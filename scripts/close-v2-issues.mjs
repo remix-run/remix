@@ -51,14 +51,13 @@ async function run() {
   console.log(`Parsed ${issues.length} issues`);
 
   for (let issue of issues) {
-    console.log(`Commenting on issue #${issue}`);
+    console.log(`--- Processing issue #${issue} ---`);
     let commentResult = runCmdIfTokenExists(getCommentCmd(issue));
     console.log(`Commented on issue #${issue}: ${commentResult}`);
     await sleep(250);
 
-    console.log(`Closing issue #${issue}`);
-    let closeResult = runCmdIfTokenExists(getCloseCmd(issue));
-    console.log(`Closed issue #${issue}: ${closeResult}`);
+    runCmdIfTokenExists(getCloseCmd(issue));
+    // No log here since the GH CLI already logs for issue close
     await sleep(250);
   }
 
