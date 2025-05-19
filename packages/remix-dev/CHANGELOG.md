@@ -1,5 +1,16 @@
 # `@remix-run/dev`
 
+## 2.16.7-pre.0
+
+### Patch Changes
+
+- Update `vite-node` ([#10611](https://github.com/remix-run/remix/pull/10611))
+- Updated dependencies:
+  - `@remix-run/node@2.16.7-pre.0`
+  - `@remix-run/react@2.16.7-pre.0`
+  - `@remix-run/serve@2.16.7-pre.0`
+  - `@remix-run/server-runtime@2.16.7-pre.0`
+
 ## 2.16.6
 
 ### Patch Changes

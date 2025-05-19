@@ -29,5 +29,7 @@
     "@remix-run/server-runtime": "2.16.6",
     "@remix-run/testing": "2.16.6"
   },
-  "changesets": []
+  "changesets": [
+    "shiny-suns-dance"
+  ]
 }

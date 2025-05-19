@@ -1,5 +1,12 @@
 # `@remix-run/react`
 
+## 2.16.7-pre.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.7-pre.0`
+
 ## 2.16.6
 
 ### Patch Changes
