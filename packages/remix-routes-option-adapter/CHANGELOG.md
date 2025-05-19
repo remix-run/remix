@@ -1,5 +1,9 @@
 # `@remix-run/routes-option-adapter`
 
+## 2.16.7
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.7.
+
 ## 2.16.6
 
 No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.6.

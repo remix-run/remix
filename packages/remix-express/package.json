@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/express",
-  "version": "2.16.6",
+  "version": "2.16.7",
   "description": "Express server request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
