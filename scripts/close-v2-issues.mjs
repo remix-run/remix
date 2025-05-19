@@ -20,14 +20,14 @@ for (let issue of issues) {
   console.log(`Commenting on issue #${issue}`);
   let commentCmd = getCommentCmd(issue);
   console.log(`Executing command: ${commentCmd}`);
-  // let commentResult = execSync(commentCmd).toString();
-  // console.log(`Commented on issue #${issue}: ${commentResult}`);
+  let commentResult = execSync(commentCmd).toString();
+  console.log(`Commented on issue #${issue}: ${commentResult}`);
 
   console.log(`Closing issue #${issue}`);
   let closeCmd = getCloseCmd(issue);
   console.log(`Executing command: ${closeCmd}`);
-  // let closeResult = execSync(closeCmd).toString();
-  // console.log(`Closed issue #${issue}: ${closeResult}`);
+  let closeResult = execSync(closeCmd).toString();
+  console.log(`Closed issue #${issue}: ${closeResult}`);
 }
 
 console.log("Done!");
