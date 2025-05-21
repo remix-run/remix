@@ -1,20 +1,22 @@
-Welcome to `remix-the-web`!
+Welcome to `remix-the-web`! We're excited to have you contribute.
+
+This guide will help you get started.
 
 ## Setting Up Your Environment
 
-First off, [install `pnpm`](https://pnpm.io/installation) somewhere globally on your machine. It's the tool we use to manage dependencies and run tasks in this workspace.
+To get started, you'll need `pnpm`. If you don't have it yet, you can [install `pnpm` here](https://pnpm.io/installation).
 
-If you're using [VS Code](https://code.visualstudio.com/) you should also install [the `node:test runner` extension](https://marketplace.visualstudio.com/items?itemName=connor4312.nodejs-testing) which provides an integrated experience when running the tests.
+If you're using [VS Code](https://code.visualstudio.com/), we recommend installing the [`node:test runner` extension](https://marketplace.visualstudio.com/items?itemName=connor4312.nodejs-testing) for a smooth testing experience.
 
-When you've done that, run `pnpm install` to install all dependencies and run a build. You can also run `pnpm test` to run all tests in the repo.
+Once that's set up, run `pnpm install` to get all the project dependencies. You can then run `pnpm build` to build the project and `pnpm test` to run all tests.
 
 ## Making Changes
 
-You can find all packages in [the `packages` directory](https://github.com/mjackson/remix-the-web/tree/main/packages). Inside each package you'll find a few common files including:
+All our packages live in the [`packages` directory](https://github.com/mjackson/remix-the-web/tree/main/packages). At a minimum, each package typically includes:
 
-- `CHANGELOG.md`
-- `package.json`
-- `README.md`
+- `CHANGELOG.md`: A log of what's changed.
+- `package.json`: Package metadata and dependencies.
+- `README.md`: Information about the package.
 
 When you make changes to a package, please make sure you add a few relevant tests and run the whole test suite to make sure everything still works. Then, add a human-friendly description of your change in the changelog and [make a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request). We will take a look at it as soon as we can.
 
