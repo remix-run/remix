@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import fs from "node:fs/promises";
 import path from "node:path";
 import {
   UNSAFE_flatRoutes as flatRoutesImpl,
@@ -16,33 +16,36 @@ import {
  */
 export async function flatRoutes(
   options: {
-    /**
-     * An array of [minimatch](https://www.npmjs.com/package/minimatch) globs that match files to ignore.
-     * Defaults to `[]`.
-     */
     ignoredRouteFiles?: string[];
-
-    /**
-     * The directory containing file system routes, relative to the app directory.
-     * Defaults to `"./routes"`.
-     */
     rootDirectory?: string;
   } = {}
 ): Promise<RouteConfigEntry[]> {
-  let { ignoredRouteFiles = [], rootDirectory: userRootDirectory = "routes" } =
-    options;
-  let appDirectory = getAppDirectory();
-  let rootDirectory = path.resolve(appDirectory, userRootDirectory);
-  let relativeRootDirectory = path.relative(appDirectory, rootDirectory);
-  let prefix = normalizeSlashes(relativeRootDirectory);
+  const { ignoredRouteFiles = [], rootDirectory: userRootDirectory = "routes" } = options;
+  const appDirectory = getAppDirectory();
+  const rootDirectory = path.resolve(appDirectory, userRootDirectory);
+  const relativeRootDirectory = path.relative(appDirectory, rootDirectory);
+  const prefix = normalizeSlashes(relativeRootDirectory);
 
-  let routes = fs.existsSync(rootDirectory)
-    ? flatRoutesImpl(appDirectory, ignoredRouteFiles, prefix)
-    : {};
+  try {
+    const directoryExists = await fs.access(rootDirectory).then(() => true).catch(() => false);
 
-  return routeManifestToRouteConfig(routes);
+    const routes = directoryExists
+      ? flatRoutesImpl(appDirectory, ignoredRouteFiles, prefix)
+      : {};
+
+    return routeManifestToRouteConfig(routes);
+  } catch (error) {
+    console.error("Error generating route config:", error);
+    throw new Error("Failed to generate route config. See logs for details.");
+  }
 }
 
-function normalizeSlashes(file: string) {
+/**
+ * Normalizes path slashes to forward slashes.
+ *
+ * @param file - The file path to normalize.
+ * @returns The normalized file path with forward slashes.
+ */
+function normalizeSlashes(file: string): string {
   return file.split(path.win32.sep).join("/");
 }
