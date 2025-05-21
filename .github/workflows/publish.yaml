@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write # Required for publishing the GitHub release.
-      id-token: write # The OIDC ID token is used for authentication with JSR.
+      contents: write # Required for publishing the GitHub release
+      id-token: write # The OIDC ID token is used for authentication with JSR
 
     steps:
       - name: Checkout
@@ -31,6 +31,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+
+      - name: Build packages
+        run: pnpm build
 
       - name: Publish
         run: pnpm publish-release-ci ${{ github.ref_name }}
