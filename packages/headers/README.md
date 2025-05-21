@@ -1,15 +1,18 @@
 # headers
 
-`headers` is a toolkit for working with HTTP headers in JavaScript.
+Tired of manually parsing and stringifying HTTP header values in JavaScript? `headers` supercharges the standard `Headers` interface, providing a robust toolkit for effortless and type-safe header manipulation.
 
-HTTP headers contain a wealth of information:
+HTTP headers are packed with critical information—from content negotiation and caching directives to authentication tokens and file metadata. While the native `Headers` API provides a basic string-based interface, it leaves the complexities of parsing specific header formats (like `Accept`, `Content-Type`, or `Set-Cookie`) entirely up to you.
 
-- Who is sending this request?
-- What's in the payload and how is it encoded?
-- What is the filename of this file upload?
-- and much more!
+`headers` solves this by offering:
 
-The [built-in JavaScript `Headers` interface](https://developer.mozilla.org/en-US/docs/Web/API/Headers) accepts and gives you strings for everything, which you're probably used to parsing and stringifying manually as needed. This library aims to give you a more fluent interface for all of this information. Similar to how the DOM gives you programmatic access to HTML documents, `headers` gives you access to HTTP headers.
+- **Type-Safe Accessors:** Interact with complex header values (e.g., media types, quality factors, cookie attributes) through strongly-typed properties and methods, eliminating guesswork and manual parsing.
+- **Automatic Parsing & Stringification:** The library intelligently handles the parsing of raw header strings into structured objects and stringifies your structured data back into spec-compliant header values.
+- **Fluent Interface:** Enjoy a more expressive and developer-friendly API for reading and writing header information.
+- **Drop-in Enhancement:** As a subclass of the standard `Headers` object, it can be used anywhere a `Headers` object is expected, providing progressive enhancement to your existing code.
+- **Individual Header Utilities:** For fine-grained control, use standalone utility classes for specific headers, perfect for scenarios outside of a full `Headers` object.
+
+Unlock a more powerful and elegant way to work with HTTP headers in your JavaScript and TypeScript projects!
 
 ## Installation
 
@@ -45,6 +48,9 @@ headers.get('Accept'); // 'text/html,text/plain;q=0.9,text/*;q=0.8'
 
 // Accept-Encoding
 headers.acceptEncoding = 'gzip, deflate;q=0.8';
+
+headers.acceptEncoding.encodings; // [ 'gzip', 'deflate' ]
+Object.fromEntries(headers.acceptEncoding.entries()); // { 'gzip': 1, 'deflate': 0.8 }
 
 headers.acceptEncoding.accepts('gzip'); // true
 headers.acceptEncoding.accepts('br'); // false
@@ -206,7 +212,7 @@ let headers = new Headers({
 });
 
 console.log(`${headers}`);
-// Content-Type: text/html
+// Content-Type: application/json
 // Accept-Language: en-US,en;q=0.9
 ```
 
@@ -307,6 +313,23 @@ header.sMaxage; // 3600
 
 // Alternative init style
 let header = new CacheControl({ public: true, maxAge: 3600 });
+
+// Full set of supported properties
+header.public; // true/false
+header.private; // true/false
+header.noCache; // true/false
+header.noStore; // true/false
+header.noTransform; // true/false
+header.mustRevalidate; // true/false
+header.proxyRevalidate; // true/false
+header.maxAge; // number
+header.sMaxage; // number
+header.minFresh; // number
+header.maxStale; // number
+header.onlyIfCached; // true/false
+header.immutable; // true/false
+header.staleWhileRevalidate; // number
+header.staleIfError; // number
 ```
 
 ### Content-Disposition

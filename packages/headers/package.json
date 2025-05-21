@@ -12,46 +12,57 @@
   "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/headers#readme",
   "files": [
     "dist",
+    "src",
     "LICENSE",
     "README.md"
   ],
   "type": "module",
+  "main": "./dist/headers.cjs",
+  "module": "./dist/headers.js",
   "types": "./dist/headers.d.ts",
-  "main": "./dist/headers.js",
   "exports": {
     ".": {
-      "module-sync": {
-        "types": "./dist/headers.d.ts",
-        "default": "./dist/headers.js"
-      },
-      "import": {
-        "types": "./dist/headers.d.ts",
-        "default": "./dist/headers.js"
-      },
-      "require": {
-        "types": "./dist/headers.d.cts",
-        "default": "./dist/headers.cjs"
-      },
-      "default": {
-        "types": "./dist/headers.d.ts",
-        "default": "./dist/headers.js"
-      }
+      "types": "./dist/headers.d.ts",
+      "import": "./dist/headers.js",
+      "require": "./dist/headers.cjs",
+      "default": "./dist/headers.js"
     },
     "./package.json": "./package.json"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
-    "tsup": "^8.3.5"
+    "esbuild": "^0.20.0"
   },
   "scripts": {
-    "build": "tsup",
+    "clean": "rm -rf dist",
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:esm": "esbuild src/headers.ts --bundle --outfile=dist/headers.js --format=esm --platform=neutral --minify --sourcemap",
+    "build:cjs": "esbuild src/headers.ts --bundle --outfile=dist/headers.cjs --format=cjs --platform=node --minify --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
-    "prepare": "pnpm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "fetch",
     "http",
     "header",
-    "headers"
+    "headers",
+    "http-headers",
+    "request-headers",
+    "response-headers",
+    "content-negotiation",
+    "cookies",
+    "set-cookie",
+    "cache-control",
+    "content-type",
+    "accept",
+    "accept-encoding",
+    "accept-language",
+    "content-disposition",
+    "if-none-match",
+    "etag",
+    "user-agent",
+    "host",
+    "last-modified"
   ]
 }
