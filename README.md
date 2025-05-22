@@ -5,7 +5,7 @@
 >
 > We plan to continue to address bugs that pose security concerns or prevent upgrading to React Router v7. If you have a bug in one of those categories, please open an issue in this repository and prefix the title with `(v2):`.
 >
-> For all other issues, ongoing maintenance will be happening in React Router v7, so please o[pen issues (bugs) and/or discussions (feature requests) [in that repo](https://github.com/remix-run/react-router/issues/new?template=bug_report.yml).
+> For all other issues, ongoing maintenance will be happening in React Router v7, so please open issues (bugs) and/or discussions (feature requests) [in that repo](https://github.com/remix-run/react-router/issues/new?template=bug_report.yml).
 
 We are happy you're here!
 
