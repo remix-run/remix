@@ -1,8 +1,15 @@
-name: 🚪 Close v2 Issues
+name: 🚪 Close v2 Issues/PRs
 
 on:
   workflow_dispatch:
     inputs:
+      type:
+        type: choice
+        description: Type
+        options:
+          - issues
+          - prs
+        required: true
       prior_to_date:
         required: true
 
@@ -10,7 +17,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   experimental:
-    name: 🚪 Close v2 Issues
+    name: 🚪 Close v2 Issues/PRs
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     env:
@@ -33,4 +40,4 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: 🚪 Close Issues
-        run: node ./scripts/close-v2-issues.mjs --date ${{ github.event.inputs.prior_to_date }}
+        run: node ./scripts/close-v2-issues.mjs --type ${{ github.event.inputs.type }} --date ${{ github.event.inputs.prior_to_date }}
