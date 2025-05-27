@@ -794,8 +794,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       tar-fs:
-        specifier: ^2.1.1
-        version: 2.1.1
+        specifier: ^2.1.3
+        version: 2.1.3
     devDependencies:
       '@types/gunzip-maybe':
         specifier: ^1.4.0
@@ -1073,8 +1073,8 @@ importers:
         specifier: ^2.6.0
         version: 2.6.0
       tar-fs:
-        specifier: ^2.1.1
-        version: 2.1.1
+        specifier: ^2.1.3
+        version: 2.1.3
       tsconfig-paths:
         specifier: ^4.0.0
         version: 4.2.0
@@ -14494,8 +14494,8 @@ packages:
     engines: {node: '>=6'}
     dev: false
 
-  /tar-fs@2.1.1:
-    resolution: {integrity: sha512-V0r2Y9scmbDRLCNex/+hYzvp/zyYjvFbHPNgVTKfQvVrb6guiE/fxP+XblDNR011utopbkex2nM4dHNV6GDsng==}
+  /tar-fs@2.1.3:
+    resolution: {integrity: sha512-090nwYJDmlhwFwEW3QQl+vaNnxsO2yVsd45eTKRBzSzu+hlb1w2K9inVq5b0ngXuLVqQ4ApvsUHHnu/zQNkWAg==}
     dependencies:
       chownr: 1.1.4
       mkdirp-classic: 0.5.3
