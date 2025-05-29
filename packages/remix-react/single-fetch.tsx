@@ -393,6 +393,8 @@ export function singleFetchUrl(reqUrl: URL | string) {
 
   if (url.pathname === "/") {
     url.pathname = "_root.data";
+  } else if (url.pathname === window.__remixContext.basename) {
+    url.pathname = window.__remixContext.basename.concat("_root.data");
   } else {
     url.pathname = `${url.pathname.replace(/\/$/, "")}.data`;
   }
