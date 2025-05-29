@@ -1,6 +1,6 @@
 # `create-remix`
 
-## 2.16.8-pre.0
+## 2.16.8
 
 ### Patch Changes
 
