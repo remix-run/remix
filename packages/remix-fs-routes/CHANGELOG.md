@@ -1,12 +1,6 @@
 # `@remix-run/fs-routes`
 
-## 2.16.8-pre.0
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/dev@2.16.8-pre.0`
-  - `@remix-run/route-config@2.16.8-pre.0`
+## 2.16.8
 
 ## 2.16.7
 
