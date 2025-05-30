@@ -1,0 +1,82 @@
+{
+  "name": "@mjackson/multipart-parser",
+  "version": "0.8.2",
+  "description": "A fast, efficient parser for multipart streams in any JavaScript environment",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/multipart-parser"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser#readme",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "types": "./dist/multipart-parser.d.ts",
+  "main": "./dist/multipart-parser.js",
+  "exports": {
+    ".": {
+      "module-sync": {
+        "types": "./dist/multipart-parser.d.ts",
+        "default": "./dist/multipart-parser.js"
+      },
+      "import": {
+        "types": "./dist/multipart-parser.d.ts",
+        "default": "./dist/multipart-parser.js"
+      },
+      "require": {
+        "types": "./dist/multipart-parser.d.cts",
+        "default": "./dist/multipart-parser.cjs"
+      },
+      "default": {
+        "types": "./dist/multipart-parser.d.ts",
+        "default": "./dist/multipart-parser.js"
+      }
+    },
+    "./node": {
+      "module-sync": {
+        "types": "./dist/multipart-parser.node.d.ts",
+        "default": "./dist/multipart-parser.node.js"
+      },
+      "import": {
+        "types": "./dist/multipart-parser.node.d.ts",
+        "default": "./dist/multipart-parser.node.js"
+      },
+      "require": {
+        "types": "./dist/multipart-parser.node.d.cts",
+        "default": "./dist/multipart-parser.node.cjs"
+      },
+      "default": {
+        "types": "./dist/multipart-parser.node.d.ts",
+        "default": "./dist/multipart-parser.node.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@mjackson/headers": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "tsup": "^8.3.5"
+  },
+  "scripts": {
+    "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",
+    "bench:bun": "bun run ./bench/runner.ts",
+    "bench:deno": "deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts",
+    "bench:node": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./bench/runner.ts",
+    "build": "tsup",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "prepare": "pnpm run build"
+  },
+  "keywords": [
+    "multipart",
+    "parser",
+    "stream",
+    "http"
+  ]
+}

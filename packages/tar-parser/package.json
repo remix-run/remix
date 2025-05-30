@@ -1,0 +1,59 @@
+{
+  "name": "@mjackson/tar-parser",
+  "version": "0.2.2",
+  "description": "A fast, efficient parser for tar streams in any JavaScript environment",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/tar-parser"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/tar-parser#readme",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "types": "./dist/tar-parser.d.ts",
+  "main": "./dist/tar-parser.js",
+  "exports": {
+    ".": {
+      "module-sync": {
+        "types": "./dist/tar-parser.d.ts",
+        "default": "./dist/tar-parser.js"
+      },
+      "import": {
+        "types": "./dist/tar-parser.d.ts",
+        "default": "./dist/tar-parser.js"
+      },
+      "require": {
+        "types": "./dist/tar-parser.d.cts",
+        "default": "./dist/tar-parser.cjs"
+      },
+      "default": {
+        "types": "./dist/tar-parser.d.ts",
+        "default": "./dist/tar-parser.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "@mjackson/lazy-file": "workspace:^",
+    "@types/node": "^20.14.10",
+    "tsup": "^8.3.5"
+  },
+  "scripts": {
+    "bench": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./bench/runner.ts",
+    "build": "tsup",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "prepare": "pnpm run build"
+  },
+  "keywords": [
+    "tar",
+    "archive",
+    "parser",
+    "stream"
+  ]
+}

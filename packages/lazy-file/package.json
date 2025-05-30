@@ -1,0 +1,77 @@
+{
+  "name": "@mjackson/lazy-file",
+  "version": "3.3.1",
+  "description": "Lazy, streaming files for JavaScript",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/lazy-file"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/lazy-file#readme",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "types": "./dist/lazy-file.d.ts",
+  "main": "./dist/lazy-file.js",
+  "exports": {
+    ".": {
+      "module-sync": {
+        "types": "./dist/lazy-file.d.ts",
+        "default": "./dist/lazy-file.js"
+      },
+      "import": {
+        "types": "./dist/lazy-file.d.ts",
+        "default": "./dist/lazy-file.js"
+      },
+      "require": {
+        "types": "./dist/lazy-file.d.cts",
+        "default": "./dist/lazy-file.cjs"
+      },
+      "default": {
+        "types": "./dist/lazy-file.d.ts",
+        "default": "./dist/lazy-file.js"
+      }
+    },
+    "./fs": {
+      "module-sync": {
+        "types": "./dist/fs.d.ts",
+        "default": "./dist/fs.js"
+      },
+      "import": {
+        "types": "./dist/fs.d.ts",
+        "default": "./dist/fs.js"
+      },
+      "require": {
+        "types": "./dist/fs.d.cts",
+        "default": "./dist/fs.cjs"
+      },
+      "default": {
+        "types": "./dist/fs.d.ts",
+        "default": "./dist/fs.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "mrmime": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "tsup": "^8.3.5"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "prepare": "pnpm run build"
+  },
+  "keywords": [
+    "file",
+    "buffer",
+    "blob"
+  ]
+}

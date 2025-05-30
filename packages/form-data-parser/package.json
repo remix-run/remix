@@ -1,0 +1,60 @@
+{
+  "name": "@mjackson/form-data-parser",
+  "version": "0.7.0",
+  "description": "A request.formData() wrapper with streaming file upload handling",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/form-data-parser"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser#readme",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "types": "./dist/form-data-parser.d.ts",
+  "main": "./dist/form-data-parser.js",
+  "exports": {
+    ".": {
+      "module-sync": {
+        "types": "./dist/form-data-parser.d.ts",
+        "default": "./dist/form-data-parser.js"
+      },
+      "import": {
+        "types": "./dist/form-data-parser.d.ts",
+        "default": "./dist/form-data-parser.js"
+      },
+      "require": {
+        "types": "./dist/form-data-parser.d.cts",
+        "default": "./dist/form-data-parser.cjs"
+      },
+      "default": {
+        "types": "./dist/form-data-parser.d.ts",
+        "default": "./dist/form-data-parser.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@mjackson/multipart-parser": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^22.4.1",
+    "tsup": "^8.3.5"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "prepare": "pnpm run build"
+  },
+  "keywords": [
+    "form-data",
+    "FormData",
+    "multipart",
+    "parser"
+  ]
+}

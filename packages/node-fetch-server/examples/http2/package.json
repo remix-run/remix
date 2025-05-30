@@ -1,0 +1,8 @@
+{
+  "name": "node-fetch-server-http2-example",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@mjackson/node-fetch-server": "workspace:^"
+  }
+}

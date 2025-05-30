@@ -1,0 +1,15 @@
+{
+  "name": "multipart-parser-deno-example",
+  "private": true,
+  "dependencies": {
+    "@mjackson/multipart-parser": "workspace:*",
+    "tmp": "^0.2.3"
+  },
+  "devDependencies": {
+    "@types/tmp": "^0.2.6",
+    "typescript": "^5.7.2"
+  },
+  "scripts": {
+    "start": "deno --unstable-byonm run --allow-all main.ts"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "name": "@mjackson/node-fetch-server",
+  "version": "0.6.1",
+  "description": "Build servers for Node.js using the web fetch API",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/node-fetch-server"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server#readme",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "types": "./dist/node-fetch-server.d.ts",
+  "main": "./dist/node-fetch-server.js",
+  "exports": {
+    ".": {
+      "module-sync": {
+        "types": "./dist/node-fetch-server.d.ts",
+        "default": "./dist/node-fetch-server.js"
+      },
+      "import": {
+        "types": "./dist/node-fetch-server.d.ts",
+        "default": "./dist/node-fetch-server.js"
+      },
+      "require": {
+        "types": "./dist/node-fetch-server.d.cts",
+        "default": "./dist/node-fetch-server.cjs"
+      },
+      "default": {
+        "types": "./dist/node-fetch-server.d.ts",
+        "default": "./dist/node-fetch-server.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "tsup": "^8.3.5"
+  },
+  "scripts": {
+    "bench": "bash ./bench/runner.sh",
+    "build": "tsup",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "prepare": "pnpm run build"
+  },
+  "keywords": [
+    "http",
+    "server",
+    "request",
+    "response",
+    "fetch",
+    "web"
+  ]
+}

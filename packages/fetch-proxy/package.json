@@ -1,0 +1,59 @@
+{
+  "name": "@mjackson/fetch-proxy",
+  "version": "0.2.0",
+  "description": "An HTTP proxy for the web Fetch API",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/fetch-proxy"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/fetch-proxy#readme",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "types": "dist/fetch-proxy.d.ts",
+  "main": "dist/fetch-proxy.js",
+  "exports": {
+    ".": {
+      "module-sync": {
+        "types": "./dist/fetch-proxy.d.ts",
+        "default": "./dist/fetch-proxy.js"
+      },
+      "import": {
+        "types": "./dist/fetch-proxy.d.ts",
+        "default": "./dist/fetch-proxy.js"
+      },
+      "require": {
+        "types": "./dist/fetch-proxy.d.cts",
+        "default": "./dist/fetch-proxy.cjs"
+      },
+      "default": {
+        "types": "./dist/fetch-proxy.d.ts",
+        "default": "./dist/fetch-proxy.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@mjackson/headers": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "tsup": "^8.3.5"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "prepare": "pnpm run build"
+  },
+  "keywords": [
+    "fetch",
+    "http",
+    "proxy"
+  ]
+}
