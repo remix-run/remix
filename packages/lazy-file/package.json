@@ -67,7 +67,7 @@
   "scripts": {
     "build": "tsup",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
-    "prepare": "pnpm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "file",

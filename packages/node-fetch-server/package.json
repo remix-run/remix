@@ -47,7 +47,7 @@
     "bench": "bash ./bench/runner.sh",
     "build": "tsup",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
-    "prepare": "pnpm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "http",

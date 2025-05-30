@@ -71,7 +71,7 @@
     "bench:node": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./bench/runner.ts",
     "build": "tsup",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
-    "prepare": "pnpm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "multipart",
