@@ -1,0 +1,12 @@
+{
+  "name": "node-fetch-server-bench",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@mjackson/node-fetch-server": "workspace:*",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21"
+  }
+}

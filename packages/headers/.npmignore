@@ -1,0 +1,2 @@
+# Ignore test files within the src directory
+src/**/*.test.ts

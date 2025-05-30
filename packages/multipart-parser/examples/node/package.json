@@ -1,0 +1,17 @@
+{
+  "name": "multipart-parser-node-example",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@mjackson/multipart-parser": "workspace:*",
+    "tmp": "^0.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/tmp": "^0.2.6",
+    "typescript": "^5.7.2"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
