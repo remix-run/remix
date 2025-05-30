@@ -1,10 +1,12 @@
 on:
-  push:
-    branches:
-      - '*'
+  # Re-enable this once we land v3 in main/dev
+  # push:
+  #   branches:
+  #     - 'v3'
+  # Update this once we land v3 in main/dev
   pull_request:
     branches:
-      - '*'
+      - 'v3'
 
 jobs:
   build-and-test:

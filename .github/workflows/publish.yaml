@@ -1,10 +1,12 @@
 on:
-  push:
-    tags:
-      - '[a-z]+@[0-9]+.[0-9]+.[0-9]+'
-      - '[a-z]+-[a-z]+@[0-9]+.[0-9]+.[0-9]+'
-      - '[a-z]+-[a-z]+-[a-z]+@[0-9]+.[0-9]+.[0-9]+'
-
+  # Re-enable this once we land v3 in main
+  # push:
+  #   tags:
+  #     - '[a-z]+@[0-9]+.[0-9]+.[0-9]+'
+  #     - '[a-z]+-[a-z]+@[0-9]+.[0-9]+.[0-9]+'
+  #     - '[a-z]+-[a-z]+-[a-z]+@[0-9]+.[0-9]+.[0-9]+'
+  # For now, just do this manually
+  workflow_dispatch:
 jobs:
   release:
     runs-on: ubuntu-latest
