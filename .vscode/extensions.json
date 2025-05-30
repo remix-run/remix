@@ -1,7 +1,0 @@
-{
-  "recommendations": [
-    "dbaeumer.vscode-eslint",
-    "denoland.vscode-deno",
-    "esbenp.prettier-vscode"
-  ]
-}

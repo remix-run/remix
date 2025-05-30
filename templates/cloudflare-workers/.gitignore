@@ -1,6 +1,0 @@
-node_modules
-
-/.wrangler
-/build
-.env
-.dev.vars
