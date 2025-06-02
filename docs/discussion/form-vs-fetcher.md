@@ -41,7 +41,7 @@ For these cases, developers should consider using a combination of [`<Form>`][fo
 
 These actions are generally more subtle and don't require a context switch for the user:
 
-- **Updating a Single Field**: Maybe a user wants to change the name of an item in a list or update a specific property of a record. This action is minor and doesn't necessitate a new page or URL.
+- **Updating a Single Field**: Maybe a user wants to change the name of an item in a list or update a specific property of a record. This action is minor and doesn't require a new page or URL.
 
 - **Deleting a Record from a List**: In a list view, if a user deletes an item, they likely expect to remain on the list view, with that item no longer in the list.
 
@@ -134,7 +134,7 @@ Combined, these APIs offer a balanced blend of structured navigation and feedbac
 
 Now consider we're looking at a list of recipes that have delete buttons on each item. When a user clicks the delete button, we want to delete the recipe from the database and remove it from the list without navigating away from the list.
 
-First consider the basic route setup to get a list of recipes on the page:
+First, consider the basic route setup to get a list of recipes on the page:
 
 ```tsx filename=app/routes/recipes/_index.tsx
 import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
@@ -192,13 +192,13 @@ const RecipeListItem: FunctionComponent<{
 };
 ```
 
-Using [`useFetcher`][use_fetcher] in this scenario works perfectly. Instead of navigating away or refreshing the entire page, we want in-place updates. When a user deletes a recipe, the action called and the fetcher manages the corresponding state transitions.
+Using [`useFetcher`][use_fetcher] in this scenario works perfectly. Instead of navigating away or refreshing the entire page, we want in-place updates. When a user deletes a recipe, the `action` is called and the fetcher manages the corresponding state transitions.
 
 The key advantage here is the maintenance of context. The user stays on the list when the deletion completes. The fetcher's state management capabilities are leveraged to give real-time feedback: it toggles between `"Deleting..."` and `"Delete"`, providing a clear indication of the ongoing process.
 
-Furthermore, with each fetcher having the autonomy to manage its own state, operations on individual list items become independent, ensuring that actions on one item don't affect the others (though revalidation of the page data is a shared concern that is covered in [Network Concurrency Management][network_concurrency_management]).
+Furthermore, with each `fetcher` having the autonomy to manage its own state, operations on individual list items become independent, ensuring that actions on one item don't affect the others (though revalidation of the page data is a shared concern covered in [Network Concurrency Management][network_concurrency_management]).
 
-In essence, `useFetcher` offers a seamless mechanism for actions that don't necessitate a change in the URL or navigation, enhancing the user experience by providing real-time feedback and context preservation.
+In essence, `useFetcher` offers a seamless mechanism for actions that don't require a change in the URL or navigation, enhancing the user experience by providing real-time feedback and context preservation.
 
 ### Mark Article as Read
 
