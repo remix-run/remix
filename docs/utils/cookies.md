@@ -4,7 +4,7 @@ title: Cookies
 
 # Cookies
 
-A [cookie][cookie] is a small piece of information that your server sends someone in a HTTP response that their browser will send back on subsequent requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions][sessions]), shopping carts, user preferences, and many other features that require remembering who is "logged in".
+A [cookie][cookie] is a small piece of information that your server sends someone in a HTTP response that their browser will send back on later requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions][sessions]), shopping carts, user preferences, and many other features that require remembering who is "logged in".
 
 Remix's `Cookie` interface provides a logical, reusable container for cookie metadata.
 
@@ -14,7 +14,7 @@ While you may create these cookies manually, it is more common to use a [session
 
 In Remix, you will typically work with cookies in your `loader` and/or `action` functions (see <Link to="../mutations">mutations</Link>), since those are the places where you need to read and write data.
 
-Let's say you have a banner on your e-commerce site that prompts users to check out the items you currently have on sale. The banner spans the top of your homepage, and includes a button on the side that allows the user to dismiss the banner so they don't see it for at least another week.
+Let's say you have a banner on your e-commerce site that prompts users to check out the items you currently have on sale. The banner spans the top of your homepage and includes a button on the side that allows the user to dismiss the banner so they don't see it for at least another week.
 
 First, create a cookie:
 
@@ -28,7 +28,7 @@ export const userPrefs = createCookie("user-prefs", {
 
 Then, you can `import` the cookie and use it in your `loader` and/or `action`. The `loader` in this case just checks the value of the user preference so you can use it in your component for deciding whether to render the banner. When the button is clicked, the `<form>` calls the `action` on the server and reloads the page without the banner.
 
-**Note:** We recommend (for now) that you create all the cookies your app needs in a `*.server.ts` file and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
+**Note:** We recommend (for now) that you create all the cookies your app needs in a `*.server.ts` file and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this warning.
 
 ```tsx filename=app/routes/_index.tsx lines=[12,17-19,26-28,37]
 import type {

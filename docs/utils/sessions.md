@@ -6,9 +6,9 @@ title: Sessions
 
 Sessions are an important part of websites that allow the server to identify requests coming from the same person, especially when it comes to server-side form validation or when JavaScript is not on the page. Sessions are a fundamental building block of many sites that let users "log in", including social, e-commerce, business, and educational websites.
 
-In Remix, sessions are managed on a per-route basis (rather than something like express middleware) in your `loader` and `action` methods using a "session storage" object (that implements the `SessionStorage` interface). Session storage understands how to parse and generate cookies, and how to store session data in a database or filesystem.
+In Remix, sessions are managed on a per-route basis (rather than something like express middleware) in your `loader` and `action` methods using a "session storage" object (that implements the `SessionStorage` interface). Session storage understands how to parse and generate cookies and how to store session data in a database or filesystem.
 
-Remix comes with several pre-built session storage options for common scenarios, and one to create your own:
+Remix comes with several pre-built session storage options for common scenarios and one to create your own:
 
 - `createCookieSessionStorage`
 - `createMemorySessionStorage`
@@ -198,13 +198,13 @@ export default function LogoutRoute() {
 }
 ```
 
-<docs-warning>It's important that you logout (or perform any mutation for that matter) in an `action` and not a `loader`. Otherwise you open your users to [Cross-Site Request Forgery][csrf] attacks. Also, Remix only re-calls `loaders` when `actions` are called.</docs-warning>
+<docs-warning>It's important that you log out (or perform any mutation for that matter) in an `action` and not a `loader`. Otherwise, you open your users to [Cross-Site Request Forgery][csrf] attacks. Also, Remix only re-calls `loaders` when `actions` are called.</docs-warning>
 
 ## Session Gotchas
 
-- Because of nested routes, multiple loaders can be called to construct a single page. When using `session.flash()` or `session.unset()`, you need to be sure no other loaders in the request are going to want to read that, otherwise you'll get race conditions. Typically if you're using flash, you'll want to have a single loader read it; if another loader wants a flash message, use a different key for that loader.
+- Because of nested routes, multiple loaders can be called to construct a single page. When using `session.flash()` or `session.unset()`, you need to be sure no other loaders in the request are going to want to read that, otherwise you'll get race conditions. Typically, if you're using flash, you'll want to have a single loader read it; if another loader wants a flash message, use a different key for that loader.
 
-- Every time you modify session data, you must `commitSession()` or your changes will be lost. This is different than what you might be used to, where some type of middleware automatically commits session data for you.
+- Every time you modify session data, you must `commitSession()` or your changes will be lost. This is different from what you might be used to, where some type of middleware automatically commits session data for you.
 
 ## `createSession`
 
@@ -281,7 +281,7 @@ const { getSession, commitSession, destroySession } =
   });
 ```
 
-The `expires` argument to `createData` and `updateData` is the same `Date` at which the cookie itself expires and is no longer valid. You can use this information to automatically purge the session record from your database to save on space, or to ensure that you do not otherwise return any data for old, expired cookies.
+The `expires` argument to `createData` and `updateData` is the same `Date` at which the cookie itself expires and is no longer valid. You can use this information to automatically purge the session record from your database to save on space or to ensure that you do not otherwise return any data for old, expired cookies.
 
 ## `createCookieSessionStorage`
 
@@ -291,7 +291,7 @@ The main advantage of cookie session storage is that you don't need any addition
 
 However, cookie-based sessions may not exceed browser cookie size limits of 4k bytes. If your cookie size exceeds this limit, `commitSession()` will throw an error.
 
-The other downside is that you need to update the `Set-Cookie` header in every loader and action that modifies the session (this includes reading a flashed session value). With other strategies you only need to set the session cookie once, because it doesn't actually store any session data, just the key to find it elsewhere.
+The other downside is that you need to update the `Set-Cookie` header in every loader and action that modifies the session (this includes reading a flashed session value). With other strategies you only need to set the session cookie once, because it doesn't store any session data, just the key to find it elsewhere.
 
 ```ts
 import { createCookieSessionStorage } from "@remix-run/node"; // or cloudflare/deno
@@ -307,7 +307,7 @@ const { getSession, commitSession, destroySession } =
   });
 ```
 
-Note that other session implementations store a unique session ID in a cookie and use that ID to look up the session in the source of truth (in-memory, filesystem, DB, etc.). In a cookie session, the cookie _is_ the source of truth so there is no unique ID out of the box. If you need to track a unique ID in your cookie session you will need to add an ID value yourself via `session.set()`.
+Note that other session implementations store a unique session ID in a cookie and use that ID to look up the session in the source of truth (in-memory, filesystem, DB, etc.). In a cookie session, the cookie _is_ the source of truth so there is no unique ID out of the box. If you need to track a unique ID in your cookie session, you will need to add an ID value yourself via `session.set()`.
 
 ## `createMemorySessionStorage`
 
@@ -468,7 +468,7 @@ session.has("userId");
 
 ### `session.set(key, value)`
 
-Sets a session value for use in subsequent requests:
+Sets a session value for use in later requests:
 
 ```ts
 session.set("userId", "1234");
@@ -476,7 +476,7 @@ session.set("userId", "1234");
 
 ### `session.flash(key, value)`
 
-Sets a session value that will be unset the first time it is read in a subsequent request. After that, it's gone. Most useful for "flash messages" and server-side form validation messages:
+Sets a session value that will be unset the first time it is read in a later request. After that, it's gone. Most useful for "flash messages" and server-side form validation messages:
 
 ```ts
 session.flash(
