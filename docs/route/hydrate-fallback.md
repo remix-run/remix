@@ -6,7 +6,7 @@ title: HydrateFallback
 
 A `HydrateFallback` component is your way of informing Remix that you do not want to render your route component until _after_ the `clientLoader` has run on hydration. When exported, Remix will render the fallback during SSR instead of your default route component, and will render your route component client-side once the `clientLoader` completes.
 
-The most common use-cases for this are client-only routes (such an in-browser canvas game) and augmenting your server data with client-side data (such as saved user preferences).
+The most common use-cases for this are client-only routes (such as an in-browser canvas game) and augmenting your server data with client-side data (such as saved user preferences).
 
 ```tsx filename=routes/client-only-route.tsx
 export async function clientLoader() {
@@ -63,7 +63,7 @@ export default function Component() {
 
 There are a few nuances worth noting around the behavior of `HydrateFallback`:
 
-- It is only relevant on initial document request and hydration, and will not be rendered on any subsequent client-side navigations
+- It is only relevant on initial document request and hydration and will not be rendered on any later client-side navigations
 - It is only relevant when you are also setting [`clientLoader.hydrate=true`][hydrate-true] on a given route
 - It is also relevant if you do have a `clientLoader` without a server `loader`, as this implies `clientLoader.hydrate=true` since there is otherwise no loader data at all to return from `useLoaderData`
   - Even if you do not specify a `HydrateFallback` in this case, Remix will not render your route component and will bubble up to any ancestor `HydrateFallback` component

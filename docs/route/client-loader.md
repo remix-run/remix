@@ -23,7 +23,7 @@ export const clientLoader = async ({
 };
 ```
 
-This function is only ever run on the client, and can be used in a few ways:
+This function is only ever run on the client and can be used in a few ways:
 
 - Instead of a server `loader` for full-client routes
 - To use alongside a `clientLoader` cache by invalidating the cache on mutations
@@ -35,7 +35,7 @@ This function is only ever run on the client, and can be used in a few ways:
 
 ## Hydration Behavior
 
-By default, `clientLoader` **will not** execute for the route during hydration of your Remix app on the initial SSR document request. This is for the primary (and simpler) use-case where the `clientLoader` does not change the shape of the server `loader` data and is just an optimization on subsequent client side navigations (to read from a cache or hit an API directly).
+By default, `clientLoader` **will not** execute for the route during hydration of your Remix app on the initial SSR document request. This is for the primary (and simpler) use-case where the `clientLoader` does not change the shape of the server `loader` data and is just an optimization on later client side navigations (to read from a cache or hit an API directly).
 
 ```tsx
 export async function loader() {
@@ -58,7 +58,7 @@ export default function Component() {
 
 ### `clientLoader.hydrate`
 
-If you need to run your `clientLoader` during hydration on the initial document request, you can opt-in by setting `clientLoader.hydrate=true`. This will tell Remix that it needs to run the `clientLoader` on hydration. Without a `HydrateFallback`, your route component will be SSR'd with the server `loader` data - and then `clientLoader` will run and the returned data will be updated in-place in the hydrated route Component.
+If you need to run your `clientLoader` during hydration on the initial document request, you can opt in by setting `clientLoader.hydrate=true`. This will tell Remix that it needs to run the `clientLoader` on hydration. Without a `HydrateFallback`, your route component will be SSR'd with the server `loader` data - and then `clientLoader` will run and the returned data will be updated in-place in the hydrated route Component.
 
 <docs-info>If a route exports a `clientLoader` and does not export a server `loader`, then `clientLoader.hydrate` is automatically treated as `true` since there is no server data to SSR with. Therefore, we always need to run the `clientLoader` on hydration before rendering the route component.</docs-info>
 
@@ -78,7 +78,7 @@ This function receives the same [`request`][loader-request] argument as a [`load
 
 ### `serverLoader`
 
-`serverLoader` is an asynchronous function to get the data from the server `loader` for this route. On client-side navigations, this will make a [fetch][fetch] call to the Remix server `loader`. If you opt-into running your `clientLoader` on hydration, then this function will return you the data that was already loaded on the server (via `Promise.resolve`).
+`serverLoader` is an asynchronous function to get the data from the server `loader` for this route. On client-side navigations, this will make a [fetch][fetch] call to the Remix server `loader`. If you opt-into running your `clientLoader` on hydration, then this function will return you the data already loaded on the server (via `Promise.resolve`).
 
 See also:
 

@@ -32,7 +32,7 @@ produces this HTML:
 <meta name="description" content="This app is the best" />
 ```
 
-By default, meta descriptors will render a [`<meta>` tag][meta-element] in most cases. The two exceptions are:
+By default, meta-descriptors will render a [`<meta>` tag][meta-element] in most cases. The two exceptions are:
 
 - `{ title }` renders a `<title>` tag
 - `{ "script:ld+json" }` renders a `<script type="application/ld+json">` tag, and its value should be a serializable object that is stringified and injected into the tag.
@@ -52,7 +52,7 @@ export const meta: MetaFunction = () => {
 };
 ```
 
-A meta descriptor can also render a [`<link>` tag][link-element] by setting the `tagName` property to `"link"`. This is useful for `<link>` tags associated with SEO like `canonical` URLs. For asset links like stylesheets and favicons, you should use the [`links` export][links] instead.
+A meta-descriptor can also render a [`<link>` tag][link-element] by setting the `tagName` property to `"link"`. This is useful for `<link>` tags associated with SEO like `canonical` URLs. For asset links like stylesheets and favicons, you should use the [`links` export][links] instead.
 
 ```tsx
 export const meta: MetaFunction = () => {
@@ -148,13 +148,13 @@ export const meta: MetaFunction<
 
 ## Gotchas with `meta` and Nested Routes
 
-Because multiple nested routes render at the same time, there is some merging that needs to happen to determine the meta tags that ultimately render. Remix gives you complete control over this merge because there is no obvious default.
+Because multiple nested routes render at the same time, there is some merging that needs to happen to determine the meta-tags that ultimately render. Remix gives you complete control over this merge because there is no obvious default.
 
-Remix will take the last matching route with a meta export and use that. This allows you to override things like `title`, remove things like `og:image` that the parent route added, or keep everything from the parent and add new meta for the child route.
+Remix will take the last matching route with a `meta` export and use that. This allows you to override things like `title`, remove things like `og:image` that the parent route added, or keep everything from the parent and add new meta for the child route.
 
 This can get quite tricky when you're new.
 
-Consider a route like `/projects/123`, there are likely three matching routes: `app/root.tsx`, `app/routes/projects.tsx`, and `app/routes/projects.$id.tsx`. All three may export meta descriptors.
+Consider a route like `/projects/123`, there are likely three matching routes: `app/root.tsx`, `app/routes/projects.tsx`, and `app/routes/projects.$id.tsx`. All three may export meta-descriptors.
 
 ```tsx bad filename=app/root.tsx
 export const meta: MetaFunction = () => {
@@ -186,7 +186,7 @@ With this code, we will lose the `viewport` meta tag at `/projects` and `/projec
 
 ### Global `meta`
 
-Nearly every app will have global meta like the `viewport` and `charSet`. We recommend using normal [`<meta>` tags][meta-element] inside the [root route][root-route] instead of the `meta` export, so you simply don't have to deal with merging:
+Nearly every app will have global meta like the `viewport` and `charSet`. We recommend using normal [`<meta>` tags][meta-element] inside the [root route][root-route] instead of the `meta` export, so you don't have to deal with merging:
 
 ```tsx filename=app/root.tsx lines=[12-16]
 import {

@@ -18,7 +18,7 @@ export const loader = async () => {
 
 This function is only ever run on the server. On the initial server render, it will provide data to the HTML document. On navigations in the browser, Remix will call the function via [`fetch`][fetch] from the browser.
 
-This means you can talk directly to your database, use server-only API secrets, etc. Any code that isn't used to render the UI will be removed from the browser bundle.
+This means you can talk directly to your database, use server-only API secrets, etc. Any code not used to render the UI will be removed from the browser bundle.
 
 Using the database ORM [Prisma][prisma] as an example:
 
