@@ -18,7 +18,7 @@ function SomeComponent() {
 ## Return Values
 
 - **PUSH**: The user came to the current page via a push action on the history stack: clicking a link or submitting a form, etc.
-- **REPLACE**: The user came to the current page via a replace action on the history stack: clicking a link with `<Link replace>`, submitting a form with `<Form replace>` or calling `navigate(to, { replace: true })`, etc.
+- **REPLACE**: The user came to the current page via a `replace` action on the history stack: clicking a link with `<Link replace>`, submitting a form with `<Form replace>` or calling `navigate(to, { replace: true })`, etc.
 - **POP**: The user came to the current page via a pop action on the history stack: clicking the back or forward button, calling `navigate(-1)` or `navigate(1)`, etc.
 
 ## Additional Resources

@@ -32,8 +32,8 @@ Optional. The path to append to the resolved URL.
 
 The only option is `{ relative: "route" | "path"}`, which defines the behavior when resolving relative URLs.
 
-- **route** default - relative to the route hierarchy, not the URL
-- **path** - makes the action relative to the URL paths, so `..` will remove one URL segment.
+- **route** default — relative to the route hierarchy, not the URL
+- **path** — makes the action relative to the URL paths, so `..` will remove one URL segment.
 
 [anchor_element_href_attribute]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link#href
 [anchor_element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link

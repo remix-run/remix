@@ -112,7 +112,7 @@ fetcher.submit(
 
 Loads data from a route loader. While multiple nested routes can match a URL, only the leaf route will be called.
 
-Note that when calling `load` on an index route's loader, you must include an [`?index` query param][index-query-param] in order to disambiguate between the `index.tsx` layout and the `root.tsx` route.
+Note that when calling `load` on an index route's loader, you must include an [`?index` query param][index-query-param] to disambiguate between the `index.tsx` layout and the `root.tsx` route.
 
 ```ts
 fetcher.load("/some/route");
@@ -133,9 +133,9 @@ The `flushSync` option tells React Router DOM to wrap the initial state update f
 
 You can know the state of the fetcher with `fetcher.state`. It will be one of:
 
-- **idle** - Nothing is being fetched.
-- **submitting** - A form has been submitted. If the method is `GET`, then the route `loader` is being called. If `DELETE`, `PATCH`, `POST`, or `PUT`, then the route `action` is being called.
-- **loading** - The loaders for the routes are being reloaded after an `action` submission.
+- **idle** — Nothing is being fetched.
+- **submitting** — A form has been submitted. If the method is `GET`, then the route `loader` is being called. If `DELETE`, `PATCH`, `POST`, or `PUT`, then the route `action` is being called.
+- **loading** — The loaders for the routes are being reloaded after an `action` submission.
 
 ### `fetcher.data`
 

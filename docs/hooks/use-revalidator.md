@@ -57,7 +57,7 @@ While you can render multiple occurrences of `useRevalidator` at the same time, 
 
 Race conditions are automatically handled when calling `revalidate()` when a revalidation is already in progress for any other reason.
 
-If a navigation happens while a revalidation is in flight, the revalidation will be cancelled and fresh data will be requested from all loaders for the next page.
+If a navigation happens while a revalidation is in flight, the revalidation will be canceled and fresh data will be requested from all loaders for the next page.
 
 [form-component]: ../components/form
 [use-fetcher]: ./use-fetcher

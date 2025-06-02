@@ -34,7 +34,7 @@ Optional. The action to append to the closest route URL.
 
 The only option is `{ relative: "route" | "path"}`.
 
-- **route** default - relative to the route hierarchy, not the URL
-- **path** - makes the action relative to the URL paths, so `..` will remove one URL segment.
+- **route** default — relative to the route hierarchy, not the URL
+- **path** — makes the action relative to the URL paths, so `..` will remove one URL segment.
 
 [form_component]: ../components/form
