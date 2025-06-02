@@ -8,33 +8,33 @@ title: "create-remix (CLI)"
 
 The `create-remix` CLI will create a new Remix project. Without passing arguments, this command will launch an interactive CLI to configure the new project and set it up in a given directory.
 
-```sh
+```shellscript nonumber
 npx create-remix@latest
 ```
 
-Optionally you can pass the desired directory path as an argument:
+Optionally, you can pass the desired directory path as an argument:
 
-```sh
+```shellscript nonumber
 npx create-remix@latest <projectDir>
 ```
 
-The default application is a TypeScript app using the built in [Remix App Server][remix-app-server]. If you wish to create your application based on a different setup, you can use the [`--template`][template-flag-hash-link] flag:
+The default application is a TypeScript app using the built-in [Remix App Server][remix-app-server]. If you wish to create your application based on a different setup, you can use the [`--template`][template-flag-hash-link] flag:
 
-```sh
+```shellscript nonumber
 npx create-remix@latest --template <templateUrl>
 ```
 
 To get a full list of available commands and flags, run:
 
-```sh
+```shellscript nonumber
 npx create-remix@latest --help
 ```
 
 ### Package managers
 
-`create-remix` can also be invoked using various package managers, allowing you to choose between npm, Yarn, pnpm, and Bun for managing the install process.
+`create-remix` can also be invoked using various package managers, allowing you to choose between npm, Yarn, pnpm, and Bun for managing the installation process.
 
-```sh
+```shellscript nonumber
 npm create remix@latest <projectDir>
 # or
 yarn create remix@latest <projectDir>
@@ -57,7 +57,7 @@ A valid template can be:
 - a local file path to a directory of files — `./path/to/remix-template`
 - a local file path to a tarball — `./path/to/remix-template.tar.gz`
 
-```sh
+```shellscript nonumber
 npx create-remix@latest ./my-app --template remix-run/grunge-stack
 npx create-remix@latest ./my-app --template remix-run/remix/templates/remix
 npx create-remix@latest ./my-app --template remix-run/examples/basic

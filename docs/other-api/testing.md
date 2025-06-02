@@ -4,9 +4,9 @@ title: "@remix-run/testing"
 
 # `@remix-run/testing`
 
-This package contains utilities to assist in unit testing portions of your Remix application. This is accomplished by mocking the Remix route modules/assets manifest output by the compiler and generating an in-memory React Router app via [createMemoryRouter][create-memory-router].
+This package contains utilities to help in unit testing portions of your Remix application. This is achieved by mocking the Remix route modules/assets manifest output by the compiler and generating an in-memory React Router app via [createMemoryRouter][create-memory-router].
 
-The general usage of this is to test components/hooks that rely on Remix hooks/components which you do not have the ability to cleanly mock ([`useLoaderData`][use-loader-data], [`useFetcher`][use-fetcher], etc.). While it can also be used for more advanced testing such as clicking links and navigating to pages, those are better suited for End-to-End tests via something like [Cypress][cypress] or [Playwright][playwright].
+The general usage of this is to test components/hooks that rely on Remix hooks/components which you aren't able to cleanly mock ([`useLoaderData`][use-loader-data], [`useFetcher`][use-fetcher], etc.). While it can also be used for more advanced testing such as clicking links and navigating to pages, those are better suited for End-to-End tests via something like [Cypress][cypress] or [Playwright][playwright].
 
 ## Usage
 
