@@ -46,7 +46,7 @@ Optional. Defines the key used to restore scroll positions.
 
 <summary>Discussion</summary>
 
-Using `location.key` emulates the browser's default behavior. The user can navigate to the same URL multiple times in the stack and each entry gets its own scroll position to restore.
+Using `location.key` emulates the browser's default behavior. The user can navigate to the same URL multiple times in the stack, and each entry gets its own scroll position to restore.
 
 Some apps may want to override this behavior and restore position based on something else. Consider a social app that has four primary pages:
 
@@ -55,7 +55,7 @@ Some apps may want to override this behavior and restore position based on somet
 - "/notifications"
 - "/search"
 
-If the user starts at "/home", scrolls down a bit, clicks "messages" in the navigation menu, then clicks "home" in the navigation menu (not the back button!) there will be three entries in the history stack:
+If the user starts at `"/home"`, scrolls down a bit, clicks `"messages"` in the navigation menu, then clicks `"home"` in the navigation menu (not the back button!) there will be three entries in the history stack:
 
 ```
 1. /home
@@ -65,7 +65,7 @@ If the user starts at "/home", scrolls down a bit, clicks "messages" in the navi
 
 By default, React Router (and the browser) will have two different scroll positions stored for `1` and `3` even though they have the same URL. That means as the user navigated from `2` → `3` the scroll position goes to the top instead of restoring to where it was in `1`.
 
-A solid product decision here is to keep the users scroll position on the home feed no matter how they got there (back button or new link clicks). For this, you'd want to use the `location.pathname` as the key.
+A solid product decision here is to keep the users' scroll position on the home feed no matter how they got there (back button or new link clicks). For this, you'd want to use the `location.pathname` as the key.
 
 ```tsx
 <ScrollRestoration
@@ -75,7 +75,7 @@ A solid product decision here is to keep the users scroll position on the home f
 />
 ```
 
-Or you may want to only use the pathname for some paths, and use the normal behavior for everything else:
+Or you may want to only use the pathname for some paths and use the normal behavior for everything else:
 
 ```tsx
 <ScrollRestoration

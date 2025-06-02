@@ -6,7 +6,7 @@ title: Form
 
 A progressively enhanced HTML [`<form>`][form_element] that submits data to actions via `fetch`, activating pending states in `useNavigation` which enables advanced user interfaces beyond a basic HTML form. After a form's action completes, all data on the page is automatically revalidated from the server to keep the UI in sync with the data.
 
-Because it uses the HTML form API, server rendered pages are interactive at a basic level before JavaScript loads. Instead of Remix managing the submission, the browser manages the submission as well as the pending states (like the spinning favicon). After JavaScript loads, Remix takes over enabling web application user experiences.
+Because it uses the HTML form API, server-rendered pages are interactive at a basic level before JavaScript loads. Instead of Remix managing the submission, the browser manages the submission as well as the pending states (like the spinning favicon). After JavaScript loads, Remix takes over enabling web application user experiences.
 
 Form is most useful for submissions that should also change the URL or otherwise add an entry to the browser history stack. For forms that shouldn't manipulate the browser history stack, use [`<fetcher.Form>`][fetcher_form].
 
@@ -79,7 +79,7 @@ If you are using [`<ScrollRestoration>`][scroll_restoration_component], this let
 
 ### `replace`
 
-Replaces the current entry in the history stack, instead of pushing the new entry.
+Replaces the current entry in the history stack instead of pushing the new entry.
 
 ```tsx
 <Form replace />
