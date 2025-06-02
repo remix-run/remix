@@ -2,12 +2,12 @@
 
 # Remix Releases
 
-This page lists all releases/release notes for Remix back to `v2.0.0`. For releases prior to v2, please refer to the [Github Releases Page](https://github.com/remix-run/remix/releases).
+This page lists all releases/release notes for Remix back to `v2.0.0`. For releases prior to v2, please refer to the [GitHub Releases Page](https://github.com/remix-run/remix/releases).
 
-We manage release notes in this file instead of the paginated Github Releases Page for 2 reasons:
+We manage release notes in this file instead of the paginated GitHub Releases Page for two reasons:
 
-- Pagination in the Github UI means that you cannot easily search release notes for a large span of releases at once
-- The paginated Github interface also cuts off longer releases notes without indication in list view, and you need to click into the detail view to see the full set of release notes
+- Pagination in the GitHub UI means that you cannot search release notes for a large span of releases at once
+- The paginated GitHub interface also cuts off longer releases notes without indication in the list view, and you need to click into the detail view to see the full set of release notes
 
 <details>
   <summary>Table of Contents</summary>
@@ -430,7 +430,7 @@ Date: 2024-11-19
 
 ### Patch Changes
 
-- Stabilize the `future.v3_routeConfig` future flag, replacing `future.unstable_routeConfig`. This enables support for `routes.ts` to assist with the migration to React Router v7. ([#10236](https://github.com/remix-run/remix/pull/10236))
+- Stabilize the `future.v3_routeConfig` future flag, replacing `future.unstable_routeConfig`. This enables support for `routes.ts` to help with the migration to React Router v7. ([#10236](https://github.com/remix-run/remix/pull/10236))
 
   Note that if you had already enabled the `future.unstable_routeConfig` flag, your route config in `app/routes.ts` is no longer defined via the `routes` export and must now be defined via the default export.
 
@@ -535,7 +535,7 @@ This release stabilizes a handful of "unstable" APIs in preparation for the [pen
 - `unstable_flushSync` → `flushSync` (`useSubmit`, `fetcher.load`, `fetcher.submit`)
 - `unstable_viewTransition` → `viewTransition` (`<Link>`, `<Form>`, `useNavigate`, `useSubmit`)
 - ~~`future.unstable_optimizeDeps` → `future.v3_optimizeDeps` ([Docs](https://remix.run/docs/en/main/guides/dependency-optimization))~~
-  - ⚠️ This flag was not intended to stabilize in Remix v2 and was reverted back to `future.unstable_optimizeDeps` in `2.13.1`
+  - ⚠️ This flag was not intended to stabilize in Remix v2 and was reverted to `future.unstable_optimizeDeps` in `2.13.1`
 - `future.unstable_lazyRouteDiscovery` → `future.v3_lazyRouteDiscovery` ([Docs](https://remix.run/docs/guides/lazy-route-discovery))
 - `future.unstable_singleFetch` → `future.v3_singleFetch` ([Docs](https://remix.run/docs/guides/single-fetch))
 
@@ -619,7 +619,7 @@ Date: 2024-09-09
 
 #### Future Flag for Automatic Dependency Optimization (unstable)
 
-You can now opt-in to automatic dependency optimization during development by using the `future.unstable_optimizeDeps` future flag. For details, check out the docs at [Guides > Dependency optimization](https://remix.run/docs/en/main/guides/dependency-optimization). For users who were previously working around this limitation, you no longer need to explicitly add routes to Vite's `optimizeDeps.entries` nor do you need to disable the `remix-dot-server` plugin.
+You can now opt-in to automatic dependency optimization during development by using the `future.unstable_optimizeDeps` future flag. For details, check out the docs at [Guides > Dependency optimization](https://remix.run/docs/en/main/guides/dependency-optimization). For users previously working around this limitation, you no longer need to explicitly add routes to Vite's `optimizeDeps.entries` nor do you need to disable the `remix-dot-server` plugin.
 
 #### Improved Single Fetch Type Safety (unstable)
 

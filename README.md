@@ -9,7 +9,7 @@
 
 We are happy you're here!
 
-[Remix](https://remix.run) is a full stack web framework that lets you focus on the user interface and work back through web fundamentals to deliver a fast, slick, and resilient user experience that deploys to any Node.js server and even non-Node.js environments at the edge like Cloudflare Workers.
+[Remix](https://remix.run) is a full-stack web framework that lets you focus on the user interface and work back through web fundamentals to deliver a fast, slick, and resilient user experience that deploys to any Node.js server and even non-Node.js environments at the edge like Cloudflare Workers.
 
 Want to know more? Read the [Technical Explanation of Remix](https://remix.run/discussion/introduction).
 
@@ -30,4 +30,4 @@ If you're interested in contributing code and/or documentation, please see [our 
 
 ## Code of Conduct
 
-Please see our [code of conduct](CODE_OF_CONDUCT.md) for any questions about the kind of community we are trying to build here and what to do if you need help with someone who is not acting professionally.
+Please see our [code of conduct](CODE_OF_CONDUCT.md) for any questions about the kind of community we are trying to build here and what to do if you need help with someone not acting professionally.
