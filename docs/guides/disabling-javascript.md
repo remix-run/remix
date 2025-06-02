@@ -5,11 +5,11 @@ toc: false
 
 # Disabling JavaScript
 
-Do you ever look at a page on your site and think "why are we loading all of this JavaScript? There's nothing on this page but links!" This may seem a little odd for a JavaScript framework, but you can easily turn off JavaScript with a boolean and your data loading, links, and even forms will still work.
+Do you ever look at a page on your site and think "why are we loading all of this JavaScript? There's nothing on this page but links!" This may seem a little odd for a JavaScript framework, but you can turn off JavaScript with a boolean and your data loading, links, and even forms will still work.
 
 Here's how we like to do it:
 
-Open up each route module you want to include JavaScript for and add a "handle". This is a way for you to provide any kind of meta information about a route to the parent route (as you'll see in a moment).
+Open up each route module you want to include JavaScript for and add a `handle`. This is a way for you to provide any kind of meta-information about a route to the parent route (as you'll see in a moment).
 
 ```tsx
 export const handle = { hydrate: true };
@@ -53,7 +53,7 @@ export default function App() {
 
 All of your data loading will still work on the server render, and all of your `<Link>`s render normal `<a>` underneath, so they will continue to work.
 
-On any page, at anytime, you can flip between plain HTML and full client-side transitions.
+On any page, at any time, you can flip between plain HTML and full client-side transitions.
 
 If you need one tiny bit of interactivity, use a `<script dangerouslySetInnerHTML>`.
 

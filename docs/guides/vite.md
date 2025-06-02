@@ -4,7 +4,7 @@ title: Vite
 
 # Vite
 
-[Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we now support Vite as an alternative compiler. In the future, Vite will become the default compiler for Remix.
+[Vite][vite] is a powerful, performant, and extensible development environment for JavaScript projects. To improve and extend Remix's bundling capabilities, we now support Vite as an alternative compiler. In the future, Vite will become the default compiler for Remix.
 
 ## Classic Remix Compiler vs. Remix Vite
 
@@ -195,14 +195,14 @@ Vite handles mixed use of client and server code differently to the Classic Remi
 
 There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. Vite copies files from the `public` directory into the client build directory, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
 
-In order to align the default Remix project structure with the way Vite works, the build output paths have been changed. There is now a single `buildDirectory` option that defaults to `"build"`, replacing the separate `assetsBuildDirectory` and `serverBuildDirectory` options. This means that, by default, the server is now compiled into `build/server` and the client is now compiled into `build/client`.
+To align the default Remix project structure with the way Vite works, the build output paths have been changed. There is now a single `buildDirectory` option that defaults to `"build"`, replacing the separate `assetsBuildDirectory` and `serverBuildDirectory` options. This means that, by default, the server is now compiled into `build/server` and the client is now compiled into `build/client`.
 
 This also means that the following configuration defaults have been changed:
 
 - [publicPath][public-path] has been replaced by [Vite's "base" option][vite-base] which defaults to `"/"` rather than `"/build/"`.
 - [serverBuildPath][server-build-path] has been replaced by `serverBuildFile` which defaults to `"index.js"`. This file will be written into the server directory within your configured `buildDirectory`.
 
-One of the reasons that Remix is moving to Vite is so you have less to learn when adopting Remix.
+One of the reasons that Remix is moving to Vite is that you have less to learn when adopting Remix.
 This means that, for any additional bundling features you'd like to use, you should reference [Vite documentation][vite] and the [Vite plugin community][vite-plugins] rather than the Remix documentation.
 
 Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the existing Remix compiler.
@@ -441,15 +441,11 @@ tsx ./server.ts
 node --loader tsm ./server.ts
 ```
 
-Just remember that there might be some noticeable slowdown for initial server startup if you do this.
+Remember that there might be some noticeable slowdown for initial server startup if you do this.
 
 #### Migrating Cloudflare Functions
 
-<docs-warning>
-
-The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pages] which is specifically designed for fullstack applications, unlike [Cloudflare Workers Sites][cloudflare-workers-sites]. If you're currently on Cloudflare Workers Sites, refer to the [Cloudflare Pages migration guide][cloudflare-pages-migration-guide].
-
-</docs-warning>
+<docs-warning>The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pages], which is specifically designed for fullstack applications, unlike [Cloudflare Workers Sites][cloudflare-workers-sites]. If you're currently on Cloudflare Workers Sites, refer to the [Cloudflare Pages migration guide][cloudflare-pages-migration-guide].</docs-warning>
 
 👉 add `cloudflareDevProxyVitePlugin` **before** `remix` plugin to correctly override vite dev server's middleware!
 
@@ -465,7 +461,7 @@ export default defineConfig({
 });
 ```
 
-Your Cloudflare app may be setting the [the Remix Config `server` field][remix-config-server] to generate a catch-all Cloudflare Function.
+Your Cloudflare app may be setting [the Remix Config `server` field][remix-config-server] to generate a catch-all Cloudflare Function.
 With Vite, this indirection is no longer necessary.
 Instead, you can author a catch-all route directly for Cloudflare, just like how you would for Express or any other custom servers.
 
@@ -545,7 +541,7 @@ export default defineConfig({
 
 #### Remove `@remix-run/css-bundle`
 
-Vite has built-in support for CSS side effect imports, PostCSS and CSS Modules, among other CSS bundling features. The Remix Vite plugin automatically attaches bundled CSS to the relevant routes.
+Vite has built-in support for CSS side effect imports, PostCSS, and CSS Modules, among other CSS bundling features. The Remix Vite plugin automatically attaches bundled CSS to the relevant routes.
 
 The <nobr>[`@remix-run/css-bundle`][css-bundling]</nobr> package is redundant when using Vite since its `cssBundleHref` export will always be `undefined`.
 
@@ -584,7 +580,7 @@ If a route's `links` function is only used to wire up `cssBundleHref`, you can r
 
 #### Fix up CSS imports referenced in `links`
 
-<docs-info>This is not required for other forms of [CSS bundling][css-bundling], e.g. CSS Modules, CSS side effect imports, Vanilla Extract, etc.</docs-info>
+<docs-info>This is not required for other forms of [CSS bundling][css-bundling], e.g., CSS Modules, CSS side effect imports, Vanilla Extract, etc.</docs-info>
 
 If you are [referencing CSS in a `links` function][regular-css], you'll need to update the corresponding CSS imports to use [Vite's explicit `?url` import syntax.][vite-url-imports]
 
@@ -758,7 +754,7 @@ declare module "*.mdx" {
 
 ###### Map MDX frontmatter to route exports
 
-The Remix compiler allowed you to define `headers`, `meta` and `handle` route exports in your frontmatter. This Remix-specific feature is obviously not supported by the `remark-mdx-frontmatter` plugin. If you were using this feature, you should manually map frontmatter to route exports yourself:
+The Remix compiler allowed you to define `headers`, `meta` and `handle` route exports in your frontmatter. This Remix-specific feature is not supported by the `remark-mdx-frontmatter` plugin. If you were using this feature, you should manually map frontmatter to route exports yourself:
 
 👉 **Map frontmatter to route exports for MDX routes**
 
@@ -837,7 +833,7 @@ NODE_OPTIONS="--inspect-brk" npm run dev
 ```
 
 Then you can attach a debugger from your browser.
-For example, in Chrome you can open up `chrome://inspect` or click the NodeJS icon in the dev tools to attach the debugger.
+For example, in Chrome you can open up `chrome://inspect` or click the Node.js icon in the dev tools to attach the debugger.
 
 #### vite-plugin-inspect
 
@@ -897,7 +893,7 @@ Open up `stats.html` in your browser to analyze your bundle.
 ## Troubleshooting
 
 Check the [debugging][debugging] and [performance][performance] sections for general troubleshooting tips.
-Also, see if anyone else is having a similar problem by looking through the [known issues with the remix vite plugin on github][issues-vite].
+Also, see if anyone else is having a similar problem by looking through the [known issues with the remix vite plugin on GitHub][issues-vite].
 
 #### HMR
 
@@ -908,7 +904,7 @@ check out our [discussion on Hot Module Replacement][hmr] to learn more about th
 
 Vite supports both ESM and CJS dependencies, but sometimes you might still run into issues with ESM / CJS interop.
 Usually, this is because a dependency is not properly configured to support ESM.
-And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
+And we don't blame them, it's [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
 
 For a walkthrough of fixing an example bug, check out [🎥 How to Fix CJS/ESM Bugs in Remix][how-fix-cjs-esm].
 
@@ -930,7 +926,7 @@ Uncaught ReferenceError: process is not defined
 Then you'll need to track down which module is pulling in dependencies that except server-only globals like `process` and isolate code either in a [separate `.server` module or with `vite-env-only`][explicitly-isolate-server-only-code].
 Since Vite uses Rollup to treeshake your code in production, these errors only occur in development.
 
-#### Plugin usage with other Vite-based tools (e.g. Vitest, Storybook)
+#### Plugin usage with other Vite-based tools (e.g., Vitest, Storybook)
 
 The Remix Vite plugin is only intended for use in your application's development server and production builds.
 While there are other Vite-based tools such as Vitest and Storybook that make use of the Vite config file, the Remix Vite plugin has not been designed for use with these tools.
@@ -989,11 +985,11 @@ export default defineConfig({
 });
 ```
 
-#### Styles disappearing in development when document remounts
+#### Styles disappear in development when `document` remounts
 
 When React is used to render the entire document (as Remix does) you can run into issues when elements are dynamically injected into the `head` element. If the document is re-mounted, the existing `head` element is removed and replaced with an entirely new one, removing any `style` elements that Vite injects during development.
 
-This is a known React issue that is fixed in their [canary release channel][react-canaries]. If you understand the risks involved, you can pin your app to a specific [React version][react-versions] and then use [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
+This is a known React issue fixed in their [canary release channel][react-canaries]. If you understand the risks involved, you can pin your app to a specific [React version][react-versions] and then use [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
 
 ```json filename=package.json
 {
@@ -1016,7 +1012,7 @@ In Remix, this issue can surface when rendering alternates between your [root ro
 
 It can also happen due to hydration errors since it causes React to re-render the entire page from scratch. Hydration errors can be caused by your app code, but they can also be caused by browser extensions that manipulate the document.
 
-This is relevant for Vite because—during development—Vite transforms CSS imports into JS files that inject their styles into the document as a side-effect. Vite does this to support lazy-loading and HMR of static CSS files.
+This is relevant for Vite because — during development — Vite transforms CSS imports into JS files that inject their styles into the document as a side effect. Vite does this to support lazy-loading and HMR of static CSS files.
 
 For example, let's assume your app has the following CSS file:
 

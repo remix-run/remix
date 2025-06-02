@@ -4,7 +4,7 @@ title: API Routes
 
 # API Routes
 
-You might be used to building React apps that don't run on the server, or least not very much of it does, so it's backed by a set of API routes. In Remix, most of your routes are both your UI and your API, so Remix in the browser knows how to talk to itself on the server.
+You might be used to building React apps that don't run on the server, or at least not very much of it does, so it's backed by a set of API routes. In Remix, most of your routes are both your UI and your API, so Remix in the browser knows how to talk to itself on the server.
 
 In general, you don't need the concept of "API Routes" at all. But we knew you'd come poking around with this term, so here we are!
 
@@ -92,7 +92,7 @@ function CitySearchCombobox() {
 
 ## Resource Routes
 
-In other cases, you may need routes that are part of your application, but aren't part of your application's UI. Maybe you want a loader that renders a report as a PDF:
+In other cases, you may need routes that are part of your application but aren't part of your application's UI. Maybe you want a loader that renders a report as a PDF:
 
 ```tsx
 export async function loader({

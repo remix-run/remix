@@ -30,11 +30,11 @@ export default defineConfig({
 
 <docs-info>If you are not yet using Vite, you can provide Future Flags via the [`remix.config.js` `future`][remix-config-future] option</docs-info>
 
-- Once an unstable feature reaches a stable state, we remove the special prefix and include the feature in the next minor release. At this point, the API's structure remains consistent throughout subsequent minor releases.
+- Once an unstable feature reaches a stable state, we remove the special prefix and include the feature in the next minor release. At this point, the API's structure remains consistent throughout later minor releases.
 
 - This approach allows us to refine the API collaboratively with early adopters, incorporating necessary changes in the unstable phase without affecting all users. The stable releases then benefit from these improvements without disruptions.
 
-- If you're utilizing features labeled with `unstable_*` flags, it's crucial to review the release notes for each minor release. This is because the behavior or structure of these features might evolve. Your feedback during this phase is invaluable in enhancing the feature before the final release!
+- If you're using features labeled with `unstable_*` flags, it's crucial to review the release notes for each minor release. This is because the behavior or structure of these features might evolve. Your feedback during this phase is invaluable in enhancing the feature before the final release!
 
 ## Managing Breaking Changes with Future Flags
 
@@ -57,12 +57,12 @@ export default defineConfig({
 
 - Both the existing `v2` behavior and the new `v3_somethingDifferent` behavior coexist simultaneously.
 - Applications can adopt changes incrementally, one step at a time, instead of having to adjust to a multitude of changes all at once in the next major release.
-- If all the `v3_*` future flags are enabled, transitioning to `v3` should ideally not necessitate any changes to your codebase.
+- If all the `v3_*` future flags are enabled, transitioning to `v3` should ideally not require any changes to your codebase.
 - Some future flags that bring about breaking changes initially start as `unstable_*` flags. These might undergo modifications during minor releases. Once they become `v3_*` future flags, the corresponding API is set and won't change further.
 
 ## Summary
 
-Our development strategy focuses on gradual feature adoption and seamless version upgrades for major releases. This empowers developers to selectively integrate new features, avoiding the need for extensive code adjustments during version transitions. By introducing features through `unstable_*` flags, we refine the API collaboratively with early adopters while ensuring stable releases benefit from enhancements. Through careful management of breaking changes using `v3_*` flags, we provide the flexibility to adopt changes incrementally, facilitating a smoother transition between major versions. While this increases the complexity for developing Remix the framework, this developer-centric approach greatly simplifies application development with Remix, ultimately leading to improved software quality and (hopefully!) developer satisfaction.
+Our development strategy focuses on gradual feature adoption and seamless version upgrades for major releases. This empowers developers to selectively integrate new features, avoiding the need for extensive code adjustments during version transitions. By introducing features through `unstable_*` flags, we refine the API collaboratively with early adopters while ensuring stable releases benefit from enhancements. Through careful management of breaking changes using `v3_*` flags, we provide the flexibility to adopt changes incrementally, facilitating a smoother transition between major versions. While this increases the complexity of developing Remix the framework, this developer-centric approach greatly simplifies application development with Remix, ultimately leading to improved software quality and (hopefully!) developer satisfaction.
 
 [vite-config-future]: ../file-conventions/vite-config#future
 [remix-config-future]: ../file-conventions/remix-config#future

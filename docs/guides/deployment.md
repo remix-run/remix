@@ -13,7 +13,7 @@ Running `npx create-remix@latest` with the `--template` flag allows you to provi
 npx create-remix@latest --template remix-run/remix/templates/express
 ```
 
-Each target has unique file structures, configuration files, cli commands that need to be run, server environment variables to be set etc. Because of this, it's important to read the README.md to deploy the app. It's got all of the steps you need to take to get your app live within minutes.
+Each target has unique file structures, configuration files, cli commands that need to be run, server environment variables to be set, etc. Because of this, it's important to read the README.md to deploy the app. It's got all the steps you need to take to get your app live within minutes.
 
 <docs-info>After initializing an app, make sure to read the README.md</docs-info>
 

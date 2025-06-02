@@ -70,7 +70,7 @@ export async function loader({
 
 [Watch on YouTube][watch_on_youtube]
 
-In HTML, forms can post to any URL with the action prop and the app will navigate there:
+In HTML, forms can post to any URL with the action prop, and the app will navigate there:
 
 ```tsx
 <Form action="/some/where" />
@@ -229,7 +229,7 @@ export async function action({
 }
 ```
 
-Again, `formData.getAll()` is often all you need, we encourage you to give it a shot!
+Again, `formData.getAll()` is often all you need, we encourage you to give it a try!
 
 [form_data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [query_string]: https://npm.im/query-string

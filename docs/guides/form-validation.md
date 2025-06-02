@@ -70,7 +70,7 @@ export async function action({
 }
 ```
 
-If any validation errors are found, they are returned from the `action` to the client. This is our way of signaling to the UI that something needs to be corrected, otherwise the user will be redirected to the dashboard.
+If any validation errors are found, they are returned from the `action` to the client. This is our way of signaling to the UI that something needs to be corrected; otherwise the user will be redirected to the dashboard.
 
 ## Step 3: Displaying Validation Errors
 

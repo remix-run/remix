@@ -11,11 +11,11 @@ There are two primary cases where a Remix site should send a 404:
 - The URL doesn't match any routes in the app
 - Your loader didn't find any data
 
-The first case is already handled by Remix, you don't have to throw a response yourself. It knows your routes, so it knows if nothing matched (_consider using a [Splat Route][splat-route] to handle this case_). The second case is up to you, but it's really easy.
+Remix already handles the first case, you don't have to throw a response yourself. It knows your routes, so it knows if nothing matched (_consider using a [Splat Route][splat-route] to handle this case_). The second case is up to you, but it's really easy.
 
 ## How to Send a 404
 
-As soon as you know you don't have what the user is looking for you should _throw a response_.
+As soon as you know you don't have what the user is looking for, you should _throw a response_.
 
 ```tsx filename=app/routes/page.$slug.tsx
 export async function loader({
@@ -44,7 +44,7 @@ Throwing also ensures that your route component doesn't render if the loader was
 
 ## Root Error Boundary
 
-You probably already have one at the root of your app. This will handle all thrown responses that weren't handled in a nested route. Here's a sample:
+You probably already have one at the root of your app. This will handle all thrown responses not handled in a nested route. Here's a sample:
 
 ```tsx
 export function ErrorBoundary() {
