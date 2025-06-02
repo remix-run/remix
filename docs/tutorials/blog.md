@@ -12,7 +12,7 @@ We're going to be short on words and quick on code in this quickstart. If you're
 
 This tutorial uses TypeScript. Remix can definitely be used without TypeScript. We feel most productive when writing TypeScript, but if you'd prefer to skip the TypeScript syntax, feel free to write your code in JavaScript.
 
-<docs-info>💿 Hey I'm Derrick the Remix Compact Disc 👋 Whenever you're supposed to _do_ something you'll see me</docs-info>
+<docs-info>💿 Hey I'm Derrick the Remix Compact Disc 👋 Whenever you're supposed to _do_ something, you'll see me</docs-info>
 
 ## Prerequisites
 
@@ -24,7 +24,7 @@ If you want to follow this tutorial locally on your own computer, it is importan
 
 - [Node.js][node-js] version (>=18.0.0)
 - [npm][npm] 7 or greater
-- A code editor ([VSCode][vs-code] is a nice one)
+- A code editor ([VSCode][vs-code] is nice)
 
 ## Creating the project
 
@@ -45,9 +45,9 @@ You can read more about the stacks available in [the stacks docs][the-stacks-doc
 
 We're using [the Indie stack][the-indie-stack], which is a full application ready to deploy to [fly.io][fly-io]. This includes development tools as well as production-ready authentication and persistence. Don't worry if you're unfamiliar with the tools used, we'll walk you through things as we go.
 
-<docs-info>Note, you can definitely start with "Just the basics" instead by running `npx create-remix@latest` without the `--template` flag. The generated project is much more minimal that way. However, some bits of the tutorial will be different for you and you'll have to configure things for deployment manually.</docs-info>
+<docs-info>Note, you can definitely start with "Just the basics" instead by running `npx create-remix@latest` without the `--template` flag. The generated project is much more minimal that way. However, some bits of the tutorial will be different for you, and you'll have to configure things for deployment manually.</docs-info>
 
-💿 Now, open the project that was generated in your preferred editor and check the instructions in the `README.md` file. Feel free to read over this. We'll get to the deployment bit later in the tutorial.
+💿 Now, open the project that was generated in your preferred editor and check the instructions in the `README.md` file. Feel free to read over this. We'll get to the deployment a bit later in the tutorial.
 
 💿 Let's start the dev server:
 
@@ -90,7 +90,7 @@ You can put it anywhere you like. I stuck it right above the icons of all the te
 
 The Remix Indie stack has [Tailwind CSS][tailwind] support pre-configured. If you'd prefer to not use Tailwind CSS, you're welcome to remove it and use something else. Learn more about your styling options with Remix in [the styling guide][the-styling-guide].
 
-Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
+Back in the browser, go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
 💿 Create a new file at `app/routes/posts._index.tsx`
 
@@ -104,7 +104,7 @@ We could have named it just `posts.tsx` but we'll have another route soon, and i
 
 Now if you navigate to the `/posts` route, you'll get an error indicating there's no way to handle the request. That's because we haven't done anything in that route yet! Let's add a component and export it as the default:
 
-💿 Make the posts component
+💿 Make the `Posts` component
 
 ```tsx filename=app/routes/posts._index.tsx
 export default function Posts() {
@@ -124,7 +124,7 @@ Data loading is built into Remix.
 
 If your web dev background is primarily in the last few years, you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also its own API route, and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
 
-If your background is a bit farther back than that with MVC web frameworks like Rails, then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair instead of writing detached jQuery code to dress up the user interactions. It's progressive enhancement realized in its fullest. Additionally, your routes are their own controller.
+If your background is a bit farther back than that with MVC web frameworks like Rails, then you can think of your Remix routes as backend views using React for templating. However, then they know how to seamlessly hydrate in the browser to add some flair instead of writing detached jQuery code to dress up the user interactions. It's progressive enhancement realized in its fullest. Additionally, your routes are their own controller.
 
 So let's get to it and provide some data to our component.
 
@@ -159,7 +159,7 @@ export default function Posts() {
 }
 ```
 
-`loader` functions are the backend "API" for their component, and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
+`loader` functions are the backend "API" for their component, and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our `post` data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
 
 <docs-error>
 Whatever you return from your loader will be exposed to the client, even if the component doesn't render it. Treat your loaders with the same care as public API endpoints.
@@ -230,7 +230,7 @@ export async function getPosts(): Promise<Array<Post>> {
 
 Note that we're making the `getPosts` function `async` because even though it's not currently doing anything async it will soon!
 
-💿 Update the posts route to use our new posts module:
+💿 Update the `posts` route to use our new `posts` module:
 
 ```tsx filename=app/routes/posts._index.tsx lines=[4,6-8] nocopy
 import { json } from "@remix-run/node";
@@ -247,11 +247,11 @@ export const loader = async () => {
 
 ## Pulling from a data source
 
-With the Indie Stack, we've got a SQLite database already set up and configured for us, so let's update our Database Schema to handle SQLite. We're using [Prisma][prisma] to interact with the database, so we'll update that schema and Prisma will take care of updating our database to match the schema for us (as well as generating and running the necessary SQL commands for the migration).
+With the Indie Stack, we've got an SQLite database already set up and configured for us, so let's update our Database Schema to handle SQLite. We're using [Prisma][prisma] to interact with the database, so we'll update that schema, and Prisma will take care of updating our database to match the schema for us (as well as generating and running the necessary SQL commands for the migration).
 
 <docs-info>You do not have to use Prisma when using Remix. Remix works great with whatever existing database or data persistence services you're currently using.</docs-info>
 
-If you've never used Prisma before, don't worry, we'll walk you through it.
+If you've never used Prisma before, don't worry; we'll walk you through it.
 
 💿 First, we need to update our Prisma schema:
 
@@ -405,9 +405,9 @@ export default function PostSlug() {
 
 The part of the filename attached to the `$` becomes a named key on the `params` object that comes into your loader. This is how we'll look up our blog post.
 
-Now, let's actually get the post contents from the database by its slug.
+Now, let's actually get the `post` contents from the database by its slug.
 
-💿 Add a `getPost` function to our post module
+💿 Add a `getPost` function to our `post` module
 
 ```tsx filename=app/models/post.server.ts lines=[7-9]
 import { prisma } from "~/db.server";
@@ -488,9 +488,9 @@ Quick note on that `invariant` for the params. Because `params` comes from the U
 
 We also have an invariant for the post. We'll handle the `404` case better later. Keep going!
 
-Now let's get that markdown parsed and rendered to HTML to the page. There are a lot of Markdown parsers, we'll use `marked` for this tutorial because it's really easy to get working.
+Now let's get that Markdown parsed and rendered to HTML to the page. There are a lot of Markdown parsers, we'll use `marked` for this tutorial because it's really easy to get working.
 
-💿 Parse the markdown into HTML
+💿 Parse the Markdown into HTML
 
 ```shellscript nonumber
 npm add marked@^4.3.0
@@ -542,7 +542,7 @@ Right now, our blog posts just come from seeding the database. Not a real soluti
 
 Let's make a new "admin" section of the app.
 
-💿 First, let's add a link to the admin section on the posts index route:
+💿 First, let's add a link to the admin section on the `posts index route:
 
 ```tsx filename=app/routes/posts._index.tsx
 // ...
@@ -603,7 +603,7 @@ export default function PostAdmin() {
 }
 ```
 
-You should recognize several of the things we're doing in there from what we've done so far. With that, you should have a decent looking page with the posts on the left and a placeholder on the right.
+You should recognize several of the things we're doing in there from what we've done so far. With that, you should have a decent-looking page with the posts on the left and a placeholder on the right.
 Now, if you click on the Admin link, it'll take you to [http://localhost:3000/posts/admin][http-localhost-3000-posts-admin].
 
 ### Index Routes
@@ -630,7 +630,7 @@ export default function AdminIndex() {
 }
 ```
 
-If you refresh you're not going to see it yet. Every route that starts with `app/routes/posts.admin.` can now render _inside_ of `app/routes/posts.admin.tsx` when their URL matches. You get to control which part of the `posts.admin.tsx` layout the child routes render.
+If you refresh, you're not going to see it yet. Every route that starts with `app/routes/posts.admin.` can now render _inside_ of `app/routes/posts.admin.tsx` when their URL matches. You get to control which part of the `posts.admin.tsx` layout the child routes render.
 
 💿 Add an outlet to the admin page
 
@@ -679,7 +679,7 @@ export default function PostAdmin() {
 }
 ```
 
-Hang with us for a minute, index routes can be confusing at first. Just know that when the URL matches the parent route's path, the index will render inside the `Outlet`.
+Hang with us for a minute, index routes can be confusing at first. Know that when the URL matches the parent route's path, the index will render inside the `Outlet`.
 
 Maybe this will help, let's add the `/posts/admin/new` route and see what happens when we click the link.
 
@@ -798,7 +798,7 @@ export const action = async ({
 
 That's it. Remix (and the browser) will take care of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
 
-In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN!
+In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and remember, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN!
 
 - [`Request`][mdn-request]
 - [`Request.formData`][mdn-request-form-data].
@@ -824,7 +824,7 @@ Whether you're using TypeScript or not, we've got a problem when the user doesn'
 
 Let's add some validation before we create the post.
 
-💿 Validate if the form data contains what we need, and return the errors if not
+💿 Validate if the form data contains what we need and return the errors if not
 
 ```tsx filename=app/routes/posts.admin.new.tsx lines=[2,16-26]
 import type { ActionFunctionArgs } from "@remix-run/node";
@@ -929,7 +929,7 @@ export default function NewPost() {
 }
 ```
 
-TypeScript is still mad, because someone could call our API with non-string values, so let's add some invariants to make it happy.
+TypeScript is still mad because someone could call our API with non-string values, so let's add some invariants to make it happy.
 
 ```tsx filename=app/routes/posts.admin.new.tsx nocopy
 //...
@@ -961,7 +961,7 @@ export const action = async ({
 
 ## Progressive Enhancement
 
-For some real fun, [disable JavaScript][disable-java-script] in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser 🤯 But that's not the point. What's cool about it is that this means our UI is resilient to network issues. But we really _like_ having JavaScript in the browser and there are a lot of cool things we can do when we've got it, so make sure to re-enable JavaScript before continuing, because we're going to need it to _progressively enhance_ the user experience next.
+For some real fun, [disable JavaScript][disable-java-script] in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser 🤯 But that's not the point. What's cool about it is that this means our UI is resilient to network issues. But we really _like_ having JavaScript in the browser. There are a lot of cool things we can do when we've got it, so make sure to re-enable JavaScript before continuing, because we're going to need it to _progressively enhance_ the user experience next.
 
 Let's slow this down and add some "pending UI" to our form.
 
@@ -1026,9 +1026,9 @@ That's it for today! Here are some bits of homework to implement if you want to 
 
 **Update/Delete posts:** make a `posts.admin.$slug.tsx` page for your posts. This should open an edit page for the post that allows you to update the post or even delete it. The links are already there in the sidebar, but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts.$slug.tsx` and `app/routes/posts.admin.new.tsx`. You just gotta put it together.
 
-**Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Pending UI guide][the-pending-ui-guide].
+**Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly, and if the tweet is deleted, it reverts to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Pending UI guide][the-pending-ui-guide].
 
-**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip: if you want to make it, so you're the only one who can make posts, simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere][somewhere] 😈
+**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip: if you want to make it, so you're the only one who can make posts, check the user's email in your loaders and actions and if it's not yours redirect them [somewhere][somewhere] 😈
 
 **Customize the app:** If you're happy with Tailwind CSS, keep it around, otherwise, check [the styling guide][the-styling-guide] to learn of other options. Remove the `Notes` model and routes, etc. Whatever you want to make this thing yours.
 

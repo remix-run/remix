@@ -16,23 +16,23 @@ You want to learn Remix? You're in the right place. Let's build [Remix Jokes][re
 
 This tutorial is the comprehensive way to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog, and I'm sure they'll be just as excited about Remix as you are (though I make no guarantees).
 
-We're going to be laser focused on Remix. This means that we're going to skip over a few things that are a distraction from the core ideas we want you to learn about Remix. For example, we'll show you how to get a CSS stylesheet on the page, but we're not going to make you write the styles by yourself. So we'll just give you stuff you can copy/paste for that kind of thing. However, if you'd prefer to write it all out yourself, you totally can (it'll just take you much longer). So we'll put it in little `<details>` elements you have to click to expand to not spoil anything if you'd prefer to code it out yourself.
+We're going to be laser-focused on Remix. This means that we're going to skip over a few things that are a distraction from the core ideas we want you to learn about Remix. For example, we'll show you how to get a CSS stylesheet on the page, but we're not going to make you write the styles by yourself. So we'll just give you stuff you can copy/paste for that kind of thing. However, if you'd prefer to write it all out yourself, you totally can (it'll just take you much longer). So we'll put it in little `<details>` elements you have to click to expand to not spoil anything if you'd prefer to code it out yourself.
 
 <details>
 
 <summary>Click me</summary>
 
-There are several areas in the tutorial where we stick code behind one of these `<details>` elements. This is so you can choose how much copy/paste you want to do without us spoiling it for you. We don't recommend struggling with concepts unrelated to Remix though, like guessing what class names to use. Feel free to reference these sections to check your work once you get the main point of the tutorial. Or if you want to run through things quickly then you can just copy/paste stuff as you go as well. We won't judge you!
+There are several areas in the tutorial where we stick code behind one of these `<details>` elements. This is so you can choose how much copy/paste you want to do without us spoiling it for you. We don't recommend struggling with concepts unrelated to Remix, though, like guessing what class names to use. Feel free to reference these sections to check your work once you get the main point of the tutorial. Or if you want to run through things quickly, then you can copy/paste stuff as you go as well. We won't judge you!
 
 </details>
 
-We'll be linking to various docs (Remix docs as well as web docs on [MDN][mdn]) throughout the tutorial (if you don't already use MDN, you'll find yourself using it a _lot_ with Remix, and getting better at the web while you're at it). If you're ever stuck, make sure you check into any docs links you may have skipped. Part of the goal of this tutorial is to get you acclimated to the Remix and web API documentation, so if something's explained in the docs, then you'll be linked to those instead of rehashing it all out in here.
+We'll be linking to various docs (Remix docs as well as web docs on [MDN][mdn]) throughout the tutorial. If you don't already use MDN, you'll find yourself using it a _lot_ with Remix, and getting better at the web while you're at it. If you're ever stuck, make sure you check into any docs links you may have skipped. Part of the goal of this tutorial is to get you acclimated to the Remix and web API documentation, so if something's explained in the docs, then you'll be linked to those instead of rehashing it all out in here.
 
 This tutorial will be using TypeScript. Feel free to follow along and skip/remove the TypeScript bits. We find that Remix is made even better when you're using TypeScript, especially since we'll also be using [Prisma][prisma] to access our data models from the SQLite database.
 
 <docs-info>💿 Hello, I'm Rachel the Remix Disc. I'll show up whenever you have to actually _do_ something.</docs-info>
 
-<docs-warning>Feel free to explore as you go, but if you deviate from the tutorial too much (like trying to deploy before getting to that step for example), you may find it doesn't work like you expected because you missed something important.</docs-warning>
+<docs-warning>Feel free to explore as you go. However, if you deviate from the tutorial too much (like trying to deploy before getting to that step, for example), you may find it doesn't work like you expected because you missed something important.</docs-warning>
 
 <docs-error>We won't add JavaScript to the browser until toward the end of the tutorial. This is to show you how well your application will work when JavaScript takes a long time to load (or fails to load at all). So until we actually add JavaScript to the page, you won't be able to use things like `useState` until we get to that step.</docs-error>
 
@@ -58,11 +58,11 @@ You'll find links to the sections of the tutorial in the navbar (top of the page
 
 ## Prerequisites
 
-You can follow along with this tutorial on [CodeSandbox][code-sandbox] (a fantastic in-browser editor) or locally on your own computer. If you use the CodeSandbox approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
+You can follow along with this tutorial on [CodeSandbox][code-sandbox] (a fantastic in-browser editor) or locally on your own computer. If you use the CodeSandbox approach, then all you need is a good internet connection and a modern browser. If you run things locally, then you're going to need some things installed:
 
 - [Node.js][node-js] version (>=18.0.0)
 - [npm][npm] 7 or greater
-- A code editor ([VSCode][vs-code] is a nice one)
+- A code editor ([VSCode][vs-code] is nice)
 
 If you'd like to follow along with the deployment step at the end, you'll also want an account on [Fly.io][fly-io].
 
@@ -122,11 +122,11 @@ cd remix-jokes
 
 Now you're in the `remix-jokes` directory. All other commands you run from here on out will be in that directory.
 
-💿 Great, now open that up in your favorite editor and let's explore the project structure a bit.
+💿 Great, now open that up in your favorite editor, and let's explore the project structure a bit.
 
 ## Explore the project structure
 
-Here's the tree structure. Hopefully what you've got looks a bit like this:
+Here's the tree structure. Hopefully, what you've got looks a bit like this:
 
 ```
 remix-jokes
@@ -183,7 +183,7 @@ This will start the server and output this:
 Remix App Server started at http://localhost:3000
 ```
 
-Open up that URL and you should be presented with a minimal page pointing to some docs.
+Open up that URL, and you should be presented with a minimal page pointing to some docs.
 
 💿 Now stop the server and delete this directory:
 
@@ -231,7 +231,7 @@ app
 └── root.tsx
 ```
 
-💿 With that set up, go ahead and start the dev server up with this command:
+💿 With that setup, go ahead and start the dev server up with this command:
 
 ```shellscript nonumber
 npm run dev
@@ -466,7 +466,7 @@ body {
 }
 ```
 
-💿 Now update `app/routes/_index.tsx` to import that css file. Then add a `links` export (as described in [the documentation][links]) to add that link to the page.
+💿 Now update `app/routes/_index.tsx` to import that CSS file. Then add a `links` export (as described in [the documentation][links]) to add that link to the page.
 
 <details>
 
@@ -536,17 +536,17 @@ Hooray! But I want to call out something important and exciting. You know how th
 
 ![The jokes page with no background gradient][the-jokes-page-with-no-background-gradient]
 
-🤯 What is this? Why aren't the CSS rules applied? Did the `body` get removed or something?! Nope. If you open the Elements tab of the dev tools you'll notice that the link tag isn't there at all!
+🤯 What is this? Why aren't the CSS rules applied? Did the `body` get removed or something?! Nope. If you open the Elements tab of the dev tools, you'll notice that the link tag isn't there at all!
 
 <docs-info>
 
-This means that you don't have to worry about unexpected CSS clashes when you're writing your CSS. You can write whatever you like and so long as you check each route your file is linked on you'll know that you haven't impacted other pages! 🔥
+This means that you don't have to worry about unexpected CSS clashes when you're writing your CSS. You can write whatever you like, and so long as you check each route your file is linked on, you'll know that you haven't impacted other pages! 🔥
 
-This also means your CSS files can be cached long-term and your CSS is naturally code-split. Performance FTW ⚡
+This also means your CSS files can be cached long-term, and your CSS is naturally code-split. Performance FTW ⚡
 
 </docs-info>
 
-That's pretty much all there is to it for styling with the tutorial. The rest is just writing the CSS which you're welcome to do if you want, or simply copy the styles from below.
+That's pretty much all there is to it for styling with the tutorial. The rest is just writing the CSS, which you're welcome to do if you want or simply copy the styles from below.
 
 <details>
 
@@ -1181,7 +1181,7 @@ nav ul a:hover {
 
 <docs-info>The `app/root.tsx` will be the one that links to the `global` CSS files. Why do you think the name "global" makes sense for the root route's styles?</docs-info>
 
-The `global-large.css` and `global-medium.css` files are for media query-based CSS.
+The `global-large.css` and `global-medium.css` files are for media-query-based CSS.
 
 <docs-info>Did you know that `<link />` tags can use media queries? [Check out the MDN page for `<link />`][check-out-the-mdn-page-for-link].</docs-info>
 
@@ -1337,7 +1337,7 @@ As we work through the rest of the tutorial, you may want to check the class nam
 
 One quick note about CSS. A lot of you folks may be used to using runtime libraries for CSS (like [Styled-Components][styled-components]). While you can use those with Remix, we'd like to encourage you to look into more traditional approaches to CSS. Many of the problems that led to the creation of these styling solutions aren't really problems in Remix, so you can often go with a simpler styling approach.
 
-That said, many Remix users are very happy with [Tailwind CSS][tailwind], and we recommend this approach. Basically, if it can give you a URL (or a CSS file which you can import to get a URL), then it's generally a good approach because Remix can then leverage the browser platform for caching and loading/unloading.
+That said, many Remix users are thrilled with [Tailwind CSS][tailwind], and we recommend this approach. Basically, if it can give you a URL (or a CSS file which you can import to get a URL), then it's generally a good approach because Remix can then leverage the browser platform for caching and loading/unloading.
 
 ## Database
 
@@ -1578,7 +1578,7 @@ export const db = singleton(
 
 I'll leave analysis of this code as an exercise for the reader because again, this has nothing to do with Remix directly.
 
-The one thing that I will call out is the file name convention. The `.server` part of the filename informs Remix that this code should never end up in the browser. This is optional, because Remix does a good job of ensuring server code doesn't end up in the client. But sometimes some server-only dependencies are difficult to treeshake, so adding the `.server` to the filename is a hint to the compiler to not worry about this module or its imports when bundling for the browser. The `.server` acts as a sort of boundary for the compiler.
+The one thing that I will call out is the file name convention. The `.server` part of the filename informs Remix that this code should never end up in the browser. This is optional because Remix does a good job of ensuring server code doesn't end up in the client. But sometimes some server-only dependencies are challenging to treeshake, so adding the `.server` to the filename is a hint to the compiler to not worry about this module or its imports when bundling for the browser. The `.server` acts as a sort of boundary for the compiler.
 
 ### Read from the database in a Remix loader
 
@@ -1589,7 +1589,7 @@ Our goal is to put a list of jokes on the `/jokes` route, so we can have a list 
 To _load_ data in a Remix route module, you use a [`loader`][loader]. This is simply an `async` function you export that returns a response, and is accessed on the component through the [`useLoaderData`][use-loader-data] hook. Here's a quick example:
 
 ```tsx nocopy
-// this is just an example. No need to copy/paste this 😄
+// This is just an example. No need to copy/paste this 😄
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
@@ -1716,11 +1716,11 @@ export const loader = async () => {
 };
 ```
 
-Notice that all I need for this page is the joke `id` and `name`. I don't need to bother getting the `content`. I'm also limiting to a total of 5 items and ordering by creation date, so we get the latest jokes. So with `prisma`, I can change my query to be exactly what I need and avoid sending too much data to the client! That makes my app faster and more responsive for my users.
+Notice that all I need for this page is the joke `id` and `name`. I don't need to bother getting the `content`. I'm also limiting to a total of five items and ordering by creation date, so we get the latest jokes. So with `prisma`, I can change my query to be exactly what I need and avoid sending too much data to the client! That makes my app faster and more responsive for my users.
 
 And to make it even cooler, you don't necessarily need Prisma or direct database access to do this. You've got a GraphQL backend you're hitting? Sweet, use your regular GraphQL stuff in your loader. It's even better than doing it on the client because you don't need to worry about shipping a [huge GraphQL client][huge-graphql-client] to the client. Keep that on your server and filter down to what you want.
 
-Oh, you've just got REST endpoints you hit? That's fine too! You can easily filter out the extra data before sending it off in your loader. Because it all happens on the server, you can save your user's download size easily without having to convince your backend engineers to change their entire API. Neat!
+Oh, you've just got REST endpoints you hit? That's fine too! You can filter out the extra data before sending it off in your loader. Because it all happens on the server, you can save your user's download size easily without having to convince your backend engineers to change their entire API. Neat!
 
 Filtering out data you don't render isn't just about sending less over the wire, you should also filter out any sensitive data you don't want exposed to the client.
 
@@ -1972,7 +1972,7 @@ The `redirect` utility is a simple utility in Remix for creating a [`Response`][
 
 ![Newly created joke displayed][newly-created-joke-displayed]
 
-Hooray! How cool is that? No `useEffect` or `useAnything` hooks. Just a form, and an async function to process the submission. Pretty cool. You can definitely still do all that stuff if you wanted to, but why would you? This is really nice.
+Hooray! How cool is that? No `useEffect` or `useAnything` hooks. Just a form and an async function to process the submission. Pretty cool. You can definitely still do all that stuff if you wanted to, but why would you? This is really nice.
 
 Another thing you'll notice is that when we were redirected to the joke's new page, it was there! But we didn't have to think about updating the cache at all. Remix handles invalidating the cache for us automatically. You don't have to think about it. _That_ is cool 😎
 
@@ -1982,9 +1982,9 @@ Before I set you off on this one, there's one more thing you need to know about 
 
 <!-- TODO: add a page about why `redirect`ing is better for successful actions and link it here. -->
 
-But if there's an error, you can return an object with the error messages and then the component can get those values from [`useActionData`][use-action-data] and display them to the user.
+But if there's an error, you can return an object with the error messages, and then the component can get those values from [`useActionData`][use-action-data] and display them to the user.
 
-💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 3 characters long and the content should be at least 10 characters long. Do this validation server-side.
+💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least three characters long and the content should be at least 10 characters long. Do this validation server-side.
 
 <details>
 
@@ -2156,15 +2156,15 @@ The `badRequest` helper function will automatically infer the type of the passed
 
 Another thing I want to call out is how all of this is just so nice and declarative. You don't have to think about state at all here. Your action gets some data, you process it and return a value. The component consumes the action data and renders based on that value. No managing state here. No thinking about race conditions. Nothing.
 
-Oh, and if you _do_ want to have client-side validation (for while the user is typing), you can simply call the `validateJokeContent` and `validateJokeName` functions that the action is using. You can _actually_ seamlessly share code between the client and server! Now _that_ is cool!
+Oh, and if you _do_ want to have client-side validation (for while the user is typing), you can call the `validateJokeContent` and `validateJokeName` functions that the action is using. You can _actually_ seamlessly share code between the client and server! Now _that_ is cool!
 
 ## Authentication
 
-It's the moment we've all been waiting for! We're going to add authentication to our little application. The reason we want to add authentication is so jokes can be associated to the users who created them.
+It's the moment we've all been waiting for! We're going to add authentication to our little application. The reason we want to add authentication is so jokes can be associated with the users who created them.
 
 One thing that would be good to understand for this section is how [HTTP cookies][http-cookies] work on the web.
 
-We're going to handroll our own authentication from scratch. Don't worry, I promise it's not as scary as it sounds.
+We're going to handroll our own authentication from scratch. Don't worry; I promise it's not as scary as it sounds.
 
 ### Preparing the database
 
@@ -2341,15 +2341,15 @@ Let me give you a quick diagram of the flow of things:
 Here's that written out:
 
 - On the `/login` route.
-- User submits login form.
+- User submits the login form.
 - Form data is validated.
   - If the form data is invalid, return the form with the errors.
-- Login type is "register"
+- The login type is "register"
   - Check whether the username is available
     - If the username is not available, return the form with an error.
   - Hash the password
   - Create a new user
-- Login type is "login"
+- The login type is "login"
   - Check whether the user exists
     - If the user doesn't exist, return the form with an error.
   - Check whether the password hash matches
@@ -2532,7 +2532,7 @@ This should look something like this:
 
 Notice in my solution I'm using `useSearchParams` to get the `redirectTo` query parameter and putting that in a hidden input. This way our `action` can know where to redirect the user. This will be useful later when we redirect a user to the login page.
 
-Great, now that we've got the UI looking nice, let's add some logic. This will be very similar to the sort of thing we did in the `/jokes/new` route. Fill in as much as you can (validation and stuff) and we'll just leave comments for the parts of the logic we don't have implemented yet (like _actually_ registering/logging in).
+Great, now that we've got the UI looking nice, let's add some logic. This will be very similar to the sort of thing we did in the `/jokes/new` route. Fill in as much as you can (validation and stuff), and we'll just leave comments for the parts of the logic we don't have implemented yet (like _actually_ registering/logging in).
 
 💿 Implement validation with an `action` in `app/routes/login.tsx`
 
@@ -2786,7 +2786,7 @@ Once you've got that done, your form should look something like this:
 
 ![Login form with errors][login-form-with-errors]
 
-Sweet! Now it's time for the juicy stuff. Let's start with the `login` side of things. We seed in a user with the username `kody` and the password (hashed) is `twixrox`. So we want to implement enough logic that will allow us to login as that user. We're going to put this logic in a separate file called `app/utils/session.server.ts`.
+Sweet! Now it's time for the juicy stuff. Let's start with the `login` side of things. We seed in a user with the username `kody` and the password (hashed) is `twixrox`. So we want to implement enough logic that will allow us to log in as that user. We're going to put this logic in a separate file called `app/utils/session.server.ts`.
 
 Here's what we need in that file to get started:
 
@@ -3035,7 +3035,7 @@ export const action = async ({
 
 </details>
 
-I want to call out the `SESSION_SECRET` environment variable I'm using really quick. The value of the `secrets` option is not the sort of thing you want in your code because the baddies could use it for their nefarious purposes. So instead we are going to read the value from the environment. This means you'll need to set the environment variable in your `.env` file. Incidentally, Prisma loads that file for us automatically so all we need to do is make sure we set that value when we deploy to production.
+I want to call out the `SESSION_SECRET` environment variable I'm using really quickly. The value of the `secrets` option is not the sort of thing you want in your code because the baddies could use it for their nefarious purposes. So instead we are going to read the value from the environment. This means you'll need to set the environment variable in your `.env` file. Incidentally, Prisma loads that file for us automatically, so all we need to do is make sure we set that value when we deploy to production.
 
 💿 Update `.env` file with `SESSION_SECRET` (with any value you like).
 
@@ -3043,7 +3043,7 @@ With that, pop open your [Network tab][network-tab], go to [`/login`][login] and
 
 ![DevTools Network tab showing a "Set-Cookie" header on the POST response][dev-tools-network-tab-showing-a-set-cookie-header-on-the-post-response]
 
-And if you check the cookies section of the [Application tab][application-tab] then you should have the cookie set in there as well.
+And if you check the cookies section of the [Application tab][application-tab], then you should have the cookie set in there as well.
 
 ![DevTools Application tab showing ][dev-tools-application-tab-showing]
 
@@ -3317,7 +3317,7 @@ Super! So now if a user attempts to create a new joke, they'll be redirected to 
 
 ### Build Logout Action
 
-We should probably give people the ability to see that they're logged in and a way to log out right? Yeah, I think so. Let's implement that.
+We should probably allow people to see that they're logged in and a way to log out right? Yeah, I think so. Let's implement that.
 
 💿 Update `app/utils/session.server.ts` to add a `getUser` function that gets the user from Prisma and a `logout` function that uses [`destroySession`][destroy-session] to log the user out.
 
@@ -3452,7 +3452,7 @@ export async function createUserSession(
 
 </details>
 
-💿 Great, now we're going to update the `app/routes/jokes.tsx` route, so we can display a login link if the user isn't logged in. If they are logged in then we'll display their username and a logout form. I'm also going to clean up the UI a bit to match the class names we've got as well, so feel free to copy/paste the example when you're ready.
+💿 Great, now we're going to update the `app/routes/jokes.tsx` route, so we can display a login link if the user isn't logged in. If they are logged in, then we'll display their username and a logout form. I'm also going to clean up the UI a bit to match the class names we've got as well, so feel free to copy/paste the example when you're ready.
 
 <details>
 
@@ -3569,9 +3569,9 @@ export const loader = async () => redirect("/");
 
 </details>
 
-Hopefully getting the user in the loader and rendering them in the component was pretty straightforward. There are a few things I want to call out about other parts of my version of the code before we continue.
+Hopefully, getting the user in the `loader` and rendering them in the component was pretty straightforward. There are a few things I want to call out about other parts of the code before we continue.
 
-First, the new `logout` route is just there to make it easy for us to logout. The reason that we're using an action (rather than a loader) is because we want to avoid [CSRF][csrf] problems by using a POST request rather than a GET request. This is why the logout button is a form and not a link. Additionally, Remix will only re-call our loaders when we perform an `action`, so if we used a `loader` then the cache would not get invalidated. The `loader` is just there in case someone somehow lands on that page, we'll just redirect them back home.
+First, the new `logout` route is just there to make it easy for us to log out. The reason that we're using an action (rather than a loader) is because we want to avoid [CSRF][csrf] problems by using a POST request rather than a GET request. This is why the logout button is a form and not a link. Additionally, Remix will only re-call our loaders when we perform an `action`, so if we used a `loader` then the cache would not get invalidated. The `loader` is just there in case someone somehow lands on that page, we'll just redirect them back home.
 
 ```tsx
 <Link to="new" className="button">
@@ -3581,7 +3581,7 @@ First, the new `logout` route is just there to make it easy for us to logout. Th
 
 Notice that the `to` prop is set to "new" without any `/`. This is the benefit of nested routing. You don't have to construct the entire URL. It can be relative. This is the same thing for the `<Link to=".">Get a random joke</Link>` link which will effectively tell Remix to reload the data for the current route.
 
-Terrific, now our app looks like this:
+Terrific! Now our app looks like this:
 
 ![Jokes page nice and designed][jokes-page-nice-and-designed]
 
@@ -3998,7 +3998,7 @@ Phew, there we go. Now users can register for a new account!
 
 ## Unexpected errors
 
-I'm sorry, but there's no way you'll be able to avoid errors at some point. Servers fall over, co-workers use `// @ts-ignore`, and so on. So we need to just embrace the possibility of unexpected errors and deal with them.
+I'm sorry: there's no way you'll be able to avoid errors at some point. Servers fall over, co-workers use `// @ts-ignore`, and so on. So we need to just embrace the possibility of unexpected errors and deal with them.
 
 Luckily, error handling in Remix is stellar. You may have used React's [Error Boundary feature][error-boundary-feature]. With Remix, your route modules can export an [`ErrorBoundary` component][error-boundary-component], and it will be used. But it's even cooler because it works on the server too! Not only that, but it'll handle errors in `loader`s and `action`s too! Wowza! So let's get to it!
 
@@ -4159,7 +4159,7 @@ export function ErrorBoundary() {
 
 </details>
 
-Ok great, with those in place, let's check what happens when there's an error. Go ahead and just add this to the default component, loader, or action of each of the routes.
+Ok, great, with those in place, let's check what happens when there's an error. Go ahead and add this to the default component, `loader`, or `action` of each of the routes.
 
 ```ts
 throw new Error("Testing Error Boundary");
@@ -4175,11 +4175,11 @@ Here's what I get:
 
 ![New Joke Page Error][new-joke-page-error]
 
-What I love about this is that in the case of the children routes, the only unusable part of the app is the part that actually broke. The rest of the app is completely interactive. There's another point for the user's experience!
+What I love about this is that in the case of the child routes, the only unusable part of the app is the part that actually broke. The rest of the app is completely interactive. There's another point for the user's experience!
 
 ## Expected errors
 
-Sometimes users do things we can anticipate. I'm not talking about validation necessarily. I'm talking about things like whether the user's authenticated (status `401`) or authorized (status `403`) to do what they're trying to do. Or maybe they're looking for something that isn't there (status `404`).
+Sometimes users do things we can expect. I'm not talking about validation necessarily. I'm talking about things like whether the user's authenticated (status `401`) or authorized (status `403`) to do what they're trying to do. Or maybe they're looking for something that isn't there (status `404`).
 
 It might help to think of the unexpected errors as 500-level errors ([server errors][server-errors]) and the expected errors as 400-level errors ([client errors][client-errors]).
 
@@ -4194,7 +4194,7 @@ With that understanding, we're going to add a `isRouteErrorResponse` check to th
 - `app/root.tsx` - Just as a last resort fallback.
 - `app/routes/jokes.$jokeId.tsx` - When a user tries to access a joke that doesn't exist (404).
 - `app/routes/jokes.new.tsx` - When a user tries to go to this page without being authenticated (401). Right now they'll just get redirected to the login if they try to submit it without authenticating. That would be super annoying to spend time writing a joke only to get redirected. Rather than inexplicably redirecting them, we could render a message that says they need to authenticate first.
-- `app/routes/jokes._index.tsx` - If there are no jokes in the database then a random joke is 404-not found. (simulate this by deleting the `prisma/dev.db` and running `npx prisma db push`. Don't forget to run `npx prisma db seed` afterward to get your seed data back.)
+- `app/routes/jokes._index.tsx` - If there are no jokes in the database, then a random joke is 404-not found. (simulate this by deleting the `prisma/dev.db` and running `npx prisma db push`. Remember to run `npx prisma db seed` afterward to get your seed data back.)
 
 💿 Let's add these `isRouteErrorResponse` checks to the routes.
 
@@ -4637,7 +4637,7 @@ One thing to keep in mind with `delete` is that HTML forms only support `method=
 </form>
 ```
 
-And then the `action` can determine whether the intention is to delete based on the `request.formData().get('intent')`.
+And then the `action` can determine whether the intention is to `delete` based on the `request.formData().get('intent')`.
 
 💿 Add a delete capability to `app/routes/jokes.$jokeId.tsx` route.
 
@@ -5725,19 +5725,19 @@ export default function JokesRoute() {
 
 ## JavaScript...
 
-Maybe we should actually include JavaScript on our JavaScript app. 😂
+Maybe we should actually include JavaScript in our JavaScript app. 😂
 
 Seriously, pull up your network tab and navigate to our app.
 
 ![Network tab indicating no JavaScript is loaded][network-tab-indicating-no-java-script-is-loaded]
 
-Did you notice that our app isn't loading any JavaScript before now? 😆 This actually is pretty significant. Our entire app can work without JavaScript on the page at all. This is because Remix leverages the platform so well for us.
+Did you notice that our app isn't loading any JavaScript before now? 😆 This actually is pretty significant. Our entire app can completely work without JavaScript on the page. This is because Remix leverages the platform so well for us.
 
-Why does it matter that our app works without JavaScript? Is it because we're worried about the 0.002% of users who run around with JS disabled? Not really. It's because not everyone's connected to your app on a lightning-fast connection and sometimes JavaScript takes some time to load or fails to load at all. Making your app functional without JavaScript means that when that happens, your app _still works_ for your users even before the JavaScript finishes loading.
+Why does it matter that our app works without JavaScript? Is it because we're worried about the 0.002% of users who run around with JS disabled? Not really. It's because not everyone's connected to your app on a lightning-fast connection, and sometimes JavaScript takes some time to load or fails to load at all. Making your app functional without JavaScript means that when that happens, your app _still works_ for your users even before the JavaScript finishes loading.
 
 Another point for user experience!
 
-There are reasons to include JavaScript on the page. For example, some common UI experiences can't be accessible without JavaScript (focus management in particular is not great when you have full-page reloads all over the place). And we can make an even nicer user experience with optimistic UI (coming soon) when we have JavaScript on the page. But we thought it'd be cool to show you how far you can get with Remix without JavaScript for your users on poor network connections. 💪
+There are reasons to include JavaScript on the page. For example, some common UI experiences can't be accessible without JavaScript (focus management in particular is not great when you have full-page reloads all over the place). And we can make an even nicer user experience with an optimistic UI (coming soon) when we have JavaScript on the page. But we thought it'd be cool to show you how far you can get with Remix without JavaScript for your users on poor network connections. 💪
 
 Ok, so let's load JavaScript on this page now 😆
 
@@ -7135,7 +7135,7 @@ export function ErrorBoundary() {
 
 ### Prefetching
 
-If a user focuses or mouses-over a link, it's likely they want to go there. So we can prefetch the page that they're going to. And this is all it takes to enable that for a specific link:
+If a user focuses or mouses over a link, it's likely they want to go there. So we can prefetch the page that they're going to. And this is all it takes to enable that for a specific link:
 
 ```
 <Link prefetch="intent" to="somewhere/neat">Somewhere Neat</Link>
@@ -7255,7 +7255,7 @@ Now that we have JavaScript on the page, we can benefit from _progressive enhanc
 
 Even though our app is quite fast (especially locally 😅), some users may have a poor connection to our app. This means that they're going to submit their jokes, but then they'll have to wait for a while before they see anything. We could add a loading spinner somewhere, but it'd be a much better user experience to be optimistic about the success of the request and render what the user would see.
 
-We have a pretty in depth [guide on Optimistic UI][guide-on-optimistic-ui], so go give that a read
+We have a pretty in-depth [guide on Optimistic UI][guide-on-optimistic-ui], so go give that a read
 
 💿 Add optimistic UI to the `app/routes/jokes.new.tsx` route.
 
@@ -7649,9 +7649,9 @@ export function ErrorBoundary() {
 
 </details>
 
-One thing I like about my example is that it can use the _exact_ same validation functions that the server uses! So if what they submitted will fail server-side validation, we don't even bother rendering the optimistic UI because we know it would fail.
+One thing I like about my example is that it can use the _exact_ same validation functions that the server uses! So if what they submitted fails server-side validation, we don't even bother rendering the optimistic UI because we know it would fail.
 
-That said, this declarative optimistic UI approach is fantastic because we don't have to worry about error recovery. If the request fails, then our component will be re-rendered, it will no longer be a submission and everything will work as it did before. Nice!
+That said, this declarative optimistic UI approach is fantastic because we don't have to worry about error recovery. If the request fails, then our component will be re-rendered, it will no longer be a submission, and everything will work as it did before. Nice!
 
 Here's a demonstration of what that experience looks like:
 
@@ -7663,7 +7663,7 @@ I feel pretty great about the user experience we've created here. So let's get t
 
 💿 Before proceeding, you're going to need to [install fly][install-fly] and [sign up for an account][sign-up-for-an-account].
 
-<docs-info>Fly.io asks you a credit card number at account creation (see why in [their blog article][their-blog-article]) but there are free tiers that cover the needs of this app hosted as a simple side project.</docs-info>
+<docs-info>Fly.io asks you a credit card number at account creation (see why in [their blog article][their-blog-article]), but there are free tiers that cover the needs of this app hosted as a simple side project.</docs-info>
 
 💿 Once you've done that, run this command from within your project directory:
 
@@ -7715,7 +7715,7 @@ Fly generated a few files for us:
 fly secrets set SESSION_SECRET=your-secret-here
 ```
 
-`your-secret-here` can be whatever you want. It's just a string that's used to sign the session cookie. Use a password generator if you like.
+`your-secret-here` can be whatever you want. It's just a string used to sign the session cookie. Use a password generator if you like.
 
 One other thing we need to do is get Prisma ready to set up our database for the first time. Now that we're happy with our schema, we can create our first migration.
 
@@ -7782,7 +7782,7 @@ Any time you make a change, simply run `fly deploy` again to redeploy.
 
 ## Conclusion
 
-Phew! And there we have it. If you made it through this whole thing then I'm really impressed ([tweet your success][tweet-your-success])! There's a lot to Remix, and we've only gotten you started. Good luck on the rest of your Remix journey!
+Phew! And there we have it. If you made it through this whole thing, then I'm really impressed ([tweet your success][tweet-your-success])! There's a lot to Remix, and we've only gotten you started. Good luck on the rest of your Remix journey!
 
 [classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
 [remix-vite]: ../guides/vite
