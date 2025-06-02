@@ -1,4 +1,4 @@
-# Do not rely on treeshaking for correctness
+# Do not rely on tree shaking for correctness
 
 Date: 2024-01-02
 
@@ -9,7 +9,7 @@ Status: accepted
 Remix lets you write code that runs on both the server and the client.
 For example, it's common to have server and client code in the same route file.
 While blending server and client code is convenient, Remix needs to ensure that server-only code is never shipped to the client.
-This prevents secrets available to the server from leaking into client and also prevents the client from crashing due to code that expects a server environment.
+This prevents secrets available to the server from leaking into a client and also prevents the client from crashing due to code that expects a server environment.
 
 Server-only code comes in three forms:
 
@@ -17,20 +17,20 @@ Server-only code comes in three forms:
 2. Imports from `.server` directories or `.server` files.
 3. Imports from server-only packages like `node:fs`
 
-Remix previously relied on treeshaking to exclude server-only code.
+Remix previously relied on tree shaking to exclude server-only code.
 Specifically, Remix used [virtual modules for each route][virtual-modules] that re-exported client-safe exports from the route.
 For a brief stint, Remix instead used [AST transforms][ast-transforms] to remove server-only exports.
 In either case, Remix would remove server exports from routes and then let the bundler treeshake any unused code and dependencies from the client bundle.
 
-The main benefit is that server and client code can co-exist in the same module graph and even the same file
-and the treeshaking saves you from the tedium of explicitly marking or separating server-only code yourself.
+The main benefit is that server and client code can co-exist in the same module graph and even the same file,
+and the tree shaking saves you from the tedium of explicitly marking or separating server-only code yourself.
 
 ### Human error
 
-However, this is also the main drawback; "server-only" is implicit and must be inferred by thorough treeshaking.
-Even if treeshaking were perfect, this approach still leaves the door open to human error.
+However, this is also the main drawback; "server-only" is implicit and must be inferred by thorough tree shaking.
+Even if tree shaking were perfect, this approach still leaves the door open to human error.
 If you or anyone on your team accidentally references server-only code from client code, the bundler will happily include that code in the client.
-You won't get any indication of this at build time, but only at runtime.
+You won't get any sign of this at build time but only at runtime.
 Your app could crash when trying to execute code meant for the server, or worse, you could accidentally ship secrets to the client.
 
 ### `.server` modules
@@ -40,44 +40,44 @@ Any modules with a directory named `.server` are never allowed into the module g
 Similarly, files with a `.server` extension are also excluded from the client module graph.
 
 Theoretically, `.server` modules are a redundancy.
-A perfect module graph with perfect treeshaking shouldn't _need_ `.server` modules.
+A perfect module graph with perfect tree shaking shouldn't _need_ `.server` modules.
 But in practice, `.server` modules are indispensable.
 They are the only guaranteed way to exclude code from the client.
 
 ### An imperfect optimization
 
-As we already discussed, even if treeshaking were perfect, it would still be a bad idea to rely on it to exclude server-only code.
-But treeshaking is a hard problem, especially in a language as dynamic as JavaScript.
-In the real world, treeshaking is not perfect.
+As we already discussed, even if tree shaking were perfect, it would still be a bad idea to rely on it to exclude server-only code.
+But tree shaking is a hard problem, especially in a language as dynamic as JavaScript.
+In the real world, tree shaking is not perfect.
 
-That's why treeshaking is designed to be an _optimization_ that slims down your bundle.
-Your code should already be correct before treeshaking is applied.
-Bundlers are allowed to make [their own tradeoffs about how much treeshaking][esbuild-minify-considerations] they want to do.
+That's why tree shaking is designed to be an _optimization_ that slims down your bundle.
+Your code should already be correct before tree shaking is applied.
+Bundlers are allowed to make [their own tradeoffs about how much tree shaking][esbuild-minify-considerations] they want to do.
 And that shouldn't [affect Remix's implementation][remix-minify-syntax].
-They are even allowed to do _less_ treeshaking without needing a major version bump.
+They are even allowed to do _less_ tree shaking without needing a major version bump.
 
-Additionally, code can only be treeshaken if it is known to be side-effect free.
-Unfortunately, even fully side-effect free packages often omit `sideEffects: false` from their `package.json`.
-And sometimes side-effects are desired!
-What if there's a server-side package with side-effects that we want to include in our server bundle?
+Additionally, code can only be tree shaken if it is known to be side-effect-free.
+Unfortunately, even fully side effect free packages often omit `sideEffects: false` from their `package.json`.
+And sometimes side effects are desired!
+What if there's a server-side package with side effects that we want to include in our server bundle?
 How could we exclude that from the client bundle?
 There are ways, but they're all hacky and brittle.
 
 ### Vite
 
-Remix is becoming a Vite plugin, but Vite's on-demand compilation in dev is incompatible with treeshaking.
+Remix is becoming a Vite plugin, but Vite's on-demand compilation in dev is incompatible with tree shaking.
 Since the compilation is on-demand, Vite only knows the _current_ importer for the module, not all possible importers.
 
 ### Summary
 
-- Even if treeshaking were perfect, it leaves the door open for human error
+- Even if tree shaking were perfect, it leaves the door open for human error
 - `.server` modules guarantee that server-only code is excluded from the client
-- Treeshaking is an imperfect _optimization_, so a Remix app should work correctly and exclude server-only code even without treeshaking
-- Vite's architecture makes treeshaking in dev untenable
+- Tree shaking is an imperfect _optimization_, so a Remix app should work correctly and exclude server-only code even without tree shaking
+- Vite's architecture makes tree shaking in dev untenable
 
 ## Decision
 
-Do not rely on implicit, cross-module treeshaking for correctness.
+Do not rely on implicit, cross-module tree shaking for correctness.
 Instead:
 
 - Forcibly remove server-only route exports and then explicitly run a dead-code elimination pass

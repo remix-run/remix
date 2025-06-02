@@ -16,19 +16,19 @@ Additionally, NPM packages can be accessed as Deno modules via [Deno-friendly CD
 
 Remix has some requirements around dependencies:
 
-- Remix treeshakes dependencies that are free of side-effects.
+- Remix tree shakes dependencies that are free of side effects.
 - Remix sets the environment (dev/prod/test) across all code, including dependencies, at runtime via the `NODE_ENV` environment variable.
 - Remix depends on some NPM packages that should be specified as peer dependencies (notably, `react` and `react-dom`).
 
-### Treeshaking
+### Tree shaking
 
-To optimize bundle size, Remix [treeshakes](https://esbuild.github.io/api/#tree-shaking) your app's code and dependencies.
+To optimize bundle size, Remix [tree shakes](https://esbuild.github.io/api/#tree-shaking) your app's code and dependencies.
 This also helps to separate browser code and server code.
 
-Under the hood, the Remix compiler uses [esbuild](https://esbuild.github.io).
+Under the hood, the Remix compiler uses [`esbuild`](https://esbuild.github.io).
 Like other bundlers, `esbuild` uses [`sideEffects` in `package.json` to determine when it is safe to eliminate unused imports](https://esbuild.github.io/api/#conditionally-injecting-a-file).
 
-Unfortunately, URL imports do not have a standard mechanism for marking packages as side-effect free.
+Unfortunately, URL imports do not have a standard mechanism for marking packages as side-effect-free.
 
 ### Setting dev/prod/test environment
 
@@ -37,7 +37,7 @@ That means changing environment requires changing the URL import in the source c
 While you could use multiple import maps (`dev.json`, `prod.json`, etc...) to workaround this, import maps have other limitations:
 
 - standard tooling for managing import maps is not available
-- import maps are not composeable, so any dependencies that use import maps must be manually accounted for
+- import maps are not composable, so any dependencies that use import maps must be manually accounted for
 
 ### Specifying peer dependencies
 
@@ -46,10 +46,9 @@ That means that specifying peer dependencies becomes tedious and error-prone as 
 
 - determine which dependencies themselves depend on `react` (or other similar peer dependency), even if indirectly.
 - manually figure out which `react` version works across _all_ of these dependencies
-- set that version for `react` as a query parameter in _all_ of the URLs for the identified dependencies
+- set that version for `react` as a query parameter in _all_ the URLs for the identified dependencies
 
-If any dependencies change (added, removed, version change),
-the user must repeat all of these steps again.
+If any dependencies change (added, removed, version change), the user must repeat all of these steps.
 
 ## Decision
 
@@ -59,7 +58,7 @@ Do not use Deno-friendly CDNs for NPM dependencies in Remix projects using Deno.
 
 Use `npm` and `node_modules/` to manage NPM dependencies like `react` for Remix projects, even when using Deno with Remix.
 
-Deno module dependencies (e.g. from `https://deno.land`) can still be managed via URL imports.
+Deno module dependencies (e.g., from `https://deno.land`) can still be managed via URL imports.
 
 ### Allow URL imports
 
@@ -68,7 +67,7 @@ letting your browser runtime and server runtime handle them accordingly.
 That means that you may:
 
 - use URL imports for the browser
-- use URL imports for the server, if your server runtime supports it
+- use URL imports for the server if your server runtime supports it
 
 For example, Node will throw errors for URL imports, while Deno will resolve URL imports as normal.
 
@@ -78,7 +77,7 @@ Remix will not yet support import maps.
 
 ## Consequences
 
-- URL imports will not be treeshaken.
+- URL imports will not be tree shaken.
 - Users can specify environment via the `NODE_ENV` environment variable at runtime.
 - Users won't have to do error-prone, manual dependency resolution.
 

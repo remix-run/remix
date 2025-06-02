@@ -6,9 +6,9 @@ Status: accepted
 
 ## Context
 
-Before adopting Vite, Remix used to rely on ESbuild's treeshaking to implicitly separate client and server code.
-Even though Vite provides equivalent treeshaking (via Rollup) for builds, it does not perform cross-module treeshaking when running the dev server.
-In any case, we think its a [bad idea to rely on treeshaking for correctness][decision-0009].
+Before adopting Vite, Remix used to rely on ESbuild's tree shaking to implicitly separate client and server code.
+Even though Vite provides equivalent tree shaking (via Rollup) for builds, it does not perform cross-module tree shaking when running the dev server.
+In any case, we think it's a [bad idea to rely on tree shaking for correctness][decision-0009].
 
 Goals:
 
@@ -61,7 +61,7 @@ The Plugin API makes this apparent:[^1]
 - `resolveId` only provides the current `importer`
 - `load` and `transform` do not receive any information about the module graph
 
-This approach lets Vite load and transform each module _once_ and cache the result[^2] which is a keystone for its speed.
+This approach lets Vite load and transform each module _once_ and cache the result[^2], which is a keystone for its speed.
 
 #### Handling mixed modules
 
@@ -69,10 +69,10 @@ While `.server` modules are a great way to separate client and server code in mo
 there will always be a need to stitch together modules that mix client and server code.
 For example, you may want to migrate from the previous compiler to Vite without needing to manually split up mixed modules.
 
-But supporting mixed modules directly in Remix would require compile-time magic which would add substantial complexity.
+But supporting mixed modules directly in Remix would require compile-time magic, which would add significant complexity.
 Not only would it degrade performance for all users (Goal 4 ❌),
 but writing compile-time transforms that manipulate the AST is much more error-prone than throwing a compile-time error when `.server` modules are imported by client code.
-Depending on how its implemented, bugs in that compile-time magic could open the door to leaking server code into the client (Goal 1 ❌).
+Depending on how it's implemented, bugs in that compile-time magic could open the door to leaking server code into the client (Goal 1 ❌).
 
 ## Decision
 
