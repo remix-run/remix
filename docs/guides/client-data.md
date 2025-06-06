@@ -151,7 +151,7 @@ You can leverage a client-side cache (memory, local storage, etc.) to bypass cer
 
 1. Load the data from server `loader` on the document load
 2. Set `clientLoader.hydrate = true` to prime the cache
-3. Load later navigations from the cache via `clientLoader`
+3. Load subsequent navigations from the cache via `clientLoader`
 4. Invalidate the cache in your `clientAction`
 
 Note that since we are not exporting a `HydrateFallback` component, we will SSR the route component and then run the `clientLoader` on hydration, so it's important that your `loader` and `clientLoader` return the same data on initial load to avoid hydration errors.
