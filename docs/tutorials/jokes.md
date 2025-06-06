@@ -1578,7 +1578,7 @@ export const db = singleton(
 
 I'll leave analysis of this code as an exercise for the reader because again, this has nothing to do with Remix directly.
 
-The one thing that I will call out is the file name convention. The `.server` part of the filename informs Remix that this code should never end up in the browser. This is optional because Remix does a good job of ensuring server code doesn't end up in the client. But sometimes some server-only dependencies are challenging to treeshake, so adding the `.server` to the filename is a hint to the compiler to not worry about this module or its imports when bundling for the browser. The `.server` acts as a sort of boundary for the compiler.
+The one thing that I will call out is the file name convention. The `.server` part of the filename informs Remix that this code should never end up in the browser. This is optional because Remix does a good job of ensuring server code doesn't end up in the client. But sometimes some server-only dependencies are difficult to treeshake, so adding the `.server` to the filename is a hint to the compiler to not worry about this module or its imports when bundling for the browser. The `.server` acts as a sort of boundary for the compiler.
 
 ### Read from the database in a Remix loader
 
