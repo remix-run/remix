@@ -2,7 +2,7 @@
 
 This is the changelog for [`headers`](https://github.com/mjackson/remix-the-web/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.11.0 (2025-06-06)
 
 - Use one set of types for all built files, instead of separate types for ESM and CJS
 - Build using esbuild directly instead of tsup
