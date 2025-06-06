@@ -22,7 +22,7 @@ With distributed servers and databases running at the edge, it's now possible to
 
 This very website has a time-to-first-byte that's hard to beat. For most people in the world it's under 100 ms. We can fix a typo in the docs, and within a minute or two the site is updated across the world without a rebuild, without redeploying, and without HTTP caching.
 
-We achieved this with distributed systems. The app runs in several regions on [Fly][fly] around the world so it's close to you. Each instance has its own SQLite database. When the app boots, it fetches tarballs from the Remix source repository on GitHub, processes the Markdown docs into HTML, and then inserts them into the SQLite database.
+We accomplished this with distributed systems. The app runs in several regions on [Fly][fly] around the world so it's close to you. Each instance has its own SQLite database. When the app boots, it fetches tarballs from the Remix source repository on GitHub, processes the Markdown docs into HTML, and then inserts them into the SQLite database.
 
 The code involved is actually really similar to what a Gatsby site might do at build time in `gatsby-node.js` or `getStaticProps` in Next.js. The idea is to take the slow parts (fetching docs from GitHub, processing Markdown) and cache it (SSG caches into HTML, this website caches into SQLite on the server).
 
