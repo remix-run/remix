@@ -30,7 +30,7 @@ export default defineConfig({
 
 <docs-info>If you are not yet using Vite, you can provide Future Flags via the [`remix.config.js` `future`][remix-config-future] option</docs-info>
 
-- Once an unstable feature reaches a stable state, we remove the special prefix and include the feature in the next minor release. At this point, the API's structure remains consistent throughout later minor releases.
+- Once an unstable feature reaches a stable state, we remove the special prefix and include the feature in the next minor release. At this point, the API's structure remains consistent throughout subsequent minor releases.
 
 - This approach allows us to refine the API collaboratively with early adopters, incorporating necessary changes in the unstable phase without affecting all users. The stable releases then benefit from these improvements without disruptions.
 
