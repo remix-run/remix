@@ -34,7 +34,7 @@ export default defineConfig({
 
 - This approach allows us to refine the API collaboratively with early adopters, incorporating necessary changes in the unstable phase without affecting all users. The stable releases then benefit from these improvements without disruptions.
 
-- If you're using features labeled with `unstable_*` flags, it's crucial to review the release notes for each minor release. This is because the behavior or structure of these features might evolve. Your feedback during this phase is invaluable in enhancing the feature before the final release!
+- If you're utilizing features labeled with `unstable_*` flags, it's crucial to review the release notes for each minor release. This is because the behavior or structure of these features might evolve. Your feedback during this phase is invaluable in enhancing the feature before the final release!
 
 ## Managing Breaking Changes with Future Flags
 
