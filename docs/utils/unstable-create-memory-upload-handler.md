@@ -26,4 +26,4 @@ export const action = async ({
 };
 ```
 
-**Options:** The only options supported are `maxPartSize` and `filter` which work the same as in `unstable_createFileUploadHandler` above. This API is not recommended for anything at scale, but is a convenient utility for simple use cases and as a fallback for another handler.
+**Options:** The only options supported are `maxPartSize` and `filter` which work the same as in `unstable_createFileUploadHandler` above. This API is not recommended for anything at scale but is a convenient utility for simple use cases and as a fallback for another handler.

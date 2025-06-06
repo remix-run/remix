@@ -6,7 +6,7 @@ title: unstable_parseMultipartFormData
 
 Allows you to handle multipart forms (file uploads) for your app.
 
-Would be useful to understand [the Browser File API][the-browser-file-api] to know how to use this API.
+It would be useful to understand [the Browser File API][the-browser-file-api] to know how to use this API.
 
 It's to be used in place of `request.formData()`.
 
@@ -26,7 +26,7 @@ export const action = async ({
     uploadHandler // <-- we'll look at this deeper next
   );
 
-  // the returned value for the file field is whatever our uploadHandler returns.
+  // The returned value for the file field is whatever our uploadHandler returns.
   // Let's imagine we're uploading the avatar to s3,
   // so our uploadHandler returns the URL.
   const avatarUrl = formData.get("avatar");
