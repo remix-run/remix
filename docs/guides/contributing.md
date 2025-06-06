@@ -242,7 +242,7 @@ Nightly releases will run the action files from the `main` branch as scheduled w
 
 ## End-to-end testing
 
-For every release of Remix (stable, experimental, nightly, and pre-releases), we will do a complete end-to-end test of Remix apps on each of our official adapters from `create-remix`, all the way to deploying them to production. We do this by using the default [templates][templates] and the CLIs for Fly, and Arc. We'll then run some simple Cypress assertions to make sure everything is running properly for both development and the deployed app.
+For every release of Remix (stable, experimental, nightly, and pre-releases), we will do a complete end-to-end test of Remix apps on each of our official adapters from `create-remix`, all the way to deploying them to production. We do this by utilizing the default [templates][templates] and the CLIs for Fly, and Arc. We'll then run some simple Cypress assertions to make sure everything is running properly for both development and the deployed app.
 
 [proposals]: https://github.com/remix-run/remix/discussions/categories/proposals
 [roadmap]: https://github.com/orgs/remix-run/projects/5
