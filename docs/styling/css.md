@@ -6,13 +6,13 @@ title: Regular CSS
 
 Remix helps you scale an app with regular CSS with nested routes and [`links`][links].
 
-CSS Maintenance issues can creep into a web app for a few reasons. It can get difficult to know:
+CSS Maintenance issues can creep into a web app for a few reasons. It can get challenging to know:
 
 - how and when to load CSS, so it was usually all loaded on every page
 - if the class names and selectors you were using were accidentally styling other UI in the app
 - if some rules weren't even used anymore as the CSS source code grew over time
 
-Remix alleviates these issues with route-based stylesheets. Nested routes can each add their own stylesheets to the page and Remix will automatically prefetch, load, and unload them with the route. When the scope of concern is limited to just the active routes, the risks of these problems are reduced significantly. The only chances for conflicts are with the parent routes' styles (and even then, you will likely see the conflict since the parent route is also rendering).
+Remix alleviates these issues with route-based stylesheets. Nested routes can each add their own stylesheets to the page, and Remix will automatically prefetch, load, and unload them with the route. When the scope of concern is limited to just the active routes, the risks of these problems are reduced significantly. The only chances for conflicts are with the parent routes' styles (and even then, you will likely see the conflict since the parent route is also rendering).
 
 <docs-warning>If you're using the [Classic Remix Compiler][classic-remix-compiler] rather than [Remix Vite][remix-vite], you should remove `?url` from the end of your CSS import paths.</docs-warning>
 
@@ -62,11 +62,11 @@ It's subtle, but this little feature removes a lot of the difficulty when stylin
 
 ### Shared Component Styles
 
-Websites large and small usually have a set of shared components used throughout the rest of the app: buttons, form elements, layouts, etc. When using plain style sheets in Remix there are two approaches we recommend.
+Websites large and small usually have a set of shared components used throughout the rest of the app: buttons, form elements, layouts, etc. When using plain style sheets in Remix, there are two approaches we recommend.
 
 #### Shared stylesheet
 
-The first approach is very simple. Put them all in a `shared.css` file included in `app/root.tsx`. That makes it easy for the components themselves to share CSS code (and your editor to provide intellisense for things like [custom properties][custom-properties]), and each component already needs a unique module name in JavaScript anyway, so you can scope the styles to a unique class name or data attribute:
+The first approach is basic. Put them all in a `shared.css` file included in `app/root.tsx`. That makes it easy for the components themselves to share CSS code (and your editor to provide intellisense for things like [custom properties][custom-properties]). Each component already needs a unique module name in JavaScript anyway, so you can scope the styles to a unique class name or data attribute:
 
 ```css filename=app/styles/shared.css
 /* scope with class names */
@@ -101,7 +101,7 @@ This also makes it easy for routes to adjust the styles of a component without n
 
 #### Surfacing Styles
 
-A second approach is to write individual css files per component and then "surface" the styles up to the routes that use them.
+A second approach is to write individual CSS files per component and then "surface" the styles up to the routes that use them.
 
 Perhaps you have a `<Button>` in `app/components/button/index.tsx` with styles at `app/components/button/styles.css` as well as a `<PrimaryButton>` that extends it.
 
@@ -252,11 +252,11 @@ export const links: LinksFunction = () => {
 // ...
 ```
 
-While that's a bit of boilerplate it enables a lot:
+While that's a bit of boilerplate, it enables a lot:
 
 - You control your network tab, and CSS dependencies are clear in the code
 - Co-located styles with your components
-- The only CSS ever loaded is the CSS that's used on the current page
+- The only CSS ever loaded is the CSS used on the current page
 - When your components aren't used by a route, their CSS is unloaded from the page
 - Remix will prefetch the CSS for the next page with [`<Link prefetch>`][link]
 - When one component's styles change, browser and CDN caches for the other components won't break because they all have their own URLs.
@@ -297,7 +297,7 @@ export const CopyToClipboard = React.forwardRef(
 CopyToClipboard.displayName = "CopyToClipboard";
 ```
 
-Not only will this make the asset high priority in the network tab, but Remix will turn that `preload` into a `prefetch` when you link to the page with [`<Link prefetch>`][link], so the SVG background is prefetched, in parallel, with the next route's data, modules, stylesheets, and any other preloads.
+Not only will this make the asset a high priority in the network tab, but Remix will turn that `preload` into a `prefetch` when you link to the page with [`<Link prefetch>`][link], so the SVG background is prefetched, in parallel, with the next route's data, modules, stylesheets, and any other preloads.
 
 ### Link Media Queries
 

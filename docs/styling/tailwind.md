@@ -1,10 +1,10 @@
 ---
-title: Tailwind
+title: Tailwind CSS
 ---
 
-# Tailwind
+# Tailwind CSS
 
-<docs-warning>This documentation is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]. If you're using [Remix Vite][remix-vite], Tailwind can be integrated using [Vite's built-in PostCSS support][vite-postcss].</docs-warning>
+<docs-warning>This documentation is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]. If you're using [Remix Vite][remix-vite], Tailwind CSS can be integrated using [Vite's built-in PostCSS support][vite-postcss].</docs-warning>
 
 Perhaps the most popular way to style a Remix application in the community is to use [Tailwind CSS][tailwind].
 
@@ -74,7 +74,7 @@ If you're using VS Code, it's recommended you install the [Tailwind IntelliSense
 
 It's recommended that you avoid Tailwind's `@import` syntax (e.g. `@import 'tailwindcss/base'`) in favor of Tailwind directives (e.g. `@tailwind base`).
 
-Tailwind replaces its import statements with inlined CSS but this can result in the interleaving of styles and import statements. This clashes with the restriction that all import statements must be at the start of the file.
+Tailwind replaces its import statements with inlined CSS, but this can result in the interleaving of styles and import statements. This clashes with the restriction that all import statements must be at the start of the file.
 
 Alternatively, you can use [PostCSS][built-in-post-css-support] with the [postcss-import] plugin to process imports before passing them to esbuild.
 
