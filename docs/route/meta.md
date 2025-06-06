@@ -32,7 +32,7 @@ produces this HTML:
 <meta name="description" content="This app is the best" />
 ```
 
-By default, meta-descriptors will render a [`<meta>` tag][meta-element] in most cases. The two exceptions are:
+By default, meta descriptors will render a [`<meta>` tag][meta-element] in most cases. The two exceptions are:
 
 - `{ title }` renders a `<title>` tag
 - `{ "script:ld+json" }` renders a `<script type="application/ld+json">` tag, and its value should be a serializable object that is stringified and injected into the tag.
