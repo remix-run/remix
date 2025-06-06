@@ -24,15 +24,15 @@ Each adapter has the same API. In the future we may have helpers specific to the
 
 ## Community Adapters
 
-- [`@fastly/remix-server-adapter`][fastly-remix-server-adapter] - For [Fastly Compute][fastly-compute].
-- [`@mcansh/remix-fastify`][remix-fastify] - For [Fastify][fastify].
-- [`@mcansh/remix-raw-http`][remix-raw-http] - For a good old bare bones Node server.
-- [`@netlify/remix-adapter`][netlify-remix-adapter] - For [Netlify][netlify].
-- [`@netlify/remix-edge-adapter`][netlify-remix-edge-adapter] - For [Netlify][netlify] Edge.
-- [`@vercel/remix`][vercel-remix] - For [Vercel][vercel].
-- [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
-- [`partymix`][partymix] - For [PartyKit][partykit].
-- [`@scandinavianairlines/remix-azure-functions`][remix-azure-functions]: For [Azure Functions][azure-functions] and [Azure Static Web Apps][azure-static-web-apps].
+- [`@fastly/remix-server-adapter`][fastly-remix-server-adapter] — For [Fastly Compute][fastly-compute].
+- [`@mcansh/remix-fastify`][remix-fastify] — For [Fastify][fastify].
+- [`@mcansh/remix-raw-http`][remix-raw-http] — For a good old bare-bones Node.js server.
+- [`@netlify/remix-adapter`][netlify-remix-adapter] — For [Netlify][netlify].
+- [`@netlify/remix-edge-adapter`][netlify-remix-edge-adapter] — For [Netlify][netlify] Edge.
+- [`@vercel/remix`][vercel-remix] — For [Vercel][vercel].
+- [`remix-google-cloud-functions`][remix-google-cloud-functions] — For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
+- [`partymix`][partymix] — For [PartyKit][partykit].
+- [`@scandinavianairlines/remix-azure-functions`][remix-azure-functions] — For [Azure Functions][azure-functions] and [Azure Static Web Apps][azure-static-web-apps].
 
 ## Creating an Adapter
 
@@ -65,7 +65,7 @@ app.all(
     // to pass that build to the request handler
     build: require("./build"),
 
-    // return anything you want here to be available as `context` in your
+    // Return anything you want here to be available as `context` in your
     // loaders and actions. This is where you can bridge the gap between Remix
     // and your server
     getLoadContext(req, res) {
