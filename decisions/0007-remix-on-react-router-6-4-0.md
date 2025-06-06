@@ -8,7 +8,7 @@ Status: accepted
 
 Now that we're almost done [Remixing React Router][remixing-react-router] and will be shipping `react-router@6.4.0` shortly, it's time for us to start thinking about how we can layer Remix on top of the latest React Router. This will allow us to delete a _bunch_ of code from Remix for handling the Data APIs. This document aims to discuss the changes we foresee making and some potential iterative implementation approaches to avoid a big-bang merge.
 
-From an iterative-release viewpoint, there's 4 separate "functional" aspects to consider here:
+From an iterative-release viewpoint, there are four separate "functional" aspects to consider here:
 
 1. Server data loading
 2. Server react component rendering
@@ -19,7 +19,7 @@ From an iterative-release viewpoint, there's 4 separate "functional" aspects to 
 
 ## Decision
 
-The high level approach is as follows
+The high-level approach is as follows
 
 1.  SSR data loading
     1.  Update `handleResourceRequest` to use `createStaticHandler` behind a flag
@@ -37,23 +37,23 @@ The high level approach is as follows
 
 ## Details
 
-There are 2 main areas where we have to make changes:
+There are two main areas where we have to make changes:
 
 1. Handling server-side requests in `@remix-run/server-runtime` (mainly in the `server.ts` file)
-2. Handling client-side hydration + routing in `@remix-run/react` (mainly in the `components.ts`, `server.ts` and `browser.ts` files)
+2. Handling client-side hydration and routing in `@remix-run/react` (mainly in the `components.ts`, `server.ts` and `browser.ts` files)
 
 Since these are separated by the network chasm, we can actually implement these independent of one another for smaller merges, iterative development, and easier rollbacks should something go wrong.
 
 ### Do the server data-fetching migration first
 
-There's two primary reasons it makes sense to handle the server-side data-fetching logic first:
+There are two primary reasons it makes sense to handle the server-side data-fetching logic first:
 
-1. It's a smaller surface area change since there's effectively only 1 new API to work with in `createStaticHandler`
+1. It's a smaller surface area change since there's effectively only one new API to work with in `createStaticHandler`
 2. It's easier to implement in a feature-flagged manner since we're on the server and bundle size is not a concern
 
 We can do this on the server using the [strangler pattern][strangler-pattern] so that we can confirm the new approach is functionally equivalent to the old approach. Depending on how far we take it, we can assert this through unit tests, integration tests, as well as run-time feature flags if desired.
 
-For example, pseudo code for this might look like the following, where we enable via a flag during local development and potentially unit/integration tests. We can throw exceptions anytime the new static handler results in different SSR data. Once we're confident, we delete the current code and remove the flag conditional.
+For example, pseudocode for this might look like the following, where we enable via a flag during local development and potentially unit/integration tests. We can throw exceptions anytime the new static handler results in different SSR data. Once we're confident, we delete the current code and remove the flag conditional.
 
 ```tsx
 // Runtime-agnostic flag to enable behavior, will always be committed as
@@ -114,7 +114,7 @@ We can also split this into iterative approaches on the server too, and do `hand
 #### Notes
 
 - This can't use `process.env` since the code we're changing is runtime agnostic. We'll go with a local hardcoded variable in `server.ts` for now to avoid runtime-specific ENV variable concerns.
-  - Unit and integration tests may need to have their own copies of this variable as well to remain passing. For example, we have unit tests that assert that a loader is called once for a given route - but when this flag is enabled, that loader will be called twice so we can set up a conditional assertion based on the flag.
+  - Unit and integration tests may need to have their own copies of this variable as well to remain passing. For example, we have unit tests that assert that a `loader` is called once for a given route — but when this flag is enabled, that `loader` will be called twice, so we can set up a conditional assertion based on the flag.
 - The `remixContext` sent through `entry.server.ts` will be altered in shape. We consider this an opaque API so not a breaking change.
 
 #### Implementation approach
@@ -139,7 +139,7 @@ We can also split this into iterative approaches on the server too, and do `hand
 
 ### Do the UI rendering layer second
 
-The rendering layer in `@remix-run/react` is a bit more of a whole-sale replacement and comes with backwards-compatibility concerns, so it makes sense to do second. However, we can still do this iteratively, we just can't deploy iteratively since the SSR and client HTML need to stay synced (and associated hooks need to read from the same contexts). First, we can focus on getting the SSR document rendered properly without `<Scripts/>`. Then second we'll add in client-side hydration.
+The rendering layer in `@remix-run/react` is a bit more of a wholesale replacement and comes with backwards-compatibility concerns, so it makes sense to do second. However, we can still do this iteratively, we just can't deploy iteratively since the SSR and client HTML need to stay synced (and associated hooks need to read from the same contexts). First, we can focus on getting the SSR document rendered properly without `<Scripts/>`. Then second, we'll add in client-side hydration.
 
 The main changes here include:
 

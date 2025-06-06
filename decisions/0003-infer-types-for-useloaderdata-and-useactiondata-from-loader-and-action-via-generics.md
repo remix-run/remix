@@ -32,7 +32,7 @@ export default function Route() {
 }
 ```
 
-For end-to-end type safety, it is then the user's responsability to make sure that `loader` and `action` also use the same type in the `json` generic:
+For end-to-end type safety, it is then the user's responsibility to make sure that `loader` and `action` also use the same type in the `json` generic:
 
 ```ts
 export const loader: LoaderFunction = () => {
@@ -85,7 +85,7 @@ function useLoaderData<T>(): T {
 }
 ```
 
-`useLoaderData` isn't basing its return type on how `data` was set (i.e. the return value of `loader`) nor is it validating the data.
+`useLoaderData` isn't basing its return type on how `data` was set (i.e., the return value of `loader`) nor is it validating the data.
 It's just blindly casting `data` to whatever the user passed in for the generic `T`.
 
 ### Issues with current approach
@@ -119,15 +119,15 @@ Again, the same goes for `useActionData`.
 - Return type of `useLoaderData` and `useActionData` should somehow be inferred from `loader` and `action`, not blindly type cast
 - Return type of `loader` and `action` should be inferred
   - Necessarily, return type of `json` should be inferred from its input
-- No module side-effects (so higher-order functions like `makeLoader` is definitely a no).
+- No module side effects (so higher-order functions like `makeLoader` is definitely a no).
 - `json` should allow everything that `JSON.stringify` allows.
 - `json` should allow only what `JSON.stringify` allows.
 - `useLoaderData` should not return anything that `JSON.parse` can't return.
 
-### Key insight: `loader` and `action` are an _implicit_ inputs
+### Key insight: `loader` and `action` are _implicit_ inputs
 
-While there's been interest in inferring the types for `useLoaderData` based on `loader`, there was [hesitance to use a Typescript generic to do so](https://github.com/remix-run/remix/pull/3276#issuecomment-1164764821).
-Typescript generics are apt for specifying or inferring types for _inputs_, not for blindly type casting output types.
+While there's been interest in inferring the types for `useLoaderData` based on `loader`, there was [hesitance to use a TypeScript generic to do so](https://github.com/remix-run/remix/pull/3276#issuecomment-1164764821).
+TypeScript generics are apt for specifying or inferring types for _inputs_, not for blindly type casting output types.
 
 A key factor in the decision was identifying that `loader` and `action` are _implicit_ inputs of `useLoaderData` and `useActionData`.
 
@@ -146,7 +146,7 @@ Without the `loader` argument to infer types from, `useLoaderData` needs a way t
 Additionally, `loader` and `useLoaderData` are both managed by Remix across the network.
 While its true that Remix doesn't "own" the network in the strictest sense, having `useLoaderData` return data that does not correspond to its `loader` is an exceedingly rare edge-case.
 
-Same goes for `useActionData`.
+The same goes for `useActionData`.
 
 ---
 
@@ -154,7 +154,7 @@ A similar case is how [Prisma](https://www.prisma.io/) infers types from databas
 
 ## Decision
 
-Explicitly provide type of the implicit `loader` input for `useLoaderData` and then infer the return type for `useLoaderData`.
+Explicitly provide a type of the implicit `loader` input for `useLoaderData` and then infer the return type for `useLoaderData`.
 Do the same for `action` and `useActionData`.
 
 ```ts
@@ -209,13 +209,13 @@ export default function Route() {
 ## Consequences
 
 - Users can continue to provide non-inferred types by type casting the result of `useLoaderData` or `useActionData`
-- Users can opt-in to inferred types by using `typeof loader` or `typeof action` at the generic for `useLoaderData` or `useActionData`.
+- Users can opt in to inferred types by using `typeof loader` or `typeof action` at the generic for `useLoaderData` or `useActionData`.
 - Return types for `loader` and `action` will be the sources-of-truth for the types inferred for `useLoaderData` and `useActionData`.
 - Users do not need to write redundant code to align types across the network
 - Return type of `useLoaderData` and `useActionData` will correspond to the JSON _serialized_ types from `json` calls in `loader` and `action`, eliminating a class of errors.
 - `LoaderFunction` and `ActionFunction` should not be used when opting into type inference as they override the inferred return types.[^1]
 
-🚨 Users who opt-in to inferred types **MUST** return a `TypedResponse` from `json` and **MUST NOT** return a bare object:
+🚨 Users who opt in to inferred types **MUST** return a `TypedResponse` from `json` and **MUST NOT** return a bare object:
 
 ```ts
 const loader = () => {
@@ -227,4 +227,4 @@ const loader = () => {
 };
 ```
 
-[^1]: The proposed `satisfies` operator for Typescript would let `LoaderFunction` and `ActionFunction` enforce function types while preserving the narrower inferred return type: https://github.com/microsoft/TypeScript/issues/47920
+[^1]: The proposed `satisfies` operator for TypeScript would let `LoaderFunction` and `ActionFunction` enforce function types while preserving the narrower inferred return type: https://github.com/microsoft/TypeScript/issues/47920
