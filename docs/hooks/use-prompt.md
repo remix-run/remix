@@ -11,7 +11,7 @@ This only works for client-side navigations within your React Router application
 </docs-info>
 
 <docs-warning>
-Blocking a user from navigating is a bit of an anti-pattern, so please carefully consider any usage of this hook and use it sparingly. In the de-facto use case of preventing a user navigating away from a half-filled form, you might consider persisting unsaved state to `sessionStorage` and automatically re-filling it if they return instead of blocking them from navigating away.
+Blocking a user from navigating is a bit of an antipattern, so please carefully consider any usage of this hook and use it sparingly. In the de-facto use case of preventing a user navigating away from a half-filled form, you might consider persisting unsaved state to `sessionStorage` and automatically re-filling it if they return instead of blocking them from navigating away.
 </docs-warning>
 
 <docs-warning>

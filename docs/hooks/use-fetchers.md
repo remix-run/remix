@@ -5,7 +5,7 @@ toc: false
 
 # `useFetchers`
 
-Returns an array of all in-flight fetchers. This is useful for components throughout the app that didn't create the fetchers but want to use their submissions to participate in optimistic UI.
+Returns an array of all in-flight fetchers. This is useful for components throughout the app that didn't create the fetchers but want to use their submissions to participate in an optimistic UI.
 
 ```tsx
 import { useFetchers } from "@remix-run/react";
