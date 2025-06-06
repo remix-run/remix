@@ -542,7 +542,7 @@ Right now, our blog posts just come from seeding the database. Not a real soluti
 
 Let's make a new "admin" section of the app.
 
-💿 First, let's add a link to the admin section on the `posts index route:
+💿 First, let's add a link to the admin section on the `posts` index route:
 
 ```tsx filename=app/routes/posts._index.tsx
 // ...
