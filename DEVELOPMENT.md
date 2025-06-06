@@ -38,7 +38,7 @@ pnpm test:integration integration/client-data --project chromium
 
 New releases should be created from release branches originating from the `dev` branch. When you are ready to begin the release process:
 
-- Make sure you've pulled all of the changes from GitHub for both `dev` and `main` branches
+- Make sure you've pulled all the changes from GitHub for both `dev` and `main` branches
 - Check out the `dev` branch
 - If needed, bump the dependencies to the correct React Router release
   - `./scripts/bump-router-versions.sh [pre|latest]`
@@ -54,7 +54,7 @@ Changesets will do most of the heavy lifting for our releases. When changes are 
 - Ensure you are on the new `release-*` branch
 - Enter Changesets pre-release mode using the `pre` tag: `pnpm changeset pre enter pre`
 - Commit the change and push the `release-*` branch to GitHub
-- Wait for the release workflow to finish - the Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs
+- Wait for the release workflow to finish — the Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs
 - Review the updated `CHANGELOG` files and make any adjustments necessary, then merge the PR into the `release-*` branch
   - `find packages -name 'CHANGELOG.md' -mindepth 2 -maxdepth 2 -exec code {} \;`
 - Once the PR is merged, the release workflow will publish the updated packages to npm
@@ -65,12 +65,12 @@ Changesets will do most of the heavy lifting for our releases. When changes are 
 
 ### Iterating a pre-release
 
-You may need to make changes to a pre-release prior to publishing a final stable release. To do so:
+You may need to make changes to a pre-release before publishing a final stable release. To do so:
 
 - Make whatever changes you need
 - Create a new changeset: `pnpm changeset`
   - **IMPORTANT:** This is required even if you ultimately don't want to include these changes in the logs
-  - Remember, changelogs can be edited prior to publishing, but the Changeset version script needs to see new changesets in order to create a new version
+  - Remember, changelogs can be edited before publishing, but the Changeset version script needs to see new changesets to create a new version
 - Commit the changesets and push the `release-*` branch to GitHub
 - Wait for the release workflow to finish and the Changesets action to open its PR that will increment all versions
 - Review the PR, make any adjustments necessary, and merge it into the `release-*` branch
@@ -81,7 +81,7 @@ You may need to make changes to a pre-release prior to publishing a final stable
 
 - Exit Changesets pre-release mode: `pnpm changeset pre exit`
 - Commit the edited `pre.json` file along with any unpublished changesets, and push the `release-*` branch to GitHub
-- Wait for the release workflow to finish - the Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs for the stable release
+- Wait for the release workflow to finish — the Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs for the stable release
 - Review the updated `CHANGELOG` files and make any adjustments necessary
   - `find packages -name 'CHANGELOG.md' -mindepth 2 -maxdepth 2 -exec code {} \;`
   - Our automated release process should have removed prerelease entries
@@ -104,11 +104,11 @@ Hotfix releases follow the same process as standard releases above, but the `rel
 
 ### Experimental releases
 
-Experimental releases use a [manually-triggered Github Actions workflow](./.github/workflows/release-experimental.yml) and can be built from any existing branch. to build and publish an experimental release:
+Experimental releases use a [manually triggered GitHub Actions workflow](./.github/workflows/release-experimental.yml) and can be built from any existing branch. To build and publish an experimental release:
 
 - Commit your changes to a branch
-- Push the branch to github
-- Go to the Github Actions UI for the [release-experimental.yml workflow](https://github.com/remix-run/remix/actions/workflows/release-experimental-dispatch.yml)
+- Push the branch to GitHub
+- Go to the GitHub Actions UI for the [release-experimental.yml workflow](https://github.com/remix-run/remix/actions/workflows/release-experimental-dispatch.yml)
 - Click the `Run workflow` dropdown
 - Leave the `Use workflow from` dropdown as `main`
 - Enter your feature branch in the `branch` input
@@ -116,13 +116,13 @@ Experimental releases use a [manually-triggered Github Actions workflow](./.gith
 
 ### Nightly releases
 
-Nightly releases happen automatically at midnight PST via a [cron-driven workflow](./.github/workflows/nightly.yml) that is essentially the same as the experimental releases, but also performs some validations after the release.
+Nightly releases happen automatically at midnight PST via a [cron-driven workflow](./.github/workflows/nightly.yml) that is essentially the same as the experimental releases but also performs some validations after the release.
 
 ## Local Development Tips and Tricks
 
 ### Environment Variables
 
-This repository supports handful of environment variables to streamline the local development/testing process.
+This repository supports a handful of environment variables to streamline the local development/testing process.
 
 **`REMIX_DEBUG`**
 
@@ -134,7 +134,7 @@ REMIX_DEBUG=true pnpm watch
 
 **`LOCAL_BUILD_DIRECTORY`**
 
-When developing Remix locally, you often need to go beyond unit/integration tests and test your changes in a local Remix application. The easiest way to do this is to run your local Remix build and use this environment variable to direct `rollup` to write the output files directly into the local Remix application's `node_modules` folder. Then you just need to restart your local Remix application server to pick up the changes.
+When developing Remix locally, you often need to go beyond unit/integration tests and test your changes in a local Remix application. The easiest way to do this is to run your local Remix build and use this environment variable to direct `rollup` to write the output files directly into the local Remix application's `node_modules` folder. Then you need to restart your local Remix application server to pick up the changes.
 
 ```sh
 # Tab 1 - create and run a local remix application
