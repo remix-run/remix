@@ -87,7 +87,7 @@ You can always check in on Remix development in our live-streamed planning meeti
 
 ### Issue Tracking
 
-If a Roadmap Issue is expected to be large (involving multiple tasks, authors, PRs, etc.), the Admin team will create a temporary project board.
+If a Roadmap Issue is expected to be large (involving multiple tasks, authors, PRs, etc.), a temporary project board will be created by the Admin team.
 
 - The original issue will remain on the Roadmap project to see general progress.
 - The subtasks will be tracked on the temporary project.
