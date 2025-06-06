@@ -39,7 +39,7 @@ If you have an idea for a new feature, please don't send a Pull Request, but fol
 2. The Remix **Admin Team** accepts Proposals in the **Roadmap Planning** meeting.
    - Proposals are accepted when the Admins create an **Issue** from the Proposal and add the issue to the [**Roadmap**][roadmap].
 3. The Admins assign an **Owner** to the issue.
-   - Owners are responsible for shipping the feature including all decisions for APIs, behavior, and implementation.
+   - Owners are responsible for shipping the feature, including all decisions for APIs, behavior, and implementation.
    - Owners organize the work with other contributors for larger issues.
    - Owners may be contributors from inside or outside the Remix team.
 4. Owners create an **RFC** from the Proposal and development can begin.
@@ -47,7 +47,7 @@ If you have an idea for a new feature, please don't send a Pull Request, but fol
 
 ### Bug-Fix Pull Requests
 
-If you think you've found a bug we'd love a PR that fixes it! Please follow these guidelines:
+If you think you've found a bug, we'd love a PR that fixes it! Please follow these guidelines:
 
 1. Contributors add a failing test along with the fix in a Pull Request
    - It's ideal if the first commit is a failing test followed by the changes to the code that fix it.
@@ -66,7 +66,7 @@ If you think you've found a bug but don't have the time to send a PR, please fol
 
    - [https://remix.new][https_remix_new] makes this really easy
 
-2. If this is not possible (related to some hosting setup, etc.) please create a GitHub repo that we can run with clear instructions in the README to observe the bug.
+2. If this is not possible (related to some hosting setup, etc.), please create a GitHub repo that we can run with clear instructions in the README to observe the bug.
 
 3. Open an issue and link to the reproduction.
 
@@ -79,7 +79,7 @@ You can always check in on Remix development in our live-streamed planning meeti
 - The Remix Admin team will meet weekly to report progress to the community and add Proposals and Verified Bugs to the Roadmap.
   - Unanimous agreement among the Remix Admin is required to add a Proposal to the Roadmap.
   - Proposals are not “rejected”, only “accepted” onto the Roadmap.
-  - Contributors can continue to up-vote and comment on Proposals, they will bubble up for a future review if it’s getting new activity.
+  - Contributors can continue to upvote and comment on Proposals, they will bubble up for a future review if it’s getting new activity.
   - The Remix Admin team may lock Proposals for any reason.
 - The meeting will be livestreamed on the [Remix YouTube channel][youtube].
   - Everyone is invited to the [Discord][discord] `#roadmap-livestream-chat` while the meeting is in progress.
@@ -87,7 +87,7 @@ You can always check in on Remix development in our live-streamed planning meeti
 
 ### Issue Tracking
 
-If a Roadmap Issue is expected to be large (involving multiple tasks, authors, PRs, etc.) a temporary project board will be created by the Admin team.
+If a Roadmap Issue is expected to be large (involving multiple tasks, authors, PRs, etc.), a temporary project board will be created by the Admin team.
 
 - The original issue will remain on the Roadmap project to see general progress.
 - The subtasks will be tracked on the temporary project.
@@ -103,7 +103,7 @@ If a Roadmap Issue is expected to be large (involving multiple tasks, authors, P
 
 ### Support for Owners
 
-- Owners will be added to the `#collaborators` private channel on [Discord][discord] to get help with architecture and implementation. This channel is private to help keep noise to a minimum so Admins don't miss messages and owners can get unblocked. Owners can also discuss these questions in any channel or anywhere!
+- Owners will be added to the `#collaborators` private channel on [Discord][discord] to get help with architecture and implementation. This channel is private to help keep noise to a minimum, so Admins don't miss messages and owners can get unblocked. Owners can also discuss these questions in any channel or anywhere!
 - Admins will actively work with owners to ensure their issues and projects are organized (correct status, links to related issues, etc.), documented, and moving forward.
 - An issue's Owner may be reassigned if progress is stagnating.
 
@@ -170,9 +170,9 @@ You can set the base in GitHub when authoring the PR with the dropdown below the
 
 ### Tests
 
-We use a mix of `jest` and `playwright` for our testing in this project. We have a suite of integration tests in the integration folder and packages have their own jest configuration, which are then referenced by the primary jest config in the root of the project.
+We use a mix of `jest` and `playwright` for our testing in this project. We have a suite of integration tests in the integration folder, and packages have their own jest configuration, which is then referenced by the primary jest config in the root of the project.
 
-The integration tests and the primary tests can be run in parallel using `npm-run-all` to make the tests run as quickly and efficiently as possible. To run these two sets of tests independently you'll need to run the individual script:
+The integration tests and the primary tests can be run in parallel using `npm-run-all` to make the tests run as quickly and efficiently as possible. To run these two sets of tests independently, you'll need to run the individual script:
 
 - `pnpm test:primary`
 - `pnpm test:integration`
@@ -203,7 +203,7 @@ Running `pnpm build` from the root directory will run the build. You can run the
 
 It's often really useful to be able to interact with a real app while developing features for apps. So you can place an app in the `playground` directory and the build process will automatically copy all the output to the `node_modules` of all the apps in the `playground` directory for you. It will even trigger a live reload event for you!
 
-To generate a new playground, simply run:
+To generate a new playground, run:
 
 ```shellscript nonumber
 pnpm playground:new <?name>
@@ -238,7 +238,7 @@ There may be other branches for various features and experimentation, but all th
 
 ## How do nightly releases work?
 
-Nightly releases will run the action files from the `main` branch as scheduled workflows will always use the latest commit to the default branch, signified by [this comment on the nightly action file][nightly_action_comment], however they check out the `dev` branch during their setup as that's where we want our nightly releases to be cut from. From there, we check if the git SHA is the same and only cut a new nightly if something has changed.
+Nightly releases will run the action files from the `main` branch as scheduled workflows will always use the latest commit to the default branch, signified by [this comment on the nightly action file][nightly_action_comment], however, they check out the `dev` branch during their setup as that's where we want our nightly releases to be cut from. From there, we check if the git SHA is the same and only cut a new nightly if something has changed.
 
 ## End-to-end testing
 

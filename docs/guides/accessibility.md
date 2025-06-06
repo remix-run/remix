@@ -18,7 +18,7 @@ Remix also provides the [`<NavLink/>`][navlink] which behaves the same as `<Link
 
 If you are rendering [`<Scripts>`][scripts] in your app, there are some important things to consider to make client-side routing more accessible for your users.
 
-With a traditional multi-page website we don't have to think about route changes too much. Your app renders an anchor tag, and the browser handles the rest. If your users disable JavaScript, your Remix app should already work this way by default!
+With a traditional multipage website we don't have to think about route changes too much. Your app renders an anchor tag, and the browser handles the rest. If your users disable JavaScript, your Remix app should already work this way by default!
 
 When the client scripts in Remix are loaded, React Router takes control of routing and prevents the browser's default behavior. Remix doesn't make any assumptions about your UI as the route changes. There are some important features you'll want to consider as a result, including:
 

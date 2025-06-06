@@ -6,7 +6,7 @@ title: Dependency optimization
 
 # Dependency optimization
 
-Remix introduced automatic dependency optimization in development behind the `future.unstable_optimizeDeps` [Future Flag][future-flags]. This allows you to opt-into this behavior which will eventually become the default in some future version of Remix - a.k.a. React Router ([1][rr-v7], [2][rr-v7-2]). This flag is intended to remain "unstable" into React Router v7 as there is some additional bundling-related work coming that will ease adoption of the flag. We plan to stabilize the flag once that work is completed in v7.
+Remix introduced automatic dependency optimization in development behind the `future.unstable_optimizeDeps` [Future Flag][future-flags]. This allows you to opt-into this behavior, which will eventually become the default in some future version of Remix — a.k.a. React Router ([1][rr-v7], [2][rr-v7-2]). This flag is intended to remain "unstable" into React Router v7 as there is some additional bundling-related work coming that will ease adoption of the flag. We plan to stabilize the flag once that work is completed in v7.
 
 In development, Vite aims to [prebundle dependencies][prebundle-dependencies] so that it can efficiently serve up those dependencies on-demand.
 To do this, Vite needs to know where to start crawling your app's module graph to look for dependencies.

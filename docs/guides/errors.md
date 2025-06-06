@@ -81,7 +81,7 @@ export function ErrorBoundary() {
 }
 ```
 
-If you need to log these errors or report them to a third-party service such as [BugSnag][bugsnag] or [Sentry][sentry], then you can do this through a [`handleError`][handle-error] export in your [`app/entry.server.js`][entry-server]. This method receives the un-sanitized versions of the error since it is also running on the server.
+If you need to log these errors or report them to a third-party service such as [BugSnag][bugsnag] or [Sentry][sentry], then you can do this through a [`handleError`][handle-error] export in your [`app/entry.server.js`][entry-server]. This method receives the unsanitized versions of the error since it is also running on the server.
 
 If you want to trigger an error boundary and display a specific message or data in the browser, then you can throw a `Response` from a `action`/`loader` with that data instead:
 

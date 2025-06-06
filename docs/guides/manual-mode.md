@@ -7,8 +7,8 @@ title: Manual Dev Server
 <docs-warning>This guide is only relevant when using the [Classic Remix Compiler][classic-remix-compiler].</docs-warning>
 
 By default, `remix dev` drives like an automatic.
-It keeps your app server up-to-date with the latest code changes by automatically restarting the app server whenever file changes are detected in your app code.
-This is a simple approach that stays out of your way, and we think will work well for most apps.
+It keeps your app server up to date with the latest code changes by automatically restarting the app server whenever file changes are detected in your app code.
+This is a simple approach that stays out of your way, and we think it will work well for most apps.
 
 But if app server restarts are slowing you down, you can take the wheel and drive `remix dev` like a manual:
 
@@ -17,12 +17,12 @@ remix dev --manual -c "node ./server.js"
 ```
 
 That means learning how to use the clutch to shift gears.
-It also means you might stall while your getting your bearings.
-It takes a bit more time to learn and its more code for you to maintain.
+It also means you might stall while you're getting your bearings.
+It takes a bit more time to learn, and it's more code for you to maintain.
 
 > With great power comes great responsibility.
 
-We don't think its worth it unless you're feeling some pain with the default automatic mode.
+We don't think it's worth it unless you're feeling some pain with the default automatic mode.
 But if you are, Remix has got you covered.
 
 ## Mental model for `remix dev`
@@ -64,13 +64,13 @@ Ok, I think we're stretching this car metaphor. 😅
 In other words, `remix-serve` knows how to reimport server code changes _without_ needing to restart itself.
 But if you are using `-c` to run your own app server, read on.
 
-## Learning to drive stick
+## Learning to drive a stick
 
 When you switch on manual mode with `--manual`, you take on some new responsibilities:
 
 1. Detect when server code changes are available
 2. Re-import code changes while keeping the app server running
-3. Send "ready" message to the Remix compiler _after_ those changes are picked up
+3. Send a "ready" message to the Remix compiler _after_ those changes are picked up
 
 Re-importing code changes turns out to be tricky because JS imports are cached.
 
@@ -84,11 +84,11 @@ const changed = await import("./build/index.js");
 ```
 
 You need some way to bust the import cache when you want to re-import modules with code changes.
-Also importing modules is different between CommonJS (`require`) and ESM (`import`) which makes things even more complicated.
+Also importing modules is different between CommonJS (`require`) and ESM (`import`) which complicates things even more.
 
 <docs-warning>
 
-If you are using `tsx` or `ts-node` to run your `server.ts`, those tools may be transpiling your ESM Typescript code to CJS Javascript code.
+If you are using `tsx` or `ts-node` to run your `server.ts`, those tools may be transpiling your ESM TypeScript code to CJS JavaScript code.
 In this case, you'll need to use CJS cache busting in your `server.ts` even though the rest of your server code uses `import`s.
 
 What matters here is how your server code is _executed_ not how its _written_.
@@ -219,7 +219,7 @@ async function handleServerUpdate() {
 
 ### 4. Dev-aware request handler
 
-Last step is to wrap all of this up in a development mode request handler:
+The last step is to wrap all of this up in a development mode request handler:
 
 ```js
 /**

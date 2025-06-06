@@ -4,7 +4,7 @@ title: Resource Routes
 
 # Resource Routes
 
-Resource Routes are not part of your application UI, but are still part of your application. They can send any kind of Response.
+Resource Routes are not part of your application UI but are still part of your application. They can send any kind of `Response`.
 
 Most routes in Remix are UI Routes, or routes that actually render a component. But routes don't always have to render components. There are a handful of cases where you want to use route as a general-purpose endpoint to your website. Here are a few examples:
 
@@ -41,7 +41,7 @@ export default function Report() {
 }
 ```
 
-It's linking to a PDF version of the page. To make this work we can create a Resource Route below it. Notice that it has no component: that makes it a Resource Route.
+It's linking to a PDF version of the page. To make this work, we can create a Resource Route below it. Notice that it has no component: that makes it a Resource Route.
 
 ```tsx filename=app/routes/reports.$id[.pdf].tsx
 export async function loader({

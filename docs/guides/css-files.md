@@ -9,7 +9,7 @@ There are two main ways to manage CSS files in Remix:
 - [CSS bundling][css-bundling]
 - [CSS URL imports][css-url-imports]
 
-This guide covers the pros and cons of each approach, and provides some recommendations based on your project's specific needs.
+This guide covers the pros and cons of each approach and provides some recommendations based on your project's specific needs.
 
 ## CSS bundling
 
@@ -32,7 +32,7 @@ export function Button(props) {
 }
 ```
 
-To use this component, you can simply import it and use it in your route file:
+To use this component, you can import it and use it in your route file:
 
 ```jsx filename=routes/hello.jsx
 import { Button } from "../components/Button";
@@ -42,11 +42,11 @@ export default function HelloRoute() {
 }
 ```
 
-When consuming this component, you don't have to worry about managing individual CSS files. CSS is treated as private implementation detail of the component. This is a common pattern in many component libraries and design systems and scales quite nicely.
+When consuming this component, you don't have to worry about managing individual CSS files. CSS is treated as a private implementation detail of the component. This is a common pattern in many component libraries and design systems and scales quite nicely.
 
 #### CSS bundling is required for some CSS solutions
 
-Some approaches to managing CSS files requires the use of bundled CSS.
+Some approaches to managing CSS files require the use of bundled CSS.
 
 For example, [CSS Modules][css-modules] is built on the assumption that CSS is bundled. Even though you're explicitly importing the CSS file's class names as a JavaScript object, the styles themselves are still treated as a side effect and automatically bundled into the output. You have no access to the underlying URL of the CSS file.
 
@@ -91,7 +91,7 @@ When React is used to render the entire document (as Remix does) you can run int
 
 In Remix, this issue can happen due to hydration errors since it causes React to re-render the entire page from scratch. Hydration errors can be caused by your app code, but they can also be caused by browser extensions that manipulate the document.
 
-This is a known React issue that is fixed in their [canary release channel][react-canaries]. If you understand the risks involved, you can pin your app to a specific [React version][react-versions] and then use [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
+This is a known React issue fixed in their [canary release channel][react-canaries]. If you understand the risks involved, you can pin your app to a specific [React version][react-versions] and then use [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
 
 ```json filename=package.json
 {
@@ -114,7 +114,7 @@ Again, it's worth stressing that this issue with styles that were injected by Vi
 
 The other main way to manage CSS files is to use [Vite's explicit URL imports][vite-url-imports].
 
-Vite lets you append `?url` to your CSS file imports to get the URL of the file (e.g. `import href from "./styles.css?url"`). This URL can then be passed to Remix via the [links export][links-export] from route modules. This ties CSS files into Remix's routing lifecycle, ensuring styles are injected and removed from the document while navigating around the app.
+Vite lets you append `?url` to your CSS file imports to get the URL of the file (e.g. `import href from "./styles.css?url"`). This URL can then be passed to Remix via the [`links` export][links-export] from route modules. This ties CSS files into Remix's routing lifecycle, ensuring styles are injected and removed from the document while navigating around the app.
 
 For example, using the same `Button` component example from earlier, you can export a `links` array alongside the component so that consumers have access to its styles.
 
@@ -149,15 +149,15 @@ This approach is much more predictable in terms of rule ordering since it gives 
 
 The downside of this approach is that it can result in a lot of boilerplate.
 
-If you have many re-usable components each with their own CSS file, you'll need to manually surface all `links` for each component up to your route components, which may require passing CSS URLs up through multiple levels of components. This can also be error prone since it's easy to forget to import a component's `links` array.
+If you have many re-usable components each with their own CSS file, you'll need to manually surface all `links` for each component up to your route components, which may require passing CSS URLs up through multiple levels of components. This can also be error-prone since it's easy to forget to import a component's `links` array.
 
 Despite its advantages, you may find this to be too cumbersome compared to CSS bundling, or you may find the extra boilerplate to be worth it. There's no right or wrong on this one.
 
 ## Conclusion
 
-It's ultimately personal preference when it comes to managing CSS files in your Remix application, but here's a good rule of thumb:
+It's ultimately a personal preference when it comes to managing CSS files in your Remix application, but here's a good rule of thumb:
 
-- If your project only has a small number of CSS files (e.g. when using Tailwind, in which case you might only have a single CSS file), you should use CSS URL imports. The increased boilerplate is minimal and your development environment will be much closer to production.
+- If your project only has a small number of CSS files (e.g., when using Tailwind, in which case you might only have a single CSS file), you should use CSS URL imports. The increased boilerplate is minimal, and your development environment will be much closer to production.
 - If your project has a large number of CSS files tied to smaller re-usable components, you'll probably find the reduced boilerplate of CSS bundling to be much more ergonomic. Just be aware of the trade-offs and write your CSS in a way that makes it resilient against changes to file ordering.
 - If you're experiencing issues with styles disappearing during development, you should consider using a [React canary release][react-canaries] so that React doesn't remove the existing `head` element when re-mounting the page.
 

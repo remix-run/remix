@@ -7,7 +7,7 @@ description: The quickest way to get rocking and rolling with Remix
 
 <docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest framework features, you should create your project using a [React Router template][react-router-templates].</docs-warning>
 
-When using [`create-remix`][create_remix] to generate a new project, you can choose a Template or a Stack to quickly get up and running. Templates are minimal starting points to get you up and running. "Stacks" are templates that are more-complete and closer to production ready architectures (potentially including aspects such as testing, database, CI, and deployment configurations).
+When using [`create-remix`][create_remix] to generate a new project, you can choose a Template or a Stack to quickly get up and running. Templates are minimal starting points to get you up and running. "Stacks" are templates that are more-complete and closer to production-ready architectures (potentially including aspects such as testing, database, CI, and deployment configurations).
 
 ## Templates
 
@@ -17,17 +17,17 @@ If you run `create-remix` without providing the `--template` option, you'll get 
 npx create-remix@latest
 ```
 
-If you are not interested in using TypeScript, you can install the simpler Javascript template instead:
+If you are not interested in using TypeScript, you can install the simpler JavaScript template instead:
 
 ```shellscript nonumber
 npx create-remix@latest --template remix-run/remix/templates/remix-javascript
 ```
 
-This is a great place to start if you're just looking to try out Remix for the first time. You can always extend this starting point yourself or migrate to a more advanced template later.
+This is a great place to start if you're just looking to try out Remix for the first time. You can always extend this starting point yourself or migrate to more advanced templates later.
 
 ### Official Templates
 
-If you want more control over your server or wish to deploy to a non-node runtime—such as [Arc][arc], [Cloudflare][cloudflare], or [Deno][deno]—then you can try one of our [official templates][official_templates] from the Remix repository:
+If you want more control over your server or wish to deploy to a non-node runtime—such as [Arc][arc], [Cloudflare][cloudflare], or [Deno][deno] — then you can try one of our [official templates][official_templates] from the Remix repository:
 
 ```shellscript nonumber
 npx create-remix@latest --template remix-run/remix/templates/cloudflare
@@ -67,7 +67,7 @@ npx create-remix@latest --template remix-run/examples/basic
 
 ## Stacks
 
-When a template is closer to being a production-ready application, to the point that it provides opinions about the CI/CD pipeline, database and hosting platform, the Remix community refers to these templates as "stacks".
+When a template is closer to being a production-ready application, to the point that it provides opinions about the CI/CD pipeline, database, and hosting platform, the Remix community refers to these templates as "stacks".
 
 There are several official stacks provided, but you can also make your own (read more below).
 
@@ -75,7 +75,7 @@ There are several official stacks provided, but you can also make your own (read
 
 ### Official Stacks
 
-The official stacks come ready with common things you need for a production application including:
+The official stacks come ready with common things you need for a production application, including:
 
 - Database
 - Automatic deployment pipelines
@@ -107,7 +107,7 @@ Community stacks can be used by passing the GitHub username/repo combo to the `-
 npx create-remix@latest --template :username/:repo
 ```
 
-<docs-success>If you want to share your stack with the community, don't forget to tag it with the [remix-stack][remix_stack_topic] topic so others can find it — and yes, we do recommend that you name your own stack after a music sub-genre (not "rock" but "indie"!).</docs-success>
+<docs-success>If you want to share your stack with the community, remember to tag it with the [remix-stack][remix_stack_topic] topic so others can find it — and yes, we do recommend that you name your own stack after a music subgenre (not "rock" but "indie"!).</docs-success>
 
 ## Other Information
 
@@ -147,7 +147,7 @@ This allows you to not have to regularly update your template to the latest vers
 
 #### Customize Initialization
 
-If the template has a `remix.init/index.js` file at the root then that file will be executed after the project has been generated and dependencies have been installed. This gives you a chance to do anything you'd like as part of the initialization of your template. For example, in the blues stack, the `app` property has to be globally unique, so we use the `remix.init/index.js` file to change it to the name of the directory that was created for the project + a couple random characters.
+If the template has a `remix.init/index.js` file at the root then that file will be executed after the project has been generated and dependencies have been installed. This gives you a chance to do anything you'd like as part of the initialization of your template. For example, in the blues stack, the `app` property has to be globally unique, so we use the `remix.init/index.js` file to change it to the name of the directory that was created for the project and a couple random characters.
 
 You could even use `remix.init/index.js` to ask further questions to the developer for additional configuration (using something like [inquirer][inquirer]). Sometimes, you'll need dependencies installed to do this, but those deps are only useful during initialization. In that case, you can also create a `remix.init/package.json` with dependencies and the Remix CLI will install those before running your script.
 

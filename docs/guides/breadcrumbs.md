@@ -4,11 +4,11 @@ title: Breadcrumbs Guide
 
 # Breadcrumbs Guide
 
-In Remix, you can easily build dynamic breadcrumbs based on your route hierarchy. This guide will take you through the process using the [`useMatches`][use-matches] and [`handle`][handle] features.
+In Remix, you can build dynamic breadcrumbs based on your route hierarchy. This guide will take you through the process using the [`useMatches`][use-matches] and [`handle`][handle] features.
 
 ## Understanding the Basics
 
-Remix provides access to all route matches and related data at the top of the React element tree. This enables components like [`<Meta />`][meta-component], [`<Links />`][links-component], and [`<Scripts />`][scripts-component] to obtain values from nested routes and render them at the top of the document.
+Remix provides access to all route matches and related data at the top of the React element tree. This enables components like [`<Meta />`][meta-component], [`<Links />`][links-component], and [`<Scripts />`][scripts-component] to get values from nested routes and render them at the top of the document.
 
 You can use a similar strategy using the `useMatches` and `handle` functions. While we're focusing on breadcrumbs, the principles demonstrated here are applicable to a range of scenarios.
 

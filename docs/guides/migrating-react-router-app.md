@@ -9,9 +9,9 @@ description: Migrating your React Router app to Remix can be done all at once or
 
 <docs-warning>This guide currently assumes you are using the [Classic Remix Compiler][classic-remix-compiler] rather than [Remix Vite][remix-vite].</docs-warning>
 
-Millions of React applications deployed worldwide are powered by [React Router][react-router]. Chances are you've shipped a few of them! Because Remix is built on top of React Router, we have worked to make migration an easy process you can work through iteratively to avoid huge refactors.
+React Router powers millions of React applications deployed worldwide[][react-router]. Chances are you've shipped a few of them! Because Remix is built on top of React Router, we have worked to make migration an easy process you can work through iteratively to avoid huge refactors.
 
-If you aren't already using React Router, we think there are several compelling reasons to reconsider! History management, dynamic path matching, nested routing, and much more. Take a look at the [React Router docs][react-router-docs] and see all what we have to offer.
+If you aren't already using React Router, we think there are several compelling reasons to reconsider! History management, dynamic path matching, nested routing, and much more. Take a look at the [React Router docs][react-router-docs] and see all that we have to offer.
 
 ## Ensure your app uses React Router v6
 
@@ -38,7 +38,7 @@ import App from "./App";
 render(<App />, document.getElementById("app"));
 ```
 
-Server-rendered React apps are a little different. The browser script is not rendering your app, but is "hydrating" the DOM provided by the server. Hydration is the process of mapping the elements in the DOM to their React component counterparts and setting up event listeners so that your app is interactive.
+Server-rendered React apps are a little different. The browser script is not rendering your app but is "hydrating" the DOM provided by the server. Hydration is the process of mapping the elements in the DOM to their React component counterparts and setting up event listeners so that your app is interactive.
 
 Let's start by creating two new files:
 
@@ -312,7 +312,7 @@ In your `package.json` file, update your scripts to use `remix` commands instead
 }
 ```
 
-And poof! Your app is now server-rendered and your build went from 90 seconds to 0.5 seconds ⚡
+And poof! Your app is now server-rendered, and your build went from 90 seconds to 0.5 seconds ⚡
 
 ## Creating your routes
 
@@ -393,7 +393,7 @@ One potential solution here is using a different caching mechanism that can be u
 
 ```tsx
 // We can safely track hydration in memory state
-// outside of the component because it is only
+// outside the component because it is only
 // updated once after the version instance of
 // `SomeComponent` has been hydrated. From there,
 // the browser takes over rendering duties across
@@ -499,9 +499,9 @@ If you are using TypeScript, you also need to create the `remix.env.d.ts` file i
 
 ### A note about non-standard imports
 
-At this point, you _might_ be able to run your app with no changes. If you are using Create React App or a highly-configured bundler setup, you likely use `import` to include non-JavaScript modules like stylesheets and images.
+At this point, you _might_ be able to run your app with no changes. If you are using Create React App or a highly configured bundler setup, you likely use `import` to include non-JavaScript modules like stylesheets and images.
 
-Remix does not support most non-standard imports, and we think for good reason. Below is a non-exhaustive list of some of the differences you'll encounter in Remix, and how to refactor as you migrate.
+Remix does not support most non-standard imports, and we think for good reason. Below is a non-exhaustive list of some of the differences you'll encounter in Remix and how to refactor as you migrate.
 
 #### Asset imports
 
@@ -616,7 +616,7 @@ If you currently inject `<link />` tags into your page client-side in your exist
 
 ### CSS bundling
 
-Remix has built-in support for [CSS Modules][css-modules], [Vanilla Extract][vanilla-extract] and [CSS side effect imports][css-side-effect-imports]. In order to make use of these features, you'll need to set up CSS bundling in your application.
+Remix has built-in support for [CSS Modules][css-modules], [Vanilla Extract][vanilla-extract] and [CSS side effect imports][css-side-effect-imports]. To make use of these features, you'll need to set up CSS bundling in your application.
 
 First, to get access to the generated CSS bundle, install the `@remix-run/css-bundle` package.
 
@@ -657,7 +657,7 @@ Similar to `links`, each route can also export a `meta` function that returns va
 The behavior for `meta` is slightly different from `links`. Instead of merging values from other `meta` functions in the route hierarchy, **each leaf route is responsible for rendering its own tags**. This is because:
 
 - You often want more fine-grained control over metadata for optimal SEO
-- In the case of some tags that follow the [Open Graph protocol][open-graph-protocol], the ordering of some tags impacts how they are interpreted by crawlers and social media sites, and it's less predictable for Remix to assume how complex metadata should be merged
+- In the case of some tags that follow the [Open Graph protocol][open-graph-protocol], the ordering of some tags impacts how they are interpreted by crawlers and social media sites. It's less predictable for Remix to assume how complex metadata should be merged
 - Some tags allow for multiple values while others do not, and Remix shouldn't assume how you want to handle all of those cases
 
 ### Updating imports

@@ -7,9 +7,9 @@ hidden: true
 
 ## In Routes Modules
 
-Each route can also define its http headers. This is mostly important for http caching. Remix doesn't rely on building your website into static files to be uploaded to a CDN for performance, instead we rely on cache headers. The end result of either approach is the same: a static document on a CDN. [Check out this video for more information on that][check-out-this-video-for-more-information-on-that].
+Each route can also define its http headers. This is mostly important for http caching. Remix doesn't rely on building your website into static files to be uploaded to a CDN for performance, instead we rely on cache headers. The result of either approach is the same: a static document on a CDN. [Check out this video for more information on that][check-out-this-video-for-more-information-on-that].
 
-Usually, the difficulty with cache headers is configuring them. In Remix we've made it easy. Just export a `headers` function from your route.
+Usually, the difficulty with cache headers is configuring them. In Remix, we've made it easy. Just export a `headers` function from your route.
 
 ```tsx
 export function headers() {
@@ -27,9 +27,9 @@ export default function Gists() {
 }
 ```
 
-The max-age tells the user's browser to cache this for 300 seconds, or 5 minutes. That means if they click back or on a link to the same page again within 5 minutes, the browser won't even make a request for the page, it will use the cache.
+The max-age tells the user's browser to cache this for 300 seconds or 5 minutes. That means if they click back or on a link to the same page again within 5 minutes, the browser won't even make a request for the page, it will use the cache.
 
-The s-maxage tells the CDN to cache it for an hour. Here's what it looks like when the first person visits our website:
+The `s-maxage` tells the CDN to cache it for an hour. Here's what it looks like when the first person visits our website:
 
 1. Request comes in to the website, which is really the CDN
 2. CDN doesn't have the document cached, so it makes a request to our server (the "origin server").
@@ -65,9 +65,9 @@ export function headers({
 
 The `loaderHeaders` object is an instance of the [Web Fetch API Headers constructor][web-fetch-api-headers-constructor]
 
-Now when the browser or a CDN wants to cache our page, it gets the headers from our data source, which is usually what you want. Note in our case we're actually just using headers GitHub sent in the response from our fetch!
+Now when the browser or a CDN wants to cache our page, it gets the headers from our data source, which usually is what you want. Note in our case we're actually just using headers GitHub sent in the response from our fetch!
 
-The second reason this matters is that Remix calls your loaders via `fetch` in the browser on client-side transitions. By returning good cache headers here, when the user clicks back/forward or visits the same page multiple times, the browser won't actually make another request for the data but will use a cached version instead. This greatly speeds up a website's performance, even for pages that you can't cache on a CDN. A lot of React apps rely on a JavaScript cache, but browser caches already work great!
+The second reason this matters is that Remix calls your loaders via `fetch` in the browser on client-side transitions. By returning good cache headers here, when the user clicks back/forward or visits the same page multiple times, the browser won't make another request for the data but will use a cached version instead. This greatly speeds up a website's performance, even for pages that you can't cache on a CDN. A lot of React apps rely on a JavaScript cache, but browser caches already work great!
 
 [check-out-this-video-for-more-information-on-that]: https://youtu.be/bfLFHp7Sbkg
 [cdn-caching]: ../guides/caching
