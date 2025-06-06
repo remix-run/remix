@@ -1337,7 +1337,7 @@ As we work through the rest of the tutorial, you may want to check the class nam
 
 One quick note about CSS. A lot of you folks may be used to using runtime libraries for CSS (like [Styled-Components][styled-components]). While you can use those with Remix, we'd like to encourage you to look into more traditional approaches to CSS. Many of the problems that led to the creation of these styling solutions aren't really problems in Remix, so you can often go with a simpler styling approach.
 
-That said, many Remix users are thrilled with [Tailwind CSS][tailwind], and we recommend this approach. Basically, if it can give you a URL (or a CSS file which you can import to get a URL), then it's generally a good approach because Remix can then leverage the browser platform for caching and loading/unloading.
+That said, many Remix users are very happy with [Tailwind CSS][tailwind], and we recommend this approach. Basically, if it can give you a URL (or a CSS file which you can import to get a URL), then it's generally a good approach because Remix can then leverage the browser platform for caching and loading/unloading.
 
 ## Database
 
