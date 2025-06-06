@@ -2,6 +2,12 @@
 
 This is the changelog for [`tar-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/tar-parser). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Add `/src` to npm package, so "go to definition" goes to the actual source
+- Use one set of types for all built files, instead of separate types for ESM and CJS
+- Build using esbuild directly instead of tsup
+
 ## v0.2.2 (2025-02-04)
 
 - Add `Promise<void>` to `TarEntryHandler` return type
