@@ -24,7 +24,7 @@ To that end, please keep in mind [our code of conduct][our-code-of-conduct].
 
 - [Meetups][the-remix-meetup-page] — There are Remix Meetups all over the world with thousands of members. Some online, some in person, and some a hybrid of the two.
 
-- [Remix Guide][remix-guide]—- A wonderful community site that gathers everything that's going on in the Remix ecosystem: online courses, blog posts, app templates, events, and more.
+- [Remix Guide][remix-guide] — A wonderful community site that gathers everything that's going on in the Remix ecosystem: online courses, blog posts, app templates, events, and more.
 
 - [Moulton][moulton] — Community Remix newsletter
 
