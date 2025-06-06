@@ -1,16 +1,10 @@
 # node-fetch-server
 
-Build portable Node.js servers using web-standard Fetch API primitives 🚀
+Build portable Node.js servers using web-standard Fetch API primitives
 
 `node-fetch-server` brings the simplicity and familiarity of the [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) to Node.js server development. Instead of dealing with Node's traditional `req`/`res` objects, you work with web-standard [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) objects—the same APIs you already use in the browser and modern JavaScript runtimes.
 
 ## Why node-fetch-server?
-
-- **Write once, run anywhere**: Your server code becomes portable across Node.js, Deno, Bun, Cloudflare Workers, and other platforms
-- **Familiar API**: Use the same Request/Response APIs you already know from client-side development
-- **Future-proof**: Align with web standards that are here to stay
-- **TypeScript-friendly**: Full type safety with standard web APIs
-- **Lightweight**: Minimal overhead while providing a cleaner, more intuitive API
 
 The Fetch API is already the standard for server development in:
 
@@ -40,22 +34,39 @@ npm install @mjackson/node-fetch-server
 
 ### Basic Server
 
+Here's a complete working example with a simple in-memory data store:
+
 ```ts
 import * as http from 'node:http';
 import { createRequestListener } from '@mjackson/node-fetch-server';
 
-// Your request handler uses standard Request/Response objects
+// Example: Simple in-memory user storage
+let users = new Map([
+  ['1', { id: '1', name: 'Alice', email: 'alice@example.com' }],
+  ['2', { id: '2', name: 'Bob', email: 'bob@example.com' }],
+]);
+
 async function handler(request: Request) {
   let url = new URL(request.url);
 
-  // Route based on pathname
-  if (url.pathname === '/') {
-    return new Response('Welcome to the home page!');
+  // GET / - Home page
+  if (url.pathname === '/' && request.method === 'GET') {
+    return new Response('Welcome to the User API! Try GET /api/users');
   }
 
-  if (url.pathname === '/api/users') {
-    let users = await getUsers(); // Your async logic here
-    return Response.json(users);
+  // GET /api/users - List all users
+  if (url.pathname === '/api/users' && request.method === 'GET') {
+    return Response.json(Array.from(users.values()));
+  }
+
+  // GET /api/users/:id - Get specific user
+  let userMatch = url.pathname.match(/^\/api\/users\/(\w+)$/);
+  if (userMatch && request.method === 'GET') {
+    let user = users.get(userMatch[1]);
+    if (user) {
+      return Response.json(user);
+    }
+    return new Response('User not found', { status: 404 });
   }
 
   return new Response('Not Found', { status: 404 });
@@ -71,24 +82,47 @@ server.listen(3000, () => {
 
 ### Working with Request Data
 
+Handle different types of request data using standard web APIs:
+
 ```ts
 async function handler(request: Request) {
-  // Access request method, headers, and body just like in the browser
-  if (request.method === 'POST' && request.url.endsWith('/api/users')) {
-    // Parse JSON body
-    let userData = await request.json();
+  let url = new URL(request.url);
 
-    // Validate and process...
-    let newUser = await createUser(userData);
+  // Handle JSON data
+  if (request.method === 'POST' && url.pathname === '/api/users') {
+    try {
+      let userData = await request.json();
 
-    // Return JSON response
-    return Response.json(newUser, {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
+      // Validate required fields
+      if (!userData.name || !userData.email) {
+        return Response.json({ error: 'Name and email are required' }, { status: 400 });
+      }
+
+      // Create user (your implementation)
+      let newUser = {
+        id: Date.now().toString(),
+        ...userData,
+      };
+
+      return Response.json(newUser, { status: 201 });
+    } catch (error) {
+      return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
+  }
+
+  // Handle URL search params
+  if (url.pathname === '/api/search') {
+    let query = url.searchParams.get('q');
+    let limit = parseInt(url.searchParams.get('limit') || '10');
+
+    return Response.json({
+      query,
+      limit,
+      results: [], // Your search results here
     });
   }
 
-  return new Response('Method not allowed', { status: 405 });
+  return new Response('Not Found', { status: 404 });
 }
 ```
 
@@ -204,10 +238,17 @@ let server = http.createServer(async (req, res) => {
   let request = createRequest(req, res, { host: process.env.HOST });
 
   try {
-    // Your custom middleware pipeline
-    let response = await pipeline(authenticate, authorize, handleRequest)(request);
+    // Add custom headers or middleware logic
+    let startTime = Date.now();
 
-    // Convert Fetch API Response back to Node.js response
+    // Process the request with your handler
+    let response = await handler(request);
+
+    // Add response timing header
+    let duration = Date.now() - startTime;
+    response.headers.set('X-Response-Time', `${duration}ms`);
+
+    // Send the response
     await sendResponse(res, response);
   } catch (error) {
     console.error('Server error:', error);
@@ -233,42 +274,48 @@ This is useful for:
 
 ## Migration from Express
 
-Transitioning from Express? Here's a quick comparison:
+Transitioning from Express? Here's a comparison of common patterns:
+
+### Basic Routing
 
 ```ts
-// Express way
+// Express
+let app = express();
+
 app.get('/users/:id', async (req, res) => {
-  let user = await getUser(req.params.id);
+  let user = await db.getUser(req.params.id);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
   res.json(user);
 });
 
-// node-fetch-server way
+app.listen(3000);
+
+// node-fetch-server
+import { createRequestListener } from '@mjackson/node-fetch-server';
+
 async function handler(request: Request) {
   let url = new URL(request.url);
   let match = url.pathname.match(/^\/users\/(\w+)$/);
 
-  if (match) {
-    let user = await getUser(match[1]);
+  if (match && request.method === 'GET') {
+    let user = await db.getUser(match[1]);
+    if (!user) {
+      return Response.json({ error: 'User not found' }, { status: 404 });
+    }
     return Response.json(user);
   }
 
   return new Response('Not Found', { status: 404 });
 }
+
+http.createServer(createRequestListener(handler)).listen(3000);
 ```
-
-Common patterns:
-
-- `req.body` → `await request.json()`
-- `req.params` → Parse from `new URL(request.url).pathname`
-- `req.query` → `new URL(request.url).searchParams`
-- `res.json(data)` → `Response.json(data)`
-- `res.status(404).send()` → `new Response('', { status: 404 })`
-- `res.redirect()` → `new Response(null, { status: 302, headers: { Location: '/path' } })`
 
 ## Related Packages
 
 - [`fetch-proxy`](https://github.com/mjackson/remix-the-web/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
-- [`fetch-router`](https://github.com/mjackson/remix-the-web/tree/main/packages/fetch-router) - URL pattern routing for Fetch API servers
 
 ## License
 
