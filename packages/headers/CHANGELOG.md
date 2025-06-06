@@ -2,7 +2,7 @@
 
 This is the changelog for [`headers`](https://github.com/mjackson/remix-the-web/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.11.1 (2025-06-06)
 
 - Do not minify builds
 - Remove some test files from the build
