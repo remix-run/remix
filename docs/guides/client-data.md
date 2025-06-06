@@ -23,7 +23,7 @@ When using Remix in a [BFF][bff] architecture, it may be advantageous to skip th
 1. Load the data from server `loader` on the document load
 2. Load the data from the `clientLoader` on all subsequent loads
 
-In this scenario, Remix will _not_ call the `clientLoader` on hydration - and will only call it on later navigations.
+In this scenario, Remix will _not_ call the `clientLoader` on hydration - and will only call it on subsequent navigations.
 
 ```tsx lines=[8,15]
 import type { LoaderFunctionArgs } from "@remix-run/node";
