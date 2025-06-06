@@ -148,7 +148,7 @@ export const meta: MetaFunction<
 
 ## Gotchas with `meta` and Nested Routes
 
-Because multiple nested routes render at the same time, there is some merging that needs to happen to determine the meta-tags that ultimately render. Remix gives you complete control over this merge because there is no obvious default.
+Because multiple nested routes render at the same time, there is some merging that needs to happen to determine the meta tags that ultimately render. Remix gives you complete control over this merge because there is no obvious default.
 
 Remix will take the last matching route with a `meta` export and use that. This allows you to override things like `title`, remove things like `og:image` that the parent route added, or keep everything from the parent and add new meta for the child route.
 
