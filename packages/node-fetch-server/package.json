@@ -11,41 +11,35 @@
   "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server#readme",
   "license": "MIT",
   "files": [
-    "dist",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "dist",
+    "src"
   ],
   "type": "module",
   "types": "./dist/node-fetch-server.d.ts",
-  "main": "./dist/node-fetch-server.js",
+  "module": "./dist/node-fetch-server.js",
+  "main": "./dist/node-fetch-server.cjs",
   "exports": {
     ".": {
-      "module-sync": {
-        "types": "./dist/node-fetch-server.d.ts",
-        "default": "./dist/node-fetch-server.js"
-      },
-      "import": {
-        "types": "./dist/node-fetch-server.d.ts",
-        "default": "./dist/node-fetch-server.js"
-      },
-      "require": {
-        "types": "./dist/node-fetch-server.d.cts",
-        "default": "./dist/node-fetch-server.cjs"
-      },
-      "default": {
-        "types": "./dist/node-fetch-server.d.ts",
-        "default": "./dist/node-fetch-server.js"
-      }
+      "types": "./dist/node-fetch-server.d.ts",
+      "import": "./dist/node-fetch-server.js",
+      "require": "./dist/node-fetch-server.cjs",
+      "default": "./dist/node-fetch-server.js"
     },
     "./package.json": "./package.json"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
-    "tsup": "^8.3.5"
+    "esbuild": "^0.20.2"
   },
   "scripts": {
     "bench": "bash ./bench/runner.sh",
-    "build": "tsup",
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:esm": "esbuild src/node-fetch-server.ts --bundle --outfile=dist/node-fetch-server.js --format=esm --platform=node --sourcemap",
+    "build:cjs": "esbuild src/node-fetch-server.ts --bundle --outfile=dist/node-fetch-server.cjs --format=cjs --platform=node --sourcemap",
+    "build": "pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
+    "clean": "rm -rf dist",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"
   },

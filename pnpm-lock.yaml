@@ -211,9 +211,9 @@ importers:
       '@types/node':
         specifier: ^22.5.0
         version: 22.5.0
-      tsup:
-        specifier: ^8.3.5
-        version: 8.3.5(@swc/core@1.5.29(@swc/helpers@0.5.12))(typescript@5.7.2)
+      esbuild:
+        specifier: ^0.20.2
+        version: 0.20.2
 
   packages/node-fetch-server/bench:
     dependencies:
