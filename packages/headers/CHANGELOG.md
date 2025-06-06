@@ -4,6 +4,7 @@ This is the changelog for [`headers`](https://github.com/mjackson/remix-the-web/
 
 ## v0.11.0 (2025-06-06)
 
+- Add `/src` to npm package, so "go to definition" goes to the actual source
 - Use one set of types for all built files, instead of separate types for ESM and CJS
 - Build using esbuild directly instead of tsup
 

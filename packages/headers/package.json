@@ -11,15 +11,15 @@
   },
   "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/headers#readme",
   "files": [
-    "dist",
-    "src",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "dist",
+    "src"
   ],
   "type": "module",
-  "main": "./dist/headers.cjs",
-  "module": "./dist/headers.js",
   "types": "./dist/headers.d.ts",
+  "module": "./dist/headers.js",
+  "main": "./dist/headers.cjs",
   "exports": {
     ".": {
       "types": "./dist/headers.d.ts",
@@ -34,11 +34,11 @@
     "esbuild": "^0.20.0"
   },
   "scripts": {
-    "clean": "rm -rf dist",
     "build:types": "tsc --project tsconfig.build.json",
-    "build:esm": "esbuild src/headers.ts --bundle --outfile=dist/headers.js --format=esm --platform=neutral --minify --sourcemap",
-    "build:cjs": "esbuild src/headers.ts --bundle --outfile=dist/headers.cjs --format=cjs --platform=node --minify --sourcemap",
+    "build:esm": "esbuild src/headers.ts --bundle --outfile=dist/headers.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/headers.ts --bundle --outfile=dist/headers.cjs --format=cjs --platform=node --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
+    "clean": "rm -rf dist",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"
   },
