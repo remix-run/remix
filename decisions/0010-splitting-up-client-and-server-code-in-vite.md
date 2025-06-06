@@ -69,7 +69,7 @@ While `.server` modules are a great way to separate client and server code in mo
 there will always be a need to stitch together modules that mix client and server code.
 For example, you may want to migrate from the previous compiler to Vite without needing to manually split up mixed modules.
 
-But supporting mixed modules directly in Remix would require compile-time magic, which would add significant complexity.
+But supporting mixed modules directly in Remix would require compile-time magic, which would add substantial complexity.
 Not only would it degrade performance for all users (Goal 4 ❌),
 but writing compile-time transforms that manipulate the AST is much more error-prone than throwing a compile-time error when `.server` modules are imported by client code.
 Depending on how it's implemented, bugs in that compile-time magic could open the door to leaking server code into the client (Goal 1 ❌).
