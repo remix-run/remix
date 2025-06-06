@@ -70,7 +70,7 @@ Pretty slick! This is now safe to bundle up for the browser. So what's the probl
 
 If you're unfamiliar with side effects, you're not alone! We'll help you identify them now.
 
-Put a **side effect** is any code that might _do something_. A **module side effect** is any code that might _do something when a module is loaded_.
+Simply put, a **side effect** is any code that might _do something_. A **module side effect** is any code that might _do something when a module is loaded_.
 
 <docs-info>A module side effect is code that executes by simply importing a module</docs-info>
 
