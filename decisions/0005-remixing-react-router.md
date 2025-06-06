@@ -132,7 +132,7 @@ Normal POST submissions that do not redirect will use a `REPLACE`:
 - Navigates to `/login` (history stack is `[/, /login]`)
 - Fills out and submits the `<Form method="post">`
 - Action does not redirect
-  - At this point, if the action returns a non-redirect and we were to PUSH the navigation, we'd end up with a history stack of `[/, /login, /login]` and the user would be in a scenario where it would take them two back buttons to get "through" the login page from a later route.
+  - At this point, if the action returns a non-redirect and we were to PUSH the navigation, we'd end up with a history stack of `[/, /login, /login]` and the user would be in a scenario where it would take them two back buttons to get "through" the login page from a subsequent route.
   - To avoid this, when a POST submission does not return a redirect, the router will REPLACE in the history stack, leaving us at `[/, /login]` and avoiding the duplicate history entry
 
 Normal POST submissions that _do_ redirect will use `PUSH` for the redirect:
