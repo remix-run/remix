@@ -24,7 +24,7 @@ With these build artifacts, an application can be deployed to any hosting servic
 
 ## HTTP Handler and Adapters
 
-While Remix runs on the server, it is not a server. It's just a handler given to an actual JavaScript server.
+While Remix runs on the server, it is not actually a server. It's just a handler that is given to an actual JavaScript server.
 
 It's built on the [Web Fetch API][fetch] instead of Node.js. This enables Remix to run in any Node.js server like [Vercel][vercel], [Netlify][netlify], [Architect][arc], etc. as well as non-Node.js environments like [Cloudflare Workers][cf] and [Deno Deploy][deno].
 
@@ -65,7 +65,7 @@ export function createRequestHandler({ build }) {
 }
 ```
 
-Real adapters do a bit more than that, but that's the gist of it. Not only does this enable you to deploy Remix anywhere. However, it also lets you incrementally adopt it in an existing JavaScript server since you can have routes outside of Remix that your server continues to handle before getting to Remix.
+Real adapters do a bit more than that, but that's the gist of it. Not only does this enable you to deploy Remix anywhere, it also lets you incrementally adopt it in an existing JavaScript server since you can have routes outside of Remix that your server continues to handle before getting to Remix.
 
 Additionally, if Remix doesn't have an adapter for your server already, you can look at the source of one of the adapters and build your own.
 
@@ -220,7 +220,7 @@ Because Remix reaches into the controller level of the backend, it can do this s
 
 And while it doesn't reach as far back into the stack as server-side frameworks like Rails and Laravel, it does reach way farther up the stack into the browser to make the transition from the back end to the front end seamless.
 
-For example. Building a plain HTML form and server-side handler in a back-end heavy web framework is just as easy to do as it is in Remix. But as soon as you want to cross over into an experience with animated validation messages, focus management, and pending UI, it requires a fundamental change in the code. Typically, people build an API route and then bring in a splash of client-side JavaScript to connect the two. With Remix, you add some code around the existing "server side view" without changing how it works fundamentally. The browser runtime takes over the server communication to provide an enhanced user experience beyond the default browser behaviors.
+For example. Building a plain HTML form and server-side handler in a back-end heavy web framework is just as easy to do as it is in Remix. But as soon as you want to cross over into an experience with animated validation messages, focus management, and pending UI, it requires a fundamental change in the code. Typically, people build an API route and then bring in a splash of client-side JavaScript to connect the two. With Remix, you simply add some code around the existing "server side view" without changing how it works fundamentally. The browser runtime takes over the server communication to provide an enhanced user experience beyond the default browser behaviors.
 
 We borrowed an old term and called this Progressive Enhancement in Remix. Start small with a plain HTML form (Remix scales down) and then scale the UI up when you have the time and ambition.
 

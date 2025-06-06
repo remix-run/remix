@@ -41,7 +41,7 @@ submission 2:    |-----✓-----✅
 submission 3:             |-----✓-----✅
 ```
 
-However, if a later submission's revalidation completes before an earlier one, Remix discards the earlier data, ensuring that only the most up-to-date information is reflected in the UI.
+However, if a subsequent submission's revalidation completes before an earlier one, Remix discards the earlier data, ensuring that only the most up-to-date information is reflected in the UI.
 
 ```text
 submission 1: |----✓---------❌

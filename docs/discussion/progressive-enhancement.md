@@ -23,7 +23,7 @@ However, we still believe in the core principles of progressive enhancement in R
 
 ## Performance
 
-Sending HTML from the server allows your app to do more things in parallel than a typical Single Page App (SPA), making the initial loading experience and later navigations faster.
+Sending HTML from the server allows your app to do more things in parallel than a typical Single Page App (SPA), making the initial loading experience and subsequent navigations faster.
 
 Typical SPAs send a blank document and only start doing work when JavaScript has loaded.
 
