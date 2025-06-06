@@ -468,7 +468,7 @@ session.has("userId");
 
 ### `session.set(key, value)`
 
-Sets a session value for use in later requests:
+Sets a session value for use in subsequent requests:
 
 ```ts
 session.set("userId", "1234");
@@ -476,7 +476,7 @@ session.set("userId", "1234");
 
 ### `session.flash(key, value)`
 
-Sets a session value that will be unset the first time it is read in a later request. After that, it's gone. Most useful for "flash messages" and server-side form validation messages:
+Sets a session value that will be unset the first time it is read in a subsequent request. After that, it's gone. Most useful for "flash messages" and server-side form validation messages:
 
 ```ts
 session.flash(

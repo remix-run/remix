@@ -4,7 +4,7 @@ title: Cookies
 
 # Cookies
 
-A [cookie][cookie] is a small piece of information that your server sends someone in a HTTP response that their browser will send back on later requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions][sessions]), shopping carts, user preferences, and many other features that require remembering who is "logged in".
+A [cookie][cookie] is a small piece of information that your server sends someone in a HTTP response that their browser will send back on subsequent requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions][sessions]), shopping carts, user preferences, and many other features that require remembering who is "logged in".
 
 Remix's `Cookie` interface provides a logical, reusable container for cookie metadata.
 
@@ -28,7 +28,7 @@ export const userPrefs = createCookie("user-prefs", {
 
 Then, you can `import` the cookie and use it in your `loader` and/or `action`. The `loader` in this case just checks the value of the user preference so you can use it in your component for deciding whether to render the banner. When the button is clicked, the `<form>` calls the `action` on the server and reloads the page without the banner.
 
-**Note:** We recommend (for now) that you create all the cookies your app needs in a `*.server.ts` file and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this warning.
+**Note:** We recommend (for now) that you create all the cookies your app needs in a `*.server.ts` file and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
 ```tsx filename=app/routes/_index.tsx lines=[12,17-19,26-28,37]
 import type {

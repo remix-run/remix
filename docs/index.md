@@ -18,7 +18,7 @@ npx create-remix@latest
   <a href="/discussion/introduction" aria-label="Technical Explanation">
     <docs-card>
       <h4 class="text-blue-brand">I'm just curious...</h4>
-      <p>Start with the <span style="text-decoration:underline">Technical Explanation</span>. Remix is a new kind of web framework that we like to call "centerstack". It blends old and new web development models uniquely that deserves some explanation!</p>
+      <p>Start with the <span style="text-decoration:underline">Technical Explanation</span>. Remix is a new kind of web framework that we like to call "centerstack". It blends old and new web development models in a unique way that deserves some explanation!</p>
     </docs-card>
   </a>
   <a href="/start/tutorial" aria-label="Developer Blog Tutorial">
