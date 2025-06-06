@@ -14,7 +14,7 @@ The fastest thing to send to a user is, of course, a static document on a CDN th
 
 (No, not the U2 guy.)
 
-Today there are a lot of exciting things happening with distributed computing "at the edge". Computing "at the edge" generally means running code on servers close to users instead of just one place (like the US East Coast). We're not only seeing more of this, but we're seeing distributed databases moving to the edge as well. We've been expecting all of this for a while, that's why Remix is designed the way it is.
+Today there are a lot of exciting things happening with distributed computing "at the edge". Computing "at the edge" generally means running code on servers close to users instead of just one place (like the US East Coast). We're not only seeing more of this, but we're seeing distributed databases moving to the edge as well. We've been anticipating all of this for a while, that's why Remix is designed the way it is.
 
 With distributed servers and databases running at the edge, it's now possible to serve dynamic content at speeds comparable to static files. **You can make your server fast, but you can't do anything about the user's network**. The only thing left to do is to get code out of your browser bundles and onto the server, sending fewer bytes over the network, and provide unparalleled web performance. That's what Remix is designed to do.
 
