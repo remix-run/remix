@@ -18,7 +18,7 @@ Please use these new exports with caution! If you're not careful — it's straig
 
 ## Skip the Hop
 
-When using Remix in a [BFF][bff] architecture, it may be helpful to skip the Remix server hop and hit your backend API directly. This assumes you are able to handle authentication accordingly and are not subject to CORS issues. You can skip the Remix BFF hop as follows:
+When using Remix in a [BFF][bff] architecture, it may be advantageous to skip the Remix server hop and hit your backend API directly. This assumes you are able to handle authentication accordingly and are not subject to CORS issues. You can skip the Remix BFF hop as follows:
 
 1. Load the data from server `loader` on the document load
 2. Load the data from the `clientLoader` on all later loads
