@@ -4,7 +4,7 @@ title: Network Concurrency Management
 
 # Network Concurrency Management
 
-When building web applications, managing network requests can be a daunting task. The challenges of ensuring up-to-date data and handling simultaneous requests often lead to complex logic in the application to deal with interruptions and race conditions. Remix simplifies this process by automating network management, mirroring and expanding the intuitive behavior of web browsers.
+When building web applications, managing network requests can be a daunting task. The challenges of ensuring up-to-date data and handling simultaneous requests often lead to complex logic in the application to deal with interruptions and race conditions. Remix simplifies this process by automating network management, mirroring, and expanding the intuitive behavior of web browsers.
 
 To help understand how Remix works, remember from [Fullstack Data Flow][fullstack_data_flow] that after `form` submissions, Remix will fetch fresh data from the loaders. This is called revalidation.
 
@@ -49,11 +49,11 @@ submission 2:    |-----✓-----✅
 submission 3:             |-----✓-----✅
 ```
 
-Because the revalidation from submission (2) started later and landed earlier than submission (1), the requests from submission (1) are cancelled and only the data from submission (2) is committed to the UI. It was requested later so its more likely to contain the updated values from both (1) and (2).
+Because the revalidation from submission (2) started later and landed earlier than submission (1), the requests from submission (1) are canceled and only the data from submission (2) is committed to the UI. It was requested later, so it's more likely to contain the updated values from both (1) and (2).
 
 ## Potential for Stale Data
 
-It's unlikely your users will ever experience this, but there are still chances for the user to see stale data in very rare conditions with inconsistent infrastructure. Even though Remix cancels requests for stale data, they will still end up making it to the server. Cancelling a request in the browser simply releases browser resources for that request, it can't "catch up" and stop it from getting to the server. In extremely rare conditions, a cancelled request may change data after the interrupting `action`'s revalidation lands. Consider this diagram:
+It's unlikely your users will ever experience this, but there are still chances for the user to see stale data in very rare conditions with inconsistent infrastructure. Even though Remix cancels requests for stale data, they will still end up making it to the server. Cancelling a request in the browser simply releases browser resources for that request, it can't "catch up" and stop it from getting to the server. In extremely rare conditions, a canceled request may change data after the interrupting `action`'s revalidation lands. Consider this diagram:
 
 ```text
      👇 interruption with new submission
@@ -120,11 +120,11 @@ export function CitySearchCombobox() {
 }
 ```
 
-All the application needs to know is how to query the data and how to render it, Remix handles the network.
+All the application needs to know is how to query the data and how to render it; Remix handles the network.
 
 ## Conclusion
 
-Remix offers developers an intuitive, browser-based approach to managing network requests. By mirroring browser behaviors and enhancing them where needed, it simplifies the complexities of concurrency, revalidation, and potential race conditions. Whether you're building a simple webpage or a sophisticated web application, Remix ensures that your user interactions are smooth, reliable, and always up-to-date.
+Remix offers developers an intuitive, browser-based approach to managing network requests. By mirroring browser behaviors and enhancing them where needed, it simplifies the complexities of concurrency, revalidation, and potential race conditions. Whether you're building a simple webpage or a sophisticated web application, Remix ensures that your user interactions are smooth, reliable, and always up to date.
 
 [fullstack_data_flow]: ./data-flow
 [use_fetcher]: ../hooks/use-fetcher

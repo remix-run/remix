@@ -7,7 +7,7 @@ order: 5
 
 Remix runs your app on the server as well as in the browser. However, it doesn't run all of your code in both places.
 
-During the build step, the compiler creates both a server build and a client build. The server build bundles up everything into a single module (or multiple modules when using [server bundles][server-bundles]), but the client build splits your app up into multiple bundles to optimize loading in the browser. It also removes server code from the bundles.
+During the build step, the compiler creates both a server build and a client build. The server build bundles everything up into a single module (or multiple modules when using [server bundles][server-bundles]), but the client build splits your app up into multiple bundles to optimize loading in the browser. It also removes server code from the bundles.
 
 The following route exports and the dependencies used within them are removed from the client build:
 

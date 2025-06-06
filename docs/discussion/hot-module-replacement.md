@@ -8,7 +8,7 @@ Hot Module Replacement is a technique for updating modules in your app without n
 It's a great developer experience, and Remix supports it out of the box.
 
 Notably, HMR does its best to preserve browser state across updates.
-If you have form within a modal, and you fill out all the fields traditional live reload would hard refresh the page.
+If you have a `form` within a modal, and you fill out all the fields, traditional live reload would hard refresh the page.
 So you'd lose all the data in the form.
 Every time you make a change, you'd have to open up the modal _again_ and fill out the form _again_. 😭
 

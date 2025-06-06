@@ -25,7 +25,7 @@ As discussed in [Fullstack Data Flow][fullstack_data_flow] Remix seamlessly brid
 
 Here's why using typical React state patterns might be an antipattern in Remix:
 
-1. **Network-related State:** If your React state is managing anything related to the network—such as data from loaders, pending form submissions, or navigational states—it's likely that you're managing state that Remix already manages:
+1. **Network-related State:** If your React state is managing anything related to the network —such as data from loaders, pending form submissions, or navigational states— it's likely that you're managing state that Remix already manages:
 
    - **[`useNavigation`][use_navigation]**: This hook gives you access to `navigation.state`, `navigation.formData`, `navigation.location`, etc.
    - **[`useFetcher`][use_fetcher]**: This facilitates interaction with `fetcher.state`, `fetcher.formData`, `fetcher.data` etc.
@@ -47,7 +47,7 @@ As a developer transitioning to Remix, it's essential to recognize and embrace i
 
 ### Network Related State
 
-For examples on using Remix's internal state to manage network related state, refer to [Pending UI][pending_ui].
+For examples on using Remix's internal state to manage network-related state, refer to [Pending UI][pending_ui].
 
 ### URL Search Params
 
@@ -113,7 +113,7 @@ export function List() {
 }
 ```
 
-Instead of synchronizing state, you can simply read and set the state in the URL directly with boring old HTML forms.
+Instead of synchronizing state, you can read and set the state in the URL directly with boring old HTML forms.
 
 ```tsx good lines=[5,9-16]
 import { Form, useSearchParams } from "@remix-run/react";
@@ -253,7 +253,7 @@ Cookies offer a comprehensive solution for this use case. However, this method i
 
 **Implementation**:
 
-First we'll need to create a cookie object:
+First, we'll need to create a cookie object:
 
 ```tsx
 import { createCookie } from "@remix-run/node";
@@ -507,7 +507,7 @@ The extensive state management from our previous example is distilled into just 
 
 Direct access to the server state is made possible through `useActionData`, and network state through `useNavigation` (or `useFetcher`).
 
-As bonus party trick, the form is functional even before JavaScript loads. Instead of Remix managing the network operations, the default browser behaviors step in.
+As a bonus party trick, the form is functional even before JavaScript loads. Instead of Remix managing the network operations, the default browser behaviors step in.
 
 If you ever find yourself entangled in managing and synchronizing state for network operations, Remix likely offers a more elegant solution.
 

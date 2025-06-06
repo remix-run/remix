@@ -48,11 +48,11 @@ Data        |---------------|
 
 While your users probably don't browse the web with JavaScript disabled, everybody has JavaScript disabled until it has finished loading. As soon as you begin server rendering your UI, you need to account for what happens when they try to interact with your app before JavaScript has loaded.
 
-Remix embraces progressive enhancement by building its abstraction on top of HTML. This means that you can build your app in a way that works without JavaScript, and then layer on JavaScript to enhance the experience.
+Remix embraces progressive enhancement by building its abstraction on top of HTML. This means that you can build your app in a way that works without JavaScript and then layer on JavaScript to enhance the experience.
 
 The simplest case is a `<Link to="/account">`. These render an `<a href="/account">` tag that works without JavaScript. When JavaScript loads, Remix will intercept clicks and handle the navigation with client side routing. This gives you more control over the UX instead of just spinning favicons in the browser tab--but it works either way.
 
-Now consider a simple add to cart button.
+Now consider a simple "add to cart" button.
 
 ```tsx
 export function AddToCart({ id }) {
@@ -65,7 +65,7 @@ export function AddToCart({ id }) {
 }
 ```
 
-Whether JavaScript has loaded or not doesn't matter, this button will add the product to the cart.
+Whether JavaScript has loaded or not doesn't matter; this button will add the product to the cart.
 
 When JavaScript loads, Remix will intercept the form submission and handle it client side. This allows you to add your own pending UI, or other client side behavior.
 
@@ -73,7 +73,7 @@ When JavaScript loads, Remix will intercept the form submission and handle it cl
 
 When you start to rely on basic features of the web like HTML and URLs, you will find that you reach for client side state and state management much less.
 
-Consider the button from before, with no fundamental change to the code, we can pepper in some client side behavior:
+Consider the button from before, with no fundamental change to the code; we can pepper in some client side behavior:
 
 ```tsx lines=[1,4,7,10-12,14]
 import { useFetcher } from "@remix-run/react";
@@ -94,7 +94,7 @@ export function AddToCart({ id }) {
 }
 ```
 
-This feature continues to work the very same as it did before when JavaScript is loading, but once JavaScript loads:
+This feature continues to work the very same as it did before when JavaScript was loading, but once JavaScript loads:
 
 - `useFetcher` no longer causes a navigation like `<Form>` does, so the user can stay on the same page and keep shopping
 - The app code determines the pending UI instead of spinning favicons in the browser
@@ -103,7 +103,7 @@ It's not about building it two different ways–once for JavaScript and once wit
 
 Not only will the user get a progressively enhanced experience, but the app developer gets to "progressively enhance" the UI without changing the fundamental design of the feature.
 
-Another example where progressive enhancement leads to simplicity is with the URL. When you start with a URL, you don't need to worry about client side state management. You can just use the URL as the source of truth for the UI.
+Another example where progressive enhancement leads to simplicity is with the URL. When you start with a URL, you don't need to worry about client side state management. You can use the URL as the source of truth for the UI.
 
 ```tsx
 export function SearchBox() {
