@@ -4,7 +4,7 @@ title: ErrorBoundary
 
 # `ErrorBoundary`
 
-A Remix `ErrorBoundary` component works just like normal React [error boundaries][error-boundaries], but with a few extra capabilities. When there is an error in your route component, the `ErrorBoundary` will be rendered in its place, nested inside any parent routes. `ErrorBoundary` components also render when there is an error in the `loader` or `action` functions for a route, so all errors for that route may be handled in one spot.
+A Remix `ErrorBoundary` component works just like normal React [error boundaries][error-boundaries] but with a few extra capabilities. When there is an error in your route component, the `ErrorBoundary` will be rendered in its place, nested inside any parent routes. `ErrorBoundary` components also render when there is an error in the `loader` or `action` functions for a route, so all errors for that route may be handled in one spot.
 
 The most common use-cases tend to be:
 
@@ -14,7 +14,7 @@ The most common use-cases tend to be:
   - Throwing a 404 when you can't find requested data
 - React may unintentionally throw an `Error` if it encounters a runtime error during rendering
 
-To obtain the thrown object, you can use the [`useRouteError`][use-route-error] hook. When a `Response` is thrown, it will be automatically unwrapped into an `ErrorResponse` instance with `state`/`statusText`/`data` fields so that you don't need to bother with `await response.json()` in your component. To differentiate thrown `Response`'s from thrown `Error`'s you can use the [`isRouteErrorResponse`][is-route-error-response] utility.
+To get the thrown object, you can use the [`useRouteError`][use-route-error] hook. When a `Response` is thrown, it will be automatically unwrapped into an `ErrorResponse` instance with `state`/`statusText`/`data` fields so that you don't need to bother with `await response.json()` in your component. To differentiate thrown `Response`'s from thrown `Error`'s you can use the [`isRouteErrorResponse`][is-route-error-response] utility.
 
 ```tsx
 import {

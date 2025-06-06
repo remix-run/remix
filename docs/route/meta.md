@@ -150,7 +150,7 @@ export const meta: MetaFunction<
 
 Because multiple nested routes render at the same time, there is some merging that needs to happen to determine the meta tags that ultimately render. Remix gives you complete control over this merge because there is no obvious default.
 
-Remix will take the last matching route with a meta export and use that. This allows you to override things like `title`, remove things like `og:image` that the parent route added, or keep everything from the parent and add new meta for the child route.
+Remix will take the last matching route with a `meta` export and use that. This allows you to override things like `title`, remove things like `og:image` that the parent route added, or keep everything from the parent and add new meta for the child route.
 
 This can get quite tricky when you're new.
 
@@ -186,7 +186,7 @@ With this code, we will lose the `viewport` meta tag at `/projects` and `/projec
 
 ### Global `meta`
 
-Nearly every app will have global meta like the `viewport` and `charSet`. We recommend using normal [`<meta>` tags][meta-element] inside the [root route][root-route] instead of the `meta` export, so you simply don't have to deal with merging:
+Nearly every app will have global meta like the `viewport` and `charSet`. We recommend using normal [`<meta>` tags][meta-element] inside the [root route][root-route] instead of the `meta` export, so you don't have to deal with merging:
 
 ```tsx filename=app/root.tsx lines=[12-16]
 import {
