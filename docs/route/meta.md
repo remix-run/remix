@@ -154,7 +154,7 @@ Remix will take the last matching route with a `meta` export and use that. This 
 
 This can get quite tricky when you're new.
 
-Consider a route like `/projects/123`, there are likely three matching routes: `app/root.tsx`, `app/routes/projects.tsx`, and `app/routes/projects.$id.tsx`. All three may export meta-descriptors.
+Consider a route like `/projects/123`, there are likely three matching routes: `app/root.tsx`, `app/routes/projects.tsx`, and `app/routes/projects.$id.tsx`. All three may export meta descriptors.
 
 ```tsx bad filename=app/root.tsx
 export const meta: MetaFunction = () => {
