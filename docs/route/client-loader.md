@@ -35,7 +35,7 @@ This function is only ever run on the client and can be used in a few ways:
 
 ## Hydration Behavior
 
-By default, `clientLoader` **will not** execute for the route during hydration of your Remix app on the initial SSR document request. This is for the primary (and simpler) use-case where the `clientLoader` does not change the shape of the server `loader` data and is just an optimization on later client side navigations (to read from a cache or hit an API directly).
+By default, `clientLoader` **will not** execute for the route during hydration of your Remix app on the initial SSR document request. This is for the primary (and simpler) use-case where the `clientLoader` does not change the shape of the server `loader` data and is just an optimization on subsequent client side navigations (to read from a cache or hit an API directly).
 
 ```tsx
 export async function loader() {
