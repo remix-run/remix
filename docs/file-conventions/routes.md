@@ -12,17 +12,17 @@ Please note that you can use either `.js`, `.jsx`, `.ts` or `.tsx` file extensio
 
 ## Disclaimer
 
-Before we go too far into the Remix convention though, we'd like to point out that file-based routing is an **incredibly** subjective idea. Some folks love the "flat" routes idea, some folks hate it and would prefer nesting routes in folders. Some folks simply hate file-based routing and would prefer to configure routes via JSON. Some folks would prefer to configure routes via JSX like they did in their React Router SPA's.
+Before we go too far into the Remix convention, though, we'd like to point out that file-based routing is an **incredibly** subjective idea. Some folks love the "flat" routes idea, some folks hate it and would prefer nesting routes in folders. Some folks simply hate file-based routing and would prefer to configure routes via JSON. Some folks would prefer to configure routes via JSX like they did in their React Router SPA's.
 
 The point is, we are well aware of this and from the get-go, Remix has always given you a first-class way to opt-out via the [`routes`][routes_config]/[`ignoredRouteFiles`][ignoredroutefiles_config] and [configure your routes manually][manual-route-configuration]. But, there has to be _some_ default so that folks can get up and running quickly and easily - and we think that the flat routes convention document below is a pretty good default that scales well for small-to-medium sized apps.
 
-Large applications with hundreds or thousands of routes will _always_ be a bit chaotic no matter what convention you use - and the idea is that via the `routes` config, you get to build _exactly_ the convention that works best for your application/team. It would be quite literally impossible for Remix to have a default convention that made everyone happy. We'd much rather give you a fairly straightforward default, and then let the community build any number of conventions you can pick and choose from.
+Large applications with hundreds or thousands of routes will _always_ be a bit chaotic no matter what convention you use — and the idea is that via the `routes` config, you get to build _exactly_ the convention that works best for your application/team. It would be quite literally impossible for Remix to have a default convention that made everyone happy. We'd much rather give you a fairly straightforward default and then let the community build any number of conventions you can pick and choose from.
 
-So, before we dive into the details of the Remix default convention, here's some community alternatives you can check out if you decide that our default is not your cup of tea.
+So, before we dive into the details of the Remix default convention, here are some community alternatives you can check out if you decide that our default is not your cup of tea.
 
-- [`remix-flat-routes`][flat_routes] - The Remix default is basically a simplified version of this package. The author has continued to iterate on and evolve this package so if you generally like the "flat routes" idea but want a bit more power (including a hybrid approach of files and folders), definitely check this one out.
+- [`remix-flat-routes`][flat_routes] - The Remix default is basically a simplified version of this package. The author has continued to iterate on and evolve this package, so if you generally like the "flat routes" idea but want a bit more power (including a hybrid approach of files and folders), definitely check this one out.
 - [`remix-custom-routes`][custom_routes] - If you want even more customization, this package lets you define that types of files should be treated as routes. This lets you go beyond the simple flat/nested concept and do something such as _"any file with an extension of `.route.tsx` is a route"_.
-- [`remix-json-routes`][json_routes] - If you just want to specify your routes via a config file, this is your jam - just provide Remix a JSON object with your routes and skip the flat/nested concept entirely. There's even a JSX option in there too.
+- [`remix-json-routes`][json_routes] - If you just want to specify your routes via a config file, this is your jam — provide Remix a JSON object with your routes and skip the flat/nested concept entirely. There's even a JSX option in there too.
 
 ## Root Route
 
@@ -227,7 +227,7 @@ Think of the `trailing_` underscore as the long bit at the end of your parent's 
 
 We call these <a name="pathless-routes"><b>Pathless Routes</b></a>
 
-Sometimes you want to share a layout with a group of routes without adding any path segments to the URL. A common example is a set of authentication routes that have a different header/footer than the public pages or the logged in app experience. You can do this with a `_leading` underscore.
+Sometimes you want to share a layout with a group of routes without adding any path segments to the URL. A common example is a set of authentication routes that have a different header/footer than the public pages or the logged-in-app experience. You can do this with a `_leading` underscore.
 
 ```text lines=[3-5]
  app/
@@ -274,7 +274,7 @@ Wrapping a route segment in parentheses will make the segment optional.
 | `/en/american-flag-speedo` | `app/routes/($lang).$productId.tsx` |
 | `/fr/american-flag-speedo` | `app/routes/($lang).$productId.tsx` |
 
-You may wonder why `/american-flag-speedo` is matching the `($lang)._index.tsx` route instead of `($lang).$productId.tsx`. This is because when you have an optional dynamic param segment followed by another dynamic param, Remix cannot reliably determine if a single-segment URL such as `/american-flag-speedo` should match `/:lang` `/:productId`. Optional segments match eagerly and thus it will match `/:lang`. If you have this type of setup it's recommended to look at `params.lang` in the `($lang)._index.tsx` loader and redirect to `/:lang/american-flag-speedo` for the current/default language if `params.lang` is not a valid language code.
+You may wonder why `/american-flag-speedo` is matching the `($lang)._index.tsx` route instead of `($lang).$productId.tsx`. This is because when you have an optional dynamic param segment followed by another dynamic param, Remix cannot reliably determine if a single-segment URL such as `/american-flag-speedo` should match `/:lang` `/:productId`. Optional segments match eagerly and thus it will match `/:lang`. If you have this type of setup, it's recommended to look at `params.lang` in the `($lang)._index.tsx` loader and redirect to `/:lang/american-flag-speedo` for the current/default language if `params.lang` is not a valid language code.
 
 ## Splat Routes
 
@@ -395,7 +395,7 @@ app/routes/app._index/route.tsx
 
 ## Scaling
 
-Our general recommendation for scale is to make every route a folder and put the modules used exclusively by that route in the folder, then put the shared modules outside of routes folder elsewhere. This has a couple benefits:
+Our general recommendation for scale is to make every route a folder and put the modules used exclusively by that route in the folder, then put the shared modules outside the `routes` folder elsewhere. This has a couple of benefits:
 
 - Easy to identify shared modules, so tread lightly when changing them
 - Easy to organize and refactor the modules for a specific route without creating "file organization fatigue" and cluttering up other parts of the app

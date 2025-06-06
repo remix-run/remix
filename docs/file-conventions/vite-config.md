@@ -108,7 +108,7 @@ The path to the build directory, relative to the project root. Defaults to
 
 #### basename
 
-An optional basename for your route paths, passed through to the [React Router "basename" option][rr-basename]. Please note that this is different from your _asset_ paths. You can can configure the [base public path][vite-public-base-path] for your assets via the [Vite "base" option][vite-base].
+An optional basename for your route paths, passed through to the [React Router "basename" option][rr-basename]. Please note that this is different from your _asset_ paths. You can configure the [base public path][vite-public-base-path] for your assets via the [Vite "base" option][vite-base].
 
 #### buildEnd
 
@@ -125,7 +125,7 @@ An array of [presets] to ease integration with other tools and hosting providers
 
 #### serverBuildFile
 
-The name of the server file generated in the server build directory. Defaults to `"index.js"`.
+The name of the server file is generated in the server build directory. Defaults to `"index.js"`.
 
 #### serverBundles
 

@@ -7,7 +7,7 @@ hidden: true
 
 <docs-warning>`remix.config.js` is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]. When using [Remix Vite][remix-vite], this file should not be present in your project. Instead, Remix configuration should be provided to the Remix plugin in your [Vite config][vite-config].</docs-warning>
 
-This file has a few build and development configuration options, but does not actually run on your server.
+This file has a few build and development configuration options but does not run on your server.
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
@@ -44,7 +44,7 @@ exports.appDirectory = "./elsewhere";
 ## assetsBuildDirectory
 
 The path to the browser build, relative to remix.config.js. Defaults to
-"public/build". Should be deployed to static hosting.
+`"public/build"`. Should be deployed to static hosting.
 
 ## browserNodeBuiltinsPolyfill
 
@@ -95,7 +95,7 @@ module.exports = {
 };
 ```
 
-If you wish to serve static assets from a separate domain you may also specify an absolute path:
+If you wish to serve static assets from a separate domain, you may also specify an absolute path:
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
@@ -163,7 +163,7 @@ field in `package.json`.
 
 A list of regex patterns that determines if a module is transpiled and included
 in the server bundle. This can be useful when consuming ESM only packages in a
-CJS build, or when consuming packages with [CSS side effect
+CJS build or when consuming packages with [CSS side effect
 imports][css_side_effect_imports].
 
 For example, the `unified` ecosystem is all ESM-only. Let's also say we're using
@@ -234,7 +234,7 @@ The platform the server build is targeting, which can either be `"neutral"` or
 
 ## tailwind
 
-Whether to support [Tailwind functions and directives][tailwind_functions_and_directives] in CSS files if `tailwindcss` is installed. Defaults to `true`.
+Whether to support [Tailwind CSS functions and directives][tailwind_functions_and_directives] in CSS files if `tailwindcss` is installed. Defaults to `true`.
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
