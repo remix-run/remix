@@ -20,7 +20,7 @@ export const clientAction = async ({
 };
 ```
 
-This function is only ever run on the client, and can be used in a few ways:
+This function is only ever run on the client and can be used in a few ways:
 
 - Instead of a server `action` for full-client routes
 - To use alongside a `clientLoader` cache by invalidating the cache on mutations
