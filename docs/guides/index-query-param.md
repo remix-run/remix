@@ -20,7 +20,7 @@ For example, consider the following forms:
 
 The `?index` param will submit to the index route, the [`action`][form_component_action] without the index param will submit to the parent route.
 
-When a [`<Form>`][form_component] is rendered in an index route without an [`action`][action], the `?index` param will automatically be appended so that the form posts to the index route. The following form, when submitted, will post to `/projects?index` because it is rendered in the context of the projects index route:
+When a [`<Form>`][form_component] is rendered in an index route without an [`action`][action], the `?index` param will automatically be appended so that the form posts to the index route. The following form, when submitted, will post to `/projects?index` because it is rendered in the context of the `projects` index route:
 
 ```tsx filename=app/routes/projects._index.tsx
 function ProjectsIndex() {
