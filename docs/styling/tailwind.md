@@ -1,8 +1,8 @@
 ---
-title: Tailwind CSS
+title: Tailwind
 ---
 
-# Tailwind CSS
+# Tailwind
 
 <docs-warning>This documentation is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]. If you're using [Remix Vite][remix-vite], Tailwind CSS can be integrated using [Vite's built-in PostCSS support][vite-postcss].</docs-warning>
 
