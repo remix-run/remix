@@ -309,24 +309,23 @@ If your app has routes using [`clientLoader`][client-loader] functions, it's imp
 
 For example, consider the following `/a/b/c` routes:
 
-```tsx filename=routes/a.tsx
-export async function loader() {
+```ts
+// routes/a.tsx
+export function loader() {
   return { data: "A" };
 }
-```
 
-```tsx filename=routes/a.b.tsx
-export async function loader() {
+// routes/a.b.tsx
+export function loader() {
   return { data: "B" };
 }
-```
 
-```tsx filename=routes/a.b.c.tsx
-export async function loader() {
+// routes/a.b.c.tsx
+export function loader() {
   return { data: "C" };
 }
 
-export async function clientLoader({ serverLoader }) {
+export function clientLoader({ serverLoader }) {
   await doSomeStuff();
   const data = await serverLoader();
   return { data };
