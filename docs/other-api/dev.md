@@ -102,13 +102,13 @@ HMR handles client-side code updates like when you change the components, markup
 Likewise, HDR handles server-side code updates.
 
 That means any time your change a [`loader`][loader] on your current page (or any code that your `loader` depends on), Remix will re-fetch data from your changed loader.
-That way your app is _always_ up-to-date with the latest code changes, client-side or server-side.
+That way your app is _always_ up to date with the latest code changes, client-side or server-side.
 
 To learn more about how HMR and HDR work together, check out [Pedro's talk at Remix Conf 2023][legendary_dx].
 
 </docs-info>
 
-#### With custom app server
+#### With a custom app server
 
 If you used a template to get started, hopefully it's already integrated with `remix dev` out-of-the-box.
 If not, you can follow these steps to integrate your project with `remix dev`:
@@ -200,7 +200,7 @@ remix dev -c "remix-serve --port 8000 ./build/index.js"
 ```
 
 In contrast, the `remix dev --port` option is an escape-hatch for users who need fine-grain control of network ports.
-Most users, should not need to use `remix dev --port`.
+Most users should not need to use `remix dev --port`.
 
 #### Manual mode
 
@@ -214,7 +214,7 @@ You can see if app server restarts are a bottleneck for your project by comparin
 
 #### Pick up changes from other packages
 
-If you are using a monorepo, you might want Remix to perform hot updates not only when your app code changes, but whenever you change code in any of your apps dependencies.
+If you are using a monorepo, you might want Remix to perform hot updates not only when your app code changes, but whenever you change code in any of your app's dependencies.
 
 For example, you could have a UI library package (`packages/ui`) that is used within your Remix app (`packages/app`).
 To pick up changes in `packages/ui`, you can configure [watchPaths][watch_paths] to include your packages.
@@ -238,7 +238,7 @@ For example, you can use `NODE_OPTIONS` to set Node's `--require` flag when runn
 }
 ```
 
-If you're using ESM as the default module system you will need to set the `--import` flag instead of `--require`:
+If you're using ESM as the default module system, you will need to set the `--import` flag instead of `--require`:
 
 ```json filename=package.json
 {
@@ -295,11 +295,11 @@ Now, hot updates will be sent correctly to the proxy:
 ##### Path imports
 
 Currently, when Remix rebuilds your app, the compiler has to process your app code along with any of its dependencies.
-The compiler tree-shakes unused code from app so that you don't ship any unused code to browser and so that you keep your server as slim as possible.
+The compiler tree-shakes unused code from the app so that you don't ship any unused code to the browser and so that you keep your server as slim as possible.
 But the compiler still needs to _crawl_ all the code to know what to keep and what to tree shake away.
 
 In short, this means that the way you do imports and exports can have a big impact on how long it takes to rebuild your app.
-For example, if you are using a library like Material UI or AntD you can likely speed up your builds by using [path imports][path_imports]:
+For example, if you are using a library like Material UI or AntD, you can likely speed up your builds by using [path imports][path_imports]:
 
 ```diff
 - import { Button, TextField } from '@mui/material';
@@ -327,7 +327,7 @@ check out our [discussion on Hot Module Replacement][hmr] to learn more about th
 Hot Data Revalidation detects loader changes by trying to bundle each loader and then fingerprinting the content for each.
 It relies on tree shaking to determine whether your changes affect each loader or not.
 
-To ensure that tree shaking can reliably detect changes to loaders, make sure you declare that your app's package is side effect free:
+To ensure that tree shaking can reliably detect changes to loaders, make sure you declare that your app's package is side-effect-free:
 
 ```json filename=package.json
 {
