@@ -11,7 +11,7 @@ This module should render the markup for the current page using a `<RemixServer>
 
 ## `handleDataRequest`
 
-You can export an optional `handleDataRequest` function that will allow you to modify the response of a data request. These are the requests that do not render HTML, but rather return the loader and action data to the browser once client-side hydration has occurred.
+You can export an optional `handleDataRequest` function that will allow you to modify the response of a data request. These are the requests that do not render HTML but rather return the loader and action data to the browser once client-side hydration has occurred.
 
 ```tsx
 export function handleDataRequest(
@@ -51,7 +51,7 @@ _Note that you generally want to avoid logging when the request was aborted, sin
 
 ### Streaming Rendering Errors
 
-When you are streaming your HTML responses via [`renderToPipeableStream`][rendertopipeablestream] or [`renderToReadableStream`][rendertoreadablestream], your own `handleError` implementation will only handle errors encountered during the initial shell render. If you encounter a rendering error during subsequent streamed rendering you will need to handle these errors manually since the Remix server has already sent the Response by that point.
+When you are streaming your HTML responses via [`renderToPipeableStream`][rendertopipeablestream] or [`renderToReadableStream`][rendertoreadablestream], your own `handleError` implementation will only handle errors encountered during the initial shell render. If you encounter a rendering error during subsequent streamed rendering, you will need to handle these errors manually since the Remix server has already sent the Response by that point.
 
 - For `renderToPipeableStream`, you can handle these errors in the `onError` callback function. You will need to toggle a boolean in `onShellReady` so you know if the error was a shell rendering error (and can be ignored) or an async rendering error (and must be handled).
   - For an example, please refer to the default [`entry.server.tsx`][node-streaming-entry-server] for Node.
@@ -60,7 +60,7 @@ When you are streaming your HTML responses via [`renderToPipeableStream`][render
 
 ### Thrown Responses
 
-Note that this does not handle thrown `Response` instances from your `loader`/`action` functions. The intention of this handler is to find bugs in your code which result in unexpected thrown errors. If you are detecting a scenario and throwing a 401/404/etc. `Response` in your `loader`/`action` then it's an expected flow that is handled by your code. If you also wish to log, or send those to an external service, that should be done at the time you throw the response.
+Note that this does not handle thrown `Response` instances from your `loader`/`action` functions. The intention of this handler is to find bugs in your code which result in unexpected thrown errors. If you are detecting a scenario and throwing a 401/404/etc. `Response` in your `loader`/`action` then it's an expected flow handled by your code. If you also wish to log or send those to an external service, that should be done at the time you throw the response.
 
 [browser-entry-module]: ./entry.client
 [rendertopipeablestream]: https://react.dev/reference/react-dom/server/renderToPipeableStream
