@@ -11,49 +11,27 @@
   "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/lazy-file#readme",
   "license": "MIT",
   "files": [
-    "dist",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "dist",
+    "src"
   ],
   "type": "module",
   "types": "./dist/lazy-file.d.ts",
-  "main": "./dist/lazy-file.js",
+  "module": "./dist/lazy-file.js",
+  "main": "./dist/lazy-file.cjs",
   "exports": {
     ".": {
-      "module-sync": {
-        "types": "./dist/lazy-file.d.ts",
-        "default": "./dist/lazy-file.js"
-      },
-      "import": {
-        "types": "./dist/lazy-file.d.ts",
-        "default": "./dist/lazy-file.js"
-      },
-      "require": {
-        "types": "./dist/lazy-file.d.cts",
-        "default": "./dist/lazy-file.cjs"
-      },
-      "default": {
-        "types": "./dist/lazy-file.d.ts",
-        "default": "./dist/lazy-file.js"
-      }
+      "types": "./dist/lazy-file.d.ts",
+      "import": "./dist/lazy-file.js",
+      "require": "./dist/lazy-file.cjs",
+      "default": "./dist/lazy-file.js"
     },
     "./fs": {
-      "module-sync": {
-        "types": "./dist/fs.d.ts",
-        "default": "./dist/fs.js"
-      },
-      "import": {
-        "types": "./dist/fs.d.ts",
-        "default": "./dist/fs.js"
-      },
-      "require": {
-        "types": "./dist/fs.d.cts",
-        "default": "./dist/fs.cjs"
-      },
-      "default": {
-        "types": "./dist/fs.d.ts",
-        "default": "./dist/fs.js"
-      }
+      "types": "./dist/fs.d.ts",
+      "import": "./dist/fs.js",
+      "require": "./dist/fs.cjs",
+      "default": "./dist/fs.js"
     },
     "./package.json": "./package.json"
   },
@@ -62,10 +40,16 @@
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
-    "tsup": "^8.3.5"
+    "esbuild": "^0.25.5"
   },
   "scripts": {
-    "build": "tsup",
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:esm": "esbuild src/lazy-file.ts --bundle --outfile=dist/lazy-file.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/lazy-file.ts --bundle --outfile=dist/lazy-file.cjs --format=cjs --platform=neutral --sourcemap",
+    "build:esm:fs": "esbuild src/fs.ts --bundle --outfile=dist/fs.js --format=esm --platform=node --sourcemap",
+    "build:cjs:fs": "esbuild src/fs.ts --bundle --outfile=dist/fs.cjs --format=cjs --platform=node --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs && pnpm run build:esm:fs && pnpm run build:cjs:fs",
+    "clean": "rm -rf dist",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"
   },
