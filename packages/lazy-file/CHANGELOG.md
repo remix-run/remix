@@ -2,7 +2,7 @@
 
 This is the changelog for [`lazy-file`](https://github.com/mjackson/remix-the-web/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v3.4.0 (2025-06-10)
 
 - Add `/src` to npm package, so "go to definition" goes to the actual source
 - Use one set of types for all built files, instead of separate types for ESM and CJS
