@@ -11,49 +11,27 @@
   "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser#readme",
   "license": "MIT",
   "files": [
-    "dist",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "dist",
+    "src"
   ],
   "type": "module",
   "types": "./dist/multipart-parser.d.ts",
-  "main": "./dist/multipart-parser.js",
+  "module": "./dist/multipart-parser.js",
+  "main": "./dist/multipart-parser.cjs",
   "exports": {
     ".": {
-      "module-sync": {
-        "types": "./dist/multipart-parser.d.ts",
-        "default": "./dist/multipart-parser.js"
-      },
-      "import": {
-        "types": "./dist/multipart-parser.d.ts",
-        "default": "./dist/multipart-parser.js"
-      },
-      "require": {
-        "types": "./dist/multipart-parser.d.cts",
-        "default": "./dist/multipart-parser.cjs"
-      },
-      "default": {
-        "types": "./dist/multipart-parser.d.ts",
-        "default": "./dist/multipart-parser.js"
-      }
+      "types": "./dist/multipart-parser.d.ts",
+      "import": "./dist/multipart-parser.js",
+      "require": "./dist/multipart-parser.cjs",
+      "default": "./dist/multipart-parser.js"
     },
     "./node": {
-      "module-sync": {
-        "types": "./dist/multipart-parser.node.d.ts",
-        "default": "./dist/multipart-parser.node.js"
-      },
-      "import": {
-        "types": "./dist/multipart-parser.node.d.ts",
-        "default": "./dist/multipart-parser.node.js"
-      },
-      "require": {
-        "types": "./dist/multipart-parser.node.d.cts",
-        "default": "./dist/multipart-parser.node.cjs"
-      },
-      "default": {
-        "types": "./dist/multipart-parser.node.d.ts",
-        "default": "./dist/multipart-parser.node.js"
-      }
+      "types": "./dist/multipart-parser.node.d.ts",
+      "import": "./dist/multipart-parser.node.js",
+      "require": "./dist/multipart-parser.node.cjs",
+      "default": "./dist/multipart-parser.node.js"
     },
     "./package.json": "./package.json"
   },
@@ -62,14 +40,20 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
-    "tsup": "^8.3.5"
+    "esbuild": "^0.25.5"
   },
   "scripts": {
     "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",
     "bench:bun": "bun run ./bench/runner.ts",
     "bench:deno": "deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts",
     "bench:node": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./bench/runner.ts",
-    "build": "tsup",
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:esm": "esbuild src/multipart-parser.ts --bundle --outfile=dist/multipart-parser.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/multipart-parser.ts --bundle --outfile=dist/multipart-parser.cjs --format=cjs --platform=node --sourcemap",
+    "build:esm:node": "esbuild src/multipart-parser.node.ts --bundle --outfile=dist/multipart-parser.node.js --format=esm --platform=node --sourcemap",
+    "build:cjs:node": "esbuild src/multipart-parser.node.ts --bundle --outfile=dist/multipart-parser.node.cjs --format=cjs --platform=node --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs && pnpm run build:esm:node && pnpm run build:cjs:node",
+    "clean": "rm -rf dist",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"
   },

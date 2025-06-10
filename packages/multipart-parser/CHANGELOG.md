@@ -2,6 +2,12 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Add `/src` to npm package, so "go to definition" goes to the actual source
+- Use one set of types for all built files, instead of separate types for ESM and CJS
+- Build using esbuild directly instead of tsup
+
 ## v0.8.2 (2025-02-04)
 
 - Add `Promise<void>` to `MultipartPartHandler` return type
