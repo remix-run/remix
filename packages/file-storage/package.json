@@ -11,67 +11,33 @@
   "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage#readme",
   "license": "MIT",
   "files": [
-    "dist",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "dist",
+    "src"
   ],
   "type": "module",
   "types": "./dist/file-storage.d.ts",
-  "main": "./dist/file-storage.js",
+  "module": "./dist/file-storage.js",
+  "main": "./dist/file-storage.cjs",
   "exports": {
     ".": {
-      "module-sync": {
-        "types": "./dist/file-storage.d.ts",
-        "default": "./dist/file-storage.js"
-      },
-      "import": {
-        "types": "./dist/file-storage.d.ts",
-        "default": "./dist/file-storage.js"
-      },
-      "require": {
-        "types": "./dist/file-storage.d.cts",
-        "default": "./dist/file-storage.cjs"
-      },
-      "default": {
-        "types": "./dist/file-storage.d.ts",
-        "default": "./dist/file-storage.js"
-      }
+      "types": "./dist/file-storage.d.ts",
+      "import": "./dist/file-storage.js",
+      "require": "./dist/file-storage.cjs",
+      "default": "./dist/file-storage.js"
     },
     "./local": {
-      "module-sync": {
-        "types": "./dist/local.d.ts",
-        "default": "./dist/local.js"
-      },
-      "import": {
-        "types": "./dist/local.d.ts",
-        "default": "./dist/local.js"
-      },
-      "require": {
-        "types": "./dist/local.d.cts",
-        "default": "./dist/local.cjs"
-      },
-      "default": {
-        "types": "./dist/local.d.ts",
-        "default": "./dist/local.js"
-      }
+      "types": "./dist/local.d.ts",
+      "import": "./dist/local.js",
+      "require": "./dist/local.cjs",
+      "default": "./dist/local.js"
     },
     "./memory": {
-      "module-sync": {
-        "types": "./dist/memory.d.ts",
-        "default": "./dist/memory.js"
-      },
-      "import": {
-        "types": "./dist/memory.d.ts",
-        "default": "./dist/memory.js"
-      },
-      "require": {
-        "types": "./dist/memory.d.cts",
-        "default": "./dist/memory.cjs"
-      },
-      "default": {
-        "types": "./dist/memory.d.ts",
-        "default": "./dist/memory.js"
-      }
+      "types": "./dist/memory.d.ts",
+      "import": "./dist/memory.js",
+      "require": "./dist/memory.cjs",
+      "default": "./dist/memory.js"
     },
     "./package.json": "./package.json"
   },
@@ -81,10 +47,18 @@
   "devDependencies": {
     "@mjackson/form-data-parser": "workspace:^",
     "@types/node": "^20.14.10",
-    "tsup": "^8.3.5"
+    "esbuild": "^0.25.5"
   },
   "scripts": {
-    "build": "tsup",
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:esm": "esbuild src/file-storage.ts --bundle --outfile=dist/file-storage.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/file-storage.ts --bundle --outfile=dist/file-storage.cjs --format=cjs --platform=neutral --sourcemap",
+    "build:esm:local": "esbuild src/local.ts --bundle --outfile=dist/local.js --format=esm --platform=node --sourcemap",
+    "build:cjs:local": "esbuild src/local.ts --bundle --outfile=dist/local.cjs --format=cjs --platform=node --sourcemap",
+    "build:esm:memory": "esbuild src/memory.ts --bundle --outfile=dist/memory.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs:memory": "esbuild src/memory.ts --bundle --outfile=dist/memory.cjs --format=cjs --platform=neutral --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs && pnpm run build:esm:local && pnpm run build:cjs:local && pnpm run build:esm:memory && pnpm run build:cjs:memory",
+    "clean": "rm -rf dist",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"
   },

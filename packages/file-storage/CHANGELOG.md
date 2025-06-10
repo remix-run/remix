@@ -2,6 +2,12 @@
 
 This is the changelog for [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Add `/src` to npm package, so "go to definition" goes to the actual source
+- Use one set of types for all built files, instead of separate types for ESM and CJS
+- Build using esbuild directly instead of tsup
+
 ## v0.6.1 (2025-02-06)
 
 - Fix regression when using `LocalFileStorage` together with `form-data-parser` (see #53)
