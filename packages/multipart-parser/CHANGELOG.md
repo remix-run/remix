@@ -2,7 +2,7 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.10.0 (2025-06-13)
 
 This release represents a major refactoring and simplification of this library from a `async`/promise-based architecture to a generator that suspends the parser as parts are found.
 
