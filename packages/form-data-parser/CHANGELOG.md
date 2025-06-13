@@ -2,7 +2,7 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.9.0 (2025-06-13)
 
 This release updates to `multipart-parser` 0.10.0 and removes the restrictions on checking the `size` and/or `slice`ing `FileUpload` objects.
 
