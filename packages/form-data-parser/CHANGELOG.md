@@ -2,6 +2,12 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+This release updates to `multipart-parser` 0.10.0 and removes the restrictions on checking the `size` and/or `slice`ing `FileUpload` objects.
+
+- `FileUpload` is now a normal subclass of `File` with all the same functionality (instead of just implementing the same interface)
+
 ## v0.8.0 (2025-06-10)
 
 - Add `/src` to npm package, so "go to definition" goes to the actual source

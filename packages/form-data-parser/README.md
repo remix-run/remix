@@ -1,19 +1,20 @@
 # form-data-parser
 
-`form-data-parser` is a wrapper around `request.formData()` that provides streaming support for handling file uploads. This is useful in server contexts where large files should be streamed to disk or some cloud storage service like [AWS S3](https://aws.amazon.com/s3/) or [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) instead of being buffered in memory.
+A streaming multipart/form-data parser that solves memory issues with file uploads in server environments. Built as an enhanced replacement for the native `request.formData()` API, it enables efficient handling of large file uploads by streaming directly to disk or cloud storage services like [AWS S3](https://aws.amazon.com/s3/) or [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/), preventing server crashes from memory exhaustion.
 
 ## Features
 
-- Drop-in replacement for `request.formData()` with support for streaming file uploads
-- Built on the standard [web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) and [File API](https://developer.mozilla.org/en-US/docs/Web/API/File)
-- Does not buffer any content, minimal memory usage
-- Automatically falls back to native `request.formData()` implementation for non-`multipart/form-data` requests
+- **Drop-in replacement** for `request.formData()` with streaming file upload support
+- **Minimal buffering** - processes file upload streams with minimal memory footprint
+- **Standards-based** - built on the [web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) and [File API](https://developer.mozilla.org/en-US/docs/Web/API/File)
+- **Smart fallback** - automatically uses native `request.formData()` for non-`multipart/form-data` requests
+- **Storage agnostic** - works with any storage backend (local disk, S3, R2, etc.)
 
-## The Problem
+## Why You Need This
 
-The web fetch API's built-in [`request.formData()` method](https://developer.mozilla.org/en-US/docs/Web/API/Request/formData) is not a great fit for server environments because it doesn't provide a way to stream file uploads. This means that when you call `request.formData()` in a server environment on a request that was submitted by a `<form enctype="multipart/form-data">`, any file uploads contained in the request are buffered in memory. For small files this may not be an issue, but it's a total non-starter for large files that exceed the server's memory capacity.
+The native [`request.formData()` method](https://developer.mozilla.org/en-US/docs/Web/API/Request/formData) has a major flaw in server environments: it buffers all file uploads in memory. When your users upload large files, this can quickly exhaust your server's RAM and crash your application.
 
-`form-data-parser` fixes this issue by providing an API to handle streaming file data.
+`form-data-parser` solves this by handling file uploads as they arrive in the request body stream, allowing the user to safely put the file in storage, and use some other value (like a unique identifier for that file) in the returned `FormData` object.
 
 ## Installation
 
@@ -25,38 +26,46 @@ npm install @mjackson/form-data-parser
 
 ## Usage
 
+This library pairs really well with [the `file-storage` library](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage) for keeping files in various storage backends.
+
 ```ts
 import { LocalFileStorage } from '@mjackson/file-storage/local';
-import { type FileUpload, parseFormData } from '@mjackson/form-data-parser';
+import type { FileUpload } from '@mjackson/form-data-parser';
+import { parseFormData } from '@mjackson/form-data-parser';
 
+// Set up storage for uploaded files
 const fileStorage = new LocalFileStorage('/uploads/user-avatars');
 
+// Define how to handle incoming file uploads
 async function uploadHandler(fileUpload: FileUpload) {
   // Is this file upload from the <input type="file" name="user-avatar"> field?
   if (fileUpload.fieldName === 'user-avatar') {
     let storageKey = `user-${user.id}-avatar`;
 
-    // FileUpload objects are not meant to stick around for very long (they are
-    // streaming data from the request.body!) so we should store them as soon as
-    // possible.
+    // Put the file in storage
     await fileStorage.set(storageKey, fileUpload);
 
-    // Return a File for the FormData object. This is a LazyFile that knows how
-    // to access the file's content if needed (using e.g. file.stream()) but
-    // waits until it is requested to actually read anything.
+    // Return a lazy File object that can access the stored file when needed
     return fileStorage.get(storageKey);
+
+    // Note: You could also just return the `storageKey` here if
+    // that's the value you want to show up in the `FormData` object
+    // at the "user-avatar" key.
   }
 
-  // Ignore any files we don't recognize the name of...
+  // Ignore unrecognized fields
 }
 
+// Handle form submissions with file uploads
 async function requestHandler(request: Request) {
+  // Parse the form data, streaming any files through your upload handler
   let formData = await parseFormData(request, uploadHandler);
 
-  let file = formData.get('user-avatar'); // File
-  file.name; // "my-avatar.jpg" (name of the file on the user's computer)
-  file.size; // number
-  file.type; // "image/jpeg"
+  // Access uploaded files just like with native FormData
+  let file = formData.get('user-avatar'); // File object
+  file.name; // "my-avatar.jpg" (original filename)
+  file.size; // File size in bytes
+  file.type; // "image/jpeg" (MIME type)
 }
 ```
 
