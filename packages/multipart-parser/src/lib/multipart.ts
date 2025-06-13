@@ -4,6 +4,9 @@ import { readStream } from './read-stream.ts';
 import type { SearchFunction, PartialTailSearchFunction } from './buffer-search.ts';
 import { createSearch, createPartialTailSearch } from './buffer-search.ts';
 
+/**
+ * The base class for errors thrown by the multipart parser.
+ */
 export class MultipartParseError extends Error {
   constructor(message: string) {
     super(message);
@@ -11,6 +14,9 @@ export class MultipartParseError extends Error {
   }
 }
 
+/**
+ * An error thrown when the maximum allowed size of a header is exceeded.
+ */
 export class MaxHeaderSizeExceededError extends MultipartParseError {
   constructor(maxHeaderSize: number) {
     super(`Multipart header size exceeds maximum allowed size of ${maxHeaderSize} bytes`);
@@ -18,6 +24,9 @@ export class MaxHeaderSizeExceededError extends MultipartParseError {
   }
 }
 
+/**
+ * An error thrown when the maximum allowed size of a file is exceeded.
+ */
 export class MaxFileSizeExceededError extends MultipartParseError {
   constructor(maxFileSize: number) {
     super(`File size exceeds maximum allowed size of ${maxFileSize} bytes`);

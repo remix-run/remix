@@ -6,7 +6,7 @@ import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-
 
 const PORT = 3000;
 
-let server = http.createServer(async (req, res) => {
+const server = http.createServer(async (req, res) => {
   if (req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(`

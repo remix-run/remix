@@ -1,7 +1,7 @@
 import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
 import tmp from 'tmp';
 
-let server = Bun.serve({
+const server = Bun.serve({
   port: 3000,
   async fetch(request) {
     if (request.method === 'GET') {
