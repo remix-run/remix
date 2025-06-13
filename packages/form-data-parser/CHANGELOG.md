@@ -2,7 +2,7 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.9.1 (2025-06-13)
 
 - Export `FormDataParserError` and `MaxFilesExceededError`
 - Re-export `MultipartParseError`, `MaxHeaderSizeExceededError`, and `MaxFileSizeExceededError` from multipart parser
