@@ -14,7 +14,8 @@
     "LICENSE",
     "README.md",
     "dist",
-    "src"
+    "src",
+    "!src/**/*.test.ts"
   ],
   "type": "module",
   "types": "dist/fetch-proxy.d.ts",
