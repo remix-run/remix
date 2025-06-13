@@ -1,8 +1,7 @@
-import { type BunFile } from 'bun';
 import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
 import tmp from 'tmp';
 
-const server = Bun.serve({
+let server = Bun.serve({
   port: 3000,
   async fetch(request) {
     if (request.method === 'GET') {
@@ -33,25 +32,22 @@ const server = Bun.serve({
       try {
         let parts: any[] = [];
 
-        await parseMultipartRequest(request, async (part) => {
+        for await (let part of parseMultipartRequest(request)) {
           if (part.isFile) {
             let tmpfile = tmp.fileSync();
-            let bytesWritten = await writeFile(Bun.file(tmpfile.name), part.body);
+            Bun.write(tmpfile.name, part.bytes);
 
             parts.push({
               name: part.name,
               filename: part.filename,
               mediaType: part.mediaType,
-              size: bytesWritten,
+              size: part.size,
               file: tmpfile.name,
             });
           } else {
-            parts.push({
-              name: part.name,
-              value: await part.text(),
-            });
+            parts.push({ name: part.name, value: part.text });
           }
-        });
+        }
 
         return new Response(JSON.stringify({ parts }, null, 2), {
           headers: { 'Content-Type': 'application/json' },
@@ -72,19 +68,3 @@ const server = Bun.serve({
 });
 
 console.log(`Server listening on http://localhost:${server.port} ...`);
-
-async function writeFile(file: BunFile, stream: ReadableStream<Uint8Array>): Promise<number> {
-  let writer = file.writer();
-  let bytesWritten = 0;
-
-  try {
-    for await (let chunk of stream) {
-      writer.write(chunk);
-      bytesWritten += chunk.byteLength;
-    }
-  } finally {
-    await writer.end();
-  }
-
-  return bytesWritten;
-}

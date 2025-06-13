@@ -1,10 +1,10 @@
+export type { ParseMultipartOptions, MultipartParserOptions } from './lib/multipart.ts';
 export {
   MultipartParseError,
   MaxHeaderSizeExceededError,
   MaxFileSizeExceededError,
-  type ParseMultipartOptions,
   parseMultipart,
-  type MultipartParserOptions,
+  parseMultipartStream,
   MultipartParser,
   MultipartPart,
 } from './lib/multipart.ts';

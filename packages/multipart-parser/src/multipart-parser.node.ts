@@ -1,10 +1,9 @@
 // Re-export all core functionality
+export type { ParseMultipartOptions, MultipartParserOptions } from './lib/multipart.ts';
 export {
   MultipartParseError,
   MaxHeaderSizeExceededError,
   MaxFileSizeExceededError,
-  type ParseMultipartOptions,
-  type MultipartParserOptions,
   MultipartParser,
   MultipartPart,
 } from './lib/multipart.ts';
@@ -12,4 +11,4 @@ export {
 export { getMultipartBoundary } from './lib/multipart-request.ts';
 
 // Export Node.js-specific functionality
-export { isMultipartRequest, parseMultipartRequest, parseMultipart } from './lib/multipart.node.ts';
+export { isMultipartRequest, parseMultipartRequest, parseMultipart, parseMultipartStream } from './lib/multipart.node.ts';

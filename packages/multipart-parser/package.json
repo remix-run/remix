@@ -45,8 +45,8 @@
   "scripts": {
     "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",
     "bench:bun": "bun run ./bench/runner.ts",
-    "bench:deno": "deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts",
-    "bench:node": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./bench/runner.ts",
+    "bench:deno": "deno run --allow-sys ./bench/runner.ts",
+    "bench:node": "node --disable-warning=ExperimentalWarning ./bench/runner.ts",
     "build:types": "tsc --project tsconfig.build.json",
     "build:esm": "esbuild src/multipart-parser.ts --bundle --outfile=dist/multipart-parser.js --format=esm --platform=neutral --sourcemap",
     "build:cjs": "esbuild src/multipart-parser.ts --bundle --outfile=dist/multipart-parser.cjs --format=cjs --platform=node --sourcemap",
@@ -54,7 +54,7 @@
     "build:cjs:node": "esbuild src/multipart-parser.node.ts --bundle --outfile=dist/multipart-parser.node.cjs --format=cjs --platform=node --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs && pnpm run build:esm:node && pnpm run build:cjs:node",
     "clean": "rm -rf dist",
-    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"
   },
   "keywords": [

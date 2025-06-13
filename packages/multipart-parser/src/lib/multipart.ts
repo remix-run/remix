@@ -1,12 +1,8 @@
 import Headers from '@mjackson/headers';
 
 import { readStream } from './read-stream.ts';
-import {
-  type SearchFunction,
-  createSearch,
-  type PartialTailSearchFunction,
-  createPartialTailSearch,
-} from './buffer-search.ts';
+import type { SearchFunction, PartialTailSearchFunction } from './buffer-search.ts';
+import { createSearch, createPartialTailSearch } from './buffer-search.ts';
 
 export class MultipartParseError extends Error {
   constructor(message: string) {
@@ -29,14 +25,6 @@ export class MaxFileSizeExceededError extends MultipartParseError {
   }
 }
 
-type MultipartMessageSource =
-  | ReadableStream<Uint8Array>
-  | Uint8Array
-  | Iterable<Uint8Array>
-  | AsyncIterable<Uint8Array>;
-
-export type MultipartPartHandler = (part: MultipartPart) => void | Promise<void>;
-
 export interface ParseMultipartOptions {
   boundary: string;
   maxHeaderSize?: number;
@@ -44,48 +32,68 @@ export interface ParseMultipartOptions {
 }
 
 /**
- * Parse a `multipart/*` buffer or stream and yield each part it finds as a `MultipartPart` object.
+ * Parse a `multipart/*` message from a buffer/iterable and yield each part as a `MultipartPart` object.
  *
- * ```ts
- * import { parseMultipart } from '@mjackson/multipart-parser';
- *
- * let boundary = '----WebKitFormBoundaryzv5Z4JY8k9lG0yQW';
- *
- * await parseMultipart(message, { boundary }, async (part) => {
- *   if (part.isFile) {
- *     console.log(part.filename);
- *
- *     if (part.mediaType.startsWith('text/')) {
- *       let text = await part.text();
- *       // ...
- *     } else {
- *       let buffer = await part.bytes();
- *       // ...
- *     }
- *   } else {
- *     let text = await part.text();
- *     // ...
- *   }
- * });
- * ```
- *
- * Note: This is a low-level API that requires manual handling of the stream and boundary. If you're
+ * Note: This is a low-level API that requires manual handling of the content and boundary. If you're
  * building a web server, consider using `parseMultipartRequest(request)` instead.
+ *
+ * @param message The multipart message as a `Uint8Array` or an iterable of `Uint8Array` chunks
+ * @param options Options for the parser
+ * @return A generator that yields `MultipartPart` objects
  */
-export async function parseMultipart(
-  message: MultipartMessageSource,
+export function* parseMultipart(
+  message: Uint8Array | Iterable<Uint8Array>,
   options: ParseMultipartOptions,
-  handler: MultipartPartHandler,
-): Promise<void> {
+): Generator<MultipartPart, void, unknown> {
   let parser = new MultipartParser(options.boundary, {
     maxHeaderSize: options.maxHeaderSize,
     maxFileSize: options.maxFileSize,
   });
 
-  await parser.parse(message, handler);
+  if (message instanceof Uint8Array) {
+    if (message.length === 0) {
+      return; // No data to parse
+    }
+
+    yield* parser.write(message);
+  } else {
+    for (let chunk of message) {
+      yield* parser.write(chunk);
+    }
+  }
+
+  parser.finish();
 }
 
-const findDoubleNewline = createSearch('\r\n\r\n');
+/**
+ * Parse a `multipart/*` message stream and yield each part as a `MultipartPart` object.
+ *
+ * Note: This is a low-level API that requires manual handling of the content and boundary. If you're
+ * building a web server, consider using `parseMultipartRequest(request)` instead.
+ *
+ * @param stream A stream containing multipart data as a `ReadableStream<Uint8Array>`
+ * @param options Options for the parser
+ * @return An async generator that yields `MultipartPart` objects
+ */
+export async function* parseMultipartStream(
+  stream: ReadableStream<Uint8Array>,
+  options: ParseMultipartOptions,
+): AsyncGenerator<MultipartPart, void, unknown> {
+  let parser = new MultipartParser(options.boundary, {
+    maxHeaderSize: options.maxHeaderSize,
+    maxFileSize: options.maxFileSize,
+  });
+
+  for await (let chunk of readStream(stream)) {
+    if (chunk.length === 0) {
+      continue; // No data to parse
+    }
+
+    yield* parser.write(chunk);
+  }
+
+  parser.finish();
+}
 
 export type MultipartParserOptions = Omit<ParseMultipartOptions, 'boundary'>;
 
@@ -95,25 +103,26 @@ const MultipartParserStateHeader = 2;
 const MultipartParserStateBody = 3;
 const MultipartParserStateDone = 4;
 
+const findDoubleNewline = createSearch('\r\n\r\n');
+
 /**
- * A parser for `multipart/*` HTTP messages.
+ * A streaming parser for `multipart/*` HTTP messages.
  */
 export class MultipartParser {
-  boundary: string;
-  maxHeaderSize: number;
-  maxFileSize: number;
+  readonly boundary: string;
+  readonly maxHeaderSize: number;
+  readonly maxFileSize: number;
 
   #findOpeningBoundary: SearchFunction;
   #openingBoundaryLength: number;
-
   #findBoundary: SearchFunction;
   #findPartialTailBoundary: PartialTailSearchFunction;
   #boundaryLength: number;
 
   #state = MultipartParserStateStart;
   #buffer: Uint8Array | null = null;
-  #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null;
-  #bodyLength = 0;
+  #currentPart: MultipartPart | null = null;
+  #contentLength = 0;
 
   constructor(boundary: string, options?: MultipartParserOptions) {
     this.boundary = boundary;
@@ -122,67 +131,18 @@ export class MultipartParser {
 
     this.#findOpeningBoundary = createSearch(`--${boundary}`);
     this.#openingBoundaryLength = 2 + boundary.length; // length of '--' + boundary
-
     this.#findBoundary = createSearch(`\r\n--${boundary}`);
     this.#findPartialTailBoundary = createPartialTailSearch(`\r\n--${boundary}`);
     this.#boundaryLength = 4 + boundary.length; // length of '\r\n--' + boundary
   }
 
   /**
-   * Parse a stream/buffer multipart message and call the given handler for each part it contains.
-   * Resolves when the parse is finished and all handlers resolve.
+   * Write a chunk of data to the parser.
+   *
+   * @param chunk A chunk of data to write to the parser
+   * @return A generator yielding `MultipartPart` objects as they are parsed
    */
-  async parse(message: MultipartMessageSource, handler: MultipartPartHandler): Promise<void> {
-    if (this.#state !== MultipartParserStateStart) {
-      this.#reset();
-    }
-
-    let promises: Promise<unknown>[] = [];
-
-    function handlePart(part: MultipartPart): void {
-      let result = handler(part);
-      if (isPromise(result)) {
-        promises.push(result);
-
-        // This hack marks the promise as "handled" in Node.js to suppress
-        // "unhandledRejection" warnings and avoid crashing the process.
-        result.catch(() => {});
-      }
-    }
-
-    if (message instanceof ReadableStream) {
-      for await (let chunk of readStream(message)) {
-        this.#write(chunk, handlePart);
-      }
-    } else if (isAsyncIterable(message)) {
-      for await (let chunk of message) {
-        this.#write(chunk, handlePart);
-      }
-    } else if (message instanceof Uint8Array) {
-      this.#write(message, handlePart);
-    } else if (isIterable(message)) {
-      for (let chunk of message) {
-        this.#write(chunk, handlePart);
-      }
-    } else {
-      throw new TypeError('Cannot parse multipart message; expected a stream or buffer');
-    }
-
-    if (this.#state !== MultipartParserStateDone) {
-      throw new MultipartParseError('Unexpected end of stream');
-    }
-
-    await Promise.all(promises);
-  }
-
-  #reset(): void {
-    this.#state = MultipartParserStateStart;
-    this.#buffer = null;
-    this.#bodyController = null;
-    this.#bodyLength = 0;
-  }
-
-  #write(chunk: Uint8Array, handler: MultipartPartHandler): void {
+  *write(chunk: Uint8Array): Generator<MultipartPart, void, unknown> {
     if (this.#state === MultipartParserStateDone) {
       throw new MultipartParseError('Unexpected data after end of stream');
     }
@@ -213,17 +173,18 @@ export class MultipartParser {
           let partialTailIndex = this.#findPartialTailBoundary(chunk);
 
           if (partialTailIndex === -1) {
-            this.#writeBody(index === 0 ? chunk : chunk.subarray(index));
+            this.#append(index === 0 ? chunk : chunk.subarray(index));
           } else {
-            this.#writeBody(chunk.subarray(index, partialTailIndex));
+            this.#append(chunk.subarray(index, partialTailIndex));
             this.#buffer = chunk.subarray(partialTailIndex);
           }
 
           break;
         }
 
-        this.#writeBody(chunk.subarray(index, boundaryIndex));
-        this.#closeBody();
+        this.#append(chunk.subarray(index, boundaryIndex));
+
+        yield this.#currentPart!;
 
         index = boundaryIndex + this.#boundaryLength;
 
@@ -267,18 +228,8 @@ export class MultipartParser {
           throw new MaxHeaderSizeExceededError(this.maxHeaderSize);
         }
 
-        let header = chunk.subarray(index, headerEndIndex);
-        let part = new MultipartPart(
-          header,
-          new ReadableStream({
-            start: (controller) => {
-              this.#bodyController = controller;
-              this.#bodyLength = 0;
-            },
-          }),
-        );
-
-        handler(part);
+        this.#currentPart = new MultipartPart(chunk.subarray(index, headerEndIndex), []);
+        this.#contentLength = 0;
 
         index = headerEndIndex + 4; // Skip header + \r\n\r\n
 
@@ -304,98 +255,70 @@ export class MultipartParser {
     }
   }
 
-  #writeBody(chunk: Uint8Array): void {
-    if (this.#bodyLength + chunk.length > this.maxFileSize) {
-      let error = new MaxFileSizeExceededError(this.maxFileSize);
-      this.#bodyController!.error(error);
-      throw error;
+  #append(chunk: Uint8Array): void {
+    if (this.#contentLength + chunk.length > this.maxFileSize) {
+      throw new MaxFileSizeExceededError(this.maxFileSize);
     }
 
-    this.#bodyController!.enqueue(chunk);
-    this.#bodyLength += chunk.length;
+    this.#currentPart!.content.push(chunk);
+    this.#contentLength += chunk.length;
   }
 
-  #closeBody(): void {
-    this.#bodyController!.close();
-    this.#bodyController = null;
+  /**
+   * Should be called after all data has been written to the parser.
+   *
+   * Note: This will throw if the multipart message is incomplete or
+   * wasn't properly terminated.
+   *
+   * @return void
+   */
+  finish(): void {
+    if (this.#state !== MultipartParserStateDone) {
+      throw new MultipartParseError('Multipart stream not finished');
+    }
   }
 }
 
-function isIterable<T>(value: unknown): value is Iterable<T> {
-  return typeof value === 'object' && value != null && Symbol.iterator in value;
-}
-
-function isAsyncIterable<T>(value: unknown): value is AsyncIterable<T> {
-  return typeof value === 'object' && value != null && Symbol.asyncIterator in value;
-}
-
-function isPromise<T>(value: unknown): value is Promise<T> {
-  return typeof value === 'object' && value != null && typeof (value as any).then === 'function';
-}
+const decoder = new TextDecoder('utf-8', { fatal: true });
 
 /**
  * A part of a `multipart/*` HTTP message.
  */
 export class MultipartPart {
+  /**
+   * The raw content of this part as an array of `Uint8Array` chunks.
+   */
+  readonly content: Uint8Array[];
+
   #header: Uint8Array;
-  #body: ReadableStream<Uint8Array>;
-
   #headers?: Headers;
-  #bodyUsed = false;
 
-  constructor(header: Uint8Array, body: ReadableStream<Uint8Array>) {
+  constructor(header: Uint8Array, content: Uint8Array[]) {
     this.#header = header;
-    this.#body = body;
+    this.content = content;
   }
 
   /**
    * The content of this part as an `ArrayBuffer`.
    */
-  async arrayBuffer(): Promise<ArrayBuffer> {
-    return (await this.bytes()).buffer as ArrayBuffer;
+  get arrayBuffer(): ArrayBuffer {
+    return this.bytes.buffer as ArrayBuffer;
   }
 
   /**
-   * The body of this part as a `ReadableStream<Uint8Array>`. In `multipart/form-data` messages, this is useful
-   * for streaming the value of files that were uploaded using `<input type="file">` fields.
-   */
-  get body(): ReadableStream<Uint8Array> {
-    return this.#body;
-  }
-
-  /**
-   * Whether the body of this part has been consumed.
-   */
-  get bodyUsed(): boolean {
-    return this.#bodyUsed;
-  }
-
-  /**
-   * The body of this part buffered into a single `Uint8Array`. In `multipart/form-data` messages, this is useful
+   * The content of this part as a single `Uint8Array`. In `multipart/form-data` messages, this is useful
    * for reading the value of files that were uploaded using `<input type="file">` fields.
    */
-  async bytes(): Promise<Uint8Array> {
-    if (this.#bodyUsed) {
-      throw new Error('Body is already consumed or is being consumed');
-    }
+  get bytes(): Uint8Array {
+    let buffer = new Uint8Array(this.size);
 
-    this.#bodyUsed = true;
-
-    let chunks: Uint8Array[] = [];
-    let totalLength = 0;
-    for await (let chunk of readStream(this.#body)) {
-      chunks.push(chunk);
-      totalLength += chunk.length;
-    }
-
-    let result = new Uint8Array(totalLength);
     let offset = 0;
-    for (let chunk of chunks) {
-      result.set(chunk, offset);
+    for (let chunk of this.content) {
+      buffer.set(chunk, offset);
       offset += chunk.length;
     }
 
-    return result;
+    return buffer;
   }
 
   /**
@@ -403,7 +326,7 @@ export class MultipartPart {
    */
   get headers(): Headers {
     if (!this.#headers) {
-      this.#headers = new Headers(new TextDecoder().decode(this.#header));
+      this.#headers = new Headers(decoder.decode(this.#header));
     }
 
     return this.#headers;
@@ -414,6 +337,13 @@ export class MultipartPart {
    */
   get isFile(): boolean {
     return this.filename !== undefined || this.mediaType === 'application/octet-stream';
+  }
+
+  /**
+   * True if this part originated from a text input field in a form submission.
+   */
+  get isText(): boolean {
+    return !this.isFile;
   }
 
   /**
@@ -438,12 +368,25 @@ export class MultipartPart {
   }
 
   /**
-   * The body of the part as a string. In `multipart/form-data` messages, this is useful for reading the value
-   * of parts that originated from `<input type="text">` fields.
-   *
-   * Note: Do not use this for binary data, use `await part.bytes()` or stream `part.body` directly instead.
+   * The size of the content in bytes.
    */
-  async text(): Promise<string> {
-    return new TextDecoder().decode(await this.bytes());
+  get size(): number {
+    let size = 0;
+
+    for (let chunk of this.content) {
+      size += chunk.length;
+    }
+
+    return size;
+  }
+
+  /**
+   * The content of this part as a string. In `multipart/form-data` messages, this is useful for
+   * reading the value of parts that originated from `<input type="text">` fields.
+   *
+   * Note: Do not use this for binary data, use `part.bytes` or `part.arrayBuffer` instead.
+   */
+  get text(): string {
+    return decoder.decode(this.bytes);
   }
 }

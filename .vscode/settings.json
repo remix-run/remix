@@ -3,7 +3,7 @@
   "nodejs-testing.extensions": [
     {
       "extensions": ["ts"],
-      "parameters": ["--experimental-strip-types", "--disable-warning=ExperimentalWarning"]
+      "parameters": ["--disable-warning=ExperimentalWarning"]
     }
   ],
   "typescript.tsdk": "./node_modules/typescript/lib"

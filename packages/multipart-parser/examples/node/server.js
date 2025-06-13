@@ -6,7 +6,7 @@ import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-
 
 const PORT = 3000;
 
-const server = http.createServer(async (req, res) => {
+let server = http.createServer(async (req, res) => {
   if (req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(`
@@ -33,30 +33,22 @@ const server = http.createServer(async (req, res) => {
       /** @type any[] */
       let parts = [];
 
-      await parseMultipartRequest(req, async (part) => {
+      for await (let part of parseMultipartRequest(req)) {
         if (part.isFile) {
           let tmpfile = tmp.fileSync();
-          let byteLength = await writeFile(tmpfile.name, part.body);
-
-          // Or, if you'd prefer to buffer you can do it like this:
-          // let bytes = await part.bytes();
-          // fs.writeFileSync(tmpfile.name, bytes, 'binary');
-          // let byteLength = bytes.byteLength;
+          fs.writeFileSync(tmpfile.name, part.bytes, 'binary');
 
           parts.push({
             name: part.name,
             filename: part.filename,
             mediaType: part.mediaType,
-            size: byteLength,
+            size: part.size,
             file: tmpfile.name,
           });
         } else {
-          parts.push({
-            name: part.name,
-            value: await part.text(),
-          });
+          parts.push({ name: part.name, value: part.text });
         }
-      });
+      }
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ parts }, null, 2));
@@ -83,20 +75,3 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT} ...`);
 });
-
-/** @type (filename: string, stream: ReadableStream<Uint8Array>) => Promise<number> */
-async function writeFile(filename, stream) {
-  let file = fs.createWriteStream(filename);
-  let bytesWritten = 0;
-
-  try {
-    for await (let chunk of stream) {
-      file.write(chunk);
-      bytesWritten += chunk.byteLength;
-    }
-  } finally {
-    file.end();
-  }
-
-  return bytesWritten;
-}

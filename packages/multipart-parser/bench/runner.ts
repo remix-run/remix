@@ -18,10 +18,7 @@ interface Parser {
   parse(message: messages.MultipartMessage): Promise<number>;
 }
 
-async function runParserBenchmarks(
-  parser: Parser,
-  times = 1000,
-): Promise<BenchmarkResults[string]> {
+async function runParserBenchmarks(parser: Parser, times = 200): Promise<BenchmarkResults[string]> {
   let results: BenchmarkResults[string] = {};
 
   for (let benchmark of benchmarks) {
