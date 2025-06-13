@@ -26,8 +26,24 @@ export class MaxFileSizeExceededError extends MultipartParseError {
 }
 
 export interface ParseMultipartOptions {
+  /**
+   * The boundary string used to separate parts in the multipart message,
+   * e.g. the `boundary` parameter in the `Content-Type` header.
+   */
   boundary: string;
+  /**
+   * The maximum allowed size of a header in bytes. If an individual part's header
+   * exceeds this size, a `MaxHeaderSizeExceededError` will be thrown.
+   *
+   * Default: 8 KiB
+   */
   maxHeaderSize?: number;
+  /**
+   * The maximum allowed size of a file in bytes. If an individual part's content
+   * exceeds this size, a `MaxFileSizeExceededError` will be thrown.
+   *
+   * Default: 2 MiB
+   */
   maxFileSize?: number;
 }
 
@@ -105,6 +121,9 @@ const MultipartParserStateDone = 4;
 
 const findDoubleNewline = createSearch('\r\n\r\n');
 
+const oneKb = 1024;
+const oneMb = 1024 * oneKb;
+
 /**
  * A streaming parser for `multipart/*` HTTP messages.
  */
@@ -126,8 +145,8 @@ export class MultipartParser {
 
   constructor(boundary: string, options?: MultipartParserOptions) {
     this.boundary = boundary;
-    this.maxHeaderSize = options?.maxHeaderSize ?? 8 * 1024;
-    this.maxFileSize = options?.maxFileSize ?? Infinity;
+    this.maxHeaderSize = options?.maxHeaderSize ?? 8 * oneKb;
+    this.maxFileSize = options?.maxFileSize ?? 2 * oneMb;
 
     this.#findOpeningBoundary = createSearch(`--${boundary}`);
     this.#openingBoundaryLength = 2 + boundary.length; // length of '--' + boundary
