@@ -213,7 +213,8 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('parses large file uploads correctly', async () => {
-    let content = getRandomBytes(10 * 1024 * 1024); // 10 MB file
+    let maxFileSize = 10 * 1024 * 1024; // 10 MiB
+    let content = getRandomBytes(maxFileSize); // 10 MiB file
     let request = new Request('https://example.com', {
       method: 'POST',
       headers: {
@@ -229,7 +230,7 @@ describe('parseMultipartRequest', async () => {
     });
 
     let parts: { name?: string; filename?: string; mediaType?: string; content: Uint8Array }[] = [];
-    for await (let part of parseMultipartRequest(request)) {
+    for await (let part of parseMultipartRequest(request, { maxFileSize })) {
       parts.push({
         name: part.name,
         filename: part.filename,

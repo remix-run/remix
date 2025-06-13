@@ -37,7 +37,8 @@ describe('parseMultipartRequest (node)', () => {
   });
 
   it('parses large file uploads correctly', async () => {
-    let content = getRandomBytes(1024 * 1024 * 10); // 10 MB file
+    let maxFileSize = 1024 * 1024 * 10; // 10 MiB
+    let content = getRandomBytes(maxFileSize);
     let request = createMultipartRequest(boundary, {
       file1: {
         filename: 'tesla.jpg',
@@ -47,7 +48,7 @@ describe('parseMultipartRequest (node)', () => {
     });
 
     let parts: { name?: string; filename?: string; mediaType?: string; content: Uint8Array }[] = [];
-    for await (let part of parseMultipartRequest(request)) {
+    for await (let part of parseMultipartRequest(request, { maxFileSize })) {
       parts.push({
         name: part.name,
         filename: part.filename,

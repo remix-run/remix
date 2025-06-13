@@ -15,6 +15,7 @@ With this release, I realized that instead of getting rid of the generator, whic
 - BREAKING CHANGE: `parser.parse()` is removed
 - BREAKING CHANGE: `part.body`, `part.bodyUsed` are removed
 - BREAKING CHANGE: `part.arrayBuffer`, `part.bytes`, `part.text` are now sync getters instead of `async` methods
+- BREAKING CHANGE: Default `maxFileSize` is now 2MiB, same as PHP's default [`upload_max_filesize`](https://www.php.net/manual/en/ini.core.php#ini.upload-max-filesize)
 
 New APIs:
 
