@@ -42,7 +42,7 @@
     "build:cjs": "esbuild src/fetch-proxy.ts --bundle --outfile=dist/fetch-proxy.cjs --format=cjs --platform=neutral --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
     "clean": "rm -rf dist",
-    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"
   },
   "keywords": [
