@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(grep:*)",
-      "Bash(npm test:*)"
-    ],
-    "deny": []
-  }
-}
