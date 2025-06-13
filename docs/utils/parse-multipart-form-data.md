@@ -4,6 +4,8 @@ title: unstable_parseMultipartFormData
 
 # `unstable_parseMultipartFormData`
 
+<docs-warning>This API is removed in React Router v7. See <a href="https://reactrouter.com/how-to/file-uploads">the React Router guide to file uploads</a> for the recommended alternative API.</docs-warning>
+
 Allows you to handle multipart forms (file uploads) for your app.
 
 It would be useful to understand [the Browser File API][the-browser-file-api] to know how to use this API.
