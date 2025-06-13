@@ -1,6 +1,6 @@
 # form-data-parser
 
-A streaming multipart/form-data parser that solves memory issues with file uploads in server environments. Built as an enhanced replacement for the native `request.formData()` API, it enables efficient handling of large file uploads by streaming directly to disk or cloud storage services like [AWS S3](https://aws.amazon.com/s3/) or [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/), preventing server crashes from memory exhaustion.
+A streaming `multipart/form-data` parser that solves memory issues with file uploads in server environments. Built as an enhanced replacement for the native `request.formData()` API, it enables efficient handling of large file uploads by streaming directly to disk or cloud storage services like [AWS S3](https://aws.amazon.com/s3/) or [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/), preventing server crashes from memory exhaustion.
 
 ## Features
 
