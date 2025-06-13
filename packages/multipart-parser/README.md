@@ -172,53 +172,53 @@ The [`examples` directory](https://github.com/mjackson/remix-the-web/tree/main/p
 The results of running the benchmarks on my laptop:
 
 ```
-> @mjackson/multipart-parser@0.6.1 bench:node /Users/michael/Projects/multipart-parser
-> node --import tsimp/import ./bench/runner.ts
+> @mjackson/multipart-parser@0.10.1 bench:node /Users/michael/Projects/remix-the-web/packages/multipart-parser
+> node --disable-warning=ExperimentalWarning ./bench/runner.ts
 
-Platform: Darwin (23.5.0)
+Platform: Darwin (24.5.0)
 CPU: Apple M1 Pro
-Date: 8/18/2024, 4:18:39 PM
-Node.js v22.1.0
+Date: 6/13/2025, 12:27:09 PM
+Node.js v24.0.2
 ┌──────────────────┬──────────────────┬──────────────────┬──────────────────┬───────────────────┐
 │ (index)          │ 1 small file     │ 1 large file     │ 100 small files  │ 5 large files     │
 ├──────────────────┼──────────────────┼──────────────────┼──────────────────┼───────────────────┤
-│ multipart-parser │ '0.01 ms ± 0.03' │ '1.06 ms ± 0.04' │ '0.10 ms ± 0.03' │ '10.60 ms ± 0.22' │
-│ multipasta       │ '0.01 ms ± 0.03' │ '1.06 ms ± 0.03' │ '0.15 ms ± 0.02' │ '10.70 ms ± 2.70' │
-│ busboy           │ '0.03 ms ± 0.09' │ '3.01 ms ± 0.08' │ '0.22 ms ± 0.03' │ '29.91 ms ± 0.91' │
-│ @fastify/busboy  │ '0.03 ms ± 0.07' │ '1.20 ms ± 0.08' │ '0.39 ms ± 0.07' │ '11.86 ms ± 0.17' │
+│ multipart-parser │ '0.01 ms ± 0.03' │ '1.08 ms ± 0.08' │ '0.04 ms ± 0.01' │ '10.50 ms ± 0.38' │
+│ multipasta       │ '0.02 ms ± 0.06' │ '1.07 ms ± 0.02' │ '0.15 ms ± 0.02' │ '10.46 ms ± 0.11' │
+│ busboy           │ '0.06 ms ± 0.17' │ '3.07 ms ± 0.24' │ '0.24 ms ± 0.05' │ '29.85 ms ± 0.18' │
+│ @fastify/busboy  │ '0.05 ms ± 0.13' │ '1.23 ms ± 0.09' │ '0.45 ms ± 0.22' │ '11.81 ms ± 0.11' │
 └──────────────────┴──────────────────┴──────────────────┴──────────────────┴───────────────────┘
 
-> @mjackson/multipart-parser@0.6.1 bench:bun /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.10.1 bench:bun /Users/michael/Projects/remix-the-web/packages/multipart-parser
 > bun run ./bench/runner.ts
 
-Platform: Darwin (23.5.0)
+Platform: Darwin (24.5.0)
 CPU: Apple M1 Pro
-Date: 8/18/2024, 4:20:58 PM
-Bun 1.1.21
+Date: 6/13/2025, 12:27:31 PM
+Bun 1.2.13
 ┌──────────────────┬────────────────┬────────────────┬─────────────────┬─────────────────┐
 │                  │ 1 small file   │ 1 large file   │ 100 small files │ 5 large files   │
 ├──────────────────┼────────────────┼────────────────┼─────────────────┼─────────────────┤
-│ multipart-parser │ 0.01 ms ± 0.04 │ 0.91 ms ± 0.09 │ 0.11 ms ± 0.05  │ 8.23 ms ± 0.18  │
-│       multipasta │ 0.01 ms ± 0.03 │ 0.87 ms ± 0.08 │ 0.22 ms ± 0.15  │ 8.09 ms ± 0.15  │
-│           busboy │ 0.03 ms ± 0.07 │ 3.59 ms ± 0.13 │ 0.36 ms ± 0.17  │ 35.26 ms ± 0.39 │
-│  @fastify/busboy │ 0.04 ms ± 0.11 │ 7.23 ms ± 0.15 │ 0.63 ms ± 0.15  │ 71.86 ms ± 0.53 │
+│ multipart-parser │ 0.01 ms ± 0.04 │ 0.86 ms ± 0.09 │ 0.04 ms ± 0.01  │ 8.32 ms ± 0.26  │
+│       multipasta │ 0.02 ms ± 0.07 │ 0.87 ms ± 0.03 │ 0.25 ms ± 0.21  │ 8.27 ms ± 0.09  │
+│           busboy │ 0.05 ms ± 0.17 │ 3.54 ms ± 0.10 │ 0.30 ms ± 0.03  │ 34.79 ms ± 0.38 │
+│  @fastify/busboy │ 0.06 ms ± 0.18 │ 4.04 ms ± 0.08 │ 0.48 ms ± 0.06  │ 39.91 ms ± 0.37 │
 └──────────────────┴────────────────┴────────────────┴─────────────────┴─────────────────┘
 
-> @mjackson/multipart-parser@0.6.1 bench:deno /Users/michael/Projects/multipart-parser
-> deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts
+> @mjackson/multipart-parser@0.10.1 bench:deno /Users/michael/Projects/remix-the-web/packages/multipart-parser
+> deno run --allow-sys ./bench/runner.ts
 
-Platform: Darwin (23.5.0)
+Platform: Darwin (24.5.0)
 CPU: Apple M1 Pro
-Date: 8/18/2024, 4:24:16 PM
-Deno 1.45.5
-┌──────────────────┬──────────────────┬───────────────────┬──────────────────┬────────────────────┐
-│ (idx)            │ 1 small file     │ 1 large file      │ 100 small files  │ 5 large files      │
-├──────────────────┼──────────────────┼───────────────────┼──────────────────┼────────────────────┤
-│ multipart-parser │ "0.01 ms ± 0.15" │ "1.00 ms ± 1.00"  │ "0.08 ms ± 0.39" │ "10.08 ms ± 0.41"  │
-│ multipasta       │ "0.01 ms ± 0.14" │ "1.02 ms ± 1.00"  │ "0.17 ms ± 0.56" │ "14.59 ms ± 0.92"  │
-│ busboy           │ "0.04 ms ± 0.28" │ "3.04 ms ± 1.00"  │ "0.30 ms ± 0.71" │ "29.86 ms ± 0.83"  │
-│ @fastify/busboy  │ "0.05 ms ± 0.31" │ "12.36 ms ± 0.78" │ "0.78 ms ± 0.98" │ "123.54 ms ± 5.04" │
-└──────────────────┴──────────────────┴───────────────────┴──────────────────┴────────────────────┘
+Date: 6/13/2025, 12:28:12 PM
+Deno 2.3.6
+┌──────────────────┬──────────────────┬────────────────────┬──────────────────┬─────────────────────┐
+│ (idx)            │ 1 small file     │ 1 large file       │ 100 small files  │ 5 large files       │
+├──────────────────┼──────────────────┼────────────────────┼──────────────────┼─────────────────────┤
+│ multipart-parser │ "0.01 ms ± 0.03" │ "1.03 ms ± 0.04"   │ "0.05 ms ± 0.01" │ "10.05 ms ± 0.20"   │
+│ multipasta       │ "0.02 ms ± 0.07" │ "1.04 ms ± 0.03"   │ "0.16 ms ± 0.02" │ "10.10 ms ± 0.08"   │
+│ busboy           │ "0.05 ms ± 0.19" │ "3.06 ms ± 0.15"   │ "0.32 ms ± 0.05" │ "29.92 ms ± 0.24"   │
+│ @fastify/busboy  │ "0.06 ms ± 0.14" │ "14.72 ms ± 11.42" │ "0.81 ms ± 0.20" │ "127.63 ms ± 35.77" │
+└──────────────────┴──────────────────┴────────────────────┴──────────────────┴─────────────────────┘
 ```
 
 ## Related Packages
