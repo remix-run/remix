@@ -5,6 +5,9 @@ import {
   MultipartPart,
 } from '@mjackson/multipart-parser';
 
+/**
+ * The base class for errors thrown by the form data parser.
+ */
 export class FormDataParseError extends Error {
   constructor(message: string) {
     super(message);
@@ -12,6 +15,9 @@ export class FormDataParseError extends Error {
   }
 }
 
+/**
+ * An error thrown when the maximum number of files allowed in a request is exceeded.
+ */
 export class MaxFilesExceededError extends FormDataParseError {
   constructor(maxFiles: number) {
     super(`Maximum number of files exceeded: ${maxFiles}`);
