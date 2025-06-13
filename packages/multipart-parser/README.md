@@ -6,7 +6,7 @@
 
 - **Universal JavaScript** - One library that works everywhere: Node.js, Bun, Deno, Cloudflare Workers, and browsers
 - **Blazing Fast** - Consistently outperforms popular alternatives like busboy in benchmarks
-- **Zero Dependencies** - Lightweight and secure with no external dependencies for core functionality
+- **Zero Dependencies** - Lightweight and secure with no external dependencies
 - **Memory Efficient** - Streaming architecture that `yield`s files as they are found in the stream
 - **Type Safe** - Written in TypeScript with comprehensive type definitions
 - **Standards Based** - Built on the web standard [Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) for maximum compatibility
@@ -16,7 +16,7 @@
 
 - Parse file uploads (`multipart/form-data`) with automatic field and file detection
 - Support for all `multipart/*` content types (mixed, alternative, related, etc.)
-- Convenient `MultipartPart` API with `arrayBuffer`, `bytes`, `text`, and metadata access
+- Convenient `MultipartPart` API with `arrayBuffer`, `bytes`, `text`, `size`, and metadata access
 - Built-in file size limiting to prevent abuse
 - First-class Node.js support with native `http.IncomingMessage` compatibility
 - [Examples for every major runtime](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples)
@@ -46,7 +46,7 @@ async function handleRequest(request: Request): void {
   try {
     for await (let part of parseMultipartRequest(request)) {
       if (part.isFile) {
-        // Access file data in multiple formats - all sync!
+        // Access file data in multiple formats
         let buffer = part.arrayBuffer; // ArrayBuffer
         console.log(`File received: ${part.filename} (${buffer.byteLength} bytes)`);
         console.log(`Content type: ${part.mediaType}`);
@@ -101,7 +101,7 @@ async function handleRequest(request: Request): Promise<Response> {
 }
 ```
 
-## Node.js Support
+## Node.js Bindings
 
 The main module (`import from "@mjackson/multipart-parser"`) assumes you're working with [the fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) (`Request`, `ReadableStream`, etc). Support for these interfaces was added to Node.js by the [undici](https://github.com/nodejs/undici) project in [version 16.5.0](https://nodejs.org/en/blog/release/v16.5.0).
 
