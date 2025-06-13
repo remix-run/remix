@@ -2,7 +2,7 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.10.1 (2025-06-13)
 
 - Add doc comments on custom error classes
 
