@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it, mock } from 'node:test';
 
 import type { FileUploadHandler } from './form-data.ts';
-import { parseFormData } from './form-data.ts';
+import { MaxFilesExceededError, parseFormData } from './form-data.ts';
 
 describe('parseFormData', () => {
   it('parses a application/x-www-form-urlencoded request', async () => {
@@ -146,5 +146,37 @@ describe('parseFormData', () => {
     assert.equal(file.name, 'example.txt');
     assert.equal(file.type, 'text/plain');
     assert.equal(await file.text(), 'This is an example file.');
+  });
+
+  it('throws MaxFilesExceededError when the number of files exceeds the limit', async () => {
+    let request = new Request('http://localhost:8080', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
+      },
+      body: [
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+        'Content-Disposition: form-data; name="file1"; filename="example1.txt"',
+        'Content-Type: text/plain',
+        '',
+        'This is the first example file.',
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+        'Content-Disposition: form-data; name="file2"; filename="example2.txt"',
+        'Content-Type: text/plain',
+        '',
+        'This is the second example file.',
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+        'Content-Disposition: form-data; name="file3"; filename="example3.txt"',
+        'Content-Type: text/plain',
+        '',
+        'This is the third example file.',
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
+      ].join('\r\n'),
+    });
+
+    await assert.rejects(
+      async () => await parseFormData(request, { maxFiles: 2 }),
+      MaxFilesExceededError,
+    );
   });
 });

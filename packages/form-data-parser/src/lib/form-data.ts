@@ -5,6 +5,20 @@ import {
   MultipartPart,
 } from '@mjackson/multipart-parser';
 
+export class FormDataParseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'FormDataParseError';
+  }
+}
+
+export class MaxFilesExceededError extends FormDataParseError {
+  constructor(maxFiles: number) {
+    super(`Maximum number of files exceeded: ${maxFiles}`);
+    this.name = 'MaxFilesExceededError';
+  }
+}
+
 /**
  * A file that was uploaded as part of a `multipart/form-data` request.
  */
@@ -35,6 +49,16 @@ async function defaultFileUploadHandler(file: FileUpload): Promise<File> {
   return file;
 }
 
+export interface ParseFormDataOptions extends MultipartParserOptions {
+  /**
+   * The maximum number of files that can be uploaded in a single request.
+   * If this limit is exceeded, a `MaxFilesExceededError` will be thrown.
+   *
+   * Default: 20
+   */
+  maxFiles?: number;
+}
+
 /**
  * Parses a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) body into a [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData)
  * object. This is useful when accessing the data contained in a HTTP `multipart/form-data` request
@@ -55,32 +79,39 @@ export async function parseFormData(
 ): Promise<FormData>;
 export async function parseFormData(
   request: Request,
-  parserOptions: MultipartParserOptions,
+  options: ParseFormDataOptions,
   uploadHandler?: FileUploadHandler,
 ): Promise<FormData>;
 export async function parseFormData(
   request: Request,
-  parserOptions?: MultipartParserOptions | FileUploadHandler,
+  options?: ParseFormDataOptions | FileUploadHandler,
   uploadHandler: FileUploadHandler = defaultFileUploadHandler,
 ): Promise<FormData> {
-  if (typeof parserOptions === 'function') {
-    uploadHandler = parserOptions;
-    parserOptions = {};
-  } else if (parserOptions == null) {
-    parserOptions = {};
+  if (typeof options === 'function') {
+    uploadHandler = options;
+    options = {};
+  } else if (options == null) {
+    options = {};
   }
 
   if (!isMultipartRequest(request)) {
     return request.formData();
   }
 
+  let { maxFiles = 20, ...parserOptions } = options;
+
   let formData = new FormData();
+  let fileCount = 0;
 
   for await (let part of parseMultipartRequest(request, parserOptions)) {
     let fieldName = part.name;
     if (!fieldName) continue;
 
     if (part.isFile) {
+      if (++fileCount > maxFiles) {
+        throw new MaxFilesExceededError(maxFiles);
+      }
+
       let value = await uploadHandler(new FileUpload(part, fieldName));
       if (value != null) {
         formData.append(fieldName, value);

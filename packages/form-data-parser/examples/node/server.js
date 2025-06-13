@@ -8,7 +8,9 @@ import { MultipartParseError, MaxFileSizeExceededError } from '@mjackson/multipa
 import { createRequestListener } from '@mjackson/node-fetch-server';
 
 const PORT = 3000;
+
 const oneMb = 1024 * 1024;
+const maxFileSize = 10 * oneMb;
 
 const fileStorage = new LocalFileStorage(await fsp.mkdtemp(path.join(os.tmpdir(), 'uploads-')));
 
@@ -46,7 +48,7 @@ const server = http.createServer(
 
     if (request.method === 'POST') {
       try {
-        let formData = await parseFormData(request, { maxFileSize: 10 * oneMb }, async (upload) => {
+        let formData = await parseFormData(request, { maxFileSize }, async (upload) => {
           let file = await fileStorage.put('image-upload', upload);
           return file.size === 0 ? null : file;
         });

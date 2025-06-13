@@ -7,6 +7,13 @@ This is the changelog for [`form-data-parser`](https://github.com/mjackson/remix
 This release updates to `multipart-parser` 0.10.0 and removes the restrictions on checking the `size` and/or `slice`ing `FileUpload` objects.
 
 - `FileUpload` is now a normal subclass of `File` with all the same functionality (instead of just implementing the same interface)
+- Add `maxFiles` option to `parseFormData` to allow limiting the number of files uploaded in a single request
+
+```ts
+let formData = await parseFormData(request, { maxFiles: 5 });
+let file = formData.get('file-upload');
+let size = file.size; // This is ok now!
+```
 
 ## v0.8.0 (2025-06-10)
 
