@@ -5,6 +5,8 @@ toc: false
 
 # `unstable_createFileUploadHandler`
 
+<docs-warning>This API is removed in React Router v7. See <a href="https://reactrouter.com/how-to/file-uploads">the React Router guide to file uploads</a> for the recommended alternative API.</docs-warning>
+
 A Node.js upload handler that will write parts with a filename to disk to keep them out of memory, parts without a filename will not be parsed. Should be composed with another upload handler.
 
 **Example:**

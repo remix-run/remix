@@ -5,6 +5,8 @@ toc: false
 
 # `unstable_createMemoryUploadHandler`
 
+<docs-warning>This API is removed in React Router v7. See <a href="https://reactrouter.com/how-to/file-uploads">the React Router guide to file uploads</a> for the recommended alternative API.</docs-warning>
+
 **Example:**
 
 ```tsx
