@@ -24,6 +24,7 @@
     "onlyBuiltDependencies": [
       "@swc/core",
       "esbuild",
+      "sharp",
       "workerd"
     ]
   }
