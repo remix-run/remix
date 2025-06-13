@@ -12,9 +12,17 @@ A streaming `multipart/form-data` parser that solves memory issues with file upl
 
 ## Why You Need This
 
-The native [`request.formData()` method](https://developer.mozilla.org/en-US/docs/Web/API/Request/formData) has a major flaw in server environments: it buffers all file uploads in memory. When your users upload large files, this can quickly exhaust your server's RAM and crash your application.
+The native [`request.formData()` method](https://developer.mozilla.org/en-US/docs/Web/API/Request/formData) has a few major flaws in server environments:
 
-`form-data-parser` solves this by handling file uploads as they arrive in the request body stream, allowing the user to safely put the file in storage, and use some other value (like a unique identifier for that file) in the returned `FormData` object.
+- It buffers all file uploads in memory
+- It does not provide fine-grained control over file upload handling
+- It does not prevent DoS attacks from malicious requests
+
+In normal usage, this makes it difficult to process requests with large file uploads because they can exhaust your server's RAM and crash the application.
+
+For attackers, this creates an attack vector where malicious actors can overwhelm your server's memory by sending large payloads with many files.
+
+`form-data-parser` solves this by handling file uploads as they arrive in the request body stream, allowing you to safely store files and use either a) the `File` directly or b) a unique identifier for that file in the returned `FormData` object.
 
 ## Installation
 
@@ -26,7 +34,71 @@ npm install @mjackson/form-data-parser
 
 ## Usage
 
-This library pairs really well with [the `file-storage` library](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage) for keeping files in various storage backends.
+The `parseFormData` interface allows you to define an "upload handler" function for fine-grained control of handling file uploads.
+
+```ts
+import * as fsp from 'node:fs/promises';
+import type { FileUpload } from '@mjackson/form-data-parser';
+import { parseFormData } from '@mjackson/form-data-parser';
+
+// Define how to handle incoming file uploads
+async function uploadHandler(fileUpload: FileUpload) {
+  // Is this file upload from the <input type="file" name="user-avatar"> field?
+  if (fileUpload.fieldName === 'user-avatar') {
+    let filename = `/uploads/user-${user.id}-avatar.bin`;
+
+    // Store the file safely on disk
+    await fsp.writeFile(filename, fileUpload.bytes);
+
+    // Return the file name to use in the FormData object so we don't
+    // keep the file contents around in memory.
+    return filename;
+  }
+
+  // Ignore unrecognized fields
+}
+
+// Handle form submissions with file uploads
+async function requestHandler(request: Request) {
+  // Parse the form data from the request.body stream, passing any files
+  // through your upload handler as they are parsed from the stream
+  let formData = await parseFormData(request, uploadHandler);
+
+  let avatarFilename = formData.get('user-avatar');
+
+  if (avatarFilename != null) {
+    console.log(`User avatar uploaded to ${avatarFilename}`);
+  } else {
+    console.log(`No user avatar file was uploaded`);
+  }
+}
+```
+
+To limit the maximum size of files that are uploaded, or the maximum number of files that may be uploaded in a single request, use the `maxFileSize` and `maxFiles` options.
+
+```ts
+import { MaxFilesExceededError, MaxFileSizeExceededError } from '@mjackson/form-data-parser';
+
+const oneKb = 1024;
+const oneMb = 1024 * oneKb;
+
+try {
+  let formData = await parseFormData(request, {
+    maxFiles: 5,
+    maxFileSize: 10 * oneMb,
+  });
+} catch (error) {
+  if (error instanceof MaxFilesExceededError) {
+    console.error(`Request may not contain more than 5 files`);
+  } else if (error instanceof MaxFileSizeExceededError) {
+    console.error(`Files may not be larger than 10 MiB`);
+  } else {
+    console.error(`An unknown error occurred:`, error);
+  }
+}
+```
+
+If you're looking for a more flexible storage solution for `File` objects that are uploaded, this library pairs really well with [the `file-storage` library](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage) for keeping files in various storage backends.
 
 ```ts
 import { LocalFileStorage } from '@mjackson/file-storage/local';
@@ -47,25 +119,9 @@ async function uploadHandler(fileUpload: FileUpload) {
 
     // Return a lazy File object that can access the stored file when needed
     return fileStorage.get(storageKey);
-
-    // Note: You could also just return the `storageKey` here if
-    // that's the value you want to show up in the `FormData` object
-    // at the "user-avatar" key.
   }
 
   // Ignore unrecognized fields
-}
-
-// Handle form submissions with file uploads
-async function requestHandler(request: Request) {
-  // Parse the form data, streaming any files through your upload handler
-  let formData = await parseFormData(request, uploadHandler);
-
-  // Access uploaded files just like with native FormData
-  let file = formData.get('user-avatar'); // File object
-  file.name; // "my-avatar.jpg" (original filename)
-  file.size; // File size in bytes
-  file.type; // "image/jpeg" (MIME type)
 }
 ```
 
