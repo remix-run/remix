@@ -50,7 +50,7 @@ for (const match of matcher.matches(url)) {
 // products/:id -> { id: 'sku-electronics-12345' }
 ```
 
-## Writing patterns
+## Route pattern parts
 
 Route patterns may specify any combination of protocol, hostname, pathname, and search:
 
@@ -63,6 +63,13 @@ Route patterns may specify any combination of protocol, hostname, pathname, and 
 ```
 
 **Note:** In route patterns, hostnames must begin with `://` to distinguish them from pathnames
+
+|                             | protocol         | hostname         | pathname                      | search         |
+| --------------------------- | ---------------- | ---------------- | ----------------------------- | -------------- |
+| Case-sensitivity            | Case-insensitive | Case-insensitive | Case-sensitive                | Case-sensitive |
+| Match behavior when omitted | Any protocol     | Any hostname     | Empty pathname: `""` or `"/"` | Any search     |
+
+## Pattern modifiers
 
 ### Wildcards
 
@@ -85,19 +92,19 @@ As a result, wildcards correspond to these regular expressions:
 | pathname | `/[^/]*/` | `/.*/` |
 
 ```ts
-'/files/*'
+'/files/*';
 // ✓ matches: /files/photo.jpg
 // ✗ doesn't match: /files/2023/photo.jpg
 
-'/docs/**'
+'/docs/**';
 // ✓ matches: /docs/api/v1/intro.html
 // ✗ doesn't match: /docs (no trailing content)
 
-'://*.example.com'
+'://*.example.com';
 // ✓ matches: ://cdn.example.com
 // ✗ doesn't match: ://api.staging.example.com
 
-'://**.api.com'
+'://**.api.com';
 // ✓ matches: ://tenant.v1.api.com
 // ✗ doesn't match: ://api.com (no prefix)
 ```
@@ -105,11 +112,11 @@ As a result, wildcards correspond to these regular expressions:
 Route patterns can have multiple wildcards, even within the same segment.
 
 ```ts
-'/assets/**/static/**/*.css'
+'/assets/**/static/**/*.css';
 // ✓ matches: /assets/v2/themes/static/dark/main.css
 // ✗ doesn't match: /assets/v2/themes/static/main.js
 
-'://us-**.cdn.com/cars/*-*'
+'://us-**.cdn.com/cars/*-*';
 // ✓ matches: ://us-east.staging.cdn.com/cars/audi-a4.jpg
 // ✗ doesn't match: ://us-east.staging.cdn.com/cars/toyota.jpg
 ```
@@ -117,7 +124,7 @@ Route patterns can have multiple wildcards, even within the same segment.
 Wildcards only match characters within the same part of the URL:
 
 ```ts
-'://api.**/users'
+'://api.**/users';
 // ✓ matches: ://api.example.com/users
 // ✗ doesn't match: ://api.example.com/123/users
 ```
@@ -131,6 +138,7 @@ Wildcards only match characters within the same part of the URL:
 Params, like wildcards, match dynamic parts of the URL but they also give you access to the matched values.
 
 A param is written as:
+
 - `:` followed by a name for capturing anything within a segment (similar to `*`)
 - `::` followed by a name for capturing anything, even across multiple segments (similar to `**`)
 
@@ -198,7 +206,7 @@ Params can be mixed with static text, wildcards, and even other params:
 Params only match characters within the same part of the URL:
 
 ```ts
-'://api.::domain/users'
+'://api.::domain/users';
 // ✓ matches: ://api.example.com/users → { domain: 'example.com' }
 // ✗ doesn't match: ://api.example.com/123/users
 ```
@@ -326,4 +334,4 @@ Use backslash `\` to escape special characters in the patterns language: `:`, `*
 
 ### JavaScript identifier
 
-For the purposes of this spec, JavaScript identifiers match this regular expression: [/[a-zA-Z*$0-9][a-zA-Z*$0-9]\*/](https://regexr.com/8fcn3)
+For the purposes of this spec, JavaScript identifiers match this regular expression: [`/[a-zA-Z_$0-9][a-zA-Z_$0-9]*/`](https://regexr.com/8fcn3)
