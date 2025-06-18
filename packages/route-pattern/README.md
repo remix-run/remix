@@ -52,24 +52,53 @@ for (const match of matcher.matches(url)) {
 
 ## Route pattern parts
 
-Route patterns may specify any combination of protocol, hostname, pathname, and search:
+Route patterns are composed of 4 parts: protocol, hostname, pathname and search.
+You can use any combination of these to create a route pattern, for example:
 
 ```ts
-'/products'; // Match on the URL pathname
-'/search?q'; // Match the pathname + search
-'https://remix.run/store'; // Match the protocol + hostname + pathname
-'://remix.run/store'; // Match hostname + pathaname
-'file:///usr/bin'; // Match protocol + pathname
+'/products'; // pathname
+'/search?q'; // pathname + search
+'https://remix.run/store'; // protocol + hostname + pathname
+'://remix.run/store'; // hostname + pathaname
+'file:///usr/bin'; // protocol + pathname
+// ...and so on...
 ```
 
-**Note:** In route patterns, hostnames must begin with `://` to distinguish them from pathnames
+**Delimiters:** Route patterns use the first occurrences of `://`, `/`, and `?` as delimiters to split a route pattern into its parts.
+Pathname-only route patterns are the most common, so route patterns are assumed to be pathname-only unless `://` or `?` are present.
+As a result, hostnames must begin with `://` and searches must begin with `?` to distinguish both from pathnames.
 
-|                             | protocol         | hostname         | pathname                      | search         |
-| --------------------------- | ---------------- | ---------------- | ----------------------------- | -------------- |
-| Case-sensitivity            | Case-insensitive | Case-insensitive | Case-sensitive                | Case-sensitive |
-| Match behavior when omitted | Any protocol     | Any hostname     | Empty pathname: `""` or `"/"` | Any search     |
+**Case Sensitivity:** Protocol and hostname are case-insensitive, while pathname and search are case-sensitive.
+
+**Omitting parts:** For protocol, hostname, and pathname omitting that part means "match anything" for that part.
+However, omitting a pathname means "match the 'empty' pathname" (namely `""` and `"/"`)
+
+```ts
+'://api.example.com/users';
+// ✓ matches: https://api.example.com/users
+// ✓ matches: http://api.example.com/users
+// ✓ matches: ftp://api.example.com/users
+
+'/api/users';
+// ✓ matches: https://example.com/api/users
+// ✓ matches: https://staging.api.com/api/users
+// ✓ matches: https://localhost:3000/api/users
+
+'https://api.example.com';
+// ✓ matches: https://api.example.com
+// ✓ matches: https://api.example.com/
+// ✗ doesn't match: https://api.example.com/users
+```
+
 
 ## Pattern modifiers
+
+Before describing [wildcards](#wildcards), [params](#params), and [optionals](#optionals),
+its important to note that each pattern modifier applies only in the same part of the URL where it appears.
+As a result:
+
+- Wildcards and params do not match characters that appear outside of their part of the route pattern
+- Optionals must begin and end within the same part of the route pattern
 
 ### Wildcards
 
