@@ -1,30 +1,34 @@
-import { lexHostname, lexPathname, lexProtocol, type Token } from './tokenize.ts';
-
-type Optional = { type: 'optional'; nodes: Array<Token>; span: [number, number] };
-type Node = Token | Optional;
+import type { Node, Optional } from './ast.ts';
+import { lexHostname, lexPathname, lexProtocol } from './lex.ts';
+import type { Token } from './token.ts';
 
 function parseOptionals(tokens: Iterable<Token>) {
   const nodes: Array<Node> = [];
 
-  let optional: Optional | null = null;
+  let optional: { node: Optional; index: number } | null = null;
   for (const token of tokens) {
     if (token.type === '(') {
       if (optional) {
-        throw new Error(`Nested paren: ${optional.span[0]} ${token.span[0]}`);
+        throw new Error(`Nested paren at index: ${optional.index} ${token.span[0]}`);
       }
-      optional = { type: 'optional', nodes: [], span: token.span };
+      optional = { node: { type: 'optional', nodes: [] }, index: token.span[0] };
       continue;
     }
     if (token.type === ')') {
       if (!optional) {
-        throw new Error(`Unbalanced paren: ${token.span[0]}`);
+        throw new Error(`Unbalanced paren at index: ${token.span[0]}`);
       }
-      optional.span[1] = optional.nodes.reduce((acc, node) => acc + node.span[1], 0) + 2;
-      nodes.push(optional);
+      nodes.push(optional.node);
       optional = null;
       continue;
     }
-    (optional?.nodes ?? nodes).push(token);
+
+    if (token.type === 'text' || token.type === 'param' || token.type === 'glob') {
+      (optional?.node.nodes ?? nodes).push(token);
+    }
+  }
+  if (optional) {
+    throw new Error(`Unbalanced paren at index: ${optional.index}`);
   }
   return nodes;
 }

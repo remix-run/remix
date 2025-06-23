@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { lexProtocol, lexHostname, lexPathname } from './tokenize.ts';
+import { lexProtocol, lexHostname, lexPathname } from './lex.ts';
 
 describe('lex', () => {
   it('lexes protocol', () => {
