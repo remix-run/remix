@@ -14,8 +14,8 @@ It does not discuss the algorithms nor data structures used by the matching engi
 ## Non-goals
 
 - Matching URL fragments (`#section`)
-- Matching the URL port (`:8080`)
-- Matching the URL credentials (`user:pass@`)
+- Matching URL port (`:8080`)
+- Matching URL credentials (`user:pass@`)
 - Caching
 - Request/Response handling
 
@@ -64,7 +64,7 @@ You can use any combination of these to create a route pattern, for example:
 // ...and so on...
 ```
 
-**Delimiters:** Route patterns use the first occurrences of `://`, `/`, and `?` as delimiters to split a route pattern into its parts.
+**Part delimiters:** Route patterns use the first occurrences of `://`, `/`, and `?` as delimiters to split a route pattern into its parts.
 Pathname-only route patterns are the most common, so route patterns are assumed to be pathname-only unless `://` or `?` are present.
 As a result, hostnames must begin with `://` and searches must begin with `?` to distinguish both from pathnames.
 
@@ -90,73 +90,13 @@ However, omitting a pathname means "match the 'empty' pathname" (namely `""` and
 // ✗ doesn't match: https://api.example.com/users
 ```
 
-
 ## Pattern modifiers
 
-Before describing [wildcards](#wildcards), [params](#params), and [optionals](#optionals),
-its important to note that each pattern modifier applies only in the same part of the URL where it appears.
+Each pattern modifier — [param](#params), [glob](#globs), or [optional](#optionals) — applies only in the same part of the URL where it appears.
 As a result:
 
-- Wildcards and params do not match characters that appear outside of their part of the route pattern
+- Params and globs do not match characters that appear outside of their part of the route pattern
 - Optionals must begin and end within the same part of the route pattern
-
-### Wildcards
-
-|            | protocol | hostname | pathname | search |
-| ---------- | -------- | -------- | -------- | ------ |
-| Supported? | ❌       | ✅       | ✅       | ❌     |
-
-Wildcards match dynamic parts of a URL.
-
-Route patterns support two types of wildcards:
-
-- `*` ("star") for matching anything _within_ a segment
-- `**` ("star star") for matching anything, even across multiple segments
-
-As a result, wildcards correspond to these regular expressions:
-
-|          | `*`       | `**`   |
-| -------- | --------- | ------ |
-| hostname | `/[^.]*/` | `/.*/` |
-| pathname | `/[^/]*/` | `/.*/` |
-
-```ts
-'/files/*';
-// ✓ matches: /files/photo.jpg
-// ✗ doesn't match: /files/2023/photo.jpg
-
-'/docs/**';
-// ✓ matches: /docs/api/v1/intro.html
-// ✗ doesn't match: /docs (no trailing content)
-
-'://*.example.com';
-// ✓ matches: ://cdn.example.com
-// ✗ doesn't match: ://api.staging.example.com
-
-'://**.api.com';
-// ✓ matches: ://tenant.v1.api.com
-// ✗ doesn't match: ://api.com (no prefix)
-```
-
-Route patterns can have multiple wildcards, even within the same segment.
-
-```ts
-'/assets/**/static/**/*.css';
-// ✓ matches: /assets/v2/themes/static/dark/main.css
-// ✗ doesn't match: /assets/v2/themes/static/main.js
-
-'://us-**.cdn.com/cars/*-*';
-// ✓ matches: ://us-east.staging.cdn.com/cars/audi-a4.jpg
-// ✗ doesn't match: ://us-east.staging.cdn.com/cars/toyota.jpg
-```
-
-Wildcards only match characters within the same part of the URL:
-
-```ts
-'://api.**/users';
-// ✓ matches: ://api.example.com/users
-// ✗ doesn't match: ://api.example.com/123/users
-```
 
 ### Params
 
@@ -164,33 +104,21 @@ Wildcards only match characters within the same part of the URL:
 | ---------- | -------- | -------- | -------- | ------ |
 | Supported? | ❌       | ✅       | ✅       | ❌     |
 
-Params, like wildcards, match dynamic parts of the URL but they also give you access to the matched values.
+Params match dynamic parts of a URL within a segment.
 
-A param is written as:
-
-- `:` followed by a name for capturing anything within a segment (similar to `*`)
-- `::` followed by a name for capturing anything, even across multiple segments (similar to `**`)
-
-**Note:** Param names must be [JavaScript identifiers](#javascript-identifier).
-
-As a result, params correspond to these regular expressions:
-
-|          | `:<name>`   | `::<name>` |
-| -------- | ----------- | ---------- |
-| hostname | `/([^.]*)/` | `/(.*)/`   |
-| pathname | `/([^/]*)/` | `/(.*)/`   |
+They are written as a `:` optionally followed by a [JavaScript identifier](#javascript-identifier) that acts as its name:
 
 ```ts
 'products/:id';
 // /products/wireless-headphones → { id: 'wireless-headphones' }
 // /products/123 → { id: '123' }
+```
 
-// ❌ Error - missing or invalid param name
-'products/:123';
+When a param name is not given, the matched value won't be returned:
 
-'docs/::path';
-// /docs/api/v1/intro.html → { path: 'api/v1/intro.html' }
-// /docs/guide → { path: 'guide' }
+```ts
+'products/:-shoes';
+// /products/tennis-shoes -> {}
 ```
 
 Param names must be unique:
@@ -204,13 +132,9 @@ Param names must be unique:
 
 // ❌ Bad - duplicate param name across hostname and pathname
 '://:region.api.example.com/users/:region';
-
-// ✅ Good - `::` param captures across segments
-'files/::path/download';
-// /files/2023/photos/vacation.jpg/download → { path: '2023/photos/vacation.jpg' }
 ```
 
-Params can be mixed with static text, wildcards, and even other params:
+Params can be mixed with static text and even other params:
 
 ```ts
 'users/@:id';
@@ -222,22 +146,34 @@ Params can be mixed with static text, wildcards, and even other params:
 'api/v:major.:minor-:channel';
 // /api/v2.1-beta → { major: '2', minor: '1', channel: 'beta' }
 
-'://:region.:env.api.example.com';
-// us-east.staging.api.example.com → { region: 'us-east', env: 'staging' }
-
-'cdn/::path/*.jpg';
-// /cdn/images/2023/vacation.jpg → { path: 'images/2023' }
-
-'://::subdomain.api.com/:version/*';
-// tenant.v1.api.com/v2/users → { subdomain: 'tenant.v1', version: 'v2' }
+'://us-:region.:env.api.example.com';
+// us-east.staging.api.example.com → { region: 'east', env: 'staging' }
 ```
 
-Params only match characters within the same part of the URL:
+### Globs
+
+|            | protocol | hostname | pathname | search |
+| ---------- | -------- | -------- | -------- | ------ |
+| Supported? | ❌       | ✅       | ✅       | ❌     |
+
+Globs match dynamic parts of a URL, but — unlike [params](#params) — they are not limited to a single segment.
+
+They are written as a `*` optionally followed by a [JavaScript identifier](#javascript-identifier) that acts as its name:
 
 ```ts
-'://api.::domain/users';
-// ✓ matches: ://api.example.com/users → { domain: 'example.com' }
-// ✗ doesn't match: ://api.example.com/123/users
+// todo
+```
+
+When a glob name is not given, the matched value won't be returned:
+
+```ts
+// todo
+```
+
+Globs share a namespace with params:
+
+```ts
+// todo
 ```
 
 ### Optionals
@@ -274,15 +210,15 @@ Optionals can span any characters and contain static text, params, or wildcards:
 // /users/sarah/settings/profile → { id: 'sarah', section: 'profile' }
 // /users/sarah/settings/profile/edit → { id: 'sarah', section: 'profile' }
 
-'users/:userId(/files/*)';
+'users/:userId(/files/:)';
 // /users/sarah → { userId: 'sarah' }
 // /users/sarah/files/document.pdf → { userId: 'sarah' }
 
-'users/:userId(/docs/**)';
+'users/:userId(/docs/*)';
 // /users/sarah → { userId: 'sarah' }
 // /users/sarah/docs/projects/readme.md → { userId: 'sarah' }
 
-'users/:userId(/files/::path)';
+'users/:userId(/files/*path)';
 // /users/sarah → { userId: 'sarah' }
 // /users/sarah/files/projects/docs/readme.md → { userId: 'sarah', path: 'projects/docs/readme.md' }
 
@@ -290,7 +226,7 @@ Optionals can span any characters and contain static text, params, or wildcards:
 // shop.example.com → {}
 // www.shop.example.com → {}
 
-'://(*.)api.example.com(/v*)';
+'://(:.)api.example.com(/v:)';
 // api.example.com → {}
 // cdn.api.example.com/v2 → {}
 ```
