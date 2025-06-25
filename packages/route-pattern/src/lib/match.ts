@@ -1,5 +1,5 @@
 import type { Node } from './ast.ts';
-import { parse } from './parse/parse.ts';
+import { parse } from './parse.ts';
 
 type Params = Record<string, string | undefined>;
 type Constraint = (url: URL) => Params | null;
