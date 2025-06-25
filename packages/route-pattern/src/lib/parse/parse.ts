@@ -1,6 +1,25 @@
-import type { Node, Optional } from './ast.ts';
+import type { Node, Optional } from '../ast.ts';
 import { lexHostname, lexPathname, lexProtocol } from './lex.ts';
 import type { Token } from './token.ts';
+import { split } from './split.ts';
+
+type Pattern = {
+  protocol?: Array<Node>;
+  hostname?: Array<Node>;
+  pathname?: Array<Node>;
+  search?: URLSearchParams;
+};
+
+export function parse(source: string) {
+  const { protocol, hostname, pathname, search } = split(source);
+
+  const pattern: Pattern = {};
+  if (protocol) pattern.protocol = parseOptionals(lexProtocol(protocol));
+  if (hostname) pattern.hostname = parseOptionals(lexHostname(hostname));
+  if (pathname) pattern.pathname = parseOptionals(lexPathname(pathname));
+  if (search) pattern.search = new URLSearchParams(search);
+  return pattern;
+}
 
 function parseOptionals(tokens: Iterable<Token>) {
   const nodes: Array<Node> = [];
@@ -24,23 +43,12 @@ function parseOptionals(tokens: Iterable<Token>) {
     }
 
     if (token.type === 'text' || token.type === 'param' || token.type === 'glob') {
-      (optional?.node.nodes ?? nodes).push(token);
+      const { span, ...node } = token;
+      (optional?.node.nodes ?? nodes).push(node);
     }
   }
   if (optional) {
     throw new Error(`Unbalanced paren at index: ${optional.index}`);
   }
   return nodes;
-}
-
-export function parseProtocol(source: string) {
-  return parseOptionals(lexProtocol(source));
-}
-
-export function parseHostname(source: string) {
-  return parseOptionals(lexHostname(source));
-}
-
-export function parsePathname(source: string) {
-  return parseOptionals(lexPathname(source));
 }

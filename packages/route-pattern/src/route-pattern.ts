@@ -1,1 +1,1 @@
-export const hello = 'world';
+export { createMatcher } from './lib/match.ts';
