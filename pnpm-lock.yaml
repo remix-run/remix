@@ -234,6 +234,15 @@ importers:
         specifier: workspace:^
         version: link:../..
 
+  packages/route-pattern:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.10
+        version: 20.16.1
+      esbuild:
+        specifier: ^0.20.0
+        version: 0.20.2
+
   packages/tar-parser:
     devDependencies:
       '@mjackson/lazy-file':
