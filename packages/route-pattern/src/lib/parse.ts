@@ -1,4 +1,4 @@
-import type { Node, Optional } from '../ast.ts';
+import type { Node, Optional } from './ast.ts';
 import { lexHostname, lexPathname, lexProtocol } from './lex.ts';
 import type { Token } from './token.ts';
 import { split } from './split.ts';
