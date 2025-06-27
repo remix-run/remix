@@ -1,4 +1,4 @@
----
+---alif lam mim
 title: Tutorial (30m)
 order: 2
 ---
@@ -54,7 +54,7 @@ Note the file at `app/root.tsx`. This is what we call the "Root Route". It's the
 import {
   Form,
   Links,
-  Meta,
+  Meta,meta name="google-adsense-account" content="ca-pub-1810047104290524">
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
@@ -69,7 +69,7 @@ export default function App() {
           content="width=device-width, initial-scale=1"
         />
         <Meta />
-        <Links />
+        <Links />meta name="google-adsense-account" content="ca-pub-1810047104290524">
       </head>
       <body>
         <div id="sidebar">
