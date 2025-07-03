@@ -1,5 +1,7 @@
 import type * as http from 'node:http';
 import type * as http2 from 'node:http2';
+import type { Socket } from 'node:net';
+import type { TLSSocket } from 'node:tls';
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts';
 import { readStream } from './read-stream.ts';
@@ -112,6 +114,14 @@ function internalServerError(): Response {
 
 export type RequestOptions = Omit<RequestListenerOptions, 'onError'>;
 
+function isEncryptedSocket(socket: Socket) {
+  return isTLSSocket(socket) && socket.encrypted;
+}
+
+function isTLSSocket(socket: Socket): socket is TLSSocket {
+  return 'encrypted' in socket;
+}
+
 /**
  * Creates a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) object from
  *
@@ -136,8 +146,7 @@ export function createRequest(
   let method = req.method ?? 'GET';
   let headers = createHeaders(req);
 
-  let protocol =
-    options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:');
+  let protocol = options?.protocol ?? (isEncryptedSocket(req.socket) ? 'https:' : 'http:');
   let host = options?.host ?? headers.get('Host') ?? 'localhost';
   let url = new URL(req.url!, `${protocol}//${host}`);
 
