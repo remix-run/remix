@@ -128,10 +128,14 @@ export function createRequest(
   res: http.ServerResponse | http2.Http2ServerResponse,
   options?: RequestOptions,
 ): Request {
-  let controller = new AbortController();
-  res.on('close', () => {
-    controller.abort();
-  });
+  let controller: AbortController | null = new AbortController();
+
+  // Abort once we can no longer write a response if we have
+  // not yet sent a response (i.e., `close` without `finish`)
+  // `finish` -> done rendering the response
+  // `close` -> response can no longer be written to
+  res.on('close', () => controller?.abort());
+  res.on('finish', () => (controller = null));
 
   let method = req.method ?? 'GET';
   let headers = createHeaders(req);
