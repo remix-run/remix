@@ -1,302 +1,199 @@
-# Route Patterns
+# Route pattern
 
-Route patterns are strings that describe the structure of URLs you want to match.
+Route patterns describe the structure of URLs you want to match
 
-This spec discusses what the user sees when they interact with route patterns.
-It does not discuss the algorithms nor data structures used by the matching engine, which will be discussed elsewhere.
+- Support for all JavaScript runtimes — Node, Bun, Deno
+- Full URL matching, not just pathname
+- Familiar syntax inspired by Rails
 
-## Goals
+## Usage
 
-- Simple metric for ranking matches
-- Detect unreachable routes
-- Benchmark in the same ballpark as existing solutions
+```tsx
+import { RoutePattern } from 'route-pattern';
 
-## Non-goals
+// Blog with optional HTML extension
+let pattern = new RoutePattern('blog/:year-:month-:day/:slug(.html)');
 
-- Matching URL fragments (`#section`)
-- Matching URL port (`:8080`)
-- Matching URL credentials (`user:pass@`)
-- Caching
-- Request/Response handling
+pattern.match('https://remix.run/blog/2024-01-15/web-architecture');
+// { params: { year: '2024', month: '01', day: '15', slug: 'web-architecture' } }
 
-## Quick example
-
-This example is here to jump-start your intuition.
-Don't worry if something is unclear; we'll cover things in excruciating detail in later sections.
-
-```ts
-const matcher = createMatcher([
-  'products/:id',
-  'products/sku-:sku(/compare/sku-:sku2)',
-  'blog/:year-:month-:day/:slug(.html)',
-  '://:tenant.remix.run/admin/users/:userId',
-]);
-
-const url = 'https://remix.run/products/wireless-headphones';
-const match = matcher.match(url);
-
-console.log(match?.pattern); // 'products/:id'
-console.log(match?.params); // { id: 'wireless-headphones' }
+pattern.match('https://remix.run/blog/2024-01-15/web-architecture.html');
+// { params: { year: '2024', month: '01', day: '15', slug: 'web-architecture' } }
 ```
 
-If you want fine-grained control, you can also get all matches in ranked order:
+```tsx
+// API with versioning and optional format
+let pattern = new RoutePattern('api(/v:major.:minor)/users/:id(.json)');
+
+pattern.match('https://remix.run/api/users/sarah');
+// { params: { id: 'sarah' } }
+
+pattern.match('https://remix.run/api/v2.1/users/sarah.json');
+// { params: { major: '2', minor: '1', id: 'sarah' } }
+```
+
+```tsx
+// Multi-tenant applications
+let pattern = new RoutePattern('://:tenant.remix.run(/admin)/users/:id');
+
+pattern.match('https://acme.remix.run/users/123');
+// { params: { tenant: 'acme', id: '123' } }
+
+pattern.match('https://acme.remix.run/admin/users/123');
+// { params: { tenant: 'acme', id: '123' } }
+```
+
+```tsx
+// Asset serving with type constraints
+let pattern = new RoutePattern('assets/*path.{jpg,png,gif,svg}');
+
+pattern.match('https://remix.run/assets/images/logos/remix.svg');
+// { params: { path: 'images/logos/remix' } }
+
+pattern.match('https://remix.run/assets/styles/main.css');
+// null (wrong file type)
+```
+
+## API
+
+**RoutePattern**
 
 ```ts
-const url = 'https://remix.run/products/sku-electronics-12345';
-for (const match of matcher.matches(url)) {
-  console.log(`${match.pattern} -> ${JSON.stringify(match.params)}`);
+class RoutePattern {
+  constructor(source: string);
+  match(url: string | URL): Match | null;
+  static matcher(patterns: Array<string | RoutePattern>): Matcher;
 }
-// products/sku-:sku(/compare/sku-:sku2) -> { sku: 'electronics-12345' }
-// products/:id -> { id: 'sku-electronics-12345' }
 ```
 
-## Route pattern parts
-
-Route patterns are composed of 4 parts: protocol, hostname, pathname and search.
-You can use any combination of these to create a route pattern, for example:
+**Match**
 
 ```ts
-'/products'; // pathname
-'/search?q'; // pathname + search
-'https://remix.run/store'; // protocol + hostname + pathname
-'://remix.run/store'; // hostname + pathaname
-'file:///usr/bin'; // protocol + pathname
-// ...and so on...
+type Match = {
+  params: Record<string, string>;
+}
 ```
 
-**Part delimiters:** Route patterns use the first occurrences of `://`, `/`, and `?` as delimiters to split a route pattern into its parts.
-Pathname-only route patterns are the most common, so route patterns are assumed to be pathname-only unless `://` or `?` are present.
-As a result, hostnames must begin with `://` and searches must begin with `?` to distinguish both from pathnames.
-
-**Case Sensitivity:** Protocol and hostname are case-insensitive, while pathname and search are case-sensitive.
-
-**Omitting parts:** For protocol, hostname, and pathname omitting that part means "match anything" for that part.
-However, omitting a pathname means "match the 'empty' pathname" (namely `""` and `"/"`)
+**Matcher**
 
 ```ts
-'://api.example.com/users';
-// ✓ matches: https://api.example.com/users
-// ✓ matches: http://api.example.com/users
-// ✓ matches: ftp://api.example.com/users
-
-'/api/users';
-// ✓ matches: https://example.com/api/users
-// ✓ matches: https://staging.api.com/api/users
-// ✓ matches: https://localhost:3000/api/users
-
-'https://api.example.com';
-// ✓ matches: https://api.example.com
-// ✓ matches: https://api.example.com/
-// ✗ doesn't match: https://api.example.com/users
+type Matcher = {
+  match(url: string | URL): Match | null;
+  matchAll(url: string | URL): Array<Match>;
+}
 ```
 
-## Pattern modifiers
+## Concepts
 
-Each pattern modifier — [param](#params), [glob](#globs), or [optional](#optionals) — applies only in the same part of the URL where it appears.
-As a result:
+Route patterns are split into 4 parts:
 
-- Params and globs do not match characters that appear outside of their part of the route pattern
-- Optionals must begin and end within the same part of the route pattern
+```ts
+'<protocol>://<hostname>/<pathname>?<search>';
+```
+
+By default, patterns are assumed to be `pathname`-only:
+
+```tsx
+let pattern = new RoutePattern('blog/:id');
+
+pattern.match('https://remix.run/blog/hello-world');
+// { params: { id: 'hello-world' } }
+
+pattern.match('https://example.com/blog/web-dev-tips');
+// { params: { id: 'web-dev-tips' } }
+```
+
+Everything after the first `?` is treated as the `search`:
+
+```tsx
+let pattern = new RoutePattern('search?q');
+
+pattern.match('https://remix.run/search?q=javascript');
+// { params: { } }
+```
+
+To specify a protocol or hostname, you must use `://` before any `/` or `?`:
+
+```tsx
+let pattern2 = new RoutePattern('://:tenant.remix.run/admin');
+
+pattern2.match('https://acme.remix.run/admin');
+// { params: { tenant: 'acme' } }
+```
+
+The `protocol`, `hostname`, and `pathname` parts support [params](#params), [globs](#globs), [optionals](#optionals), and [enums](#enums).
+`search` is instead treated as [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams).
 
 ### Params
 
-|            | protocol | hostname | pathname | search |
-| ---------- | -------- | -------- | -------- | ------ |
-| Supported? | ❌       | ✅       | ✅       | ❌     |
+Params match dynamic parts of a URL within a segment. They're written as `:` followed optionally by a name:
 
-Params match dynamic parts of a URL within a segment.
+```tsx
+let pattern = new RoutePattern('users/@:id');
 
-They are written as a `:` optionally followed by a [JavaScript identifier](#javascript-identifier) that acts as its name:
-
-```ts
-'products/:id';
-// /products/wireless-headphones → { id: 'wireless-headphones' }
-// /products/123 → { id: '123' }
+pattern.match('https://remix.run/users/@sarah');
+// { params: { id: 'sarah' } }
 ```
 
-When a param name is not given, the matched value won't be returned:
+You can put multiple params in a single segment:
 
-```ts
-'products/:-shoes';
-// /products/tennis-shoes -> {}
+```tsx
+let pattern = new RoutePattern('api/v:major.:minor');
+
+pattern.match('https://remix.run/api/v2.1');
+// { params: { major: '2', minor: '1' } }
 ```
 
-Param names must be unique:
+You can omit the param name if you don't need the captured value:
 
-```ts
-// ❌ Bad - duplicate param name
-'users/:id/posts/:id';
+```tsx
+let pattern = new RoutePattern('products/:-shoes');
 
-// ✅ Good - unique param names
-'users/:user/posts/:post';
-
-// ❌ Bad - duplicate param name across hostname and pathname
-'://:region.api.example.com/users/:region';
-```
-
-Params can be mixed with static text and even other params:
-
-```ts
-'users/@:id';
-// /users/@sarah → { id: 'sarah' }
-
-'downloads/:filename.pdf';
-// /downloads/report.pdf → { filename: 'report' }
-
-'api/v:major.:minor-:channel';
-// /api/v2.1-beta → { major: '2', minor: '1', channel: 'beta' }
-
-'://us-:region.:env.api.example.com';
-// us-east.staging.api.example.com → { region: 'east', env: 'staging' }
+pattern.match('https://remix.run/products/tennis-shoes');
+// { params: {} }
 ```
 
 ### Globs
 
-|            | protocol | hostname | pathname | search |
-| ---------- | -------- | -------- | -------- | ------ |
-| Supported? | ❌       | ✅       | ✅       | ❌     |
+Globs match dynamic parts that can span multiple segments. They're written as `*` followed optionally by a name:
 
-Globs match dynamic parts of a URL, but — unlike [params](#params) — they are not limited to a single segment.
+```tsx
+let pattern = new RoutePattern('://app.unpkg.com/*path/dist/:file.mjs');
 
-They are written as a `*` optionally followed by a [JavaScript identifier](#javascript-identifier) that acts as its name:
-
-```ts
-// todo
+pattern.match('https://app.unpkg.com/preact@10.26.9/files/dist/preact.mjs');
+// { params: { path: 'preact@10.26.9/files', file: 'preact' }}
 ```
 
-When a glob name is not given, the matched value won't be returned:
+You can omit the glob name if you don't need the captured value:
 
-```ts
-// todo
-```
+```tsx
+let pattern = new RoutePattern('assets/*/favicon.ico');
 
-Globs share a namespace with params:
-
-```ts
-// todo
+pattern.match('https://remix.run/assets/v2/favicon.ico');
+// { params: {} }
 ```
 
 ### Optionals
 
-|            | protocol | hostname | pathname | search |
-| ---------- | -------- | -------- | -------- | ------ |
-| Supported? | ✅       | ✅       | ✅       | ❌     |
+You can mark parts of a pattern as optional by wrapping them in parentheses:
 
-You can mark any part of a pattern as optional by enclosing it in parentheses `()`.
+```tsx
+let pattern = new RoutePattern('api(/v:version)/users');
 
-```ts
-'products/:id(/edit)';
-// /products/winter-jacket → { id: 'winter-jacket' }
-// /products/winter-jacket/edit → { id: 'winter-jacket' }
+pattern.match('https://remix.run/api/users');
+// { params: {} }
 
-'http(s)://api.example.com';
-// http://api.example.com → {}
-// https://api.example.com → {}
+pattern.match('https://remix.run/api/v2/users');
+// { params: { version: '2' } }
 ```
 
-Optionals can span any characters and contain static text, params, or wildcards:
+### Enums
 
-```ts
-'download/:filename(.pdf)';
-// /download/report → { filename: 'report' }
-// /download/report.pdf → { filename: 'report' }
+Enums let you match against a specific set of static values:
 
-'api(/v:version)/users';
-// /api/users → {}
-// /api/v2/users → { version: '2' }
+```tsx
+let pattern = new RoutePattern('files/:filename.{jpg,png,gif}');
 
-'users/:id(/settings/:section)(/edit)';
-// /users/sarah → { id: 'sarah' }
-// /users/sarah/settings/profile → { id: 'sarah', section: 'profile' }
-// /users/sarah/settings/profile/edit → { id: 'sarah', section: 'profile' }
-
-'users/:userId(/files/:)';
-// /users/sarah → { userId: 'sarah' }
-// /users/sarah/files/document.pdf → { userId: 'sarah' }
-
-'users/:userId(/docs/*)';
-// /users/sarah → { userId: 'sarah' }
-// /users/sarah/docs/projects/readme.md → { userId: 'sarah' }
-
-'users/:userId(/files/*path)';
-// /users/sarah → { userId: 'sarah' }
-// /users/sarah/files/projects/docs/readme.md → { userId: 'sarah', path: 'projects/docs/readme.md' }
-
-'://(www.)shop.example.com';
-// shop.example.com → {}
-// www.shop.example.com → {}
-
-'://(:.)api.example.com(/v:)';
-// api.example.com → {}
-// cdn.api.example.com/v2 → {}
+pattern.match('https://remix.run/files/logo.png');
+// { params: { filename: 'logo' } }
 ```
-
-Optionals cannot be nested:
-
-```ts
-// ❌ Bad - nested optionals not allowed
-'users/:id(/settings(/advanced))';
-
-// ✅ Good - use multiple separate patterns
-'users/:id';
-'users/:id/settings(/advanced)';
-```
-
-Optionals cannot span across multiple parts of a route pattern:
-
-```ts
-// ❌ Bad - optional starts in protocol, ends in hostname
-'http(s://api).example.com';
-
-// ❌ Bad - optional starts in hostname, ends in pathname
-'://(api.example.com/users)/settings';
-
-// ❌ Bad - optional spans protocol and pathname
-'http(s://example.com/api)';
-
-// ✅ Good - separate optionals for each part
-'http(s)://api.example.com(/settings)';
-
-// ✅ Good - optional contained within hostname
-'://(www.)example.com';
-
-// ✅ Good - optional contained within pathname
-'://example.com(/api/v2)';
-```
-
-### Escaping special characters
-
-Use backslash `\` to escape special characters in the patterns language: `:`, `*`, `(` and `)`.
-
-**Note:** In JavaScript code, you'll need `\\` since backslash itself needs to be escaped in a string:
-
-```ts
-'/api\\:v2/users';
-// ✅ Matches: /api:v2/users (literal colon)
-// ❌ Does NOT match: /apiv2/users (param :v2 would consume "v2")
-
-'/files\\*.backup';
-// ✅ Matches: /files*.backup (literal asterisk)
-// ❌ Does NOT match: /files/document.backup (wildcard * would match "document")
-
-'/docs\\*\\*/readme.md';
-// ✅ Matches: /docs**/readme.md (literal asterisks)
-// ❌ Does NOT match: /docs/api/v1/readme.md (** would match "api/v1")
-
-'/wiki/Mercury\\(planet\\)';
-// ✅ Matches: /wiki/Mercury(planet) (literal parentheses for disambiguation)
-// ❌ Does NOT match: /wiki/Mercury (optionals would make "(planet)" optional)
-
-'://api\\*.example.com';
-// ✅ Matches: ://api*.example.com (literal asterisk in hostname)
-// ❌ Does NOT match: ://api-cdn.example.com (wildcard * would match "-cdn")
-
-'/search\\:query\\(\\*\\*\\)';
-// ✅ Matches: /search:query(**) (all literal characters)
-```
-
-## Definitions
-
-### JavaScript identifier
-
-For the purposes of this spec, JavaScript identifiers match this regular expression: [`/[a-zA-Z_$0-9][a-zA-Z_$0-9]*/`](https://regexr.com/8fcn3)
