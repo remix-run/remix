@@ -199,7 +199,7 @@ function Sidebar({ children }) {
   const [isOpen, setIsOpen] = React.useState(false);
 
   // synchronize initially
-  useLayoutEffect(() => {
+  useEffect(() => {
     const isOpen = window.localStorage.getItem("sidebar");
     setIsOpen(isOpen);
   }, []);
