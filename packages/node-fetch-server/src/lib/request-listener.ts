@@ -2,7 +2,6 @@ import type * as http from 'node:http';
 import type * as http2 from 'node:http2';
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts';
-import { readStream } from './read-stream.ts';
 
 export interface RequestListenerOptions {
   /**
@@ -215,7 +214,7 @@ export async function sendResponse(
   res.writeHead(response.status, headers);
 
   if (response.body != null && res.req.method !== 'HEAD') {
-    for await (let chunk of readStream(response.body)) {
+    for await (let chunk of response.body) {
       // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
       res.write(chunk);
     }

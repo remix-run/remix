@@ -2,6 +2,10 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Remove internal `readStream()` helper and use async iterator directly
+
 ## v0.7.0 (2025-06-06)
 
 - Add `/src` to npm package, so "go to definition" goes to the actual source
