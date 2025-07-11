@@ -2,7 +2,7 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/mjackson/remix-the-web/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.4.0 (2025-07-11)
 
 - Forward all additional options to the proxied request object
 
