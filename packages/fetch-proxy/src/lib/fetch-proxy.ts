@@ -48,27 +48,27 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
   }
 
   return async (input: URL | RequestInfo, init?: RequestInit) => {
-    let incomingRequest = new Request(input, init);
-    let incomingUrl = new URL(incomingRequest.url);
+    let request = new Request(input, init);
+    let url = new URL(request.url);
 
-    let proxyUrl = new URL(incomingUrl.search, targetUrl);
-    if (incomingUrl.pathname !== '/') {
+    let proxyUrl = new URL(url.search, targetUrl);
+    if (url.pathname !== '/') {
       proxyUrl.pathname =
-        proxyUrl.pathname === '/' ? incomingUrl.pathname : proxyUrl.pathname + incomingUrl.pathname;
+        proxyUrl.pathname === '/' ? url.pathname : proxyUrl.pathname + url.pathname;
     }
 
-    let proxyHeaders = new Headers(incomingRequest.headers);
+    let proxyHeaders = new Headers(request.headers);
     if (xForwardedHeaders) {
-      proxyHeaders.append('X-Forwarded-Proto', incomingUrl.protocol.replace(/:$/, ''));
-      proxyHeaders.append('X-Forwarded-Host', incomingUrl.host);
+      proxyHeaders.append('X-Forwarded-Proto', url.protocol.replace(/:$/, ''));
+      proxyHeaders.append('X-Forwarded-Host', url.host);
     }
 
     let proxyInit: RequestInit = {
-      method: incomingRequest.method,
+      ...init,
       headers: proxyHeaders,
     };
-    if (incomingRequest.method !== 'GET' && incomingRequest.method !== 'HEAD') {
-      proxyInit.body = incomingRequest.body;
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      proxyInit.body = request.body;
 
       // init.duplex = 'half' must be set when body is a ReadableStream, and Node follows the spec.
       // However, this property is not defined in the TypeScript types for RequestInit, so we have
@@ -77,8 +77,8 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
       (proxyInit as { duplex: 'half' }).duplex = 'half';
     }
 
-    let targetResponse = await localFetch(proxyUrl, proxyInit);
-    let responseHeaders = new Headers(targetResponse.headers);
+    let response = await localFetch(proxyUrl, proxyInit);
+    let responseHeaders = new Headers(response.headers);
 
     if (responseHeaders.has('Set-Cookie')) {
       let setCookie = responseHeaders.getSetCookie();
@@ -89,7 +89,7 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
         let header = new SetCookie(cookie);
 
         if (rewriteCookieDomain && header.domain) {
-          header.domain = incomingUrl.host;
+          header.domain = url.host;
         }
 
         if (rewriteCookiePath && header.path) {
@@ -104,9 +104,9 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
       }
     }
 
-    return new Response(targetResponse.body, {
-      status: targetResponse.status,
-      statusText: targetResponse.statusText,
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
       headers: responseHeaders,
     });
   };

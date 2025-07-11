@@ -2,6 +2,10 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/mjackson/remix-the-web/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Forward all additional options to the proxied request object
+
 ## v0.3.0 (2025-06-10)
 
 - Add `/src` to npm package, so "go to definition" goes to the actual source
