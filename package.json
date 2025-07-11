@@ -1,7 +1,7 @@
 {
   "name": "remix-the-web",
   "private": true,
-  "packageManager": "pnpm@10.12.1",
+  "packageManager": "pnpm@10.13.1",
   "devDependencies": {
     "prettier": "^3.3.3",
     "typescript": "^5.7.2"
