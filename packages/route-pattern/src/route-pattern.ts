@@ -1,1 +1,1 @@
-export { createMatcher } from './lib/match.ts';
+export { RoutePattern } from './lib/route-pattern.ts';
