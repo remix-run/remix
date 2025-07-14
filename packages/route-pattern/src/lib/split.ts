@@ -1,15 +1,17 @@
+type Span = [number, number];
+
 export function split(source: string) {
   const result: {
-    protocol?: string;
-    hostname?: string;
-    pathname?: string;
-    search?: string;
+    protocol?: Span;
+    hostname?: Span;
+    pathname?: Span;
+    search?: Span;
   } = {};
 
   // search
   const searchStart = source.indexOf('?');
   if (searchStart !== -1) {
-    result.search = source.slice(searchStart + 1);
+    result.search = [searchStart + 1, source.length];
     source = source.slice(0, searchStart);
   }
 
@@ -18,23 +20,23 @@ export function split(source: string) {
   if (solidus !== -1) {
     // protocol
     if (solidus !== 0) {
-      result.protocol = source.slice(0, solidus);
+      result.protocol = [0, solidus];
     }
     index = solidus + 3;
 
     // hostname
     const hostnameEnd = source.indexOf('/', index);
     if (hostnameEnd === -1) {
-      result.hostname = source.slice(index, source.length);
+      result.hostname = [index, source.length];
       return result;
     }
-    result.hostname = source.slice(index, hostnameEnd);
+    result.hostname = [index, hostnameEnd];
     index = hostnameEnd + 1;
   }
 
   // pathname
   if (index !== source.length) {
-    result.pathname = source.slice(index);
+    result.pathname = [index, source.length];
   }
 
   return result;

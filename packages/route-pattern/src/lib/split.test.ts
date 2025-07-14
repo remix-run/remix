@@ -5,7 +5,9 @@ import { split } from './split.ts';
 
 describe('split', () => {
   it('splits route patterns into protocol, hostname, pathname, search', () => {
-    const cases: Array<[string, ReturnType<typeof split>]> = [
+    const cases: Array<
+      [string, { protocol?: string; hostname?: string; pathname?: string; search?: string }]
+    > = [
       [
         'http(s)://(*host.:sub.)remix.run/products(/:id/v:version)/*?q=1',
         {
@@ -46,8 +48,26 @@ describe('split', () => {
       // search + ...
       ['?q=1', { search: 'q=1' }],
     ];
+
     for (const [input, expected] of cases) {
-      assert.deepStrictEqual(split(input), expected);
+      const spans = split(input);
+      const result: { protocol?: string; hostname?: string; pathname?: string; search?: string } =
+        {};
+
+      if (spans.protocol) {
+        result.protocol = input.slice(...spans.protocol);
+      }
+      if (spans.hostname) {
+        result.hostname = input.slice(...spans.hostname);
+      }
+      if (spans.pathname) {
+        result.pathname = input.slice(...spans.pathname);
+      }
+      if (spans.search) {
+        result.search = input.slice(...spans.search);
+      }
+
+      assert.deepStrictEqual(result, expected);
     }
   });
 });

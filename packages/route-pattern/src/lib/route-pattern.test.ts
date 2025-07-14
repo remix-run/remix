@@ -1,0 +1,473 @@
+import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import { RoutePattern } from './route-pattern.ts';
+
+describe('RoutePattern', () => {
+  describe('constructor', () => {
+    it('stores the source pattern', () => {
+      const pattern = new RoutePattern('users/:id');
+      assert.strictEqual(pattern.source, 'users/:id');
+    });
+  });
+
+  describe('match', () => {
+    describe('pathname only patterns', () => {
+      const pathnameTests = [
+        {
+          name: 'matches plain text',
+          pattern: 'users',
+          input: 'https://example.com/users',
+          expected: { params: {} },
+        },
+        {
+          name: 'returns null for non-matching text',
+          pattern: 'users',
+          input: 'https://example.com/posts',
+          expected: null,
+        },
+        {
+          name: 'extracts named parameters',
+          pattern: 'users/:id',
+          input: 'https://example.com/users/123',
+          expected: { params: { id: '123' } },
+        },
+        {
+          name: 'extracts multiple parameters',
+          pattern: 'users/:userId/posts/:postId',
+          input: 'https://example.com/users/123/posts/456',
+          expected: { params: { userId: '123', postId: '456' } },
+        },
+        {
+          name: 'extracts unnamed parameters',
+          pattern: 'users/:',
+          input: 'https://example.com/users/123',
+          expected: { params: {} },
+        },
+        {
+          name: 'extracts parameters with complex names',
+          pattern: 'users/:user_id/posts/:$post',
+          input: 'https://example.com/users/abc123/posts/def456',
+          expected: { params: { user_id: 'abc123', $post: 'def456' } },
+        },
+        {
+          name: 'extracts named globs',
+          pattern: 'assets/*path',
+          input: 'https://example.com/assets/images/logo.png',
+          expected: { params: { path: 'images/logo.png' } },
+        },
+        {
+          name: 'extracts unnamed globs',
+          pattern: 'assets/*',
+          input: 'https://example.com/assets/images/logo.png',
+          expected: { params: {} },
+        },
+        {
+          name: 'matches optional sections when present',
+          pattern: 'api(/:version)',
+          input: 'https://example.com/api/v1',
+          expected: { params: { version: 'v1' } },
+        },
+        {
+          name: 'matches optional sections when absent',
+          pattern: 'api(/:version)',
+          input: 'https://example.com/api',
+          expected: { params: { version: undefined } },
+        },
+        {
+          name: 'matches complex optional patterns - with format',
+          pattern: 'users/:id(.:format)',
+          input: 'https://example.com/users/123.json',
+          expected: { params: { id: '123.json', format: undefined } },
+        },
+        {
+          name: 'matches complex optional patterns - without format',
+          pattern: 'users/:id(.:format)',
+          input: 'https://example.com/users/123',
+          expected: { params: { id: '123', format: undefined } },
+        },
+        {
+          name: 'handles mixed parameters and text',
+          pattern: 'api/v:version/users/:id',
+          input: 'https://example.com/api/v2/users/123',
+          expected: { params: { version: '2', id: '123' } },
+        },
+        {
+          name: 'handles escaped characters',
+          pattern: 'users\\:test',
+          input: 'https://example.com/users:test',
+          expected: { params: {} },
+        },
+      ];
+
+      pathnameTests.forEach(({ name, pattern, input, expected }) => {
+        it(name, () => {
+          const routePattern = new RoutePattern(pattern);
+          assert.deepStrictEqual(routePattern.match(input), expected);
+        });
+      });
+    });
+
+    describe('enums', () => {
+      const enumTests = [
+        {
+          name: 'matches simple enum values',
+          pattern: 'files/:name.{jpg,png,gif}',
+          input: 'https://example.com/files/logo.png',
+          expected: { params: { name: 'logo' } },
+        },
+        {
+          name: 'returns null for non-matching enum values',
+          pattern: 'files/:name.{jpg,png,gif}',
+          input: 'https://example.com/files/logo.css',
+          expected: null,
+        },
+        {
+          name: 'matches enum at start of path',
+          pattern: '{api,admin}/users',
+          input: 'https://example.com/api/users',
+          expected: { params: {} },
+        },
+        {
+          name: 'matches enum in middle of path',
+          pattern: 'assets/{images,styles}/file.ext',
+          input: 'https://example.com/assets/styles/file.ext',
+          expected: { params: {} },
+        },
+        {
+          name: 'matches single-member enum',
+          pattern: 'api/{v1}/users',
+          input: 'https://example.com/api/v1/users',
+          expected: { params: {} },
+        },
+        {
+          name: 'combines enum with globs',
+          pattern: 'assets/*path.{jpg,png,gif,svg}',
+          input: 'https://example.com/assets/images/logos/remix.svg',
+          expected: { params: { path: 'images/logos/remix' } },
+        },
+        {
+          name: 'enum with optional sections',
+          pattern: 'api/{json,xml}(/:version)',
+          input: 'https://example.com/api/json/v2',
+          expected: { params: { version: 'v2' } },
+        },
+        {
+          name: 'enum with optional sections - absent',
+          pattern: 'api/{json,xml}(/:version)',
+          input: 'https://example.com/api/xml',
+          expected: { params: { version: undefined } },
+        },
+      ];
+
+      enumTests.forEach(({ name, pattern, input, expected }) => {
+        it(name, () => {
+          const routePattern = new RoutePattern(pattern);
+          assert.deepStrictEqual(routePattern.match(input), expected);
+        });
+      });
+    });
+
+    describe('multiple params in single segment', () => {
+      const multiParamTests = [
+        {
+          name: 'extracts multiple params with dots',
+          pattern: 'api/v:major.:minor',
+          input: 'https://example.com/api/v2.1',
+          expected: { params: { major: '2', minor: '1' } },
+        },
+        {
+          name: 'extracts multiple params with dashes',
+          pattern: 'blog/:year-:month-:day',
+          input: 'https://example.com/blog/2024-01-15',
+          expected: { params: { year: '2024', month: '01', day: '15' } },
+        },
+        {
+          name: 'extracts params with mixed separators',
+          pattern: 'users/@:username.:format',
+          input: 'https://example.com/users/@sarah.json',
+          expected: { params: { username: 'sarah', format: 'json' } },
+        },
+        {
+          name: 'handles params with static prefix',
+          pattern: 'users/@:id',
+          input: 'https://example.com/users/@sarah',
+          expected: { params: { id: 'sarah' } },
+        },
+        {
+          name: 'handles params with static suffix',
+          pattern: 'products/:-shoes',
+          input: 'https://example.com/products/tennis-shoes',
+          expected: { params: {} },
+        },
+        {
+          name: 'complex pattern with multiple params and text',
+          pattern: 'api/v:major.:minor/users/:id/:action',
+          input: 'https://example.com/api/v2.1/users/123/edit',
+          expected: { params: { major: '2', minor: '1', id: '123', action: 'edit' } },
+        },
+      ];
+
+      multiParamTests.forEach(({ name, pattern, input, expected }) => {
+        it(name, () => {
+          const routePattern = new RoutePattern(pattern);
+          assert.deepStrictEqual(routePattern.match(input), expected);
+        });
+      });
+    });
+
+    describe('complex combinations from README examples', () => {
+      const complexTests = [
+        {
+          name: 'blog with date params and optional extension',
+          pattern: 'blog/:year-:month-:day/:slug(.html)',
+          input: 'https://remix.run/blog/2024-01-15/web-architecture',
+          expected: { params: { year: '2024', month: '01', day: '15', slug: 'web-architecture' } },
+        },
+        {
+          name: 'blog with date params and extension present',
+          pattern: 'blog/:year-:month-:day/:slug(.html)',
+          input: 'https://remix.run/blog/2024-01-15/web-architecture.html',
+          expected: {
+            params: { year: '2024', month: '01', day: '15', slug: 'web-architecture.html' },
+          },
+        },
+        {
+          name: 'API with optional versioning and format',
+          pattern: 'api(/v:major.:minor)/users/:id(.json)',
+          input: 'https://remix.run/api/users/sarah',
+          expected: { params: { major: undefined, minor: undefined, id: 'sarah' } },
+        },
+        {
+          name: 'API with versioning and format present',
+          pattern: 'api(/v:major.:minor)/users/:id(.json)',
+          input: 'https://remix.run/api/v2.1/users/sarah.json',
+          expected: { params: { major: '2', minor: '1', id: 'sarah.json' } },
+        },
+        {
+          name: 'complex glob with file and extension',
+          pattern: '://app.unpkg.com/*path/dist/:file.mjs',
+          input: 'https://app.unpkg.com/preact@10.26.9/files/dist/preact.mjs',
+          expected: { params: { path: 'preact@10.26.9/files', file: 'preact' } },
+        },
+        {
+          name: 'unnamed glob with static parts',
+          pattern: 'assets/*/favicon.ico',
+          input: 'https://remix.run/assets/v2/favicon.ico',
+          expected: { params: {} },
+        },
+        {
+          name: 'param with file extension enum',
+          pattern: 'files/:filename.{jpg,png,gif}',
+          input: 'https://remix.run/files/logo.png',
+          expected: { params: { filename: 'logo' } },
+        },
+        {
+          name: 'glob with file extension enum',
+          pattern: 'assets/*path.{jpg,png,gif,svg}',
+          input: 'https://remix.run/assets/images/logos/remix.svg',
+          expected: { params: { path: 'images/logos/remix' } },
+        },
+        {
+          name: 'glob with file extension enum - no match',
+          pattern: 'assets/*path.{jpg,png,gif,svg}',
+          input: 'https://remix.run/assets/styles/main.css',
+          expected: null,
+        },
+      ];
+
+      complexTests.forEach(({ name, pattern, input, expected }) => {
+        it(name, () => {
+          const routePattern = new RoutePattern(pattern);
+          assert.deepStrictEqual(routePattern.match(input), expected);
+        });
+      });
+    });
+
+    describe('full URL patterns', () => {
+      const fullUrlTests = [
+        {
+          name: 'matches protocol patterns',
+          pattern: 'https://example.com',
+          input: 'https://example.com/',
+          expected: { params: {} },
+        },
+        {
+          name: 'extracts protocol parameters',
+          pattern: ':protocol://example.com',
+          input: 'https://example.com/',
+          expected: { params: { protocol: 'https' } },
+        },
+        {
+          name: 'matches hostname patterns',
+          pattern: '://example.com',
+          input: 'https://example.com/',
+          expected: { params: {} },
+        },
+        {
+          name: 'extracts hostname parameters',
+          pattern: '://:subdomain.example.com',
+          input: 'https://api.example.com/',
+          expected: { params: { subdomain: 'api' } },
+        },
+        {
+          name: 'matches complex hostname patterns',
+          pattern: '://:tenant.app.example.com',
+          input: 'https://acme.app.example.com/',
+          expected: { params: { tenant: 'acme' } },
+        },
+        {
+          name: 'combines protocol, hostname, and pathname',
+          pattern: ':protocol://:subdomain.example.com/api/:version',
+          input: 'https://api.example.com/api/v1',
+          expected: { params: { protocol: 'https', subdomain: 'api', version: 'v1' } },
+        },
+        {
+          name: 'handles optional sections in full URLs',
+          pattern: 'https://:tenant.example.com/users/:id',
+          input: 'https://acme.example.com/users/123',
+          expected: { params: { tenant: 'acme', id: '123' } },
+        },
+        {
+          name: 'handles globs in hostnames',
+          pattern: '://*host.example.com',
+          input: 'https://api.v1.example.com/',
+          expected: { params: { host: 'api.v1' } },
+        },
+        {
+          name: 'multi-tenant with optional admin path',
+          pattern: '://:tenant.remix.run/(:admin/)users/:id',
+          input: 'https://acme.remix.run/users/123',
+          expected: { params: { tenant: 'acme', admin: undefined, id: '123' } },
+        },
+        {
+          name: 'multi-tenant with admin path present',
+          pattern: '://:tenant.remix.run/(:admin/)users/:id',
+          input: 'https://acme.remix.run/admin/users/123',
+          expected: { params: { tenant: 'acme', admin: 'admin', id: '123' } },
+        },
+      ];
+
+      fullUrlTests.forEach(({ name, pattern, input, expected }) => {
+        it(name, () => {
+          const routePattern = new RoutePattern(pattern);
+          assert.deepStrictEqual(routePattern.match(input), expected);
+        });
+      });
+    });
+
+    describe('input types', () => {
+      const inputTypeTests = [
+        {
+          name: 'accepts string URLs',
+          pattern: 'users/:id',
+          input: 'https://example.com/users/123',
+          expected: { params: { id: '123' } },
+        },
+        {
+          name: 'accepts URL objects',
+          pattern: 'users/:id',
+          input: new URL('https://example.com/users/123'),
+          expected: { params: { id: '123' } },
+        },
+      ];
+
+      inputTypeTests.forEach(({ name, pattern, input, expected }) => {
+        it(name, () => {
+          const routePattern = new RoutePattern(pattern);
+          assert.deepStrictEqual(routePattern.match(input), expected);
+        });
+      });
+    });
+
+    describe('edge cases', () => {
+      const edgeCaseTests = [
+        {
+          name: 'handles empty patterns',
+          pattern: '',
+          input: 'https://example.com/',
+          expected: { params: {} },
+        },
+        {
+          name: 'handles root path',
+          pattern: '/',
+          input: 'https://example.com/',
+          expected: null,
+        },
+        {
+          name: 'handles patterns with no pathname',
+          pattern: 'https://example.com',
+          input: 'https://example.com/',
+          expected: { params: {} },
+        },
+        {
+          name: 'returns null for mismatched protocols',
+          pattern: 'https://example.com',
+          input: 'http://example.com/',
+          expected: null,
+        },
+        {
+          name: 'returns null for mismatched hostnames',
+          pattern: '://example.com',
+          input: 'https://other.com/',
+          expected: null,
+        },
+        {
+          name: 'returns null for mismatched paths',
+          pattern: 'users/:id',
+          input: 'https://example.com/posts/123',
+          expected: null,
+        },
+        {
+          name: 'handles special characters in URLs',
+          pattern: 'search/:query',
+          input: 'https://example.com/search/hello%20world',
+          expected: { params: { query: 'hello%20world' } },
+        },
+        {
+          name: 'handles parameters that look like paths',
+          pattern: 'proxy/*url',
+          input: 'https://example.com/proxy/https://other.com/api',
+          expected: { params: { url: 'https://other.com/api' } },
+        },
+      ];
+
+      edgeCaseTests.forEach(({ name, pattern, input, expected }) => {
+        it(name, () => {
+          const routePattern = new RoutePattern(pattern);
+          assert.deepStrictEqual(routePattern.match(input), expected);
+        });
+      });
+    });
+
+    describe('parameter constraints', () => {
+      const constraintTests = [
+        {
+          name: 'parameters do not match across path segments',
+          pattern: 'users/:id/posts',
+          input: 'https://example.com/users/123/456/posts',
+          expected: null,
+        },
+        {
+          name: 'hostname parameters do not match across dots',
+          pattern: '://:subdomain.example.com',
+          input: 'https://api.v1.example.com/',
+          expected: null,
+        },
+        {
+          name: 'globs can match across segments',
+          pattern: 'files/*path',
+          input: 'https://example.com/files/docs/readme.txt',
+          expected: { params: { path: 'docs/readme.txt' } },
+        },
+      ];
+
+      constraintTests.forEach(({ name, pattern, input, expected }) => {
+        it(name, () => {
+          const routePattern = new RoutePattern(pattern);
+          assert.deepStrictEqual(routePattern.match(input), expected);
+        });
+      });
+    });
+  });
+});
