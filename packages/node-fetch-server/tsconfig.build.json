@@ -6,6 +6,6 @@
     "declarationMap": true,
     "outDir": "./dist"
   },
-  "include": ["src"],
+  "include": ["global.d.ts", "src"],
   "exclude": ["src/**/*.test.ts"]
 }
