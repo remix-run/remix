@@ -60,9 +60,9 @@ pattern.match('https://remix.run/assets/styles/main.css');
 
 ```ts
 class RoutePattern {
+  readonly source: string;
   constructor(source: string);
   match(url: string | URL): Match | null;
-  static matcher(patterns: Array<string | RoutePattern>): Matcher;
 }
 ```
 
@@ -70,17 +70,8 @@ class RoutePattern {
 
 ```ts
 type Match = {
-  params: Record<string, string>;
-}
-```
-
-**Matcher**
-
-```ts
-type Matcher = {
-  match(url: string | URL): Match | null;
-  matchAll(url: string | URL): Array<Match>;
-}
+  params: Record<string, string | undefined>;
+};
 ```
 
 ## Concepts
