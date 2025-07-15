@@ -209,7 +209,6 @@ describe('createRequestListener', () => {
   it('handles backpressure when writing response chunks', async () => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async () => {
-        // Create a response with multiple chunks
         let chunks = ['chunk1', 'chunk2', 'chunk3', 'chunk4', 'chunk5'];
         let body = new ReadableStream({
           async start(controller) {
@@ -219,6 +218,7 @@ describe('createRequestListener', () => {
             controller.close();
           },
         });
+
         return new Response(body);
       };
 
@@ -227,7 +227,6 @@ describe('createRequestListener', () => {
 
       let req = createMockRequest();
 
-      // Create a custom mock response that properly extends EventEmitter
       let writtenChunks: Uint8Array[] = [];
       let writeCallCount = 0;
       let drainListenerCalled = false;
@@ -245,18 +244,16 @@ describe('createRequestListener', () => {
             setTimeout(() => {
               writable.emit('drain');
             }, 0);
-            return false; // Indicate buffer is full
+            return false; // Buffer is full
           }
-          return true; // Indicate buffer has space
+          return true; // Buffer has space
         },
         end() {
           assert.equal(writtenChunks.length, 5);
           assert.equal(writeCallCount, 5);
 
-          // Verify backpressure was handled
           assert.ok(drainListenerCalled, 'drain listener should have been registered');
 
-          // Verify chunk contents
           let receivedText = writtenChunks.map((chunk) => new TextDecoder().decode(chunk)).join('');
           assert.equal(receivedText, 'chunk1chunk2chunk3chunk4chunk5');
 
