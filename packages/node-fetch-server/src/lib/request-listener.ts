@@ -217,7 +217,11 @@ export async function sendResponse(
   if (response.body != null && res.req.method !== 'HEAD') {
     for await (let chunk of readStream(response.body)) {
       // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
-      res.write(chunk);
+      if (res.write(chunk) === false) {
+        await new Promise<void>((resolve) => {
+          res.once('drain', resolve);
+        });
+      }
     }
   }
 
