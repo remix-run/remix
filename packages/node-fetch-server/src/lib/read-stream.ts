@@ -1,9 +1,13 @@
 export async function* readStream(stream: ReadableStream<Uint8Array>): AsyncIterable<Uint8Array> {
   let reader = stream.getReader();
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    yield value;
+  try {
+    while (true) {
+      let result = await reader.read();
+      if (result.done) break;
+      yield result.value;
+    }
+  } finally {
+    reader.releaseLock();
   }
 }
