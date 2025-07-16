@@ -469,5 +469,113 @@ describe('RoutePattern', () => {
         });
       });
     });
+
+    describe('search params', () => {
+      const searchTests = [
+        {
+          name: 'matches basic search param',
+          pattern: 'search?q=test',
+          input: 'https://example.com/search?q=test',
+          expected: { params: {} },
+        },
+        {
+          name: 'returns null for missing search param',
+          pattern: 'search?q=test',
+          input: 'https://example.com/search',
+          expected: null,
+        },
+        {
+          name: 'returns null for wrong search param value',
+          pattern: 'search?q=test',
+          input: 'https://example.com/search?q=other',
+          expected: null,
+        },
+        {
+          name: 'matches with extra search params',
+          pattern: 'search?q=test',
+          input: 'https://example.com/search?q=test&extra=value',
+          expected: { params: {} },
+        },
+        {
+          name: 'matches multiple search params',
+          pattern: 'api?format=json&version=v1',
+          input: 'https://example.com/api?format=json&version=v1',
+          expected: { params: {} },
+        },
+        {
+          name: 'returns null for missing one of multiple search params',
+          pattern: 'api?format=json&version=v1',
+          input: 'https://example.com/api?format=json',
+          expected: null,
+        },
+        {
+          name: 'matches search params in different order',
+          pattern: 'api?format=json&version=v1',
+          input: 'https://example.com/api?version=v1&format=json',
+          expected: { params: {} },
+        },
+        {
+          name: 'matches search param with empty value',
+          pattern: 'search?q',
+          input: 'https://example.com/search?q',
+          expected: { params: {} },
+        },
+        {
+          name: 'matches search param with special characters',
+          pattern: 'search?q=hello%20world',
+          input: 'https://example.com/search?q=hello%20world',
+          expected: { params: {} },
+        },
+        {
+          name: 'matches search param with URL-encoded values',
+          pattern: 'search?q=test%26more',
+          input: 'https://example.com/search?q=test%26more',
+          expected: { params: {} },
+        },
+        {
+          name: 'combines pathname params with search params',
+          pattern: 'users/:id?format=json',
+          input: 'https://example.com/users/123?format=json',
+          expected: { params: { id: '123' } },
+        },
+        {
+          name: 'combines protocol, hostname, pathname, and search',
+          pattern: ':protocol://:subdomain.example.com/api/:version?format=json',
+          input: 'https://api.example.com/api/v1?format=json',
+          expected: { params: { protocol: 'https', subdomain: 'api', version: 'v1' } },
+        },
+        {
+          name: 'matches search params with repeated values',
+          pattern: 'search?tags=javascript',
+          input: 'https://example.com/search?tags=javascript&tags=react',
+          expected: { params: {} },
+        },
+        {
+          name: 'returns null when required search param value not found in repeated values',
+          pattern: 'search?tags=python',
+          input: 'https://example.com/search?tags=javascript&tags=react',
+          expected: null,
+        },
+        {
+          name: 'handles search params with spaces in pattern',
+          pattern: 'search?q=hello world',
+          input: 'https://example.com/search?q=hello world',
+          expected: { params: {} },
+        },
+        {
+          name: 'handles complex search param combinations',
+          pattern: 'results?page=1&limit=10&sort=date',
+          input: 'https://example.com/results?page=1&limit=10&sort=date&extra=ignore',
+          expected: { params: {} },
+        },
+      ];
+
+      searchTests.forEach(({ name, pattern, input, expected }) => {
+        it(name, () => {
+          const routePattern = new RoutePattern(pattern);
+          assert.deepStrictEqual(routePattern.match(input), expected);
+        });
+      });
+    });
   });
 });

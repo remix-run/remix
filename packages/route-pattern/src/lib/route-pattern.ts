@@ -34,7 +34,11 @@ export class RoutePattern {
     if (!pathnameMatch) return null;
     Object.assign(params, pathnameMatch.groups ?? {});
 
-    // todo search
+    if (this._ast.search) {
+      for (const [key, value] of this._ast.search?.entries()) {
+        if (!url.searchParams.getAll(key).includes(value)) return null;
+      }
+    }
 
     return { params };
   }
