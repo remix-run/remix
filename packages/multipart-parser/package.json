@@ -1,0 +1,67 @@
+{
+  "name": "@mjackson/multipart-parser",
+  "version": "0.10.1",
+  "description": "A fast, efficient parser for multipart streams in any JavaScript environment",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/multipart-parser"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser#readme",
+  "license": "MIT",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "types": "./dist/multipart-parser.d.ts",
+  "module": "./dist/multipart-parser.js",
+  "main": "./dist/multipart-parser.cjs",
+  "exports": {
+    ".": {
+      "types": "./dist/multipart-parser.d.ts",
+      "import": "./dist/multipart-parser.js",
+      "require": "./dist/multipart-parser.cjs",
+      "default": "./dist/multipart-parser.js"
+    },
+    "./node": {
+      "types": "./dist/multipart-parser.node.d.ts",
+      "import": "./dist/multipart-parser.node.js",
+      "require": "./dist/multipart-parser.node.cjs",
+      "default": "./dist/multipart-parser.node.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@mjackson/headers": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "esbuild": "^0.25.5"
+  },
+  "scripts": {
+    "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",
+    "bench:bun": "bun run ./bench/runner.ts",
+    "bench:deno": "deno run --allow-sys ./bench/runner.ts",
+    "bench:node": "node --disable-warning=ExperimentalWarning ./bench/runner.ts",
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:esm": "esbuild src/multipart-parser.ts --bundle --outfile=dist/multipart-parser.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/multipart-parser.ts --bundle --outfile=dist/multipart-parser.cjs --format=cjs --platform=node --sourcemap",
+    "build:esm:node": "esbuild src/multipart-parser.node.ts --bundle --outfile=dist/multipart-parser.node.js --format=esm --platform=node --sourcemap",
+    "build:cjs:node": "esbuild src/multipart-parser.node.ts --bundle --outfile=dist/multipart-parser.node.cjs --format=cjs --platform=node --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs && pnpm run build:esm:node && pnpm run build:cjs:node",
+    "clean": "rm -rf dist",
+    "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "multipart",
+    "parser",
+    "stream",
+    "http"
+  ]
+}

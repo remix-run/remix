@@ -1,0 +1,54 @@
+{
+  "name": "@mjackson/fetch-proxy",
+  "version": "0.4.0",
+  "description": "An HTTP proxy for the web Fetch API",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/fetch-proxy"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/fetch-proxy#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "types": "dist/fetch-proxy.d.ts",
+  "module": "dist/fetch-proxy.js",
+  "main": "dist/fetch-proxy.cjs",
+  "exports": {
+    ".": {
+      "types": "./dist/fetch-proxy.d.ts",
+      "import": "./dist/fetch-proxy.js",
+      "require": "./dist/fetch-proxy.cjs",
+      "default": "./dist/fetch-proxy.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@mjackson/headers": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "esbuild": "^0.25.5"
+  },
+  "scripts": {
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:esm": "esbuild src/fetch-proxy.ts --bundle --outfile=dist/fetch-proxy.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/fetch-proxy.ts --bundle --outfile=dist/fetch-proxy.cjs --format=cjs --platform=neutral --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
+    "clean": "rm -rf dist",
+    "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "fetch",
+    "http",
+    "proxy"
+  ]
+}
