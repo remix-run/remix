@@ -1,0 +1,72 @@
+{
+  "name": "@mjackson/file-storage",
+  "version": "0.7.0",
+  "description": "Key/value storage for JavaScript File objects",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/file-storage"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage#readme",
+  "license": "MIT",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "types": "./dist/file-storage.d.ts",
+  "module": "./dist/file-storage.js",
+  "main": "./dist/file-storage.cjs",
+  "exports": {
+    ".": {
+      "types": "./dist/file-storage.d.ts",
+      "import": "./dist/file-storage.js",
+      "require": "./dist/file-storage.cjs",
+      "default": "./dist/file-storage.js"
+    },
+    "./local": {
+      "types": "./dist/local.d.ts",
+      "import": "./dist/local.js",
+      "require": "./dist/local.cjs",
+      "default": "./dist/local.js"
+    },
+    "./memory": {
+      "types": "./dist/memory.d.ts",
+      "import": "./dist/memory.js",
+      "require": "./dist/memory.cjs",
+      "default": "./dist/memory.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@mjackson/lazy-file": "workspace:^"
+  },
+  "devDependencies": {
+    "@mjackson/form-data-parser": "workspace:^",
+    "@types/node": "^20.14.10",
+    "esbuild": "^0.25.5"
+  },
+  "scripts": {
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:esm": "esbuild src/file-storage.ts --bundle --outfile=dist/file-storage.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/file-storage.ts --bundle --outfile=dist/file-storage.cjs --format=cjs --platform=neutral --sourcemap",
+    "build:esm:local": "esbuild src/local.ts --bundle --outfile=dist/local.js --format=esm --platform=node --sourcemap",
+    "build:cjs:local": "esbuild src/local.ts --bundle --outfile=dist/local.cjs --format=cjs --platform=node --sourcemap",
+    "build:esm:memory": "esbuild src/memory.ts --bundle --outfile=dist/memory.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs:memory": "esbuild src/memory.ts --bundle --outfile=dist/memory.cjs --format=cjs --platform=neutral --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs && pnpm run build:esm:local && pnpm run build:cjs:local && pnpm run build:esm:memory && pnpm run build:cjs:memory",
+    "clean": "rm -rf dist",
+    "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "file",
+    "storage",
+    "stream",
+    "fs"
+  ]
+}

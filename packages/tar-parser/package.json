@@ -1,0 +1,54 @@
+{
+  "name": "@mjackson/tar-parser",
+  "version": "0.3.0",
+  "description": "A fast, efficient parser for tar streams in any JavaScript environment",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/tar-parser"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/tar-parser#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "types": "./dist/tar-parser.d.ts",
+  "module": "./dist/tar-parser.js",
+  "main": "./dist/tar-parser.cjs",
+  "exports": {
+    ".": {
+      "types": "./dist/tar-parser.d.ts",
+      "import": "./dist/tar-parser.js",
+      "require": "./dist/tar-parser.cjs",
+      "default": "./dist/tar-parser.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "@mjackson/lazy-file": "workspace:^",
+    "@types/node": "^20.14.10",
+    "esbuild": "^0.25.5"
+  },
+  "scripts": {
+    "bench": "node --disable-warning=ExperimentalWarning ./bench/runner.ts",
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:esm": "esbuild src/tar-parser.ts --bundle --outfile=dist/tar-parser.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/tar-parser.ts --bundle --outfile=dist/tar-parser.cjs --format=cjs --platform=node --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
+    "clean": "rm -rf dist",
+    "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "tar",
+    "archive",
+    "parser",
+    "stream"
+  ]
+}

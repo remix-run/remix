@@ -1,0 +1,18 @@
+{
+  "name": "multipart-parser-cf-workers-example",
+  "private": true,
+  "dependencies": {
+    "@mjackson/multipart-parser": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240725.0",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.20.0"
+  },
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "cf-typegen": "wrangler types"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "@mjackson/form-data-parser",
+  "version": "0.9.1",
+  "description": "A request.formData() wrapper with streaming file upload handling",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/form-data-parser"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser#readme",
+  "license": "MIT",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "types": "./dist/form-data-parser.d.ts",
+  "module": "./dist/form-data-parser.js",
+  "main": "./dist/form-data-parser.cjs",
+  "exports": {
+    ".": {
+      "types": "./dist/form-data-parser.d.ts",
+      "import": "./dist/form-data-parser.js",
+      "require": "./dist/form-data-parser.cjs",
+      "default": "./dist/form-data-parser.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@mjackson/multipart-parser": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^22.4.1",
+    "esbuild": "^0.25.5"
+  },
+  "scripts": {
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:esm": "esbuild src/form-data-parser.ts --bundle --outfile=dist/form-data-parser.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/form-data-parser.ts --bundle --outfile=dist/form-data-parser.cjs --format=cjs --platform=node --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
+    "clean": "rm -rf dist",
+    "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "form-data",
+    "FormData",
+    "multipart",
+    "parser"
+  ]
+}

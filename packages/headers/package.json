@@ -1,0 +1,69 @@
+{
+  "name": "@mjackson/headers",
+  "version": "0.11.1",
+  "description": "A toolkit for working with HTTP headers in JavaScript",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/headers"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/headers#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "types": "./dist/headers.d.ts",
+  "module": "./dist/headers.js",
+  "main": "./dist/headers.cjs",
+  "exports": {
+    ".": {
+      "types": "./dist/headers.d.ts",
+      "import": "./dist/headers.js",
+      "require": "./dist/headers.cjs",
+      "default": "./dist/headers.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "esbuild": "^0.20.0"
+  },
+  "scripts": {
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:esm": "esbuild src/headers.ts --bundle --outfile=dist/headers.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/headers.ts --bundle --outfile=dist/headers.cjs --format=cjs --platform=node --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
+    "clean": "rm -rf dist",
+    "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "fetch",
+    "http",
+    "header",
+    "headers",
+    "http-headers",
+    "request-headers",
+    "response-headers",
+    "content-negotiation",
+    "cookies",
+    "set-cookie",
+    "cache-control",
+    "content-type",
+    "accept",
+    "accept-encoding",
+    "accept-language",
+    "content-disposition",
+    "if-none-match",
+    "etag",
+    "user-agent",
+    "host",
+    "last-modified"
+  ]
+}
