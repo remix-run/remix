@@ -18,8 +18,8 @@ export async function createRelease(packageName, version) {
     headers: {
       authorization: `token ${token}`,
     },
-    owner: 'mjackson',
-    repo: 'remix-the-web',
+    owner: 'remix-run',
+    repo: 'remix',
     tag_name: tagName,
     name: `${packageName} v${version}`,
     body: changes?.body ?? 'No changes.',
