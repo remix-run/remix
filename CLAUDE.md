@@ -25,6 +25,8 @@ $ pnpm --filter @remix-run/headers run build
 
 ## Releasing
 
+A package needs to be released if the topmost section in its `CHANGELOG.md` begins with `## HEAD`. This means that there are features and/or bug fixes in the head of the development line that haven't been published yet.
+
 The release process is a two-step process. First, we tag a release. Then, we publish it.
 
 To cut a release:
