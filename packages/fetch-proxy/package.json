@@ -1,15 +1,15 @@
 {
-  "name": "@mjackson/fetch-proxy",
+  "name": "@remix-run/fetch-proxy",
   "version": "0.4.0",
   "description": "An HTTP proxy for the web Fetch API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "url": "git+https://github.com/remix-run/remix.git",
     "directory": "packages/fetch-proxy"
   },
-  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/fetch-proxy#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/v3/packages/fetch-proxy#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -23,15 +23,24 @@
   "main": "dist/fetch-proxy.cjs",
   "exports": {
     ".": {
-      "types": "./dist/fetch-proxy.d.ts",
-      "import": "./dist/fetch-proxy.js",
-      "require": "./dist/fetch-proxy.cjs",
-      "default": "./dist/fetch-proxy.js"
+      "types": "./src/fetch-proxy.ts",
+      "default": "./src/fetch-proxy.ts"
     },
     "./package.json": "./package.json"
   },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/fetch-proxy.d.ts",
+        "import": "./dist/fetch-proxy.js",
+        "require": "./dist/fetch-proxy.cjs",
+        "default": "./dist/fetch-proxy.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
   "dependencies": {
-    "@mjackson/headers": "workspace:^"
+    "@remix-run/headers": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",

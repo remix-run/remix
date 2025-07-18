@@ -1,6 +1,10 @@
 # `form-data-parser` CHANGELOG
 
-This is the changelog for [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`form-data-parser`](https://github.com/remix-run/remix/tree/v3/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
+
+## HEAD
+
+- Renamed package from `@mjackson/form-data-parser` to `@remix-run/form-data-parser`
 
 ## v0.9.1 (2025-06-13)
 
@@ -31,7 +35,7 @@ let size = file.size; // This is ok now!
 - BREAKING CHANGE: Override `parseFormData` signature so the upload handler is always last in the argument list. `parserOptions` are now an optional 2nd arg.
 
 ```ts
-import { parseFormData } from '@mjackson/form-data-parser';
+import { parseFormData } from '@remix-run/form-data-parser';
 
 // before
 await parseFormData(
@@ -48,8 +52,8 @@ await parseFormData(request, { maxFileSize }, (fileUpload) => {
 });
 ```
 
-- Upgrade [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser) to v0.8 to fix an issue where errors would crash the process when `maxFileSize` was exceeded (see #28)
-- Add an [example of how to use `form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser/examples/node) together with [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage) to handle multipart uploads on Node.js
+- Upgrade [`multipart-parser`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser) to v0.8 to fix an issue where errors would crash the process when `maxFileSize` was exceeded (see #28)
+- Add an [example of how to use `form-data-parser`](https://github.com/remix-run/remix/tree/v3/packages/form-data-parser/examples/node) together with [`file-storage`](https://github.com/remix-run/remix/tree/v3/packages/file-storage) to handle multipart uploads on Node.js
 - Expand `FileUploadHandler` interface to support returning `Blob` from the upload handler, which is the superclass of `File`
 
 ## v0.6.0 (2025-01-15)

@@ -1,6 +1,6 @@
 import * as cp from 'node:child_process';
 
-import { fileExists, readJson } from './utils/fs.js';
+import { readJson } from './utils/fs.js';
 import { createRelease } from './utils/github-releases.js';
 import { getPackageDir, getPackageFile } from './utils/packages.js';
 import { logAndExec } from './utils/process.js';
@@ -9,23 +9,24 @@ import { isValidVersion } from './utils/semver.js';
 let packageName = process.argv[2];
 let version = process.argv[3];
 
-if (packageName === undefined || (!packageName.includes('@') && version === undefined)) {
-  console.error(`Usage:
-    node publish-release.js <packageName> <version>
-    node publish-release.js <tag>`);
-  process.exit(1);
-}
-
+// Support passing a tag directly, e.g. `headers@1.0.0`
 if (packageName.includes('@')) {
   let split = packageName.split('@');
   packageName = split[0];
   version = split[1];
 }
 
+if (packageName === undefined || version === undefined) {
+  console.error(`Usage:
+    node publish-release.js <packageName> <version>
+    node publish-release.js <tag>`);
+  process.exit(1);
+}
+
 let tag = `${packageName}@${version}`;
 
 if (packageName === '' || !isValidVersion(version)) {
-  console.error(`Invalid tag: ${tag}`);
+  console.error(`Invalid tag: "${tag}"`);
   process.exit(1);
 }
 
@@ -63,22 +64,22 @@ logAndExec(`pnpm publish --access public --no-git-checks`, {
 console.log();
 
 // 4) Publish to jsr (if applicable)
-let jsrJsonFile = getPackageFile(packageName, 'jsr.json');
-if (fileExists(jsrJsonFile)) {
-  let jsrJson = readJson(jsrJsonFile);
-  if (jsrJson.version !== version) {
-    console.error(
-      `Tag does not match jsr.json version: ${version} !== ${jsrJson.version} (${tag})`,
-    );
-    process.exit(1);
-  }
+// let jsrJsonFile = getPackageFile(packageName, 'jsr.json');
+// if (fileExists(jsrJsonFile)) {
+//   let jsrJson = readJson(jsrJsonFile);
+//   if (jsrJson.version !== version) {
+//     console.error(
+//       `Tag does not match jsr.json version: ${version} !== ${jsrJson.version} (${tag})`,
+//     );
+//     process.exit(1);
+//   }
 
-  logAndExec(`npx jsr publish`, {
-    cwd: getPackageDir(packageName),
-    env: process.env,
-  });
-  console.log();
-}
+//   logAndExec(`npx jsr publish`, {
+//     cwd: getPackageDir(packageName),
+//     env: process.env,
+//   });
+//   console.log();
+// }
 
 // 5) Publish to GitHub Releases
 console.log(`Publishing ${tag} on GitHub Releases ...`);

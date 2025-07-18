@@ -1,5 +1,5 @@
 import * as http from 'node:http';
-import { createRequestListener } from '@mjackson/node-fetch-server';
+import { createRequestListener } from '@remix-run/node-fetch-server';
 
 const PORT = process.env.PORT || 3000;
 

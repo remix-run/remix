@@ -1,14 +1,14 @@
 {
-  "name": "@mjackson/multipart-parser",
+  "name": "@remix-run/multipart-parser",
   "version": "0.10.1",
   "description": "A fast, efficient parser for multipart streams in any JavaScript environment",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "url": "git+https://github.com/remix-run/remix.git",
     "directory": "packages/multipart-parser"
   },
-  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/v3/packages/multipart-parser#readme",
   "license": "MIT",
   "files": [
     "LICENSE",
@@ -23,21 +23,34 @@
   "main": "./dist/multipart-parser.cjs",
   "exports": {
     ".": {
-      "types": "./dist/multipart-parser.d.ts",
-      "import": "./dist/multipart-parser.js",
-      "require": "./dist/multipart-parser.cjs",
-      "default": "./dist/multipart-parser.js"
+      "types": "./src/multipart-parser.ts",
+      "default": "./src/multipart-parser.ts"
     },
     "./node": {
-      "types": "./dist/multipart-parser.node.d.ts",
-      "import": "./dist/multipart-parser.node.js",
-      "require": "./dist/multipart-parser.node.cjs",
-      "default": "./dist/multipart-parser.node.js"
+      "types": "./src/multipart-parser.node.ts",
+      "default": "./src/multipart-parser.node.ts"
     },
     "./package.json": "./package.json"
   },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/multipart-parser.d.ts",
+        "import": "./dist/multipart-parser.js",
+        "require": "./dist/multipart-parser.cjs",
+        "default": "./dist/multipart-parser.js"
+      },
+      "./node": {
+        "types": "./dist/multipart-parser.node.d.ts",
+        "import": "./dist/multipart-parser.node.js",
+        "require": "./dist/multipart-parser.node.cjs",
+        "default": "./dist/multipart-parser.node.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
   "dependencies": {
-    "@mjackson/headers": "workspace:^"
+    "@remix-run/headers": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",

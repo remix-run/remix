@@ -1,14 +1,14 @@
 {
-  "name": "@mjackson/file-storage",
+  "name": "@remix-run/file-storage",
   "version": "0.7.0",
   "description": "Key/value storage for JavaScript File objects",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "url": "git+https://github.com/remix-run/remix.git",
     "directory": "packages/file-storage"
   },
-  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/v3/packages/file-storage#readme",
   "license": "MIT",
   "files": [
     "LICENSE",
@@ -23,30 +23,47 @@
   "main": "./dist/file-storage.cjs",
   "exports": {
     ".": {
-      "types": "./dist/file-storage.d.ts",
-      "import": "./dist/file-storage.js",
-      "require": "./dist/file-storage.cjs",
-      "default": "./dist/file-storage.js"
+      "types": "./src/file-storage.ts",
+      "default": "./src/file-storage.ts"
     },
     "./local": {
-      "types": "./dist/local.d.ts",
-      "import": "./dist/local.js",
-      "require": "./dist/local.cjs",
-      "default": "./dist/local.js"
+      "types": "./src/local.ts",
+      "default": "./src/local.ts"
     },
     "./memory": {
-      "types": "./dist/memory.d.ts",
-      "import": "./dist/memory.js",
-      "require": "./dist/memory.cjs",
-      "default": "./dist/memory.js"
+      "types": "./src/memory.ts",
+      "default": "./src/memory.ts"
     },
     "./package.json": "./package.json"
   },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/file-storage.d.ts",
+        "import": "./dist/file-storage.js",
+        "require": "./dist/file-storage.cjs",
+        "default": "./dist/file-storage.js"
+      },
+      "./local": {
+        "types": "./dist/local.d.ts",
+        "import": "./dist/local.js",
+        "require": "./dist/local.cjs",
+        "default": "./dist/local.js"
+      },
+      "./memory": {
+        "types": "./dist/memory.d.ts",
+        "import": "./dist/memory.js",
+        "require": "./dist/memory.cjs",
+        "default": "./dist/memory.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
   "dependencies": {
-    "@mjackson/lazy-file": "workspace:^"
+    "@remix-run/lazy-file": "workspace:^"
   },
   "devDependencies": {
-    "@mjackson/form-data-parser": "workspace:^",
+    "@remix-run/form-data-parser": "workspace:^",
     "@types/node": "^20.14.10",
     "esbuild": "^0.25.5"
   },

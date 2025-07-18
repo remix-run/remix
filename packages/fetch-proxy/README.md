@@ -18,13 +18,13 @@ In the context of servers, an HTTP proxy server is a server that forwards all re
 Install from [npm](https://www.npmjs.com/):
 
 ```sh
-npm i @mjackson/fetch-proxy
+npm i @remix-run/fetch-proxy
 ```
 
 ## Usage
 
 ```ts
-import { createFetchProxy } from '@mjackson/fetch-proxy';
+import { createFetchProxy } from '@remix-run/fetch-proxy';
 
 // Create a proxy that sends all requests through to remix.run
 let proxy = createFetchProxy('https://remix.run');
@@ -44,8 +44,8 @@ assert(title.includes('Remix'));
 
 ## Related Packages
 
-- [`node-fetch-server`](https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server) - Build HTTP servers for Node.js using the web fetch API
+- [`node-fetch-server`](https://github.com/remix-run/remix/tree/v3/packages/node-fetch-server) - Build HTTP servers for Node.js using the web fetch API
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/v3/LICENSE)

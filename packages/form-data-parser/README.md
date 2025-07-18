@@ -29,7 +29,7 @@ For attackers, this creates an attack vector where malicious actors can overwhel
 Install from [npm](https://www.npmjs.com/):
 
 ```sh
-npm install @mjackson/form-data-parser
+npm install @remix-run/form-data-parser
 ```
 
 ## Usage
@@ -38,8 +38,8 @@ The `parseFormData` interface allows you to define an "upload handler" function 
 
 ```ts
 import * as fsp from 'node:fs/promises';
-import type { FileUpload } from '@mjackson/form-data-parser';
-import { parseFormData } from '@mjackson/form-data-parser';
+import type { FileUpload } from '@remix-run/form-data-parser';
+import { parseFormData } from '@remix-run/form-data-parser';
 
 // Define how to handle incoming file uploads
 async function uploadHandler(fileUpload: FileUpload) {
@@ -77,7 +77,7 @@ async function requestHandler(request: Request) {
 To limit the maximum size of files that are uploaded, or the maximum number of files that may be uploaded in a single request, use the `maxFileSize` and `maxFiles` options.
 
 ```ts
-import { MaxFilesExceededError, MaxFileSizeExceededError } from '@mjackson/form-data-parser';
+import { MaxFilesExceededError, MaxFileSizeExceededError } from '@remix-run/form-data-parser';
 
 const oneKb = 1024;
 const oneMb = 1024 * oneKb;
@@ -98,12 +98,12 @@ try {
 }
 ```
 
-If you're looking for a more flexible storage solution for `File` objects that are uploaded, this library pairs really well with [the `file-storage` library](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage) for keeping files in various storage backends.
+If you're looking for a more flexible storage solution for `File` objects that are uploaded, this library pairs really well with [the `file-storage` library](https://github.com/remix-run/remix/tree/v3/packages/file-storage) for keeping files in various storage backends.
 
 ```ts
-import { LocalFileStorage } from '@mjackson/file-storage/local';
-import type { FileUpload } from '@mjackson/form-data-parser';
-import { parseFormData } from '@mjackson/form-data-parser';
+import { LocalFileStorage } from '@remix-run/file-storage/local';
+import type { FileUpload } from '@remix-run/form-data-parser';
+import { parseFormData } from '@remix-run/form-data-parser';
 
 // Set up storage for uploaded files
 const fileStorage = new LocalFileStorage('/uploads/user-avatars');
@@ -127,9 +127,9 @@ async function uploadHandler(fileUpload: FileUpload) {
 
 ## Related Packages
 
-- [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage) - A simple key/value interface for storing `FileUpload` objects you get from the parser
-- [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
+- [`file-storage`](https://github.com/remix-run/remix/tree/v3/packages/file-storage) - A simple key/value interface for storing `FileUpload` objects you get from the parser
+- [`multipart-parser`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/v3/LICENSE)

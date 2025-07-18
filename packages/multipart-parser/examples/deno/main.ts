@@ -1,5 +1,5 @@
 // deno-lint-ignore-file prefer-const
-import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
+import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser';
 // @deno-types="npm:@types/tmp"
 import tmp from 'npm:tmp';
 

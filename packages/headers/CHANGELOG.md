@@ -1,6 +1,10 @@
 # `headers` CHANGELOG
 
-This is the changelog for [`headers`](https://github.com/mjackson/remix-the-web/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/v3/packages/headers). It follows [semantic versioning](https://semver.org/).
+
+## HEAD
+
+- Renamed package from `@mjackson/headers` to `@remix-run/headers`
 
 ## v0.11.1 (2025-06-06)
 
@@ -32,7 +36,7 @@ let cookieNames = headers.cookie.names;
 Additionally, this release adds support for the `If-None-Match` header. This is useful for conditional GET requests where you want to return a response with content only if the ETag has changed.
 
 ```ts
-import { SuperHeaders } from '@mjackson/headers';
+import { SuperHeaders } from '@remix-run/headers';
 
 function requestHandler(request: Request): Promise<Response> {
   let response = await callDownstreamService(request);
@@ -122,7 +126,7 @@ headers.date = ms;
   `AcceptLanguage.prototype.getPreferred(languages)`
 
 ```ts
-import { AcceptLanguage } from '@mjackson/headers';
+import { AcceptLanguage } from '@remix-run/headers';
 
 let header = new AcceptLanguage({ 'en-US': 1, en: 0.9 });
 
@@ -140,7 +144,7 @@ header.getPreferred(['en-GB', 'en-US']); // 'en-US'
 - Added `Accept` support
 
 ```ts
-import { Accept } from '@mjackson/headers';
+import { Accept } from '@remix-run/headers';
 
 let header = new Accept({ 'text/html': 1, 'text/*': 0.9 });
 
@@ -158,7 +162,7 @@ header.getPreferred(['text/html', 'text/plain']); // 'text/html'
 - Added `Accept-Encoding` support
 
 ```ts
-import { AcceptEncoding } from '@mjackson/headers';
+import { AcceptEncoding } from '@remix-run/headers';
 
 let header = new AcceptEncoding({ gzip: 1, deflate: 0.9 });
 
@@ -199,7 +203,7 @@ header.getPreferred(['gzip', 'deflate']); // 'gzip'
 
 ## v0.7.0 (2024-08-27)
 
-- Added support for the `Accept-Language` header (https://github.com/mjackson/remix-the-web/pull/8, thanks [@ArnoSaine](https://github.com/ArnoSaine))
+- Added support for the `Accept-Language` header (https://github.com/remix-run/remix/pull/8, thanks [@ArnoSaine](https://github.com/ArnoSaine))
 
 ## v0.6.1 (2024-08-13)
 
@@ -227,4 +231,4 @@ let headers = new Headers({
 });
 ```
 
-- Changed package name from `fetch-super-headers` to `@mjackson/headers`. Eventual goal is to get the `headers` npm package name.
+- Changed package name from `fetch-super-headers` to `@remix-run/headers`. Eventual goal is to get the `headers` npm package name.

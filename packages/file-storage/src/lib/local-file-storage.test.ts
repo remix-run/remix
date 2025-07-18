@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { parseFormData } from '@mjackson/form-data-parser';
+import { parseFormData } from '@remix-run/form-data-parser';
 
 import { LocalFileStorage } from './local-file-storage.ts';
 

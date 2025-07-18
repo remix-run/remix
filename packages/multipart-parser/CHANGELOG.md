@@ -1,6 +1,10 @@
 # `multipart-parser` CHANGELOG
 
-This is the changelog for [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`multipart-parser`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
+
+## HEAD
+
+- Renamed package from `@mjackson/multipart-parser` to `@remix-run/multipart-parser`
 
 ## v0.10.1 (2025-06-13)
 
@@ -32,7 +36,7 @@ New APIs:
 If you're upgrading, check the README for current usage recommendations. Here's a high-level taste of the before/after of this release.
 
 ```ts
-import { parseMultipartRequest } from '@mjackson/multipart-parser';
+import { parseMultipartRequest } from '@remix-run/multipart-parser';
 
 // before
 await parseMultipartRequest(request, async (part) => {
@@ -68,7 +72,7 @@ This release improves error handling and simplifies some of the internals of the
 - BREAKING CHANGE: Change `parseMultipartRequest` and `parseMultipart` interfaces from `for await...of` to `await` + callback API.
 
 ```ts
-import { parseMultipartRequest } from '@mjackson/multipart-parser';
+import { parseMultipartRequest } from '@remix-run/multipart-parser';
 
 // before
 for await (let part of parseMultipartRequest(request)) {
@@ -91,7 +95,7 @@ import {
   MultipartParseError,
   MaxFileSizeExceededError,
   parseMultipartRequest,
-} from '@mjackson/multipart-parser/node';
+} from '@remix-run/multipart-parser/node';
 
 const tenMb = 10 * Math.pow(2, 20);
 
@@ -166,5 +170,5 @@ const server = http.createServer(async (req, res) => {
 
 ## v0.4.0 (2024-08-12)
 
-- Switch dependency from `fetch-super-headers` to `@mjackson/headers`
+- Switch dependency from `fetch-super-headers` to `@remix-run/headers`
 - Use `for await...of` to iterate over `ReadableStream` internally. This will also cancel the stream when the loop exits from e.g. an error in a user-defined `part` handler.

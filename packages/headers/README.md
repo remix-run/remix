@@ -17,7 +17,7 @@ Unlock a more powerful and elegant way to work with HTTP headers in your JavaScr
 ## Installation
 
 ```sh
-npm install @mjackson/headers
+npm install @remix-run/headers
 ```
 
 ## Overview
@@ -25,7 +25,7 @@ npm install @mjackson/headers
 The following should give you a sense of what kinds of things you can do with this library:
 
 ```ts
-import Headers from '@mjackson/headers';
+import Headers from '@remix-run/headers';
 
 let headers = new Headers();
 
@@ -170,7 +170,7 @@ console.log(`${headers}`);
 `Headers` works just like [DOM's `Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) (it's a subclass) so you can use them anywhere you need a `Headers`.
 
 ```ts
-import Headers from '@mjackson/headers';
+import Headers from '@remix-run/headers';
 
 // Use in a fetch()
 let response = await fetch('https://example.com', {
@@ -220,12 +220,12 @@ console.log(`${headers}`);
 
 In addition to the high-level `Headers` API, `headers` also provides a rich set of primitives you can use to work with just about any complex HTTP header value. Each header class includes a spec-compliant parser (the constructor), stringifier (`toString`), and getters/setters for all relevant attributes. Classes for headers that contain a list of fields, like `Cookie`, are iterable.
 
-If you need support for a header that isn't listed here, please [send a PR](https://github.com/mjackson/remix-the-web/pulls)! The goal is to have first-class support for all common HTTP headers.
+If you need support for a header that isn't listed here, please [send a PR](https://github.com/remix-run/remix/pulls)! The goal is to have first-class support for all common HTTP headers.
 
 ### Accept
 
 ```ts
-import { Accept } from '@mjackson/headers';
+import { Accept } from '@remix-run/headers';
 
 let header = new Accept('text/html;text/*;q=0.9');
 
@@ -251,7 +251,7 @@ let header = new Accept(['text/html', ['text/*', 0.9]]);
 ### Accept-Encoding
 
 ```ts
-import { AcceptEncoding } from '@mjackson/headers';
+import { AcceptEncoding } from '@remix-run/headers';
 
 let header = new AcceptEncoding('gzip,deflate;q=0.9');
 
@@ -277,7 +277,7 @@ let header = new AcceptEncoding(['gzip', ['deflate', 0.9]]);
 ### Accept-Language
 
 ```ts
-import { AcceptLanguage } from '@mjackson/headers';
+import { AcceptLanguage } from '@remix-run/headers';
 
 let header = new AcceptLanguage('en-US,en;q=0.9');
 
@@ -304,7 +304,7 @@ let header = new AcceptLanguage(['en-US', ['en', 0.9]]);
 ### Cache-Control
 
 ```ts
-import { CacheControl } from '@mjackson/headers';
+import { CacheControl } from '@remix-run/headers';
 
 let header = new CacheControl('public, max-age=3600, s-maxage=3600');
 header.public; // true
@@ -335,7 +335,7 @@ header.staleIfError; // number
 ### Content-Disposition
 
 ```ts
-import { ContentDisposition } from '@mjackson/headers';
+import { ContentDisposition } from '@remix-run/headers';
 
 let header = new ContentDisposition('attachment; name=file1; filename=file1.txt');
 header.type; // "attachment"
@@ -354,7 +354,7 @@ let header = new ContentDisposition({
 ### Content-Type
 
 ```ts
-import { ContentType } from '@mjackson/headers';
+import { ContentType } from '@remix-run/headers';
 
 let header = new ContentType('text/html; charset=utf-8');
 header.mediaType; // "text/html"
@@ -372,7 +372,7 @@ let header = new ContentType({
 ### Cookie
 
 ```ts
-import { Cookie } from '@mjackson/headers';
+import { Cookie } from '@remix-run/headers';
 
 let header = new Cookie('theme=dark; session_id=123');
 header.get('theme'); // "dark"
@@ -396,7 +396,7 @@ let header = new Cookie([
 ### If-None-Match
 
 ```ts
-import { IfNoneMatch } from '@mjackson/headers';
+import { IfNoneMatch } from '@remix-run/headers';
 
 let header = new IfNoneMatch('"67ab43", "54ed21"');
 
@@ -415,7 +415,7 @@ let header = new IfNoneMatch({
 ### Set-Cookie
 
 ```ts
-import { SetCookie } from '@mjackson/headers';
+import { SetCookie } from '@remix-run/headers';
 
 let header = new SetCookie('session_id=abc; Domain=example.com; Path=/; Secure; HttpOnly');
 header.name; // "session_id"
@@ -441,9 +441,9 @@ let header = new SetCookie({
 
 ## Related Packages
 
-- [`fetch-proxy`](https://github.com/mjackson/remix-the-web/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
-- [`node-fetch-server`](https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server) - Build HTTP servers on Node.js using the web fetch API
+- [`fetch-proxy`](https://github.com/remix-run/remix/tree/v3/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
+- [`node-fetch-server`](https://github.com/remix-run/remix/tree/v3/packages/node-fetch-server) - Build HTTP servers on Node.js using the web fetch API
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/v3/LICENSE)

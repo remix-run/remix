@@ -1,15 +1,15 @@
 {
-  "name": "@mjackson/route-pattern",
+  "name": "@remix-run/route-pattern",
   "version": "0.3.0",
   "description": "Route patterns are strings that describe the structure of URLs you want to match",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "url": "git+https://github.com/remix-run/remix.git",
     "directory": "packages/route-pattern"
   },
-  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/route-pattern#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/v3/packages/route-pattern#readme",
   "files": [
     "LICENSE",
     "README.md",

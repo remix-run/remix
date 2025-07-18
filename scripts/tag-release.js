@@ -1,6 +1,6 @@
 import * as cp from 'node:child_process';
 
-import { fileExists, readFile, readJson, writeFile, writeJson } from './utils/fs.js';
+import { readFile, readJson, writeFile, writeJson } from './utils/fs.js';
 import { getPackageFile } from './utils/packages.js';
 import { logAndExec } from './utils/process.js';
 import { getNextVersion } from './utils/semver.js';
@@ -32,15 +32,15 @@ console.log();
 writeJson(packageJsonFile, { ...packageJson, version: nextVersion });
 logAndExec(`git add ${packageJsonFile}`);
 
-// 4) Update jsr.json (if applicable) with the new release version
-let jsrJsonFile = getPackageFile(packageName, 'jsr.json');
-if (fileExists(jsrJsonFile)) {
-  let jsrJson = readJson(jsrJsonFile);
-  writeJson(jsrJsonFile, { ...jsrJson, version: nextVersion });
-  logAndExec(`git add ${jsrJsonFile}`);
-}
+// 3) Update jsr.json (if applicable) with the new release version
+// let jsrJsonFile = getPackageFile(packageName, 'jsr.json');
+// if (fileExists(jsrJsonFile)) {
+//   let jsrJson = readJson(jsrJsonFile);
+//   writeJson(jsrJsonFile, { ...jsrJson, version: nextVersion });
+//   logAndExec(`git add ${jsrJsonFile}`);
+// }
 
-// 3) Swap out "## HEAD" in CHANGELOG.md with the new release version + date
+// 4) Swap out "## HEAD" in CHANGELOG.md with the new release version + date
 let changelogFile = getPackageFile(packageName, 'CHANGELOG.md');
 let changelog = readFile(changelogFile);
 let match = /^## HEAD\n/m.exec(changelog);

@@ -1,4 +1,4 @@
-import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
+import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser';
 
 export default {
   async fetch(request, env): Promise<Response> {

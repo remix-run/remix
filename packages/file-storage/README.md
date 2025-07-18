@@ -14,13 +14,13 @@
 Install from [npm](https://www.npmjs.com/):
 
 ```sh
-npm install @mjackson/file-storage
+npm install @remix-run/file-storage
 ```
 
 ## Usage
 
 ```ts
-import { LocalFileStorage } from '@mjackson/file-storage/local';
+import { LocalFileStorage } from '@remix-run/file-storage/local';
 
 let storage = new LocalFileStorage('./user/files');
 
@@ -43,7 +43,7 @@ await storage.remove(key);
 The `FileStorage` interface allows you to implement your own file storage for custom storage backends:
 
 ```ts
-import { type FileStorage } from '@mjackson/file-storage';
+import { type FileStorage } from '@remix-run/file-storage';
 
 class CustomFileStorage implements FileStorage {
   /**
@@ -75,9 +75,9 @@ class CustomFileStorage implements FileStorage {
 
 ## Related Packages
 
-- [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser) - Pairs well with this library for storing `FileUpload` objects received in `multipart/form-data` requests
-- [`lazy-file`](https://github.com/mjackson/remix-the-web/tree/main/packages/lazy-file) - The streaming `File` implementation used internally to stream files from storage
+- [`form-data-parser`](https://github.com/remix-run/remix/tree/v3/packages/form-data-parser) - Pairs well with this library for storing `FileUpload` objects received in `multipart/form-data` requests
+- [`lazy-file`](https://github.com/remix-run/remix/tree/v3/packages/lazy-file) - The streaming `File` implementation used internally to stream files from storage
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/v3/LICENSE)

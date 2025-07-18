@@ -35,7 +35,7 @@ All other `File` functionality works as you'd expect.
 Install from [npm](https://www.npmjs.com/):
 
 ```sh
-npm install @mjackson/lazy-file
+npm install @remix-run/lazy-file
 ```
 
 ## Usage
@@ -43,7 +43,7 @@ npm install @mjackson/lazy-file
 The low-level API can be used to create a `File` that streams content from anywhere:
 
 ```ts
-import { type LazyContent, LazyFile } from '@mjackson/lazy-file';
+import { type LazyContent, LazyFile } from '@remix-run/lazy-file';
 
 let content: LazyContent = {
   // The total length of this file in bytes.
@@ -70,7 +70,7 @@ file.type; // "text/plain"
 The `lazy-file/fs` export provides functions for reading from and writing to the local filesystem using the `File` API.
 
 ```ts
-import { openFile, writeFile } from '@mjackson/lazy-file/fs';
+import { openFile, writeFile } from '@remix-run/lazy-file/fs';
 
 // No data is read at this point, it's just a reference to a
 // file on the local filesystem
@@ -100,8 +100,8 @@ All file contents are read on-demand and nothing is ever buffered.
 
 ## Related Packages
 
-- [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage) - Uses `lazy-file/fs` internally to create streaming `File` objects from storage on disk
+- [`file-storage`](https://github.com/remix-run/remix/tree/v3/packages/file-storage) - Uses `lazy-file/fs` internally to create streaming `File` objects from storage on disk
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/v3/LICENSE)

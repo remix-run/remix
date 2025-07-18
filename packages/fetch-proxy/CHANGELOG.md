@@ -1,6 +1,10 @@
 # `fetch-proxy` CHANGELOG
 
-This is the changelog for [`fetch-proxy`](https://github.com/mjackson/remix-the-web/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/v3/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
+
+## HEAD
+
+- Renamed package from `@mjackson/fetch-proxy` to `@remix-run/fetch-proxy`
 
 ## v0.4.0 (2025-07-11)
 

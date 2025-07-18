@@ -1,14 +1,14 @@
 {
-  "name": "@mjackson/node-fetch-server",
+  "name": "@remix-run/node-fetch-server",
   "version": "0.7.0",
   "description": "Build servers for Node.js using the web fetch API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "url": "git+https://github.com/remix-run/remix.git",
     "directory": "packages/node-fetch-server"
   },
-  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/v3/packages/node-fetch-server#readme",
   "license": "MIT",
   "files": [
     "LICENSE",

@@ -19,20 +19,20 @@
 - Convenient `MultipartPart` API with `arrayBuffer`, `bytes`, `text`, `size`, and metadata access
 - Built-in file size limiting to prevent abuse
 - First-class Node.js support with native `http.IncomingMessage` compatibility
-- [Examples for every major runtime](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples)
+- [Examples for every major runtime](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser/examples)
 
 ## Installation
 
 Install from [npm](https://www.npmjs.com/):
 
 ```sh
-npm install @mjackson/multipart-parser
+npm install @remix-run/multipart-parser
 ```
 
 Or install from [JSR](https://jsr.io/):
 
 ```sh
-deno add @mjackson/multipart-parser
+deno add @remix-run/multipart-parser
 ```
 
 ## Usage
@@ -40,7 +40,7 @@ deno add @mjackson/multipart-parser
 The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It automatically validates the request is `multipart/form-data`, extracts the multipart boundary from the `Content-Type` header, parses all fields and files in the `request.body` stream, and gives each one to you as a `MultipartPart` object with a rich API for accessing its metadata and content.
 
 ```ts
-import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
+import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser';
 
 async function handleRequest(request: Request): void {
   try {
@@ -78,7 +78,7 @@ import {
   MultipartParseError,
   MaxFileSizeExceededError,
   parseMultipartRequest,
-} from '@mjackson/multipart-parser/node';
+} from '@remix-run/multipart-parser/node';
 
 const oneMb = Math.pow(2, 20);
 const maxFileSize = 10 * oneMb;
@@ -103,13 +103,13 @@ async function handleRequest(request: Request): Promise<Response> {
 
 ## Node.js Bindings
 
-The main module (`import from "@mjackson/multipart-parser"`) assumes you're working with [the fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) (`Request`, `ReadableStream`, etc). Support for these interfaces was added to Node.js by the [undici](https://github.com/nodejs/undici) project in [version 16.5.0](https://nodejs.org/en/blog/release/v16.5.0).
+The main module (`import from "@remix-run/multipart-parser"`) assumes you're working with [the fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) (`Request`, `ReadableStream`, etc). Support for these interfaces was added to Node.js by the [undici](https://github.com/nodejs/undici) project in [version 16.5.0](https://nodejs.org/en/blog/release/v16.5.0).
 
 If however you're building a server for Node.js that relies on node-specific APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
 
 ```ts
 import * as http from 'node:http';
-import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser/node';
+import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser/node';
 
 let server = http.createServer(async (req, res) => {
   try {
@@ -133,7 +133,7 @@ server.listen(8080);
 If you're working directly with multipart boundaries and buffers/streams of multipart data that are not necessarily part of a request, `multipart-parser` provides a low-level `parseMultipart()` API that you can use directly:
 
 ```ts
-import { parseMultipart } from '@mjackson/multipart-parser';
+import { parseMultipart } from '@remix-run/multipart-parser';
 
 let message = new Uint8Array(/* ... */);
 let boundary = '----WebKitFormBoundary56eac3x';
@@ -146,7 +146,7 @@ for (let part of parseMultipart(message, { boundary })) {
 In addition, the `parseMultipartStream` function provides an `async` generator interface for multipart data in a `ReadableStream`:
 
 ```ts
-import { parseMultipartStream } from '@mjackson/multipart-parser';
+import { parseMultipartStream } from '@remix-run/multipart-parser';
 
 let message = new ReadableStream(/* ... */);
 let boundary = '----WebKitFormBoundary56eac3x';
@@ -158,12 +158,12 @@ for await (let part of parseMultipartStream(message, { boundary })) {
 
 ## Examples
 
-The [`examples` directory](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples) contains a few working examples of how you can use this library:
+The [`examples` directory](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser/examples) contains a few working examples of how you can use this library:
 
-- [`examples/bun`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples/bun) - using multipart-parser in Bun
-- [`examples/cf-workers`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples/cf-workers) - using multipart-parser in a Cloudflare Worker and storing file uploads in R2
-- [`examples/deno`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples/deno) - using multipart-parser in Deno
-- [`examples/node`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples/node) - using multipart-parser in Node.js
+- [`examples/bun`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser/examples/bun) - using multipart-parser in Bun
+- [`examples/cf-workers`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser/examples/cf-workers) - using multipart-parser in a Cloudflare Worker and storing file uploads in R2
+- [`examples/deno`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser/examples/deno) - using multipart-parser in Deno
+- [`examples/node`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser/examples/node) - using multipart-parser in Node.js
 
 ## Benchmark
 
@@ -172,7 +172,7 @@ The [`examples` directory](https://github.com/mjackson/remix-the-web/tree/main/p
 The results of running the benchmarks on my laptop:
 
 ```
-> @mjackson/multipart-parser@0.10.1 bench:node /Users/michael/Projects/remix-the-web/packages/multipart-parser
+> @remix-run/multipart-parser@0.10.1 bench:node /Users/michael/Projects/remix-the-web/packages/multipart-parser
 > node --disable-warning=ExperimentalWarning ./bench/runner.ts
 
 Platform: Darwin (24.5.0)
@@ -188,7 +188,7 @@ Node.js v24.0.2
 │ @fastify/busboy  │ '0.05 ms ± 0.13' │ '1.23 ms ± 0.09' │ '0.45 ms ± 0.22' │ '11.81 ms ± 0.11' │
 └──────────────────┴──────────────────┴──────────────────┴──────────────────┴───────────────────┘
 
-> @mjackson/multipart-parser@0.10.1 bench:bun /Users/michael/Projects/remix-the-web/packages/multipart-parser
+> @remix-run/multipart-parser@0.10.1 bench:bun /Users/michael/Projects/remix-the-web/packages/multipart-parser
 > bun run ./bench/runner.ts
 
 Platform: Darwin (24.5.0)
@@ -204,7 +204,7 @@ Bun 1.2.13
 │  @fastify/busboy │ 0.06 ms ± 0.18 │ 4.04 ms ± 0.08 │ 0.48 ms ± 0.06  │ 39.91 ms ± 0.37 │
 └──────────────────┴────────────────┴────────────────┴─────────────────┴─────────────────┘
 
-> @mjackson/multipart-parser@0.10.1 bench:deno /Users/michael/Projects/remix-the-web/packages/multipart-parser
+> @remix-run/multipart-parser@0.10.1 bench:deno /Users/michael/Projects/remix-the-web/packages/multipart-parser
 > deno run --allow-sys ./bench/runner.ts
 
 Platform: Darwin (24.5.0)
@@ -223,8 +223,8 @@ Deno 2.3.6
 
 ## Related Packages
 
-- [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser) - Uses `multipart-parser` internally to parse multipart requests and generate `FileUpload`s for storage
-- [`headers`](https://github.com/mjackson/remix-the-web/tree/main/packages/headers) - Used internally to parse HTTP headers and get metadata (filename, content type) for each `MultipartPart`
+- [`form-data-parser`](https://github.com/remix-run/remix/tree/v3/packages/form-data-parser) - Uses `multipart-parser` internally to parse multipart requests and generate `FileUpload`s for storage
+- [`headers`](https://github.com/remix-run/remix/tree/v3/packages/headers) - Used internally to parse HTTP headers and get metadata (filename, content type) for each `MultipartPart`
 
 ## Credits
 
@@ -232,4 +232,4 @@ Thanks to Jacob Ebey who gave me several code reviews on this project prior to p
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/v3/LICENSE)

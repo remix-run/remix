@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as http from 'node:http';
 import tmp from 'tmp';
 
-import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser/node';
+import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser/node';
 
 const PORT = 3000;
 

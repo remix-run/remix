@@ -1,6 +1,10 @@
 # `lazy-file` CHANGELOG
 
-This is the changelog for [`lazy-file`](https://github.com/mjackson/remix-the-web/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/v3/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
+
+## HEAD
+
+- Renamed package from `@mjackson/lazy-file` to `@remix-run/lazy-file`
 
 ## v3.4.0 (2025-06-10)
 

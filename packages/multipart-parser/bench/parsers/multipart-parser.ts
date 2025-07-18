@@ -1,4 +1,4 @@
-import { parseMultipart } from '@mjackson/multipart-parser';
+import { parseMultipart } from '@remix-run/multipart-parser';
 
 import { MultipartMessage } from '../messages.ts';
 

@@ -1,4 +1,4 @@
-import SuperHeaders from '@mjackson/headers';
+import SuperHeaders from '@remix-run/headers';
 
 export type PartValue =
   | string

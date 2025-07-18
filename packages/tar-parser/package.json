@@ -1,15 +1,15 @@
 {
-  "name": "@mjackson/tar-parser",
+  "name": "@remix-run/tar-parser",
   "version": "0.3.0",
   "description": "A fast, efficient parser for tar streams in any JavaScript environment",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "url": "git+https://github.com/remix-run/remix.git",
     "directory": "packages/tar-parser"
   },
-  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/tar-parser#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/v3/packages/tar-parser#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -23,15 +23,24 @@
   "main": "./dist/tar-parser.cjs",
   "exports": {
     ".": {
-      "types": "./dist/tar-parser.d.ts",
-      "import": "./dist/tar-parser.js",
-      "require": "./dist/tar-parser.cjs",
-      "default": "./dist/tar-parser.js"
+      "types": "./src/tar-parser.ts",
+      "default": "./src/tar-parser.ts"
     },
     "./package.json": "./package.json"
   },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/tar-parser.d.ts",
+        "import": "./dist/tar-parser.js",
+        "require": "./dist/tar-parser.cjs",
+        "default": "./dist/tar-parser.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
   "devDependencies": {
-    "@mjackson/lazy-file": "workspace:^",
+    "@remix-run/lazy-file": "workspace:^",
     "@types/node": "^20.14.10",
     "esbuild": "^0.25.5"
   },

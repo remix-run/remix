@@ -1,9 +1,10 @@
 # `node-fetch-server` CHANGELOG
 
-This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/v3/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
 ## HEAD
 
+- Renamed package from `@mjackson/node-fetch-server` to `@remix-run/node-fetch-server`
 - Handle backpressure correctly in response streaming
 
 ## v0.7.0 (2025-06-06)
@@ -22,7 +23,7 @@ This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remi
 
 ```ts
 import * as http2 from 'node:http2';
-import { createRequestListener } from '@mjackson/node-fetch-server';
+import { createRequestListener } from '@remix-run/node-fetch-server';
 
 let server = http2.createSecureServer(options);
 

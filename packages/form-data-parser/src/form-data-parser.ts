@@ -11,4 +11,4 @@ export {
   MultipartParseError,
   MaxHeaderSizeExceededError,
   MaxFileSizeExceededError,
-} from '@mjackson/multipart-parser';
+} from '@remix-run/multipart-parser';

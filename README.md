@@ -63,8 +63,8 @@ All packages are published in both modern ESM and legacy CJS formats for maximum
 
 ## Contributing
 
-We welcome contributions! If you'd like to contribute, please feel free to open an issue or submit a pull request. See [CONTRIBUTING](https://github.com/mjackson/remix-the-web/blob/main/CONTRIBUTING.md) for more information.
+We welcome contributions! If you'd like to contribute, please feel free to open an issue or submit a pull request. See [CONTRIBUTING](https://github.com/remix-run/remix/blob/v3/CONTRIBUTING.md) for more information.
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/v3/LICENSE)

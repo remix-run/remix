@@ -1,15 +1,15 @@
 {
-  "name": "@mjackson/headers",
+  "name": "@remix-run/headers",
   "version": "0.11.1",
   "description": "A toolkit for working with HTTP headers in JavaScript",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "url": "git+https://github.com/remix-run/remix.git",
     "directory": "packages/headers"
   },
-  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/headers#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/v3/packages/headers#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -23,12 +23,21 @@
   "main": "./dist/headers.cjs",
   "exports": {
     ".": {
-      "types": "./dist/headers.d.ts",
-      "import": "./dist/headers.js",
-      "require": "./dist/headers.cjs",
-      "default": "./dist/headers.js"
+      "types": "./src/headers.ts",
+      "default": "./src/headers.ts"
     },
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/headers.d.ts",
+        "import": "./dist/headers.js",
+        "require": "./dist/headers.cjs",
+        "default": "./dist/headers.js"
+      },
+      "./package.json": "./package.json"
+    }
   },
   "devDependencies": {
     "@types/node": "^20.14.10",

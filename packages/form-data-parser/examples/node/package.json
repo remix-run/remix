@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@mjackson/file-storage": "workspace:*",
-    "@mjackson/form-data-parser": "workspace:*",
-    "@mjackson/multipart-parser": "workspace:*",
-    "@mjackson/node-fetch-server": "workspace:*"
+    "@remix-run/file-storage": "workspace:*",
+    "@remix-run/form-data-parser": "workspace:*",
+    "@remix-run/multipart-parser": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",

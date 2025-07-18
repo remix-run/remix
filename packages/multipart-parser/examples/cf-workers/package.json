@@ -2,7 +2,7 @@
   "name": "multipart-parser-cf-workers-example",
   "private": true,
   "dependencies": {
-    "@mjackson/multipart-parser": "workspace:*"
+    "@remix-run/multipart-parser": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240725.0",

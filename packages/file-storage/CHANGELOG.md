@@ -1,6 +1,10 @@
 # `file-storage` CHANGELOG
 
-This is the changelog for [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/v3/packages/file-storage). It follows [semantic versioning](https://semver.org/).
+
+## HEAD
+
+- Renamed package from `@mjackson/file-storage` to `@remix-run/file-storage`
 
 ## v0.7.0 (2025-06-10)
 

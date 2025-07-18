@@ -1,4 +1,4 @@
-import { SetCookie } from '@mjackson/headers';
+import { SetCookie } from '@remix-run/headers';
 
 export interface FetchProxyOptions {
   /**

@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { parseFormData } from '@mjackson/form-data-parser';
+import { parseFormData } from '@remix-run/form-data-parser';
 
 import { MemoryFileStorage } from './memory-file-storage.ts';
 

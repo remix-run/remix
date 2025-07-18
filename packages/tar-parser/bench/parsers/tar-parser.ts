@@ -1,5 +1,5 @@
-import { parseTar } from '@mjackson/tar-parser';
-import { openFile } from '@mjackson/lazy-file/fs';
+import { parseTar } from '@remix-run/tar-parser';
+import { openFile } from '@remix-run/lazy-file/fs';
 
 export async function parse(filename: string): Promise<number> {
   let stream = openFile(filename).stream().pipeThrough(new DecompressionStream('gzip'));

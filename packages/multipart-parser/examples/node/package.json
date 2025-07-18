@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@mjackson/multipart-parser": "workspace:*",
+    "@remix-run/multipart-parser": "workspace:*",
     "tmp": "^0.2.3"
   },
   "devDependencies": {

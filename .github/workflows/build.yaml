@@ -14,7 +14,7 @@ on:
       - 'v3'
 
 jobs:
-  build-and-test:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -35,8 +35,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build packages
-        run: pnpm build
+      # - name: Build packages
+      #   run: pnpm build
 
       - name: Run tests
         run: pnpm test

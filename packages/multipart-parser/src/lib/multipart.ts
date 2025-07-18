@@ -1,4 +1,4 @@
-import Headers from '@mjackson/headers';
+import Headers from '@remix-run/headers';
 
 import { readStream } from './read-stream.ts';
 import type { SearchFunction, PartialTailSearchFunction } from './buffer-search.ts';

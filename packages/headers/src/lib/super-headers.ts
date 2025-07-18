@@ -146,7 +146,7 @@ const SetCookieKey = 'set-cookie';
 /**
  * An enhanced JavaScript `Headers` interface with type-safe access.
  *
- * [API Reference](https://github.com/mjackson/remix-the-web/tree/main/packages/headers)
+ * [API Reference](https://github.com/remix-run/remix/tree/v3/packages/headers)
  *
  * [MDN `Headers` Base Class Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
  */

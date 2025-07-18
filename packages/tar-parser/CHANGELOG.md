@@ -1,6 +1,10 @@
 # `tar-parser` CHANGELOG
 
-This is the changelog for [`tar-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/tar-parser). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`tar-parser`](https://github.com/remix-run/remix/tree/v3/packages/tar-parser). It follows [semantic versioning](https://semver.org/).
+
+## HEAD
+
+- Renamed package from `@mjackson/tar-parser` to `@remix-run/tar-parser`
 
 ## v0.3.0 (2025-06-06)
 

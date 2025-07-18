@@ -1,7 +1,7 @@
 import * as http2 from 'node:http2';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { createRequestListener } from '@mjackson/node-fetch-server';
+import { createRequestListener } from '@remix-run/node-fetch-server';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 const PORT = 3000;

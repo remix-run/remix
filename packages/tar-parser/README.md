@@ -15,7 +15,7 @@
 Install from [npm](https://www.npmjs.com/):
 
 ```sh
-npm install @mjackson/tar-parser
+npm install @remix-run/tar-parser
 ```
 
 ## Usage
@@ -23,10 +23,10 @@ npm install @mjackson/tar-parser
 The main parser interface is the `parseTar(archive, handler)` function:
 
 ```ts
-import { parseTar } from '@mjackson/tar-parser';
+import { parseTar } from '@remix-run/tar-parser';
 
 let response = await fetch(
-  'https://github.com/mjackson/remix-the-web/archive/refs/heads/main.tar.gz',
+  'https://github.com/remix-run/remix/archive/refs/heads/main.tar.gz',
 );
 
 await parseTar(response.body.pipeThrough(new DecompressionStream('gzip')), (entry) => {
@@ -49,7 +49,7 @@ await parseTar(response.body, { filenameEncoding: 'latin1' }, (entry) => {
 `tar-parser` performs on par with other popular tar parsing libraries on Node.js.
 
 ```
-> @mjackson/tar-parser@0.0.0 bench /Users/michael/Projects/remix-the-web/packages/tar-parser
+> @remix-run/tar-parser@0.0.0 bench /Users/michael/Projects/remix-the-web/packages/tar-parser
 > node --disable-warning=ExperimentalWarning ./bench/runner.ts
 
 Platform: Darwin (24.0.0)
@@ -71,4 +71,4 @@ Node.js v22.8.0
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/v3/LICENSE)
