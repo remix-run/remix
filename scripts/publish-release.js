@@ -6,25 +6,59 @@ import { getPackageDir, getPackageFile } from './utils/packages.js';
 import { logAndExec } from './utils/process.js';
 import { isValidVersion } from './utils/semver.js';
 
-let packageName = process.argv[2];
-let version = process.argv[3];
+let tag = process.argv[2];
 
-// Support passing a tag directly, e.g. `headers@1.0.0`
-if (packageName.includes('@')) {
-  let split = packageName.split('@');
-  packageName = split[0];
-  version = split[1];
+// If no argument provided, try to detect a tag at HEAD
+if (tag === undefined) {
+  let currentTags = cp
+    .execSync('git tag --points-at HEAD')
+    .toString()
+    .trim()
+    .split('\n')
+    .filter(Boolean);
+
+  // Look for tags that match the package@version format
+  let packageTags = currentTags.filter((tag) => {
+    let match = tag.match(/^([^@]+)@(\d+\.\d+\.\d+.*)$/);
+    return match && isValidVersion(match[2]);
+  });
+
+  if (packageTags.length === 0) {
+    console.error('No package tags found at HEAD');
+    console.error(`Usage:
+    node publish-release.js <tag>
+    node publish-release.js # auto-detect tag at HEAD`);
+    process.exit(1);
+  }
+
+  // TODO: Support tagging and publishing multiple packages at once
+  if (packageTags.length > 1) {
+    console.error('Multiple package tags found at HEAD:');
+    packageTags.forEach((tag) => console.error(`  - ${tag}`));
+    console.error('Please specify which tag to publish');
+    process.exit(1);
+  }
+
+  // Use the single tag found
+  tag = packageTags[0];
+  console.log(`Auto-detected tag: ${tag}`);
 }
 
-if (packageName === undefined || version === undefined) {
-  console.error(`Usage:
-    node publish-release.js <packageName> <version>
-    node publish-release.js <tag>`);
+// Parse the tag
+if (!tag.includes('@')) {
+  console.error(`Invalid tag format: "${tag}"`);
+  console.error('Tag must be in format: packageName@version');
   process.exit(1);
 }
 
-let tag = `${packageName}@${version}`;
+let split = tag.split('@');
+let packageName = split[0];
+let version = split[1];
 
+if (!packageName || !version) {
+  console.error(`Invalid tag: "${tag}"`);
+  process.exit(1);
+}
 if (packageName === '' || !isValidVersion(version)) {
   console.error(`Invalid tag: "${tag}"`);
   process.exit(1);
