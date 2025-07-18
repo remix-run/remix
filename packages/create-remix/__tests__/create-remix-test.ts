@@ -1,1480 +1,363 @@
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
-import { spawn } from "node:child_process";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { pathToFileURL } from "node:url";
-import fse from "fs-extra";
-import semver from "semver";
-import stripAnsi from "strip-ansi";
+import * as readline from "readline";
+import crossSpawn from "cross-spawn";
 
-import { jestTimeout } from "./setupAfterEnv";
 import { createRemix } from "../index";
-import { server } from "./msw";
 
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterAll(() => server.close());
+// Mock dependencies
+jest.mock("readline");
+jest.mock("cross-spawn");
 
-// this is so we can mock "npm install" etc. in a cross-platform way
-jest.mock("execa");
-
-const DOWN = "\x1B\x5B\x42";
-const ENTER = "\x0D";
-
-const TEMP_DIR = path.join(
-  fse.realpathSync(tmpdir()),
-  `remix-tests-${Math.random().toString(32).slice(2)}`
-);
-function maskTempDir(string: string) {
-  return string.replace(TEMP_DIR, "<TEMP_DIR>");
-}
-
-jest.setTimeout(30_000);
-beforeAll(async () => {
-  await fse.remove(TEMP_DIR);
-  await fse.ensureDir(TEMP_DIR);
-});
-
-afterAll(async () => {
-  await fse.remove(TEMP_DIR);
-});
-
-describe("create-remix CLI", () => {
-  let tempDirs = new Set<string>();
+describe("createRemix", () => {
+  let mockReadline: any;
+  let mockSpawn: any;
+  let mockChildProcess: any;
+  let consoleLogSpy: jest.SpyInstance;
 
   beforeEach(() => {
+    // Reset all mocks
     jest.clearAllMocks();
+
+    // Mock console.log
+    consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
+
+    // Setup readline mock
+    mockReadline = {
+      question: jest.fn(),
+      close: jest.fn(),
+      on: jest.fn(),
+    };
+    (readline.createInterface as jest.Mock).mockReturnValue(mockReadline);
+
+    // Setup child process mock
+    mockChildProcess = {
+      on: jest.fn(),
+    };
+    mockSpawn = crossSpawn as jest.MockedFunction<typeof crossSpawn>;
+    mockSpawn.mockReturnValue(mockChildProcess as any);
   });
 
-  afterEach(async () => {
-    for (let dir of tempDirs) {
-      await fse.remove(dir);
-    }
-    tempDirs = new Set<string>();
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
   });
 
-  function getProjectDir(name: string) {
-    let tmpDir = path.join(TEMP_DIR, name);
-    tempDirs.add(tmpDir);
-    return tmpDir;
-  }
-
-  it("supports the --help flag", async () => {
-    let { stdout } = await execCreateRemix({
-      args: ["--help"],
-    });
-    expect(stdout.trim()).toMatchInlineSnapshot(`
-      "create-remix  
-
-      Usage:
-
-      $ create-remix <projectDir> <...options>
-
-      Values:
-
-      projectDir          The Remix project directory
-
-      Options:
-
-      --help, -h          Print this help message and exit
-      --version, -V       Print the CLI version and exit
-      --no-color          Disable ANSI colors in console output
-      --no-motion         Disable animations in console output
-
-      --template <name>   The project template to use
-      --[no-]install      Whether or not to install dependencies after creation
-      --package-manager   The package manager to use
-      --show-install-output   Whether to show the output of the install process
-      --[no-]init-script  Whether or not to run the template's remix.init script, if present
-      --[no-]git-init     Whether or not to initialize a Git repository
-      --yes, -y           Skip all option prompts and run setup
-      --remix-version, -v     The version of Remix to use
-
-      Creating a new project:
-
-      Remix projects are created from templates. A template can be:
-
-      - a GitHub repo shorthand, :username/:repo or :username/:repo/:directory
-      - the URL of a GitHub repo (or directory within it)
-      - the URL of a tarball
-      - a file path to a directory of files
-      - a file path to a tarball
-
-      $ create-remix my-app --template remix-run/grunge-stack
-      $ create-remix my-app --template remix-run/remix/templates/remix
-      $ create-remix my-app --template remix-run/examples/basic
-      $ create-remix my-app --template :username/:repo
-      $ create-remix my-app --template :username/:repo/:directory
-      $ create-remix my-app --template https://github.com/:username/:repo
-      $ create-remix my-app --template https://github.com/:username/:repo/tree/:branch
-      $ create-remix my-app --template https://github.com/:username/:repo/tree/:branch/:directory
-      $ create-remix my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
-      $ create-remix my-app --template https://example.com/remix-template.tar.gz
-      $ create-remix my-app --template ./path/to/remix-template
-      $ create-remix my-app --template ./path/to/remix-template.tar.gz
-
-      To create a new project from a template in a private GitHub repo,
-      pass the \`token\` flag with a personal access token with access
-      to that repo.
-
-      Initialize a project:
-
-      Remix project templates may contain a \`remix.init\` directory
-      with a script that initializes the project. This script automatically
-      runs during \`remix create\`, but if you ever need to run it manually
-      you can run:
-
-      $ remix init"
-    `);
-  });
-
-  it("supports the --version flag", async () => {
-    let { stdout } = await execCreateRemix({
-      args: ["--version"],
-    });
-    expect(!!semver.valid(stdout.trim())).toBe(true);
-  });
-
-  it("allows you to go through the prompts", async () => {
-    let projectDir = getProjectDir("prompts");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [],
-      interactions: [
-        {
-          question: /where.*create.*project/i,
-          type: [projectDir, ENTER],
-        },
-        {
-          question: /init.*git/i,
-          type: ["n"],
-        },
-        {
-          question: /install dependencies/i,
-          type: ["n"],
-        },
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("supports the --yes flag", async () => {
-    let projectDir = getProjectDir("yes");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [projectDir, "--yes", "--no-git-init", "--no-install"],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("errors when project directory isn't provided when shell isn't interactive", async () => {
-    let projectDir = getProjectDir("non-interactive-no-project-dir");
-
-    let { status, stderr } = await execCreateRemix({
-      args: ["--no-install"],
-      interactive: false,
-    });
-
-    expect(stderr.trim()).toMatchInlineSnapshot(
-      `"▲  Oh no! No project directory provided"`
-    );
-    expect(status).toBe(1);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeFalsy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
-  });
-
-  it("works for GitHub username/repo combo", async () => {
-    let projectDir = getProjectDir("github-username-repo");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        "remix-fake-tester-username/remix-fake-tester-repo",
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("works for GitHub username/repo/path combo", async () => {
-    let projectDir = getProjectDir("github-username-repo-path");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        "fake-remix-tester/nested-dir/stack",
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("works for GitHub username/repo/path combo (when dots exist in folder)", async () => {
-    let projectDir = getProjectDir("github-username-repo-path-dots");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        "fake-remix-tester/nested-dir/folder.with.dots",
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("fails for GitHub username/repo/path combo when path doesn't exist", async () => {
-    let projectDir = getProjectDir("github-username-repo-path-missing");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        "fake-remix-tester/nested-dir/this/path/does/not/exist",
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toMatchInlineSnapshot(
-      `"▲  Oh no! The path "this/path/does/not/exist" was not found in this GitHub repo."`
-    );
-    expect(status).toBe(1);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeFalsy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
-  });
-
-  it("fails for private GitHub username/repo combo without a token", async () => {
-    let projectDir = getProjectDir("private-repo-no-token");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        "private-org/private-repo",
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toMatchInlineSnapshot(
-      `"▲  Oh no! There was a problem fetching the file from GitHub. The request responded with a 404 status. Please try again later."`
-    );
-    expect(status).toBe(1);
-  });
-
-  it("succeeds for private GitHub username/repo combo with a valid token", async () => {
-    let projectDir = getProjectDir("github-username-repo-with-token");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        "private-org/private-repo",
-        "--no-git-init",
-        "--no-install",
-        "--token",
-        "valid-token",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("works for remote tarballs", async () => {
-    let projectDir = getProjectDir("remote-tarball");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        "https://example.com/remix-stack.tar.gz",
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("fails for private github release tarballs", async () => {
-    let projectDir = getProjectDir("private-release-tarball-no-token");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        "https://github.com/private-org/private-repo/releases/download/v0.0.1/stack.tar.gz",
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toMatchInlineSnapshot(
-      `"▲  Oh no! There was a problem fetching the file from GitHub. The request responded with a 404 status. Please try again later."`
-    );
-    expect(status).toBe(1);
-  });
-
-  it("succeeds for private github release tarballs when including token", async () => {
-    let projectDir = getProjectDir("private-release-tarball-with-token");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        "https://github.com/private-org/private-repo/releases/download/v0.0.1/stack.tar.gz",
-        "--token",
-        "valid-token",
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("works for different branches and nested paths", async () => {
-    let projectDir = getProjectDir("diff-branch");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        "https://github.com/fake-remix-tester/nested-dir/tree/dev/stack",
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("fails for different branches and nested paths when path doesn't exist", async () => {
-    let projectDir = getProjectDir("diff-branch-invalid-path");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        "https://github.com/fake-remix-tester/nested-dir/tree/dev/this/path/does/not/exist",
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toMatchInlineSnapshot(
-      `"▲  Oh no! The path "this/path/does/not/exist" was not found in this GitHub repo."`
-    );
-    expect(status).toBe(1);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeFalsy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
-  });
-
-  it("works for a path to a tarball on disk", async () => {
-    let projectDir = getProjectDir("local-tarball");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        path.join(__dirname, "fixtures", "arc.tar.gz"),
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("works for a path to a tgz tarball on disk", async () => {
-    let projectDir = getProjectDir("local-tarball");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        path.join(__dirname, "fixtures", "arc.tgz"),
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("works for a file URL to a tarball on disk", async () => {
-    let projectDir = getProjectDir("file-url-tarball");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        pathToFileURL(
-          path.join(__dirname, "fixtures", "arc.tar.gz")
-        ).toString(),
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("works for a file path to a directory on disk", async () => {
-    let projectDir = getProjectDir("local-directory");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        path.join(__dirname, "fixtures", "stack"),
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("works for a file URL to a directory on disk", async () => {
-    let projectDir = getProjectDir("file-url-directory");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        pathToFileURL(path.join(__dirname, "fixtures", "stack")).toString(),
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("prompts to run remix.init script when installing dependencies", async () => {
-    let projectDir = getProjectDir("remix-init-prompt");
-
-    let { status, stdout, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        path.join(__dirname, "fixtures", "successful-remix-init"),
-        "--no-git-init",
-        "--debug",
-      ],
-      interactions: [
-        {
-          question: /install dependencies/i,
-          type: ["y", ENTER],
-        },
-        {
-          question: /init script/i,
-          type: ["y", ENTER],
-        },
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(stdout).toContain(`Template's remix.init script complete`);
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
-  });
-
-  it("doesn't prompt to run remix.init script when not installing dependencies", async () => {
-    let projectDir = getProjectDir("remix-init-skip-on-no-install");
-
-    let { status, stdout, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        path.join(__dirname, "fixtures", "successful-remix-init"),
-        "--no-git-init",
-      ],
-      interactions: [
-        {
-          question: /install dependencies/i,
-          type: ["n", ENTER],
-        },
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(stdout).toContain(`Skipping template's remix.init script.`);
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-
-    // Init script hasn't run so file exists
-    expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeFalsy();
-
-    // Init script hasn't run so remix.init directory still exists
-    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
-  });
-
-  it("runs remix.init script when --install and --init-script flags are passed", async () => {
-    let projectDir = getProjectDir("remix-init-prompt-with-flags");
-
-    let { status, stdout, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        path.join(__dirname, "fixtures", "successful-remix-init"),
-        "--no-git-init",
-        "--install",
-        "--init-script",
-        "--debug",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-
-    expect(stdout).toContain(`Template's remix.init script complete`);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
-  });
-
-  it("doesn't run remix.init script when --no-install flag is passed, even when --init-script flag is passed", async () => {
-    let projectDir = getProjectDir(
-      "remix-init-skip-on-no-install-with-init-flag"
-    );
-
-    let { status, stdout, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        path.join(__dirname, "fixtures", "successful-remix-init"),
-        "--no-git-init",
-        "--no-install",
-        "--init-script",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(stdout).toContain(`Skipping template's remix.init script.`);
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-
-    // Init script hasn't run so file exists
-    expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeFalsy();
-
-    // Init script hasn't run so remix.init directory still exists
-    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
-  });
-
-  it("doesn't run remix.init script when --no-init-script flag is passed", async () => {
-    let projectDir = getProjectDir("remix-init-skip-on-no-init-flag");
-
-    let { status, stdout, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        path.join(__dirname, "fixtures", "successful-remix-init"),
-        "--no-git-init",
-        "--install",
-        "--no-init-script",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(stdout).toContain(`Skipping template's remix.init script.`);
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-
-    // Init script hasn't run so file exists
-    expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeFalsy();
-
-    // Init script hasn't run so remix.init directory still exists
-    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
-  });
-
-  it("throws an error when invalid remix.init script when automatically ran", async () => {
-    let projectDir = getProjectDir("invalid-remix-init-auto");
-
-    let { status, stderr } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        path.join(__dirname, "fixtures", "failing-remix-init"),
-        "--no-git-init",
-        "--install",
-        "--init-script",
-      ],
-    });
-
-    expect(stderr.trim()).toMatchInlineSnapshot(
-      `"▲  Oh no! Template's remix.init script failed"`
-    );
-    expect(status).toBe(1);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeFalsy();
-    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
-  });
-
-  it("runs npm install by default", async () => {
-    let originalUserAgent = process.env.npm_config_user_agent;
-    process.env.npm_config_user_agent = undefined;
-
-    let projectDir = getProjectDir("npm-install-default");
-
-    let execa = require("execa");
-    execa.mockImplementation(async () => {});
-
-    // Suppress terminal output
-    let stdoutMock = jest
-      .spyOn(process.stdout, "write")
-      .mockImplementation(() => true);
-
-    await createRemix([
-      projectDir,
-      "--template",
-      path.join(__dirname, "fixtures", "blank"),
-      "--no-git-init",
-      "--yes",
-    ]);
-
-    stdoutMock.mockReset();
-
-    expect(execa).toHaveBeenCalledWith(
-      "npm",
-      expect.arrayContaining(["install"]),
-      expect.anything()
-    );
-
-    process.env.npm_config_user_agent = originalUserAgent;
-  });
-
-  it("runs npm install if package manager in user agent string is unknown", async () => {
-    let originalUserAgent = process.env.npm_config_user_agent;
-    process.env.npm_config_user_agent =
-      "unknown_package_manager/1.0.0 npm/? node/v14.17.0 linux x64";
-
-    let projectDir = getProjectDir("npm-install-on-unknown-package-manager");
-
-    let execa = require("execa");
-    execa.mockImplementation(async () => {});
-
-    // Suppress terminal output
-    let stdoutMock = jest
-      .spyOn(process.stdout, "write")
-      .mockImplementation(() => true);
-
-    await createRemix([
-      projectDir,
-      "--template",
-      path.join(__dirname, "fixtures", "blank"),
-      "--no-git-init",
-      "--yes",
-    ]);
-
-    stdoutMock.mockReset();
-
-    expect(execa).toHaveBeenCalledWith(
-      "npm",
-      expect.arrayContaining(["install"]),
-      expect.anything()
-    );
-
-    process.env.npm_config_user_agent = originalUserAgent;
-  });
-
-  it("recognizes when npm was used to run the command", async () => {
-    let originalUserAgent = process.env.npm_config_user_agent;
-    process.env.npm_config_user_agent =
-      "npm/8.19.4 npm/? node/v14.17.0 linux x64";
-
-    let projectDir = getProjectDir("npm-install-from-user-agent");
-
-    let execa = require("execa");
-    execa.mockImplementation(async () => {});
-
-    // Suppress terminal output
-    let stdoutMock = jest
-      .spyOn(process.stdout, "write")
-      .mockImplementation(() => true);
-
-    await createRemix([
-      projectDir,
-      "--template",
-      path.join(__dirname, "fixtures", "blank"),
-      "--no-git-init",
-      "--yes",
-    ]);
-
-    stdoutMock.mockReset();
-
-    expect(execa).toHaveBeenCalledWith(
-      "npm",
-      expect.arrayContaining(["install"]),
-      expect.anything()
-    );
-    process.env.npm_config_user_agent = originalUserAgent;
-  });
-
-  it("recognizes when Yarn was used to run the command", async () => {
-    let originalUserAgent = process.env.npm_config_user_agent;
-    process.env.npm_config_user_agent =
-      "yarn/1.22.18 npm/? node/v14.17.0 linux x64";
-
-    let projectDir = getProjectDir("yarn-create-from-user-agent");
-
-    let execa = require("execa");
-    execa.mockImplementation(async () => {});
-
-    // Suppress terminal output
-    let stdoutMock = jest
-      .spyOn(process.stdout, "write")
-      .mockImplementation(() => true);
-
-    await createRemix([
-      projectDir,
-      "--template",
-      path.join(__dirname, "fixtures", "blank"),
-      "--no-git-init",
-      "--yes",
-    ]);
-
-    stdoutMock.mockReset();
-
-    expect(execa).toHaveBeenCalledWith(
-      "yarn",
-      expect.arrayContaining(["install"]),
-      expect.anything()
-    );
-    process.env.npm_config_user_agent = originalUserAgent;
-  });
-
-  it("recognizes when pnpm was used to run the command", async () => {
-    let originalUserAgent = process.env.npm_config_user_agent;
-    process.env.npm_config_user_agent =
-      "pnpm/6.32.3 npm/? node/v14.17.0 linux x64";
-
-    let projectDir = getProjectDir("pnpm-create-from-user-agent");
-
-    let execa = require("execa");
-    execa.mockImplementation(async () => {});
-
-    // Suppress terminal output
-    let stdoutMock = jest
-      .spyOn(process.stdout, "write")
-      .mockImplementation(() => true);
-
-    await createRemix([
-      projectDir,
-      "--template",
-      path.join(__dirname, "fixtures", "blank"),
-      "--no-git-init",
-      "--yes",
-    ]);
-
-    stdoutMock.mockReset();
-
-    expect(execa).toHaveBeenCalledWith(
-      "pnpm",
-      expect.arrayContaining(["install"]),
-      expect.anything()
-    );
-    process.env.npm_config_user_agent = originalUserAgent;
-  });
-
-  it("recognizes when Bun was used to run the command", async () => {
-    let originalUserAgent = process.env.npm_config_user_agent;
-    process.env.npm_config_user_agent =
-      "bun/0.7.0 npm/? node/v14.17.0 linux x64";
-
-    let projectDir = getProjectDir("bun-create-from-user-agent");
-
-    let execa = require("execa");
-    execa.mockImplementation(async () => {});
-
-    // Suppress terminal output
-    let stdoutMock = jest
-      .spyOn(process.stdout, "write")
-      .mockImplementation(() => true);
-
-    await createRemix([
-      projectDir,
-      "--template",
-      path.join(__dirname, "fixtures", "blank"),
-      "--no-git-init",
-      "--yes",
-    ]);
-
-    stdoutMock.mockReset();
-
-    expect(execa).toHaveBeenCalledWith(
-      "bun",
-      expect.arrayContaining(["install"]),
-      expect.anything()
-    );
-    process.env.npm_config_user_agent = originalUserAgent;
-  });
-
-  it("supports specifying the package manager, regardless of user agent", async () => {
-    let originalUserAgent = process.env.npm_config_user_agent;
-    process.env.npm_config_user_agent =
-      "yarn/1.22.18 npm/? node/v14.17.0 linux x64";
-
-    let projectDir = getProjectDir("pnpm-create-override");
-
-    let execa = require("execa");
-    execa.mockImplementation(async () => {});
-
-    // Suppress terminal output
-    let stdoutMock = jest
-      .spyOn(process.stdout, "write")
-      .mockImplementation(() => true);
-
-    await createRemix([
-      projectDir,
-      "--template",
-      path.join(__dirname, "fixtures", "blank"),
-      "--no-git-init",
-      "--yes",
-      "--package-manager",
-      "pnpm",
-    ]);
-
-    stdoutMock.mockReset();
-
-    expect(execa).toHaveBeenCalledWith(
-      "pnpm",
-      expect.arrayContaining(["install"]),
-      expect.anything()
-    );
-    process.env.npm_config_user_agent = originalUserAgent;
-  });
-
-  it("works when creating an app in the current dir", async () => {
-    let emptyDir = getProjectDir("current-dir-if-empty");
-    fse.mkdirSync(emptyDir);
-
-    let { status, stderr } = await execCreateRemix({
-      cwd: emptyDir,
-      args: [
-        ".",
-        "--template",
-        path.join(__dirname, "fixtures", "stack"),
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(emptyDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(emptyDir, "app/root.tsx"))).toBeTruthy();
-  });
-
-  it("does not copy .git nor node_modules directories if they exist in the template", async () => {
-    // Can't really commit this file into a git repo, so just create it as
-    // part of the test and then remove it when we're done
-    let templateWithIgnoredDirs = path.join(
-      __dirname,
-      "fixtures",
-      "with-ignored-dir"
-    );
-    fse.mkdirSync(path.join(templateWithIgnoredDirs, ".git"));
-    fse.createFileSync(
-      path.join(templateWithIgnoredDirs, ".git", "some-git-file.txt")
-    );
-    fse.mkdirSync(path.join(templateWithIgnoredDirs, "node_modules"));
-    fse.createFileSync(
-      path.join(
-        templateWithIgnoredDirs,
-        "node_modules",
-        "some-node-module-file.txt"
-      )
-    );
-
-    let projectDir = getProjectDir("with-git-dir");
-
-    try {
-      let { status, stderr } = await execCreateRemix({
-        args: [
-          projectDir,
-          "--template",
-          templateWithIgnoredDirs,
-          "--no-git-init",
-          "--no-install",
-        ],
-      });
-
-      expect(stderr.trim()).toBeFalsy();
-      expect(status).toBe(0);
-      expect(fse.existsSync(path.join(projectDir, ".git"))).toBeFalsy();
-      expect(fse.existsSync(path.join(projectDir, "node_modules"))).toBeFalsy();
-      expect(
-        fse.existsSync(path.join(projectDir, "package.json"))
-      ).toBeTruthy();
-    } finally {
-      fse.removeSync(path.join(templateWithIgnoredDirs, ".git"));
-      fse.removeSync(path.join(templateWithIgnoredDirs, "node_modules"));
-    }
-  });
-
-  it("changes star dependencies for only Remix packages", async () => {
-    let projectDir = getProjectDir("local-directory");
-
-    let { status } = await execCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        path.join(__dirname, "fixtures", "stack"),
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(status).toBe(0);
-
-    let packageJsonPath = path.join(projectDir, "package.json");
-    let packageJson = JSON.parse(String(fse.readFileSync(packageJsonPath)));
-    let dependencies = packageJson.dependencies;
-
-    expect(dependencies).toMatchObject({
-      "@remix-run/react": expect.any(String),
-      remix: expect.any(String),
-      "not-remix": "*",
-    });
-  });
-
-  describe("when project directory contains files", () => {
-    describe("interactive shell", () => {
-      let interactive = true;
-
-      it("works without prompt when there are no collisions", async () => {
-        let projectDir = getProjectDir("not-empty-dir-interactive");
-        fse.mkdirSync(projectDir);
-        fse.createFileSync(path.join(projectDir, "some-file.txt"));
-
-        let { status, stderr } = await execCreateRemix({
-          args: [
-            projectDir,
-            "--template",
-            path.join(__dirname, "fixtures", "stack"),
-            "--no-git-init",
-            "--no-install",
-          ],
-          interactive,
-        });
-
-        expect(stderr.trim()).toBeFalsy();
-        expect(status).toBe(0);
-        expect(
-          fse.existsSync(path.join(projectDir, "package.json"))
-        ).toBeTruthy();
-        expect(
-          fse.existsSync(path.join(projectDir, "app/root.tsx"))
-        ).toBeTruthy();
-      });
-
-      it("prompts for overwrite when there are collisions", async () => {
-        let notEmptyDir = getProjectDir("not-empty-dir-interactive-collisions");
-        fse.mkdirSync(notEmptyDir);
-        fse.createFileSync(path.join(notEmptyDir, "package.json"));
-        fse.createFileSync(path.join(notEmptyDir, "tsconfig.json"));
-
-        let { status, stdout, stderr } = await execCreateRemix({
-          args: [
-            notEmptyDir,
-            "--template",
-            path.join(__dirname, "fixtures", "stack"),
-            "--no-git-init",
-            "--no-install",
-          ],
-          interactive,
-          interactions: [
-            {
-              question: /contains files that will be overwritten/i,
-              type: ["y"],
-            },
-          ],
-        });
-
-        expect(stdout).toContain("Files that would be overwritten:");
-        expect(stdout).toContain("package.json");
-        expect(stdout).toContain("tsconfig.json");
-        expect(status).toBe(0);
-        expect(stderr.trim()).toBeFalsy();
-        expect(
-          fse.existsSync(path.join(notEmptyDir, "package.json"))
-        ).toBeTruthy();
-        expect(
-          fse.existsSync(path.join(notEmptyDir, "tsconfig.json"))
-        ).toBeTruthy();
-        expect(
-          fse.existsSync(path.join(notEmptyDir, "app/root.tsx"))
-        ).toBeTruthy();
-      });
-
-      it("works without prompt when --overwrite is specified", async () => {
-        let projectDir = getProjectDir(
-          "not-empty-dir-interactive-collisions-overwrite"
-        );
-        fse.mkdirSync(projectDir);
-        fse.createFileSync(path.join(projectDir, "package.json"));
-        fse.createFileSync(path.join(projectDir, "tsconfig.json"));
-
-        let { status, stdout, stderr } = await execCreateRemix({
-          args: [
-            projectDir,
-            "--template",
-            path.join(__dirname, "fixtures", "stack"),
-            "--overwrite",
-            "--no-git-init",
-            "--no-install",
-          ],
-        });
-
-        expect(stdout).toContain(
-          "Overwrite: overwriting files due to `--overwrite`"
-        );
-        expect(stdout).toContain("package.json");
-        expect(stdout).toContain("tsconfig.json");
-        expect(status).toBe(0);
-        expect(stderr.trim()).toBeFalsy();
-        expect(
-          fse.existsSync(path.join(projectDir, "package.json"))
-        ).toBeTruthy();
-        expect(
-          fse.existsSync(path.join(projectDir, "tsconfig.json"))
-        ).toBeTruthy();
-        expect(
-          fse.existsSync(path.join(projectDir, "app/root.tsx"))
-        ).toBeTruthy();
-      });
-    });
-
-    describe("non-interactive shell", () => {
-      let interactive = false;
-
-      it("works when there are no collisions", async () => {
-        let projectDir = getProjectDir("not-empty-dir-non-interactive");
-        fse.mkdirSync(projectDir);
-        fse.createFileSync(path.join(projectDir, "some-file.txt"));
-
-        let { status, stderr } = await execCreateRemix({
-          args: [
-            projectDir,
-            "--template",
-            path.join(__dirname, "fixtures", "stack"),
-            "--no-git-init",
-            "--no-install",
-          ],
-          interactive,
-        });
-
-        expect(stderr.trim()).toBeFalsy();
-        expect(status).toBe(0);
-        expect(
-          fse.existsSync(path.join(projectDir, "package.json"))
-        ).toBeTruthy();
-        expect(
-          fse.existsSync(path.join(projectDir, "app/root.tsx"))
-        ).toBeTruthy();
-      });
-
-      it("errors when there are collisions", async () => {
-        let projectDir = getProjectDir(
-          "not-empty-dir-non-interactive-collisions"
-        );
-        fse.mkdirSync(projectDir);
-        fse.createFileSync(path.join(projectDir, "package.json"));
-        fse.createFileSync(path.join(projectDir, "tsconfig.json"));
-
-        let { status, stderr } = await execCreateRemix({
-          args: [
-            projectDir,
-            "--template",
-            path.join(__dirname, "fixtures", "stack"),
-            "--no-git-init",
-            "--no-install",
-          ],
-          interactive,
-        });
-
-        expect(stderr.trim()).toMatchInlineSnapshot(`
-                  "▲  Oh no! Destination directory contains files that would be overwritten
-                           and no \`--overwrite\` flag was included in a non-interactive
-                           environment. The following files would be overwritten:
-                             package.json
-                             tsconfig.json"
-              `);
-        expect(status).toBe(1);
-        expect(
-          fse.existsSync(path.join(projectDir, "app/root.tsx"))
-        ).toBeFalsy();
-      });
-
-      it("works when there are collisions and --overwrite is specified", async () => {
-        let projectDir = getProjectDir(
-          "not-empty-dir-non-interactive-collisions-overwrite"
-        );
-        fse.mkdirSync(projectDir);
-        fse.createFileSync(path.join(projectDir, "package.json"));
-        fse.createFileSync(path.join(projectDir, "tsconfig.json"));
-
-        let { status, stdout, stderr } = await execCreateRemix({
-          args: [
-            projectDir,
-            "--template",
-            path.join(__dirname, "fixtures", "stack"),
-            "--no-git-init",
-            "--no-install",
-            "--overwrite",
-          ],
-          interactive,
-        });
-
-        expect(stdout).toContain(
-          "Overwrite: overwriting files due to `--overwrite`"
-        );
-        expect(stdout).toContain("package.json");
-        expect(stdout).toContain("tsconfig.json");
-        expect(status).toBe(0);
-        expect(stderr.trim()).toBeFalsy();
-        expect(
-          fse.existsSync(path.join(projectDir, "package.json"))
-        ).toBeTruthy();
-        expect(
-          fse.existsSync(path.join(projectDir, "tsconfig.json"))
-        ).toBeTruthy();
-        expect(
-          fse.existsSync(path.join(projectDir, "app/root.tsx"))
-        ).toBeTruthy();
-      });
-    });
-  });
-
-  describe("errors", () => {
-    it("identifies when a github repo is not accessible (403)", async () => {
-      let projectDir = getProjectDir("repo-403");
-
-      let { status, stderr } = await execCreateRemix({
-        args: [
-          projectDir,
-          "--template",
-          "error-username/403",
-          "--no-git-init",
-          "--no-install",
-        ],
-      });
-
-      expect(stderr.trim()).toMatchInlineSnapshot(
-        `"▲  Oh no! There was a problem fetching the file from GitHub. The request responded with a 403 status. Please try again later."`
+  describe("when user confirms with 'y'", () => {
+    it("should spawn the command and resolve on successful exit", async () => {
+      // Arrange
+      let argv = ["--template", "my-template"];
+      let questionCallback: Function;
+      let exitHandler: Function;
+
+      // Capture the question callback
+      mockReadline.question.mockImplementation(
+        (question: string, callback: Function) => {
+          questionCallback = callback;
+        }
       );
-      expect(status).toBe(1);
-    });
 
-    it("identifies when a github repo does not exist (404)", async () => {
-      let projectDir = getProjectDir("repo-404");
+      // Capture the child process event handlers
+      mockChildProcess.on.mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === "exit") {
+            exitHandler = handler;
+          }
+          return mockChildProcess;
+        }
+      );
 
-      let { status, stderr } = await execCreateRemix({
-        args: [
-          projectDir,
-          "--template",
-          "error-username/404",
-          "--no-git-init",
-          "--no-install",
-        ],
+      // Act
+      let promise = createRemix(argv);
+
+      // Simulate user answering 'y'
+      questionCallback!("y");
+
+      // Simulate successful exit
+      exitHandler!(0);
+
+      await promise;
+
+      // Assert
+      expect(readline.createInterface).toHaveBeenCalledWith({
+        input: process.stdin,
+        output: process.stdout,
       });
 
-      expect(stderr.trim()).toMatchInlineSnapshot(
-        `"▲  Oh no! There was a problem fetching the file from GitHub. The request responded with a 404 status. Please try again later."`
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        "\nDid you mean `npx create-react-router@latest`?\n"
       );
-      expect(status).toBe(1);
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        "\nRunning: npx create-react-router@latest\n"
+      );
+
+      expect(mockSpawn).toHaveBeenCalledWith(
+        "npx",
+        ["create-react-router@latest", "--template", "my-template"],
+        {
+          stdio: "inherit",
+          env: process.env,
+        }
+      );
+
+      expect(mockReadline.close).toHaveBeenCalled();
     });
 
-    it("identifies when something unknown goes wrong with the repo request (4xx)", async () => {
-      let projectDir = getProjectDir("repo-4xx");
+    it("should reject when child process exits with non-zero code", async () => {
+      // Arrange
+      let questionCallback: Function;
+      let exitHandler: Function;
 
-      let { status, stderr } = await execCreateRemix({
-        args: [
-          projectDir,
-          "--template",
-          "error-username/400",
-          "--no-git-init",
-          "--no-install",
-        ],
-      });
-
-      expect(stderr.trim()).toMatchInlineSnapshot(
-        `"▲  Oh no! There was a problem fetching the file from GitHub. The request responded with a 400 status. Please try again later."`
+      mockReadline.question.mockImplementation(
+        (question: string, callback: Function) => {
+          questionCallback = callback;
+        }
       );
-      expect(status).toBe(1);
+
+      mockChildProcess.on.mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === "exit") {
+            exitHandler = handler;
+          }
+          return mockChildProcess;
+        }
+      );
+
+      // Act
+      let promise = createRemix([]);
+      questionCallback!("y");
+      exitHandler!(1);
+
+      // Assert
+      await expect(promise).rejects.toThrow("Command failed with exit code 1");
+      expect(mockReadline.close).toHaveBeenCalled();
     });
 
-    it("identifies when a remote tarball does not exist (404)", async () => {
-      let projectDir = getProjectDir("remote-tarball-404");
+    it("should reject when child process emits error", async () => {
+      // Arrange
+      let error = new Error("Spawn error");
+      let questionCallback: Function;
+      let errorHandler: Function;
 
-      let { status, stderr } = await execCreateRemix({
-        args: [
-          projectDir,
-          "--template",
-          "https://example.com/error/404/remix-stack.tar.gz",
-          "--no-git-init",
-          "--no-install",
-        ],
-      });
-
-      expect(stderr.trim()).toMatchInlineSnapshot(
-        `"▲  Oh no! There was a problem fetching the file. The request responded with a 404 status. Please try again later."`
+      mockReadline.question.mockImplementation(
+        (question: string, callback: Function) => {
+          questionCallback = callback;
+        }
       );
-      expect(status).toBe(1);
-    });
 
-    it("identifies when a remote tarball does not exist (4xx)", async () => {
-      let projectDir = getProjectDir("remote-tarball-4xx");
-
-      let { status, stderr } = await execCreateRemix({
-        args: [
-          projectDir,
-          "--template",
-          "https://example.com/error/400/remix-stack.tar.gz",
-          "--no-git-init",
-          "--no-install",
-        ],
-      });
-
-      expect(stderr.trim()).toMatchInlineSnapshot(
-        `"▲  Oh no! There was a problem fetching the file. The request responded with a 400 status. Please try again later."`
+      mockChildProcess.on.mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === "error") {
+            errorHandler = handler;
+          }
+          return mockChildProcess;
+        }
       );
-      expect(status).toBe(1);
+
+      // Act
+      let promise = createRemix([]);
+      questionCallback!("y");
+      errorHandler!(error);
+
+      // Assert
+      await expect(promise).rejects.toThrow("Spawn error");
+      expect(mockReadline.close).toHaveBeenCalled();
     });
   });
 
-  describe("supports proxy usage", () => {
-    beforeAll(() => {
-      server.close();
-    });
-    afterAll(() => {
-      server.listen({ onUnhandledRequest: "error" });
-    });
-    it("uses the proxy from env var", async () => {
-      let projectDir = await getProjectDir("template");
+  describe("when user confirms with 'yes'", () => {
+    it("should spawn the command (case insensitive)", async () => {
+      // Arrange
+      let questionCallback: Function;
+      let exitHandler: Function;
 
-      let { stderr } = await execCreateRemix({
-        args: [
-          projectDir,
-          "--template",
-          "remix-run/grunge-stack",
-          "--no-install",
-          "--no-git-init",
-          "--debug",
-        ],
-        mockNetwork: false,
-        env: { HTTPS_PROXY: "http://127.0.0.1:33128" },
+      mockReadline.question.mockImplementation(
+        (question: string, callback: Function) => {
+          questionCallback = callback;
+        }
+      );
+
+      mockChildProcess.on.mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === "exit") {
+            exitHandler = handler;
+          }
+          return mockChildProcess;
+        }
+      );
+
+      // Act
+      let promise = createRemix([]);
+      questionCallback!("YES");
+      exitHandler!(0);
+
+      await promise;
+
+      // Assert
+      expect(mockSpawn).toHaveBeenCalled();
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        "\nRunning: npx create-react-router@latest\n"
+      );
+    });
+  });
+
+  describe("when user declines", () => {
+    it("should not spawn command when user answers 'n'", async () => {
+      // Arrange
+      let questionCallback: Function;
+
+      mockReadline.question.mockImplementation(
+        (question: string, callback: Function) => {
+          questionCallback = callback;
+        }
+      );
+
+      // Act
+      let promise = createRemix([]);
+      questionCallback!("n");
+
+      await promise;
+
+      // Assert
+      expect(mockSpawn).not.toHaveBeenCalled();
+      expect(consoleLogSpy).toHaveBeenCalledWith("\nCommand not executed.");
+      expect(mockReadline.close).toHaveBeenCalled();
+    });
+
+    it("should not spawn command when user answers anything else", async () => {
+      // Arrange
+      let questionCallback: Function;
+
+      mockReadline.question.mockImplementation(
+        (question: string, callback: Function) => {
+          questionCallback = callback;
+        }
+      );
+
+      // Act
+      let promise = createRemix([]);
+      questionCallback!("maybe");
+
+      await promise;
+
+      // Assert
+      expect(mockSpawn).not.toHaveBeenCalled();
+      expect(consoleLogSpy).toHaveBeenCalledWith("\nCommand not executed.");
+      expect(mockReadline.close).toHaveBeenCalled();
+    });
+  });
+
+  describe("when readline is closed without answer", () => {
+    it("should reject with appropriate error", async () => {
+      // Arrange
+      let rlCloseHandler: Function;
+      let hasAnswered = false;
+
+      mockReadline.on.mockImplementation((event: string, handler: Function) => {
+        if (event === "close") {
+          rlCloseHandler = handler;
+        }
+        return mockReadline;
       });
 
-      expect(stderr.trim()).toMatch("127.0.0.1:33");
+      mockReadline.question.mockImplementation(
+        (question: string, callback: Function) => {
+          // Don't call the callback - simulate closing without answering
+        }
+      );
+
+      mockReadline.close.mockImplementation(() => {
+        if (!hasAnswered && rlCloseHandler) {
+          rlCloseHandler();
+        }
+      });
+
+      // Act
+      let promise = createRemix([]);
+
+      // Simulate closing readline without answering
+      mockReadline.close();
+
+      // Assert
+      await expect(promise).rejects.toThrow(
+        "User did not confirm command execution"
+      );
+    });
+  });
+
+  describe("edge cases", () => {
+    it("should handle empty argv array", async () => {
+      // Arrange
+      let questionCallback: Function;
+      let exitHandler: Function;
+
+      mockReadline.question.mockImplementation(
+        (question: string, callback: Function) => {
+          questionCallback = callback;
+        }
+      );
+
+      mockChildProcess.on.mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === "exit") {
+            exitHandler = handler;
+          }
+          return mockChildProcess;
+        }
+      );
+
+      // Act
+      let promise = createRemix([]);
+      questionCallback!("y");
+      exitHandler!(0);
+
+      await promise;
+
+      // Assert
+      expect(mockSpawn).toHaveBeenCalledWith(
+        "npx",
+        ["create-react-router@latest"],
+        expect.any(Object)
+      );
+    });
+
+    it("should pass through multiple arguments", async () => {
+      // Arrange
+      let argv = ["--template", "remix", "--install", "--typescript"];
+      let questionCallback: Function;
+      let exitHandler: Function;
+
+      mockReadline.question.mockImplementation(
+        (question: string, callback: Function) => {
+          questionCallback = callback;
+        }
+      );
+
+      mockChildProcess.on.mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === "exit") {
+            exitHandler = handler;
+          }
+          return mockChildProcess;
+        }
+      );
+
+      // Act
+      let promise = createRemix(argv);
+      questionCallback!("y");
+      exitHandler!(0);
+
+      await promise;
+
+      // Assert
+      expect(mockSpawn).toHaveBeenCalledWith(
+        "npx",
+        [
+          "create-react-router@latest",
+          "--template",
+          "remix",
+          "--install",
+          "--typescript",
+        ],
+        expect.any(Object)
+      );
     });
   });
 });
-
-async function execCreateRemix({
-  args = [],
-  interactions = [],
-  interactive = true,
-  env = {},
-  mockNetwork = true,
-  cwd,
-}: {
-  args: string[];
-  interactive?: boolean;
-  interactions?: ShellInteractions;
-  env?: Record<string, string>;
-  mockNetwork?: boolean;
-  cwd?: string;
-}) {
-  let proc = spawn(
-    "node",
-    [
-      "--require",
-      require.resolve("esbuild-register"),
-      ...(mockNetwork
-        ? ["--require", path.join(__dirname, "./msw-register.ts")]
-        : []),
-      path.resolve(__dirname, "../cli.ts"),
-      ...args,
-    ],
-    {
-      cwd,
-      stdio: [null, null, null],
-      env: {
-        ...process.env,
-        ...env,
-        ...(interactive ? { CREATE_REMIX_FORCE_INTERACTIVE: "true" } : {}),
-      },
-    }
-  );
-
-  return await interactWithShell(proc, interactions);
-}
-
-interface ShellResult {
-  status: number | "timeout" | null;
-  stdout: string;
-  stderr: string;
-}
-
-type ShellInteractions = Array<
-  | { question: RegExp; type: Array<String>; answer?: never }
-  | { question: RegExp; answer: RegExp; type?: never }
->;
-
-async function interactWithShell(
-  proc: ChildProcessWithoutNullStreams,
-  interactions: ShellInteractions
-): Promise<ShellResult> {
-  proc.stdin.setDefaultEncoding("utf-8");
-
-  let deferred = defer<ShellResult>();
-
-  let stepNumber = 0;
-
-  let stdout = "";
-  let stderr = "";
-  proc.stdout.on("data", (chunk: unknown) => {
-    if (chunk instanceof Buffer) {
-      chunk = String(chunk);
-    }
-    if (typeof chunk !== "string") {
-      console.error({ stdoutChunk: chunk });
-      throw new Error("stdout chunk is not a string");
-    }
-    stdout += stripAnsi(maskTempDir(chunk));
-    let step = interactions[stepNumber];
-    if (!step) return;
-    let { question, answer, type } = step;
-    if (question.test(chunk)) {
-      if (answer) {
-        let currentSelection = chunk
-          .split("\n")
-          .slice(1)
-          .find(
-            (line) =>
-              line.includes("❯") || line.includes(">") || line.includes("●")
-          );
-
-        if (currentSelection && answer.test(currentSelection)) {
-          proc.stdin.write(ENTER);
-          stepNumber += 1;
-        } else {
-          proc.stdin.write(DOWN);
-        }
-      } else if (type) {
-        for (let command of type) {
-          proc.stdin.write(command);
-        }
-        stepNumber += 1;
-      }
-    }
-
-    if (stepNumber === interactions.length) {
-      proc.stdin.end();
-    }
-  });
-
-  proc.stderr.on("data", (chunk: unknown) => {
-    if (chunk instanceof Buffer) {
-      chunk = String(chunk);
-    }
-    if (typeof chunk !== "string") {
-      console.error({ stderrChunk: chunk });
-      throw new Error("stderr chunk is not a string");
-    }
-    stderr += stripAnsi(maskTempDir(chunk));
-  });
-
-  proc.on("close", (status) => {
-    deferred.resolve({ status, stdout, stderr });
-  });
-
-  // this ensures that if we do timeout we at least get as much useful
-  // output as possible.
-  let timeout = setTimeout(() => {
-    if (deferred.state.current === "pending") {
-      proc.kill();
-      deferred.resolve({ status: "timeout", stdout, stderr });
-    }
-  }, jestTimeout);
-
-  let result = await deferred.promise;
-  clearTimeout(timeout);
-
-  return result;
-}
-
-function defer<Value>() {
-  let resolve: (value: Value) => void, reject: (reason?: any) => void;
-  let state: { current: "pending" | "resolved" | "rejected" } = {
-    current: "pending",
-  };
-  let promise = new Promise<Value>((res, rej) => {
-    resolve = (value: Value) => {
-      state.current = "resolved";
-      return res(value);
-    };
-    reject = (reason?: any) => {
-      state.current = "rejected";
-      return rej(reason);
-    };
-  });
-  return { promise, resolve: resolve!, reject: reject!, state };
-}
