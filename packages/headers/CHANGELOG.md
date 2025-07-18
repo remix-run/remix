@@ -2,7 +2,7 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/v3/packages/headers). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.12.0 (2025-07-18)
 
 - Renamed package from `@mjackson/headers` to `@remix-run/headers`
 
