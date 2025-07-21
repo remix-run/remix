@@ -19,9 +19,6 @@
   "scripts": {
     "tsc": "tsc"
   },
-  "dependencies": {
-    "cross-spawn": "^7.0.6"
-  },
   "engines": {
     "node": ">=18.0.0"
   },
