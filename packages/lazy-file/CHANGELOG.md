@@ -2,7 +2,7 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/v3/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v3.5.0 (2025-07-21)
 
 - Renamed package from `@mjackson/lazy-file` to `@remix-run/lazy-file`
 
