@@ -749,11 +749,7 @@ importers:
         specifier: ^3.24.0
         version: 3.74.0(@cloudflare/workers-types@4.20240208.0)
 
-  packages/create-remix:
-    dependencies:
-      cross-spawn:
-        specifier: ^7.0.6
-        version: 7.0.6
+  packages/create-remix: {}
 
   packages/remix: {}
 

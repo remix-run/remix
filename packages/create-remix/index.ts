@@ -1,47 +1,13 @@
-import * as readline from "readline";
-import crossSpawn from "cross-spawn";
-
 export async function createRemix(argv: string[]) {
-  return new Promise<void>((resolve, reject) => {
-    let rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-
-    console.log("\nDid you mean `npx create-react-router@latest`?\n");
-
-    rl.question("Would you like to run this command? (y/n): ", (answer) => {
-      if (answer.toLowerCase() === "y" || answer.toLowerCase() === "yes") {
-        console.log("\nRunning: npx create-react-router@latest\n");
-
-        // Use cross-spawn for better cross-platform support
-        let child = crossSpawn("npx", ["create-react-router@latest", ...argv], {
-          stdio: "inherit",
-          env: process.env,
-        });
-
-        child.on("error", (error) => {
-          reject(error);
-          rl.close();
-        });
-
-        child.on("exit", (code) => {
-          rl.close();
-          if (code !== 0) {
-            reject(new Error(`Command failed with exit code ${code}`));
-          } else {
-            resolve();
-          }
-        });
-      } else {
-        console.log("\nCommand not executed.");
-        rl.close();
-        resolve();
-      }
-    });
-
-    rl.on("close", () => {
-      reject(new Error("User did not confirm command execution"));
-    });
-  });
+  console.log("\n🔄 Remix v2 is now part of React Router!");
+  console.log("\nRemix v2 has been upstreamed into React Router and is now in maintenance mode.");
+  console.log("For new projects, please use React Router instead.");
+  console.log("\nTo create a new React Router project, run:");
+  
+  const command = argv.length > 0 
+    ? `npx create-react-router@latest ${argv.join(" ")}`
+    : "npx create-react-router@latest";
+    
+  console.log(`\n  ${command}\n`);
+  console.log("Learn more: https://reactrouter.com\n");
 }
