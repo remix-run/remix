@@ -1,6 +1,6 @@
 export async function createRemix(argv: string[]) {
-  console.log("\n🔄 Remix is now part of React Router!");
-  console.log("\nRemix has been upstreamed into React Router and is now in maintenance mode.");
+  console.log("\n🔄 Remix v2 is now part of React Router!");
+  console.log("\nRemix v2 has been upstreamed into React Router and is now in maintenance mode.");
   console.log("For new projects, please use React Router instead.");
   console.log("\nTo create a new React Router project, run:");
   
