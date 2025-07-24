@@ -30,6 +30,7 @@
     "@remix-run/testing": "2.16.8"
   },
   "changesets": [
-    "early-starfishes-heal"
+    "early-starfishes-heal",
+    "trigger-new-release"
   ]
 }
