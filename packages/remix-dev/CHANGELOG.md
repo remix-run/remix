@@ -1,5 +1,16 @@
 # `@remix-run/dev`
 
+## 2.17.0-pre.0
+
+### Patch Changes
+
+- Update `tar-fs` ([#10638](https://github.com/remix-run/remix/pull/10638))
+- Updated dependencies:
+  - `@remix-run/node@2.17.0-pre.0`
+  - `@remix-run/react@2.17.0-pre.0`
+  - `@remix-run/serve@2.17.0-pre.0`
+  - `@remix-run/server-runtime@2.17.0-pre.0`
+
 ## 2.16.7
 
 ### Patch Changes

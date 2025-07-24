@@ -1,5 +1,15 @@
 # `create-remix`
 
+## 2.17.0-pre.0
+
+### Minor Changes
+
+- Redirect users to `create-react-router` instead of `create-remix`. Remix v2 is in maintenance mode so new Remix apps should not be created any longer. ([`601060cbf`](https://github.com/remix-run/remix/commit/601060cbfde209a0275a85fb29bec2630cd05c3d))
+
+### Patch Changes
+
+- Update `tar-fs` ([#10638](https://github.com/remix-run/remix/pull/10638))
+
 ## 2.16.7
 
 No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.7.
