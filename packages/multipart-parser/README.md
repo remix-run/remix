@@ -29,12 +29,6 @@ Install from [npm](https://www.npmjs.com/):
 npm install @remix-run/multipart-parser
 ```
 
-Or install from [JSR](https://jsr.io/):
-
-```sh
-deno add @remix-run/multipart-parser
-```
-
 ## Usage
 
 The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It automatically validates the request is `multipart/form-data`, extracts the multipart boundary from the `Content-Type` header, parses all fields and files in the `request.body` stream, and gives each one to you as a `MultipartPart` object with a rich API for accessing its metadata and content.
