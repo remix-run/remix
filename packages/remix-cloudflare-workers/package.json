@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/cloudflare-workers",
-  "version": "2.16.7",
+  "version": "2.16.8",
   "description": "Cloudflare worker request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
