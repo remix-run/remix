@@ -2,7 +2,7 @@
 
 This is the changelog for [`tar-parser`](https://github.com/remix-run/remix/tree/v3/packages/tar-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.4.0 (2025-07-24)
 
 - Renamed package from `@mjackson/tar-parser` to `@remix-run/tar-parser`
 

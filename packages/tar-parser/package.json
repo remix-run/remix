@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/tar-parser",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A fast, efficient parser for tar streams in any JavaScript environment",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
