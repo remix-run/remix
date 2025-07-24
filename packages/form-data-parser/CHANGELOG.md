@@ -2,7 +2,7 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/remix-run/remix/tree/v3/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.10.0 (2025-07-24)
 
 - Renamed package from `@mjackson/form-data-parser` to `@remix-run/form-data-parser`
 
