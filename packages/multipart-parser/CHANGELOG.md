@@ -2,7 +2,7 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.11.0 (2025-07-24)
 
 - Renamed package from `@mjackson/multipart-parser` to `@remix-run/multipart-parser`
 
