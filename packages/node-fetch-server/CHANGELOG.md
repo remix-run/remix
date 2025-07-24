@@ -2,7 +2,7 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/v3/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.8.0 (2025-07-24)
 
 - Renamed package from `@mjackson/node-fetch-server` to `@remix-run/node-fetch-server`
 - Handle backpressure correctly in response streaming
