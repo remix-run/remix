@@ -5,6 +5,17 @@ This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tre
 ## HEAD
 
 - Renamed package from `@mjackson/fetch-proxy` to `@remix-run/fetch-proxy`
+- FIX: A regression that stopped forwarding the method from an exising request object
+- Forward additional properties from existing request objects passed to the proxy, including:
+  - cache
+  - credentials
+  - integrity
+  - keepalive
+  - mode
+  - redirect
+  - referrer
+  - referrerPolicy
+  - signal
 
 ## v0.4.0 (2025-07-11)
 
