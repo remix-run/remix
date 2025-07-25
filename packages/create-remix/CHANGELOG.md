@@ -6,10 +6,6 @@
 
 - Redirect users to `create-react-router` instead of `create-remix`. Remix v2 is in maintenance mode so new Remix apps should not be created any longer. ([`601060cbf`](https://github.com/remix-run/remix/commit/601060cbfde209a0275a85fb29bec2630cd05c3d))
 
-### Patch Changes
-
-- REMOVE - needed to kick out another prerelease ([`7f1c506a3`](https://github.com/remix-run/remix/commit/7f1c506a301dbc4c33a5338be50eebf896d8e747))
-
 ## 2.16.8
 
 ### Patch Changes
