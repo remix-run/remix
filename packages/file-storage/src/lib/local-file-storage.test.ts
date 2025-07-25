@@ -45,6 +45,29 @@ describe('LocalFileStorage', () => {
     assert.equal(await storage.get('hello'), null);
   });
 
+  it('removes empty hash directories after removing files', async () => {
+    let storage = new LocalFileStorage(directory);
+    let file = new File(['Test content'], 'test.txt', { type: 'text/plain' });
+
+    // Set a file
+    await storage.set('test-key', file);
+
+    // Verify subdirectories exist
+    let subdirs = fs.readdirSync(directory).filter((name) => {
+      return fs.statSync(path.join(directory, name)).isDirectory();
+    });
+    assert.ok(subdirs.length > 0);
+
+    // Remove the file
+    await storage.remove('test-key');
+
+    // Verify no subdirectories remain
+    let subdirsAfter = fs.readdirSync(directory).filter((name) => {
+      return fs.statSync(path.join(directory, name)).isDirectory();
+    });
+    assert.equal(subdirsAfter.length, 0);
+  });
+
   it('lists files with pagination', async () => {
     let storage = new LocalFileStorage(directory);
     let allKeys = ['a', 'b', 'c', 'd', 'e'];

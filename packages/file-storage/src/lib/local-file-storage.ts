@@ -127,10 +127,16 @@ export class LocalFileStorage implements FileStorage {
   }
 
   async remove(key: string): Promise<void> {
-    let { filePath, metaPath } = await this.#getPaths(key);
+    let { directory, filePath, metaPath } = await this.#getPaths(key);
 
     try {
       await Promise.all([fsp.unlink(filePath), fsp.unlink(metaPath)]);
+
+      // Check if directory is empty and remove it if so
+      let files = await fsp.readdir(directory);
+      if (files.length === 0) {
+        await fsp.rmdir(directory);
+      }
     } catch (error) {
       if (!isNoEntityError(error)) {
         throw error;

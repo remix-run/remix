@@ -2,9 +2,6 @@ import type { FileStorage, ListOptions, ListResult } from './file-storage.ts';
 
 /**
  * A simple, in-memory implementation of the `FileStorage` interface.
- *
- * Note: Any files you put in storage will have their entire contents buffered in memory, so this is not suitable for large files
- * in production scenarios.
  */
 export class MemoryFileStorage implements FileStorage {
   #map = new Map<string, File>();
