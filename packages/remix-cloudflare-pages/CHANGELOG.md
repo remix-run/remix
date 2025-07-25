@@ -1,5 +1,12 @@
 # `@remix-run/cloudflare-pages`
 
+## 2.17.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@2.17.0`
+
 ## 2.16.8
 
 ### Patch Changes
