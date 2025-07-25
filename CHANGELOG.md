@@ -279,7 +279,7 @@ Date: 2025-07-25
 ### Minor Changes
 
 - `create-remix` - Redirect users to `create-react-router` instead of `create-remix` ([#10686](https://github.com/remix-run/remix/pull/10686), [#10688](https://github.com/remix-run/remix/pull/10688))
-  - Remix v2 is in maintenance mode so new Remix apps should not be created any longer
+  - Remix v2 is in maintenance mode so we don't want new Remix apps to be created
 
 ### Changes by Package
 

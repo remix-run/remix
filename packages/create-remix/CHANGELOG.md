@@ -1,12 +1,6 @@
 # `create-remix`
 
-## 2.17.0-pre.1
-
-### Patch Changes
-
-- REMOVE - needed to kick out another prerelease ([`7f1c506a3`](https://github.com/remix-run/remix/commit/7f1c506a301dbc4c33a5338be50eebf896d8e747))
-
-## 2.17.0-pre.0
+## 2.17.0
 
 ### Minor Changes
 
