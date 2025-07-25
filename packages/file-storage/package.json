@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/file-storage",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Key/value storage for JavaScript File objects",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
