@@ -22,13 +22,19 @@
   "module": "./dist/node-fetch-server.js",
   "main": "./dist/node-fetch-server.cjs",
   "exports": {
-    ".": {
-      "types": "./dist/node-fetch-server.d.ts",
-      "import": "./dist/node-fetch-server.js",
-      "require": "./dist/node-fetch-server.cjs",
-      "default": "./dist/node-fetch-server.js"
-    },
+    ".": "./src/node-fetch-server.ts",
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/node-fetch-server.d.ts",
+        "import": "./dist/node-fetch-server.js",
+        "require": "./dist/node-fetch-server.cjs",
+        "default": "./dist/node-fetch-server.js"
+      },
+      "./package.json": "./package.json"
+    }
   },
   "devDependencies": {
     "@types/node": "^22.5.0",

@@ -22,14 +22,8 @@
   "module": "./dist/multipart-parser.js",
   "main": "./dist/multipart-parser.cjs",
   "exports": {
-    ".": {
-      "types": "./src/multipart-parser.ts",
-      "default": "./src/multipart-parser.ts"
-    },
-    "./node": {
-      "types": "./src/multipart-parser.node.ts",
-      "default": "./src/multipart-parser.node.ts"
-    },
+    ".": "./src/multipart-parser.ts",
+    "./node": "./src/multipart-parser.node.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {

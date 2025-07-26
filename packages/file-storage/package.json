@@ -22,18 +22,9 @@
   "module": "./dist/file-storage.js",
   "main": "./dist/file-storage.cjs",
   "exports": {
-    ".": {
-      "types": "./src/file-storage.ts",
-      "default": "./src/file-storage.ts"
-    },
-    "./local": {
-      "types": "./src/local.ts",
-      "default": "./src/local.ts"
-    },
-    "./memory": {
-      "types": "./src/memory.ts",
-      "default": "./src/memory.ts"
-    },
+    ".": "./src/file-storage.ts",
+    "./local": "./src/local.ts",
+    "./memory": "./src/memory.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {

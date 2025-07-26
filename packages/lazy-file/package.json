@@ -22,14 +22,8 @@
   "module": "./dist/lazy-file.js",
   "main": "./dist/lazy-file.cjs",
   "exports": {
-    ".": {
-      "types": "./src/lazy-file.ts",
-      "default": "./src/lazy-file.ts"
-    },
-    "./fs": {
-      "types": "./src/fs.ts",
-      "default": "./src/fs.ts"
-    },
+    ".": "./src/lazy-file.ts",
+    "./fs": "./src/fs.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {

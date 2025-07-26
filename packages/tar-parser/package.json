@@ -22,10 +22,7 @@
   "module": "./dist/tar-parser.js",
   "main": "./dist/tar-parser.cjs",
   "exports": {
-    ".": {
-      "types": "./src/tar-parser.ts",
-      "default": "./src/tar-parser.ts"
-    },
+    ".": "./src/tar-parser.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {

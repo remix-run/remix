@@ -22,10 +22,7 @@
   "module": "./dist/headers.js",
   "main": "./dist/headers.cjs",
   "exports": {
-    ".": {
-      "types": "./src/headers.ts",
-      "default": "./src/headers.ts"
-    },
+    ".": "./src/headers.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {

@@ -22,10 +22,7 @@
   "module": "dist/fetch-proxy.js",
   "main": "dist/fetch-proxy.cjs",
   "exports": {
-    ".": {
-      "types": "./src/fetch-proxy.ts",
-      "default": "./src/fetch-proxy.ts"
-    },
+    ".": "./src/fetch-proxy.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {

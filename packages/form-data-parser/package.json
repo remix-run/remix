@@ -22,10 +22,7 @@
   "module": "./dist/form-data-parser.js",
   "main": "./dist/form-data-parser.cjs",
   "exports": {
-    ".": {
-      "types": "./src/form-data-parser.ts",
-      "default": "./src/form-data-parser.ts"
-    },
+    ".": "./src/form-data-parser.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {

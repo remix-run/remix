@@ -21,13 +21,19 @@
   "module": "./dist/route-pattern.js",
   "main": "./dist/route-pattern.cjs",
   "exports": {
-    ".": {
-      "types": "./dist/route-pattern.d.ts",
-      "import": "./dist/route-pattern.js",
-      "require": "./dist/route-pattern.cjs",
-      "default": "./dist/route-pattern.js"
-    },
+    ".": "./src/route-pattern.ts",
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/route-pattern.d.ts",
+        "import": "./dist/route-pattern.js",
+        "require": "./dist/route-pattern.cjs",
+        "default": "./dist/route-pattern.js"
+      },
+      "./package.json": "./package.json"
+    }
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
