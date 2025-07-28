@@ -52,7 +52,7 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
     return this.has(tag) || this.tags.includes('*');
   }
 
-  toString() {
+  toString(): string {
     return this.tags.join(', ');
   }
 }

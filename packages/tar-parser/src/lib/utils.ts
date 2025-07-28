@@ -53,7 +53,12 @@ export function indexOf(buffer: Uint8Array, value: number, offset: number, end: 
   return end;
 }
 
-export function getString(buffer: Uint8Array, offset: number, size: number, label = 'utf-8') {
+export function getString(
+  buffer: Uint8Array,
+  offset: number,
+  size: number,
+  label = 'utf-8',
+): string {
   return new TextDecoder(label).decode(
     buffer.subarray(offset, indexOf(buffer, 0, offset, offset + size)),
   );
@@ -61,7 +66,7 @@ export function getString(buffer: Uint8Array, offset: number, size: number, labe
 
 const Utf8Decoder = new TextDecoder();
 
-export function getOctal(buffer: Uint8Array, offset: number, size: number) {
+export function getOctal(buffer: Uint8Array, offset: number, size: number): number | null {
   let value = buffer.subarray(offset, offset + size);
   offset = 0;
 

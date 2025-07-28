@@ -1,6 +1,11 @@
 type Span = [number, number];
 
-export function split(source: string) {
+export function split(source: string): {
+  protocol?: Span;
+  hostname?: Span;
+  pathname?: Span;
+  search?: Span;
+} {
   const result: {
     protocol?: Span;
     hostname?: Span;
