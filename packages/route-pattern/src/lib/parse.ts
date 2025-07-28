@@ -16,7 +16,7 @@ type Enum = { type: 'enum'; members: Array<string> };
 type Optional = { type: 'optional'; nodes: Array<Node> };
 type Node = Text | Param | Glob | Enum | Optional;
 
-export function parse(source: string) {
+export function parse(source: string): Ast {
   const { protocol, hostname, pathname, search } = split(source);
   const ast: Ast = {};
   if (protocol) ast.protocol = parsePart(source, protocol);
