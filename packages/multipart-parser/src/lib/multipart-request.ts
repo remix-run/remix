@@ -18,7 +18,7 @@ export function getMultipartBoundary(contentType: string): string | null {
  * @param request The `Request` object to check
  * @return `true` if the request is a multipart request, `false` otherwise
  */
-export function isMultipartRequest(request: Request): boolean {
+export function isMultipartRequest(request: Request | Response): boolean {
   let contentType = request.headers.get('Content-Type');
   return contentType != null && contentType.startsWith('multipart/');
 }
@@ -32,7 +32,7 @@ export function isMultipartRequest(request: Request): boolean {
  * @return An async generator yielding `MultipartPart` objects
  */
 export async function* parseMultipartRequest(
-  request: Request,
+  request: Request | Response,
   options?: MultipartParserOptions,
 ): AsyncGenerator<MultipartPart, void, unknown> {
   if (!isMultipartRequest(request)) {
