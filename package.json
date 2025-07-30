@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.13.1",
   "devDependencies": {
     "prettier": "^3.3.3",
-    "typescript": "^5.7.2"
+    "typescript": "^5.8.3"
   },
   "engines": {
     "node": ">=24"
