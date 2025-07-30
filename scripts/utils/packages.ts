@@ -8,25 +8,21 @@ export const packagesDir = path.relative(
   path.resolve(__dirname, '..', '..', 'packages'),
 );
 
-/** @type () => string[] */
-export function getAllPackageNames() {
+export function getAllPackageNames(): string[] {
   return fs.readdirSync(packagesDir).filter((name) => {
     let dir = getPackageDir(name);
     return fs.existsSync(dir) && fs.statSync(dir).isDirectory();
   });
 }
 
-/** @type (packageName: string) => string */
-export function getPackageDir(packageName) {
+export function getPackageDir(packageName: string): string {
   return path.resolve(packagesDir, packageName);
 }
 
-/** @type (packageName: string) => boolean */
-export function packageExists(packageName) {
+export function packageExists(packageName: string): boolean {
   return fs.existsSync(getPackageDir(packageName));
 }
 
-/** @type (packageName: string, filename: string) => string */
-export function getPackageFile(packageName, filename) {
+export function getPackageFile(packageName: string, filename: string): string {
   return path.join(getPackageDir(packageName), filename);
 }

@@ -1,10 +1,10 @@
 import * as cp from 'node:child_process';
 
-import { readJson } from './utils/fs.js';
-import { createRelease } from './utils/github-releases.js';
-import { getPackageDir, getPackageFile } from './utils/packages.js';
-import { logAndExec } from './utils/process.js';
-import { isValidVersion } from './utils/semver.js';
+import { readJson } from './utils/fs.ts';
+import { createRelease } from './utils/github-releases.ts';
+import { getPackageDir, getPackageFile } from './utils/packages.ts';
+import { logAndExec } from './utils/process.ts';
+import { isValidVersion } from './utils/semver.ts';
 
 let tag = process.argv[2];
 

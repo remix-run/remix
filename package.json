@@ -7,16 +7,16 @@
     "typescript": "^5.7.2"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "scripts": {
     "build": "pnpm -r build",
     "clean": "git clean -fdX -e '!/.claude/settings.local.json' -e '!/.env' .",
-    "publish-release": "node --env-file .env ./scripts/publish-release.js",
-    "publish-release-ci": "node ./scripts/publish-release.js",
-    "tag-release": "node ./scripts/tag-release.js",
+    "publish-release": "node --env-file .env ./scripts/publish-release.ts",
+    "publish-release-ci": "node ./scripts/publish-release.ts",
+    "tag-release": "node ./scripts/tag-release.ts",
     "test": "pnpm -r --workspace-concurrency 1 test",
-    "view-changes": "node ./scripts/view-changes.js"
+    "view-changes": "node ./scripts/view-changes.ts"
   },
   "workspaces": [
     "packages/*"

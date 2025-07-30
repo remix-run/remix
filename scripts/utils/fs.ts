@@ -1,12 +1,10 @@
 import * as fs from 'node:fs';
 
-/** @type (filename: string) => boolean */
-export function fileExists(filename) {
+export function fileExists(filename: string): boolean {
   return fs.existsSync(filename);
 }
 
-/** @type (filename: string, encoding?: BufferEncoding) => string */
-export function readFile(filename, encoding = 'utf-8') {
+export function readFile(filename: string, encoding: BufferEncoding = 'utf-8'): string {
   try {
     return fs.readFileSync(filename, encoding);
   } catch (error) {
@@ -19,24 +17,20 @@ export function readFile(filename, encoding = 'utf-8') {
   }
 }
 
-/** @type (error: unknown) => error is { code: string } */
-function isFsError(error) {
+function isFsError(error: unknown): error is { code: string } {
   return (
     typeof error === 'object' && error != null && 'code' in error && typeof error.code === 'string'
   );
 }
 
-/** @type (filename: string, data: string) => void */
-export function writeFile(filename, data) {
+export function writeFile(filename: string, data: string): void {
   fs.writeFileSync(filename, data);
 }
 
-/** @type (filename: string) => any */
-export function readJson(filename) {
+export function readJson(filename: string): any {
   return JSON.parse(readFile(filename));
 }
 
-/** @type (filename: string, data: any) => void */
-export function writeJson(filename, data) {
+export function writeJson(filename: string, data: any): void {
   writeFile(filename, JSON.stringify(data, null, 2) + '\n');
 }

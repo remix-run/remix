@@ -1,11 +1,10 @@
-import { getPackageFile } from './packages.js';
-import { fileExists, readFile } from './fs.js';
+import { getPackageFile } from './packages.ts';
+import { fileExists, readFile } from './fs.ts';
 
-/** @typedef {{ version: string; date?: Date; body: string }} Changes */
-/** @typedef {Record<string, Changes>} AllChanges */
+export type Changes = { version: string; date?: Date; body: string };
+type AllChanges = Record<string, Changes>;
 
-/** @type (packageName: string) => AllChanges | null */
-export function getAllChanges(packageName) {
+export function getAllChanges(packageName: string): AllChanges | null {
   let changelogFile = getPackageFile(packageName, 'CHANGELOG.md');
 
   if (!fileExists(changelogFile)) {
@@ -15,8 +14,7 @@ export function getAllChanges(packageName) {
   let changelog = readFile(changelogFile);
   let parser = /^## ([a-z\d\.\-]+)(?: \(([^)]+)\))?$/gim;
 
-  /** @type {AllChanges} */
-  let result = {};
+  let result: AllChanges = {};
 
   let match;
   while ((match = parser.exec(changelog))) {
@@ -33,8 +31,7 @@ export function getAllChanges(packageName) {
   return result;
 }
 
-/** @type (packageName: string, version: string) => Changes | null */
-export function getChanges(packageName, version) {
+export function getChanges(packageName: string, version: string): Changes | null {
   let allChanges = getAllChanges(packageName);
 
   if (allChanges !== null) {

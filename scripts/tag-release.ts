@@ -1,9 +1,9 @@
 import * as cp from 'node:child_process';
 
-import { readFile, readJson, writeFile, writeJson } from './utils/fs.js';
-import { getPackageFile } from './utils/packages.js';
-import { logAndExec } from './utils/process.js';
-import { getNextVersion } from './utils/semver.js';
+import { readFile, readJson, writeFile, writeJson } from './utils/fs.ts';
+import { getPackageFile } from './utils/packages.ts';
+import { logAndExec } from './utils/process.ts';
+import { getNextVersion } from './utils/semver.ts';
 
 let packageName = process.argv[2];
 let releaseType = process.argv[3];
