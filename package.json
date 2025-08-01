@@ -15,6 +15,7 @@
     "publish-release": "node --env-file .env ./scripts/publish-release.js",
     "publish-release-ci": "node ./scripts/publish-release.js",
     "tag-release": "node ./scripts/tag-release.js",
+    "typecheck": "pnpm -r --workspace-concurrency 1 typecheck",
     "test": "pnpm -r --workspace-concurrency 1 test",
     "view-changes": "node ./scripts/view-changes.js"
   },
