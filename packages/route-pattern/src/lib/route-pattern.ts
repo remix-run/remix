@@ -1,4 +1,5 @@
-import { parse, type Ast, type Part } from './parse.ts';
+import { parse, type Ast } from './parse.ts';
+import { type Part } from './parse.types.ts';
 
 type Params = Record<string, string | undefined>;
 type Match = { params: Params };

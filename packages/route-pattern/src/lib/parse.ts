@@ -1,3 +1,4 @@
+import type { Glob, Optional, Param, Part } from './parse.types.ts';
 import { split } from './split.ts';
 
 export type Ast = {
@@ -6,15 +7,6 @@ export type Ast = {
   pathname?: Part;
   search?: URLSearchParams;
 };
-
-export type Part = Array<Node>;
-
-type Text = { type: 'text'; value: string };
-type Param = { type: 'param'; name?: string };
-type Glob = { type: 'glob'; name?: string };
-type Enum = { type: 'enum'; members: Array<string> };
-type Optional = { type: 'optional'; nodes: Array<Node> };
-type Node = Text | Param | Glob | Enum | Optional;
 
 export function parse(source: string) {
   const { protocol, hostname, pathname, search } = split(source);
