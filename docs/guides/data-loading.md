@@ -144,6 +144,10 @@ This is great when you already have an API to work with and don't care or need t
 
 Since Remix runs on your server, you can connect directly to a database in your route modules. For example, you could connect to a Postgres database with [Prisma][prisma].
 
+<docs-info>
+**Looking for a serverless Postgres database?** Check out [Prisma Postgres][https://prisma.io/postgres] - a fully managed, serverless Postgres database that scales automatically and integrates seamlessly with Prisma ORM. Perfect for Remix applications that need a production-ready database without the operational overhead.
+</docs-info>
+
 ```tsx filename=app/db.server.ts
 import { PrismaClient } from "@prisma/client";
 const db = new PrismaClient();
@@ -759,6 +763,7 @@ export default function RouteComp() {
 [fetcher-submit]: ../hooks/use-fetcher#fetchersubmit
 [loader]: ../route/loader
 [prisma]: https://prisma.io
+[prisma-postgres]: https://prisma.io/postgres
 [request]: https://developer.mozilla.org/en-US/docs/Web/API/Request
 [search-params-getall]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams/getAll
 [should-revalidate]: ../route/should-revalidate
