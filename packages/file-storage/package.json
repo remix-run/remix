@@ -68,6 +68,7 @@
     "build:cjs:memory": "esbuild src/memory.ts --bundle --outfile=dist/memory.cjs --format=cjs --platform=neutral --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs && pnpm run build:esm:local && pnpm run build:cjs:local && pnpm run build:esm:memory && pnpm run build:cjs:memory",
     "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"
   },

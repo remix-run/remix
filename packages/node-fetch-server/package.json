@@ -47,6 +47,7 @@
     "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=node --sourcemap",
     "build": "pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
     "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"
   },

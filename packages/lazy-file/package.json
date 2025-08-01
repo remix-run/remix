@@ -57,6 +57,7 @@
     "build:esm:fs": "esbuild src/fs.ts --bundle --outfile=dist/fs.js --format=esm --platform=node --sourcemap",
     "build:cjs:fs": "esbuild src/fs.ts --bundle --outfile=dist/fs.cjs --format=cjs --platform=node --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs && pnpm run build:esm:fs && pnpm run build:cjs:fs",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"
