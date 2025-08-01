@@ -1,8 +1,7 @@
-import { getChanges } from './utils/changes.js';
-import { getAllPackageNames, packageExists } from './utils/packages.js';
+import { getChanges, type Changes } from './utils/changes.ts';
+import { getAllPackageNames, packageExists } from './utils/packages.ts';
 
-/** @type {(packageName: string, changes: import('./utils/changes.js').Changes) => void} */
-function printPackageChanges(packageName, changes) {
+function printPackageChanges(packageName: string, changes: Changes): void {
   console.log(`📦 ${packageName}`);
   console.log('─'.repeat(50));
   console.log(changes.body);
