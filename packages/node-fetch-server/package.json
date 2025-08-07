@@ -18,17 +18,23 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
-  "types": "./dist/node-fetch-server.d.ts",
-  "module": "./dist/node-fetch-server.js",
-  "main": "./dist/node-fetch-server.cjs",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "exports": {
-    ".": {
-      "types": "./dist/node-fetch-server.d.ts",
-      "import": "./dist/node-fetch-server.js",
-      "require": "./dist/node-fetch-server.cjs",
-      "default": "./dist/node-fetch-server.js"
-    },
+    ".": "./src/index.ts",
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
@@ -37,10 +43,11 @@
   "scripts": {
     "bench": "bash ./bench/runner.sh",
     "build:types": "tsc --project tsconfig.build.json",
-    "build:esm": "esbuild src/node-fetch-server.ts --bundle --outfile=dist/node-fetch-server.js --format=esm --platform=node --sourcemap",
-    "build:cjs": "esbuild src/node-fetch-server.ts --bundle --outfile=dist/node-fetch-server.cjs --format=cjs --platform=node --sourcemap",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=node --sourcemap",
+    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=node --sourcemap",
     "build": "pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
     "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"
   },

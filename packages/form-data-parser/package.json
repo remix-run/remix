@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/form-data-parser",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "A request.formData() wrapper with streaming file upload handling",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
@@ -18,23 +18,20 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
-  "types": "./dist/form-data-parser.d.ts",
-  "module": "./dist/form-data-parser.js",
-  "main": "./dist/form-data-parser.cjs",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "exports": {
-    ".": {
-      "types": "./src/form-data-parser.ts",
-      "default": "./src/form-data-parser.ts"
-    },
+    ".": "./src/index.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
       ".": {
-        "types": "./dist/form-data-parser.d.ts",
-        "import": "./dist/form-data-parser.js",
-        "require": "./dist/form-data-parser.cjs",
-        "default": "./dist/form-data-parser.js"
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "default": "./dist/index.js"
       },
       "./package.json": "./package.json"
     }
@@ -48,9 +45,10 @@
   },
   "scripts": {
     "build:types": "tsc --project tsconfig.build.json",
-    "build:esm": "esbuild src/form-data-parser.ts --bundle --outfile=dist/form-data-parser.js --format=esm --platform=neutral --sourcemap",
-    "build:cjs": "esbuild src/form-data-parser.ts --bundle --outfile=dist/form-data-parser.cjs --format=cjs --platform=node --sourcemap",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=node --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"

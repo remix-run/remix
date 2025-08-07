@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/route-pattern",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Route patterns are strings that describe the structure of URLs you want to match",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -17,17 +17,23 @@
     "src"
   ],
   "type": "module",
-  "types": "./dist/route-pattern.d.ts",
-  "module": "./dist/route-pattern.js",
-  "main": "./dist/route-pattern.cjs",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "exports": {
-    ".": {
-      "types": "./dist/route-pattern.d.ts",
-      "import": "./dist/route-pattern.js",
-      "require": "./dist/route-pattern.cjs",
-      "default": "./dist/route-pattern.js"
-    },
+    ".": "./src/index.ts",
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
@@ -35,10 +41,11 @@
   },
   "scripts": {
     "build:types": "tsc --project tsconfig.build.json",
-    "build:esm": "esbuild src/route-pattern.ts --bundle --outfile=dist/route-pattern.js --format=esm --platform=neutral --sourcemap",
-    "build:cjs": "esbuild src/route-pattern.ts --bundle --outfile=dist/route-pattern.cjs --format=cjs --platform=node --sourcemap",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=node --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
     "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
     "prepublishOnly": "pnpm run build"
   },

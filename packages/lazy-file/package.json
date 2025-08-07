@@ -18,27 +18,21 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
-  "types": "./dist/lazy-file.d.ts",
-  "module": "./dist/lazy-file.js",
-  "main": "./dist/lazy-file.cjs",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "exports": {
-    ".": {
-      "types": "./src/lazy-file.ts",
-      "default": "./src/lazy-file.ts"
-    },
-    "./fs": {
-      "types": "./src/fs.ts",
-      "default": "./src/fs.ts"
-    },
+    ".": "./src/index.ts",
+    "./fs": "./src/fs.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
       ".": {
-        "types": "./dist/lazy-file.d.ts",
-        "import": "./dist/lazy-file.js",
-        "require": "./dist/lazy-file.cjs",
-        "default": "./dist/lazy-file.js"
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "default": "./dist/index.js"
       },
       "./fs": {
         "types": "./dist/fs.d.ts",
@@ -58,11 +52,12 @@
   },
   "scripts": {
     "build:types": "tsc --project tsconfig.build.json",
-    "build:esm": "esbuild src/lazy-file.ts --bundle --outfile=dist/lazy-file.js --format=esm --platform=neutral --sourcemap",
-    "build:cjs": "esbuild src/lazy-file.ts --bundle --outfile=dist/lazy-file.cjs --format=cjs --platform=neutral --sourcemap",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=neutral --sourcemap",
     "build:esm:fs": "esbuild src/fs.ts --bundle --outfile=dist/fs.js --format=esm --platform=node --sourcemap",
     "build:cjs:fs": "esbuild src/fs.ts --bundle --outfile=dist/fs.cjs --format=cjs --platform=node --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs && pnpm run build:esm:fs && pnpm run build:cjs:fs",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"

@@ -18,23 +18,20 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
-  "types": "./dist/headers.d.ts",
-  "module": "./dist/headers.js",
-  "main": "./dist/headers.cjs",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "exports": {
-    ".": {
-      "types": "./src/headers.ts",
-      "default": "./src/headers.ts"
-    },
+    ".": "./src/index.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
       ".": {
-        "types": "./dist/headers.d.ts",
-        "import": "./dist/headers.js",
-        "require": "./dist/headers.cjs",
-        "default": "./dist/headers.js"
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "default": "./dist/index.js"
       },
       "./package.json": "./package.json"
     }
@@ -45,10 +42,11 @@
   },
   "scripts": {
     "build:types": "tsc --project tsconfig.build.json",
-    "build:esm": "esbuild src/headers.ts --bundle --outfile=dist/headers.js --format=esm --platform=neutral --sourcemap",
-    "build:cjs": "esbuild src/headers.ts --bundle --outfile=dist/headers.cjs --format=cjs --platform=node --sourcemap",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=node --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
     "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepublishOnly": "pnpm run build"
   },

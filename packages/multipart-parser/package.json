@@ -18,33 +18,27 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
-  "types": "./dist/multipart-parser.d.ts",
-  "module": "./dist/multipart-parser.js",
-  "main": "./dist/multipart-parser.cjs",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "exports": {
-    ".": {
-      "types": "./src/multipart-parser.ts",
-      "default": "./src/multipart-parser.ts"
-    },
-    "./node": {
-      "types": "./src/multipart-parser.node.ts",
-      "default": "./src/multipart-parser.node.ts"
-    },
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
       ".": {
-        "types": "./dist/multipart-parser.d.ts",
-        "import": "./dist/multipart-parser.js",
-        "require": "./dist/multipart-parser.cjs",
-        "default": "./dist/multipart-parser.js"
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "default": "./dist/index.js"
       },
       "./node": {
-        "types": "./dist/multipart-parser.node.d.ts",
-        "import": "./dist/multipart-parser.node.js",
-        "require": "./dist/multipart-parser.node.cjs",
-        "default": "./dist/multipart-parser.node.js"
+        "types": "./dist/node.d.ts",
+        "import": "./dist/node.js",
+        "require": "./dist/node.cjs",
+        "default": "./dist/node.js"
       },
       "./package.json": "./package.json"
     }
@@ -62,10 +56,10 @@
     "bench:deno": "deno run --allow-sys ./bench/runner.ts",
     "bench:node": "node --disable-warning=ExperimentalWarning ./bench/runner.ts",
     "build:types": "tsc --project tsconfig.build.json",
-    "build:esm": "esbuild src/multipart-parser.ts --bundle --outfile=dist/multipart-parser.js --format=esm --platform=neutral --sourcemap",
-    "build:cjs": "esbuild src/multipart-parser.ts --bundle --outfile=dist/multipart-parser.cjs --format=cjs --platform=node --sourcemap",
-    "build:esm:node": "esbuild src/multipart-parser.node.ts --bundle --outfile=dist/multipart-parser.node.js --format=esm --platform=node --sourcemap",
-    "build:cjs:node": "esbuild src/multipart-parser.node.ts --bundle --outfile=dist/multipart-parser.node.cjs --format=cjs --platform=node --sourcemap",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=node --sourcemap",
+    "build:esm:node": "esbuild src/node.ts --bundle --outfile=dist/node.js --format=esm --platform=node --sourcemap",
+    "build:cjs:node": "esbuild src/node.ts --bundle --outfile=dist/node.cjs --format=cjs --platform=node --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs && pnpm run build:esm:node && pnpm run build:cjs:node",
     "clean": "rm -rf dist",
     "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
