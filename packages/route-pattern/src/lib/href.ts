@@ -75,7 +75,7 @@ type PartVariantSerialize<part extends Array<Node>> =
 // Params ------------------------------------------------------------------------------------------
 
 // prettier-ignore
-type Params<source extends string> =
+export type Params<source extends string> =
   Parse<source> extends infer ast extends Ast ?
     | (ast['protocol'] extends infer part extends Part ? PartParams<part> : never)
     | (ast['hostname'] extends infer part extends Part ? PartParams<part> : never)
