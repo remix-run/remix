@@ -97,3 +97,18 @@ export function concat(chunks: Uint8Array[]): Uint8Array {
 
   return result;
 }
+
+type InputType = 'Request' | 'Response';
+
+export function createInput(
+  type: InputType,
+  url: string,
+  init: RequestInit
+): Request | Response {
+  switch (type) {
+    case 'Request':
+      return new Request(url, init);
+    case 'Response':
+      return new Response(init.body, { headers: init.headers });
+  }
+}
