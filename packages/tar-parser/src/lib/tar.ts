@@ -315,7 +315,6 @@ export class TarParser {
     }
 
     this.#header = parseTarHeader(block, this.#options);
-
     switch (this.#header.type) {
       case 'gnu-long-path':
       case 'gnu-long-link-path':
@@ -399,6 +398,13 @@ export class TarParser {
       this.#bodyController!.enqueue(this.#buffer!);
       this.#missing -= this.#buffer!.length;
       this.#buffer = null;
+      
+      // Check if we've finished reading the entire body
+      if (this.#missing === 0) {
+        this.#bodyController!.close();
+        this.#bodyController = null;
+        this.#missing = overflow(this.#header!.size);
+      }
     } else {
       this.#bodyController!.enqueue(this.#read(this.#missing));
       this.#bodyController!.close();
