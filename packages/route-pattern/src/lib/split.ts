@@ -1,7 +1,7 @@
 type Span = [number, number]
 
 export function split(source: string) {
-  const result: {
+  let result: {
     protocol?: Span
     hostname?: Span
     pathname?: Span
@@ -9,14 +9,14 @@ export function split(source: string) {
   } = {}
 
   // search
-  const searchStart = source.indexOf('?')
+  let searchStart = source.indexOf('?')
   if (searchStart !== -1) {
     result.search = [searchStart + 1, source.length]
     source = source.slice(0, searchStart)
   }
 
   let index = 0
-  const solidus = source.indexOf('://')
+  let solidus = source.indexOf('://')
   if (solidus !== -1) {
     // protocol
     if (solidus !== 0) {
@@ -25,7 +25,7 @@ export function split(source: string) {
     index = solidus + 3
 
     // hostname
-    const hostnameEnd = source.indexOf('/', index)
+    let hostnameEnd = source.indexOf('/', index)
     if (hostnameEnd === -1) {
       result.hostname = [index, source.length]
       return result

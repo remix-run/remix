@@ -5,7 +5,7 @@ import { split } from './split.ts'
 
 describe('split', () => {
   it('splits route patterns into protocol, hostname, pathname, search', () => {
-    const cases: Array<
+    let cases: Array<
       [string, { protocol?: string; hostname?: string; pathname?: string; search?: string }]
     > = [
       [
@@ -49,10 +49,9 @@ describe('split', () => {
       ['?q=1', { search: 'q=1' }],
     ]
 
-    for (const [input, expected] of cases) {
-      const spans = split(input)
-      const result: { protocol?: string; hostname?: string; pathname?: string; search?: string } =
-        {}
+    for (let [input, expected] of cases) {
+      let spans = split(input)
+      let result: { protocol?: string; hostname?: string; pathname?: string; search?: string } = {}
 
       if (spans.protocol) {
         result.protocol = input.slice(...spans.protocol)

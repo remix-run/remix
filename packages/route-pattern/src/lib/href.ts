@@ -11,8 +11,8 @@ type HrefArgs<Source extends string> =
 export const createHref =
   <source extends string>() =>
   <variant extends Variant<source>>(variant: variant, ...args: HrefArgs<variant>) => {
-    const params = args.at(0) ?? {}
-    const ast = parse(variant)
+    let params = args.at(0) ?? {}
+    let ast = parse(variant)
 
     let href = ''
     href += ast.protocol ? resolvePart(ast.protocol, params) : 'https'

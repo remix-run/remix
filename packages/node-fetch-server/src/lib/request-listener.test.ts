@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it, mock } from 'node:test'
 
-import * as http from 'node:http'
+import type * as http from 'node:http'
 import * as stream from 'node:stream'
 
 import { type FetchHandler } from './fetch-handler.ts'

@@ -100,7 +100,7 @@ function parse256(buf: Uint8Array): number | null {
   let tuple = []
   let i
   for (i = buf.length - 1; i > 0; i--) {
-    const byte = buf[i]
+    let byte = buf[i]
     if (positive) tuple.push(byte)
     else tuple.push(0xff - byte)
   }

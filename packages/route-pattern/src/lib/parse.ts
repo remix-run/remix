@@ -9,8 +9,8 @@ export type Ast = {
 }
 
 export function parse(source: string) {
-  const { protocol, hostname, pathname, search } = split(source)
-  const ast: Ast = {}
+  let { protocol, hostname, pathname, search } = split(source)
+  let ast: Ast = {}
   if (protocol) ast.protocol = parsePart(source, protocol)
   if (hostname) ast.hostname = parsePart(source, hostname)
   if (pathname) ast.pathname = parsePart(source, pathname)
@@ -21,14 +21,14 @@ export function parse(source: string) {
 const identifierRE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
 function parsePart(source: string, bounds: [number, number]) {
-  const part = source.slice(...bounds)
+  let part = source.slice(...bounds)
 
-  const ast: Part = []
+  let ast: Part = []
   let optional: { node: Optional; index: number } | null = null
 
-  const nodes = () => optional?.node.nodes ?? ast
-  const appendText = (text: string) => {
-    const last = nodes().at(-1)
+  let nodes = () => optional?.node.nodes ?? ast
+  let appendText = (text: string) => {
+    let last = nodes().at(-1)
     if (last?.type !== 'text') {
       nodes().push({ type: 'text', value: text })
       return
@@ -38,13 +38,13 @@ function parsePart(source: string, bounds: [number, number]) {
 
   let i = 0
   while (i < part.length) {
-    const char = part[i]
+    let char = part[i]
 
     // param
     if (char === ':') {
       i += 1
-      const node: Param = { type: 'param' }
-      const name = identifierRE.exec(part.slice(i))?.[0]
+      let node: Param = { type: 'param' }
+      let name = identifierRE.exec(part.slice(i))?.[0]
       if (name) node.name = name
       nodes().push(node)
       i += name?.length ?? 0
@@ -54,8 +54,8 @@ function parsePart(source: string, bounds: [number, number]) {
     // glob
     if (char === '*') {
       i += 1
-      const node: Glob = { type: 'glob' }
-      const name = identifierRE.exec(part.slice(i))?.[0]
+      let node: Glob = { type: 'glob' }
+      let name = identifierRE.exec(part.slice(i))?.[0]
       if (name) node.name = name
       nodes().push(node)
       i += name?.length ?? 0
@@ -64,9 +64,9 @@ function parsePart(source: string, bounds: [number, number]) {
 
     // enum
     if (char === '{') {
-      const close = part.indexOf('}', i)
+      let close = part.indexOf('}', i)
       if (close === -1) throw new Error(`unmatched { at ${i}`)
-      const members = part.slice(i + 1, close).split(',')
+      let members = part.slice(i + 1, close).split(',')
       nodes().push({ type: 'enum', members })
       i = close + 1
       continue
@@ -92,7 +92,7 @@ function parsePart(source: string, bounds: [number, number]) {
 
     // text
     if (char === '\\') {
-      const next = part.at(i + 1)
+      let next = part.at(i + 1)
       if (!next) throw new Error(`dangling escape at ${i}`)
       appendText(next)
       i += 2

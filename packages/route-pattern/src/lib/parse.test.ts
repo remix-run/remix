@@ -5,7 +5,7 @@ import { parse } from './parse.ts'
 
 describe('parse', () => {
   describe('pathname only patterns', () => {
-    const testCases = [
+    let testCases = [
       {
         name: 'plain text',
         input: 'hello',
@@ -254,14 +254,14 @@ describe('parse', () => {
 
     testCases.forEach(({ name, input, expected }) => {
       it(name, () => {
-        const result = parse(input)
+        let result = parse(input)
         assert.deepStrictEqual(result, expected)
       })
     })
   })
 
   describe('full URL patterns', () => {
-    const testCases = [
+    let testCases = [
       {
         name: 'protocol only (without ://)',
         input: 'https:',
@@ -343,14 +343,14 @@ describe('parse', () => {
 
     testCases.forEach(({ name, input, expected }) => {
       it(name, () => {
-        const result = parse(input)
+        let result = parse(input)
         assert.deepStrictEqual(result, expected)
       })
     })
   })
 
   describe('error cases', () => {
-    const errorCases = [
+    let errorCases = [
       {
         name: 'unmatched opening brace',
         input: '{unclosed',

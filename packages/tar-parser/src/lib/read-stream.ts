@@ -4,8 +4,8 @@ export async function* readStream(stream: ReadableStream<Uint8Array>): AsyncIter
   let reader = stream.getReader()
 
   while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    yield value
+    let result = await reader.read()
+    if (result.done) break
+    yield result.value
   }
 }

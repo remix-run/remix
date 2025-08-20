@@ -1,9 +1,5 @@
-import type { MultipartParserOptions } from '@remix-run/multipart-parser'
-import {
-  isMultipartRequest,
-  parseMultipartRequest,
-  MultipartPart,
-} from '@remix-run/multipart-parser'
+import type { MultipartParserOptions, MultipartPart } from '@remix-run/multipart-parser'
+import { isMultipartRequest, parseMultipartRequest } from '@remix-run/multipart-parser'
 
 /**
  * The base class for errors thrown by the form data parser.

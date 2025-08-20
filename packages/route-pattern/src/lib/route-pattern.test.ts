@@ -6,14 +6,14 @@ import { RoutePattern } from './route-pattern.ts'
 describe('RoutePattern', () => {
   describe('constructor', () => {
     it('stores the source pattern', () => {
-      const pattern = new RoutePattern('users/:id')
+      let pattern = new RoutePattern('users/:id')
       assert.strictEqual(pattern.source, 'users/:id')
     })
   })
 
   describe('match', () => {
     describe('pathname only patterns', () => {
-      const pathnameTests = [
+      let pathnameTests = [
         {
           name: 'matches plain text',
           pattern: 'users',
@@ -102,14 +102,14 @@ describe('RoutePattern', () => {
 
       pathnameTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern)
+          let routePattern = new RoutePattern(pattern)
           assert.deepStrictEqual(routePattern.match(input), expected)
         })
       })
     })
 
     describe('enums', () => {
-      const enumTests = [
+      let enumTests = [
         {
           name: 'matches simple enum values',
           pattern: 'files/:name.{jpg,png,gif}',
@@ -162,14 +162,14 @@ describe('RoutePattern', () => {
 
       enumTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern)
+          let routePattern = new RoutePattern(pattern)
           assert.deepStrictEqual(routePattern.match(input), expected)
         })
       })
     })
 
     describe('multiple params in single segment', () => {
-      const multiParamTests = [
+      let multiParamTests = [
         {
           name: 'extracts multiple params with dots',
           pattern: 'api/v:major.:minor',
@@ -210,14 +210,14 @@ describe('RoutePattern', () => {
 
       multiParamTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern)
+          let routePattern = new RoutePattern(pattern)
           assert.deepStrictEqual(routePattern.match(input), expected)
         })
       })
     })
 
     describe('complex combinations from README examples', () => {
-      const complexTests = [
+      let complexTests = [
         {
           name: 'blog with date params and optional extension',
           pattern: 'blog/:year-:month-:day/:slug(.html)',
@@ -278,14 +278,14 @@ describe('RoutePattern', () => {
 
       complexTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern)
+          let routePattern = new RoutePattern(pattern)
           assert.deepStrictEqual(routePattern.match(input), expected)
         })
       })
     })
 
     describe('full URL patterns', () => {
-      const fullUrlTests = [
+      let fullUrlTests = [
         {
           name: 'matches protocol patterns',
           pattern: 'https://example.com',
@@ -350,14 +350,14 @@ describe('RoutePattern', () => {
 
       fullUrlTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern)
+          let routePattern = new RoutePattern(pattern)
           assert.deepStrictEqual(routePattern.match(input), expected)
         })
       })
     })
 
     describe('input types', () => {
-      const inputTypeTests = [
+      let inputTypeTests = [
         {
           name: 'accepts string URLs',
           pattern: 'users/:id',
@@ -374,14 +374,14 @@ describe('RoutePattern', () => {
 
       inputTypeTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern)
+          let routePattern = new RoutePattern(pattern)
           assert.deepStrictEqual(routePattern.match(input), expected)
         })
       })
     })
 
     describe('edge cases', () => {
-      const edgeCaseTests = [
+      let edgeCaseTests = [
         {
           name: 'handles empty patterns',
           pattern: '',
@@ -434,14 +434,14 @@ describe('RoutePattern', () => {
 
       edgeCaseTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern)
+          let routePattern = new RoutePattern(pattern)
           assert.deepStrictEqual(routePattern.match(input), expected)
         })
       })
     })
 
     describe('parameter constraints', () => {
-      const constraintTests = [
+      let constraintTests = [
         {
           name: 'parameters do not match across path segments',
           pattern: 'users/:id/posts',
@@ -464,14 +464,14 @@ describe('RoutePattern', () => {
 
       constraintTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern)
+          let routePattern = new RoutePattern(pattern)
           assert.deepStrictEqual(routePattern.match(input), expected)
         })
       })
     })
 
     describe('search params', () => {
-      const searchTests = [
+      let searchTests = [
         {
           name: 'matches basic search param',
           pattern: 'search?q=test',
@@ -572,7 +572,7 @@ describe('RoutePattern', () => {
 
       searchTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern)
+          let routePattern = new RoutePattern(pattern)
           assert.deepStrictEqual(routePattern.match(input), expected)
         })
       })

@@ -17,26 +17,26 @@ export class RoutePattern {
   match(url: URL | string): Match | null {
     if (typeof url === 'string') url = new URL(url)
 
-    const protocolRE = partToRegExp(this._ast.protocol, { param: /.*/ }) ?? /^.*$/
-    const hostnameRE = partToRegExp(this._ast.hostname, { param: /[^.]+/ }) ?? /^.*$/
-    const pathnameRE = partToRegExp(this._ast.pathname, { param: /[^/]+/ }) ?? /^$/
+    let protocolRE = partToRegExp(this._ast.protocol, { param: /.*/ }) ?? /^.*$/
+    let hostnameRE = partToRegExp(this._ast.hostname, { param: /[^.]+/ }) ?? /^.*$/
+    let pathnameRE = partToRegExp(this._ast.pathname, { param: /[^/]+/ }) ?? /^$/
 
-    const params: Params = {}
+    let params: Params = {}
 
-    const protocolMatch = protocolRE.exec(url.protocol.slice(0, -1))
+    let protocolMatch = protocolRE.exec(url.protocol.slice(0, -1))
     if (!protocolMatch) return null
     Object.assign(params, protocolMatch.groups ?? {})
 
-    const hostnameMatch = hostnameRE.exec(url.hostname)
+    let hostnameMatch = hostnameRE.exec(url.hostname)
     if (!hostnameMatch) return null
     Object.assign(params, hostnameMatch.groups ?? {})
 
-    const pathnameMatch = pathnameRE.exec(url.pathname.slice(1))
+    let pathnameMatch = pathnameRE.exec(url.pathname.slice(1))
     if (!pathnameMatch) return null
     Object.assign(params, pathnameMatch.groups ?? {})
 
     if (this._ast.search) {
-      for (const [key, value] of this._ast.search?.entries()) {
+      for (let [key, value] of this._ast.search?.entries()) {
         if (!url.searchParams.getAll(key).includes(value)) return null
       }
     }
@@ -51,12 +51,12 @@ function regexpEscape(text: string): string {
 
 function partToRegExp(part: Part | undefined, options: { param: RegExp }) {
   if (part === undefined) return undefined
-  const source = partToRegExpSource(part, options.param)
+  let source = partToRegExpSource(part, options.param)
   return new RegExp('^' + source + '$')
 }
 
 function partToRegExpSource(part: Part, paramRegExp: RegExp) {
-  const source: string = part
+  let source: string = part
     .map((node) => {
       if (node.type === 'param') {
         let source = '('
