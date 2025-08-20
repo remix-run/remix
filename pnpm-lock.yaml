@@ -37,6 +37,19 @@ importers:
         specifier: ^0.25.5
         version: 0.25.5
 
+  packages/fetch-router:
+    dependencies:
+      '@remix-run/route-pattern':
+        specifier: workspace:^
+        version: link:../route-pattern
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.10
+        version: 20.16.1
+      esbuild:
+        specifier: ^0.20.0
+        version: 0.20.2
+
   packages/file-storage:
     dependencies:
       '@remix-run/lazy-file':
