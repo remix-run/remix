@@ -1,15 +1,15 @@
-# Route pattern
+# Route Pattern
 
-Route patterns describe the structure of URLs you want to match
+Route patterns describe the structure of URLs you want to match.
 
-- Support for all JavaScript runtimes — Node, Bun, Deno
 - Full URL matching, not just pathname
 - Familiar syntax inspired by Rails
+- Support for all JavaScript runtimes (Node, Bun, Deno, etc.)
 
 ## Usage
 
 ```tsx
-import { RoutePattern } from 'route-pattern'
+import { RoutePattern } from '@remix-run/route-pattern'
 
 // Blog with optional HTML extension
 let pattern = new RoutePattern('blog/:year-:month-:day/:slug(.html)')
@@ -117,7 +117,7 @@ The `protocol`, `hostname`, and `pathname` parts support [params](#params), [glo
 
 ### Params
 
-Params match dynamic parts of a URL within a segment. They're written as `:` followed optionally by a name:
+Params match dynamic parts of a URL within a segment. They're written as `:` followed (optionally) by a name:
 
 ```tsx
 let pattern = new RoutePattern('users/@:id')
@@ -135,7 +135,7 @@ pattern.match('https://remix.run/api/v2.1')
 // { params: { major: '2', minor: '1' } }
 ```
 
-You can omit the param name if you don't need the captured value:
+You can omit the param name (just a `:` with no name) if you don't need the captured value:
 
 ```tsx
 let pattern = new RoutePattern('products/:-shoes')
@@ -146,7 +146,7 @@ pattern.match('https://remix.run/products/tennis-shoes')
 
 ### Globs
 
-Globs match dynamic parts that can span multiple segments. They're written as `*` followed optionally by a name:
+Globs match dynamic parts that can span multiple segments. They're written as `*` followed (optionally) by a name:
 
 ```tsx
 let pattern = new RoutePattern('://app.unpkg.com/*path/dist/:file.mjs')
