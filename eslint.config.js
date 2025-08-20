@@ -46,6 +46,29 @@ export default [
           fixMixedExportsWithInlineTypeSpecifier: false,
         },
       ],
+
+      // Prefer native public and #private over TS accessibility modifiers
+      // Disallow `public`/`private`/`protected` on class fields, methods, and parameter properties
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'PropertyDefinition[accessibility]',
+          message: "Use native class fields: omit 'public' and use '#private' for private state.",
+        },
+        {
+          selector: 'MethodDefinition[accessibility]',
+          message:
+            "Use native methods: omit 'public'; for private behavior use '#private' fields/methods.",
+        },
+        {
+          selector: 'TSParameterProperty[accessibility]',
+          message:
+            "Avoid TS parameter properties; declare fields explicitly and use '#private' when needed.",
+        },
+      ],
+
+      // Ensure no rule asks for explicit member accessibility
+      '@typescript-eslint/explicit-member-accessibility': 'off',
     },
   },
   {
