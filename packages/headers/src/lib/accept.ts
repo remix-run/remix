@@ -1,8 +1,8 @@
-import { type HeaderValue } from './header-value.ts';
-import { parseParams } from './param-values.ts';
-import { isIterable } from './utils.ts';
+import { type HeaderValue } from './header-value.ts'
+import { parseParams } from './param-values.ts'
+import { isIterable } from './utils.ts'
 
-export type AcceptInit = Iterable<string | [string, number]> | Record<string, number>;
+export type AcceptInit = Iterable<string | [string, number]> | Record<string, number>
 
 /**
  * The value of a `Accept` HTTP header.
@@ -12,71 +12,71 @@ export type AcceptInit = Iterable<string | [string, number]> | Record<string, nu
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2)
  */
 export class Accept implements HeaderValue, Iterable<[string, number]> {
-  #map: Map<string, number>;
+  #map: Map<string, number>
 
   constructor(init?: string | AcceptInit) {
-    this.#map = new Map();
+    this.#map = new Map()
 
     if (init) {
       if (typeof init === 'string') {
         for (let piece of init.split(/\s*,\s*/)) {
-          let params = parseParams(piece);
-          if (params.length < 1) continue;
+          let params = parseParams(piece)
+          if (params.length < 1) continue
 
-          let mediaType = params[0][0];
-          let weight = 1;
+          let mediaType = params[0][0]
+          let weight = 1
 
           for (let i = 1; i < params.length; i++) {
-            let [key, value] = params[i];
+            let [key, value] = params[i]
             if (key === 'q') {
-              weight = Number(value);
-              break;
+              weight = Number(value)
+              break
             }
           }
 
-          this.#map.set(mediaType.toLowerCase(), weight);
+          this.#map.set(mediaType.toLowerCase(), weight)
         }
       } else if (isIterable(init)) {
         for (let mediaType of init) {
           if (Array.isArray(mediaType)) {
-            this.#map.set(mediaType[0].toLowerCase(), mediaType[1]);
+            this.#map.set(mediaType[0].toLowerCase(), mediaType[1])
           } else {
-            this.#map.set(mediaType.toLowerCase(), 1);
+            this.#map.set(mediaType.toLowerCase(), 1)
           }
         }
       } else {
         for (let mediaType of Object.getOwnPropertyNames(init)) {
-          this.#map.set(mediaType.toLowerCase(), init[mediaType]);
+          this.#map.set(mediaType.toLowerCase(), init[mediaType])
         }
       }
 
-      this.#sort();
+      this.#sort()
     }
   }
 
   #sort() {
-    this.#map = new Map([...this.#map].sort((a, b) => b[1] - a[1]));
+    this.#map = new Map([...this.#map].sort((a, b) => b[1] - a[1]))
   }
 
   /**
    * An array of all media types in the header.
    */
   get mediaTypes(): string[] {
-    return Array.from(this.#map.keys());
+    return Array.from(this.#map.keys())
   }
 
   /**
    * An array of all weights (q values) in the header.
    */
   get weights(): number[] {
-    return Array.from(this.#map.values());
+    return Array.from(this.#map.values())
   }
 
   /**
    * The number of media types in the `Accept` header.
    */
   get size(): number {
-    return this.#map.size;
+    return this.#map.size
   }
 
   /**
@@ -85,7 +85,7 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
    * @returns `true` if the media type is acceptable, `false` otherwise.
    */
   accepts(mediaType: string): boolean {
-    return this.getWeight(mediaType) > 0;
+    return this.getWeight(mediaType) > 0
   }
 
   /**
@@ -94,19 +94,19 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
    * @returns The weight of the media type.
    */
   getWeight(mediaType: string): number {
-    let [type, subtype] = mediaType.toLowerCase().split('/');
+    let [type, subtype] = mediaType.toLowerCase().split('/')
 
     for (let [key, value] of this) {
-      let [t, s] = key.split('/');
+      let [t, s] = key.split('/')
       if (
         (t === type || t === '*' || type === '*') &&
         (s === subtype || s === '*' || subtype === '*')
       ) {
-        return value;
+        return value
       }
     }
 
-    return 0;
+    return 0
   }
 
   /**
@@ -117,11 +117,11 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
   getPreferred(mediaTypes: string[]): string | null {
     let sorted = mediaTypes
       .map((mediaType) => [mediaType, this.getWeight(mediaType)] as const)
-      .sort((a, b) => b[1] - a[1]);
+      .sort((a, b) => b[1] - a[1])
 
-    let first = sorted[0];
+    let first = sorted[0]
 
-    return first !== undefined && first[1] > 0 ? first[0] : null;
+    return first !== undefined && first[1] > 0 ? first[0] : null
   }
 
   /**
@@ -130,7 +130,7 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
    * @returns The weight of the media type, or `null` if it is not in the header.
    */
   get(mediaType: string): number | null {
-    return this.#map.get(mediaType.toLowerCase()) ?? null;
+    return this.#map.get(mediaType.toLowerCase()) ?? null
   }
 
   /**
@@ -139,8 +139,8 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
    * @param weight The weight of the media type. Defaults to 1.
    */
   set(mediaType: string, weight = 1): void {
-    this.#map.set(mediaType.toLowerCase(), weight);
-    this.#sort();
+    this.#map.set(mediaType.toLowerCase(), weight)
+    this.#sort()
   }
 
   /**
@@ -148,7 +148,7 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
    * @param mediaType The media type to remove.
    */
   delete(mediaType: string): void {
-    this.#map.delete(mediaType.toLowerCase());
+    this.#map.delete(mediaType.toLowerCase())
   }
 
   /**
@@ -157,22 +157,22 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
    * @returns `true` if the media type is in the header (verbatim), `false` otherwise.
    */
   has(mediaType: string): boolean {
-    return this.#map.has(mediaType.toLowerCase());
+    return this.#map.has(mediaType.toLowerCase())
   }
 
   /**
    * Removes all media types from the header.
    */
   clear(): void {
-    this.#map.clear();
+    this.#map.clear()
   }
 
   entries(): IterableIterator<[string, number]> {
-    return this.#map.entries();
+    return this.#map.entries()
   }
 
   [Symbol.iterator](): IterableIterator<[string, number]> {
-    return this.entries();
+    return this.entries()
   }
 
   forEach(
@@ -180,17 +180,17 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
     thisArg?: any,
   ): void {
     for (let [mediaType, weight] of this) {
-      callback.call(thisArg, mediaType, weight, this);
+      callback.call(thisArg, mediaType, weight, this)
     }
   }
 
   toString(): string {
-    let pairs: string[] = [];
+    let pairs: string[] = []
 
     for (let [mediaType, weight] of this.#map) {
-      pairs.push(`${mediaType}${weight === 1 ? '' : `;q=${weight}`}`);
+      pairs.push(`${mediaType}${weight === 1 ? '' : `;q=${weight}`}`)
     }
 
-    return pairs.join(',');
+    return pairs.join(',')
   }
 }

@@ -23,25 +23,23 @@ npm install @remix-run/tar-parser
 The main parser interface is the `parseTar(archive, handler)` function:
 
 ```ts
-import { parseTar } from '@remix-run/tar-parser';
+import { parseTar } from '@remix-run/tar-parser'
 
-let response = await fetch(
-  'https://github.com/remix-run/remix/archive/refs/heads/main.tar.gz',
-);
+let response = await fetch('https://github.com/remix-run/remix/archive/refs/heads/main.tar.gz')
 
 await parseTar(response.body.pipeThrough(new DecompressionStream('gzip')), (entry) => {
-  console.log(entry.name, entry.size);
-});
+  console.log(entry.name, entry.size)
+})
 ```
 
 If you're parsing an archive with filename encodings other than UTF-8, use the `filenameEncoding` option:
 
 ```ts
-let response = await fetch(/* ... */);
+let response = await fetch(/* ... */)
 
 await parseTar(response.body, { filenameEncoding: 'latin1' }, (entry) => {
-  console.log(entry.name, entry.size);
-});
+  console.log(entry.name, entry.size)
+})
 ```
 
 ## Benchmark

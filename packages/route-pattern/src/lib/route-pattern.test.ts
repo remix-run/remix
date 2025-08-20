@@ -1,15 +1,15 @@
-import * as assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 
-import { RoutePattern } from './route-pattern.ts';
+import { RoutePattern } from './route-pattern.ts'
 
 describe('RoutePattern', () => {
   describe('constructor', () => {
     it('stores the source pattern', () => {
-      const pattern = new RoutePattern('users/:id');
-      assert.strictEqual(pattern.source, 'users/:id');
-    });
-  });
+      const pattern = new RoutePattern('users/:id')
+      assert.strictEqual(pattern.source, 'users/:id')
+    })
+  })
 
   describe('match', () => {
     describe('pathname only patterns', () => {
@@ -98,15 +98,15 @@ describe('RoutePattern', () => {
           input: 'https://example.com/users:test',
           expected: { params: {} },
         },
-      ];
+      ]
 
       pathnameTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          const routePattern = new RoutePattern(pattern)
+          assert.deepStrictEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('enums', () => {
       const enumTests = [
@@ -158,15 +158,15 @@ describe('RoutePattern', () => {
           input: 'https://example.com/api/xml',
           expected: { params: { version: undefined } },
         },
-      ];
+      ]
 
       enumTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          const routePattern = new RoutePattern(pattern)
+          assert.deepStrictEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('multiple params in single segment', () => {
       const multiParamTests = [
@@ -206,15 +206,15 @@ describe('RoutePattern', () => {
           input: 'https://example.com/api/v2.1/users/123/edit',
           expected: { params: { major: '2', minor: '1', id: '123', action: 'edit' } },
         },
-      ];
+      ]
 
       multiParamTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          const routePattern = new RoutePattern(pattern)
+          assert.deepStrictEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('complex combinations from README examples', () => {
       const complexTests = [
@@ -274,15 +274,15 @@ describe('RoutePattern', () => {
           input: 'https://remix.run/assets/styles/main.css',
           expected: null,
         },
-      ];
+      ]
 
       complexTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          const routePattern = new RoutePattern(pattern)
+          assert.deepStrictEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('full URL patterns', () => {
       const fullUrlTests = [
@@ -346,15 +346,15 @@ describe('RoutePattern', () => {
           input: 'https://acme.remix.run/admin/users/123',
           expected: { params: { tenant: 'acme', admin: 'admin', id: '123' } },
         },
-      ];
+      ]
 
       fullUrlTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          const routePattern = new RoutePattern(pattern)
+          assert.deepStrictEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('input types', () => {
       const inputTypeTests = [
@@ -370,15 +370,15 @@ describe('RoutePattern', () => {
           input: new URL('https://example.com/users/123'),
           expected: { params: { id: '123' } },
         },
-      ];
+      ]
 
       inputTypeTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          const routePattern = new RoutePattern(pattern)
+          assert.deepStrictEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('edge cases', () => {
       const edgeCaseTests = [
@@ -430,15 +430,15 @@ describe('RoutePattern', () => {
           input: 'https://example.com/proxy/https://other.com/api',
           expected: { params: { url: 'https://other.com/api' } },
         },
-      ];
+      ]
 
       edgeCaseTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          const routePattern = new RoutePattern(pattern)
+          assert.deepStrictEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('parameter constraints', () => {
       const constraintTests = [
@@ -460,15 +460,15 @@ describe('RoutePattern', () => {
           input: 'https://example.com/files/docs/readme.txt',
           expected: { params: { path: 'docs/readme.txt' } },
         },
-      ];
+      ]
 
       constraintTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          const routePattern = new RoutePattern(pattern)
+          assert.deepStrictEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('search params', () => {
       const searchTests = [
@@ -568,14 +568,14 @@ describe('RoutePattern', () => {
           input: 'https://example.com/results?page=1&limit=10&sort=date&extra=ignore',
           expected: { params: {} },
         },
-      ];
+      ]
 
       searchTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
-  });
-});
+          const routePattern = new RoutePattern(pattern)
+          assert.deepStrictEqual(routePattern.match(input), expected)
+        })
+      })
+    })
+  })
+})

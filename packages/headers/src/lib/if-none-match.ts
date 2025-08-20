@@ -1,11 +1,11 @@
-import { type HeaderValue } from './header-value.ts';
-import { quoteEtag } from './utils.ts';
+import { type HeaderValue } from './header-value.ts'
+import { quoteEtag } from './utils.ts'
 
 export interface IfNoneMatchInit {
   /**
    * The entity tags to compare against the current entity.
    */
-  tags: string[];
+  tags: string[]
 }
 
 /**
@@ -16,16 +16,16 @@ export interface IfNoneMatchInit {
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.2)
  */
 export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
-  tags: string[] = [];
+  tags: string[] = []
 
   constructor(init?: string | string[] | IfNoneMatchInit) {
     if (init) {
       if (typeof init === 'string') {
-        this.tags.push(...init.split(/\s*,\s*/).map(quoteEtag));
+        this.tags.push(...init.split(/\s*,\s*/).map(quoteEtag))
       } else if (Array.isArray(init)) {
-        this.tags.push(...init.map(quoteEtag));
+        this.tags.push(...init.map(quoteEtag))
       } else {
-        this.tags.push(...init.tags.map(quoteEtag));
+        this.tags.push(...init.tags.map(quoteEtag))
       }
     }
   }
@@ -39,7 +39,7 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
    * @returns `true` if the tag is present in the header, `false` otherwise.
    */
   has(tag: string): boolean {
-    return this.tags.includes(quoteEtag(tag));
+    return this.tags.includes(quoteEtag(tag))
   }
 
   /**
@@ -49,10 +49,10 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
    * @returns `true` if the tag is present in the header (or the header contains a wildcard), `false` otherwise.
    */
   matches(tag: string): boolean {
-    return this.has(tag) || this.tags.includes('*');
+    return this.has(tag) || this.tags.includes('*')
   }
 
   toString() {
-    return this.tags.join(', ');
+    return this.tags.join(', ')
   }
 }

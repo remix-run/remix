@@ -1,13 +1,13 @@
-import type * as http from 'node:http';
-import { Readable } from 'node:stream';
+import type * as http from 'node:http'
+import { Readable } from 'node:stream'
 
-import type { ParseMultipartOptions, MultipartParserOptions, MultipartPart } from './multipart.ts';
+import type { ParseMultipartOptions, MultipartParserOptions, MultipartPart } from './multipart.ts'
 import {
   MultipartParseError,
   parseMultipart as parseMultipartWeb,
   parseMultipartStream as parseMultipartStreamWeb,
-} from './multipart.ts';
-import { getMultipartBoundary } from './multipart-request.ts';
+} from './multipart.ts'
+import { getMultipartBoundary } from './multipart-request.ts'
 
 /**
  * Parse a `multipart/*` Node.js `Buffer` and yield each part as a `MultipartPart` object.
@@ -23,7 +23,7 @@ export function* parseMultipart(
   message: Buffer | Iterable<Buffer>,
   options: ParseMultipartOptions,
 ): Generator<MultipartPart, void, unknown> {
-  yield* parseMultipartWeb(message as Uint8Array | Iterable<Uint8Array>, options);
+  yield* parseMultipartWeb(message as Uint8Array | Iterable<Uint8Array>, options)
 }
 
 /**
@@ -40,7 +40,7 @@ export async function* parseMultipartStream(
   stream: Readable,
   options: ParseMultipartOptions,
 ): AsyncGenerator<MultipartPart, void, unknown> {
-  yield* parseMultipartStreamWeb(Readable.toWeb(stream) as ReadableStream, options);
+  yield* parseMultipartStreamWeb(Readable.toWeb(stream) as ReadableStream, options)
 }
 
 /**
@@ -50,8 +50,8 @@ export async function* parseMultipartStream(
  * @return `true` if the request is a multipart request, `false` otherwise
  */
 export function isMultipartRequest(req: http.IncomingMessage): boolean {
-  let contentType = req.headers['content-type'];
-  return contentType != null && /^multipart\//i.test(contentType);
+  let contentType = req.headers['content-type']
+  return contentType != null && /^multipart\//i.test(contentType)
 }
 
 /**
@@ -66,17 +66,17 @@ export async function* parseMultipartRequest(
   options?: MultipartParserOptions,
 ): AsyncGenerator<MultipartPart, void, unknown> {
   if (!isMultipartRequest(req)) {
-    throw new MultipartParseError('Request is not a multipart request');
+    throw new MultipartParseError('Request is not a multipart request')
   }
 
-  let boundary = getMultipartBoundary(req.headers['content-type']!);
+  let boundary = getMultipartBoundary(req.headers['content-type']!)
   if (!boundary) {
-    throw new MultipartParseError('Invalid Content-Type header: missing boundary');
+    throw new MultipartParseError('Invalid Content-Type header: missing boundary')
   }
 
   yield* parseMultipartStream(req, {
     boundary,
     maxHeaderSize: options?.maxHeaderSize,
     maxFileSize: options?.maxFileSize,
-  });
+  })
 }

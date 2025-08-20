@@ -1,7 +1,7 @@
-import * as assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 
-import { parse } from './parse.ts';
+import { parse } from './parse.ts'
 
 describe('parse', () => {
   describe('pathname only patterns', () => {
@@ -250,15 +250,15 @@ describe('parse', () => {
           ],
         },
       },
-    ];
+    ]
 
     testCases.forEach(({ name, input, expected }) => {
       it(name, () => {
-        const result = parse(input);
-        assert.deepStrictEqual(result, expected);
-      });
-    });
-  });
+        const result = parse(input)
+        assert.deepStrictEqual(result, expected)
+      })
+    })
+  })
 
   describe('full URL patterns', () => {
     const testCases = [
@@ -339,15 +339,15 @@ describe('parse', () => {
           search: new URLSearchParams('format=json'),
         },
       },
-    ];
+    ]
 
     testCases.forEach(({ name, input, expected }) => {
       it(name, () => {
-        const result = parse(input);
-        assert.deepStrictEqual(result, expected);
-      });
-    });
-  });
+        const result = parse(input)
+        assert.deepStrictEqual(result, expected)
+      })
+    })
+  })
 
   describe('error cases', () => {
     const errorCases = [
@@ -376,14 +376,14 @@ describe('parse', () => {
         input: 'test\\',
         expectedError: 'dangling escape at 4',
       },
-    ];
+    ]
 
     errorCases.forEach(({ name, input, expectedError }) => {
       it(name, () => {
         assert.throws(() => parse(input), {
           message: expectedError,
-        });
-      });
-    });
-  });
-});
+        })
+      })
+    })
+  })
+})

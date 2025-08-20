@@ -1,25 +1,25 @@
-import { SetCookie } from '@remix-run/headers';
+import { SetCookie } from '@remix-run/headers'
 
 export interface FetchProxyOptions {
   /**
    * The `fetch` function to use for the actual fetch. Defaults to the global `fetch` function.
    */
-  fetch?: typeof globalThis.fetch;
+  fetch?: typeof globalThis.fetch
   /**
    * Set `false` to prevent the `Domain` attribute of `Set-Cookie` headers from being rewritten. By
    * default the domain will be rewritten to the domain of the incoming request.
    */
-  rewriteCookieDomain?: boolean;
+  rewriteCookieDomain?: boolean
   /**
    * Set `false` to prevent the `Path` attribute of `Set-Cookie` headers from being rewritten. By
    * default the portion of the pathname that matches the proxy target's pathname will be removed.
    */
-  rewriteCookiePath?: boolean;
+  rewriteCookiePath?: boolean
   /**
    * Set `true` to add `X-Forwarded-Proto` and `X-Forwarded-Host` headers to the proxied request.
    * Defaults to `false`.
    */
-  xForwardedHeaders?: boolean;
+  xForwardedHeaders?: boolean
 }
 
 /**
@@ -27,7 +27,7 @@ export interface FetchProxyOptions {
  * that forwards requests to another server.
  */
 export interface FetchProxy {
-  (input: URL | RequestInfo, init?: RequestInit): Promise<Response>;
+  (input: URL | RequestInfo, init?: RequestInit): Promise<Response>
 }
 
 /**
@@ -37,30 +37,30 @@ export interface FetchProxy {
  * @returns A fetch function that forwards requests to the target server
  */
 export function createFetchProxy(target: string | URL, options?: FetchProxyOptions): FetchProxy {
-  let localFetch = options?.fetch ?? globalThis.fetch;
-  let rewriteCookieDomain = options?.rewriteCookieDomain ?? true;
-  let rewriteCookiePath = options?.rewriteCookiePath ?? true;
-  let xForwardedHeaders = options?.xForwardedHeaders ?? false;
+  let localFetch = options?.fetch ?? globalThis.fetch
+  let rewriteCookieDomain = options?.rewriteCookieDomain ?? true
+  let rewriteCookiePath = options?.rewriteCookiePath ?? true
+  let xForwardedHeaders = options?.xForwardedHeaders ?? false
 
-  let targetUrl = new URL(target);
+  let targetUrl = new URL(target)
   if (targetUrl.pathname.endsWith('/')) {
-    targetUrl.pathname = targetUrl.pathname.replace(/\/+$/, '');
+    targetUrl.pathname = targetUrl.pathname.replace(/\/+$/, '')
   }
 
   return async (input: URL | RequestInfo, init?: RequestInit) => {
-    let request = new Request(input, init);
-    let url = new URL(request.url);
+    let request = new Request(input, init)
+    let url = new URL(request.url)
 
-    let proxyUrl = new URL(url.search, targetUrl);
+    let proxyUrl = new URL(url.search, targetUrl)
     if (url.pathname !== '/') {
       proxyUrl.pathname =
-        proxyUrl.pathname === '/' ? url.pathname : proxyUrl.pathname + url.pathname;
+        proxyUrl.pathname === '/' ? url.pathname : proxyUrl.pathname + url.pathname
     }
 
-    let proxyHeaders = new Headers(request.headers);
+    let proxyHeaders = new Headers(request.headers)
     if (xForwardedHeaders) {
-      proxyHeaders.append('X-Forwarded-Proto', url.protocol.replace(/:$/, ''));
-      proxyHeaders.append('X-Forwarded-Host', url.host);
+      proxyHeaders.append('X-Forwarded-Proto', url.protocol.replace(/:$/, ''))
+      proxyHeaders.append('X-Forwarded-Host', url.host)
     }
 
     let proxyInit: RequestInit = {
@@ -76,41 +76,41 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
       referrerPolicy: request.referrerPolicy,
       signal: request.signal,
       ...init,
-    };
+    }
     if (request.method !== 'GET' && request.method !== 'HEAD') {
-      proxyInit.body = request.body;
+      proxyInit.body = request.body
 
       // init.duplex = 'half' must be set when body is a ReadableStream, and Node follows the spec.
       // However, this property is not defined in the TypeScript types for RequestInit, so we have
       // to cast it here in order to set it without a type error.
       // See https://fetch.spec.whatwg.org/#dom-requestinit-duplex
-      (proxyInit as { duplex: 'half' }).duplex = 'half';
+      ;(proxyInit as { duplex: 'half' }).duplex = 'half'
     }
 
-    let response = await localFetch(proxyUrl, proxyInit);
-    let responseHeaders = new Headers(response.headers);
+    let response = await localFetch(proxyUrl, proxyInit)
+    let responseHeaders = new Headers(response.headers)
 
     if (responseHeaders.has('Set-Cookie')) {
-      let setCookie = responseHeaders.getSetCookie();
+      let setCookie = responseHeaders.getSetCookie()
 
-      responseHeaders.delete('Set-Cookie');
+      responseHeaders.delete('Set-Cookie')
 
       for (let cookie of setCookie) {
-        let header = new SetCookie(cookie);
+        let header = new SetCookie(cookie)
 
         if (rewriteCookieDomain && header.domain) {
-          header.domain = url.host;
+          header.domain = url.host
         }
 
         if (rewriteCookiePath && header.path) {
           if (header.path.startsWith(targetUrl.pathname + '/')) {
-            header.path = header.path.slice(targetUrl.pathname.length);
+            header.path = header.path.slice(targetUrl.pathname.length)
           } else if (header.path === targetUrl.pathname) {
-            header.path = '/';
+            header.path = '/'
           }
         }
 
-        responseHeaders.append('Set-Cookie', header.toString());
+        responseHeaders.append('Set-Cookie', header.toString())
       }
     }
 
@@ -118,6 +118,6 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
       status: response.status,
       statusText: response.statusText,
       headers: responseHeaders,
-    });
-  };
+    })
+  }
 }

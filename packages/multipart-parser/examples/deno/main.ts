@@ -1,9 +1,9 @@
 // deno-lint-ignore-file prefer-const
-import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser';
+import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser'
 // @deno-types="npm:@types/tmp"
-import tmp from 'npm:tmp';
+import tmp from 'npm:tmp'
 
-const PORT = 3000;
+const PORT = 3000
 
 async function requestHandler(request: Request): Promise<Response> {
   if (request.method === 'GET') {
@@ -27,18 +27,18 @@ async function requestHandler(request: Request): Promise<Response> {
       {
         headers: { 'Content-Type': 'text/html' },
       },
-    );
+    )
   }
 
   if (request.method === 'POST') {
     try {
       // deno-lint-ignore no-explicit-any
-      let parts: any[] = [];
+      let parts: any[] = []
 
       for await (let part of parseMultipartRequest(request)) {
         if (part.isFile) {
-          let tmpfile = tmp.fileSync();
-          await Deno.writeFile(tmpfile.name, part.bytes);
+          let tmpfile = tmp.fileSync()
+          await Deno.writeFile(tmpfile.name, part.bytes)
 
           parts.push({
             name: part.name,
@@ -46,35 +46,35 @@ async function requestHandler(request: Request): Promise<Response> {
             mediaType: part.mediaType,
             size: part.size,
             file: tmpfile.name,
-          });
+          })
         } else {
-          parts.push({ name: part.name, value: part.text });
+          parts.push({ name: part.name, value: part.text })
         }
       }
 
       return new Response(JSON.stringify({ parts }, null, 2), {
         headers: { 'Content-Type': 'application/json' },
-      });
+      })
     } catch (error) {
       if (error instanceof MultipartParseError) {
-        return new Response(`Error: ${error.message}`, { status: 400 });
+        return new Response(`Error: ${error.message}`, { status: 400 })
       }
 
-      console.error(error);
+      console.error(error)
 
-      return new Response('Internal Server Error', { status: 500 });
+      return new Response('Internal Server Error', { status: 500 })
     }
   }
 
-  return new Response('Method Not Allowed', { status: 405 });
+  return new Response('Method Not Allowed', { status: 405 })
 }
 
 Deno.serve(
   {
     port: PORT,
     onListen() {
-      console.log(`Server listening on http://localhost:${PORT} ...`);
+      console.log(`Server listening on http://localhost:${PORT} ...`)
     },
   },
   requestHandler,
-);
+)

@@ -1,8 +1,8 @@
-import * as path from 'node:path';
-import { openFile } from '@remix-run/lazy-file/fs';
+import * as path from 'node:path'
+import { openFile } from '@remix-run/lazy-file/fs'
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
-const fixturesDir = path.resolve(__dirname, 'fixtures');
+const __dirname = path.dirname(new URL(import.meta.url).pathname)
+const fixturesDir = path.resolve(__dirname, 'fixtures')
 
 export const fixtures = {
   base256Size: path.resolve(fixturesDir, 'base-256-size.tar'),
@@ -25,11 +25,11 @@ export const fixtures = {
   types: path.resolve(fixturesDir, 'types.tar'),
   unicodeBsd: path.resolve(fixturesDir, 'unicode-bsd.tar'),
   unicode: path.resolve(fixturesDir, 'unicode.tar'),
-};
+}
 
 export function readFixture(filename: string): ReadableStream<Uint8Array> {
-  let stream = openFile(filename).stream();
+  let stream = openFile(filename).stream()
   return filename.endsWith('.tar.gz') || filename.endsWith('.tgz')
     ? stream.pipeThrough(new DecompressionStream('gzip'))
-    : stream;
+    : stream
 }

@@ -1,25 +1,25 @@
 export type Ast = {
-  protocol?: Array<Node>;
-  hostname?: Array<Node>;
-  pathname?: Array<Node>;
-};
+  protocol?: Array<Node>
+  hostname?: Array<Node>
+  pathname?: Array<Node>
+}
 
 export type Parse<source extends string> =
   SplitUrl<source> extends infer split extends {
-    protocol?: string;
-    hostname?: string;
-    pathname?: string;
+    protocol?: string
+    hostname?: string
+    pathname?: string
   }
     ? {
-        protocol: split['protocol'] extends string ? PartParse<split['protocol']> : undefined;
-        hostname: split['hostname'] extends string ? PartParse<split['hostname']> : undefined;
-        pathname: split['pathname'] extends string ? PartParse<split['pathname']> : undefined;
+        protocol: split['protocol'] extends string ? PartParse<split['protocol']> : undefined
+        hostname: split['hostname'] extends string ? PartParse<split['hostname']> : undefined
+        pathname: split['pathname'] extends string ? PartParse<split['pathname']> : undefined
       }
-    : never;
+    : never
 
 // SplitUrl ----------------------------------------------------------------------------------------
 
-type SplitUrl<source extends string> = OmitEmptyStringValues<_SplitUrl<source>>;
+type SplitUrl<source extends string> = OmitEmptyStringValues<_SplitUrl<source>>
 
 // prettier-ignore
 type _SplitUrl<source extends string> =
@@ -30,31 +30,31 @@ type _SplitUrl<source extends string> =
     { protocol: protocol; hostname: after } :
   { pathname: source };
 
-type OmitEmptyStringValues<S> = { [K in keyof S as S[K] extends '' ? never : K]: S[K] };
+type OmitEmptyStringValues<S> = { [K in keyof S as S[K] extends '' ? never : K]: S[K] }
 
 // Part --------------------------------------------------------------------------------------------
 
-export type Part = Array<Node>;
+export type Part = Array<Node>
 
-export type Node = Param | Glob | Enum | Text | Optional;
+export type Node = Param | Glob | Enum | Text | Optional
 
-export type Param = { type: 'param'; name?: string };
-export type Glob = { type: 'glob'; name?: string };
-export type Enum = { type: 'enum'; members: Array<string> };
-export type Text = { type: 'text'; value: string };
-export type Optional = { type: 'optional'; nodes: Array<Node> };
+export type Param = { type: 'param'; name?: string }
+export type Glob = { type: 'glob'; name?: string }
+export type Enum = { type: 'enum'; members: Array<string> }
+export type Text = { type: 'text'; value: string }
+export type Optional = { type: 'optional'; nodes: Array<Node> }
 
 type PartParseState = {
-  ast: Array<Node>;
-  optional: Optional | null;
-  rest: string;
-};
+  ast: Array<Node>
+  optional: Optional | null
+  rest: string
+}
 
 type PartParse<source extends string> = _PartParse<{
-  ast: [];
-  optional: null;
-  rest: source;
-}>;
+  ast: []
+  optional: null
+  rest: source
+}>
 
 // prettier-ignore
 type _PartParse<state extends PartParseState> =
@@ -122,13 +122,13 @@ type AppendText<state extends PartParseState, text extends string, rest extends 
 
 // prettier-ignore
 type _a_z = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z'
-type _A_Z = Uppercase<_a_z>;
-type _0_9 = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+type _A_Z = Uppercase<_a_z>
+type _0_9 = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
-type IdentifierHead = _a_z | _A_Z | '_' | '$';
-type IdentifierTail = IdentifierHead | _0_9;
+type IdentifierHead = _a_z | _A_Z | '_' | '$'
+type IdentifierTail = IdentifierHead | _0_9
 
-type IdentiferParse<text extends string> = _IdentifierParse<{ identifier: ''; rest: text }>;
+type IdentiferParse<text extends string> = _IdentifierParse<{ identifier: ''; rest: text }>
 
 // prettier-ignore
 type _IdentifierParse<state extends { identifier: string, rest: string }> =

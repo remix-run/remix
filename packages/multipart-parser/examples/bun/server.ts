@@ -1,5 +1,5 @@
-import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser';
-import tmp from 'tmp';
+import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser'
+import tmp from 'tmp'
 
 const server = Bun.serve({
   port: 3000,
@@ -25,17 +25,17 @@ const server = Bun.serve({
         {
           headers: { 'Content-Type': 'text/html' },
         },
-      );
+      )
     }
 
     if (request.method === 'POST') {
       try {
-        let parts: any[] = [];
+        let parts: any[] = []
 
         for await (let part of parseMultipartRequest(request)) {
           if (part.isFile) {
-            let tmpfile = tmp.fileSync();
-            Bun.write(tmpfile.name, part.bytes);
+            let tmpfile = tmp.fileSync()
+            Bun.write(tmpfile.name, part.bytes)
 
             parts.push({
               name: part.name,
@@ -43,28 +43,28 @@ const server = Bun.serve({
               mediaType: part.mediaType,
               size: part.size,
               file: tmpfile.name,
-            });
+            })
           } else {
-            parts.push({ name: part.name, value: part.text });
+            parts.push({ name: part.name, value: part.text })
           }
         }
 
         return new Response(JSON.stringify({ parts }, null, 2), {
           headers: { 'Content-Type': 'application/json' },
-        });
+        })
       } catch (error) {
         if (error instanceof MultipartParseError) {
-          return new Response(`Error: ${error.message}`, { status: 400 });
+          return new Response(`Error: ${error.message}`, { status: 400 })
         }
 
-        console.error(error);
+        console.error(error)
 
-        return new Response('Internal Server Error', { status: 500 });
+        return new Response('Internal Server Error', { status: 500 })
       }
     }
 
-    return new Response('Method Not Allowed', { status: 405 });
+    return new Response('Method Not Allowed', { status: 405 })
   },
-});
+})
 
-console.log(`Server listening on http://localhost:${server.port} ...`);
+console.log(`Server listening on http://localhost:${server.port} ...`)

@@ -1,31 +1,31 @@
-import * as fs from 'node:fs';
-import gunzip from 'gunzip-maybe';
-import tar from 'tar-stream';
+import * as fs from 'node:fs'
+import gunzip from 'gunzip-maybe'
+import tar from 'tar-stream'
 
 export async function parse(filename: string): Promise<number> {
-  let stream = fs.createReadStream(filename).pipe(gunzip());
+  let stream = fs.createReadStream(filename).pipe(gunzip())
 
-  let start = performance.now();
+  let start = performance.now()
 
   await new Promise<void>((resolve, reject) => {
-    let extract = tar.extract();
+    let extract = tar.extract()
 
-    extract.on('error', reject);
+    extract.on('error', reject)
 
     extract.on('entry', function (_header, stream, next) {
       stream.on('end', function () {
-        next(); // ready for next entry
-      });
+        next() // ready for next entry
+      })
 
-      stream.resume(); // just auto drain the stream
-    });
+      stream.resume() // just auto drain the stream
+    })
 
     extract.on('finish', function () {
-      resolve();
-    });
+      resolve()
+    })
 
-    stream.pipe(extract);
-  });
+    stream.pipe(extract)
+  })
 
-  return performance.now() - start;
+  return performance.now() - start
 }

@@ -1,5 +1,5 @@
-import { parse } from './parse.ts';
-import type { Ast, Enum, Glob, Node, Optional, Param, Parse, Part, Text } from './parse.types.ts';
+import { parse } from './parse.ts'
+import type { Ast, Enum, Glob, Node, Optional, Param, Parse, Part, Text } from './parse.types.ts'
 
 // prettier-ignore
 type HrefArgs<Source extends string> =
@@ -11,39 +11,39 @@ type HrefArgs<Source extends string> =
 export const createHref =
   <source extends string>() =>
   <variant extends Variant<source>>(variant: variant, ...args: HrefArgs<variant>) => {
-    const params = args.at(0) ?? {};
-    const ast = parse(variant);
+    const params = args.at(0) ?? {}
+    const ast = parse(variant)
 
-    let href = '';
-    href += ast.protocol ? resolvePart(ast.protocol, params) : 'https';
-    href += '://';
-    href += ast.hostname ? resolvePart(ast.hostname, params) : '';
-    href += '/';
-    href += ast.pathname ? resolvePart(ast.pathname, params) : '';
+    let href = ''
+    href += ast.protocol ? resolvePart(ast.protocol, params) : 'https'
+    href += '://'
+    href += ast.hostname ? resolvePart(ast.hostname, params) : ''
+    href += '/'
+    href += ast.pathname ? resolvePart(ast.pathname, params) : ''
     if (ast.search) {
-      href += '?';
-      href += ast.search.toString();
+      href += '?'
+      href += ast.search.toString()
     }
-    return href;
-  };
+    return href
+  }
 
 function resolvePart(part: Part, params: Record<string, string>) {
   return part
     .map((node) => {
-      if (node.type === 'text') return node.value;
-      if (node.type === 'enum') throw new Error('Variant cannot include enums');
-      if (node.type === 'optional') throw new Error('Variant cannot include optionals');
+      if (node.type === 'text') return node.value
+      if (node.type === 'enum') throw new Error('Variant cannot include enums')
+      if (node.type === 'optional') throw new Error('Variant cannot include optionals')
 
-      if (!node.name) throw new Error('Variants cannot include params nor globs without names');
-      if (node.type === 'param') return params[node.name];
-      if (node.type === 'glob') return params[node.name];
+      if (!node.name) throw new Error('Variants cannot include params nor globs without names')
+      if (node.type === 'param') return params[node.name]
+      if (node.type === 'glob') return params[node.name]
     })
-    .join('');
+    .join('')
 }
 
 // Variant -----------------------------------------------------------------------------------------
 
-type Variant<source extends string> = source extends any ? VariantSerialize<Parse<source>> : never;
+type Variant<source extends string> = source extends any ? VariantSerialize<Parse<source>> : never
 
 // prettier-ignore
 type VariantSerialize<ast extends Ast> =

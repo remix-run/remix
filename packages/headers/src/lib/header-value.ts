@@ -1,3 +1,3 @@
 export interface HeaderValue {
-  toString(): string;
+  toString(): string
 }

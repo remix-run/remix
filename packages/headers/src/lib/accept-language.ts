@@ -1,8 +1,8 @@
-import { type HeaderValue } from './header-value.ts';
-import { parseParams } from './param-values.ts';
-import { isIterable } from './utils.ts';
+import { type HeaderValue } from './header-value.ts'
+import { parseParams } from './param-values.ts'
+import { isIterable } from './utils.ts'
 
-export type AcceptLanguageInit = Iterable<string | [string, number]> | Record<string, number>;
+export type AcceptLanguageInit = Iterable<string | [string, number]> | Record<string, number>
 
 /**
  * The value of a `Accept-Language` HTTP header.
@@ -12,71 +12,71 @@ export type AcceptLanguageInit = Iterable<string | [string, number]> | Record<st
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5)
  */
 export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
-  #map: Map<string, number>;
+  #map: Map<string, number>
 
   constructor(init?: string | AcceptLanguageInit) {
-    this.#map = new Map();
+    this.#map = new Map()
 
     if (init) {
       if (typeof init === 'string') {
         for (let piece of init.split(/\s*,\s*/)) {
-          let params = parseParams(piece);
-          if (params.length < 1) continue;
+          let params = parseParams(piece)
+          if (params.length < 1) continue
 
-          let language = params[0][0];
-          let weight = 1;
+          let language = params[0][0]
+          let weight = 1
 
           for (let i = 1; i < params.length; i++) {
-            let [key, value] = params[i];
+            let [key, value] = params[i]
             if (key === 'q') {
-              weight = Number(value);
-              break;
+              weight = Number(value)
+              break
             }
           }
 
-          this.#map.set(language.toLowerCase(), weight);
+          this.#map.set(language.toLowerCase(), weight)
         }
       } else if (isIterable(init)) {
         for (let value of init) {
           if (Array.isArray(value)) {
-            this.#map.set(value[0].toLowerCase(), value[1]);
+            this.#map.set(value[0].toLowerCase(), value[1])
           } else {
-            this.#map.set(value.toLowerCase(), 1);
+            this.#map.set(value.toLowerCase(), 1)
           }
         }
       } else {
         for (let language of Object.getOwnPropertyNames(init)) {
-          this.#map.set(language.toLowerCase(), init[language]);
+          this.#map.set(language.toLowerCase(), init[language])
         }
       }
 
-      this.#sort();
+      this.#sort()
     }
   }
 
   #sort() {
-    this.#map = new Map([...this.#map].sort((a, b) => b[1] - a[1]));
+    this.#map = new Map([...this.#map].sort((a, b) => b[1] - a[1]))
   }
 
   /**
    * An array of all languages in the header.
    */
   get languages(): string[] {
-    return Array.from(this.#map.keys());
+    return Array.from(this.#map.keys())
   }
 
   /**
    * An array of all weights (q values) in the header.
    */
   get weights(): number[] {
-    return Array.from(this.#map.values());
+    return Array.from(this.#map.values())
   }
 
   /**
    * The number of languages in the header.
    */
   get size(): number {
-    return this.#map.size;
+    return this.#map.size
   }
 
   /**
@@ -85,7 +85,7 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
    * @returns `true` if the language is acceptable, `false` otherwise.
    */
   accepts(language: string): boolean {
-    return this.getWeight(language) > 0;
+    return this.getWeight(language) > 0
   }
 
   /**
@@ -95,19 +95,19 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
    * @returns The weight of the language, or `0` if it is not in the header.
    */
   getWeight(language: string): number {
-    let [base, subtype] = language.toLowerCase().split('-');
+    let [base, subtype] = language.toLowerCase().split('-')
 
     for (let [key, value] of this) {
-      let [b, s] = key.split('-');
+      let [b, s] = key.split('-')
       if (
         (b === base || b === '*' || base === '*') &&
         (s === subtype || s === undefined || subtype === undefined)
       ) {
-        return value;
+        return value
       }
     }
 
-    return 0;
+    return 0
   }
 
   /**
@@ -118,11 +118,11 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
   getPreferred(languages: string[]): string | null {
     let sorted = languages
       .map((language) => [language, this.getWeight(language)] as const)
-      .sort((a, b) => b[1] - a[1]);
+      .sort((a, b) => b[1] - a[1])
 
-    let first = sorted[0];
+    let first = sorted[0]
 
-    return first !== undefined && first[1] > 0 ? first[0] : null;
+    return first !== undefined && first[1] > 0 ? first[0] : null
   }
 
   /**
@@ -132,7 +132,7 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
    * @returns The weight of the language, or `null` if it is not in the header.
    */
   get(language: string): number | null {
-    return this.#map.get(language.toLowerCase()) ?? null;
+    return this.#map.get(language.toLowerCase()) ?? null
   }
 
   /**
@@ -141,8 +141,8 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
    * @param weight The weight of the language. Defaults to 1.
    */
   set(language: string, weight = 1): void {
-    this.#map.set(language.toLowerCase(), weight);
-    this.#sort();
+    this.#map.set(language.toLowerCase(), weight)
+    this.#sort()
   }
 
   /**
@@ -150,7 +150,7 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
    * @param language The locale identifier of the language to remove.
    */
   delete(language: string): void {
-    this.#map.delete(language.toLowerCase());
+    this.#map.delete(language.toLowerCase())
   }
 
   /**
@@ -159,22 +159,22 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
    * @returns `true` if the language is in the header, `false` otherwise.
    */
   has(language: string): boolean {
-    return this.#map.has(language.toLowerCase());
+    return this.#map.has(language.toLowerCase())
   }
 
   /**
    * Removes all languages from the header.
    */
   clear(): void {
-    this.#map.clear();
+    this.#map.clear()
   }
 
   entries(): IterableIterator<[string, number]> {
-    return this.#map.entries();
+    return this.#map.entries()
   }
 
   [Symbol.iterator](): IterableIterator<[string, number]> {
-    return this.entries();
+    return this.entries()
   }
 
   forEach(
@@ -182,17 +182,17 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
     thisArg?: any,
   ): void {
     for (let [language, weight] of this) {
-      callback.call(thisArg, language, weight, this);
+      callback.call(thisArg, language, weight, this)
     }
   }
 
   toString(): string {
-    let pairs: string[] = [];
+    let pairs: string[] = []
 
     for (let [language, weight] of this.#map) {
-      pairs.push(`${language}${weight === 1 ? '' : `;q=${weight}`}`);
+      pairs.push(`${language}${weight === 1 ? '' : `;q=${weight}`}`)
     }
 
-    return pairs.join(',');
+    return pairs.join(',')
   }
 }

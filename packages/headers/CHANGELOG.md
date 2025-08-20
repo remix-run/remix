@@ -27,28 +27,28 @@ This release contains several improvements to `Cookie` that bring it more in lin
 
 ```ts
 // before
-let cookieNames = Array.from(headers.cookie.names());
+let cookieNames = Array.from(headers.cookie.names())
 
 // after
-let cookieNames = headers.cookie.names;
+let cookieNames = headers.cookie.names
 ```
 
 Additionally, this release adds support for the `If-None-Match` header. This is useful for conditional GET requests where you want to return a response with content only if the ETag has changed.
 
 ```ts
-import { SuperHeaders } from '@remix-run/headers';
+import { SuperHeaders } from '@remix-run/headers'
 
 function requestHandler(request: Request): Promise<Response> {
-  let response = await callDownstreamService(request);
+  let response = await callDownstreamService(request)
 
   if (request.method === 'GET' && response.headers.has('ETag')) {
-    let headers = new SuperHeaders(request.headers);
+    let headers = new SuperHeaders(request.headers)
     if (headers.ifNoneMatch.matches(response.headers.get('ETag'))) {
-      return new Response(null, { status: 304 });
+      return new Response(null, { status: 304 })
     }
   }
 
-  return response;
+  return response
 }
 ```
 
@@ -60,121 +60,121 @@ This release tightens up the type safety and brings `SuperHeaders` more in line 
 
 ```ts
 // before
-let headers = new SuperHeaders();
-headers.set('Content-Type', { mediaType: 'text/html' });
+let headers = new SuperHeaders()
+headers.set('Content-Type', { mediaType: 'text/html' })
 
 // after
-headers.set('Content-Type', 'text/html');
+headers.set('Content-Type', 'text/html')
 
 // if you need the previous behavior, use the setter instead of set()
-headers.contentType = { mediaType: 'text/html' };
+headers.contentType = { mediaType: 'text/html' }
 ```
 
 Similarly, the constructor no longer accepts non-string values in an array init value.
 
 ```ts
 // before
-let headers = new SuperHeaders([['Content-Type', { mediaType: 'text/html' }]]);
+let headers = new SuperHeaders([['Content-Type', { mediaType: 'text/html' }]])
 
 // if you need the previous behavior, use the object init instead
-let headers = new SuperHeaders({ contentType: { mediaType: 'text/html' } });
+let headers = new SuperHeaders({ contentType: { mediaType: 'text/html' } })
 ```
 
 - BREAKING CHANGE: `headers.get()` returns `null` for uninitialized custom header values instead of `undefined`. This follows the native `Headers` interface more closely.
 
 ```ts
 // before
-let headers = new SuperHeaders();
-headers.get('Host'); // null
-headers.get('Content-Type'); // undefined
+let headers = new SuperHeaders()
+headers.get('Host') // null
+headers.get('Content-Type') // undefined
 
 // after
-headers.get('Host'); // null
-headers.get('Content-Type'); // null
+headers.get('Host') // null
+headers.get('Content-Type') // null
 ```
 
 - BREAKING CHANGE: Removed ability to initialize `AcceptLanguage` with `undefined` weight values.
 
 ```ts
 // before
-let h1 = new AcceptLanguage({ 'en-US': undefined });
-let h2 = new AcceptLanguage([['en-US', undefined]]);
+let h1 = new AcceptLanguage({ 'en-US': undefined })
+let h2 = new AcceptLanguage([['en-US', undefined]])
 
 // after
-let h3 = new AcceptLanguage({ 'en-US': 1 });
+let h3 = new AcceptLanguage({ 'en-US': 1 })
 ```
 
 - All setters now also accept `undefined | null` in addition to `string` and custom object values. Setting a header to `undefined | null` is the same as using `headers.delete()`.
 
 ```ts
-let headers = new SuperHeaders({ contentType: 'text/html' });
-headers.get('Content-Type'); // 'text/html'
+let headers = new SuperHeaders({ contentType: 'text/html' })
+headers.get('Content-Type') // 'text/html'
 
-headers.contentType = null; // same as headers.delete('Content-Type');
-headers.get('Content-Type'); // null
+headers.contentType = null // same as headers.delete('Content-Type');
+headers.get('Content-Type') // null
 ```
 
 - Allow setting date headers (`date`, `expires`, `ifModifiedSince`, `ifUnmodifiedSince`, and `lastModified`) using numbers.
 
 ```ts
-let ms = new Date().getTime();
-let headers = new SuperHeaders({ lastModified: ms });
-headers.date = ms;
+let ms = new Date().getTime()
+let headers = new SuperHeaders({ lastModified: ms })
+headers.date = ms
 ```
 
 - Added `AcceptLanguage.prototype.accepts(language)`, `AcceptLanguage.prototype.getWeight(language)`,
   `AcceptLanguage.prototype.getPreferred(languages)`
 
 ```ts
-import { AcceptLanguage } from '@remix-run/headers';
+import { AcceptLanguage } from '@remix-run/headers'
 
-let header = new AcceptLanguage({ 'en-US': 1, en: 0.9 });
+let header = new AcceptLanguage({ 'en-US': 1, en: 0.9 })
 
-header.accepts('en-US'); // true
-header.accepts('en-GB'); // true
-header.accepts('en'); // true
-header.accepts('fr'); // false
+header.accepts('en-US') // true
+header.accepts('en-GB') // true
+header.accepts('en') // true
+header.accepts('fr') // false
 
-header.getWeight('en-US'); // 1
-header.getWeight('en-GB'); // 0.9
+header.getWeight('en-US') // 1
+header.getWeight('en-GB') // 0.9
 
-header.getPreferred(['en-GB', 'en-US']); // 'en-US'
+header.getPreferred(['en-GB', 'en-US']) // 'en-US'
 ```
 
 - Added `Accept` support
 
 ```ts
-import { Accept } from '@remix-run/headers';
+import { Accept } from '@remix-run/headers'
 
-let header = new Accept({ 'text/html': 1, 'text/*': 0.9 });
+let header = new Accept({ 'text/html': 1, 'text/*': 0.9 })
 
-header.accepts('text/html'); // true
-header.accepts('text/plain'); // true
-header.accepts('text/*'); // true
-header.accepts('image/jpeg'); // false
+header.accepts('text/html') // true
+header.accepts('text/plain') // true
+header.accepts('text/*') // true
+header.accepts('image/jpeg') // false
 
-header.getWeight('text/html'); // 1
-header.getWeight('text/plain'); // 0.9
+header.getWeight('text/html') // 1
+header.getWeight('text/plain') // 0.9
 
-header.getPreferred(['text/html', 'text/plain']); // 'text/html'
+header.getPreferred(['text/html', 'text/plain']) // 'text/html'
 ```
 
 - Added `Accept-Encoding` support
 
 ```ts
-import { AcceptEncoding } from '@remix-run/headers';
+import { AcceptEncoding } from '@remix-run/headers'
 
-let header = new AcceptEncoding({ gzip: 1, deflate: 0.9 });
+let header = new AcceptEncoding({ gzip: 1, deflate: 0.9 })
 
-header.accepts('gzip'); // true
-header.accepts('deflate'); // true
-header.accepts('identity'); // true
-header.accepts('br'); // false
+header.accepts('gzip') // true
+header.accepts('deflate') // true
+header.accepts('identity') // true
+header.accepts('br') // false
 
-header.getWeight('gzip'); // 1
-header.getWeight('deflate'); // 0.9
+header.getWeight('gzip') // 1
+header.getWeight('deflate') // 0.9
 
-header.getPreferred(['gzip', 'deflate']); // 'gzip'
+header.getPreferred(['gzip', 'deflate']) // 'gzip'
 ```
 
 - Added `SuperHeaders.prototype` (getters and setters) for:
@@ -228,7 +228,7 @@ let headers = new Headers({
     ['session_id', 'abc'],
     ['theme', 'dark'],
   ],
-});
+})
 ```
 
 - Changed package name from `fetch-super-headers` to `@remix-run/headers`. Eventual goal is to get the `headers` npm package name.

@@ -1,1 +1,1 @@
-export { MemoryFileStorage } from './lib/memory-file-storage.ts';
+export { MemoryFileStorage } from './lib/memory-file-storage.ts'

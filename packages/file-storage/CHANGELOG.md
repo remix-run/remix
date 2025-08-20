@@ -36,8 +36,8 @@ The following `options` are available:
 For example, to list all files under keys that start with `user123/`:
 
 ```ts
-let result = await storage.list({ prefix: 'user123/' });
-console.log(result.files);
+let result = await storage.list({ prefix: 'user123/' })
+console.log(result.files)
 // [
 //   { key: "user123/..." },
 //   { key: "user123/..." },
@@ -48,8 +48,8 @@ console.log(result.files);
 `result.files` will be an array of `{ key: string }` objects. To include metadata about each file, use `includeMetadata: true`.
 
 ```ts
-let result = await storage.list({ prefix: 'user123/', includeMetadata: true });
-console.log(result.files);
+let result = await storage.list({ prefix: 'user123/', includeMetadata: true })
+console.log(result.files)
 // [
 //   {
 //     key: "user123/...",
@@ -65,12 +65,12 @@ console.log(result.files);
 Pagination is done via an opaque `cursor` property in the list result object. If it is not `undefined`, there are more files to list. You can list them by passing the `cursor` back in the `options` object on the next call. For example, to list all items in storage, you could do something like this:
 
 ```ts
-let result = await storage.list();
-console.log(result.files);
+let result = await storage.list()
+console.log(result.files)
 
 while (result.cursor !== undefined) {
-  result = await storage.list({ cursor: result.cursor });
-  console.log(result.files);
+  result = await storage.list({ cursor: result.cursor })
+  console.log(result.files)
 }
 ```
 
@@ -82,11 +82,11 @@ Use the `limit` option to limit how many results you get back in the `files` arr
 
 ```ts
 // before
-await storage.set(key, file);
-let newFile = await storage.get(key)!;
+await storage.set(key, file)
+let newFile = await storage.get(key)!
 
 // after
-let newFile = await storage.put(key, file);
+let newFile = await storage.put(key, file)
 ```
 
 ## v0.4.1 (2025-01-10)

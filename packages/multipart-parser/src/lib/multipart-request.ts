@@ -1,5 +1,5 @@
-import type { MultipartParserOptions, MultipartPart } from './multipart.ts';
-import { MultipartParseError, parseMultipartStream } from './multipart.ts';
+import type { MultipartParserOptions, MultipartPart } from './multipart.ts'
+import { MultipartParseError, parseMultipartStream } from './multipart.ts'
 
 /**
  * Extracts the boundary string from a `multipart/*` content type.
@@ -8,8 +8,8 @@ import { MultipartParseError, parseMultipartStream } from './multipart.ts';
  * @return The boundary string if found, or null if not present
  */
 export function getMultipartBoundary(contentType: string): string | null {
-  let match = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);
-  return match ? (match[1] ?? match[2]) : null;
+  let match = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType)
+  return match ? (match[1] ?? match[2]) : null
 }
 
 /**
@@ -19,8 +19,8 @@ export function getMultipartBoundary(contentType: string): string | null {
  * @return `true` if the request is a multipart request, `false` otherwise
  */
 export function isMultipartRequest(request: Request): boolean {
-  let contentType = request.headers.get('Content-Type');
-  return contentType != null && contentType.startsWith('multipart/');
+  let contentType = request.headers.get('Content-Type')
+  return contentType != null && contentType.startsWith('multipart/')
 }
 
 /**
@@ -36,20 +36,20 @@ export async function* parseMultipartRequest(
   options?: MultipartParserOptions,
 ): AsyncGenerator<MultipartPart, void, unknown> {
   if (!isMultipartRequest(request)) {
-    throw new MultipartParseError('Request is not a multipart request');
+    throw new MultipartParseError('Request is not a multipart request')
   }
   if (!request.body) {
-    throw new MultipartParseError('Request body is empty');
+    throw new MultipartParseError('Request body is empty')
   }
 
-  let boundary = getMultipartBoundary(request.headers.get('Content-Type')!);
+  let boundary = getMultipartBoundary(request.headers.get('Content-Type')!)
   if (!boundary) {
-    throw new MultipartParseError('Invalid Content-Type header: missing boundary');
+    throw new MultipartParseError('Invalid Content-Type header: missing boundary')
   }
 
   yield* parseMultipartStream(request.body, {
     boundary,
     maxHeaderSize: options?.maxHeaderSize,
     maxFileSize: options?.maxFileSize,
-  });
+  })
 }

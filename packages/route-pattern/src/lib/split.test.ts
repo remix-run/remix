@@ -1,7 +1,7 @@
-import * as assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 
-import { split } from './split.ts';
+import { split } from './split.ts'
 
 describe('split', () => {
   it('splits route patterns into protocol, hostname, pathname, search', () => {
@@ -47,27 +47,27 @@ describe('split', () => {
 
       // search + ...
       ['?q=1', { search: 'q=1' }],
-    ];
+    ]
 
     for (const [input, expected] of cases) {
-      const spans = split(input);
+      const spans = split(input)
       const result: { protocol?: string; hostname?: string; pathname?: string; search?: string } =
-        {};
+        {}
 
       if (spans.protocol) {
-        result.protocol = input.slice(...spans.protocol);
+        result.protocol = input.slice(...spans.protocol)
       }
       if (spans.hostname) {
-        result.hostname = input.slice(...spans.hostname);
+        result.hostname = input.slice(...spans.hostname)
       }
       if (spans.pathname) {
-        result.pathname = input.slice(...spans.pathname);
+        result.pathname = input.slice(...spans.pathname)
       }
       if (spans.search) {
-        result.search = input.slice(...spans.search);
+        result.search = input.slice(...spans.search)
       }
 
-      assert.deepStrictEqual(result, expected);
+      assert.deepStrictEqual(result, expected)
     }
-  });
-});
+  })
+})

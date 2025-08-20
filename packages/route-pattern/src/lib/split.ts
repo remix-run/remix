@@ -1,43 +1,43 @@
-type Span = [number, number];
+type Span = [number, number]
 
 export function split(source: string) {
   const result: {
-    protocol?: Span;
-    hostname?: Span;
-    pathname?: Span;
-    search?: Span;
-  } = {};
+    protocol?: Span
+    hostname?: Span
+    pathname?: Span
+    search?: Span
+  } = {}
 
   // search
-  const searchStart = source.indexOf('?');
+  const searchStart = source.indexOf('?')
   if (searchStart !== -1) {
-    result.search = [searchStart + 1, source.length];
-    source = source.slice(0, searchStart);
+    result.search = [searchStart + 1, source.length]
+    source = source.slice(0, searchStart)
   }
 
-  let index = 0;
-  const solidus = source.indexOf('://');
+  let index = 0
+  const solidus = source.indexOf('://')
   if (solidus !== -1) {
     // protocol
     if (solidus !== 0) {
-      result.protocol = [0, solidus];
+      result.protocol = [0, solidus]
     }
-    index = solidus + 3;
+    index = solidus + 3
 
     // hostname
-    const hostnameEnd = source.indexOf('/', index);
+    const hostnameEnd = source.indexOf('/', index)
     if (hostnameEnd === -1) {
-      result.hostname = [index, source.length];
-      return result;
+      result.hostname = [index, source.length]
+      return result
     }
-    result.hostname = [index, hostnameEnd];
-    index = hostnameEnd + 1;
+    result.hostname = [index, hostnameEnd]
+    index = hostnameEnd + 1
   }
 
   // pathname
   if (index !== source.length) {
-    result.pathname = [index, source.length];
+    result.pathname = [index, source.length]
   }
 
-  return result;
+  return result
 }

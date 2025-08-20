@@ -1,147 +1,147 @@
-import { type AcceptInit, Accept } from './accept.ts';
-import { type AcceptEncodingInit, AcceptEncoding } from './accept-encoding.ts';
-import { type AcceptLanguageInit, AcceptLanguage } from './accept-language.ts';
-import { type CacheControlInit, CacheControl } from './cache-control.ts';
-import { type ContentDispositionInit, ContentDisposition } from './content-disposition.ts';
-import { type ContentTypeInit, ContentType } from './content-type.ts';
-import { type CookieInit, Cookie } from './cookie.ts';
-import { canonicalHeaderName } from './header-names.ts';
-import { type HeaderValue } from './header-value.ts';
-import { type IfNoneMatchInit, IfNoneMatch } from './if-none-match.ts';
-import { type SetCookieInit, SetCookie } from './set-cookie.ts';
-import { isIterable, quoteEtag } from './utils.ts';
+import { type AcceptInit, Accept } from './accept.ts'
+import { type AcceptEncodingInit, AcceptEncoding } from './accept-encoding.ts'
+import { type AcceptLanguageInit, AcceptLanguage } from './accept-language.ts'
+import { type CacheControlInit, CacheControl } from './cache-control.ts'
+import { type ContentDispositionInit, ContentDisposition } from './content-disposition.ts'
+import { type ContentTypeInit, ContentType } from './content-type.ts'
+import { type CookieInit, Cookie } from './cookie.ts'
+import { canonicalHeaderName } from './header-names.ts'
+import { type HeaderValue } from './header-value.ts'
+import { type IfNoneMatchInit, IfNoneMatch } from './if-none-match.ts'
+import { type SetCookieInit, SetCookie } from './set-cookie.ts'
+import { isIterable, quoteEtag } from './utils.ts'
 
-type DateInit = number | Date;
+type DateInit = number | Date
 
 interface SuperHeadersPropertyInit {
   /**
    * The [`Accept`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept) header value.
    */
-  accept?: string | AcceptInit;
+  accept?: string | AcceptInit
   /**
    * The [`Accept-Encoding`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding) header value.
    */
-  acceptEncoding?: string | AcceptEncodingInit;
+  acceptEncoding?: string | AcceptEncodingInit
   /**
    * The [`Accept-Language`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language) header value.
    */
-  acceptLanguage?: string | AcceptLanguageInit;
+  acceptLanguage?: string | AcceptLanguageInit
   /**
    * The [`Accept-Ranges`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Ranges) header value.
    */
-  acceptRanges?: string;
+  acceptRanges?: string
   /**
    * The [`Age`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Age) header value.
    */
-  age?: string | number;
+  age?: string | number
   /**
    * The [`Cache-Control`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) header value.
    */
-  cacheControl?: string | CacheControlInit;
+  cacheControl?: string | CacheControlInit
   /**
    * The [`Connection`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection) header value.
    */
-  connection?: string;
+  connection?: string
   /**
    * The [`Content-Disposition`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition) header value.
    */
-  contentDisposition?: string | ContentDispositionInit;
+  contentDisposition?: string | ContentDispositionInit
   /**
    * The [`Content-Encoding`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding) header value.
    */
-  contentEncoding?: string | string[];
+  contentEncoding?: string | string[]
   /**
    * The [`Content-Language`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language) header value.
    */
-  contentLanguage?: string | string[];
+  contentLanguage?: string | string[]
   /**
    * The [`Content-Length`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Length) header value.
    */
-  contentLength?: string | number;
+  contentLength?: string | number
   /**
    * The [`Content-Type`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type) header value.
    */
-  contentType?: string | ContentTypeInit;
+  contentType?: string | ContentTypeInit
   /**
    * The [`Cookie`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie) header value.
    */
-  cookie?: string | CookieInit;
+  cookie?: string | CookieInit
   /**
    * The [`Date`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date) header value.
    */
-  date?: string | DateInit;
+  date?: string | DateInit
   /**
    * The [`ETag`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag) header value.
    */
-  etag?: string;
+  etag?: string
   /**
    * The [`Expires`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires) header value.
    */
-  expires?: string | DateInit;
+  expires?: string | DateInit
   /**
    * The [`Host`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host) header value.
    */
-  host?: string;
+  host?: string
   /**
    * The [`If-Modified-Since`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since) header value.
    */
-  ifModifiedSince?: string | DateInit;
+  ifModifiedSince?: string | DateInit
   /**
    * The [`If-None-Match`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match) header value.
    */
-  ifNoneMatch?: string | string[] | IfNoneMatchInit;
+  ifNoneMatch?: string | string[] | IfNoneMatchInit
   /**
    * The [`If-Unmodified-Since`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Unmodified-Since) header value.
    */
-  ifUnmodifiedSince?: string | DateInit;
+  ifUnmodifiedSince?: string | DateInit
   /**
    * The [`Last-Modified`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified) header value.
    */
-  lastModified?: string | DateInit;
+  lastModified?: string | DateInit
   /**
    * The [`Location`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Location) header value.
    */
-  location?: string;
+  location?: string
   /**
    * The [`Referer`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer) header value.
    */
-  referer?: string;
+  referer?: string
   /**
    * The [`Set-Cookie`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie) header value(s).
    */
-  setCookie?: string | (string | SetCookieInit)[];
+  setCookie?: string | (string | SetCookieInit)[]
 }
 
 export type SuperHeadersInit =
   | Iterable<[string, string]>
-  | (SuperHeadersPropertyInit & Record<string, string | HeaderValue>);
+  | (SuperHeadersPropertyInit & Record<string, string | HeaderValue>)
 
-const CRLF = '\r\n';
+const CRLF = '\r\n'
 
-const AcceptKey = 'accept';
-const AcceptEncodingKey = 'accept-encoding';
-const AcceptLanguageKey = 'accept-language';
-const AcceptRangesKey = 'accept-ranges';
-const AgeKey = 'age';
-const CacheControlKey = 'cache-control';
-const ConnectionKey = 'connection';
-const ContentDispositionKey = 'content-disposition';
-const ContentEncodingKey = 'content-encoding';
-const ContentLanguageKey = 'content-language';
-const ContentLengthKey = 'content-length';
-const ContentTypeKey = 'content-type';
-const CookieKey = 'cookie';
-const DateKey = 'date';
-const ETagKey = 'etag';
-const ExpiresKey = 'expires';
-const HostKey = 'host';
-const IfModifiedSinceKey = 'if-modified-since';
-const IfNoneMatchKey = 'if-none-match';
-const IfUnmodifiedSinceKey = 'if-unmodified-since';
-const LastModifiedKey = 'last-modified';
-const LocationKey = 'location';
-const RefererKey = 'referer';
-const SetCookieKey = 'set-cookie';
+const AcceptKey = 'accept'
+const AcceptEncodingKey = 'accept-encoding'
+const AcceptLanguageKey = 'accept-language'
+const AcceptRangesKey = 'accept-ranges'
+const AgeKey = 'age'
+const CacheControlKey = 'cache-control'
+const ConnectionKey = 'connection'
+const ContentDispositionKey = 'content-disposition'
+const ContentEncodingKey = 'content-encoding'
+const ContentLanguageKey = 'content-language'
+const ContentLengthKey = 'content-length'
+const ContentTypeKey = 'content-type'
+const CookieKey = 'cookie'
+const DateKey = 'date'
+const ETagKey = 'etag'
+const ExpiresKey = 'expires'
+const HostKey = 'host'
+const IfModifiedSinceKey = 'if-modified-since'
+const IfNoneMatchKey = 'if-none-match'
+const IfUnmodifiedSinceKey = 'if-unmodified-since'
+const LastModifiedKey = 'last-modified'
+const LocationKey = 'location'
+const RefererKey = 'referer'
+const SetCookieKey = 'set-cookie'
 
 /**
  * An enhanced JavaScript `Headers` interface with type-safe access.
@@ -151,36 +151,36 @@ const SetCookieKey = 'set-cookie';
  * [MDN `Headers` Base Class Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
  */
 export class SuperHeaders extends Headers {
-  #map: Map<string, string | HeaderValue>;
-  #setCookies: (string | SetCookie)[] = [];
+  #map: Map<string, string | HeaderValue>
+  #setCookies: (string | SetCookie)[] = []
 
   constructor(init?: string | SuperHeadersInit | Headers) {
-    super();
+    super()
 
-    this.#map = new Map();
+    this.#map = new Map()
 
     if (init) {
       if (typeof init === 'string') {
-        let lines = init.split(CRLF);
+        let lines = init.split(CRLF)
         for (let line of lines) {
-          let match = line.match(/^([^:]+):(.*)/);
+          let match = line.match(/^([^:]+):(.*)/)
           if (match) {
-            this.append(match[1].trim(), match[2].trim());
+            this.append(match[1].trim(), match[2].trim())
           }
         }
       } else if (isIterable(init)) {
         for (let [name, value] of init) {
-          this.append(name, value);
+          this.append(name, value)
         }
       } else if (typeof init === 'object') {
         for (let name of Object.getOwnPropertyNames(init)) {
-          let value = init[name];
+          let value = init[name]
 
-          let descriptor = Object.getOwnPropertyDescriptor(SuperHeaders.prototype, name);
+          let descriptor = Object.getOwnPropertyDescriptor(SuperHeaders.prototype, name)
           if (descriptor?.set) {
-            descriptor.set.call(this, value);
+            descriptor.set.call(this, value)
           } else {
-            this.set(name, value.toString());
+            this.set(name, value.toString())
           }
         }
       }
@@ -194,12 +194,12 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/append)
    */
   append(name: string, value: string): void {
-    let key = name.toLowerCase();
+    let key = name.toLowerCase()
     if (key === SetCookieKey) {
-      this.#setCookies.push(value);
+      this.#setCookies.push(value)
     } else {
-      let existingValue = this.#map.get(key);
-      this.#map.set(key, existingValue ? `${existingValue}, ${value}` : value);
+      let existingValue = this.#map.get(key)
+      this.#map.set(key, existingValue ? `${existingValue}, ${value}` : value)
     }
   }
 
@@ -209,11 +209,11 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/delete)
    */
   delete(name: string): void {
-    let key = name.toLowerCase();
+    let key = name.toLowerCase()
     if (key === SetCookieKey) {
-      this.#setCookies = [];
+      this.#setCookies = []
     } else {
-      this.#map.delete(key);
+      this.#map.delete(key)
     }
   }
 
@@ -223,18 +223,18 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/get)
    */
   get(name: string): string | null {
-    let key = name.toLowerCase();
+    let key = name.toLowerCase()
     if (key === SetCookieKey) {
-      return this.getSetCookie().join(', ');
+      return this.getSetCookie().join(', ')
     } else {
-      let value = this.#map.get(key);
+      let value = this.#map.get(key)
       if (typeof value === 'string') {
-        return value;
+        return value
       } else if (value != null) {
-        let str = value.toString();
-        return str === '' ? null : str;
+        let str = value.toString()
+        return str === '' ? null : str
       } else {
-        return null;
+        return null
       }
     }
   }
@@ -247,7 +247,7 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/getSetCookie)
    */
   getSetCookie(): string[] {
-    return this.#setCookies.map((v) => (typeof v === 'string' ? v : v.toString()));
+    return this.#setCookies.map((v) => (typeof v === 'string' ? v : v.toString()))
   }
 
   /**
@@ -256,8 +256,8 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/has)
    */
   has(name: string): boolean {
-    let key = name.toLowerCase();
-    return key === SetCookieKey ? this.#setCookies.length > 0 : this.get(key) != null;
+    let key = name.toLowerCase()
+    return key === SetCookieKey ? this.#setCookies.length > 0 : this.get(key) != null
   }
 
   /**
@@ -267,11 +267,11 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/set)
    */
   set(name: string, value: string): void {
-    let key = name.toLowerCase();
+    let key = name.toLowerCase()
     if (key === SetCookieKey) {
-      this.#setCookies = [value];
+      this.#setCookies = [value]
     } else {
-      this.#map.set(key, value);
+      this.#map.set(key, value)
     }
   }
 
@@ -281,7 +281,7 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/keys)
    */
   *keys(): IterableIterator<string> {
-    for (let [key] of this) yield key;
+    for (let [key] of this) yield key
   }
 
   /**
@@ -290,7 +290,7 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/values)
    */
   *values(): IterableIterator<string> {
-    for (let [, value] of this) yield value;
+    for (let [, value] of this) yield value
   }
 
   /**
@@ -300,17 +300,17 @@ export class SuperHeaders extends Headers {
    */
   *entries(): IterableIterator<[string, string]> {
     for (let [key] of this.#map) {
-      let str = this.get(key);
-      if (str) yield [key, str];
+      let str = this.get(key)
+      if (str) yield [key, str]
     }
 
     for (let value of this.getSetCookie()) {
-      yield [SetCookieKey, value];
+      yield [SetCookieKey, value]
     }
   }
 
   [Symbol.iterator](): IterableIterator<[string, string]> {
-    return this.entries();
+    return this.entries()
   }
 
   /**
@@ -323,7 +323,7 @@ export class SuperHeaders extends Headers {
     thisArg?: any,
   ): void {
     for (let [key, value] of this) {
-      callback.call(thisArg, value, key, this);
+      callback.call(thisArg, value, key, this)
     }
   }
 
@@ -331,13 +331,13 @@ export class SuperHeaders extends Headers {
    * Returns a string representation of the headers suitable for use in a HTTP message.
    */
   toString(): string {
-    let lines: string[] = [];
+    let lines: string[] = []
 
     for (let [key, value] of this) {
-      lines.push(`${canonicalHeaderName(key)}: ${value}`);
+      lines.push(`${canonicalHeaderName(key)}: ${value}`)
     }
 
-    return lines.join(CRLF);
+    return lines.join(CRLF)
   }
 
   // Header-specific getters and setters
@@ -351,11 +351,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2)
    */
   get accept(): Accept {
-    return this.#getHeaderValue(AcceptKey, Accept);
+    return this.#getHeaderValue(AcceptKey, Accept)
   }
 
   set accept(value: string | AcceptInit | undefined | null) {
-    this.#setHeaderValue(AcceptKey, Accept, value);
+    this.#setHeaderValue(AcceptKey, Accept, value)
   }
 
   /**
@@ -367,11 +367,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4)
    */
   get acceptEncoding(): AcceptEncoding {
-    return this.#getHeaderValue(AcceptEncodingKey, AcceptEncoding);
+    return this.#getHeaderValue(AcceptEncodingKey, AcceptEncoding)
   }
 
   set acceptEncoding(value: string | AcceptEncodingInit | undefined | null) {
-    this.#setHeaderValue(AcceptEncodingKey, AcceptEncoding, value);
+    this.#setHeaderValue(AcceptEncodingKey, AcceptEncoding, value)
   }
 
   /**
@@ -383,11 +383,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5)
    */
   get acceptLanguage(): AcceptLanguage {
-    return this.#getHeaderValue(AcceptLanguageKey, AcceptLanguage);
+    return this.#getHeaderValue(AcceptLanguageKey, AcceptLanguage)
   }
 
   set acceptLanguage(value: string | AcceptLanguageInit | undefined | null) {
-    this.#setHeaderValue(AcceptLanguageKey, AcceptLanguage, value);
+    this.#setHeaderValue(AcceptLanguageKey, AcceptLanguage, value)
   }
 
   /**
@@ -398,11 +398,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7233#section-2.3)
    */
   get acceptRanges(): string | null {
-    return this.#getStringValue(AcceptRangesKey);
+    return this.#getStringValue(AcceptRangesKey)
   }
 
   set acceptRanges(value: string | undefined | null) {
-    this.#setStringValue(AcceptRangesKey, value);
+    this.#setStringValue(AcceptRangesKey, value)
   }
 
   /**
@@ -413,11 +413,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.1)
    */
   get age(): number | null {
-    return this.#getNumberValue(AgeKey);
+    return this.#getNumberValue(AgeKey)
   }
 
   set age(value: string | number | undefined | null) {
-    this.#setNumberValue(AgeKey, value);
+    this.#setNumberValue(AgeKey, value)
   }
 
   /**
@@ -428,11 +428,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.2)
    */
   get cacheControl(): CacheControl {
-    return this.#getHeaderValue(CacheControlKey, CacheControl);
+    return this.#getHeaderValue(CacheControlKey, CacheControl)
   }
 
   set cacheControl(value: string | CacheControlInit | undefined | null) {
-    this.#setHeaderValue(CacheControlKey, CacheControl, value);
+    this.#setHeaderValue(CacheControlKey, CacheControl, value)
   }
 
   /**
@@ -444,11 +444,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7230#section-6.1)
    */
   get connection(): string | null {
-    return this.#getStringValue(ConnectionKey);
+    return this.#getStringValue(ConnectionKey)
   }
 
   set connection(value: string | undefined | null) {
-    this.#setStringValue(ConnectionKey, value);
+    this.#setStringValue(ConnectionKey, value)
   }
 
   /**
@@ -459,11 +459,11 @@ export class SuperHeaders extends Headers {
    * [RFC 6266](https://datatracker.ietf.org/doc/html/rfc6266)
    */
   get contentDisposition(): ContentDisposition {
-    return this.#getHeaderValue(ContentDispositionKey, ContentDisposition);
+    return this.#getHeaderValue(ContentDispositionKey, ContentDisposition)
   }
 
   set contentDisposition(value: string | ContentDispositionInit | undefined | null) {
-    this.#setHeaderValue(ContentDispositionKey, ContentDisposition, value);
+    this.#setHeaderValue(ContentDispositionKey, ContentDisposition, value)
   }
 
   /**
@@ -477,11 +477,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.content-encoding)
    */
   get contentEncoding(): string | null {
-    return this.#getStringValue(ContentEncodingKey);
+    return this.#getStringValue(ContentEncodingKey)
   }
 
   set contentEncoding(value: string | string[] | undefined | null) {
-    this.#setStringValue(ContentEncodingKey, Array.isArray(value) ? value.join(', ') : value);
+    this.#setStringValue(ContentEncodingKey, Array.isArray(value) ? value.join(', ') : value)
   }
 
   /**
@@ -495,11 +495,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.content-language)
    */
   get contentLanguage(): string | null {
-    return this.#getStringValue(ContentLanguageKey);
+    return this.#getStringValue(ContentLanguageKey)
   }
 
   set contentLanguage(value: string | string[] | undefined | null) {
-    this.#setStringValue(ContentLanguageKey, Array.isArray(value) ? value.join(', ') : value);
+    this.#setStringValue(ContentLanguageKey, Array.isArray(value) ? value.join(', ') : value)
   }
 
   /**
@@ -510,11 +510,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2)
    */
   get contentLength(): number | null {
-    return this.#getNumberValue(ContentLengthKey);
+    return this.#getNumberValue(ContentLengthKey)
   }
 
   set contentLength(value: string | number | undefined | null) {
-    this.#setNumberValue(ContentLengthKey, value);
+    this.#setNumberValue(ContentLengthKey, value)
   }
 
   /**
@@ -525,11 +525,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-3.1.1.5)
    */
   get contentType(): ContentType {
-    return this.#getHeaderValue(ContentTypeKey, ContentType);
+    return this.#getHeaderValue(ContentTypeKey, ContentType)
   }
 
   set contentType(value: string | ContentTypeInit | undefined | null) {
-    this.#setHeaderValue(ContentTypeKey, ContentType, value);
+    this.#setHeaderValue(ContentTypeKey, ContentType, value)
   }
 
   /**
@@ -541,11 +541,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-5.4)
    */
   get cookie(): Cookie {
-    return this.#getHeaderValue(CookieKey, Cookie);
+    return this.#getHeaderValue(CookieKey, Cookie)
   }
 
   set cookie(value: string | CookieInit | undefined | null) {
-    this.#setHeaderValue(CookieKey, Cookie, value);
+    this.#setHeaderValue(CookieKey, Cookie, value)
   }
 
   /**
@@ -556,11 +556,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.1.2)
    */
   get date(): Date | null {
-    return this.#getDateValue(DateKey);
+    return this.#getDateValue(DateKey)
   }
 
   set date(value: string | DateInit | undefined | null) {
-    this.#setDateValue(DateKey, value);
+    this.#setDateValue(DateKey, value)
   }
 
   /**
@@ -571,11 +571,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-2.3)
    */
   get etag(): string | null {
-    return this.#getStringValue(ETagKey);
+    return this.#getStringValue(ETagKey)
   }
 
   set etag(value: string | undefined | null) {
-    this.#setStringValue(ETagKey, typeof value === 'string' ? quoteEtag(value) : value);
+    this.#setStringValue(ETagKey, typeof value === 'string' ? quoteEtag(value) : value)
   }
 
   /**
@@ -586,11 +586,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.3)
    */
   get expires(): Date | null {
-    return this.#getDateValue(ExpiresKey);
+    return this.#getDateValue(ExpiresKey)
   }
 
   set expires(value: string | DateInit | undefined | null) {
-    this.#setDateValue(ExpiresKey, value);
+    this.#setDateValue(ExpiresKey, value)
   }
 
   /**
@@ -601,11 +601,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7230#section-5.4)
    */
   get host(): string | null {
-    return this.#getStringValue(HostKey);
+    return this.#getStringValue(HostKey)
   }
 
   set host(value: string | undefined | null) {
-    this.#setStringValue(HostKey, value);
+    this.#setStringValue(HostKey, value)
   }
 
   /**
@@ -617,11 +617,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.3)
    */
   get ifModifiedSince(): Date | null {
-    return this.#getDateValue(IfModifiedSinceKey);
+    return this.#getDateValue(IfModifiedSinceKey)
   }
 
   set ifModifiedSince(value: string | DateInit | undefined | null) {
-    this.#setDateValue(IfModifiedSinceKey, value);
+    this.#setDateValue(IfModifiedSinceKey, value)
   }
 
   /**
@@ -632,11 +632,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.2)
    */
   get ifNoneMatch(): IfNoneMatch {
-    return this.#getHeaderValue(IfNoneMatchKey, IfNoneMatch);
+    return this.#getHeaderValue(IfNoneMatchKey, IfNoneMatch)
   }
 
   set ifNoneMatch(value: string | string[] | IfNoneMatchInit | undefined | null) {
-    this.#setHeaderValue(IfNoneMatchKey, IfNoneMatch, value);
+    this.#setHeaderValue(IfNoneMatchKey, IfNoneMatch, value)
   }
 
   /**
@@ -648,11 +648,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.4)
    */
   get ifUnmodifiedSince(): Date | null {
-    return this.#getDateValue(IfUnmodifiedSinceKey);
+    return this.#getDateValue(IfUnmodifiedSinceKey)
   }
 
   set ifUnmodifiedSince(value: string | DateInit | undefined | null) {
-    this.#setDateValue(IfUnmodifiedSinceKey, value);
+    this.#setDateValue(IfUnmodifiedSinceKey, value)
   }
 
   /**
@@ -663,11 +663,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-2.2)
    */
   get lastModified(): Date | null {
-    return this.#getDateValue(LastModifiedKey);
+    return this.#getDateValue(LastModifiedKey)
   }
 
   set lastModified(value: string | DateInit | undefined | null) {
-    this.#setDateValue(LastModifiedKey, value);
+    this.#setDateValue(LastModifiedKey, value)
   }
 
   /**
@@ -678,11 +678,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.2)
    */
   get location(): string | null {
-    return this.#getStringValue(LocationKey);
+    return this.#getStringValue(LocationKey)
   }
 
   set location(value: string | undefined | null) {
-    this.#setStringValue(LocationKey, value);
+    this.#setStringValue(LocationKey, value)
   }
 
   /**
@@ -694,11 +694,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.5.2)
    */
   get referer(): string | null {
-    return this.#getStringValue(RefererKey);
+    return this.#getStringValue(RefererKey)
   }
 
   set referer(value: string | undefined | null) {
-    this.#setStringValue(RefererKey, value);
+    this.#setStringValue(RefererKey, value)
   }
 
   /**
@@ -709,58 +709,58 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.1)
    */
   get setCookie(): SetCookie[] {
-    let setCookies = this.#setCookies;
+    let setCookies = this.#setCookies
 
     for (let i = 0; i < setCookies.length; ++i) {
       if (typeof setCookies[i] === 'string') {
-        setCookies[i] = new SetCookie(setCookies[i]);
+        setCookies[i] = new SetCookie(setCookies[i])
       }
     }
 
-    return setCookies as SetCookie[];
+    return setCookies as SetCookie[]
   }
 
   set setCookie(value: (string | SetCookieInit)[] | string | SetCookieInit | undefined | null) {
     if (value != null) {
       this.#setCookies = (Array.isArray(value) ? value : [value]).map((v) =>
         typeof v === 'string' ? v : new SetCookie(v),
-      );
+      )
     } else {
-      this.#setCookies = [];
+      this.#setCookies = []
     }
   }
 
   // Helpers
 
   #getHeaderValue<T extends HeaderValue>(key: string, ctor: new (init?: any) => T): T {
-    let value = this.#map.get(key);
+    let value = this.#map.get(key)
 
     if (value !== undefined) {
       if (typeof value === 'string') {
-        let obj = new ctor(value);
-        this.#map.set(key, obj); // cache the new object
-        return obj;
+        let obj = new ctor(value)
+        this.#map.set(key, obj) // cache the new object
+        return obj
       } else {
-        return value as T;
+        return value as T
       }
     }
 
-    let obj = new ctor();
-    this.#map.set(key, obj); // cache the new object
-    return obj;
+    let obj = new ctor()
+    this.#map.set(key, obj) // cache the new object
+    return obj
   }
 
   #setHeaderValue(key: string, ctor: new (init?: string) => HeaderValue, value: any): void {
     if (value != null) {
-      this.#map.set(key, typeof value === 'string' ? value : new ctor(value));
+      this.#map.set(key, typeof value === 'string' ? value : new ctor(value))
     } else {
-      this.#map.delete(key);
+      this.#map.delete(key)
     }
   }
 
   #getDateValue(key: string): Date | null {
-    let value = this.#map.get(key);
-    return value === undefined ? null : new Date(value as string);
+    let value = this.#map.get(key)
+    return value === undefined ? null : new Date(value as string)
   }
 
   #setDateValue(key: string, value: string | DateInit | undefined | null): void {
@@ -770,35 +770,35 @@ export class SuperHeaders extends Headers {
         typeof value === 'string'
           ? value
           : (typeof value === 'number' ? new Date(value) : value).toUTCString(),
-      );
+      )
     } else {
-      this.#map.delete(key);
+      this.#map.delete(key)
     }
   }
 
   #getNumberValue(key: string): number | null {
-    let value = this.#map.get(key);
-    return value === undefined ? null : parseInt(value as string, 10);
+    let value = this.#map.get(key)
+    return value === undefined ? null : parseInt(value as string, 10)
   }
 
   #setNumberValue(key: string, value: string | number | undefined | null): void {
     if (value != null) {
-      this.#map.set(key, typeof value === 'string' ? value : value.toString());
+      this.#map.set(key, typeof value === 'string' ? value : value.toString())
     } else {
-      this.#map.delete(key);
+      this.#map.delete(key)
     }
   }
 
   #getStringValue(key: string): string | null {
-    let value = this.#map.get(key);
-    return value === undefined ? null : (value as string);
+    let value = this.#map.get(key)
+    return value === undefined ? null : (value as string)
   }
 
   #setStringValue(key: string, value: string | undefined | null): void {
     if (value != null) {
-      this.#map.set(key, value);
+      this.#map.set(key, value)
     } else {
-      this.#map.delete(key);
+      this.#map.delete(key)
     }
   }
 }

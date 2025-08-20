@@ -7,14 +7,14 @@ export interface FileStorage {
    * @param key The key to look up
    * @returns The file with the given key, or `null` if no such key exists
    */
-  get(key: string): File | null | Promise<File | null>;
+  get(key: string): File | null | Promise<File | null>
 
   /**
    * Check if a file with the given key exists.
    * @param key The key to look up
    * @returns `true` if a file with the given key exists, `false` otherwise
    */
-  has(key: string): boolean | Promise<boolean>;
+  has(key: string): boolean | Promise<boolean>
 
   /**
    * List the files in storage.
@@ -75,7 +75,7 @@ export interface FileStorage {
    * @param options Options for the list operation
    * @returns An object with an array of `files` and an optional `cursor` property
    */
-  list<T extends ListOptions>(options?: T): ListResult<T> | Promise<ListResult<T>>;
+  list<T extends ListOptions>(options?: T): ListResult<T> | Promise<ListResult<T>>
 
   /**
    * Put a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) in storage and return
@@ -84,14 +84,14 @@ export interface FileStorage {
    * @param file The file to store
    * @returns A new File object backed by this storage
    */
-  put(key: string, file: File): File | Promise<File>;
+  put(key: string, file: File): File | Promise<File>
 
   /**
    * Remove the file with the given key from storage.
    * @param key The key to remove
    * @returns A promise that resolves when the file has been removed
    */
-  remove(key: string): void | Promise<void>;
+  remove(key: string): void | Promise<void>
 
   /**
    * Put a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) in storage at the given
@@ -100,14 +100,14 @@ export interface FileStorage {
    * @param file The file to store
    * @returns A promise that resolves when the file has been stored
    */
-  set(key: string, file: File): void | Promise<void>;
+  set(key: string, file: File): void | Promise<void>
 }
 
 export interface FileKey {
   /**
    * The key of the file in storage.
    */
-  key: string;
+  key: string
 }
 
 /**
@@ -117,38 +117,38 @@ export interface FileMetadata extends FileKey {
   /**
    * The last modified time of the file (in ms since the Unix epoch).
    */
-  lastModified: number;
+  lastModified: number
   /**
    * The name of the file.
    */
-  name: string;
+  name: string
   /**
    * The size of the file in bytes.
    */
-  size: number;
+  size: number
   /**
    * The MIME type of the file.
    */
-  type: string;
+  type: string
 }
 
 export interface ListOptions {
   /**
    * An opaque string that allows you to paginate over the keys in storage.
    */
-  cursor?: string;
+  cursor?: string
   /**
    * If `true`, include file metadata in the result.
    */
-  includeMetadata?: boolean;
+  includeMetadata?: boolean
   /**
    * The maximum number of files to return.
    */
-  limit?: number;
+  limit?: number
   /**
    * Only return files with keys that start with this prefix.
    */
-  prefix?: string;
+  prefix?: string
 }
 
 export interface ListResult<T extends ListOptions> {
@@ -156,9 +156,9 @@ export interface ListResult<T extends ListOptions> {
    * An opaque string that allows you to paginate over the keys in storage. Pass this back in the
    * `options` object on the next `list()` call to get the next page of results.
    */
-  cursor?: string;
+  cursor?: string
   /**
    * A list of the files in storage.
    */
-  files: (T extends { includeMetadata: true } ? FileMetadata : FileKey)[];
+  files: (T extends { includeMetadata: true } ? FileMetadata : FileKey)[]
 }

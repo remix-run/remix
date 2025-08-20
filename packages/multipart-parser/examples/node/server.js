@@ -1,14 +1,14 @@
-import * as fs from 'node:fs';
-import * as http from 'node:http';
-import tmp from 'tmp';
+import * as fs from 'node:fs'
+import * as http from 'node:http'
+import tmp from 'tmp'
 
-import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser/node';
+import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser/node'
 
-const PORT = 3000;
+const PORT = 3000
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.writeHead(200, { 'Content-Type': 'text/html' })
     res.end(`
 <!DOCTYPE html>
 <html>
@@ -24,19 +24,19 @@ const server = http.createServer(async (req, res) => {
     </form>
   </body>
 </html>
-`);
-    return;
+`)
+    return
   }
 
   if (req.method === 'POST') {
     try {
       /** @type any[] */
-      let parts = [];
+      let parts = []
 
       for await (let part of parseMultipartRequest(req)) {
         if (part.isFile) {
-          let tmpfile = tmp.fileSync();
-          fs.writeFileSync(tmpfile.name, part.bytes, 'binary');
+          let tmpfile = tmp.fileSync()
+          fs.writeFileSync(tmpfile.name, part.bytes, 'binary')
 
           parts.push({
             name: part.name,
@@ -44,34 +44,34 @@ const server = http.createServer(async (req, res) => {
             mediaType: part.mediaType,
             size: part.size,
             file: tmpfile.name,
-          });
+          })
         } else {
-          parts.push({ name: part.name, value: part.text });
+          parts.push({ name: part.name, value: part.text })
         }
       }
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ parts }, null, 2));
-      return;
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ parts }, null, 2))
+      return
     } catch (error) {
       if (error instanceof MultipartParseError) {
-        res.writeHead(400, { 'Content-Type': 'text/plain', Connection: 'close' });
-        res.end(`Error: ${error.message}`);
-        return;
+        res.writeHead(400, { 'Content-Type': 'text/plain', Connection: 'close' })
+        res.end(`Error: ${error.message}`)
+        return
       }
 
-      console.error(error);
+      console.error(error)
 
-      res.writeHead(500, { 'Content-Type': 'text/plain' });
-      res.end('Internal Server Error');
-      return;
+      res.writeHead(500, { 'Content-Type': 'text/plain' })
+      res.end('Internal Server Error')
+      return
     }
   }
 
-  res.writeHead(405);
-  res.end('Method Not Allowed');
-});
+  res.writeHead(405)
+  res.end('Method Not Allowed')
+})
 
 server.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT} ...`);
-});
+  console.log(`Server listening on http://localhost:${PORT} ...`)
+})

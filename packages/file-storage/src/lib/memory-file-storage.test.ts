@@ -1,109 +1,109 @@
-import * as assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
-import { parseFormData } from '@remix-run/form-data-parser';
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
+import { parseFormData } from '@remix-run/form-data-parser'
 
-import { MemoryFileStorage } from './memory-file-storage.ts';
+import { MemoryFileStorage } from './memory-file-storage.ts'
 
 describe('MemoryFileStorage', () => {
   it('stores and retrieves files', async () => {
-    let storage = new MemoryFileStorage();
-    let file = new File(['Hello, world!'], 'hello.txt', { type: 'text/plain' });
+    let storage = new MemoryFileStorage()
+    let file = new File(['Hello, world!'], 'hello.txt', { type: 'text/plain' })
 
-    await storage.set('hello', file);
+    await storage.set('hello', file)
 
-    assert.ok(storage.has('hello'));
+    assert.ok(storage.has('hello'))
 
-    let retrieved = storage.get('hello');
+    let retrieved = storage.get('hello')
 
-    assert.ok(retrieved);
-    assert.equal(retrieved.name, 'hello.txt');
-    assert.equal(retrieved.type, 'text/plain');
-    assert.equal(retrieved.size, 13);
+    assert.ok(retrieved)
+    assert.equal(retrieved.name, 'hello.txt')
+    assert.equal(retrieved.type, 'text/plain')
+    assert.equal(retrieved.size, 13)
 
-    let text = await retrieved.text();
+    let text = await retrieved.text()
 
-    assert.equal(text, 'Hello, world!');
+    assert.equal(text, 'Hello, world!')
 
-    storage.remove('hello');
+    storage.remove('hello')
 
-    assert.ok(!storage.has('hello'));
-    assert.equal(storage.get('hello'), null);
-  });
+    assert.ok(!storage.has('hello'))
+    assert.equal(storage.get('hello'), null)
+  })
 
   it('lists files with pagination', async () => {
-    let storage = new MemoryFileStorage();
-    let allKeys = ['a', 'b', 'c', 'd', 'e'];
+    let storage = new MemoryFileStorage()
+    let allKeys = ['a', 'b', 'c', 'd', 'e']
 
     await Promise.all(
       allKeys.map((key) =>
         storage.set(key, new File([`Hello ${key}!`], `hello.txt`, { type: 'text/plain' })),
       ),
-    );
+    )
 
-    let { cursor, files } = storage.list();
-    assert.equal(cursor, undefined);
-    assert.equal(files.length, 5);
-    assert.deepEqual(files.map((f) => f.key).sort(), allKeys);
+    let { cursor, files } = storage.list()
+    assert.equal(cursor, undefined)
+    assert.equal(files.length, 5)
+    assert.deepEqual(files.map((f) => f.key).sort(), allKeys)
 
-    let { cursor: cursor1, files: files1 } = storage.list({ limit: 0 });
-    assert.equal(cursor1, undefined);
-    assert.equal(files1.length, 0);
+    let { cursor: cursor1, files: files1 } = storage.list({ limit: 0 })
+    assert.equal(cursor1, undefined)
+    assert.equal(files1.length, 0)
 
-    let { cursor: cursor2, files: files2 } = storage.list({ limit: 2 });
-    assert.notEqual(cursor2, undefined);
-    assert.equal(files2.length, 2);
+    let { cursor: cursor2, files: files2 } = storage.list({ limit: 2 })
+    assert.notEqual(cursor2, undefined)
+    assert.equal(files2.length, 2)
 
-    let { cursor: cursor3, files: files3 } = storage.list({ cursor: cursor2 });
-    assert.equal(cursor3, undefined);
-    assert.equal(files3.length, 3);
+    let { cursor: cursor3, files: files3 } = storage.list({ cursor: cursor2 })
+    assert.equal(cursor3, undefined)
+    assert.equal(files3.length, 3)
 
-    assert.deepEqual([...files2, ...files3].map((f) => f.key).sort(), allKeys);
-  });
+    assert.deepEqual([...files2, ...files3].map((f) => f.key).sort(), allKeys)
+  })
 
   it('lists files by key prefix', async () => {
-    let storage = new MemoryFileStorage();
-    let allKeys = ['a', 'b', 'b/c', 'c', 'd'];
+    let storage = new MemoryFileStorage()
+    let allKeys = ['a', 'b', 'b/c', 'c', 'd']
 
     await Promise.all(
       allKeys.map((key) =>
         storage.set(key, new File([`Hello ${key}!`], `hello.txt`, { type: 'text/plain' })),
       ),
-    );
+    )
 
-    let { cursor, files } = storage.list({ prefix: 'b' });
+    let { cursor, files } = storage.list({ prefix: 'b' })
 
-    assert.equal(cursor, undefined);
-    assert.equal(files.length, 2);
-    assert.equal(files[0].key, 'b');
-    assert.equal(files[1].key, 'b/c');
-  });
+    assert.equal(cursor, undefined)
+    assert.equal(files.length, 2)
+    assert.equal(files[0].key, 'b')
+    assert.equal(files[1].key, 'b/c')
+  })
 
   it('lists files with metadata', async () => {
-    let storage = new MemoryFileStorage();
-    let allKeys = ['a', 'b', 'c', 'd', 'e'];
+    let storage = new MemoryFileStorage()
+    let allKeys = ['a', 'b', 'c', 'd', 'e']
 
     await Promise.all(
       allKeys.map((key) =>
         storage.set(key, new File([`Hello ${key}!`], `hello.txt`, { type: 'text/plain' })),
       ),
-    );
+    )
 
-    let { cursor, files } = storage.list({ includeMetadata: true });
+    let { cursor, files } = storage.list({ includeMetadata: true })
 
-    assert.equal(cursor, undefined);
-    assert.equal(files.length, 5);
-    assert.deepEqual(files.map((f) => f.key).sort(), allKeys);
-    files.forEach((f) => assert.ok('lastModified' in f));
-    files.forEach((f) => assert.ok('name' in f));
-    files.forEach((f) => assert.ok('size' in f));
-    files.forEach((f) => assert.ok('type' in f));
-  });
+    assert.equal(cursor, undefined)
+    assert.equal(files.length, 5)
+    assert.deepEqual(files.map((f) => f.key).sort(), allKeys)
+    files.forEach((f) => assert.ok('lastModified' in f))
+    files.forEach((f) => assert.ok('name' in f))
+    files.forEach((f) => assert.ok('size' in f))
+    files.forEach((f) => assert.ok('type' in f))
+  })
 
   describe('integration with form-data-parser', () => {
     it('stores and lists file uploads', async () => {
-      let storage = new MemoryFileStorage();
+      let storage = new MemoryFileStorage()
 
-      let boundary = '----WebKitFormBoundaryzv5f5B8XUeVl7e0A';
+      let boundary = '----WebKitFormBoundaryzv5f5B8XUeVl7e0A'
       let request = new Request('http://example.com', {
         method: 'POST',
         headers: {
@@ -117,22 +117,22 @@ describe('MemoryFileStorage', () => {
           'Hello, world!',
           `--${boundary}--`,
         ].join('\r\n'),
-      });
+      })
 
       await parseFormData(request, async (file) => {
-        await storage.put('hello', file);
-      });
+        await storage.put('hello', file)
+      })
 
-      assert.ok(storage.has('hello'));
+      assert.ok(storage.has('hello'))
 
-      let { files } = storage.list({ includeMetadata: true });
+      let { files } = storage.list({ includeMetadata: true })
 
-      assert.equal(files.length, 1);
-      assert.equal(files[0].key, 'hello');
-      assert.equal(files[0].name, 'hello.txt');
-      assert.equal(files[0].size, 13);
-      assert.equal(files[0].type, 'text/plain');
-      assert.ok(files[0].lastModified);
-    });
-  });
-});
+      assert.equal(files.length, 1)
+      assert.equal(files[0].key, 'hello')
+      assert.equal(files[0].name, 'hello.txt')
+      assert.equal(files[0].size, 13)
+      assert.equal(files[0].type, 'text/plain')
+      assert.ok(files[0].lastModified)
+    })
+  })
+})

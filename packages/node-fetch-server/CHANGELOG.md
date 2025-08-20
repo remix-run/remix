@@ -22,27 +22,27 @@ This is the changelog for [`node-fetch-server`](https://github.com/remix-run/rem
 - Add http/2 support
 
 ```ts
-import * as http2 from 'node:http2';
-import { createRequestListener } from '@remix-run/node-fetch-server';
+import * as http2 from 'node:http2'
+import { createRequestListener } from '@remix-run/node-fetch-server'
 
-let server = http2.createSecureServer(options);
+let server = http2.createSecureServer(options)
 
 server.on(
   'request',
   createRequestListener((request) => {
-    let url = new URL(request.url);
+    let url = new URL(request.url)
 
     if (url.pathname === '/') {
       return new Response('Hello HTTP/2!', {
         headers: {
           'Content-Type': 'text/plain',
         },
-      });
+      })
     }
 
-    return new Response('Not Found', { status: 404 });
+    return new Response('Not Found', { status: 404 })
   }),
-);
+)
 ```
 
 ## v0.5.1 (2025-01-25)

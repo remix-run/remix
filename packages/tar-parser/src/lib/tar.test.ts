@@ -1,61 +1,61 @@
-import * as assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 
-import { fixtures, readFixture } from '../../test/utils.ts';
+import { fixtures, readFixture } from '../../test/utils.ts'
 
-import { type TarHeader, parseTar } from './tar.ts';
+import { type TarHeader, parseTar } from './tar.ts'
 
 async function bufferBytes(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> {
-  let chunks: Uint8Array[] = [];
-  let length = 0;
+  let chunks: Uint8Array[] = []
+  let length = 0
 
   for await (let chunk of stream) {
-    chunks.push(chunk);
-    length += chunk.byteLength;
+    chunks.push(chunk)
+    length += chunk.byteLength
   }
 
-  let result = new Uint8Array(length);
-  let offset = 0;
+  let result = new Uint8Array(length)
+  let offset = 0
 
   for (let chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.byteLength;
+    result.set(chunk, offset)
+    offset += chunk.byteLength
   }
 
-  return result;
+  return result
 }
 
 async function bufferString(
   stream: ReadableStream<Uint8Array>,
   encoding = 'utf-8',
 ): Promise<string> {
-  let decoder = new TextDecoder(encoding);
-  let string = '';
+  let decoder = new TextDecoder(encoding)
+  let string = ''
 
   for await (let chunk of stream) {
-    string += decoder.decode(chunk, { stream: true });
+    string += decoder.decode(chunk, { stream: true })
   }
 
-  string += decoder.decode();
+  string += decoder.decode()
 
-  return string;
+  return string
 }
 
 async function computeHash(buffer: Uint8Array, algorithm = 'SHA-256'): Promise<string> {
-  let digest = await crypto.subtle.digest(algorithm, buffer);
+  let digest = await crypto.subtle.digest(algorithm, buffer)
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('')
-    .slice(0, 8);
+    .slice(0, 8)
 }
 
 describe('TarParser', () => {
   it('parses express-4.21.1.tgz', async () => {
-    let entries: Record<string, string> = {};
+    let entries: Record<string, string> = {}
     await parseTar(readFixture(fixtures.expressNpmPackage), async (entry) => {
-      let hash = await computeHash(await bufferBytes(entry.body));
-      entries[entry.name] = hash;
-    });
+      let hash = await computeHash(await bufferBytes(entry.body))
+      entries[entry.name] = hash
+    })
 
     assert.deepEqual(entries, {
       'package/LICENSE': '95a57628',
@@ -74,46 +74,46 @@ describe('TarParser', () => {
       'package/package.json': '774eaac2',
       'package/History.md': 'ca257313',
       'package/Readme.md': '016f344e',
-    });
-  });
+    })
+  })
 
   it('parses fetch-proxy-0.1.0.tar.gz', async () => {
-    let entries: [string, number, string][] = [];
+    let entries: [string, number, string][] = []
     await parseTar(readFixture(fixtures.fetchProxyGithubArchive), async (entry) => {
-      let hash = await computeHash(await bufferBytes(entry.body));
-      entries.push([entry.name, entry.size, hash]);
-    });
+      let hash = await computeHash(await bufferBytes(entry.body))
+      entries.push([entry.name, entry.size, hash])
+    })
 
-    assert.equal(entries.length, 192);
-  });
+    assert.equal(entries.length, 192)
+  })
 
   it('parses lodash-4.17.21.tgz', async () => {
-    let entries: [string, number, string][] = [];
+    let entries: [string, number, string][] = []
     await parseTar(readFixture(fixtures.lodashNpmPackage), async (entry) => {
-      let hash = await computeHash(await bufferBytes(entry.body));
-      entries.push([entry.name, entry.size, hash]);
-    });
+      let hash = await computeHash(await bufferBytes(entry.body))
+      entries.push([entry.name, entry.size, hash])
+    })
 
-    assert.equal(entries.length, 1054);
-  });
+    assert.equal(entries.length, 1054)
+  })
 
   it('parses npm-11.0.0.tgz', async () => {
-    let entries: [string, number, string][] = [];
+    let entries: [string, number, string][] = []
     await parseTar(readFixture(fixtures.npmNpmPackage), async (entry) => {
-      let hash = await computeHash(await bufferBytes(entry.body));
-      entries.push([entry.name, entry.size, hash]);
-    });
+      let hash = await computeHash(await bufferBytes(entry.body))
+      entries.push([entry.name, entry.size, hash])
+    })
 
-    assert.equal(entries.length, 2368);
-  });
-});
+    assert.equal(entries.length, 2368)
+  })
+})
 
 describe('tar-stream test cases', () => {
   it('parses one-file.tar', async () => {
-    let entries: [TarHeader, string][] = [];
+    let entries: [TarHeader, string][] = []
     await parseTar(readFixture(fixtures.oneFile), async (entry) => {
-      entries.push([entry.header, await bufferString(entry.body)]);
-    });
+      entries.push([entry.header, await bufferString(entry.body)])
+    })
 
     assert.deepEqual(entries, [
       [
@@ -134,14 +134,14 @@ describe('tar-stream test cases', () => {
         },
         'hello world\n',
       ],
-    ]);
-  });
+    ])
+  })
 
   it('parses multi-file.tar', async () => {
-    let entries: [TarHeader, string][] = [];
+    let entries: [TarHeader, string][] = []
     await parseTar(readFixture(fixtures.multiFile), async (entry) => {
-      entries.push([entry.header, await bufferString(entry.body)]);
-    });
+      entries.push([entry.header, await bufferString(entry.body)])
+    })
 
     assert.deepEqual(entries, [
       [
@@ -180,14 +180,14 @@ describe('tar-stream test cases', () => {
         },
         'i am file-2\n',
       ],
-    ]);
-  });
+    ])
+  })
 
   it('parses pax.tar', async () => {
-    let entries: [TarHeader, string][] = [];
+    let entries: [TarHeader, string][] = []
     await parseTar(readFixture(fixtures.pax), async (entry) => {
-      entries.push([entry.header, await bufferString(entry.body)]);
-    });
+      entries.push([entry.header, await bufferString(entry.body)])
+    })
 
     assert.deepEqual(entries, [
       [
@@ -211,14 +211,14 @@ describe('tar-stream test cases', () => {
         },
         'hello world\n',
       ],
-    ]);
-  });
+    ])
+  })
 
   it('parses types.tar', async () => {
-    let headers: TarHeader[] = [];
+    let headers: TarHeader[] = []
     await parseTar(readFixture(fixtures.types), async (entry) => {
-      headers.push(entry.header);
-    });
+      headers.push(entry.header)
+    })
 
     assert.deepEqual(headers, [
       {
@@ -251,14 +251,14 @@ describe('tar-stream test cases', () => {
         devminor: 0,
         pax: null,
       },
-    ]);
-  });
+    ])
+  })
 
   it('parses long-name.tar', async () => {
-    let entries: [TarHeader, string][] = [];
+    let entries: [TarHeader, string][] = []
     await parseTar(readFixture(fixtures.longName), async (entry) => {
-      entries.push([entry.header, await bufferString(entry.body)]);
-    });
+      entries.push([entry.header, await bufferString(entry.body)])
+    })
 
     assert.deepEqual(entries, [
       [
@@ -279,14 +279,14 @@ describe('tar-stream test cases', () => {
         },
         'hello long name\n',
       ],
-    ]);
-  });
+    ])
+  })
 
   it('parses unicode-bsd.tar', async () => {
-    let headers: TarHeader[] = [];
+    let headers: TarHeader[] = []
     await parseTar(readFixture(fixtures.unicodeBsd), async (entry) => {
-      headers.push(entry.header);
-    });
+      headers.push(entry.header)
+    })
 
     assert.deepEqual(headers, [
       {
@@ -311,14 +311,14 @@ describe('tar-stream test cases', () => {
           path: 'høllø.txt',
         },
       },
-    ]);
-  });
+    ])
+  })
 
   it('parses unicode.tar', async () => {
-    let headers: TarHeader[] = [];
+    let headers: TarHeader[] = []
     await parseTar(readFixture(fixtures.unicode), async (entry) => {
-      headers.push(entry.header);
-    });
+      headers.push(entry.header)
+    })
 
     assert.deepEqual(headers, [
       {
@@ -336,52 +336,52 @@ describe('tar-stream test cases', () => {
         devminor: 0,
         pax: { path: 'høstål.txt' },
       },
-    ]);
-  });
+    ])
+  })
 
   it('parses name-is-100.tar', async () => {
-    let entries: [number, string][] = [];
+    let entries: [number, string][] = []
     await parseTar(readFixture(fixtures.nameIs100), async (entry) => {
-      entries.push([entry.header.name.length, await bufferString(entry.body)]);
-    });
+      entries.push([entry.header.name.length, await bufferString(entry.body)])
+    })
 
-    assert.deepEqual(entries, [[100, 'hello\n']]);
-  });
+    assert.deepEqual(entries, [[100, 'hello\n']])
+  })
 
   it('parses space.tar', async () => {
-    let entries: [TarHeader, string][] = [];
+    let entries: [TarHeader, string][] = []
     await parseTar(readFixture(fixtures.space), async (entry) => {
-      entries.push([entry.header, await bufferString(entry.body)]);
-    });
+      entries.push([entry.header, await bufferString(entry.body)])
+    })
 
-    assert.equal(entries.length, 4);
-  });
+    assert.equal(entries.length, 4)
+  })
 
   it('parses gnu-long-path.tar', async () => {
-    let entries: [TarHeader, string][] = [];
+    let entries: [TarHeader, string][] = []
     await parseTar(readFixture(fixtures.gnuLongPath), async (entry) => {
-      entries.push([entry.header, await bufferString(entry.body)]);
-    });
+      entries.push([entry.header, await bufferString(entry.body)])
+    })
 
-    assert.equal(entries.length, 1);
-  });
+    assert.equal(entries.length, 1)
+  })
 
   it('parses base-256-uid-gid.tar', async () => {
-    let headers: TarHeader[] = [];
+    let headers: TarHeader[] = []
     await parseTar(readFixture(fixtures.base256UidGid), async (entry) => {
-      headers.push(entry.header);
-    });
+      headers.push(entry.header)
+    })
 
-    assert.equal(headers.length, 1);
-    assert.equal(headers[0].uid, 116435139);
-    assert.equal(headers[0].gid, 1876110778);
-  });
+    assert.equal(headers.length, 1)
+    assert.equal(headers[0].uid, 116435139)
+    assert.equal(headers[0].gid, 1876110778)
+  })
 
   it('parses base-256-size.tar', async () => {
-    let headers: TarHeader[] = [];
+    let headers: TarHeader[] = []
     await parseTar(readFixture(fixtures.base256Size), async (entry) => {
-      headers.push(entry.header);
-    });
+      headers.push(entry.header)
+    })
 
     assert.deepEqual(headers, [
       {
@@ -399,14 +399,14 @@ describe('tar-stream test cases', () => {
         devminor: 0,
         pax: null,
       },
-    ]);
-  });
+    ])
+  })
 
   it('parses latin1.tar', async () => {
-    let entries: [TarHeader, string][] = [];
+    let entries: [TarHeader, string][] = []
     await parseTar(readFixture(fixtures.latin1), { filenameEncoding: 'latin1' }, async (entry) => {
-      entries.push([entry.header, await bufferString(entry.body)]);
-    });
+      entries.push([entry.header, await bufferString(entry.body)])
+    })
 
     assert.deepEqual(entries, [
       [
@@ -427,26 +427,26 @@ describe('tar-stream test cases', () => {
         },
         'Hello, world!\n',
       ],
-    ]);
-  });
+    ])
+  })
 
   it('throws when parsing incomplete.tar', async () => {
     await assert.rejects(
       async () => {
-        await parseTar(readFixture(fixtures.incomplete), () => {});
+        await parseTar(readFixture(fixtures.incomplete), () => {})
       },
       {
         name: 'TarParseError',
         message: 'Unexpected end of archive',
       },
-    );
-  });
+    )
+  })
 
   it('parses gnu.tar', async () => {
-    let entries: [TarHeader, string][] = [];
+    let entries: [TarHeader, string][] = []
     await parseTar(readFixture(fixtures.gnu), async (entry) => {
-      entries.push([entry.header, await bufferString(entry.body)]);
-    });
+      entries.push([entry.header, await bufferString(entry.body)])
+    })
 
     assert.deepEqual(entries, [
       [
@@ -467,14 +467,14 @@ describe('tar-stream test cases', () => {
         },
         'Hello, world!\n',
       ],
-    ]);
-  });
+    ])
+  })
 
   it('parses gnu-incremental.tar', async () => {
-    let entries: [TarHeader, string][] = [];
+    let entries: [TarHeader, string][] = []
     await parseTar(readFixture(fixtures.gnuIncremental), async (entry) => {
-      entries.push([entry.header, await bufferString(entry.body)]);
-    });
+      entries.push([entry.header, await bufferString(entry.body)])
+    })
 
     assert.deepEqual(entries, [
       [
@@ -495,6 +495,6 @@ describe('tar-stream test cases', () => {
         },
         'Hello, world!\n',
       ],
-    ]);
-  });
-});
+    ])
+  })
+})

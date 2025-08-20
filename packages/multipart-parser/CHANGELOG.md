@@ -36,17 +36,17 @@ New APIs:
 If you're upgrading, check the README for current usage recommendations. Here's a high-level taste of the before/after of this release.
 
 ```ts
-import { parseMultipartRequest } from '@remix-run/multipart-parser';
+import { parseMultipartRequest } from '@remix-run/multipart-parser'
 
 // before
 await parseMultipartRequest(request, async (part) => {
-  let buffer = await part.arrayBuffer();
+  let buffer = await part.arrayBuffer()
   // ...
-});
+})
 
 // after
 for await (let part of parseMultipartRequest(request)) {
-  let buffer = part.arrayBuffer;
+  let buffer = part.arrayBuffer
   // ...
 }
 ```
@@ -72,7 +72,7 @@ This release improves error handling and simplifies some of the internals of the
 - BREAKING CHANGE: Change `parseMultipartRequest` and `parseMultipart` interfaces from `for await...of` to `await` + callback API.
 
 ```ts
-import { parseMultipartRequest } from '@remix-run/multipart-parser';
+import { parseMultipartRequest } from '@remix-run/multipart-parser'
 
 // before
 for await (let part of parseMultipartRequest(request)) {
@@ -82,7 +82,7 @@ for await (let part of parseMultipartRequest(request)) {
 // after
 await parseMultipartRequest(request, (part) => {
   // ...
-});
+})
 ```
 
 This change greatly simplifies the implementation of `parseMultipartRequest`/`parseMultipart` and fixes a subtle bug that did not properly catch parse errors when `maxFileSize` was exceeded (see #28).
@@ -90,34 +90,34 @@ This change greatly simplifies the implementation of `parseMultipartRequest`/`pa
 - Add `MaxHeaderSizeExceededError` and `MaxFileSizeExceededError` to make it easier to have finer-grained error handling.
 
 ```ts
-import * as http from 'node:http';
+import * as http from 'node:http'
 import {
   MultipartParseError,
   MaxFileSizeExceededError,
   parseMultipartRequest,
-} from '@remix-run/multipart-parser/node';
+} from '@remix-run/multipart-parser/node'
 
-const tenMb = 10 * Math.pow(2, 20);
+const tenMb = 10 * Math.pow(2, 20)
 
 const server = http.createServer(async (req, res) => {
   try {
     await parseMultipartRequest(req, { maxFileSize: tenMb }, (part) => {
       // ...
-    });
+    })
   } catch (error) {
     if (error instanceof MaxFileSizeExceededError) {
-      res.writeHead(413);
-      res.end(error.message);
+      res.writeHead(413)
+      res.end(error.message)
     } else if (error instanceof MultipartParseError) {
-      res.writeHead(400);
-      res.end('Invalid multipart request');
+      res.writeHead(400)
+      res.end('Invalid multipart request')
     } else {
-      console.error(error);
-      res.writeHead(500);
-      res.end('Internal Server Error');
+      console.error(error)
+      res.writeHead(500)
+      res.end('Internal Server Error')
     }
   }
-});
+})
 ```
 
 ## v0.7.3 (2025-01-24)

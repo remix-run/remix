@@ -1,8 +1,8 @@
-import * as assert from 'node:assert/strict';
-import { describe, it, mock } from 'node:test';
+import * as assert from 'node:assert/strict'
+import { describe, it, mock } from 'node:test'
 
-import type { FileUploadHandler } from './form-data.ts';
-import { MaxFilesExceededError, parseFormData } from './form-data.ts';
+import type { FileUploadHandler } from './form-data.ts'
+import { MaxFilesExceededError, parseFormData } from './form-data.ts'
 
 describe('parseFormData', () => {
   it('parses a application/x-www-form-urlencoded request', async () => {
@@ -12,12 +12,12 @@ describe('parseFormData', () => {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'text=Hello%2C%20World!',
-    });
+    })
 
-    let formData = await parseFormData(request);
+    let formData = await parseFormData(request)
 
-    assert.equal(formData.get('text'), 'Hello, World!');
-  });
+    assert.equal(formData.get('text'), 'Hello, World!')
+  })
 
   it('parses a multipart/form-data request', async () => {
     let request = new Request('http://localhost:8080', {
@@ -37,18 +37,18 @@ describe('parseFormData', () => {
         'This is an example file.',
         '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
       ].join('\r\n'),
-    });
+    })
 
-    let formData = await parseFormData(request);
+    let formData = await parseFormData(request)
 
-    assert.equal(formData.get('text'), 'Hello, World!');
+    assert.equal(formData.get('text'), 'Hello, World!')
 
-    let file = formData.get('file');
-    assert.ok(file instanceof File);
-    assert.equal(file.name, 'example.txt');
-    assert.equal(file.type, 'text/plain');
-    assert.equal(await file.text(), 'This is an example file.');
-  });
+    let file = formData.get('file')
+    assert.ok(file instanceof File)
+    assert.equal(file.name, 'example.txt')
+    assert.equal(file.type, 'text/plain')
+    assert.equal(await file.text(), 'This is an example file.')
+  })
 
   it('calls the file upload handler for each file part', async () => {
     let request = new Request('http://localhost:8080', {
@@ -69,14 +69,14 @@ describe('parseFormData', () => {
         'This is another example file.',
         '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
       ].join('\r\n'),
-    });
+    })
 
-    let fileUploadHandler = mock.fn<FileUploadHandler>();
+    let fileUploadHandler = mock.fn<FileUploadHandler>()
 
-    await parseFormData(request, fileUploadHandler);
+    await parseFormData(request, fileUploadHandler)
 
-    assert.equal(fileUploadHandler.mock.calls.length, 2);
-  });
+    assert.equal(fileUploadHandler.mock.calls.length, 2)
+  })
 
   it('allows returning `null` from the upload handler', async () => {
     let request = new Request('http://localhost:8080', {
@@ -92,12 +92,12 @@ describe('parseFormData', () => {
         'This is an example file.',
         '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
       ].join('\r\n'),
-    });
+    })
 
-    let formData = await parseFormData(request, () => null);
+    let formData = await parseFormData(request, () => null)
 
-    assert.equal(formData.get('file'), null);
-  });
+    assert.equal(formData.get('file'), null)
+  })
 
   it('allows returning strings from the upload handler', async () => {
     let request = new Request('http://localhost:8080', {
@@ -113,12 +113,12 @@ describe('parseFormData', () => {
         'This is an example file.',
         '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
       ].join('\r\n'),
-    });
+    })
 
-    let formData = await parseFormData(request, (upload) => upload.text());
+    let formData = await parseFormData(request, (upload) => upload.text())
 
-    assert.equal(formData.get('file'), 'This is an example file.');
-  });
+    assert.equal(formData.get('file'), 'This is an example file.')
+  })
 
   it('allows returning files from the upload handler', async () => {
     let request = new Request('http://localhost:8080', {
@@ -134,19 +134,19 @@ describe('parseFormData', () => {
         'This is an example file.',
         '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
       ].join('\r\n'),
-    });
+    })
 
     let formData = await parseFormData(request, async (upload) => {
-      return new File([await upload.text()], 'example.txt', { type: 'text/plain' });
-    });
+      return new File([await upload.text()], 'example.txt', { type: 'text/plain' })
+    })
 
-    let file = formData.get('file');
+    let file = formData.get('file')
 
-    assert.ok(file instanceof File);
-    assert.equal(file.name, 'example.txt');
-    assert.equal(file.type, 'text/plain');
-    assert.equal(await file.text(), 'This is an example file.');
-  });
+    assert.ok(file instanceof File)
+    assert.equal(file.name, 'example.txt')
+    assert.equal(file.type, 'text/plain')
+    assert.equal(await file.text(), 'This is an example file.')
+  })
 
   it('throws MaxFilesExceededError when the number of files exceeds the limit', async () => {
     let request = new Request('http://localhost:8080', {
@@ -172,11 +172,11 @@ describe('parseFormData', () => {
         'This is the third example file.',
         '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
       ].join('\r\n'),
-    });
+    })
 
     await assert.rejects(
       async () => await parseFormData(request, { maxFiles: 2 }),
       MaxFilesExceededError,
-    );
-  });
-});
+    )
+  })
+})
