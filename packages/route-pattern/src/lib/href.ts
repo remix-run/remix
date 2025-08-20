@@ -8,10 +8,13 @@ type HrefArgs<Source extends string> =
     [Record<params, string>] :
   never;
 
-export const createHref =
-  <source extends string>() =>
-  <variant extends Variant<source>>(variant: variant, ...args: HrefArgs<variant>) => {
-    let params = args.at(0) ?? {}
+export interface HrefBuilder<Source extends string> {
+  <V extends Variant<Source>>(variant: V, ...args: HrefArgs<V>): string
+}
+
+export function createHrefBuilder<Source extends string>(): HrefBuilder<Source> {
+  return <V extends Variant<Source>>(variant: V, ...args: HrefArgs<V>) => {
+    let params = args[0] ?? {}
     let ast = parse(variant)
 
     let href = ''
@@ -24,8 +27,10 @@ export const createHref =
       href += '?'
       href += ast.search.toString()
     }
+
     return href
   }
+}
 
 function resolvePart(part: Part, params: Record<string, string>) {
   return part

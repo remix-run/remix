@@ -1,3 +1,3 @@
 export { RoutePattern } from './lib/route-pattern.ts'
-export { createHref } from './lib/href.ts'
-export type { Params } from './lib/href.ts'
+export type { HrefBuilder, Params } from './lib/href.ts'
+export { createHrefBuilder } from './lib/href.ts'
