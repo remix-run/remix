@@ -1,10 +1,14 @@
 {
   "name": "remix-the-web",
+  "type": "module",
   "private": true,
   "packageManager": "pnpm@10.15.0",
   "devDependencies": {
+    "eslint": "^9.33.0",
+    "eslint-plugin-prefer-let": "^4.0.0",
     "prettier": "^3.3.3",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.40.0"
   },
   "engines": {
     "node": ">=22"
@@ -17,6 +21,8 @@
     "tag-release": "node ./scripts/tag-release.js",
     "typecheck": "pnpm -r --workspace-concurrency 1 typecheck",
     "test": "pnpm -r --workspace-concurrency 1 test",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
     "view-changes": "node ./scripts/view-changes.js"
   },
   "workspaces": [
