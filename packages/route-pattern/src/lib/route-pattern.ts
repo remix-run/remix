@@ -43,6 +43,10 @@ export class RoutePattern {
 
     return { params }
   }
+
+  toString() {
+    return this.source
+  }
 }
 
 function regexpEscape(text: string): string {

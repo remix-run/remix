@@ -7,7 +7,7 @@ describe('RoutePattern', () => {
   describe('constructor', () => {
     it('stores the source pattern', () => {
       let pattern = new RoutePattern('users/:id')
-      assert.strictEqual(pattern.source, 'users/:id')
+      assert.equal(pattern.source, 'users/:id')
     })
   })
 
@@ -103,7 +103,7 @@ describe('RoutePattern', () => {
       pathnameTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
           let routePattern = new RoutePattern(pattern)
-          assert.deepStrictEqual(routePattern.match(input), expected)
+          assert.deepEqual(routePattern.match(input), expected)
         })
       })
     })
@@ -163,7 +163,7 @@ describe('RoutePattern', () => {
       enumTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
           let routePattern = new RoutePattern(pattern)
-          assert.deepStrictEqual(routePattern.match(input), expected)
+          assert.deepEqual(routePattern.match(input), expected)
         })
       })
     })
@@ -211,7 +211,7 @@ describe('RoutePattern', () => {
       multiParamTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
           let routePattern = new RoutePattern(pattern)
-          assert.deepStrictEqual(routePattern.match(input), expected)
+          assert.deepEqual(routePattern.match(input), expected)
         })
       })
     })
@@ -279,7 +279,7 @@ describe('RoutePattern', () => {
       complexTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
           let routePattern = new RoutePattern(pattern)
-          assert.deepStrictEqual(routePattern.match(input), expected)
+          assert.deepEqual(routePattern.match(input), expected)
         })
       })
     })
@@ -351,7 +351,7 @@ describe('RoutePattern', () => {
       fullUrlTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
           let routePattern = new RoutePattern(pattern)
-          assert.deepStrictEqual(routePattern.match(input), expected)
+          assert.deepEqual(routePattern.match(input), expected)
         })
       })
     })
@@ -375,7 +375,7 @@ describe('RoutePattern', () => {
       inputTypeTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
           let routePattern = new RoutePattern(pattern)
-          assert.deepStrictEqual(routePattern.match(input), expected)
+          assert.deepEqual(routePattern.match(input), expected)
         })
       })
     })
@@ -435,7 +435,7 @@ describe('RoutePattern', () => {
       edgeCaseTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
           let routePattern = new RoutePattern(pattern)
-          assert.deepStrictEqual(routePattern.match(input), expected)
+          assert.deepEqual(routePattern.match(input), expected)
         })
       })
     })
@@ -465,7 +465,7 @@ describe('RoutePattern', () => {
       constraintTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
           let routePattern = new RoutePattern(pattern)
-          assert.deepStrictEqual(routePattern.match(input), expected)
+          assert.deepEqual(routePattern.match(input), expected)
         })
       })
     })
@@ -573,9 +573,16 @@ describe('RoutePattern', () => {
       searchTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
           let routePattern = new RoutePattern(pattern)
-          assert.deepStrictEqual(routePattern.match(input), expected)
+          assert.deepEqual(routePattern.match(input), expected)
         })
       })
+    })
+  })
+
+  describe('toString', () => {
+    it('returns the source pattern', () => {
+      let pattern = new RoutePattern('users/:id?format=json')
+      assert.equal(pattern.toString(), 'users/:id?format=json')
     })
   })
 })

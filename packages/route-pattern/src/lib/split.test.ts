@@ -66,7 +66,7 @@ describe('split', () => {
         result.search = input.slice(...spans.search)
       }
 
-      assert.deepStrictEqual(result, expected)
+      assert.deepEqual(result, expected)
     }
   })
 })

@@ -255,7 +255,7 @@ describe('parse', () => {
     testCases.forEach(({ name, input, expected }) => {
       it(name, () => {
         let result = parse(input)
-        assert.deepStrictEqual(result, expected)
+        assert.deepEqual(result, expected)
       })
     })
   })
@@ -344,7 +344,7 @@ describe('parse', () => {
     testCases.forEach(({ name, input, expected }) => {
       it(name, () => {
         let result = parse(input)
-        assert.deepStrictEqual(result, expected)
+        assert.deepEqual(result, expected)
       })
     })
   })

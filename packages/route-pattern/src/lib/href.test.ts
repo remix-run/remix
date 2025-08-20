@@ -7,7 +7,7 @@ describe('href', () => {
   it('fills in params', () => {
     type pattern = 'products(/:id)' | 'foo/*bar' | '://remix.run/about'
     let href = createHref<pattern>()
-    assert.deepStrictEqual(href('products/:id', { id: '1' }), 'https:///products/1')
+    assert.deepEqual(href('products/:id', { id: '1' }), 'https:///products/1')
 
     // @ts-expect-error invalid variant
     href('does-not-exist')
