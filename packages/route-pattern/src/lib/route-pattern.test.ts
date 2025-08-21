@@ -440,16 +440,16 @@ describe('RoutePattern', () => {
       })
     })
 
-    describe('parameter constraints', () => {
+    describe('variable constraints', () => {
       let constraintTests = [
         {
-          name: 'parameters do not match across path segments',
+          name: 'variables do not match across path segments',
           pattern: 'users/:id/posts',
           input: 'https://example.com/users/123/456/posts',
           expected: null,
         },
         {
-          name: 'hostname parameters do not match across dots',
+          name: 'hostname variables do not match across dots',
           pattern: '://:subdomain.example.com',
           input: 'https://api.v1.example.com/',
           expected: null,
