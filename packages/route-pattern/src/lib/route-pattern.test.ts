@@ -9,6 +9,12 @@ describe('RoutePattern', () => {
       let pattern = new RoutePattern('users/:id')
       assert.equal(pattern.source, 'users/:id')
     })
+
+    it('can be created from another pattern', () => {
+      let pattern = new RoutePattern('users/:id')
+      let pattern2 = new RoutePattern(pattern)
+      assert.equal(pattern2.source, pattern.source)
+    })
   })
 
   describe('match', () => {

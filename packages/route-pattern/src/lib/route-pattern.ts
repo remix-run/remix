@@ -5,36 +5,50 @@ import { parse } from './parse.ts'
 type Params = Record<string, string | undefined>
 type Match = { params: Params }
 
+/**
+ * A pattern for matching URLs.
+ */
 export class RoutePattern {
+  /**
+   * The source string that was used to create this pattern.
+   */
   readonly source: string
 
   readonly #ast: Ast
+  readonly #protocolMatcher: RegExp
+  readonly #hostnameMatcher: RegExp
+  readonly #pathnameMatcher: RegExp
 
-  constructor(source: string) {
-    this.source = source
-    this.#ast = parse(source)
+  constructor(source: string | RoutePattern) {
+    this.source = typeof source === 'string' ? source : source.source
+    this.#ast = parse(this.source)
+    this.#protocolMatcher = partToRegExp(this.#ast.protocol, { param: /.*/ }) ?? /^.*$/
+    this.#hostnameMatcher = partToRegExp(this.#ast.hostname, { param: /[^.]+/ }) ?? /^.*$/
+    this.#pathnameMatcher = partToRegExp(this.#ast.pathname, { param: /[^/]+/ }) ?? /^$/
   }
 
   match(url: URL | string): Match | null {
     if (typeof url === 'string') url = new URL(url)
 
-    let protocolRE = partToRegExp(this.#ast.protocol, { param: /.*/ }) ?? /^.*$/
-    let hostnameRE = partToRegExp(this.#ast.hostname, { param: /[^.]+/ }) ?? /^.*$/
-    let pathnameRE = partToRegExp(this.#ast.pathname, { param: /[^/]+/ }) ?? /^$/
-
     let params: Params = {}
 
-    let protocolMatch = protocolRE.exec(url.protocol.slice(0, -1))
-    if (!protocolMatch) return null
-    Object.assign(params, protocolMatch.groups ?? {})
+    let protocolMatch = this.#protocolMatcher.exec(url.protocol.slice(0, -1))
+    if (protocolMatch === null) return null
+    if (protocolMatch.groups) {
+      Object.assign(params, protocolMatch.groups)
+    }
 
-    let hostnameMatch = hostnameRE.exec(url.hostname)
-    if (!hostnameMatch) return null
-    Object.assign(params, hostnameMatch.groups ?? {})
+    let hostnameMatch = this.#hostnameMatcher.exec(url.hostname)
+    if (hostnameMatch === null) return null
+    if (hostnameMatch.groups) {
+      Object.assign(params, hostnameMatch.groups)
+    }
 
-    let pathnameMatch = pathnameRE.exec(url.pathname.slice(1))
-    if (!pathnameMatch) return null
-    Object.assign(params, pathnameMatch.groups ?? {})
+    let pathnameMatch = this.#pathnameMatcher.exec(url.pathname.slice(1))
+    if (pathnameMatch === null) return null
+    if (pathnameMatch.groups) {
+      Object.assign(params, pathnameMatch.groups)
+    }
 
     if (this.#ast.search) {
       for (let [key, value] of this.#ast.search?.entries()) {
@@ -48,10 +62,6 @@ export class RoutePattern {
   toString() {
     return this.source
   }
-}
-
-function regexpEscape(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function partToRegExp(part: Part | undefined, options: { param: RegExp }) {
@@ -95,4 +105,8 @@ function partToRegExpSource(part: Part, paramRegExp: RegExp) {
     .join('')
 
   return source
+}
+
+function regexpEscape(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
