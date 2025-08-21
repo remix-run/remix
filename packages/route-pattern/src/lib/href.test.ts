@@ -5,9 +5,9 @@ import { createHrefBuilder } from './href.ts'
 
 describe('href', () => {
   it('fills in params', () => {
-    type pattern = 'products(/:id)' | 'foo/*bar' | '://remix.run/about'
-    let href = createHrefBuilder<pattern>()
-    assert.deepEqual(href('products/:id', { id: '1' }), 'https:///products/1')
+    let href = createHrefBuilder<'products(/:id)'>({ defaultHostname: 'remix.run' })
+
+    assert.deepEqual(href('products/:id', { id: '1' }), 'https://remix.run/products/1')
 
     // @ts-expect-error invalid variant
     href('does-not-exist')

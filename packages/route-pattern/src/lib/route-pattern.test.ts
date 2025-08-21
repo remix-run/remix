@@ -527,6 +527,18 @@ describe('RoutePattern', () => {
           expected: { params: {} },
         },
         {
+          name: 'matches search param with + characters',
+          pattern: 'search?q=hello+world',
+          input: 'https://example.com/search?q=hello%20world',
+          expected: { params: {} },
+        },
+        {
+          name: 'matches input with + characters',
+          pattern: 'search?q=hello%20world',
+          input: 'https://example.com/search?q=hello+world',
+          expected: { params: {} },
+        },
+        {
           name: 'matches search param with URL-encoded values',
           pattern: 'search?q=test%26more',
           input: 'https://example.com/search?q=test%26more',

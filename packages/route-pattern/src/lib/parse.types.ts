@@ -4,8 +4,8 @@ export type Ast = {
   pathname?: Array<Node>
 }
 
-export type Parse<source extends string> =
-  SplitUrl<source> extends infer split extends {
+export type Parse<T extends string> =
+  SplitUrl<T> extends infer split extends {
     protocol?: string
     hostname?: string
     pathname?: string
@@ -19,16 +19,16 @@ export type Parse<source extends string> =
 
 // SplitUrl ----------------------------------------------------------------------------------------
 
-type SplitUrl<source extends string> = OmitEmptyStringValues<_SplitUrl<source>>
+type SplitUrl<T extends string> = OmitEmptyStringValues<_SplitUrl<T>>
 
 // prettier-ignore
-type _SplitUrl<source extends string> =
-  source extends `${infer before}?${infer search}` ? _SplitUrl<before> & { search: search } :
-  source extends `${infer protocol}://${infer after}` ?
-    protocol extends `${string}/${string}` ? { pathname: source } :
-    after extends `${infer hostname}/${infer pathname}` ? { protocol: protocol; hostname: hostname; pathname: pathname } :
-    { protocol: protocol; hostname: after } :
-  { pathname: source };
+type _SplitUrl<T extends string> =
+  T extends `${infer L}?${infer R}` ? _SplitUrl<L> & { search: R } :
+  T extends `${infer Protocol}://${infer R}` ?
+    Protocol extends `${string}/${string}` ? { pathname: T } :
+    R extends `${infer Hostname}/${infer Pathname}` ? { protocol: Protocol; hostname: Hostname; pathname: Pathname } :
+    { protocol: Protocol; hostname: R } :
+  { pathname: T };
 
 type OmitEmptyStringValues<S> = { [K in keyof S as S[K] extends '' ? never : K]: S[K] }
 

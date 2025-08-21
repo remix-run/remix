@@ -2,25 +2,40 @@ import { parse } from './parse.ts'
 import type { Ast, Enum, Glob, Node, Optional, Param, Parse, Part, Text } from './parse.types.ts'
 
 // prettier-ignore
-type HrefArgs<Source extends string> =
+type HrefBuilderArgs<Source extends string> =
   Params<Source> extends infer params extends string ?
     [params] extends [never] ? [] :
     [Record<params, string>] :
   never;
 
 export interface HrefBuilder<Source extends string> {
-  <V extends Variant<Source>>(variant: V, ...args: HrefArgs<V>): string
+  <V extends Variant<Source>>(variant: V, ...args: HrefBuilderArgs<V>): string
 }
 
-export function createHrefBuilder<Source extends string>(): HrefBuilder<Source> {
-  return <V extends Variant<Source>>(variant: V, ...args: HrefArgs<V>) => {
+interface HrefBuilderOptions {
+  /**
+   * The default protocol to use when the pattern doesn't specify one.
+   * Defaults to `https`.
+   */
+  defaultProtocol?: string
+  /**
+   * The default hostname to use when the pattern doesn't specify one.
+   * Defaults to an empty string.
+   */
+  defaultHostname?: string
+}
+
+export function createHrefBuilder<Source extends string>(
+  options: HrefBuilderOptions = {},
+): HrefBuilder<Source> {
+  return <V extends Variant<Source>>(variant: V, ...args: HrefBuilderArgs<V>) => {
     let params = args[0] ?? {}
     let ast = parse(variant)
 
     let href = ''
-    href += ast.protocol ? resolvePart(ast.protocol, params) : 'https'
+    href += ast.protocol ? resolvePart(ast.protocol, params) : (options.defaultProtocol ?? 'https')
     href += '://'
-    href += ast.hostname ? resolvePart(ast.hostname, params) : ''
+    href += ast.hostname ? resolvePart(ast.hostname, params) : (options.defaultHostname ?? '')
     href += '/'
     href += ast.pathname ? resolvePart(ast.pathname, params) : ''
     if (ast.search) {
@@ -90,8 +105,8 @@ export type Params<source extends string> =
 
 // prettier-ignore
 type PartParams<part extends Part> =
-  part extends [infer node, ...infer nodes extends Array<Node>] ?
-    node extends { type: 'param' | 'glob', name: infer name } ? name | PartParams<nodes> :
-    node extends infer optional extends Optional ? PartParams<optional['nodes']> | PartParams<nodes> :
-    PartParams<nodes> :
+  part extends [infer L, ...infer R extends Array<Node>] ?
+    L extends { type: 'param' | 'glob', name: infer name } ? name | PartParams<R> :
+    L extends infer optional extends Optional ? PartParams<optional['nodes']> | PartParams<R> :
+    PartParams<R> :
   never
