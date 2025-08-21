@@ -74,21 +74,10 @@ function partToRegExpSource(part: Part, paramRegExp: RegExp) {
   let source: string = part
     .map((node) => {
       if (node.type === 'variable') {
-        let source = '('
-        if (node.name) {
-          source += `?<${node.name}>`
-        }
-        source += paramRegExp.source
-        source += ')'
-        return source
+        return `(?<${node.name}>${paramRegExp.source})`
       }
       if (node.type === 'wildcard') {
-        let source = '('
-        if (node.name) {
-          source += `?<${node.name}>`
-        }
-        source += '.*)'
-        return source
+        return `(?<${node.name}>.*)`
       }
       if (node.type === 'enum') {
         return `(?:${node.members.map(regexpEscape).join('|')})`

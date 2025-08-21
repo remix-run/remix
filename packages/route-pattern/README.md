@@ -112,13 +112,13 @@ pattern2.match('https://acme.remix.run/admin')
 // { params: { tenant: 'acme' } }
 ```
 
-The `protocol`, `hostname`, and `pathname` support [variables](#variables), [wildcards](#wildcars), [optionals](#optionals), and [enums](#enums).
+The `protocol`, `hostname`, and `pathname` support [variables](#variables), [wildcards](#wildcards), [optionals](#optionals), and [enums](#enums).
 
 `search` is treated as a [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams).
 
 ### Variables
 
-Variables match dynamic parts of a URL within a segment. They're written as `:` followed (optionally) by a name:
+Variables match dynamic parts of a URL within a segment. They're written as `:` followed by a name.
 
 ```tsx
 let pattern = new RoutePattern('users/@:id')
@@ -127,7 +127,7 @@ pattern.match('https://remix.run/users/@sarah')
 // { params: { id: 'sarah' } }
 ```
 
-You can put multiple variables in a single segment:
+The name must be a [valid JavaScript identifier](https://developer.mozilla.org/en-US/docs/Glossary/Identifier). You can put multiple variables in a single segment by separating them with a character that is not part of a valid identifier, like a `.`:
 
 ```tsx
 let pattern = new RoutePattern('api/v:major.:minor')
@@ -136,33 +136,15 @@ pattern.match('https://remix.run/api/v2.1')
 // { params: { major: '2', minor: '1' } }
 ```
 
-You can omit the variable name (just a `:` with no name) if you don't need the captured value:
-
-```tsx
-let pattern = new RoutePattern('products/:-shoes')
-
-pattern.match('https://remix.run/products/tennis-shoes')
-// { params: {} }
-```
-
 ### Wildcards
 
-Wildcards match dynamic parts that can span multiple segments. They're written as `*` followed (optionally) by a name:
+Wildcards match dynamic parts that can span multiple segments. They're written as `*` followed by a name:
 
 ```tsx
 let pattern = new RoutePattern('://app.unpkg.com/*path/dist/:file.mjs')
 
 pattern.match('https://app.unpkg.com/preact@10.26.9/files/dist/preact.mjs')
 // { params: { path: 'preact@10.26.9/files', file: 'preact' }}
-```
-
-You can omit the wildcard name if you don't need the captured value:
-
-```tsx
-let pattern = new RoutePattern('assets/*/favicon.ico')
-
-pattern.match('https://remix.run/assets/v2/favicon.ico')
-// { params: {} }
 ```
 
 ### Optionals

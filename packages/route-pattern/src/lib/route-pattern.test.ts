@@ -45,10 +45,10 @@ describe('RoutePattern', () => {
           expected: { params: { userId: '123', postId: '456' } },
         },
         {
-          name: 'extracts unnamed parameters',
-          pattern: 'users/:',
+          name: 'extracts named parameters - required',
+          pattern: 'users/:id',
           input: 'https://example.com/users/123',
-          expected: { params: {} },
+          expected: { params: { id: '123' } },
         },
         {
           name: 'extracts parameters with complex names',
@@ -63,10 +63,10 @@ describe('RoutePattern', () => {
           expected: { params: { path: 'images/logo.png' } },
         },
         {
-          name: 'extracts unnamed wildcards',
-          pattern: 'assets/*',
+          name: 'extracts named wildcards - required',
+          pattern: 'assets/*path',
           input: 'https://example.com/assets/images/logo.png',
-          expected: { params: {} },
+          expected: { params: { path: 'images/logo.png' } },
         },
         {
           name: 'matches optional sections when present',
@@ -202,9 +202,9 @@ describe('RoutePattern', () => {
         },
         {
           name: 'handles params with static suffix',
-          pattern: 'products/:-shoes',
+          pattern: 'products/:name-shoes',
           input: 'https://example.com/products/tennis-shoes',
-          expected: { params: {} },
+          expected: { params: { name: 'tennis' } },
         },
         {
           name: 'complex pattern with multiple params and text',
@@ -257,10 +257,10 @@ describe('RoutePattern', () => {
           expected: { params: { path: 'preact@10.26.9/files', file: 'preact' } },
         },
         {
-          name: 'unnamed wildcard with static parts',
-          pattern: 'assets/*/favicon.ico',
+          name: 'wildcard with static parts',
+          pattern: 'assets/*version/favicon.ico',
           input: 'https://remix.run/assets/v2/favicon.ico',
-          expected: { params: {} },
+          expected: { params: { version: 'v2' } },
         },
         {
           name: 'param with file extension enum',

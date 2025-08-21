@@ -35,13 +35,6 @@ describe('parse', () => {
         },
       },
       {
-        name: 'variable without name',
-        input: ':',
-        expected: {
-          pathname: [{ type: 'variable' }],
-        },
-      },
-      {
         name: 'variable with underscores',
         input: ':user_id',
         expected: {
@@ -72,13 +65,6 @@ describe('parse', () => {
         input: '*files',
         expected: {
           pathname: [{ type: 'wildcard', name: 'files' }],
-        },
-      },
-      {
-        name: 'wildcard without name',
-        input: '*',
-        expected: {
-          pathname: [{ type: 'wildcard' }],
         },
       },
       {
@@ -216,7 +202,7 @@ describe('parse', () => {
       // Complex combinations
       {
         name: 'complex pattern',
-        input: 'api/v:version/users/:id(*.:format)',
+        input: 'api/v:version/users/:id(*rest.:format)',
         expected: {
           pathname: [
             { type: 'text', value: 'api/v' },
@@ -226,7 +212,7 @@ describe('parse', () => {
             {
               type: 'optional',
               nodes: [
-                { type: 'wildcard' },
+                { type: 'wildcard', name: 'rest' },
                 { type: 'text', value: '.' },
                 { type: 'variable', name: 'format' },
               ],
@@ -264,16 +250,19 @@ describe('parse', () => {
     let testCases = [
       {
         name: 'protocol only (without ://)',
-        input: 'https:',
+        input: 'https\\:',
         expected: {
-          pathname: [{ type: 'text', value: 'https' }, { type: 'variable' }],
+          pathname: [{ type: 'text', value: 'https:' }],
         },
       },
       {
         name: 'protocol with variable (without ://)',
-        input: ':protocol:',
+        input: ':protocol\\:',
         expected: {
-          pathname: [{ type: 'variable', name: 'protocol' }, { type: 'variable' }],
+          pathname: [
+            { type: 'variable', name: 'protocol' },
+            { type: 'text', value: ':' },
+          ],
         },
       },
       {

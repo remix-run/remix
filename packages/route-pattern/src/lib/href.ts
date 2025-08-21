@@ -71,11 +71,9 @@ function resolvePart(part: Part, params: Record<string, string>) {
   return part
     .map((node) => {
       if (node.type === 'variable') {
-        if (!node.name) throw new Error('Variants cannot include variables without names')
         return params[node.name]
       }
       if (node.type === 'wildcard') {
-        if (!node.name) throw new Error('Variants cannot include wildcards without names')
         return params[node.name]
       }
       if (node.type === 'text') return node.value

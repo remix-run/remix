@@ -20,7 +20,7 @@ export function parse(source: string) {
   return ast
 }
 
-const identifierRE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
+const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
 function parsePart(source: string, bounds: [number, number]) {
   let part = source.slice(...bounds)
@@ -45,22 +45,20 @@ function parsePart(source: string, bounds: [number, number]) {
     // variable
     if (char === ':') {
       i += 1
-      let node: Variable = { type: 'variable' }
-      let name = identifierRE.exec(part.slice(i))?.[0]
-      if (name) node.name = name
-      nodes().push(node)
-      i += name?.length ?? 0
+      let name = identifierMatcher.exec(part.slice(i))?.[0]
+      if (!name) throw new Error(`variable missing name at ${i}`)
+      nodes().push({ type: 'variable', name })
+      i += name.length
       continue
     }
 
     // wildcard
     if (char === '*') {
       i += 1
-      let node: Wildcard = { type: 'wildcard' }
-      let name = identifierRE.exec(part.slice(i))?.[0]
-      if (name) node.name = name
-      nodes().push(node)
-      i += name?.length ?? 0
+      let name = identifierMatcher.exec(part.slice(i))?.[0]
+      if (!name) throw new Error(`wildcard missing name at ${i}`)
+      nodes().push({ type: 'wildcard', name })
+      i += name.length
       continue
     }
 
