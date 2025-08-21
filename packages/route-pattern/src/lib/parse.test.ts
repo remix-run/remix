@@ -291,6 +291,26 @@ describe('parse', () => {
         },
       },
       {
+        name: 'hostname and port',
+        input: '://example.com:8080',
+        expected: {
+          hostname: [{ type: 'text', value: 'example.com' }],
+          port: '8080',
+        },
+      },
+      {
+        name: 'hostname, port, and pathname',
+        input: '://example.com:8080/api/:id',
+        expected: {
+          hostname: [{ type: 'text', value: 'example.com' }],
+          port: '8080',
+          pathname: [
+            { type: 'text', value: 'api/' },
+            { type: 'variable', name: 'id' },
+          ],
+        },
+      },
+      {
         name: 'protocol, hostname, and pathname',
         input: 'https://example.com/api/:id',
         expected: {
@@ -312,13 +332,14 @@ describe('parse', () => {
       },
       {
         name: 'complex full URL',
-        input: ':protocol://:subdomain.example.com/api/v:version/users/:id?format=json',
+        input: ':protocol://:subdomain.example.com:8080/api/v:version/users/:id?format=json',
         expected: {
           protocol: [{ type: 'variable', name: 'protocol' }],
           hostname: [
             { type: 'variable', name: 'subdomain' },
             { type: 'text', value: '.example.com' },
           ],
+          port: '8080',
           pathname: [
             { type: 'text', value: 'api/v' },
             { type: 'variable', name: 'version' },

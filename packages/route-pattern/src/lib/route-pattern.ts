@@ -44,6 +44,10 @@ export class RoutePattern {
       Object.assign(params, hostnameMatch.groups)
     }
 
+    if (this.#ast.port !== undefined) {
+      if (url.port !== this.#ast.port) return null
+    }
+
     let pathnameMatch = this.#pathnameMatcher.exec(url.pathname.slice(1))
     if (pathnameMatch === null) return null
     if (pathnameMatch.groups) {

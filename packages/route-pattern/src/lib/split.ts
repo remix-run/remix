@@ -4,6 +4,7 @@ export function split(source: string) {
   let result: {
     protocol?: Span
     hostname?: Span
+    port?: Span
     pathname?: Span
     search?: Span
   } = {}
@@ -25,13 +26,25 @@ export function split(source: string) {
     index = solidus + 3
 
     // hostname
-    let hostnameEnd = source.indexOf('/', index)
-    if (hostnameEnd === -1) {
-      result.hostname = [index, source.length]
-      return result
+    let hostEnd = source.indexOf('/', index)
+    if (hostEnd === -1) hostEnd = source.length
+
+    // detect port (numeric) at end of host segment
+    let hostSegment = source.slice(index, hostEnd)
+    let colonIndex = hostSegment.lastIndexOf(':')
+    if (colonIndex !== -1) {
+      let afterColon = hostSegment.slice(colonIndex + 1)
+      if (/^[0-9]+$/.test(afterColon)) {
+        // hostname up to colon, port after colon
+        result.hostname = [index, index + colonIndex]
+        result.port = [index + colonIndex + 1, hostEnd]
+      } else {
+        result.hostname = [index, hostEnd]
+      }
+    } else {
+      result.hostname = [index, hostEnd]
     }
-    result.hostname = [index, hostnameEnd]
-    index = hostnameEnd + 1
+    index = hostEnd === source.length ? hostEnd : hostEnd + 1
   }
 
   // pathname

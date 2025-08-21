@@ -4,16 +4,18 @@ import { split } from './split.ts'
 export type Ast = {
   protocol?: Part
   hostname?: Part
+  port?: string
   pathname?: Part
   search?: URLSearchParams
 }
 
 export function parse(source: string) {
-  let { protocol, hostname, pathname, search } = split(source)
+  let { protocol, hostname, port, pathname, search } = split(source)
   let ast: Ast = {}
 
   if (protocol) ast.protocol = parsePart(source, protocol)
   if (hostname) ast.hostname = parsePart(source, hostname)
+  if (port) ast.port = source.slice(...port)
   if (pathname) ast.pathname = parsePart(source, pathname)
   if (search) ast.search = new URLSearchParams(source.slice(...search))
 

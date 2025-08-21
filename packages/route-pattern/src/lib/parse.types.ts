@@ -1,36 +1,26 @@
 export type Ast = {
   protocol?: Array<Node>
   hostname?: Array<Node>
+  port?: string
   pathname?: Array<Node>
 }
 
+import type { Split } from './split.types.ts'
+
 export type Parse<T extends string> =
-  SplitUrl<T> extends infer split extends {
+  Split<T> extends infer split extends {
     protocol?: string
     hostname?: string
+    port?: string
     pathname?: string
   }
     ? {
         protocol: split['protocol'] extends string ? PartParse<split['protocol']> : undefined
         hostname: split['hostname'] extends string ? PartParse<split['hostname']> : undefined
+        port: split['port'] extends string ? split['port'] : undefined
         pathname: split['pathname'] extends string ? PartParse<split['pathname']> : undefined
       }
     : never
-
-// SplitUrl ----------------------------------------------------------------------------------------
-
-type SplitUrl<T extends string> = OmitEmptyStringValues<_SplitUrl<T>>
-
-// prettier-ignore
-type _SplitUrl<T extends string> =
-  T extends `${infer L}?${infer R}` ? _SplitUrl<L> & { search: R } :
-  T extends `${infer Protocol}://${infer R}` ?
-    Protocol extends `${string}/${string}` ? { pathname: T } :
-    R extends `${infer Hostname}/${infer Pathname}` ? { protocol: Protocol; hostname: Hostname; pathname: Pathname } :
-    { protocol: Protocol; hostname: R } :
-  { pathname: T };
-
-type OmitEmptyStringValues<S> = { [K in keyof S as S[K] extends '' ? never : K]: S[K] }
 
 // Part --------------------------------------------------------------------------------------------
 

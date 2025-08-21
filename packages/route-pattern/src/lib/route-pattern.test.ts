@@ -329,6 +329,18 @@ describe('RoutePattern', () => {
           expected: { params: { protocol: 'https', subdomain: 'api', version: 'v1' } },
         },
         {
+          name: 'matches when pattern specifies a fixed port',
+          pattern: '://example.com:8080/api/:id',
+          input: 'https://example.com:8080/api/123',
+          expected: { params: { id: '123' } },
+        },
+        {
+          name: 'returns null when port does not match fixed port',
+          pattern: '://example.com:8080/api/:id',
+          input: 'https://example.com:3000/api/123',
+          expected: null,
+        },
+        {
           name: 'handles optional sections in full URLs',
           pattern: 'https://:tenant.example.com/users/:id',
           input: 'https://acme.example.com/users/123',

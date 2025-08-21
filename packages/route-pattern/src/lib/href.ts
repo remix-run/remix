@@ -53,6 +53,10 @@ export function createHrefBuilder<Source extends string>(
         : (options.defaultProtocol ?? 'https')
       href += '://'
       href += ast.hostname ? resolvePart(ast.hostname, params) : (options.defaultHostname ?? '')
+      if (ast.port) {
+        href += ':'
+        href += ast.port
+      }
     }
 
     href += '/'
@@ -93,6 +97,8 @@ type Variant<T extends string> = T extends any ? VariantSerialize<Parse<T>> : ne
 type VariantSerialize<T extends Ast> =
   T extends { protocol: infer P extends Array<Node> } ?
     `${PartVariantSerialize<P>}${VariantSerialize<Omit<T, 'protocol'>>}` :
+  T extends { hostname: infer H extends Array<Node>, port: infer R extends string } ?
+    `://${PartVariantSerialize<H>}:${R}/${VariantSerialize<Omit<T, 'hostname' | 'port'>>}` :
   T extends { hostname: infer H extends Array<Node> } ?
     `://${PartVariantSerialize<H>}/${VariantSerialize<Omit<T, 'hostname'>>}` :
   T extends { pathname: infer P extends Array<Node> } ?

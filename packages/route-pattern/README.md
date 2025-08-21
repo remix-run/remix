@@ -76,10 +76,10 @@ type Match = {
 
 ## Concepts
 
-Route patterns are split into 4 parts:
+Route patterns are split into 5 parts:
 
 ```ts
-'<protocol>://<hostname>/<pathname>?<search>'
+'<protocol>://<hostname>[:<port>]/<pathname>?<search>'
 ```
 
 By default, patterns are assumed to be `pathname`-only:
@@ -106,15 +106,26 @@ pattern.match('https://remix.run/search?q=javascript')
 To specify a protocol or hostname, you must use `://` before any `/` or `?`:
 
 ```tsx
-let pattern2 = new RoutePattern('://:tenant.remix.run/admin')
+let pattern = new RoutePattern('://:tenant.remix.run/admin')
 
-pattern2.match('https://acme.remix.run/admin')
+pattern.match('https://acme.remix.run/admin')
 // { params: { tenant: 'acme' } }
+```
+
+To specify a port, use a `:` followed by the port number immediately following the hostname, before any `/`:
+
+```tsx
+let pattern = new RoutePattern('://remix.run:8080/admin')
+
+pattern.match('https://remix.run:8080/admin')
+// { params: {} }
 ```
 
 The `protocol`, `hostname`, and `pathname` support [variables](#variables), [wildcards](#wildcards), [optionals](#optionals), and [enums](#enums).
 
-`search` is treated as a [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams).
+The `port` is treated as a string.
+
+The `search` is treated as a [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams).
 
 ### Variables
 
