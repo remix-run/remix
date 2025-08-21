@@ -27,12 +27,12 @@ interface HrefBuilderOptions {
    * The default protocol to use when the pattern doesn't specify one.
    * Defaults to `https`.
    */
-  defaultProtocol?: string
+  protocol?: string
   /**
-   * The default hostname to use when the pattern doesn't specify one.
+   * The default host (including port) to use when the pattern doesn't specify one.
    * Defaults to an empty string.
    */
-  defaultHostname?: string
+  host?: string
 }
 
 export function createHrefBuilder<Source extends string>(
@@ -47,12 +47,10 @@ export function createHrefBuilder<Source extends string>(
 
     // If we have a hostname to work with we can make a full URL. Otherwise we can only make an
     // absolute path.
-    if (ast.hostname || options.defaultHostname) {
-      href += ast.protocol
-        ? resolvePart(ast.protocol, params)
-        : (options.defaultProtocol ?? 'https')
+    if (ast.hostname || options.host) {
+      href += ast.protocol ? resolvePart(ast.protocol, params) : (options.protocol ?? 'https')
       href += '://'
-      href += ast.hostname ? resolvePart(ast.hostname, params) : (options.defaultHostname ?? '')
+      href += ast.hostname ? resolvePart(ast.hostname, params) : (options.host ?? '')
       if (ast.port) {
         href += ':'
         href += ast.port

@@ -27,6 +27,12 @@ export class RoutePattern {
     this.#pathnameMatcher = partToRegExp(this.#ast.pathname, { param: /[^/]+/ }) ?? /^$/
   }
 
+  /**
+   * Match a URL against this pattern.
+   *
+   * @param url The URL to match
+   * @returns The parameters if the URL matches this pattern, `null` otherwise
+   */
   match(url: URL | string): Match | null {
     if (typeof url === 'string') url = new URL(url)
 
@@ -61,6 +67,16 @@ export class RoutePattern {
     }
 
     return { params }
+  }
+
+  /**
+   * Test if a URL matches this pattern.
+   *
+   * @param url The URL to test
+   * @returns `true` if the URL matches this pattern, `false` otherwise
+   */
+  test(url: URL | string): boolean {
+    return this.match(url) !== null
   }
 
   toString() {

@@ -609,6 +609,13 @@ describe('RoutePattern', () => {
     })
   })
 
+  describe('test', () => {
+    it('returns true if the URL matches the pattern', () => {
+      let pattern = new RoutePattern('users/:id?format=json')
+      assert.equal(pattern.test('https://example.com/users/123?format=json'), true)
+    })
+  })
+
   describe('toString', () => {
     it('returns the source pattern', () => {
       let pattern = new RoutePattern('users/:id?format=json')
