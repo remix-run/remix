@@ -14,8 +14,8 @@ import type {
 // prettier-ignore
 type HrefBuilderArgs<T extends string> =
   Params<T> extends infer params extends string ?
-    [params] extends [never] ? [] :
-    [Record<params, string>] :
+    [params] extends [never] ? [] | [any, SearchParams] :
+    [Record<params, string>] | [Record<params, string>, SearchParams] :
   never;
 
 export interface HrefBuilder<T extends string> {
@@ -40,17 +40,27 @@ export function createHrefBuilder<Source extends string>(
 ): HrefBuilder<Source> {
   return <V extends Variant<Source>>(variant: V, ...args: HrefBuilderArgs<V>) => {
     let params = args[0] ?? {}
+    let searchParams = args[1]
     let ast = parse(variant)
 
     let href = ''
-    href += ast.protocol ? resolvePart(ast.protocol, params) : (options.defaultProtocol ?? 'https')
-    href += '://'
-    href += ast.hostname ? resolvePart(ast.hostname, params) : (options.defaultHostname ?? '')
+
+    // If we have a hostname to work with we can make a full URL. Otherwise we can only make an
+    // absolute path.
+    if (ast.hostname || options.defaultHostname) {
+      href += ast.protocol
+        ? resolvePart(ast.protocol, params)
+        : (options.defaultProtocol ?? 'https')
+      href += '://'
+      href += ast.hostname ? resolvePart(ast.hostname, params) : (options.defaultHostname ?? '')
+    }
+
     href += '/'
     href += ast.pathname ? resolvePart(ast.pathname, params) : ''
-    if (ast.search) {
+
+    if (searchParams || ast.search) {
       href += '?'
-      href += ast.search.toString()
+      href += new URLSearchParams(searchParams ?? ast.search).toString()
     }
 
     return href
@@ -126,3 +136,7 @@ type PartParams<T extends Part> =
     L extends Optional ? PartParams<L['nodes']> | PartParams<R> :
     PartParams<R> :
   never
+
+// SearchParams -----------------------------------------------------------------------------------
+
+export type SearchParams = NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
