@@ -36,9 +36,9 @@ type OmitEmptyStringValues<S> = { [K in keyof S as S[K] extends '' ? never : K]:
 
 export type Part = Array<Node>
 
-export type Node = Param | Glob | Enum | Text | Optional
+export type Node = Variable | Glob | Enum | Text | Optional
 
-export type Param = { type: 'param'; name?: string }
+export type Variable = { type: 'variable'; name?: string }
 export type Glob = { type: 'glob'; name?: string }
 export type Enum = { type: 'enum'; members: Array<string> }
 export type Text = { type: 'text'; value: string }
@@ -61,7 +61,7 @@ type _PartParse<state extends PartParseState> =
     state extends { rest: `${infer char}${infer rest}` } ?
       char extends ':' ?
         IdentiferParse<rest> extends { identifier: infer name extends string, rest: infer rest extends string } ?
-          _PartParse<AppendNode<state, { type: 'param', name: name }, rest>> :
+          _PartParse<AppendNode<state, { type: 'variable', name: name }, rest>> :
         never : // this should never happen
       char extends '*' ?
         IdentiferParse<rest> extends { identifier: infer name extends string, rest: infer rest extends string } ?

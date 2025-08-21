@@ -1,5 +1,6 @@
-import { parse, type Ast } from './parse.ts'
-import { type Part } from './parse.types.ts'
+import type { Ast } from './parse.ts'
+import type { Part } from './parse.types.ts'
+import { parse } from './parse.ts'
 
 type Params = Record<string, string | undefined>
 type Match = { params: Params }
@@ -62,7 +63,7 @@ function partToRegExp(part: Part | undefined, options: { param: RegExp }) {
 function partToRegExpSource(part: Part, paramRegExp: RegExp) {
   let source: string = part
     .map((node) => {
-      if (node.type === 'param') {
+      if (node.type === 'variable') {
         let source = '('
         if (node.name) {
           source += `?<${node.name}>`

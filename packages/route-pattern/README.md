@@ -115,9 +115,9 @@ pattern2.match('https://acme.remix.run/admin')
 The `protocol`, `hostname`, and `pathname` parts support [params](#params), [globs](#globs), [optionals](#optionals), and [enums](#enums).
 `search` is instead treated as [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams).
 
-### Params
+### Variables
 
-Params match dynamic parts of a URL within a segment. They're written as `:` followed (optionally) by a name:
+Variables match dynamic parts of a URL within a segment. They're written as `:` followed (optionally) by a name:
 
 ```tsx
 let pattern = new RoutePattern('users/@:id')
@@ -126,7 +126,7 @@ pattern.match('https://remix.run/users/@sarah')
 // { params: { id: 'sarah' } }
 ```
 
-You can put multiple params in a single segment:
+You can put multiple variables in a single segment:
 
 ```tsx
 let pattern = new RoutePattern('api/v:major.:minor')
@@ -135,7 +135,7 @@ pattern.match('https://remix.run/api/v2.1')
 // { params: { major: '2', minor: '1' } }
 ```
 
-You can omit the param name (just a `:` with no name) if you don't need the captured value:
+You can omit the variable name (just a `:` with no name) if you don't need the captured value:
 
 ```tsx
 let pattern = new RoutePattern('products/:-shoes')

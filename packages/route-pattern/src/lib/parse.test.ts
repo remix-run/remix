@@ -26,42 +26,42 @@ describe('parse', () => {
         },
       },
 
-      // param
+      // variable
       {
-        name: 'named parameter',
+        name: 'named variable',
         input: ':id',
         expected: {
-          pathname: [{ type: 'param', name: 'id' }],
+          pathname: [{ type: 'variable', name: 'id' }],
         },
       },
       {
-        name: 'parameter without name',
+        name: 'variable without name',
         input: ':',
         expected: {
-          pathname: [{ type: 'param' }],
+          pathname: [{ type: 'variable' }],
         },
       },
       {
-        name: 'parameter with underscores',
+        name: 'variable with underscores',
         input: ':user_id',
         expected: {
-          pathname: [{ type: 'param', name: 'user_id' }],
+          pathname: [{ type: 'variable', name: 'user_id' }],
         },
       },
       {
-        name: 'parameter with dollar sign',
+        name: 'variable with dollar sign',
         input: ':$special',
         expected: {
-          pathname: [{ type: 'param', name: '$special' }],
+          pathname: [{ type: 'variable', name: '$special' }],
         },
       },
       {
-        name: 'text with parameter',
+        name: 'text with variable',
         input: 'users/:id',
         expected: {
           pathname: [
             { type: 'text', value: 'users/' },
-            { type: 'param', name: 'id' },
+            { type: 'variable', name: 'id' },
           ],
         },
       },
@@ -131,10 +131,10 @@ describe('parse', () => {
         },
       },
       {
-        name: 'optional parameter',
+        name: 'optional variable',
         input: '(:id)',
         expected: {
-          pathname: [{ type: 'optional', nodes: [{ type: 'param', name: 'id' }] }],
+          pathname: [{ type: 'optional', nodes: [{ type: 'variable', name: 'id' }] }],
         },
       },
       {
@@ -146,7 +146,7 @@ describe('parse', () => {
               type: 'optional',
               nodes: [
                 { type: 'text', value: 'users/' },
-                { type: 'param', name: 'id' },
+                { type: 'variable', name: 'id' },
               ],
             },
           ],
@@ -162,7 +162,7 @@ describe('parse', () => {
               type: 'optional',
               nodes: [
                 { type: 'text', value: '/' },
-                { type: 'param', name: 'version' },
+                { type: 'variable', name: 'version' },
               ],
             },
           ],
@@ -220,15 +220,15 @@ describe('parse', () => {
         expected: {
           pathname: [
             { type: 'text', value: 'api/v' },
-            { type: 'param', name: 'version' },
+            { type: 'variable', name: 'version' },
             { type: 'text', value: '/users/' },
-            { type: 'param', name: 'id' },
+            { type: 'variable', name: 'id' },
             {
               type: 'optional',
               nodes: [
                 { type: 'glob' },
                 { type: 'text', value: '.' },
-                { type: 'param', name: 'format' },
+                { type: 'variable', name: 'format' },
               ],
             },
           ],
@@ -244,7 +244,7 @@ describe('parse', () => {
               type: 'optional',
               nodes: [
                 { type: 'text', value: '/' },
-                { type: 'param', name: 'version' },
+                { type: 'variable', name: 'version' },
               ],
             },
           ],
@@ -266,14 +266,14 @@ describe('parse', () => {
         name: 'protocol only (without ://)',
         input: 'https:',
         expected: {
-          pathname: [{ type: 'text', value: 'https' }, { type: 'param' }],
+          pathname: [{ type: 'text', value: 'https' }, { type: 'variable' }],
         },
       },
       {
-        name: 'protocol with param (without ://)',
+        name: 'protocol with variable (without ://)',
         input: ':protocol:',
         expected: {
-          pathname: [{ type: 'param', name: 'protocol' }, { type: 'param' }],
+          pathname: [{ type: 'variable', name: 'protocol' }, { type: 'variable' }],
         },
       },
       {
@@ -284,11 +284,11 @@ describe('parse', () => {
         },
       },
       {
-        name: 'hostname with param',
+        name: 'hostname with variable',
         input: '://:subdomain.example.com',
         expected: {
           hostname: [
-            { type: 'param', name: 'subdomain' },
+            { type: 'variable', name: 'subdomain' },
             { type: 'text', value: '.example.com' },
           ],
         },
@@ -309,7 +309,7 @@ describe('parse', () => {
           hostname: [{ type: 'text', value: 'example.com' }],
           pathname: [
             { type: 'text', value: 'api/' },
-            { type: 'param', name: 'id' },
+            { type: 'variable', name: 'id' },
           ],
         },
       },
@@ -325,16 +325,16 @@ describe('parse', () => {
         name: 'complex full URL',
         input: ':protocol://:subdomain.example.com/api/v:version/users/:id?format=json',
         expected: {
-          protocol: [{ type: 'param', name: 'protocol' }],
+          protocol: [{ type: 'variable', name: 'protocol' }],
           hostname: [
-            { type: 'param', name: 'subdomain' },
+            { type: 'variable', name: 'subdomain' },
             { type: 'text', value: '.example.com' },
           ],
           pathname: [
             { type: 'text', value: 'api/v' },
-            { type: 'param', name: 'version' },
+            { type: 'variable', name: 'version' },
             { type: 'text', value: '/users/' },
-            { type: 'param', name: 'id' },
+            { type: 'variable', name: 'id' },
           ],
           search: new URLSearchParams('format=json'),
         },

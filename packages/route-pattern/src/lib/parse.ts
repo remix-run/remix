@@ -1,4 +1,4 @@
-import type { Glob, Optional, Param, Part } from './parse.types.ts'
+import type { Glob, Optional, Variable, Part } from './parse.types.ts'
 import { split } from './split.ts'
 
 export type Ast = {
@@ -11,10 +11,12 @@ export type Ast = {
 export function parse(source: string) {
   let { protocol, hostname, pathname, search } = split(source)
   let ast: Ast = {}
+
   if (protocol) ast.protocol = parsePart(source, protocol)
   if (hostname) ast.hostname = parsePart(source, hostname)
   if (pathname) ast.pathname = parsePart(source, pathname)
   if (search) ast.search = new URLSearchParams(source.slice(...search))
+
   return ast
 }
 
@@ -40,10 +42,10 @@ function parsePart(source: string, bounds: [number, number]) {
   while (i < part.length) {
     let char = part[i]
 
-    // param
+    // variable
     if (char === ':') {
       i += 1
-      let node: Param = { type: 'param' }
+      let node: Variable = { type: 'variable' }
       let name = identifierRE.exec(part.slice(i))?.[0]
       if (name) node.name = name
       nodes().push(node)
