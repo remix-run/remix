@@ -1,15 +1,25 @@
 import { parse } from './parse.ts'
-import type { Ast, Enum, Glob, Node, Optional, Variable, Parse, Part, Text } from './parse.types.ts'
+import type {
+  Ast,
+  Enum,
+  Wildcard,
+  Node,
+  Optional,
+  Variable,
+  Parse,
+  Part,
+  Text,
+} from './parse.types.ts'
 
 // prettier-ignore
-type HrefBuilderArgs<Source extends string> =
-  Params<Source> extends infer params extends string ?
+type HrefBuilderArgs<T extends string> =
+  Params<T> extends infer params extends string ?
     [params] extends [never] ? [] :
     [Record<params, string>] :
   never;
 
-export interface HrefBuilder<Source extends string> {
-  <V extends Variant<Source>>(variant: V, ...args: HrefBuilderArgs<V>): string
+export interface HrefBuilder<T extends string> {
+  <V extends Variant<T>>(variant: V, ...args: HrefBuilderArgs<V>): string
 }
 
 interface HrefBuilderOptions {
@@ -54,8 +64,8 @@ function resolvePart(part: Part, params: Record<string, string>) {
         if (!node.name) throw new Error('Variants cannot include variables without names')
         return params[node.name]
       }
-      if (node.type === 'glob') {
-        if (!node.name) throw new Error('Variants cannot include globs without names')
+      if (node.type === 'wildcard') {
+        if (!node.name) throw new Error('Variants cannot include wildcards without names')
         return params[node.name]
       }
       if (node.type === 'text') return node.value
@@ -69,17 +79,17 @@ function resolvePart(part: Part, params: Record<string, string>) {
 
 // Variant -----------------------------------------------------------------------------------------
 
-type Variant<source extends string> = source extends any ? VariantSerialize<Parse<source>> : never
+type Variant<T extends string> = T extends any ? VariantSerialize<Parse<T>> : never
 
 // prettier-ignore
-type VariantSerialize<ast extends Ast> =
-  ast extends { protocol: infer P extends Array<Node> } ?
-    `${PartVariantSerialize<P>}${VariantSerialize<Omit<ast, 'protocol'>>}` :
-  ast extends { hostname: infer H extends Array<Node> } ?
-    `://${PartVariantSerialize<H>}/${VariantSerialize<Omit<ast, 'hostname'>>}` :
-  ast extends { pathname: infer P extends Array<Node> } ?
-    `${PartVariantSerialize<P>}${VariantSerialize<Omit<ast, 'pathname'>>}` :
-  ast extends { search: infer S extends string } ?
+type VariantSerialize<T extends Ast> =
+  T extends { protocol: infer P extends Array<Node> } ?
+    `${PartVariantSerialize<P>}${VariantSerialize<Omit<T, 'protocol'>>}` :
+  T extends { hostname: infer H extends Array<Node> } ?
+    `://${PartVariantSerialize<H>}/${VariantSerialize<Omit<T, 'hostname'>>}` :
+  T extends { pathname: infer P extends Array<Node> } ?
+    `${PartVariantSerialize<P>}${VariantSerialize<Omit<T, 'pathname'>>}` :
+  T extends { search: infer S extends string } ?
     `?${S}` :
   ''
 
@@ -89,7 +99,7 @@ type PartVariantSerialize<T extends Array<Node>> =
     L extends Variable ?
       L['name'] extends '' | undefined ? never :
       `:${L['name']}${PartVariantSerialize<R>}` :
-    L extends Glob ? 
+    L extends Wildcard ? 
       L['name'] extends '' | undefined ? never :
       `*${L['name']}${PartVariantSerialize<R>}` :
     L extends Enum ? `${L['members'][number]}${PartVariantSerialize<R>}` :
@@ -112,7 +122,7 @@ export type Params<T extends string> =
 // prettier-ignore
 type PartParams<T extends Part> =
   T extends [infer L extends Node, ...infer R extends Array<Node>] ?
-    L extends { type: 'variable' | 'glob', name: infer N } ? N | PartParams<R> :
+    L extends { type: 'variable' | 'wildcard', name: infer N } ? N | PartParams<R> :
     L extends Optional ? PartParams<L['nodes']> | PartParams<R> :
     PartParams<R> :
   never

@@ -1,4 +1,4 @@
-import type { Glob, Optional, Variable, Part } from './parse.types.ts'
+import type { Wildcard, Optional, Variable, Part } from './parse.types.ts'
 import { split } from './split.ts'
 
 export type Ast = {
@@ -53,10 +53,10 @@ function parsePart(source: string, bounds: [number, number]) {
       continue
     }
 
-    // glob
+    // wildcard
     if (char === '*') {
       i += 1
-      let node: Glob = { type: 'glob' }
+      let node: Wildcard = { type: 'wildcard' }
       let name = identifierRE.exec(part.slice(i))?.[0]
       if (name) node.name = name
       nodes().push(node)

@@ -112,8 +112,9 @@ pattern2.match('https://acme.remix.run/admin')
 // { params: { tenant: 'acme' } }
 ```
 
-The `protocol`, `hostname`, and `pathname` parts support [params](#params), [globs](#globs), [optionals](#optionals), and [enums](#enums).
-`search` is instead treated as [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams).
+The `protocol`, `hostname`, and `pathname` support [variables](#variables), [wildcards](#wildcars), [optionals](#optionals), and [enums](#enums).
+
+`search` is treated as a [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams).
 
 ### Variables
 
@@ -144,9 +145,9 @@ pattern.match('https://remix.run/products/tennis-shoes')
 // { params: {} }
 ```
 
-### Globs
+### Wildcards
 
-Globs match dynamic parts that can span multiple segments. They're written as `*` followed (optionally) by a name:
+Wildcards match dynamic parts that can span multiple segments. They're written as `*` followed (optionally) by a name:
 
 ```tsx
 let pattern = new RoutePattern('://app.unpkg.com/*path/dist/:file.mjs')
@@ -155,7 +156,7 @@ pattern.match('https://app.unpkg.com/preact@10.26.9/files/dist/preact.mjs')
 // { params: { path: 'preact@10.26.9/files', file: 'preact' }}
 ```
 
-You can omit the glob name if you don't need the captured value:
+You can omit the wildcard name if you don't need the captured value:
 
 ```tsx
 let pattern = new RoutePattern('assets/*/favicon.ico')

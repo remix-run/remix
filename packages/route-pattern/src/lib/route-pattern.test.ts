@@ -51,13 +51,13 @@ describe('RoutePattern', () => {
           expected: { params: { user_id: 'abc123', $post: 'def456' } },
         },
         {
-          name: 'extracts named globs',
+          name: 'extracts named wildcards',
           pattern: 'assets/*path',
           input: 'https://example.com/assets/images/logo.png',
           expected: { params: { path: 'images/logo.png' } },
         },
         {
-          name: 'extracts unnamed globs',
+          name: 'extracts unnamed wildcards',
           pattern: 'assets/*',
           input: 'https://example.com/assets/images/logo.png',
           expected: { params: {} },
@@ -141,7 +141,7 @@ describe('RoutePattern', () => {
           expected: { params: {} },
         },
         {
-          name: 'combines enum with globs',
+          name: 'combines enum with wildcards',
           pattern: 'assets/*path.{jpg,png,gif,svg}',
           input: 'https://example.com/assets/images/logos/remix.svg',
           expected: { params: { path: 'images/logos/remix' } },
@@ -245,13 +245,13 @@ describe('RoutePattern', () => {
           expected: { params: { major: '2', minor: '1', id: 'sarah.json' } },
         },
         {
-          name: 'complex glob with file and extension',
+          name: 'complex wildcard with file and extension',
           pattern: '://app.unpkg.com/*path/dist/:file.mjs',
           input: 'https://app.unpkg.com/preact@10.26.9/files/dist/preact.mjs',
           expected: { params: { path: 'preact@10.26.9/files', file: 'preact' } },
         },
         {
-          name: 'unnamed glob with static parts',
+          name: 'unnamed wildcard with static parts',
           pattern: 'assets/*/favicon.ico',
           input: 'https://remix.run/assets/v2/favicon.ico',
           expected: { params: {} },
@@ -263,13 +263,13 @@ describe('RoutePattern', () => {
           expected: { params: { filename: 'logo' } },
         },
         {
-          name: 'glob with file extension enum',
+          name: 'wildcard with file extension enum',
           pattern: 'assets/*path.{jpg,png,gif,svg}',
           input: 'https://remix.run/assets/images/logos/remix.svg',
           expected: { params: { path: 'images/logos/remix' } },
         },
         {
-          name: 'glob with file extension enum - no match',
+          name: 'wildcard with file extension enum - no match',
           pattern: 'assets/*path.{jpg,png,gif,svg}',
           input: 'https://remix.run/assets/styles/main.css',
           expected: null,
@@ -329,7 +329,7 @@ describe('RoutePattern', () => {
           expected: { params: { tenant: 'acme', id: '123' } },
         },
         {
-          name: 'handles globs in hostnames',
+          name: 'handles wildcards in hostnames',
           pattern: '://*host.example.com',
           input: 'https://api.v1.example.com/',
           expected: { params: { host: 'api.v1' } },
@@ -425,7 +425,7 @@ describe('RoutePattern', () => {
           expected: { params: { query: 'hello%20world' } },
         },
         {
-          name: 'handles parameters that look like paths',
+          name: 'handles wildcards that look like paths',
           pattern: 'proxy/*url',
           input: 'https://example.com/proxy/https://other.com/api',
           expected: { params: { url: 'https://other.com/api' } },
@@ -455,7 +455,7 @@ describe('RoutePattern', () => {
           expected: null,
         },
         {
-          name: 'globs can match across segments',
+          name: 'wildcards can match across segments',
           pattern: 'files/*path',
           input: 'https://example.com/files/docs/readme.txt',
           expected: { params: { path: 'docs/readme.txt' } },

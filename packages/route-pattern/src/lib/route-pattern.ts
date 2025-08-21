@@ -72,7 +72,7 @@ function partToRegExpSource(part: Part, paramRegExp: RegExp) {
         source += ')'
         return source
       }
-      if (node.type === 'glob') {
+      if (node.type === 'wildcard') {
         let source = '('
         if (node.name) {
           source += `?<${node.name}>`
@@ -80,15 +80,16 @@ function partToRegExpSource(part: Part, paramRegExp: RegExp) {
         source += '.*)'
         return source
       }
-      if (node.type === 'optional') {
-        return `(?:${partToRegExpSource(node.nodes, paramRegExp)})?`
+      if (node.type === 'enum') {
+        return `(?:${node.members.map(regexpEscape).join('|')})`
       }
       if (node.type === 'text') {
         return regexpEscape(node.value)
       }
-      if (node.type === 'enum') {
-        return `(?:${node.members.map(regexpEscape).join('|')})`
+      if (node.type === 'optional') {
+        return `(?:${partToRegExpSource(node.nodes, paramRegExp)})?`
       }
+
       throw new Error(`Node with unknown type: ${node}`)
     })
     .join('')

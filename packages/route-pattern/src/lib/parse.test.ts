@@ -66,28 +66,28 @@ describe('parse', () => {
         },
       },
 
-      // glob
+      // wildcard
       {
-        name: 'named glob',
+        name: 'named wildcard',
         input: '*files',
         expected: {
-          pathname: [{ type: 'glob', name: 'files' }],
+          pathname: [{ type: 'wildcard', name: 'files' }],
         },
       },
       {
-        name: 'glob without name',
+        name: 'wildcard without name',
         input: '*',
         expected: {
-          pathname: [{ type: 'glob' }],
+          pathname: [{ type: 'wildcard' }],
         },
       },
       {
-        name: 'text with glob',
+        name: 'text with wildcard',
         input: 'assets/*files',
         expected: {
           pathname: [
             { type: 'text', value: 'assets/' },
-            { type: 'glob', name: 'files' },
+            { type: 'wildcard', name: 'files' },
           ],
         },
       },
@@ -226,7 +226,7 @@ describe('parse', () => {
             {
               type: 'optional',
               nodes: [
-                { type: 'glob' },
+                { type: 'wildcard' },
                 { type: 'text', value: '.' },
                 { type: 'variable', name: 'format' },
               ],
