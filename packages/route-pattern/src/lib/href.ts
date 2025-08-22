@@ -106,22 +106,26 @@ export function createHrefBuilder<Source extends string | undefined = undefined>
   }
 }
 
-function resolvePart(part: Part, params: Record<string, string>) {
-  return part
-    .map((node) => {
-      if (node.type === 'variable') {
-        return params[node.name]
-      }
-      if (node.type === 'wildcard') {
-        return node.name ? params[node.name] : params['*']
-      }
-      if (node.type === 'text') return node.value
-      if (node.type === 'enum') throw new Error('Variants cannot include enums')
-      if (node.type === 'optional') throw new Error('Variants cannot include optionals')
+function resolvePart(part: Part, params: Record<string, string>): string {
+  return part.map((node) => resolveNode(node, params)).join('')
+}
 
-      node satisfies never
-    })
-    .join('')
+function resolveNode(node: Node, params: Record<string, string>): string {
+  if (node.type === 'variable') {
+    return params[node.name] ?? ''
+  }
+  if (node.type === 'wildcard') {
+    return node.name ? (params[node.name] ?? '') : (params['*'] ?? '')
+  }
+  if (node.type === 'enum') {
+    return node.members[0] ?? ''
+  }
+  if (node.type === 'optional') {
+    return node.nodes.map((node) => resolveNode(node, params)).join('')
+  }
+
+  // text
+  return node.value
 }
 
 // Variant -----------------------------------------------------------------------------------------

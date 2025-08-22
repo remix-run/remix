@@ -24,6 +24,18 @@ describe('href', () => {
     assert.equal(href('files/*.jpg', { '*': 'cat/dog' }), '/files/cat/dog.jpg')
   })
 
+  it('uses a valid optional value', () => {
+    let href = createHrefBuilder()
+    assert.equal(href('products/:id(.:ext)', { id: '1', ext: 'jpg' }), '/products/1.jpg')
+    // @ts-expect-error missing param keys
+    assert.equal(href('products/:id(.:ext)', { id: '1' }), '/products/1.')
+  })
+
+  it('uses a valid enum value', () => {
+    let href = createHrefBuilder()
+    assert.equal(href('products/:id.{jpg,png}', { id: '1' }), '/products/1.jpg')
+  })
+
   it('enforces type safety', () => {
     let href = createHrefBuilder<'products(/:id)'>()
     // @ts-expect-error invalid variant
