@@ -69,10 +69,8 @@ By default, patterns are assumed to be `pathname`-only:
 
 ```tsx
 let pattern = new RoutePattern('blog/:id')
-
 pattern.match('https://remix.run/blog/hello-world')
 // { params: { id: 'hello-world' } }
-
 pattern.match('https://example.com/blog/web-dev-tips')
 // { params: { id: 'web-dev-tips' } }
 ```
@@ -81,7 +79,6 @@ Everything after the first `?` is treated as the `search`:
 
 ```tsx
 let pattern = new RoutePattern('search?q')
-
 pattern.match('https://remix.run/search?q=javascript')
 // { params: { } }
 ```
@@ -90,7 +87,6 @@ To specify a protocol or hostname, you must use `://` before any `/` or `?`:
 
 ```tsx
 let pattern = new RoutePattern('://:tenant.remix.run/admin')
-
 pattern.match('https://acme.remix.run/admin')
 // { params: { tenant: 'acme' } }
 ```
@@ -99,7 +95,6 @@ To specify a port, use a `:` followed by the port number immediately following t
 
 ```tsx
 let pattern = new RoutePattern('://remix.run:8080/admin')
-
 pattern.match('https://remix.run:8080/admin')
 // { params: {} }
 ```
@@ -116,7 +111,6 @@ Variables match dynamic parts of a URL within a segment. They're written as `:` 
 
 ```tsx
 let pattern = new RoutePattern('users/@:id')
-
 pattern.match('https://remix.run/users/@sarah')
 // { params: { id: 'sarah' } }
 ```
@@ -125,7 +119,6 @@ The name must be a [valid JavaScript identifier](https://developer.mozilla.org/e
 
 ```tsx
 let pattern = new RoutePattern('api/v:major.:minor')
-
 pattern.match('https://remix.run/api/v2.1')
 // { params: { major: '2', minor: '1' } }
 ```
@@ -154,10 +147,8 @@ You can mark parts of a pattern as optional by wrapping them in parentheses:
 
 ```tsx
 let pattern = new RoutePattern('api(/v:version)/users')
-
 pattern.match('https://remix.run/api/users')
 // { params: {} }
-
 pattern.match('https://remix.run/api/v2/users')
 // { params: { version: '2' } }
 ```
@@ -168,7 +159,6 @@ Enums let you match against a specific set of static values:
 
 ```tsx
 let pattern = new RoutePattern('files/:filename.{jpg,png,gif}')
-
 pattern.match('https://remix.run/files/logo.png')
 // { params: { filename: 'logo' } }
 ```
