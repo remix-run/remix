@@ -29,7 +29,7 @@ export type Part = Array<Node>
 export type Node = Variable | Wildcard | Enum | Text | Optional
 
 export type Variable = { type: 'variable'; name: string }
-export type Wildcard = { type: 'wildcard'; name: string }
+export type Wildcard = { type: 'wildcard'; name?: string }
 export type Enum = { type: 'enum'; members: Array<string> }
 export type Text = { type: 'text'; value: string }
 export type Optional = { type: 'optional'; nodes: Array<Node> }
@@ -55,7 +55,7 @@ type _PartParse<state extends PartParseState> =
         never : // this should never happen
       char extends '*' ?
         IdentiferParse<rest> extends { identifier: infer name extends string, rest: infer rest extends string } ?
-          (name extends '' ? never : _PartParse<AppendNode<state, { type: 'wildcard', name: name }, rest>>) :
+          _PartParse<AppendNode<state, (name extends '' ? { type: 'wildcard' } : { type: 'wildcard', name: name }), rest>> :
         never : // this should never happen
       char extends '{' ?
         rest extends `${infer body}}${infer after}` ? _PartParse<AppendNode<state, { type: 'enum', members: EnumSplit<body> }, after>> :

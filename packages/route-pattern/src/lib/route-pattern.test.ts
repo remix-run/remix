@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { RoutePattern } from './route-pattern.ts'
+import { createHrefBuilder } from './href.ts'
 
 describe('RoutePattern', () => {
   describe('constructor', () => {
@@ -103,6 +104,18 @@ describe('RoutePattern', () => {
           pattern: 'users\\:test',
           input: 'https://example.com/users:test',
           expected: { params: {} },
+        },
+        {
+          name: 'matches unnamed wildcard without capturing',
+          pattern: 'files/*.jpg',
+          input: 'https://example.com/files/logo.jpg',
+          expected: { params: {} },
+        },
+        {
+          name: 'unnamed wildcard non-match on extension',
+          pattern: 'files/*.jpg',
+          input: 'https://example.com/files/logo.png',
+          expected: null,
         },
       ]
 
@@ -351,6 +364,12 @@ describe('RoutePattern', () => {
           pattern: '://*host.example.com',
           input: 'https://api.v1.example.com/',
           expected: { params: { host: 'api.v1' } },
+        },
+        {
+          name: 'handles unnamed wildcards in hostnames without capturing',
+          pattern: '://*.example.com',
+          input: 'https://api.v1.example.com/',
+          expected: { params: {} },
         },
         {
           name: 'multi-tenant with optional admin path',

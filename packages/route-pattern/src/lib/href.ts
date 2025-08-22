@@ -11,15 +11,49 @@ import type {
   Text,
 } from './parse.types.ts'
 
+// Detect unnamed wildcards in the AST --------------------------------------------------------------
+// prettier-ignore
+type HasUnnamedWildcardInPart<T extends Array<Node>> =
+  T extends [infer L extends Node, ...infer R extends Array<Node>] ?
+    L extends { type: 'wildcard' } ? (
+      L extends { name: string } ? HasUnnamedWildcardInPart<R> : true
+    ) :
+    L extends Optional ? (HasUnnamedWildcardInPart<L['nodes']> extends true ? true : HasUnnamedWildcardInPart<R>) :
+    HasUnnamedWildcardInPart<R> :
+  false
+
+// prettier-ignore
+type HasUnnamedWildcardInAst<T extends Ast> =
+  (T extends { protocol: infer P extends Array<Node> } ? HasUnnamedWildcardInPart<P> : false) extends true ? true :
+  (T extends { hostname: infer H extends Array<Node> } ? HasUnnamedWildcardInPart<H> : false) extends true ? true :
+  (T extends { pathname: infer P2 extends Array<Node> } ? HasUnnamedWildcardInPart<P2> : false)
+
+// Param record that conditionally includes the '*' key
+type ParamRecordFor<TParams extends string, THasUnnamed extends boolean> = Record<
+  TParams | (THasUnnamed extends true ? '*' : never),
+  string
+>
+
 // prettier-ignore
 type HrefBuilderArgs<T extends string> =
   Params<T> extends infer params extends string ?
-    [params] extends [never] ? [] | [any, SearchParams] :
-    [Record<params, string>] | [Record<params, string>, SearchParams] :
+    [params] extends [never] ? (
+      HasUnnamedWildcardInAst<Parse<T>> extends true
+        ? [Record<'*', string>] | [Record<'*', string>, SearchParams]
+        : [] | [any, SearchParams]
+    ) : (
+      [ParamRecordFor<params, HasUnnamedWildcardInAst<Parse<T>>>] |
+      [ParamRecordFor<params, HasUnnamedWildcardInAst<Parse<T>>>, SearchParams]
+    ) :
   never;
 
-export interface HrefBuilder<T extends string> {
-  <V extends Variant<T>>(variant: V, ...args: HrefBuilderArgs<V>): string
+type VariantOrAny<T extends string> = [string] extends [T] ? string : Variant<T>
+
+export interface HrefBuilder<TSource extends string | undefined = undefined> {
+  <V extends TSource extends string ? Variant<TSource> : string>(
+    variant: V,
+    ...args: HrefBuilderArgs<V>
+  ): string
 }
 
 interface HrefBuilderOptions {
@@ -35,10 +69,13 @@ interface HrefBuilderOptions {
   host?: string
 }
 
-export function createHrefBuilder<Source extends string>(
+export function createHrefBuilder<Source extends string | undefined = undefined>(
   options: HrefBuilderOptions = {},
 ): HrefBuilder<Source> {
-  return <V extends Variant<Source>>(variant: V, ...args: HrefBuilderArgs<V>) => {
+  return <V extends Source extends string ? Variant<Source> : string>(
+    variant: V,
+    ...args: HrefBuilderArgs<V>
+  ) => {
     let params = args[0] ?? {}
     let searchParams = args[1]
     let ast = parse(variant)
@@ -76,7 +113,7 @@ function resolvePart(part: Part, params: Record<string, string>) {
         return params[node.name]
       }
       if (node.type === 'wildcard') {
-        return params[node.name]
+        return node.name ? params[node.name] : params['*']
       }
       if (node.type === 'text') return node.value
       if (node.type === 'enum') throw new Error('Variants cannot include enums')
@@ -89,7 +126,12 @@ function resolvePart(part: Part, params: Record<string, string>) {
 
 // Variant -----------------------------------------------------------------------------------------
 
-type Variant<T extends string> = T extends any ? VariantSerialize<Parse<T>> : never
+type Variant<T extends string> =
+  HasUnnamedWildcardInAst<Parse<T>> extends true
+    ? T
+    : T extends any
+      ? VariantSerialize<Parse<T>>
+      : never
 
 // prettier-ignore
 type VariantSerialize<T extends Ast> =
@@ -112,8 +154,7 @@ type PartVariantSerialize<T extends Array<Node>> =
       L['name'] extends '' | undefined ? never :
       `:${L['name']}${PartVariantSerialize<R>}` :
     L extends Wildcard ? 
-      L['name'] extends '' | undefined ? never :
-      `*${L['name']}${PartVariantSerialize<R>}` :
+      L['name'] extends '' | undefined ? `*${PartVariantSerialize<R>}` : `*${L['name']}${PartVariantSerialize<R>}` :
     L extends Enum ? `${L['members'][number]}${PartVariantSerialize<R>}` :
     L extends Text ? `${L['value']}${PartVariantSerialize<R>}` :
     L extends Optional ? PartVariantSerialize<R> | `${PartVariantSerialize<L['nodes']>}${PartVariantSerialize<R>}` :
@@ -134,7 +175,8 @@ export type Params<T extends string> =
 // prettier-ignore
 type PartParams<T extends Part> =
   T extends [infer L extends Node, ...infer R extends Array<Node>] ?
-    L extends { type: 'variable' | 'wildcard', name: infer N } ? N | PartParams<R> :
+    L extends { type: 'variable', name: infer N extends string } ? N | PartParams<R> :
+    L extends { type: 'wildcard', name: infer N } ? (N extends string ? N | PartParams<R> : '*' | PartParams<R>) :
     L extends Optional ? PartParams<L['nodes']> | PartParams<R> :
     PartParams<R> :
   never

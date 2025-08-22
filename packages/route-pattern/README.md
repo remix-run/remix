@@ -6,17 +6,15 @@ Route patterns describe the structure of URLs you want to match.
 - Familiar syntax inspired by Rails
 - Support for all JavaScript runtimes (Node, Bun, Deno, etc.)
 
-## Usage
+## Pattern Matching
 
 ```tsx
 import { RoutePattern } from '@remix-run/route-pattern'
 
 // Blog with optional HTML extension
 let pattern = new RoutePattern('blog/:year-:month-:day/:slug(.html)')
-
 pattern.match('https://remix.run/blog/2024-01-15/web-architecture')
 // { params: { year: '2024', month: '01', day: '15', slug: 'web-architecture' } }
-
 pattern.match('https://remix.run/blog/2024-01-15/web-architecture.html')
 // { params: { year: '2024', month: '01', day: '15', slug: 'web-architecture' } }
 ```
@@ -24,10 +22,8 @@ pattern.match('https://remix.run/blog/2024-01-15/web-architecture.html')
 ```tsx
 // API with versioning and optional format
 let pattern = new RoutePattern('api(/v:major.:minor)/users/:id(.json)')
-
 pattern.match('https://remix.run/api/users/sarah')
 // { params: { id: 'sarah' } }
-
 pattern.match('https://remix.run/api/v2.1/users/sarah.json')
 // { params: { major: '2', minor: '1', id: 'sarah' } }
 ```
@@ -35,10 +31,8 @@ pattern.match('https://remix.run/api/v2.1/users/sarah.json')
 ```tsx
 // Multi-tenant applications
 let pattern = new RoutePattern('://:tenant.remix.run(/admin)/users/:id')
-
 pattern.match('https://acme.remix.run/users/123')
 // { params: { tenant: 'acme', id: '123' } }
-
 pattern.match('https://acme.remix.run/admin/users/123')
 // { params: { tenant: 'acme', id: '123' } }
 ```
@@ -46,32 +40,21 @@ pattern.match('https://acme.remix.run/admin/users/123')
 ```tsx
 // Asset serving with type constraints
 let pattern = new RoutePattern('assets/*path.{jpg,png,gif,svg}')
-
 pattern.match('https://remix.run/assets/images/logos/remix.svg')
 // { params: { path: 'images/logos/remix' } }
-
 pattern.match('https://remix.run/assets/styles/main.css')
 // null (wrong file type)
 ```
 
-## API
+## Building HREFs
 
-**RoutePattern**
+This library includes an href builder that understands the route pattern format and provides a typesafe way to generate hrefs.
 
-```ts
-class RoutePattern {
-  readonly source: string
-  constructor(source: string)
-  match(url: string | URL): Match | null
-}
-```
+```tsx
+import { createHrefBuilder } from '@remix-run/route-pattern'
 
-**Match**
-
-```ts
-type Match = {
-  params: Record<string, string | undefined>
-}
+let href = createHrefBuilder()
+href('products/:id', { id: '123' }) // "/products/123"
 ```
 
 ## Concepts
@@ -149,13 +132,20 @@ pattern.match('https://remix.run/api/v2.1')
 
 ### Wildcards
 
-Wildcards match dynamic parts that can span multiple segments. They're written as `*` followed by a name:
+Wildcards match dynamic parts of the URL that span multiple segments. A wildcard with a name shows up in `params[name]`:
 
 ```tsx
 let pattern = new RoutePattern('://app.unpkg.com/*path/dist/:file.mjs')
-
 pattern.match('https://app.unpkg.com/preact@10.26.9/files/dist/preact.mjs')
 // { params: { path: 'preact@10.26.9/files', file: 'preact' }}
+```
+
+A wildcard with no name (a plain `*`) does not populate `params`:
+
+```
+let pattern = new RoutePattern('files/*.jpg')
+pattern.match('https://example.com/files/logo/small.jpg')
+// { params: {} }
 ```
 
 ### Optionals

@@ -58,9 +58,12 @@ function parsePart(source: string, bounds: [number, number]) {
     if (char === '*') {
       i += 1
       let name = identifierMatcher.exec(part.slice(i))?.[0]
-      if (!name) throw new Error(`wildcard missing name at ${i}`)
-      nodes().push({ type: 'wildcard', name })
-      i += name.length
+      if (name) {
+        nodes().push({ type: 'wildcard', name })
+        i += name.length
+      } else {
+        nodes().push({ type: 'wildcard' })
+      }
       continue
     }
 

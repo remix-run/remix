@@ -68,12 +68,30 @@ describe('parse', () => {
         },
       },
       {
+        name: 'unnamed wildcard',
+        input: '*',
+        expected: {
+          pathname: [{ type: 'wildcard' }],
+        },
+      },
+      {
         name: 'text with wildcard',
         input: 'assets/*files',
         expected: {
           pathname: [
             { type: 'text', value: 'assets/' },
             { type: 'wildcard', name: 'files' },
+          ],
+        },
+      },
+      {
+        name: 'text with unnamed wildcard and suffix',
+        input: 'files/*.jpg',
+        expected: {
+          pathname: [
+            { type: 'text', value: 'files/' },
+            { type: 'wildcard' },
+            { type: 'text', value: '.jpg' },
           ],
         },
       },
@@ -296,6 +314,13 @@ describe('parse', () => {
         expected: {
           hostname: [{ type: 'text', value: 'example.com' }],
           port: '8080',
+        },
+      },
+      {
+        name: 'hostname with unnamed wildcard',
+        input: '://*.example.com',
+        expected: {
+          hostname: [{ type: 'wildcard' }, { type: 'text', value: '.example.com' }],
         },
       },
       {

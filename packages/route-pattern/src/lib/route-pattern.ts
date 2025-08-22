@@ -97,7 +97,7 @@ function partToRegExpSource(part: Part, paramRegExp: RegExp) {
         return `(?<${node.name}>${paramRegExp.source})`
       }
       if (node.type === 'wildcard') {
-        return `(?<${node.name}>.*)`
+        return node.name ? `(?<${node.name}>.*)` : `(?:.*)`
       }
       if (node.type === 'enum') {
         return `(?:${node.members.map(regexpEscape).join('|')})`
