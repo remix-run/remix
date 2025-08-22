@@ -118,10 +118,10 @@ function resolveNode(node: Node, params: Record<string, string>): string {
     return node.name ? (params[node.name] ?? '') : (params['*'] ?? '')
   }
   if (node.type === 'enum') {
-    return node.members[0] ?? ''
+    return node.members[0]
   }
   if (node.type === 'optional') {
-    return node.nodes.map((node) => resolveNode(node, params)).join('')
+    return resolvePart(node.nodes, params)
   }
 
   // text
