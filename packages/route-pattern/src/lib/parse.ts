@@ -9,14 +9,28 @@ export type Ast = {
   search?: URLSearchParams
 }
 
+export class ParseError extends Error {
+  source: string
+  position: number
+  partType?: string
+
+  constructor(message: string, source: string, position: number, partType?: string) {
+    super(`${message}${partType ? ` in ${partType}` : ''}`)
+    this.name = 'ParseError'
+    this.source = source
+    this.position = position
+    this.partType = partType
+  }
+}
+
 export function parse(source: string) {
   let { protocol, hostname, port, pathname, search } = split(source)
   let ast: Ast = {}
 
-  if (protocol) ast.protocol = parsePart(source, protocol)
-  if (hostname) ast.hostname = parsePart(source, hostname)
+  if (protocol) ast.protocol = parsePart(source, protocol, 'protocol')
+  if (hostname) ast.hostname = parsePart(source, hostname, 'hostname')
   if (port) ast.port = source.slice(...port)
-  if (pathname) ast.pathname = parsePart(source, pathname)
+  if (pathname) ast.pathname = parsePart(source, pathname, 'pathname')
   if (search) ast.search = new URLSearchParams(source.slice(...search))
 
   return ast
@@ -24,32 +38,32 @@ export function parse(source: string) {
 
 const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
-function parsePart(source: string, bounds: [number, number]) {
-  let part = source.slice(...bounds)
-
+function parsePart(source: string, bounds: [number, number], partType?: string) {
+  let [start, end] = bounds
   let ast: Part = []
   let optional: { node: Optional; index: number } | null = null
+  let currentNodes = ast
 
-  let nodes = () => optional?.node.nodes ?? ast
   let appendText = (text: string) => {
-    let last = nodes().at(-1)
+    let last = currentNodes.at(-1)
     if (last?.type !== 'text') {
-      nodes().push({ type: 'text', value: text })
+      currentNodes.push({ type: 'text', value: text })
       return
     }
     last.value += text
   }
 
-  let i = 0
-  while (i < part.length) {
-    let char = part[i]
+  let i = start
+  while (i < end) {
+    let char = source[i]
 
     // variable
     if (char === ':') {
       i += 1
-      let name = identifierMatcher.exec(part.slice(i))?.[0]
-      if (!name) throw new Error(`variable missing name at ${i}`)
-      nodes().push({ type: 'variable', name })
+      let remaining = source.slice(i, end)
+      let name = identifierMatcher.exec(remaining)?.[0]
+      if (!name) throw new ParseError('missing variable name', source, i, partType)
+      currentNodes.push({ type: 'variable', name })
       i += name.length
       continue
     }
@@ -57,39 +71,42 @@ function parsePart(source: string, bounds: [number, number]) {
     // wildcard
     if (char === '*') {
       i += 1
-      let name = identifierMatcher.exec(part.slice(i))?.[0]
+      let remaining = source.slice(i, end)
+      let name = identifierMatcher.exec(remaining)?.[0]
       if (name) {
-        nodes().push({ type: 'wildcard', name })
+        currentNodes.push({ type: 'wildcard', name })
         i += name.length
       } else {
-        nodes().push({ type: 'wildcard' })
+        currentNodes.push({ type: 'wildcard' })
       }
       continue
     }
 
     // enum
     if (char === '{') {
-      let close = part.indexOf('}', i)
-      if (close === -1) throw new Error(`unmatched { at ${i}`)
-      let members = part.slice(i + 1, close).split(',')
-      nodes().push({ type: 'enum', members })
+      let close = source.indexOf('}', i)
+      if (close === -1 || close >= end) throw new ParseError('unmatched {', source, i, partType)
+      let members = source.slice(i + 1, close).split(',')
+      currentNodes.push({ type: 'enum', members })
       i = close + 1
       continue
     }
     if (char === '}') {
-      throw new Error(`unmatched } at ${i}`)
+      throw new ParseError('unmatched }', source, i, partType)
     }
 
     // optional
     if (char === '(') {
-      if (optional) throw new Error(`nested ( at ${optional.index} ${i}`)
+      if (optional) throw new ParseError('invalid nested (', source, i, partType)
       optional = { node: { type: 'optional', nodes: [] }, index: i }
+      currentNodes = optional.node.nodes
       i += 1
       continue
     }
     if (char === ')') {
-      if (!optional) throw new Error(`unmatched ) at ${i}`)
+      if (!optional) throw new ParseError('unmatched )', source, i, partType)
       ast.push(optional.node)
+      currentNodes = ast
       optional = null
       i += 1
       continue
@@ -97,17 +114,18 @@ function parsePart(source: string, bounds: [number, number]) {
 
     // text
     if (char === '\\') {
-      let next = part.at(i + 1)
-      if (!next) throw new Error(`dangling escape at ${i}`)
+      let next = source.at(i + 1)
+      if (!next || i + 1 >= end) throw new ParseError('dangling escape', source, i, partType)
       appendText(next)
       i += 2
       continue
     }
+
     appendText(char)
     i += 1
   }
 
-  if (optional) throw new Error(`unmatched ( at ${optional.index}`)
+  if (optional) throw new ParseError('unmatched (', source, optional.index, partType)
 
   return ast
 }

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { parse } from './parse.ts'
+import { parse, ParseError } from './parse.ts'
 
 describe('parse', () => {
   describe('pathname only patterns', () => {
@@ -384,41 +384,135 @@ describe('parse', () => {
     })
   })
 
-  describe('error cases', () => {
-    let errorCases = [
-      {
-        name: 'unmatched opening brace',
-        input: '{unclosed',
-        expectedError: 'unmatched { at 0',
-      },
-      {
-        name: 'unmatched closing brace',
-        input: 'closed}',
-        expectedError: 'unmatched } at 6',
-      },
-      {
-        name: 'unmatched closing parenthesis',
-        input: 'closed)',
-        expectedError: 'unmatched ) at 6',
-      },
-      {
-        name: 'nested opening parenthesis',
-        input: '(nested(test))',
-        expectedError: 'nested ( at 0 7',
-      },
-      {
-        name: 'dangling escape',
-        input: 'test\\',
-        expectedError: 'dangling escape at 4',
-      },
-    ]
+  describe('error reporting', () => {
+    it('reports accurate positions in original source string', () => {
+      // Test error in pathname part of a full URL pattern
+      let source = 'https://example.com/users/:invalid)'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'unmatched ) in pathname')
+        assert.equal(error.position, 34) // Position of ')' in original string
+        assert.equal(error.partType, 'pathname')
+      }
+    })
 
-    errorCases.forEach(({ name, input, expectedError }) => {
-      it(name, () => {
-        assert.throws(() => parse(input), {
-          message: expectedError,
-        })
-      })
+    it('reports accurate positions in hostname part', () => {
+      let source = 'https://:.com/path'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'missing variable name in hostname')
+        assert.equal(error.position, 9) // Position after ':' in hostname
+        assert.equal(error.partType, 'hostname')
+      }
+    })
+
+    it('reports accurate positions in protocol part', () => {
+      let source = 'http:://example.com/path'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'missing variable name in protocol')
+        assert.equal(error.position, 5) // Position after ':' with missing variable name
+        assert.equal(error.partType, 'protocol')
+      }
+    })
+
+    it('includes source context in error message', () => {
+      let source = 'very-long-pathname-with-error/:invalid}'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'unmatched } in pathname')
+        assert.equal(error.source, source)
+      }
+    })
+
+    it('reports missing variable name errors', () => {
+      let source = '/:/blog'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'missing variable name in pathname')
+        assert.equal(error.position, 2)
+        assert.equal(error.partType, 'pathname')
+      }
+    })
+
+    it('reports unmatched opening brace errors', () => {
+      let source = '{unclosed'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'unmatched { in pathname')
+        assert.equal(error.position, 0)
+        assert.equal(error.partType, 'pathname')
+      }
+    })
+
+    it('reports unmatched closing brace errors', () => {
+      let source = 'closed}'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'unmatched } in pathname')
+        assert.equal(error.position, 6)
+        assert.equal(error.partType, 'pathname')
+      }
+    })
+
+    it('reports unmatched closing parenthesis errors', () => {
+      let source = 'closed)'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'unmatched ) in pathname')
+        assert.equal(error.position, 6)
+        assert.equal(error.partType, 'pathname')
+      }
+    })
+
+    it('reports invalid nested parenthesis errors', () => {
+      let source = '(nested(test))'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'invalid nested ( in pathname')
+        assert.equal(error.position, 7)
+        assert.equal(error.partType, 'pathname')
+      }
+    })
+
+    it('reports dangling escape errors', () => {
+      let source = 'test\\'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'dangling escape in pathname')
+        assert.equal(error.position, 4)
+        assert.equal(error.partType, 'pathname')
+      }
     })
   })
 })

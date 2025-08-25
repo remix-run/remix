@@ -2,7 +2,6 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { RoutePattern } from './route-pattern.ts'
-import { createHrefBuilder } from './href.ts'
 
 describe('RoutePattern', () => {
   describe('constructor', () => {
