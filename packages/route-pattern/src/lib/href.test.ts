@@ -85,5 +85,9 @@ describe('href', () => {
       ]),
       'https://remix.run/products/1?sort=asc&limit=10',
     )
+
+    assert.equal(href('/search?q=remix', null, { q: 'angular' }), '/search?q=angular')
+
+    assert.equal(href('/search?q=remix', null, { some: 'thing' }), '/search?some=thing')
   })
 })
