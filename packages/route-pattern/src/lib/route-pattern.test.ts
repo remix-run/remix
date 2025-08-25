@@ -107,7 +107,7 @@ describe('RoutePattern', () => {
         {
           name: 'matches unnamed wildcard without capturing',
           pattern: 'files/*.jpg',
-          input: 'https://example.com/files/logo.jpg',
+          input: 'https://example.com/files/logo/remix.jpg',
           expected: { params: {} },
         },
         {
