@@ -12,6 +12,7 @@ import type {
 } from './parse.types.ts'
 
 // Detect unnamed wildcards in the AST --------------------------------------------------------------
+
 // prettier-ignore
 type HasUnnamedWildcardInPart<T extends Array<Node>> =
   T extends [infer L extends Node, ...infer R extends Array<Node>] ?
@@ -26,35 +27,35 @@ type HasUnnamedWildcardInPart<T extends Array<Node>> =
 type HasUnnamedWildcardInAst<T extends Ast> =
   (T extends { protocol: infer P extends Array<Node> } ? HasUnnamedWildcardInPart<P> : false) extends true ? true :
   (T extends { hostname: infer H extends Array<Node> } ? HasUnnamedWildcardInPart<H> : false) extends true ? true :
-  (T extends { pathname: infer P2 extends Array<Node> } ? HasUnnamedWildcardInPart<P2> : false)
+  (T extends { pathname: infer P extends Array<Node> } ? HasUnnamedWildcardInPart<P> : false)
+
+// Href builder -----------------------------------------------------------------------------------
+
+export interface HrefBuilder<T extends string | undefined = undefined> {
+  <V extends T extends string ? Variant<T> : string>(
+    variant: V,
+    ...args: HrefBuilderArgs<V>
+  ): string
+}
+
+// prettier-ignore
+type HrefBuilderArgs<T extends string> =
+  Params<T> extends infer P extends string ?
+    [P] extends [never] ? (
+      HasUnnamedWildcardInAst<Parse<T>> extends true ?
+        [Record<'*', string>] | [Record<'*', string>, SearchParams] :
+        [] | [any, SearchParams]
+    ) : (
+      [ParamRecordFor<P, HasUnnamedWildcardInAst<Parse<T>>>] |
+      [ParamRecordFor<P, HasUnnamedWildcardInAst<Parse<T>>>, SearchParams]
+    ) :
+  never;
 
 // Param record that conditionally includes the '*' key
 type ParamRecordFor<TParams extends string, THasUnnamed extends boolean> = Record<
   TParams | (THasUnnamed extends true ? '*' : never),
   string
 >
-
-// prettier-ignore
-type HrefBuilderArgs<T extends string> =
-  Params<T> extends infer params extends string ?
-    [params] extends [never] ? (
-      HasUnnamedWildcardInAst<Parse<T>> extends true
-        ? [Record<'*', string>] | [Record<'*', string>, SearchParams]
-        : [] | [any, SearchParams]
-    ) : (
-      [ParamRecordFor<params, HasUnnamedWildcardInAst<Parse<T>>>] |
-      [ParamRecordFor<params, HasUnnamedWildcardInAst<Parse<T>>>, SearchParams]
-    ) :
-  never;
-
-type VariantOrAny<T extends string> = [string] extends [T] ? string : Variant<T>
-
-export interface HrefBuilder<TSource extends string | undefined = undefined> {
-  <V extends TSource extends string ? Variant<TSource> : string>(
-    variant: V,
-    ...args: HrefBuilderArgs<V>
-  ): string
-}
 
 interface HrefBuilderOptions {
   /**
@@ -134,34 +135,34 @@ type Variant<T extends string> =
   HasUnnamedWildcardInAst<Parse<T>> extends true
     ? T
     : T extends any
-      ? VariantSerialize<Parse<T>>
+      ? VariantString<Parse<T>>
       : never
 
 // prettier-ignore
-type VariantSerialize<T extends Ast> =
+type VariantString<T extends Ast> =
   T extends { protocol: infer P extends Array<Node> } ?
-    `${PartVariantSerialize<P>}${VariantSerialize<Omit<T, 'protocol'>>}` :
+    `${PartVariantString<P>}${VariantString<Omit<T, 'protocol'>>}` :
   T extends { hostname: infer H extends Array<Node>, port: infer R extends string } ?
-    `://${PartVariantSerialize<H>}:${R}/${VariantSerialize<Omit<T, 'hostname' | 'port'>>}` :
+    `://${PartVariantString<H>}:${R}/${VariantString<Omit<T, 'hostname' | 'port'>>}` :
   T extends { hostname: infer H extends Array<Node> } ?
-    `://${PartVariantSerialize<H>}/${VariantSerialize<Omit<T, 'hostname'>>}` :
+    `://${PartVariantString<H>}/${VariantString<Omit<T, 'hostname'>>}` :
   T extends { pathname: infer P extends Array<Node> } ?
-    `${PartVariantSerialize<P>}${VariantSerialize<Omit<T, 'pathname'>>}` :
+    `${PartVariantString<P>}${VariantString<Omit<T, 'pathname'>>}` :
   T extends { search: infer S extends string } ?
     `?${S}` :
   ''
 
 // prettier-ignore
-type PartVariantSerialize<T extends Array<Node>> =
+type PartVariantString<T extends Array<Node>> =
   T extends [infer L extends Node, ...infer R extends Array<Node>] ?
     L extends Variable ?
       L['name'] extends '' | undefined ? never :
-      `:${L['name']}${PartVariantSerialize<R>}` :
+      `:${L['name']}${PartVariantString<R>}` :
     L extends Wildcard ? 
-      L['name'] extends '' | undefined ? `*${PartVariantSerialize<R>}` : `*${L['name']}${PartVariantSerialize<R>}` :
-    L extends Enum ? `${L['members'][number]}${PartVariantSerialize<R>}` :
-    L extends Text ? `${L['value']}${PartVariantSerialize<R>}` :
-    L extends Optional ? PartVariantSerialize<R> | `${PartVariantSerialize<L['nodes']>}${PartVariantSerialize<R>}` :
+      L['name'] extends '' | undefined ? `*${PartVariantString<R>}` : `*${L['name']}${PartVariantString<R>}` :
+    L extends Enum ? `${L['members'][number]}${PartVariantString<R>}` :
+    L extends Text ? `${L['value']}${PartVariantString<R>}` :
+    L extends Optional ? PartVariantString<R> | `${PartVariantString<L['nodes']>}${PartVariantString<R>}` :
     never :
   ''
 
@@ -169,10 +170,10 @@ type PartVariantSerialize<T extends Array<Node>> =
 
 // prettier-ignore
 export type Params<T extends string> =
-  Parse<T> extends infer ast extends Ast ?
-    | (ast['protocol'] extends Part ? PartParams<ast['protocol']> : never)
-    | (ast['hostname'] extends Part ? PartParams<ast['hostname']> : never)
-    | (ast['pathname'] extends Part ? PartParams<ast['pathname']> : never)
+  Parse<T> extends infer A extends Ast ?
+    | (A['protocol'] extends Part ? PartParams<A['protocol']> : never)
+    | (A['hostname'] extends Part ? PartParams<A['hostname']> : never)
+    | (A['pathname'] extends Part ? PartParams<A['pathname']> : never)
   :
   never;
 

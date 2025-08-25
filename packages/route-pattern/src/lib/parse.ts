@@ -1,4 +1,4 @@
-import type { Wildcard, Optional, Variable, Part } from './parse.types.ts'
+import type { Optional, Part } from './parse.types.ts'
 import { split } from './split.ts'
 
 export type Ast = {
@@ -106,6 +106,8 @@ function parsePart(source: string, bounds: [number, number]) {
     appendText(char)
     i += 1
   }
+
   if (optional) throw new Error(`unmatched ( at ${optional.index}`)
+
   return ast
 }

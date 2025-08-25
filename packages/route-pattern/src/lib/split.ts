@@ -25,15 +25,15 @@ export function split(source: string) {
     }
     index = solidus + 3
 
-    // hostname
+    // hostname + port
     let hostEnd = source.indexOf('/', index)
     if (hostEnd === -1) hostEnd = source.length
 
     // detect port (numeric) at end of host segment
-    let hostSegment = source.slice(index, hostEnd)
-    let colonIndex = hostSegment.lastIndexOf(':')
+    let host = source.slice(index, hostEnd)
+    let colonIndex = host.lastIndexOf(':')
     if (colonIndex !== -1) {
-      let afterColon = hostSegment.slice(colonIndex + 1)
+      let afterColon = host.slice(colonIndex + 1)
       if (/^[0-9]+$/.test(afterColon)) {
         // hostname up to colon, port after colon
         result.hostname = [index, index + colonIndex]

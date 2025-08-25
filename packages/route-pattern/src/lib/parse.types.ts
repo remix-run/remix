@@ -1,11 +1,11 @@
+import type { Split } from './split.types.ts'
+
 export type Ast = {
   protocol?: Array<Node>
   hostname?: Array<Node>
   port?: string
   pathname?: Array<Node>
 }
-
-import type { Split } from './split.types.ts'
 
 export type Parse<T extends string> =
   Split<T> extends infer split extends {
