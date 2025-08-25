@@ -113,16 +113,26 @@ function resolvePart(part: Part, params: Record<string, string>): string {
 
 function resolveNode(node: Node, params: Record<string, string>): string {
   if (node.type === 'variable') {
-    return params[node.name] ?? ''
+    if (!(node.name in params)) {
+      throw new Error(`Missing required parameter: ${node.name}`)
+    }
+
+    return params[node.name]
   }
   if (node.type === 'wildcard') {
-    return node.name ? (params[node.name] ?? '') : (params['*'] ?? '')
+    let name = node.name ?? '*'
+
+    if (!(name in params)) {
+      throw new Error(`Missing required parameter: ${name}`)
+    }
+
+    return params[name]
   }
   if (node.type === 'enum') {
-    return node.members[0]
+    throw new Error('Cannot use pattern with enum in href()')
   }
   if (node.type === 'optional') {
-    return resolvePart(node.nodes, params)
+    throw new Error('Cannot use pattern with optional in href()')
   }
 
   // text
