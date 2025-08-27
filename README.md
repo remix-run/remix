@@ -45,6 +45,7 @@ We currently publish the following packages:
 - [lazy-file](packages/lazy-file): Optimize performance with lazy-loaded, streaming `Blob`s and `File`s for JavaScript.
 - [multipart-parser](packages/multipart-parser): High-performance, streaming parser for multipart messages, perfect for handling complex form data.
 - [node-fetch-server](packages/node-fetch-server): Build Node.js HTTP servers using the web-standard `fetch()` API, promoting code consistency.
+- [route-pattern](packages/route-pattern): A powerful and flexible URL pattern matching library for modern JavaScript applications.
 - [tar-parser](packages/tar-parser): A fast, streaming parser for tar archives, designed for efficient data extraction.
 
 All packages are published in both modern ESM and legacy CJS formats for maximum compatibility with both existing and new projects.
