@@ -398,7 +398,7 @@ export class TarParser {
       this.#bodyController!.enqueue(this.#buffer!)
       this.#missing -= this.#buffer!.length
       this.#buffer = null
-      
+
       // Check if we've finished reading the entire body
       if (this.#missing === 0) {
         this.#bodyController!.close()

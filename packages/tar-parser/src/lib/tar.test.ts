@@ -497,15 +497,15 @@ describe('tar-stream test cases', () => {
       ],
     ])
   })
-  
+
   it('parses large github repo', async () => {
-    const response = await fetch(
+    let response = await fetch(
       'https://codeload.github.com/vercel/next.js/tar.gz/refs/heads/canary',
     )
     if (!response.ok) {
       throw new Error(`Failed to fetch tar.gz: ${response.status} ${response.statusText}`)
     }
-    const entries: [TarHeader][] = []
+    let entries: [TarHeader][] = []
     await parseTar(response.body!.pipeThrough(new DecompressionStream('gzip')), async (entry) => {
       entries.push([entry.header])
     })
