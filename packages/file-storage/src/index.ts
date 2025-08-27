@@ -4,4 +4,4 @@ export type {
   FileMetadata,
   ListOptions,
   ListResult,
-} from './lib/file-storage.ts';
+} from './lib/file-storage.ts'

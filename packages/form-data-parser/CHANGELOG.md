@@ -23,9 +23,9 @@ This release updates to `multipart-parser` 0.10.0 and removes the restrictions o
 - Add `maxFiles` option to `parseFormData` to allow limiting the number of files uploaded in a single request
 
 ```ts
-let formData = await parseFormData(request, { maxFiles: 5 });
-let file = formData.get('file-upload');
-let size = file.size; // This is ok now!
+let formData = await parseFormData(request, { maxFiles: 5 })
+let file = formData.get('file-upload')
+let size = file.size // This is ok now!
 ```
 
 ## v0.8.0 (2025-06-10)
@@ -39,7 +39,7 @@ let size = file.size; // This is ok now!
 - BREAKING CHANGE: Override `parseFormData` signature so the upload handler is always last in the argument list. `parserOptions` are now an optional 2nd arg.
 
 ```ts
-import { parseFormData } from '@remix-run/form-data-parser';
+import { parseFormData } from '@remix-run/form-data-parser'
 
 // before
 await parseFormData(
@@ -48,12 +48,12 @@ await parseFormData(
     // ...
   },
   { maxFileSize },
-);
+)
 
 // after
 await parseFormData(request, { maxFileSize }, (fileUpload) => {
   // ...
-});
+})
 ```
 
 - Upgrade [`multipart-parser`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser) to v0.8 to fix an issue where errors would crash the process when `maxFileSize` was exceeded (see #28)

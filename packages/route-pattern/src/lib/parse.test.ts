@@ -1,11 +1,11 @@
-import * as assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 
-import { parse } from './parse.ts';
+import { parse, ParseError } from './parse.ts'
 
 describe('parse', () => {
   describe('pathname only patterns', () => {
-    const testCases = [
+    let testCases = [
       {
         name: 'plain text',
         input: 'hello',
@@ -26,68 +26,72 @@ describe('parse', () => {
         },
       },
 
-      // param
+      // variable
       {
-        name: 'named parameter',
+        name: 'named variable',
         input: ':id',
         expected: {
-          pathname: [{ type: 'param', name: 'id' }],
+          pathname: [{ type: 'variable', name: 'id' }],
         },
       },
       {
-        name: 'parameter without name',
-        input: ':',
-        expected: {
-          pathname: [{ type: 'param' }],
-        },
-      },
-      {
-        name: 'parameter with underscores',
+        name: 'variable with underscores',
         input: ':user_id',
         expected: {
-          pathname: [{ type: 'param', name: 'user_id' }],
+          pathname: [{ type: 'variable', name: 'user_id' }],
         },
       },
       {
-        name: 'parameter with dollar sign',
+        name: 'variable with dollar sign',
         input: ':$special',
         expected: {
-          pathname: [{ type: 'param', name: '$special' }],
+          pathname: [{ type: 'variable', name: '$special' }],
         },
       },
       {
-        name: 'text with parameter',
+        name: 'text with variable',
         input: 'users/:id',
         expected: {
           pathname: [
             { type: 'text', value: 'users/' },
-            { type: 'param', name: 'id' },
+            { type: 'variable', name: 'id' },
           ],
         },
       },
 
-      // glob
+      // wildcard
       {
-        name: 'named glob',
+        name: 'named wildcard',
         input: '*files',
         expected: {
-          pathname: [{ type: 'glob', name: 'files' }],
+          pathname: [{ type: 'wildcard', name: 'files' }],
         },
       },
       {
-        name: 'glob without name',
+        name: 'unnamed wildcard',
         input: '*',
         expected: {
-          pathname: [{ type: 'glob' }],
+          pathname: [{ type: 'wildcard' }],
         },
       },
       {
-        name: 'text with glob',
+        name: 'text with wildcard',
         input: 'assets/*files',
         expected: {
           pathname: [
             { type: 'text', value: 'assets/' },
-            { type: 'glob', name: 'files' },
+            { type: 'wildcard', name: 'files' },
+          ],
+        },
+      },
+      {
+        name: 'text with unnamed wildcard and suffix',
+        input: 'files/*.jpg',
+        expected: {
+          pathname: [
+            { type: 'text', value: 'files/' },
+            { type: 'wildcard' },
+            { type: 'text', value: '.jpg' },
           ],
         },
       },
@@ -131,10 +135,10 @@ describe('parse', () => {
         },
       },
       {
-        name: 'optional parameter',
+        name: 'optional variable',
         input: '(:id)',
         expected: {
-          pathname: [{ type: 'optional', nodes: [{ type: 'param', name: 'id' }] }],
+          pathname: [{ type: 'optional', nodes: [{ type: 'variable', name: 'id' }] }],
         },
       },
       {
@@ -146,7 +150,7 @@ describe('parse', () => {
               type: 'optional',
               nodes: [
                 { type: 'text', value: 'users/' },
-                { type: 'param', name: 'id' },
+                { type: 'variable', name: 'id' },
               ],
             },
           ],
@@ -162,7 +166,7 @@ describe('parse', () => {
               type: 'optional',
               nodes: [
                 { type: 'text', value: '/' },
-                { type: 'param', name: 'version' },
+                { type: 'variable', name: 'version' },
               ],
             },
           ],
@@ -216,19 +220,19 @@ describe('parse', () => {
       // Complex combinations
       {
         name: 'complex pattern',
-        input: 'api/v:version/users/:id(*.:format)',
+        input: 'api/v:version/users/:id(*rest.:format)',
         expected: {
           pathname: [
             { type: 'text', value: 'api/v' },
-            { type: 'param', name: 'version' },
+            { type: 'variable', name: 'version' },
             { type: 'text', value: '/users/' },
-            { type: 'param', name: 'id' },
+            { type: 'variable', name: 'id' },
             {
               type: 'optional',
               nodes: [
-                { type: 'glob' },
+                { type: 'wildcard', name: 'rest' },
                 { type: 'text', value: '.' },
-                { type: 'param', name: 'format' },
+                { type: 'variable', name: 'format' },
               ],
             },
           ],
@@ -244,36 +248,39 @@ describe('parse', () => {
               type: 'optional',
               nodes: [
                 { type: 'text', value: '/' },
-                { type: 'param', name: 'version' },
+                { type: 'variable', name: 'version' },
               ],
             },
           ],
         },
       },
-    ];
+    ]
 
     testCases.forEach(({ name, input, expected }) => {
       it(name, () => {
-        const result = parse(input);
-        assert.deepStrictEqual(result, expected);
-      });
-    });
-  });
+        let result = parse(input)
+        assert.deepEqual(result, expected)
+      })
+    })
+  })
 
   describe('full URL patterns', () => {
-    const testCases = [
+    let testCases = [
       {
         name: 'protocol only (without ://)',
-        input: 'https:',
+        input: 'https\\:',
         expected: {
-          pathname: [{ type: 'text', value: 'https' }, { type: 'param' }],
+          pathname: [{ type: 'text', value: 'https:' }],
         },
       },
       {
-        name: 'protocol with param (without ://)',
-        input: ':protocol:',
+        name: 'protocol with variable (without ://)',
+        input: ':protocol\\:',
         expected: {
-          pathname: [{ type: 'param', name: 'protocol' }, { type: 'param' }],
+          pathname: [
+            { type: 'variable', name: 'protocol' },
+            { type: 'text', value: ':' },
+          ],
         },
       },
       {
@@ -284,11 +291,11 @@ describe('parse', () => {
         },
       },
       {
-        name: 'hostname with param',
+        name: 'hostname with variable',
         input: '://:subdomain.example.com',
         expected: {
           hostname: [
-            { type: 'param', name: 'subdomain' },
+            { type: 'variable', name: 'subdomain' },
             { type: 'text', value: '.example.com' },
           ],
         },
@@ -302,6 +309,33 @@ describe('parse', () => {
         },
       },
       {
+        name: 'hostname and port',
+        input: '://example.com:8080',
+        expected: {
+          hostname: [{ type: 'text', value: 'example.com' }],
+          port: '8080',
+        },
+      },
+      {
+        name: 'hostname with unnamed wildcard',
+        input: '://*.example.com',
+        expected: {
+          hostname: [{ type: 'wildcard' }, { type: 'text', value: '.example.com' }],
+        },
+      },
+      {
+        name: 'hostname, port, and pathname',
+        input: '://example.com:8080/api/:id',
+        expected: {
+          hostname: [{ type: 'text', value: 'example.com' }],
+          port: '8080',
+          pathname: [
+            { type: 'text', value: 'api/' },
+            { type: 'variable', name: 'id' },
+          ],
+        },
+      },
+      {
         name: 'protocol, hostname, and pathname',
         input: 'https://example.com/api/:id',
         expected: {
@@ -309,7 +343,7 @@ describe('parse', () => {
           hostname: [{ type: 'text', value: 'example.com' }],
           pathname: [
             { type: 'text', value: 'api/' },
-            { type: 'param', name: 'id' },
+            { type: 'variable', name: 'id' },
           ],
         },
       },
@@ -323,67 +357,162 @@ describe('parse', () => {
       },
       {
         name: 'complex full URL',
-        input: ':protocol://:subdomain.example.com/api/v:version/users/:id?format=json',
+        input: ':protocol://:subdomain.example.com:8080/api/v:version/users/:id?format=json',
         expected: {
-          protocol: [{ type: 'param', name: 'protocol' }],
+          protocol: [{ type: 'variable', name: 'protocol' }],
           hostname: [
-            { type: 'param', name: 'subdomain' },
+            { type: 'variable', name: 'subdomain' },
             { type: 'text', value: '.example.com' },
           ],
+          port: '8080',
           pathname: [
             { type: 'text', value: 'api/v' },
-            { type: 'param', name: 'version' },
+            { type: 'variable', name: 'version' },
             { type: 'text', value: '/users/' },
-            { type: 'param', name: 'id' },
+            { type: 'variable', name: 'id' },
           ],
           search: new URLSearchParams('format=json'),
         },
       },
-    ];
+    ]
 
     testCases.forEach(({ name, input, expected }) => {
       it(name, () => {
-        const result = parse(input);
-        assert.deepStrictEqual(result, expected);
-      });
-    });
-  });
+        let result = parse(input)
+        assert.deepEqual(result, expected)
+      })
+    })
+  })
 
-  describe('error cases', () => {
-    const errorCases = [
-      {
-        name: 'unmatched opening brace',
-        input: '{unclosed',
-        expectedError: 'unmatched { at 0',
-      },
-      {
-        name: 'unmatched closing brace',
-        input: 'closed}',
-        expectedError: 'unmatched } at 6',
-      },
-      {
-        name: 'unmatched closing parenthesis',
-        input: 'closed)',
-        expectedError: 'unmatched ) at 6',
-      },
-      {
-        name: 'nested opening parenthesis',
-        input: '(nested(test))',
-        expectedError: 'nested ( at 0 7',
-      },
-      {
-        name: 'dangling escape',
-        input: 'test\\',
-        expectedError: 'dangling escape at 4',
-      },
-    ];
+  describe('error reporting', () => {
+    it('reports accurate positions in original source string', () => {
+      // Test error in pathname part of a full URL pattern
+      let source = 'https://example.com/users/:invalid)'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'unmatched ) in pathname')
+        assert.equal(error.position, 34) // Position of ')' in original string
+        assert.equal(error.partType, 'pathname')
+      }
+    })
 
-    errorCases.forEach(({ name, input, expectedError }) => {
-      it(name, () => {
-        assert.throws(() => parse(input), {
-          message: expectedError,
-        });
-      });
-    });
-  });
-});
+    it('reports accurate positions in hostname part', () => {
+      let source = 'https://:.com/path'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'missing variable name in hostname')
+        assert.equal(error.position, 9) // Position after ':' in hostname
+        assert.equal(error.partType, 'hostname')
+      }
+    })
+
+    it('reports accurate positions in protocol part', () => {
+      let source = 'http:://example.com/path'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'missing variable name in protocol')
+        assert.equal(error.position, 5) // Position after ':' with missing variable name
+        assert.equal(error.partType, 'protocol')
+      }
+    })
+
+    it('includes source context in error message', () => {
+      let source = 'very-long-pathname-with-error/:invalid}'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'unmatched } in pathname')
+        assert.equal(error.source, source)
+      }
+    })
+
+    it('reports missing variable name errors', () => {
+      let source = '/:/blog'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'missing variable name in pathname')
+        assert.equal(error.position, 2)
+        assert.equal(error.partType, 'pathname')
+      }
+    })
+
+    it('reports unmatched opening brace errors', () => {
+      let source = '{unclosed'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'unmatched { in pathname')
+        assert.equal(error.position, 0)
+        assert.equal(error.partType, 'pathname')
+      }
+    })
+
+    it('reports unmatched closing brace errors', () => {
+      let source = 'closed}'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'unmatched } in pathname')
+        assert.equal(error.position, 6)
+        assert.equal(error.partType, 'pathname')
+      }
+    })
+
+    it('reports unmatched closing parenthesis errors', () => {
+      let source = 'closed)'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'unmatched ) in pathname')
+        assert.equal(error.position, 6)
+        assert.equal(error.partType, 'pathname')
+      }
+    })
+
+    it('reports invalid nested parenthesis errors', () => {
+      let source = '(nested(test))'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'invalid nested ( in pathname')
+        assert.equal(error.position, 7)
+        assert.equal(error.partType, 'pathname')
+      }
+    })
+
+    it('reports dangling escape errors', () => {
+      let source = 'test\\'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'dangling escape in pathname')
+        assert.equal(error.position, 4)
+        assert.equal(error.partType, 'pathname')
+      }
+    })
+  })
+})

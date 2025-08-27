@@ -1,19 +1,25 @@
-import * as assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 
-import { RoutePattern } from './route-pattern.ts';
+import { RoutePattern } from './route-pattern.ts'
 
 describe('RoutePattern', () => {
   describe('constructor', () => {
     it('stores the source pattern', () => {
-      const pattern = new RoutePattern('users/:id');
-      assert.strictEqual(pattern.source, 'users/:id');
-    });
-  });
+      let pattern = new RoutePattern('users/:id')
+      assert.equal(pattern.source, 'users/:id')
+    })
+
+    it('can be created from another pattern', () => {
+      let pattern = new RoutePattern('users/:id')
+      let pattern2 = new RoutePattern(pattern)
+      assert.equal(pattern2.source, pattern.source)
+    })
+  })
 
   describe('match', () => {
     describe('pathname only patterns', () => {
-      const pathnameTests = [
+      let pathnameTests = [
         {
           name: 'matches plain text',
           pattern: 'users',
@@ -39,10 +45,10 @@ describe('RoutePattern', () => {
           expected: { params: { userId: '123', postId: '456' } },
         },
         {
-          name: 'extracts unnamed parameters',
-          pattern: 'users/:',
+          name: 'extracts named parameters - required',
+          pattern: 'users/:id',
           input: 'https://example.com/users/123',
-          expected: { params: {} },
+          expected: { params: { id: '123' } },
         },
         {
           name: 'extracts parameters with complex names',
@@ -51,16 +57,16 @@ describe('RoutePattern', () => {
           expected: { params: { user_id: 'abc123', $post: 'def456' } },
         },
         {
-          name: 'extracts named globs',
+          name: 'extracts named wildcards',
           pattern: 'assets/*path',
           input: 'https://example.com/assets/images/logo.png',
           expected: { params: { path: 'images/logo.png' } },
         },
         {
-          name: 'extracts unnamed globs',
-          pattern: 'assets/*',
+          name: 'extracts named wildcards - required',
+          pattern: 'assets/*path',
           input: 'https://example.com/assets/images/logo.png',
-          expected: { params: {} },
+          expected: { params: { path: 'images/logo.png' } },
         },
         {
           name: 'matches optional sections when present',
@@ -98,18 +104,30 @@ describe('RoutePattern', () => {
           input: 'https://example.com/users:test',
           expected: { params: {} },
         },
-      ];
+        {
+          name: 'matches unnamed wildcard without capturing',
+          pattern: 'files/*.jpg',
+          input: 'https://example.com/files/logo/remix.jpg',
+          expected: { params: {} },
+        },
+        {
+          name: 'unnamed wildcard non-match on extension',
+          pattern: 'files/*.jpg',
+          input: 'https://example.com/files/logo.png',
+          expected: null,
+        },
+      ]
 
       pathnameTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          let routePattern = new RoutePattern(pattern)
+          assert.deepEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('enums', () => {
-      const enumTests = [
+      let enumTests = [
         {
           name: 'matches simple enum values',
           pattern: 'files/:name.{jpg,png,gif}',
@@ -141,7 +159,7 @@ describe('RoutePattern', () => {
           expected: { params: {} },
         },
         {
-          name: 'combines enum with globs',
+          name: 'combines enum with wildcards',
           pattern: 'assets/*path.{jpg,png,gif,svg}',
           input: 'https://example.com/assets/images/logos/remix.svg',
           expected: { params: { path: 'images/logos/remix' } },
@@ -158,18 +176,18 @@ describe('RoutePattern', () => {
           input: 'https://example.com/api/xml',
           expected: { params: { version: undefined } },
         },
-      ];
+      ]
 
       enumTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          let routePattern = new RoutePattern(pattern)
+          assert.deepEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('multiple params in single segment', () => {
-      const multiParamTests = [
+      let multiParamTests = [
         {
           name: 'extracts multiple params with dots',
           pattern: 'api/v:major.:minor',
@@ -196,9 +214,9 @@ describe('RoutePattern', () => {
         },
         {
           name: 'handles params with static suffix',
-          pattern: 'products/:-shoes',
+          pattern: 'products/:name-shoes',
           input: 'https://example.com/products/tennis-shoes',
-          expected: { params: {} },
+          expected: { params: { name: 'tennis' } },
         },
         {
           name: 'complex pattern with multiple params and text',
@@ -206,18 +224,18 @@ describe('RoutePattern', () => {
           input: 'https://example.com/api/v2.1/users/123/edit',
           expected: { params: { major: '2', minor: '1', id: '123', action: 'edit' } },
         },
-      ];
+      ]
 
       multiParamTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          let routePattern = new RoutePattern(pattern)
+          assert.deepEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('complex combinations from README examples', () => {
-      const complexTests = [
+      let complexTests = [
         {
           name: 'blog with date params and optional extension',
           pattern: 'blog/:year-:month-:day/:slug(.html)',
@@ -245,16 +263,16 @@ describe('RoutePattern', () => {
           expected: { params: { major: '2', minor: '1', id: 'sarah.json' } },
         },
         {
-          name: 'complex glob with file and extension',
+          name: 'complex wildcard with file and extension',
           pattern: '://app.unpkg.com/*path/dist/:file.mjs',
           input: 'https://app.unpkg.com/preact@10.26.9/files/dist/preact.mjs',
           expected: { params: { path: 'preact@10.26.9/files', file: 'preact' } },
         },
         {
-          name: 'unnamed glob with static parts',
-          pattern: 'assets/*/favicon.ico',
+          name: 'wildcard with static parts',
+          pattern: 'assets/*version/favicon.ico',
           input: 'https://remix.run/assets/v2/favicon.ico',
-          expected: { params: {} },
+          expected: { params: { version: 'v2' } },
         },
         {
           name: 'param with file extension enum',
@@ -263,29 +281,29 @@ describe('RoutePattern', () => {
           expected: { params: { filename: 'logo' } },
         },
         {
-          name: 'glob with file extension enum',
+          name: 'wildcard with file extension enum',
           pattern: 'assets/*path.{jpg,png,gif,svg}',
           input: 'https://remix.run/assets/images/logos/remix.svg',
           expected: { params: { path: 'images/logos/remix' } },
         },
         {
-          name: 'glob with file extension enum - no match',
+          name: 'wildcard with file extension enum - no match',
           pattern: 'assets/*path.{jpg,png,gif,svg}',
           input: 'https://remix.run/assets/styles/main.css',
           expected: null,
         },
-      ];
+      ]
 
       complexTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          let routePattern = new RoutePattern(pattern)
+          assert.deepEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('full URL patterns', () => {
-      const fullUrlTests = [
+      let fullUrlTests = [
         {
           name: 'matches protocol patterns',
           pattern: 'https://example.com',
@@ -323,16 +341,34 @@ describe('RoutePattern', () => {
           expected: { params: { protocol: 'https', subdomain: 'api', version: 'v1' } },
         },
         {
+          name: 'matches when pattern specifies a fixed port',
+          pattern: '://example.com:8080/api/:id',
+          input: 'https://example.com:8080/api/123',
+          expected: { params: { id: '123' } },
+        },
+        {
+          name: 'returns null when port does not match fixed port',
+          pattern: '://example.com:8080/api/:id',
+          input: 'https://example.com:3000/api/123',
+          expected: null,
+        },
+        {
           name: 'handles optional sections in full URLs',
           pattern: 'https://:tenant.example.com/users/:id',
           input: 'https://acme.example.com/users/123',
           expected: { params: { tenant: 'acme', id: '123' } },
         },
         {
-          name: 'handles globs in hostnames',
+          name: 'handles wildcards in hostnames',
           pattern: '://*host.example.com',
           input: 'https://api.v1.example.com/',
           expected: { params: { host: 'api.v1' } },
+        },
+        {
+          name: 'handles unnamed wildcards in hostnames without capturing',
+          pattern: '://*.example.com',
+          input: 'https://api.v1.example.com/',
+          expected: { params: {} },
         },
         {
           name: 'multi-tenant with optional admin path',
@@ -346,18 +382,18 @@ describe('RoutePattern', () => {
           input: 'https://acme.remix.run/admin/users/123',
           expected: { params: { tenant: 'acme', admin: 'admin', id: '123' } },
         },
-      ];
+      ]
 
       fullUrlTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          let routePattern = new RoutePattern(pattern)
+          assert.deepEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('input types', () => {
-      const inputTypeTests = [
+      let inputTypeTests = [
         {
           name: 'accepts string URLs',
           pattern: 'users/:id',
@@ -370,18 +406,18 @@ describe('RoutePattern', () => {
           input: new URL('https://example.com/users/123'),
           expected: { params: { id: '123' } },
         },
-      ];
+      ]
 
       inputTypeTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          let routePattern = new RoutePattern(pattern)
+          assert.deepEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('edge cases', () => {
-      const edgeCaseTests = [
+      let edgeCaseTests = [
         {
           name: 'handles empty patterns',
           pattern: '',
@@ -425,53 +461,53 @@ describe('RoutePattern', () => {
           expected: { params: { query: 'hello%20world' } },
         },
         {
-          name: 'handles parameters that look like paths',
+          name: 'handles wildcards that look like paths',
           pattern: 'proxy/*url',
           input: 'https://example.com/proxy/https://other.com/api',
           expected: { params: { url: 'https://other.com/api' } },
         },
-      ];
+      ]
 
       edgeCaseTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          let routePattern = new RoutePattern(pattern)
+          assert.deepEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
-    describe('parameter constraints', () => {
-      const constraintTests = [
+    describe('variable constraints', () => {
+      let constraintTests = [
         {
-          name: 'parameters do not match across path segments',
+          name: 'variables do not match across path segments',
           pattern: 'users/:id/posts',
           input: 'https://example.com/users/123/456/posts',
           expected: null,
         },
         {
-          name: 'hostname parameters do not match across dots',
+          name: 'hostname variables do not match across dots',
           pattern: '://:subdomain.example.com',
           input: 'https://api.v1.example.com/',
           expected: null,
         },
         {
-          name: 'globs can match across segments',
+          name: 'wildcards can match across segments',
           pattern: 'files/*path',
           input: 'https://example.com/files/docs/readme.txt',
           expected: { params: { path: 'docs/readme.txt' } },
         },
-      ];
+      ]
 
       constraintTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
+          let routePattern = new RoutePattern(pattern)
+          assert.deepEqual(routePattern.match(input), expected)
+        })
+      })
+    })
 
     describe('search params', () => {
-      const searchTests = [
+      let searchTests = [
         {
           name: 'matches basic search param',
           pattern: 'search?q=test',
@@ -527,6 +563,18 @@ describe('RoutePattern', () => {
           expected: { params: {} },
         },
         {
+          name: 'matches search param with + characters',
+          pattern: 'search?q=hello+world',
+          input: 'https://example.com/search?q=hello%20world',
+          expected: { params: {} },
+        },
+        {
+          name: 'matches input with + characters',
+          pattern: 'search?q=hello%20world',
+          input: 'https://example.com/search?q=hello+world',
+          expected: { params: {} },
+        },
+        {
           name: 'matches search param with URL-encoded values',
           pattern: 'search?q=test%26more',
           input: 'https://example.com/search?q=test%26more',
@@ -568,14 +616,28 @@ describe('RoutePattern', () => {
           input: 'https://example.com/results?page=1&limit=10&sort=date&extra=ignore',
           expected: { params: {} },
         },
-      ];
+      ]
 
       searchTests.forEach(({ name, pattern, input, expected }) => {
         it(name, () => {
-          const routePattern = new RoutePattern(pattern);
-          assert.deepStrictEqual(routePattern.match(input), expected);
-        });
-      });
-    });
-  });
-});
+          let routePattern = new RoutePattern(pattern)
+          assert.deepEqual(routePattern.match(input), expected)
+        })
+      })
+    })
+  })
+
+  describe('test', () => {
+    it('returns true if the URL matches the pattern', () => {
+      let pattern = new RoutePattern('users/:id?format=json')
+      assert.equal(pattern.test('https://example.com/users/123?format=json'), true)
+    })
+  })
+
+  describe('toString', () => {
+    it('returns the source pattern', () => {
+      let pattern = new RoutePattern('users/:id?format=json')
+      assert.equal(pattern.toString(), 'users/:id?format=json')
+    })
+  })
+})

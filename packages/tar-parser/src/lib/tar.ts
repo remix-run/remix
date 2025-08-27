@@ -1,4 +1,4 @@
-import { readStream } from './read-stream.ts';
+import { readStream } from './read-stream.ts'
 import {
   buffersEqual,
   concatChunks,
@@ -8,31 +8,31 @@ import {
   getOctal,
   getString,
   overflow,
-} from './utils.ts';
+} from './utils.ts'
 
-const TarBlockSize = 512;
+const TarBlockSize = 512
 
 export class TarParseError extends Error {
   constructor(message: string) {
-    super(message);
-    this.name = 'TarParseError';
+    super(message)
+    this.name = 'TarParseError'
   }
 }
 
 export interface TarHeader {
-  name: string;
-  mode: number | null;
-  uid: number | null;
-  gid: number | null;
-  size: number;
-  mtime: number | null;
-  type: string;
-  linkname: string | null;
-  uname: string;
-  gname: string;
-  devmajor: number | null;
-  devminor: number | null;
-  pax: Record<string, string> | null;
+  name: string
+  mode: number | null
+  uid: number | null
+  gid: number | null
+  size: number
+  mtime: number | null
+  type: string
+  linkname: string | null
+  uname: string
+  gname: string
+  devmajor: number | null
+  devminor: number | null
+  pax: Record<string, string> | null
 }
 
 const TarFileTypes: Record<string, string> = {
@@ -49,25 +49,25 @@ const TarFileTypes: Record<string, string> = {
   '30': 'gnu-long-path',
   '55': 'pax-global-header',
   '72': 'pax-header',
-};
+}
 
-const ZeroOffset = '0'.charCodeAt(0);
-const UstarMagic = new Uint8Array([0x75, 0x73, 0x74, 0x61, 0x72, 0x00]); // "ustar\0"
-const UstarVersion = new Uint8Array([ZeroOffset, ZeroOffset]); // "00"
-const GnuMagic = new Uint8Array([0x75, 0x73, 0x74, 0x61, 0x72, 0x20]); // "ustar "
-const GnuVersion = new Uint8Array([0x20, 0x00]); // " \0"
+const ZeroOffset = '0'.charCodeAt(0)
+const UstarMagic = new Uint8Array([0x75, 0x73, 0x74, 0x61, 0x72, 0x00]) // "ustar\0"
+const UstarVersion = new Uint8Array([ZeroOffset, ZeroOffset]) // "00"
+const GnuMagic = new Uint8Array([0x75, 0x73, 0x74, 0x61, 0x72, 0x20]) // "ustar "
+const GnuVersion = new Uint8Array([0x20, 0x00]) // " \0"
 
 export interface ParseTarHeaderOptions {
   /**
    * Set false to disallow unknown header formats. Defaults to true.
    */
-  allowUnknownFormat?: boolean;
+  allowUnknownFormat?: boolean
   /**
    * The label (encoding) for filenames. Defaults to 'utf-8'.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Encoding_API/Encodings)
    */
-  filenameEncoding?: string;
+  filenameEncoding?: string
 }
 
 /**
@@ -79,11 +79,11 @@ export interface ParseTarHeaderOptions {
  */
 export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOptions): TarHeader {
   if (block.length !== TarBlockSize) {
-    throw new TarParseError('Invalid tar header size');
+    throw new TarParseError('Invalid tar header size')
   }
 
-  let allowUnknownFormat = options?.allowUnknownFormat ?? true;
-  let filenameEncoding = options?.filenameEncoding ?? 'utf-8';
+  let allowUnknownFormat = options?.allowUnknownFormat ?? true
+  let filenameEncoding = options?.filenameEncoding ?? 'utf-8'
 
   // Tar header format
   // Offset  Size    Field
@@ -104,14 +104,14 @@ export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOption
   // 337     8       Device minor number (octal)
   // 345     155     Filename prefix (ustar only)
 
-  let checksum = getOctal(block, 148, 8);
+  let checksum = getOctal(block, 148, 8)
   if (checksum !== computeChecksum(block)) {
     throw new TarParseError(
       'Invalid tar header. Maybe the tar is corrupted or needs to be gunzipped?',
-    );
+    )
   }
 
-  let typeFlag = block[156] === 0 ? 0 : block[156] - ZeroOffset;
+  let typeFlag = block[156] === 0 ? 0 : block[156] - ZeroOffset
   let header: TarHeader = {
     name: getString(block, 0, 100, filenameEncoding),
     mode: getOctal(block, 100, 8),
@@ -126,34 +126,34 @@ export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOption
     devmajor: getOctal(block, 329, 8),
     devminor: getOctal(block, 337, 8),
     pax: null,
-  };
+  }
 
-  let magic = block.subarray(257, 263);
-  let version = block.subarray(263, 265);
+  let magic = block.subarray(257, 263)
+  let version = block.subarray(263, 265)
   if (buffersEqual(magic, UstarMagic) && buffersEqual(version, UstarVersion)) {
     // UStar (posix) format
     if (block[345] !== 0) {
-      let prefix = getString(block, 345, 155);
-      header.name = prefix + '/' + header.name;
+      let prefix = getString(block, 345, 155)
+      header.name = prefix + '/' + header.name
     }
   } else if (buffersEqual(magic, GnuMagic) && buffersEqual(version, GnuVersion)) {
     // GNU format
   } else if (!allowUnknownFormat) {
-    throw new TarParseError('Invalid tar header, unknown format');
+    throw new TarParseError('Invalid tar header, unknown format')
   }
 
-  return header;
+  return header
 }
 
 type TarArchiveSource =
   | ReadableStream<Uint8Array>
   | Uint8Array
   | Iterable<Uint8Array>
-  | AsyncIterable<Uint8Array>;
+  | AsyncIterable<Uint8Array>
 
-type TarEntryHandler = (entry: TarEntry) => void | Promise<void>;
+type TarEntryHandler = (entry: TarEntry) => void | Promise<void>
 
-export type ParseTarOptions = ParseTarHeaderOptions;
+export type ParseTarOptions = ParseTarHeaderOptions
 
 /**
  * Parse a tar archive and call the given handler for each entry it contains.
@@ -170,51 +170,51 @@ export type ParseTarOptions = ParseTarHeaderOptions;
  * @param handler A function to call for each entry in the archive
  * @returns A promise that resolves when the parse is finished
  */
-export async function parseTar(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void>;
+export async function parseTar(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void>
 export async function parseTar(
   archive: TarArchiveSource,
   options: ParseTarOptions,
   handler: TarEntryHandler,
-): Promise<void>;
+): Promise<void>
 export async function parseTar(
   archive: TarArchiveSource,
   options: ParseTarOptions | TarEntryHandler,
   handler?: TarEntryHandler,
 ): Promise<void> {
-  let opts: ParseTarOptions | undefined;
+  let opts: ParseTarOptions | undefined
   if (typeof options === 'function') {
-    handler = options;
+    handler = options
   } else {
-    opts = options;
+    opts = options
   }
 
-  let parser = new TarParser(opts);
-  await parser.parse(archive, handler!);
+  let parser = new TarParser(opts)
+  await parser.parse(archive, handler!)
 }
 
-export type TarParserOptions = ParseTarHeaderOptions;
+export type TarParserOptions = ParseTarHeaderOptions
 
 /**
  * A parser for tar archives.
  */
 export class TarParser {
-  #buffer: Uint8Array | null = null;
-  #missing = 0;
-  #header: TarHeader | null = null;
-  #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null;
-  #longHeader = false;
-  #gnuLongPath: string | null = null;
-  #gnuLongLinkPath: string | null = null;
-  #paxGlobal: Record<string, string> | null = null;
-  #pax: Record<string, string> | null = null;
+  #buffer: Uint8Array | null = null
+  #missing = 0
+  #header: TarHeader | null = null
+  #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null
+  #longHeader = false
+  #gnuLongPath: string | null = null
+  #gnuLongLinkPath: string | null = null
+  #paxGlobal: Record<string, string> | null = null
+  #pax: Record<string, string> | null = null
 
-  #options?: TarParserOptions;
+  #options?: TarParserOptions
 
   /**
    * @param options Options that control how the tar archive is parsed
    */
   constructor(options?: TarParserOptions) {
-    this.#options = options;
+    this.#options = options
   }
 
   /**
@@ -226,248 +226,248 @@ export class TarParser {
    * @returns A promise that resolves when the parse is finished
    */
   async parse(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void> {
-    this.#reset();
+    this.#reset()
 
-    let results: unknown[] = [];
+    let results: unknown[] = []
 
     function handleEntry(entry: TarEntry): void {
-      results.push(handler(entry));
+      results.push(handler(entry))
     }
 
     if (archive instanceof ReadableStream) {
       for await (let chunk of readStream(archive)) {
-        this.#write(chunk, handleEntry);
+        this.#write(chunk, handleEntry)
       }
     } else if (isAsyncIterable(archive)) {
       for await (let chunk of archive) {
-        this.#write(chunk, handleEntry);
+        this.#write(chunk, handleEntry)
       }
     } else if (archive instanceof Uint8Array) {
-      this.#write(archive, handleEntry);
+      this.#write(archive, handleEntry)
     } else if (isIterable(archive)) {
       for (let chunk of archive) {
-        this.#write(chunk, handleEntry);
+        this.#write(chunk, handleEntry)
       }
     } else {
-      throw new TypeError('Cannot parse tar archive; expected a stream or buffer');
+      throw new TypeError('Cannot parse tar archive; expected a stream or buffer')
     }
 
     if (this.#missing !== 0) {
-      throw new TarParseError('Unexpected end of archive');
+      throw new TarParseError('Unexpected end of archive')
     }
 
-    await Promise.all(results);
+    await Promise.all(results)
   }
 
   #reset(): void {
-    this.#buffer = null;
-    this.#missing = 0;
-    this.#header = null;
-    this.#bodyController = null;
-    this.#longHeader = false;
-    this.#gnuLongPath = null;
-    this.#gnuLongLinkPath = null;
-    this.#paxGlobal = null;
-    this.#pax = null;
+    this.#buffer = null
+    this.#missing = 0
+    this.#header = null
+    this.#bodyController = null
+    this.#longHeader = false
+    this.#gnuLongPath = null
+    this.#gnuLongLinkPath = null
+    this.#paxGlobal = null
+    this.#pax = null
   }
 
   #write(chunk: Uint8Array, handler: TarEntryHandler): void {
     if (this.#buffer !== null) {
-      this.#buffer = concatChunks(this.#buffer, chunk);
+      this.#buffer = concatChunks(this.#buffer, chunk)
     } else {
-      this.#buffer = chunk;
+      this.#buffer = chunk
     }
 
     while (this.#buffer !== null && this.#buffer.length > 0) {
       if (this.#missing > 0) {
         if (this.#bodyController !== null) {
-          this.#parseBody();
-          continue;
+          this.#parseBody()
+          continue
         }
 
         if (this.#longHeader) {
-          if (this.#missing > this.#buffer.length) break;
-          this.#parseLongHeader();
-          continue;
+          if (this.#missing > this.#buffer.length) break
+          this.#parseLongHeader()
+          continue
         }
 
         if (this.#missing >= this.#buffer.length) {
-          this.#missing -= this.#buffer.length;
-          this.#buffer = null;
-          break;
+          this.#missing -= this.#buffer.length
+          this.#buffer = null
+          break
         }
 
-        this.#buffer = this.#buffer.subarray(this.#missing);
-        this.#missing = 0;
+        this.#buffer = this.#buffer.subarray(this.#missing)
+        this.#missing = 0
       }
 
-      if (this.#buffer.length < TarBlockSize) break;
-      this.#parseHeader(handler);
+      if (this.#buffer.length < TarBlockSize) break
+      this.#parseHeader(handler)
     }
   }
 
   #parseHeader(handler: TarEntryHandler): void {
-    let block = this.#read(TarBlockSize);
+    let block = this.#read(TarBlockSize)
 
     if (isZeroBlock(block)) {
-      this.#header = null;
-      return;
+      this.#header = null
+      return
     }
 
-    this.#header = parseTarHeader(block, this.#options);
+    this.#header = parseTarHeader(block, this.#options)
     switch (this.#header.type) {
       case 'gnu-long-path':
       case 'gnu-long-link-path':
       case 'pax-global-header':
       case 'pax-header':
-        this.#longHeader = true;
-        this.#missing = this.#header.size;
-        return;
+        this.#longHeader = true
+        this.#missing = this.#header.size
+        return
     }
 
     if (this.#gnuLongPath) {
-      this.#header.name = this.#gnuLongPath;
-      this.#gnuLongPath = null;
+      this.#header.name = this.#gnuLongPath
+      this.#gnuLongPath = null
     }
 
     if (this.#gnuLongLinkPath) {
-      this.#header.linkname = this.#gnuLongLinkPath;
-      this.#gnuLongLinkPath = null;
+      this.#header.linkname = this.#gnuLongLinkPath
+      this.#gnuLongLinkPath = null
     }
 
     if (this.#pax) {
-      if (this.#pax.path) this.#header.name = this.#pax.path;
-      if (this.#pax.linkpath) this.#header.linkname = this.#pax.linkpath;
-      if (this.#pax.size) this.#header.size = parseInt(this.#pax.size, 10);
-      this.#header.pax = this.#pax;
-      this.#pax = null;
+      if (this.#pax.path) this.#header.name = this.#pax.path
+      if (this.#pax.linkpath) this.#header.linkname = this.#pax.linkpath
+      if (this.#pax.size) this.#header.size = parseInt(this.#pax.size, 10)
+      this.#header.pax = this.#pax
+      this.#pax = null
     }
 
     if (this.#header.size === 0 || this.#header.type === 'directory') {
       let emptyBody = new ReadableStream({
         start(controller) {
-          controller.close();
+          controller.close()
         },
-      });
+      })
 
-      handler(new TarEntry(this.#header, emptyBody));
-      this.#bodyController = null;
-      this.#missing = 0;
-      return;
+      handler(new TarEntry(this.#header, emptyBody))
+      this.#bodyController = null
+      this.#missing = 0
+      return
     }
 
     let body = new ReadableStream({
       start: (controller) => {
-        this.#bodyController = controller;
+        this.#bodyController = controller
       },
-    });
+    })
 
-    handler(new TarEntry(this.#header, body));
+    handler(new TarEntry(this.#header, body))
 
-    this.#missing = this.#header.size;
+    this.#missing = this.#header.size
   }
 
   #parseLongHeader(): void {
-    this.#longHeader = false;
+    this.#longHeader = false
 
-    let buffer = this.#read(this.#header!.size);
+    let buffer = this.#read(this.#header!.size)
 
     switch (this.#header!.type) {
       case 'gnu-long-path':
-        this.#gnuLongPath = decodeLongPath(buffer);
-        break;
+        this.#gnuLongPath = decodeLongPath(buffer)
+        break
       case 'gnu-long-link-path':
-        this.#gnuLongLinkPath = decodeLongPath(buffer);
-        break;
+        this.#gnuLongLinkPath = decodeLongPath(buffer)
+        break
       case 'pax-global-header':
-        this.#paxGlobal = decodePax(buffer);
-        break;
+        this.#paxGlobal = decodePax(buffer)
+        break
       case 'pax-header':
         this.#pax =
           this.#paxGlobal !== null
             ? Object.assign({}, this.#paxGlobal, decodePax(buffer))
-            : decodePax(buffer);
-        break;
+            : decodePax(buffer)
+        break
     }
 
-    this.#missing = overflow(this.#header!.size);
+    this.#missing = overflow(this.#header!.size)
   }
 
   #parseBody(): void {
     if (this.#missing >= this.#buffer!.length) {
-      this.#bodyController!.enqueue(this.#buffer!);
-      this.#missing -= this.#buffer!.length;
-      this.#buffer = null;
+      this.#bodyController!.enqueue(this.#buffer!)
+      this.#missing -= this.#buffer!.length
+      this.#buffer = null
       
       // Check if we've finished reading the entire body
       if (this.#missing === 0) {
-        this.#bodyController!.close();
-        this.#bodyController = null;
-        this.#missing = overflow(this.#header!.size);
+        this.#bodyController!.close()
+        this.#bodyController = null
+        this.#missing = overflow(this.#header!.size)
       }
     } else {
-      this.#bodyController!.enqueue(this.#read(this.#missing));
-      this.#bodyController!.close();
-      this.#bodyController = null;
-      this.#missing = overflow(this.#header!.size);
+      this.#bodyController!.enqueue(this.#read(this.#missing))
+      this.#bodyController!.close()
+      this.#bodyController = null
+      this.#missing = overflow(this.#header!.size)
     }
   }
 
   #read(size: number): Uint8Array {
-    let result = this.#buffer!.subarray(0, size);
-    this.#buffer = this.#buffer!.subarray(size);
-    return result;
+    let result = this.#buffer!.subarray(0, size)
+    this.#buffer = this.#buffer!.subarray(size)
+    return result
   }
 }
 
 function isIterable<T>(value: unknown): value is Iterable<T> {
-  return typeof value === 'object' && value != null && Symbol.iterator in value;
+  return typeof value === 'object' && value != null && Symbol.iterator in value
 }
 
 function isAsyncIterable<T>(value: unknown): value is AsyncIterable<T> {
-  return typeof value === 'object' && value != null && Symbol.asyncIterator in value;
+  return typeof value === 'object' && value != null && Symbol.asyncIterator in value
 }
 
 function isZeroBlock(buffer: Uint8Array): boolean {
-  return buffer.every((byte) => byte === 0);
+  return buffer.every((byte) => byte === 0)
 }
 
 /**
  * An entry in a tar archive.
  */
 export class TarEntry {
-  #header: TarHeader;
-  #body: ReadableStream<Uint8Array>;
-  #bodyUsed = false;
+  #header: TarHeader
+  #body: ReadableStream<Uint8Array>
+  #bodyUsed = false
 
   /**
    * @param header The header info for this entry
    * @param body The entry's content as a stream of `Uint8Array` chunks
    */
   constructor(header: TarHeader, body: ReadableStream<Uint8Array>) {
-    this.#header = header;
-    this.#body = body;
+    this.#header = header
+    this.#body = body
   }
 
   /**
    * The content of this entry as an [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer).
    */
   async arrayBuffer(): Promise<ArrayBuffer> {
-    return (await this.bytes()).buffer as ArrayBuffer;
+    return (await this.bytes()).buffer as ArrayBuffer
   }
 
   /**
    * The content of this entry as a `ReadableStream<Uint8Array>`.
    */
   get body(): ReadableStream<Uint8Array> {
-    return this.#body;
+    return this.#body
   }
 
   /**
    * Whether the body of this entry has been consumed.
    */
   get bodyUsed(): boolean {
-    return this.#bodyUsed;
+    return this.#bodyUsed
   }
 
   /**
@@ -475,40 +475,40 @@ export class TarEntry {
    */
   async bytes(): Promise<Uint8Array> {
     if (this.#bodyUsed) {
-      throw new Error('Body is already consumed or is being consumed');
+      throw new Error('Body is already consumed or is being consumed')
     }
 
-    this.#bodyUsed = true;
+    this.#bodyUsed = true
 
-    let result = new Uint8Array(this.size);
-    let offset = 0;
+    let result = new Uint8Array(this.size)
+    let offset = 0
     for await (let chunk of readStream(this.#body)) {
-      result.set(chunk, offset);
-      offset += chunk.length;
+      result.set(chunk, offset)
+      offset += chunk.length
     }
 
-    return result;
+    return result
   }
 
   /**
    * The raw header info associated with this entry.
    */
   get header(): TarHeader {
-    return this.#header;
+    return this.#header
   }
 
   /**
    * The name of this entry.
    */
   get name(): string {
-    return this.header.name;
+    return this.header.name
   }
 
   /**
    * The size of this entry in bytes.
    */
   get size(): number {
-    return this.header.size;
+    return this.header.size
   }
 
   /**
@@ -517,6 +517,6 @@ export class TarEntry {
    * Note: Do not use this for binary data, use `await entry.bytes()` or stream `entry.body` directly instead.
    */
   async text(): Promise<string> {
-    return new TextDecoder().decode(await this.bytes());
+    return new TextDecoder().decode(await this.bytes())
   }
 }

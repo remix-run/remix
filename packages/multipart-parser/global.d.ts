@@ -1,1 +1,1 @@
-declare var Deno: { version: { deno: string } } | undefined;
+declare var Deno: { version: { deno: string } } | undefined

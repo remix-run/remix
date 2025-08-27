@@ -4,19 +4,19 @@ export interface ClientAddress {
    *
    * [Node.js Reference](https://nodejs.org/api/net.html#socketremoteaddress)
    */
-  address: string;
+  address: string
   /**
    * The family of the client IP address.
    *
    * [Node.js Reference](https://nodejs.org/api/net.html#socketremotefamily)
    */
-  family: 'IPv4' | 'IPv6';
+  family: 'IPv4' | 'IPv6'
   /**
    * The remote port of the client that sent the request.
    *
    * [Node.js Reference](https://nodejs.org/api/net.html#socketremoteport)
    */
-  port: number;
+  port: number
 }
 
 /**
@@ -26,7 +26,7 @@ export interface ClientAddress {
  * [MDN `Response` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Response)
  */
 export interface ErrorHandler {
-  (error: unknown): void | Response | Promise<void | Response>;
+  (error: unknown): void | Response | Promise<void | Response>
 }
 
 /**
@@ -37,5 +37,5 @@ export interface ErrorHandler {
  * [MDN `Response` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Response)
  */
 export interface FetchHandler {
-  (request: Request, client: ClientAddress): Response | Promise<Response>;
+  (request: Request, client: ClientAddress): Response | Promise<Response>
 }

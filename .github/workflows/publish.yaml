@@ -1,14 +1,14 @@
 on:
-  # push:
-  #   tags:
-  #     - '[a-z]+@[0-9]+.[0-9]+.[0-9]+'
-  #     - '[a-z]+-[a-z]+@[0-9]+.[0-9]+.[0-9]+'
-  #     - '[a-z]+-[a-z]+-[a-z]+@[0-9]+.[0-9]+.[0-9]+'
-  # Run manually from inside GitHub Actions for now
-  workflow_dispatch:
+  push:
+    tags:
+      - '[a-z]+@[0-9]+.[0-9]+.[0-9]+'
+      - '[a-z]+-[a-z]+@[0-9]+.[0-9]+.[0-9]+'
+      - '[a-z]+-[a-z]+-[a-z]+@[0-9]+.[0-9]+.[0-9]+'
+      - '!remix@2.*' # Ignore remix@2.x.x tags
+      - '!create-remix@2.*' # Ignore create-remix@2.x.x tags
 
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
 
     permissions:

@@ -1,71 +1,61 @@
-export type Ast = {
-  protocol?: Array<Node>;
-  hostname?: Array<Node>;
-  pathname?: Array<Node>;
-};
+import type { Split } from './split.types.ts'
 
-export type Parse<source extends string> =
-  SplitUrl<source> extends infer split extends {
-    protocol?: string;
-    hostname?: string;
-    pathname?: string;
+export type Ast = {
+  protocol?: Array<Node>
+  hostname?: Array<Node>
+  port?: string
+  pathname?: Array<Node>
+}
+
+export type Parse<T extends string> =
+  Split<T> extends infer split extends {
+    protocol?: string
+    hostname?: string
+    port?: string
+    pathname?: string
   }
     ? {
-        protocol: split['protocol'] extends string ? PartParse<split['protocol']> : undefined;
-        hostname: split['hostname'] extends string ? PartParse<split['hostname']> : undefined;
-        pathname: split['pathname'] extends string ? PartParse<split['pathname']> : undefined;
+        protocol: split['protocol'] extends string ? PartParse<split['protocol']> : undefined
+        hostname: split['hostname'] extends string ? PartParse<split['hostname']> : undefined
+        port: split['port'] extends string ? split['port'] : undefined
+        pathname: split['pathname'] extends string ? PartParse<split['pathname']> : undefined
       }
-    : never;
-
-// SplitUrl ----------------------------------------------------------------------------------------
-
-type SplitUrl<source extends string> = OmitEmptyStringValues<_SplitUrl<source>>;
-
-// prettier-ignore
-type _SplitUrl<source extends string> =
-  source extends `${infer before}?${infer search}` ? _SplitUrl<before> & { search: search } :
-  source extends `${infer protocol}://${infer after}` ?
-    protocol extends `${string}/${string}` ? { pathname: source } :
-    after extends `${infer hostname}/${infer pathname}` ? { protocol: protocol; hostname: hostname; pathname: pathname } :
-    { protocol: protocol; hostname: after } :
-  { pathname: source };
-
-type OmitEmptyStringValues<S> = { [K in keyof S as S[K] extends '' ? never : K]: S[K] };
+    : never
 
 // Part --------------------------------------------------------------------------------------------
 
-export type Part = Array<Node>;
+export type Part = Array<Node>
 
-export type Node = Param | Glob | Enum | Text | Optional;
+export type Node = Variable | Wildcard | Enum | Text | Optional
 
-export type Param = { type: 'param'; name?: string };
-export type Glob = { type: 'glob'; name?: string };
-export type Enum = { type: 'enum'; members: Array<string> };
-export type Text = { type: 'text'; value: string };
-export type Optional = { type: 'optional'; nodes: Array<Node> };
+export type Variable = { type: 'variable'; name: string }
+export type Wildcard = { type: 'wildcard'; name?: string }
+export type Enum = { type: 'enum'; members: Array<string> }
+export type Text = { type: 'text'; value: string }
+export type Optional = { type: 'optional'; nodes: Array<Node> }
 
 type PartParseState = {
-  ast: Array<Node>;
-  optional: Optional | null;
-  rest: string;
-};
+  ast: Array<Node>
+  optional: Optional | null
+  rest: string
+}
 
 type PartParse<source extends string> = _PartParse<{
-  ast: [];
-  optional: null;
-  rest: source;
-}>;
+  ast: []
+  optional: null
+  rest: source
+}>
 
 // prettier-ignore
 type _PartParse<state extends PartParseState> =
     state extends { rest: `${infer char}${infer rest}` } ?
       char extends ':' ?
         IdentiferParse<rest> extends { identifier: infer name extends string, rest: infer rest extends string } ?
-          _PartParse<AppendNode<state, { type: 'param', name: name }, rest>> :
+          (name extends '' ? never : _PartParse<AppendNode<state, { type: 'variable', name: name }, rest>>) :
         never : // this should never happen
       char extends '*' ?
         IdentiferParse<rest> extends { identifier: infer name extends string, rest: infer rest extends string } ?
-          _PartParse<AppendNode<state, { type: 'glob', name: name }, rest>> :
+          _PartParse<AppendNode<state, (name extends '' ? { type: 'wildcard' } : { type: 'wildcard', name: name }), rest>> :
         never : // this should never happen
       char extends '{' ?
         rest extends `${infer body}}${infer after}` ? _PartParse<AppendNode<state, { type: 'enum', members: EnumSplit<body> }, after>> :
@@ -122,13 +112,13 @@ type AppendText<state extends PartParseState, text extends string, rest extends 
 
 // prettier-ignore
 type _a_z = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z'
-type _A_Z = Uppercase<_a_z>;
-type _0_9 = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+type _A_Z = Uppercase<_a_z>
+type _0_9 = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
-type IdentifierHead = _a_z | _A_Z | '_' | '$';
-type IdentifierTail = IdentifierHead | _0_9;
+type IdentifierHead = _a_z | _A_Z | '_' | '$'
+type IdentifierTail = IdentifierHead | _0_9
 
-type IdentiferParse<text extends string> = _IdentifierParse<{ identifier: ''; rest: text }>;
+type IdentiferParse<text extends string> = _IdentifierParse<{ identifier: ''; rest: text }>
 
 // prettier-ignore
 type _IdentifierParse<state extends { identifier: string, rest: string }> =

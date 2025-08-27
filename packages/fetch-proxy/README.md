@@ -24,22 +24,22 @@ npm i @remix-run/fetch-proxy
 ## Usage
 
 ```ts
-import { createFetchProxy } from '@remix-run/fetch-proxy';
+import { createFetchProxy } from '@remix-run/fetch-proxy'
 
 // Create a proxy that sends all requests through to remix.run
-let proxy = createFetchProxy('https://remix.run');
+let proxy = createFetchProxy('https://remix.run')
 
 // This fetch handler is probably running as part of your server somewhere...
 function handleFetch(request: Request): Promise<Response> {
-  return proxy(request);
+  return proxy(request)
 }
 
 // Test it out by manually throwing a Request at it
-let response = await handleFetch(new Request('https://shopify.com'));
+let response = await handleFetch(new Request('https://shopify.com'))
 
-let text = await response.text();
-let title = text.match(/<title>([^<]+)<\/title>/)[1];
-assert(title.includes('Remix'));
+let text = await response.text()
+let title = text.match(/<title>([^<]+)<\/title>/)[1]
+assert(title.includes('Remix'))
 ```
 
 ## Related Packages

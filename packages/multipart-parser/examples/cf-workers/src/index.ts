@@ -1,4 +1,4 @@
-import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser';
+import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser'
 
 export default {
   async fetch(request, env): Promise<Response> {
@@ -23,51 +23,51 @@ export default {
         {
           headers: { 'Content-Type': 'text/html' },
         },
-      );
+      )
     }
 
     if (request.method === 'POST') {
       try {
-        let bucket = env.MULTIPART_UPLOADS;
-        let parts: any[] = [];
+        let bucket = env.MULTIPART_UPLOADS
+        let parts: any[] = []
 
         for await (let part of parseMultipartRequest(request)) {
           if (part.isFile) {
             let uniqueKey = `upload-${new Date().getTime()}-${Math.random()
               .toString(36)
-              .slice(2, 8)}`;
+              .slice(2, 8)}`
 
             await bucket.put(uniqueKey, part.bytes, {
               httpMetadata: {
                 contentType: part.headers.get('Content-Type')!,
               },
-            });
+            })
 
             parts.push({
               name: part.name,
               filename: part.filename,
               mediaType: part.mediaType,
               size: part.size,
-            });
+            })
           } else {
-            parts.push({ name: part.name, value: part.text });
+            parts.push({ name: part.name, value: part.text })
           }
         }
 
         return new Response(JSON.stringify({ parts }, null, 2), {
           headers: { 'Content-Type': 'application/json' },
-        });
+        })
       } catch (error) {
         if (error instanceof MultipartParseError) {
-          return new Response(`Error: ${error.message}`, { status: 400 });
+          return new Response(`Error: ${error.message}`, { status: 400 })
         }
 
-        console.error(error);
+        console.error(error)
 
-        return new Response('Internal Server Error', { status: 500 });
+        return new Response('Internal Server Error', { status: 500 })
       }
     }
 
-    return new Response('Method Not Allowed', { status: 405 });
+    return new Response('Method Not Allowed', { status: 405 })
   },
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<Env>

@@ -1,27 +1,27 @@
-import * as fsp from 'node:fs/promises';
-import * as http from 'node:http';
-import * as os from 'node:os';
-import * as path from 'node:path';
+import * as fsp from 'node:fs/promises'
+import * as http from 'node:http'
+import * as os from 'node:os'
+import * as path from 'node:path'
 
-import { LocalFileStorage } from '@remix-run/file-storage/local';
+import { LocalFileStorage } from '@remix-run/file-storage/local'
 import {
   MultipartParseError,
   MaxFileSizeExceededError,
   parseFormData,
-} from '@remix-run/form-data-parser';
-import { createRequestListener } from '@remix-run/node-fetch-server';
+} from '@remix-run/form-data-parser'
+import { createRequestListener } from '@remix-run/node-fetch-server'
 
-const PORT = 3000;
+const PORT = 3000
 
-const oneMb = 1024 * 1024;
-const maxFileSize = 10 * oneMb;
+const oneMb = 1024 * 1024
+const maxFileSize = 10 * oneMb
 
-const fileStorage = new LocalFileStorage(await fsp.mkdtemp(path.join(os.tmpdir(), 'uploads-')));
+const fileStorage = new LocalFileStorage(await fsp.mkdtemp(path.join(os.tmpdir(), 'uploads-')))
 
 /** @type (file: File) => Promise<string> */
 async function getDataUrl(file) {
-  let buffer = Buffer.from(await file.arrayBuffer());
-  return `data:${file.type};base64,${buffer.toString('base64')}`;
+  let buffer = Buffer.from(await file.arrayBuffer())
+  return `data:${file.type};base64,${buffer.toString('base64')}`
 }
 
 const server = http.createServer(
@@ -47,18 +47,18 @@ const server = http.createServer(
             'Content-Type': 'text/html',
           },
         },
-      );
+      )
     }
 
     if (request.method === 'POST') {
       try {
         let formData = await parseFormData(request, { maxFileSize }, async (upload) => {
-          let file = await fileStorage.put('image-upload', upload);
-          return file.size === 0 ? null : file;
-        });
+          let file = await fileStorage.put('image-upload', upload)
+          return file.size === 0 ? null : file
+        })
 
-        let text = /** @type string | null */ (formData.get('text1'));
-        let image = /** @type File | null */ (formData.get('image1'));
+        let text = /** @type string | null */ (formData.get('text1'))
+        let image = /** @type File | null */ (formData.get('image1'))
 
         return new Response(
           `<!DOCTYPE html>
@@ -77,26 +77,26 @@ const server = http.createServer(
               'Content-Type': 'text/html',
             },
           },
-        );
+        )
       } catch (error) {
         if (error instanceof MaxFileSizeExceededError) {
-          return new Response(error.message, { status: 413 });
+          return new Response(error.message, { status: 413 })
         }
 
         if (error instanceof MultipartParseError) {
-          return new Response(error.message, { status: 400 });
+          return new Response(error.message, { status: 400 })
         }
 
-        console.error(error);
+        console.error(error)
 
-        return new Response('Internal Server Error', { status: 500 });
+        return new Response('Internal Server Error', { status: 500 })
       }
     }
 
-    return new Response('Method Not Allowed', { status: 405 });
+    return new Response('Method Not Allowed', { status: 405 })
   }),
-);
+)
 
 server.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT} ...`);
-});
+  console.log(`Server listening on http://localhost:${PORT} ...`)
+})

@@ -1,17 +1,12 @@
 on:
-  # push:
-  #   branches:
-  #     - '*'
-  # pull_request:
-  #   branches:
-  #     - '*'
-  # Run only on the v3 branch for now
   push:
-    branches:
-      - 'v3'
+    branches-ignore:
+      - release-v2
+      - v2
   pull_request:
-    branches:
-      - 'v3'
+    branches-ignore:
+      - release-v2
+      - v2
 
 jobs:
   test:

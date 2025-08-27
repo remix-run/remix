@@ -1,5 +1,5 @@
-import { type HeaderValue } from './header-value.ts';
-import { parseParams } from './param-values.ts';
+import { type HeaderValue } from './header-value.ts'
+import { parseParams } from './param-values.ts'
 
 // Taken from https://github.com/jjenzz/pretty-cache-header by jjenzz
 // License: MIT https://github.com/jjenzz/pretty-cache-header/blob/main/LICENSE
@@ -15,7 +15,7 @@ export interface CacheControlInit {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#max-age)
    */
-  maxAge?: number;
+  maxAge?: number
   /**
    * The `max-stale=N` **request directive** indicates that the client allows a stored response
    * that is [stale](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age)
@@ -23,7 +23,7 @@ export interface CacheControlInit {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#max-stale)
    */
-  maxStale?: number;
+  maxStale?: number
   /**
    * The `min-fresh=N` **request directive** indicates that the client allows a stored response
    * that is [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age)
@@ -31,7 +31,7 @@ export interface CacheControlInit {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#min-fresh)
    */
-  minFresh?: number;
+  minFresh?: number
   /**
    * The `s-maxage` **response directive** also indicates how long the response is
    * [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age) for (similar to `max-age`) —
@@ -39,7 +39,7 @@ export interface CacheControlInit {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#s-maxage)
    */
-  sMaxage?: number;
+  sMaxage?: number
   /**
    * The `no-cache` **request directive** asks caches to validate the response with the origin
    * server before reuse. If you want caches to always check for content updates while reusing
@@ -55,7 +55,7 @@ export interface CacheControlInit {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#no-cache)
    */
-  noCache?: true;
+  noCache?: true
   /**
    * The `no-store` **request directive** allows a client to request that caches refrain from
    * storing the request and corresponding response — even if the origin server's response could
@@ -66,21 +66,21 @@ export interface CacheControlInit {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#no-store)
    */
-  noStore?: true;
+  noStore?: true
   /**
    * `no-transform` indicates that any intermediary (regardless of whether it implements a cache)
    * shouldn't transform the response contents.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#no-transform)
    */
-  noTransform?: true;
+  noTransform?: true
   /**
    * The client indicates that cache should obtain an already-cached response. If a cache has
    * stored a response, it's reused.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#only-if-cached)
    */
-  onlyIfCached?: true;
+  onlyIfCached?: true
   /**
    * The `must-revalidate` **response directive** indicates that the response can be stored in
    * caches and can be reused while [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age).
@@ -89,14 +89,14 @@ export interface CacheControlInit {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#must-revalidate)
    */
-  mustRevalidate?: true;
+  mustRevalidate?: true
   /**
    * The `proxy-revalidate` **response directive** is the equivalent of `must-revalidate`, but
    * specifically for shared caches only.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#proxy-revalidate)
    */
-  proxyRevalidate?: true;
+  proxyRevalidate?: true
   /**
    * The `must-understand` **response directive** indicates that a cache should store the response
    * only if it understands the requirements for caching based on status code.
@@ -105,7 +105,7 @@ export interface CacheControlInit {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#must-understand)
    */
-  mustUnderstand?: true;
+  mustUnderstand?: true
   /**
    * The `private` **response directive** indicates that the response can be stored only in a
    * private cache (e.g. local caches in browsers).
@@ -115,7 +115,7 @@ export interface CacheControlInit {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#private)
    */
-  private?: true;
+  private?: true
   /**
    * The `public` **response directive** indicates that the response can be stored in a shared
    * cache. Responses for requests with `Authorization` header fields must not be stored in a
@@ -124,21 +124,21 @@ export interface CacheControlInit {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#public)
    */
-  public?: true;
+  public?: true
   /**
    * The `immutable` **response directive** indicates that the response will not be updated while
    * it's [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age).
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#public)
    */
-  immutable?: true;
+  immutable?: true
   /**
    * The `stale-while-revalidate` **response directive** indicates that the cache could reuse a
    * stale response while it revalidates it to a cache.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#stale-while-revalidate)
    */
-  staleWhileRevalidate?: number;
+  staleWhileRevalidate?: number
   /**
    * The `stale-if-error` **response directive** indicates that the cache can reuse a
    * [stale response](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age)
@@ -147,7 +147,7 @@ export interface CacheControlInit {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#stale-if-error)
    */
-  staleIfError?: number;
+  staleIfError?: number
 }
 
 /**
@@ -158,154 +158,154 @@ export interface CacheControlInit {
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.2)
  */
 export class CacheControl implements HeaderValue, CacheControlInit {
-  maxAge?: number;
-  maxStale?: number;
-  minFresh?: number;
-  sMaxage?: number;
-  noCache?: true;
-  noStore?: true;
-  noTransform?: true;
-  onlyIfCached?: true;
-  mustRevalidate?: true;
-  proxyRevalidate?: true;
-  mustUnderstand?: true;
-  private?: true;
-  public?: true;
-  immutable?: true;
-  staleWhileRevalidate?: number;
-  staleIfError?: number;
+  maxAge?: number
+  maxStale?: number
+  minFresh?: number
+  sMaxage?: number
+  noCache?: true
+  noStore?: true
+  noTransform?: true
+  onlyIfCached?: true
+  mustRevalidate?: true
+  proxyRevalidate?: true
+  mustUnderstand?: true
+  private?: true
+  public?: true
+  immutable?: true
+  staleWhileRevalidate?: number
+  staleIfError?: number
 
   constructor(init?: string | CacheControlInit) {
     if (init) {
       if (typeof init === 'string') {
-        let params = parseParams(init, ',');
+        let params = parseParams(init, ',')
         if (params.length > 0) {
           for (let [name, value] of params) {
             switch (name) {
               case 'max-age':
-                this.maxAge = Number(value);
-                break;
+                this.maxAge = Number(value)
+                break
               case 'max-stale':
-                this.maxStale = Number(value);
-                break;
+                this.maxStale = Number(value)
+                break
               case 'min-fresh':
-                this.minFresh = Number(value);
-                break;
+                this.minFresh = Number(value)
+                break
               case 's-maxage':
-                this.sMaxage = Number(value);
-                break;
+                this.sMaxage = Number(value)
+                break
               case 'no-cache':
-                this.noCache = true;
-                break;
+                this.noCache = true
+                break
               case 'no-store':
-                this.noStore = true;
-                break;
+                this.noStore = true
+                break
               case 'no-transform':
-                this.noTransform = true;
-                break;
+                this.noTransform = true
+                break
               case 'only-if-cached':
-                this.onlyIfCached = true;
-                break;
+                this.onlyIfCached = true
+                break
               case 'must-revalidate':
-                this.mustRevalidate = true;
-                break;
+                this.mustRevalidate = true
+                break
               case 'proxy-revalidate':
-                this.proxyRevalidate = true;
-                break;
+                this.proxyRevalidate = true
+                break
               case 'must-understand':
-                this.mustUnderstand = true;
-                break;
+                this.mustUnderstand = true
+                break
               case 'private':
-                this.private = true;
-                break;
+                this.private = true
+                break
               case 'public':
-                this.public = true;
-                break;
+                this.public = true
+                break
               case 'immutable':
-                this.immutable = true;
-                break;
+                this.immutable = true
+                break
               case 'stale-while-revalidate':
-                this.staleWhileRevalidate = Number(value);
-                break;
+                this.staleWhileRevalidate = Number(value)
+                break
               case 'stale-if-error':
-                this.staleIfError = Number(value);
-                break;
+                this.staleIfError = Number(value)
+                break
             }
           }
         }
       } else {
-        this.maxAge = init.maxAge;
-        this.maxStale = init.maxStale;
-        this.minFresh = init.minFresh;
-        this.sMaxage = init.sMaxage;
-        this.noCache = init.noCache;
-        this.noStore = init.noStore;
-        this.noTransform = init.noTransform;
-        this.onlyIfCached = init.onlyIfCached;
-        this.mustRevalidate = init.mustRevalidate;
-        this.proxyRevalidate = init.proxyRevalidate;
-        this.mustUnderstand = init.mustUnderstand;
-        this.private = init.private;
-        this.public = init.public;
-        this.immutable = init.immutable;
-        this.staleWhileRevalidate = init.staleWhileRevalidate;
-        this.staleIfError = init.staleIfError;
+        this.maxAge = init.maxAge
+        this.maxStale = init.maxStale
+        this.minFresh = init.minFresh
+        this.sMaxage = init.sMaxage
+        this.noCache = init.noCache
+        this.noStore = init.noStore
+        this.noTransform = init.noTransform
+        this.onlyIfCached = init.onlyIfCached
+        this.mustRevalidate = init.mustRevalidate
+        this.proxyRevalidate = init.proxyRevalidate
+        this.mustUnderstand = init.mustUnderstand
+        this.private = init.private
+        this.public = init.public
+        this.immutable = init.immutable
+        this.staleWhileRevalidate = init.staleWhileRevalidate
+        this.staleIfError = init.staleIfError
       }
     }
   }
 
   toString(): string {
-    let parts = [];
+    let parts = []
 
     if (this.public) {
-      parts.push('public');
+      parts.push('public')
     }
     if (this.private) {
-      parts.push('private');
+      parts.push('private')
     }
     if (typeof this.maxAge === 'number') {
-      parts.push(`max-age=${this.maxAge}`);
+      parts.push(`max-age=${this.maxAge}`)
     }
     if (typeof this.sMaxage === 'number') {
-      parts.push(`s-maxage=${this.sMaxage}`);
+      parts.push(`s-maxage=${this.sMaxage}`)
     }
     if (this.noCache) {
-      parts.push('no-cache');
+      parts.push('no-cache')
     }
     if (this.noStore) {
-      parts.push('no-store');
+      parts.push('no-store')
     }
     if (this.noTransform) {
-      parts.push('no-transform');
+      parts.push('no-transform')
     }
     if (this.onlyIfCached) {
-      parts.push('only-if-cached');
+      parts.push('only-if-cached')
     }
     if (this.mustRevalidate) {
-      parts.push('must-revalidate');
+      parts.push('must-revalidate')
     }
     if (this.proxyRevalidate) {
-      parts.push('proxy-revalidate');
+      parts.push('proxy-revalidate')
     }
     if (this.mustUnderstand) {
-      parts.push('must-understand');
+      parts.push('must-understand')
     }
     if (this.immutable) {
-      parts.push('immutable');
+      parts.push('immutable')
     }
     if (typeof this.staleWhileRevalidate === 'number') {
-      parts.push(`stale-while-revalidate=${this.staleWhileRevalidate}`);
+      parts.push(`stale-while-revalidate=${this.staleWhileRevalidate}`)
     }
     if (typeof this.staleIfError === 'number') {
-      parts.push(`stale-if-error=${this.staleIfError}`);
+      parts.push(`stale-if-error=${this.staleIfError}`)
     }
     if (typeof this.maxStale === 'number') {
-      parts.push(`max-stale=${this.maxStale}`);
+      parts.push(`max-stale=${this.maxStale}`)
     }
     if (typeof this.minFresh === 'number') {
-      parts.push(`min-fresh=${this.minFresh}`);
+      parts.push(`min-fresh=${this.minFresh}`)
     }
 
-    return parts.join(', ');
+    return parts.join(', ')
   }
 }

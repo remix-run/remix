@@ -1,20 +1,15 @@
 on:
-  # push:
-  #   branches:
-  #     - '*'
-  # pull_request:
-  #   branches:
-  #     - '*'
-  # Run only on the v3 branch for now
   push:
-    branches:
-      - 'v3'
+    branches-ignore:
+      - release-v2
+      - v2
   pull_request:
-    branches:
-      - 'v3'
+    branches-ignore:
+      - release-v2
+      - v2
 
 jobs:
-  test:
+  typecheck:
     runs-on: ubuntu-latest
 
     steps:
@@ -34,9 +29,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
-
-      # - name: Build packages
-      #   run: pnpm build
 
       - name: Run typechecks
         run: pnpm typecheck

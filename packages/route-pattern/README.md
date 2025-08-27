@@ -1,190 +1,216 @@
-# Route pattern
+# Route Pattern
 
-Route patterns describe the structure of URLs you want to match
+A powerful and flexible URL pattern matching library for modern JavaScript applications. Route Pattern provides type-safe URL parsing and generation with a powerful, intuitive syntax.
 
-- Support for all JavaScript runtimes — Node, Bun, Deno
-- Full URL matching, not just pathname
-- Familiar syntax inspired by Rails
+## Why Route Pattern?
 
-## Usage
+- **Comprehensive URL Matching**: Match complete URLs including protocol, hostname, port, pathname, and query parameters—not just paths
+- **Developer-Friendly Syntax**: Clean, readable patterns inspired by Rails routing
+- **Type Safety**: Generate URLs with compile-time parameter validation and autocompletion
+- **Production Ready**: Battle-tested patterns for real-world scenarios including multi-tenant applications, API versioning, asset serving, and internationalization
+- **Universal Runtime Support**: Works seamlessly across all JavaScript environments including Node.js, Bun, Deno, Cloudflare Workers, and browsers
 
-```tsx
-import { RoutePattern } from 'route-pattern';
-
-// Blog with optional HTML extension
-let pattern = new RoutePattern('blog/:year-:month-:day/:slug(.html)');
-
-pattern.match('https://remix.run/blog/2024-01-15/web-architecture');
-// { params: { year: '2024', month: '01', day: '15', slug: 'web-architecture' } }
-
-pattern.match('https://remix.run/blog/2024-01-15/web-architecture.html');
-// { params: { year: '2024', month: '01', day: '15', slug: 'web-architecture' } }
-```
+## Quick Start
 
 ```tsx
-// API with versioning and optional format
-let pattern = new RoutePattern('api(/v:major.:minor)/users/:id(.json)');
+import { RoutePattern } from '@remix-run/route-pattern'
 
-pattern.match('https://remix.run/api/users/sarah');
-// { params: { id: 'sarah' } }
-
-pattern.match('https://remix.run/api/v2.1/users/sarah.json');
-// { params: { major: '2', minor: '1', id: 'sarah' } }
-```
-
-```tsx
-// Multi-tenant applications
-let pattern = new RoutePattern('://:tenant.remix.run(/admin)/users/:id');
-
-pattern.match('https://acme.remix.run/users/123');
-// { params: { tenant: 'acme', id: '123' } }
-
-pattern.match('https://acme.remix.run/admin/users/123');
-// { params: { tenant: 'acme', id: '123' } }
-```
-
-```tsx
-// Asset serving with type constraints
-let pattern = new RoutePattern('assets/*path.{jpg,png,gif,svg}');
-
-pattern.match('https://remix.run/assets/images/logos/remix.svg');
-// { params: { path: 'images/logos/remix' } }
-
-pattern.match('https://remix.run/assets/styles/main.css');
-// null (wrong file type)
-```
-
-## API
-
-**RoutePattern**
-
-```ts
-class RoutePattern {
-  readonly source: string;
-  constructor(source: string);
-  match(url: string | URL): Match | null;
-}
-```
-
-**Match**
-
-```ts
-type Match = {
-  params: Record<string, string | undefined>;
-};
-```
-
-## Concepts
-
-Route patterns are split into 4 parts:
-
-```ts
-'<protocol>://<hostname>/<pathname>?<search>';
-```
-
-By default, patterns are assumed to be `pathname`-only:
-
-```tsx
-let pattern = new RoutePattern('blog/:id');
-
-pattern.match('https://remix.run/blog/hello-world');
-// { params: { id: 'hello-world' } }
-
-pattern.match('https://example.com/blog/web-dev-tips');
-// { params: { id: 'web-dev-tips' } }
-```
-
-Everything after the first `?` is treated as the `search`:
-
-```tsx
-let pattern = new RoutePattern('search?q');
-
-pattern.match('https://remix.run/search?q=javascript');
-// { params: { } }
-```
-
-To specify a protocol or hostname, you must use `://` before any `/` or `?`:
-
-```tsx
-let pattern2 = new RoutePattern('://:tenant.remix.run/admin');
-
-pattern2.match('https://acme.remix.run/admin');
-// { params: { tenant: 'acme' } }
-```
-
-The `protocol`, `hostname`, and `pathname` parts support [params](#params), [globs](#globs), [optionals](#optionals), and [enums](#enums).
-`search` is instead treated as [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams).
-
-### Params
-
-Params match dynamic parts of a URL within a segment. They're written as `:` followed optionally by a name:
-
-```tsx
-let pattern = new RoutePattern('users/@:id');
-
-pattern.match('https://remix.run/users/@sarah');
+let pattern = new RoutePattern('users/:id')
+pattern.match('https://shopify.com/users/sarah')
 // { params: { id: 'sarah' } }
 ```
 
-You can put multiple params in a single segment:
+## Common Use Cases
+
+### Blog and Content Management
+
+Handle date-based URLs with optional file extensions:
 
 ```tsx
-let pattern = new RoutePattern('api/v:major.:minor');
+let pattern = new RoutePattern('blog/:year-:month-:day/:slug(.html)')
+pattern.match('https://remix.run/blog/2024-01-15/introducing-remix')
+// { params: { year: '2024', month: '01', day: '15', slug: 'introducing-remix' } }
+pattern.match('https://remix.run/blog/2024-01-15/introducing-remix.html')
+// { params: { year: '2024', month: '01', day: '15', slug: 'introducing-remix' } }
+```
 
-pattern.match('https://remix.run/api/v2.1');
+### API Versioning
+
+Support flexible API versioning with backward compatibility:
+
+```tsx
+let pattern = new RoutePattern('api(/v:major.:minor)/customers/:id(.json)')
+pattern.match('https://shopify.com/api/customers/emma')
+// { params: { id: 'emma' } }
+pattern.match('https://shopify.com/api/v2.1/customers/emma.json')
+// { params: { major: '2', minor: '1', id: 'emma' } }
+```
+
+### Multi-Tenant Applications
+
+Route requests based on subdomain tenants:
+
+```tsx
+let pattern = new RoutePattern('://:store.shopify.com(/admin)/orders')
+pattern.match('https://coffee-roasters.shopify.com/orders')
+// { params: { store: 'coffee-roasters' } }
+pattern.match('https://coffee-roasters.shopify.com/admin/orders')
+// { params: { store: 'coffee-roasters' } }
+```
+
+### Static Asset Serving
+
+Serve files with type validation and nested paths:
+
+```tsx
+let pattern = new RoutePattern('assets/*path.{jpg,png,gif,svg,webp}')
+pattern.match('https://cdn.shopify.com/assets/images/products/sneakers.webp')
+// { params: { path: 'images/products/sneakers' } }
+pattern.match('https://cdn.shopify.com/assets/styles/main.css')
+// null (file type not allowed)
+```
+
+## URL Generation
+
+Generate type-safe URLs from your route patterns with compile-time parameter validation:
+
+```tsx
+import { createHrefBuilder } from '@remix-run/route-pattern'
+
+let href = createHrefBuilder()
+
+// Basic route generation
+href('/customers/:id', { id: 'alex' })
+// → "/customers/alex"
+
+// Complex patterns with optional segments
+href('/api(/v:version)/products/:id(.json)', {
+  version: '2.1',
+  id: 'wireless-headphones',
+})
+// → "/api/v2.1/products/wireless-headphones.json"
+
+// Multi-segment wildcards
+href('/assets/*path.{jpg,png}', { path: 'images/hero' })
+// → "/assets/images/hero.jpg"
+```
+
+## Pattern Format
+
+Route patterns follow a structured format that mirrors URL anatomy:
+
+```ts
+'<protocol>://<hostname>[:<port>]/<pathname>?<search>'
+```
+
+### URL Components
+
+**Pathname-Only Matching** (default): When no protocol or hostname is specified, patterns match only the pathname portion:
+
+```tsx
+let pattern = new RoutePattern('blog/:id')
+pattern.match('https://remix.run/blog/route-discovery')
+// { params: { id: 'route-discovery' } }
+pattern.match('https://remix.run/blog/remixing-shopify')
+// { params: { id: 'remixing-shopify' } }
+```
+
+**Query Parameter Matching**: Content after `?` is treated as search parameters:
+
+```tsx
+let pattern = new RoutePattern('search?q')
+pattern.match('https://remix.run/search?q=routing')
+// { params: {} }
+```
+
+**Full URL Matching**: Use `://` to specify protocol and hostname patterns:
+
+```tsx
+let pattern = new RoutePattern('://:store.shopify.com/admin')
+pattern.match('https://bookstore.shopify.com/admin')
+// { params: { store: 'bookstore' } }
+```
+
+**Port Specification**: Include port numbers directly after the hostname:
+
+```tsx
+let pattern = new RoutePattern('://localhost:3000/docs')
+pattern.match('https://localhost:3000/docs')
+// { params: {} }
+```
+
+### Pattern Features
+
+The `protocol`, `hostname`, and `pathname` components support dynamic matching through [variables](#variables), [wildcards](#wildcards), [optionals](#optionals), and [enums](#enums).
+
+Port numbers are matched as literal strings, while search parameters follow standard [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams) behavior.
+
+### Variables
+
+Variables capture dynamic URL segments and are denoted by a colon (`:`) followed by a parameter name:
+
+```tsx
+let pattern = new RoutePattern('users/@:username')
+pattern.match('https://shopify.com/users/@maya')
+// { params: { username: 'maya' } }
+```
+
+**Naming Requirements**: Variable names must be valid [JavaScript identifiers](https://developer.mozilla.org/en-US/docs/Glossary/Identifier).
+
+**Multiple Variables**: Combine multiple variables within a single segment using non-identifier separators:
+
+```tsx
+let pattern = new RoutePattern('api/v:major.:minor')
+pattern.match('https://api.shopify.com/api/v2.1')
 // { params: { major: '2', minor: '1' } }
 ```
 
-You can omit the param name if you don't need the captured value:
+### Wildcards
+
+Wildcards match multi-segment dynamic content and are represented by an asterisk (`*`):
+
+**Named Wildcards**: Capture the matched content as a parameter:
 
 ```tsx
-let pattern = new RoutePattern('products/:-shoes');
+let pattern = new RoutePattern('cdn/*filepath/v:version')
+let match = pattern.match('https://cdn.shopify.com/assets/themes/dawn/v2')
+// { params: { filepath: 'assets/themes/dawn', version: '2' } }
+```
 
-pattern.match('https://remix.run/products/tennis-shoes');
+**Anonymous Wildcards**: Match content without capturing it:
+
+```tsx
+let pattern = new RoutePattern('docs/*.md')
+pattern.match('https://remix.run/docs/guides/routing.md')
 // { params: {} }
 ```
 
-### Globs
-
-Globs match dynamic parts that can span multiple segments. They're written as `*` followed optionally by a name:
-
-```tsx
-let pattern = new RoutePattern('://app.unpkg.com/*path/dist/:file.mjs');
-
-pattern.match('https://app.unpkg.com/preact@10.26.9/files/dist/preact.mjs');
-// { params: { path: 'preact@10.26.9/files', file: 'preact' }}
-```
-
-You can omit the glob name if you don't need the captured value:
-
-```tsx
-let pattern = new RoutePattern('assets/*/favicon.ico');
-
-pattern.match('https://remix.run/assets/v2/favicon.ico');
-// { params: {} }
-```
+Wildcards are ideal for handling nested file paths, package directories, or any URL structure with variable depth.
 
 ### Optionals
 
-You can mark parts of a pattern as optional by wrapping them in parentheses:
+Mark URL segments as optional by wrapping them in parentheses. Optional segments allow patterns to match both with and without the specified content:
 
 ```tsx
-let pattern = new RoutePattern('api(/v:version)/users');
-
-pattern.match('https://remix.run/api/users');
+let pattern = new RoutePattern('api(/v:version)/products')
+pattern.match('https://api.shopify.com/api/products')
 // { params: {} }
-
-pattern.match('https://remix.run/api/v2/users');
+pattern.match('https://api.shopify.com/api/v2/products')
 // { params: { version: '2' } }
 ```
 
+Optionals are perfect for backward compatibility, feature flags, or supporting multiple URL formats in a single pattern.
+
 ### Enums
 
-Enums let you match against a specific set of static values:
+Restrict matches to specific allowed values using enum syntax with curly braces:
 
 ```tsx
-let pattern = new RoutePattern('files/:filename.{jpg,png,gif}');
-
-pattern.match('https://remix.run/files/logo.png');
-// { params: { filename: 'logo' } }
+let pattern = new RoutePattern('products/:filename.{jpg,png,gif,webp}')
+pattern.match('https://cdn.shopify.com/products/sneakers.png')
+// { params: { filename: 'sneakers' } }
+pattern.match('https://cdn.shopify.com/products/catalog.pdf')
+// null (extension not in allowed list)
 ```
+
+Enums provide type safety and validation, ensuring URLs match only expected formats while maintaining clean parameter extraction.

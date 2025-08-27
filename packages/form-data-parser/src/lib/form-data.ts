@@ -1,17 +1,13 @@
-import type { MultipartParserOptions } from '@remix-run/multipart-parser';
-import {
-  isMultipartRequest,
-  parseMultipartRequest,
-  MultipartPart,
-} from '@remix-run/multipart-parser';
+import type { MultipartParserOptions, MultipartPart } from '@remix-run/multipart-parser'
+import { isMultipartRequest, parseMultipartRequest } from '@remix-run/multipart-parser'
 
 /**
  * The base class for errors thrown by the form data parser.
  */
 export class FormDataParseError extends Error {
   constructor(message: string) {
-    super(message);
-    this.name = 'FormDataParseError';
+    super(message)
+    this.name = 'FormDataParseError'
   }
 }
 
@@ -20,8 +16,8 @@ export class FormDataParseError extends Error {
  */
 export class MaxFilesExceededError extends FormDataParseError {
   constructor(maxFiles: number) {
-    super(`Maximum number of files exceeded: ${maxFiles}`);
-    this.name = 'MaxFilesExceededError';
+    super(`Maximum number of files exceeded: ${maxFiles}`)
+    this.name = 'MaxFilesExceededError'
   }
 }
 
@@ -32,14 +28,14 @@ export class FileUpload extends File {
   /**
    * The name of the <input> field used to upload the file.
    */
-  readonly fieldName: string;
+  readonly fieldName: string
 
   constructor(part: MultipartPart, fieldName: string) {
     super(part.content, part.filename ?? 'file-upload', {
       type: part.mediaType ?? 'application/octet-stream',
-    });
+    })
 
-    this.fieldName = fieldName;
+    this.fieldName = fieldName
   }
 }
 
@@ -47,12 +43,12 @@ export class FileUpload extends File {
  * A function used for handling file uploads.
  */
 export interface FileUploadHandler {
-  (file: FileUpload): void | null | string | Blob | Promise<void | null | string | Blob>;
+  (file: FileUpload): void | null | string | Blob | Promise<void | null | string | Blob>
 }
 
 async function defaultFileUploadHandler(file: FileUpload): Promise<File> {
   // By default just keep the file around in memory.
-  return file;
+  return file
 }
 
 export interface ParseFormDataOptions extends MultipartParserOptions {
@@ -62,7 +58,7 @@ export interface ParseFormDataOptions extends MultipartParserOptions {
    *
    * Default: 20
    */
-  maxFiles?: number;
+  maxFiles?: number
 }
 
 /**
@@ -82,50 +78,50 @@ export interface ParseFormDataOptions extends MultipartParserOptions {
 export async function parseFormData(
   request: Request,
   uploadHandler?: FileUploadHandler,
-): Promise<FormData>;
+): Promise<FormData>
 export async function parseFormData(
   request: Request,
   options: ParseFormDataOptions,
   uploadHandler?: FileUploadHandler,
-): Promise<FormData>;
+): Promise<FormData>
 export async function parseFormData(
   request: Request,
   options?: ParseFormDataOptions | FileUploadHandler,
   uploadHandler: FileUploadHandler = defaultFileUploadHandler,
 ): Promise<FormData> {
   if (typeof options === 'function') {
-    uploadHandler = options;
-    options = {};
+    uploadHandler = options
+    options = {}
   } else if (options == null) {
-    options = {};
+    options = {}
   }
 
   if (!isMultipartRequest(request)) {
-    return request.formData();
+    return request.formData()
   }
 
-  let { maxFiles = 20, ...parserOptions } = options;
+  let { maxFiles = 20, ...parserOptions } = options
 
-  let formData = new FormData();
-  let fileCount = 0;
+  let formData = new FormData()
+  let fileCount = 0
 
   for await (let part of parseMultipartRequest(request, parserOptions)) {
-    let fieldName = part.name;
-    if (!fieldName) continue;
+    let fieldName = part.name
+    if (!fieldName) continue
 
     if (part.isFile) {
       if (++fileCount > maxFiles) {
-        throw new MaxFilesExceededError(maxFiles);
+        throw new MaxFilesExceededError(maxFiles)
       }
 
-      let value = await uploadHandler(new FileUpload(part, fieldName));
+      let value = await uploadHandler(new FileUpload(part, fieldName))
       if (value != null) {
-        formData.append(fieldName, value);
+        formData.append(fieldName, value)
       }
     } else {
-      formData.append(fieldName, part.text);
+      formData.append(fieldName, part.text)
     }
   }
 
-  return formData;
+  return formData
 }

@@ -1,91 +1,121 @@
-import { parse, type Ast } from './parse.ts';
-import { type Part } from './parse.types.ts';
+import type { Ast } from './parse.ts'
+import type { Part } from './parse.types.ts'
+import { parse } from './parse.ts'
 
-type Params = Record<string, string | undefined>;
-type Match = { params: Params };
+type Params = Record<string, string | undefined>
+type Match = { params: Params }
 
+/**
+ * A pattern for matching URLs.
+ */
 export class RoutePattern {
-  readonly source: string;
+  /**
+   * The source string that was used to create this pattern.
+   */
+  readonly source: string
 
-  private readonly _ast: Ast;
+  readonly #ast: Ast
+  readonly #protocolMatcher: RegExp
+  readonly #hostnameMatcher: RegExp
+  readonly #pathnameMatcher: RegExp
 
-  constructor(source: string) {
-    this.source = source;
-    this._ast = parse(source);
+  constructor(source: string | RoutePattern) {
+    this.source = typeof source === 'string' ? source : source.source
+    this.#ast = parse(this.source)
+    this.#protocolMatcher = partToRegExp(this.#ast.protocol, { param: /.*/ }) ?? /^.*$/
+    this.#hostnameMatcher = partToRegExp(this.#ast.hostname, { param: /[^.]+/ }) ?? /^.*$/
+    this.#pathnameMatcher = partToRegExp(this.#ast.pathname, { param: /[^/]+/ }) ?? /^$/
   }
 
+  /**
+   * Match a URL against this pattern.
+   *
+   * @param url The URL to match
+   * @returns The parameters if the URL matches this pattern, `null` otherwise
+   */
   match(url: URL | string): Match | null {
-    if (typeof url === 'string') url = new URL(url);
+    if (typeof url === 'string') url = new URL(url)
 
-    const protocolRE = partToRegExp(this._ast.protocol, { param: /.*/ }) ?? /^.*$/;
-    const hostnameRE = partToRegExp(this._ast.hostname, { param: /[^.]+/ }) ?? /^.*$/;
-    const pathnameRE = partToRegExp(this._ast.pathname, { param: /[^/]+/ }) ?? /^$/;
+    let params: Params = {}
 
-    const params: Params = {};
+    let protocolMatch = this.#protocolMatcher.exec(url.protocol.slice(0, -1))
+    if (protocolMatch === null) return null
+    if (protocolMatch.groups) {
+      Object.assign(params, protocolMatch.groups)
+    }
 
-    const protocolMatch = protocolRE.exec(url.protocol.slice(0, -1));
-    if (!protocolMatch) return null;
-    Object.assign(params, protocolMatch.groups ?? {});
+    let hostnameMatch = this.#hostnameMatcher.exec(url.hostname)
+    if (hostnameMatch === null) return null
+    if (hostnameMatch.groups) {
+      Object.assign(params, hostnameMatch.groups)
+    }
 
-    const hostnameMatch = hostnameRE.exec(url.hostname);
-    if (!hostnameMatch) return null;
-    Object.assign(params, hostnameMatch.groups ?? {});
+    if (this.#ast.port !== undefined) {
+      if (url.port !== this.#ast.port) return null
+    }
 
-    const pathnameMatch = pathnameRE.exec(url.pathname.slice(1));
-    if (!pathnameMatch) return null;
-    Object.assign(params, pathnameMatch.groups ?? {});
+    let pathnameMatch = this.#pathnameMatcher.exec(url.pathname.slice(1))
+    if (pathnameMatch === null) return null
+    if (pathnameMatch.groups) {
+      Object.assign(params, pathnameMatch.groups)
+    }
 
-    if (this._ast.search) {
-      for (const [key, value] of this._ast.search?.entries()) {
-        if (!url.searchParams.getAll(key).includes(value)) return null;
+    if (this.#ast.search) {
+      for (let [key, value] of this.#ast.search?.entries()) {
+        if (!url.searchParams.getAll(key).includes(value)) return null
       }
     }
 
-    return { params };
+    return { params }
+  }
+
+  /**
+   * Test if a URL matches this pattern.
+   *
+   * @param url The URL to test
+   * @returns `true` if the URL matches this pattern, `false` otherwise
+   */
+  test(url: URL | string): boolean {
+    return this.match(url) !== null
+  }
+
+  toString() {
+    return this.source
   }
 }
 
-function regexpEscape(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 function partToRegExp(part: Part | undefined, options: { param: RegExp }) {
-  if (part === undefined) return undefined;
-  const source = partToRegExpSource(part, options.param);
-  return new RegExp('^' + source + '$');
+  if (part === undefined) return undefined
+  let source = partToRegExpSource(part, options.param)
+  return new RegExp('^' + source + '$')
 }
 
 function partToRegExpSource(part: Part, paramRegExp: RegExp) {
-  const source: string = part
+  let source: string = part
     .map((node) => {
-      if (node.type === 'param') {
-        let source = '(';
-        if (node.name) {
-          source += `?<${node.name}>`;
-        }
-        source += paramRegExp.source;
-        source += ')';
-        return source;
+      if (node.type === 'variable') {
+        return `(?<${node.name}>${paramRegExp.source})`
       }
-      if (node.type === 'glob') {
-        let source = '(';
-        if (node.name) {
-          source += `?<${node.name}>`;
-        }
-        source += '.*)';
-        return source;
-      }
-      if (node.type === 'optional') {
-        return `(?:${partToRegExpSource(node.nodes, paramRegExp)})?`;
-      }
-      if (node.type === 'text') {
-        return regexpEscape(node.value);
+      if (node.type === 'wildcard') {
+        return node.name ? `(?<${node.name}>.*)` : `(?:.*)`
       }
       if (node.type === 'enum') {
-        return `(?:${node.members.map(regexpEscape).join('|')})`;
+        return `(?:${node.members.map(regexpEscape).join('|')})`
       }
-      throw new Error(`Node with unknown type: ${node}`);
+      if (node.type === 'text') {
+        return regexpEscape(node.value)
+      }
+      if (node.type === 'optional') {
+        return `(?:${partToRegExpSource(node.nodes, paramRegExp)})?`
+      }
+
+      throw new Error(`Node with unknown type: ${node}`)
     })
-    .join('');
-  return source;
+    .join('')
+
+  return source
+}
+
+function regexpEscape(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

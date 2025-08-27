@@ -8,4 +8,4 @@ export {
   type TarParserOptions,
   TarParser,
   TarEntry,
-} from './lib/tar.ts';
+} from './lib/tar.ts'

@@ -20,30 +20,30 @@ npm install @remix-run/file-storage
 ## Usage
 
 ```ts
-import { LocalFileStorage } from '@remix-run/file-storage/local';
+import { LocalFileStorage } from '@remix-run/file-storage/local'
 
-let storage = new LocalFileStorage('./user/files');
+let storage = new LocalFileStorage('./user/files')
 
-let file = new File(['hello world'], 'hello.txt', { type: 'text/plain' });
-let key = 'hello-key';
+let file = new File(['hello world'], 'hello.txt', { type: 'text/plain' })
+let key = 'hello-key'
 
 // Put the file in storage.
-await storage.set(key, file);
+await storage.set(key, file)
 
 // Then, sometime later...
-let fileFromStorage = await storage.get(key);
+let fileFromStorage = await storage.get(key)
 // All of the original file's metadata is intact
-fileFromStorage.name; // 'hello.txt'
-fileFromStorage.type; // 'text/plain'
+fileFromStorage.name // 'hello.txt'
+fileFromStorage.type // 'text/plain'
 
 // To remove from storage
-await storage.remove(key);
+await storage.remove(key)
 ```
 
 The `FileStorage` interface allows you to implement your own file storage for custom storage backends:
 
 ```ts
-import { type FileStorage } from '@remix-run/file-storage';
+import { type FileStorage } from '@remix-run/file-storage'
 
 class CustomFileStorage implements FileStorage {
   /**
