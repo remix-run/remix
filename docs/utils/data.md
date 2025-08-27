@@ -5,7 +5,7 @@ toc: false
 
 # `data`
 
-This is a utility for use with [Single Fetch][single-fetch] to return raw data accompanied with a status code or custom response headers. This avoids the need to serialize your data into a `Response` instance to provide custom status/headers. This is generally a replacement for `loader`/`action` functions that used [`json`][json] or [`defer`][defer] prior to Single Fetch.
+This is a utility for use with [Single Fetch][single-fetch] to return raw data accompanied by a status code or custom response headers. This avoids the need to serialize your data into a `Response` instance to provide custom status/headers. This is generally a replacement for `loader`/`action` functions that used [`json`][json] or [`defer`][defer] prior to Single Fetch.
 
 ```tsx
 import { data } from "@remix-run/node"; // or cloudflare/deno

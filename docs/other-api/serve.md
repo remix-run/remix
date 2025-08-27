@@ -5,11 +5,11 @@ order: 3
 
 # Remix App Server
 
-Remix is designed for you to own your server, but if you don't want to set one up you can use the Remix App Server instead. It's a production-ready, but basic Node.js server built with Express.
+Remix is designed for you to own your server, but if you don't want to set one up, you can use the Remix App Server instead. It's a production-ready but basic Node.js server built with Express.
 
-By design, we do not provide options to customize the Remix App Server because if you need to customize the underlying `express` server, we'd rather you manage the server completely instead of creating an abstraction to handle all of the possible customizations you may require. If you find you want to customize it, you should use the `@remix-run/express` adapter instead.
+By design, we do not provide options to customize the Remix App Server because if you need to customize the underlying `express` server, we'd rather you manage the server completely instead of creating an abstraction to handle all the possible customizations you may require. If you find you want to customize it, you should use the `@remix-run/express` adapter instead.
 
-You can see the underlying `express` server configuration in [packages/remix-serve/cli.ts][remix-serve-code]. By default it uses the following Express middlewares (please refer to their documentation for default behaviors):
+You can see the underlying `express` server configuration in [packages/remix-serve/cli.ts][remix-serve-code]. By default, it uses the following Express middlewares (please refer to their documentation for default behaviors):
 
 - [`compression`][compression]
 - [`express.static`][express-static] (and thus [`serve-static`][serve-static])
@@ -69,7 +69,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
 
   If you need a workaround for preserving cache in development, you can set up a [singleton][singleton] in your server.
 
-- Any **module side effects** will remain in place! This may cause problems, but should probably be avoided anyway.
+- Any **module side effects** will remain in place! This may cause problems but should probably be avoided anyway.
 
   ```tsx lines=[3-6]
   import { json } from "@remix-run/node"; // or cloudflare/deno
@@ -86,7 +86,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
 
   If you need to write your code in a way that has these types of module side effects, you should set up your own [@remix-run/express][remix-run-express] server and a tool in development like pm2-dev or nodemon to restart the server on file changes instead.
 
-In production this doesn't happen. The server boots up and that's the end of it.
+In production this doesn't happen. The server boots up, and that's the end of it.
 
 [remix-run-express]: ./adapter#createrequesthandler
 [singleton]: ../guides/manual-mode#keeping-in-memory-server-state-across-rebuilds

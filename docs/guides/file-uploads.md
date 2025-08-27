@@ -2,7 +2,7 @@
 title: File Uploads
 ---
 
-<docs-warning>This doc is a WIP: It was extracted from the API docs for file uploads so it's a bit out of context. We intend to re-write this as a general guide on file uploads.</docs-warning>
+<docs-warning>The APIs covered in this guide were removed in React Router v7. See <a href="https://reactrouter.com/how-to/file-uploads">the React Router guide to file uploads</a> for the recommended approach.</docs-warning>
 
 Most of the time, you'll probably want to proxy the file to a file host.
 
@@ -99,7 +99,7 @@ Your job is to do whatever you need with the `data` and return a value that's a 
 
 ### Upload Handler Composition
 
-We have the built-in `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
+We have the built-in `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler; here's a theoretical example:
 
 ```ts filename=file-upload-handler.server.ts
 import type { UploadHandler } from "@remix-run/node"; // or cloudflare/deno

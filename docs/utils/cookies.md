@@ -14,7 +14,7 @@ While you may create these cookies manually, it is more common to use a [session
 
 In Remix, you will typically work with cookies in your `loader` and/or `action` functions (see <Link to="../mutations">mutations</Link>), since those are the places where you need to read and write data.
 
-Let's say you have a banner on your e-commerce site that prompts users to check out the items you currently have on sale. The banner spans the top of your homepage, and includes a button on the side that allows the user to dismiss the banner so they don't see it for at least another week.
+Let's say you have a banner on your e-commerce site that prompts users to check out the items you currently have on sale. The banner spans the top of your homepage and includes a button on the side that allows the user to dismiss the banner so they don't see it for at least another week.
 
 First, create a cookie:
 

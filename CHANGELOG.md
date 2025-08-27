@@ -2,12 +2,12 @@
 
 # Remix Releases
 
-This page lists all releases/release notes for Remix back to `v2.0.0`. For releases prior to v2, please refer to the [Github Releases Page](https://github.com/remix-run/remix/releases).
+This page lists all releases/release notes for Remix back to `v2.0.0`. For releases prior to v2, please refer to the [GitHub Releases Page](https://github.com/remix-run/remix/releases).
 
-We manage release notes in this file instead of the paginated Github Releases Page for 2 reasons:
+We manage release notes in this file instead of the paginated GitHub Releases Page for 2 reasons:
 
-- Pagination in the Github UI means that you cannot easily search release notes for a large span of releases at once
-- The paginated Github interface also cuts off longer releases notes without indication in list view, and you need to click into the detail view to see the full set of release notes
+- Pagination in the GitHub UI means that you cannot easily search release notes for a large span of releases at once
+- The paginated GitHub interface also cuts off longer releases notes without indication in list view, and you need to click into the detail view to see the full set of release notes
 
 <details>
   <summary>Table of Contents</summary>

@@ -10,7 +10,7 @@ One of the primary features of Remix is simplifying interactions with the server
 - Server render your pages
 - Be resilient to network conditions when JavaScript fails to load
 - Make optimizations as the user interacts with your site to make it fast by only loading data for the changing parts of the page
-- Fetch data, JavaScript modules, CSS and other assets in parallel on transitions, avoiding render+fetch waterfalls that lead to choppy UI
+- Fetch data, JavaScript modules, CSS, and other assets in parallel on transitions, avoiding render+fetch waterfalls that lead to choppy UI
 - Ensure the data in the UI is in sync with the data on the server by revalidating after [actions][action]
 - Excellent scroll restoration on back/forward clicks (even across domains)
 - Handle server-side errors with [error boundaries][error-boundary]
@@ -113,7 +113,7 @@ While you may be uncomfortable throwing errors like this with `invariant` when i
 
 ## External APIs
 
-Remix polyfills the `fetch` API on your server, so it's very easy to fetch data from existing JSON APIs. Instead of managing state, errors, race conditions, and more yourself, you can do the fetch from your loader (on the server) and let Remix handle the rest.
+Remix polyfills the `fetch` API on your server, so it's straightforward to fetch data from existing JSON APIs. Instead of managing state, errors, race conditions, and more yourself, you can do the fetch from your loader (on the server) and let Remix handle the rest.
 
 ```tsx filename=app/routes/gists.tsx lines=[5]
 import { json } from "@remix-run/node"; // or cloudflare/deno
@@ -267,7 +267,7 @@ export default function Product() {
 
 ## Not Found
 
-While loading data it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [error boundary][error-boundary].
+While loading data, it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [error boundary][error-boundary].
 
 ```tsx lines=[10-13]
 export const loader = async ({
@@ -330,7 +330,7 @@ When multiple nested routes are rendering and the search params change, all the 
 
 ### Search Params in Components
 
-Sometimes you need to read and change the search params from your component instead of your loaders and actions. There are handful of ways to do this depending on your use case.
+Sometimes you need to read and change the search params from your component instead of your loaders and actions. There are a handful of ways to do this depending on your use case.
 
 **Setting Search Params**
 
@@ -514,7 +514,7 @@ export default function ProductFilters() {
 }
 ```
 
-If the user clicks the checkbox and submits the form, the URL updates and the checkbox state changes too. But if the user clicks the link _only the url will update and not the checkbox_. That's not what we want. You may be familiar with React's controlled components here and think to switch it to `checked` instead of `defaultChecked`:
+If the user clicks the checkbox and submits the form, the URL updates and the checkbox state changes too. But if the user clicks the link, _only the url will update and not the checkbox_. That's not what we want. You may be familiar with React's controlled components here and think to switch it to `checked` instead of `defaultChecked`:
 
 ```tsx bad lines=[6]
 <input
@@ -526,7 +526,7 @@ If the user clicks the checkbox and submits the form, the URL updates and the ch
 />
 ```
 
-Now we have the opposite problem: clicking the link updates both the URL and the checkbox state but _the checkbox no longer works_ because React prevents the state from changing until the URL that controls it changes--and it never will because we can't change the checkbox and resubmit the form.
+Now we have the opposite problem: clicking the link updates both the URL and the checkbox state, but _the checkbox no longer works_ because React prevents the state from changing until the URL that controls it changes--and it never will because we can't change the checkbox and resubmit the form.
 
 React wants you to control it with some state, but we want the user to control it until they submit the form, and then we want the URL to control it when it changes. So we're in this "sorta-controlled" spot.
 
@@ -571,7 +571,7 @@ export default function ProductFilters() {
 **Second Choice**: If you want the input to be "semi controlled", where the checkbox reflects the URL state, but the user can also toggle it on and off before submitting the form and changing the URL, you'll need to wire up some state. It's a bit of work but straightforward:
 
 - Initialize some state from the search params
-- Update the state when the user clicks the checkbox so the box changes to "checked"
+- Update the state when the user clicks the checkbox, so the box changes to "checked"
 - Update the state when the search params change (the user submitted the form or clicked the link) to reflect what's in the url search params
 
 ```tsx lines=[11-14,16-20,31-35]
@@ -671,9 +671,9 @@ function SearchCheckbox({ name, value }) {
 
 ## Remix Optimizations
 
-Remix optimizes the user experiences by only loading the data for the parts of the page that are changing on navigation. For example, consider the UI you're using right now in these docs. The navbar on the side is in a parent route that fetched the dynamically-generated menu of all the docs, and the child route fetched the document you're reading right now. If you click a link in the sidebar, Remix knows that the parent route will remain on the page - but the child route's data will change because the url param for the document will change. With this insight, Remix _will not refetch the parent route's data_.
+Remix optimizes the user experiences by only loading the data for the parts of the page that are changing on navigation. For example, consider the UI you're using right now in these docs. The navbar on the side is in a parent route that fetched the dynamically generated menu of all the docs, and the child route fetched the document you're reading right now. If you click a link in the sidebar, Remix knows that the parent route will remain on the page — but the child route's data will change because the url param for the document will change. With this insight, Remix _will not refetch the parent route's data_.
 
-Without Remix the next question is "how do I reload all the data?". This is built into Remix as well. Whenever an [action][action] is called (the user submitted a form or you, the programmer, called `submit` from `useSubmit`), Remix will automatically reload all the routes on the page to capture any changes that might have happened.
+Without Remix, the next question is "how do I reload all the data?" This is built into Remix as well. Whenever an [action][action] is called (the user submitted a form or you, the programmer, called `submit` from `useSubmit`), Remix will automatically reload all the routes on the page to capture any changes that might have happened.
 
 You don't have to worry about expiring caches or avoid over-fetching data as the user interacts with your app, it's all automatic.
 
@@ -696,14 +696,14 @@ That said, if you bring an external data library and sidestep Remix's own data c
 - Server render your pages
 - Be resilient to network conditions when JavaScript fails to load
 - Make optimizations as the user interacts with your site to make it fast by only loading data for the changing parts of the page
-- Fetch data, JavaScript modules, CSS and other assets in parallel on transitions, avoiding render+fetch waterfalls that lead to choppy UI
+- Fetch data, JavaScript modules, CSS, and other assets in parallel on transitions, avoiding render+fetch waterfalls that lead to choppy UI
 - Ensure the data in the UI is in sync with the data on the server by revalidating after actions
 - Excellent scroll restoration on back/forward clicks (even across domains)
 - Handle server-side errors with [error boundaries][error-boundary]
 - Enable solid UX for "Not Found" and "Unauthorized" with [error boundaries][error-boundary]
 - Help you keep the happy path of your UI happy.
 
-Instead you'll need to do extra work to provide a good user experience.
+Instead, you'll need to do extra work to provide a good user experience.
 
 Remix is designed to meet any user experience you can design. While it's unexpected that you _need_ an external data library, you might still _want_ one and that's fine!
 
@@ -736,7 +736,7 @@ Not everything makes it! Loaders are for _data_, and data needs to be serializab
 
 Some databases (like [FaunaDB][fauna]) return objects with methods that you'll want to be careful to serialize before returning from your loader. Usually this isn't a problem, but it's good to understand that your data is traveling over the network.
 
-Additionally, Remix will call your loaders for you, in no case should you ever try to call your loader directly:
+Additionally, Remix will call your loaders for you; in no case should you ever try to call your loader directly:
 
 <docs-error>This will not work</docs-error>
 

@@ -29,7 +29,7 @@ import { useLocation } from "@remix-run/react";
 
 ## Extended Behavior
 
-Some of the components and hooks have been extended to work with Remix's server-rendering and data fetching features. For example, `Link` can prefetch data and resources in Remix, where the React Router version cannot.
+Some components and hooks have been extended to work with Remix's server-rendering and data fetching features. For example, `Link` can prefetch data and resources in Remix, where the React Router version cannot.
 
 🚫 Don't do this:
 

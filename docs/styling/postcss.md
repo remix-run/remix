@@ -46,17 +46,17 @@ You can use CSS preprocessors like LESS and SASS. Doing so requires running an a
 
 Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export][route-module-links] function, or included via [side effect imports][css-side-effect-imports] when using [CSS bundling][css-bundling], just like any other CSS file in Remix.
 
-To ease development with CSS preprocessors you can add npm scripts to your `package.json` that generate CSS files from your SASS or LESS files. These scripts can be run in parallel alongside any other npm scripts that you run for developing a Remix application.
+To ease development with CSS preprocessors, you can add npm scripts to your `package.json` that generate CSS files from your SASS or LESS files. These scripts can be run in parallel alongside any other npm scripts that you run for developing a Remix application.
 
 An example using SASS.
 
-1. First you'll need to install the tool your preprocess uses to generate CSS files.
+1. First, you'll need to install the tool your preprocessing uses to generate CSS files.
 
    ```shellscript nonumber
    npm add -D sass
    ```
 
-2. Add an npm script to your `package.json`'s `scripts` section that uses the installed tool to generate CSS files.
+2. Add an `npm` script to your `package.json`'s `scripts` section that uses the installed tool to generate CSS files.
 
    ```jsonc filename=package.json
    {
@@ -79,7 +79,7 @@ An example using SASS.
    npm run sass
    ```
 
-   This will start the `sass` process. Any new SASS files, or changes to existing SASS files, will be detected by the running process.
+   This will start the `sass` process. The running process will detect any new SASS files or changes to existing SASS files.
 
    You might want to use something like `concurrently` to avoid needing two terminal tabs to generate your CSS files and also run `remix dev`.
 

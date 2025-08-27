@@ -21,7 +21,9 @@ v2 releases are managed from a `release-v2` branch created from the `v2` branch.
   - `git commit -am "Enter prerelease mode"`
   - `git push --set-upstream origin release-v2`
 - Wait for the changesets release workflow to finish - the Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs
-- Merge the PR into the `release-v2` branch and the changesets action will publish the prerelease to `npm`
+- Review the updated `CHANGELOG` files and make any adjustments necessary, then merge the PR into the `release-v2` branch
+  - `find packages -name 'CHANGELOG.md' -mindepth 2 -maxdepth 2 -exec code {} \;`
+- Once the PR is merged, the release workflow will publish the updated packages to npm
 - At this point, you can begin crafting the release notes for the eventual stable release in the root `CHANGELOG.md` file in the repo
   - Copy the template for a new release and update the version numbers and links accordingly
   - Copy the relevant changelog entries from all packages into the release notes and adjust accordingly
@@ -30,7 +32,7 @@ v2 releases are managed from a `release-v2` branch created from the `v2` branch.
 
 ### Iterating a pre-release
 
-You may need to make changes to a pre-release prior to publishing a final stable release. To do so:
+You may need to make changes to a pre-release before publishing a final stable release. To do so:
 
 - Branch from `release-v2` and make whatever changes you need
 - Create a new changeset: `pnpm changeset`
@@ -68,12 +70,46 @@ You may need to make changes to a pre-release prior to publishing a final stable
 
 ### Experimental releases
 
-Experimental releases use a [manually-triggered Github Actions workflow](./.github/workflows/release-experimental.yml) and can be built from any existing branch. to build and publish an experimental release:
+Experimental releases use a [manually triggered GitHub Actions workflow](./.github/workflows/release-experimental.yml) and can be built from any existing branch. To build and publish an experimental release:
 
 - Commit your changes to a branch
-- Push the branch to github
-- Go to the Github Actions UI for the [release-experimental.yml workflow](https://github.com/remix-run/remix/actions/workflows/release-experimental-dispatch.yml)
+- Push the branch to GitHub
+- Go to the GitHub Actions UI for the [release-experimental.yml workflow](https://github.com/remix-run/remix/actions/workflows/release-experimental-dispatch.yml)
 - Click the `Run workflow` dropdown
 - Leave the `Use workflow from` dropdown as `main`
 - Enter your feature branch in the `branch` input
 - Click the `Run workflow` button
+
+### Nightly releases
+
+Nightly releases happen automatically at midnight PST via a [cron-driven workflow](./.github/workflows/nightly.yml) that is essentially the same as the experimental releases but also performs some validations after the release.
+
+## Local Development Tips and Tricks
+
+### Environment Variables
+
+This repository supports a handful of environment variables to streamline the local development/testing process.
+
+**`REMIX_DEBUG`**
+
+By default, the Remix `rollup` build will strip any `console.debug` calls to avoid cluttering up the console during application usage. These `console.debug` statements can be preserved by setting `REMIX_DEBUG=true` during your local build.
+
+```sh
+REMIX_DEBUG=true pnpm watch
+```
+
+**`LOCAL_BUILD_DIRECTORY`**
+
+When developing Remix locally, you often need to go beyond unit/integration tests and test your changes in a local Remix application. The easiest way to do this is to run your local Remix build and use this environment variable to direct `rollup` to write the output files directly into the local Remix application's `node_modules` folder. Then you need to restart your local Remix application server to pick up the changes.
+
+```sh
+# Tab 1 - create and run a local remix application
+npx create-remix
+cd my-remix-app
+npm run dev
+
+# Tab 2 - remix repository
+LOCAL_BUILD_DIRECTORY=../my-remix-app pnpm watch
+```
+
+Now - any time you make changes in the Remix repository, they will be written out to the appropriate locations in `../my-remix-app/node_modules` and you can restart the `npm run dev` command to pick them up 🎉.

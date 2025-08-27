@@ -62,9 +62,9 @@ This tells you what the next location is going to be.
 
 ### `navigation.state`
 
-- **idle** - There is no navigation pending.
-- **submitting** - A route action is being called due to a form submission using POST, PUT, PATCH, or DELETE
-- **loading** - The loaders for the next routes are being called to render the next page
+- **idle** — There is no navigation pending.
+- **submitting** — A route action is being called due to a form submission using POST, PUT, PATCH, or DELETE
+- **loading** — The loaders for the next routes are being called to render the next page
 
 Normal navigations and GET form submissions transition through these states:
 

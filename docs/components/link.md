@@ -18,7 +18,7 @@ import { Link } from "@remix-run/react";
 
 ### `to: string`
 
-The most basic usage takes an href string:
+The most basic usage takes an `href` string:
 
 ```tsx
 <Link to="/some/path" />
@@ -49,8 +49,8 @@ Defines the route discovery behavior when using [`future.v3_lazyRouteDiscovery`]
 </>
 ```
 
-- **render** - default, discover the route when the link renders
-- **none** - don't eagerly discover, only discover if the link is clicked
+- **render** — default, discover the route when the link renders
+- **none** — don't eagerly discover, only discover if the link is clicked
 
 ### `prefetch`
 
@@ -66,10 +66,10 @@ Defines the data and module prefetching behavior for the link.
 </>
 ```
 
-- **none** - default, no prefetching
-- **intent** - prefetches when the user hovers or focuses the link
-- **render** - prefetches when the link renders
-- **viewport** - prefetches when the link is in the viewport, very useful for mobile
+- **none** — default, no prefetching
+- **intent** — prefetches when the user hovers or focuses the link
+- **render** — prefetches when the link renders
+- **viewport** — prefetches when the link is in the viewport, very useful for mobile
 
 Prefetching is done with HTML `<link rel="prefetch">` tags. They are inserted after the link.
 
@@ -136,8 +136,8 @@ Defines the relative path behavior for the link.
 <Link relative="path" />;
 ```
 
-- **route** - default, relative to the route hierarchy so `..` will remove all URL segments of the current route pattern
-- **path** - relative to the path so `..` will remove one URL segment
+- **route** — default, relative to the route hierarchy so `..` will remove all URL segments of the current route pattern
+- **path** — relative to the path so `..` will remove one URL segment
 
 ### `reloadDocument`
 
@@ -168,7 +168,7 @@ A -> C
 
 ### `state`
 
-Adds persistent client side routing state to the next location.
+Adds a persistent client side routing state to the next location.
 
 ```tsx
 <Link to="/somewhere/else" state={{ some: "value" }} />

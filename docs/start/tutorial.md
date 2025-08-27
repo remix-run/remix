@@ -7,11 +7,11 @@ order: 2
 
 <docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest framework features, you can follow the same [tutorial from the React Router docs][react-router-tutorial].</docs-warning>
 
-We'll be building a small, but feature-rich app that lets you keep track of your contacts. There's no database or other "production ready" things, so we can stay focused on Remix. We expect it to take about 30m if you're following along, otherwise it's a quick read.
+We'll be building a small, but feature-rich app that lets you keep track of your contacts. There's no database or other "production ready" things, so we can stay focused on Remix. We expect it to take about 30 m if you're following along, otherwise it's a quick read.
 
 <img class="tutorial" src="/docs-images/contacts/01.webp" />
 
-👉 **Every time you see this it means you need to do something in the app!**
+👉 **Every time you see this, it means you need to do something in the app!**
 
 The rest is just there for your information and deeper understanding. Let's get to it.
 
@@ -23,7 +23,7 @@ The rest is just there for your information and deeper understanding. Let's get 
 npx create-remix@latest --template remix-run/remix/templates/remix-tutorial
 ```
 
-This uses a pretty bare-bones template but includes our css and data model, so we can focus on Remix. The [Quick Start][quickstart] can familiarize you with the basic setup of a Remix project if you'd like to learn more.
+This uses a pretty bare-bones template but includes our CSS and data model, so we can focus on Remix. The [Quick Start][quickstart] can familiarize you with the basic setup of a Remix project if you'd like to learn more.
 
 👉 **Start the app**
 
@@ -142,7 +142,7 @@ The app should look something like this now. It sure is nice having a designer w
 
 ## The Contact Route UI
 
-If you click on one of the sidebar items you'll get the default 404 page. Let's create a route that matches the url `/contacts/1`.
+If you click on one of the sidebar items, you'll get the default 404 page. Let's create a route that matches the url `/contacts/1`.
 
 👉 **Create the `app/routes` directory and contact route module**
 
@@ -264,7 +264,7 @@ Now if we click one of the links or visit `/contacts/1` we get ... nothing new?
 
 ## Nested Routes and Outlets
 
-Since Remix is built on top of React Router, it supports nested routing. In order for child routes to render inside of parent layouts, we need to render an [`Outlet`][outlet-component] in the parent. Let's fix it, open up `app/root.tsx` and render an outlet inside.
+Since Remix is built on top of React Router, it supports nested routing. In order for child routes to render inside parent layouts, we need to render an [`Outlet`][outlet-component] in the parent. Let's fix it, open up `app/root.tsx` and render an outlet inside.
 
 👉 **Render an [`<Outlet />`][outlet-component]**
 
@@ -297,7 +297,7 @@ export default function App() {
 }
 ```
 
-Now the child route should be rendering through the outlet.
+Now the child route should be rendered through the outlet.
 
 <img class="tutorial" loading="lazy" alt="contact route with the main content" src="/docs-images/contacts/06.webp" />
 
@@ -305,7 +305,7 @@ Now the child route should be rendering through the outlet.
 
 You may or may not have noticed, but when we click the links in the sidebar, the browser is doing a full document request for the next URL instead of client side routing.
 
-Client side routing allows our app to update the URL without requesting another document from the server. Instead, the app can immediately render new UI. Let's make it happen with [`<Link>`][link-component].
+Client side routing allows our app to update the URL without requesting another document from the server. Instead, the app can immediately render a new UI. Let's make it happen with [`<Link>`][link-component].
 
 👉 **Change the sidebar `<a href>` to `<Link to>`**
 
@@ -321,7 +321,7 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 
-// existing imports & exports
+// existing imports and exports
 
 export default function App() {
   return (
@@ -442,7 +442,7 @@ That's it! Remix will now automatically keep that data in sync with your UI. The
 You may have noticed TypeScript complaining about the `contact` type inside the map. We can add a quick annotation to get type inference about our data with `typeof loader`:
 
 ```tsx filename=app/root.tsx lines=[4]
-// existing imports & exports
+// existing imports and exports
 
 export default function App() {
   const { contacts } = useLoaderData<typeof loader>();
@@ -513,9 +513,9 @@ export const loader = async ({
 // existing code
 ```
 
-First problem this highlights is we might have gotten the param's name wrong between the file name and the code (maybe you changed the name of the file!). Invariant is a handy function for throwing an error with a custom message when you anticipated a potential issue with your code.
+The first problem this highlights is we might have gotten the param's name wrong between the file name and the code (maybe you changed the name of the file!). Invariant is a handy function for throwing an error with a custom message when you anticipated a potential issue with your code.
 
-Next, the `useLoaderData<typeof loader>()` now knows that we got a contact or `null` (maybe there is no contact with that ID). This potential `null` is cumbersome for our component code and the TS errors are flying around still.
+Next, the `useLoaderData<typeof loader>()` now knows that we got a contact or `null` (maybe there is no contact with that ID). This potential `null` is cumbersome for our component code, and the TS errors are flying around still.
 
 We could account for the possibility of the contact being not found in component code, but the webby thing to do is send a proper 404. We can do that in the loader and solve all of our problems at once.
 
@@ -542,7 +542,7 @@ Now, if the user isn't found, code execution down this path stops and Remix rend
 
 We'll create our first contact in a second, but first let's talk about HTML.
 
-Remix emulates HTML Form navigation as the data mutation primitive, which used to be the only way prior to the JavaScript cambrian explosion. Don't be fooled by the simplicity! Forms in Remix give you the UX capabilities of client rendered apps with the simplicity of the "old school" web model.
+Remix emulates HTML Form navigation as the data mutation primitive, which used to be the only way prior to the JavaScript cambrian explosion. Don't be fooled by the simplicity! Forms in Remix give you the UX capabilities of client-rendered apps with the simplicity of the "old school" web model.
 
 While unfamiliar to some web developers, HTML `form`s actually cause a navigation in the browser, just like clicking a link. The only difference is in the request: links can only change the URL while `form`s can also change the request method (`GET` vs. `POST`) and the request body (`POST` form data).
 
@@ -587,7 +587,7 @@ In web semantics, a `POST` usually means some data is changing. By convention, R
 
 In fact, since it's all just HTML and HTTP, you could disable JavaScript and the whole thing will still work. Instead of Remix serializing the form and making a [`fetch`][fetch] request to your server, the browser will serialize the form and make a document request. From there Remix will render the page server side and send it down. It's the same UI in the end either way.
 
-We'll keep JavaScript around though because we're going to make a better user experience than spinning favicons and static documents.
+We'll keep JavaScript around, though, because we're going to make a better user experience than spinning favicons and static documents.
 
 ## Updating Data
 
@@ -763,7 +763,7 @@ updates.first; // "Some"
 updates.last; // "Name"
 ```
 
-Aside from the `action` function, none of these APIs we're discussing are provided by Remix: [`request`][request], [`request.formData`][request-form-data], [`Object.fromEntries`][object-from-entries] are all provided by the web platform.
+Aside from the `action` function, Remix provides none of these APIs we're discussing: [`request`][request], [`request.formData`][request-form-data], [`Object.fromEntries`][object-from-entries] are all provided by the web platform.
 
 After we finished the `action`, note the [`redirect`][redirect] at the end:
 
@@ -866,7 +866,7 @@ export default function App() {
 }
 ```
 
-Note that we are passing a function to `className`. When the user is at the URL that matches `<NavLink to>`, then `isActive` will be true. When it's _about_ to be active (the data is still loading) then `isPending` will be true. This allows us to easily indicate where the user is and also provide immediate feedback when links are clicked but data needs to be loaded.
+Note that we are passing a function to `className`. When the user is at the URL that matches `<NavLink to>`, then `isActive` will be true. When it's _about_ to be active (the data is still loading) then `isPending` will be true. This allows us to easily indicate where the user is and also provide immediate feedback when links are clicked, but data needs to be loaded.
 
 <img class="tutorial" loading="lazy" src="/docs-images/contacts/15.webp"/>
 
@@ -874,7 +874,7 @@ Note that we are passing a function to `className`. When the user is at the URL 
 
 As the user navigates the app, Remix will _leave the old page up_ as data is loading for the next page. You may have noticed the app feels a little unresponsive as you click between the list. Let's provide the user with some feedback so the app doesn't feel unresponsive.
 
-Remix is managing all the state behind the scenes and reveals the pieces you need to build dynamic web apps. In this case, we'll use the [`useNavigation`][use-navigation] hook.
+Remix is managing all the states behind the scenes and reveals the pieces you need to build dynamic web apps. In this case, we'll use the [`useNavigation`][use-navigation] hook.
 
 👉 **Use `useNavigation` to add global pending UI**
 
@@ -892,7 +892,7 @@ import {
   useNavigation,
 } from "@remix-run/react";
 
-// existing imports & exports
+// existing imports and exports
 
 export default function App() {
   const { contacts } = useLoaderData<typeof loader>();
@@ -920,7 +920,7 @@ export default function App() {
 
 [`useNavigation`][use-navigation] returns the current navigation state: it can be one of `"idle"`, `"loading"` or `"submitting"`.
 
-In our case, we add a `"loading"` class to the main part of the app if we're not idle. The CSS then adds a nice fade after a short delay (to avoid flickering the UI for fast loads). You could do anything you want though, like show a spinner or loading bar across the top.
+In our case, we add a `"loading"` class to the main part of the app if we're not idle. The CSS then adds a nice fade after a short delay (to avoid flickering the UI for fast loads). You could do anything you want, though, like show a spinner or loading bar across the top.
 
 <img class="tutorial" loading="lazy" src="/docs-images/contacts/16.webp" />
 
@@ -947,7 +947,7 @@ If we review code in the contact route, we can find the delete button looks like
 
 Note the `action` points to `"destroy"`. Like `<Link to>`, `<Form action>` can take a _relative_ value. Since the form is rendered in `contacts.$contactId.tsx`, then a relative action with `destroy` will submit the form to `contacts.$contactId.destroy` when clicked.
 
-At this point you should know everything you need to know to make the delete button work. Maybe give it a shot before moving on? You'll need:
+At this point you should know everything you need to know to make the delete button work. Maybe give it a try before moving on? You'll need:
 
 1. A new route
 2. An `action` at that route
@@ -1042,7 +1042,7 @@ import {
   useLoaderData,
   useNavigate,
 } from "@remix-run/react";
-// existing imports & exports
+// existing imports and exports
 
 export default function EditContact() {
   const { contact } = useLoaderData<typeof loader>();
@@ -1096,7 +1096,7 @@ import type {
   LoaderFunctionArgs,
 } from "@remix-run/node";
 
-// existing imports & exports
+// existing imports and exports
 
 export const loader = async ({
   request,
@@ -1130,7 +1130,7 @@ Let's solve (2) first and start the input with the value from the URL.
 👉 **Return `q` from your `loader`, set it as the input's default value**
 
 ```tsx filename=app/root.tsx lines=[9,13,26]
-// existing imports & exports
+// existing imports and exports
 
 export const loader = async ({
   request,
@@ -1184,7 +1184,7 @@ Now for problem (1), clicking the back button and updating the input. We can bri
 // existing imports
 import { useEffect } from "react";
 
-// existing imports & exports
+// existing imports and exports
 
 export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
@@ -1213,7 +1213,7 @@ You could certainly do this as a controlled component. You will have more synchr
 // We no longer need useEffect
 import { useState } from "react";
 
-// existing imports & exports
+// existing imports and exports
 
 export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
@@ -1266,7 +1266,7 @@ export default function App() {
 
 </details>
 
-Alright, you should now be able to click the back/forward/refresh buttons and the input's value should be in sync with the URL and results.
+Alright, you should now be able to click the back/forward/refresh buttons, and the input's value should be in sync with the URL and results.
 
 ## Submitting `Form`'s `onChange`
 
@@ -1288,7 +1288,7 @@ import {
   useNavigation,
   useSubmit,
 } from "@remix-run/react";
-// existing imports & exports
+// existing imports and exports
 
 export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
@@ -1339,7 +1339,7 @@ For a better user experience, let's add some immediate UI feedback for the searc
 👉 **Add a variable to know if we're searching**
 
 ```tsx filename=app/root.tsx lines=[7-11]
-// existing imports & exports
+// existing imports and exports
 
 export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
@@ -1360,7 +1360,7 @@ When nothing is happening, `navigation.location` will be `undefined`, but when t
 👉 **Add classes to search form elements using the new `searching` state**
 
 ```tsx filename=app/root.tsx lines=[22,31]
-// existing imports & exports
+// existing imports and exports
 
 export default function App() {
   // existing code
@@ -1408,7 +1408,7 @@ export default function App() {
 Bonus points, avoid fading out the main screen when searching:
 
 ```tsx filename=app/root.tsx lines=[13]
-// existing imports & exports
+// existing imports and exports
 
 export default function App() {
   // existing code
@@ -1445,12 +1445,12 @@ Since the form is submitted for every keystroke, typing the characters "alex" an
 
 <img class="tutorial" loading="lazy" src="/docs-images/contacts/21.webp" />
 
-We can avoid this by _replacing_ the current entry in the history stack with the next page, instead of pushing into it.
+We can avoid this by _replacing_ the current entry in the history stack with the next page instead of pushing into it.
 
 👉 **Use `replace` in `submit`**
 
 ```tsx filename=app/root.tsx lines=[16-19]
-// existing imports & exports
+// existing imports and exports
 
 export default function App() {
   // existing code
@@ -1485,7 +1485,7 @@ export default function App() {
 }
 ```
 
-After a quick check if this is the first search or not, we decide to replace. Now the first search will add a new entry, but every keystroke after that will replace the current entry. Instead of clicking back 7 times to remove the search, users only have to click back once.
+After a quick check if this is the first search or not, we decide to replace it. Now the first search will add a new entry, but every keystroke after that will replace the current entry. Instead of clicking back seven times to remove the search, users only have to click back once.
 
 ## `Form`s Without Navigation
 
@@ -1504,7 +1504,7 @@ import {
   useFetcher,
   useLoaderData,
 } from "@remix-run/react";
-// existing imports & exports
+// existing imports and exports
 
 // existing code
 
@@ -1566,7 +1566,7 @@ Alright, we're ready to click the star next to the user's name!
 
 Check that out, both stars automatically update. Our new `<fetcher.Form method="post">` works almost exactly like the `<Form>` we've been using: it calls the action and then all data is revalidated automatically — even your errors will be caught the same way.
 
-There is one key difference though, it's not a navigation, so the URL doesn't change and the history stack is unaffected.
+There is one key difference, though, it's not a navigation, so the URL doesn't change, and the history stack is unaffected.
 
 ## Optimistic UI
 
@@ -1611,7 +1611,7 @@ Now the star _immediately_ changes to the new state when you click it.
 
 ---
 
-That's it! Thanks for giving Remix a shot. We hope this tutorial gives you a solid start to build great user experiences. There's a lot more you can do, so make sure to check out all the APIs 😀
+That's it! Thanks for giving Remix a try. We hope this tutorial gives you a solid start to build great user experiences. There's a lot more you can do, so make sure to check out all the APIs 😀
 
 [jim]: https://blog.jim-nielsen.com
 [outlet-component]: ../components/outlet

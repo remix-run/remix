@@ -19,7 +19,7 @@ If you prefer to initialize a batteries-included Remix project, you can use the 
 npx create-remix@latest
 ```
 
-However, this guide will explain everything the CLI does to set up your project, and instead of using the CLI you can follow these steps. If you're just getting started with Remix, we recommend following this guide to understand all of the different pieces that make up a Remix app.
+However, this guide will explain everything the CLI does to set up your project, and instead of using the CLI, you can follow these steps. If you're just getting started with Remix, we recommend following this guide to understand all the different pieces that make up a Remix app.
 
 ```shellscript nonumber
 mkdir my-remix-app
@@ -243,7 +243,7 @@ app.listen(3000, () => {
 npm run dev
 ```
 
-Now you can work on your app with immediate feedback. Give it a shot, change the text in `root.jsx` and watch!
+Now you can work on your app with immediate feedback. Give it a try, change the text in `root.jsx` and watch!
 
 ## Controlling Server and Browser Entries
 

@@ -7,11 +7,11 @@ title: useBlocker
 The `useBlocker` hook allows you to prevent the user from navigating away from the current location, and present them with a custom UI to allow them to confirm the navigation.
 
 <docs-info>
-This only works for client-side navigations within your React Router application and will not block document requests. To prevent document navigations you will need to add your own <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event" target="_blank">`beforeunload`</a> event handler.
+This only works for client-side navigations within your React Router application and will not block document requests. To prevent document navigations, you will need to add your own <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event" target="_blank">`beforeunload`</a> event handler.
 </docs-info>
 
 <docs-warning>
-Blocking a user from navigating is a bit of an anti-pattern, so please carefully consider any usage of this hook and use it sparingly. In the de-facto use case of preventing a user navigating away from a half-filled form, you might consider persisting unsaved state to `sessionStorage` and automatically re-filling it if they return instead of blocking them from navigating away.
+Blocking a user from navigating is a bit of an antipattern, so please carefully consider any usage of this hook and use it sparingly. In the de-facto use case of preventing a user navigating away from a half-filled form, you might consider persisting unsaved state to `sessionStorage` and automatically re-filling it if they return instead of blocking them from navigating away.
 </docs-warning>
 
 ```tsx
@@ -77,6 +77,6 @@ When in a `blocked` state, you may call `blocker.proceed()` to proceed to the bl
 
 ### `reset()`
 
-When in a `blocked` state, you may call `blocker.reset()` to return the blocker back to an `unblocked` state and leave the user at the current location.
+When in a `blocked` state, you may call `blocker.reset()` to return the blocker to an `unblocked` state and leave the user at the current location.
 
 [example]: https://github.com/remix-run/react-router/tree/main/examples/navigation-blocking

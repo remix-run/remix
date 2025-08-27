@@ -5,7 +5,7 @@ order: 5
 
 # Future Flags and Deprecations
 
-This guide walks you through the process of adopting future flags in your Remix app. By following this strategy, you will be able to upgrade to the next major version of Remix with minimal changes. To read more about future flags see [Development Strategy][development-strategy].
+This guide walks you through the process of adopting future flags in your Remix app. By following this strategy, you will be able to upgrade to the next major version of Remix with minimal changes. To read more about future flags, see [Development Strategy][development-strategy].
 
 We highly recommend you make a commit after each step and ship it instead of doing everything all at once. Most flags can be adopted in any order, with exceptions noted below.
 
@@ -23,11 +23,11 @@ npm install @remix-run/{dev,react,node,etc.}@2
 
 **Background**
 
-Previously Remix required a `fetch` polyfill to be installed. This was accomplished by calling `installGlobals()`.
+Previously Remix required a `fetch` polyfill to be installed. This was achieved by calling `installGlobals()`.
 
 The next major version requires a minimum of Node 20 to take advantage of the built-in `fetch` support.
 
-Note: if you are using miniflare/cloudflare worker with your remix project, ensure your [compatibility flag][compatibility-flag] is set to `2023-03-01` or later as well.
+Note: if you are using Miniflare/Cloudflare worker with your remix project, ensure your [compatibility flag][compatibility-flag] is set to `2023-03-01` or later as well.
 
 👉 **Update to Node 20+**
 
@@ -50,7 +50,7 @@ export default defineConfig({
 
 **Background**
 
-Remix no longer uses its own, closed compiler (now referred to as the "Classic Compiler"), and instead uses [Vite][vite]. Vite is a powerful, performant and extensible development environment for JavaScript projects. [View the Vite docs][vite-docs] for more information on performance, troubleshooting, etc.
+Remix no longer uses its own, closed compiler (now referred to as the "Classic Compiler") and instead uses [Vite][vite]. Vite is a powerful, performant and extensible development environment for JavaScript projects. [View the Vite docs][vite-docs] for more information on performance, troubleshooting, etc.
 
 While this is not a future flag, new features and some feature flags are only available in the Vite plugin, and the Classic Compiler will be removed in the next version of Remix.
 
@@ -89,7 +89,7 @@ export default defineConfig({
 
 Many users found that automatically [optimizing dependencies][dependency-optimization] helped them more easily adopt the Vite plugin. For this reason we added the `unstable_optimizeDeps` flag to the Vite plugin.
 
-This flag will remain in an "unstable" state until React Router v7 so it is not critical that you adopt this in your Remix v2 app prior to upgrading to React Router v7.
+This flag will remain in an "unstable" state until React Router v7, so it is not critical that you adopt this in your Remix v2 app before upgrading to React Router v7.
 
 ```ts filename=vite.config.ts lines=[4-6]
 export default defineConfig({
@@ -369,7 +369,7 @@ You likely won't need to adjust any code, unless you had custom logic inside of 
 
 **Background**
 
-With this flag, Remix no longer sends the full route manifest up to the client on initial load. Instead, Remix only sends the server-rendered routes up in the manifest and then fetches the remaining routes as the user navigated around the application. Additional details are available in the [docs][lazy-route-discovery] and the [blog post][lazy-route-discovery-blog-post]
+With this flag, Remix no longer sends the full route manifest up to the client on initial load. Instead, Remix only sends the server-rendered routes up in the manifest and then fetches the remaining routes as the user navigates around the application. Additional details are available in the [docs][lazy-route-discovery] and the [blog post][lazy-route-discovery-blog-post]
 
 👉 **Enable the Flag**
 
@@ -527,7 +527,7 @@ This flag requires the [Vite plugin][vite-plugin].
 
 Config-based routing is the new default in React Router v7, configured via the `routes.ts` file in the app directory. Support for `routes.ts` and its related APIs in Remix are designed as a migration path to help minimize the number of changes required when moving your Remix project over to React Router v7. While some new packages have been introduced within the `@remix-run` scope, these new packages only exist to keep the code in `routes.ts` as similar as possible to the equivalent code for React Router v7.
 
-When the `v3_routeConfig` future flag is enabled, Remix's built-in file system routing will be disabled and your project will opted into React Router v7's config-based routing. If you prefer to keep using Remix's file-based routing we cover how to enable it in `routes.ts` below.
+When the `v3_routeConfig` future flag is enabled, Remix's built-in file system routing will be disabled and your project will opt into React Router v7's config-based routing. If you prefer to keep using Remix's file-based routing, we cover how to enable it in `routes.ts` below.
 
 **Update your code**
 
@@ -650,7 +650,7 @@ export default [
 ] satisfies RouteConfig;
 ```
 
-Note that if you need to mix and match different route config approaches, they can be merged together into a single array of routes. The `RouteConfig` type ensures that everything is still valid.
+Note that if you need to mix and match different route config approaches, they can be merged into a single array of routes. The `RouteConfig` type ensures that everything is still valid.
 
 ```ts
 import { flatRoutes } from "@remix-run/fs-routes";
@@ -714,7 +714,7 @@ The following utilities are deprecated and will be removed in React Router v7:
 
 We recommend using [`@mjackson/form-data-parser`][form-data-parser] and [`@mjackson/file-storage`][file-storage] to handle multipart form data and file uploads.
 
-You can also checkout the [React Router "File Uploads" doc][react-router-file-uploads] or ["File uploads with Remix"][file-uploads-with-remix] blog post for guides on using these libraries.
+You can also check out the [React Router "File Uploads" doc][react-router-file-uploads] or ["File uploads with Remix"][file-uploads-with-remix] blog post for guides on using these libraries.
 
 [development-strategy]: ../guides/api-development-strategy
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698

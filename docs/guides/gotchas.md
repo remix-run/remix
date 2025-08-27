@@ -141,7 +141,7 @@ export async function action() {
 
 > Why does this happen?
 
-Remix uses "tree shaking" to remove server code from browser bundles. Anything inside of Route module `action`, `headers`, and `loader` exports will be removed. It's a great approach but suffers from ecosystem compatibility.
+Remix uses "tree shaking" to remove server code from browser bundles. Anything inside Route module `action`, `headers`, and `loader` exports will be removed. It's a great approach but suffers from ecosystem compatibility.
 
 When you import a third-party module, Remix checks the `package.json` of that package for `"sideEffects": false`. If that is configured, Remix knows it can safely remove the code from the client bundles. Without it, the imports remain because code may depend on the module's side effects (like setting global polyfills, etc.).
 
@@ -186,7 +186,7 @@ With major deployment platforms now supporting ESM server side, we're confident 
 
 <docs-warning>This section is only relevant if you're using the [Classic Remix Compiler][classic-remix-compiler].</docs-warning>
 
-When using [CSS bundling features][css_bundling] in combination with `export *` (e.g. when using an index file like `components/index.ts` that re-exports from all subdirectories) you may find that styles from the re-exported modules are missing from the build output.
+When using [CSS bundling features][css_bundling] in combination with `export *` (e.g., when using an index file like `components/index.ts` that re-exports from all subdirectories) you may find that styles from the re-exported modules are missing from the build output.
 
 This is due to an [issue with `esbuild`'s CSS tree shaking][esbuild_css_tree_shaking_issue]. As a workaround, you should use named re-exports instead.
 
