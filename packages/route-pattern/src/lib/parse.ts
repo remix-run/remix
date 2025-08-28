@@ -42,12 +42,12 @@ function parsePart(source: string, bounds: [number, number], partName: string) {
   let [start, end] = bounds
   let part: Part = []
   let optional: { node: Optional; index: number } | null = null
-  let currentNodes = part
+  let currentNodes = () => optional?.node.nodes ?? part
 
   let appendText = (text: string) => {
-    let last = currentNodes.at(-1)
+    let last = currentNodes().at(-1)
     if (last?.type !== 'text') {
-      currentNodes.push({ type: 'text', value: text })
+      currentNodes().push({ type: 'text', value: text })
       return
     }
     last.value += text
@@ -63,7 +63,7 @@ function parsePart(source: string, bounds: [number, number], partName: string) {
       let remaining = source.slice(i, end)
       let name = identifierMatcher.exec(remaining)?.[0]
       if (!name) throw new ParseError('missing variable name', source, i, partName)
-      currentNodes.push({ type: 'variable', name })
+      currentNodes().push({ type: 'variable', name })
       i += name.length
       continue
     }
@@ -74,10 +74,10 @@ function parsePart(source: string, bounds: [number, number], partName: string) {
       let remaining = source.slice(i, end)
       let name = identifierMatcher.exec(remaining)?.[0]
       if (name) {
-        currentNodes.push({ type: 'wildcard', name })
+        currentNodes().push({ type: 'wildcard', name })
         i += name.length
       } else {
-        currentNodes.push({ type: 'wildcard' })
+        currentNodes().push({ type: 'wildcard' })
       }
       continue
     }
@@ -87,7 +87,7 @@ function parsePart(source: string, bounds: [number, number], partName: string) {
       let close = source.indexOf('}', i)
       if (close === -1 || close >= end) throw new ParseError('unmatched {', source, i, partName)
       let members = source.slice(i + 1, close).split(',')
-      currentNodes.push({ type: 'enum', members })
+      currentNodes().push({ type: 'enum', members })
       i = close + 1
       continue
     }
@@ -99,14 +99,12 @@ function parsePart(source: string, bounds: [number, number], partName: string) {
     if (char === '(') {
       if (optional) throw new ParseError('invalid nested (', source, i, partName)
       optional = { node: { type: 'optional', nodes: [] }, index: i }
-      currentNodes = optional.node.nodes
       i += 1
       continue
     }
     if (char === ')') {
       if (!optional) throw new ParseError('unmatched )', source, i, partName)
       part.push(optional.node)
-      currentNodes = part
       optional = null
       i += 1
       continue
