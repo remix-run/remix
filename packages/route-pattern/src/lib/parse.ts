@@ -40,9 +40,9 @@ const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
 function parsePart(source: string, bounds: [number, number], partType: string) {
   let [start, end] = bounds
-  let ast: Part = []
+  let part: Part = []
   let optional: { node: Optional; index: number } | null = null
-  let currentNodes = ast
+  let currentNodes = part
 
   let appendText = (text: string) => {
     let last = currentNodes.at(-1)
@@ -105,8 +105,8 @@ function parsePart(source: string, bounds: [number, number], partType: string) {
     }
     if (char === ')') {
       if (!optional) throw new ParseError('unmatched )', source, i, partType)
-      ast.push(optional.node)
-      currentNodes = ast
+      part.push(optional.node)
+      currentNodes = part
       optional = null
       i += 1
       continue
@@ -127,5 +127,5 @@ function parsePart(source: string, bounds: [number, number], partType: string) {
 
   if (optional) throw new ParseError('unmatched (', source, optional.index, partType)
 
-  return ast
+  return part
 }
