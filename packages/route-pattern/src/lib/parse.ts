@@ -12,9 +12,9 @@ export type Ast = {
 export class ParseError extends Error {
   source: string
   position: number
-  partType?: string
+  partType: string
 
-  constructor(message: string, source: string, position: number, partType?: string) {
+  constructor(message: string, source: string, position: number, partType: string) {
     super(`${message}${partType ? ` in ${partType}` : ''}`)
     this.name = 'ParseError'
     this.source = source
@@ -38,7 +38,7 @@ export function parse(source: string) {
 
 const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
-function parsePart(source: string, bounds: [number, number], partType?: string) {
+function parsePart(source: string, bounds: [number, number], partType: string) {
   let [start, end] = bounds
   let ast: Part = []
   let optional: { node: Optional; index: number } | null = null
