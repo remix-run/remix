@@ -395,7 +395,7 @@ describe('parse', () => {
         assert.ok(error instanceof ParseError)
         assert.equal(error.message, 'unmatched ) in pathname')
         assert.equal(error.position, 34) // Position of ')' in original string
-        assert.equal(error.partType, 'pathname')
+        assert.equal(error.partName, 'pathname')
       }
     })
 
@@ -408,7 +408,7 @@ describe('parse', () => {
         assert.ok(error instanceof ParseError)
         assert.equal(error.message, 'missing variable name in hostname')
         assert.equal(error.position, 9) // Position after ':' in hostname
-        assert.equal(error.partType, 'hostname')
+        assert.equal(error.partName, 'hostname')
       }
     })
 
@@ -421,7 +421,7 @@ describe('parse', () => {
         assert.ok(error instanceof ParseError)
         assert.equal(error.message, 'missing variable name in protocol')
         assert.equal(error.position, 5) // Position after ':' with missing variable name
-        assert.equal(error.partType, 'protocol')
+        assert.equal(error.partName, 'protocol')
       }
     })
 
@@ -446,7 +446,7 @@ describe('parse', () => {
         assert.ok(error instanceof ParseError)
         assert.equal(error.message, 'missing variable name in pathname')
         assert.equal(error.position, 2)
-        assert.equal(error.partType, 'pathname')
+        assert.equal(error.partName, 'pathname')
       }
     })
 
@@ -459,7 +459,7 @@ describe('parse', () => {
         assert.ok(error instanceof ParseError)
         assert.equal(error.message, 'unmatched { in pathname')
         assert.equal(error.position, 0)
-        assert.equal(error.partType, 'pathname')
+        assert.equal(error.partName, 'pathname')
       }
     })
 
@@ -472,7 +472,7 @@ describe('parse', () => {
         assert.ok(error instanceof ParseError)
         assert.equal(error.message, 'unmatched } in pathname')
         assert.equal(error.position, 6)
-        assert.equal(error.partType, 'pathname')
+        assert.equal(error.partName, 'pathname')
       }
     })
 
@@ -485,7 +485,7 @@ describe('parse', () => {
         assert.ok(error instanceof ParseError)
         assert.equal(error.message, 'unmatched ) in pathname')
         assert.equal(error.position, 6)
-        assert.equal(error.partType, 'pathname')
+        assert.equal(error.partName, 'pathname')
       }
     })
 
@@ -498,7 +498,7 @@ describe('parse', () => {
         assert.ok(error instanceof ParseError)
         assert.equal(error.message, 'invalid nested ( in pathname')
         assert.equal(error.position, 7)
-        assert.equal(error.partType, 'pathname')
+        assert.equal(error.partName, 'pathname')
       }
     })
 
@@ -511,7 +511,7 @@ describe('parse', () => {
         assert.ok(error instanceof ParseError)
         assert.equal(error.message, 'dangling escape in pathname')
         assert.equal(error.position, 4)
-        assert.equal(error.partType, 'pathname')
+        assert.equal(error.partName, 'pathname')
       }
     })
   })
