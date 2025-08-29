@@ -13,13 +13,9 @@ type _Split<T extends string> =
 // prettier-ignore
 type _SplitHost<T extends string> =
   T extends `${infer L}:${infer R}` ?
-    R extends `${string}:${string}` ?
-      _SplitHost<R> extends { hostname: infer H extends string; port: infer P extends string } ?
-        { hostname: `${L}:${H}`; port: P } :
-        { hostname: T } :
-      IsDigits<R> extends true ?
-        { hostname: L; port: R } :
-        { hostname: T } :
+    IsDigits<R> extends true ? { hostname: L; port: R} :
+    _SplitHost<R> extends { hostname: infer H extends string; port: infer P extends string } ? { hostname: `${L}:${H}`; port: P } :
+    { hostname: T } :
   { hostname: T }
 
 // Digits ------------------------------------------------------------------------------------------
