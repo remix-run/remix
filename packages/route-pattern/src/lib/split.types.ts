@@ -2,16 +2,11 @@ export type Split<T extends string> = OmitEmptyStringValues<_Split<T>>
 
 // prettier-ignore
 type _Split<T extends string> =
-  T extends `${infer L}?${infer R}` ?
-    _Split<L> & { search: R } :
-    T extends `${infer Protocol}://${infer R}` ?
-      Protocol extends `${string}/${string}` ?
-        { pathname: T } :
-        R extends `${infer Host}/${infer Pathname}` ? (
-          _SplitHost<Host> & { protocol: Protocol; pathname: Pathname }
-        ) : (
-          _SplitHost<R> & { protocol: Protocol }
-        ) :
+  T extends `${infer L}?${infer R}` ? _Split<L> & { search: R } :
+  T extends `${infer Protocol}://${infer R}` ?
+    Protocol extends `${string}/${string}` ? { pathname: T } :
+    R extends `${infer Host}/${infer Pathname}` ? _SplitHost<Host> & { protocol: Protocol; pathname: Pathname } :
+    _SplitHost<R> & { protocol: Protocol } :
   { pathname: T }
 
 // Split host string into { hostname, port }
