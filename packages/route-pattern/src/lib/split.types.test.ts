@@ -1,8 +1,5 @@
 import type { Split } from './split.types.ts'
-
-type Assert<T extends true> = T
-type IsEqual<A, B> =
-  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false
+import type { Assert, IsEqual } from './test.d.ts'
 
 // should not treat trailing ":tld" in hostname as a port
 type Case1 = Split<'http://host.com.:tld/path/:id'>
