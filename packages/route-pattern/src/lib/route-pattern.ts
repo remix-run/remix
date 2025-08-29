@@ -15,16 +15,45 @@ export class RoutePattern {
   readonly source: string
 
   readonly #ast: Ast
-  readonly #protocolMatcher: RegExp
-  readonly #hostnameMatcher: RegExp
-  readonly #pathnameMatcher: RegExp
+  readonly #matcher: RegExp
+  readonly #hasHost: boolean
+  readonly #paramNames: Array<string>
 
   constructor(source: string | RoutePattern) {
     this.source = typeof source === 'string' ? source : source.source
     this.#ast = parse(this.source)
-    this.#protocolMatcher = partToRegExp(this.#ast.protocol, { param: /.*/ }) ?? /^.*$/
-    this.#hostnameMatcher = partToRegExp(this.#ast.hostname, { param: /[^.]+/ }) ?? /^.*$/
-    this.#pathnameMatcher = partToRegExp(this.#ast.pathname, { param: /[^/]+/ }) ?? /^$/
+    this.#hasHost =
+      this.#ast.hostname !== undefined ||
+      this.#ast.protocol !== undefined ||
+      this.#ast.port !== undefined
+    this.#paramNames = []
+
+    if (this.#hasHost) {
+      let protocolSource = this.#ast.protocol
+        ? partToRegExpSource(this.#ast.protocol, /.*/, this.#paramNames)
+        : `[^:]+`
+
+      let hostnameSource = this.#ast.hostname
+        ? partToRegExpSource(this.#ast.hostname, /[^.]+/, this.#paramNames)
+        : `[^/:]+`
+
+      let portSource =
+        this.#ast.port !== undefined ? `:${regexpEscape(this.#ast.port)}` : `(?::[0-9]+)?`
+
+      let pathnameSource = this.#ast.pathname
+        ? partToRegExpSource(this.#ast.pathname, /[^/]+/, this.#paramNames)
+        : ''
+
+      this.#matcher = new RegExp(
+        `^${protocolSource}://${hostnameSource}${portSource}/${pathnameSource}$`,
+      )
+    } else {
+      let pathnameSource = this.#ast.pathname
+        ? partToRegExpSource(this.#ast.pathname, /[^/]+/, this.#paramNames)
+        : ''
+
+      this.#matcher = new RegExp(`^${pathnameSource}$`)
+    }
   }
 
   /**
@@ -36,28 +65,19 @@ export class RoutePattern {
   match(url: URL | string): Match | null {
     if (typeof url === 'string') url = new URL(url)
 
+    let match = this.#matcher.exec(
+      this.#hasHost
+        ? `${url.protocol.slice(0, -1)}://${url.hostname}${url.port ? `:${url.port}` : ''}/${url.pathname.slice(1)}`
+        : url.pathname.slice(1),
+    )
+    if (match === null) return null
+
+    // Map positional capture groups to parameter names in source order
     let params: Params = {}
-
-    let protocolMatch = this.#protocolMatcher.exec(url.protocol.slice(0, -1))
-    if (protocolMatch === null) return null
-    if (protocolMatch.groups) {
-      Object.assign(params, protocolMatch.groups)
-    }
-
-    let hostnameMatch = this.#hostnameMatcher.exec(url.hostname)
-    if (hostnameMatch === null) return null
-    if (hostnameMatch.groups) {
-      Object.assign(params, hostnameMatch.groups)
-    }
-
-    if (this.#ast.port !== undefined) {
-      if (url.port !== this.#ast.port) return null
-    }
-
-    let pathnameMatch = this.#pathnameMatcher.exec(url.pathname.slice(1))
-    if (pathnameMatch === null) return null
-    if (pathnameMatch.groups) {
-      Object.assign(params, pathnameMatch.groups)
+    for (let i = 0; i < this.#paramNames.length; i++) {
+      let value = match[i + 1]
+      let paramName = this.#paramNames[i]
+      params[paramName] = value
     }
 
     if (this.#ast.search) {
@@ -84,20 +104,17 @@ export class RoutePattern {
   }
 }
 
-function partToRegExp(part: Part | undefined, options: { param: RegExp }) {
-  if (part === undefined) return undefined
-  let source = partToRegExpSource(part, options.param)
-  return new RegExp('^' + source + '$')
-}
-
-function partToRegExpSource(part: Part, paramRegExp: RegExp) {
+function partToRegExpSource(part: Part, paramRegExp: RegExp, paramNames: string[]) {
   let source: string = part
     .map((node) => {
       if (node.type === 'variable') {
-        return `(?<${node.name}>${paramRegExp.source})`
+        paramNames.push(node.name)
+        return `(${paramRegExp.source})`
       }
       if (node.type === 'wildcard') {
-        return node.name ? `(?<${node.name}>.*)` : `(?:.*)`
+        if (!node.name) return `(?:.*)`
+        paramNames.push(node.name)
+        return `(.*)`
       }
       if (node.type === 'enum') {
         return `(?:${node.members.map(regexpEscape).join('|')})`
@@ -106,7 +123,7 @@ function partToRegExpSource(part: Part, paramRegExp: RegExp) {
         return regexpEscape(node.value)
       }
       if (node.type === 'optional') {
-        return `(?:${partToRegExpSource(node.nodes, paramRegExp)})?`
+        return `(?:${partToRegExpSource(node.nodes, paramRegExp, paramNames)})?`
       }
 
       throw new Error(`Node with unknown type: ${node}`)

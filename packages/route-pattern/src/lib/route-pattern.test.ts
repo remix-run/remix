@@ -126,6 +126,14 @@ describe('RoutePattern', () => {
       })
     })
 
+    describe('duplicate variable names', () => {
+      it('uses the right-most param value', () => {
+        let pattern = new RoutePattern('api/:id/users/:id')
+        let match = pattern.match('https://example.com/api/123/users/456')
+        assert.deepEqual(match?.params, { id: '456' })
+      })
+    })
+
     describe('enums', () => {
       let enumTests = [
         {

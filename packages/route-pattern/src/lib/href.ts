@@ -183,8 +183,7 @@ export type Params<T extends string> =
   Parse<T> extends infer A extends Ast ?
     | (A['protocol'] extends Part ? PartParams<A['protocol']> : never)
     | (A['hostname'] extends Part ? PartParams<A['hostname']> : never)
-    | (A['pathname'] extends Part ? PartParams<A['pathname']> : never)
-  :
+    | (A['pathname'] extends Part ? PartParams<A['pathname']> : never) :
   never;
 
 // prettier-ignore
