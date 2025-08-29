@@ -30,7 +30,7 @@ export type Node = Variable | Wildcard | Enum | Text | Optional
 
 export type Variable = { type: 'variable'; name: string }
 export type Wildcard = { type: 'wildcard'; name?: string }
-export type Enum = { type: 'enum'; members: Array<string> }
+export type Enum = { type: 'enum'; members: readonly string[] }
 export type Text = { type: 'text'; value: string }
 export type Optional = { type: 'optional'; nodes: Array<Node> }
 
