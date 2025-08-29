@@ -21,4 +21,4 @@ Additionally, Remix doesn't abstract over your infrastructure, so the templates 
 
 In a nutshell: if you want to deploy your app, Read the manual 😋
 
-[starter-templates]: https://github.com/remix-run/remix/tree/main/templates
+[starter-templates]: https://github.com/remix-run/remix/tree/v2/templates
