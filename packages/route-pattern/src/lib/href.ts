@@ -21,15 +21,8 @@ export interface HrefBuilder<T extends string | undefined = undefined> {
 // prettier-ignore
 type HrefBuilderArgs<T extends string> =
   Params<T> extends infer P extends string ?
-    [P] extends [never] ? (
-      HasUnnamedWildcardInAst<Parse<T>> extends true ?
-        [Record<'*', string>] | [Record<'*', string>, SearchParams] :
-        [] | [any, SearchParams]
-    ) : (
-      HasUnnamedWildcardInAst<Parse<T>> extends true ?
-        [Record<P | '*', string>] | [Record<P | '*', string>, SearchParams] :
-        [Record<P, string>] | [Record<P, string>, SearchParams]
-    ) :
+    [P] extends [never] ? [] | [any, SearchParams] :
+    [Record<P, string>] | [Record<P, string>, SearchParams] :
   never
 
 interface HrefBuilderOptions {
@@ -128,30 +121,13 @@ type Params<T extends string> =
 type PartParams<T extends Part> =
   T extends [infer L extends Node, ...infer R extends Array<Node>] ?
     L extends { type: 'variable', name: infer N extends string } ? N | PartParams<R> :
-    L extends { type: 'wildcard', name: infer N } ? (N extends string ? N | PartParams<R> : '*' | PartParams<R>) :
+    L extends { type: 'wildcard', name: infer N extends string } ? N | PartParams<R> :
+    L extends { type: 'wildcard' } ? '*' | PartParams<R> :
     L extends Optional ? PartParams<L['nodes']> | PartParams<R> :
     PartParams<R> :
   never
 
 type SearchParams = NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
-
-// Detect unnamed wildcards in the AST --------------------------------------------------------------
-
-// prettier-ignore
-type HasUnnamedWildcardInAst<T extends Ast> =
-  (T extends { protocol: infer P extends Array<Node> } ? HasUnnamedWildcardInPart<P> : false) extends true ? true :
-  (T extends { hostname: infer H extends Array<Node> } ? HasUnnamedWildcardInPart<H> : false) extends true ? true :
-  (T extends { pathname: infer P extends Array<Node> } ? HasUnnamedWildcardInPart<P> : false)
-
-// prettier-ignore
-type HasUnnamedWildcardInPart<T extends Array<Node>> =
-  T extends [infer L extends Node, ...infer R extends Array<Node>] ?
-    L extends { type: 'wildcard' } ? (
-      L extends { name: string } ? HasUnnamedWildcardInPart<R> : true
-    ) :
-    L extends Optional ? (HasUnnamedWildcardInPart<L['nodes']> extends true ? true : HasUnnamedWildcardInPart<R>) :
-    HasUnnamedWildcardInPart<R> :
-  false
 
 // Variant -----------------------------------------------------------------------------------------
 
