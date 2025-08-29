@@ -1,10 +1,10 @@
 import type { Split } from './split.types.ts'
 
 export type Ast = {
-  protocol?: Array<Node>
-  hostname?: Array<Node>
+  protocol?: Array<PartNode>
+  hostname?: Array<PartNode>
   port?: string
-  pathname?: Array<Node>
+  pathname?: Array<PartNode>
 }
 
 export type Parse<T extends string> =
@@ -24,18 +24,25 @@ export type Parse<T extends string> =
 
 // Part --------------------------------------------------------------------------------------------
 
-export type Part = Array<Node>
+export type Part = Array<PartNode>
 
-export type Node = Variable | Wildcard | Enum | Text | Optional
+type Variable = { type: 'variable'; name: string }
+type Wildcard = { type: 'wildcard'; name?: string }
+type Enum = { type: 'enum'; members: readonly string[] }
+type Text = { type: 'text'; value: string }
+type Optional = { type: 'optional'; nodes: Array<PartNode> }
 
-export type Variable = { type: 'variable'; name: string }
-export type Wildcard = { type: 'wildcard'; name?: string }
-export type Enum = { type: 'enum'; members: readonly string[] }
-export type Text = { type: 'text'; value: string }
-export type Optional = { type: 'optional'; nodes: Array<Node> }
+export type PartNode<Key extends keyof _PartNode = keyof _PartNode> = _PartNode[Key]
+type _PartNode = {
+  variable: Variable
+  wildcard: Wildcard
+  enum: Enum
+  text: Text
+  optional: Optional
+}
 
 type PartParseState = {
-  ast: Array<Node>
+  ast: Array<PartNode>
   optional: Optional | null
   rest: string
 }
@@ -77,7 +84,7 @@ type _PartParse<state extends PartParseState> =
     state['ast']
 
 // prettier-ignore
-type AppendNode<state extends PartParseState, node extends Node, rest extends string> =
+type AppendNode<state extends PartParseState, node extends PartNode, rest extends string> =
   state extends { optional: infer optional extends Optional } ?
     {
       ast: state['ast']
@@ -95,13 +102,13 @@ type AppendText<state extends PartParseState, text extends string, rest extends 
   state extends { optional: Optional } ?
     {
       ast: state['ast']
-      optional: state['optional']['nodes'] extends [...infer nodes extends Array<Node>, { type: 'text', value: infer value extends string }] ?
+      optional: state['optional']['nodes'] extends [...infer nodes extends Array<PartNode>, { type: 'text', value: infer value extends string }] ?
         { type: 'optional', nodes: [...nodes, { type: 'text', value: `${value}${text}`}] } :
         { type: 'optional', nodes: [...state['optional']['nodes'], { type: 'text', value: text }] }
       rest: rest;
     } :
     {
-      ast: state['ast'] extends [...infer nodes extends Array<Node>, { type: 'text', value: infer value extends string }] ?
+      ast: state['ast'] extends [...infer nodes extends Array<PartNode>, { type: 'text', value: infer value extends string }] ?
         [...nodes, { type: 'text', value: `${value}${text}`}] :
         [...state['ast'], { type: 'text', value: text }]
       optional: state['optional']

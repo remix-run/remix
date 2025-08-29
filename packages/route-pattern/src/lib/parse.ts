@@ -1,4 +1,4 @@
-import type { Optional, Part } from './parse.types.ts'
+import type { PartNode, Part } from './parse.types.ts'
 import { split } from './split.ts'
 
 export type Ast = {
@@ -41,7 +41,7 @@ const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 function parsePart(source: string, bounds: [number, number], partName: string) {
   let [start, end] = bounds
   let part: Part = []
-  let optional: { node: Optional; index: number } | null = null
+  let optional: { node: PartNode<'optional'>; index: number } | null = null
   let currentNodes = () => optional?.node.nodes ?? part
 
   let appendText = (text: string) => {
