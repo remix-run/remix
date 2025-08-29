@@ -1,42 +1,65 @@
 import type { Variant } from './href.ts'
 import type { Assert, IsEqual } from './test.d.ts'
 
-// Variables ---------------------------------------------------------------
+// prettier-ignore
+export type Tests = [
+  // should handle simple variable patterns
+  Assert<IsEqual<
+    Variant<'products/:id'>,
+    'products/:id'
+  >>,
 
-type V1 = Variant<'products/:id'>
-type _assertV1 = Assert<IsEqual<V1, 'products/:id'>>
+  // should handle optional path segments
+  Assert<IsEqual<
+    Variant<'products(/:id)'>,
+    'products' | 'products/:id'
+  >>,
 
-// Optionals ---------------------------------------------------------------
+  // should handle optional extensions
+  Assert<IsEqual<
+    Variant<'products/:id(.:ext)'>,
+    'products/:id' | 'products/:id.:ext'
+  >>,
 
-type V2 = Variant<'products(/:id)'>
-type _assertV2 = Assert<IsEqual<V2, 'products' | 'products/:id'>>
+  // should handle wildcard patterns
+  Assert<IsEqual<
+    Variant<'files/*'>,
+    'files/*'
+  >>,
 
-type V3 = Variant<'products/:id(.:ext)'>
-type _assertV3 = Assert<IsEqual<V3, 'products/:id' | 'products/:id.:ext'>>
+  // should handle wildcard with file extension
+  Assert<IsEqual<
+    Variant<'files/*.jpg'>,
+    'files/*.jpg'
+  >>,
 
-// Wildcards ---------------------------------------------------------------
+  // should handle named wildcard patterns
+  Assert<IsEqual<
+    Variant<'files/*path'>,
+    'files/*path'
+  >>,
 
-type V4 = Variant<'files/*'>
-type _assertV4 = Assert<IsEqual<V4, 'files/*'>>
+  // should handle wildcard with optional extension
+  Assert<IsEqual<
+    Variant<'files/*(.:ext)'>,
+    'files/*' | 'files/*.:ext'
+  >>,
 
-type V5 = Variant<'files/*.jpg'>
-type _assertV5 = Assert<IsEqual<V5, 'files/*.jpg'>>
+  // should handle enum patterns
+  Assert<IsEqual<
+    Variant<'avatar.{jpg,png,gif}'>,
+    'avatar.jpg' | 'avatar.png' | 'avatar.gif'
+  >>,
 
-type V6 = Variant<'files/*path'>
-type _assertV6 = Assert<IsEqual<V6, 'files/*path'>>
+  // should handle optional enum patterns
+  Assert<IsEqual<
+    Variant<'photo(.{jpg,png})'>,
+    'photo' | 'photo.jpg' | 'photo.png'
+  >>,
 
-type V7 = Variant<'files/*(.:ext)'>
-type _assertV7 = Assert<IsEqual<V7, 'files/*' | 'files/*.:ext'>>
-
-// Enums -------------------------------------------------------------------
-
-type V8 = Variant<'avatar.{jpg,png,gif}'>
-type _assertV8 = Assert<IsEqual<V8, 'avatar.jpg' | 'avatar.png' | 'avatar.gif'>>
-
-type V9 = Variant<'photo(.{jpg,png})'>
-type _assertV9 = Assert<IsEqual<V9, 'photo' | 'photo.jpg' | 'photo.png'>>
-
-type V10 = Variant<'files/*.{jpg,png}'>
-type _assertV10 = Assert<IsEqual<V10, 'files/*.jpg' | 'files/*.png'>>
-
-export {}
+  // should handle wildcard with enum extension
+  Assert<IsEqual<
+    Variant<'files/*.{jpg,png}'>,
+    'files/*.jpg' | 'files/*.png'
+  >>,
+]
