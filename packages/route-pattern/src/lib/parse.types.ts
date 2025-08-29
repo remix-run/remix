@@ -42,13 +42,13 @@ type _PartNode = {
 }
 
 type PartParseState = {
-  ast: Array<PartNode>
+  part: Array<PartNode>
   optional: Optional | null
   rest: string
 }
 
 type PartParse<source extends string> = _PartParse<{
-  ast: []
+  part: []
   optional: null
   rest: source
 }>
@@ -70,10 +70,10 @@ type _PartParse<state extends PartParseState> =
       char extends '}' ? never : // unmatched `}`
       char extends '(' ?
         state extends { optional: Optional } ? never : // nested optional
-        _PartParse<{ ast: state['ast'], optional: { type: 'optional', nodes: [] }, rest: rest }> :
+        _PartParse<{ part: state['part'], optional: { type: 'optional', nodes: [] }, rest: rest }> :
       char extends ')' ?
         state extends { optional: infer optional extends Optional } ?
-          _PartParse<{ ast: [...state['ast'], optional], optional: null, rest: rest }> :
+          _PartParse<{ part: [...state['part'], optional], optional: null, rest: rest }> :
         never : // unmatched `)`
       char extends '\\' ?
         rest extends `${infer next}${infer after}` ? _PartParse<AppendText<state, next, after>> :
@@ -81,18 +81,18 @@ type _PartParse<state extends PartParseState> =
       _PartParse<AppendText<state, char, rest>>
     :
     state extends { optional: Optional} ? never : // unmatched `(`
-    state['ast']
+    state['part']
 
 // prettier-ignore
 type AppendNode<state extends PartParseState, node extends PartNode, rest extends string> =
   state extends { optional: infer optional extends Optional } ?
     {
-      ast: state['ast']
+      part: state['part']
       optional: { type: 'optional', nodes: [...optional['nodes'], node]}
       rest: rest
     } :
     {
-      ast: [...state['ast'], node]
+      part: [...state['part'], node]
       optional: null
       rest: rest;
     }
@@ -101,16 +101,16 @@ type AppendNode<state extends PartParseState, node extends PartNode, rest extend
 type AppendText<state extends PartParseState, text extends string, rest extends string> =
   state extends { optional: Optional } ?
     {
-      ast: state['ast']
+      part: state['part']
       optional: state['optional']['nodes'] extends [...infer nodes extends Array<PartNode>, { type: 'text', value: infer value extends string }] ?
         { type: 'optional', nodes: [...nodes, { type: 'text', value: `${value}${text}`}] } :
         { type: 'optional', nodes: [...state['optional']['nodes'], { type: 'text', value: text }] }
       rest: rest;
     } :
     {
-      ast: state['ast'] extends [...infer nodes extends Array<PartNode>, { type: 'text', value: infer value extends string }] ?
+      part: state['part'] extends [...infer nodes extends Array<PartNode>, { type: 'text', value: infer value extends string }] ?
         [...nodes, { type: 'text', value: `${value}${text}`}] :
-        [...state['ast'], { type: 'text', value: text }]
+        [...state['part'], { type: 'text', value: text }]
       optional: state['optional']
       rest: rest;
     }
