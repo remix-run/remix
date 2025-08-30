@@ -1078,7 +1078,7 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 - [SvelteKit][sveltekit]
 
 [vite]: https://vitejs.dev
-[template-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/cloudflare
+[template-cloudflare]: https://github.com/remix-run/remix/tree/v2/templates/cloudflare
 [public-path]: ../file-conventions/remix-config#publicpath
 [server-build-path]: ../file-conventions/remix-config#serverbuildpath
 [vite-config]: ../file-conventions/vite-config

@@ -165,7 +165,7 @@ After the init script has been run, the `remix.init` folder gets deleted, so you
 [indie_stack]: https://github.com/remix-run/indie-stack
 [grunge_stack]: https://github.com/remix-run/grunge-stack
 [remix_stack_topic]: https://github.com/topics/remix-stack
-[official_templates]: https://github.com/remix-run/remix/tree/main/templates
+[official_templates]: https://github.com/remix-run/remix/tree/v2/templates
 [examples]: https://github.com/remix-run/examples
 [vercel_template_docs]: https://vercel.com/docs/frameworks/remix
 [netlify_template_docs]: https://docs.netlify.com/integrations/frameworks/remix
