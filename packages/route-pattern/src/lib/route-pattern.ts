@@ -1,5 +1,4 @@
-import type { Ast } from './parse.ts'
-import type { Part } from './parse.types.ts'
+import type { Ast, Part } from './parse.types.ts'
 import { parse } from './parse.ts'
 
 type Params = Record<string, string | undefined>
@@ -81,7 +80,7 @@ export class RoutePattern {
     }
 
     if (this.#ast.search) {
-      for (let [key, value] of this.#ast.search?.entries()) {
+      for (let [key, value] of new URLSearchParams(this.#ast.search).entries()) {
         if (!url.searchParams.getAll(key).includes(value)) return null
       }
     }

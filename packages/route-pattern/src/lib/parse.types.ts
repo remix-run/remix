@@ -5,6 +5,7 @@ export type Ast = {
   hostname?: Array<PartNode>
   port?: string
   pathname?: Array<PartNode>
+  search?: string
 }
 
 export type Parse<T extends string> =
@@ -13,12 +14,14 @@ export type Parse<T extends string> =
     hostname?: string
     port?: string
     pathname?: string
+    search?: string
   }
     ? {
         protocol: split['protocol'] extends string ? PartParse<split['protocol']> : undefined
         hostname: split['hostname'] extends string ? PartParse<split['hostname']> : undefined
         port: split['port'] extends string ? split['port'] : undefined
         pathname: split['pathname'] extends string ? PartParse<split['pathname']> : undefined
+        search: split['search'] extends string ? split['search'] : undefined
       }
     : never
 

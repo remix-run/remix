@@ -352,7 +352,7 @@ describe('parse', () => {
         input: 'search?q=:query',
         expected: {
           pathname: [{ type: 'text', value: 'search' }],
-          search: new URLSearchParams('q=:query'),
+          search: 'q=:query',
         },
       },
       {
@@ -371,7 +371,7 @@ describe('parse', () => {
             { type: 'text', value: '/users/' },
             { type: 'variable', name: 'id' },
           ],
-          search: new URLSearchParams('format=json'),
+          search: 'format=json',
         },
       },
     ]

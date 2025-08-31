@@ -1,13 +1,5 @@
-import type { PartNode, Part } from './parse.types.ts'
+import type { Ast, PartNode, Part } from './parse.types.ts'
 import { split } from './split.ts'
-
-export type Ast = {
-  protocol?: Part
-  hostname?: Part
-  port?: string
-  pathname?: Part
-  search?: URLSearchParams
-}
 
 export class ParseError extends Error {
   source: string
@@ -31,7 +23,7 @@ export function parse(source: string) {
   if (hostname) ast.hostname = parsePart(source, hostname, 'hostname')
   if (port) ast.port = source.slice(...port)
   if (pathname) ast.pathname = parsePart(source, pathname, 'pathname')
-  if (search) ast.search = new URLSearchParams(source.slice(...search))
+  if (search) ast.search = source.slice(...search)
 
   return ast
 }
