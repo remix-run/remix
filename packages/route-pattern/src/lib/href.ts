@@ -110,7 +110,7 @@ type Params<T extends string> =
 // prettier-ignore
 type PartParams<T extends Part> =
   T extends [infer L extends PartNode, ...infer R extends Array<PartNode>] ?
-    L extends { type: 'variable', name: infer N extends string } ? N | PartParams<R> :
+    L extends PartNode<'variable'> ? L['name'] | PartParams<R> :
     L extends PartNode<'wildcard'> ? (L extends { name: infer N extends string } ? N : '*') | PartParams<R> :
     L extends PartNode<'optional'> ? PartParams<L['nodes']> | PartParams<R> :
     PartParams<R> :
