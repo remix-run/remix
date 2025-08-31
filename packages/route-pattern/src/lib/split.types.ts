@@ -32,15 +32,12 @@ type _SplitHost<T extends string> =
 // prettier-ignore
 type _0_9 = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
-type IsDigits<S extends string> = S extends ''
-  ? false
-  : S extends `${infer H}${infer T}`
-    ? H extends _0_9
-      ? T extends ''
-        ? true
-        : IsDigits<T>
-      : false
-    : false
+// prettier-ignore
+type IsDigits<S extends string> =
+  S extends `${_0_9}${infer T}` ?
+    T extends '' ? true :
+    IsDigits<T> :
+  false
 
 // Utils -------------------------------------------------------------------------------------------
 
