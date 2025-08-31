@@ -1,4 +1,4 @@
-import type { Variant } from './href.ts'
+import type { Variant } from './variant.ts'
 import type { Assert, IsEqual } from './test.d.ts'
 
 // prettier-ignore
