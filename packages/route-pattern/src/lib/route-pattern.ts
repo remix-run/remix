@@ -1,5 +1,5 @@
 import type { Params } from './params.ts'
-import type { Ast, Part } from './parse.types.ts'
+import type { Part } from './parse.types.ts'
 import { parse } from './parse.ts'
 
 /**
@@ -11,45 +11,49 @@ export class RoutePattern<T extends string> {
    */
   readonly source: T
 
-  readonly #ast: Ast
   readonly #matcher: RegExp
-  readonly #hasHost: boolean
+  readonly #matchOrigin: boolean
   readonly #paramNames: Array<string>
+  readonly #requiredSearchParams: Map<string, Set<string>> | null
 
   constructor(source: T | RoutePattern<T>) {
     this.source = typeof source === 'string' ? source : source.source
-    this.#ast = parse(this.source)
-    this.#hasHost =
-      this.#ast.hostname !== undefined ||
-      this.#ast.protocol !== undefined ||
-      this.#ast.port !== undefined
+
+    let { protocol, hostname, port, pathname, searchParams } = parse(this.source)
+
+    this.#matchOrigin = protocol !== undefined || hostname !== undefined || port !== undefined
     this.#paramNames = []
 
-    if (this.#hasHost) {
-      let protocolSource = this.#ast.protocol
-        ? partToRegExpSource(this.#ast.protocol, /.*/, this.#paramNames)
-        : `[^:]+`
-
-      let hostnameSource = this.#ast.hostname
-        ? partToRegExpSource(this.#ast.hostname, /[^.]+/, this.#paramNames)
+    if (this.#matchOrigin) {
+      let protocolSource = protocol ? partToRegExpSource(protocol, /.*/, this.#paramNames) : `[^:]+`
+      let hostnameSource = hostname
+        ? partToRegExpSource(hostname, /[^.]+/, this.#paramNames)
         : `[^/:]+`
-
-      let portSource =
-        this.#ast.port !== undefined ? `:${regexpEscape(this.#ast.port)}` : `(?::[0-9]+)?`
-
-      let pathnameSource = this.#ast.pathname
-        ? partToRegExpSource(this.#ast.pathname, /[^/]+/, this.#paramNames)
-        : ''
+      let portSource = port !== undefined ? `:${regexpEscape(port)}` : `(?::[0-9]+)?`
+      let pathnameSource = pathname ? partToRegExpSource(pathname, /[^/]+/, this.#paramNames) : ''
 
       this.#matcher = new RegExp(
         `^${protocolSource}://${hostnameSource}${portSource}/${pathnameSource}$`,
       )
     } else {
-      let pathnameSource = this.#ast.pathname
-        ? partToRegExpSource(this.#ast.pathname, /[^/]+/, this.#paramNames)
-        : ''
+      let pathnameSource = pathname ? partToRegExpSource(pathname, /[^/]+/, this.#paramNames) : ''
 
       this.#matcher = new RegExp(`^${pathnameSource}$`)
+    }
+
+    if (searchParams) {
+      let required = new Map<string, Set<string>>()
+      for (let [key, value] of searchParams.entries()) {
+        let set = required.get(key)
+        if (!set) {
+          set = new Set<string>()
+          required.set(key, set)
+        }
+        set.add(value)
+      }
+      this.#requiredSearchParams = required
+    } else {
+      this.#requiredSearchParams = null
     }
   }
 
@@ -63,7 +67,7 @@ export class RoutePattern<T extends string> {
     if (typeof url === 'string') url = new URL(url)
 
     let match = this.#matcher.exec(
-      this.#hasHost
+      this.#matchOrigin
         ? `${url.protocol.slice(0, -1)}://${url.hostname}${url.port ? `:${url.port}` : ''}/${url.pathname.slice(1)}`
         : url.pathname.slice(1),
     )
@@ -77,9 +81,24 @@ export class RoutePattern<T extends string> {
       params[paramName] = value
     }
 
-    if (this.#ast.searchParams) {
-      for (let [key, value] of this.#ast.searchParams.entries()) {
-        if (!url.searchParams.getAll(key).includes(value)) return null
+    if (this.#requiredSearchParams) {
+      // Build an index of the URL's query once for O(1) membership checks
+      let valuesByKey = new Map<string, Set<string>>()
+      for (let [k, v] of url.searchParams) {
+        let set = valuesByKey.get(k)
+        if (!set) {
+          set = new Set<string>()
+          valuesByKey.set(k, set)
+        }
+        set.add(v)
+      }
+
+      for (let [key, requiredValues] of this.#requiredSearchParams) {
+        let set = valuesByKey.get(key)
+        if (!set) return null
+        for (let value of requiredValues) {
+          if (!set.has(value)) return null
+        }
       }
     }
 

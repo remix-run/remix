@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/route-pattern",
   "version": "0.6.0",
-  "description": "Route patterns are strings that describe the structure of URLs you want to match",
+  "description": "Match and generate URLs with strong typing",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
