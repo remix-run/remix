@@ -33,8 +33,12 @@ const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 function parsePart(source: string, bounds: [number, number], partName: string) {
   let [start, end] = bounds
   let part: Part = []
-  let optionalStack: Array<{ node: PartNode<'optional'>; index: number }> = []
-  let currentNodes = () => optionalStack.at(-1)?.node.nodes ?? part
+  // Use a simple stack of node arrays: the top is where new nodes are appended.
+  // The root of the stack is the `part` array. Each '(' pushes a new array; ')'
+  // pops and wraps it in an optional node which is appended to the new top.
+  let nodesStack: Array<Array<PartNode>> = [part]
+  let openIndexes: Array<number> = []
+  let currentNodes = () => nodesStack[nodesStack.length - 1]
 
   let appendText = (text: string) => {
     let last = currentNodes().at(-1)
@@ -89,20 +93,16 @@ function parsePart(source: string, bounds: [number, number], partName: string) {
 
     // optional
     if (char === '(') {
-      optionalStack.push({ node: { type: 'optional', nodes: [] }, index: i })
+      nodesStack.push([])
+      openIndexes.push(i)
       i += 1
       continue
     }
     if (char === ')') {
-      if (optionalStack.length === 0) throw new ParseError('unmatched )', source, i, partName)
-      let finished = optionalStack.pop()!
-      if (optionalStack.length > 0) {
-        // Append to the parent optional's nodes
-        optionalStack.at(-1)!.node.nodes.push(finished.node)
-      } else {
-        // Append to the root part
-        part.push(finished.node)
-      }
+      if (nodesStack.length === 1) throw new ParseError('unmatched )', source, i, partName)
+      let nodes = nodesStack.pop()!
+      openIndexes.pop()
+      currentNodes().push({ type: 'optional', nodes })
       i += 1
       continue
     }
@@ -120,10 +120,9 @@ function parsePart(source: string, bounds: [number, number], partName: string) {
     i += 1
   }
 
-  if (optionalStack.length > 0) {
+  if (openIndexes.length > 0) {
     // Report the position of the earliest unmatched '('
-    let first = optionalStack[0]
-    throw new ParseError('unmatched (', source, first.index, partName)
+    throw new ParseError('unmatched (', source, openIndexes[0], partName)
   }
 
   return part

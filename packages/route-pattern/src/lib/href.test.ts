@@ -21,10 +21,8 @@ describe('href', () => {
 
   it('substitutes * for unnamed wildcards in variants', () => {
     let href = createHrefBuilder()
-    // assert.equal(href('/files/*.jpg', { '*': 'cat/dog' }), '/files/cat/dog.jpg')
-    //assert.equal(href('*/files/*.jpg', { '*': 'cat/dog' }), 'cat/dog/files/cat/dog.jpg')
-
-    assert.equal(href('files/:id/images/:id.jpg', { id: 'cat' }), '/files/cat/images/cat.jpg')
+    assert.equal(href('/files/*.jpg', { '*': 'cat/dog' }), '/files/cat/dog.jpg')
+    assert.equal(href('*/files/*.jpg', { '*': 'cat/dog' }), '/cat/dog/files/cat/dog.jpg')
   })
 
   it('throws when using optional in href()', () => {

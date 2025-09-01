@@ -19,6 +19,7 @@ pattern.match('https://remix.run/api/v1.2') // { params: { major: '1', minor : '
 - Tighten up some types in `href()`. Now you get variants for
   - all the different values of an enum
   - unnamed wildcards
+- Fix bug when using unnamed wildcards in `href()`
 
 ## v0.6.0 (2025-08-29)
 

@@ -4,10 +4,9 @@ A powerful and flexible URL pattern matching library for modern JavaScript appli
 
 ## Why Route Pattern?
 
-- **Comprehensive URL Matching**: Match complete URLs including protocol, hostname, port, pathname, and query parameters—not just paths
+- **Comprehensive URL Matching**: Match complete URLs including protocol, hostname, port, pathname, and query parameters
 - **Developer-Friendly Syntax**: Clean, readable patterns inspired by Rails routing
-- **Type Safety**: Generate URLs with compile-time parameter validation and autocompletion
-- **Production Ready**: Battle-tested patterns for real-world scenarios including multi-tenant applications, API versioning, asset serving, and internationalization
+- **Type Safety**: Generate URLs with type-safe parameter validation and autocompletion
 - **Universal Runtime Support**: Works seamlessly across all JavaScript environments including Node.js, Bun, Deno, Cloudflare Workers, and browsers
 
 ## Quick Start
@@ -39,11 +38,13 @@ pattern.match('https://remix.run/blog/2024-01-15/introducing-remix.html')
 Support flexible API versioning with backward compatibility:
 
 ```tsx
-let pattern = new RoutePattern('api(/v:major.:minor)/customers/:id(.json)')
+let pattern = new RoutePattern('api(/v:major(.:minor))/customers/:id(.json)')
 pattern.match('https://shopify.com/api/customers/emma')
 // { params: { id: 'emma' } }
 pattern.match('https://shopify.com/api/v2.1/customers/emma.json')
 // { params: { major: '2', minor: '1', id: 'emma' } }
+pattern.match('https://shopify.com/api/v2/customers/emma.json')
+// { params: { major: '2', minor: undefined, id: 'emma' } }
 ```
 
 ### Multi-Tenant Applications
@@ -51,10 +52,8 @@ pattern.match('https://shopify.com/api/v2.1/customers/emma.json')
 Route requests based on subdomain tenants:
 
 ```tsx
-let pattern = new RoutePattern('://:store.shopify.com(/admin)/orders')
+let pattern = new RoutePattern('://:store.shopify.com/orders')
 pattern.match('https://coffee-roasters.shopify.com/orders')
-// { params: { store: 'coffee-roasters' } }
-pattern.match('https://coffee-roasters.shopify.com/admin/orders')
 // { params: { store: 'coffee-roasters' } }
 ```
 
@@ -72,26 +71,22 @@ pattern.match('https://cdn.shopify.com/assets/styles/main.css')
 
 ## URL Generation
 
-Generate type-safe URLs from your route patterns with compile-time parameter validation:
+Generate type-safe URLs from your route patterns with type-safe parameter validation:
 
 ```tsx
 import { createHrefBuilder } from '@remix-run/route-pattern'
 
 let href = createHrefBuilder()
 
-// Basic route generation
-href('/customers/:id', { id: 'alex' })
-// → "/customers/alex"
-
 // Complex patterns with optional segments
-href('/api(/v:version)/products/:id(.json)', {
+href('/api/v:version/products/:id.json', {
   version: '2.1',
   id: 'wireless-headphones',
 })
 // → "/api/v2.1/products/wireless-headphones.json"
 
 // Multi-segment wildcards
-href('/assets/*path.{jpg,png}', { path: 'images/hero' })
+href('/assets/*path.jpg', { path: 'images/hero' })
 // → "/assets/images/hero.jpg"
 ```
 
@@ -135,7 +130,7 @@ pattern.match('https://bookstore.shopify.com/admin')
 
 ```tsx
 let pattern = new RoutePattern('://localhost:3000/docs')
-pattern.match('https://localhost:3000/docs')
+pattern.match('http://localhost:3000/docs')
 // { params: {} }
 ```
 
@@ -172,9 +167,9 @@ Wildcards match multi-segment dynamic content and are represented by an asterisk
 **Named Wildcards**: Capture the matched content as a parameter:
 
 ```tsx
-let pattern = new RoutePattern('cdn/*filepath/v:version')
+let pattern = new RoutePattern('cdn/*path/v:version')
 let match = pattern.match('https://cdn.shopify.com/assets/themes/dawn/v2')
-// { params: { filepath: 'assets/themes/dawn', version: '2' } }
+// { params: { path: 'assets/themes/dawn', version: '2' } }
 ```
 
 **Anonymous Wildcards**: Match content without capturing it:

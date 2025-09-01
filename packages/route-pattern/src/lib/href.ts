@@ -49,17 +49,19 @@ export function createHrefBuilder<Source extends string | undefined = undefined>
       href += '://'
       href += ast.hostname ? resolvePart(ast.hostname, params) : (options.host ?? '')
       if (ast.port) {
-        href += ':'
-        href += ast.port
+        href += `:${ast.port}`
       }
     }
 
-    href += '/'
-    href += ast.pathname ? resolvePart(ast.pathname, params) : ''
+    if (ast.pathname) {
+      let pathname = resolvePart(ast.pathname, params)
+      href += pathname.startsWith('/') ? pathname : `/${pathname}`
+    } else {
+      href += '/'
+    }
 
     if (searchParams || ast.searchParams) {
-      href += '?'
-      href += new URLSearchParams(searchParams ?? ast.searchParams).toString()
+      href += `?${new URLSearchParams(searchParams ?? ast.searchParams).toString()}`
     }
 
     return href
