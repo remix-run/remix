@@ -441,6 +441,13 @@ describe('RoutePattern', () => {
         })
       })
 
+      it('handles emojis in patterns', () => {
+        let pattern = new RoutePattern('frameworks/💿')
+        assert.deepEqual(pattern.match('https://example.com/frameworks/💿'), {
+          params: {},
+        })
+      })
+
       it('handles wildcards that look like paths', () => {
         let pattern = new RoutePattern('proxy/*url')
         assert.deepEqual(pattern.match('https://example.com/proxy/https://other.com/api')?.params, {
