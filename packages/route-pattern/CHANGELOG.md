@@ -2,7 +2,7 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/v3/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.7.0 (2025-09-01)
 
 - Add support for nested optionals in route patterns
 
