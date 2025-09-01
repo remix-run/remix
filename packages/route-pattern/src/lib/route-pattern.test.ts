@@ -93,6 +93,68 @@ describe('RoutePattern', () => {
         })
       })
 
+      it('matches nested optional sections when present', () => {
+        let pattern = new RoutePattern('api(/:major(/:minor))')
+        assert.deepEqual(pattern.match('https://example.com/api/v2/1'), {
+          params: { major: 'v2', minor: '1' },
+        })
+      })
+
+      it('matches nested optional sections when partially present', () => {
+        let pattern = new RoutePattern('api(/:major(/:minor))')
+        assert.deepEqual(pattern.match('https://example.com/api/v2'), {
+          params: { major: 'v2', minor: undefined },
+        })
+      })
+
+      it('matches nested optional sections when absent', () => {
+        let pattern = new RoutePattern('api(/:major(/:minor))')
+        assert.deepEqual(pattern.match('https://example.com/api'), {
+          params: { major: undefined, minor: undefined },
+        })
+      })
+
+      it('matches nested optionals with wildcard and variable', () => {
+        let pattern = new RoutePattern('files(/*path(.:ext))')
+        // Wildcard is greedy; when ext group is optional, wildcard consumes the suffix
+        assert.deepEqual(pattern.match('https://example.com/files/docs/readme.md'), {
+          params: { path: 'docs/readme.md', ext: undefined },
+        })
+        assert.deepEqual(pattern.match('https://example.com/files/docs/readme'), {
+          params: { path: 'docs/readme', ext: undefined },
+        })
+        assert.deepEqual(pattern.match('https://example.com/files'), {
+          params: { path: undefined, ext: undefined },
+        })
+      })
+
+      it('matches nested optionals with unnamed wildcard and variable', () => {
+        let pattern = new RoutePattern('files(/*(.:ext))')
+        // Unnamed wildcard is greedy and not captured
+        assert.deepEqual(pattern.match('https://example.com/files/docs/readme.md'), {
+          params: { ext: undefined },
+        })
+        assert.deepEqual(pattern.match('https://example.com/files/docs/readme'), {
+          params: { ext: undefined },
+        })
+        assert.deepEqual(pattern.match('https://example.com/files'), {
+          params: { ext: undefined },
+        })
+      })
+
+      it('matches nested optionals mixing variable then wildcard', () => {
+        let pattern = new RoutePattern('blog(/:slug(/*rest))')
+        assert.deepEqual(pattern.match('https://example.com/blog/post/a/b'), {
+          params: { slug: 'post', rest: 'a/b' },
+        })
+        assert.deepEqual(pattern.match('https://example.com/blog/post'), {
+          params: { slug: 'post', rest: undefined },
+        })
+        assert.deepEqual(pattern.match('https://example.com/blog'), {
+          params: { slug: undefined, rest: undefined },
+        })
+      })
+
       it('handles mixed parameters and text', () => {
         let pattern = new RoutePattern('api/v:version/users/:id')
         assert.deepEqual(pattern.match('https://example.com/api/v2/users/123'), {

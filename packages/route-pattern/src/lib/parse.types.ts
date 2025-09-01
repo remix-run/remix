@@ -46,13 +46,13 @@ type _PartNode = {
 
 type PartParseState = {
   part: Array<PartNode>
-  optional: Optional | null
+  optionals: Array<Array<PartNode>>
   rest: string
 }
 
 type PartParse<source extends string> = _PartParse<{
   part: []
-  optional: null
+  optionals: []
   rest: source
 }>
 
@@ -72,51 +72,68 @@ type _PartParse<state extends PartParseState> =
         never : // unmatched `{`
       char extends '}' ? never : // unmatched `}`
       char extends '(' ?
-        state extends { optional: Optional } ? never : // nested optional
-        _PartParse<{ part: state['part'], optional: { type: 'optional', nodes: [] }, rest: rest }> :
+        _PartParse<PushOptional<state, rest>> :
       char extends ')' ?
-        state extends { optional: infer optional extends Optional } ?
-          _PartParse<{ part: [...state['part'], optional], optional: null, rest: rest }> :
-        never : // unmatched `)`
+        PopOptional<state, rest> extends infer next extends PartParseState ? _PartParse<next> : never : // unmatched `)` handled in PopOptional
       char extends '\\' ?
         rest extends `${infer next}${infer after}` ? _PartParse<AppendText<state, next, after>> :
         never : // dangling escape
       _PartParse<AppendText<state, char, rest>>
     :
-    state extends { optional: Optional} ? never : // unmatched `(`
+    state['optionals'] extends [] ?
     state['part']
+    : never // unmatched `(`
 
 // prettier-ignore
 type AppendNode<state extends PartParseState, node extends PartNode, rest extends string> =
-  state extends { optional: infer optional extends Optional } ?
+  state['optionals'] extends [...infer O extends Array<Array<PartNode>>, infer Top extends Array<PartNode>] ?
     {
       part: state['part']
-      optional: { type: 'optional', nodes: [...optional['nodes'], node]}
+      optionals: [...O, [...Top, node]]
       rest: rest
     } :
     {
       part: [...state['part'], node]
-      optional: null
+      optionals: state['optionals']
       rest: rest;
     }
 
 // prettier-ignore
 type AppendText<state extends PartParseState, text extends string, rest extends string> =
-  state extends { optional: Optional } ?
-    {
-      part: state['part']
-      optional: state['optional']['nodes'] extends [...infer nodes extends Array<PartNode>, { type: 'text', value: infer value extends string }] ?
-        { type: 'optional', nodes: [...nodes, { type: 'text', value: `${value}${text}`}] } :
-        { type: 'optional', nodes: [...state['optional']['nodes'], { type: 'text', value: text }] }
-      rest: rest;
-    } :
-    {
-      part: state['part'] extends [...infer nodes extends Array<PartNode>, { type: 'text', value: infer value extends string }] ?
-        [...nodes, { type: 'text', value: `${value}${text}`}] :
-        [...state['part'], { type: 'text', value: text }]
-      optional: state['optional']
-      rest: rest;
-    }
+  state['optionals'] extends [...infer O extends Array<Array<PartNode>>, infer Top extends Array<PartNode>] ?
+    (
+      Top extends [...infer Nodes extends Array<PartNode>, { type: 'text', value: infer value extends string }] ?
+        { part: state['part']; optionals: [...O, [...Nodes, { type: 'text', value: `${value}${text}` }]]; rest: rest } :
+        { part: state['part']; optionals: [...O, [...Top, { type: 'text', value: text }]]; rest: rest }
+    ) :
+    (
+      state['part'] extends [...infer Nodes extends Array<PartNode>, { type: 'text', value: infer value extends string }] ?
+        { part: [...Nodes, { type: 'text', value: `${value}${text}` }]; optionals: state['optionals']; rest: rest } :
+        { part: [...state['part'], { type: 'text', value: text }]; optionals: state['optionals']; rest: rest }
+    )
+
+// Optional stack helpers ---------------------------------------------------------------------------
+
+type PushOptional<state extends PartParseState, rest extends string> = {
+  part: state['part']
+  optionals: [...state['optionals'], []]
+  rest: rest
+}
+
+// If stack is empty -> unmatched ')', return never
+// Else pop and wrap nodes into an Optional node; append to parent or part
+type PopOptional<state extends PartParseState, rest extends string> = state['optionals'] extends [
+  ...infer O extends Array<Array<PartNode>>,
+  infer Top extends Array<PartNode>,
+]
+  ? O extends [...infer OO extends Array<Array<PartNode>>, infer Parent extends Array<PartNode>]
+    ? {
+        part: state['part']
+        optionals: [...OO, [...Parent, { type: 'optional'; nodes: Top }]]
+        rest: rest
+      }
+    : { part: [...state['part'], { type: 'optional'; nodes: Top }]; optionals: []; rest: rest }
+  : never
 
 // Identifier --------------------------------------------------------------------------------------
 

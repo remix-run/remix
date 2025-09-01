@@ -33,8 +33,8 @@ const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 function parsePart(source: string, bounds: [number, number], partName: string) {
   let [start, end] = bounds
   let part: Part = []
-  let optional: { node: PartNode<'optional'>; index: number } | null = null
-  let currentNodes = () => optional?.node.nodes ?? part
+  let optionalStack: Array<{ node: PartNode<'optional'>; index: number }> = []
+  let currentNodes = () => optionalStack.at(-1)?.node.nodes ?? part
 
   let appendText = (text: string) => {
     let last = currentNodes().at(-1)
@@ -89,15 +89,20 @@ function parsePart(source: string, bounds: [number, number], partName: string) {
 
     // optional
     if (char === '(') {
-      if (optional) throw new ParseError('invalid nested (', source, i, partName)
-      optional = { node: { type: 'optional', nodes: [] }, index: i }
+      optionalStack.push({ node: { type: 'optional', nodes: [] }, index: i })
       i += 1
       continue
     }
     if (char === ')') {
-      if (!optional) throw new ParseError('unmatched )', source, i, partName)
-      part.push(optional.node)
-      optional = null
+      if (optionalStack.length === 0) throw new ParseError('unmatched )', source, i, partName)
+      let finished = optionalStack.pop()!
+      if (optionalStack.length > 0) {
+        // Append to the parent optional's nodes
+        optionalStack.at(-1)!.node.nodes.push(finished.node)
+      } else {
+        // Append to the root part
+        part.push(finished.node)
+      }
       i += 1
       continue
     }
@@ -115,7 +120,11 @@ function parsePart(source: string, bounds: [number, number], partName: string) {
     i += 1
   }
 
-  if (optional) throw new ParseError('unmatched (', source, optional.index, partName)
+  if (optionalStack.length > 0) {
+    // Report the position of the earliest unmatched '('
+    let first = optionalStack[0]
+    throw new ParseError('unmatched (', source, first.index, partName)
+  }
 
   return part
 }

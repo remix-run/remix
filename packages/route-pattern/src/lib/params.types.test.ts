@@ -72,5 +72,23 @@ export type Tests = [
   Assert<IsEqual<
     Params<'https://:sub.example.com/:id(.:ext)'>,
     { sub: string; id: string; ext: string | undefined }
+  >>,
+
+  // Nested optionals: variables
+  Assert<IsEqual<
+    Params<'api(/:major(/:minor))'>,
+    { major: string | undefined; minor: string | undefined }
+  >>,
+
+  // Nested optionals: named wildcard + variable
+  Assert<IsEqual<
+    Params<'files(/*path(.:ext))'>,
+    { path: string | undefined; ext: string | undefined }
+  >>,
+
+  // Nested optionals: unnamed wildcard + variable
+  Assert<IsEqual<
+    Params<'files(/*(.:ext))'>,
+    { '*': string | undefined; ext: string | undefined }
   >>
 ]

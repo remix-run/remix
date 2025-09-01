@@ -30,6 +30,6 @@ type PartVariantString<T extends Array<PartNode>> =
       never
     ) :
     L extends PartNode<'text'> ? `${L['value']}${PartVariantString<R>}` :
-    L extends PartNode<'optional'> ? PartVariantString<R> | `${PartVariantString<L['nodes']>}${PartVariantString<R>}` :
+    L extends PartNode<'optional'> ? `${PartVariantString<L['nodes']>}${PartVariantString<R>}` | PartVariantString<R> :
     never :
   ''

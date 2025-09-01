@@ -4,6 +4,16 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 ## HEAD
 
+- Add support for nested optionals in route patterns
+
+```tsx
+// Now you can do stuff like
+let pattern = new RoutePattern('api(/v:major(.:minor))')
+pattern.match('https://remix.run/api') // { params: {} }
+pattern.match('https://remix.run/api/v1') // { params: { major: '1' } }
+pattern.match('https://remix.run/api/v1.2') // { params: { major: '1', minor : '2' } }
+```
+
 - Make `pattern.match().params` type-safe
 - Export top-level `Params<pattern>` helper for extracting params from a pattern
 - Tighten up some types in `href()`. Now you get variants for

@@ -62,4 +62,22 @@ export type Tests = [
     Variant<'files/*.{jpg,png}'>,
     'files/*.jpg' | 'files/*.png'
   >>,
+
+  // nested optionals: variables
+  Assert<IsEqual<
+    Variant<'api(/:major(/:minor))'>,
+    'api' | 'api/:major' | 'api/:major/:minor'
+  >>,
+
+  // nested optionals: named wildcard + variable
+  Assert<IsEqual<
+    Variant<'files(/*path(.:ext))'>,
+    'files' | 'files/*path' | 'files/*path.:ext'
+  >>,
+
+  // nested optionals: unnamed wildcard + variable
+  Assert<IsEqual<
+    Variant<'files(/*(.:ext))'>,
+    'files' | 'files/*' | 'files/*.:ext'
+  >>
 ]

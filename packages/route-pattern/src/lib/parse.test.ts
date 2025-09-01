@@ -383,17 +383,65 @@ describe('parse', () => {
       }
     })
 
-    it('reports invalid nested parenthesis errors', () => {
-      let source = '(nested(test))'
-      try {
-        parse(source)
-        assert.fail('Expected ParseError to be thrown')
-      } catch (error) {
-        assert.ok(error instanceof ParseError)
-        assert.equal(error.message, 'invalid nested ( in pathname')
-        assert.equal(error.position, 7)
-        assert.equal(error.partName, 'pathname')
-      }
+    it('parses nested optionals', () => {
+      assert.deepEqual(parse('(nested(test))'), {
+        pathname: [
+          {
+            type: 'optional',
+            nodes: [
+              { type: 'text', value: 'nested' },
+              {
+                type: 'optional',
+                nodes: [{ type: 'text', value: 'test' }],
+              },
+            ],
+          },
+        ],
+      })
+    })
+
+    it('parses nested optionals with variables and wildcards (named)', () => {
+      assert.deepEqual(parse('files(/*path(.:ext))'), {
+        pathname: [
+          { type: 'text', value: 'files' },
+          {
+            type: 'optional',
+            nodes: [
+              { type: 'text', value: '/' },
+              { type: 'wildcard', name: 'path' },
+              {
+                type: 'optional',
+                nodes: [
+                  { type: 'text', value: '.' },
+                  { type: 'variable', name: 'ext' },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+    })
+
+    it('parses nested optionals with variables and wildcards (unnamed)', () => {
+      assert.deepEqual(parse('files(/*(.:ext))'), {
+        pathname: [
+          { type: 'text', value: 'files' },
+          {
+            type: 'optional',
+            nodes: [
+              { type: 'text', value: '/' },
+              { type: 'wildcard' },
+              {
+                type: 'optional',
+                nodes: [
+                  { type: 'text', value: '.' },
+                  { type: 'variable', name: 'ext' },
+                ],
+              },
+            ],
+          },
+        ],
+      })
     })
 
     it('reports dangling escape errors', () => {
@@ -405,6 +453,32 @@ describe('parse', () => {
         assert.ok(error instanceof ParseError)
         assert.equal(error.message, 'dangling escape in pathname')
         assert.equal(error.position, 4)
+        assert.equal(error.partName, 'pathname')
+      }
+    })
+
+    it('reports unmatched opening parenthesis errors in nested optionals (missing closing ))', () => {
+      let source = '(nested(test'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'unmatched ( in pathname')
+        assert.equal(error.position, 0)
+        assert.equal(error.partName, 'pathname')
+      }
+    })
+
+    it('reports unmatched closing parenthesis errors in nested optionals (missing opening ()', () => {
+      let source = 'nested(test)))'
+      try {
+        parse(source)
+        assert.fail('Expected ParseError to be thrown')
+      } catch (error) {
+        assert.ok(error instanceof ParseError)
+        assert.equal(error.message, 'unmatched ) in pathname')
+        assert.equal(error.position, 12)
         assert.equal(error.partName, 'pathname')
       }
     })
