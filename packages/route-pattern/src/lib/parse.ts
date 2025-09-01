@@ -23,7 +23,7 @@ export function parse(source: string) {
   if (hostname) ast.hostname = parsePart(source, hostname, 'hostname')
   if (port) ast.port = source.slice(...port)
   if (pathname) ast.pathname = parsePart(source, pathname, 'pathname')
-  if (search) ast.search = source.slice(...search)
+  if (search) ast.searchParams = new URLSearchParams(source.slice(...search))
 
   return ast
 }

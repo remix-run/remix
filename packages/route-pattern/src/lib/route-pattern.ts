@@ -1,24 +1,22 @@
+import type { Params } from './params.ts'
 import type { Ast, Part } from './parse.types.ts'
 import { parse } from './parse.ts'
-
-type Params = Record<string, string | undefined>
-type Match = { params: Params }
 
 /**
  * A pattern for matching URLs.
  */
-export class RoutePattern {
+export class RoutePattern<T extends string> {
   /**
    * The source string that was used to create this pattern.
    */
-  readonly source: string
+  readonly source: T
 
   readonly #ast: Ast
   readonly #matcher: RegExp
   readonly #hasHost: boolean
   readonly #paramNames: Array<string>
 
-  constructor(source: string | RoutePattern) {
+  constructor(source: T | RoutePattern<T>) {
     this.source = typeof source === 'string' ? source : source.source
     this.#ast = parse(this.source)
     this.#hasHost =
@@ -61,7 +59,7 @@ export class RoutePattern {
    * @param url The URL to match
    * @returns The parameters if the URL matches this pattern, `null` otherwise
    */
-  match(url: URL | string): Match | null {
+  match(url: URL | string): Match<T> | null {
     if (typeof url === 'string') url = new URL(url)
 
     let match = this.#matcher.exec(
@@ -72,15 +70,15 @@ export class RoutePattern {
     if (match === null) return null
 
     // Map positional capture groups to parameter names in source order
-    let params: Params = {}
+    let params = {} as any
     for (let i = 0; i < this.#paramNames.length; i++) {
       let value = match[i + 1]
       let paramName = this.#paramNames[i]
       params[paramName] = value
     }
 
-    if (this.#ast.search) {
-      for (let [key, value] of new URLSearchParams(this.#ast.search).entries()) {
+    if (this.#ast.searchParams) {
+      for (let [key, value] of this.#ast.searchParams.entries()) {
         if (!url.searchParams.getAll(key).includes(value)) return null
       }
     }
@@ -101,6 +99,10 @@ export class RoutePattern {
   toString() {
     return this.source
   }
+}
+
+export interface Match<T extends string> {
+  params: Params<T>
 }
 
 function partToRegExpSource(part: Part, paramRegExp: RegExp, paramNames: string[]) {

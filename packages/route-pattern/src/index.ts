@@ -1,4 +1,5 @@
 export { RoutePattern } from './lib/route-pattern.ts'
 export type { HrefBuilder } from './lib/href.ts'
 export { createHrefBuilder } from './lib/href.ts'
+export type { Params } from './lib/params.ts'
 export { ParseError } from './lib/parse.ts'

@@ -57,9 +57,9 @@ export function createHrefBuilder<Source extends string | undefined = undefined>
     href += '/'
     href += ast.pathname ? resolvePart(ast.pathname, params) : ''
 
-    if (searchParams || ast.search) {
+    if (searchParams || ast.searchParams) {
       href += '?'
-      href += new URLSearchParams(searchParams ?? ast.search).toString()
+      href += new URLSearchParams(searchParams ?? ast.searchParams).toString()
     }
 
     return href

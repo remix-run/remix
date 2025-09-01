@@ -1,15 +1,15 @@
 import type { Split } from './split.types.ts'
 
-export type Ast = {
+export interface Ast {
   protocol?: Array<PartNode>
   hostname?: Array<PartNode>
   port?: string
   pathname?: Array<PartNode>
-  search?: string
+  searchParams?: URLSearchParams
 }
 
 export type Parse<T extends string> =
-  Split<T> extends infer split extends {
+  Split<T> extends infer S extends {
     protocol?: string
     hostname?: string
     port?: string
@@ -17,11 +17,11 @@ export type Parse<T extends string> =
     search?: string
   }
     ? {
-        protocol: split['protocol'] extends string ? PartParse<split['protocol']> : undefined
-        hostname: split['hostname'] extends string ? PartParse<split['hostname']> : undefined
-        port: split['port'] extends string ? split['port'] : undefined
-        pathname: split['pathname'] extends string ? PartParse<split['pathname']> : undefined
-        search: split['search'] extends string ? split['search'] : undefined
+        protocol: S['protocol'] extends string ? PartParse<S['protocol']> : undefined
+        hostname: S['hostname'] extends string ? PartParse<S['hostname']> : undefined
+        port: S['port'] extends string ? S['port'] : undefined
+        pathname: S['pathname'] extends string ? PartParse<S['pathname']> : undefined
+        searchParams: S['search'] extends string ? URLSearchParams : undefined
       }
     : never
 

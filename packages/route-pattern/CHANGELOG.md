@@ -4,6 +4,8 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 ## HEAD
 
+- Make `pattern.match().params` type-safe
+- Export top-level `Params<pattern>` helper for extracting params from a pattern
 - Tighten up some types in `href()`. Now you get variants for
   - all the different values of an enum
   - unnamed wildcards
