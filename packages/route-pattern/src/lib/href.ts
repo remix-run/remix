@@ -16,6 +16,25 @@ type HrefBuilderArgs<T extends string> =
     [Record<P, string>] | [Record<P, string>, SearchParams] :
   never
 
+// prettier-ignore
+type Params<T extends string> =
+  Parse<T> extends infer A extends Ast ?
+    | (A['protocol'] extends Part ? PartParams<A['protocol']> : never)
+    | (A['hostname'] extends Part ? PartParams<A['hostname']> : never)
+    | (A['pathname'] extends Part ? PartParams<A['pathname']> : never) :
+  never
+
+// prettier-ignore
+type PartParams<T extends Part> =
+  T extends [infer L extends PartNode, ...infer R extends Array<PartNode>] ?
+    L extends PartNode<'variable'> ? L['name'] | PartParams<R> :
+    L extends PartNode<'wildcard'> ? (L extends { name: infer N extends string } ? N : '*') | PartParams<R> :
+    L extends PartNode<'optional'> ? PartParams<L['nodes']> | PartParams<R> :
+    PartParams<R> :
+  never
+
+type SearchParams = NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
+
 interface HrefBuilderOptions {
   /**
    * The default protocol to use when the pattern doesn't specify one.
@@ -29,10 +48,10 @@ interface HrefBuilderOptions {
   host?: string
 }
 
-export function createHrefBuilder<Source extends string | undefined = undefined>(
+export function createHrefBuilder<T extends string | undefined = undefined>(
   options: HrefBuilderOptions = {},
-): HrefBuilder<Source> {
-  return <V extends Source extends string ? Variant<Source> : string>(
+): HrefBuilder<T> {
+  return <V extends T extends string ? Variant<T> : string>(
     variant: V,
     ...args: HrefBuilderArgs<V>
   ) => {
@@ -99,24 +118,3 @@ function resolveNode(node: PartNode, params: Record<string, string>): string {
   // text
   return node.value
 }
-
-// Params and SearchParams -----------------------------------------------------------------------
-
-// prettier-ignore
-type Params<T extends string> =
-  Parse<T> extends infer A extends Ast ?
-    | (A['protocol'] extends Part ? PartParams<A['protocol']> : never)
-    | (A['hostname'] extends Part ? PartParams<A['hostname']> : never)
-    | (A['pathname'] extends Part ? PartParams<A['pathname']> : never) :
-  never
-
-// prettier-ignore
-type PartParams<T extends Part> =
-  T extends [infer L extends PartNode, ...infer R extends Array<PartNode>] ?
-    L extends PartNode<'variable'> ? L['name'] | PartParams<R> :
-    L extends PartNode<'wildcard'> ? (L extends { name: infer N extends string } ? N : '*') | PartParams<R> :
-    L extends PartNode<'optional'> ? PartParams<L['nodes']> | PartParams<R> :
-    PartParams<R> :
-  never
-
-type SearchParams = NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
