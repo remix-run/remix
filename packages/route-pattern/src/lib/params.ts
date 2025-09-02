@@ -1,14 +1,16 @@
 import type { Ast, Parse, Part, PartNode } from './parse.types.ts'
-import type { IsEqual } from './type-utils'
+import type { IsEqual, Pretty } from './type-utils'
 
 export type Params<T extends string> =
   _Params<T> extends infer P ? (IsEqual<P, {}> extends true ? Record<string, never> : P) : never
 
 // prettier-ignore
 type _Params<T extends string> =
-  Parse<T> extends infer A extends Ast ?
-    { [K in RequiredParams<A> | OptionalParams<A>]: K extends OptionalParams<A> ? string | undefined : string } :
-    never
+  Parse<T> extends infer A extends Ast ? Pretty<
+    { [K in RequiredParams<A>]: string } &
+    { [K in OptionalParams<A>]?: string }
+  > :
+  never
 
 // prettier-ignore
 type RequiredParams<A extends Ast> =

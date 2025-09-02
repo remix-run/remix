@@ -23,12 +23,12 @@ export type Tests = [
   // Optional variables in pathname
   Assert<IsEqual<
     Params<'products(/:id)'>,
-    { id: string | undefined }
+    { id?: string }
   >>,
 
   Assert<IsEqual<
     Params<'products/:sku(/:variant)'>,
-    { sku: string; variant: string | undefined }
+    { sku: string; variant?: string }
   >>,
 
   // Wildcards
@@ -44,12 +44,12 @@ export type Tests = [
 
   Assert<IsEqual<
     Params<'files/*(.:ext)'>,
-    { '*': string; ext: string | undefined }
+    { '*': string; ext?: string }
   >>,
 
   Assert<IsEqual<
     Params<'files/*path(.:ext)'>,
-    { path: string; ext: string | undefined }
+    { path: string; ext?: string }
   >>,
 
   // Enums (no params)
@@ -77,24 +77,24 @@ export type Tests = [
   // Mixed host + path params
   Assert<IsEqual<
     Params<'https://:sub.example.com/:id(.:ext)'>,
-    { sub: string; id: string; ext: string | undefined }
+    { sub: string; id: string; ext?: string }
   >>,
 
   // Nested optionals: variables
   Assert<IsEqual<
     Params<'api(/:major(/:minor))'>,
-    { major: string | undefined; minor: string | undefined }
+    { major?: string ; minor?: string }
   >>,
 
   // Nested optionals: named wildcard + variable
   Assert<IsEqual<
     Params<'files(/*path(.:ext))'>,
-    { path: string | undefined; ext: string | undefined }
+    { path?: string ; ext?: string }
   >>,
 
   // Nested optionals: unnamed wildcard + variable
   Assert<IsEqual<
     Params<'files(/*(.:ext))'>,
-    { '*': string | undefined; ext: string | undefined }
+    { '*'?: string ; ext?: string }
   >>
 ]
