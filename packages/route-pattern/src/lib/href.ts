@@ -1,5 +1,6 @@
+import type { Params } from './params.ts'
 import { parse } from './parse.ts'
-import type { Ast, Parse, Part, PartNode } from './parse.types.ts'
+import type { Part, PartNode } from './parse.types.ts'
 import type { Variant } from './variant.ts'
 
 export interface HrefBuilder<T extends string | undefined = undefined> {
@@ -11,26 +12,9 @@ export interface HrefBuilder<T extends string | undefined = undefined> {
 
 // prettier-ignore
 type HrefBuilderArgs<T extends string> =
-  Params<T> extends infer P extends string ?
-    [P] extends [never] ? [] | [any, SearchParams] :
-    [Record<P, string>] | [Record<P, string>, SearchParams] :
-  never
-
-// prettier-ignore
-type Params<T extends string> =
-  Parse<T> extends infer A extends Ast ?
-    | (A['protocol'] extends Part ? PartParams<A['protocol']> : never)
-    | (A['hostname'] extends Part ? PartParams<A['hostname']> : never)
-    | (A['pathname'] extends Part ? PartParams<A['pathname']> : never) :
-  never
-
-// prettier-ignore
-type PartParams<T extends Part> =
-  T extends [infer L extends PartNode, ...infer R extends Array<PartNode>] ?
-    L extends PartNode<'variable'> ? L['name'] | PartParams<R> :
-    L extends PartNode<'wildcard'> ? (L extends { name: infer N extends string } ? N : '*') | PartParams<R> :
-    L extends PartNode<'optional'> ? PartParams<L['nodes']> | PartParams<R> :
-    PartParams<R> :
+  Params<T> extends infer P ?
+    P extends Record<string, never> ? [] | [null, SearchParams] :
+    [P] | [P, SearchParams] :
   never
 
 type SearchParams = NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
@@ -55,7 +39,7 @@ export function createHrefBuilder<T extends string | undefined = undefined>(
     variant: V,
     ...args: HrefBuilderArgs<V>
   ) => {
-    let params = args[0] ?? {}
+    let params = (args[0] ?? {}) as Record<string, string>
     let searchParams = args[1]
     let ast = parse(variant)
 

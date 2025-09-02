@@ -1,5 +1,5 @@
 import type { Split } from './split.types.ts'
-import type { Assert, IsEqual } from './test-utils.d.ts'
+import type { Assert, IsEqual } from './type-utils'
 
 // prettier-ignore
 export type Tests = [

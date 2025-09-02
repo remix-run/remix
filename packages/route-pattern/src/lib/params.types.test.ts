@@ -1,8 +1,14 @@
 import type { Params } from './params.ts'
-import type { Assert, IsEqual } from './test-utils.d.ts'
+import type { Assert, IsEqual } from './type-utils'
 
 // prettier-ignore
 export type Tests = [
+  // No params
+  Assert<IsEqual<
+    Params<'products'>,
+    Record<string, never>
+  >>,
+
   // Required variables in pathname
   Assert<IsEqual<
     Params<'products/:id'>,
@@ -49,7 +55,7 @@ export type Tests = [
   // Enums (no params)
   Assert<IsEqual<
     Params<'avatar.{jpg,png,gif}'>,
-    {}
+    Record<string, never>
   >>,
 
   Assert<IsEqual<
