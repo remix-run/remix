@@ -98,7 +98,7 @@ try {
 }
 ```
 
-If you're looking for a more flexible storage solution for `File` objects that are uploaded, this library pairs really well with [the `file-storage` library](https://github.com/remix-run/remix/tree/v3/packages/file-storage) for keeping files in various storage backends.
+If you're looking for a more flexible storage solution for `File` objects that are uploaded, this library pairs really well with [the `file-storage` library](https://github.com/remix-run/remix/tree/main/packages/file-storage) for keeping files in various storage backends.
 
 ```ts
 import { LocalFileStorage } from '@remix-run/file-storage/local'
@@ -127,8 +127,8 @@ async function uploadHandler(fileUpload: FileUpload) {
 
 ## Related Packages
 
-- [`file-storage`](https://github.com/remix-run/remix/tree/v3/packages/file-storage) - A simple key/value interface for storing `FileUpload` objects you get from the parser
-- [`multipart-parser`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
+- [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - A simple key/value interface for storing `FileUpload` objects you get from the parser
+- [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
 
 ## License
 

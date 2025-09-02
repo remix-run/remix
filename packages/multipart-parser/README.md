@@ -19,7 +19,7 @@
 - Convenient `MultipartPart` API with `arrayBuffer`, `bytes`, `text`, `size`, and metadata access
 - Built-in file size limiting to prevent abuse
 - First-class Node.js support with native `http.IncomingMessage` compatibility
-- [Examples for every major runtime](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser/examples)
+- [Examples for every major runtime](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/examples)
 
 ## Installation
 
@@ -152,12 +152,12 @@ for await (let part of parseMultipartStream(message, { boundary })) {
 
 ## Examples
 
-The [`examples` directory](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser/examples) contains a few working examples of how you can use this library:
+The [`examples` directory](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/examples) contains a few working examples of how you can use this library:
 
-- [`examples/bun`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser/examples/bun) - using multipart-parser in Bun
-- [`examples/cf-workers`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser/examples/cf-workers) - using multipart-parser in a Cloudflare Worker and storing file uploads in R2
-- [`examples/deno`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser/examples/deno) - using multipart-parser in Deno
-- [`examples/node`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser/examples/node) - using multipart-parser in Node.js
+- [`examples/bun`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/examples/bun) - using multipart-parser in Bun
+- [`examples/cf-workers`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/examples/cf-workers) - using multipart-parser in a Cloudflare Worker and storing file uploads in R2
+- [`examples/deno`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/examples/deno) - using multipart-parser in Deno
+- [`examples/node`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/examples/node) - using multipart-parser in Node.js
 
 ## Benchmark
 
@@ -217,8 +217,8 @@ Deno 2.3.6
 
 ## Related Packages
 
-- [`form-data-parser`](https://github.com/remix-run/remix/tree/v3/packages/form-data-parser) - Uses `multipart-parser` internally to parse multipart requests and generate `FileUpload`s for storage
-- [`headers`](https://github.com/remix-run/remix/tree/v3/packages/headers) - Used internally to parse HTTP headers and get metadata (filename, content type) for each `MultipartPart`
+- [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser) - Uses `multipart-parser` internally to parse multipart requests and generate `FileUpload`s for storage
+- [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers) - Used internally to parse HTTP headers and get metadata (filename, content type) for each `MultipartPart`
 
 ## Credits
 

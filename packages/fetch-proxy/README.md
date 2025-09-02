@@ -44,7 +44,7 @@ assert(title.includes('Remix'))
 
 ## Related Packages
 
-- [`node-fetch-server`](https://github.com/remix-run/remix/tree/v3/packages/node-fetch-server) - Build HTTP servers for Node.js using the web fetch API
+- [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server) - Build HTTP servers for Node.js using the web fetch API
 
 ## License
 

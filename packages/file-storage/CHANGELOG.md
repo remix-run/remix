@@ -1,6 +1,6 @@
 # `file-storage` CHANGELOG
 
-This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/v3/packages/file-storage). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
 ## v0.9.0 (2025-07-25)
 

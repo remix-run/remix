@@ -1,6 +1,6 @@
 # `node-fetch-server` CHANGELOG
 
-This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/v3/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
 ## v0.8.0 (2025-07-24)
 

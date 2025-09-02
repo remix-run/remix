@@ -9,7 +9,7 @@
     "url": "git+https://github.com/remix-run/remix.git",
     "directory": "packages/tar-parser"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/v3/packages/tar-parser#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/tar-parser#readme",
   "files": [
     "LICENSE",
     "README.md",
