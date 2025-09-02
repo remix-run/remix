@@ -1,7 +1,11 @@
 import type { Ast, Parse, PartNode } from './parse.types.ts'
+import type { IsEqual } from './type-utils'
 
 // prettier-ignore
-export type Variant<T extends string> = T extends any ? VariantString<Parse<T>> : never
+export type Variant<T extends string> = T extends any ?
+  IsEqual<T, string> extends true ? string :
+  VariantString<Parse<T>> :
+  never
 
 // prettier-ignore
 type VariantString<T extends Ast> =

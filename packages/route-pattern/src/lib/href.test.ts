@@ -28,7 +28,6 @@ describe('href', () => {
   it('throws when using optional in href()', () => {
     let href = createHrefBuilder()
     assert.throws(
-      // @ts-expect-error missing param keys
       () => href('products/:id(.:ext)', { id: '1' }),
       new Error('Cannot use pattern with optional in href()'),
     )

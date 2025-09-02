@@ -3,11 +3,8 @@ import { parse } from './parse.ts'
 import type { Part, PartNode } from './parse.types.ts'
 import type { Variant } from './variant.ts'
 
-export interface HrefBuilder<T extends string | undefined = undefined> {
-  <V extends T extends string ? Variant<T> : string>(
-    variant: V,
-    ...args: HrefBuilderArgs<V>
-  ): string
+export interface HrefBuilder<T extends string = string> {
+  <V extends Variant<T>>(variant: V, ...args: HrefBuilderArgs<V>): string
 }
 
 // prettier-ignore
@@ -32,13 +29,10 @@ interface HrefBuilderOptions {
   host?: string
 }
 
-export function createHrefBuilder<T extends string | undefined = undefined>(
+export function createHrefBuilder<T extends string = string>(
   options: HrefBuilderOptions = {},
 ): HrefBuilder<T> {
-  return <V extends T extends string ? Variant<T> : string>(
-    variant: V,
-    ...args: HrefBuilderArgs<V>
-  ) => {
+  return <V extends Variant<T>>(variant: V, ...args: HrefBuilderArgs<V>) => {
     let params = (args[0] ?? {}) as Record<string, string>
     let searchParams = args[1]
     let ast = parse(variant)
