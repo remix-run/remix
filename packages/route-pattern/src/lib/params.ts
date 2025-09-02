@@ -7,39 +7,38 @@ export type Params<T extends string> =
 // prettier-ignore
 type _Params<T extends string> =
   Parse<T> extends infer A extends Ast ? Pretty<
-    { [K in RequiredParams<A>]: string } &
-    { [K in OptionalParams<A>]?: string }
+    { [K in RequiredParamKey<A>]: string } &
+    { [K in OptionalParamKey<A>]?: string }
   > :
   never
 
 // prettier-ignore
-type RequiredParams<A extends Ast> =
-  | (A['protocol'] extends Part ? RequiredPartParams<A['protocol']> : never)
-  | (A['pathname'] extends Part ? RequiredPartParams<A['pathname']> : never)
-  | (A['hostname'] extends Part ? RequiredPartParams<A['hostname']> : never)
+type RequiredParamKey<A extends Ast> =
+  | (A['protocol'] extends Part ? RequiredPartParamKey<A['protocol']> : never)
+  | (A['pathname'] extends Part ? RequiredPartParamKey<A['pathname']> : never)
+  | (A['hostname'] extends Part ? RequiredPartParamKey<A['hostname']> : never)
 
 // prettier-ignore
-type RequiredPartParams<T extends Part> =
+type RequiredPartParamKey<T extends Part> =
   T extends [infer L extends PartNode, ...infer R extends Part] ?
-    L extends PartNode<'optional'> ? never | RequiredPartParams<R> :
-    L extends { type: 'variable', name: infer N extends string } ? N | RequiredPartParams<R> :
-    L extends { type: 'wildcard', name: infer N extends string } ? N | RequiredPartParams<R> :
-    L extends { type: 'wildcard' } ? '*' | RequiredPartParams<R> :
-    RequiredPartParams<R> :
+    L extends PartNode<'optional'> ? never | RequiredPartParamKey<R> :
+    L extends PartNode<'variable'> ? L['name'] | RequiredPartParamKey<R> :
+    L extends PartNode<'wildcard'> ? (L extends { name: string } ? L['name'] : '*') | RequiredPartParamKey<R> :
+    RequiredPartParamKey<R> :
   never
 
 // prettier-ignore
-type OptionalParams<A extends Ast> =
-  | (A['protocol'] extends Part ? OptionalPartParams<A['protocol']> : never)
-  | (A['pathname'] extends Part ? OptionalPartParams<A['pathname']> : never)
-  | (A['hostname'] extends Part ? OptionalPartParams<A['hostname']> : never)
+type OptionalParamKey<A extends Ast> =
+  | (A['protocol'] extends Part ? OptionalPartParamKey<A['protocol']> : never)
+  | (A['pathname'] extends Part ? OptionalPartParamKey<A['pathname']> : never)
+  | (A['hostname'] extends Part ? OptionalPartParamKey<A['hostname']> : never)
 
 // prettier-ignore
-type OptionalPartParams<T extends Part, IsOptional extends boolean = false> =
+type OptionalPartParamKey<T extends Part, IsOptional extends boolean = false> =
   T extends [infer L extends PartNode, ...infer R extends Part] ?
-    L extends PartNode<'optional'> ? OptionalPartParams<L['nodes'], true> | OptionalPartParams<R, IsOptional> :
-    L extends { type: 'variable', name: infer N extends string } ? (IsOptional extends true ? N | OptionalPartParams<R, true> : OptionalPartParams<R, IsOptional>) :
-    L extends { type: 'wildcard', name: infer N extends string } ? (IsOptional extends true ? N | OptionalPartParams<R, true> : OptionalPartParams<R, IsOptional>) :
-    L extends { type: 'wildcard' } ? (IsOptional extends true ? '*' | OptionalPartParams<R, true> : OptionalPartParams<R, IsOptional>) :
-    OptionalPartParams<R, IsOptional> :
+    L extends PartNode<'optional'> ? OptionalPartParamKey<L['nodes'], true> | OptionalPartParamKey<R, IsOptional> :
+    L extends PartNode<'variable'> ? (IsOptional extends true ? L['name'] : never) | OptionalPartParamKey<R, IsOptional> :
+    L extends PartNode<'wildcard'> ? (IsOptional extends true ?
+      (L extends { name: string } ? L['name'] : '*') : never) | OptionalPartParamKey<R, IsOptional> :
+    OptionalPartParamKey<R, IsOptional> :
   never

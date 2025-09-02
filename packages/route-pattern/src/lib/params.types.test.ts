@@ -47,6 +47,12 @@ export type Tests = [
     { '*': string; ext?: string }
   >>,
 
+  // Unnamed wildcard within optional
+  Assert<IsEqual<
+    Params<'files/(*).:ext'>,
+    { '*'?: string; ext: string }
+  >>,
+
   Assert<IsEqual<
     Params<'files/*path(.:ext)'>,
     { path: string; ext?: string }
