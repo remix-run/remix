@@ -2,7 +2,7 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/v3/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.9.0 (2025-09-03)
 
 - Add `protocol`, `hostname`, `port`, `pathname`, `search`, and `searchParams` properties to the `Match` interface. This is useful to avoid parsing the URL twice when passing a string directly to `pattern.match(urlString)`
 - Fix `protocol` and `hostname` to always ignore case given in the pattern
