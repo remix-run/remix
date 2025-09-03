@@ -2,6 +2,17 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/v3/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Add `protocol`, `hostname`, `port`, `pathname`, and `searchParams` properties to the `Match` interface. This is useful to avoid parsing the URL twice when passing a string directly to `let match = pattern.match(urlString)`
+- Fix `protocol` and `hostname` to always ignore case given in the pattern
+- Add `ignoreCase` option to `RoutePattern` constructor to match URL pathnames in a case-insensitive way
+
+```tsx
+let pattern = new RoutePattern('https://remix.run/users/:id', { ignoreCase: true })
+pattern.match('https://remix.run/Users/123') // { ..., params: { id: '123' } }
+```
+
 ## v0.8.0 (2025-09-03)
 
 - Any valid pattern is also valid in `href(pattern)`

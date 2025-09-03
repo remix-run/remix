@@ -2,6 +2,13 @@ import type { Params } from './params.ts'
 import type { Part } from './parse.types.ts'
 import { parse } from './parse.ts'
 
+export interface RoutePatternOptions {
+  /**
+   * Whether to ignore case when matching URL pathnames.
+   */
+  ignoreCase?: boolean
+}
+
 /**
  * A pattern for matching URLs.
  */
@@ -10,14 +17,19 @@ export class RoutePattern<T extends string> {
    * The source string that was used to create this pattern.
    */
   readonly source: T
+  /**
+   * Whether to ignore case when matching URL pathnames.
+   */
+  readonly ignoreCase: boolean
 
   readonly #matcher: RegExp
   readonly #matchOrigin: boolean
   readonly #paramNames: Array<string>
   readonly #requiredSearchParams: Map<string, Set<string>> | null
 
-  constructor(source: T | RoutePattern<T>) {
+  constructor(source: T | RoutePattern<T>, options?: RoutePatternOptions) {
     this.source = typeof source === 'string' ? source : source.source
+    this.ignoreCase = options?.ignoreCase === true
 
     let { protocol, hostname, port, pathname, searchParams } = parse(this.source)
 
@@ -25,20 +37,26 @@ export class RoutePattern<T extends string> {
     this.#paramNames = []
 
     if (this.#matchOrigin) {
-      let protocolSource = protocol ? partToRegExpSource(protocol, /.*/, this.#paramNames) : `[^:]+`
+      let protocolSource = protocol
+        ? partToRegExpSource(protocol, /.*/, this.#paramNames, true)
+        : `[^:]+`
       let hostnameSource = hostname
-        ? partToRegExpSource(hostname, /[^.]+/, this.#paramNames)
+        ? partToRegExpSource(hostname, /[^.]+/, this.#paramNames, true)
         : `[^/:]+`
       let portSource = port !== undefined ? `:${regexpEscape(port)}` : `(?::[0-9]+)?`
-      let pathnameSource = pathname ? partToRegExpSource(pathname, /[^/]+/, this.#paramNames) : ''
+      let pathnameSource = pathname
+        ? partToRegExpSource(pathname, /[^/]+/, this.#paramNames, this.ignoreCase)
+        : ''
 
       this.#matcher = new RegExp(
         `^${protocolSource}://${hostnameSource}${portSource}/${pathnameSource}$`,
       )
     } else {
-      let pathnameSource = pathname ? partToRegExpSource(pathname, /[^/]+/, this.#paramNames) : ''
+      let pathnameSource = pathname
+        ? partToRegExpSource(pathname, /[^/]+/, this.#paramNames, this.ignoreCase)
+        : ''
 
-      this.#matcher = new RegExp(`^${pathnameSource}$`)
+      this.#matcher = new RegExp(`^/${pathnameSource}$`)
     }
 
     if (searchParams) {
@@ -66,10 +84,11 @@ export class RoutePattern<T extends string> {
   match(url: URL | string): Match<T> | null {
     if (typeof url === 'string') url = new URL(url)
 
+    let pathname = this.ignoreCase ? url.pathname.toLowerCase() : url.pathname
     let match = this.#matcher.exec(
       this.#matchOrigin
-        ? `${url.protocol.slice(0, -1)}://${url.hostname}${url.port ? `:${url.port}` : ''}/${url.pathname.slice(1)}`
-        : url.pathname.slice(1),
+        ? `${url.protocol.slice(0, -1)}://${url.hostname}${url.port ? `:${url.port}` : ''}${pathname}`
+        : pathname,
     )
     if (match === null) return null
 
@@ -102,7 +121,14 @@ export class RoutePattern<T extends string> {
       }
     }
 
-    return { params }
+    return {
+      protocol: url.protocol,
+      hostname: url.hostname,
+      port: url.port,
+      pathname: url.pathname,
+      searchParams: url.searchParams,
+      params,
+    }
   }
 
   /**
@@ -121,10 +147,38 @@ export class RoutePattern<T extends string> {
 }
 
 export interface Match<T extends string> {
+  /**
+   * The protocol of the URL that was matched.
+   */
+  protocol: string
+  /**
+   * The hostname of the URL that was matched.
+   */
+  hostname: string
+  /**
+   * The port of the URL that was matched.
+   */
+  port: string
+  /**
+   * The pathname of the URL that was matched.
+   */
+  pathname: string
+  /**
+   * The params that were extracted from the URL's search/query string.
+   */
+  searchParams: URLSearchParams
+  /**
+   * The parameters that were extracted from the URL protocol, hostname, and/or pathname.
+   */
   params: Params<T>
 }
 
-function partToRegExpSource(part: Part, paramRegExp: RegExp, paramNames: string[]) {
+function partToRegExpSource(
+  part: Part,
+  paramRegExp: RegExp,
+  paramNames: string[],
+  forceLowerCase: boolean,
+) {
   let source: string = part
     .map((node) => {
       if (node.type === 'variable') {
@@ -137,13 +191,13 @@ function partToRegExpSource(part: Part, paramRegExp: RegExp, paramNames: string[
         return `(.*)`
       }
       if (node.type === 'enum') {
-        return `(?:${node.members.map(regexpEscape).join('|')})`
+        return `(?:${node.members.map((member) => regexpEscape(forceLowerCase ? member.toLowerCase() : member)).join('|')})`
       }
       if (node.type === 'text') {
-        return regexpEscape(node.value)
+        return regexpEscape(forceLowerCase ? node.value.toLowerCase() : node.value)
       }
       if (node.type === 'optional') {
-        return `(?:${partToRegExpSource(node.nodes, paramRegExp, paramNames)})?`
+        return `(?:${partToRegExpSource(node.nodes, paramRegExp, paramNames, forceLowerCase)})?`
       }
 
       throw new Error(`Node with unknown type: ${node}`)
