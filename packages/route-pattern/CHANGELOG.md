@@ -2,7 +2,7 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/v3/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.8.0 (2025-09-03)
 
 - Any valid pattern is also valid in `href(pattern)`
 - Href generation with missing optional variables omits the optional section entirely
