@@ -1,44 +1,46 @@
 import type { Ast, Parse, Part, PartNode } from './parse.types.ts'
-import type { IsEqual, Pretty } from './type-utils'
 
+type Simplify<T> = T extends {} ? { [K in keyof T]: T[K] } : T
+
+/**
+ * The parameters that are parsed when a pattern matches a URL.
+ */
+// prettier-ignore
 export type Params<T extends string> =
-  _Params<T> extends infer P ? (IsEqual<P, {}> extends true ? Record<string, never> : P) : never
+  Simplify<Record<RequiredParams<T>, string> & Record<OptionalParams<T>, string | undefined>>
 
 // prettier-ignore
-type _Params<T extends string> =
-  Parse<T> extends infer A extends Ast ? Pretty<
-    { [K in RequiredParamKey<A>]: string } &
-    { [K in OptionalParamKey<A>]?: string }
-  > :
-  never
+export type RequiredParams<T extends string> =
+  Parse<T> extends infer A extends Ast ?
+    | (A['protocol'] extends Part ? RequiredPartParams<A['protocol']> : never)
+    | (A['pathname'] extends Part ? RequiredPartParams<A['pathname']> : never)
+    | (A['hostname'] extends Part ? RequiredPartParams<A['hostname']> : never) :
+    never
 
 // prettier-ignore
-type RequiredParamKey<A extends Ast> =
-  | (A['protocol'] extends Part ? RequiredPartParamKey<A['protocol']> : never)
-  | (A['pathname'] extends Part ? RequiredPartParamKey<A['pathname']> : never)
-  | (A['hostname'] extends Part ? RequiredPartParamKey<A['hostname']> : never)
-
-// prettier-ignore
-type RequiredPartParamKey<T extends Part> =
+type RequiredPartParams<T extends Part> =
   T extends [infer L extends PartNode, ...infer R extends Part] ?
-    L extends PartNode<'optional'> ? never | RequiredPartParamKey<R> :
-    L extends PartNode<'variable'> ? L['name'] | RequiredPartParamKey<R> :
-    L extends PartNode<'wildcard'> ? (L extends { name: string } ? L['name'] : '*') | RequiredPartParamKey<R> :
-    RequiredPartParamKey<R> :
-  never
+    L extends PartNode<'optional'> ? never | RequiredPartParams<R> :
+    L extends { type: 'variable', name: infer N extends string } ? N | RequiredPartParams<R> :
+    L extends { type: 'wildcard', name: infer N extends string } ? N | RequiredPartParams<R> :
+    L extends { type: 'wildcard' } ? '*' | RequiredPartParams<R> :
+    RequiredPartParams<R> :
+    never
 
 // prettier-ignore
-type OptionalParamKey<A extends Ast> =
-  | (A['protocol'] extends Part ? OptionalPartParamKey<A['protocol']> : never)
-  | (A['pathname'] extends Part ? OptionalPartParamKey<A['pathname']> : never)
-  | (A['hostname'] extends Part ? OptionalPartParamKey<A['hostname']> : never)
+export type OptionalParams<T extends string> =
+  Parse<T> extends infer A extends Ast ?
+    | (A['protocol'] extends Part ? OptionalPartParams<A['protocol']> : never)
+    | (A['pathname'] extends Part ? OptionalPartParams<A['pathname']> : never)
+    | (A['hostname'] extends Part ? OptionalPartParams<A['hostname']> : never) :
+    never
 
 // prettier-ignore
-type OptionalPartParamKey<T extends Part, IsOptional extends boolean = false> =
+type OptionalPartParams<T extends Part, IsOptional extends boolean = false> =
   T extends [infer L extends PartNode, ...infer R extends Part] ?
-    L extends PartNode<'optional'> ? OptionalPartParamKey<L['nodes'], true> | OptionalPartParamKey<R, IsOptional> :
-    L extends PartNode<'variable'> ? (IsOptional extends true ? L['name'] : never) | OptionalPartParamKey<R, IsOptional> :
-    L extends PartNode<'wildcard'> ? (IsOptional extends true ?
-      (L extends { name: string } ? L['name'] : '*') : never) | OptionalPartParamKey<R, IsOptional> :
-    OptionalPartParamKey<R, IsOptional> :
-  never
+    L extends PartNode<'optional'> ? OptionalPartParams<L['nodes'], true> | OptionalPartParams<R, IsOptional> :
+    L extends { type: 'variable', name: infer N extends string } ? (IsOptional extends true ? N | OptionalPartParams<R, true> : OptionalPartParams<R, IsOptional>) :
+    L extends { type: 'wildcard', name: infer N extends string } ? (IsOptional extends true ? N | OptionalPartParams<R, true> : OptionalPartParams<R, IsOptional>) :
+    L extends { type: 'wildcard' } ? (IsOptional extends true ? '*' | OptionalPartParams<R, true> : OptionalPartParams<R, IsOptional>) :
+    OptionalPartParams<R, IsOptional> :
+    never

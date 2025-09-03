@@ -1,20 +1,39 @@
-import type { Params } from './params.ts'
+import type { RequiredParams, OptionalParams } from './params.ts'
 import { parse } from './parse.ts'
 import type { Part, PartNode } from './parse.types.ts'
 import type { Variant } from './variant.ts'
 
-export interface HrefBuilder<T extends string = string> {
-  <V extends Variant<T>>(variant: V, ...args: HrefBuilderArgs<V>): string
+export class MissingParamError extends Error {
+  paramName: string
+
+  constructor(paramName: string) {
+    super(`Missing required parameter: ${paramName}`)
+    this.name = 'MissingParamError'
+    this.paramName = paramName
+  }
+}
+
+type ParamValue = string | number | bigint | boolean
+type AnyParams = Record<string, ParamValue>
+
+export interface HrefBuilder<T extends string | undefined = undefined> {
+  <P extends T extends string ? T | Variant<T> : string>(
+    pattern: P,
+    ...args: HrefBuilderArgs<P>
+  ): string
 }
 
 // prettier-ignore
 type HrefBuilderArgs<T extends string> =
-  Params<T> extends infer P ?
-    P extends Record<string, never> ? [] | [null, SearchParams] :
-    [P] | [P, SearchParams] :
-  never
+  [RequiredParams<T>] extends [never] ?
+    [] | [null | undefined | AnyParams] | [null | undefined | AnyParams, HrefSearchParams] :
+    [HrefParams<T>] | [HrefParams<T>, HrefSearchParams]
 
-type SearchParams = NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
+// prettier-ignore
+type HrefParams<T extends string> =
+  Record<RequiredParams<T>, ParamValue> & Partial<Record<OptionalParams<T>, ParamValue>>
+
+type HrefSearchParams = NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
 
 interface HrefBuilderOptions {
   /**
@@ -32,10 +51,10 @@ interface HrefBuilderOptions {
 export function createHrefBuilder<T extends string = string>(
   options: HrefBuilderOptions = {},
 ): HrefBuilder<T> {
-  return <V extends Variant<T>>(variant: V, ...args: HrefBuilderArgs<V>) => {
-    let params = (args[0] ?? {}) as Record<string, string>
+  return (pattern: string, ...args: any) => {
+    let params = args[0] ?? {}
     let searchParams = args[1]
-    let ast = parse(variant)
+    let ast = parse(pattern)
 
     let href = ''
 
@@ -65,32 +84,40 @@ export function createHrefBuilder<T extends string = string>(
   }
 }
 
-function resolvePart(part: Part, params: Record<string, string>): string {
+function resolvePart(part: Part, params: AnyParams): string {
   return part.map((node) => resolveNode(node, params)).join('')
 }
 
-function resolveNode(node: PartNode, params: Record<string, string>): string {
+function resolveNode(node: PartNode, params: AnyParams): string {
   if (node.type === 'variable') {
-    if (!(node.name in params)) {
-      throw new Error(`Missing required parameter: ${node.name}`)
+    if (params[node.name] == null) {
+      throw new MissingParamError(node.name)
     }
 
-    return params[node.name]
+    return String(params[node.name])
   }
   if (node.type === 'wildcard') {
     let name = node.name ?? '*'
 
-    if (!(name in params)) {
-      throw new Error(`Missing required parameter: ${name}`)
+    if (params[name] == null) {
+      throw new MissingParamError(name)
     }
 
-    return params[name]
+    return String(params[name])
   }
   if (node.type === 'enum') {
-    throw new Error('Cannot use pattern with enum in href()')
+    return node.members[0] // Use first member
   }
   if (node.type === 'optional') {
-    throw new Error('Cannot use pattern with optional in href()')
+    try {
+      return node.nodes.map((node) => resolveNode(node, params)).join('')
+    } catch (error) {
+      if (error instanceof MissingParamError) {
+        return '' // Missing required parameter, ok to skip since it's optional
+      }
+
+      throw error
+    }
   }
 
   // text

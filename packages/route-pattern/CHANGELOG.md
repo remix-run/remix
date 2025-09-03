@@ -2,6 +2,32 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/v3/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Any valid pattern is also valid in `href(pattern)`
+- Href generation with missing optional variables omits the optional section entirely
+
+```tsx
+let href = createHrefBuilder()
+href('products(/:id)', { id: 'remix' }) // /products/remix
+
+// These all used to fail, but are now OK!
+href('products(/:id)') // /products
+href('products(/:id)', {}) // /products
+href('products(/:id)', { id: null }) // /products (type error)
+href('products(/:id)', { id: undefined }) // /products (type error)
+```
+
+- Param values may be `string | number | bigint | boolean` and are automatically stringified
+
+```tsx
+let href = createHrefBuilder()
+
+// These used to be a type errors, but are now OK!
+href('products(/:id)', { id: 1 }) // /products/1
+href('products(/:id)', { id: false }) // /products/false
+```
+
 ## v0.7.0 (2025-09-01)
 
 - Add support for nested optionals in route patterns
