@@ -1,7 +1,5 @@
 import type { Params } from './params.ts'
-import type { Assert, IsEqual } from './type-utils'
-
-type X = Params<'products'>
+import type { Assert, IsEqual } from './type-utils.d.ts'
 
 // prettier-ignore
 export type Tests = [

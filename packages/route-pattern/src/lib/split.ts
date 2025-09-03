@@ -1,19 +1,49 @@
-type Span = [number, number]
+export interface SplitResult {
+  protocol?: string
+  hostname?: string
+  port?: string
+  pathname?: string
+  search?: string
+}
 
-export function split(source: string) {
-  let result: {
-    protocol?: Span
-    hostname?: Span
-    port?: Span
-    pathname?: Span
-    search?: Span
-  } = {}
+type OmitEmptyStringValues<S> = { [K in keyof S as S[K] extends '' ? never : K]: S[K] }
+
+export type Split<T extends string> = OmitEmptyStringValues<_Split<T>>
+
+// prettier-ignore
+type _Split<T extends string> =
+  T extends `${infer L}?${infer R}` ? _Split<L> & { search: R } :
+  T extends `${infer Protocol}://${infer R}` ?
+    Protocol extends `${string}/${string}` ? { pathname: T } :
+    R extends `${infer Host}/${infer Pathname}` ? SplitHost<Host> & { protocol: Protocol; pathname: Pathname } :
+    SplitHost<R> & { protocol: Protocol } :
+  { pathname: T }
+
+// prettier-ignore
+type SplitHost<T extends string> =
+  T extends `${infer L}:${infer R}` ?
+    IsDigits<R> extends true ? { hostname: L; port: R} :
+    SplitHost<R> extends { hostname: infer H extends string; port: infer P extends string } ? { hostname: `${L}:${H}`; port: P } :
+    { hostname: T } :
+  { hostname: T }
+
+type _0_9 = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+
+// prettier-ignore
+type IsDigits<S extends string> =
+  S extends `${_0_9}${infer T}` ?
+    T extends '' ? true :
+    IsDigits<T> :
+  false
+
+export function split<T extends string>(source: T): Split<T> {
+  let result = {} as any
 
   // search
   let searchStart = source.indexOf('?')
   if (searchStart !== -1) {
-    result.search = [searchStart + 1, source.length]
-    source = source.slice(0, searchStart)
+    result.search = source.slice(searchStart + 1, source.length)
+    source = source.slice(0, searchStart) as T
   }
 
   let index = 0
@@ -21,7 +51,7 @@ export function split(source: string) {
   if (solidus !== -1) {
     // protocol
     if (solidus !== 0) {
-      result.protocol = [0, solidus]
+      result.protocol = source.slice(0, solidus)
     }
     index = solidus + 3
 
@@ -36,21 +66,21 @@ export function split(source: string) {
       let afterColon = host.slice(colonIndex + 1)
       if (/^[0-9]+$/.test(afterColon)) {
         // hostname up to colon, port after colon
-        result.hostname = [index, index + colonIndex]
-        result.port = [index + colonIndex + 1, hostEnd]
+        result.hostname = source.slice(index, index + colonIndex)
+        result.port = source.slice(index + colonIndex + 1, hostEnd)
       } else {
-        result.hostname = [index, hostEnd]
+        result.hostname = source.slice(index, hostEnd)
       }
     } else {
-      result.hostname = [index, hostEnd]
+      result.hostname = source.slice(index, hostEnd)
     }
     index = hostEnd === source.length ? hostEnd : hostEnd + 1
   }
 
   // pathname
   if (index !== source.length) {
-    result.pathname = [index, source.length]
+    result.pathname = source.slice(index, source.length)
   }
 
-  return result
+  return result as Split<T>
 }

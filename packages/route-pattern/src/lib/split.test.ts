@@ -56,32 +56,7 @@ describe('split', () => {
     ]
 
     for (let [input, expected] of cases) {
-      let spans = split(input)
-      let result: {
-        protocol?: string
-        hostname?: string
-        port?: string
-        pathname?: string
-        search?: string
-      } = {}
-
-      if (spans.protocol) {
-        result.protocol = input.slice(...spans.protocol)
-      }
-      if (spans.hostname) {
-        result.hostname = input.slice(...spans.hostname)
-      }
-      if (spans.port) {
-        result.port = input.slice(...spans.port)
-      }
-      if (spans.pathname) {
-        result.pathname = input.slice(...spans.pathname)
-      }
-      if (spans.search) {
-        result.search = input.slice(...spans.search)
-      }
-
-      assert.deepEqual(result, expected)
+      assert.deepEqual(split(input), expected)
     }
   })
 })

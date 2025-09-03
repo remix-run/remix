@@ -1,4 +1,4 @@
-import type { Ast, Parse, Part, PartNode } from './parse.types.ts'
+import type { ParseResult, Parse, NodeList, Node, Optional } from './parse.types.ts'
 
 type Simplify<T> = T extends {} ? { [K in keyof T]: T[K] } : T
 
@@ -11,16 +11,16 @@ export type Params<T extends string> =
 
 // prettier-ignore
 export type RequiredParams<T extends string> =
-  Parse<T> extends infer A extends Ast ?
-    | (A['protocol'] extends Part ? RequiredPartParams<A['protocol']> : never)
-    | (A['pathname'] extends Part ? RequiredPartParams<A['pathname']> : never)
-    | (A['hostname'] extends Part ? RequiredPartParams<A['hostname']> : never) :
+  Parse<T> extends infer A extends ParseResult ?
+    | (A['protocol'] extends NodeList ? RequiredPartParams<A['protocol']> : never)
+    | (A['pathname'] extends NodeList ? RequiredPartParams<A['pathname']> : never)
+    | (A['hostname'] extends NodeList ? RequiredPartParams<A['hostname']> : never) :
     never
 
 // prettier-ignore
-type RequiredPartParams<T extends Part> =
-  T extends [infer L extends PartNode, ...infer R extends Part] ?
-    L extends PartNode<'optional'> ? never | RequiredPartParams<R> :
+type RequiredPartParams<T extends NodeList> =
+  T extends [infer L extends Node, ...infer R extends NodeList] ?
+    L extends Optional ? never | RequiredPartParams<R> :
     L extends { type: 'variable', name: infer N extends string } ? N | RequiredPartParams<R> :
     L extends { type: 'wildcard', name: infer N extends string } ? N | RequiredPartParams<R> :
     L extends { type: 'wildcard' } ? '*' | RequiredPartParams<R> :
@@ -29,16 +29,16 @@ type RequiredPartParams<T extends Part> =
 
 // prettier-ignore
 export type OptionalParams<T extends string> =
-  Parse<T> extends infer A extends Ast ?
-    | (A['protocol'] extends Part ? OptionalPartParams<A['protocol']> : never)
-    | (A['pathname'] extends Part ? OptionalPartParams<A['pathname']> : never)
-    | (A['hostname'] extends Part ? OptionalPartParams<A['hostname']> : never) :
+  Parse<T> extends infer A extends ParseResult ?
+    | (A['protocol'] extends NodeList ? OptionalPartParams<A['protocol']> : never)
+    | (A['pathname'] extends NodeList ? OptionalPartParams<A['pathname']> : never)
+    | (A['hostname'] extends NodeList ? OptionalPartParams<A['hostname']> : never) :
     never
 
 // prettier-ignore
-type OptionalPartParams<T extends Part, IsOptional extends boolean = false> =
-  T extends [infer L extends PartNode, ...infer R extends Part] ?
-    L extends PartNode<'optional'> ? OptionalPartParams<L['nodes'], true> | OptionalPartParams<R, IsOptional> :
+type OptionalPartParams<T extends NodeList, IsOptional extends boolean = false> =
+  T extends [infer L extends Node, ...infer R extends NodeList] ?
+    L extends Optional ? OptionalPartParams<L['nodes'], true> | OptionalPartParams<R, IsOptional> :
     L extends { type: 'variable', name: infer N extends string } ? (IsOptional extends true ? N | OptionalPartParams<R, true> : OptionalPartParams<R, IsOptional>) :
     L extends { type: 'wildcard', name: infer N extends string } ? (IsOptional extends true ? N | OptionalPartParams<R, true> : OptionalPartParams<R, IsOptional>) :
     L extends { type: 'wildcard' } ? (IsOptional extends true ? '*' | OptionalPartParams<R, true> : OptionalPartParams<R, IsOptional>) :

@@ -1,29 +1,47 @@
-import type { Split } from './split.types.ts'
-import type { Assert, IsEqual } from './type-utils'
+import type { Split } from './split.ts'
+import type { Assert, IsEqual } from './type-utils.d.ts'
 
 // prettier-ignore
 export type Tests = [
+  // should parse pathname only patterns
+  Assert<IsEqual<
+    Split<'path/:id'>,
+    { pathname: 'path/:id' }
+  >>,
+
+  // should parse pathname with search
+  Assert<IsEqual<
+    Split<'path/:id?q=1'>,
+    { pathname: 'path/:id'; search: 'q=1' }
+  >>,
+
+  // should parse protocol + hostname
+  Assert<IsEqual<
+    Split<'http(s)://remix.run'>,
+    { protocol: 'http(s)'; hostname: 'remix.run' }
+  >>,
+
   // should not treat trailing ":tld" in hostname as a port
   Assert<IsEqual<
-    Split<'http://host.com.:tld/path/:id'>,
-    { protocol: 'http'; hostname: 'host.com.:tld'; pathname: 'path/:id' }
+    Split<'http://remix.run.:tld/path/:id'>,
+    { protocol: 'http'; hostname: 'remix.run.:tld'; pathname: 'path/:id' }
   >>,
 
   // should detect numeric port at end of host
   Assert<IsEqual<
-    Split<'http://host.com:8080/path/:id'>,
-    { protocol: 'http'; hostname: 'host.com'; port: '8080'; pathname: 'path/:id' }
+    Split<'http://remix.run:8080/path/:id'>,
+    { protocol: 'http'; hostname: 'remix.run'; port: '8080'; pathname: 'path/:id' }
   >>,
 
   // should detect numeric port without pathname
   Assert<IsEqual<
-    Split<'http://host.com:3000'>,
-    { protocol: 'http'; hostname: 'host.com'; port: '3000' }
+    Split<'http://remix.run:3000'>,
+    { protocol: 'http'; hostname: 'remix.run'; port: '3000' }
   >>,
 
   // should allow host to contain other variables
   Assert<IsEqual<
-    Split<'http://:sub.host.com:8080/path/:id'>,
-    { protocol: 'http'; hostname: ':sub.host.com'; port: '8080'; pathname: 'path/:id' }
+    Split<'http://:sub.remix.run:8080/path/:id'>,
+    { protocol: 'http'; hostname: ':sub.remix.run'; port: '8080'; pathname: 'path/:id' }
   >>,
 ]

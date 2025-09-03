@@ -1,6 +1,6 @@
 import type { RequiredParams, OptionalParams } from './params.ts'
 import { parse } from './parse.ts'
-import type { Part, PartNode } from './parse.types.ts'
+import type { NodeList, Node } from './parse.types.ts'
 import type { Variant } from './variant.ts'
 
 export class MissingParamError extends Error {
@@ -62,7 +62,7 @@ export function createHrefBuilder<T extends string = string>(
     // absolute path.
     if (ast.hostname || options.host) {
       if (ast.protocol) {
-        href += resolvePart(ast.protocol, params)
+        href += resolveList(ast.protocol, params)
       } else if (options.protocol) {
         href += options.protocol.replace(/:$/, '')
       } else {
@@ -72,7 +72,7 @@ export function createHrefBuilder<T extends string = string>(
       href += '://'
 
       if (ast.hostname) {
-        href += resolvePart(ast.hostname, params)
+        href += resolveList(ast.hostname, params)
         if (ast.port) {
           href += `:${ast.port}`
         }
@@ -82,7 +82,7 @@ export function createHrefBuilder<T extends string = string>(
     }
 
     if (ast.pathname) {
-      let pathname = resolvePart(ast.pathname, params)
+      let pathname = resolveList(ast.pathname, params)
       href += pathname.startsWith('/') ? pathname : `/${pathname}`
     } else {
       href += '/'
@@ -96,11 +96,11 @@ export function createHrefBuilder<T extends string = string>(
   }
 }
 
-function resolvePart(part: Part, params: AnyParams): string {
-  return part.map((node) => resolveNode(node, params)).join('')
+function resolveList(nodes: NodeList, params: AnyParams): string {
+  return nodes.map((node) => resolveNode(node, params)).join('')
 }
 
-function resolveNode(node: PartNode, params: AnyParams): string {
+function resolveNode(node: Node, params: AnyParams): string {
   if (node.type === 'variable') {
     if (params[node.name] == null) {
       throw new MissingParamError(node.name)
@@ -122,7 +122,7 @@ function resolveNode(node: PartNode, params: AnyParams): string {
   }
   if (node.type === 'optional') {
     try {
-      return node.nodes.map((node) => resolveNode(node, params)).join('')
+      return resolveList(node.nodes, params)
     } catch (error) {
       if (error instanceof MissingParamError) {
         return '' // Missing required parameter, ok to skip since it's optional

@@ -1,5 +1,5 @@
 import type { Params } from './params.ts'
-import type { Part } from './parse.types.ts'
+import type { NodeList } from './parse.types.ts'
 import { parse } from './parse.ts'
 
 export interface RoutePatternOptions {
@@ -178,7 +178,7 @@ export interface Match<T extends string> {
 }
 
 function partToRegExpSource(
-  part: Part,
+  part: NodeList,
   paramRegExp: RegExp,
   paramNames: string[],
   forceLowerCase: boolean,

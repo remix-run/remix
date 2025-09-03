@@ -1,5 +1,6 @@
-import type { Ast, PartNode, Part } from './parse.types.ts'
+import type { ParseResult, Node, NodeList } from './parse.types.ts'
 import { split } from './split.ts'
+import type { SplitResult } from './split.ts'
 
 export class ParseError extends Error {
   source: string
@@ -16,27 +17,45 @@ export class ParseError extends Error {
 }
 
 export function parse(source: string) {
-  let { protocol, hostname, port, pathname, search } = split(source)
-  let ast: Ast = {}
+  let result: ParseResult = {}
 
-  if (protocol) ast.protocol = parsePart(source, protocol, 'protocol')
-  if (hostname) ast.hostname = parsePart(source, hostname, 'hostname')
-  if (port) ast.port = source.slice(...port)
-  if (pathname) ast.pathname = parsePart(source, pathname, 'pathname')
-  if (search) ast.searchParams = new URLSearchParams(source.slice(...search))
+  let { protocol, hostname, port, pathname, search } = split(source) as SplitResult
+  let start = 0
 
-  return ast
+  if (protocol) {
+    start = source.indexOf(protocol, start)
+    result.protocol = parsePart(source, [start, start + protocol.length], 'protocol')
+    start += protocol.length
+  }
+  if (hostname) {
+    start = source.indexOf(hostname, start)
+    result.hostname = parsePart(source, [start, start + hostname.length], 'hostname')
+    start += hostname.length
+  }
+  if (port) {
+    result.port = port
+    start = source.indexOf(port, start) + port.length
+  }
+  if (pathname) {
+    start = source.indexOf(pathname, start)
+    result.pathname = parsePart(source, [start, start + pathname.length], 'pathname')
+  }
+  if (search) {
+    result.searchParams = new URLSearchParams(search)
+  }
+
+  return result
 }
 
 const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
 function parsePart(source: string, bounds: [number, number], partName: string) {
   let [start, end] = bounds
-  let part: Part = []
+  let nodes: NodeList = []
   // Use a simple stack of node arrays: the top is where new nodes are appended.
   // The root of the stack is the `part` array. Each '(' pushes a new array; ')'
   // pops and wraps it in an optional node which is appended to the new top.
-  let nodesStack: Array<Array<PartNode>> = [part]
+  let nodesStack: Array<Array<Node>> = [nodes]
   let openIndexes: Array<number> = []
   let currentNodes = () => nodesStack[nodesStack.length - 1]
 
@@ -125,5 +144,5 @@ function parsePart(source: string, bounds: [number, number], partName: string) {
     throw new ParseError('unmatched (', source, openIndexes[0], partName)
   }
 
-  return part
+  return nodes
 }
