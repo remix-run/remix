@@ -18,7 +18,7 @@ let pattern = new URLPattern({ pathname: '/products/:id' })
 
 - `RoutePattern` does not allow regex syntax. This means route patterns are statically analyzable without parsing RegExp grammar, which makes it easier to provide type safety. Also, the whole point of `RoutePattern` is to provide a syntax that is sufficient for matching URLs without resorting to some other syntax.
 
-- `RoutePattern` does not support "unnamed groups" that must be accessed by index in the match result. Instead, all variables (groups) must have names and are accessed by that name on `match.params`. The only exception to this is unnamed wildcards which are accessed at `match.params['*']`.
+- `RoutePattern` does not support "unnamed groups" that must be accessed by index in the match result. Instead, all variables (groups) must have names and are accessed by that name at `match.params[name]`.
 
 - `RoutePattern` expresses optionals using parentheses, similar to Rails. These read like English instead of using `?` to indicate optional groups as in regular expressions. It also makes the start and end positions of an optional group immediately obvious.
 
