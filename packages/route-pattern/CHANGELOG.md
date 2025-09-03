@@ -4,7 +4,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 ## HEAD
 
-- Add `protocol`, `hostname`, `port`, `pathname`, and `searchParams` properties to the `Match` interface. This is useful to avoid parsing the URL twice when passing a string directly to `let match = pattern.match(urlString)`
+- Add `protocol`, `hostname`, `port`, `pathname`, and `searchParams` properties to the `Match` interface. This is useful to avoid parsing the URL twice when passing a string directly to `pattern.match(urlString)`
 - Fix `protocol` and `hostname` to always ignore case given in the pattern
 - Add `ignoreCase` option to `RoutePattern` constructor to match URL pathnames in a case-insensitive way
 
