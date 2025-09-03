@@ -125,6 +125,7 @@ export class RoutePattern<T extends string> {
       hostname: url.hostname,
       port: url.port,
       pathname: url.pathname,
+      search: url.search,
       searchParams: url.searchParams,
       params,
     }
@@ -162,6 +163,10 @@ export interface Match<T extends string> {
    * The pathname of the URL that was matched.
    */
   pathname: string
+  /**
+   * The search string of the URL that was matched.
+   */
+  search: string
   /**
    * The params that were extracted from the URL's search/query string.
    */
