@@ -104,4 +104,4 @@ All file contents are read on-demand and nothing is ever buffered.
 
 ## License
 
-See [LICENSE](https://github.com/remix-run/remix/blob/v3/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

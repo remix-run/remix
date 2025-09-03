@@ -69,4 +69,4 @@ Node.js v22.8.0
 
 ## License
 
-See [LICENSE](https://github.com/remix-run/remix/blob/v3/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

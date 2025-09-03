@@ -226,4 +226,4 @@ Thanks to Jacob Ebey who gave me several code reviews on this project prior to p
 
 ## License
 
-See [LICENSE](https://github.com/remix-run/remix/blob/v3/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

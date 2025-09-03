@@ -319,4 +319,4 @@ http.createServer(createRequestListener(handler)).listen(3000)
 
 ## License
 
-See [LICENSE](https://github.com/remix-run/remix/blob/v3/LICENSE)
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)
