@@ -439,15 +439,53 @@ describe('RoutePattern', () => {
       })
     })
 
-    describe('variable constraints', () => {
-      it('does not match variables across path segments', () => {
-        let pattern = new RoutePattern('users/:id/posts')
-        assert.deepEqual(pattern.match('https://example.com/users/123/456/posts'), null)
+    describe('optionals', () => {
+      it('matches optional hostname sections when present', () => {
+        let pattern = new RoutePattern('://(:subdomain.)example.com/:version')
+        let params = pattern.match('https://api.example.com/v1')?.params
+        assert.ok(params)
+        assert.ok('subdomain' in params)
+        assert.equal(params.subdomain, 'api')
+        assert.ok('version' in params)
+        assert.equal(params.version, 'v1')
       })
 
+      it('matches optional hostname sections when absent', () => {
+        let pattern = new RoutePattern('://(:subdomain.)example.com/:version')
+        let params = pattern.match('https://example.com/v1')?.params
+        assert.ok(params)
+        assert.ok('subdomain' in params)
+        assert.equal(params.subdomain, undefined)
+        assert.ok('version' in params)
+        assert.equal(params.version, 'v1')
+      })
+
+      it('matches optional pathname sections when present', () => {
+        let pattern = new RoutePattern('api(/:version)')
+        let params = pattern.match('https://example.com/api/v1')?.params
+        assert.ok(params)
+        assert.ok('version' in params)
+        assert.equal(params.version, 'v1')
+      })
+
+      it('matches optional pathname sections when absent', () => {
+        let pattern = new RoutePattern('api(/:version)')
+        let params = pattern.match('https://example.com/api')?.params
+        assert.ok(params)
+        assert.ok('version' in params)
+        assert.equal(params.version, undefined)
+      })
+    })
+
+    describe('variable constraints', () => {
       it('does not match hostname variables across dots', () => {
         let pattern = new RoutePattern('://:subdomain.example.com')
         assert.deepEqual(pattern.match('https://api.v1.example.com/'), null)
+      })
+
+      it('does not match variables across path segments', () => {
+        let pattern = new RoutePattern('users/:id/posts')
+        assert.deepEqual(pattern.match('https://example.com/users/123/456/posts'), null)
       })
 
       it('matches wildcards across segments', () => {

@@ -95,9 +95,8 @@ export class RoutePattern<T extends string> {
     // Map positional capture groups to parameter names in source order
     let params = {} as any
     for (let i = 0; i < this.#paramNames.length; i++) {
-      let value = match[i + 1]
       let paramName = this.#paramNames[i]
-      params[paramName] = value
+      params[paramName] = match[i + 1]
     }
 
     if (this.#requiredSearchParams) {
