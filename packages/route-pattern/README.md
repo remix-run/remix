@@ -80,6 +80,19 @@ href('/api/v:version/products/:id.json', {
 // Multi-segment wildcards
 href('/assets/*path.jpg', { path: 'images/hero' })
 // → "/assets/images/hero.jpg"
+
+// With Query Parameters
+href('shoes/:brand?limit=10&sort=asc', { brand: 'nike' }, { limit: 50, sort: 'desc' })
+// → "/shoes/nike?limit=50&sort=desc"
+```
+
+Include a default host (and optional port) in URLs:
+
+```tsx
+let href = createHrefBuilder({ host: 'remix.run:8080' })
+
+href('blog/:slug', { slug: 'remixing-shopify' })
+// → "https://remix.run:8080/blog/remixing-shopify"
 ```
 
 ## Pattern Format
