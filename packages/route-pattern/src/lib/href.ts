@@ -61,11 +61,23 @@ export function createHrefBuilder<T extends string = string>(
     // If we have a hostname to work with we can make a full URL. Otherwise we can only make an
     // absolute path.
     if (ast.hostname || options.host) {
-      href += ast.protocol ? resolvePart(ast.protocol, params) : (options.protocol ?? 'https')
+      if (ast.protocol) {
+        href += resolvePart(ast.protocol, params)
+      } else if (options.protocol) {
+        href += options.protocol.replace(/:$/, '')
+      } else {
+        href += 'https'
+      }
+
       href += '://'
-      href += ast.hostname ? resolvePart(ast.hostname, params) : (options.host ?? '')
-      if (ast.port) {
-        href += `:${ast.port}`
+
+      if (ast.hostname) {
+        href += resolvePart(ast.hostname, params)
+        if (ast.port) {
+          href += `:${ast.port}`
+        }
+      } else {
+        href += options.host
       }
     }
 

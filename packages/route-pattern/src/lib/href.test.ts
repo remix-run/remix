@@ -9,6 +9,11 @@ describe('href', () => {
     assert.equal(href('://remix.run/products/:id', { id: '1' }), 'http://remix.run/products/1')
   })
 
+  it('uses a default protocol with a colon', () => {
+    let href = createHrefBuilder({ protocol: 'http:' })
+    assert.equal(href('://remix.run/products/:id', { id: '1' }), 'http://remix.run/products/1')
+  })
+
   it('uses a default hostname', () => {
     let href = createHrefBuilder({ host: 'remix.run' })
     assert.equal(href('products/:id', { id: '1' }), 'https://remix.run/products/1')
