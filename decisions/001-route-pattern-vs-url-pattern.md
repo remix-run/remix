@@ -6,9 +6,9 @@ The web has a built-in URL matcher called [`URLPattern`](https://developer.mozil
 
 There are a number of major differences between `RoutePattern` and `URLPattern`. Here are the main ones:
 
-- `RoutePattern` comes with an "href builder" for building URLs from route patterns. This is the logical bookend to "matching" or parsing a URL.
+- **Generating URLs**: `RoutePattern` comes with an "href builder" for building URLs from route patterns. This is the logical bookend to "matching" or parsing a URL.
 
-- `RoutePattern` allows matching only a URL pathname without resorting to the object syntax, or beginning with a leading `/`
+- **Easier pathname-only Matching**: `RoutePattern` allows matching only a URL pathname without resorting to the object syntax, or beginning with a leading `/`
 
 ```tsx
 let pattern = new RoutePattern('products/:id') // matches <protocol>://<host>/products/:id
@@ -16,11 +16,19 @@ let pattern = new RoutePattern('products/:id') // matches <protocol>://<host>/pr
 let pattern = new URLPattern({ pathname: '/products/:id' })
 ```
 
-- `RoutePattern` does not allow regex syntax. This means route patterns are statically analyzable without parsing RegExp grammar, which makes it easier to provide type safety. Also, the whole point of `RoutePattern` is to provide a syntax that is sufficient for matching URLs without resorting to some other syntax.
+- **Non-exhaustive Search Matching**: `RoutePattern` does not treat the pattern's search string as exhaustive. This allows matching URLs that contain additional query parameters, which is important for allowing traffic that comes from sources where you don't have full control over the search string.
 
-- `RoutePattern` does not support "unnamed groups" that must be accessed by index in the match result. Instead, all variables (groups) must have names and are accessed by that name at `match.params[name]`.
+```tsx
+let pattern = new RoutePattern('?q=remix')
+pattern.exec('https://remix.run/?q=remix') // match
+pattern.exec('https://remix.run/?q=remix&utm_source') // also match!
 
-- `RoutePattern` expresses optionals using parentheses, similar to Rails. These read like English instead of using `?` to indicate optional groups as in regular expressions. It also makes the start and end positions of an optional group immediately obvious.
+let pattern = new URLPattern({ search: '?q=remix' })
+pattern.exec('https://remix.run/?q=remix') // match
+pattern.exec('https://remix.run/?q=remix&utm_source') // null :(
+```
+
+- **More Intuitive Optionals**: `RoutePattern` expresses optionals using parentheses, similar to Rails. These read like English instead of using `?` to indicate optional groups as in regular expressions. It also makes the start and end positions of an optional group immediately obvious.
 
 ```tsx
 // An "optional group" using URLPattern
@@ -40,14 +48,6 @@ pattern.test('https://example.com/books') // true
 pattern.test('https://example.com/books/') // false
 ```
 
-- `RoutePattern` does not treat the pattern's search string as exhaustive. This allows matching URLs that contain additional query parameters, which is important for allowing traffic that comes from sources where you don't have full control over the search string.
+- **Uniform Param Access**: `RoutePattern` does not support "unnamed groups" that must be accessed by index in the match result. Instead, all variables (groups) must have names and are accessed by that name at `match.params[name]`.
 
-```tsx
-let pattern = new RoutePattern('?q=remix')
-pattern.exec('https://remix.run/?q=remix') // match
-pattern.exec('https://remix.run/?q=remix&utm_source') // also match!
-
-let pattern = new URLPattern({ search: '?q=remix' })
-pattern.exec('https://remix.run/?q=remix') // match
-pattern.exec('https://remix.run/?q=remix&utm_source') // null :(
-```
+- **No RegExp Syntax**: `RoutePattern` does not allow regex syntax. This means route patterns are statically analyzable without parsing RegExp grammar, which makes it easier to provide type safety. Also, the whole point of `RoutePattern` is to provide a syntax that is sufficient for matching URLs without resorting to some other syntax.

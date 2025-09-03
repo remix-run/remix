@@ -19,9 +19,7 @@ pattern.match('https://shopify.com/users/sarah')
 // { params: { id: 'sarah' } }
 ```
 
-## Common Use Cases
-
-### Blog and Content Management
+## Examples
 
 Handle date-based URLs with optional file extensions:
 
@@ -32,8 +30,6 @@ pattern.match('https://remix.run/blog/2024-01-15/introducing-remix')
 pattern.match('https://remix.run/blog/2024-01-15/introducing-remix.html')
 // { params: { year: '2024', month: '01', day: '15', slug: 'introducing-remix' } }
 ```
-
-### API Versioning
 
 Support flexible API versioning with backward compatibility:
 
@@ -47,17 +43,13 @@ pattern.match('https://shopify.com/api/v2/customers/emma.json')
 // { params: { major: '2', minor: undefined, id: 'emma' } }
 ```
 
-### Multi-Tenant Applications
-
-Route requests based on subdomain tenants:
+Route requests based on subdomains:
 
 ```tsx
 let pattern = new RoutePattern('://:store.shopify.com/orders')
 pattern.match('https://coffee-roasters.shopify.com/orders')
 // { params: { store: 'coffee-roasters' } }
 ```
-
-### Static Asset Serving
 
 Serve files with type validation and nested paths:
 
@@ -209,3 +201,12 @@ pattern.match('https://cdn.shopify.com/products/catalog.pdf')
 ```
 
 Enums provide type safety and validation, ensuring URLs match only expected formats while maintaining clean parameter extraction.
+
+## Alternatives
+
+- [`path-to-regexp`](https://www.npmjs.com/package/path-to-regexp)
+- [`URLPattern`](https://developer.mozilla.org/en-US/docs/Web/API/URLPattern)
+
+## License
+
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)
