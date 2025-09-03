@@ -496,6 +496,19 @@ describe('RoutePattern', () => {
       })
     })
 
+    describe('wildcards', () => {
+      it('matches wildcard at the end of the pathname', () => {
+        let pattern = new RoutePattern('files/*')
+        assert.deepEqual(pattern.match('https://example.com/files/readme.txt')?.params, {})
+        assert.deepEqual(pattern.match('https://example.com/files/')?.params, {})
+      })
+
+      it('does not match wildcard at the end of the pathname when there is no trailing slash', () => {
+        let pattern = new RoutePattern('files/*')
+        assert.deepEqual(pattern.match('https://example.com/files'), null)
+      })
+    })
+
     describe('search params', () => {
       it('matches basic search param', () => {
         let pattern = new RoutePattern('search?q=test')
