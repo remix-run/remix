@@ -20,8 +20,8 @@ let pattern = new URLPattern({ pathname: '/products/:id' })
 
 ```tsx
 let pattern = new RoutePattern('?q=remix')
-pattern.exec('https://remix.run/?q=remix') // match
-pattern.exec('https://remix.run/?q=remix&utm_source') // also match!
+pattern.match('https://remix.run/?q=remix') // match
+pattern.match('https://remix.run/?q=remix&utm_source') // also match!
 
 let pattern = new URLPattern({ search: '?q=remix' })
 pattern.exec('https://remix.run/?q=remix') // match
