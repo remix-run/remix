@@ -226,7 +226,7 @@ export function parseSearch(search: string): {
   return { namesWithoutAssignment, namesWithAssignment, valuesByKey }
 }
 
-export function decodeSearchComponent(text: string): string {
+function decodeSearchComponent(text: string): string {
   try {
     return decodeURIComponent(text.replace(/\+/g, ' '))
   } catch {
