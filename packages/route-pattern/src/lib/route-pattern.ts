@@ -120,15 +120,7 @@ export class RoutePattern<T extends string> {
       }
     }
 
-    return {
-      protocol: url.protocol,
-      hostname: url.hostname,
-      port: url.port,
-      pathname: url.pathname,
-      search: url.search,
-      searchParams: url.searchParams,
-      params,
-    }
+    return { url, params }
   }
 
   /**
@@ -148,33 +140,13 @@ export class RoutePattern<T extends string> {
 
 export interface Match<T extends string> {
   /**
-   * The protocol of the URL that was matched.
+   * The URL that was matched.
    */
-  protocol: string
-  /**
-   * The hostname of the URL that was matched.
-   */
-  hostname: string
-  /**
-   * The port of the URL that was matched.
-   */
-  port: string
-  /**
-   * The pathname of the URL that was matched.
-   */
-  pathname: string
-  /**
-   * The search string of the URL that was matched.
-   */
-  search: string
-  /**
-   * The params that were extracted from the URL's search/query string.
-   */
-  searchParams: URLSearchParams
+  readonly url: URL
   /**
    * The parameters that were extracted from the URL protocol, hostname, and/or pathname.
    */
-  params: Params<T>
+  readonly params: Params<T>
 }
 
 function partToRegExpSource(

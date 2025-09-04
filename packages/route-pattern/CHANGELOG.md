@@ -2,6 +2,10 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/v3/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- BREAKING CHANGE: removed `match.protocol`, `match.hostname`, `match.port`, `match.pathname`, `match.search`, and `match.searchParams`. Use `match.url` instead
+
 ## v0.9.1 (2025-09-04)
 
 - Fix handling of patterns with leading slash

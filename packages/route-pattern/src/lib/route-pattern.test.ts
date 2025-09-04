@@ -402,12 +402,7 @@ describe('RoutePattern', () => {
       it('handles root path', () => {
         let pattern = new RoutePattern('/')
         assert.deepEqual(pattern.match('https://example.com/'), {
-          protocol: 'https:',
-          hostname: 'example.com',
-          port: '',
-          pathname: '/',
-          search: '',
-          searchParams: new URLSearchParams(),
+          url: new URL('https://example.com/'),
           params: {},
         })
       })
