@@ -2,6 +2,23 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/v3/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Fix handling of patterns with leading slash
+- Make variables not greedy
+
+```tsx
+let pattern = new RoutePattern('/:id(.json)')
+// Before :id was greedy and would consume ".json"
+pattern.match('https://remix.run/123.json')
+// { params: { id: '123.json' } }
+// After
+pattern.match('https://remix.run/123.json')
+// { params: { id: '123' } }
+```
+
+- Allow search params values to have type `string | number | bigint | boolean` and automatically stringify
+
 ## v0.9.0 (2025-09-03)
 
 - Add `protocol`, `hostname`, `port`, `pathname`, `search`, and `searchParams` properties to the `Match` interface. This is useful to avoid parsing the URL twice when passing a string directly to `pattern.match(urlString)`

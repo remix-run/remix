@@ -9,9 +9,21 @@ export type Tests = [
     { pathname: 'path/:id' }
   >>,
 
+  // should parse pathname with leading slash
+  Assert<IsEqual<
+    Split<'/path/:id'>,
+    { pathname: 'path/:id' }
+  >>,
+
   // should parse pathname with search
   Assert<IsEqual<
     Split<'path/:id?q=1'>,
+    { pathname: 'path/:id'; search: 'q=1' }
+  >>,
+
+  // should parse pathname with leading slash and search
+  Assert<IsEqual<
+    Split<'/path/:id?q=1'>,
     { pathname: 'path/:id'; search: 'q=1' }
   >>,
 

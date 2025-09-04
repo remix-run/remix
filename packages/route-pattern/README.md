@@ -172,7 +172,7 @@ Wildcards match multi-segment dynamic content and are represented by an asterisk
 **Named Wildcards**: Capture the matched content as a parameter:
 
 ```tsx
-let pattern = new RoutePattern('cdn/*path/v:version')
+let pattern = new RoutePattern('/*path/v:version')
 let match = pattern.match('https://cdn.shopify.com/assets/themes/dawn/v2')
 // { params: { path: 'assets/themes/dawn', version: '2' } }
 ```
@@ -194,7 +194,7 @@ Mark URL segments as optional by wrapping them in parentheses. Optional segments
 ```tsx
 let pattern = new RoutePattern('api(/v:version)/products')
 pattern.match('https://api.shopify.com/api/products')
-// { params: {} }
+// { params: { version: undefined } }
 pattern.match('https://api.shopify.com/api/v2/products')
 // { params: { version: '2' } }
 ```

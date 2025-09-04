@@ -176,6 +176,25 @@ describe('parse', () => {
         ],
       })
     })
+
+    it('parses pathname with leading slash', () => {
+      assert.deepEqual(parse('/path/:id'), {
+        pathname: [
+          { type: 'text', value: 'path/' },
+          { type: 'variable', name: 'id' },
+        ],
+      })
+    })
+
+    it('parses pathname with leading slash and search', () => {
+      assert.deepEqual(parse('/path/:id?q=1'), {
+        pathname: [
+          { type: 'text', value: 'path/' },
+          { type: 'variable', name: 'id' },
+        ],
+        searchParams: new URLSearchParams('q=1'),
+      })
+    })
   })
 
   describe('full URL patterns', () => {

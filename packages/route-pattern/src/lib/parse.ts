@@ -24,12 +24,12 @@ export function parse(source: string) {
 
   if (protocol) {
     start = source.indexOf(protocol, start)
-    result.protocol = parsePart(source, [start, start + protocol.length], 'protocol')
+    result.protocol = parsePart(source, start, protocol.length, 'protocol')
     start += protocol.length
   }
   if (hostname) {
     start = source.indexOf(hostname, start)
-    result.hostname = parsePart(source, [start, start + hostname.length], 'hostname')
+    result.hostname = parsePart(source, start, hostname.length, 'hostname')
     start += hostname.length
   }
   if (port) {
@@ -38,7 +38,7 @@ export function parse(source: string) {
   }
   if (pathname) {
     start = source.indexOf(pathname, start)
-    result.pathname = parsePart(source, [start, start + pathname.length], 'pathname')
+    result.pathname = parsePart(source, start, pathname.length, 'pathname')
   }
   if (search) {
     result.searchParams = new URLSearchParams(search)
@@ -49,8 +49,7 @@ export function parse(source: string) {
 
 const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
-function parsePart(source: string, bounds: [number, number], partName: string) {
-  let [start, end] = bounds
+function parsePart(source: string, start: number, length: number, partName: string) {
   let nodes: NodeList = []
   // Use a simple stack of node arrays: the top is where new nodes are appended.
   // The root of the stack is the `part` array. Each '(' pushes a new array; ')'
@@ -69,6 +68,7 @@ function parsePart(source: string, bounds: [number, number], partName: string) {
   }
 
   let i = start
+  let end = start + length
   while (i < end) {
     let char = source[i]
 

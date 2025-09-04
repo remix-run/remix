@@ -41,11 +41,11 @@ export class RoutePattern<T extends string> {
         ? partToRegExpSource(protocol, /.*/, this.#paramNames, true)
         : `[^:]+`
       let hostnameSource = hostname
-        ? partToRegExpSource(hostname, /[^.]+/, this.#paramNames, true)
+        ? partToRegExpSource(hostname, /[^.]+?/, this.#paramNames, true)
         : `[^/:]+`
       let portSource = port !== undefined ? `:${regexpEscape(port)}` : `(?::[0-9]+)?`
       let pathnameSource = pathname
-        ? partToRegExpSource(pathname, /[^/]+/, this.#paramNames, this.ignoreCase)
+        ? partToRegExpSource(pathname, /[^/]+?/, this.#paramNames, this.ignoreCase)
         : ''
 
       this.#matcher = new RegExp(
@@ -53,7 +53,7 @@ export class RoutePattern<T extends string> {
       )
     } else {
       let pathnameSource = pathname
-        ? partToRegExpSource(pathname, /[^/]+/, this.#paramNames, this.ignoreCase)
+        ? partToRegExpSource(pathname, /[^/]+?/, this.#paramNames, this.ignoreCase)
         : ''
 
       this.#matcher = new RegExp(`^/${pathnameSource}$`)

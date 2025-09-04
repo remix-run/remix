@@ -82,8 +82,8 @@ describe('RoutePattern', () => {
       it('matches complex optional patterns - with format', () => {
         let pattern = new RoutePattern('users/:id(.:format)')
         assert.deepEqual(pattern.match('https://example.com/users/123.json')?.params, {
-          id: '123.json',
-          format: undefined,
+          id: '123',
+          format: 'json',
         })
       })
 
@@ -401,7 +401,15 @@ describe('RoutePattern', () => {
 
       it('handles root path', () => {
         let pattern = new RoutePattern('/')
-        assert.deepEqual(pattern.match('https://example.com/'), null)
+        assert.deepEqual(pattern.match('https://example.com/'), {
+          protocol: 'https:',
+          hostname: 'example.com',
+          port: '',
+          pathname: '/',
+          search: '',
+          searchParams: new URLSearchParams(),
+          params: {},
+        })
       })
 
       it('handles patterns with no pathname', () => {

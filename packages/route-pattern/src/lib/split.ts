@@ -17,6 +17,7 @@ type _Split<T extends string> =
     Protocol extends `${string}/${string}` ? { pathname: T } :
     R extends `${infer Host}/${infer Pathname}` ? SplitHost<Host> & { protocol: Protocol; pathname: Pathname } :
     SplitHost<R> & { protocol: Protocol } :
+  T extends `/${infer Pathname}` ? { pathname: Pathname } :
   { pathname: T }
 
 // prettier-ignore
@@ -79,7 +80,12 @@ export function split<T extends string>(source: T): Split<T> {
 
   // pathname
   if (index !== source.length) {
-    result.pathname = source.slice(index, source.length)
+    let pathname = source.slice(index, source.length)
+    if (pathname.startsWith('/')) {
+      result.pathname = pathname.slice(1)
+    } else {
+      result.pathname = pathname
+    }
   }
 
   return result as Split<T>

@@ -33,7 +33,7 @@ type HrefBuilderArgs<T extends string> =
 type HrefParams<T extends string> =
   Record<RequiredParams<T>, ParamValue> & Partial<Record<OptionalParams<T>, ParamValue>>
 
-type HrefSearchParams = NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
+type HrefSearchParams = NonNullable<ConstructorParameters<typeof URLSearchParams>[0]> | AnyParams
 
 interface HrefBuilderOptions {
   /**

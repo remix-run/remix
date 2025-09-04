@@ -50,9 +50,11 @@ describe('split', () => {
       // pathname + ...
       ['path/:id', { pathname: 'path/:id' }],
       ['path/:id?q=1', { pathname: 'path/:id', search: 'q=1' }],
+      ['/path/:id', { pathname: 'path/:id' }],
 
       // search + ...
       ['?q=1', { search: 'q=1' }],
+      ['/path/:id?q=1', { pathname: 'path/:id', search: 'q=1' }],
     ]
 
     for (let [input, expected] of cases) {
