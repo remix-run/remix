@@ -1,4 +1,4 @@
-import type { ParseResult, Node, NodeList } from './parse.types.ts'
+import type { ParseResult, Node, NodeList, SearchConstraints } from './parse.types.ts'
 import { split } from './split.ts'
 import type { SplitResult } from './split.ts'
 
@@ -41,7 +41,7 @@ export function parse(source: string) {
     result.pathname = parsePart(source, start, pathname.length, 'pathname')
   }
   if (search) {
-    result.searchParams = new URLSearchParams(search)
+    result.search = search
   }
 
   return result
@@ -145,4 +145,91 @@ function parsePart(source: string, start: number, length: number, partName: stri
   }
 
   return nodes
+}
+
+// Search parsing helpers ---------------------------------------------------------------------------
+
+export function parseSearchConstraints(search: string): SearchConstraints {
+  let constraints = new Map<
+    string,
+    { requiredValues?: Set<string>; requireAssignment: boolean; allowBare: boolean }
+  >()
+
+  for (let part of search.split('&')) {
+    if (part === '') continue
+    let eqIndex = part.indexOf('=')
+    if (eqIndex === -1) {
+      // Presence-only (no '=')
+      let name = decodeSearchComponent(part)
+      let existing = constraints.get(name)
+      if (!existing) {
+        constraints.set(name, { requireAssignment: false, allowBare: true })
+      }
+      continue
+    }
+
+    let name = decodeSearchComponent(part.slice(0, eqIndex))
+    let valuePart = part.slice(eqIndex + 1)
+    let existing = constraints.get(name)
+    if (!existing) {
+      existing = { requireAssignment: true, allowBare: false }
+      constraints.set(name, existing)
+    } else {
+      existing.requireAssignment = true
+      existing.allowBare = false
+    }
+
+    if (valuePart.length > 0) {
+      let decodedValue = decodeSearchComponent(valuePart)
+      if (!existing.requiredValues) existing.requiredValues = new Set<string>()
+      existing.requiredValues.add(decodedValue)
+    }
+  }
+
+  return constraints
+}
+
+export function parseSearch(search: string): {
+  namesWithoutAssignment: Set<string>
+  namesWithAssignment: Set<string>
+  valuesByKey: Map<string, Set<string>>
+} {
+  if (search.startsWith('?')) search = search.slice(1)
+
+  let namesWithoutAssignment = new Set<string>()
+  let namesWithAssignment = new Set<string>()
+  let valuesByKey = new Map<string, Set<string>>()
+
+  if (search.length > 0) {
+    for (let part of search.split('&')) {
+      if (part === '') continue
+      let eqIndex = part.indexOf('=')
+      if (eqIndex === -1) {
+        let name = decodeSearchComponent(part)
+        namesWithoutAssignment.add(name)
+        continue
+      }
+
+      let name = decodeSearchComponent(part.slice(0, eqIndex))
+      let valuePart = part.slice(eqIndex + 1)
+      namesWithAssignment.add(name)
+      let value = decodeSearchComponent(valuePart)
+      let set = valuesByKey.get(name)
+      if (!set) {
+        set = new Set<string>()
+        valuesByKey.set(name, set)
+      }
+      set.add(value)
+    }
+  }
+
+  return { namesWithoutAssignment, namesWithAssignment, valuesByKey }
+}
+
+export function decodeSearchComponent(text: string): string {
+  try {
+    return decodeURIComponent(text.replace(/\+/g, ' '))
+  } catch {
+    return text
+  }
 }

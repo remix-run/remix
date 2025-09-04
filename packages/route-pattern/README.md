@@ -115,13 +115,37 @@ pattern.match('https://remix.run/blog/remixing-shopify')
 // { params: { id: 'remixing-shopify' } }
 ```
 
-**Query Parameter Matching**: Content after `?` is treated as search parameters:
+**Search Parameter Matching**: Content after `?` is treated as search parameters:
 
 ```tsx
 let pattern = new RoutePattern('search?q')
-pattern.match('https://remix.run/search?q=routing')
-// { params: {} }
+
+pattern.match('https://remix.run/search?q') // match!
+
+let match = pattern.match('https://remix.run/search?q=routing') // match!
+match.url.searchParams // new URLSearchParams('?q=routing')
 ```
+
+If a search parameter is followed by `=`, it must have some value in order to match.
+
+```tsx
+let pattern = new RoutePattern('search?q=')
+pattern.match('https://remix.run/search?q') // null
+pattern.match('https://remix.run/search?q=') // match! (empty string is fine)
+pattern.match('https://remix.run/search?q=routing') // match!
+```
+
+A search parameter with a specific value(s) matches only if the URL has that value.
+
+```tsx
+let pattern = new RoutePattern('search?q=routing')
+pattern.match('https://remix.run/search?q') // null
+pattern.match('https://remix.run/search?q=') // null
+pattern.match('https://remix.run/search?q=routing') // match!
+pattern.match('https://remix.run/search?q=routing&utm_source') // also match!
+```
+
+You can think about search parameter matching like "narrowing" for a route. Search parameters in a route pattern narrow the set of URLs it matches.
 
 **Full URL Matching**: Use `://` to specify protocol and hostname patterns:
 

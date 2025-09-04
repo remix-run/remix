@@ -5,7 +5,7 @@ export interface ParseResult {
   hostname?: NodeList
   port?: string
   pathname?: NodeList
-  searchParams?: URLSearchParams
+  search?: string
 }
 
 // prettier-ignore
@@ -14,9 +14,9 @@ export type Parse<T extends string> =
     {
       protocol: S['protocol'] extends string ? PartParse<S['protocol']> : undefined
       hostname: S['hostname'] extends string ? PartParse<S['hostname']> : undefined
-      port: S['port'] extends string ? S['port'] : undefined
+      port: S['port'] extends string ? string : undefined
       pathname: S['pathname'] extends string ? PartParse<S['pathname']> : undefined
-      searchParams: S['search'] extends string ? URLSearchParams : undefined
+      search: S['search'] extends string ? string : undefined
     } :
     never
 
@@ -146,3 +146,10 @@ type _IdentifierParse<S extends { identifier: string, rest: string }> =
 type EnumSplit<Body extends string> =
   Body extends `${infer Member},${infer Rest}` ? [Member, ...EnumSplit<Rest>] :
   [Body]
+
+// Search constraints ------------------------------------------------------------------------------
+
+export type SearchConstraints = Map<
+  string,
+  { requiredValues?: Set<string>; requireAssignment: boolean; allowBare: boolean }
+>

@@ -88,8 +88,8 @@ export function createHrefBuilder<T extends string = string>(
       href += '/'
     }
 
-    if (searchParams || parsed.searchParams) {
-      href += `?${new URLSearchParams(searchParams ?? parsed.searchParams).toString()}`
+    if (searchParams || parsed.search) {
+      href += `?${new URLSearchParams(searchParams ?? parsed.search).toString()}`
     }
 
     return href

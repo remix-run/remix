@@ -192,7 +192,7 @@ describe('parse', () => {
           { type: 'text', value: 'path/' },
           { type: 'variable', name: 'id' },
         ],
-        searchParams: new URLSearchParams('q=1'),
+        search: 'q=1',
       })
     })
   })
@@ -271,7 +271,7 @@ describe('parse', () => {
     it('parses with search params', () => {
       assert.deepEqual(parse('search?q=:query'), {
         pathname: [{ type: 'text', value: 'search' }],
-        searchParams: new URLSearchParams('q=:query'),
+        search: 'q=:query',
       })
     })
 
@@ -291,7 +291,7 @@ describe('parse', () => {
             { type: 'text', value: '/users/' },
             { type: 'variable', name: 'id' },
           ],
-          searchParams: new URLSearchParams('format=json'),
+          search: 'format=json',
         },
       )
     })

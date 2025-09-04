@@ -5,6 +5,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 ## HEAD
 
 - BREAKING CHANGE: removed `match.protocol`, `match.hostname`, `match.port`, `match.pathname`, `match.search`, and `match.searchParams`. Use `match.url` instead
+- Fix search matching and add more fine-grained examples
 
 ## v0.9.1 (2025-09-04)
 

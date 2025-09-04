@@ -555,8 +555,24 @@ describe('RoutePattern', () => {
       })
 
       it('matches search param with empty value', () => {
-        let pattern = new RoutePattern('search?q')
+        let pattern = new RoutePattern('search?q') // q must be present
         assert.deepEqual(pattern.match('https://example.com/search?q')?.params, {})
+        assert.deepEqual(pattern.match('https://example.com/search?q=')?.params, {})
+        assert.deepEqual(pattern.match('https://example.com/search?q=test')?.params, {})
+      })
+
+      it('matches required search param', () => {
+        let pattern = new RoutePattern('search?q=') // q must have some value
+        assert.deepEqual(pattern.match('https://example.com/search?q'), null)
+        assert.deepEqual(pattern.match('https://example.com/search?q=')?.params, {}) // empty string is fine
+        assert.deepEqual(pattern.match('https://example.com/search?q=test')?.params, {})
+      })
+
+      it('matches required search param with specific value', () => {
+        let pattern = new RoutePattern('search?q=test') // q must be "test"
+        assert.deepEqual(pattern.match('https://example.com/search?q'), null)
+        assert.deepEqual(pattern.match('https://example.com/search?q='), null)
+        assert.deepEqual(pattern.match('https://example.com/search?q=test')?.params, {})
       })
 
       it('matches search param with special characters', () => {

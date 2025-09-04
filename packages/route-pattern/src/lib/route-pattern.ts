@@ -1,6 +1,6 @@
 import type { Params } from './params.ts'
-import type { NodeList } from './parse.types.ts'
-import { parse } from './parse.ts'
+import type { NodeList, SearchConstraints } from './parse.types.ts'
+import { parse, parseSearch, parseSearchConstraints } from './parse.ts'
 
 export interface RoutePatternOptions {
   /**
@@ -25,13 +25,13 @@ export class RoutePattern<T extends string> {
   readonly #matcher: RegExp
   readonly #matchOrigin: boolean
   readonly #paramNames: Array<string>
-  readonly #requiredSearchParams: Map<string, Set<string>> | null
+  readonly #searchConstraints: SearchConstraints | null
 
   constructor(source: T | RoutePattern<T>, options?: RoutePatternOptions) {
     this.source = typeof source === 'string' ? source : source.source
     this.ignoreCase = options?.ignoreCase === true
 
-    let { protocol, hostname, port, pathname, searchParams } = parse(this.source)
+    let { protocol, hostname, port, pathname, search } = parse(this.source)
 
     this.#matchOrigin = protocol !== undefined || hostname !== undefined || port !== undefined
     this.#paramNames = []
@@ -59,19 +59,10 @@ export class RoutePattern<T extends string> {
       this.#matcher = new RegExp(`^/${pathnameSource}$`)
     }
 
-    if (searchParams) {
-      let required = new Map<string, Set<string>>()
-      for (let [key, value] of searchParams.entries()) {
-        let set = required.get(key)
-        if (!set) {
-          set = new Set<string>()
-          required.set(key, set)
-        }
-        set.add(value)
-      }
-      this.#requiredSearchParams = required
+    if (search) {
+      this.#searchConstraints = parseSearchConstraints(search)
     } else {
-      this.#requiredSearchParams = null
+      this.#searchConstraints = null
     }
   }
 
@@ -99,25 +90,8 @@ export class RoutePattern<T extends string> {
       params[paramName] = match[i + 1]
     }
 
-    if (this.#requiredSearchParams) {
-      // Build an index of the URL's query once for O(1) membership checks
-      let valuesByKey = new Map<string, Set<string>>()
-      for (let [k, v] of url.searchParams) {
-        let set = valuesByKey.get(k)
-        if (!set) {
-          set = new Set<string>()
-          valuesByKey.set(k, set)
-        }
-        set.add(v)
-      }
-
-      for (let [key, requiredValues] of this.#requiredSearchParams) {
-        let set = valuesByKey.get(key)
-        if (!set) return null
-        for (let value of requiredValues) {
-          if (!set.has(value)) return null
-        }
-      }
+    if (this.#searchConstraints && !matchSearch(url.search, this.#searchConstraints)) {
+      return null
     }
 
     return { url, params }
@@ -185,4 +159,31 @@ function partToRegExpSource(
 
 function regexpEscape(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function matchSearch(search: string, constraints: SearchConstraints): boolean {
+  let { namesWithoutAssignment, namesWithAssignment, valuesByKey } = parseSearch(search)
+
+  for (let [key, constraint] of constraints) {
+    let hasAssigned = namesWithAssignment.has(key)
+    let hasBare = namesWithoutAssignment.has(key)
+    let values = valuesByKey.get(key)
+
+    if (constraint.requiredValues && constraint.requiredValues.size > 0) {
+      if (!values) return false
+      for (let value of constraint.requiredValues) {
+        if (!values.has(value)) return false
+      }
+      continue
+    }
+
+    if (constraint.requireAssignment) {
+      if (!hasAssigned) return false
+      continue
+    }
+
+    if (!(hasAssigned || hasBare)) return false
+  }
+
+  return true
 }
