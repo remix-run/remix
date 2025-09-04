@@ -54,15 +54,15 @@ export function createHrefBuilder<T extends string = string>(
   return (pattern: string, ...args: any) => {
     let params = args[0] ?? {}
     let searchParams = args[1]
-    let ast = parse(pattern)
+    let parsed = parse(pattern)
 
     let href = ''
 
     // If we have a hostname to work with we can make a full URL. Otherwise we can only make an
     // absolute path.
-    if (ast.hostname || options.host) {
-      if (ast.protocol) {
-        href += resolveList(ast.protocol, params)
+    if (parsed.hostname || options.host) {
+      if (parsed.protocol) {
+        href += resolveList(parsed.protocol, params)
       } else if (options.protocol) {
         href += options.protocol.replace(/:$/, '')
       } else {
@@ -71,25 +71,25 @@ export function createHrefBuilder<T extends string = string>(
 
       href += '://'
 
-      if (ast.hostname) {
-        href += resolveList(ast.hostname, params)
-        if (ast.port) {
-          href += `:${ast.port}`
+      if (parsed.hostname) {
+        href += resolveList(parsed.hostname, params)
+        if (parsed.port) {
+          href += `:${parsed.port}`
         }
       } else {
         href += options.host
       }
     }
 
-    if (ast.pathname) {
-      let pathname = resolveList(ast.pathname, params)
+    if (parsed.pathname) {
+      let pathname = resolveList(parsed.pathname, params)
       href += pathname.startsWith('/') ? pathname : `/${pathname}`
     } else {
       href += '/'
     }
 
-    if (searchParams || ast.searchParams) {
-      href += `?${new URLSearchParams(searchParams ?? ast.searchParams).toString()}`
+    if (searchParams || parsed.searchParams) {
+      href += `?${new URLSearchParams(searchParams ?? parsed.searchParams).toString()}`
     }
 
     return href

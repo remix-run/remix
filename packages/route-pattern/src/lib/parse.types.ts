@@ -1,10 +1,10 @@
 import type { SplitResult, Split } from './split.ts'
 
 export interface ParseResult {
-  protocol?: Array<Node>
-  hostname?: Array<Node>
+  protocol?: NodeList
+  hostname?: NodeList
   port?: string
-  pathname?: Array<Node>
+  pathname?: NodeList
   searchParams?: URLSearchParams
 }
 
