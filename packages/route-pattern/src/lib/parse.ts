@@ -150,10 +150,7 @@ function parsePart(source: string, start: number, length: number, partName: stri
 // Search parsing helpers ---------------------------------------------------------------------------
 
 export function parseSearchConstraints(search: string): SearchConstraints {
-  let constraints = new Map<
-    string,
-    { requiredValues?: Set<string>; requireAssignment: boolean; allowBare: boolean }
-  >()
+  let constraints: SearchConstraints = new Map()
 
   for (let part of search.split('&')) {
     if (part === '') continue
