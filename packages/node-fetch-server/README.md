@@ -315,7 +315,7 @@ http.createServer(createRequestListener(handler)).listen(3000)
 
 ## Related Packages
 
-- [`fetch-proxy`](https://github.com/remix-run/remix/tree/v3/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
+- [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
 
 ## License
 

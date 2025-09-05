@@ -441,8 +441,8 @@ let header = new SetCookie({
 
 ## Related Packages
 
-- [`fetch-proxy`](https://github.com/remix-run/remix/tree/v3/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
-- [`node-fetch-server`](https://github.com/remix-run/remix/tree/v3/packages/node-fetch-server) - Build HTTP servers on Node.js using the web fetch API
+- [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
+- [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server) - Build HTTP servers on Node.js using the web fetch API
 
 ## License
 

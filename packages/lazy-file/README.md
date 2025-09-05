@@ -100,7 +100,7 @@ All file contents are read on-demand and nothing is ever buffered.
 
 ## Related Packages
 
-- [`file-storage`](https://github.com/remix-run/remix/tree/v3/packages/file-storage) - Uses `lazy-file/fs` internally to create streaming `File` objects from storage on disk
+- [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - Uses `lazy-file/fs` internally to create streaming `File` objects from storage on disk
 
 ## License
 

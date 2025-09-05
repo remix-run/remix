@@ -8,7 +8,7 @@
     "url": "git+https://github.com/remix-run/remix.git",
     "directory": "packages/lazy-file"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/v3/packages/lazy-file#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/lazy-file#readme",
   "license": "MIT",
   "files": [
     "LICENSE",

@@ -9,7 +9,7 @@
     "url": "git+https://github.com/remix-run/remix.git",
     "directory": "packages/fetch-proxy"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/v3/packages/fetch-proxy#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/fetch-proxy#readme",
   "files": [
     "LICENSE",
     "README.md",
