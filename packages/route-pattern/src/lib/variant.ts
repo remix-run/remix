@@ -14,19 +14,26 @@ import type { IsEqual } from './type-utils.d.ts'
 export type Variant<T extends string> =
   T extends any ?
     IsEqual<T, string> extends true ? string :
-    VariantString<Parse<T>> :
+    VariantString<Parse<T>, HasLeadingSlash<T>> :
   never
 
+// Detect if the original pattern begins with a leading slash (and is not an origin URL)
 // prettier-ignore
-type VariantString<T extends ParseResult> =
+type HasLeadingSlash<T extends string> =
+  T extends `${string}://${string}` ? false :
+  T extends `/${string}` ? true :
+  false
+
+// prettier-ignore
+type VariantString<T extends ParseResult, L extends boolean> =
   T extends { protocol: infer P extends Array<Node> } ?
-    `${PartVariantString<P>}${VariantString<Omit<T, 'protocol'>>}` :
+    `${PartVariantString<P>}${VariantString<Omit<T, 'protocol'>, false>}` :
   T extends { hostname: infer H extends Array<Node>, port: infer R extends string } ?
-    `://${PartVariantString<H>}:${R}/${VariantString<Omit<T, 'hostname' | 'port'>>}` :
+    `://${PartVariantString<H>}:${R}/${VariantString<Omit<T, 'hostname' | 'port'>, false>}` :
   T extends { hostname: infer H extends Array<Node> } ?
-    `://${PartVariantString<H>}/${VariantString<Omit<T, 'hostname'>>}` :
+    `://${PartVariantString<H>}/${VariantString<Omit<T, 'hostname'>, false>}` :
   T extends { pathname: infer P extends Array<Node> } ?
-    `${PartVariantString<P>}${VariantString<Omit<T, 'pathname'>>}` :
+    `${L extends true ? '/' : ''}${PartVariantString<P>}${VariantString<Omit<T, 'pathname'>, false>}` :
   T extends { search: infer S extends string } ?
     `?${S}` :
   ''

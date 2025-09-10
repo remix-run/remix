@@ -2,6 +2,7 @@ import type { RequiredParams, OptionalParams } from './params.ts'
 import { parse } from './parse.ts'
 import type { NodeList, Node } from './parse.types.ts'
 import type { Variant } from './variant.ts'
+import type { RoutePattern } from './route-pattern.ts'
 
 export class MissingParamError extends Error {
   paramName: string
@@ -16,12 +17,14 @@ export class MissingParamError extends Error {
 type ParamValue = string | number | bigint | boolean
 type AnyParams = Record<string, ParamValue>
 
-export interface HrefBuilder<T extends string | undefined = undefined> {
-  <P extends T extends string ? T | Variant<T> : string>(
+export interface HrefBuilder<T extends string | RoutePattern<any> | undefined = undefined> {
+  <P extends T extends undefined ? string : SourceOf<T> | Variant<SourceOf<T>>>(
     pattern: P,
     ...args: HrefBuilderArgs<P>
   ): string
 }
+
+type SourceOf<T> = T extends string ? T : T extends RoutePattern<infer S extends string> ? S : never
 
 // prettier-ignore
 type HrefBuilderArgs<T extends string> =
@@ -48,7 +51,7 @@ interface HrefBuilderOptions {
   host?: string
 }
 
-export function createHrefBuilder<T extends string = string>(
+export function createHrefBuilder<T extends string | RoutePattern<any> = string>(
   options: HrefBuilderOptions = {},
 ): HrefBuilder<T> {
   return (pattern: string, ...args: any) => {

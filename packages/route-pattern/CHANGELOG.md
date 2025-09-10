@@ -2,6 +2,11 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/v3/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- `createHrefBuilder<T>` now accepts `RoutePattern` as a generic `T` instead of just `string`
+- `Variant<T>` preserves leading slashes in pathname-only patterns
+
 ## v0.10.0 (2025-09-04)
 
 - BREAKING CHANGE: removed `match.protocol`, `match.hostname`, `match.port`, `match.pathname`, `match.search`, and `match.searchParams`. Use `match.url` instead

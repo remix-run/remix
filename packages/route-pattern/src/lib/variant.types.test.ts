@@ -15,6 +15,12 @@ export type Tests = [
     'products' | 'products/:id'
   >>,
 
+  // should handle optional path segments with a leading slash
+  Assert<IsEqual<
+    Variant<'/products(/:id)'>,
+    '/products' | '/products/:id'
+  >>,
+
   // should handle optional extensions
   Assert<IsEqual<
     Variant<'products/:id(.:ext)'>,
