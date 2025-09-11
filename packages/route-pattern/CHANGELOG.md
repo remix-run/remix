@@ -2,7 +2,7 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/v3/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.11.0 (2025-09-11)
 
 - `createHrefBuilder<T>` now accepts a `RoutePattern` directly instead of just `string`s
 - `Variant<T>` preserves leading slashes in pathname-only patterns
