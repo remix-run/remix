@@ -280,6 +280,8 @@ Date: 2025-09-11
 
 ### Patch Changes
 
+- `remix-serve` - Update `compression` and `morgan` dependencies to latest versions
+- `@remix-run/eslint-config` - Update deprecation warning with proper link to sample v2 eslint config file
 - `@remix-run/react` - Escape HTML in `meta()` JSON-LD content
 
 **Full Changelog**: [`v2.17.0...v2.17.1`](https://github.com/remix-run/remix/compare/remix@2.17.0...remix@2.17.1)
