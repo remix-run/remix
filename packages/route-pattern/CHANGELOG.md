@@ -4,7 +4,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 ## HEAD
 
-- `createHrefBuilder<T>` now accepts `RoutePattern` as a generic `T` instead of just `string`
+- `createHrefBuilder<T>` now accepts a `RoutePattern` directly instead of just `string`s
 - `Variant<T>` preserves leading slashes in pathname-only patterns
 
 ## v0.10.0 (2025-09-04)

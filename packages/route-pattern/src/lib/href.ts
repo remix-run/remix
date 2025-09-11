@@ -19,7 +19,7 @@ type AnyParams = Record<string, ParamValue>
 
 export interface HrefBuilder<T extends string | RoutePattern<any> | undefined = undefined> {
   <P extends T extends undefined ? string : SourceOf<T> | Variant<SourceOf<T>>>(
-    pattern: P,
+    pattern: P | RoutePattern<P>,
     ...args: HrefBuilderArgs<P>
   ): string
 }
@@ -54,10 +54,10 @@ interface HrefBuilderOptions {
 export function createHrefBuilder<T extends string | RoutePattern<any> = string>(
   options: HrefBuilderOptions = {},
 ): HrefBuilder<T> {
-  return (pattern: string, ...args: any) => {
+  return (pattern: string | RoutePattern<any>, ...args: any) => {
     let params = args[0] ?? {}
     let searchParams = args[1]
-    let parsed = parse(pattern)
+    let parsed = parse(typeof pattern === 'string' ? pattern : pattern.source)
 
     let href = ''
 

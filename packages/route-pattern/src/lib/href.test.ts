@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { MissingParamError, createHrefBuilder } from './href.ts'
+import { RoutePattern } from './route-pattern.ts'
 
 describe('href', () => {
   it('uses a default protocol', () => {
@@ -22,6 +23,11 @@ describe('href', () => {
   it('makes absolute hrefs when no hostname is provided', () => {
     let href = createHrefBuilder()
     assert.equal(href('products/:id', { id: '1' }), '/products/1')
+  })
+
+  it('accepts a RoutePattern directly', () => {
+    let href = createHrefBuilder()
+    assert.equal(href(new RoutePattern('products/:id'), { id: '1' }), '/products/1')
   })
 
   it('substitutes * for unnamed wildcards in variants', () => {
