@@ -1,3 +1,4 @@
+// deno-lint-ignore no-import-prefix
 import * as path from "https://deno.land/std@0.128.0/path/mod.ts";
 import mime from "mime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
