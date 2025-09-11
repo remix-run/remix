@@ -1,8 +1,8 @@
 <!-- markdownlint-disable no-duplicate-header no-emphasis-as-heading no-inline-html -->
 
-# Remix Releases
+# Remix v2 Releases
 
-This page lists all releases/release notes for Remix back to `v2.0.0`. For releases prior to v2, please refer to the [GitHub Releases Page](https://github.com/remix-run/remix/releases).
+This page lists all releases/release notes for Remix `v2.x` releases. For releases prior to v2, please refer to the [GitHub Releases Page](https://github.com/remix-run/remix/releases).
 
 We manage release notes in this file instead of the paginated GitHub Releases Page for 2 reasons:
 
@@ -12,7 +12,7 @@ We manage release notes in this file instead of the paginated GitHub Releases Pa
 <details>
   <summary>Table of Contents</summary>
 
-- [Remix Releases](#remix-releases)
+- [Remix v2 Releases](#remix-v2-releases)
   - [v2.17.1](#v2171)
     - [Patch Changes](#patch-changes)
   - [v2.17.0](#v2170)
@@ -276,7 +276,7 @@ Date: YYYY-MM-DD
 
 ## v2.17.1
 
-Date: 2025-09-11
+Date: 2025-09-12
 
 ### Patch Changes
 
