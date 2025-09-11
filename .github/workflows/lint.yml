@@ -3,8 +3,7 @@ name: ⬣ Lint
 on:
   push:
     branches:
-      - main
-      - dev
+      - v2
   pull_request:
 
 concurrency:
