@@ -72,8 +72,8 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
         const content = JSON.parse(await Deno.readTextFile(file));
         const data = content.data;
         const expires = typeof content.expires === "string"
-            ? new Date(content.expires)
-            : null;
+          ? new Date(content.expires)
+          : null;
 
         if (!expires || expires > new Date()) {
           return data;
