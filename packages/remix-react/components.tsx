@@ -689,7 +689,7 @@ export function Meta() {
               <script
                 key={`script:ld+json:${json}`}
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: json }}
+                dangerouslySetInnerHTML={{ __html: escapeHtml(json) }}
               />
             );
           } catch (err) {
