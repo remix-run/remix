@@ -9,7 +9,7 @@
     "url": "git+https://github.com/remix-run/remix.git",
     "directory": "packages/route-pattern"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/v3/packages/route-pattern#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/route-pattern#readme",
   "files": [
     "LICENSE",
     "README.md",

@@ -1,6 +1,6 @@
 # `fetch-proxy` CHANGELOG
 
-This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/v3/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
 ## v0.5.0 (2025-07-24)
 

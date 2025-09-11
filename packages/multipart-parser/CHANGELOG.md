@@ -1,6 +1,6 @@
 # `multipart-parser` CHANGELOG
 
-This is the changelog for [`multipart-parser`](https://github.com/remix-run/remix/tree/v3/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
 ## v0.11.0 (2025-07-24)
 
