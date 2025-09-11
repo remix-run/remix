@@ -2,7 +2,7 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.8.1 (2025-09-11)
 
 - Only abort `request.signal` when the connection closes before the response completes (see #10726)
 
