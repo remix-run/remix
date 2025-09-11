@@ -18,8 +18,15 @@ type ParamValue = string | number | bigint | boolean
 type AnyParams = Record<string, ParamValue>
 
 export interface HrefBuilder<T extends string | RoutePattern<any> | undefined = undefined> {
+  // Accept a RoutePattern instance
   <P extends T extends undefined ? string : SourceOf<T> | Variant<SourceOf<T>>>(
-    pattern: P | RoutePattern<P>,
+    pattern: RoutePattern<P>,
+    ...args: HrefBuilderArgs<P>
+  ): string
+  // And accept a string pattern
+  // Also, make this the last signature so Parameters<HrefBuilder<...>> picks it
+  <P extends T extends undefined ? string : SourceOf<T> | Variant<SourceOf<T>>>(
+    pattern: P,
     ...args: HrefBuilderArgs<P>
   ): string
 }

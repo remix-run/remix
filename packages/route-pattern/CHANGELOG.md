@@ -2,6 +2,10 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Fix type tests when using `Parameters<HrefBuilder<...>>` to always be deterministic and use a `string` argument as the 1st arg
+
 ## v0.11.0 (2025-09-11)
 
 - `createHrefBuilder<T>` now accepts a `RoutePattern` directly instead of just `string`s
