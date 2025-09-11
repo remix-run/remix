@@ -27,9 +27,6 @@
     "vite-ecosystem-ci:build": "pnpm build",
     "vite-ecosystem-ci:before-test": "pnpm playwright install",
     "vite-ecosystem-ci:test": "pnpm playwright:integration --project=chromium integration/vite-* && pnpm clean:integration",
-    "changeset": "changeset",
-    "changeset:version": "changeset version && node ./scripts/remove-prerelease-changelogs.mjs && node ./scripts/patchup-version.mjs && pnpm install --no-frozen-lockfile",
-    "changeset:release": "pnpm build --tsc && ./scripts/changesets-release.sh",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\""
   },
@@ -44,7 +41,6 @@
     "@babel/preset-env": "^7.21.5",
     "@babel/preset-react": "^7.18.6",
     "@babel/preset-typescript": "^7.21.5",
-    "@changesets/cli": "^2.25.2",
     "@cloudflare/kv-asset-handler": "^0.3.0",
     "@manypkg/get-packages": "^1.1.3",
     "@mcansh/remark-definition-links": "2.4.1",
@@ -136,10 +132,5 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "pnpm": {
-    "patchedDependencies": {
-      "@changesets/assemble-release-plan@5.2.2": "patches/@changesets__assemble-release-plan@5.2.2.patch"
-    }
   }
 }
