@@ -1,5 +1,5 @@
 import type { Params } from './params.ts'
-import type { TokenList, SearchConstraints } from './parse.types.ts'
+import type { Optional, TokenList, SearchConstraints } from './parse.types.ts'
 import { parse, parseSearch, parseSearchConstraints } from './parse.ts'
 
 export interface RoutePatternOptions {
@@ -146,11 +146,11 @@ function tokensToRegExpSource(
       if (token.type === 'text') {
         return regexpEscape(forceLowerCase ? token.value.toLowerCase() : token.value)
       }
-      if (token.type === 'optional') {
-        return `(?:${tokensToRegExpSource(token.tokens, paramRegExp, paramNames, forceLowerCase)})?`
-      }
 
-      throw new Error(`Node with unknown type: ${token}`)
+      token satisfies Optional
+
+      // token.type === 'optional'
+      return `(?:${tokensToRegExpSource(token.tokens, paramRegExp, paramNames, forceLowerCase)})?`
     })
     .join('')
 

@@ -87,13 +87,13 @@ type AppendToken<S extends PartParseState, token extends Token, rest extends str
 type AppendText<S extends PartParseState, text extends string, rest extends string> =
   S['optionals'] extends [...infer O extends Array<Array<Token>>, infer Top extends Array<Token>] ?
     (
-      Top extends [...infer Nodes extends Array<Token>, { type: 'text', value: infer value extends string }] ?
-        { tokens: S['tokens']; optionals: [...O, [...Nodes, { type: 'text', value: `${value}${text}` }]]; rest: rest } :
+      Top extends [...infer Tokens extends Array<Token>, { type: 'text', value: infer value extends string }] ?
+        { tokens: S['tokens']; optionals: [...O, [...Tokens, { type: 'text', value: `${value}${text}` }]]; rest: rest } :
         { tokens: S['tokens']; optionals: [...O, [...Top, { type: 'text', value: text }]]; rest: rest }
     ) :
     (
-      S['tokens'] extends [...infer Nodes extends Array<Token>, { type: 'text', value: infer value extends string }] ?
-        { tokens: [...Nodes, { type: 'text', value: `${value}${text}` }]; optionals: S['optionals']; rest: rest } :
+      S['tokens'] extends [...infer Tokens extends Array<Token>, { type: 'text', value: infer value extends string }] ?
+        { tokens: [...Tokens, { type: 'text', value: `${value}${text}` }]; optionals: S['optionals']; rest: rest } :
         { tokens: [...S['tokens'], { type: 'text', value: text }]; optionals: S['optionals']; rest: rest }
     )
 
