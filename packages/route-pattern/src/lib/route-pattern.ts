@@ -1,5 +1,5 @@
 import type { Params } from './params.ts'
-import type { NodeList, SearchConstraints } from './parse.types.ts'
+import type { TokenList, SearchConstraints } from './parse.types.ts'
 import { parse, parseSearch, parseSearchConstraints } from './parse.ts'
 
 export interface RoutePatternOptions {
@@ -38,14 +38,14 @@ export class RoutePattern<T extends string> {
 
     if (this.#matchOrigin) {
       let protocolSource = protocol
-        ? partToRegExpSource(protocol, /.*/, this.#paramNames, true)
+        ? tokensToRegExpSource(protocol, /.*/, this.#paramNames, true)
         : `[^:]+`
       let hostnameSource = hostname
-        ? partToRegExpSource(hostname, /[^.]+?/, this.#paramNames, true)
+        ? tokensToRegExpSource(hostname, /[^.]+?/, this.#paramNames, true)
         : `[^/:]+`
       let portSource = port !== undefined ? `:${regexpEscape(port)}` : `(?::[0-9]+)?`
       let pathnameSource = pathname
-        ? partToRegExpSource(pathname, /[^/]+?/, this.#paramNames, this.ignoreCase)
+        ? tokensToRegExpSource(pathname, /[^/]+?/, this.#paramNames, this.ignoreCase)
         : ''
 
       this.#matcher = new RegExp(
@@ -53,7 +53,7 @@ export class RoutePattern<T extends string> {
       )
     } else {
       let pathnameSource = pathname
-        ? partToRegExpSource(pathname, /[^/]+?/, this.#paramNames, this.ignoreCase)
+        ? tokensToRegExpSource(pathname, /[^/]+?/, this.#paramNames, this.ignoreCase)
         : ''
 
       this.#matcher = new RegExp(`^/${pathnameSource}$`)
@@ -123,34 +123,34 @@ export interface Match<T extends string> {
   readonly params: Params<T>
 }
 
-function partToRegExpSource(
-  part: NodeList,
+function tokensToRegExpSource(
+  tokens: TokenList,
   paramRegExp: RegExp,
   paramNames: string[],
   forceLowerCase: boolean,
 ) {
-  let source: string = part
-    .map((node) => {
-      if (node.type === 'variable') {
-        paramNames.push(node.name)
+  let source: string = tokens
+    .map((token) => {
+      if (token.type === 'variable') {
+        paramNames.push(token.name)
         return `(${paramRegExp.source})`
       }
-      if (node.type === 'wildcard') {
-        if (!node.name) return `(?:.*)`
-        paramNames.push(node.name)
+      if (token.type === 'wildcard') {
+        if (!token.name) return `(?:.*)`
+        paramNames.push(token.name)
         return `(.*)`
       }
-      if (node.type === 'enum') {
-        return `(?:${node.members.map((member) => regexpEscape(forceLowerCase ? member.toLowerCase() : member)).join('|')})`
+      if (token.type === 'enum') {
+        return `(?:${token.members.map((member) => regexpEscape(forceLowerCase ? member.toLowerCase() : member)).join('|')})`
       }
-      if (node.type === 'text') {
-        return regexpEscape(forceLowerCase ? node.value.toLowerCase() : node.value)
+      if (token.type === 'text') {
+        return regexpEscape(forceLowerCase ? token.value.toLowerCase() : token.value)
       }
-      if (node.type === 'optional') {
-        return `(?:${partToRegExpSource(node.nodes, paramRegExp, paramNames, forceLowerCase)})?`
+      if (token.type === 'optional') {
+        return `(?:${tokensToRegExpSource(token.tokens, paramRegExp, paramNames, forceLowerCase)})?`
       }
 
-      throw new Error(`Node with unknown type: ${node}`)
+      throw new Error(`Node with unknown type: ${token}`)
     })
     .join('')
 

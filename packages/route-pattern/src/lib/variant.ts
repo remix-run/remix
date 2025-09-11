@@ -1,7 +1,7 @@
 import type {
   ParseResult,
   Parse,
-  Node,
+  Token,
   Variable,
   Wildcard,
   Enum,
@@ -26,21 +26,21 @@ type HasLeadingSlash<T extends string> =
 
 // prettier-ignore
 type VariantString<T extends ParseResult, L extends boolean> =
-  T extends { protocol: infer P extends Array<Node> } ?
+  T extends { protocol: infer P extends Array<Token> } ?
     `${PartVariantString<P>}${VariantString<Omit<T, 'protocol'>, false>}` :
-  T extends { hostname: infer H extends Array<Node>, port: infer R extends string } ?
+  T extends { hostname: infer H extends Array<Token>, port: infer R extends string } ?
     `://${PartVariantString<H>}:${R}/${VariantString<Omit<T, 'hostname' | 'port'>, false>}` :
-  T extends { hostname: infer H extends Array<Node> } ?
+  T extends { hostname: infer H extends Array<Token> } ?
     `://${PartVariantString<H>}/${VariantString<Omit<T, 'hostname'>, false>}` :
-  T extends { pathname: infer P extends Array<Node> } ?
+  T extends { pathname: infer P extends Array<Token> } ?
     `${L extends true ? '/' : ''}${PartVariantString<P>}${VariantString<Omit<T, 'pathname'>, false>}` :
   T extends { search: infer S extends string } ?
     `?${S}` :
   ''
 
 // prettier-ignore
-type PartVariantString<T extends Array<Node>> =
-  T extends [infer L extends Node, ...infer R extends Array<Node>] ?
+type PartVariantString<T extends Array<Token>> =
+  T extends [infer L extends Token, ...infer R extends Array<Token>] ?
     L extends Variable ? `:${L['name']}${PartVariantString<R>}` :
     L extends Wildcard ? (
       L extends { name: infer N extends string } ? `*${N}${PartVariantString<R>}` :
@@ -51,6 +51,6 @@ type PartVariantString<T extends Array<Node>> =
       never
     ) :
     L extends Text ? `${L['value']}${PartVariantString<R>}` :
-    L extends Optional ? `${PartVariantString<L['nodes']>}${PartVariantString<R>}` | PartVariantString<R> :
+    L extends Optional ? `${PartVariantString<L['tokens']>}${PartVariantString<R>}` | PartVariantString<R> :
     never :
   ''

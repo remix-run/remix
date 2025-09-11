@@ -74,22 +74,22 @@ describe('parse', () => {
 
     it('parses optional text', () => {
       assert.deepEqual(parse('(hello)'), {
-        pathname: [{ type: 'optional', nodes: [{ type: 'text', value: 'hello' }] }],
+        pathname: [{ type: 'optional', tokens: [{ type: 'text', value: 'hello' }] }],
       })
     })
 
     it('parses optional variable', () => {
       assert.deepEqual(parse('(:id)'), {
-        pathname: [{ type: 'optional', nodes: [{ type: 'variable', name: 'id' }] }],
+        pathname: [{ type: 'optional', tokens: [{ type: 'variable', name: 'id' }] }],
       })
     })
 
-    it('parses optional with multiple nodes', () => {
+    it('parses optional with multiple tokens', () => {
       assert.deepEqual(parse('(users/:id)'), {
         pathname: [
           {
             type: 'optional',
-            nodes: [
+            tokens: [
               { type: 'text', value: 'users/' },
               { type: 'variable', name: 'id' },
             ],
@@ -104,7 +104,7 @@ describe('parse', () => {
           { type: 'text', value: 'api' },
           {
             type: 'optional',
-            nodes: [
+            tokens: [
               { type: 'text', value: '/' },
               { type: 'variable', name: 'version' },
             ],
@@ -152,7 +152,7 @@ describe('parse', () => {
           { type: 'variable', name: 'id' },
           {
             type: 'optional',
-            nodes: [
+            tokens: [
               { type: 'wildcard', name: 'rest' },
               { type: 'text', value: '.' },
               { type: 'variable', name: 'format' },
@@ -168,7 +168,7 @@ describe('parse', () => {
           { type: 'enum', members: ['json', 'xml'] },
           {
             type: 'optional',
-            nodes: [
+            tokens: [
               { type: 'text', value: '/' },
               { type: 'variable', name: 'version' },
             ],
@@ -407,11 +407,11 @@ describe('parse', () => {
         pathname: [
           {
             type: 'optional',
-            nodes: [
+            tokens: [
               { type: 'text', value: 'nested' },
               {
                 type: 'optional',
-                nodes: [{ type: 'text', value: 'test' }],
+                tokens: [{ type: 'text', value: 'test' }],
               },
             ],
           },
@@ -425,12 +425,12 @@ describe('parse', () => {
           { type: 'text', value: 'files' },
           {
             type: 'optional',
-            nodes: [
+            tokens: [
               { type: 'text', value: '/' },
               { type: 'wildcard', name: 'path' },
               {
                 type: 'optional',
-                nodes: [
+                tokens: [
                   { type: 'text', value: '.' },
                   { type: 'variable', name: 'ext' },
                 ],
@@ -447,12 +447,12 @@ describe('parse', () => {
           { type: 'text', value: 'files' },
           {
             type: 'optional',
-            nodes: [
+            tokens: [
               { type: 'text', value: '/' },
               { type: 'wildcard' },
               {
                 type: 'optional',
-                nodes: [
+                tokens: [
                   { type: 'text', value: '.' },
                   { type: 'variable', name: 'ext' },
                 ],

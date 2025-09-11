@@ -1,10 +1,10 @@
 import type { SplitResult, Split } from './split.ts'
 
 export interface ParseResult {
-  protocol?: NodeList
-  hostname?: NodeList
+  protocol?: TokenList
+  hostname?: TokenList
   port?: string
-  pathname?: NodeList
+  pathname?: TokenList
   search?: string
 }
 
@@ -24,19 +24,19 @@ export type Variable = { type: 'variable'; name: string }
 export type Wildcard = { type: 'wildcard'; name?: string }
 export type Enum = { type: 'enum'; members: readonly string[] }
 export type Text = { type: 'text'; value: string }
-export type Optional = { type: 'optional'; nodes: NodeList }
+export type Optional = { type: 'optional'; tokens: TokenList }
 
-export type Node = Variable | Wildcard | Enum | Text | Optional
-export type NodeList = Array<Node>
+export type Token = Variable | Wildcard | Enum | Text | Optional
+export type TokenList = Array<Token>
 
 type PartParseState = {
-  nodes: NodeList
-  optionals: Array<NodeList>
+  tokens: TokenList
+  optionals: Array<TokenList>
   rest: string
 }
 
 type PartParse<T extends string> = _PartParse<{
-  nodes: []
+  tokens: []
   optionals: []
   rest: T
 }>
@@ -46,15 +46,15 @@ type _PartParse<S extends PartParseState> =
   S extends { rest: `${infer Head}${infer Tail}` } ?
     Head extends ':' ?
       IdentiferParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
-        (name extends '' ? never : _PartParse<AppendNode<S, { type: 'variable', name: name }, rest>>) :
+        (name extends '' ? never : _PartParse<AppendToken<S, { type: 'variable', name: name }, rest>>) :
       never : // this should never happen
     Head extends '*' ?
       IdentiferParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
-        _PartParse<AppendNode<S, (name extends '' ? { type: 'wildcard' } : { type: 'wildcard', name: name }), rest>> :
+        _PartParse<AppendToken<S, (name extends '' ? { type: 'wildcard' } : { type: 'wildcard', name: name }), rest>> :
       never : // this should never happen
     Head extends '{' ?
       Tail extends `${infer body}}${infer after}` ?
-        _PartParse<AppendNode<S, { type: 'enum', members: EnumSplit<body> }, after>> :
+        _PartParse<AppendToken<S, { type: 'enum', members: EnumSplit<body> }, after>> :
       never : // unmatched `{`
     Head extends '}' ?
       never : // unmatched `}`
@@ -66,58 +66,58 @@ type _PartParse<S extends PartParseState> =
       Tail extends `${infer L}${infer R}` ? _PartParse<AppendText<S, L, R>> :
       never : // dangling escape
     _PartParse<AppendText<S, Head, Tail>> :
-  S['optionals'] extends [] ? S['nodes'] :
+  S['optionals'] extends [] ? S['tokens'] :
   never // unmatched `(`
 
 // prettier-ignore
-type AppendNode<S extends PartParseState, node extends Node, rest extends string> =
-  S['optionals'] extends [...infer O extends Array<Array<Node>>, infer Top extends Array<Node>] ?
+type AppendToken<S extends PartParseState, token extends Token, rest extends string> =
+  S['optionals'] extends [...infer O extends Array<Array<Token>>, infer Top extends Array<Token>] ?
     {
-      nodes: S['nodes']
-      optionals: [...O, [...Top, node]]
+      tokens: S['tokens']
+      optionals: [...O, [...Top, token]]
       rest: rest
     } :
     {
-      nodes: [...S['nodes'], node]
+      tokens: [...S['tokens'], token]
       optionals: S['optionals']
       rest: rest;
     }
 
 // prettier-ignore
 type AppendText<S extends PartParseState, text extends string, rest extends string> =
-  S['optionals'] extends [...infer O extends Array<Array<Node>>, infer Top extends Array<Node>] ?
+  S['optionals'] extends [...infer O extends Array<Array<Token>>, infer Top extends Array<Token>] ?
     (
-      Top extends [...infer Nodes extends Array<Node>, { type: 'text', value: infer value extends string }] ?
-        { nodes: S['nodes']; optionals: [...O, [...Nodes, { type: 'text', value: `${value}${text}` }]]; rest: rest } :
-        { nodes: S['nodes']; optionals: [...O, [...Top, { type: 'text', value: text }]]; rest: rest }
+      Top extends [...infer Nodes extends Array<Token>, { type: 'text', value: infer value extends string }] ?
+        { tokens: S['tokens']; optionals: [...O, [...Nodes, { type: 'text', value: `${value}${text}` }]]; rest: rest } :
+        { tokens: S['tokens']; optionals: [...O, [...Top, { type: 'text', value: text }]]; rest: rest }
     ) :
     (
-      S['nodes'] extends [...infer Nodes extends Array<Node>, { type: 'text', value: infer value extends string }] ?
-        { nodes: [...Nodes, { type: 'text', value: `${value}${text}` }]; optionals: S['optionals']; rest: rest } :
-        { nodes: [...S['nodes'], { type: 'text', value: text }]; optionals: S['optionals']; rest: rest }
+      S['tokens'] extends [...infer Nodes extends Array<Token>, { type: 'text', value: infer value extends string }] ?
+        { tokens: [...Nodes, { type: 'text', value: `${value}${text}` }]; optionals: S['optionals']; rest: rest } :
+        { tokens: [...S['tokens'], { type: 'text', value: text }]; optionals: S['optionals']; rest: rest }
     )
 
 // Optional stack helpers ---------------------------------------------------------------------------
 
 type PushOptional<S extends PartParseState, rest extends string> = {
-  nodes: S['nodes']
+  tokens: S['tokens']
   optionals: [...S['optionals'], []]
   rest: rest
 }
 
 // If stack is empty -> unmatched ')', return never
-// Else pop and wrap nodes into an Optional node; append to parent or part
+// Else pop and wrap tokens into an Optional token; append to parent or part
 type PopOptional<S extends PartParseState, R extends string> = S['optionals'] extends [
-  ...infer O extends Array<Array<Node>>,
-  infer Top extends Array<Node>,
+  ...infer O extends Array<Array<Token>>,
+  infer Top extends Array<Token>,
 ]
-  ? O extends [...infer OO extends Array<Array<Node>>, infer Parent extends Array<Node>]
+  ? O extends [...infer OO extends Array<Array<Token>>, infer Parent extends Array<Token>]
     ? {
-        nodes: S['nodes']
-        optionals: [...OO, [...Parent, { type: 'optional'; nodes: Top }]]
+        tokens: S['tokens']
+        optionals: [...OO, [...Parent, { type: 'optional'; tokens: Top }]]
         rest: R
       }
-    : { nodes: [...S['nodes'], { type: 'optional'; nodes: Top }]; optionals: []; rest: R }
+    : { tokens: [...S['tokens'], { type: 'optional'; tokens: Top }]; optionals: []; rest: R }
   : never
 
 // Identifier --------------------------------------------------------------------------------------

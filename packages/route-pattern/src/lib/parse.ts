@@ -1,4 +1,4 @@
-import type { ParseResult, Node, NodeList, SearchConstraints } from './parse.types.ts'
+import type { ParseResult, Token, TokenList, SearchConstraints } from './parse.types.ts'
 import { split } from './split.ts'
 import type { SplitResult } from './split.ts'
 
@@ -50,18 +50,18 @@ export function parse(source: string) {
 const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
 function parsePart(source: string, start: number, length: number, partName: string) {
-  let nodes: NodeList = []
-  // Use a simple stack of node arrays: the top is where new nodes are appended.
+  let tokens: TokenList = []
+  // Use a simple stack of token arrays: the top is where new tokens are appended.
   // The root of the stack is the `part` array. Each '(' pushes a new array; ')'
-  // pops and wraps it in an optional node which is appended to the new top.
-  let nodesStack: Array<Array<Node>> = [nodes]
+  // pops and wraps it in an optional token which is appended to the new top.
+  let tokensStack: Array<Array<Token>> = [tokens]
   let openIndexes: Array<number> = []
-  let currentNodes = () => nodesStack[nodesStack.length - 1]
+  let currentTokens = () => tokensStack[tokensStack.length - 1]
 
   let appendText = (text: string) => {
-    let last = currentNodes().at(-1)
+    let last = currentTokens().at(-1)
     if (last?.type !== 'text') {
-      currentNodes().push({ type: 'text', value: text })
+      currentTokens().push({ type: 'text', value: text })
       return
     }
     last.value += text
@@ -78,7 +78,7 @@ function parsePart(source: string, start: number, length: number, partName: stri
       let remaining = source.slice(i, end)
       let name = identifierMatcher.exec(remaining)?.[0]
       if (!name) throw new ParseError('missing variable name', source, i, partName)
-      currentNodes().push({ type: 'variable', name })
+      currentTokens().push({ type: 'variable', name })
       i += name.length
       continue
     }
@@ -89,10 +89,10 @@ function parsePart(source: string, start: number, length: number, partName: stri
       let remaining = source.slice(i, end)
       let name = identifierMatcher.exec(remaining)?.[0]
       if (name) {
-        currentNodes().push({ type: 'wildcard', name })
+        currentTokens().push({ type: 'wildcard', name })
         i += name.length
       } else {
-        currentNodes().push({ type: 'wildcard' })
+        currentTokens().push({ type: 'wildcard' })
       }
       continue
     }
@@ -102,7 +102,7 @@ function parsePart(source: string, start: number, length: number, partName: stri
       let close = source.indexOf('}', i)
       if (close === -1 || close >= end) throw new ParseError('unmatched {', source, i, partName)
       let members = source.slice(i + 1, close).split(',')
-      currentNodes().push({ type: 'enum', members })
+      currentTokens().push({ type: 'enum', members })
       i = close + 1
       continue
     }
@@ -112,16 +112,16 @@ function parsePart(source: string, start: number, length: number, partName: stri
 
     // optional
     if (char === '(') {
-      nodesStack.push([])
+      tokensStack.push([])
       openIndexes.push(i)
       i += 1
       continue
     }
     if (char === ')') {
-      if (nodesStack.length === 1) throw new ParseError('unmatched )', source, i, partName)
-      let nodes = nodesStack.pop()!
+      if (tokensStack.length === 1) throw new ParseError('unmatched )', source, i, partName)
+      let tokens = tokensStack.pop()!
       openIndexes.pop()
-      currentNodes().push({ type: 'optional', nodes })
+      currentTokens().push({ type: 'optional', tokens })
       i += 1
       continue
     }
@@ -144,7 +144,7 @@ function parsePart(source: string, start: number, length: number, partName: stri
     throw new ParseError('unmatched (', source, openIndexes[0], partName)
   }
 
-  return nodes
+  return tokens
 }
 
 // Search parsing helpers ---------------------------------------------------------------------------

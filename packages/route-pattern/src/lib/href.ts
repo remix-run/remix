@@ -1,11 +1,11 @@
 import type { RequiredParams, OptionalParams } from './params.ts'
 import { parse } from './parse.ts'
-import type { NodeList, Node } from './parse.types.ts'
+import type { Token, TokenList } from './parse.types.ts'
 import type { Variant } from './variant.ts'
 import type { RoutePattern } from './route-pattern.ts'
 
 export class MissingParamError extends Error {
-  paramName: string
+  readonly paramName: string
 
   constructor(paramName: string) {
     super(`Missing required parameter: ${paramName}`)
@@ -65,7 +65,7 @@ export function createHrefBuilder<T extends string | RoutePattern<any> = string>
     // absolute path.
     if (parsed.hostname || options.host) {
       if (parsed.protocol) {
-        href += resolveList(parsed.protocol, params)
+        href += resolveTokens(parsed.protocol, params)
       } else if (options.protocol) {
         href += options.protocol.replace(/:$/, '')
       } else {
@@ -75,7 +75,7 @@ export function createHrefBuilder<T extends string | RoutePattern<any> = string>
       href += '://'
 
       if (parsed.hostname) {
-        href += resolveList(parsed.hostname, params)
+        href += resolveTokens(parsed.hostname, params)
         if (parsed.port) {
           href += `:${parsed.port}`
         }
@@ -85,7 +85,7 @@ export function createHrefBuilder<T extends string | RoutePattern<any> = string>
     }
 
     if (parsed.pathname) {
-      let pathname = resolveList(parsed.pathname, params)
+      let pathname = resolveTokens(parsed.pathname, params)
       href += pathname.startsWith('/') ? pathname : `/${pathname}`
     } else {
       href += '/'
@@ -99,20 +99,20 @@ export function createHrefBuilder<T extends string | RoutePattern<any> = string>
   }
 }
 
-function resolveList(nodes: NodeList, params: AnyParams): string {
-  return nodes.map((node) => resolveNode(node, params)).join('')
+function resolveTokens(tokens: TokenList, params: AnyParams): string {
+  return tokens.map((token) => resolveToken(token, params)).join('')
 }
 
-function resolveNode(node: Node, params: AnyParams): string {
-  if (node.type === 'variable') {
-    if (params[node.name] == null) {
-      throw new MissingParamError(node.name)
+function resolveToken(token: Token, params: AnyParams): string {
+  if (token.type === 'variable') {
+    if (params[token.name] == null) {
+      throw new MissingParamError(token.name)
     }
 
-    return String(params[node.name])
+    return String(params[token.name])
   }
-  if (node.type === 'wildcard') {
-    let name = node.name ?? '*'
+  if (token.type === 'wildcard') {
+    let name = token.name ?? '*'
 
     if (params[name] == null) {
       throw new MissingParamError(name)
@@ -120,12 +120,12 @@ function resolveNode(node: Node, params: AnyParams): string {
 
     return String(params[name])
   }
-  if (node.type === 'enum') {
-    return node.members[0] // Use first member
+  if (token.type === 'enum') {
+    return token.members[0] // Use first member
   }
-  if (node.type === 'optional') {
+  if (token.type === 'optional') {
     try {
-      return resolveList(node.nodes, params)
+      return resolveTokens(token.tokens, params)
     } catch (error) {
       if (error instanceof MissingParamError) {
         return '' // Missing required parameter, ok to skip since it's optional
@@ -136,5 +136,5 @@ function resolveNode(node: Node, params: AnyParams): string {
   }
 
   // text
-  return node.value
+  return token.value
 }
