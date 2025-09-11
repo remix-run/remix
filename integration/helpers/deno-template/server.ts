@@ -1,3 +1,4 @@
+// deno-lint-ignore no-import-prefix
 import { serve } from "https://deno.land/std@0.128.0/http/server.ts";
 import { createRequestHandlerWithStaticFiles } from "@remix-run/deno";
 // Import path interpreted by the Remix compiler
