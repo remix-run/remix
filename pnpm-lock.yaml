@@ -7,11 +7,6 @@ settings:
 overrides:
   jsdom: ^22.0.0
 
-patchedDependencies:
-  '@changesets/assemble-release-plan@5.2.2':
-    hash: pkun533jr2p6iwxlsqfp6xfmxe
-    path: patches/@changesets__assemble-release-plan@5.2.2.patch
-
 importers:
 
   .:
