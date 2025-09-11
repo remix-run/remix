@@ -5,7 +5,7 @@ import type * as http from 'node:http'
 import * as stream from 'node:stream'
 
 import { type FetchHandler } from './fetch-handler.ts'
-import { createRequestListener } from './request-listener.ts'
+import { createRequest, createRequestListener } from './request-listener.ts'
 
 describe('createRequestListener', () => {
   it('returns a request listener', async () => {
@@ -269,6 +269,28 @@ describe('createRequestListener', () => {
 
       listener(req, res)
     })
+  })
+})
+
+describe('createRequest abort behavior', () => {
+  it('aborts the request.signal when response closes before finishing', () => {
+    let req = createMockRequest()
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+
+    assert.equal(request.signal.aborted, false)
+    res.emit('close')
+    assert.equal(request.signal.aborted, true)
+  })
+
+  it('does not abort after finish even if close occurs later', () => {
+    let req = createMockRequest()
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+
+    res.emit('finish')
+    res.emit('close')
+    assert.equal(request.signal.aborted, false)
   })
 })
 
