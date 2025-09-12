@@ -35,6 +35,79 @@ describe('createRequestListener', () => {
     })
   })
 
+  it('returns custom status, statusText, and header values (HTTP/1)', async () => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async () => {
+        return new Response('Hello, world!', {
+          status: 201,
+          statusText: 'Created!',
+          headers: {
+            'x-a': 'A',
+            'x-b': 'B',
+          },
+        })
+      }
+
+      let listener = createRequestListener(handler)
+      assert.ok(listener)
+
+      let req = createMockRequest()
+      req.httpVersionMajor = 1
+      let res = createMockResponse({ req })
+
+      mock.method(
+        res,
+        'writeHead',
+        (status: number, statusText: string, headers: Record<string, string | string[]>) => {
+          assert.equal(status, 201)
+          assert.equal(statusText, 'Created!')
+          assert.equal(headers['x-a'], 'A')
+          assert.equal(headers['x-b'], 'B')
+        }
+      )
+
+      mock.method(res, 'end', () => resolve())
+
+      listener(req, res)
+    })
+  })
+
+  it('returns custom status, statusText, and header values (HTTP/2)', async () => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async () => {
+        return new Response('Hello, world!', {
+          status: 201,
+          statusText: 'Created!',
+          headers: {
+            'x-a': 'A',
+            'x-b': 'B',
+          },
+        })
+      }
+
+      let listener = createRequestListener(handler)
+      assert.ok(listener)
+
+      let req = createMockRequest()
+      req.httpVersionMajor = 2
+      let res = createMockResponse({ req })
+
+      mock.method(
+        res,
+        'writeHead',
+        (status: number, headers: Record<string, string | string[]>) => {
+          assert.equal(status, 201)
+          assert.equal(headers['x-a'], 'A')
+          assert.equal(headers['x-b'], 'B')
+        }
+      )
+
+      mock.method(res, 'end', () => resolve())
+
+      listener(req, res)
+    })
+  })
+
   it('calls onError when an error is thrown in the request handler', async () => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async () => {
