@@ -5,6 +5,11 @@ const semver = require("semver");
 const buildDir = path.resolve(__dirname, "../build/node_modules");
 const packageDir = path.resolve(__dirname, "../packages");
 
+function getTaggedVersion() {
+  let output = cp.execSync("git tag --list --points-at HEAD").toString().trim();
+  return output.replace(/^v/, "").replace(/^remix@/, "");
+}
+
 /**
  * @param {string} dir
  * @param {string} tag
@@ -16,22 +21,14 @@ function publish(dir, tag) {
   } else {
     args.push("--publish-branch v2");
   }
-  console.log(
-    `Running publish command: pnpm publish --dry-run ${dir} ${args.join(" ")}`
-  );
-  cp.execSync(`pnpm publish --dry-run ${dir} ${args.join(" ")}`, {
+  cp.execSync(`pnpm publish ${dir} ${args.join(" ")}`, {
     stdio: "inherit",
   });
 }
 
 async function run() {
   // Make sure there's a current tag
-  let taggedVersion = "";
-  try {
-    cp.execSync('git tag --list --points-at HEAD | grep -e "^remix@"')
-      .toString()
-      .trim();
-  } catch (e) {}
+  let taggedVersion = getTaggedVersion();
   if (taggedVersion === "") {
     console.error("Missing release version. Run the version script first.");
     process.exit(1);

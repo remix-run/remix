@@ -161,6 +161,11 @@ const updateDenoImportMap = async (importMapPath, nextVersion) => {
  * @param {string} nextVersion
  */
 async function incrementRemixVersion(nextVersion) {
+  let isOneOffRelease =
+    nextVersion.includes("experimental") || nextVersion.includes("nightly");
+  let isPrerelease = nextVersion.includes("pre");
+  let isStable = !isOneOffRelease && !isPrerelease;
+
   // Update version numbers in package.json for all packages
   await updateRemixVersion("remix", nextVersion);
   await updateRemixVersion("create-remix", nextVersion);
@@ -168,11 +173,7 @@ async function incrementRemixVersion(nextVersion) {
     await updateRemixVersion(`remix-${name}`, nextVersion);
   }
 
-  if (
-    !["experimental", "nightly", "pre"].some((substr) =>
-      nextVersion.includes(substr)
-    )
-  ) {
+  if (isStable) {
     // Update version numbers in Deno's import maps
     await Promise.all(
       [
@@ -192,7 +193,8 @@ async function incrementRemixVersion(nextVersion) {
 
   // Commit and tag
   execSync(`git commit --all --message="Version ${nextVersion}"`);
-  execSync(`git tag -a -m "Version ${nextVersion}" v${nextVersion}`);
+  let tag = isOneOffRelease ? `v${nextVersion}` : `remix@${nextVersion}`;
+  execSync(`git tag -a -m "Version ${nextVersion}" ${tag}`);
   console.log(chalk.green(`  Committed and tagged version ${nextVersion}`));
 }
 
