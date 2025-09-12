@@ -111,25 +111,6 @@ async function updateRemixVersion(packageName, nextVersion, successMessage) {
 }
 
 /**
- *
- * @param {string} nextVersion
- */
-async function updateDeploymentScriptVersion(nextVersion) {
-  let file = packageJson("deployment-test", "scripts");
-  let json = await jsonfile.readFile(file);
-  json.dependencies["@remix-run/dev"] = nextVersion;
-  await jsonfile.writeFile(file, json, { spaces: 2 });
-
-  console.log(
-    chalk.green(
-      `  Updated Remix to version ${chalk.bold(nextVersion)} in ${chalk.bold(
-        "scripts/deployment-test"
-      )}`
-    )
-  );
-}
-
-/**
  * @param {string} importSpecifier
  * @returns {[string, string]} [packageName, importPath]
  */
