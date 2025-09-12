@@ -3,7 +3,7 @@ name: ⚙️ Deduplicate lock file
 on:
   push:
     branches:
-      - dev
+      - v2
     paths:
       - pnpm-lock.yaml
 

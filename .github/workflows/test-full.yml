@@ -6,11 +6,8 @@ name: Branch
 on:
   push:
     branches:
-      - main
-      - dev
-      - release-*
-    tags:
-      - "v0.0.0-nightly-*"
+      - v2
+      - release-v2
     paths-ignore:
       - "docs/**"
       - "scripts/**"
