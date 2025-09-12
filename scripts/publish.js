@@ -1,14 +1,9 @@
 const path = require("node:path");
-const { execSync } = require("node:child_process");
+const cp = require("node:child_process");
 const semver = require("semver");
 
 const buildDir = path.resolve(__dirname, "../build/node_modules");
 const packageDir = path.resolve(__dirname, "../packages");
-
-function getTaggedVersion() {
-  let output = execSync("git tag --list --points-at HEAD").toString().trim();
-  return output.replace(/^v/g, "");
-}
 
 /**
  * @param {string} dir
@@ -19,16 +14,24 @@ function publish(dir, tag) {
   if (["experimental", "nightly"].includes(tag)) {
     args.push(`--no-git-checks`);
   } else {
-    args.push("--publish-branch release-next");
+    args.push("--publish-branch v2");
   }
-  execSync(`pnpm publish ${dir} ${args.join(" ")}`, {
+  console.log(
+    `Running publish command: pnpm publish --dry-run ${dir} ${args.join(" ")}`
+  );
+  cp.execSync(`pnpm publish --dry-run ${dir} ${args.join(" ")}`, {
     stdio: "inherit",
   });
 }
 
 async function run() {
   // Make sure there's a current tag
-  let taggedVersion = getTaggedVersion();
+  let taggedVersion = "";
+  try {
+    cp.execSync('git tag --list --points-at HEAD | grep -e "^remix@"')
+      .toString()
+      .trim();
+  } catch (e) {}
   if (taggedVersion === "") {
     console.error("Missing release version. Run the version script first.");
     process.exit(1);

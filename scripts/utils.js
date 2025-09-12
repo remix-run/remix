@@ -96,21 +96,6 @@ async function updatePackageConfig(packageName, transform) {
 async function updateRemixVersion(packageName, nextVersion, successMessage) {
   await updatePackageConfig(packageName, (config) => {
     config.version = nextVersion;
-    for (let pkg of remixPackages.all) {
-      if (config.dependencies?.[`@remix-run/${pkg}`]) {
-        config.dependencies[`@remix-run/${pkg}`] = nextVersion;
-      }
-      if (config.devDependencies?.[`@remix-run/${pkg}`]) {
-        config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
-      }
-      if (config.peerDependencies?.[`@remix-run/${pkg}`]) {
-        let isRelaxedPeerDep =
-          config.peerDependencies[`@remix-run/${pkg}`]?.startsWith("^");
-        config.peerDependencies[`@remix-run/${pkg}`] = `${
-          isRelaxedPeerDep ? "^" : ""
-        }${nextVersion}`;
-      }
-    }
   });
   let logName = packageName.startsWith("remix-")
     ? `@remix-run/${packageName.slice(6)}`
@@ -202,24 +187,27 @@ async function incrementRemixVersion(nextVersion) {
     await updateRemixVersion(`remix-${name}`, nextVersion);
   }
 
-  // Update version numbers in Deno's import maps
-  await Promise.all(
-    [
-      path.join(".vscode", "deno_resolve_npm_imports.json"),
-      path.join(
-        "templates",
-        "classic-remix-compiler",
-        "deno",
-        ".vscode",
-        "resolve_npm_imports.json"
-      ),
-    ].map((importMapPath) =>
-      updateDenoImportMap(path.join(rootDir, importMapPath), nextVersion)
+  if (
+    !["experimental", "nightly", "pre"].some((substr) =>
+      nextVersion.includes(substr)
     )
-  );
-
-  // Update deployment script `@remix-run/dev` version
-  await updateDeploymentScriptVersion(nextVersion);
+  ) {
+    // Update version numbers in Deno's import maps
+    await Promise.all(
+      [
+        path.join(".vscode", "deno_resolve_npm_imports.json"),
+        path.join(
+          "templates",
+          "classic-remix-compiler",
+          "deno",
+          ".vscode",
+          "resolve_npm_imports.json"
+        ),
+      ].map((importMapPath) =>
+        updateDenoImportMap(path.join(rootDir, importMapPath), nextVersion)
+      )
+    );
+  }
 
   // Commit and tag
   execSync(`git commit --all --message="Version ${nextVersion}"`);
