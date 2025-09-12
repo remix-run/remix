@@ -10,15 +10,17 @@ export interface ParseResult {
 
 // prettier-ignore
 export type Parse<T extends string> =
-  Split<T> extends infer S extends SplitResult ?
-    {
-      protocol: S['protocol'] extends string ? PartParse<S['protocol']> : undefined
-      hostname: S['hostname'] extends string ? PartParse<S['hostname']> : undefined
-      port: S['port'] extends string ? string : undefined
-      pathname: S['pathname'] extends string ? PartParse<S['pathname']> : undefined
-      search: S['search'] extends string ? string : undefined
-    } :
-    never
+  T extends any ?
+    Split<T> extends infer S extends SplitResult ?
+      {
+        protocol: S['protocol'] extends string ? PartParse<S['protocol']> : undefined
+        hostname: S['hostname'] extends string ? PartParse<S['hostname']> : undefined
+        port: S['port'] extends string ? string : undefined
+        pathname: S['pathname'] extends string ? PartParse<S['pathname']> : undefined
+        search: S['search'] extends string ? string : undefined
+      } :
+      never :
+  never
 
 export type Variable = { type: 'variable'; name: string }
 export type Wildcard = { type: 'wildcard'; name?: string }
