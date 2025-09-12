@@ -1,6 +1,6 @@
-# Route Pattern
+# route-pattern
 
-A powerful and flexible URL pattern matching library for modern JavaScript applications. Route Pattern provides type-safe URL parsing and generation with a powerful, intuitive syntax.
+A powerful and flexible URL pattern matching library for modern JavaScript applications. `route-pattern` provides type-safe URL parsing and generation with a powerful, intuitive syntax.
 
 ## Why Route Pattern?
 
@@ -123,7 +123,7 @@ let pattern = new RoutePattern('search?q')
 pattern.match('https://remix.run/search?q') // match!
 
 let match = pattern.match('https://remix.run/search?q=routing') // match!
-match.url.searchParams // new URLSearchParams('?q=routing')
+match.searchParams // new URLSearchParams('?q=routing')
 ```
 
 If a search parameter is followed by `=`, it must have some value in order to match.

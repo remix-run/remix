@@ -18,6 +18,24 @@ describe('RoutePattern', () => {
   })
 
   describe('match', () => {
+    it('returns a match object', () => {
+      let pattern = new RoutePattern('users/:id')
+      let match = pattern.match('https://example.com/users/123')
+
+      assert.ok(match)
+      assert.deepEqual(match.params, { id: '123' })
+
+      assert.ok(match.url instanceof URL)
+      assert.equal(match.url.href, 'https://example.com/users/123')
+      assert.equal(match.url.origin, 'https://example.com')
+      assert.equal(match.url.protocol, 'https:')
+      assert.equal(match.url.hostname, 'example.com')
+      assert.equal(match.url.port, '')
+      assert.equal(match.url.pathname, '/users/123')
+      assert.equal(match.url.search, '')
+      assert.ok(match.url.searchParams instanceof URLSearchParams)
+    })
+
     describe('pathname only patterns', () => {
       it('matches plain text', () => {
         let pattern = new RoutePattern('users')
@@ -401,10 +419,7 @@ describe('RoutePattern', () => {
 
       it('handles root path', () => {
         let pattern = new RoutePattern('/')
-        assert.deepEqual(pattern.match('https://example.com/'), {
-          url: new URL('https://example.com/'),
-          params: {},
-        })
+        assert.deepEqual(pattern.match('https://example.com/')?.params, {})
       })
 
       it('handles patterns with no pathname', () => {

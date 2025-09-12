@@ -72,7 +72,7 @@ export class RoutePattern<T extends string> {
    * @param url The URL to match
    * @returns The parameters if the URL matches this pattern, `null` otherwise
    */
-  match(url: URL | string): Match<T> | null {
+  match(url: URL | string): RouteMatch<T> | null {
     if (typeof url === 'string') url = new URL(url)
 
     let pathname = this.ignoreCase ? url.pathname.toLowerCase() : url.pathname
@@ -112,15 +112,15 @@ export class RoutePattern<T extends string> {
   }
 }
 
-export interface Match<T extends string> {
-  /**
-   * The URL that was matched.
-   */
-  readonly url: URL
+export interface RouteMatch<T extends string> {
   /**
    * The parameters that were extracted from the URL protocol, hostname, and/or pathname.
    */
   readonly params: Params<T>
+  /**
+   * The URL that was matched.
+   */
+  readonly url: URL
 }
 
 function tokensToRegExpSource(
