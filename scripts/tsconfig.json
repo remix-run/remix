@@ -1,6 +1,6 @@
 {
   "include": ["."],
-  "exclude": ["./deployment-test", "./playground/template/**/*"],
+  "exclude": ["./playground/template/**/*"],
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,

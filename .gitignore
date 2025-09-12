@@ -20,11 +20,6 @@ tsconfig.tsbuildinfo
 .eslintcache
 .tmp
 
-/scripts/deployment-test/apps
-/scripts/deployment-test/package-lock.json
-/scripts/deployment-test/yarn.lock
-/scripts/deployment-test/pnpm-lock.yaml
-
 /.idea/
 /playground
 /scripts/playground/template.local

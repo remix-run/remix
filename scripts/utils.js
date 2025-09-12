@@ -96,21 +96,6 @@ async function updatePackageConfig(packageName, transform) {
 async function updateRemixVersion(packageName, nextVersion, successMessage) {
   await updatePackageConfig(packageName, (config) => {
     config.version = nextVersion;
-    for (let pkg of remixPackages.all) {
-      if (config.dependencies?.[`@remix-run/${pkg}`]) {
-        config.dependencies[`@remix-run/${pkg}`] = nextVersion;
-      }
-      if (config.devDependencies?.[`@remix-run/${pkg}`]) {
-        config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
-      }
-      if (config.peerDependencies?.[`@remix-run/${pkg}`]) {
-        let isRelaxedPeerDep =
-          config.peerDependencies[`@remix-run/${pkg}`]?.startsWith("^");
-        config.peerDependencies[`@remix-run/${pkg}`] = `${
-          isRelaxedPeerDep ? "^" : ""
-        }${nextVersion}`;
-      }
-    }
   });
   let logName = packageName.startsWith("remix-")
     ? `@remix-run/${packageName.slice(6)}`
@@ -121,25 +106,6 @@ async function updateRemixVersion(packageName, nextVersion, successMessage) {
         successMessage ||
         `Updated ${chalk.bold(logName)} to version ${chalk.bold(nextVersion)}`
       }`
-    )
-  );
-}
-
-/**
- *
- * @param {string} nextVersion
- */
-async function updateDeploymentScriptVersion(nextVersion) {
-  let file = packageJson("deployment-test", "scripts");
-  let json = await jsonfile.readFile(file);
-  json.dependencies["@remix-run/dev"] = nextVersion;
-  await jsonfile.writeFile(file, json, { spaces: 2 });
-
-  console.log(
-    chalk.green(
-      `  Updated Remix to version ${chalk.bold(nextVersion)} in ${chalk.bold(
-        "scripts/deployment-test"
-      )}`
     )
   );
 }
@@ -195,6 +161,11 @@ const updateDenoImportMap = async (importMapPath, nextVersion) => {
  * @param {string} nextVersion
  */
 async function incrementRemixVersion(nextVersion) {
+  let isOneOffRelease =
+    nextVersion.includes("experimental") || nextVersion.includes("nightly");
+  let isPrerelease = nextVersion.includes("pre");
+  let isStable = !isOneOffRelease && !isPrerelease;
+
   // Update version numbers in package.json for all packages
   await updateRemixVersion("remix", nextVersion);
   await updateRemixVersion("create-remix", nextVersion);
@@ -202,28 +173,28 @@ async function incrementRemixVersion(nextVersion) {
     await updateRemixVersion(`remix-${name}`, nextVersion);
   }
 
-  // Update version numbers in Deno's import maps
-  await Promise.all(
-    [
-      path.join(".vscode", "deno_resolve_npm_imports.json"),
-      path.join(
-        "templates",
-        "classic-remix-compiler",
-        "deno",
-        ".vscode",
-        "resolve_npm_imports.json"
-      ),
-    ].map((importMapPath) =>
-      updateDenoImportMap(path.join(rootDir, importMapPath), nextVersion)
-    )
-  );
-
-  // Update deployment script `@remix-run/dev` version
-  await updateDeploymentScriptVersion(nextVersion);
+  if (isStable) {
+    // Update version numbers in Deno's import maps
+    await Promise.all(
+      [
+        path.join(".vscode", "deno_resolve_npm_imports.json"),
+        path.join(
+          "templates",
+          "classic-remix-compiler",
+          "deno",
+          ".vscode",
+          "resolve_npm_imports.json"
+        ),
+      ].map((importMapPath) =>
+        updateDenoImportMap(path.join(rootDir, importMapPath), nextVersion)
+      )
+    );
+  }
 
   // Commit and tag
   execSync(`git commit --all --message="Version ${nextVersion}"`);
-  execSync(`git tag -a -m "Version ${nextVersion}" v${nextVersion}`);
+  let tag = isOneOffRelease ? `v${nextVersion}` : `remix@${nextVersion}`;
+  execSync(`git tag -a -m "Version ${nextVersion}" ${tag}`);
   console.log(chalk.green(`  Committed and tagged version ${nextVersion}`));
 }
 
