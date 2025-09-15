@@ -7,7 +7,7 @@ import type {
   Enum,
   Text,
   Optional,
-} from './parse.types.ts'
+} from './parse.ts'
 import type { IsEqual } from './type-utils.d.ts'
 
 // prettier-ignore

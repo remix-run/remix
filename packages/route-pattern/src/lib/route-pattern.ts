@@ -1,5 +1,5 @@
 import type { Params } from './params.ts'
-import type { Optional, TokenList, SearchConstraints } from './parse.types.ts'
+import type { Optional, TokenList, SearchConstraints } from './parse.ts'
 import { parse, parseSearch, parseSearchConstraints } from './parse.ts'
 
 export interface RoutePatternOptions {

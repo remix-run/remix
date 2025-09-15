@@ -1,8 +1,9 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { MissingParamError, createHrefBuilder } from './href.ts'
+import { type HrefBuilder, MissingParamError, createHrefBuilder } from './href.ts'
 import { RoutePattern } from './route-pattern.ts'
+import type { Assert, IsEqual } from './type-utils.d.ts'
 
 describe('href', () => {
   it('uses a default protocol', () => {
@@ -128,3 +129,18 @@ describe('href', () => {
     )
   })
 })
+
+// prettier-ignore
+export type Tests = [
+  // First arg type with string generic
+  Assert<IsEqual<
+    Parameters<HrefBuilder<'/products(/:id)'>>[0],
+    '/products(/:id)' | '/products' | '/products/:id'
+  >>,
+
+  // First arg type when generic is derived from RoutePattern
+  Assert<IsEqual<
+    Parameters<HrefBuilder<RoutePattern<'/products(/:id)'>>>[0],
+    '/products(/:id)' | '/products' | '/products/:id'
+  >>,
+]
