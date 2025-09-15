@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { type Split, split } from './split.ts'
-import type { Assert, IsEqual } from './type-utils.d.ts'
+import type { Assert, IsEqual } from '../type-utils.d.ts'
 
 describe('split', () => {
   it('splits route patterns into protocol, hostname, port, pathname, search', () => {
