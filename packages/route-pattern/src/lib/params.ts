@@ -1,4 +1,4 @@
-import type { ParseResult, Parse, TokenList, Token, Optional } from './parse.types.ts'
+import type { ParseResult, Parse, TokenList, Token, Optional } from './parse.ts'
 
 type Simplify<T> = T extends {} ? { [K in keyof T]: T[K] } : T
 

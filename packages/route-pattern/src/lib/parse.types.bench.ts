@@ -1,5 +1,5 @@
 import { bench } from '@ark/attest'
-import type { Parse } from './parse.types'
+import type { Parse } from './parse.ts'
 
 // Simple benchmark: Basic route patterns with single features
 bench('Parse - Small', () => {
