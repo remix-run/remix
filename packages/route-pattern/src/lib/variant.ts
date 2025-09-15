@@ -8,7 +8,7 @@ import type {
   Text,
   Optional,
 } from './parse.ts'
-import type { IsEqual } from './type-utils.d.ts'
+import type { IsEqual } from '../type-utils.d.ts'
 
 // prettier-ignore
 export type Variant<T extends string> =

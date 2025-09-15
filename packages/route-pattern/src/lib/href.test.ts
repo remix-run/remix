@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { type HrefBuilder, MissingParamError, createHrefBuilder } from './href.ts'
 import { RoutePattern } from './route-pattern.ts'
-import type { Assert, IsEqual } from './type-utils.d.ts'
+import type { Assert, IsEqual } from '../type-utils.d.ts'
 
 describe('href', () => {
   it('uses a default protocol', () => {
