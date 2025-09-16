@@ -2,7 +2,7 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.9.0 (2025-09-16)
 
 - Support `statusText` in HTTP/1 responses (#10745)
 
