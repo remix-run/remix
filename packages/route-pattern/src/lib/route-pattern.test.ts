@@ -5,7 +5,7 @@ import { RoutePattern } from './route-pattern.ts'
 
 describe('RoutePattern', () => {
   describe('constructor', () => {
-    it('stores the source pattern', () => {
+    it('stores the input pattern', () => {
       let pattern = new RoutePattern('users/:id')
       assert.equal(pattern.source, 'users/:id')
     })
@@ -14,6 +14,34 @@ describe('RoutePattern', () => {
       let pattern = new RoutePattern('users/:id')
       let pattern2 = new RoutePattern(pattern)
       assert.equal(pattern2.source, pattern.source)
+    })
+
+    it('resolves the input pattern against the base pattern arg', () => {
+      let pattern = new RoutePattern('users/:id', 'https://remix.run/api')
+      assert.equal(pattern.source, 'https://remix.run/api/users/:id')
+
+      let pattern2 = new RoutePattern('users/:id', new RoutePattern('https://remix.run/api'))
+      assert.equal(pattern2.source, 'https://remix.run/api/users/:id')
+    })
+
+    it('resolves the input pattern against the base pattern option', () => {
+      let pattern = new RoutePattern('users/:id', { base: 'https://remix.run/api' })
+      assert.equal(pattern.source, 'https://remix.run/api/users/:id')
+
+      let pattern2 = new RoutePattern('users/:id', {
+        base: new RoutePattern('https://remix.run/api'),
+      })
+      assert.equal(pattern2.source, 'https://remix.run/api/users/:id')
+    })
+
+    it('does not ignore case by default', () => {
+      let pattern = new RoutePattern('users/:id')
+      assert.equal(pattern.ignoreCase, false)
+    })
+
+    it('stores the ignoreCase option', () => {
+      let pattern = new RoutePattern('users/:id', { ignoreCase: true })
+      assert.equal(pattern.ignoreCase, true)
     })
   })
 

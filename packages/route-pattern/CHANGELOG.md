@@ -4,6 +4,22 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 ## HEAD
 
+- Add `base` option to `RoutePattern`, which allows a pattern to be built relative
+  to another pattern
+
+  ```tsx
+  import { RoutePattern } from '@remix-run/route-pattern'
+
+  let pattern = new RoutePattern('users/:id', 'https://remix.run/api')
+  pattern.source // 'https://remix.run/api/users/:id
+  ```
+
+  The `base` pattern may also be provided in `options.base`.
+
+  ```tsx
+  let pattern = new RoutePattern('users/:id', { base: 'https://remix.run/api' })
+  ```
+
 - Expose `RouteMatch` as public API, i.e. `import { RouteMatch } from '@remix-run/route-pattern'` works now
 - Fix type tests when using `Parameters<HrefBuilder<...>>` to always be deterministic and use a `string` argument as the 1st arg
 

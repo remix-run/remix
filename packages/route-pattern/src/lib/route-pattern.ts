@@ -1,18 +1,21 @@
 import type { Params } from './params.ts'
-import type { Optional, TokenList, SearchConstraints } from './parse.ts'
 import { parse, parseSearch, parseSearchConstraints } from './parse.ts'
+import type { Optional, TokenList, SearchConstraints } from './parse.ts'
+import { resolve } from './resolve.ts'
+import type { Resolve } from './resolve.ts'
 
-export interface RoutePatternOptions {
+export interface RoutePatternOptions<B extends string> {
+  /**
+   * The base pattern to resolve the source pattern against.
+   */
+  base?: B | RoutePattern<B>
   /**
    * Whether to ignore case when matching URL pathnames.
    */
   ignoreCase?: boolean
 }
 
-/**
- * A pattern for matching URLs.
- */
-export class RoutePattern<T extends string> {
+class _RoutePattern<T extends string> {
   /**
    * The source string that was used to create this pattern.
    */
@@ -27,9 +30,23 @@ export class RoutePattern<T extends string> {
   readonly #paramNames: Array<string>
   readonly #searchConstraints: SearchConstraints | null
 
-  constructor(source: T | RoutePattern<T>, options?: RoutePatternOptions) {
-    this.source = typeof source === 'string' ? source : source.source
-    this.ignoreCase = options?.ignoreCase === true
+  constructor(
+    input: string | _RoutePattern<string>,
+    options?: string | _RoutePattern<string> | RoutePatternOptions<string>,
+  ) {
+    let inputSource = typeof input === 'string' ? input : input.source
+    let base =
+      typeof options === 'string'
+        ? options
+        : typeof options === 'object' && 'source' in options
+          ? options
+          : options?.base
+    let baseSource = typeof base === 'string' ? base : base?.source
+    let resolved = baseSource ? resolve(inputSource, baseSource) : inputSource
+
+    this.source = resolved as T
+    this.ignoreCase =
+      typeof options === 'object' && 'ignoreCase' in options ? options.ignoreCase === true : false
 
     let { protocol, hostname, port, pathname, search } = parse(this.source)
 
@@ -111,6 +128,21 @@ export class RoutePattern<T extends string> {
     return this.source
   }
 }
+
+export interface RoutePatternConstructor {
+  new <T extends string>(input: T | RoutePattern<T>): RoutePattern<T>
+  new <T extends string, B extends string>(
+    input: T | RoutePattern<T>,
+    base: B | RoutePattern<B> | RoutePatternOptions<B>,
+  ): RoutePattern<Resolve<T, B>>
+}
+
+/**
+ * A pattern for matching URLs.
+ */
+export type RoutePattern<T extends string> = _RoutePattern<T>
+
+export const RoutePattern = _RoutePattern as unknown as RoutePatternConstructor
 
 export interface RouteMatch<T extends string> {
   /**
