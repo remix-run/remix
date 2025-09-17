@@ -1,8 +1,33 @@
 const path = require("node:path");
 const cp = require("node:child_process");
+const fs = require("node:fs");
 const semver = require("semver");
 
+const { ensureCleanWorkingDirectory } = require("./utils");
+
 const packageDir = path.resolve(__dirname, "../packages");
+
+const PACKAGES = [
+  "remix-eslint-config",
+  "remix-server-runtime", // publish before platforms
+  "remix-cloudflare",
+  "remix-cloudflare-pages",
+  "remix-cloudflare-workers",
+  "remix-deno",
+  "remix-node", // publish node before node servers
+  "remix-dev", // publish after node
+  "remix-architect",
+  "remix-express", // publish express before serve
+  "remix-react",
+  "remix-serve",
+  "remix-fs-routes",
+  "remix-css-bundle",
+  "remix-testing",
+  "remix-route-config",
+  "remix-routes-option-adapter",
+  "create-remix",
+  "remix",
+];
 
 function getTaggedVersion() {
   let output = cp.execSync("git tag --list --points-at HEAD").toString().trim();
@@ -14,18 +39,28 @@ function getTaggedVersion() {
  * @param {string} tag
  */
 function publish(dir, tag) {
-  let args = ["--access public", `--tag ${tag}`];
-  if (["experimental", "nightly"].includes(tag)) {
-    args.push(`--no-git-checks`);
-  } else {
-    args.push("--publish-branch v2");
-  }
-  let cmd = `pnpm publish ${dir} ${args.join(" ")}`;
+  let cmd = `pnpm publish ${dir} --access public --tag ${tag} --no-git-checks`;
   console.log("Publishing command:", cmd);
   cp.execSync(cmd, { stdio: "inherit" });
 }
 
+/**
+ * @param {string} dir
+ * @param {string} tag
+ */
+function validateVersion(dir, tag) {
+  let file = path.join(dir, "package.json");
+  let json = JSON.parse(fs.readFileSync(file, "utf8"));
+  if (json.version !== tag) {
+    throw new Error(
+      `Package ${dir} is on version ${json.version}, but should be on ${tag}`
+    );
+  }
+}
+
 async function run() {
+  ensureCleanWorkingDirectory();
+
   // Make sure there's a current tag
   let taggedVersion = getTaggedVersion();
 
@@ -46,28 +81,13 @@ async function run() {
       : prereleaseTag
     : "latest";
 
+  // Validate all packages
+  for (let name of PACKAGES) {
+    validateVersion(path.join(packageDir, name), taggedVersion);
+  }
+
   // Publish all packages
-  for (let name of [
-    "remix-eslint-config",
-    "remix-server-runtime", // publish before platforms
-    "remix-cloudflare",
-    "remix-cloudflare-pages",
-    "remix-cloudflare-workers",
-    "remix-deno",
-    "remix-node", // publish node before node servers
-    "remix-dev", // publish after node
-    "remix-architect",
-    "remix-express", // publish express before serve
-    "remix-react",
-    "remix-serve",
-    "remix-fs-routes",
-    "remix-css-bundle",
-    "remix-testing",
-    "remix-route-config",
-    "remix-routes-option-adapter",
-    "create-remix",
-    "remix",
-  ]) {
+  for (let name of PACKAGES) {
     publish(path.join(packageDir, name), tag);
   }
 }
