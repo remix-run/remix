@@ -16,8 +16,6 @@
     "lint:fix": "pnpm lint --fix",
     "playground:new": "node ./scripts/playground/new.js",
     "publish": "node ./scripts/publish.js",
-    "publish:private": "node ./scripts/publish-private.js",
-    "release": "node ./scripts/release.js",
     "test": "pnpm run \"/^test:.*/\"",
     "pretest:integration": "pnpm build",
     "test:integration": "pnpm playwright:integration",

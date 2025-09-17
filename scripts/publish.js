@@ -1,13 +1,13 @@
 const path = require("node:path");
-const { execSync } = require("node:child_process");
+const cp = require("node:child_process");
 const semver = require("semver");
 
 const buildDir = path.resolve(__dirname, "../build/node_modules");
 const packageDir = path.resolve(__dirname, "../packages");
 
 function getTaggedVersion() {
-  let output = execSync("git tag --list --points-at HEAD").toString().trim();
-  return output.replace(/^v/g, "");
+  let output = cp.execSync("git tag --list --points-at HEAD").toString().trim();
+  return output.replace(/^v/, "").replace(/^remix@/, "");
 }
 
 /**
@@ -19,9 +19,9 @@ function publish(dir, tag) {
   if (["experimental", "nightly"].includes(tag)) {
     args.push(`--no-git-checks`);
   } else {
-    args.push("--publish-branch release-next");
+    args.push("--publish-branch v2");
   }
-  execSync(`pnpm publish ${dir} ${args.join(" ")}`, {
+  cp.execSync(`pnpm publish ${dir} ${args.join(" ")}`, {
     stdio: "inherit",
   });
 }
