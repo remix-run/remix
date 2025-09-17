@@ -15,7 +15,7 @@
     "lint:deno": "deno lint integration/helpers/deno-template packages/remix-deno templates/deno --ignore=node_modules,build,public/build",
     "lint:fix": "pnpm lint --fix",
     "playground:new": "node ./scripts/playground/new.js",
-    "publish": "node ./scripts/publish.js",
+    "publish-ci": "node ./scripts/publish.js",
     "test": "pnpm run \"/^test:.*/\"",
     "pretest:integration": "pnpm build",
     "test:integration": "pnpm playwright:integration",

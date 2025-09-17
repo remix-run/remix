@@ -2,7 +2,6 @@ const path = require("node:path");
 const cp = require("node:child_process");
 const semver = require("semver");
 
-const buildDir = path.resolve(__dirname, "../build/node_modules");
 const packageDir = path.resolve(__dirname, "../packages");
 
 function getTaggedVersion() {
@@ -21,18 +20,21 @@ function publish(dir, tag) {
   } else {
     args.push("--publish-branch v2");
   }
-  cp.execSync(`pnpm publish ${dir} ${args.join(" ")}`, {
-    stdio: "inherit",
-  });
+  let cmd = `pnpm publish ${dir} ${args.join(" ")}`;
+  console.log("Publishing command:", cmd);
+  cp.execSync(cmd, { stdio: "inherit" });
 }
 
 async function run() {
   // Make sure there's a current tag
   let taggedVersion = getTaggedVersion();
+
   if (taggedVersion === "") {
     console.error("Missing release version. Run the version script first.");
     process.exit(1);
   }
+
+  console.log("Found tagged version:", taggedVersion);
 
   let prerelease = semver.prerelease(taggedVersion);
   let prereleaseTag = prerelease ? String(prerelease[0]) : undefined;
@@ -44,36 +46,30 @@ async function run() {
       : prereleaseTag
     : "latest";
 
-  // Publish eslint config directly from the package directory
-  publish(path.join(packageDir, "remix-eslint-config"), tag);
-
-  // Publish all @remix-run/* packages
+  // Publish all packages
   for (let name of [
-    "dev",
-    "server-runtime", // publish before platforms
-    "cloudflare",
-    "cloudflare-pages",
-    "cloudflare-workers",
-    "deno",
-    "node", // publish node before node servers
-    "architect",
-    "express", // publish express before serve
-    "react",
-    "serve",
-    "fs-routes",
-    "css-bundle",
-    "testing",
-    "route-config",
-    "routes-option-adapter",
+    "remix-eslint-config",
+    "remix-server-runtime", // publish before platforms
+    "remix-cloudflare",
+    "remix-cloudflare-pages",
+    "remix-cloudflare-workers",
+    "remix-deno",
+    "remix-node", // publish node before node servers
+    "remix-dev", // publish after node
+    "remix-architect",
+    "remix-express", // publish express before serve
+    "remix-react",
+    "remix-serve",
+    "remix-fs-routes",
+    "remix-css-bundle",
+    "remix-testing",
+    "remix-route-config",
+    "remix-routes-option-adapter",
+    "create-remix",
+    "remix",
   ]) {
-    publish(path.join(buildDir, "@remix-run", name), tag);
+    publish(path.join(packageDir, name), tag);
   }
-
-  // Publish create-remix
-  publish(path.join(buildDir, "create-remix"), tag);
-
-  // Publish remix package
-  publish(path.join(buildDir, "remix"), tag);
 }
 
 run().then(
