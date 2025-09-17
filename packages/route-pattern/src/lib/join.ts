@@ -52,14 +52,10 @@ export function join<B extends string, T extends string>(base: B, input: T): Joi
 export type Join<B extends string, T extends string> =
   T extends '' ? B :
   B extends '' ? T :
-  Split<B> extends infer S extends SplitResult ?
-    Split<T> extends infer I extends SplitResult ?
-      _Join<S, I, B, T> :
-      never :
-    never
+  _Join<Split<B>, Split<T>, HasLeadingSlash<B, T>>
 
 // prettier-ignore
-type _Join<B extends SplitResult, I extends SplitResult, Base extends string, Input extends string> =
+type _Join<B extends SplitResult, I extends SplitResult, LeadingSlash extends boolean> =
   HasOrigin<I['protocol'], I['hostname'], I['port']> extends true ?
     Build<
       I['protocol'],
@@ -68,7 +64,7 @@ type _Join<B extends SplitResult, I extends SplitResult, Base extends string, In
       JoinPath<RemoveTrailingSlash<B['pathname']>, I['pathname']>,
       JoinSearch<B['search'], I['search']>,
       true,
-      HasLeadingSlash<Base, Input>
+      LeadingSlash
     > :
     Build<
       B['protocol'],
@@ -77,7 +73,7 @@ type _Join<B extends SplitResult, I extends SplitResult, Base extends string, In
       JoinPath<RemoveTrailingSlash<B['pathname']>, I['pathname']>,
       JoinSearch<B['search'], I['search']>,
       HasOrigin<B['protocol'], B['hostname'], B['port']>,
-      HasLeadingSlash<Base, Input>
+      LeadingSlash
     >
 
 // Has any origin info
@@ -114,6 +110,11 @@ type JoinSearch<B, I> =
 type HasLeadingSlash<B extends string, T extends string> =
   T extends `/${string}` ? true : B extends `/${string}` ? true : false
 
+// Assemble final string
+// prettier-ignore
+type Build<P, H, Po, Path, Search, OriginPresent extends boolean, LeadingSlash extends boolean> =
+  `${BuildOrigin<P, H, Po>}${BuildPath<Path, OriginPresent, LeadingSlash>}${Search extends string ? `?${Search}` : ''}`
+
 // Build origin string
 // prettier-ignore
 type BuildOrigin<P, H, Po> =
@@ -127,14 +128,9 @@ type BuildOrigin<P, H, Po> =
 
 // Build path string
 // prettier-ignore
-type BuildPath<Path, OriginPresent extends boolean, LeadingSlashWhenNoOrigin extends boolean> =
+type BuildPath<Path, OriginPresent extends boolean, LeadingSlash extends boolean> =
   Path extends string ? (
     OriginPresent extends true ? `/${Path}` : (
-      LeadingSlashWhenNoOrigin extends true ? `/${Path}` : Path
+      LeadingSlash extends true ? `/${Path}` : Path
     )
   ) : ''
-
-// Assemble final string
-// prettier-ignore
-type Build<P, H, Po, Path, Search, OriginPresent extends boolean, LeadingSlashWhenNoOrigin extends boolean> =
-  `${BuildOrigin<P, H, Po>}${BuildPath<Path, OriginPresent, LeadingSlashWhenNoOrigin>}${Search extends string ? `?${Search}` : ''}`
