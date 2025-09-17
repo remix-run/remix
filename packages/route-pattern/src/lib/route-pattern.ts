@@ -30,23 +30,14 @@ class _RoutePattern<T extends string> {
   readonly #paramNames: Array<string>
   readonly #searchConstraints: SearchConstraints | null
 
-  constructor(
-    input: string | _RoutePattern<string>,
-    options?: string | _RoutePattern<string> | RoutePatternOptions,
-  ) {
+  constructor(input: string | _RoutePattern<string>, options?: RoutePatternOptions) {
     let inputSource = typeof input === 'string' ? input : input.source
-    let base =
-      typeof options === 'string'
-        ? options
-        : typeof options === 'object' && 'source' in options
-          ? options
-          : options?.base
+    let base = options?.base
     let baseSource = typeof base === 'string' ? base : base?.source
-    let resolved = baseSource ? resolve(inputSource, baseSource) : inputSource
+    let source = baseSource ? resolve(inputSource, baseSource) : inputSource
 
-    this.source = resolved as T
-    this.ignoreCase =
-      typeof options === 'object' && 'ignoreCase' in options ? options.ignoreCase === true : false
+    this.source = source as T
+    this.ignoreCase = options?.ignoreCase === true
 
     let { protocol, hostname, port, pathname, search } = parse(this.source)
 
@@ -133,7 +124,7 @@ export interface RoutePatternConstructor {
   new <T extends string>(input: T | RoutePattern<T>): RoutePattern<T>
   new <T extends string, B extends string>(
     input: T | RoutePattern<T>,
-    base: B | RoutePattern<B> | { base: B | RoutePattern<B> },
+    options: { base: B | RoutePattern<B> },
   ): RoutePattern<Resolve<T, B>>
   new <T extends string>(input: T | RoutePattern<T>, options: RoutePatternOptions): RoutePattern<T>
 }

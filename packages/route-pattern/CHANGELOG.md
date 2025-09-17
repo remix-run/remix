@@ -10,14 +10,8 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   ```tsx
   import { RoutePattern } from '@remix-run/route-pattern'
 
-  let pattern = new RoutePattern('users/:id', 'https://remix.run/api')
-  pattern.source // 'https://remix.run/api/users/:id
-  ```
-
-  The `base` pattern may also be provided in `options.base`.
-
-  ```tsx
   let pattern = new RoutePattern('users/:id', { base: 'https://remix.run/api' })
+  pattern.source // 'https://remix.run/api/users/:id
   ```
 
 - Expose `RouteMatch` as public API, i.e. `import { RouteMatch } from '@remix-run/route-pattern'` works now

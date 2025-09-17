@@ -23,21 +23,7 @@ describe('RoutePattern', () => {
       assert.equal(pattern2.source, pattern.source)
     })
 
-    it('resolves the input pattern against the base pattern arg', () => {
-      let pattern = new RoutePattern('users/:id', 'https://remix.run/api')
-      assert.equal(pattern.source, 'https://remix.run/api/users/:id')
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type T1 = Assert<IsEqual<typeof pattern, RoutePattern<'https://remix.run/api/users/:id'>>>
-
-      let pattern2 = new RoutePattern('users/:id', new RoutePattern('https://remix.run/api'))
-      assert.equal(pattern2.source, 'https://remix.run/api/users/:id')
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type T2 = Assert<IsEqual<typeof pattern2, RoutePattern<'https://remix.run/api/users/:id'>>>
-    })
-
-    it('resolves the input pattern against the base pattern option', () => {
+    it('resolves the input pattern against the base option', () => {
       let pattern = new RoutePattern('users/:id', { base: 'https://remix.run/api' })
       assert.equal(pattern.source, 'https://remix.run/api/users/:id')
 
