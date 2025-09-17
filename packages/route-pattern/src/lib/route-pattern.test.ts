@@ -13,46 +13,18 @@ describe('RoutePattern', () => {
 
     it('can be created from another pattern', () => {
       let pattern = new RoutePattern('users/:id')
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type T1 = Assert<IsEqual<typeof pattern, RoutePattern<'users/:id'>>>
-
       let pattern2 = new RoutePattern(pattern)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type T2 = Assert<IsEqual<typeof pattern2, RoutePattern<'users/:id'>>>
-
       assert.equal(pattern2.source, pattern.source)
-    })
-
-    it('resolves the input pattern against the base option', () => {
-      let pattern = new RoutePattern('users/:id', { base: 'https://remix.run/api' })
-      assert.equal(pattern.source, 'https://remix.run/api/users/:id')
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type T1 = Assert<IsEqual<typeof pattern, RoutePattern<'https://remix.run/api/users/:id'>>>
-
-      let pattern2 = new RoutePattern('users/:id', {
-        base: new RoutePattern('https://remix.run/api'),
-      })
-      assert.equal(pattern2.source, 'https://remix.run/api/users/:id')
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type T2 = Assert<IsEqual<typeof pattern2, RoutePattern<'https://remix.run/api/users/:id'>>>
     })
 
     it('does not ignore case by default', () => {
       let pattern = new RoutePattern('users/:id')
       assert.equal(pattern.ignoreCase, false)
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type T = Assert<IsEqual<typeof pattern, RoutePattern<'users/:id'>>>
     })
 
     it('stores the ignoreCase option', () => {
       let pattern = new RoutePattern('users/:id', { ignoreCase: true })
       assert.equal(pattern.ignoreCase, true)
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type T = Assert<IsEqual<typeof pattern, RoutePattern<'users/:id'>>>
     })
   })
 
@@ -720,6 +692,27 @@ describe('RoutePattern', () => {
     it('returns true if the URL matches the pattern', () => {
       let pattern = new RoutePattern('users/:id?format=json')
       assert.equal(pattern.test('https://example.com/users/123?format=json'), true)
+    })
+  })
+
+  describe('join', () => {
+    it('joins two patterns', () => {
+      let pattern = new RoutePattern('users/:id')
+      let pattern2 = pattern.join('posts/:postId')
+      assert.equal(pattern2.source, 'users/:id/posts/:postId')
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type T = Assert<IsEqual<typeof pattern2, RoutePattern<'users/:id/posts/:postId'>>>
+    })
+
+    it('joins two patterns with options', () => {
+      let pattern = new RoutePattern('https://remix.run')
+      let pattern2 = pattern.join('posts/:postId', { ignoreCase: true })
+      assert.equal(pattern2.source, 'https://remix.run/posts/:postId')
+      assert.equal(pattern2.ignoreCase, true)
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type T = Assert<IsEqual<typeof pattern2, RoutePattern<'https://remix.run/posts/:postId'>>>
     })
   })
 

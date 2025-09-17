@@ -244,7 +244,7 @@ export interface ParseResult {
 
 // prettier-ignore
 export type Parse<T extends string> =
-  T extends any ?
+  // T extends any ?
     Split<T> extends infer S extends SplitResult ?
       {
         protocol: S['protocol'] extends string ? PartParse<S['protocol']> : undefined
@@ -253,7 +253,7 @@ export type Parse<T extends string> =
         pathname: S['pathname'] extends string ? PartParse<S['pathname']> : undefined
         search: S['search'] extends string ? string : undefined
       } :
-      never :
+      // never :
     never
 
 export type Variable = { type: 'variable'; name: string }

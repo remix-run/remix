@@ -1,12 +1,12 @@
 import { split } from './split.ts'
 import type { Split } from './split.ts'
 
-export function resolve<T extends string, B extends string>(input: T, base: B): Resolve<T, B> {
-  if (input === '') return base as Resolve<T, B>
-  if (base === '') return input as Resolve<T, B>
+export function join<B extends string, T extends string>(base: B, input: T): Join<B, T> {
+  if (input === '') return base as Join<B, T>
+  if (base === '') return input as Join<B, T>
 
-  let i = split(input)
   let b = split(base)
+  let i = split(input)
 
   // Origin resolution: any origin info in input overwrites base origin
   let hasOrigin = i.protocol != null || i.hostname != null || i.port != null
@@ -45,48 +45,48 @@ export function resolve<T extends string, B extends string>(input: T, base: B): 
   let search = i.search ? (b.search ? `${b.search}&${i.search}` : i.search) : b.search
   let query = search ? `?${search}` : ''
 
-  return `${origin}${path}${query}` as Resolve<T, B>
+  return `${origin}${path}${query}` as Join<B, T>
 }
 
 // prettier-ignore
-export type Resolve<T extends string, B extends string> =
+export type Join<B extends string, T extends string> =
   T extends '' ? B :
   B extends '' ? T :
-  _Resolve<T, B>
+  _Join<B, T>
 
 // prettier-ignore
-type _Resolve<T extends string, B extends string> =
-  Split<T> extends infer I ?
-    Split<B> extends infer S ?
+type _Join<B extends string, T extends string> =
+  Split<B> extends infer S ?
+    Split<T> extends infer I ?
       I extends { protocol: infer Ip; hostname: infer Ih; port: infer Ipo; pathname: infer IpN; search: infer Is }
       ? S extends { protocol: infer Bp; hostname: infer Bh; port: infer Bpo; pathname: infer BpN; search: infer Bs }
-        ? _ResolveFromParts<Ip, Ih, Ipo, IpN, Is, Bp, Bh, Bpo, BpN, Bs, T, B> : never
+        ? _JoinFromParts<Ip, Ih, Ipo, IpN, Is, Bp, Bh, Bpo, BpN, Bs, B, T> : never
       : never
     : never : never
 
 // prettier-ignore
-type _ResolveFromParts<
-  Ip, Ih, Ipo, IpN, Is, Bp, Bh, Bpo, BpN, Bs, T extends string, B extends string
+type _JoinFromParts<
+  Ip, Ih, Ipo, IpN, Is, Bp, Bh, Bpo, BpN, Bs, B extends string, T extends string
 > =
-  HasOrigin<Ip, Ih, Ipo> extends true
-      ? Build<
-        Ip extends string ? Ip : undefined,
-        Ih extends string ? Ih : undefined,
-        Ipo extends string ? Ipo : undefined,
-        JoinPath<RemoveTrailingSlash<BpN>, IpN>,
-        JoinSearch<Bs, Is>,
-        true,
-        HasLeadingSlash<T, B>
-      >
-    : Build<
-        Bp extends string ? Bp : undefined,
-        Bh extends string ? Bh : undefined,
-        Bpo extends string ? Bpo : undefined,
-        JoinPath<RemoveTrailingSlash<BpN>, IpN>,
-        JoinSearch<Bs, Is>,
-        HasOrigin<Bp, Bh, Bpo>,
-        HasLeadingSlash<T, B>
-      >
+  HasOrigin<Ip, Ih, Ipo> extends true ?
+    Build<
+      Ip extends string ? Ip : undefined,
+      Ih extends string ? Ih : undefined,
+      Ipo extends string ? Ipo : undefined,
+      JoinPath<RemoveTrailingSlash<BpN>, IpN>,
+      JoinSearch<Bs, Is>,
+      true,
+      HasLeadingSlash<B, T>
+    > :
+    Build<
+      Bp extends string ? Bp : undefined,
+      Bh extends string ? Bh : undefined,
+      Bpo extends string ? Bpo : undefined,
+      JoinPath<RemoveTrailingSlash<BpN>, IpN>,
+      JoinSearch<Bs, Is>,
+      HasOrigin<Bp, Bh, Bpo>,
+      HasLeadingSlash<B, T>
+    >
 
 // Has any origin info
 // prettier-ignore
@@ -103,7 +103,9 @@ type RemoveTrailingSlash<P> = P extends string ? (P extends `${infer L}/` ? L : 
 // prettier-ignore
 type JoinPath<BasePath, InputPath> =
   InputPath extends string ? (
-    BasePath extends string ? `${BasePath}/${InputPath}` : InputPath
+    BasePath extends string ? (
+      BasePath extends '' ? InputPath : `${BasePath}/${InputPath}`
+    ) : InputPath
   ) : (
     BasePath extends string ? BasePath : undefined
   )
@@ -119,7 +121,7 @@ type JoinSearch<Bs, Is> =
 
 // Whether to force a leading slash when no origin
 // prettier-ignore
-type HasLeadingSlash<T extends string, B extends string> =
+type HasLeadingSlash<B extends string, T extends string> =
   T extends `/${string}` ? true : B extends `/${string}` ? true : false
 
 // Build origin string

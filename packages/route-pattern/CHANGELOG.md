@@ -4,13 +4,14 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 ## HEAD
 
-- Add `base` option to `RoutePattern`, which allows a pattern to be built relative
+- Add `pattern.join(input, options)`, which allows a pattern to be built relative
   to another pattern
 
   ```tsx
   import { RoutePattern } from '@remix-run/route-pattern'
 
-  let pattern = new RoutePattern('users/:id', { base: 'https://remix.run/api' })
+  let base = new RoutePattern('https://remix.run/api')
+  let pattern = base.join('users/:id')
   pattern.source // 'https://remix.run/api/users/:id
   ```
 
