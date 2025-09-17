@@ -4,11 +4,11 @@ import type { Optional, TokenList, SearchConstraints } from './parse.ts'
 import { resolve } from './resolve.ts'
 import type { Resolve } from './resolve.ts'
 
-export interface RoutePatternOptions<B extends string> {
+export interface RoutePatternOptions {
   /**
    * The base pattern to resolve the source pattern against.
    */
-  base?: B | RoutePattern<B>
+  base?: string | RoutePattern<string>
   /**
    * Whether to ignore case when matching URL pathnames.
    */
@@ -32,7 +32,7 @@ class _RoutePattern<T extends string> {
 
   constructor(
     input: string | _RoutePattern<string>,
-    options?: string | _RoutePattern<string> | RoutePatternOptions<string>,
+    options?: string | _RoutePattern<string> | RoutePatternOptions,
   ) {
     let inputSource = typeof input === 'string' ? input : input.source
     let base =
@@ -133,8 +133,9 @@ export interface RoutePatternConstructor {
   new <T extends string>(input: T | RoutePattern<T>): RoutePattern<T>
   new <T extends string, B extends string>(
     input: T | RoutePattern<T>,
-    base: B | RoutePattern<B> | RoutePatternOptions<B>,
+    base: B | RoutePattern<B> | { base: B | RoutePattern<B> },
   ): RoutePattern<Resolve<T, B>>
+  new <T extends string>(input: T | RoutePattern<T>, options: RoutePatternOptions): RoutePattern<T>
 }
 
 /**

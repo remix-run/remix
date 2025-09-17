@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { RoutePattern } from './route-pattern.ts'
+import type { Assert, IsEqual } from '../type-utils.d.ts'
 
 describe('RoutePattern', () => {
   describe('constructor', () => {
@@ -12,7 +13,13 @@ describe('RoutePattern', () => {
 
     it('can be created from another pattern', () => {
       let pattern = new RoutePattern('users/:id')
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type T1 = Assert<IsEqual<typeof pattern, RoutePattern<'users/:id'>>>
+
       let pattern2 = new RoutePattern(pattern)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type T2 = Assert<IsEqual<typeof pattern2, RoutePattern<'users/:id'>>>
+
       assert.equal(pattern2.source, pattern.source)
     })
 
@@ -20,28 +27,46 @@ describe('RoutePattern', () => {
       let pattern = new RoutePattern('users/:id', 'https://remix.run/api')
       assert.equal(pattern.source, 'https://remix.run/api/users/:id')
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type T1 = Assert<IsEqual<typeof pattern, RoutePattern<'https://remix.run/api/users/:id'>>>
+
       let pattern2 = new RoutePattern('users/:id', new RoutePattern('https://remix.run/api'))
       assert.equal(pattern2.source, 'https://remix.run/api/users/:id')
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type T2 = Assert<IsEqual<typeof pattern2, RoutePattern<'https://remix.run/api/users/:id'>>>
     })
 
     it('resolves the input pattern against the base pattern option', () => {
       let pattern = new RoutePattern('users/:id', { base: 'https://remix.run/api' })
       assert.equal(pattern.source, 'https://remix.run/api/users/:id')
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type T1 = Assert<IsEqual<typeof pattern, RoutePattern<'https://remix.run/api/users/:id'>>>
+
       let pattern2 = new RoutePattern('users/:id', {
         base: new RoutePattern('https://remix.run/api'),
       })
       assert.equal(pattern2.source, 'https://remix.run/api/users/:id')
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type T2 = Assert<IsEqual<typeof pattern2, RoutePattern<'https://remix.run/api/users/:id'>>>
     })
 
     it('does not ignore case by default', () => {
       let pattern = new RoutePattern('users/:id')
       assert.equal(pattern.ignoreCase, false)
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type T = Assert<IsEqual<typeof pattern, RoutePattern<'users/:id'>>>
     })
 
     it('stores the ignoreCase option', () => {
       let pattern = new RoutePattern('users/:id', { ignoreCase: true })
       assert.equal(pattern.ignoreCase, true)
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      type T = Assert<IsEqual<typeof pattern, RoutePattern<'users/:id'>>>
     })
   })
 
