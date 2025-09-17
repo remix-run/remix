@@ -1,19 +1,31 @@
 export interface SplitResult {
-  protocol?: string
-  hostname?: string
-  port?: string
-  pathname?: string
-  search?: string
+  protocol: string | undefined
+  hostname: string | undefined
+  port: string | undefined
+  pathname: string | undefined
+  search: string | undefined
 }
 
-type OmitEmptyStringValues<S> = { [K in keyof S as S[K] extends '' ? never : K]: S[K] }
-
-export type Split<T extends string> = OmitEmptyStringValues<_Split<T>>
+// prettier-ignore
+export type Split<T extends string> =
+  SplitPattern<T> extends infer S extends Partial<SplitResult> ? {
+    protocol: S['protocol'] extends string ? S['protocol'] : undefined
+    hostname: S['hostname'] extends string ? S['hostname'] : undefined
+    port: S['port'] extends string ? S['port'] : undefined
+    pathname: S['pathname'] extends string ? S['pathname'] : undefined
+    search: S['search'] extends string ? S['search'] : undefined
+  } :
+  never
 
 // prettier-ignore
-type _Split<T extends string> =
-  T extends `${infer L}?${infer R}` ? _Split<L> & { search: R } :
+type SplitPattern<T extends string> =
+  T extends '' ? {} :
+  T extends `${infer L}?${infer R}` ? SplitPattern<L> & { search: R } :
   T extends `${infer Protocol}://${infer R}` ?
+    Protocol extends '' ? (
+      R extends `${infer Host}/${infer Pathname}` ? SplitHost<Host> & { pathname: Pathname } :
+      SplitHost<R>
+    ) :
     Protocol extends `${string}/${string}` ? { pathname: T } :
     R extends `${infer Host}/${infer Pathname}` ? SplitHost<Host> & { protocol: Protocol; pathname: Pathname } :
     SplitHost<R> & { protocol: Protocol } :
@@ -38,12 +50,16 @@ type IsDigits<S extends string> =
   false
 
 export function split<T extends string>(source: T): Split<T> {
-  let result = {} as any
+  let protocol: string | undefined
+  let hostname: string | undefined
+  let port: string | undefined
+  let pathname: string | undefined
+  let search: string | undefined
 
   // search
   let searchStart = source.indexOf('?')
   if (searchStart !== -1) {
-    result.search = source.slice(searchStart + 1, source.length)
+    search = source.slice(searchStart + 1, source.length)
     source = source.slice(0, searchStart) as T
   }
 
@@ -52,7 +68,7 @@ export function split<T extends string>(source: T): Split<T> {
   if (solidus !== -1) {
     // protocol
     if (solidus !== 0) {
-      result.protocol = source.slice(0, solidus)
+      protocol = source.slice(0, solidus)
     }
     index = solidus + 3
 
@@ -67,26 +83,24 @@ export function split<T extends string>(source: T): Split<T> {
       let afterColon = host.slice(colonIndex + 1)
       if (/^[0-9]+$/.test(afterColon)) {
         // hostname up to colon, port after colon
-        result.hostname = source.slice(index, index + colonIndex)
-        result.port = source.slice(index + colonIndex + 1, hostEnd)
+        hostname = source.slice(index, index + colonIndex)
+        port = source.slice(index + colonIndex + 1, hostEnd)
       } else {
-        result.hostname = source.slice(index, hostEnd)
+        hostname = source.slice(index, hostEnd)
       }
     } else {
-      result.hostname = source.slice(index, hostEnd)
+      hostname = source.slice(index, hostEnd)
     }
     index = hostEnd === source.length ? hostEnd : hostEnd + 1
   }
 
   // pathname
   if (index !== source.length) {
-    let pathname = source.slice(index, source.length)
+    pathname = source.slice(index, source.length)
     if (pathname.startsWith('/')) {
-      result.pathname = pathname.slice(1)
-    } else {
-      result.pathname = pathname
+      pathname = pathname.slice(1)
     }
   }
 
-  return result as Split<T>
+  return { protocol, hostname, port, pathname, search } as Split<T>
 }
