@@ -1,5 +1,5 @@
 import { split } from './split.ts'
-import type { Split } from './split.ts'
+import type { Split, SplitResult } from './split.ts'
 
 export function join<B extends string, T extends string>(base: B, input: T): Join<B, T> {
   if (input === '') return base as Join<B, T>
@@ -52,40 +52,32 @@ export function join<B extends string, T extends string>(base: B, input: T): Joi
 export type Join<B extends string, T extends string> =
   T extends '' ? B :
   B extends '' ? T :
-  _Join<B, T>
+  Split<B> extends infer S extends SplitResult ?
+    Split<T> extends infer I extends SplitResult ?
+      _Join<S, I, B, T> :
+      never :
+    never
 
 // prettier-ignore
-type _Join<B extends string, T extends string> =
-  Split<B> extends infer S ?
-    Split<T> extends infer I ?
-      I extends { protocol: infer Ip; hostname: infer Ih; port: infer Ipo; pathname: infer IpN; search: infer Is }
-      ? S extends { protocol: infer Bp; hostname: infer Bh; port: infer Bpo; pathname: infer BpN; search: infer Bs }
-        ? _JoinFromParts<Ip, Ih, Ipo, IpN, Is, Bp, Bh, Bpo, BpN, Bs, B, T> : never
-      : never
-    : never : never
-
-// prettier-ignore
-type _JoinFromParts<
-  Ip, Ih, Ipo, IpN, Is, Bp, Bh, Bpo, BpN, Bs, B extends string, T extends string
-> =
-  HasOrigin<Ip, Ih, Ipo> extends true ?
+type _Join<B extends SplitResult, I extends SplitResult, Base extends string, Input extends string> =
+  HasOrigin<I['protocol'], I['hostname'], I['port']> extends true ?
     Build<
-      Ip extends string ? Ip : undefined,
-      Ih extends string ? Ih : undefined,
-      Ipo extends string ? Ipo : undefined,
-      JoinPath<RemoveTrailingSlash<BpN>, IpN>,
-      JoinSearch<Bs, Is>,
+      I['protocol'],
+      I['hostname'],
+      I['port'],
+      JoinPath<RemoveTrailingSlash<B['pathname']>, I['pathname']>,
+      JoinSearch<B['search'], I['search']>,
       true,
-      HasLeadingSlash<B, T>
+      HasLeadingSlash<Base, Input>
     > :
     Build<
-      Bp extends string ? Bp : undefined,
-      Bh extends string ? Bh : undefined,
-      Bpo extends string ? Bpo : undefined,
-      JoinPath<RemoveTrailingSlash<BpN>, IpN>,
-      JoinSearch<Bs, Is>,
-      HasOrigin<Bp, Bh, Bpo>,
-      HasLeadingSlash<B, T>
+      B['protocol'],
+      B['hostname'],
+      B['port'],
+      JoinPath<RemoveTrailingSlash<B['pathname']>, I['pathname']>,
+      JoinSearch<B['search'], I['search']>,
+      HasOrigin<B['protocol'], B['hostname'], B['port']>,
+      HasLeadingSlash<Base, Input>
     >
 
 // Has any origin info
@@ -101,23 +93,21 @@ type RemoveTrailingSlash<P> = P extends string ? (P extends `${infer L}/` ? L : 
 
 // Join base and input pathnames
 // prettier-ignore
-type JoinPath<BasePath, InputPath> =
-  InputPath extends string ? (
-    BasePath extends string ? (
-      BasePath extends '' ? InputPath : `${BasePath}/${InputPath}`
-    ) : InputPath
-  ) : (
-    BasePath extends string ? BasePath : undefined
-  )
+type JoinPath<B, I> =
+  I extends string ?
+    B extends string ?
+      B extends '' ? I :
+      `${B}/${I}` :
+    I :
+  B extends string ? B : undefined
 
 // Join searches with '&'
 // prettier-ignore
-type JoinSearch<Bs, Is> =
-  Is extends string ? (
-    Bs extends string ? `${Bs}&${Is}` : Is
-  ) : (
-    Bs extends string ? Bs : undefined
-  )
+type JoinSearch<B, I> =
+  I extends string ?
+    B extends string ? `${B}&${I}` :
+    I :
+  B extends string ? B : undefined
 
 // Whether to force a leading slash when no origin
 // prettier-ignore
