@@ -234,41 +234,9 @@ To add a new release, copy from this template:
 
 Date: YYYY-MM-DD
 
-### What's Changed
-
-#### Big New Feature 1
-
-#### Big New Feature 2
-
 ### Minor Changes
 
 ### Patch Changes
-
-### Updated Dependencies
-
-- [`react-router-dom@6.X.Y`](https://github.com/remix-run/react-router/releases/tag/react-router%406.X.Y)
-- [`@remix-run/router@1.X.Y`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1XY)
-
-### Changes by Package
-
-- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/create-remix/CHANGELOG.md#2XY)
-- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-architect/CHANGELOG.md#2XY)
-- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-cloudflare/CHANGELOG.md#2XY)
-- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-cloudflare-pages/CHANGELOG.md#2XY)
-- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-cloudflare-workers/CHANGELOG.md#2XY)
-- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-css-bundle/CHANGELOG.md#2XY)
-- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-deno/CHANGELOG.md#2XY)
-- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-dev/CHANGELOG.md#2XY)
-- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-eslint-config/CHANGELOG.md#2XY)
-- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-express/CHANGELOG.md#2XY)
-- [`@remix-run/fs-routes`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-fs-routes/CHANGELOG.md#2XY)
-- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-node/CHANGELOG.md#2XY)
-- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-react/CHANGELOG.md#2XY)
-- [`@remix-run/route-config`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-route-config/CHANGELOG.md#2XY)
-- [`@remix-run/routes-option-adapter`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-routes-option-adapter/CHANGELOG.md#2XY)
-- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-serve/CHANGELOG.md#2XY)
-- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-server-runtime/CHANGELOG.md#2XY)
-- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-testing/CHANGELOG.md#2XY)
 
 **Full Changelog**: [`v2.X.Y...v2.X.Y`](https://github.com/remix-run/remix/compare/remix@2.X.Y...remix@2.X.Y)
 
@@ -276,7 +244,7 @@ Date: YYYY-MM-DD
 
 ## v2.17.1
 
-Date: 2025-09-12
+Date: 2025-09-17
 
 ### Patch Changes
 
