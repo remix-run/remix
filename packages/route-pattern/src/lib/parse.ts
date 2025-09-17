@@ -244,7 +244,7 @@ export interface ParseResult {
 
 // prettier-ignore
 export type Parse<T extends string> =
-  // T extends any ?
+  T extends any ?
     Split<T> extends infer S extends SplitResult ?
       {
         protocol: S['protocol'] extends string ? PartParse<S['protocol']> : undefined
@@ -253,7 +253,7 @@ export type Parse<T extends string> =
         pathname: S['pathname'] extends string ? PartParse<S['pathname']> : undefined
         search: S['search'] extends string ? string : undefined
       } :
-      // never :
+      never :
     never
 
 export type Variable = { type: 'variable'; name: string }
@@ -281,11 +281,11 @@ type PartParse<T extends string> = _PartParse<{
 type _PartParse<S extends PartParseState> =
   S extends { rest: `${infer Head}${infer Tail}` } ?
     Head extends ':' ?
-      IdentiferParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
+      IdentifierParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
         (name extends '' ? never : _PartParse<AppendToken<S, { type: 'variable', name: name }, rest>>) :
       never : // this should never happen
     Head extends '*' ?
-      IdentiferParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
+      IdentifierParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
         _PartParse<AppendToken<S, (name extends '' ? { type: 'wildcard' } : { type: 'wildcard', name: name }), rest>> :
       never : // this should never happen
     Head extends '{' ?
@@ -366,7 +366,7 @@ type _0_9 = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 type IdentifierHead = _a_z | _A_Z | '_' | '$'
 type IdentifierTail = IdentifierHead | _0_9
 
-type IdentiferParse<T extends string> = _IdentifierParse<{ identifier: ''; rest: T }>
+type IdentifierParse<T extends string> = _IdentifierParse<{ identifier: ''; rest: T }>
 
 // prettier-ignore
 type _IdentifierParse<S extends { identifier: string, rest: string }> =
