@@ -25,11 +25,11 @@ type HasLeadingSlash<T extends string> =
   false
 
 // prettier-ignore
-type VariantString<T extends ParseResult, L extends boolean> =
+type VariantString<T extends Partial<ParseResult>, L extends boolean> =
   T extends { protocol: infer P extends Array<Token> } ?
     `${PartVariantString<P>}${VariantString<Omit<T, 'protocol'>, false>}` :
-  T extends { hostname: infer H extends Array<Token>, port: infer R extends string } ?
-    `://${PartVariantString<H>}:${R}/${VariantString<Omit<T, 'hostname' | 'port'>, false>}` :
+  T extends { hostname: infer H extends Array<Token>, port: infer P extends string } ?
+    `://${PartVariantString<H>}:${P}/${VariantString<Omit<T, 'hostname' | 'port'>, false>}` :
   T extends { hostname: infer H extends Array<Token> } ?
     `://${PartVariantString<H>}/${VariantString<Omit<T, 'hostname'>, false>}` :
   T extends { pathname: infer P extends Array<Token> } ?

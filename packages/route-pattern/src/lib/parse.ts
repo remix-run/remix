@@ -15,35 +15,39 @@ export class ParseError extends Error {
   }
 }
 
-export function parse(source: string) {
-  let result: ParseResult = {}
+export function parse<T extends string>(source: T): Parse<T> {
+  let protocol: Array<Token> | undefined
+  let hostname: Array<Token> | undefined
+  let port: string | undefined
+  let pathname: Array<Token> | undefined
+  let search: string | undefined
 
-  let { protocol, hostname, port, pathname, search } = split(source) as SplitResult
+  let parts = split(source) as SplitResult
   let start = 0
 
-  if (protocol) {
-    start = source.indexOf(protocol, start)
-    result.protocol = parsePart(source, start, protocol.length, 'protocol')
-    start += protocol.length
+  if (parts.protocol) {
+    start = source.indexOf(parts.protocol, start)
+    protocol = parsePart(source, start, parts.protocol.length, 'protocol')
+    start += parts.protocol.length
   }
-  if (hostname) {
-    start = source.indexOf(hostname, start)
-    result.hostname = parsePart(source, start, hostname.length, 'hostname')
-    start += hostname.length
+  if (parts.hostname) {
+    start = source.indexOf(parts.hostname, start)
+    hostname = parsePart(source, start, parts.hostname.length, 'hostname')
+    start += parts.hostname.length
   }
-  if (port) {
-    result.port = port
-    start = source.indexOf(port, start) + port.length
+  if (parts.port) {
+    port = parts.port
+    start = source.indexOf(parts.port, start) + parts.port.length
   }
-  if (pathname) {
-    start = source.indexOf(pathname, start)
-    result.pathname = parsePart(source, start, pathname.length, 'pathname')
+  if (parts.pathname) {
+    start = source.indexOf(parts.pathname, start)
+    pathname = parsePart(source, start, parts.pathname.length, 'pathname')
   }
-  if (search) {
-    result.search = search
+  if (parts.search) {
+    search = parts.search
   }
 
-  return result
+  return { protocol, hostname, port, pathname, search } as Parse<T>
 }
 
 const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
@@ -231,11 +235,11 @@ function decodeSearchComponent(text: string): string {
 }
 
 export interface ParseResult {
-  protocol?: TokenList
-  hostname?: TokenList
-  port?: string
-  pathname?: TokenList
-  search?: string
+  protocol: Array<Token> | undefined
+  hostname: Array<Token> | undefined
+  port: string | undefined
+  pathname: Array<Token> | undefined
+  search: string | undefined
 }
 
 // prettier-ignore
@@ -250,7 +254,7 @@ export type Parse<T extends string> =
         search: S['search'] extends string ? string : undefined
       } :
       never :
-  never
+    never
 
 export type Variable = { type: 'variable'; name: string }
 export type Wildcard = { type: 'wildcard'; name?: string }

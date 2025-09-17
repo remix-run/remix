@@ -2,90 +2,177 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { parse, ParseError } from './parse.ts'
+import type { Parse } from './parse.ts'
+import type { Assert, IsEqual } from '../type-utils.d.ts'
 
 describe('parse', () => {
+  it('parses empty string', () => {
+    assert.deepEqual(parse(''), {
+      protocol: undefined,
+      hostname: undefined,
+      port: undefined,
+      pathname: undefined,
+      search: undefined,
+    })
+  })
+
   describe('pathname only patterns', () => {
     it('parses plain text', () => {
-      assert.deepEqual(parse('hello'), { pathname: [{ type: 'text', value: 'hello' }] })
-    })
-
-    it('parses empty string', () => {
-      assert.deepEqual(parse(''), {})
+      assert.deepEqual(parse('hello'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'text', value: 'hello' }],
+        search: undefined,
+      })
     })
 
     it('parses text with spaces', () => {
-      assert.deepEqual(parse('hello world'), { pathname: [{ type: 'text', value: 'hello world' }] })
+      assert.deepEqual(parse('hello world'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'text', value: 'hello world' }],
+        search: undefined,
+      })
     })
 
     // variables
 
     it('parses named variable', () => {
-      assert.deepEqual(parse(':id'), { pathname: [{ type: 'variable', name: 'id' }] })
+      assert.deepEqual(parse(':id'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'variable', name: 'id' }],
+        search: undefined,
+      })
     })
 
     it('parses named variable with underscores', () => {
-      assert.deepEqual(parse(':user_id'), { pathname: [{ type: 'variable', name: 'user_id' }] })
+      assert.deepEqual(parse(':user_id'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'variable', name: 'user_id' }],
+        search: undefined,
+      })
     })
 
     it('parses named variable with dollar sign', () => {
-      assert.deepEqual(parse(':$special'), { pathname: [{ type: 'variable', name: '$special' }] })
+      assert.deepEqual(parse(':$special'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'variable', name: '$special' }],
+        search: undefined,
+      })
     })
 
     it('parses text with variable', () => {
       assert.deepEqual(parse('users/:id'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [
           { type: 'text', value: 'users/' },
           { type: 'variable', name: 'id' },
         ],
+        search: undefined,
       })
     })
 
     // wildcard
 
     it('parses named wildcard', () => {
-      assert.deepEqual(parse('*files'), { pathname: [{ type: 'wildcard', name: 'files' }] })
+      assert.deepEqual(parse('*files'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'wildcard', name: 'files' }],
+        search: undefined,
+      })
     })
 
     it('parses unnamed wildcard', () => {
-      assert.deepEqual(parse('*'), { pathname: [{ type: 'wildcard' }] })
+      assert.deepEqual(parse('*'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'wildcard' }],
+        search: undefined,
+      })
     })
 
     // enum
 
     it('parses simple enum', () => {
-      assert.deepEqual(parse('{a,b,c}'), { pathname: [{ type: 'enum', members: ['a', 'b', 'c'] }] })
+      assert.deepEqual(parse('{a,b,c}'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'enum', members: ['a', 'b', 'c'] }],
+        search: undefined,
+      })
     })
 
     it('parses enum with spaces', () => {
       assert.deepEqual(parse('{hello,world}'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [{ type: 'enum', members: ['hello', 'world'] }],
+        search: undefined,
       })
     })
 
     it('parses single member enum', () => {
-      assert.deepEqual(parse('{only}'), { pathname: [{ type: 'enum', members: ['only'] }] })
+      assert.deepEqual(parse('{only}'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'enum', members: ['only'] }],
+        search: undefined,
+      })
     })
 
     it('parses empty enum', () => {
-      assert.deepEqual(parse('{}'), { pathname: [{ type: 'enum', members: [''] }] })
+      assert.deepEqual(parse('{}'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'enum', members: [''] }],
+        search: undefined,
+      })
     })
 
     // optional
 
     it('parses optional text', () => {
       assert.deepEqual(parse('(hello)'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [{ type: 'optional', tokens: [{ type: 'text', value: 'hello' }] }],
+        search: undefined,
       })
     })
 
     it('parses optional variable', () => {
       assert.deepEqual(parse('(:id)'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [{ type: 'optional', tokens: [{ type: 'variable', name: 'id' }] }],
+        search: undefined,
       })
     })
 
     it('parses optional with multiple tokens', () => {
       assert.deepEqual(parse('(users/:id)'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [
           {
             type: 'optional',
@@ -95,11 +182,15 @@ describe('parse', () => {
             ],
           },
         ],
+        search: undefined,
       })
     })
 
     it('parses text with optional', () => {
       assert.deepEqual(parse('api(/:version)'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [
           { type: 'text', value: 'api' },
           {
@@ -110,34 +201,69 @@ describe('parse', () => {
             ],
           },
         ],
+        search: undefined,
       })
     })
 
     // escaping
 
     it('parses escaped colon', () => {
-      assert.deepEqual(parse('\\:'), { pathname: [{ type: 'text', value: ':' }] })
+      assert.deepEqual(parse('\\:'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'text', value: ':' }],
+        search: undefined,
+      })
     })
 
     it('parses escaped asterisk', () => {
-      assert.deepEqual(parse('\\*'), { pathname: [{ type: 'text', value: '*' }] })
+      assert.deepEqual(parse('\\*'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'text', value: '*' }],
+        search: undefined,
+      })
     })
 
     it('parses escaped parenthesis', () => {
-      assert.deepEqual(parse('\\('), { pathname: [{ type: 'text', value: '(' }] })
+      assert.deepEqual(parse('\\('), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'text', value: '(' }],
+        search: undefined,
+      })
     })
 
     it('parses escaped brace', () => {
-      assert.deepEqual(parse('\\{'), { pathname: [{ type: 'text', value: '{' }] })
+      assert.deepEqual(parse('\\{'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'text', value: '{' }],
+        search: undefined,
+      })
     })
 
     it('parses escaped backslash', () => {
-      assert.deepEqual(parse('\\\\'), { pathname: [{ type: 'text', value: '\\' }] })
+      assert.deepEqual(parse('\\\\'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'text', value: '\\' }],
+        search: undefined,
+      })
     })
 
     it('parses text with escaped special chars', () => {
       assert.deepEqual(parse('hello\\:world\\*test'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [{ type: 'text', value: 'hello:world*test' }],
+        search: undefined,
       })
     })
 
@@ -145,6 +271,9 @@ describe('parse', () => {
 
     it('parses complex pattern', () => {
       assert.deepEqual(parse('api/v:version/users/:id(*rest.:format)'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [
           { type: 'text', value: 'api/v' },
           { type: 'variable', name: 'version' },
@@ -159,11 +288,15 @@ describe('parse', () => {
             ],
           },
         ],
+        search: undefined,
       })
     })
 
     it('parses enum with optional', () => {
       assert.deepEqual(parse('{json,xml}(/:version)'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [
           { type: 'enum', members: ['json', 'xml'] },
           {
@@ -174,20 +307,28 @@ describe('parse', () => {
             ],
           },
         ],
+        search: undefined,
       })
     })
 
     it('parses pathname with leading slash', () => {
       assert.deepEqual(parse('/path/:id'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [
           { type: 'text', value: 'path/' },
           { type: 'variable', name: 'id' },
         ],
+        search: undefined,
       })
     })
 
     it('parses pathname with leading slash and search', () => {
       assert.deepEqual(parse('/path/:id?q=1'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [
           { type: 'text', value: 'path/' },
           { type: 'variable', name: 'id' },
@@ -199,30 +340,48 @@ describe('parse', () => {
 
   describe('full URL patterns', () => {
     it('parses protocol only (without ://)', () => {
-      assert.deepEqual(parse('https\\:'), { pathname: [{ type: 'text', value: 'https:' }] })
+      assert.deepEqual(parse('https\\:'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
+        pathname: [{ type: 'text', value: 'https:' }],
+        search: undefined,
+      })
     })
 
     it('parses protocol with variable (without ://)', () => {
       assert.deepEqual(parse(':protocol\\:'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [
           { type: 'variable', name: 'protocol' },
           { type: 'text', value: ':' },
         ],
+        search: undefined,
       })
     })
 
     it('parses hostname only', () => {
       assert.deepEqual(parse('://example.com'), {
+        protocol: undefined,
         hostname: [{ type: 'text', value: 'example.com' }],
+        port: undefined,
+        pathname: undefined,
+        search: undefined,
       })
     })
 
     it('parses hostname with variable', () => {
       assert.deepEqual(parse('://:subdomain.example.com'), {
+        protocol: undefined,
         hostname: [
           { type: 'variable', name: 'subdomain' },
           { type: 'text', value: '.example.com' },
         ],
+        port: undefined,
+        pathname: undefined,
+        search: undefined,
       })
     })
 
@@ -230,30 +389,42 @@ describe('parse', () => {
       assert.deepEqual(parse('https://example.com'), {
         protocol: [{ type: 'text', value: 'https' }],
         hostname: [{ type: 'text', value: 'example.com' }],
+        port: undefined,
+        pathname: undefined,
+        search: undefined,
       })
     })
 
     it('parses hostname and port', () => {
       assert.deepEqual(parse('://example.com:8080'), {
+        protocol: undefined,
         hostname: [{ type: 'text', value: 'example.com' }],
         port: '8080',
+        pathname: undefined,
+        search: undefined,
       })
     })
 
     it('parses hostname with unnamed wildcard', () => {
       assert.deepEqual(parse('://*.example.com'), {
+        protocol: undefined,
         hostname: [{ type: 'wildcard' }, { type: 'text', value: '.example.com' }],
+        port: undefined,
+        pathname: undefined,
+        search: undefined,
       })
     })
 
     it('parses hostname, port, and pathname', () => {
       assert.deepEqual(parse('://example.com:8080/api/:id'), {
+        protocol: undefined,
         hostname: [{ type: 'text', value: 'example.com' }],
         port: '8080',
         pathname: [
           { type: 'text', value: 'api/' },
           { type: 'variable', name: 'id' },
         ],
+        search: undefined,
       })
     })
 
@@ -261,15 +432,20 @@ describe('parse', () => {
       assert.deepEqual(parse('https://example.com/api/:id'), {
         protocol: [{ type: 'text', value: 'https' }],
         hostname: [{ type: 'text', value: 'example.com' }],
+        port: undefined,
         pathname: [
           { type: 'text', value: 'api/' },
           { type: 'variable', name: 'id' },
         ],
+        search: undefined,
       })
     })
 
     it('parses with search params', () => {
       assert.deepEqual(parse('search?q=:query'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [{ type: 'text', value: 'search' }],
         search: 'q=:query',
       })
@@ -404,6 +580,9 @@ describe('parse', () => {
 
     it('parses nested optionals', () => {
       assert.deepEqual(parse('(nested(test))'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [
           {
             type: 'optional',
@@ -416,11 +595,15 @@ describe('parse', () => {
             ],
           },
         ],
+        search: undefined,
       })
     })
 
     it('parses nested optionals with variables and wildcards (named)', () => {
       assert.deepEqual(parse('files(/*path(.:ext))'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [
           { type: 'text', value: 'files' },
           {
@@ -438,11 +621,15 @@ describe('parse', () => {
             ],
           },
         ],
+        search: undefined,
       })
     })
 
     it('parses nested optionals with variables and wildcards (unnamed)', () => {
       assert.deepEqual(parse('files(/*(.:ext))'), {
+        protocol: undefined,
+        hostname: undefined,
+        port: undefined,
         pathname: [
           { type: 'text', value: 'files' },
           {
@@ -460,6 +647,7 @@ describe('parse', () => {
             ],
           },
         ],
+        search: undefined,
       })
     })
 
@@ -503,3 +691,196 @@ describe('parse', () => {
     })
   })
 })
+
+// prettier-ignore
+export type Tests = [
+  // empty string
+  Assert<IsEqual<
+    Parse<''>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: undefined; search: undefined }
+  >>,
+
+  // pathname only patterns
+  Assert<IsEqual<
+    Parse<'hello'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'text', value: 'hello' }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'hello world'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'text', value: 'hello world' }]; search: undefined }
+  >>,
+
+  // variables
+  Assert<IsEqual<
+    Parse<':id'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'variable', name: 'id' }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<':user_id'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'variable', name: 'user_id' }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<':$special'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'variable', name: '$special' }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'users/:id'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'text', value: 'users/' }, { type: 'variable', name: 'id' }]; search: undefined }
+  >>,
+
+  // wildcard
+  Assert<IsEqual<
+    Parse<'*files'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'wildcard', name: 'files' }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'*'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'wildcard' }]; search: undefined }
+  >>,
+
+  // enum
+  Assert<IsEqual<
+    Parse<'{a,b,c}'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'enum', members: ['a', 'b', 'c'] }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'{hello,world}'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'enum', members: ['hello', 'world'] }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'{only}'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'enum', members: ['only'] }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'{}'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'enum', members: [''] }]; search: undefined }
+  >>,
+
+  // optional
+  Assert<IsEqual<
+    Parse<'(hello)'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'optional', tokens: [{ type: 'text', value: 'hello' }] }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'(:id)'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'optional', tokens: [{ type: 'variable', name: 'id' }] }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'(users/:id)'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'optional', tokens: [{ type: 'text', value: 'users/' }, { type: 'variable', name: 'id' }] }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'api(/:version)'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'text', value: 'api' }, { type: 'optional', tokens: [{ type: 'text', value: '/' }, { type: 'variable', name: 'version' }] }]; search: undefined }
+  >>,
+
+  // escaping
+  Assert<IsEqual<
+    Parse<'\\:'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'text', value: ':' }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'\\*'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'text', value: '*' }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'\\('>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'text', value: '(' }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'\\{'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'text', value: '{' }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'\\\\'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'text', value: '\\' }]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'hello\\:world\\*test'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [{ type: 'text', value: 'hello:world*test' }]; search: undefined }
+  >>,
+
+  // complex combinations
+  Assert<IsEqual<
+    Parse<'api/v:version/users/:id(*rest.:format)'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [
+      { type: 'text', value: 'api/v' },
+      { type: 'variable', name: 'version' },
+      { type: 'text', value: '/users/' },
+      { type: 'variable', name: 'id' },
+      { type: 'optional', tokens: [ { type: 'wildcard', name: 'rest' }, { type: 'text', value: '.' }, { type: 'variable', name: 'format' } ] },
+    ]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'{json,xml}(/:version)'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [ { type: 'enum', members: ['json', 'xml'] }, { type: 'optional', tokens: [ { type: 'text', value: '/' }, { type: 'variable', name: 'version' } ] } ]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'/path/:id'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [ { type: 'text', value: 'path/' }, { type: 'variable', name: 'id' } ]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'/path/:id?q=1'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [ { type: 'text', value: 'path/' }, { type: 'variable', name: 'id' } ]; search: string }
+  >>,
+
+  // full URL patterns
+  Assert<IsEqual<
+    Parse<'https\\:'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [ { type: 'text', value: 'https:' } ]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<':protocol\\:'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [ { type: 'variable', name: 'protocol' }, { type: 'text', value: ':' } ]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'://example.com'>,
+    { protocol: undefined; hostname: [ { type: 'text', value: 'example.com' } ]; port: undefined; pathname: undefined; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'://:subdomain.example.com'>,
+    { protocol: undefined; hostname: [ { type: 'variable', name: 'subdomain' }, { type: 'text', value: '.example.com' } ]; port: undefined; pathname: undefined; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'https://example.com'>,
+    { protocol: [ { type: 'text', value: 'https' } ]; hostname: [ { type: 'text', value: 'example.com' } ]; port: undefined; pathname: undefined; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'://example.com:8080'>,
+    { protocol: undefined; hostname: [ { type: 'text', value: 'example.com' } ]; port: string; pathname: undefined; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'://*.example.com'>,
+    { protocol: undefined; hostname: [ { type: 'wildcard' }, { type: 'text', value: '.example.com' } ]; port: undefined; pathname: undefined; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'://example.com:8080/api/:id'>,
+    { protocol: undefined; hostname: [ { type: 'text', value: 'example.com' } ]; port: string; pathname: [ { type: 'text', value: 'api/' }, { type: 'variable', name: 'id' } ]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'https://example.com/api/:id'>,
+    { protocol: [ { type: 'text', value: 'https' } ]; hostname: [ { type: 'text', value: 'example.com' } ]; port: undefined; pathname: [ { type: 'text', value: 'api/' }, { type: 'variable', name: 'id' } ]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'search?q=:query'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [ { type: 'text', value: 'search' } ]; search: string }
+  >>,
+  Assert<IsEqual<
+    Parse<':protocol://:subdomain.example.com:8080/api/v:version/users/:id?format=json'>,
+    { protocol: [ { type: 'variable', name: 'protocol' } ]; hostname: [ { type: 'variable', name: 'subdomain' }, { type: 'text', value: '.example.com' } ]; port: string; pathname: [ { type: 'text', value: 'api/v' }, { type: 'variable', name: 'version' }, { type: 'text', value: '/users/' }, { type: 'variable', name: 'id' } ]; search: string }
+  >>,
+
+  // nested optionals (successful parses)
+  Assert<IsEqual<
+    Parse<'(nested(test))'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [ { type: 'optional', tokens: [ { type: 'text', value: 'nested' }, { type: 'optional', tokens: [ { type: 'text', value: 'test' } ] } ] } ]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'files(/*path(.:ext))'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [ { type: 'text', value: 'files' }, { type: 'optional', tokens: [ { type: 'text', value: '/' }, { type: 'wildcard', name: 'path' }, { type: 'optional', tokens: [ { type: 'text', value: '.' }, { type: 'variable', name: 'ext' } ] } ] } ]; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Parse<'files(/*(.:ext))'>,
+    { protocol: undefined; hostname: undefined; port: undefined; pathname: [ { type: 'text', value: 'files' }, { type: 'optional', tokens: [ { type: 'text', value: '/' }, { type: 'wildcard' }, { type: 'optional', tokens: [ { type: 'text', value: '.' }, { type: 'variable', name: 'ext' } ] } ] } ]; search: undefined }
+  >>,
+]

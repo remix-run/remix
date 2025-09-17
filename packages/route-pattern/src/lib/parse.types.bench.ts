@@ -1,10 +1,11 @@
 import { bench } from '@ark/attest'
+
 import type { Parse } from './parse.ts'
 
 // Simple benchmark: Basic route patterns with single features
 bench('Parse - Small', () => {
   return {} as Parse<'users/:id'>
-}).types([120, 'instantiations'])
+}).types([101, 'instantiations'])
 
 // Medium benchmark: Moderate complexity with combined features (~10 patterns)
 bench('Parse - Medium', () => {
@@ -20,7 +21,7 @@ bench('Parse - Medium', () => {
     | '(/:locale)/products/:category'
     | 'admin/{users,posts}/:id/edit'
   >
-}).types([16561, 'instantiations'])
+}).types([16074, 'instantiations'])
 
 // Large/Complex benchmark: 100 route patterns with various feature combinations
 bench('Parse - Large', () => {
@@ -142,4 +143,4 @@ bench('Parse - Large', () => {
     | 'https://api.example.com:8080/v:version/users/:id'
     | ':protocol://:subdomain.example.com:port/api/*path.:format'
   >
-}).types([195233, 'instantiations'])
+}).types([189294, 'instantiations'])
