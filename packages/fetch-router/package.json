@@ -42,7 +42,7 @@
     "esbuild": "^0.20.0"
   },
   "dependencies": {
-    "@remix-run/route-pattern": "workspace:^"
+    "@remix-run/route-pattern": "workspace:*"
   },
   "scripts": {
     "build:types": "tsc --project tsconfig.build.json",

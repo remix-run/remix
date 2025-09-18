@@ -2,19 +2,36 @@
 
 Work in progress router built on the Fetch API and [`route-pattern`](../route-pattern).
 
-## Routing
+## Building Routes
 
-Routes are defined in an array that determines the order in which they are tried, from first to last. Routes may be defined with a simple string or a `RoutePattern` for matching the incoming request's URL.
+Routes are built using the `createRoutes` function. The callback receives a "route builder" as its first argument and returns an array of routes. Routes will be tried in the same order they are defined.
 
-Route handlers are functions that receive a request `context` object and return a `Response` (sync) or a `Promise<Response>` (async).
+```tsx
+interface RouteHandler<T extends string = any> {
+  (requestContext: RequestContext<T>) => Response | Promise<Response>
+}
 
-Properties of the request `context` object include:
+interface Route {
+  methods: RouteMethod[]
+  pattern: RoutePattern
+  handler: RouteHandler
+}
+```
 
+At the core, a route has:
+
+- HTTP method(s)
+- A URL pattern
+- A request handler
+
+A route request handler (or "route handler") is a function that receives a `requestContext` object and returns a `Response` (sync) or a `Promise<Response>` (async).
+
+Properties of the `requestContext` object include:
+
+- `context` - the application context. This is a space for the application developer and middleware to store stuff
 - `request` - the incoming `Request` object
 - `params` - an object of `Params` that were parsed from the URL (from `route-pattern`'s `match.params` object)
 - `url` - the parsed request URL (an actual `URL` object, from `match.url`)
-- `set(key, value)` - sets a custom value in the request context
-- `get(key)` - retrieves a custom value from the request context
 
 ```tsx
 import { createRouter, createRoutes } from '@remix-run/fetch-router'
@@ -62,6 +79,9 @@ let router = createRouter({
 })
 
 let response = await router.fetch(new Request('https://remix.run/users/mj'))
+// Can also use a plain string or URL - anything you can use to init a new Request
+// let response = await router.fetch('https://remix.run/users/mj')
+// let response = await router.fetch(new URL('https://remix.run/users/mj'))
 ```
 
 The `route` argument passed to the `createRoutes` callback is a "route builder".

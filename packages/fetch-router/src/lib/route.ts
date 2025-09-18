@@ -1,16 +1,11 @@
 import { RoutePattern } from '@remix-run/route-pattern'
-import type { Params } from '@remix-run/route-pattern'
 
-export type RouteMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+import type { RequestContext } from './request-context.ts'
 
-export interface RouteHandler<T extends string> {
-  (arg: { request: Request; params: Params<T> }): Response | Promise<Response>
-}
+export type RouteMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
 
-export interface RouteOptions<M extends RouteMethod, T extends string> {
-  method?: M
-  pattern: T | RoutePattern<T>
-  handler: RouteHandler<T>
+export interface RouteHandler<T extends string = string> {
+  (ctx: RequestContext<T>): Response | Promise<Response>
 }
 
 export class Route<M extends RouteMethod, T extends string> {
@@ -18,16 +13,28 @@ export class Route<M extends RouteMethod, T extends string> {
   readonly pattern: RoutePattern<T>
   readonly handler: RouteHandler<T>
 
-  constructor(options: RouteOptions<M, T>) {
-    this.method = (options.method ?? 'GET') as M
-    this.pattern =
-      typeof options.pattern === 'string' ? new RoutePattern(options.pattern) : options.pattern
-    this.handler = options.handler
+  constructor(method: M, pattern: T | RoutePattern<T>, handler: RouteHandler<T>) {
+    this.method = method
+    this.pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
+    this.handler = handler
   }
 }
 
-export function createRoute<M extends RouteMethod, T extends string>(
-  options: RouteOptions<M, T>,
-): Route<M, T> {
-  return new Route(options)
+export interface RouteOptions {
+  method?: RouteMethod
+  pattern: string | RoutePattern<string>
+  handler: RouteHandler<string>
+}
+
+export function createRoute<M extends RouteMethod, T extends string>(options: {
+  method: M
+  pattern: T | RoutePattern<T>
+  handler: RouteHandler<T>
+}): Route<M, T>
+export function createRoute<T extends string>(options: {
+  pattern: T | RoutePattern<T>
+  handler: RouteHandler<T>
+}): Route<'GET', T>
+export function createRoute(options: RouteOptions): Route<RouteMethod, string> {
+  return new Route(options.method ?? 'GET', options.pattern, options.handler)
 }
