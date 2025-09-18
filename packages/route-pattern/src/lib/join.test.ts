@@ -37,15 +37,17 @@ describe('join', () => {
   })
 
   it('joins input with absolute pathname', () => {
-    assert.equal(join('/world', '/hello'), '/world/hello')
-    // ignore trailing slash on base
-    assert.equal(join('/world/', '/hello'), '/world/hello')
+    assert.equal(join('hello', '/world'), 'hello/world')
+    assert.equal(join('hello/', '/world'), 'hello/world')
+    assert.equal(join('/hello', '/world'), '/hello/world')
+    assert.equal(join('/hello/', '/world'), '/hello/world')
   })
 
   it('joins input with relative pathname', () => {
     assert.equal(join('hello', 'world'), 'hello/world')
-    // ignore trailing slash on base
     assert.equal(join('hello/', 'world'), 'hello/world')
+    assert.equal(join('/hello', 'world'), '/hello/world')
+    assert.equal(join('/hello/', 'world'), '/hello/world')
   })
 
   it('joins input with search params', () => {
@@ -80,12 +82,16 @@ export type Tests = [
   Assert<IsEqual<Join<'/', '/hello'>, '/hello'>>,
 
   // absolute pathname join
+  Assert<IsEqual<Join<'hello', '/world'>, 'hello/world'>>,
   Assert<IsEqual<Join<'/hello', '/world'>, '/hello/world'>>,
+  Assert<IsEqual<Join<'hello/', '/world'>, 'hello/world'>>,
   Assert<IsEqual<Join<'/hello/', '/world'>, '/hello/world'>>,
 
   // relative pathname join
   Assert<IsEqual<Join<'hello', 'world'>, 'hello/world'>>,
+  Assert<IsEqual<Join<'/hello', 'world'>, '/hello/world'>>,
   Assert<IsEqual<Join<'hello/', 'world'>, 'hello/world'>>,
+  Assert<IsEqual<Join<'/hello/', 'world'>, '/hello/world'>>,
 
   // search params
   Assert<IsEqual<Join<'https://remix.run', '?q=1'>, 'https://remix.run?q=1'>>,

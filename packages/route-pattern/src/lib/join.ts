@@ -25,7 +25,7 @@ export function join<B extends string, T extends string>(base: B, input: T): Joi
 
   // Determine whether to prefix with '/'
   let originPresent = protocol !== undefined || hostname !== undefined || port !== undefined
-  let leadingSlashWhenNoOrigin = base.startsWith('/') || input.startsWith('/')
+  let hasLeadingSlash = base.startsWith('/')
 
   // Build origin string
   let origin = ''
@@ -37,7 +37,7 @@ export function join<B extends string, T extends string>(base: B, input: T): Joi
   // Build path string
   let path = ''
   if (joinedPath && joinedPath.length > 0) {
-    if (originPresent || leadingSlashWhenNoOrigin) path = `/${joinedPath}`
+    if (originPresent || hasLeadingSlash) path = `/${joinedPath}`
     else path = joinedPath
   }
 
@@ -52,7 +52,7 @@ export function join<B extends string, T extends string>(base: B, input: T): Joi
 export type Join<B extends string, T extends string> =
   T extends '' ? B :
   B extends '' ? T :
-  _Join<Split<B>, Split<T>, HasLeadingSlash<B, T>>
+  _Join<Split<B>, Split<T>, HasLeadingSlash<B>>
 
 // prettier-ignore
 type _Join<B extends SplitResult, I extends SplitResult, LeadingSlash extends boolean> =
@@ -105,10 +105,7 @@ type JoinSearch<B, I> =
     I :
   B extends string ? B : undefined
 
-// Whether to force a leading slash when no origin
-// prettier-ignore
-type HasLeadingSlash<B extends string, T extends string> =
-  T extends `/${string}` ? true : B extends `/${string}` ? true : false
+type HasLeadingSlash<T extends string> = T extends `/${string}` ? true : false
 
 // Assemble final string
 // prettier-ignore
