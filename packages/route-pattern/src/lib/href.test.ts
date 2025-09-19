@@ -80,11 +80,11 @@ describe('href', () => {
 
   it('throws when required params are missing', () => {
     let href = createHrefBuilder()
-    // @ts-expect-error missing param keys
+    // @ts-expect-error missing required param
     assert.throws(() => href('products/:id', {}), new MissingParamError('id'))
-    // @ts-expect-error missing param keys
+    // @ts-expect-error missing named wildcard value
     assert.throws(() => href('products/*path', {}), new MissingParamError('path'))
-    // @ts-expect-error missing param keys
+    // @ts-expect-error missing unnamed wildcard value
     assert.throws(() => href('products/*', {}), new MissingParamError('*'))
   })
 

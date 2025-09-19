@@ -191,9 +191,9 @@ pattern.match('https://api.shopify.com/api/v2.1')
 
 ### Wildcards
 
-Wildcards match multi-segment dynamic content and are represented by an asterisk (`*`):
+Wildcards match multi-segment dynamic content and are represented by an asterisk (`*`).
 
-**Named Wildcards**: Capture the matched content as a parameter:
+**Named Wildcards** capture the matched content as a parameter:
 
 ```tsx
 let pattern = new RoutePattern('/*path/v:version')
@@ -201,7 +201,7 @@ let match = pattern.match('https://cdn.shopify.com/assets/themes/dawn/v2')
 // { params: { path: 'assets/themes/dawn', version: '2' } }
 ```
 
-**Anonymous Wildcards**: Match content without capturing it:
+**Unnamed Wildcards** match content without capturing it:
 
 ```tsx
 let pattern = new RoutePattern('docs/*.md')

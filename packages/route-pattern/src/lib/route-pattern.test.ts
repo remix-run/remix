@@ -71,30 +71,11 @@ describe('RoutePattern', () => {
         })
       })
 
-      it('extracts named parameters - required', () => {
-        let pattern = new RoutePattern('users/:id')
-        assert.deepEqual(pattern.match('https://example.com/users/123')?.params, { id: '123' })
-      })
-
       it('extracts parameters with complex names', () => {
         let pattern = new RoutePattern('users/:user_id/posts/:$post')
         assert.deepEqual(pattern.match('https://example.com/users/abc123/posts/def456')?.params, {
           user_id: 'abc123',
           $post: 'def456',
-        })
-      })
-
-      it('extracts named wildcards', () => {
-        let pattern = new RoutePattern('assets/*path')
-        assert.deepEqual(pattern.match('https://example.com/assets/images/logo.png')?.params, {
-          path: 'images/logo.png',
-        })
-      })
-
-      it('extracts named wildcards - required', () => {
-        let pattern = new RoutePattern('assets/*path')
-        assert.deepEqual(pattern.match('https://example.com/assets/images/logo.png')?.params, {
-          path: 'images/logo.png',
         })
       })
 
@@ -516,17 +497,27 @@ describe('RoutePattern', () => {
         let pattern = new RoutePattern('users/:id/posts')
         assert.deepEqual(pattern.match('https://example.com/users/123/456/posts'), null)
       })
+    })
 
+    describe('wildcards', () => {
       it('matches wildcards across segments', () => {
         let pattern = new RoutePattern('files/*path')
         assert.deepEqual(pattern.match('https://example.com/files/docs/readme.txt')?.params, {
           path: 'docs/readme.txt',
         })
       })
-    })
 
-    describe('wildcards', () => {
-      it('matches wildcard at the end of the pathname', () => {
+      it('matches named wildcard at the end of the pathname', () => {
+        let pattern = new RoutePattern('files/*path')
+        assert.deepEqual(pattern.match('https://example.com/files/docs/readme.txt')?.params, {
+          path: 'docs/readme.txt',
+        })
+        assert.deepEqual(pattern.match('https://example.com/files/')?.params, {
+          path: '',
+        })
+      })
+
+      it('matches unnamed wildcard at the end of the pathname', () => {
         let pattern = new RoutePattern('files/*')
         assert.deepEqual(pattern.match('https://example.com/files/readme.txt')?.params, {})
         assert.deepEqual(pattern.match('https://example.com/files/')?.params, {})
