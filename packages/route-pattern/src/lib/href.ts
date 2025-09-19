@@ -1,8 +1,8 @@
 import type { RequiredParams, OptionalParams } from './params.ts'
 import { parse } from './parse.ts'
 import type { Token, TokenList } from './parse.ts'
-import type { Variant } from './variant.ts'
 import type { RoutePattern } from './route-pattern.ts'
+import type { Variant } from './variant.ts'
 
 export class MissingParamError extends Error {
   readonly paramName: string
@@ -14,19 +14,9 @@ export class MissingParamError extends Error {
   }
 }
 
-type ParamValue = string | number | bigint | boolean
-type AnyParams = Record<string, ParamValue>
-
-export interface HrefBuilder<T extends string | RoutePattern<any> | undefined = undefined> {
-  // Accept a RoutePattern instance
-  <P extends T extends undefined ? string : SourceOf<T> | Variant<SourceOf<T>>>(
-    pattern: RoutePattern<P>,
-    ...args: HrefBuilderArgs<P>
-  ): string
-  // And accept a string pattern
-  // Also, make this the last signature so Parameters<HrefBuilder<...>> picks it
-  <P extends T extends undefined ? string : SourceOf<T> | Variant<SourceOf<T>>>(
-    pattern: P,
+export interface HrefBuilder<T extends string | RoutePattern = string> {
+  <P extends string extends T ? string : SourceOf<T> | Variant<SourceOf<T>>>(
+    pattern: P | RoutePattern<P>,
     ...args: HrefBuilderArgs<P>
   ): string
 }
@@ -34,7 +24,7 @@ export interface HrefBuilder<T extends string | RoutePattern<any> | undefined = 
 type SourceOf<T> = T extends string ? T : T extends RoutePattern<infer S extends string> ? S : never
 
 // prettier-ignore
-type HrefBuilderArgs<T extends string> =
+export type HrefBuilderArgs<T extends string> =
   [RequiredParams<T>] extends [never] ?
     [] | [null | undefined | AnyParams] | [null | undefined | AnyParams, HrefSearchParams] :
     [HrefParams<T>] | [HrefParams<T>, HrefSearchParams]
@@ -45,7 +35,10 @@ type HrefParams<T extends string> =
 
 type HrefSearchParams = NonNullable<ConstructorParameters<typeof URLSearchParams>[0]> | AnyParams
 
-interface HrefBuilderOptions {
+type ParamValue = string | number | bigint | boolean
+type AnyParams = Record<string, ParamValue>
+
+export interface HrefBuilderOptions {
   /**
    * The default protocol to use when the pattern doesn't specify one.
    * Defaults to `https`.
@@ -58,10 +51,10 @@ interface HrefBuilderOptions {
   host?: string
 }
 
-export function createHrefBuilder<T extends string | RoutePattern<any> = string>(
+export function createHrefBuilder<T extends string | RoutePattern = string>(
   options: HrefBuilderOptions = {},
 ): HrefBuilder<T> {
-  return (pattern: string | RoutePattern<any>, ...args: any) => {
+  return (pattern: string | RoutePattern, ...args: any) => {
     let params = args[0] ?? {}
     let searchParams = args[1]
     let parsed = parse(typeof pattern === 'string' ? pattern : pattern.source)

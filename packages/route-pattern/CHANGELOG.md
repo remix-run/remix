@@ -15,8 +15,8 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   pattern.source // 'https://remix.run/api/users/:id
   ```
 
-- Expose `RouteMatch` as public API, i.e. `import { RouteMatch } from '@remix-run/route-pattern'` works now
-- Fix type tests when using `Parameters<HrefBuilder<...>>` to always be deterministic and use a `string` argument as the 1st arg
+- Expose `HrefBuilderArgs` and `HrefBuilderOptions` types as public API
+- Expose `RouteMatch` type as public API
 
 ## v0.11.0 (2025-09-11)
 

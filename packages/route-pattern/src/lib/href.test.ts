@@ -39,6 +39,7 @@ describe('href', () => {
 
   it('fills in params', () => {
     let href = createHrefBuilder({ host: 'remix.run' })
+
     assert.equal(href('products/:id', { id: '1' }), 'https://remix.run/products/1')
     assert.equal(href('products/:id', { id: 1 }), 'https://remix.run/products/1')
 
@@ -129,18 +130,3 @@ describe('href', () => {
     )
   })
 })
-
-// prettier-ignore
-export type Tests = [
-  // First arg type with string generic
-  Assert<IsEqual<
-    Parameters<HrefBuilder<'/products(/:id)'>>[0],
-    '/products(/:id)' | '/products' | '/products/:id'
-  >>,
-
-  // First arg type when generic is derived from RoutePattern
-  Assert<IsEqual<
-    Parameters<HrefBuilder<RoutePattern<'/products(/:id)'>>>[0],
-    '/products(/:id)' | '/products' | '/products/:id'
-  >>,
-]

@@ -14,7 +14,7 @@ export interface RoutePatternOptions {
 /**
  * A pattern for matching URLs.
  */
-export class RoutePattern<T extends string> {
+export class RoutePattern<T extends string = string> {
   /**
    * The source string that was used to create this pattern.
    */
@@ -78,11 +78,7 @@ export class RoutePattern<T extends string> {
     if (typeof url === 'string') url = new URL(url)
 
     let pathname = this.ignoreCase ? url.pathname.toLowerCase() : url.pathname
-    let match = this.#matcher.exec(
-      this.#matchOrigin
-        ? `${url.protocol.slice(0, -1)}://${url.hostname}${url.port ? `:${url.port}` : ''}${pathname}`
-        : pathname,
-    )
+    let match = this.#matcher.exec(this.#matchOrigin ? `${url.origin}${pathname}` : pathname)
     if (match === null) return null
 
     // Map positional capture groups to parameter names in source order
