@@ -1,52 +1,38 @@
-import {
-  isRouteStub,
-  type RouteDef,
-  type RouteMethod,
-  type RouteSchema,
-  type RouteStub,
-} from './route-schema.ts'
-import type { RouteHandler } from './route-handler.ts'
-import type { RoutePatterns } from './route-patterns.ts'
+import { RoutePattern } from '@remix-run/route-pattern'
 
-export type RouteHandlers<S extends RouteSchema> = {
-  [K in keyof S]: HandlerForRouteDef<S[K]>
-}
+import { AppContext } from './app-context.ts'
+import type { Middleware } from './middleware.ts'
+import type { RouteHandlers, RouteHandler } from './route-handlers.ts'
+import { isRouteStub } from './route-schema.ts'
+import type { RequestMethod, RouteSchema } from './route-schema.ts'
 
-// prettier-ignore
-export type HandlerForRouteDef<T extends RouteDef> =
-  T extends string ? RouteHandler<T> :
-  T extends RoutePattern<infer P extends string> ? HandlerForRouteDef<P> :
-  T extends RouteStub<infer P extends string> ? HandlerForRouteDef<P> :
-  T extends RouteSchema ?
-    // If T is the bare RouteSchema, exclude to avoid recursion and union widening
-    [RouteSchema] extends [T] ? never :
-    RouteHandlers<T> :
-  never
-
-export class Route<M extends RouteMethod = RouteMethod, T extends string = string> {
+export class Route<M extends RequestMethod = RequestMethod, T extends string = string> {
   readonly method: M
   readonly pattern: RoutePattern<T>
+  readonly middleware: Middleware[]
   readonly handler: RouteHandler<T>
 
-  constructor(method: M, pattern: T | RoutePattern<T>, handler: RouteHandler<T>) {
+  constructor(
+    method: M,
+    pattern: T | RoutePattern<T>,
+    handler: RouteHandler<T>,
+    middleware: Middleware[] = [],
+  ) {
     this.method = method
     this.pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
+    this.middleware = middleware
     this.handler = handler
   }
 }
 
-export class Router<S extends RouteSchema> {
-  readonly schema: RouteSchema
+const RequestMethods = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] as const
 
-  #routes: {
-    GET: Route<'GET', string>[]
-    HEAD: Route<'HEAD', string>[]
-    POST: Route<'POST', string>[]
-    PUT: Route<'PUT', string>[]
-    PATCH: Route<'PATCH', string>[]
-    DELETE: Route<'DELETE', string>[]
-    OPTIONS: Route<'OPTIONS', string>[]
-  } = {
+type RouteStorage = {
+  [M in RequestMethod]: Route<M, string>[]
+}
+
+export class Router<S extends RouteSchema> {
+  #routes: RouteStorage = {
     GET: [],
     HEAD: [],
     POST: [],
@@ -57,69 +43,61 @@ export class Router<S extends RouteSchema> {
   }
 
   constructor(schema: S, handlers: RouteHandlers<S>) {
-    this.schema = schema
     this.#createRoutes(schema, handlers)
   }
 
-  #createRoutes(schema: S, handlers: RouteHandlers<S>): void {
-    for (let [key, value] of Object.entries(schema)) {
-      if (typeof value === 'string') {
-        this.addRoute('GET', value, handlers[key])
-        this.addRoute('HEAD', value, handlers[key])
-        this.addRoute('POST', value, handlers[key])
-        this.addRoute('PUT', value, handlers[key])
-        this.addRoute('PATCH', value, handlers[key])
-        this.addRoute('DELETE', value, handlers[key])
-        this.addRoute('OPTIONS', value, handlers[key])
-      } else if (value instanceof RoutePattern) {
-        this.addRoute('GET', value, handlers[key])
-        this.addRoute('HEAD', value, handlers[key])
-        this.addRoute('POST', value, handlers[key])
-        this.addRoute('PUT', value, handlers[key])
-        this.addRoute('PATCH', value, handlers[key])
-        this.addRoute('DELETE', value, handlers[key])
-        this.addRoute('OPTIONS', value, handlers[key])
+  #createRoutes<T extends RouteSchema>(schema: T, handlers: RouteHandlers<T>): void {
+    for (let key in schema) {
+      let value = schema[key]
+      let handler = handlers[key]
+
+      if (typeof value === 'string' || value instanceof RoutePattern) {
+        this.addAnyRoute(value, handler)
       } else if (isRouteStub(value)) {
-        this.addRoute(value.method as RouteMethod, value.pattern as RoutePattern, handlers[key])
+        if (value.method == null) {
+          this.addAnyRoute(value.pattern, handler)
+        } else {
+          this.addRoute(value.method, value.pattern, handler)
+        }
       } else if (typeof value === 'object' && value != null) {
         // value is nested RouteSchema
-        this.#createRoutes(value as S, handlers[key] as any)
+        this.#createRoutes(value, handlers[key] as any)
       } else {
         throw new Error('Invalid route schema')
       }
     }
   }
 
-  addRoute<M extends RouteMethod, T extends string>(
+  addRoute<M extends RequestMethod, T extends string>(
     method: M,
     pattern: T | RoutePattern<T>,
     handler: RouteHandler<T>,
-  ): Route<M, T> {
-    let route = new Route(method, pattern, handler)
-    let routes = this.#routes[method] as Route<M, T>[]
-    routes.push(route)
-    return route
+  ): void {
+    this.#routes[method].push(new Route(method, pattern, handler))
   }
 
-  async fetch(request: string | URL | Request): Promise<Response> {
-    if (typeof request === 'string' || request instanceof URL) {
-      request = new Request(request)
+  addAnyRoute<T extends string>(pattern: T | RoutePattern<T>, handler: RouteHandler<T>): void {
+    for (let method of RequestMethods) {
+      this.addRoute(method, pattern, handler)
     }
+  }
 
-    let method = request.method.toUpperCase() as RouteMethod
+  async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+    let request =
+      typeof input === 'string' || input instanceof URL ? new Request(input, init) : input
 
-    if (!(method in this.#routes)) {
+    if (!(request.method in this.#routes)) {
       return new Response('Method Not Allowed', { status: 405 })
     }
 
     let url =
-      typeof request === 'string'
-        ? new URL(request)
-        : request instanceof URL
-          ? request
+      typeof input === 'string'
+        ? new URL(input)
+        : input instanceof URL
+          ? input
           : new URL(request.url)
 
-    let routes = this.#routes[method]
+    let routes = this.#routes[request.method as RequestMethod]
     let response: Response | undefined
     if (routes != null && routes.length > 0) {
       for (let route of routes) {
@@ -138,7 +116,7 @@ export class Router<S extends RouteSchema> {
     }
 
     if (response != null) {
-      if (method === 'HEAD') {
+      if (request.method === 'HEAD') {
         return new Response(null, response)
       }
 
@@ -155,48 +133,3 @@ export function createRouter<S extends RouteSchema>(
 ): Router<S> {
   return new Router(schema, handlers)
 }
-
-////////////////////////////////////////////////////////////////////////
-
-import { createHrefBuilder, RoutePattern } from '@remix-run/route-pattern'
-import { AppContext } from './app-context.ts'
-
-let routes = {
-  home: '/',
-  about: '/about',
-  products: {
-    index: '/products',
-    edit: new RoutePattern('/products/:id/edit'),
-  },
-  api: {
-    users: { method: 'GET', pattern: new RoutePattern('/api/users') },
-  },
-} as const
-
-type P = RoutePatterns<typeof routes>
-
-let href = createHrefBuilder<P>()
-
-href(routes.products.edit, { id: '1' })
-
-let router = createRouter(routes, {
-  home() {
-    return new Response('Home')
-  },
-  about() {
-    return new Response('About')
-  },
-  products: {
-    index() {
-      return new Response('Products')
-    },
-    edit({ params }) {
-      return new Response(`Edit ${params.id}`)
-    },
-  },
-  api: {
-    users({ params }) {
-      return new Response('Users')
-    },
-  },
-})

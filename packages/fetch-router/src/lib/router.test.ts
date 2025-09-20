@@ -3,28 +3,53 @@ import { describe, it } from 'node:test'
 
 import { createRouter } from './router.ts'
 
-describe('createRouter', () => {
-  it('creates a router', () => {
-    let router = createRouter({}, {})
-    assert.ok(router)
+describe('router.fetch()', () => {
+  it('handles a simple route', async () => {
+    let routes = {
+      home: '/',
+    } as const
+
+    let router = createRouter(routes, {
+      home() {
+        return new Response('Home')
+      },
+    })
+
+    let response = await router.fetch(new URL('https://remix.run'))
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Home')
   })
 
-  describe('router.fetch()', () => {
-    it('handles a simple route', async () => {
-      let routes = {
-        home: '/',
-      } as const
+  it('handles a route with a method', async () => {
+    let routes = {
+      comments: {
+        create: { method: 'POST', pattern: '/post/:id/comments' },
+      },
+    } as const
 
-      let router = createRouter(routes, {
-        home() {
-          return new Response('Home')
-        },
-      })
+    // function logger(context: any, next: any) {
+    //   console.log(`[${new Date()}] ${context.request.method} ${context.url}`)
+    //   return next()
+    // }
 
-      let response = await router.fetch(new Request('https://example.com/'))
+    let commentsRoutes = (await import('./comments-routes.ts')).default
 
-      assert.equal(response.status, 200)
-      assert.equal(await response.text(), 'Home')
+    let router = createRouter(routes, {
+      // use: [logger],
+      // comments: {
+      //   create({ params }) {
+      //     return new Response(`Created comment ${params.id}`)
+      //   },
+      // },
+      comments: commentsRoutes,
     })
+
+    let response = await router.fetch(
+      new Request('https://remix.run/post/1/comments', { method: 'POST' }),
+    )
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Created comment 1')
   })
 })
