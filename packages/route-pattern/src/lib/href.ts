@@ -93,36 +93,60 @@ export function createHrefBuilder<T extends string | RoutePattern = string>(
 }
 
 function resolveTokens(tokens: TokenList, params: Record<string, any>): string {
-  return tokens.map((token) => resolveToken(token, params)).join('')
+  let result = ''
+
+  for (let i = 0; i < tokens.length; i++) {
+    let token = tokens[i]
+    let nextToken = i === tokens.length - 2 ? tokens[i + 1] : undefined
+
+    // Check for the special case: text ending with "/" followed by a wildcard as the last token
+    if (token.type === 'text' && token.value.endsWith('/') && nextToken?.type === 'wildcard') {
+      // Split the text token: everything before the trailing slash + the trailing slash
+      let beforeSlash = token.value.slice(0, -1)
+      result += beforeSlash
+
+      // Handle the trailing slash + wildcard as optional
+      let wildcardName = nextToken.name ?? '*'
+      if (params[wildcardName] != null && params[wildcardName] !== '') {
+        result += '/' + String(params[wildcardName])
+      }
+
+      // Skip the next token since we handled it here
+      i++
+      continue
+    }
+
+    result += resolveToken(token, params)
+  }
+
+  return result
 }
 
 function resolveToken(token: Token, params: Record<string, any>): string {
-  switch (token.type) {
-    case 'variable':
-    case 'wildcard':
-      let name = token.name ?? '*'
+  if (token.type === 'variable' || token.type === 'wildcard') {
+    let name = token.name ?? '*'
 
-      if (params[name] == null) {
-        throw new MissingParamError(name)
-      }
+    if (params[name] == null) {
+      throw new MissingParamError(name)
+    }
 
-      return String(params[name])
-
-    case 'enum':
-      return token.members[0] // Use first member
-
-    case 'optional':
-      try {
-        return resolveTokens(token.tokens, params)
-      } catch (error) {
-        if (error instanceof MissingParamError) {
-          return '' // Missing required parameter, ok to skip since it's optional
-        }
-
-        throw error
-      }
-
-    case 'text':
-      return token.value
+    return String(params[name])
   }
+
+  if (token.type === 'enum') {
+    return token.members[0] // Use first member
+  }
+
+  if (token.type === 'optional') {
+    try {
+      return resolveTokens(token.tokens, params)
+    } catch (error) {
+      if (error instanceof MissingParamError) {
+        return '' // Missing required parameter, ok to skip since it's optional
+      }
+      throw error
+    }
+  }
+
+  return token.value
 }

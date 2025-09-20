@@ -34,12 +34,12 @@ export type Tests = [
   // Wildcards
   Assert<IsEqual<
     Params<'files/*'>,
-    { '*': string }
+    { '*': string | undefined }
   >>,
 
   Assert<IsEqual<
     Params<'files/*path'>,
-    { path: string }
+    { path: string | undefined }
   >>,
 
   Assert<IsEqual<

@@ -499,15 +499,9 @@ describe('RoutePattern', () => {
       })
     })
 
-    describe('wildcards', () => {
-      it('matches wildcards across segments', () => {
-        let pattern = new RoutePattern('files/*path')
-        assert.deepEqual(pattern.match('https://example.com/files/docs/readme.txt')?.params, {
-          path: 'docs/readme.txt',
-        })
-      })
-
-      it('matches named wildcard at the end of the pathname', () => {
+    // A "trailing wildcard" is a wildcard at the end of a pattern that immediately follows a slash
+    describe('trailing wildcards', () => {
+      it('matches named wildcard', () => {
         let pattern = new RoutePattern('files/*path')
         assert.deepEqual(pattern.match('https://example.com/files/docs/readme.txt')?.params, {
           path: 'docs/readme.txt',
@@ -515,17 +509,16 @@ describe('RoutePattern', () => {
         assert.deepEqual(pattern.match('https://example.com/files/')?.params, {
           path: '',
         })
+        assert.deepEqual(pattern.match('https://example.com/files')?.params, {
+          path: undefined,
+        })
       })
 
-      it('matches unnamed wildcard at the end of the pathname', () => {
+      it('matches unnamed wildcard', () => {
         let pattern = new RoutePattern('files/*')
         assert.deepEqual(pattern.match('https://example.com/files/readme.txt')?.params, {})
         assert.deepEqual(pattern.match('https://example.com/files/')?.params, {})
-      })
-
-      it('does not match wildcard at the end of the pathname when there is no trailing slash', () => {
-        let pattern = new RoutePattern('files/*')
-        assert.deepEqual(pattern.match('https://example.com/files'), null)
+        assert.deepEqual(pattern.match('https://example.com/files')?.params, {})
       })
     })
 

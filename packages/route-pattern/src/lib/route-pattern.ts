@@ -143,25 +143,53 @@ function tokensToRegExpSource(
   paramNames: string[],
   forceLowerCase: boolean,
 ): string {
-  return tokens
-    .map((token): string => {
-      switch (token.type) {
-        case 'variable':
-          paramNames.push(token.name)
-          return `(${paramRegExp.source})`
-        case 'wildcard':
-          if (!token.name) return `(?:.*)`
-          paramNames.push(token.name)
-          return `(.*)`
-        case 'enum':
-          return `(?:${token.members.map((member) => regexpEscape(forceLowerCase ? member.toLowerCase() : member)).join('|')})`
-        case 'text':
-          return regexpEscape(forceLowerCase ? token.value.toLowerCase() : token.value)
-        case 'optional':
-          return `(?:${tokensToRegExpSource(token.tokens, paramRegExp, paramNames, forceLowerCase)})?`
+  let result = ''
+
+  for (let i = 0; i < tokens.length; i++) {
+    let token = tokens[i]
+    let nextToken = i === tokens.length - 2 ? tokens[i + 1] : undefined
+
+    // Check for the special case: text ending with "/" followed by a wildcard as the last token
+    if (token.type === 'text' && token.value.endsWith('/') && nextToken?.type === 'wildcard') {
+      // Split the text token: everything before the trailing slash + the trailing slash
+      let beforeSlash = token.value.slice(0, -1)
+      let textPart = regexpEscape(forceLowerCase ? beforeSlash.toLowerCase() : beforeSlash)
+
+      // Handle the trailing slash + wildcard as optional
+      if (nextToken.name) {
+        // Named wildcard: make the slash and capture group optional
+        paramNames.push(nextToken.name)
+        result += textPart + `(?:/(.*))?`
+      } else {
+        // Unnamed wildcard: make the slash and non-capturing group optional
+        result += textPart + `(?:/.*)?`
       }
-    })
-    .join('')
+
+      // Skip the next token since we handled it here
+      i++
+      continue
+    }
+
+    if (token.type === 'variable') {
+      paramNames.push(token.name)
+      result += `(${paramRegExp.source})`
+    } else if (token.type === 'wildcard') {
+      if (!token.name) {
+        result += `(?:.*)`
+      } else {
+        paramNames.push(token.name)
+        result += `(.*)`
+      }
+    } else if (token.type === 'enum') {
+      result += `(?:${token.members.map((member) => regexpEscape(forceLowerCase ? member.toLowerCase() : member)).join('|')})`
+    } else if (token.type === 'text') {
+      result += regexpEscape(forceLowerCase ? token.value.toLowerCase() : token.value)
+    } else if (token.type === 'optional') {
+      result += `(?:${tokensToRegExpSource(token.tokens, paramRegExp, paramNames, forceLowerCase)})?`
+    }
+  }
+
+  return result
 }
 
 function regexpEscape(text: string): string {

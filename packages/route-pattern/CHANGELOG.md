@@ -4,6 +4,22 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 ## HEAD
 
+- Wildcards at the end of a pattern that immediately follow a slash make that slash optional
+
+  ```tsx
+  import { RoutePattern } from '@remix-run/route-pattern'
+
+  let pattern = new RoutePattern('/files/*')
+  // before
+  pattern.match('https://remix.run/files') // null
+  // after
+  pattern.match('https://remix.run/files') // match!
+
+  // href generation works too!
+  href(pattern, { '*': undefined }) // /files
+  href(pattern) // /files - "*" param is not required
+  ```
+
 - Add `pattern.join(input, options)`, which allows a pattern to be built relative
   to another pattern
 

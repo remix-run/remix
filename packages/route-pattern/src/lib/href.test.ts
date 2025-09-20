@@ -76,12 +76,29 @@ describe('href', () => {
 
   it('throws when required params are missing', () => {
     let href = createHrefBuilder()
-    // @ts-expect-error missing required param
+    // @ts-expect-error missing required "id" param
     assert.throws(() => href('products/:id', {}), new MissingParamError('id'))
-    // @ts-expect-error missing named wildcard value
-    assert.throws(() => href('products/*path', {}), new MissingParamError('path'))
-    // @ts-expect-error missing unnamed wildcard value
-    assert.throws(() => href('products/*', {}), new MissingParamError('*'))
+    // @ts-expect-error missing required "category" param
+    assert.throws(() => href('*category/products', {}), new MissingParamError('category'))
+  })
+
+  // A "trailing wildcard" is a wildcard at the end of a pattern that immediately follows a slash
+  describe('trailing wildcards', () => {
+    it('does not throw when param is missing', () => {
+      let href = createHrefBuilder()
+      assert.equal(href('products/*path', {}), '/products')
+      assert.equal(href('products/:id/*path', { id: '1' }), '/products/1')
+      assert.equal(href('products/*', {}), '/products')
+      assert.equal(href('products/:id/*', { id: '1' }), '/products/1')
+    })
+
+    it('omits the trailing slash when param is empty string', () => {
+      let href = createHrefBuilder()
+      assert.equal(href('products/*path', { path: '' }), '/products')
+      assert.equal(href('products/:id/*path', { id: '1', path: '' }), '/products/1')
+      assert.equal(href('products/*', { '*': '' }), '/products')
+      assert.equal(href('products/:id/*', { id: '1', '*': '' }), '/products/1')
+    })
   })
 
   it('fills in search params', () => {
