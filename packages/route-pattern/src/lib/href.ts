@@ -66,24 +66,15 @@ export function createHrefBuilder<T extends string | RoutePattern = string>(
     // If we have a hostname to work with we can make a full URL. Otherwise we can only make an
     // absolute path.
     if (parsed.hostname || options.host) {
-      if (parsed.protocol) {
-        href += resolveTokens(parsed.protocol, params)
-      } else if (options.protocol) {
-        href += options.protocol.replace(/:$/, '')
-      } else {
-        href += 'https'
-      }
+      let protocol = parsed.protocol
+        ? resolveTokens(parsed.protocol, params)
+        : (options.protocol?.replace(/:$/, '') ?? 'https')
 
-      href += '://'
+      let host = parsed.hostname
+        ? resolveTokens(parsed.hostname, params) + (parsed.port ? `:${parsed.port}` : '')
+        : options.host
 
-      if (parsed.hostname) {
-        href += resolveTokens(parsed.hostname, params)
-        if (parsed.port) {
-          href += `:${parsed.port}`
-        }
-      } else {
-        href += options.host
-      }
+      href += `${protocol}://${host}`
     }
 
     if (parsed.pathname) {
@@ -94,7 +85,7 @@ export function createHrefBuilder<T extends string | RoutePattern = string>(
     }
 
     if (searchParams || parsed.search) {
-      href += `?${new URLSearchParams(searchParams ?? parsed.search).toString()}`
+      href += `?${new URLSearchParams(searchParams ?? parsed.search)}`
     }
 
     return href

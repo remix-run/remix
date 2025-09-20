@@ -196,9 +196,9 @@ export function parseSearch(search: string): {
 } {
   if (search.startsWith('?')) search = search.slice(1)
 
-  let namesWithoutAssignment = new Set<string>()
-  let namesWithAssignment = new Set<string>()
-  let valuesByKey = new Map<string, Set<string>>()
+  let namesWithoutAssignment = new Set<string>(),
+    namesWithAssignment = new Set<string>(),
+    valuesByKey = new Map<string, Set<string>>()
 
   if (search.length > 0) {
     for (let part of search.split('&')) {
@@ -214,11 +214,8 @@ export function parseSearch(search: string): {
       let valuePart = part.slice(eqIndex + 1)
       namesWithAssignment.add(name)
       let value = decodeSearchComponent(valuePart)
-      let set = valuesByKey.get(name)
-      if (!set) {
-        set = new Set<string>()
-        valuesByKey.set(name, set)
-      }
+      let set = valuesByKey.get(name) ?? new Set<string>()
+      if (!valuesByKey.has(name)) valuesByKey.set(name, set)
       set.add(value)
     }
   }

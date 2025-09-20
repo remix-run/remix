@@ -28,24 +28,27 @@ export function join<B extends string, T extends string>(base: B, input: T): Joi
   let hasLeadingSlash = base.startsWith('/')
 
   // Build origin string
-  let origin = ''
-  if (protocol !== undefined) origin = `${protocol}://`
-  else if (hostname !== undefined || port !== undefined) origin = '://'
+  let origin =
+    protocol !== undefined
+      ? `${protocol}://`
+      : hostname !== undefined || port !== undefined
+        ? '://'
+        : ''
   if (hostname !== undefined) origin += hostname
   if (port !== undefined) origin += `:${port}`
 
   // Build path string
-  let path = ''
-  if (joinedPath && joinedPath.length > 0) {
-    if (originPresent || hasLeadingSlash) path = `/${joinedPath}`
-    else path = joinedPath
-  }
+  let path =
+    joinedPath && joinedPath.length > 0
+      ? originPresent || hasLeadingSlash
+        ? `/${joinedPath}`
+        : joinedPath
+      : ''
 
   // Search resolution: append input to base with '&'
   let search = i.search ? (b.search ? `${b.search}&${i.search}` : i.search) : b.search
-  let query = search ? `?${search}` : ''
 
-  return `${origin}${path}${query}` as Join<B, T>
+  return `${origin}${path}${search ? `?${search}` : ''}` as Join<B, T>
 }
 
 // prettier-ignore

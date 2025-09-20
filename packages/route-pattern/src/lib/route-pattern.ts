@@ -144,33 +144,26 @@ function tokensToRegExpSource(
   paramRegExp: RegExp,
   paramNames: string[],
   forceLowerCase: boolean,
-) {
-  let source: string = tokens
-    .map((token) => {
-      if (token.type === 'variable') {
-        paramNames.push(token.name)
-        return `(${paramRegExp.source})`
+): string {
+  return tokens
+    .map((token): string => {
+      switch (token.type) {
+        case 'variable':
+          paramNames.push(token.name)
+          return `(${paramRegExp.source})`
+        case 'wildcard':
+          if (!token.name) return `(?:.*)`
+          paramNames.push(token.name)
+          return `(.*)`
+        case 'enum':
+          return `(?:${token.members.map((member) => regexpEscape(forceLowerCase ? member.toLowerCase() : member)).join('|')})`
+        case 'text':
+          return regexpEscape(forceLowerCase ? token.value.toLowerCase() : token.value)
+        case 'optional':
+          return `(?:${tokensToRegExpSource(token.tokens, paramRegExp, paramNames, forceLowerCase)})?`
       }
-      if (token.type === 'wildcard') {
-        if (!token.name) return `(?:.*)`
-        paramNames.push(token.name)
-        return `(.*)`
-      }
-      if (token.type === 'enum') {
-        return `(?:${token.members.map((member) => regexpEscape(forceLowerCase ? member.toLowerCase() : member)).join('|')})`
-      }
-      if (token.type === 'text') {
-        return regexpEscape(forceLowerCase ? token.value.toLowerCase() : token.value)
-      }
-
-      token satisfies Optional
-
-      // token.type === 'optional'
-      return `(?:${tokensToRegExpSource(token.tokens, paramRegExp, paramNames, forceLowerCase)})?`
     })
     .join('')
-
-  return source
 }
 
 function regexpEscape(text: string): string {
@@ -181,9 +174,9 @@ function matchSearch(search: string, constraints: SearchConstraints): boolean {
   let { namesWithoutAssignment, namesWithAssignment, valuesByKey } = parseSearch(search)
 
   for (let [key, constraint] of constraints) {
-    let hasAssigned = namesWithAssignment.has(key)
-    let hasBare = namesWithoutAssignment.has(key)
-    let values = valuesByKey.get(key)
+    let hasAssigned = namesWithAssignment.has(key),
+      hasBare = namesWithoutAssignment.has(key),
+      values = valuesByKey.get(key)
 
     if (constraint.requiredValues && constraint.requiredValues.size > 0) {
       if (!values) return false
