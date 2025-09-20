@@ -15,8 +15,8 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   pattern.source // 'https://remix.run/api/users/:id
   ```
 
-- Expose `HrefBuilderArgs` and `HrefBuilderOptions` types as public API
-- Expose `RouteMatch` type as public API
+- Expose `HrefBuilderOptions` and `RouteMatch` types as public API
+- Allow `null` and `undefined` as values for optional params
 
 ## v0.11.0 (2025-09-11)
 

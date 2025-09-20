@@ -68,14 +68,10 @@ describe('href', () => {
     assert.equal(href('products(/:id)', null), 'https://remix.run/products')
   })
 
-  it('enforces type safety', () => {
+  it('requires a valid pattern', () => {
     let href = createHrefBuilder<'products(/:id)'>()
     // @ts-expect-error invalid pattern
     assert.equal(href('does-not-exist'), '/does-not-exist')
-    // @ts-expect-error null param value
-    assert.equal(href('products(/:id)', { id: null }), '/products')
-    // @ts-expect-error undefined param value
-    assert.equal(href('products(/:id)', { id: undefined }), '/products')
   })
 
   it('throws when required params are missing', () => {

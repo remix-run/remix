@@ -24,19 +24,21 @@ export interface HrefBuilder<T extends string | RoutePattern = string> {
 type SourceOf<T> = T extends string ? T : T extends RoutePattern<infer S extends string> ? S : never
 
 // prettier-ignore
-export type HrefBuilderArgs<T extends string> =
+type HrefBuilderArgs<T extends string> =
   [RequiredParams<T>] extends [never] ?
-    [] | [null | undefined | AnyParams] | [null | undefined | AnyParams, HrefSearchParams] :
+    [] | [null | undefined | Record<string, any>] | [null | undefined | Record<string, any>, HrefSearchParams] :
     [HrefParams<T>] | [HrefParams<T>, HrefSearchParams]
 
 // prettier-ignore
 type HrefParams<T extends string> =
-  Record<RequiredParams<T>, ParamValue> & Partial<Record<OptionalParams<T>, ParamValue>>
+  Record<RequiredParams<T>, ParamValue> &
+  Partial<Record<OptionalParams<T>, ParamValue | null | undefined>>
 
-type HrefSearchParams = NonNullable<ConstructorParameters<typeof URLSearchParams>[0]> | AnyParams
+type HrefSearchParams =
+  | NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
+  | Record<string, ParamValue>
 
 type ParamValue = string | number | bigint | boolean
-type AnyParams = Record<string, ParamValue>
 
 export interface HrefBuilderOptions {
   /**
@@ -99,42 +101,37 @@ export function createHrefBuilder<T extends string | RoutePattern = string>(
   }
 }
 
-function resolveTokens(tokens: TokenList, params: AnyParams): string {
+function resolveTokens(tokens: TokenList, params: Record<string, any>): string {
   return tokens.map((token) => resolveToken(token, params)).join('')
 }
 
-function resolveToken(token: Token, params: AnyParams): string {
-  if (token.type === 'variable') {
-    if (params[token.name] == null) {
-      throw new MissingParamError(token.name)
-    }
+function resolveToken(token: Token, params: Record<string, any>): string {
+  switch (token.type) {
+    case 'variable':
+    case 'wildcard':
+      let name = token.name ?? '*'
 
-    return String(params[token.name])
-  }
-  if (token.type === 'wildcard') {
-    let name = token.name ?? '*'
-
-    if (params[name] == null) {
-      throw new MissingParamError(name)
-    }
-
-    return String(params[name])
-  }
-  if (token.type === 'enum') {
-    return token.members[0] // Use first member
-  }
-  if (token.type === 'optional') {
-    try {
-      return resolveTokens(token.tokens, params)
-    } catch (error) {
-      if (error instanceof MissingParamError) {
-        return '' // Missing required parameter, ok to skip since it's optional
+      if (params[name] == null) {
+        throw new MissingParamError(name)
       }
 
-      throw error
-    }
-  }
+      return String(params[name])
 
-  // text
-  return token.value
+    case 'enum':
+      return token.members[0] // Use first member
+
+    case 'optional':
+      try {
+        return resolveTokens(token.tokens, params)
+      } catch (error) {
+        if (error instanceof MissingParamError) {
+          return '' // Missing required parameter, ok to skip since it's optional
+        }
+
+        throw error
+      }
+
+    case 'text':
+      return token.value
+  }
 }
