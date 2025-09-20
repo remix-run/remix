@@ -333,7 +333,16 @@ describe('parse', () => {
           { type: 'text', value: 'path/' },
           { type: 'variable', name: 'id' },
         ],
-        search: 'q=1',
+        search: new Map([
+          [
+            'q',
+            {
+              allowBare: false,
+              requireAssignment: true,
+              requiredValues: new Set(['1']),
+            },
+          ],
+        ]),
       })
     })
   })
@@ -447,7 +456,16 @@ describe('parse', () => {
         hostname: undefined,
         port: undefined,
         pathname: [{ type: 'text', value: 'search' }],
-        search: 'q=:query',
+        search: new Map([
+          [
+            'q',
+            {
+              allowBare: false,
+              requireAssignment: true,
+              requiredValues: new Set([':query']),
+            },
+          ],
+        ]),
       })
     })
 
@@ -467,7 +485,16 @@ describe('parse', () => {
             { type: 'text', value: '/users/' },
             { type: 'variable', name: 'id' },
           ],
-          search: 'format=json',
+          search: new Map([
+            [
+              'format',
+              {
+                allowBare: false,
+                requireAssignment: true,
+                requiredValues: new Set(['json']),
+              },
+            ],
+          ]),
         },
       )
     })

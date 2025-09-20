@@ -1,12 +1,12 @@
-import { split } from './split.ts'
+import { splitStrings } from './split.ts'
 import type { Split, SplitResult } from './split.ts'
 
 export function join<B extends string, T extends string>(base: B, input: T): Join<B, T> {
   if (input === '') return base as Join<B, T>
   if (base === '') return input as Join<B, T>
 
-  let b = split(base)
-  let i = split(input)
+  let b = splitStrings(base)
+  let i = splitStrings(input)
 
   // Origin resolution: any origin info in input overwrites base origin
   let hasOrigin = i.protocol != null || i.hostname != null || i.port != null
@@ -24,7 +24,6 @@ export function join<B extends string, T extends string>(base: B, input: T): Joi
   else joinedPath = basePath
 
   // Determine whether to prefix with '/'
-  let originPresent = protocol !== undefined || hostname !== undefined || port !== undefined
   let hasLeadingSlash = base.startsWith('/')
 
   // Build origin string
@@ -40,7 +39,7 @@ export function join<B extends string, T extends string>(base: B, input: T): Joi
   // Build path string
   let path =
     joinedPath && joinedPath.length > 0
-      ? originPresent || hasLeadingSlash
+      ? origin !== '' || hasLeadingSlash
         ? `/${joinedPath}`
         : joinedPath
       : ''

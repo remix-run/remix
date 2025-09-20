@@ -6,8 +6,8 @@ export class ParseError extends Error {
   position: number
   partName: string
 
-  constructor(message: string, source: string, position: number, partName: string) {
-    super(`${message}${partName ? ` in ${partName}` : ''}`)
+  constructor(description: string, partName: string, source: string, position: number) {
+    super(`${description} in ${partName}`)
     this.name = 'ParseError'
     this.source = source
     this.position = position
@@ -15,44 +15,37 @@ export class ParseError extends Error {
   }
 }
 
-export function parse<T extends string>(source: T): Parse<T> {
+export function parse<T extends string>(source: T) {
   let protocol: Array<Token> | undefined
   let hostname: Array<Token> | undefined
   let port: string | undefined
   let pathname: Array<Token> | undefined
-  let search: string | undefined
+  let search: SearchConstraints | undefined
 
-  let parts = split(source) as SplitResult
-  let start = 0
+  let ranges = split(source)
 
-  if (parts.protocol) {
-    start = source.indexOf(parts.protocol, start)
-    protocol = parsePart(source, start, parts.protocol.length, 'protocol')
-    start += parts.protocol.length
+  if (ranges.protocol) {
+    protocol = parsePart('protocol', source, ...ranges.protocol)
   }
-  if (parts.hostname) {
-    start = source.indexOf(parts.hostname, start)
-    hostname = parsePart(source, start, parts.hostname.length, 'hostname')
-    start += parts.hostname.length
+  if (ranges.hostname) {
+    hostname = parsePart('hostname', source, ...ranges.hostname)
   }
-  if (parts.port) {
-    port = parts.port
-    start = source.indexOf(parts.port, start) + parts.port.length
+  if (ranges.port) {
+    port = source.slice(...ranges.port)
   }
-  if (parts.pathname) {
-    start = source.indexOf(parts.pathname, start)
-    pathname = parsePart(source, start, parts.pathname.length, 'pathname')
+  if (ranges.pathname) {
+    pathname = parsePart('pathname', source, ...ranges.pathname)
   }
-  if (parts.search) {
-    search = parts.search
+  if (ranges.search) {
+    search = parseSearchConstraints(source.slice(...ranges.search))
   }
 
-  return { protocol, hostname, port, pathname, search } as Parse<T>
+  return { protocol, hostname, port, pathname, search }
 }
 
 const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
-function parsePart(source: string, start: number, length: number, partName: string) {
+function parsePart(partName: string, source: string, start: number, end: number) {
   let tokens: TokenList = []
   // Use a simple stack of token arrays: the top is where new tokens are appended.
   // The root of the stack is the `part` array. Each '(' pushes a new array; ')'
@@ -71,7 +64,6 @@ function parsePart(source: string, start: number, length: number, partName: stri
   }
 
   let i = start
-  let end = start + length
   while (i < end) {
     let char = source[i]
 
@@ -80,7 +72,7 @@ function parsePart(source: string, start: number, length: number, partName: stri
       i += 1
       let remaining = source.slice(i, end)
       let name = identifierMatcher.exec(remaining)?.[0]
-      if (!name) throw new ParseError('missing variable name', source, i, partName)
+      if (!name) throw new ParseError('missing variable name', partName, source, i)
       currentTokens().push({ type: 'variable', name })
       i += name.length
       continue
@@ -103,14 +95,14 @@ function parsePart(source: string, start: number, length: number, partName: stri
     // enum
     if (char === '{') {
       let close = source.indexOf('}', i)
-      if (close === -1 || close >= end) throw new ParseError('unmatched {', source, i, partName)
+      if (close === -1 || close >= end) throw new ParseError('unmatched {', partName, source, i)
       let members = source.slice(i + 1, close).split(',')
       currentTokens().push({ type: 'enum', members })
       i = close + 1
       continue
     }
     if (char === '}') {
-      throw new ParseError('unmatched }', source, i, partName)
+      throw new ParseError('unmatched }', partName, source, i)
     }
 
     // optional
@@ -121,7 +113,7 @@ function parsePart(source: string, start: number, length: number, partName: stri
       continue
     }
     if (char === ')') {
-      if (tokensStack.length === 1) throw new ParseError('unmatched )', source, i, partName)
+      if (tokensStack.length === 1) throw new ParseError('unmatched )', partName, source, i)
       let tokens = tokensStack.pop()!
       openIndexes.pop()
       currentTokens().push({ type: 'optional', tokens })
@@ -132,7 +124,7 @@ function parsePart(source: string, start: number, length: number, partName: stri
     // text
     if (char === '\\') {
       let next = source.at(i + 1)
-      if (!next || i + 1 >= end) throw new ParseError('dangling escape', source, i, partName)
+      if (!next || i + 1 >= end) throw new ParseError('dangling escape', partName, source, i)
       appendText(next)
       i += 2
       continue
@@ -144,7 +136,7 @@ function parsePart(source: string, start: number, length: number, partName: stri
 
   if (openIndexes.length > 0) {
     // Report the position of the earliest unmatched '('
-    throw new ParseError('unmatched (', source, openIndexes[0], partName)
+    throw new ParseError('unmatched (', partName, source, openIndexes[0])
   }
 
   return tokens

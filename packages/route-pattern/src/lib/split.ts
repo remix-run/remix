@@ -1,3 +1,87 @@
+type Range = [number, number] // [start (inclusive), end (exclusive)]
+
+/**
+ * Split a route pattern into protocol, hostname, port, pathname, and search
+ * ranges. Ranges are [start (inclusive), end (exclusive)].
+ */
+export function split<T extends string>(source: T) {
+  let protocol: Range | undefined
+  let hostname: Range | undefined
+  let port: Range | undefined
+  let pathname: Range | undefined
+  let search: Range | undefined
+
+  // search
+  let searchStart = source.indexOf('?')
+  if (searchStart !== -1) {
+    search = [searchStart + 1, source.length]
+    source = source.slice(0, searchStart) as T
+  }
+
+  let index = 0
+  let solidusIndex = source.indexOf('://')
+  if (solidusIndex !== -1) {
+    // protocol
+    if (solidusIndex !== 0) {
+      protocol = [0, solidusIndex]
+    }
+    index = solidusIndex + 3
+
+    // hostname + port
+    let hostEndIndex = source.indexOf('/', index)
+    if (hostEndIndex === -1) hostEndIndex = source.length
+
+    // detect port (numeric) at end of host segment
+    let colonIndex = source.lastIndexOf(':', hostEndIndex - 1)
+    if (colonIndex !== -1 && colonIndex >= index) {
+      // Ensure everything after the colon is digits
+      let isPort = true
+      for (let i = colonIndex + 1; i < hostEndIndex; i++) {
+        let char = source.charCodeAt(i)
+        if (char < 48 /* '0' */ || char > 57 /* '9' */) {
+          isPort = false
+          break
+        }
+      }
+
+      if (isPort && colonIndex + 1 < hostEndIndex) {
+        // hostname up to colon, port after colon
+        hostname = [index, colonIndex]
+        port = [colonIndex + 1, hostEndIndex]
+      } else {
+        hostname = [index, hostEndIndex]
+      }
+    } else {
+      hostname = [index, hostEndIndex]
+    }
+
+    index = hostEndIndex === source.length ? hostEndIndex : hostEndIndex + 1
+  }
+
+  // pathname
+  if (index !== source.length) {
+    if (source.charAt(index) === '/') {
+      index += 1
+    }
+
+    pathname = [index, source.length]
+  }
+
+  return { protocol, hostname, port, pathname, search }
+}
+
+export function splitStrings(source: string) {
+  let ranges = split(source)
+
+  return {
+    protocol: ranges.protocol ? source.slice(ranges.protocol[0], ranges.protocol[1]) : undefined,
+    hostname: ranges.hostname ? source.slice(ranges.hostname[0], ranges.hostname[1]) : undefined,
+    port: ranges.port ? source.slice(ranges.port[0], ranges.port[1]) : undefined,
+    pathname: ranges.pathname ? source.slice(ranges.pathname[0], ranges.pathname[1]) : undefined,
+    search: ranges.search ? source.slice(ranges.search[0], ranges.search[1]) : undefined,
+  }
+}
+
 export interface SplitResult {
   protocol: string | undefined
   hostname: string | undefined
@@ -48,59 +132,3 @@ type IsDigits<S extends string> =
     T extends '' ? true :
     IsDigits<T> :
   false
-
-export function split<T extends string>(source: T): Split<T> {
-  let protocol: string | undefined
-  let hostname: string | undefined
-  let port: string | undefined
-  let pathname: string | undefined
-  let search: string | undefined
-
-  // search
-  let searchStart = source.indexOf('?')
-  if (searchStart !== -1) {
-    search = source.slice(searchStart + 1, source.length)
-    source = source.slice(0, searchStart) as T
-  }
-
-  let index = 0
-  let solidus = source.indexOf('://')
-  if (solidus !== -1) {
-    // protocol
-    if (solidus !== 0) {
-      protocol = source.slice(0, solidus)
-    }
-    index = solidus + 3
-
-    // hostname + port
-    let hostEnd = source.indexOf('/', index)
-    if (hostEnd === -1) hostEnd = source.length
-
-    // detect port (numeric) at end of host segment
-    let host = source.slice(index, hostEnd)
-    let colonIndex = host.lastIndexOf(':')
-    if (colonIndex !== -1) {
-      let afterColon = host.slice(colonIndex + 1)
-      if (/^[0-9]+$/.test(afterColon)) {
-        // hostname up to colon, port after colon
-        hostname = source.slice(index, index + colonIndex)
-        port = source.slice(index + colonIndex + 1, hostEnd)
-      } else {
-        hostname = source.slice(index, hostEnd)
-      }
-    } else {
-      hostname = source.slice(index, hostEnd)
-    }
-    index = hostEnd === source.length ? hostEnd : hostEnd + 1
-  }
-
-  // pathname
-  if (index !== source.length) {
-    pathname = source.slice(index, source.length)
-    if (pathname.startsWith('/')) {
-      pathname = pathname.slice(1)
-    }
-  }
-
-  return { protocol, hostname, port, pathname, search } as Split<T>
-}

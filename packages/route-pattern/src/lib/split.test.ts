@@ -1,13 +1,13 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { split } from './split.ts'
-import type { Split } from './split.ts'
 import type { Assert, IsEqual } from '../type-utils.d.ts'
+import { splitStrings } from './split.ts'
+import type { Split } from './split.ts'
 
 describe('split', () => {
   it('parses empty string', () => {
-    assert.deepEqual(split(''), {
+    assert.deepEqual(splitStrings(''), {
       protocol: undefined,
       hostname: undefined,
       port: undefined,
@@ -18,7 +18,7 @@ describe('split', () => {
 
   it('parses complex URL', () => {
     assert.deepEqual(
-      split('http(s)://(*host.:sub.)remix.run:8080/products(/:id/v:version)/*?q=1'),
+      splitStrings('http(s)://(*host.:sub.)remix.run:8080/products(/:id/v:version)/*?q=1'),
       {
         protocol: 'http(s)',
         hostname: '(*host.:sub.)remix.run',
@@ -31,7 +31,7 @@ describe('split', () => {
 
   // protocol + ...
   it('parses protocol and hostname', () => {
-    assert.deepEqual(split('http://host.com'), {
+    assert.deepEqual(splitStrings('http://host.com'), {
       protocol: 'http',
       hostname: 'host.com',
       port: undefined,
@@ -41,7 +41,7 @@ describe('split', () => {
   })
 
   it('parses protocol and hostname with port', () => {
-    assert.deepEqual(split('http://host.com:8080'), {
+    assert.deepEqual(splitStrings('http://host.com:8080'), {
       protocol: 'http',
       hostname: 'host.com',
       port: '8080',
@@ -51,7 +51,7 @@ describe('split', () => {
   })
 
   it('parses protocol and hostname with pathname', () => {
-    assert.deepEqual(split('http://host.com/path/:id'), {
+    assert.deepEqual(splitStrings('http://host.com/path/:id'), {
       protocol: 'http',
       hostname: 'host.com',
       port: undefined,
@@ -61,7 +61,7 @@ describe('split', () => {
   })
 
   it('parses protocol and hostname with port and pathname', () => {
-    assert.deepEqual(split('http://host.com:8080/path/:id'), {
+    assert.deepEqual(splitStrings('http://host.com:8080/path/:id'), {
       protocol: 'http',
       hostname: 'host.com',
       port: '8080',
@@ -71,7 +71,7 @@ describe('split', () => {
   })
 
   it('parses protocol and hostname with search', () => {
-    assert.deepEqual(split('http://host.com?q=1'), {
+    assert.deepEqual(splitStrings('http://host.com?q=1'), {
       protocol: 'http',
       hostname: 'host.com',
       port: undefined,
@@ -81,7 +81,7 @@ describe('split', () => {
   })
 
   it('parses protocol and hostname with pathname and search', () => {
-    assert.deepEqual(split('http://host.com/path/:id?q=1'), {
+    assert.deepEqual(splitStrings('http://host.com/path/:id?q=1'), {
       protocol: 'http',
       hostname: 'host.com',
       port: undefined,
@@ -92,7 +92,7 @@ describe('split', () => {
 
   // hostname + ...
   it('parses hostname only', () => {
-    assert.deepEqual(split('://host.com'), {
+    assert.deepEqual(splitStrings('://host.com'), {
       protocol: undefined,
       hostname: 'host.com',
       port: undefined,
@@ -102,7 +102,7 @@ describe('split', () => {
   })
 
   it('parses hostname with port', () => {
-    assert.deepEqual(split('://host.com:3000'), {
+    assert.deepEqual(splitStrings('://host.com:3000'), {
       protocol: undefined,
       hostname: 'host.com',
       port: '3000',
@@ -112,7 +112,7 @@ describe('split', () => {
   })
 
   it('parses hostname with pathname', () => {
-    assert.deepEqual(split('://host.com/path/:id'), {
+    assert.deepEqual(splitStrings('://host.com/path/:id'), {
       protocol: undefined,
       hostname: 'host.com',
       port: undefined,
@@ -122,7 +122,7 @@ describe('split', () => {
   })
 
   it('parses hostname with port and pathname', () => {
-    assert.deepEqual(split('://host.com:3000/path/:id'), {
+    assert.deepEqual(splitStrings('://host.com:3000/path/:id'), {
       protocol: undefined,
       hostname: 'host.com',
       port: '3000',
@@ -132,7 +132,7 @@ describe('split', () => {
   })
 
   it('parses hostname with search', () => {
-    assert.deepEqual(split('://host.com?q=1'), {
+    assert.deepEqual(splitStrings('://host.com?q=1'), {
       protocol: undefined,
       hostname: 'host.com',
       port: undefined,
@@ -142,7 +142,7 @@ describe('split', () => {
   })
 
   it('parses hostname with pathname and search', () => {
-    assert.deepEqual(split('://host.com/path/:id?q=1'), {
+    assert.deepEqual(splitStrings('://host.com/path/:id?q=1'), {
       protocol: undefined,
       hostname: 'host.com',
       port: undefined,
@@ -153,7 +153,7 @@ describe('split', () => {
 
   // pathname + ...
   it('parses pathname only', () => {
-    assert.deepEqual(split('path/:id'), {
+    assert.deepEqual(splitStrings('path/:id'), {
       protocol: undefined,
       hostname: undefined,
       port: undefined,
@@ -163,7 +163,7 @@ describe('split', () => {
   })
 
   it('parses pathname with search', () => {
-    assert.deepEqual(split('path/:id?q=1'), {
+    assert.deepEqual(splitStrings('path/:id?q=1'), {
       protocol: undefined,
       hostname: undefined,
       port: undefined,
@@ -173,7 +173,7 @@ describe('split', () => {
   })
 
   it('parses pathname with leading slash', () => {
-    assert.deepEqual(split('/path/:id'), {
+    assert.deepEqual(splitStrings('/path/:id'), {
       protocol: undefined,
       hostname: undefined,
       port: undefined,
@@ -184,7 +184,7 @@ describe('split', () => {
 
   // search + ...
   it('parses search only', () => {
-    assert.deepEqual(split('?q=1'), {
+    assert.deepEqual(splitStrings('?q=1'), {
       protocol: undefined,
       hostname: undefined,
       port: undefined,
@@ -194,7 +194,7 @@ describe('split', () => {
   })
 
   it('parses pathname with leading slash and search', () => {
-    assert.deepEqual(split('/path/:id?q=1'), {
+    assert.deepEqual(splitStrings('/path/:id?q=1'), {
       protocol: undefined,
       hostname: undefined,
       port: undefined,

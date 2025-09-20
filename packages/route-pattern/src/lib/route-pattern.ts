@@ -2,7 +2,7 @@ import { join } from './join.ts'
 import type { Join } from './join.ts'
 import type { Params } from './params.ts'
 import { parse, parseSearch, parseSearchConstraints } from './parse.ts'
-import type { Optional, TokenList, SearchConstraints } from './parse.ts'
+import type { TokenList, SearchConstraints } from './parse.ts'
 
 export interface RoutePatternOptions {
   /**
@@ -27,7 +27,7 @@ export class RoutePattern<T extends string = string> {
   readonly #matcher: RegExp
   readonly #matchOrigin: boolean
   readonly #paramNames: Array<string>
-  readonly #searchConstraints: SearchConstraints | null
+  readonly #searchConstraints: SearchConstraints | undefined
 
   constructor(source: T | RoutePattern<T>, options?: RoutePatternOptions) {
     this.source = typeof source === 'string' ? source : source.source
@@ -62,9 +62,7 @@ export class RoutePattern<T extends string = string> {
     }
 
     if (search) {
-      this.#searchConstraints = parseSearchConstraints(search)
-    } else {
-      this.#searchConstraints = null
+      this.#searchConstraints = search
     }
   }
 
