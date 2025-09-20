@@ -47,20 +47,20 @@ const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
 function parsePart(partName: string, source: string, start: number, end: number) {
   let tokens: TokenList = []
+  let currentTokens = tokens
   // Use a simple stack of token arrays: the top is where new tokens are appended.
   // The root of the stack is the `part` array. Each '(' pushes a new array; ')'
   // pops and wraps it in an optional token which is appended to the new top.
   let tokensStack: Array<Array<Token>> = [tokens]
   let openIndexes: Array<number> = []
-  let currentTokens = () => tokensStack[tokensStack.length - 1]
 
   let appendText = (text: string) => {
-    let last = currentTokens().at(-1)
-    if (last?.type !== 'text') {
-      currentTokens().push({ type: 'text', value: text })
+    let lastToken = currentTokens.at(-1)
+    if (lastToken?.type !== 'text') {
+      currentTokens.push({ type: 'text', value: text })
       return
     }
-    last.value += text
+    lastToken.value += text
   }
 
   let i = start
@@ -73,7 +73,7 @@ function parsePart(partName: string, source: string, start: number, end: number)
       let remaining = source.slice(i, end)
       let name = identifierMatcher.exec(remaining)?.[0]
       if (!name) throw new ParseError('missing variable name', partName, source, i)
-      currentTokens().push({ type: 'variable', name })
+      currentTokens.push({ type: 'variable', name })
       i += name.length
       continue
     }
@@ -84,10 +84,10 @@ function parsePart(partName: string, source: string, start: number, end: number)
       let remaining = source.slice(i, end)
       let name = identifierMatcher.exec(remaining)?.[0]
       if (name) {
-        currentTokens().push({ type: 'wildcard', name })
+        currentTokens.push({ type: 'wildcard', name })
         i += name.length
       } else {
-        currentTokens().push({ type: 'wildcard' })
+        currentTokens.push({ type: 'wildcard' })
       }
       continue
     }
@@ -97,7 +97,7 @@ function parsePart(partName: string, source: string, start: number, end: number)
       let close = source.indexOf('}', i)
       if (close === -1 || close >= end) throw new ParseError('unmatched {', partName, source, i)
       let members = source.slice(i + 1, close).split(',')
-      currentTokens().push({ type: 'enum', members })
+      currentTokens.push({ type: 'enum', members })
       i = close + 1
       continue
     }
@@ -108,6 +108,7 @@ function parsePart(partName: string, source: string, start: number, end: number)
     // optional
     if (char === '(') {
       tokensStack.push([])
+      currentTokens = tokensStack[tokensStack.length - 1]
       openIndexes.push(i)
       i += 1
       continue
@@ -115,8 +116,9 @@ function parsePart(partName: string, source: string, start: number, end: number)
     if (char === ')') {
       if (tokensStack.length === 1) throw new ParseError('unmatched )', partName, source, i)
       let tokens = tokensStack.pop()!
+      currentTokens = tokensStack[tokensStack.length - 1]
       openIndexes.pop()
-      currentTokens().push({ type: 'optional', tokens })
+      currentTokens.push({ type: 'optional', tokens })
       i += 1
       continue
     }
