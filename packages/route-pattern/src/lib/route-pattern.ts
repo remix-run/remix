@@ -222,3 +222,32 @@ function matchSearch(search: string, constraints: SearchConstraints): boolean {
 
   return true
 }
+/**
+ // Anative URLPattern for pathname-only patterns (variables, wildcards)
+ //eturns null if not supported or pattern uses enums or optionals or origin/search....
+ **/
+
+
+export function urlpat(input:string|RoutePattern):URLPattern|null{
+  let Ctor =(globalThis as any).URLPattern
+  if (!Ctor) return null;
+  let src=typeof input==='string' ? input:input.source
+  let {protocol,hostname,port,pathname,search}=parse(src)
+  if(protocol||hostname||port|| search) return null
+  if(!pathname) return new Ctor({pathname: '/'})
+  let path=token(pathname)
+  if (path==null) return null
+  if(!path.startsWith('/')) path='/'+path
+  return new Ctor({pathname: path})
+}
+function token(tokens: TokenList): string|null{
+  let o=''
+  for (let i=0;i<tokens.length;i++ ){
+    let t=tokens[i]
+    if (t.type==='text') o+=t.value
+    else if(t.type==='variable') o+=`:${t.name}`
+    else if (t.type==='wildcard') o+=t.name?`*${t.name}` : '*';
+    else return null;
+  }
+  return o;
+}
