@@ -1,6 +1,6 @@
 import type { RequiredParams, OptionalParams } from './params.ts'
 import { parse } from './parse.ts'
-import type { Token, TokenList } from './parse.ts'
+import type { Token } from './parse.ts'
 import type { RoutePattern } from './route-pattern.ts'
 import type { Variant } from './variant.ts'
 
@@ -67,18 +67,18 @@ export function createHrefBuilder<T extends string | RoutePattern = string>(
     // absolute path.
     if (parsed.hostname || options.host) {
       let protocol = parsed.protocol
-        ? resolveTokens(parsed.protocol, params)
+        ? resolveTokens(parsed.protocol, '', params)
         : (options.protocol?.replace(/:$/, '') ?? 'https')
 
       let host = parsed.hostname
-        ? resolveTokens(parsed.hostname, params) + (parsed.port ? `:${parsed.port}` : '')
+        ? resolveTokens(parsed.hostname, '.', params) + (parsed.port ? `:${parsed.port}` : '')
         : options.host
 
       href += `${protocol}://${host}`
     }
 
     if (parsed.pathname) {
-      let pathname = resolveTokens(parsed.pathname, params)
+      let pathname = resolveTokens(parsed.pathname, '/', params)
       href += pathname.startsWith('/') ? pathname : `/${pathname}`
     } else {
       href += '/'
@@ -92,23 +92,19 @@ export function createHrefBuilder<T extends string | RoutePattern = string>(
   }
 }
 
-function resolveTokens(tokens: TokenList, params: Record<string, any>): string {
+function resolveTokens(tokens: Token[], sep: string, params: Record<string, any>): string {
   let result = ''
 
   for (let i = 0; i < tokens.length; i++) {
     let token = tokens[i]
     let nextToken = i === tokens.length - 2 ? tokens[i + 1] : undefined
 
-    // Check for the special case: text ending with "/" followed by a wildcard as the last token
-    if (token.type === 'text' && token.value.endsWith('/') && nextToken?.type === 'wildcard') {
-      // Split the text token: everything before the trailing slash + the trailing slash
-      let beforeSlash = token.value.slice(0, -1)
-      result += beforeSlash
-
-      // Handle the trailing slash + wildcard as optional
+    // Check for the special case: separator followed by a wildcard as the last token
+    if (token.type === 'separator' && nextToken?.type === 'wildcard') {
+      // Handle the trailing separator + wildcard as optional
       let wildcardName = nextToken.name ?? '*'
       if (params[wildcardName] != null && params[wildcardName] !== '') {
-        result += '/' + String(params[wildcardName])
+        result += sep + String(params[wildcardName])
       }
 
       // Skip the next token since we handled it here
@@ -116,13 +112,13 @@ function resolveTokens(tokens: TokenList, params: Record<string, any>): string {
       continue
     }
 
-    result += resolveToken(token, params)
+    result += resolveToken(token, sep, params)
   }
 
   return result
 }
 
-function resolveToken(token: Token, params: Record<string, any>): string {
+function resolveToken(token: Token, sep: string, params: Record<string, any>): string {
   if (token.type === 'variable' || token.type === 'wildcard') {
     let name = token.name ?? '*'
 
@@ -137,9 +133,13 @@ function resolveToken(token: Token, params: Record<string, any>): string {
     return token.members[0] // Use first member
   }
 
+  if (token.type === 'separator') {
+    return sep
+  }
+
   if (token.type === 'optional') {
     try {
-      return resolveTokens(token.tokens, params)
+      return resolveTokens(token.tokens, sep, params)
     } catch (error) {
       if (error instanceof MissingParamError) {
         return '' // Missing required parameter, ok to skip since it's optional

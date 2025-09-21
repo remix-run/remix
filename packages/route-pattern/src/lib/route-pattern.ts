@@ -1,8 +1,8 @@
 import { join } from './join.ts'
 import type { Join } from './join.ts'
 import type { Params } from './params.ts'
-import { parse, parseSearch, parseSearchConstraints } from './parse.ts'
-import type { TokenList, SearchConstraints } from './parse.ts'
+import { parse, parseSearch } from './parse.ts'
+import type { Token, SearchConstraints } from './parse.ts'
 
 export interface RoutePatternOptions {
   /**
@@ -40,14 +40,14 @@ export class RoutePattern<T extends string = string> {
 
     if (this.#matchOrigin) {
       let protocolSource = protocol
-        ? tokensToRegExpSource(protocol, /.*/, this.#paramNames, true)
+        ? tokensToRegExpSource(protocol, '', /.*/, this.#paramNames, true)
         : `[^:]+`
       let hostnameSource = hostname
-        ? tokensToRegExpSource(hostname, /[^.]+?/, this.#paramNames, true)
+        ? tokensToRegExpSource(hostname, '.', /[^.]+?/, this.#paramNames, true)
         : `[^/:]+`
       let portSource = port !== undefined ? `:${regexpEscape(port)}` : `(?::[0-9]+)?`
       let pathnameSource = pathname
-        ? tokensToRegExpSource(pathname, /[^/]+?/, this.#paramNames, this.ignoreCase)
+        ? tokensToRegExpSource(pathname, '/', /[^/]+?/, this.#paramNames, this.ignoreCase)
         : ''
 
       this.#matcher = new RegExp(
@@ -55,7 +55,7 @@ export class RoutePattern<T extends string = string> {
       )
     } else {
       let pathnameSource = pathname
-        ? tokensToRegExpSource(pathname, /[^/]+?/, this.#paramNames, this.ignoreCase)
+        ? tokensToRegExpSource(pathname, '/', /[^/]+?/, this.#paramNames, this.ignoreCase)
         : ''
 
       this.#matcher = new RegExp(`^/${pathnameSource}$`)
@@ -138,7 +138,8 @@ export interface RouteMatch<T extends string> {
 }
 
 function tokensToRegExpSource(
-  tokens: TokenList,
+  tokens: Token[],
+  sep: string,
   paramRegExp: RegExp,
   paramNames: string[],
   forceLowerCase: boolean,
@@ -149,20 +150,16 @@ function tokensToRegExpSource(
     let token = tokens[i]
     let nextToken = i === tokens.length - 2 ? tokens[i + 1] : undefined
 
-    // Check for the special case: text ending with "/" followed by a wildcard as the last token
-    if (token.type === 'text' && token.value.endsWith('/') && nextToken?.type === 'wildcard') {
-      // Split the text token: everything before the trailing slash + the trailing slash
-      let beforeSlash = token.value.slice(0, -1)
-      let textPart = regexpEscape(forceLowerCase ? beforeSlash.toLowerCase() : beforeSlash)
-
-      // Handle the trailing slash + wildcard as optional
+    // Check for the special case: separator followed by a wildcard as the last token
+    if (token.type === 'separator' && nextToken?.type === 'wildcard') {
+      // Handle the trailing separator + wildcard as optional
       if (nextToken.name) {
-        // Named wildcard: make the slash and capture group optional
+        // Named wildcard: make the separator and capture group optional
         paramNames.push(nextToken.name)
-        result += textPart + `(?:/(.*))?`
+        result += `(?:${regexpEscape(sep)}(.*))?`
       } else {
-        // Unnamed wildcard: make the slash and non-capturing group optional
-        result += textPart + `(?:/.*)?`
+        // Unnamed wildcard: make the separator and non-capturing group optional
+        result += `(?:${regexpEscape(sep)}.*)?`
       }
 
       // Skip the next token since we handled it here
@@ -184,8 +181,10 @@ function tokensToRegExpSource(
       result += `(?:${token.members.map((member) => regexpEscape(forceLowerCase ? member.toLowerCase() : member)).join('|')})`
     } else if (token.type === 'text') {
       result += regexpEscape(forceLowerCase ? token.value.toLowerCase() : token.value)
+    } else if (token.type === 'separator') {
+      result += regexpEscape(sep)
     } else if (token.type === 'optional') {
-      result += `(?:${tokensToRegExpSource(token.tokens, paramRegExp, paramNames, forceLowerCase)})?`
+      result += `(?:${tokensToRegExpSource(token.tokens, sep, paramRegExp, paramNames, forceLowerCase)})?`
     }
   }
 

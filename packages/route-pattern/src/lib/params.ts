@@ -1,6 +1,4 @@
-import type { ParseResult, Parse, TokenList, Token, Optional } from './parse.ts'
-
-type Simplify<T> = T extends {} ? { [K in keyof T]: T[K] } : T
+import type { ParseResult, Parse, Token, Optional } from './parse.ts'
 
 /**
  * The parameters that are parsed when a pattern matches a URL.
@@ -8,6 +6,8 @@ type Simplify<T> = T extends {} ? { [K in keyof T]: T[K] } : T
 export type Params<T extends string> = Simplify<
   Record<RequiredParams<T>, string> & Record<OptionalParams<T>, string | undefined>
 >
+
+type Simplify<T> = T extends {} ? { [K in keyof T]: T[K] } : T
 
 // prettier-ignore
 export type RequiredParams<T extends string> =
@@ -18,8 +18,8 @@ export type RequiredParams<T extends string> =
   never
 
 // prettier-ignore
-type RequiredPartParams<T extends TokenList | undefined> =
-  T extends [infer Head extends Token, ...infer Tail extends TokenList] ?
+type RequiredPartParams<T extends Token[] | undefined> =
+  T extends [infer Head extends Token, ...infer Tail extends Token[]] ?
     Head extends Optional ? never | RequiredPartParams<Tail> :
     Head extends { type: 'variable' | 'wildcard', name: infer N extends string } ? 
       (IsTrailingWildcard<Head, Tail> extends true ? never : N) | RequiredPartParams<Tail> :
@@ -37,8 +37,8 @@ export type OptionalParams<T extends string> =
   never
 
 // prettier-ignore
-type OptionalPartParams<T extends TokenList | undefined, IsOptional extends boolean = false> =
-  T extends [infer Head extends Token, ...infer Tail extends TokenList] ?
+type OptionalPartParams<T extends Token[] | undefined, IsOptional extends boolean = false> =
+  T extends [infer Head extends Token, ...infer Tail extends Token[]] ?
     Head extends Optional ? OptionalPartParams<Head['tokens'], true> | OptionalPartParams<Tail, IsOptional> :
     Head extends { type: 'variable' | 'wildcard', name: infer N extends string } ? 
       (IsOptional extends true ? N | OptionalPartParams<Tail, true> : 
@@ -53,5 +53,5 @@ type OptionalPartParams<T extends TokenList | undefined, IsOptional extends bool
 
 // Helper type to detect trailing wildcards (wildcard as last token)
 // prettier-ignore
-type IsTrailingWildcard<Head extends Token, Tail extends TokenList> =
-  Head extends { type: 'wildcard' } ?  Tail extends [] ? true : false : false
+type IsTrailingWildcard<Head extends Token, Tail extends Token[]> =
+  Head extends { type: 'wildcard' } ? Tail extends [] ? true : false : false

@@ -85,5 +85,29 @@ export type Tests = [
   Assert<IsEqual<
     Variant<'files(/*(.:ext))'>,
     'files' | 'files/*' | 'files/*.:ext'
+  >>,
+
+  // should handle hostname patterns with dots
+  Assert<IsEqual<
+    Variant<'://api.example.com'>,
+    '://api.example.com'
+  >>,
+
+  // should handle hostname patterns with variables
+  Assert<IsEqual<
+    Variant<'://:subdomain.example.com'>,
+    '://:subdomain.example.com'
+  >>,
+
+  // should handle hostname patterns with optionals
+  Assert<IsEqual<
+    Variant<'://api(.staging).example.com'>,
+    '://api.example.com' | '://api.staging.example.com'
+  >>,
+
+  // should handle complex hostname patterns
+  Assert<IsEqual<
+    Variant<'://:env(.staging).example.com'>,
+    '://:env.example.com' | '://:env.staging.example.com'
   >>
 ]

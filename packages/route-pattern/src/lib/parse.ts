@@ -16,10 +16,10 @@ export class ParseError extends Error {
 }
 
 export function parse<T extends string>(source: T) {
-  let protocol: Array<Token> | undefined
-  let hostname: Array<Token> | undefined
+  let protocol: Token[] | undefined
+  let hostname: Token[] | undefined
   let port: string | undefined
-  let pathname: Array<Token> | undefined
+  let pathname: Token[] | undefined
   let search: SearchConstraints | undefined
 
   let ranges = split(source)
@@ -28,13 +28,13 @@ export function parse<T extends string>(source: T) {
     protocol = parsePart('protocol', source, ...ranges.protocol)
   }
   if (ranges.hostname) {
-    hostname = parsePart('hostname', source, ...ranges.hostname)
+    hostname = parsePart('hostname', source, ...ranges.hostname, '.')
   }
   if (ranges.port) {
     port = source.slice(...ranges.port)
   }
   if (ranges.pathname) {
-    pathname = parsePart('pathname', source, ...ranges.pathname)
+    pathname = parsePart('pathname', source, ...ranges.pathname, '/')
   }
   if (ranges.search) {
     search = parseSearchConstraints(source.slice(...ranges.search))
@@ -45,13 +45,19 @@ export function parse<T extends string>(source: T) {
 
 const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
-function parsePart(partName: string, source: string, start: number, end: number) {
-  let tokens: TokenList = []
+function parsePart(
+  partName: string,
+  source: string,
+  start: number,
+  end: number,
+  separatorChar?: string,
+) {
+  let tokens: Token[] = []
   let currentTokens = tokens
   // Use a simple stack of token arrays: the top is where new tokens are appended.
   // The root of the stack is the `part` array. Each '(' pushes a new array; ')'
   // pops and wraps it in an optional token which is appended to the new top.
-  let tokensStack: Array<Array<Token>> = [tokens]
+  let tokensStack: Array<Token[]> = [tokens]
   let openIndexes: Array<number> = []
 
   let appendText = (text: string) => {
@@ -66,6 +72,13 @@ function parsePart(partName: string, source: string, start: number, end: number)
   let i = start
   while (i < end) {
     let char = source[i]
+
+    // separator
+    if (char === separatorChar) {
+      currentTokens.push({ type: 'separator' })
+      i += 1
+      continue
+    }
 
     // variable
     if (char === ':') {
@@ -107,8 +120,7 @@ function parsePart(partName: string, source: string, start: number, end: number)
 
     // optional
     if (char === '(') {
-      tokensStack.push([])
-      currentTokens = tokensStack[tokensStack.length - 1]
+      tokensStack.push((currentTokens = []))
       openIndexes.push(i)
       i += 1
       continue
@@ -117,8 +129,8 @@ function parsePart(partName: string, source: string, start: number, end: number)
       if (tokensStack.length === 1) throw new ParseError('unmatched )', partName, source, i)
       let tokens = tokensStack.pop()!
       currentTokens = tokensStack[tokensStack.length - 1]
-      openIndexes.pop()
       currentTokens.push({ type: 'optional', tokens })
+      openIndexes.pop()
       i += 1
       continue
     }
@@ -238,10 +250,10 @@ export type Parse<T extends string> =
   T extends any ?
     Split<T> extends infer S extends SplitResult ?
       {
-        protocol: S['protocol'] extends string ? PartParse<S['protocol']> : undefined
-        hostname: S['hostname'] extends string ? PartParse<S['hostname']> : undefined
+        protocol: S['protocol'] extends string ? ParsePart<S['protocol']> : undefined
+        hostname: S['hostname'] extends string ? ParsePart<S['hostname'], '.'> : undefined
         port: S['port'] extends string ? string : undefined
-        pathname: S['pathname'] extends string ? PartParse<S['pathname']> : undefined
+        pathname: S['pathname'] extends string ? ParsePart<S['pathname'], '/'> : undefined
         search: S['search'] extends string ? string : undefined
       } :
       never :
@@ -251,54 +263,60 @@ export type Variable = { type: 'variable'; name: string }
 export type Wildcard = { type: 'wildcard'; name?: string }
 export type Enum = { type: 'enum'; members: readonly string[] }
 export type Text = { type: 'text'; value: string }
-export type Optional = { type: 'optional'; tokens: TokenList }
+export type Separator = { type: 'separator' }
+export type Optional = { type: 'optional'; tokens: Token[] }
 
-export type Token = Variable | Wildcard | Enum | Text | Optional
-export type TokenList = Array<Token>
+export type Token = Variable | Wildcard | Enum | Text | Separator | Optional
 
-type PartParseState = {
-  tokens: TokenList
-  optionals: Array<TokenList>
+type ParsePartState = {
+  tokens: Token[]
+  optionals: Array<Token[]>
   rest: string
 }
 
-type PartParse<T extends string> = _PartParse<{
-  tokens: []
-  optionals: []
-  rest: T
-}>
+type ParsePart<T extends string, Sep extends string = ''> = _ParsePart<
+  {
+    tokens: []
+    optionals: []
+    rest: T
+  },
+  Sep
+>
 
 // prettier-ignore
-type _PartParse<S extends PartParseState> =
+type _ParsePart<S extends ParsePartState, Sep extends string = ''> =
   S extends { rest: `${infer Head}${infer Tail}` } ?
+    Head extends Sep ? (
+      _ParsePart<AppendToken<S, { type: 'separator' }, Tail>, Sep>
+    ) :
     Head extends ':' ?
       IdentifierParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
-        (name extends '' ? never : _PartParse<AppendToken<S, { type: 'variable', name: name }, rest>>) :
+        (name extends '' ? never : _ParsePart<AppendToken<S, { type: 'variable', name: name }, rest>, Sep>) :
       never : // this should never happen
     Head extends '*' ?
       IdentifierParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
-        _PartParse<AppendToken<S, (name extends '' ? { type: 'wildcard' } : { type: 'wildcard', name: name }), rest>> :
+        _ParsePart<AppendToken<S, (name extends '' ? { type: 'wildcard' } : { type: 'wildcard', name: name }), rest>, Sep> :
       never : // this should never happen
     Head extends '{' ?
       Tail extends `${infer body}}${infer after}` ?
-        _PartParse<AppendToken<S, { type: 'enum', members: EnumSplit<body> }, after>> :
+        _ParsePart<AppendToken<S, { type: 'enum', members: EnumSplit<body> }, after>, Sep> :
       never : // unmatched `{`
     Head extends '}' ?
       never : // unmatched `}`
     Head extends '(' ?
-      _PartParse<PushOptional<S, Tail>> :
+      _ParsePart<PushOptional<S, Tail>, Sep> :
     Head extends ')' ?
-      PopOptional<S, Tail> extends infer next extends PartParseState ? _PartParse<next> : never : // unmatched `)` handled in PopOptional
+      PopOptional<S, Tail> extends infer next extends ParsePartState ? _ParsePart<next, Sep> : never : // unmatched `)` handled in PopOptional
     Head extends '\\' ?
-      Tail extends `${infer L}${infer R}` ? _PartParse<AppendText<S, L, R>> :
+      Tail extends `${infer L}${infer R}` ? _ParsePart<AppendText<S, L, R>, Sep> :
       never : // dangling escape
-    _PartParse<AppendText<S, Head, Tail>> :
+    _ParsePart<AppendText<S, Head, Tail>, Sep> :
   S['optionals'] extends [] ? S['tokens'] :
   never // unmatched `(`
 
 // prettier-ignore
-type AppendToken<S extends PartParseState, token extends Token, rest extends string> =
-  S['optionals'] extends [...infer O extends Array<Array<Token>>, infer Top extends Array<Token>] ?
+type AppendToken<S extends ParsePartState, token extends Token, rest extends string> =
+  S['optionals'] extends [...infer O extends Array<Token[]>, infer Top extends Token[]] ?
     {
       tokens: S['tokens']
       optionals: [...O, [...Top, token]]
@@ -311,8 +329,8 @@ type AppendToken<S extends PartParseState, token extends Token, rest extends str
     }
 
 // prettier-ignore
-type AppendText<S extends PartParseState, text extends string, rest extends string> =
-  S['optionals'] extends [...infer O extends Array<Array<Token>>, infer Top extends Array<Token>] ?
+type AppendText<S extends ParsePartState, text extends string, rest extends string> =
+  S['optionals'] extends [...infer O extends Array<Token[]>, infer Top extends Token[]] ?
     (
       Top extends [...infer Tokens extends Array<Token>, { type: 'text', value: infer value extends string }] ?
         { tokens: S['tokens']; optionals: [...O, [...Tokens, { type: 'text', value: `${value}${text}` }]]; rest: rest } :
@@ -326,7 +344,7 @@ type AppendText<S extends PartParseState, text extends string, rest extends stri
 
 // Optional stack helpers ---------------------------------------------------------------------------
 
-type PushOptional<S extends PartParseState, rest extends string> = {
+type PushOptional<S extends ParsePartState, rest extends string> = {
   tokens: S['tokens']
   optionals: [...S['optionals'], []]
   rest: rest
@@ -334,11 +352,11 @@ type PushOptional<S extends PartParseState, rest extends string> = {
 
 // If stack is empty -> unmatched ')', return never
 // Else pop and wrap tokens into an Optional token; append to parent or part
-type PopOptional<S extends PartParseState, R extends string> = S['optionals'] extends [
-  ...infer O extends Array<Array<Token>>,
+type PopOptional<S extends ParsePartState, R extends string> = S['optionals'] extends [
+  ...infer O extends Array<Token[]>,
   infer Top extends Array<Token>,
 ]
-  ? O extends [...infer OO extends Array<Array<Token>>, infer Parent extends Array<Token>]
+  ? O extends [...infer OO extends Array<Token[]>, infer Parent extends Token[]]
     ? {
         tokens: S['tokens']
         optionals: [...OO, [...Parent, { type: 'optional'; tokens: Top }]]
