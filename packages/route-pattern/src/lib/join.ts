@@ -5,131 +5,113 @@ export function join<B extends string, T extends string>(base: B, input: T): Joi
   if (input === '') return base as Join<B, T>
   if (base === '') return input as Join<B, T>
 
-  let b = splitStrings(base)
-  let i = splitStrings(input)
+  // Special case: joining '/' with '/' should result in '/'
+  if (base === '/' && input === '/') return '/' as Join<B, T>
 
-  // Origin resolution: any origin info in input overwrites base origin
-  let hasOrigin = i.protocol != null || i.hostname != null || i.port != null
-  let protocol = hasOrigin ? i.protocol : b.protocol
-  let hostname = hasOrigin ? i.hostname : b.hostname
-  let port = hasOrigin ? i.port : b.port
+  let a = splitStrings(base)
+  let b = splitStrings(input)
 
-  // Pathname resolution: concatenate base + input, ignoring trailing slash on base
-  let basePath = b.pathname as string | undefined
-  if (basePath && basePath.endsWith('/')) basePath = basePath.slice(0, -1)
-  let inputPath = i.pathname
-  let joinedPath: string | undefined
-  if (inputPath && basePath) joinedPath = `${basePath}/${inputPath}`
-  else if (inputPath) joinedPath = inputPath
-  else joinedPath = basePath
-
-  // Determine whether to prefix with '/'
-  let hasLeadingSlash = base.startsWith('/')
-
-  // Build origin string
   let origin =
-    protocol !== undefined
-      ? `${protocol}://`
-      : hostname !== undefined || port !== undefined
-        ? '://'
+    b.hostname != null
+      ? buildOrigin(b.protocol, b.hostname, b.port)
+      : a.hostname != null
+        ? buildOrigin(a.protocol, a.hostname, a.port)
         : ''
-  if (hostname !== undefined) origin += hostname
-  if (port !== undefined) origin += `:${port}`
 
-  // Build path string
-  let path =
-    joinedPath && joinedPath.length > 0
-      ? origin !== '' || hasLeadingSlash
-        ? `/${joinedPath}`
-        : joinedPath
-      : ''
+  let pathname =
+    b.pathname != null
+      ? a.pathname != null
+        ? `${a.pathname.replace(/\/$/, '')}/${b.pathname}`
+        : b.pathname
+      : (a.pathname ?? '')
 
-  // Search resolution: append input to base with '&'
-  let search = i.search ? (b.search ? `${b.search}&${i.search}` : i.search) : b.search
+  if (pathname !== '' && !pathname.startsWith('/') && (base.startsWith('/') || origin !== '')) {
+    pathname = `/${pathname}`
+  }
 
-  return `${origin}${path}${search ? `?${search}` : ''}` as Join<B, T>
+  let search =
+    b.search != null ? (a.search != null ? `${a.search}&${b.search}` : b.search) : (a.search ?? '')
+
+  if (search !== '' && !search.startsWith('?')) {
+    search = `?${search}`
+  }
+
+  return `${origin}${pathname}${search}` as Join<B, T>
+}
+
+function buildOrigin(
+  protocol: string | undefined,
+  hostname: string | undefined,
+  port: string | undefined,
+) {
+  return hostname == null ? '' : `${protocol ?? ''}://${hostname}${port != null ? `:${port}` : ''}`
 }
 
 // prettier-ignore
-export type Join<B extends string, T extends string> =
-  T extends '' ? B :
-  B extends '' ? T :
-  _Join<Split<B>, Split<T>, HasLeadingSlash<B>>
+export type Join<A extends string, B extends string> =
+  B extends '' ? A :
+  A extends '' ? B :
+  A extends '/' ? (B extends '/' ? '/' : _Join<Split<A>, Split<B>, HasLeadingSlash<A>>) :
+  _Join<Split<A>, Split<B>, HasLeadingSlash<A>>
 
 // prettier-ignore
-type _Join<B extends SplitResult, I extends SplitResult, LeadingSlash extends boolean> =
-  HasOrigin<I['protocol'], I['hostname'], I['port']> extends true ?
-    Build<
-      I['protocol'],
-      I['hostname'],
-      I['port'],
-      JoinPath<RemoveTrailingSlash<B['pathname']>, I['pathname']>,
-      JoinSearch<B['search'], I['search']>,
-      true,
-      LeadingSlash
-    > :
-    Build<
-      B['protocol'],
-      B['hostname'],
-      B['port'],
-      JoinPath<RemoveTrailingSlash<B['pathname']>, I['pathname']>,
-      JoinSearch<B['search'], I['search']>,
-      HasOrigin<B['protocol'], B['hostname'], B['port']>,
-      LeadingSlash
-    >
+type _Join<A extends SplitResult, B extends SplitResult, LeadingSlash extends boolean> =
+  BuildJoin<
+    JoinOrigin<A, B>,
+    BuildPathname<JoinPathname<A, B>, JoinOrigin<A, B>, LeadingSlash>,
+    BuildSearch<JoinSearch<A, B>>
+  >
 
-// Has any origin info
-// prettier-ignore
-type HasOrigin<P, H, Po> =
-  P extends string ? true :
-  H extends string ? true :
-  Po extends string ? true :
-  false
-
-// Remove trailing slash from a pathname string if present
-type RemoveTrailingSlash<P> = P extends string ? (P extends `${infer L}/` ? L : P) : undefined
-
-// Join base and input pathnames
-// prettier-ignore
-type JoinPath<B, I> =
-  I extends string ?
-    B extends string ?
-      B extends '' ? I :
-      `${B}/${I}` :
-    I :
-  B extends string ? B : undefined
-
-// Join searches with '&'
-// prettier-ignore
-type JoinSearch<B, I> =
-  I extends string ?
-    B extends string ? `${B}&${I}` :
-    I :
-  B extends string ? B : undefined
+type BuildJoin<
+  Origin extends string,
+  Pathname extends string,
+  Search extends string,
+> = `${Origin}${Pathname}${Search}`
 
 type HasLeadingSlash<T extends string> = T extends `/${string}` ? true : false
 
-// Assemble final string
 // prettier-ignore
-type Build<P, H, Po, Path, Search, OriginPresent extends boolean, LeadingSlash extends boolean> =
-  `${BuildOrigin<P, H, Po>}${BuildPath<Path, OriginPresent, LeadingSlash>}${Search extends string ? `?${Search}` : ''}`
+type BuildPathname<Pathname extends string, Origin extends string, LeadingSlash extends boolean> =
+  Pathname extends '' ? '' :
+  Pathname extends `/${string}` ? Pathname :
+  Origin extends '' ?
+    LeadingSlash extends true ? `/${Pathname}` : Pathname :
+    `/${Pathname}`
 
-// Build origin string
 // prettier-ignore
-type BuildOrigin<P, H, Po> =
-  P extends string ? (
-    `${P}://${H extends string ? H : ''}${Po extends string ? `:${Po}` : ''}`
-  ) : (
-    H extends string ? `://${H}${Po extends string ? `:${Po}` : ''}` : (
-      Po extends string ? `://:${Po}` : ''
-    )
-  )
+type BuildSearch<Search extends string> =
+  Search extends '' ? '' :
+  Search extends `?${string}` ? Search :
+  `?${Search}`
 
-// Build path string
 // prettier-ignore
-type BuildPath<Path, OriginPresent extends boolean, LeadingSlash extends boolean> =
-  Path extends string ? (
-    OriginPresent extends true ? `/${Path}` : (
-      LeadingSlash extends true ? `/${Path}` : Path
-    )
-  ) : ''
+type JoinOrigin<A extends SplitResult, B extends SplitResult> =
+  HasOrigin<B> extends true ? BuildOrigin<B> :
+  HasOrigin<A> extends true ? BuildOrigin<A> :
+  ''
+
+type HasOrigin<T extends SplitResult> = T['hostname'] extends string ? true : false
+
+// prettier-ignore
+type BuildOrigin<T extends SplitResult> =
+  T['hostname'] extends string ?
+    `${T['protocol'] extends string ? T['protocol'] : ''}://${T['hostname']}${T['port'] extends string ? `:${T['port']}` : ''}` :
+    ''
+
+// prettier-ignore
+type JoinPathname<A extends SplitResult, B extends SplitResult> =
+  B['pathname'] extends string ?
+    A['pathname'] extends string ?
+      `${RemoveTrailingSlash<A['pathname']>}/${B['pathname']}` :
+      B['pathname'] :
+    A['pathname'] extends string ? A['pathname'] : ''
+
+type RemoveTrailingSlash<T> = T extends string ? (T extends `${infer L}/` ? L : T) : undefined
+
+// prettier-ignore
+type JoinSearch<A extends SplitResult, B extends SplitResult> =
+  B['search'] extends string ?
+    A['search'] extends string ?
+      `${A['search']}&${B['search']}` :
+      B['search'] :
+    A['search'] extends string ? A['search'] : ''

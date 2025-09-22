@@ -72,13 +72,12 @@ export function split<T extends string>(source: T) {
 
 export function splitStrings(source: string) {
   let ranges = split(source)
-
   return {
-    protocol: ranges.protocol ? source.slice(ranges.protocol[0], ranges.protocol[1]) : undefined,
-    hostname: ranges.hostname ? source.slice(ranges.hostname[0], ranges.hostname[1]) : undefined,
-    port: ranges.port ? source.slice(ranges.port[0], ranges.port[1]) : undefined,
-    pathname: ranges.pathname ? source.slice(ranges.pathname[0], ranges.pathname[1]) : undefined,
-    search: ranges.search ? source.slice(ranges.search[0], ranges.search[1]) : undefined,
+    protocol: ranges.protocol ? source.slice(...ranges.protocol) : undefined,
+    hostname: ranges.hostname ? source.slice(...ranges.hostname) : undefined,
+    port: ranges.port ? source.slice(...ranges.port) : undefined,
+    pathname: ranges.pathname ? source.slice(...ranges.pathname) : undefined,
+    search: ranges.search ? source.slice(...ranges.search) : undefined,
   }
 }
 

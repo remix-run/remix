@@ -10,6 +10,10 @@ describe('join', () => {
     assert.equal(join('', ''), '')
   })
 
+  it('joins two slashes', () => {
+    assert.equal(join('/', '/'), '/')
+  })
+
   it('joins empty input', () => {
     assert.equal(join('hello', ''), 'hello')
   })
@@ -31,9 +35,14 @@ describe('join', () => {
     assert.equal(join('https://remix.run:8080/', 'api'), 'https://remix.run:8080/api')
   })
 
-  it('joins input against the root pathname', () => {
+  it('joins input with the root pathname', () => {
     assert.equal(join('/', 'hello'), '/hello')
     assert.equal(join('/', '/hello'), '/hello')
+  })
+
+  it('joins root input with an existing pathname', () => {
+    assert.equal(join('hello', '/'), 'hello/')
+    assert.equal(join('/hello', '/'), '/hello/')
   })
 
   it('joins input with absolute pathname', () => {
@@ -63,6 +72,7 @@ describe('join', () => {
 export type Tests = [
   // empty input/base
   Assert<IsEqual<Join<'', ''>, ''>>,
+  Assert<IsEqual<Join<'/', '/'>, '/'>>,
   Assert<IsEqual<Join<'hello', ''>, 'hello'>>,
   Assert<IsEqual<Join<'', 'hello'>, 'hello'>>,
 
@@ -80,6 +90,10 @@ export type Tests = [
   // root pathname join
   Assert<IsEqual<Join<'/', 'hello'>, '/hello'>>,
   Assert<IsEqual<Join<'/', '/hello'>, '/hello'>>,
+
+  // root input with existing pathname
+  Assert<IsEqual<Join<'hello', '/'>, 'hello/'>>,
+  Assert<IsEqual<Join<'/hello', '/'>, '/hello/'>>,
 
   // absolute pathname join
   Assert<IsEqual<Join<'hello', '/world'>, 'hello/world'>>,

@@ -25,16 +25,16 @@ export function parse<T extends string>(source: T) {
   let ranges = split(source)
 
   if (ranges.protocol) {
-    protocol = parsePart('protocol', source, ...ranges.protocol)
+    protocol = parsePart('protocol', '', source, ...ranges.protocol)
   }
   if (ranges.hostname) {
-    hostname = parsePart('hostname', source, ...ranges.hostname, '.')
+    hostname = parsePart('hostname', '.', source, ...ranges.hostname)
   }
   if (ranges.port) {
     port = source.slice(...ranges.port)
   }
   if (ranges.pathname) {
-    pathname = parsePart('pathname', source, ...ranges.pathname, '/')
+    pathname = parsePart('pathname', '/', source, ...ranges.pathname)
   }
   if (ranges.search) {
     search = parseSearchConstraints(source.slice(...ranges.search))
@@ -45,13 +45,7 @@ export function parse<T extends string>(source: T) {
 
 const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
-function parsePart(
-  partName: string,
-  source: string,
-  start: number,
-  end: number,
-  separatorChar?: string,
-) {
+function parsePart(partName: string, sep: string, source: string, start: number, end: number) {
   let tokens: Token[] = []
   let currentTokens = tokens
   // Use a simple stack of token arrays: the top is where new tokens are appended.
@@ -62,11 +56,11 @@ function parsePart(
 
   let appendText = (text: string) => {
     let lastToken = currentTokens.at(-1)
-    if (lastToken?.type !== 'text') {
+    if (lastToken?.type === 'text') {
+      lastToken.value += text
+    } else {
       currentTokens.push({ type: 'text', value: text })
-      return
     }
-    lastToken.value += text
   }
 
   let i = start
@@ -74,7 +68,7 @@ function parsePart(
     let char = source[i]
 
     // separator
-    if (char === separatorChar) {
+    if (char === sep) {
       currentTokens.push({ type: 'separator' })
       i += 1
       continue
