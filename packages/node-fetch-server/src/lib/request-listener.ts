@@ -134,8 +134,8 @@ export function createRequest(
   // not yet sent a response (i.e., `close` without `finish`)
   // `finish` -> done rendering the response
   // `close` -> response can no longer be written to
-  res.on('close', () => controller?.abort())
-  res.on('finish', () => (controller = null))
+  res.once('close', () => controller?.abort())
+  res.once('finish', () => (controller = null))
 
   let method = req.method ?? 'GET'
   let headers = createHeaders(req)
