@@ -1,10 +1,18 @@
 type Range = [number, number] // [start (inclusive), end (exclusive)]
 
+export interface SplitResult {
+  protocol: Range | undefined
+  hostname: Range | undefined
+  port: Range | undefined
+  pathname: Range | undefined
+  search: Range | undefined
+}
+
 /**
  * Split a route pattern into protocol, hostname, port, pathname, and search
  * ranges. Ranges are [start (inclusive), end (exclusive)].
  */
-export function split<T extends string>(source: T) {
+export function split<T extends string>(source: T): SplitResult {
   let protocol: Range | undefined
   let hostname: Range | undefined
   let port: Range | undefined
@@ -81,7 +89,7 @@ export function splitStrings(source: string) {
   }
 }
 
-export interface SplitResult {
+export interface PatternParts {
   protocol: string | undefined
   hostname: string | undefined
   port: string | undefined
@@ -91,7 +99,7 @@ export interface SplitResult {
 
 // prettier-ignore
 export type Split<T extends string> =
-  SplitPattern<T> extends infer S extends Partial<SplitResult> ? {
+  SplitPattern<T> extends infer S extends Partial<PatternParts> ? {
     protocol: S['protocol'] extends string ? S['protocol'] : undefined
     hostname: S['hostname'] extends string ? S['hostname'] : undefined
     port: S['port'] extends string ? S['port'] : undefined

@@ -107,18 +107,15 @@ export class RoutePattern<T extends string = string> {
    * Join this pattern with another pattern. This is useful when building a pattern
    * relative to a base pattern.
    *
+   * Note: The returned pattern will use the same options as this pattern.
+   *
    * @param input The pattern to join with
-   * @param options The options to use for the joined pattern
    * @returns The joined pattern
    */
-  join<P extends string>(
-    input: P | RoutePattern<P>,
-    options?: RoutePatternOptions,
-  ): RoutePattern<Join<T, P>> {
-    return new RoutePattern(
-      join(this.source, typeof input === 'string' ? input : input.source),
-      options,
-    )
+  join<P extends string>(input: P | RoutePattern<P>): RoutePattern<Join<T, P>> {
+    return new RoutePattern(join(this.source, typeof input === 'string' ? input : input.source), {
+      ignoreCase: this.ignoreCase,
+    })
   }
 
   toString() {

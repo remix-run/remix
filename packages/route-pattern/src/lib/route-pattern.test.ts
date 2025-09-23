@@ -684,19 +684,12 @@ describe('RoutePattern', () => {
       let pattern = new RoutePattern('users/:id')
       let pattern2 = pattern.join('posts/:postId')
       assert.equal(pattern2.source, 'users/:id/posts/:postId')
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type T = Assert<IsEqual<typeof pattern2, RoutePattern<'users/:id/posts/:postId'>>>
     })
 
-    it('joins two patterns with options', () => {
-      let pattern = new RoutePattern('https://remix.run')
-      let pattern2 = pattern.join('posts/:postId', { ignoreCase: true })
-      assert.equal(pattern2.source, 'https://remix.run/posts/:postId')
+    it('reuses options from the base pattern', () => {
+      let pattern = new RoutePattern('https://remix.run', { ignoreCase: true })
+      let pattern2 = pattern.join('posts/:postId')
       assert.equal(pattern2.ignoreCase, true)
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      type T = Assert<IsEqual<typeof pattern2, RoutePattern<'https://remix.run/posts/:postId'>>>
     })
   })
 

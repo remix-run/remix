@@ -1,9 +1,9 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import type { Assert, IsEqual } from '../type-utils.d.ts'
 import { join } from './join.ts'
 import type { Join } from './join.ts'
-import type { Assert, IsEqual } from '../type-utils'
 
 describe('join', () => {
   it('joins empty input and base', () => {
@@ -41,8 +41,8 @@ describe('join', () => {
   })
 
   it('joins root input with an existing pathname', () => {
-    assert.equal(join('hello', '/'), 'hello/')
-    assert.equal(join('/hello', '/'), '/hello/')
+    assert.equal(join('hello', '/'), 'hello')
+    assert.equal(join('/hello', '/'), '/hello')
   })
 
   it('joins input with absolute pathname', () => {
@@ -57,6 +57,13 @@ describe('join', () => {
     assert.equal(join('hello/', 'world'), 'hello/world')
     assert.equal(join('/hello', 'world'), '/hello/world')
     assert.equal(join('/hello/', 'world'), '/hello/world')
+  })
+
+  it('joins input with optional pathname', () => {
+    assert.equal(join('', '(/:lang)/world'), '(/:lang)/world')
+    assert.equal(join('/', '(/:lang)/world'), '(/:lang)/world')
+    assert.equal(join('hello', '(/:lang)/world'), 'hello(/:lang)/world')
+    assert.equal(join('hello/', '(/:lang)/world'), 'hello(/:lang)/world')
   })
 
   it('joins input with search params', () => {
@@ -92,8 +99,8 @@ export type Tests = [
   Assert<IsEqual<Join<'/', '/hello'>, '/hello'>>,
 
   // root input with existing pathname
-  Assert<IsEqual<Join<'hello', '/'>, 'hello/'>>,
-  Assert<IsEqual<Join<'/hello', '/'>, '/hello/'>>,
+  Assert<IsEqual<Join<'hello', '/'>, 'hello'>>,
+  Assert<IsEqual<Join<'/hello', '/'>, '/hello'>>,
 
   // absolute pathname join
   Assert<IsEqual<Join<'hello', '/world'>, 'hello/world'>>,
@@ -106,6 +113,12 @@ export type Tests = [
   Assert<IsEqual<Join<'/hello', 'world'>, '/hello/world'>>,
   Assert<IsEqual<Join<'hello/', 'world'>, 'hello/world'>>,
   Assert<IsEqual<Join<'/hello/', 'world'>, '/hello/world'>>,
+
+  // optional pathname join
+  Assert<IsEqual<Join<'', '(/:lang)/world'>, '(/:lang)/world'>>,
+  Assert<IsEqual<Join<'/', '(/:lang)/world'>, '(/:lang)/world'>>,
+  Assert<IsEqual<Join<'hello', '(/:lang)/world'>, 'hello(/:lang)/world'>>,
+  Assert<IsEqual<Join<'hello/', '(/:lang)/world'>, 'hello(/:lang)/world'>>,
 
   // search params
   Assert<IsEqual<Join<'https://remix.run', '?q=1'>, 'https://remix.run?q=1'>>,

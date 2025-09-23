@@ -1,5 +1,5 @@
 import { split } from './split.ts'
-import type { SplitResult, Split } from './split.ts'
+import type { PatternParts, Split } from './split.ts'
 
 export class ParseError extends Error {
   source: string
@@ -15,7 +15,15 @@ export class ParseError extends Error {
   }
 }
 
-export function parse<T extends string>(source: T) {
+export interface ParseResult {
+  protocol: Array<Token> | undefined
+  hostname: Array<Token> | undefined
+  port: string | undefined
+  pathname: Array<Token> | undefined
+  search: SearchConstraints | undefined
+}
+
+export function parse<T extends string>(source: T): ParseResult {
   let protocol: Token[] | undefined
   let hostname: Token[] | undefined
   let port: string | undefined
@@ -231,31 +239,31 @@ function decodeSearchComponent(text: string): string {
   }
 }
 
-export interface ParseResult {
-  protocol: Array<Token> | undefined
-  hostname: Array<Token> | undefined
+export type ParsedPattern = {
+  protocol: Token[] | undefined
+  hostname: Token[] | undefined
   port: string | undefined
-  pathname: Array<Token> | undefined
+  pathname: Token[] | undefined
   search: string | undefined
 }
 
 // prettier-ignore
 export type Parse<T extends string> =
   T extends any ?
-    Split<T> extends infer S extends SplitResult ?
+    Split<T> extends infer S extends PatternParts ?
       {
         protocol: S['protocol'] extends string ? ParsePart<S['protocol']> : undefined
         hostname: S['hostname'] extends string ? ParsePart<S['hostname'], '.'> : undefined
-        port: S['port'] extends string ? string : undefined
+        port: S['port'] extends string ? S['port'] : undefined
         pathname: S['pathname'] extends string ? ParsePart<S['pathname'], '/'> : undefined
-        search: S['search'] extends string ? string : undefined
+        search: S['search'] extends string ? S['search'] : undefined
       } :
       never :
     never
 
 export type Variable = { type: 'variable'; name: string }
 export type Wildcard = { type: 'wildcard'; name?: string }
-export type Enum = { type: 'enum'; members: readonly string[] }
+export type Enum = { type: 'enum'; members: string[] }
 export type Text = { type: 'text'; value: string }
 export type Separator = { type: 'separator' }
 export type Optional = { type: 'optional'; tokens: Token[] }
@@ -280,9 +288,7 @@ type ParsePart<T extends string, Sep extends string = ''> = _ParsePart<
 // prettier-ignore
 type _ParsePart<S extends ParsePartState, Sep extends string = ''> =
   S extends { rest: `${infer Head}${infer Tail}` } ?
-    Head extends Sep ? (
-      _ParsePart<AppendToken<S, { type: 'separator' }, Tail>, Sep>
-    ) :
+    Head extends Sep ? _ParsePart<AppendToken<S, { type: 'separator' }, Tail>, Sep> :
     Head extends ':' ?
       IdentifierParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
         (name extends '' ? never : _ParsePart<AppendToken<S, { type: 'variable', name: name }, rest>, Sep>) :
@@ -294,13 +300,12 @@ type _ParsePart<S extends ParsePartState, Sep extends string = ''> =
     Head extends '{' ?
       Tail extends `${infer body}}${infer after}` ?
         _ParsePart<AppendToken<S, { type: 'enum', members: EnumSplit<body> }, after>, Sep> :
-      never : // unmatched `{`
-    Head extends '}' ?
-      never : // unmatched `}`
-    Head extends '(' ?
-      _ParsePart<PushOptional<S, Tail>, Sep> :
+        never : // unmatched `{`
+    Head extends '}' ? never : // unmatched `}`
+    Head extends '(' ? _ParsePart<PushOptional<S, Tail>, Sep> :
     Head extends ')' ?
-      PopOptional<S, Tail> extends infer next extends ParsePartState ? _ParsePart<next, Sep> : never : // unmatched `)` handled in PopOptional
+      PopOptional<S, Tail> extends infer next extends ParsePartState ? _ParsePart<next, Sep> :
+      never : // unmatched `)` handled in PopOptional
     Head extends '\\' ?
       Tail extends `${infer L}${infer R}` ? _ParsePart<AppendText<S, L, R>, Sep> :
       never : // dangling escape
