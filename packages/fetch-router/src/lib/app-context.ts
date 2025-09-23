@@ -4,7 +4,7 @@
  * @param defaultValue The default value for the context
  * @returns The new context key
  */
-export function createContext<T>(defaultValue?: T): ContextKey<T> {
+export function createKey<T>(defaultValue?: T): ContextKey<T> {
   return { defaultValue }
 }
 
@@ -14,16 +14,19 @@ export interface ContextKey<T> {
 
 export type ContextValue<TKey> = TKey extends ContextKey<infer T> ? T : never
 
+/**
+ * Type-safe storage for application-specific context values.
+ */
 export class AppContext {
   #map: Map<ContextKey<any>, ContextValue<any>> = new Map()
 
   get<K extends ContextKey<any>>(key: K): ContextValue<K> {
     if (!this.#map.has(key)) {
-      if (key.defaultValue) {
-        return key.defaultValue
+      if (key.defaultValue === undefined) {
+        throw new Error(`Missing context value for key ${key}`)
       }
 
-      throw new Error(`Missing context value for key ${key}`)
+      return key.defaultValue
     }
 
     return this.#map.get(key) as ContextValue<K>

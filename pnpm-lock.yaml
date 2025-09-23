@@ -40,7 +40,7 @@ importers:
   packages/fetch-router:
     dependencies:
       '@remix-run/route-pattern':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../route-pattern
     devDependencies:
       '@types/node':
