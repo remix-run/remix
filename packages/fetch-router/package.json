@@ -19,9 +19,6 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
-  "types": "./dist/index.d.ts",
-  "module": "./dist/index.js",
-  "main": "./dist/index.cjs",
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
@@ -31,7 +28,6 @@
       ".": {
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js",
-        "require": "./dist/index.cjs",
         "default": "./dist/index.js"
       },
       "./package.json": "./package.json"
@@ -47,8 +43,7 @@
   "scripts": {
     "build:types": "tsc --project tsconfig.build.json",
     "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
-    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=node --sourcemap",
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
