@@ -1,4 +1,5 @@
-export { RoutePattern } from './lib/route-pattern.ts'
+export { RoutePattern,urlpat } from './lib/route-pattern.ts'
+export { createRouter } from './lib/router.ts'
 export type { RoutePatternOptions, RouteMatch } from './lib/route-pattern.ts'
 export { MissingParamError, createHrefBuilder } from './lib/href.ts'
 export type { HrefBuilder, HrefBuilderOptions } from './lib/href.ts'
