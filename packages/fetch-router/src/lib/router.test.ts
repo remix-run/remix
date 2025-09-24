@@ -344,7 +344,7 @@ describe('app storage', () => {
     let handlers = createHandlers(routes, {
       home: {
         use: [auth],
-        handler({ storage }) {
+        get({ storage }) {
           let currentUser = storage.get(currentUserKey)
           return new Response(`Hello, ${currentUser}`)
         },
