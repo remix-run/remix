@@ -2,7 +2,7 @@ import { parse } from './parse.ts'
 import type { Parse, ParsedPattern } from './parse.ts'
 import type { ParseResult, SearchConstraints, Token } from './parse.ts'
 import { stringifyTokens, stringifySearchConstraints } from './stringify.ts'
-import type { Stringify, StringifyTokens, StringifyPort, StringifySearch } from './stringify.ts'
+import type { StringifyTokens, StringifyPort, StringifySearch } from './stringify.ts'
 
 export function join<B extends string, T extends string>(base: B, input: T): Join<B, T> {
   if (input === '' || input === '/') return base as Join<B, T>

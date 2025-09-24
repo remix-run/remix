@@ -41,7 +41,7 @@ describe('href', () => {
     assert.equal(href(new RoutePattern('products/:id'), { id: '1' }), '/products/1')
   })
 
-  it('works with a RouteSchema', () => {
+  it('works with a RouteMap', () => {
     let routes = createRoutes({ products: '/products/:id' })
     let href = createHrefBuilder<typeof routes>()
     assert.equal(href('/products/:id', { id: '1' }), '/products/1')

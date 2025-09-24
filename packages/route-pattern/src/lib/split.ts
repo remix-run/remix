@@ -78,17 +78,6 @@ export function split<T extends string>(source: T): SplitResult {
   return { protocol, hostname, port, pathname, search }
 }
 
-export function splitStrings(source: string) {
-  let ranges = split(source)
-  return {
-    protocol: ranges.protocol ? source.slice(...ranges.protocol) : undefined,
-    hostname: ranges.hostname ? source.slice(...ranges.hostname) : undefined,
-    port: ranges.port ? source.slice(...ranges.port) : undefined,
-    pathname: ranges.pathname ? source.slice(...ranges.pathname) : undefined,
-    search: ranges.search ? source.slice(...ranges.search) : undefined,
-  }
-}
-
 export interface PatternParts {
   protocol: string | undefined
   hostname: string | undefined
