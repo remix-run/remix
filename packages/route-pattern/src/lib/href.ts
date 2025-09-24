@@ -1,6 +1,7 @@
 import type { RequiredParams, OptionalParams } from './params.ts'
 import { parse } from './parse.ts'
 import type { Token } from './parse.ts'
+import type { RouteMap } from './route-map.ts'
 import type { RoutePattern } from './route-pattern.ts'
 import type { Variant } from './variant.ts'
 
@@ -14,14 +15,19 @@ export class MissingParamError extends Error {
   }
 }
 
-export interface HrefBuilder<T extends string | RoutePattern = string> {
+export interface HrefBuilder<T extends string | RoutePattern | RouteMap = string> {
   <P extends string extends T ? string : SourceOf<T> | Variant<SourceOf<T>>>(
     pattern: P | RoutePattern<P>,
     ...args: HrefBuilderArgs<P>
   ): string
 }
 
-type SourceOf<T> = T extends string ? T : T extends RoutePattern<infer S extends string> ? S : never
+// prettier-ignore
+type SourceOf<T> =
+  T extends string ? T :
+  T extends RoutePattern<infer S extends string> ? S :
+  T extends RouteMap<infer S extends string> ? S :
+  never
 
 // prettier-ignore
 type HrefBuilderArgs<T extends string> =
@@ -40,7 +46,9 @@ type HrefSearchParams =
 
 type ParamValue = string | number | bigint | boolean
 
-export interface HrefBuilderOptions {
+export type HrefBuilderOptions = ProtocolHostOptions | OriginOptions
+
+export interface ProtocolHostOptions {
   /**
    * The default protocol to use when the pattern doesn't specify one.
    * Defaults to `https`.
@@ -51,9 +59,22 @@ export interface HrefBuilderOptions {
    * Defaults to an empty string.
    */
   host?: string
+  // Exclude OriginOptions
+  origin?: never
 }
 
-export function createHrefBuilder<T extends string | RoutePattern = string>(
+export interface OriginOptions {
+  /**
+   * The default origin to use when the pattern doesn't specify one.
+   * Defaults to an empty string.
+   */
+  origin?: string
+  // Exclude ProtocolHostOptions
+  protocol?: never
+  host?: never
+}
+
+export function createHrefBuilder<T extends string | RoutePattern | RouteMap = string>(
   options: HrefBuilderOptions = {},
 ): HrefBuilder<T> {
   return (pattern: string | RoutePattern, ...args: any) => {
@@ -63,9 +84,11 @@ export function createHrefBuilder<T extends string | RoutePattern = string>(
 
     let href = ''
 
-    // If we have a hostname to work with we can make a full URL. Otherwise we can only make an
-    // absolute path.
-    if (parsed.hostname || options.host) {
+    // If we have a default origin or the pattern has a hostname we can make a full URL.
+    // Otherwise we can only make an absolute path.
+    if (options.origin) {
+      href += options.origin
+    } else if (parsed.hostname || options.host) {
       let protocol = parsed.protocol
         ? resolveTokens(parsed.protocol, '', params)
         : (options.protocol?.replace(/:$/, '') ?? 'https')

@@ -1,9 +1,9 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { type HrefBuilder, MissingParamError, createHrefBuilder } from './href.ts'
+import { MissingParamError, createHrefBuilder } from './href.ts'
 import { RoutePattern } from './route-pattern.ts'
-import type { Assert, IsEqual } from '../type-utils.d.ts'
+import { createRoutes } from './route-map.ts'
 
 describe('href', () => {
   it('uses a default protocol', () => {
@@ -16,12 +16,22 @@ describe('href', () => {
     assert.equal(href('://remix.run/products/:id', { id: '1' }), 'http://remix.run/products/1')
   })
 
-  it('uses a default hostname', () => {
+  it('ignores a default protocol when the pattern has no hostname', () => {
+    let href = createHrefBuilder({ protocol: 'http:' })
+    assert.equal(href('products/:id', { id: 1 }), '/products/1')
+  })
+
+  it('uses a default host', () => {
     let href = createHrefBuilder({ host: 'remix.run' })
     assert.equal(href('products/:id', { id: '1' }), 'https://remix.run/products/1')
   })
 
-  it('makes absolute hrefs when no hostname is provided', () => {
+  it('uses a default origin', () => {
+    let href = createHrefBuilder({ origin: 'https://remix.run' })
+    assert.equal(href('products/:id', { id: '1' }), 'https://remix.run/products/1')
+  })
+
+  it('makes absolute hrefs when no host is provided', () => {
     let href = createHrefBuilder()
     assert.equal(href('products/:id', { id: '1' }), '/products/1')
   })
@@ -29,6 +39,12 @@ describe('href', () => {
   it('accepts a RoutePattern directly', () => {
     let href = createHrefBuilder()
     assert.equal(href(new RoutePattern('products/:id'), { id: '1' }), '/products/1')
+  })
+
+  it('works with a RouteSchema', () => {
+    let routes = createRoutes({ products: '/products/:id' })
+    let href = createHrefBuilder<typeof routes>()
+    assert.equal(href('/products/:id', { id: '1' }), '/products/1')
   })
 
   it('substitutes * for unnamed wildcards in variants', () => {
