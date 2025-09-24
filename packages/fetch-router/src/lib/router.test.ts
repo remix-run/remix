@@ -292,7 +292,7 @@ describe('createHandlers()', () => {
       calledUrls.push(url.toString())
     }
 
-    let router = createRouter(routes, [pushUrl], {
+    let handlers = createHandlers(routes, [pushUrl], {
       home() {
         return new Response('Home')
       },
@@ -305,6 +305,8 @@ describe('createHandlers()', () => {
         },
       },
     })
+
+    let router = createRouter(routes, handlers)
 
     let response = await router.fetch('https://remix.run')
     assert.equal(response.status, 200)
