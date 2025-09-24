@@ -4,6 +4,28 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 ## HEAD
 
+- Add RouteMap feature for working with more than one pattern at a time. The mapping allows human-friendly naming of patterns. Also works with href builder.
+
+  ```tsx
+  import { createRoutes, createHrefBuilder } from '@remix-run/route-pattern'
+
+  let routes = createRoutes({
+    home: '/',
+    blog: {
+      index: '/blog',
+      post: '/blog/:slug',
+    },
+  })
+
+  routes.home.match('https://remix.run/')
+  // { params: {} }
+  routes.blog.post.match('https://remix.run/blog/my-post')
+  // { params: { slug: 'my-post' } }
+
+  let href = createHrefBuilder<typeof routes>()
+  href(routes.blog.post, { slug: 'my-post' }) // /blog/my-post
+  ```
+
 - Wildcards at the end of a pattern that immediately follow a slash make that slash optional
 
   ```tsx

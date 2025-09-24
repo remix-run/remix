@@ -11,7 +11,7 @@ A powerful and flexible URL pattern matching library for modern JavaScript appli
 
 ## Examples
 
-The following examples show how to create a route map and use it to match and generate URLs.
+The following examples show how to create a route map and use it to match and generate URLs. A route map is a mapping of human-friendly names to patterns.
 
 Parts of a route pattern that begin with a colon (`:`) are dynamic parameters.
 
