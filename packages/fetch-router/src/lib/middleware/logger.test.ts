@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createRoutes } from '../route-schema.ts'
+import { createRoutes } from '@remix-run/route-pattern'
+
 import { createRouter } from '../router.ts'
 import { logger } from './logger.ts'
 

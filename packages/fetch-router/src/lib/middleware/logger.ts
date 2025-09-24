@@ -52,9 +52,9 @@ export function logger(options: LoggerOptions = {}): Middleware {
         case 'duration':
           return String(end.getTime() - start.getTime())
         case 'contentLength':
-          return response.headers.get('Content-Length') || '-'
+          return response.headers.get('Content-Length') ?? '-'
         case 'contentType':
-          return response.headers.get('Content-Type') || '-'
+          return response.headers.get('Content-Type') ?? '-'
         case 'host':
           return url.host
         case 'hostname':
@@ -72,7 +72,7 @@ export function logger(options: LoggerOptions = {}): Middleware {
         case 'query':
           return url.search
         case 'referer':
-          return request.headers.get('Referer') || '-'
+          return request.headers.get('Referer') ?? '-'
         case 'search':
           return url.search
         case 'status':
@@ -82,7 +82,7 @@ export function logger(options: LoggerOptions = {}): Middleware {
         case 'url':
           return url.href
         case 'userAgent':
-          return request.headers.get('User-Agent') || '-'
+          return request.headers.get('User-Agent') ?? '-'
         default:
           return '-'
       }

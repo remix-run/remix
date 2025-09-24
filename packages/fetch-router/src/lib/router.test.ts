@@ -1,9 +1,11 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createRoutes } from './route-schema.ts'
-import { createRouter } from './router.ts'
-import type { NextFunction } from './middleware.ts'
+import { createRoutes } from '@remix-run/route-pattern'
+
+import { createStorageKey } from './app-storage.ts'
+import { createHandlers, createRouter } from './router.ts'
+import type { NextFunction, RouteHandlers } from './router.ts'
 import type { RequestContext } from './request-context.ts'
 
 describe('router.fetch()', () => {
@@ -31,15 +33,17 @@ describe('router.fetch()', () => {
       },
     })
 
-    let router = createRouter(routes, {
-      comments: {
-        create: {
-          method: 'POST',
-          handler({ params }) {
-            return new Response(`Created comment ${params.id}`)
-          },
+    let commentsHandlers: RouteHandlers<typeof routes.comments> = {
+      create: {
+        method: 'POST',
+        handler({ params }) {
+          return new Response(`Created comment ${params.id}`)
         },
       },
+    }
+
+    let router = createRouter(routes, {
+      comments: commentsHandlers,
     })
 
     let response = await router.fetch('https://remix.run/post/1/comments', { method: 'POST' })
@@ -48,23 +52,33 @@ describe('router.fetch()', () => {
     assert.equal(await response.text(), 'Created comment 1')
   })
 
-  it('handles a route declared with a shorthand method-specific handler', async () => {
+  it('handles a route declared with shorthand method-specific handlers', async () => {
     let routes = createRoutes({
-      comments: '/post/:id/comments',
+      post: '/posts/:id',
+      posts: {
+        comments: '/posts/:id/comments',
+      },
     })
 
-    let router = createRouter(routes, {
+    // Create a sub-router just for the posts routes
+    let router = createRouter(routes.posts, {
       comments: {
+        get({ params }) {
+          return new Response(`Get comments for post ${params.id}`)
+        },
         post({ params }) {
-          return new Response(`Created comment ${params.id}`)
+          return new Response(`Create comment for post ${params.id}`)
         },
       },
     })
 
-    let response = await router.fetch('https://remix.run/post/1/comments', { method: 'POST' })
-
+    let response = await router.fetch('https://remix.run/posts/1/comments')
     assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Created comment 1')
+    assert.equal(await response.text(), 'Get comments for post 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments', { method: 'POST' })
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Create comment for post 1')
   })
 
   it('prefers generic handlers over method-specific handlers', async () => {
@@ -260,5 +274,87 @@ describe('middleware', () => {
     await assert.rejects(async () => {
       await router.fetch('https://remix.run')
     }, new Error('next() called multiple times'))
+  })
+})
+
+describe('createHandlers()', () => {
+  it('applies middleware to all route handlers', async () => {
+    let routes = createRoutes({
+      home: '/',
+      post: '/posts/:id',
+      posts: {
+        comments: '/posts/:id/comments',
+      },
+    })
+
+    let calledUrls: string[] = []
+
+    function pushUrl({ url }: RequestContext) {
+      calledUrls.push(url.toString())
+    }
+
+    let handlers = createHandlers([pushUrl], routes, {
+      home() {
+        return new Response('Home')
+      },
+      post({ params }) {
+        return new Response(`Post ${params.id}`)
+      },
+      posts: {
+        comments({ params }) {
+          return new Response(`Comments on post ${params.id}`)
+        },
+      },
+    })
+
+    let router = createRouter(routes, handlers)
+
+    let response = await router.fetch('https://remix.run')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Home')
+
+    response = await router.fetch('https://remix.run/posts/1')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Post 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Comments on post 1')
+
+    assert.deepEqual(calledUrls, [
+      'https://remix.run/',
+      'https://remix.run/posts/1',
+      'https://remix.run/posts/1/comments',
+    ])
+  })
+})
+
+describe('app storage', () => {
+  it('can be accessed from middleware and route handlers', async () => {
+    let routes = createRoutes({
+      home: '/',
+    })
+
+    let currentUserKey = createStorageKey('')
+
+    function auth({ storage }: RequestContext) {
+      storage.set(currentUserKey, 'mj')
+    }
+
+    let handlers = createHandlers(routes, {
+      home: {
+        use: [auth],
+        handler({ storage }) {
+          let currentUser = storage.get(currentUserKey)
+          return new Response(`Hello, ${currentUser}`)
+        },
+      },
+    })
+
+    let router = createRouter(routes, handlers)
+
+    let response = await router.fetch('https://remix.run')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Hello, mj')
   })
 })

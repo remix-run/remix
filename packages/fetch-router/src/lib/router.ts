@@ -1,42 +1,44 @@
 import { RoutePattern } from '@remix-run/route-pattern'
+import type { RouteMap } from '@remix-run/route-pattern'
 
-import type { Middleware, NextFunction } from './middleware.ts'
-import type { RouteHandler } from './route-handler.ts'
-import type { RouteSchema } from './route-schema.ts'
 import { RequestContext } from './request-context.ts'
+import { RequestMethods } from './request-methods.ts'
+import type { RequestMethod } from './request-methods.ts'
 
-// Request methods /////////////////////////////////////////////////////////////////////////////////
+// Middleware //////////////////////////////////////////////////////////////////////////////////////
 
-export type RequestMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
-export const RequestMethods: RequestMethod[] = [
-  'GET',
-  'HEAD',
-  'POST',
-  'PUT',
-  'PATCH',
-  'DELETE',
-  'OPTIONS',
-]
+export interface Middleware<T extends string = string> {
+  (ctx: RequestContext<T>, next: NextFunction): Response | Promise<Response> | void | Promise<void>
+}
+
+export type NextFunction = () => Promise<Response>
 
 // Route handlers //////////////////////////////////////////////////////////////////////////////////
 
 // prettier-ignore
-export type RouteHandlers<T extends RouteSchema> = {
+export type RouteHandlers<T extends RouteMap> = {
   [K in keyof T]: (
-    T[K] extends RoutePattern<infer P extends string> ? RouteHandler<P> | EnhancedRouteHandler<P> :
-    T[K] extends RouteSchema ? RouteHandlers<T[K]> :
+    T[K] extends RoutePattern<infer P extends string> ? RouteHandler<P> :
+    T[K] extends RouteMap ? RouteHandlers<T[K]> :
     never
   )
 }
 
-type EnhancedRouteHandler<T extends string> = GenericRouteHandler<T> | ShorthandRouteHandler<T>
+export type RouteHandler<T extends string> =
+  | RouteHandlerFunction<T>
+  | GenericRouteHandler<T>
+  | ShorthandRouteHandler<T>
+
+interface RouteHandlerFunction<T extends string> {
+  (ctx: RequestContext<T>): Response | Promise<Response>
+}
 
 interface GenericRouteHandler<T extends string> {
-  use?: Middleware[]
+  use?: Middleware<T>[]
   method?: RequestMethod
   methods?: RequestMethod[]
-  handler: RouteHandler<T>
-  // Explicitly exclude shorthand method properties
+  handler: RouteHandlerFunction<T>
+  // Explicitly exclude shorthand handler properties
   get?: never
   head?: never
   post?: never
@@ -47,33 +49,108 @@ interface GenericRouteHandler<T extends string> {
 }
 
 interface ShorthandRouteHandler<T extends string> {
-  use?: Middleware[]
-  get?: RouteHandler<T>
-  head?: RouteHandler<T>
-  post?: RouteHandler<T>
-  put?: RouteHandler<T>
-  patch?: RouteHandler<T>
-  delete?: RouteHandler<T>
-  options?: RouteHandler<T>
+  use?: Middleware<T>[]
+  get?: RouteHandlerFunction<T>
+  head?: RouteHandlerFunction<T>
+  post?: RouteHandlerFunction<T>
+  put?: RouteHandlerFunction<T>
+  patch?: RouteHandlerFunction<T>
+  delete?: RouteHandlerFunction<T>
+  options?: RouteHandlerFunction<T>
   // Explicitly exclude generic handler properties
   handler?: never
   method?: never
   methods?: never
 }
 
+/**
+ * Create a set of route handlers, optionally fronted by generic middleware.
+ */
+export function createHandlers<T extends RouteMap>(
+  routes: T,
+  handlers: RouteHandlers<T>,
+): RouteHandlers<T>
+export function createHandlers<T extends RouteMap>(
+  middleware: Middleware[],
+  routes: T,
+  handlers: RouteHandlers<T>,
+): RouteHandlers<T>
+export function createHandlers<T extends RouteMap>(
+  middlewareOrRoutes: any,
+  routesOrHandlers: any,
+  handlers?: RouteHandlers<T>,
+): RouteHandlers<T> {
+  let middleware: Middleware[] | null = null
+  let routes: T | null = null
+  if (Array.isArray(middlewareOrRoutes)) {
+    middleware = middlewareOrRoutes
+    routes = routesOrHandlers
+  } else {
+    middleware = null
+    routes = middlewareOrRoutes
+    handlers = routesOrHandlers
+  }
+
+  if (routes == null || handlers == null) {
+    throw new Error('Invalid arguments')
+  }
+
+  if (middleware != null) {
+    handlers = useMiddleware(middleware, routes, handlers)
+  }
+
+  return handlers
+}
+
+function useMiddleware<T extends RouteMap>(
+  middleware: Middleware[],
+  routes: T,
+  handlers: RouteHandlers<T>,
+): RouteHandlers<T> {
+  let newHandlers: RouteHandlers<T> = {} as any
+
+  for (let key in routes) {
+    let value = routes[key]
+    let handler = handlers[key]
+
+    if (value instanceof RoutePattern) {
+      if (typeof handler === 'function') {
+        newHandlers[key] = { use: middleware, handler } as any
+      } else {
+        newHandlers[key] = {
+          ...handler,
+          use:
+            handler.use != null && Array.isArray(handler.use)
+              ? [...middleware, ...handler.use]
+              : middleware,
+        } as any
+      }
+    } else {
+      // value is a nested RouteSchema
+      newHandlers[key] = useMiddleware(middleware, value, handler as any) as any
+    }
+  }
+
+  return newHandlers
+}
+
 // Route storage ///////////////////////////////////////////////////////////////////////////////////
+
+type RouteStorage = {
+  [M in RequestMethod]: Route<M, string>[]
+}
 
 class Route<M extends RequestMethod = RequestMethod, T extends string = string> {
   readonly method: M
   readonly pattern: RoutePattern<T>
-  readonly handler: RouteHandler<T>
-  readonly middleware: Middleware[] | null
+  readonly handler: RouteHandlerFunction<T>
+  readonly middleware: Middleware<T>[] | null
 
   constructor(
     method: M,
     pattern: T | RoutePattern<T>,
-    handler: RouteHandler<T>,
-    middleware: Middleware[] | null = null,
+    handler: RouteHandlerFunction<T>,
+    middleware: Middleware<T>[] | null = null,
   ) {
     this.method = method
     this.pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
@@ -82,11 +159,17 @@ class Route<M extends RequestMethod = RequestMethod, T extends string = string> 
   }
 }
 
-type RouteStorage = {
-  [M in RequestMethod]: Route<M, string>[]
-}
-
 // Router //////////////////////////////////////////////////////////////////////////////////////////
+
+export function createRouter<T extends RouteMap>(routes?: T, handlers?: RouteHandlers<T>): Router {
+  let router = new Router()
+
+  if (routes != null && handlers != null) {
+    router.addRoutes(routes, handlers)
+  }
+
+  return router
+}
 
 export class Router {
   #routes: RouteStorage = {
@@ -99,27 +182,27 @@ export class Router {
     OPTIONS: [],
   }
 
-  addRoutes<T extends RouteSchema>(schema: T, handlers: RouteHandlers<T>): void {
-    this.#addRoutes(schema, handlers)
+  addRoutes<T extends RouteMap>(routes: T, handlers: RouteHandlers<T>): void {
+    this.#addRoutes(routes, handlers)
   }
 
-  #addRoutes<T extends RouteSchema>(
+  #addRoutes<T extends RouteMap>(
     routes: T,
     handlers: RouteHandlers<T>,
     parentKeys: string[] = [],
   ): void {
     for (let key in routes) {
       let keys = [...parentKeys, key]
-      let pattern = routes[key]
-      let handler = handlers[key] as RouteHandler<string> | EnhancedRouteHandler<string>
+      let value = routes[key]
+      let handler = handlers[key] as RouteHandlerFunction<string> | RouteHandler<string>
 
       if (handler == null) {
         throw new Error(`Missing handler for route ${keys.join('.')}`)
       }
 
-      if (pattern instanceof RoutePattern) {
+      if (value instanceof RoutePattern) {
         if (typeof handler === 'function') {
-          this.addAnyRoute(pattern, handler as any)
+          this.addAnyRoute(value, handler as any)
           continue
         }
 
@@ -129,49 +212,26 @@ export class Router {
           // Generic handler
           let methods = handler.methods ?? (handler.method ? [handler.method] : RequestMethods)
           for (let method of methods) {
-            this.addRoute(method, pattern, handler.handler, handler.use)
+            this.addRoute(method, value, handler.handler, handler.use)
             handlerAdded = true
           }
         } else {
-          handler = handler as ShorthandRouteHandler<string>
-
           // HTTP method-specific handlers
-          if (handler.get != null) {
-            this.addRoute('GET', pattern, handler.get, handler.use)
-            handlerAdded = true
-          }
-          if (handler.head != null) {
-            this.addRoute('HEAD', pattern, handler.head, handler.use)
-            handlerAdded = true
-          }
-          if (handler.post != null) {
-            this.addRoute('POST', pattern, handler.post, handler.use)
-            handlerAdded = true
-          }
-          if (handler.put != null) {
-            this.addRoute('PUT', pattern, handler.put, handler.use)
-            handlerAdded = true
-          }
-          if (handler.patch != null) {
-            this.addRoute('PATCH', pattern, handler.patch, handler.use)
-            handlerAdded = true
-          }
-          if (handler.delete != null) {
-            this.addRoute('DELETE', pattern, handler.delete, handler.use)
-            handlerAdded = true
-          }
-          if (handler.options != null) {
-            this.addRoute('OPTIONS', pattern, handler.options, handler.use)
-            handlerAdded = true
+          for (let method of RequestMethods) {
+            let methodHandler = handler[method.toLowerCase() as keyof ShorthandRouteHandler<string>]
+            if (typeof methodHandler === 'function') {
+              this.addRoute(method, value, methodHandler, handler.use)
+              handlerAdded = true
+            }
           }
         }
 
         if (!handlerAdded) {
           throw new Error(`No handler for route ${keys.join('.')}`)
         }
-      } else if (typeof pattern === 'object' && pattern != null) {
-        // value is nested RouteSchema
-        this.#addRoutes(pattern, handlers[key] as any, keys)
+      } else if (typeof value === 'object' && value != null) {
+        // pattern is nested RouteSchema
+        this.#addRoutes(value, handler as any, keys)
       } else {
         throw new Error('Invalid route schema')
       }
@@ -181,16 +241,16 @@ export class Router {
   addRoute<M extends RequestMethod, T extends string>(
     method: M,
     pattern: T | RoutePattern<T>,
-    handler: RouteHandler<T>,
-    middleware: Middleware[] | null = null,
+    handler: RouteHandlerFunction<T>,
+    middleware: Middleware<T>[] | null = null,
   ): void {
     this.#routes[method].push(new Route(method, pattern, handler, middleware))
   }
 
   addAnyRoute<T extends string>(
     pattern: T | RoutePattern<T>,
-    handler: RouteHandler<T>,
-    middleware: Middleware[] | null = null,
+    handler: RouteHandlerFunction<T>,
+    middleware: Middleware<T>[] | null = null,
   ): void {
     for (let method of RequestMethods) {
       this.addRoute(method, pattern, handler, middleware)
@@ -219,7 +279,7 @@ export class Router {
         let match = route.pattern.match(request.url)
 
         if (match != null) {
-          let context = new RequestContext(request, match.params, url)
+          let context = new RequestContext(match.params, request, url)
 
           if (route.middleware != null) {
             response = await runMiddleware(route.middleware, context, async () => {
@@ -283,17 +343,4 @@ function runMiddleware(
   }
 
   return dispatch(0)
-}
-
-export function createRouter<T extends RouteSchema>(
-  routes?: T,
-  handlers?: RouteHandlers<T>,
-): Router {
-  let router = new Router()
-
-  if (routes != null && handlers != null) {
-    router.addRoutes(routes, handlers)
-  }
-
-  return router
 }
