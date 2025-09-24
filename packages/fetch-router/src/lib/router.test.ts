@@ -170,14 +170,13 @@ describe('middleware', () => {
 
     let middlewareInvocations: string[] = []
 
-    function one(_context: RequestContext, next: NextFunction) {
+    function one() {
       middlewareInvocations.push('one')
       return new Response('One')
     }
 
-    function two(_context: RequestContext, next: NextFunction) {
+    function two() {
       middlewareInvocations.push('two')
-      return next()
     }
 
     let router = createRouter(routes, {
