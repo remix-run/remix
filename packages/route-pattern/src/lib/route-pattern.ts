@@ -40,14 +40,14 @@ export class RoutePattern<T extends string = string> {
 
     if (this.#matchOrigin) {
       let protocolSource = protocol
-        ? tokensToRegExpSource(protocol, '', /.*/, this.#paramNames, true)
-        : `[^:]+`
+        ? tokensToRegExpSource(protocol, '', '.*', this.#paramNames, true)
+        : '[^:]+'
       let hostnameSource = hostname
-        ? tokensToRegExpSource(hostname, '.', /[^.]+?/, this.#paramNames, true)
-        : `[^/:]+`
-      let portSource = port !== undefined ? `:${regexpEscape(port)}` : `(?::[0-9]+)?`
+        ? tokensToRegExpSource(hostname, '.', '[^.]+?', this.#paramNames, true)
+        : '[^/:]+'
+      let portSource = port !== undefined ? `:${regexpEscape(port)}` : '(?::[0-9]+)?'
       let pathnameSource = pathname
-        ? tokensToRegExpSource(pathname, '/', /[^/]+?/, this.#paramNames, this.ignoreCase)
+        ? tokensToRegExpSource(pathname, '/', '[^/]+?', this.#paramNames, this.ignoreCase)
         : ''
 
       this.#matcher = new RegExp(
@@ -55,7 +55,7 @@ export class RoutePattern<T extends string = string> {
       )
     } else {
       let pathnameSource = pathname
-        ? tokensToRegExpSource(pathname, '/', /[^/]+?/, this.#paramNames, this.ignoreCase)
+        ? tokensToRegExpSource(pathname, '/', '[^/]+?', this.#paramNames, this.ignoreCase)
         : ''
 
       this.#matcher = new RegExp(`^/${pathnameSource}$`)
@@ -137,7 +137,7 @@ export interface RouteMatch<T extends string> {
 function tokensToRegExpSource(
   tokens: Token[],
   sep: string,
-  paramRegExp: RegExp,
+  paramRegExpSource: string,
   paramNames: string[],
   forceLowerCase: boolean,
 ): string {
@@ -166,7 +166,7 @@ function tokensToRegExpSource(
 
     if (token.type === 'variable') {
       paramNames.push(token.name)
-      result += `(${paramRegExp.source})`
+      result += `(${paramRegExpSource})`
     } else if (token.type === 'wildcard') {
       if (!token.name) {
         result += `(?:.*)`
@@ -181,7 +181,7 @@ function tokensToRegExpSource(
     } else if (token.type === 'separator') {
       result += regexpEscape(sep)
     } else if (token.type === 'optional') {
-      result += `(?:${tokensToRegExpSource(token.tokens, sep, paramRegExp, paramNames, forceLowerCase)})?`
+      result += `(?:${tokensToRegExpSource(token.tokens, sep, paramRegExpSource, paramNames, forceLowerCase)})?`
     }
   }
 
