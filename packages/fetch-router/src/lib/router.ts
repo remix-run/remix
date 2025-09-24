@@ -71,30 +71,25 @@ export function createHandlers<T extends RouteMap>(
   handlers: RouteHandlers<T>,
 ): RouteHandlers<T>
 export function createHandlers<T extends RouteMap>(
-  middleware: Middleware[],
   routes: T,
+  middleware: Middleware[],
   handlers: RouteHandlers<T>,
 ): RouteHandlers<T>
 export function createHandlers<T extends RouteMap>(
-  middlewareOrRoutes: any,
-  routesOrHandlers: any,
+  routes: T,
+  middlewareOrHandlers: any,
   handlers?: RouteHandlers<T>,
 ): RouteHandlers<T> {
-  let middleware: Middleware[] | null = null
-  let routes: T | null = null
-  if (Array.isArray(middlewareOrRoutes)) {
-    middleware = middlewareOrRoutes
-    routes = routesOrHandlers
+  let middleware: Middleware[] | undefined
+  if (Array.isArray(middlewareOrHandlers)) {
+    middleware = middlewareOrHandlers
   } else {
-    middleware = null
-    routes = middlewareOrRoutes
-    handlers = routesOrHandlers
+    handlers = middlewareOrHandlers
   }
 
-  if (routes == null || handlers == null) {
-    throw new Error('Invalid arguments')
+  if (handlers == null) {
+    throw new Error('Missing route handlers')
   }
-
   if (middleware != null) {
     handlers = useMiddleware(middleware, routes, handlers)
   }
@@ -161,11 +156,33 @@ class Route<M extends RequestMethod = RequestMethod, T extends string = string> 
 
 // Router //////////////////////////////////////////////////////////////////////////////////////////
 
-export function createRouter<T extends RouteMap>(routes?: T, handlers?: RouteHandlers<T>): Router {
+export function createRouter(): Router
+export function createRouter<T extends RouteMap>(routes: T, handlers: RouteHandlers<T>): Router
+export function createRouter<T extends RouteMap>(
+  routes: T,
+  middleware: Middleware[],
+  handlers: RouteHandlers<T>,
+): Router
+export function createRouter<T extends RouteMap>(
+  routes?: T,
+  middlewareOrHandlers?: any,
+  handlers?: RouteHandlers<T>,
+): Router {
+  let middleware: Middleware[] | undefined
+  if (Array.isArray(middlewareOrHandlers)) {
+    middleware = middlewareOrHandlers
+  } else {
+    handlers = middlewareOrHandlers
+  }
+
   let router = new Router()
 
   if (routes != null && handlers != null) {
-    router.addRoutes(routes, handlers)
+    if (middleware != null) {
+      router.addRoutes(routes, middleware, handlers)
+    } else {
+      router.addRoutes(routes, handlers)
+    }
   }
 
   return router
@@ -182,8 +199,28 @@ export class Router {
     OPTIONS: [],
   }
 
-  addRoutes<T extends RouteMap>(routes: T, handlers: RouteHandlers<T>): void {
-    this.#addRoutes(routes, handlers)
+  addRoutes<T extends RouteMap>(routes: T, handlers: RouteHandlers<T>): void
+  addRoutes<T extends RouteMap>(
+    routes: T,
+    middleware: Middleware[],
+    handlers: RouteHandlers<T>,
+  ): void
+  addRoutes<T extends RouteMap>(
+    routes: T,
+    middlewareOrHandlers: any,
+    handlers?: RouteHandlers<T>,
+  ): void {
+    let middleware: Middleware[] | undefined
+    if (Array.isArray(middlewareOrHandlers)) {
+      middleware = middlewareOrHandlers
+    } else {
+      handlers = middlewareOrHandlers
+    }
+
+    this.#addRoutes(
+      routes,
+      middleware == null ? handlers! : useMiddleware(middleware, routes, handlers!),
+    )
   }
 
   #addRoutes<T extends RouteMap>(

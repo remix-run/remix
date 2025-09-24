@@ -1,4 +1,4 @@
-import type { Middleware } from '../middleware.ts'
+import type { Middleware } from '../router.ts'
 
 export interface LoggerOptions {
   /**

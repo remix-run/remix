@@ -215,7 +215,7 @@ describe('middleware', () => {
     let router = createRouter(routes, {
       home: {
         use: [one, two],
-        handler() {
+        get() {
           return new Response('Home')
         },
       },
@@ -292,7 +292,7 @@ describe('createHandlers()', () => {
       calledUrls.push(url.toString())
     }
 
-    let handlers = createHandlers([pushUrl], routes, {
+    let router = createRouter(routes, [pushUrl], {
       home() {
         return new Response('Home')
       },
@@ -305,8 +305,6 @@ describe('createHandlers()', () => {
         },
       },
     })
-
-    let router = createRouter(routes, handlers)
 
     let response = await router.fetch('https://remix.run')
     assert.equal(response.status, 200)
@@ -340,7 +338,7 @@ describe('app storage', () => {
       storage.set(currentUserKey, 'mj')
     }
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter(routes, {
       home: {
         use: [auth],
         get({ storage }) {
@@ -349,8 +347,6 @@ describe('app storage', () => {
         },
       },
     })
-
-    let router = createRouter(routes, handlers)
 
     let response = await router.fetch('https://remix.run')
     assert.equal(response.status, 200)
