@@ -1,5 +1,5 @@
-import type { Variant } from './variant.ts'
 import type { Assert, IsEqual } from '../type-utils.d.ts'
+import type { Variant } from './variant.ts'
 
 // prettier-ignore
 export type Tests = [

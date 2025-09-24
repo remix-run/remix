@@ -98,7 +98,7 @@ You can also restrict matches to specific allowed values using enum syntax with 
 
 ```tsx
 let routes = createRoutes({
-  images: 'assets/*path.{jpg,png,gif,svg,webp}',
+  images: 'http(s)://cdn.shopify.com/assets/*path.{jpg,png,gif,svg,webp}',
 })
 
 routes.images.match('https://cdn.shopify.com/assets/products/sneakers.webp')
