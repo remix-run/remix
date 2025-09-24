@@ -107,19 +107,6 @@ function parsePart(partName: string, sep: string, source: string, start: number,
       continue
     }
 
-    // enum
-    if (char === '{') {
-      let close = source.indexOf('}', i)
-      if (close === -1 || close >= end) throw new ParseError('unmatched {', partName, source, i)
-      let members = source.slice(i + 1, close).split(',')
-      currentTokens.push({ type: 'enum', members })
-      i = close + 1
-      continue
-    }
-    if (char === '}') {
-      throw new ParseError('unmatched }', partName, source, i)
-    }
-
     // optional
     if (char === '(') {
       tokensStack.push((currentTokens = []))
@@ -263,12 +250,11 @@ export type Parse<T extends string> =
 
 export type Variable = { type: 'variable'; name: string }
 export type Wildcard = { type: 'wildcard'; name?: string }
-export type Enum = { type: 'enum'; members: string[] }
 export type Text = { type: 'text'; value: string }
 export type Separator = { type: 'separator' }
 export type Optional = { type: 'optional'; tokens: Token[] }
 
-export type Token = Variable | Wildcard | Enum | Text | Separator | Optional
+export type Token = Variable | Wildcard | Text | Separator | Optional
 
 type ParsePartState = {
   tokens: Token[]
@@ -297,11 +283,6 @@ type _ParsePart<S extends ParsePartState, Sep extends string = ''> =
       IdentifierParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
         _ParsePart<AppendToken<S, (name extends '' ? { type: 'wildcard' } : { type: 'wildcard', name: name }), rest>, Sep> :
       never : // this should never happen
-    Head extends '{' ?
-      Tail extends `${infer body}}${infer after}` ?
-        _ParsePart<AppendToken<S, { type: 'enum', members: EnumSplit<body> }, after>, Sep> :
-        never : // unmatched `{`
-    Head extends '}' ? never : // unmatched `}`
     Head extends '(' ? _ParsePart<PushOptional<S, Tail>, Sep> :
     Head extends ')' ?
       PopOptional<S, Tail> extends infer next extends ParsePartState ? _ParsePart<next, Sep> :

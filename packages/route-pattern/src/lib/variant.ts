@@ -4,7 +4,6 @@ import type {
   Token,
   Variable,
   Wildcard,
-  Enum,
   Text,
   Separator,
   Optional,
@@ -44,10 +43,6 @@ type PartVariantString<T extends Array<Token>, Sep extends string = '/'> =
     L extends Wildcard ? (
       L extends { name: infer N extends string } ? `*${N}${PartVariantString<R, Sep>}` :
       `*${PartVariantString<R, Sep>}`
-    ) :
-    L extends Enum ? (
-      L extends { members: infer M extends readonly string[] } ? `${M[number]}${PartVariantString<R, Sep>}` :
-      never
     ) :
     L extends Text ? `${L['value']}${PartVariantString<R, Sep>}` :
     L extends Separator ? `${Sep}${PartVariantString<R, Sep>}` :

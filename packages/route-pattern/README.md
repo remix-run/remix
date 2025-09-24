@@ -94,17 +94,13 @@ routes.orders.match('https://coffee-roasters.shopify.com/orders')
 
 Wildcards (`*`) are useful for matching nested paths, file paths, or any URL structure with variable depth.
 
-You can also restrict matches to specific allowed values using enum syntax with curly braces, e.g. `{jpg,png}`.
-
 ```tsx
 let routes = createRoutes({
-  images: 'http(s)://cdn.shopify.com/assets/*path.{jpg,png,gif,svg,webp}',
+  images: 'http(s)://cdn.shopify.com/assets/*path.:ext',
 })
 
 routes.images.match('https://cdn.shopify.com/assets/products/sneakers.webp')
-// { params: { path: 'products/sneakers' } }
-routes.images.match('https://cdn.shopify.com/assets/styles/main.css')
-// null (file type not allowed)
+// { params: { path: 'products/sneakers', ext: 'webp' } }
 ```
 
 A wildcard that is not followed by an identifier is "unnamed" and won't show up in the params. But it will still match.
@@ -265,7 +261,7 @@ pattern.match('http://localhost:3000/docs')
 
 ### Pattern Features
 
-The `protocol`, `hostname`, and `pathname` components support dynamic matching through [variables](#variables), [wildcards](#wildcards), [optionals](#optionals), and [enums](#enums).
+The `protocol`, `hostname`, and `pathname` components support dynamic matching through [variables](#variables), [wildcards](#wildcards), and [optionals](#optionals).
 
 Port numbers are matched as literal strings, while search parameters follow standard [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams) behavior.
 
@@ -324,20 +320,6 @@ pattern.match('https://api.shopify.com/api/v2/products')
 ```
 
 Optionals are perfect for backward compatibility, feature flags, or supporting multiple URL formats in a single pattern.
-
-### Enums
-
-Restrict matches to specific allowed values using enum syntax with curly braces:
-
-```tsx
-let pattern = new RoutePattern('products/:filename.{jpg,png,gif,webp}')
-pattern.match('https://cdn.shopify.com/products/sneakers.png')
-// { params: { filename: 'sneakers' } }
-pattern.match('https://cdn.shopify.com/products/catalog.pdf')
-// null (extension not in allowed list)
-```
-
-Enums provide type safety and validation, ensuring URLs match only expected formats while maintaining clean parameter extraction.
 
 ## Alternatives
 

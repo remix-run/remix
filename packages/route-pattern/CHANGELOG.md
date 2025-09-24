@@ -4,6 +4,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 ## HEAD
 
+- BREAKING CHANGE: removed support for enum patterns
 - Add RouteMap feature for working with more than one pattern at a time. The mapping allows human-friendly naming of patterns. Also works with href builder.
 
   ```tsx

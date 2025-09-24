@@ -69,12 +69,6 @@ describe('href', () => {
       'https://remix.run/images/images/hero.png',
     )
 
-    // Use the first member of an enum
-    assert.equal(
-      href('images/:id.{jpg,png}', { id: 'remix' }),
-      'https://remix.run/images/remix.jpg',
-    )
-
     // Include optionals by default
     assert.equal(href('products(.md)'), 'https://remix.run/products.md')
 

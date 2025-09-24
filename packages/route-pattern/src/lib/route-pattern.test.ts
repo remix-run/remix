@@ -205,57 +205,6 @@ describe('RoutePattern', () => {
       })
     })
 
-    describe('enums', () => {
-      it('matches simple enum values', () => {
-        let pattern = new RoutePattern('files/:name.{jpg,png,gif}')
-        assert.deepEqual(pattern.match('https://example.com/files/logo.png')?.params, {
-          name: 'logo',
-        })
-      })
-
-      it('returns null for non-matching enum values', () => {
-        let pattern = new RoutePattern('files/:name.{jpg,png,gif}')
-        assert.deepEqual(pattern.match('https://example.com/files/logo.css'), null)
-      })
-
-      it('matches enum at start of path', () => {
-        let pattern = new RoutePattern('{api,admin}/users')
-        assert.deepEqual(pattern.match('https://example.com/api/users')?.params, {})
-      })
-
-      it('matches enum in middle of path', () => {
-        let pattern = new RoutePattern('assets/{images,styles}/file.ext')
-        assert.deepEqual(pattern.match('https://example.com/assets/styles/file.ext')?.params, {})
-      })
-
-      it('matches single-member enum', () => {
-        let pattern = new RoutePattern('api/{v1}/users')
-        assert.deepEqual(pattern.match('https://example.com/api/v1/users')?.params, {})
-      })
-
-      it('combines enum with wildcards', () => {
-        let pattern = new RoutePattern('assets/*path.{jpg,png,gif,svg}')
-        assert.deepEqual(
-          pattern.match('https://example.com/assets/images/logos/remix.svg')?.params,
-          { path: 'images/logos/remix' },
-        )
-      })
-
-      it('enum with optional sections', () => {
-        let pattern = new RoutePattern('api/{json,xml}(/:version)')
-        assert.deepEqual(pattern.match('https://example.com/api/json/v2')?.params, {
-          version: 'v2',
-        })
-      })
-
-      it('enum with optional sections - absent', () => {
-        let pattern = new RoutePattern('api/{json,xml}(/:version)')
-        assert.deepEqual(pattern.match('https://example.com/api/xml')?.params, {
-          version: undefined,
-        })
-      })
-    })
-
     describe('multiple params in single segment', () => {
       it('extracts multiple params with dots', () => {
         let pattern = new RoutePattern('api/v:major.:minor')

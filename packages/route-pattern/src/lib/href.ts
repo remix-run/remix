@@ -152,10 +152,6 @@ function resolveToken(token: Token, sep: string, params: Record<string, any>): s
     return String(params[name])
   }
 
-  if (token.type === 'enum') {
-    return token.members[0] // Use first member
-  }
-
   if (token.type === 'separator') {
     return sep
   }

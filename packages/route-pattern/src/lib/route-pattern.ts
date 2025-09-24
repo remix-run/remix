@@ -174,8 +174,6 @@ function tokensToRegExpSource(
         paramNames.push(token.name)
         result += `(.*)`
       }
-    } else if (token.type === 'enum') {
-      result += `(?:${token.members.map((member) => regexpEscape(forceLowerCase ? member.toLowerCase() : member)).join('|')})`
     } else if (token.type === 'text') {
       result += regexpEscape(forceLowerCase ? token.value.toLowerCase() : token.value)
     } else if (token.type === 'separator') {

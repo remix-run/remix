@@ -105,48 +105,6 @@ describe('parse', () => {
       })
     })
 
-    // enum
-
-    it('parses simple enum', () => {
-      assert.deepEqual(parse('{a,b,c}'), {
-        protocol: undefined,
-        hostname: undefined,
-        port: undefined,
-        pathname: [{ type: 'enum', members: ['a', 'b', 'c'] }],
-        search: undefined,
-      })
-    })
-
-    it('parses enum with spaces', () => {
-      assert.deepEqual(parse('{hello,world}'), {
-        protocol: undefined,
-        hostname: undefined,
-        port: undefined,
-        pathname: [{ type: 'enum', members: ['hello', 'world'] }],
-        search: undefined,
-      })
-    })
-
-    it('parses single member enum', () => {
-      assert.deepEqual(parse('{only}'), {
-        protocol: undefined,
-        hostname: undefined,
-        port: undefined,
-        pathname: [{ type: 'enum', members: ['only'] }],
-        search: undefined,
-      })
-    })
-
-    it('parses empty enum', () => {
-      assert.deepEqual(parse('{}'), {
-        protocol: undefined,
-        hostname: undefined,
-        port: undefined,
-        pathname: [{ type: 'enum', members: [''] }],
-        search: undefined,
-      })
-    })
-
     // optional
 
     it('parses optional text', () => {
@@ -289,22 +247,6 @@ describe('parse', () => {
               { type: 'text', value: '.' },
               { type: 'variable', name: 'format' },
             ],
-          },
-        ],
-        search: undefined,
-      })
-    })
-
-    it('parses enum with optional', () => {
-      assert.deepEqual(parse('{json,xml}(/:version)'), {
-        protocol: undefined,
-        hostname: undefined,
-        port: undefined,
-        pathname: [
-          { type: 'enum', members: ['json', 'xml'] },
-          {
-            type: 'optional',
-            tokens: [{ type: 'separator' }, { type: 'variable', name: 'version' }],
           },
         ],
         search: undefined,
@@ -582,13 +524,14 @@ describe('parse', () => {
     })
 
     it('includes source context in error message', () => {
-      let source = 'very-long-pathname-with-error/:invalid}'
+      let source = 'very-long-pathname-with-error/:invalid)'
       try {
         parse(source)
         assert.fail('Expected ParseError to be thrown')
       } catch (error) {
         assert.ok(error instanceof ParseError)
-        assert.equal(error.message, 'unmatched } in pathname')
+        assert.equal(error.message, 'unmatched ) in pathname')
+        assert.equal(error.position, 38)
         assert.equal(error.source, source)
       }
     })
@@ -602,32 +545,6 @@ describe('parse', () => {
         assert.ok(error instanceof ParseError)
         assert.equal(error.message, 'missing variable name in pathname')
         assert.equal(error.position, 2)
-        assert.equal(error.partName, 'pathname')
-      }
-    })
-
-    it('reports unmatched opening brace errors', () => {
-      let source = '{unclosed'
-      try {
-        parse(source)
-        assert.fail('Expected ParseError to be thrown')
-      } catch (error) {
-        assert.ok(error instanceof ParseError)
-        assert.equal(error.message, 'unmatched { in pathname')
-        assert.equal(error.position, 0)
-        assert.equal(error.partName, 'pathname')
-      }
-    })
-
-    it('reports unmatched closing brace errors', () => {
-      let source = 'closed}'
-      try {
-        parse(source)
-        assert.fail('Expected ParseError to be thrown')
-      } catch (error) {
-        assert.ok(error instanceof ParseError)
-        assert.equal(error.message, 'unmatched } in pathname')
-        assert.equal(error.position, 6)
         assert.equal(error.partName, 'pathname')
       }
     })
@@ -880,56 +797,6 @@ export type Tests = [
     >
   >,
 
-  // enum
-  Assert<
-    IsEqual<
-      Parse<'{a,b,c}'>,
-      {
-        protocol: undefined
-        hostname: undefined
-        port: undefined
-        pathname: [{ type: 'enum'; members: ['a', 'b', 'c'] }]
-        search: undefined
-      }
-    >
-  >,
-  Assert<
-    IsEqual<
-      Parse<'{hello,world}'>,
-      {
-        protocol: undefined
-        hostname: undefined
-        port: undefined
-        pathname: [{ type: 'enum'; members: ['hello', 'world'] }]
-        search: undefined
-      }
-    >
-  >,
-  Assert<
-    IsEqual<
-      Parse<'{only}'>,
-      {
-        protocol: undefined
-        hostname: undefined
-        port: undefined
-        pathname: [{ type: 'enum'; members: ['only'] }]
-        search: undefined
-      }
-    >
-  >,
-  Assert<
-    IsEqual<
-      Parse<'{}'>,
-      {
-        protocol: undefined
-        hostname: undefined
-        port: undefined
-        pathname: [{ type: 'enum'; members: [''] }]
-        search: undefined
-      }
-    >
-  >,
-
   // optional
   Assert<
     IsEqual<
@@ -1093,24 +960,6 @@ export type Tests = [
               { type: 'text'; value: '.' },
               { type: 'variable'; name: 'format' },
             ]
-          },
-        ]
-        search: undefined
-      }
-    >
-  >,
-  Assert<
-    IsEqual<
-      Parse<'{json,xml}(/:version)'>,
-      {
-        protocol: undefined
-        hostname: undefined
-        port: undefined
-        pathname: [
-          { type: 'enum'; members: ['json', 'xml'] },
-          {
-            type: 'optional'
-            tokens: [{ type: 'separator' }, { type: 'variable'; name: 'version' }]
           },
         ]
         search: undefined

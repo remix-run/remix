@@ -36,8 +36,6 @@ export function stringifyTokens(tokens: Token[], sep = ''): string {
       result += `:${token.name}`
     } else if (token.type === 'wildcard') {
       result += `*${token.name ?? ''}`
-    } else if (token.type === 'enum') {
-      result += `{${token.members.join(',')}}`
     } else if (token.type === 'text') {
       result += token.value
     } else if (token.type === 'separator') {
@@ -105,7 +103,6 @@ type StringifyToken<T extends Token, Sep extends string = ''> =
   T extends { type: 'variable', name: infer N extends string } ? `:${N}` :
   T extends { type: 'wildcard', name: infer N extends string } ? `*${N}` :
   T extends { type: 'wildcard' } ? '*' :
-  T extends { type: 'enum', members: infer M extends string[] } ? `{${JoinStringArray<M, ','>}}` :
   T extends { type: 'separator' } ? Sep :
   T extends { type: 'optional', tokens: infer Tokens extends Token[] } ? `(${StringifyTokens<Tokens, Sep>})` :
   never

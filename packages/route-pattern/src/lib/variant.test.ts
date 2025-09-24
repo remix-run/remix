@@ -51,24 +51,6 @@ export type Tests = [
     'files/*' | 'files/*.:ext'
   >>,
 
-  // should handle enum patterns
-  Assert<IsEqual<
-    Variant<'avatar.{jpg,png,gif}'>,
-    'avatar.jpg' | 'avatar.png' | 'avatar.gif'
-  >>,
-
-  // should handle optional enum patterns
-  Assert<IsEqual<
-    Variant<'photo(.{jpg,png})'>,
-    'photo' | 'photo.jpg' | 'photo.png'
-  >>,
-
-  // should handle wildcard with enum extension
-  Assert<IsEqual<
-    Variant<'files/*.{jpg,png}'>,
-    'files/*.jpg' | 'files/*.png'
-  >>,
-
   // nested optionals: variables
   Assert<IsEqual<
     Variant<'api(/:major(/:minor))'>,
