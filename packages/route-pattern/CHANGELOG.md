@@ -4,7 +4,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 ## v0.12.0 (2025-09-25)
 
-- BREAKING CHANGE: removed `options` arg from `createHrefBuilder` (and `HrefBuilderOptions` export)
+- BREAKING CHANGE: removed `options` arg from `createHrefBuilder`
 - BREAKING CHANGE: removed support for enum patterns
 - Add `pattern.href(...args)` method for generating URLs from patterns
 
@@ -56,7 +56,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   pattern.source // "https://remix.run/api/users/:id"
   ```
 
-- Expose `HrefBuilderOptions` and `RouteMatch` types as public API
+- Export `RouteMatch` type as public API
 - Allow `null` and `undefined` as values for optional params
 
 ## v0.11.0 (2025-09-11)
