@@ -1,4 +1,4 @@
-export { createStorageKey as createKey } from './lib/app-storage.ts'
+export { createStorageKey } from './lib/app-storage.ts'
 export { AppStorage } from './lib/app-storage.ts'
 
 export { RequestMethods, RequestContext, createRouter, createHandlers } from './lib/router.ts'

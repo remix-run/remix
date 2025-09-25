@@ -276,8 +276,8 @@ export class Router {
     }
   }
 
-  addRoute<M extends RequestMethod, T extends string>(
-    method: M,
+  addRoute<T extends string>(
+    method: RequestMethod,
     pattern: T | RoutePattern<T>,
     handler: RouteHandlerFunction<AnyParams>,
     middleware: Middleware[] | null = null,
