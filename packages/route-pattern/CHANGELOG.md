@@ -6,6 +6,15 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - BREAKING CHANGE: removed `options` arg from `createHrefBuilder` (and `HrefBuilderOptions` export)
 - BREAKING CHANGE: removed support for enum patterns
+- Add `pattern.href(...args)` method for generating URLs from patterns
+
+  ```tsx
+  import { RoutePattern } from '@remix-run/route-pattern'
+
+  let pattern = new RoutePattern('users/:id')
+  pattern.href({ id: '123' }) // "/users/123"
+  ```
+
 - Add RouteMap feature for working with more than one pattern at a time. The mapping allows human-friendly naming of patterns. Also works with href builder.
 
   ```tsx

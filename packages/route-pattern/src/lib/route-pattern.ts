@@ -1,9 +1,10 @@
+import { formatHref } from './href.ts'
+import type { HrefBuilderArgs } from './href.ts'
 import { join } from './join.ts'
 import type { Join } from './join.ts'
 import type { Params } from './params.ts'
 import { parse, parseSearch } from './parse.ts'
-import type { ParseResult } from './parse.ts'
-import type { Token, SearchConstraints } from './parse.ts'
+import type { Token, ParseResult, SearchConstraints } from './parse.ts'
 
 export interface RoutePatternOptions {
   /**
@@ -67,6 +68,17 @@ export class RoutePattern<T extends string = string> {
     if (searchConstraints) {
       this.#searchConstraints = searchConstraints
     }
+  }
+
+  /**
+   * Generate a href (URL) for this pattern.
+   *
+   * @param params The parameters to use in the href.
+   * @param searchParams The search parameters to use in the href.
+   * @returns The href
+   */
+  href(...args: HrefBuilderArgs<T>): string {
+    return formatHref(this.#parsed, ...(args as any))
   }
 
   /**

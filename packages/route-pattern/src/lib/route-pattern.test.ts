@@ -27,6 +27,37 @@ describe('RoutePattern', () => {
     })
   })
 
+  describe('href', () => {
+    it('generates a href', () => {
+      let pattern = new RoutePattern('users/:id')
+      assert.equal(pattern.href({ id: '123' }), '/users/123')
+    })
+
+    it('generates a href with search params', () => {
+      let pattern = new RoutePattern('users/:id')
+      assert.equal(pattern.href({ id: '123' }, { sort: 'asc' }), '/users/123?sort=asc')
+    })
+
+    it('generates a href with origin', () => {
+      let pattern = new RoutePattern('://example.com/users/:id')
+      assert.equal(pattern.href({ id: '123' }), 'https://example.com/users/123')
+    })
+  })
+
+  describe('join', () => {
+    it('joins two patterns', () => {
+      let pattern = new RoutePattern('users/:id')
+      let pattern2 = pattern.join('posts/:postId')
+      assert.equal(pattern2.source, '/users/:id/posts/:postId')
+    })
+
+    it('reuses options from the base pattern', () => {
+      let pattern = new RoutePattern('https://remix.run', { ignoreCase: true })
+      let pattern2 = pattern.join('posts/:postId')
+      assert.equal(pattern2.ignoreCase, true)
+    })
+  })
+
   describe('match', () => {
     it('returns a match object', () => {
       let pattern = new RoutePattern('users/:id')
@@ -624,20 +655,6 @@ describe('RoutePattern', () => {
     it('returns true if the URL matches the pattern', () => {
       let pattern = new RoutePattern('users/:id?format=json')
       assert.equal(pattern.test('https://example.com/users/123?format=json'), true)
-    })
-  })
-
-  describe('join', () => {
-    it('joins two patterns', () => {
-      let pattern = new RoutePattern('users/:id')
-      let pattern2 = pattern.join('posts/:postId')
-      assert.equal(pattern2.source, '/users/:id/posts/:postId')
-    })
-
-    it('reuses options from the base pattern', () => {
-      let pattern = new RoutePattern('https://remix.run', { ignoreCase: true })
-      let pattern2 = pattern.join('posts/:postId')
-      assert.equal(pattern2.ignoreCase, true)
     })
   })
 

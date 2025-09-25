@@ -16,7 +16,7 @@ The following examples show how to create a route map and use it to match and ge
 Parts of a route pattern that begin with a colon (`:`) are dynamic parameters.
 
 ```tsx
-import { createRoutes, createHrefBuilder } from '@remix-run/route-pattern'
+import { createRoutes } from '@remix-run/route-pattern'
 
 let routes = createRoutes({
   home: '/',
@@ -32,17 +32,16 @@ let routes = createRoutes({
   },
 })
 
+// URL matching
 routes.profile.match('https://shopify.com/profiles/1')
 // { params: { id: '1' } }
 routes.blog.post.match('https://shopify.com/blog/remixing-shopify')
 // { params: { slug: 'remixing-shopify' } }
 
-// The generic restricts the set of URLs that may be generated.
-let href = createHrefBuilder<typeof routes>()
-
-href(routes.home) // "/"
-href(routes.blog.post, { slug: 'remixing-shopify' }) // "/blog/remixing-shopify"
-href(routes.profiles.edit, { id: 1 }) // "/profiles/1/edit"
+// URL generation
+routes.home.href() // "/"
+routes.blog.post.href({ slug: 'remixing-shopify' }) // "/blog/remixing-shopify"
+routes.profiles.edit.href({ id: 1 }) // "/profiles/1/edit"
 ```
 
 A single URL segment can contain multiple parameters by separating them with any character that isn't a [valid JavaScript identifier character](https://developer.mozilla.org/en-US/docs/Glossary/Identifier).

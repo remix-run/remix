@@ -35,6 +35,8 @@ export function formatHref(
   // If the pattern has a hostname we can make a full URL.
   // Otherwise we can only make an absolute path.
   if (parsed.hostname) {
+    // Default protocol is https because it's free these days so there's no
+    // excuse not to use it.
     let protocol = parsed.protocol ? resolveTokens(parsed.protocol, '', params) : 'https'
     let host = resolveTokens(parsed.hostname, '.', params) + (parsed.port ? `:${parsed.port}` : '')
     href += `${protocol}://${host}`
