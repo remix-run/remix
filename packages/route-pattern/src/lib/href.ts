@@ -59,30 +59,31 @@ export function formatHref(
 }
 
 function resolveTokens(tokens: Token[], sep: string, params: Record<string, any>): string {
-  return tokens.map((token) => resolveToken(token, sep, params)).join('')
-}
+  let str = ''
 
-function resolveToken(token: Token, sep: string, params: Record<string, any>): string {
-  if (token.type === 'variable' || token.type === 'wildcard') {
-    let name = token.name ?? '*'
-    if (params[name] == null) throw new MissingParamError(name)
-    return String(params[name])
-  }
-  if (token.type === 'separator') {
-    return sep
-  }
-  if (token.type === 'optional') {
-    try {
-      return resolveTokens(token.tokens, sep, params)
-    } catch (error) {
-      if (error instanceof MissingParamError) {
-        return '' // Missing required parameter, ok to skip since it's optional
+  for (let token of tokens) {
+    if (token.type === 'variable' || token.type === 'wildcard') {
+      let name = token.name ?? '*'
+      if (params[name] == null) throw new MissingParamError(name)
+      str += String(params[name])
+    } else if (token.type === 'text') {
+      str += token.value
+    } else if (token.type === 'separator') {
+      str += sep
+    } else if (token.type === 'optional') {
+      try {
+        str += resolveTokens(token.tokens, sep, params)
+      } catch (error) {
+        if (!(error instanceof MissingParamError)) {
+          throw error
+        }
+
+        // Missing required parameter, ok to skip since it's optional
       }
-      throw error
     }
   }
-  // text
-  return token.value
+
+  return str
 }
 
 export interface HrefBuilder<T extends string | RoutePattern | RouteMap = string> {
