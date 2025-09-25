@@ -59,46 +59,18 @@ export function formatHref(
 }
 
 function resolveTokens(tokens: Token[], sep: string, params: Record<string, any>): string {
-  let result = ''
-
-  for (let i = 0; i < tokens.length; i++) {
-    let token = tokens[i]
-    let nextToken = i === tokens.length - 2 ? tokens[i + 1] : undefined
-
-    // Check for the special case: separator followed by a wildcard as the last token
-    if (token.type === 'separator' && nextToken?.type === 'wildcard') {
-      // Handle the trailing separator + wildcard as optional
-      let wildcardName = nextToken.name ?? '*'
-      if (params[wildcardName] != null && params[wildcardName] !== '') {
-        result += sep + String(params[wildcardName])
-      }
-
-      // Skip the next token since we handled it here
-      i++
-      continue
-    }
-
-    result += resolveToken(token, sep, params)
-  }
-
-  return result
+  return tokens.map((token) => resolveToken(token, sep, params)).join('')
 }
 
 function resolveToken(token: Token, sep: string, params: Record<string, any>): string {
   if (token.type === 'variable' || token.type === 'wildcard') {
     let name = token.name ?? '*'
-
-    if (params[name] == null) {
-      throw new MissingParamError(name)
-    }
-
+    if (params[name] == null) throw new MissingParamError(name)
     return String(params[name])
   }
-
   if (token.type === 'separator') {
     return sep
   }
-
   if (token.type === 'optional') {
     try {
       return resolveTokens(token.tokens, sep, params)
@@ -109,7 +81,6 @@ function resolveToken(token: Token, sep: string, params: Record<string, any>): s
       throw error
     }
   }
-
   // text
   return token.value
 }

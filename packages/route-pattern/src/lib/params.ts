@@ -21,12 +21,10 @@ export type RequiredParams<T extends string> =
 type RequiredPartParams<T extends Token[] | undefined> =
   T extends [infer Head extends Token, ...infer Tail extends Token[]] ?
     Head extends Optional ? RequiredPartParams<Tail> :
-    Head extends { type: 'variable' | 'wildcard', name: infer N extends string } ? 
-      (IsTrailingWildcard<Head, Tail> extends true ? never : N) | RequiredPartParams<Tail> :
-    Head extends { type: 'wildcard' } ? 
-      (IsTrailingWildcard<Head, Tail> extends true ? never : '*') | RequiredPartParams<Tail> :
+    Head extends { type: 'variable' | 'wildcard', name: infer N extends string } ? N | RequiredPartParams<Tail> :
+    Head extends { type: 'wildcard' } ? '*' | RequiredPartParams<Tail> :
     RequiredPartParams<Tail> :
-  never
+    never
 
 // prettier-ignore
 export type OptionalParams<T extends string> =
@@ -34,24 +32,17 @@ export type OptionalParams<T extends string> =
     | OptionalPartParams<A['protocol']>
     | OptionalPartParams<A['hostname']>
     | OptionalPartParams<A['pathname']> :
-  never
+    never
 
 // prettier-ignore
 type OptionalPartParams<T extends Token[] | undefined, IsOptional extends boolean = false> =
   T extends [infer Head extends Token, ...infer Tail extends Token[]] ?
     Head extends Optional ? OptionalPartParams<Head['tokens'], true> | OptionalPartParams<Tail, IsOptional> :
     Head extends { type: 'variable' | 'wildcard', name: infer N extends string } ? 
-      (IsOptional extends true ? N | OptionalPartParams<Tail, true> : 
-       IsTrailingWildcard<Head, Tail> extends true ? N | OptionalPartParams<Tail, IsOptional> : 
-       OptionalPartParams<Tail, IsOptional>) :
+      IsOptional extends true ? N | OptionalPartParams<Tail, IsOptional> : 
+      OptionalPartParams<Tail, IsOptional> :
     Head extends { type: 'wildcard' } ? 
-      (IsOptional extends true ? '*' | OptionalPartParams<Tail, true> : 
-       IsTrailingWildcard<Head, Tail> extends true ? '*' | OptionalPartParams<Tail, IsOptional> : 
-       OptionalPartParams<Tail, IsOptional>) :
+      IsOptional extends true ? '*' | OptionalPartParams<Tail, IsOptional> : 
+      OptionalPartParams<Tail, IsOptional> :
     OptionalPartParams<Tail, IsOptional> :
   never
-
-// Helper type to detect trailing wildcards (wildcard as last token)
-// prettier-ignore
-type IsTrailingWildcard<Head extends Token, Tail extends Token[]> =
-  Head extends { type: 'wildcard' } ? Tail extends [] ? true : false : false

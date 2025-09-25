@@ -60,6 +60,14 @@ routes.blog.post.match('https://remix.run/blog/2024-01-15/introducing-remix')
 // { params: { year: '2024', month: '01', day: '15', slug: 'introducing-remix' } }
 routes.blog.post.match('https://remix.run/blog/2024-01-15/introducing-remix.html')
 // { params: { year: '2024', month: '01', day: '15', slug: 'introducing-remix' } }
+
+routes.blog.post.href({
+  year: '2024',
+  month: '01',
+  day: '15',
+  slug: 'introducing-remix',
+})
+// "/blog/2024-01-15/introducing-remix.html"
 ```
 
 Optional parts of the URL may be nested to support flexible URL patterns.
@@ -77,6 +85,15 @@ routes.api.customers.match('https://shopify.com/api/v2.1/customers/cari.json')
 // { params: { major: '2', minor: '1', id: 'cari', format: 'json' } }
 routes.api.customers.match('https://shopify.com/api/v2/customers/cari.json')
 // { params: { major: '2', minor: undefined, id: 'cari', format: 'json' } }
+
+routes.api.customers.href({ major: '2', minor: '1', id: 'cari', format: 'json' })
+// "/api/v2.1/customers/cari.json"
+routes.api.customers.href({ major: '2', id: 'cari', format: 'json' })
+// "/api/v2/customers/cari.json"
+routes.api.customers.href({ major: '2', id: 'cari' })
+// "/api/v2/customers/cari"
+routes.api.customers.href({ id: 'cari' })
+// "/api/customers/cari"
 ```
 
 URL patterns may match on the full URL, including protocol, hostname, and port. Pass a "base" pattern to `createRoutes` as the first arg to make all patterns relative to that base.
@@ -89,6 +106,9 @@ let routes = createRoutes('https://:store.shopify.com', {
 
 routes.orders.match('https://coffee-roasters.shopify.com/orders')
 // { params: { store: 'coffee-roasters' } }
+
+routes.inventory.href({ store: 'remix' })
+// "https://remix.shopify.com/inventory"
 ```
 
 Wildcards (`*`) are useful for matching nested paths, file paths, or any URL structure with variable depth.
@@ -100,6 +120,9 @@ let routes = createRoutes({
 
 routes.images.match('https://cdn.shopify.com/assets/products/sneakers.webp')
 // { params: { path: 'products/sneakers', ext: 'webp' } }
+
+routes.images.href({ path: 'remix', ext: 'webp' })
+// "https://cdn.shopify.com/assets/remix.webp"
 ```
 
 A wildcard that is not followed by an identifier is "unnamed" and won't show up in the params. But it will still match.
@@ -111,14 +134,19 @@ let routes = createRoutes({
 
 routes.images.match('https://cdn.shopify.com/files/images/logo.png')
 // { params: {} }
+
+routes.images.href({ '*': 'images/hero.jpg' })
+// "/files/images/hero.jpg"
 ```
 
 ## URL Generation
 
+In addition to generating URLs using `pattern.href(...args)`, you can also use the `createHrefBuilder` function to create a custom href builder that can be used to generate URLs from patterns or pattern strings.
+
 URL generation is type-safe, which helps prevent creating invalid URLs. Href builder provides two levels of type-safety:
 
-1. The generic type of the href builder restricts the set of URLs that may be generated. This means you can't use a pattern that is not in the route schema.
-2. The href builder validates the parameters, so you can't pass a parameter that is not in the route pattern.
+1. The generic type passed to `createHrefBuilder` restricts the set of patterns that may be used as the first argument.
+2. The href builder validates the parameters, making sure you pass the correct parameters for the pattern.
 
 ```tsx
 import { createHrefBuilder } from '@remix-run/route-pattern'
@@ -135,47 +163,49 @@ let routes = createRoutes({
   },
 })
 
-// The generic restricts the set of URLs that may be generated.
+// The generic restricts the set of patterns that may be used
 let href = createHrefBuilder<typeof routes>()
 
 // Complex patterns with optional segments
-href(routes.api.products, { version: '2.1', id: 'wireless-headphones' })
+href('/api/v:version/products/:id.json', { version: '2.1', id: 'wireless-headphones' })
 // "/api/v2.1/products/wireless-headphones.json"
 
 // ❌ Type error: Missing required "id" param
-href(routes.api.products, { version: '2.1' })
+href('/api/v:version/products/:id.json', { version: '2.1' })
 
 // Multi-segment wildcards
-href(routes.assets.images, { path: 'images/hero' })
+href('/assets/*path.jpg', { path: 'images/hero' })
 // "/assets/images/hero.jpg"
 
 // With Query Parameters
-href(routes.products.shoes, { brand: 'nike' }, { limit: 50, sort: 'desc' })
+href('/shoes/:brand', { brand: 'nike' }, { limit: 50, sort: 'desc' })
 // "/shoes/nike?limit=50&sort=desc"
 
 // ❌ Type error: Invalid route pattern
 href('/some/invalid-route')
 ```
 
-If you don't use the generic type, you can still pass in a string, but you won't get any type safety.
-
-Include a default host (and optional port) in URLs:
+If you don't use the generic type, you can still use `createHrefBuilder` with a string, but you won't get any type safety.
 
 ```tsx
-let href = createHrefBuilder({ host: 'remix.run:8080' })
+let href = createHrefBuilder()
 
 href('blog/:slug', { slug: 'remixing-shopify' })
-// "https://remix.run:8080/blog/remixing-shopify"
+// "/blog/remixing-shopify"
 ```
 
-## Low-level RoutePattern API
+## RoutePattern API
 
-The `RoutePattern` interface provides a low-level API for matching URLs one at a time.
+The `RoutePattern` interface provides a low-level API for matching and generating URLs one at a time.
 
 ```tsx
 let pattern = new RoutePattern('blog/:slug')
+
 pattern.match('https://remix.run/blog/remixing-shopify')
 // { params: { slug: 'remixing-shopify' } }
+
+pattern.href({ slug: 'remixing-shopify' })
+// "/blog/remixing-shopify"
 ```
 
 ## Pattern Syntax

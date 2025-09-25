@@ -91,8 +91,8 @@ export class RoutePattern<T extends string = string> {
    * @returns The joined pattern
    */
   join<P extends string>(input: P | RoutePattern<P>): RoutePattern<Join<T, P>> {
-    let inputTokens = parse(typeof input === 'string' ? input : input.source)
-    return new RoutePattern(join(this.#parsed, inputTokens) as Join<T, P>, {
+    let parsedInput = parse(typeof input === 'string' ? input : input.source)
+    return new RoutePattern(join(this.#parsed, parsedInput) as Join<T, P>, {
       ignoreCase: this.ignoreCase,
     })
   }
@@ -159,36 +159,16 @@ function tokensToRegExpSource(
 ): string {
   let source = ''
 
-  for (let i = 0; i < tokens.length; i++) {
-    let token = tokens[i]
-    let nextToken = i === tokens.length - 2 ? tokens[i + 1] : undefined
-
-    // Check for the special case: separator followed by a wildcard as the last token
-    if (token.type === 'separator' && nextToken?.type === 'wildcard') {
-      // Handle the trailing separator + wildcard as optional
-      if (nextToken.name) {
-        // Named wildcard: make the separator and capture group optional
-        paramNames.push(nextToken.name)
-        source += `(?:${regexpEscape(sep)}(.*))?`
-      } else {
-        // Unnamed wildcard: make the separator and non-capturing group optional
-        source += `(?:${regexpEscape(sep)}.*)?`
-      }
-
-      // Skip the next token since we handled it here
-      i++
-      continue
-    }
-
+  for (let token of tokens) {
     if (token.type === 'variable') {
       paramNames.push(token.name)
       source += `(${paramRegExpSource})`
     } else if (token.type === 'wildcard') {
-      if (!token.name) {
-        source += `(?:.*)`
-      } else {
+      if (token.name) {
         paramNames.push(token.name)
         source += `(.*)`
+      } else {
+        source += `(?:.*)`
       }
     } else if (token.type === 'text') {
       source += regexpEscape(forceLowerCase ? token.value.toLowerCase() : token.value)

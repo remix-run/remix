@@ -6,16 +6,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - BREAKING CHANGE: removed `options` arg from `createHrefBuilder` (and `HrefBuilderOptions` export)
 - BREAKING CHANGE: removed support for enum patterns
-- Add `pattern.href(...args)` method for generating URLs from patterns
-
-  ```tsx
-  import { RoutePattern } from '@remix-run/route-pattern'
-
-  let pattern = new RoutePattern('users/:id')
-  pattern.href({ id: '123' }) // "/users/123"
-  ```
-
-- Add RouteMap feature for working with more than one pattern at a time. The mapping allows human-friendly naming of patterns. Also works with href builder.
+- Add `createRoutes` function for working with more than one pattern at a time. This generates a `RouteMap` object that allows human-friendly naming of patterns. Also works as a generic to `createHrefBuilder()` that restricts the set of patterns that may be used as the first argument.
 
   ```tsx
   import { createRoutes, createHrefBuilder } from '@remix-run/route-pattern'
@@ -34,23 +25,16 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   // { params: { slug: 'my-post' } }
 
   let href = createHrefBuilder<typeof routes>()
-  href(routes.blog.post, { slug: 'my-post' }) // /blog/my-post
+  href('/blog/:slug', { slug: 'my-post' }) // /blog/my-post
   ```
 
-- Wildcards at the end of a pattern that immediately follow a slash make that slash optional
+- Add `pattern.href(...args)` method for generating URLs from patterns
 
   ```tsx
   import { RoutePattern } from '@remix-run/route-pattern'
 
-  let pattern = new RoutePattern('/files/*')
-  // before
-  pattern.match('https://remix.run/files') // null
-  // after
-  pattern.match('https://remix.run/files') // match!
-
-  // href generation works too!
-  href(pattern, { '*': undefined }) // /files
-  href(pattern) // /files - "*" param is not required
+  let pattern = new RoutePattern('users/:id')
+  pattern.href({ id: '123' }) // "/users/123"
   ```
 
 - Add `pattern.join(input, options)`, which allows a pattern to be built relative

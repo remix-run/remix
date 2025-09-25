@@ -478,8 +478,7 @@ describe('RoutePattern', () => {
       })
     })
 
-    // A "trailing wildcard" is a wildcard at the end of a pattern that immediately follows a slash
-    describe('trailing wildcards', () => {
+    describe('wildcards', () => {
       it('matches named wildcard', () => {
         let pattern = new RoutePattern('files/*path')
         assert.deepEqual(pattern.match('https://example.com/files/docs/readme.txt')?.params, {
@@ -488,16 +487,18 @@ describe('RoutePattern', () => {
         assert.deepEqual(pattern.match('https://example.com/files/')?.params, {
           path: '',
         })
-        assert.deepEqual(pattern.match('https://example.com/files')?.params, {
-          path: undefined,
-        })
+
+        // Slash is literal before the wildcard, must be present
+        assert.deepEqual(pattern.match('https://example.com/files'), null)
       })
 
       it('matches unnamed wildcard', () => {
         let pattern = new RoutePattern('files/*')
         assert.deepEqual(pattern.match('https://example.com/files/readme.txt')?.params, {})
         assert.deepEqual(pattern.match('https://example.com/files/')?.params, {})
-        assert.deepEqual(pattern.match('https://example.com/files')?.params, {})
+
+        // Slash is literal before the wildcard, must be present
+        assert.deepEqual(pattern.match('https://example.com/files'), null)
       })
     })
 
