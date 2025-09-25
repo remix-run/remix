@@ -1,6 +1,6 @@
 import type { Token, SearchConstraints, ParseResult, ParsedPattern } from './parse.ts'
 
-export function stringify(parsed: ParseResult): string {
+export function stringify(parsed: Omit<ParseResult, 'search'> & { search?: string }): string {
   let str = ''
 
   if (parsed.hostname != null) {
@@ -11,14 +11,16 @@ export function stringify(parsed: ParseResult): string {
   }
 
   if (parsed.pathname != null) {
-    let pathname = stringifyTokens(parsed.pathname, '/')
-    if (pathname !== '') {
-      str += `/${pathname}`
-    }
+    if (!startsWithSeparator(parsed.pathname)) str += '/'
+    str += stringifyTokens(parsed.pathname, '/')
+  } else {
+    str += '/'
   }
 
-  if (parsed.search != null) {
-    let search = stringifySearchConstraints(parsed.search)
+  if (parsed.search) {
+    str += `?${parsed.search}`
+  } else if (parsed.searchConstraints != null) {
+    let search = stringifySearchConstraints(parsed.searchConstraints)
     if (search !== '') {
       str += `?${search}`
     }
@@ -27,25 +29,39 @@ export function stringify(parsed: ParseResult): string {
   return str
 }
 
+export function startsWithSeparator(tokens: Token[]): boolean {
+  if (tokens.length === 0) return false
+
+  let firstToken = tokens[0]
+  if (firstToken.type === 'separator') return true
+
+  // Check if it starts with an optional that contains a separator
+  if (firstToken.type === 'optional' && firstToken.tokens && firstToken.tokens.length > 0) {
+    return startsWithSeparator(firstToken.tokens)
+  }
+
+  return false
+}
+
 export function stringifyTokens(tokens: Token[], sep = ''): string {
-  let result = ''
+  let str = ''
 
   for (let i = 0; i < tokens.length; i++) {
     let token = tokens[i]
     if (token.type === 'variable') {
-      result += `:${token.name}`
+      str += `:${token.name}`
     } else if (token.type === 'wildcard') {
-      result += `*${token.name ?? ''}`
+      str += `*${token.name ?? ''}`
     } else if (token.type === 'text') {
-      result += token.value
+      str += token.value
     } else if (token.type === 'separator') {
-      result += sep
+      str += sep
     } else if (token.type === 'optional') {
-      result += `(${stringifyTokens(token.tokens, sep)})`
+      str += `(${stringifyTokens(token.tokens, sep)})`
     }
   }
 
-  return result
+  return str
 }
 
 export function stringifySearchConstraints(search: SearchConstraints): string {
@@ -72,25 +88,11 @@ export function stringifySearchConstraints(search: SearchConstraints): string {
 // prettier-ignore
 export type Stringify<T extends ParsedPattern> =
   T['hostname'] extends Token[] ?
-    `${StringifyTokens<T['protocol']>}://${StringifyTokens<T['hostname'], '.'>}${StringifyPort<T['port']>}${StringifyPathname<T['pathname']>}${StringifySearch<T['search']>}` :
-    T['pathname'] extends Token[] ?
-      `${StringifyPathname<T['pathname']>}${StringifySearch<T['search']>}` :
-      StringifySearch<T['search']>
-
-export type StringifyPort<T extends string | undefined> = T extends string ? `:${T}` : ''
+    `${StringifyTokens<T['protocol'], ''>}://${StringifyTokens<T['hostname'], '.'>}${StringifyPort<T['port']>}${StringifyPathname<T['pathname']>}${StringifySearch<T['search']>}` :
+    `${StringifyPathname<T['pathname']>}${StringifySearch<T['search']>}`
 
 // prettier-ignore
-type StringifyPathname<T extends Token[] | undefined> =
-  T extends undefined ? '' :
-  StringifyTokens<T, '/'> extends infer S extends string ?
-    S extends '' ? '' :
-    `/${S}` :
-  never
-
-export type StringifySearch<T extends string | undefined> = T extends string ? `?${T}` : ''
-
-// prettier-ignore
-export type StringifyTokens<T extends Token[] | undefined, Sep extends string = ''> =
+type StringifyTokens<T extends Token[] | undefined, Sep extends string> =
   T extends undefined ? '' :
   T extends [] ? '' :
   T extends [infer Head extends Token, ...infer Tail extends Token[]] ?
@@ -98,7 +100,7 @@ export type StringifyTokens<T extends Token[] | undefined, Sep extends string = 
     never
 
 // prettier-ignore
-type StringifyToken<T extends Token, Sep extends string = ''> =
+type StringifyToken<T extends Token, Sep extends string> =
   T extends { type: 'text', value: infer V extends string } ? V :
   T extends { type: 'variable', name: infer N extends string } ? `:${N}` :
   T extends { type: 'wildcard', name: infer N extends string } ? `*${N}` :
@@ -108,9 +110,23 @@ type StringifyToken<T extends Token, Sep extends string = ''> =
   never
 
 // prettier-ignore
-type JoinStringArray<T extends string[], S extends string> =
-  T extends [] ? '' :
-  T extends [infer Head extends string] ? Head :
-  T extends [infer Head extends string, ...infer Tail extends string[]] ?
-    `${Head}${S}${JoinStringArray<Tail, S>}` :
+type StringifyPathname<T extends Token[] | undefined> =
+  T extends undefined ? '/' :
+  T extends [] ? '/' :
+  T extends Token[] ?
+    StartsWithSeparator<T> extends true ?
+      `${StringifyTokens<T, '/'>}` :
+      `/${StringifyTokens<T, '/'>}` :
     never
+
+type StringifyPort<T extends string | undefined> = T extends string ? `:${T}` : ''
+
+type StringifySearch<T extends string | undefined> = T extends string ? `?${T}` : ''
+
+// prettier-ignore
+export type StartsWithSeparator<T extends Token[]> =
+  T extends [] ? false :
+  T extends [{ type: 'separator' }, ...any] ? true :
+  T extends [{ type: 'optional', tokens: infer Tokens extends Token[] }, ...any] ?
+    StartsWithSeparator<Tokens> :
+    false

@@ -2,6 +2,7 @@ import { join } from './join.ts'
 import type { Join } from './join.ts'
 import type { Params } from './params.ts'
 import { parse, parseSearch } from './parse.ts'
+import type { ParseResult } from './parse.ts'
 import type { Token, SearchConstraints } from './parse.ts'
 
 export interface RoutePatternOptions {
@@ -24,6 +25,7 @@ export class RoutePattern<T extends string = string> {
    */
   readonly ignoreCase: boolean
 
+  readonly #parsed: ParseResult
   readonly #matcher: RegExp
   readonly #matchOrigin: boolean
   readonly #paramNames: Array<string>
@@ -33,9 +35,10 @@ export class RoutePattern<T extends string = string> {
     this.source = typeof source === 'string' ? source : source.source
     this.ignoreCase = options?.ignoreCase === true
 
-    let { protocol, hostname, port, pathname, search } = parse(this.source)
+    this.#parsed = parse(this.source)
+    let { protocol, hostname, port, pathname, searchConstraints } = this.#parsed
 
-    this.#matchOrigin = protocol !== undefined || hostname !== undefined || port !== undefined
+    this.#matchOrigin = hostname !== undefined
     this.#paramNames = []
 
     if (this.#matchOrigin) {
@@ -61,9 +64,25 @@ export class RoutePattern<T extends string = string> {
       this.#matcher = new RegExp(`^/${pathnameSource}$`)
     }
 
-    if (search) {
-      this.#searchConstraints = search
+    if (searchConstraints) {
+      this.#searchConstraints = searchConstraints
     }
+  }
+
+  /**
+   * Join this pattern with another pattern. This is useful when building a pattern
+   * relative to a base pattern.
+   *
+   * Note: The returned pattern will use the same options as this pattern.
+   *
+   * @param input The pattern to join with
+   * @returns The joined pattern
+   */
+  join<P extends string>(input: P | RoutePattern<P>): RoutePattern<Join<T, P>> {
+    let inputTokens = parse(typeof input === 'string' ? input : input.source)
+    return new RoutePattern(join(this.#parsed, inputTokens) as Join<T, P>, {
+      ignoreCase: this.ignoreCase,
+    })
   }
 
   /**
@@ -103,21 +122,6 @@ export class RoutePattern<T extends string = string> {
     return this.match(url) !== null
   }
 
-  /**
-   * Join this pattern with another pattern. This is useful when building a pattern
-   * relative to a base pattern.
-   *
-   * Note: The returned pattern will use the same options as this pattern.
-   *
-   * @param input The pattern to join with
-   * @returns The joined pattern
-   */
-  join<P extends string>(input: P | RoutePattern<P>): RoutePattern<Join<T, P>> {
-    return new RoutePattern(join(this.source, typeof input === 'string' ? input : input.source), {
-      ignoreCase: this.ignoreCase,
-    })
-  }
-
   toString() {
     return this.source
   }
@@ -141,7 +145,7 @@ function tokensToRegExpSource(
   paramNames: string[],
   forceLowerCase: boolean,
 ): string {
-  let result = ''
+  let source = ''
 
   for (let i = 0; i < tokens.length; i++) {
     let token = tokens[i]
@@ -153,10 +157,10 @@ function tokensToRegExpSource(
       if (nextToken.name) {
         // Named wildcard: make the separator and capture group optional
         paramNames.push(nextToken.name)
-        result += `(?:${regexpEscape(sep)}(.*))?`
+        source += `(?:${regexpEscape(sep)}(.*))?`
       } else {
         // Unnamed wildcard: make the separator and non-capturing group optional
-        result += `(?:${regexpEscape(sep)}.*)?`
+        source += `(?:${regexpEscape(sep)}.*)?`
       }
 
       // Skip the next token since we handled it here
@@ -166,24 +170,24 @@ function tokensToRegExpSource(
 
     if (token.type === 'variable') {
       paramNames.push(token.name)
-      result += `(${paramRegExpSource})`
+      source += `(${paramRegExpSource})`
     } else if (token.type === 'wildcard') {
       if (!token.name) {
-        result += `(?:.*)`
+        source += `(?:.*)`
       } else {
         paramNames.push(token.name)
-        result += `(.*)`
+        source += `(.*)`
       }
     } else if (token.type === 'text') {
-      result += regexpEscape(forceLowerCase ? token.value.toLowerCase() : token.value)
+      source += regexpEscape(forceLowerCase ? token.value.toLowerCase() : token.value)
     } else if (token.type === 'separator') {
-      result += regexpEscape(sep)
+      source += regexpEscape(sep)
     } else if (token.type === 'optional') {
-      result += `(?:${tokensToRegExpSource(token.tokens, sep, paramRegExpSource, paramNames, forceLowerCase)})?`
+      source += `(?:${tokensToRegExpSource(token.tokens, sep, paramRegExpSource, paramNames, forceLowerCase)})?`
     }
   }
 
-  return result
+  return source
 }
 
 function regexpEscape(text: string): string {

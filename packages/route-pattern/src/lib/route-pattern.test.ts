@@ -631,7 +631,7 @@ describe('RoutePattern', () => {
     it('joins two patterns', () => {
       let pattern = new RoutePattern('users/:id')
       let pattern2 = pattern.join('posts/:postId')
-      assert.equal(pattern2.source, 'users/:id/posts/:postId')
+      assert.equal(pattern2.source, '/users/:id/posts/:postId')
     })
 
     it('reuses options from the base pattern', () => {

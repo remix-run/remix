@@ -13,6 +13,7 @@ describe('parse', () => {
       port: undefined,
       pathname: undefined,
       search: undefined,
+      searchConstraints: undefined,
     })
   })
 
@@ -24,6 +25,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'text', value: 'hello' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -34,6 +36,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'text', value: 'hello world' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -46,6 +49,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'variable', name: 'id' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -56,6 +60,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'variable', name: 'user_id' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -66,6 +71,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'variable', name: '$special' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -80,6 +86,7 @@ describe('parse', () => {
           { type: 'variable', name: 'id' },
         ],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -92,6 +99,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'wildcard', name: 'files' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -102,6 +110,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'wildcard' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -114,6 +123,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'optional', tokens: [{ type: 'text', value: 'hello' }] }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -124,6 +134,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'optional', tokens: [{ type: 'variable', name: 'id' }] }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -143,6 +154,7 @@ describe('parse', () => {
           },
         ],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -159,6 +171,7 @@ describe('parse', () => {
           },
         ],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -171,6 +184,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'text', value: ':' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -181,6 +195,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'text', value: '*' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -191,6 +206,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'text', value: '(' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -201,6 +217,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'text', value: '{' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -211,6 +228,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'text', value: '\\' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -221,6 +239,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'text', value: 'hello:world*test' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -250,6 +269,7 @@ describe('parse', () => {
           },
         ],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -264,6 +284,7 @@ describe('parse', () => {
           { type: 'variable', name: 'id' },
         ],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -277,7 +298,8 @@ describe('parse', () => {
           { type: 'separator' },
           { type: 'variable', name: 'id' },
         ],
-        search: new Map([
+        search: 'q=1',
+        searchConstraints: new Map([
           [
             'q',
             {
@@ -299,6 +321,7 @@ describe('parse', () => {
         port: undefined,
         pathname: [{ type: 'text', value: 'https:' }],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -312,6 +335,7 @@ describe('parse', () => {
           { type: 'text', value: ':' },
         ],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -326,6 +350,7 @@ describe('parse', () => {
         port: undefined,
         pathname: undefined,
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -342,6 +367,7 @@ describe('parse', () => {
         port: undefined,
         pathname: undefined,
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -356,6 +382,7 @@ describe('parse', () => {
         port: undefined,
         pathname: undefined,
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -370,6 +397,7 @@ describe('parse', () => {
         port: '8080',
         pathname: undefined,
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -386,6 +414,7 @@ describe('parse', () => {
         port: undefined,
         pathname: undefined,
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -404,6 +433,7 @@ describe('parse', () => {
           { type: 'variable', name: 'id' },
         ],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -422,6 +452,7 @@ describe('parse', () => {
           { type: 'variable', name: 'id' },
         ],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -431,7 +462,8 @@ describe('parse', () => {
         hostname: undefined,
         port: undefined,
         pathname: [{ type: 'text', value: 'search' }],
-        search: new Map([
+        search: 'q=:query',
+        searchConstraints: new Map([
           [
             'q',
             {
@@ -467,7 +499,8 @@ describe('parse', () => {
             { type: 'separator' },
             { type: 'variable', name: 'id' },
           ],
-          search: new Map([
+          search: 'format=json',
+          searchConstraints: new Map([
             [
               'format',
               {
@@ -580,6 +613,7 @@ describe('parse', () => {
           },
         ],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -606,6 +640,7 @@ describe('parse', () => {
           },
         ],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 
@@ -632,6 +667,7 @@ describe('parse', () => {
           },
         ],
         search: undefined,
+        searchConstraints: undefined,
       })
     })
 

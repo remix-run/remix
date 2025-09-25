@@ -1,5 +1,5 @@
 import { split } from './split.ts'
-import type { PatternParts, Split } from './split.ts'
+import type { SplitPattern, Split } from './split.ts'
 
 export class ParseError extends Error {
   source: string
@@ -20,7 +20,8 @@ export interface ParseResult {
   hostname: Array<Token> | undefined
   port: string | undefined
   pathname: Array<Token> | undefined
-  search: SearchConstraints | undefined
+  search: string | undefined
+  searchConstraints: SearchConstraints | undefined
 }
 
 export function parse<T extends string>(source: T): ParseResult {
@@ -28,7 +29,8 @@ export function parse<T extends string>(source: T): ParseResult {
   let hostname: Token[] | undefined
   let port: string | undefined
   let pathname: Token[] | undefined
-  let search: SearchConstraints | undefined
+  let search: string | undefined
+  let searchConstraints: SearchConstraints | undefined
 
   let ranges = split(source)
 
@@ -45,10 +47,11 @@ export function parse<T extends string>(source: T): ParseResult {
     pathname = parsePart('pathname', '/', source, ...ranges.pathname)
   }
   if (ranges.search) {
-    search = parseSearchConstraints(source.slice(...ranges.search))
+    search = source.slice(...ranges.search)
+    searchConstraints = parseSearchConstraints(search)
   }
 
-  return { protocol, hostname, port, pathname, search }
+  return { protocol, hostname, port, pathname, search, searchConstraints }
 }
 
 const identifierMatcher = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
@@ -145,8 +148,6 @@ function parsePart(partName: string, sep: string, source: string, start: number,
   return tokens
 }
 
-// Search parsing helpers ---------------------------------------------------------------------------
-
 export function parseSearchConstraints(search: string): SearchConstraints {
   let constraints: SearchConstraints = new Map()
 
@@ -226,7 +227,7 @@ function decodeSearchComponent(text: string): string {
   }
 }
 
-export type ParsedPattern = {
+export interface ParsedPattern {
   protocol: Token[] | undefined
   hostname: Token[] | undefined
   port: string | undefined
@@ -237,7 +238,7 @@ export type ParsedPattern = {
 // prettier-ignore
 export type Parse<T extends string> =
   T extends any ?
-    Split<T> extends infer S extends PatternParts ?
+    Split<T> extends infer S extends SplitPattern ?
       {
         protocol: S['protocol'] extends string ? ParsePart<S['protocol']> : undefined
         hostname: S['hostname'] extends string ? ParsePart<S['hostname'], '.'> : undefined

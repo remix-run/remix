@@ -1,71 +1,24 @@
-import { parse } from './parse.ts'
-import type { Parse, ParsedPattern } from './parse.ts'
-import type { ParseResult, SearchConstraints, Token } from './parse.ts'
-import { stringifyTokens, stringifySearchConstraints } from './stringify.ts'
-import type { StringifyTokens, StringifyPort, StringifySearch } from './stringify.ts'
+import type { Parse, ParsedPattern, ParseResult } from './parse.ts'
+import type { SearchConstraints, Token } from './parse.ts'
+import { stringify, startsWithSeparator } from './stringify.ts'
+import type { Stringify, StartsWithSeparator } from './stringify.ts'
 
-export function join<B extends string, T extends string>(base: B, input: T): Join<B, T> {
-  if (input === '' || input === '/') return base as Join<B, T>
-  if (base === '') return input as Join<B, T>
-  if (base === '/' && input === '/') return '/' as Join<B, T>
+export function join(a: ParseResult, b: ParseResult): string {
+  let { protocol, hostname, port } = b.hostname != null ? b : a
+  let pathname = joinPathnames(a.pathname, b.pathname)
+  let searchConstraints = joinSearchConstraints(a.searchConstraints, b.searchConstraints)
 
-  let a = parse(base)
-  let b = parse(input)
-
-  let tokens: ParseResult = {
-    protocol: undefined,
-    hostname: undefined,
-    port: undefined,
-    pathname: undefined,
-    search: undefined,
-  }
-
-  // Origin (protocol, hostname, port): input overrides base
-  if (b.hostname != null) {
-    tokens.protocol = b.protocol
-    tokens.hostname = b.hostname
-    tokens.port = b.port
-  } else if (a.hostname != null) {
-    tokens.protocol = a.protocol
-    tokens.hostname = a.hostname
-    tokens.port = a.port
-  }
-
-  tokens.pathname = joinPathnames(a.pathname, b.pathname)
-  tokens.search = joinSearchConstraints(a.search, b.search)
-
-  let str = ''
-
-  if (tokens.hostname != null) {
-    let protocol = tokens.protocol != null ? stringifyTokens(tokens.protocol) : ''
-    let hostname = stringifyTokens(tokens.hostname, '.')
-    let port = tokens.port != null ? `:${tokens.port}` : ''
-    str += `${protocol}://${hostname}${port}`
-  }
-
-  if (tokens.pathname != null) {
-    let pathname = stringifyTokens(tokens.pathname, '/')
-    if (pathname !== '') {
-      // Only add leading slash if base starts with '/' OR there's an origin
-      // BUT not if the pathname already starts with a slash (including inside optionals)
-      let needsLeadingSlash =
-        (base.startsWith('/') || tokens.hostname != null) && !startsWithSeparator(tokens.pathname)
-      str += needsLeadingSlash ? `/${pathname}` : pathname
-    }
-  }
-
-  if (tokens.search != null) {
-    let search = stringifySearchConstraints(tokens.search)
-    if (search !== '') {
-      str += `?${search}`
-    }
-  }
-
-  return str as Join<B, T>
+  return stringify({
+    protocol,
+    hostname,
+    port,
+    pathname,
+    searchConstraints,
+  })
 }
 
 function joinPathnames(a: Token[] | undefined, b: Token[] | undefined): Token[] | undefined {
-  if (b == null) return a
+  if (b == null || b.length === 0) return a
   if (a == null || a.length === 0) return b
 
   let tokens = [...a]
@@ -87,20 +40,6 @@ function joinPathnames(a: Token[] | undefined, b: Token[] | undefined): Token[] 
   tokens.push(...b)
 
   return tokens
-}
-
-function startsWithSeparator(tokens: Token[]): boolean {
-  if (tokens.length === 0) return false
-
-  let firstToken = tokens[0]
-  if (firstToken.type === 'separator') return true
-
-  // Check if it starts with an optional that contains a separator
-  if (firstToken.type === 'optional' && firstToken.tokens && firstToken.tokens.length > 0) {
-    return startsWithSeparator(firstToken.tokens)
-  }
-
-  return false
 }
 
 function joinSearchConstraints(
@@ -145,22 +84,15 @@ export type Join<A extends string, B extends string> =
   B extends '' ? A :
   A extends '' ? B :
   B extends '/' ? A :
-  _Join<Parse<A>, Parse<B>, HasLeadingSlash<A>>
+  _Join<Parse<A>, Parse<B>>
 
-type HasLeadingSlash<T extends string> = T extends `/${string}` ? true : false
-
-// prettier-ignore
-type _Join<
-  A extends ParsedPattern,
-  B extends ParsedPattern,
-  LeadingSlash extends boolean
-> = JoinStringify<{
+type _Join<A extends ParsedPattern, B extends ParsedPattern> = Stringify<{
   protocol: JoinOriginField<A, B, 'protocol'>
   hostname: JoinOriginField<A, B, 'hostname'>
   port: JoinOriginField<A, B, 'port'>
   pathname: JoinPathnames<A['pathname'], B['pathname']>
   search: JoinSearch<A['search'], B['search']>
-}, LeadingSlash>
+}>
 
 // prettier-ignore
 type JoinOriginField<
@@ -170,15 +102,15 @@ type JoinOriginField<
 > = B['hostname'] extends Token[] ? B[Field] : A[Field]
 
 // prettier-ignore
-type JoinPathnames<
-  A extends Token[] | undefined,
-  B extends Token[] | undefined
-> = B extends undefined ? A :
-    A extends undefined ? B :
-    A extends [] ? B :
-    A extends Token[] ?
-      B extends Token[] ? JoinPathnameTokens<RemoveTrailingSeparator<A>, B> : never :
-      never
+type JoinPathnames<A extends Token[] | undefined, B extends Token[] | undefined> =
+  B extends undefined ? A :
+  B extends [] ? A :
+  A extends undefined ? B :
+  A extends [] ? B :
+  A extends Token[] ?
+    B extends Token[] ? JoinPathnameTokens<RemoveTrailingSeparator<A>, B> :
+    never :
+  never
 
 // prettier-ignore
 type RemoveTrailingSeparator<T extends Token[]> =
@@ -186,19 +118,11 @@ type RemoveTrailingSeparator<T extends Token[]> =
 
 // prettier-ignore
 type JoinPathnameTokens<
-  Base extends Token[],
-  Input extends Token[]
-> = StartsWithSeparator<Input> extends true ?
-    [...Base, ...Input] :
-    [...Base, { type: 'separator' }, ...Input]
-
-// prettier-ignore
-type StartsWithSeparator<T extends Token[]> =
-  T extends [] ? false :
-  T extends [{ type: 'separator' }, ...any] ? true :
-  T extends [{ type: 'optional', tokens: infer Tokens extends Token[] }, ...any] ?
-    StartsWithSeparator<Tokens> :
-    false
+  A extends Token[],
+  B extends Token[]
+> = StartsWithSeparator<B> extends true ?
+    [...A, ...B] :
+    [...A, { type: 'separator' }, ...B]
 
 // prettier-ignore
 type JoinSearch<
@@ -207,25 +131,3 @@ type JoinSearch<
 > = B extends undefined ? A :
     A extends undefined ? B :
     `${A}&${B}`
-
-// Custom stringify for join that handles leading slash logic correctly
-// prettier-ignore
-type JoinStringify<T extends ParsedPattern, LeadingSlash extends boolean> =
-  T['hostname'] extends Token[] ?
-    `${StringifyTokens<T['protocol']>}://${StringifyTokens<T['hostname'], '.'>}${StringifyPort<T['port']>}${JoinStringifyPathname<T['pathname'], true>}${StringifySearch<T['search']>}` :
-    T['pathname'] extends Token[] ?
-      `${JoinStringifyPathname<T['pathname'], LeadingSlash>}${StringifySearch<T['search']>}` :
-      StringifySearch<T['search']>
-
-// Custom pathname stringify that conditionally adds leading slash
-// prettier-ignore
-type JoinStringifyPathname<T extends Token[] | undefined, NeedsLeadingSlash extends boolean> =
-  T extends undefined ? '' :
-  T extends Token[] ?
-    StringifyTokens<T, '/'> extends infer S extends string ?
-      S extends '' ? '' :
-      NeedsLeadingSlash extends true ?
-        StartsWithSeparator<T> extends true ? S : `/${S}` :
-        S :
-    never :
-  never

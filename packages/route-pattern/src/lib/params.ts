@@ -1,4 +1,4 @@
-import type { ParseResult, Parse, Token, Optional } from './parse.ts'
+import type { Parse, Token, Optional, ParsedPattern } from './parse.ts'
 
 /**
  * The parameters that are parsed when a pattern matches a URL.
@@ -11,16 +11,16 @@ type Simplify<T> = T extends {} ? { [K in keyof T]: T[K] } : T
 
 // prettier-ignore
 export type RequiredParams<T extends string> =
-  Parse<T> extends infer A extends ParseResult ?
+  Parse<T> extends infer A extends ParsedPattern ?
     | RequiredPartParams<A['protocol']>
-    | RequiredPartParams<A['pathname']>
-    | RequiredPartParams<A['hostname']> :
+    | RequiredPartParams<A['hostname']>
+    | RequiredPartParams<A['pathname']> :
   never
 
 // prettier-ignore
 type RequiredPartParams<T extends Token[] | undefined> =
   T extends [infer Head extends Token, ...infer Tail extends Token[]] ?
-    Head extends Optional ? never | RequiredPartParams<Tail> :
+    Head extends Optional ? RequiredPartParams<Tail> :
     Head extends { type: 'variable' | 'wildcard', name: infer N extends string } ? 
       (IsTrailingWildcard<Head, Tail> extends true ? never : N) | RequiredPartParams<Tail> :
     Head extends { type: 'wildcard' } ? 
@@ -30,10 +30,10 @@ type RequiredPartParams<T extends Token[] | undefined> =
 
 // prettier-ignore
 export type OptionalParams<T extends string> =
-  Parse<T> extends infer A extends ParseResult ?
+  Parse<T> extends infer A extends ParsedPattern ?
     | OptionalPartParams<A['protocol']>
-    | OptionalPartParams<A['pathname']>
-    | OptionalPartParams<A['hostname']> :
+    | OptionalPartParams<A['hostname']>
+    | OptionalPartParams<A['pathname']> :
   never
 
 // prettier-ignore

@@ -1,5 +1,6 @@
 import type { RequiredParams, OptionalParams } from './params.ts'
 import { parse } from './parse.ts'
+import type { ParseResult } from './parse.ts'
 import type { Token } from './parse.ts'
 import type { RouteMap } from './route-map.ts'
 import type { RoutePattern } from './route-pattern.ts'
@@ -15,104 +16,44 @@ export class MissingParamError extends Error {
   }
 }
 
-export interface HrefBuilder<T extends string | RoutePattern | RouteMap = string> {
-  <P extends string extends T ? string : SourceOf<T> | Variant<SourceOf<T>>>(
-    pattern: P | RoutePattern<P>,
-    ...args: HrefBuilderArgs<P>
-  ): string
+export function createHrefBuilder<
+  T extends string | RoutePattern | RouteMap = string,
+>(): HrefBuilder<T> {
+  return (pattern: string | RoutePattern, ...args: any) =>
+    formatHref(parse(typeof pattern === 'string' ? pattern : pattern.source), ...args)
 }
 
-// prettier-ignore
-type SourceOf<T> =
-  T extends string ? T :
-  T extends RoutePattern<infer S extends string> ? S :
-  T extends RouteMap<infer S extends string> ? S :
-  never
+export function formatHref(
+  parsed: ParseResult,
+  params?: Record<string, any>,
+  searchParams?: Record<string, any>,
+): string {
+  params = params ?? {}
 
-// prettier-ignore
-type HrefBuilderArgs<T extends string> =
-  [RequiredParams<T>] extends [never] ?
-    [] | [null | undefined | Record<string, any>] | [null | undefined | Record<string, any>, HrefSearchParams] :
-    [HrefParams<T>] | [HrefParams<T>, HrefSearchParams]
+  let href = ''
 
-// prettier-ignore
-type HrefParams<T extends string> =
-  Record<RequiredParams<T>, ParamValue> &
-  Partial<Record<OptionalParams<T>, ParamValue | null | undefined>>
-
-type HrefSearchParams =
-  | NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
-  | Record<string, ParamValue>
-
-type ParamValue = string | number | bigint | boolean
-
-export type HrefBuilderOptions = ProtocolHostOptions | OriginOptions
-
-export interface ProtocolHostOptions {
-  /**
-   * The default protocol to use when the pattern doesn't specify one.
-   * Defaults to `https`.
-   */
-  protocol?: string
-  /**
-   * The default host (including port) to use when the pattern doesn't specify one.
-   * Defaults to an empty string.
-   */
-  host?: string
-  // Exclude OriginOptions
-  origin?: never
-}
-
-export interface OriginOptions {
-  /**
-   * The default origin to use when the pattern doesn't specify one.
-   * Defaults to an empty string.
-   */
-  origin?: string
-  // Exclude ProtocolHostOptions
-  protocol?: never
-  host?: never
-}
-
-export function createHrefBuilder<T extends string | RoutePattern | RouteMap = string>(
-  options: HrefBuilderOptions = {},
-): HrefBuilder<T> {
-  return (pattern: string | RoutePattern, ...args: any) => {
-    let params = args[0] ?? {}
-    let searchParams = args[1]
-    let parsed = parse(typeof pattern === 'string' ? pattern : pattern.source)
-
-    let href = ''
-
-    // If we have a default origin or the pattern has a hostname we can make a full URL.
-    // Otherwise we can only make an absolute path.
-    if (options.origin) {
-      href += options.origin
-    } else if (parsed.hostname || options.host) {
-      let protocol = parsed.protocol
-        ? resolveTokens(parsed.protocol, '', params)
-        : (options.protocol?.replace(/:$/, '') ?? 'https')
-
-      let host = parsed.hostname
-        ? resolveTokens(parsed.hostname, '.', params) + (parsed.port ? `:${parsed.port}` : '')
-        : options.host
-
-      href += `${protocol}://${host}`
-    }
-
-    if (parsed.pathname) {
-      let pathname = resolveTokens(parsed.pathname, '/', params)
-      href += pathname.startsWith('/') ? pathname : `/${pathname}`
-    } else {
-      href += '/'
-    }
-
-    if (searchParams || parsed.search) {
-      href += `?${new URLSearchParams(searchParams ?? parsed.search)}`
-    }
-
-    return href
+  // If the pattern has a hostname we can make a full URL.
+  // Otherwise we can only make an absolute path.
+  if (parsed.hostname) {
+    let protocol = parsed.protocol ? resolveTokens(parsed.protocol, '', params) : 'https'
+    let host = resolveTokens(parsed.hostname, '.', params) + (parsed.port ? `:${parsed.port}` : '')
+    href += `${protocol}://${host}`
   }
+
+  if (parsed.pathname) {
+    let pathname = resolveTokens(parsed.pathname, '/', params)
+    href += pathname.startsWith('/') ? pathname : `/${pathname}`
+  } else {
+    href += '/'
+  }
+
+  if (searchParams) {
+    href += `?${new URLSearchParams(searchParams)}`
+  } else if (parsed.search) {
+    href += `?${parsed.search}`
+  }
+
+  return href
 }
 
 function resolveTokens(tokens: Token[], sep: string, params: Record<string, any>): string {
@@ -167,5 +108,37 @@ function resolveToken(token: Token, sep: string, params: Record<string, any>): s
     }
   }
 
+  // text
   return token.value
 }
+
+export interface HrefBuilder<T extends string | RoutePattern | RouteMap = string> {
+  <P extends string extends T ? string : SourceOf<T> | Variant<SourceOf<T>>>(
+    pattern: P | RoutePattern<P>,
+    ...args: HrefBuilderArgs<P>
+  ): string
+}
+
+// prettier-ignore
+type SourceOf<T> =
+  T extends string ? T :
+  T extends RoutePattern<infer S extends string> ? S :
+  T extends RouteMap<infer S extends string> ? S :
+  never
+
+// prettier-ignore
+export type HrefBuilderArgs<T extends string> =
+  [RequiredParams<T>] extends [never] ?
+    [] | [null | undefined | Record<string, any>] | [null | undefined | Record<string, any>, HrefSearchParams] :
+    [HrefParams<T>] | [HrefParams<T>, HrefSearchParams]
+
+// prettier-ignore
+type HrefParams<T extends string> =
+  Record<RequiredParams<T>, ParamValue> &
+  Partial<Record<OptionalParams<T>, ParamValue | null | undefined>>
+
+type HrefSearchParams =
+  | NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
+  | Record<string, ParamValue>
+
+type ParamValue = string | number | bigint | boolean

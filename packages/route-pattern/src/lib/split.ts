@@ -78,7 +78,7 @@ export function split<T extends string>(source: T): SplitResult {
   return { protocol, hostname, port, pathname, search }
 }
 
-export interface PatternParts {
+export interface SplitPattern {
   protocol: string | undefined
   hostname: string | undefined
   port: string | undefined
@@ -88,7 +88,7 @@ export interface PatternParts {
 
 // prettier-ignore
 export type Split<T extends string> =
-  SplitPattern<T> extends infer S extends Partial<PatternParts> ? {
+  _Split<T> extends infer S extends Partial<SplitPattern> ? {
     protocol: S['protocol'] extends string ? S['protocol'] : undefined
     hostname: S['hostname'] extends string ? S['hostname'] : undefined
     port: S['port'] extends string ? S['port'] : undefined
@@ -98,9 +98,9 @@ export type Split<T extends string> =
   never
 
 // prettier-ignore
-type SplitPattern<T extends string> =
+type _Split<T extends string> =
   T extends '' ? {} :
-  T extends `${infer L}?${infer R}` ? SplitPattern<L> & { search: R } :
+  T extends `${infer L}?${infer R}` ? _Split<L> & { search: R } :
   T extends `${infer Protocol}://${infer R}` ?
     Protocol extends '' ? (
       R extends `${infer Host}/${infer Pathname}` ? SplitHost<Host> & { pathname: Pathname } :

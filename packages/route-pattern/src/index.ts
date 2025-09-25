@@ -1,5 +1,5 @@
 export { MissingParamError, createHrefBuilder } from './lib/href.ts'
-export type { HrefBuilder, HrefBuilderOptions } from './lib/href.ts'
+export type { HrefBuilder } from './lib/href.ts'
 
 export type { Params } from './lib/params.ts'
 
