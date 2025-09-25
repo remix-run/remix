@@ -2,7 +2,7 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.12.0 (2025-09-25)
 
 - BREAKING CHANGE: removed `options` arg from `createHrefBuilder` (and `HrefBuilderOptions` export)
 - BREAKING CHANGE: removed support for enum patterns
