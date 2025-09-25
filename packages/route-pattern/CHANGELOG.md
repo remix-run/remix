@@ -6,10 +6,19 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - BREAKING CHANGE: removed `options` arg from `createHrefBuilder` (and `HrefBuilderOptions` export)
 - BREAKING CHANGE: removed support for enum patterns
-- Add `createRoutes` function for working with more than one pattern at a time. This generates a `RouteMap` object that allows human-friendly naming of patterns. Also works as a generic to `createHrefBuilder()` that restricts the set of patterns that may be used as the first argument.
+- Add `pattern.href(...args)` method for generating URLs from patterns
 
   ```tsx
-  import { createRoutes, createHrefBuilder } from '@remix-run/route-pattern'
+  import { RoutePattern } from '@remix-run/route-pattern'
+
+  let pattern = new RoutePattern('users/:id')
+  pattern.href({ id: '123' }) // "/users/123"
+  ```
+
+- Add `createRoutes` function for working with more than one pattern at a time. This generates a `RouteMap` object that allows human-friendly naming of patterns.
+
+  ```tsx
+  import { createRoutes } from '@remix-run/route-pattern'
 
   let routes = createRoutes({
     home: '/',
@@ -24,17 +33,16 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   routes.blog.post.match('https://remix.run/blog/my-post')
   // { params: { slug: 'my-post' } }
 
-  let href = createHrefBuilder<typeof routes>()
-  href('/blog/:slug', { slug: 'my-post' }) // /blog/my-post
+  routes.blog.post.href({ slug: 'my-post' }) // "/blog/my-post"
   ```
 
-- Add `pattern.href(...args)` method for generating URLs from patterns
+  A `RouteMap` also works as a generic to `createHrefBuilder()` to restrict the set of patterns that may be used as the first argument.
 
   ```tsx
-  import { RoutePattern } from '@remix-run/route-pattern'
+  import { createHrefBuilder } from '@remix-run/route-pattern'
 
-  let pattern = new RoutePattern('users/:id')
-  pattern.href({ id: '123' }) // "/users/123"
+  let href = createHrefBuilder<typeof routes>()
+  href('/blog/:slug', { slug: 'my-post' }) // "/blog/my-post"
   ```
 
 - Add `pattern.join(input, options)`, which allows a pattern to be built relative
@@ -45,7 +53,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
   let base = new RoutePattern('https://remix.run/api')
   let pattern = base.join('users/:id')
-  pattern.source // 'https://remix.run/api/users/:id
+  pattern.source // "https://remix.run/api/users/:id"
   ```
 
 - Expose `HrefBuilderOptions` and `RouteMatch` types as public API
