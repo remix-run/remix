@@ -3,15 +3,8 @@ import type { Params, RouteMap } from '@remix-run/route-pattern'
 
 import { AppStorage } from './app-storage.ts'
 
-export const RequestMethods: readonly RequestMethod[] = [
-  'GET',
-  'HEAD',
-  'POST',
-  'PUT',
-  'PATCH',
-  'DELETE',
-  'OPTIONS',
-]
+// prettier-ignore
+export const RequestMethods: readonly RequestMethod[] = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 
 export type RequestMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
 
@@ -206,11 +199,10 @@ export function createRouter<T extends RouteMap>(
   let router = new Router()
 
   if (routes != null && handlers != null) {
-    if (middleware != null) {
-      router.addRoutes(routes, middleware, handlers)
-    } else {
-      router.addRoutes(routes, handlers)
-    }
+    router.addRoutes(
+      routes,
+      middleware == null ? handlers : useMiddleware(middleware, routes, handlers),
+    )
   }
 
   return router
@@ -227,28 +219,8 @@ export class Router {
     OPTIONS: [],
   }
 
-  addRoutes<T extends RouteMap>(routes: T, handlers: RouteHandlers<T>): void
-  addRoutes<T extends RouteMap>(
-    routes: T,
-    middleware: Middleware[],
-    handlers: RouteHandlers<T>,
-  ): void
-  addRoutes<T extends RouteMap>(
-    routes: T,
-    middlewareOrHandlers: any,
-    handlers?: RouteHandlers<T>,
-  ): void {
-    let middleware: Middleware[] | undefined
-    if (Array.isArray(middlewareOrHandlers)) {
-      middleware = middlewareOrHandlers
-    } else {
-      handlers = middlewareOrHandlers
-    }
-
-    this.#addRoutes(
-      routes,
-      middleware == null ? handlers! : useMiddleware(middleware, routes, handlers!),
-    )
+  addRoutes<T extends RouteMap>(routes: T, handlers: RouteHandlers<T>): void {
+    this.#addRoutes(routes, handlers)
   }
 
   #addRoutes<T extends RouteMap>(
