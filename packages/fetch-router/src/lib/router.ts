@@ -59,7 +59,7 @@ interface GenericRouteHandler<P extends AnyParams> {
   method?: RequestMethod
   methods?: RequestMethod[]
   handler: RouteHandlerFunction<P>
-  // Explicitly exclude shorthand handler properties
+  // Exclude shorthand handler properties
   get?: never
   head?: never
   post?: never
@@ -78,7 +78,7 @@ interface ShorthandRouteHandler<P extends AnyParams> {
   patch?: RouteHandlerFunction<P>
   delete?: RouteHandlerFunction<P>
   options?: RouteHandlerFunction<P>
-  // Explicitly exclude generic handler properties
+  // Exclude generic handler properties
   handler?: never
   method?: never
   methods?: never
