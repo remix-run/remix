@@ -32,17 +32,16 @@ export function formatHref(
 
   let href = ''
 
-  // If the pattern has a hostname we can make a full URL.
-  // Otherwise we can only make an absolute path.
-  if (parsed.hostname) {
+  if (parsed.hostname != null) {
     // Default protocol is https because it's free these days so there's no
     // excuse not to use it.
-    let protocol = parsed.protocol ? resolveTokens(parsed.protocol, '', params) : 'https'
-    let host = resolveTokens(parsed.hostname, '.', params) + (parsed.port ? `:${parsed.port}` : '')
-    href += `${protocol}://${host}`
+    let protocol = parsed.protocol != null ? resolveTokens(parsed.protocol, '', params) : 'https'
+    let hostname = resolveTokens(parsed.hostname, '.', params)
+    let port = parsed.port != null ? `:${parsed.port}` : ''
+    href += `${protocol}://${hostname}${port}`
   }
 
-  if (parsed.pathname) {
+  if (parsed.pathname != null) {
     let pathname = resolveTokens(parsed.pathname, '/', params)
     href += pathname.startsWith('/') ? pathname : `/${pathname}`
   } else {

@@ -11,8 +11,8 @@ export function stringify(parsed: Omit<ParseResult, 'search'> & { search?: strin
   }
 
   if (parsed.pathname != null) {
-    if (!startsWithSeparator(parsed.pathname)) str += '/'
-    str += stringifyTokens(parsed.pathname, '/')
+    let pathname = stringifyTokens(parsed.pathname, '/')
+    str += startsWithSeparator(parsed.pathname) ? pathname : `/${pathname}`
   } else {
     str += '/'
   }
