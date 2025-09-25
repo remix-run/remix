@@ -61,23 +61,37 @@ interface GenericRouteHandler<P extends AnyParams> {
   handler: RouteHandlerFunction<P>
   // Exclude shorthand handler properties
   get?: never
+  GET?: never
   head?: never
+  HEAD?: never
   post?: never
+  POST?: never
   put?: never
+  PUT?: never
   patch?: never
+  PATCH?: never
   delete?: never
+  DELETE?: never
   options?: never
+  OPTIONS?: never
 }
 
 interface ShorthandRouteHandler<P extends AnyParams> {
   use?: Middleware<P>[]
   get?: RouteHandlerFunction<P>
+  GET?: RouteHandlerFunction<P>
   head?: RouteHandlerFunction<P>
+  HEAD?: RouteHandlerFunction<P>
   post?: RouteHandlerFunction<P>
+  POST?: RouteHandlerFunction<P>
   put?: RouteHandlerFunction<P>
+  PUT?: RouteHandlerFunction<P>
   patch?: RouteHandlerFunction<P>
+  PATCH?: RouteHandlerFunction<P>
   delete?: RouteHandlerFunction<P>
+  DELETE?: RouteHandlerFunction<P>
   options?: RouteHandlerFunction<P>
+  OPTIONS?: RouteHandlerFunction<P>
   // Exclude generic handler properties
   handler?: never
   method?: never
@@ -256,6 +270,7 @@ export class Router {
           // HTTP method-specific handlers
           for (let method of RequestMethods) {
             let methodHandler =
+              handler[method] ??
               handler[method.toLowerCase() as keyof ShorthandRouteHandler<AnyParams>]
             if (typeof methodHandler === 'function') {
               this.addRoute(method, value, methodHandler, handler.use)

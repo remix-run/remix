@@ -51,7 +51,71 @@ describe('router.fetch()', () => {
     assert.equal(await response.text(), 'Created comment 1')
   })
 
-  it('handles a route declared with shorthand method-specific handlers', async () => {
+  it('supports uppercase shorthand method-specific handlers', async () => {
+    let routes = createRoutes({
+      post: '/posts/:id',
+      posts: {
+        comments: '/posts/:id/comments',
+      },
+    })
+
+    // Create a sub-router just for the posts routes
+    let router = createRouter(routes.posts, {
+      comments: {
+        GET({ params }) {
+          return new Response(`GET ${params.id}`)
+        },
+        HEAD({ params }) {
+          return new Response(`HEAD ${params.id}`)
+        },
+        POST({ params }) {
+          return new Response(`POST ${params.id}`)
+        },
+        PUT({ params }) {
+          return new Response(`PUT ${params.id}`)
+        },
+        PATCH({ params }) {
+          return new Response(`PATCH ${params.id}`)
+        },
+        DELETE({ params }) {
+          return new Response(`DELETE ${params.id}`)
+        },
+        OPTIONS({ params }) {
+          return new Response(`OPTIONS ${params.id}`)
+        },
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/posts/1/comments')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'GET 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments', { method: 'HEAD' })
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'HEAD 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments', { method: 'POST' })
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'POST 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments', { method: 'PUT' })
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'PUT 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments', { method: 'PATCH' })
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'PATCH 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments', { method: 'DELETE' })
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'DELETE 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments', { method: 'OPTIONS' })
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'OPTIONS 1')
+  })
+
+  it('supports lowercase shorthand method-specific handlers', async () => {
     let routes = createRoutes({
       post: '/posts/:id',
       posts: {
@@ -63,21 +127,56 @@ describe('router.fetch()', () => {
     let router = createRouter(routes.posts, {
       comments: {
         get({ params }) {
-          return new Response(`Get comments for post ${params.id}`)
+          return new Response(`get ${params.id}`)
+        },
+        head({ params }) {
+          return new Response(`head ${params.id}`)
         },
         post({ params }) {
-          return new Response(`Create comment for post ${params.id}`)
+          return new Response(`post ${params.id}`)
+        },
+        put({ params }) {
+          return new Response(`put ${params.id}`)
+        },
+        patch({ params }) {
+          return new Response(`patch ${params.id}`)
+        },
+        delete({ params }) {
+          return new Response(`delete ${params.id}`)
+        },
+        options({ params }) {
+          return new Response(`options ${params.id}`)
         },
       },
     })
 
     let response = await router.fetch('https://remix.run/posts/1/comments')
     assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Get comments for post 1')
+    assert.equal(await response.text(), 'get 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments', { method: 'HEAD' })
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'head 1')
 
     response = await router.fetch('https://remix.run/posts/1/comments', { method: 'POST' })
     assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Create comment for post 1')
+    assert.equal(await response.text(), 'post 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments', { method: 'PUT' })
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'put 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments', { method: 'PATCH' })
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'patch 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments', { method: 'DELETE' })
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'delete 1')
+
+    response = await router.fetch('https://remix.run/posts/1/comments', { method: 'OPTIONS' })
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'options 1')
   })
 
   it('prefers generic handlers over method-specific handlers', async () => {
