@@ -1,5 +1,6 @@
 import type { Join } from './join.ts'
 import { RoutePattern } from './route-pattern.ts'
+import type { Simplify } from './type-utils.ts'
 
 /**
  * Create a route map from a set of route definitions.
@@ -59,8 +60,6 @@ export type RouteDefs = {
 type BuildRouteMap<P extends string = string, R extends RouteDefs = RouteDefs> = Simplify<
   BuildMap<P, R>
 >
-
-type Simplify<T> = { [K in keyof T]: T[K] } & {}
 
 // prettier-ignore
 type BuildMap<P extends string , R extends RouteDefs > = {

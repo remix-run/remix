@@ -1,4 +1,5 @@
 import type { Parse, Token, Optional, ParsedPattern } from './parse.ts'
+import type { Simplify } from './type-utils.ts'
 
 /**
  * The parameters that are parsed when a pattern matches a URL.
@@ -6,8 +7,6 @@ import type { Parse, Token, Optional, ParsedPattern } from './parse.ts'
 export type Params<T extends string> = Simplify<
   Record<RequiredParams<T>, string> & Record<OptionalParams<T>, string | undefined>
 >
-
-type Simplify<T> = T extends {} ? { [K in keyof T]: T[K] } : T
 
 // prettier-ignore
 export type RequiredParams<T extends string> =

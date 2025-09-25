@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { Assert, IsEqual } from '../type-utils.d.ts'
+import type { Assert, IsEqual } from './type-utils'
 import { parse } from './parse.ts'
 import type { Parse } from './parse.ts'
 import { stringify } from './stringify.ts'

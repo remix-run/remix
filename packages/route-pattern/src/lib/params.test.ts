@@ -1,4 +1,4 @@
-import type { Assert, IsEqual } from '../type-utils.d.ts'
+import type { Assert, IsEqual } from './type-utils'
 import type { Params } from './params.ts'
 
 // prettier-ignore

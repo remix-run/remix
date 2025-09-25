@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { Assert, IsEqual } from '../type-utils'
+import type { Assert, IsEqual } from './type-utils'
 import { RoutePattern } from './route-pattern.ts'
 import { createRoutes } from './route-map.ts'
 
