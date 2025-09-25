@@ -5,8 +5,7 @@ import { createRoutes } from '@remix-run/route-pattern'
 
 import { createStorageKey } from './app-storage.ts'
 import { createHandlers, createRouter } from './router.ts'
-import type { NextFunction, RouteHandlers } from './router.ts'
-import type { RequestContext } from './request-context.ts'
+import type { RequestContext, NextFunction, RouteHandlers, Middleware } from './router.ts'
 
 describe('router.fetch()', () => {
   it('handles a simple route', async () => {

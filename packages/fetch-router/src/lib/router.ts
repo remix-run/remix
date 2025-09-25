@@ -1,14 +1,42 @@
 import { RoutePattern } from '@remix-run/route-pattern'
-import type { RouteMap } from '@remix-run/route-pattern'
+import type { Params, RouteMap } from '@remix-run/route-pattern'
 
-import { RequestContext } from './request-context.ts'
-import { RequestMethods } from './request-methods.ts'
-import type { RequestMethod } from './request-methods.ts'
+import { AppStorage } from './app-storage.ts'
+
+export const RequestMethods: readonly RequestMethod[] = [
+  'GET',
+  'HEAD',
+  'POST',
+  'PUT',
+  'PATCH',
+  'DELETE',
+  'OPTIONS',
+]
+
+export type RequestMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
+
+// Request context /////////////////////////////////////////////////////////////////////////////////
+
+type AnyParams = Record<string, string>
+
+export class RequestContext<P extends AnyParams = {}> {
+  readonly params: P
+  readonly request: Request
+  readonly url: URL
+  readonly storage: AppStorage
+
+  constructor(params: P, request: Request, url: URL) {
+    this.params = params
+    this.request = request
+    this.url = url
+    this.storage = new AppStorage()
+  }
+}
 
 // Middleware //////////////////////////////////////////////////////////////////////////////////////
 
-export interface Middleware<T extends string = string> {
-  (ctx: RequestContext<T>, next: NextFunction): Response | Promise<Response> | void | Promise<void>
+export interface Middleware<P extends AnyParams = {}> {
+  (ctx: RequestContext<P>, next: NextFunction): Response | Promise<Response> | void | Promise<void>
 }
 
 export type NextFunction = () => Promise<Response>
@@ -18,26 +46,26 @@ export type NextFunction = () => Promise<Response>
 // prettier-ignore
 export type RouteHandlers<T extends RouteMap> = {
   [K in keyof T]: (
-    T[K] extends RoutePattern<infer P extends string> ? RouteHandler<P> :
+    T[K] extends RoutePattern<infer P extends string> ? RouteHandler<Params<P>> :
     T[K] extends RouteMap ? RouteHandlers<T[K]> :
     never
   )
 }
 
-export type RouteHandler<T extends string> =
-  | RouteHandlerFunction<T>
-  | GenericRouteHandler<T>
-  | ShorthandRouteHandler<T>
+export type RouteHandler<P extends AnyParams> =
+  | RouteHandlerFunction<P>
+  | GenericRouteHandler<P>
+  | ShorthandRouteHandler<P>
 
-interface RouteHandlerFunction<T extends string> {
-  (ctx: RequestContext<T>): Response | Promise<Response>
+interface RouteHandlerFunction<P extends AnyParams> {
+  (ctx: RequestContext<P>): Response | Promise<Response>
 }
 
-interface GenericRouteHandler<T extends string> {
-  use?: Middleware<T>[]
+interface GenericRouteHandler<P extends AnyParams> {
+  use?: Middleware<P>[]
   method?: RequestMethod
   methods?: RequestMethod[]
-  handler: RouteHandlerFunction<T>
+  handler: RouteHandlerFunction<P>
   // Explicitly exclude shorthand handler properties
   get?: never
   head?: never
@@ -48,15 +76,15 @@ interface GenericRouteHandler<T extends string> {
   options?: never
 }
 
-interface ShorthandRouteHandler<T extends string> {
-  use?: Middleware<T>[]
-  get?: RouteHandlerFunction<T>
-  head?: RouteHandlerFunction<T>
-  post?: RouteHandlerFunction<T>
-  put?: RouteHandlerFunction<T>
-  patch?: RouteHandlerFunction<T>
-  delete?: RouteHandlerFunction<T>
-  options?: RouteHandlerFunction<T>
+interface ShorthandRouteHandler<P extends AnyParams> {
+  use?: Middleware<P>[]
+  get?: RouteHandlerFunction<P>
+  head?: RouteHandlerFunction<P>
+  post?: RouteHandlerFunction<P>
+  put?: RouteHandlerFunction<P>
+  patch?: RouteHandlerFunction<P>
+  delete?: RouteHandlerFunction<P>
+  options?: RouteHandlerFunction<P>
   // Explicitly exclude generic handler properties
   handler?: never
   method?: never
@@ -132,20 +160,20 @@ function useMiddleware<T extends RouteMap>(
 // Route storage ///////////////////////////////////////////////////////////////////////////////////
 
 type RouteStorage = {
-  [M in RequestMethod]: Route<M, string>[]
+  [M in RequestMethod]: Route[]
 }
 
-class Route<M extends RequestMethod = RequestMethod, T extends string = string> {
-  readonly method: M
-  readonly pattern: RoutePattern<T>
-  readonly handler: RouteHandlerFunction<T>
-  readonly middleware: Middleware<T>[] | null
+class Route {
+  readonly method: RequestMethod
+  readonly pattern: RoutePattern
+  readonly handler: RouteHandlerFunction<AnyParams>
+  readonly middleware: Middleware[] | null
 
   constructor(
-    method: M,
-    pattern: T | RoutePattern<T>,
-    handler: RouteHandlerFunction<T>,
-    middleware: Middleware<T>[] | null = null,
+    method: RequestMethod,
+    pattern: string | RoutePattern,
+    handler: RouteHandlerFunction<AnyParams>,
+    middleware: Middleware[] | null = null,
   ) {
     this.method = method
     this.pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
@@ -231,7 +259,7 @@ export class Router {
     for (let key in routes) {
       let keys = [...parentKeys, key]
       let value = routes[key]
-      let handler = handlers[key] as RouteHandlerFunction<string> | RouteHandler<string>
+      let handler = handlers[key] as RouteHandler<AnyParams>
 
       if (handler == null) {
         throw new Error(`Missing handler for route ${keys.join('.')}`)
@@ -255,7 +283,8 @@ export class Router {
         } else {
           // HTTP method-specific handlers
           for (let method of RequestMethods) {
-            let methodHandler = handler[method.toLowerCase() as keyof ShorthandRouteHandler<string>]
+            let methodHandler =
+              handler[method.toLowerCase() as keyof ShorthandRouteHandler<AnyParams>]
             if (typeof methodHandler === 'function') {
               this.addRoute(method, value, methodHandler, handler.use)
               handlerAdded = true
@@ -278,16 +307,16 @@ export class Router {
   addRoute<M extends RequestMethod, T extends string>(
     method: M,
     pattern: T | RoutePattern<T>,
-    handler: RouteHandlerFunction<T>,
-    middleware: Middleware<T>[] | null = null,
+    handler: RouteHandlerFunction<AnyParams>,
+    middleware: Middleware[] | null = null,
   ): void {
     this.#routes[method].push(new Route(method, pattern, handler, middleware))
   }
 
   addAnyRoute<T extends string>(
     pattern: T | RoutePattern<T>,
-    handler: RouteHandlerFunction<T>,
-    middleware: Middleware<T>[] | null = null,
+    handler: RouteHandlerFunction<AnyParams>,
+    middleware: Middleware[] | null = null,
   ): void {
     for (let method of RequestMethods) {
       this.addRoute(method, pattern, handler, middleware)
