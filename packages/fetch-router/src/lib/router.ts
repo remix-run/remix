@@ -5,7 +5,6 @@ import { AppStorage } from './app-storage.ts'
 
 // prettier-ignore
 export const RequestMethods: readonly RequestMethod[] = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
-
 export type RequestMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
 
 // Request context /////////////////////////////////////////////////////////////////////////////////
@@ -46,52 +45,52 @@ export type RouteHandlers<T extends RouteMap> = {
 }
 
 export type RouteHandler<P extends AnyParams> =
-  | RouteHandlerFunction<P>
+  | RequestHandler<P>
   | GenericRouteHandler<P>
   | ShorthandRouteHandler<P>
 
-interface RouteHandlerFunction<P extends AnyParams> {
-  (ctx: RequestContext<P>): Response | Promise<Response>
+export interface RequestHandler<P extends AnyParams = {}, T = Response> {
+  (ctx: RequestContext<P>): T | Promise<T>
 }
 
 interface GenericRouteHandler<P extends AnyParams> {
   use?: Middleware<P>[]
   method?: RequestMethod
   methods?: RequestMethod[]
-  handler: RouteHandlerFunction<P>
+  handler: RequestHandler<P>
   // Exclude shorthand handler properties
   get?: never
-  GET?: never
   head?: never
-  HEAD?: never
   post?: never
-  POST?: never
   put?: never
-  PUT?: never
   patch?: never
-  PATCH?: never
   delete?: never
-  DELETE?: never
   options?: never
+  GET?: never
+  HEAD?: never
+  POST?: never
+  PUT?: never
+  PATCH?: never
+  DELETE?: never
   OPTIONS?: never
 }
 
 interface ShorthandRouteHandler<P extends AnyParams> {
   use?: Middleware<P>[]
-  get?: RouteHandlerFunction<P>
-  GET?: RouteHandlerFunction<P>
-  head?: RouteHandlerFunction<P>
-  HEAD?: RouteHandlerFunction<P>
-  post?: RouteHandlerFunction<P>
-  POST?: RouteHandlerFunction<P>
-  put?: RouteHandlerFunction<P>
-  PUT?: RouteHandlerFunction<P>
-  patch?: RouteHandlerFunction<P>
-  PATCH?: RouteHandlerFunction<P>
-  delete?: RouteHandlerFunction<P>
-  DELETE?: RouteHandlerFunction<P>
-  options?: RouteHandlerFunction<P>
-  OPTIONS?: RouteHandlerFunction<P>
+  get?: RequestHandler<P>
+  head?: RequestHandler<P>
+  post?: RequestHandler<P>
+  put?: RequestHandler<P>
+  patch?: RequestHandler<P>
+  delete?: RequestHandler<P>
+  options?: RequestHandler<P>
+  GET?: RequestHandler<P>
+  HEAD?: RequestHandler<P>
+  POST?: RequestHandler<P>
+  PUT?: RequestHandler<P>
+  PATCH?: RequestHandler<P>
+  DELETE?: RequestHandler<P>
+  OPTIONS?: RequestHandler<P>
   // Exclude generic handler properties
   handler?: never
   method?: never
@@ -170,16 +169,16 @@ type RouteStorage = {
   [M in RequestMethod]: Route<M, string>[]
 }
 
-export class Route<M extends RequestMethod, P extends string> {
+export class Route<M extends RequestMethod = RequestMethod, P extends string = string> {
   readonly method: M
   readonly pattern: RoutePattern<P>
-  readonly handler: RouteHandlerFunction<Params<P>>
+  readonly handler: RequestHandler
   readonly middleware: Middleware[] | null
 
   constructor(
     method: M,
     pattern: P | RoutePattern<P>,
-    handler: RouteHandlerFunction<Params<P>>,
+    handler: RequestHandler,
     middleware: Middleware[] | null = null,
   ) {
     this.method = method
@@ -294,7 +293,7 @@ export class Router {
   addRoute<M extends RequestMethod, P extends string>(
     method: M,
     pattern: P | RoutePattern<P>,
-    handler: RouteHandlerFunction<Params<P>>,
+    handler: RequestHandler<Params<P>>,
     middleware: Middleware[] | null = null,
   ): void {
     this.#routes[method].push(new Route(method, pattern, handler, middleware))
@@ -302,7 +301,7 @@ export class Router {
 
   addAnyRoute<P extends string>(
     pattern: P | RoutePattern<P>,
-    handler: RouteHandlerFunction<Params<P>>,
+    handler: RequestHandler<Params<P>>,
     middleware: Middleware[] | null = null,
   ): void {
     for (let method of RequestMethods) {

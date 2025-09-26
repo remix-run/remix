@@ -92,7 +92,7 @@ describe('router.fetch()', () => {
 
     response = await router.fetch('https://remix.run/posts/1/comments', { method: 'HEAD' })
     assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'HEAD 1')
+    assert.equal(await response.text(), '') // HEAD requests should not have a body
 
     response = await router.fetch('https://remix.run/posts/1/comments', { method: 'POST' })
     assert.equal(response.status, 200)
@@ -156,7 +156,7 @@ describe('router.fetch()', () => {
 
     response = await router.fetch('https://remix.run/posts/1/comments', { method: 'HEAD' })
     assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'head 1')
+    assert.equal(await response.text(), '') // HEAD requests should not have a body
 
     response = await router.fetch('https://remix.run/posts/1/comments', { method: 'POST' })
     assert.equal(response.status, 200)
