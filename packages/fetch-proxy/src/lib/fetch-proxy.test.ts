@@ -100,7 +100,7 @@ describe('fetch proxy', () => {
     }
   })
 
-  it('does not append X-Forwarded-Proto and X-Forwarded-Host headers by default', async () => {
+  it('does not append X-Forwarded-Proto, X-Forwarded-Host, and X-Forwarded-Port headers by default', async () => {
     let { request } = await testProxy(
       new Request('http://shopify.com:8080/search?q=remix'),
       'https://remix.run:3000/dest',
@@ -108,9 +108,10 @@ describe('fetch proxy', () => {
 
     assert.equal(request.headers.get('X-Forwarded-Proto'), null)
     assert.equal(request.headers.get('X-Forwarded-Host'), null)
+    assert.equal(request.headers.get('X-Forwarded-Port'), null)
   })
 
-  it('appends X-Forwarded-Proto and X-Forwarded-Host headers when desired', async () => {
+  it('appends X-Forwarded-Proto, X-Forwarded-Host, and X-Forwarded-Port headers when desired', async () => {
     let { request } = await testProxy(
       new Request('http://shopify.com:8080/search?q=remix'),
       'https://remix.run:3000/dest',
@@ -120,7 +121,8 @@ describe('fetch proxy', () => {
     )
 
     assert.equal(request.headers.get('X-Forwarded-Proto'), 'http')
-    assert.equal(request.headers.get('X-Forwarded-Host'), 'shopify.com:8080')
+    assert.equal(request.headers.get('X-Forwarded-Host'), 'shopify.com')
+    assert.equal(request.headers.get('X-Forwarded-Port'), '8080')
   })
 
   it('forwards additional request init options', async () => {
