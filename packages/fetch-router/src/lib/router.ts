@@ -167,19 +167,19 @@ function useMiddleware<T extends RouteMap>(
 // Route storage ///////////////////////////////////////////////////////////////////////////////////
 
 type RouteStorage = {
-  [M in RequestMethod]: Route[]
+  [M in RequestMethod]: Route<M, string>[]
 }
 
-class Route {
-  readonly method: RequestMethod
-  readonly pattern: RoutePattern
-  readonly handler: RouteHandlerFunction<AnyParams>
+export class Route<M extends RequestMethod, P extends string> {
+  readonly method: M
+  readonly pattern: RoutePattern<P>
+  readonly handler: RouteHandlerFunction<Params<P>>
   readonly middleware: Middleware[] | null
 
   constructor(
-    method: RequestMethod,
-    pattern: string | RoutePattern,
-    handler: RouteHandlerFunction<AnyParams>,
+    method: M,
+    pattern: P | RoutePattern<P>,
+    handler: RouteHandlerFunction<Params<P>>,
     middleware: Middleware[] | null = null,
   ) {
     this.method = method
@@ -291,18 +291,18 @@ export class Router {
     }
   }
 
-  addRoute<T extends string>(
-    method: RequestMethod,
-    pattern: T | RoutePattern<T>,
-    handler: RouteHandlerFunction<AnyParams>,
+  addRoute<M extends RequestMethod, P extends string>(
+    method: M,
+    pattern: P | RoutePattern<P>,
+    handler: RouteHandlerFunction<Params<P>>,
     middleware: Middleware[] | null = null,
   ): void {
     this.#routes[method].push(new Route(method, pattern, handler, middleware))
   }
 
-  addAnyRoute<T extends string>(
-    pattern: T | RoutePattern<T>,
-    handler: RouteHandlerFunction<AnyParams>,
+  addAnyRoute<P extends string>(
+    pattern: P | RoutePattern<P>,
+    handler: RouteHandlerFunction<Params<P>>,
     middleware: Middleware[] | null = null,
   ): void {
     for (let method of RequestMethods) {
