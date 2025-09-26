@@ -1,6 +1,6 @@
 import type { Token, SearchConstraints, ParseResult, ParsedPattern } from './parse.ts'
 
-export function stringify(parsed: Omit<ParseResult, 'search'> & { search?: string }): string {
+export function stringify(parsed: ParseResult): string {
   let str = ''
 
   if (parsed.hostname != null) {

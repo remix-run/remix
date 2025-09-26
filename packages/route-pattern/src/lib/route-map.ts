@@ -4,8 +4,6 @@ import type { Simplify } from './type-utils.ts'
 
 /**
  * Create a route map from a set of route definitions.
- *
- * @param routes Route definitions
  */
 export function createRoutes<const R extends RouteDefs>(routes: R): BuildRouteMap<'/', R>
 export function createRoutes<P extends string, const R extends RouteDefs>(

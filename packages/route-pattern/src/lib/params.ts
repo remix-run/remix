@@ -14,7 +14,7 @@ export type RequiredParams<T extends string> =
     | RequiredPartParams<A['protocol']>
     | RequiredPartParams<A['hostname']>
     | RequiredPartParams<A['pathname']> :
-  never
+    never
 
 // prettier-ignore
 type RequiredPartParams<T extends Token[] | undefined> =
@@ -44,4 +44,4 @@ type OptionalPartParams<T extends Token[] | undefined, IsOptional extends boolea
       IsOptional extends true ? '*' | OptionalPartParams<Tail, IsOptional> : 
       OptionalPartParams<Tail, IsOptional> :
     OptionalPartParams<Tail, IsOptional> :
-  never
+    never
