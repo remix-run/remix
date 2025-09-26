@@ -10,7 +10,7 @@ In the context of servers, an HTTP proxy server is a server that forwards all re
 
 - Built on the standard [JavaScript Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
 - Supports rewriting `Set-Cookie` headers received from target server
-- Supports `X-Forwarded-Proto` and `X-Forwarded-Host` headers
+- Supports `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Forwarded-Port` headers
 - Supports custom `fetch` implementations
 
 ## Installation
