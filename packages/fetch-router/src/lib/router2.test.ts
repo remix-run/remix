@@ -4,7 +4,7 @@ import { describe, it } from 'node:test'
 import { RoutePattern } from '@remix-run/route-pattern'
 
 import type { Assert, IsEqual } from './type-utils.ts'
-import { RequestMethods, Route, createHandlers, createRoutes } from './router2.ts'
+import { RequestMethods, Route, createRoutes, createHandlers, createRouter } from './router2.ts'
 import type { RequestMethod } from './router2.ts'
 
 describe('createRoutes()', () => {
@@ -37,6 +37,14 @@ describe('createRoutes()', () => {
   })
 
   it('creates a route map with a base pattern', () => {
+    let categoriesRoutes = createRoutes('categories', {
+      index: '/',
+      edit: {
+        methods: ['GET', 'POST'],
+        pattern: '/:slug/edit',
+      },
+    })
+
     let routes = createRoutes('https://remix.run', {
       home: '/',
       users: {
@@ -44,13 +52,7 @@ describe('createRoutes()', () => {
         show: '/users/:id',
       },
       // nested route map
-      categories: createRoutes('categories', {
-        index: '/',
-        edit: {
-          methods: ['GET', 'POST'],
-          pattern: '/:slug/edit',
-        },
-      }),
+      categories: categoriesRoutes,
     })
 
     type T = [
@@ -169,6 +171,7 @@ describe('createHandlers()', () => {
       home() {
         return new Response('Home')
       },
+      // nested route handler map
       users: usersHandlers,
     })
 
@@ -191,5 +194,26 @@ describe('createHandlers()', () => {
     assert.deepEqual(handlers.users.show.route.pattern, new RoutePattern('/users/:id'))
     assert.deepEqual(handlers.users.show.middleware, null)
     assert.deepEqual(typeof handlers.users.show.requestHandler, 'function')
+  })
+})
+
+describe('createRouter()', () => {
+  it('creates a router', async () => {
+    let routes = createRoutes({
+      home: '/',
+    })
+
+    let handlers = createHandlers(routes, {
+      home() {
+        return new Response('Home')
+      },
+    })
+
+    let router = createRouter(handlers)
+
+    let response = await router.fetch('https://remix.run')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Home')
   })
 })
