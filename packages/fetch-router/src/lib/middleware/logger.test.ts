@@ -1,9 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createRoutes } from '@remix-run/route-pattern'
-
-import { createRouter } from '../router.ts'
+import { createRoutes, createHandlers, createRouter } from '../router.ts'
 import { logger } from './logger.ts'
 
 describe('logger', () => {
@@ -14,10 +12,10 @@ describe('logger', () => {
 
     let messages: string[] = []
 
-    let router = createRouter(routes, {
+    let handlers = createHandlers(routes, {
       home: {
         use: [logger({ log: (message) => messages.push(message) })],
-        get() {
+        handler() {
           return new Response('Home', {
             headers: {
               'Content-Length': '4',
@@ -27,6 +25,8 @@ describe('logger', () => {
         },
       },
     })
+
+    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run')
 
