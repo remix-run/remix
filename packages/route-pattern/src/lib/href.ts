@@ -103,7 +103,7 @@ type SourceOf<T> =
 export type HrefBuilderArgs<T extends string> =
   [RequiredParams<T>] extends [never] ?
     [] | [null | undefined | Record<string, any>] | [null | undefined | Record<string, any>, HrefSearchParams] :
-    [HrefParams<T>] | [HrefParams<T>, HrefSearchParams]
+    [HrefParams<T>, HrefSearchParams] | [HrefParams<T>]
 
 // prettier-ignore
 type HrefParams<T extends string> =

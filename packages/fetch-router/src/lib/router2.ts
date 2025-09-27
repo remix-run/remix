@@ -1,23 +1,8 @@
 import { RoutePattern } from '@remix-run/route-pattern'
-import type { Join, Params } from '@remix-run/route-pattern'
+import type { Join, Params, HrefBuilderArgs } from '@remix-run/route-pattern'
 
 import type { Simplify } from './type-utils.ts'
 import { AppStorage } from './app-storage.ts'
-
-// Route
-// - request methods
-// - pattern
-// - input validation schema ?
-// - href(route) => string
-
-// Route Handler = route + implementation
-// - route
-// - middleware
-// - request handler
-
-// Router
-// - middleware (global)
-// - routes (route handlers)
 
 // prettier-ignore
 export const RequestMethods: RequestMethod[] = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
@@ -50,11 +35,11 @@ export class RequestContext<P extends AnyParams = {}> {
   readonly url: URL
   readonly storage: AppStorage
 
-  constructor(params: P, request: Request, url: URL) {
+  constructor(params: P, request: Request, url: URL, storage = new AppStorage()) {
     this.params = params
     this.request = request
     this.url = url
-    this.storage = new AppStorage()
+    this.storage = storage
   }
 }
 
@@ -88,11 +73,9 @@ export class Route<M extends RequestMethod = RequestMethod, P extends string = s
     this.pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
   }
 
-  href(...args: any): string {
+  href(...args: HrefBuilderArgs<P>): string {
     return this.pattern.href(...args)
   }
-
-  // TODO: match?
 }
 
 /**
@@ -422,17 +405,10 @@ export class Router {
    */
   readonly globalMiddleware: Middleware[] | null
 
-  #routeHandlers: RouteHandlerStorage = {
-    GET: [],
-    HEAD: [],
-    POST: [],
-    PUT: [],
-    PATCH: [],
-    DELETE: [],
-    OPTIONS: [],
-  }
+  // prettier-ignore
+  #routeHandlers: RouteHandlerStorage = { GET: [], HEAD: [], POST: [], PUT: [], PATCH: [], DELETE: [], OPTIONS: [] }
 
-  constructor(globalMiddleware: Middleware[] | null = null) {
+  constructor(globalMiddleware: Middleware<{}>[] | null = null) {
     this.globalMiddleware = globalMiddleware
   }
 
@@ -472,17 +448,19 @@ export class Router {
       input instanceof URL ? input :
       new URL(request.url)
 
-    let context = new RequestContext({}, request, url)
+    let globalContext = new RequestContext({}, request, url)
 
     if (this.globalMiddleware != null) {
-      return runMiddleware(this.globalMiddleware, context, () => this.#runHandlers(context))
+      return runMiddleware(this.globalMiddleware, globalContext, () =>
+        this.#runHandlers(globalContext),
+      )
     }
 
-    return this.#runHandlers(context)
+    return this.#runHandlers(globalContext)
   }
 
-  async #runHandlers(context: RequestContext): Promise<Response> {
-    let { request, url } = context
+  async #runHandlers(globalContext: RequestContext): Promise<Response> {
+    let { request, url } = globalContext
     let response: Response | undefined
 
     let routeHandlers = this.#routeHandlers[request.method as RequestMethod]
@@ -491,7 +469,7 @@ export class Router {
         let match = routeHandler.route.pattern.match(url)
 
         if (match != null) {
-          Object.assign(context.params, match.params)
+          let context = new RequestContext(match.params, request, url, globalContext.storage)
 
           if (routeHandler.middleware != null) {
             response = await runMiddleware(routeHandler.middleware, context, async () => {
