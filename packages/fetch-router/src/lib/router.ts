@@ -87,19 +87,12 @@ export function createRoutes<P extends string, const D extends RouteDefs>(
 ): BuildRouteMap<P, D>
 export function createRoutes<const D extends RouteDefs>(routeDefs: D): BuildRouteMap<'/', D>
 export function createRoutes(baseOrRouteDefs: any, routeDefs?: RouteDefs): RouteMap {
-  let base: RoutePattern
-  if (typeof baseOrRouteDefs === 'string' || baseOrRouteDefs instanceof RoutePattern) {
-    if (routeDefs == null) {
-      throw new Error('Missing route definitions')
-    }
-
-    base = typeof baseOrRouteDefs === 'string' ? new RoutePattern(baseOrRouteDefs) : baseOrRouteDefs
-  } else {
-    routeDefs = baseOrRouteDefs
-    base = new RoutePattern('/')
-  }
-
-  return _createRoutes(base, routeDefs!)
+  return typeof baseOrRouteDefs === 'string' || baseOrRouteDefs instanceof RoutePattern
+    ? _createRoutes(
+        typeof baseOrRouteDefs === 'string' ? new RoutePattern(baseOrRouteDefs) : baseOrRouteDefs,
+        routeDefs!,
+      )
+    : _createRoutes(new RoutePattern('/'), baseOrRouteDefs)
 }
 
 function _createRoutes<P extends string, D extends RouteDefs>(
@@ -261,18 +254,9 @@ export function createHandlers<T extends RouteMap>(
   middlewareOrHandlerDefs: any,
   handlerDefs?: RouteHandlerDefs<T>,
 ): RouteHandlerMap {
-  let middleware: Middleware[] | null = null
-  if (Array.isArray(middlewareOrHandlerDefs)) {
-    if (handlerDefs == null) {
-      throw new Error('Missing handler definitions')
-    }
-
-    middleware = middlewareOrHandlerDefs
-  } else {
-    handlerDefs = middlewareOrHandlerDefs
-  }
-
-  return _createHandlers(routes, handlerDefs!, middleware)
+  return Array.isArray(middlewareOrHandlerDefs)
+    ? _createHandlers(routes, handlerDefs!, middlewareOrHandlerDefs)
+    : _createHandlers(routes, middlewareOrHandlerDefs, null)
 }
 
 function _createHandlers<T extends RouteMap>(
@@ -338,9 +322,11 @@ function concatMiddleware(
   middleware: Middleware[] | null,
   routeMiddleware: any,
 ): Middleware[] | null {
-  if (routeMiddleware == null || !Array.isArray(routeMiddleware)) return middleware
-  if (middleware == null) return routeMiddleware
-  return [...middleware, ...routeMiddleware]
+  return routeMiddleware == null || !Array.isArray(routeMiddleware)
+    ? middleware
+    : middleware == null
+      ? routeMiddleware
+      : [...middleware, ...routeMiddleware]
 }
 
 // prettier-ignore
@@ -502,11 +488,12 @@ export class Router {
       return new Response('Method Not Allowed', { status: 405 })
     }
 
-    // prettier-ignore
     let url =
-      typeof input === 'string' ? new URL(input) :
-      input instanceof URL ? input :
-      new URL(request.url)
+      typeof input === 'string'
+        ? new URL(input)
+        : input instanceof URL
+          ? input
+          : new URL(request.url)
 
     let context = new RequestContext({}, request, url)
 
@@ -521,10 +508,10 @@ export class Router {
     let response: Response | undefined
 
     let routeHandlers = this.#routeHandlers[context.request.method as RequestMethod]
-    if (routeHandlers != null && routeHandlers.length > 0) {
+
+    if (routeHandlers?.length > 0) {
       for (let routeHandler of routeHandlers) {
         let match = routeHandler.route.pattern.match(context.url)
-
         if (match != null) {
           Object.assign(context.params, match.params)
           response = await routeHandler.dispatch(context)
@@ -586,21 +573,13 @@ function runMiddleware<P extends AnyParams>(
 export function createRouter(handlers: RouteHandlerMap): Router
 export function createRouter(middleware: Middleware[], handlers: RouteHandlerMap): Router
 export function createRouter(middlewareOrHandlers: any, handlers?: RouteHandlerMap): Router {
-  let middleware: Middleware[] | null = null
+  let router: Router
   if (Array.isArray(middlewareOrHandlers)) {
-    if (handlers == null) {
-      throw new Error('Missing route handlers')
-    }
-
-    middleware = middlewareOrHandlers
+    router = new Router(middlewareOrHandlers)
+    router.addHandlers(handlers!)
   } else {
-    handlers = middlewareOrHandlers
-  }
-
-  let router = new Router(middleware)
-
-  if (handlers != null) {
-    router.addHandlers(handlers)
+    router = new Router(null)
+    router.addHandlers(middlewareOrHandlers)
   }
 
   return router

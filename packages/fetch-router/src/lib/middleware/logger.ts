@@ -43,50 +43,29 @@ export function logger(options: LoggerOptions = {}): Middleware {
     let response = await next()
     let end = new Date()
 
-    let message = format.replace(/%(\w+)/g, (_, key) => {
-      switch (key) {
-        case 'date':
-          return formatApacheDate(start)
-        case 'dateISO':
-          return start.toISOString()
-        case 'duration':
-          return String(end.getTime() - start.getTime())
-        case 'contentLength':
-          return response.headers.get('Content-Length') ?? '-'
-        case 'contentType':
-          return response.headers.get('Content-Type') ?? '-'
-        case 'host':
-          return url.host
-        case 'hostname':
-          return url.hostname
-        case 'method':
-          return request.method
-        case 'path':
-          return url.pathname + url.search
-        case 'pathname':
-          return url.pathname
-        case 'port':
-          return url.port
-        case 'protocol':
-          return url.protocol
-        case 'query':
-          return url.search
-        case 'referer':
-          return request.headers.get('Referer') ?? '-'
-        case 'search':
-          return url.search
-        case 'status':
-          return String(response.status)
-        case 'statusText':
-          return response.statusText
-        case 'url':
-          return url.href
-        case 'userAgent':
-          return request.headers.get('User-Agent') ?? '-'
-        default:
-          return '-'
-      }
-    })
+    let tokens: Record<string, () => string> = {
+      date: () => formatApacheDate(start),
+      dateISO: () => start.toISOString(),
+      duration: () => String(end.getTime() - start.getTime()),
+      contentLength: () => response.headers.get('Content-Length') ?? '-',
+      contentType: () => response.headers.get('Content-Type') ?? '-',
+      host: () => url.host,
+      hostname: () => url.hostname,
+      method: () => request.method,
+      path: () => url.pathname + url.search,
+      pathname: () => url.pathname,
+      port: () => url.port,
+      protocol: () => url.protocol,
+      query: () => url.search,
+      referer: () => request.headers.get('Referer') ?? '-',
+      search: () => url.search,
+      status: () => String(response.status),
+      statusText: () => response.statusText,
+      url: () => url.href,
+      userAgent: () => request.headers.get('User-Agent') ?? '-',
+    }
+
+    let message = format.replace(/%(\w+)/g, (_, key) => tokens[key]?.() ?? '-')
 
     log(message)
   }
