@@ -1,6 +1,9 @@
 export { createStorageKey } from './lib/app-storage.ts'
 export { AppStorage } from './lib/app-storage.ts'
 
+export { createResource, createResources } from './lib/resource.ts'
+export type { ResourceOptions, ResourcesOptions } from './lib/resource.ts'
+
 export {
   RequestMethods,
   RequestContext,
