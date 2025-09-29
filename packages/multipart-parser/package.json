@@ -47,23 +47,24 @@
     "@remix-run/headers": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^20.14.10",
-    "esbuild": "^0.25.5"
+    "@types/node": "^24.6.0",
+    "esbuild": "^0.25.10"
   },
   "scripts": {
     "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",
     "bench:bun": "bun run ./bench/runner.ts",
     "bench:deno": "deno run --allow-sys ./bench/runner.ts",
     "bench:node": "node --disable-warning=ExperimentalWarning ./bench/runner.ts",
-    "build:types": "tsc --project tsconfig.build.json",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
-    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=node --sourcemap",
-    "build:esm:node": "esbuild src/node.ts --bundle --outfile=dist/node.js --format=esm --platform=node --sourcemap",
-    "build:cjs:node": "esbuild src/node.ts --bundle --outfile=dist/node.cjs --format=cjs --platform=node --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs && pnpm run build:esm:node && pnpm run build:cjs:node",
+    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=node --sourcemap",
+    "build:cjs:node": "esbuild src/node.ts --bundle --outfile=dist/node.cjs --format=cjs --platform=node --sourcemap",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:esm:node": "esbuild src/node.ts --bundle --outfile=dist/node.js --format=esm --platform=node --sourcemap",
+    "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
-    "prepublishOnly": "pnpm run build"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "multipart",

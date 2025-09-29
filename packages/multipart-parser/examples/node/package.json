@@ -7,7 +7,7 @@
     "tmp": "^0.2.3"
   },
   "devDependencies": {
-    "@types/node": "^20.14.10",
+    "@types/node": "^24.6.0",
     "@types/tmp": "^0.2.6",
     "typescript": "^5.7.2"
   },

@@ -32,18 +32,18 @@
   },
   "devDependencies": {
     "@ark/attest": "^0.49.0",
-    "@types/node": "^20.14.10",
-    "esbuild": "^0.20.0"
+    "@types/node": "^24.6.0",
+    "esbuild": "^0.25.10"
   },
   "scripts": {
     "bench": "node src/lib/parse.types.bench.ts",
-    "build:types": "tsc --project tsconfig.build.json",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "route",

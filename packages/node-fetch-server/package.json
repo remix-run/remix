@@ -37,19 +37,19 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^22.5.0",
-    "esbuild": "^0.20.2"
+    "@types/node": "^24.6.0",
+    "esbuild": "^0.25.10"
   },
   "scripts": {
     "bench": "bash ./bench/runner.sh",
-    "build:types": "tsc --project tsconfig.build.json",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=node --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
     "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=node --sourcemap",
-    "build": "pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=node --sourcemap",
+    "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
-    "prepublishOnly": "pnpm run build"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "http",

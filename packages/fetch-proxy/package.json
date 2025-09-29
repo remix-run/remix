@@ -40,18 +40,18 @@
     "@remix-run/headers": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^20.14.10",
-    "esbuild": "^0.25.5"
+    "@types/node": "^24.6.0",
+    "esbuild": "^0.25.10"
   },
   "scripts": {
-    "build:types": "tsc --project tsconfig.build.json",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
-    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=neutral --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs",
+    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=neutral --sourcemap",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
-    "prepublishOnly": "pnpm run build"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "fetch",

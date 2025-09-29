@@ -55,22 +55,22 @@
   },
   "devDependencies": {
     "@remix-run/form-data-parser": "workspace:^",
-    "@types/node": "^20.14.10",
-    "esbuild": "^0.25.5"
+    "@types/node": "^24.6.0",
+    "esbuild": "^0.25.10"
   },
   "scripts": {
-    "build:types": "tsc --project tsconfig.build.json",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
-    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=neutral --sourcemap",
-    "build:esm:local": "esbuild src/local.ts --bundle --outfile=dist/local.js --format=esm --platform=node --sourcemap",
-    "build:cjs:local": "esbuild src/local.ts --bundle --outfile=dist/local.cjs --format=cjs --platform=node --sourcemap",
-    "build:esm:memory": "esbuild src/memory.ts --bundle --outfile=dist/memory.js --format=esm --platform=neutral --sourcemap",
-    "build:cjs:memory": "esbuild src/memory.ts --bundle --outfile=dist/memory.cjs --format=cjs --platform=neutral --sourcemap",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:cjs && pnpm run build:esm:local && pnpm run build:cjs:local && pnpm run build:esm:memory && pnpm run build:cjs:memory",
+    "build:cjs": "esbuild src/index.ts --bundle --outfile=dist/index.cjs --format=cjs --platform=neutral --sourcemap",
+    "build:cjs:local": "esbuild src/local.ts --bundle --outfile=dist/local.cjs --format=cjs --platform=node --sourcemap",
+    "build:cjs:memory": "esbuild src/memory.ts --bundle --outfile=dist/memory.cjs --format=cjs --platform=neutral --sourcemap",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:esm:local": "esbuild src/local.ts --bundle --outfile=dist/local.js --format=esm --platform=node --sourcemap",
+    "build:esm:memory": "esbuild src/memory.ts --bundle --outfile=dist/memory.js --format=esm --platform=neutral --sourcemap",
+    "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
-    "prepublishOnly": "pnpm run build"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "file",
