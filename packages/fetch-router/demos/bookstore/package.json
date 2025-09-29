@@ -1,0 +1,17 @@
+{
+  "name": "fetch-router-bookstore-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --enable-source-maps server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/route-pattern": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

@@ -50,6 +50,22 @@ importers:
         specifier: ^0.20.0
         version: 0.20.2
 
+  packages/fetch-router/demos/bookstore:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../..
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../../../node-fetch-server
+      '@remix-run/route-pattern':
+        specifier: workspace:*
+        version: link:../../../route-pattern
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.7.2
+
   packages/file-storage:
     dependencies:
       '@remix-run/lazy-file':
