@@ -3,7 +3,6 @@ import { describe, it } from 'node:test'
 
 import { MissingParamError, createHrefBuilder } from './href.ts'
 import { RoutePattern } from './route-pattern.ts'
-import { createRoutes } from './route-map.ts'
 
 describe('href', () => {
   it('makes absolute hrefs when no host is provided', () => {
@@ -14,12 +13,6 @@ describe('href', () => {
   it('works with a RoutePattern', () => {
     let href = createHrefBuilder()
     assert.equal(href(new RoutePattern('products/:id'), { id: '1' }), '/products/1')
-  })
-
-  it('works with a RouteMap', () => {
-    let routes = createRoutes({ products: '/products/:id' })
-    let href = createHrefBuilder<typeof routes>()
-    assert.equal(href('/products/:id', { id: '1' }), '/products/1')
   })
 
   it('substitutes * for unnamed wildcards in variants', () => {

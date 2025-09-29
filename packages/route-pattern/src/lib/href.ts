@@ -2,7 +2,6 @@ import type { RequiredParams, OptionalParams } from './params.ts'
 import { parse } from './parse.ts'
 import type { ParseResult } from './parse.ts'
 import type { Token } from './parse.ts'
-import type { RouteMap } from './route-map.ts'
 import type { RoutePattern } from './route-pattern.ts'
 import type { Variant } from './variant.ts'
 
@@ -16,9 +15,7 @@ export class MissingParamError extends Error {
   }
 }
 
-export function createHrefBuilder<
-  T extends string | RoutePattern | RouteMap = string,
->(): HrefBuilder<T> {
+export function createHrefBuilder<T extends string | RoutePattern = string>(): HrefBuilder<T> {
   return (pattern: string | RoutePattern, ...args: any) =>
     formatHref(parse(typeof pattern === 'string' ? pattern : pattern.source), ...args)
 }
@@ -85,7 +82,7 @@ function resolveTokens(tokens: Token[], sep: string, params: Record<string, any>
   return str
 }
 
-export interface HrefBuilder<T extends string | RoutePattern | RouteMap = string> {
+export interface HrefBuilder<T extends string | RoutePattern = string> {
   <P extends string extends T ? string : SourceOf<T> | Variant<SourceOf<T>>>(
     pattern: P | RoutePattern<P>,
     ...args: HrefBuilderArgs<P>
@@ -96,7 +93,6 @@ export interface HrefBuilder<T extends string | RoutePattern | RouteMap = string
 type SourceOf<T> =
   T extends string ? T :
   T extends RoutePattern<infer S extends string> ? S :
-  T extends RouteMap<infer S extends string> ? S :
   never
 
 // prettier-ignore

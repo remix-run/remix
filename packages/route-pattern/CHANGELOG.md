@@ -2,6 +2,14 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- BREAKING CHANGE: removed `createRoutes` and corresponding types (`RouteMap`, `RouteDefs`, and `RouteDef`). This functionality will be re-introduced in a future "router" package.
+- BREAKING CHANGE: removed `RouteMap` from `createHrefBuilder` generic type.
+- Expose `Join` type as public API
+- Expose `HrefBuilderArgs` type as public API
+- Optimization: compile patterns as needed instead of on instantiation
+
 ## v0.12.0 (2025-09-25)
 
 - BREAKING CHANGE: removed `options` arg from `createHrefBuilder`

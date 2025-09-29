@@ -11,37 +11,21 @@ A powerful and flexible URL pattern matching library for modern JavaScript appli
 
 ## Examples
 
-The following examples show how to create a route map and use it to match and generate URLs. A route map is a mapping of human-friendly names to patterns.
-
-Parts of a route pattern that begin with a colon (`:`) are dynamic parameters.
+The following examples show how to create route patterns and use them to match and generate URLs. Parts of a route pattern that begin with a colon (`:`) are dynamic parameters.
 
 ```tsx
-import { createRoutes } from '@remix-run/route-pattern'
+import { RoutePattern } from '@remix-run/route-pattern'
 
-let routes = createRoutes({
-  home: '/',
-  blog: {
-    index: '/blog',
-    post: '/blog/:slug',
-  },
-  profile: '/profiles/:id',
-  profiles: {
-    index: '/profiles',
-    new: '/profiles/new',
-    edit: '/profiles/:id/edit',
-  },
-})
+let pattern = new RoutePattern('blog/:slug')
 
 // URL matching
-routes.profile.match('https://shopify.com/profiles/1')
-// { params: { id: '1' } }
-routes.blog.post.match('https://shopify.com/blog/remixing-shopify')
+pattern.match('https://remix.run/blog/remixing-shopify')
 // { params: { slug: 'remixing-shopify' } }
+pattern.match('https://remix.run/admin')
+// null
 
 // URL generation
-routes.home.href() // "/"
-routes.blog.post.href({ slug: 'remixing-shopify' }) // "/blog/remixing-shopify"
-routes.profiles.edit.href({ id: 1 }) // "/profiles/1/edit"
+pattern.href({ slug: 'remixing-shopify' }) // "/blog/remixing-shopify"
 ```
 
 A single URL segment can contain multiple parameters by separating them with any character that isn't a [valid JavaScript identifier character](https://developer.mozilla.org/en-US/docs/Glossary/Identifier).
@@ -49,19 +33,14 @@ A single URL segment can contain multiple parameters by separating them with any
 Optional parts of the URL are wrapped in parentheses.
 
 ```tsx
-let routes = createRoutes({
-  blog: {
-    index: '/blog',
-    post: '/blog/:year-:month-:day/:slug(.html)',
-  },
-})
+let pattern = new RoutePattern('blog/:year-:month-:day/:slug(.html)')
 
-routes.blog.post.match('https://remix.run/blog/2024-01-15/introducing-remix')
+pattern.match('https://remix.run/blog/2024-01-15/introducing-remix.html')
 // { params: { year: '2024', month: '01', day: '15', slug: 'introducing-remix' } }
-routes.blog.post.match('https://remix.run/blog/2024-01-15/introducing-remix.html')
+pattern.match('https://remix.run/blog/2024-01-15/introducing-remix')
 // { params: { year: '2024', month: '01', day: '15', slug: 'introducing-remix' } }
 
-routes.blog.post.href({
+pattern.href({
   year: '2024',
   month: '01',
   day: '15',
@@ -73,69 +52,60 @@ routes.blog.post.href({
 Optional parts of the URL may be nested to support flexible URL patterns.
 
 ```tsx
-let routes = createRoutes({
-  api: {
-    customers: 'api(/v:major(.:minor))/customers/:id(.:format)',
-  },
-})
+let pattern = new RoutePattern('api(/v:major(.:minor))/customers/:id(.:format)')
 
-routes.api.customers.match('https://shopify.com/api/customers/cari')
+pattern.match('https://shopify.com/api/customers/cari')
 // { params: { major: undefined, minor: undefined, id: 'cari', format: undefined } }
-routes.api.customers.match('https://shopify.com/api/v2.1/customers/cari.json')
+pattern.match('https://shopify.com/api/v2.1/customers/cari.json')
 // { params: { major: '2', minor: '1', id: 'cari', format: 'json' } }
-routes.api.customers.match('https://shopify.com/api/v2/customers/cari.json')
+pattern.match('https://shopify.com/api/v2/customers/cari.json')
 // { params: { major: '2', minor: undefined, id: 'cari', format: 'json' } }
 
-routes.api.customers.href({ major: '2', minor: '1', id: 'cari', format: 'json' })
+pattern.href({ major: '2', minor: '1', id: 'cari', format: 'json' })
 // "/api/v2.1/customers/cari.json"
-routes.api.customers.href({ major: '2', id: 'cari', format: 'json' })
+pattern.href({ major: '2', id: 'cari', format: 'json' })
 // "/api/v2/customers/cari.json"
-routes.api.customers.href({ major: '2', id: 'cari' })
+pattern.href({ major: '2', id: 'cari' })
 // "/api/v2/customers/cari"
-routes.api.customers.href({ id: 'cari' })
+pattern.href({ id: 'cari' })
 // "/api/customers/cari"
 ```
 
-URL patterns may match on the full URL, including protocol, hostname, and port. Pass a "base" pattern to `createRoutes` as the first arg to make all patterns relative to that base.
+URL patterns may match on the full URL, including protocol, hostname, and port.
 
 ```tsx
-let routes = createRoutes('https://:store.shopify.com', {
-  inventory: '/inventory',
-  orders: '/orders',
-})
+let pattern = new RoutePattern('https://:store.shopify.com/orders')
 
-routes.orders.match('https://coffee-roasters.shopify.com/orders')
+pattern.match('https://coffee-roasters.shopify.com/orders')
 // { params: { store: 'coffee-roasters' } }
 
-routes.inventory.href({ store: 'remix' })
-// "https://remix.shopify.com/inventory"
+pattern.href({ store: 'remix' })
+// "https://remix.shopify.com/orders"
 ```
 
 Wildcards (`*`) are useful for matching nested paths, file paths, or any URL structure with variable depth.
 
 ```tsx
-let routes = createRoutes({
-  images: 'http(s)://cdn.shopify.com/assets/*path.:ext',
-})
+let pattern = new RoutePattern('http(s)://cdn.shopify.com/assets/*path.:ext')
 
-routes.images.match('https://cdn.shopify.com/assets/products/sneakers.webp')
+pattern.match('https://cdn.shopify.com/assets/products/sneakers.webp')
+// { params: { path: 'products/sneakers', ext: 'webp' } }
+pattern.match('http://cdn.shopify.com/assets/products/sneakers.webp')
 // { params: { path: 'products/sneakers', ext: 'webp' } }
 
-routes.images.href({ path: 'remix', ext: 'webp' })
-// "https://cdn.shopify.com/assets/remix.webp"
+pattern.href({ path: 'remix', ext: 'png' })
+// "https://cdn.shopify.com/assets/remix.png"
 ```
 
 A wildcard that is not followed by an identifier is "unnamed" and won't show up in the params. But it will still match.
 
 ```tsx
-let routes = createRoutes({
-  images: 'files/*',
-})
+let pattern = new RoutePattern('files/*')
 
-routes.images.match('https://cdn.shopify.com/files/images/logo.png')
+pattern.match('https://cdn.shopify.com/files/images/logo.png')
 // { params: {} }
 
-routes.images.href({ '*': 'images/hero.jpg' })
+pattern.href({ '*': 'images/hero.jpg' })
 // "/files/images/hero.jpg"
 ```
 
@@ -151,20 +121,10 @@ URL generation is type-safe, which helps prevent creating invalid URLs. Href bui
 ```tsx
 import { createHrefBuilder } from '@remix-run/route-pattern'
 
-let routes = createRoutes({
-  api: {
-    products: '/api/v:version/products/:id.json',
-  },
-  assets: {
-    images: '/assets/*path.jpg',
-  },
-  products: {
-    shoes: '/shoes/:brand',
-  },
-})
+type ValidPatterns = 'api/v:version/products/:id.json' | 'assets/*path.jpg' | 'shoes/:brand'
 
 // The generic restricts the set of patterns that may be used
-let href = createHrefBuilder<typeof routes>()
+let href = createHrefBuilder<ValidPatterns>()
 
 // Complex patterns with optional segments
 href('/api/v:version/products/:id.json', { version: '2.1', id: 'wireless-headphones' })
@@ -194,20 +154,6 @@ href('blog/:slug', { slug: 'remixing-shopify' })
 // "/blog/remixing-shopify"
 ```
 
-## RoutePattern API
-
-The `RoutePattern` interface provides a low-level API for matching and generating URLs one at a time.
-
-```tsx
-let pattern = new RoutePattern('blog/:slug')
-
-pattern.match('https://remix.run/blog/remixing-shopify')
-// { params: { slug: 'remixing-shopify' } }
-
-pattern.href({ slug: 'remixing-shopify' })
-// "/blog/remixing-shopify"
-```
-
 ## Pattern Syntax
 
 Route pattern strings follow a structured format that mirrors URL anatomy.
@@ -220,7 +166,7 @@ URL origin (protocol, hostname, and port) is optional.
 
 ### URL Components
 
-**Pathname-Only Matching** (default): When no protocol or hostname is specified, patterns match only the pathname portion:
+**Pathname-Only Matching** (default): When no hostname is specified, patterns match only the pathname portion:
 
 ```tsx
 let pattern = new RoutePattern('blog/:id')

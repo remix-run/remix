@@ -366,13 +366,6 @@ type _IdentifierParse<S extends { identifier: string, rest: string }> =
       _IdentifierParse<{ identifier: `${S['identifier']}${Head}`, rest: Tail }> :
       S
 
-// Enum --------------------------------------------------------------------------------------------
-
-// prettier-ignore
-type EnumSplit<Body extends string> =
-  Body extends `${infer Member},${infer Rest}` ? [Member, ...EnumSplit<Rest>] :
-  [Body]
-
 // Search constraints ------------------------------------------------------------------------------
 
 export type SearchConstraints = Map<

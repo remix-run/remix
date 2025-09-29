@@ -26,48 +26,13 @@ export class RoutePattern<T extends string = string> {
    */
   readonly ignoreCase: boolean
 
-  readonly #parsed: ParseResult
-  readonly #matcher: RegExp
-  readonly #matchOrigin: boolean
-  readonly #paramNames: Array<string>
-  readonly #searchConstraints: SearchConstraints | undefined
+  #parsed: ParseResult
+  #compiled: CompileResult | undefined
 
   constructor(source: T | RoutePattern<T>, options?: RoutePatternOptions) {
     this.source = typeof source === 'string' ? source : source.source
     this.ignoreCase = options?.ignoreCase === true
-
     this.#parsed = parse(this.source)
-    let { protocol, hostname, port, pathname, searchConstraints } = this.#parsed
-
-    this.#matchOrigin = hostname !== undefined
-    this.#paramNames = []
-
-    if (this.#matchOrigin) {
-      let protocolSource = protocol
-        ? tokensToRegExpSource(protocol, '', '.*', this.#paramNames, true)
-        : '[^:]+'
-      let hostnameSource = hostname
-        ? tokensToRegExpSource(hostname, '.', '[^.]+?', this.#paramNames, true)
-        : '[^/:]+'
-      let portSource = port !== undefined ? `:${regexpEscape(port)}` : '(?::[0-9]+)?'
-      let pathnameSource = pathname
-        ? tokensToRegExpSource(pathname, '/', '[^/]+?', this.#paramNames, this.ignoreCase)
-        : ''
-
-      this.#matcher = new RegExp(
-        `^${protocolSource}://${hostnameSource}${portSource}/${pathnameSource}$`,
-      )
-    } else {
-      let pathnameSource = pathname
-        ? tokensToRegExpSource(pathname, '/', '[^/]+?', this.#paramNames, this.ignoreCase)
-        : ''
-
-      this.#matcher = new RegExp(`^/${pathnameSource}$`)
-    }
-
-    if (searchConstraints) {
-      this.#searchConstraints = searchConstraints
-    }
   }
 
   /**
@@ -106,22 +71,33 @@ export class RoutePattern<T extends string = string> {
   match(url: URL | string): RouteMatch<T> | null {
     if (typeof url === 'string') url = new URL(url)
 
+    let { matchOrigin, matcher, paramNames } = this.#compile()
+
     let pathname = this.ignoreCase ? url.pathname.toLowerCase() : url.pathname
-    let match = this.#matcher.exec(this.#matchOrigin ? `${url.origin}${pathname}` : pathname)
+    let match = matcher.exec(matchOrigin ? `${url.origin}${pathname}` : pathname)
     if (match === null) return null
 
     // Map positional capture groups to parameter names in source order
     let params = {} as any
-    for (let i = 0; i < this.#paramNames.length; i++) {
-      let paramName = this.#paramNames[i]
+    for (let i = 0; i < paramNames.length; i++) {
+      let paramName = paramNames[i]
       params[paramName] = match[i + 1]
     }
 
-    if (this.#searchConstraints && !matchSearch(url.search, this.#searchConstraints)) {
+    if (
+      this.#parsed.searchConstraints != null &&
+      !matchSearch(url.search, this.#parsed.searchConstraints)
+    ) {
       return null
     }
 
     return { url, params }
+  }
+
+  #compile(): CompileResult {
+    if (this.#compiled) return this.#compiled
+    this.#compiled = compilePattern(this.#parsed, this.ignoreCase)
+    return this.#compiled
   }
 
   /**
@@ -148,6 +124,43 @@ export interface RouteMatch<T extends string> {
    * The URL that was matched.
    */
   readonly url: URL
+}
+
+interface CompileResult {
+  matchOrigin: boolean
+  matcher: RegExp
+  paramNames: string[]
+}
+
+function compilePattern(parsed: ParseResult, ignoreCase: boolean): CompileResult {
+  let { protocol, hostname, port, pathname } = parsed
+
+  let matchOrigin = hostname !== undefined
+  let matcher: RegExp
+  let paramNames: string[] = []
+
+  if (matchOrigin) {
+    let protocolSource = protocol
+      ? tokensToRegExpSource(protocol, '', '.*', paramNames, true)
+      : '[^:]+'
+    let hostnameSource = hostname
+      ? tokensToRegExpSource(hostname, '.', '[^.]+?', paramNames, true)
+      : '[^/:]+'
+    let portSource = port !== undefined ? `:${regexpEscape(port)}` : '(?::[0-9]+)?'
+    let pathnameSource = pathname
+      ? tokensToRegExpSource(pathname, '/', '[^/]+?', paramNames, ignoreCase)
+      : ''
+
+    matcher = new RegExp(`^${protocolSource}://${hostnameSource}${portSource}/${pathnameSource}$`)
+  } else {
+    let pathnameSource = pathname
+      ? tokensToRegExpSource(pathname, '/', '[^/]+?', paramNames, ignoreCase)
+      : ''
+
+    matcher = new RegExp(`^/${pathnameSource}$`)
+  }
+
+  return { matchOrigin, matcher, paramNames }
 }
 
 function tokensToRegExpSource(
