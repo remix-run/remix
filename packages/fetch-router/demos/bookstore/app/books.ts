@@ -1,7 +1,6 @@
-import { createHandlers } from '@remix-run/fetch-router'
+import { createHandlers, html } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
-import { html } from './utils/response.ts'
 
 export const booksHandlers = createHandlers(routes.books, {
   catalog({ url }) {
@@ -13,10 +12,10 @@ export const booksHandlers = createHandlers(routes.books, {
     return html(renderBookDetails(params.isbn))
   },
   reviews: {
-    get({ params }) {
+    show({ params }) {
       return html(renderBookReviews(params.isbn))
     },
-    async post({ params, request }) {
+    async action({ params, request }) {
       let review = await request.json()
       return new Response(`Review added for book ${params.isbn}: ${review.rating}/5 stars`)
     },
@@ -67,7 +66,7 @@ function renderBookDetails(isbn: string) {
         <p><strong>Price:</strong> $19.99</p>
         <p><strong>Description:</strong> A fascinating tale that will keep you reading.</p>
         <button>Add to Cart</button>
-        <p><a href="${routes.books.reviews.href({ isbn })}">Read Reviews</a></p>
+        <p><a href="${routes.books.reviews.show.href({ isbn })}">Read Reviews</a></p>
         <p><a href="${routes.api.books.author.edit.href({ id: isbn })}">Edit Author Info</a> (Admin)</p>
       </body>
     </html>

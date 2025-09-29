@@ -1,9 +1,8 @@
-import { createHandlers } from '@remix-run/fetch-router'
+import { createHandlers, html } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { authMiddleware } from './middleware/auth.ts'
 import { adminMiddleware } from './middleware/admin.ts'
-import { html } from './utils/response.ts'
 
 export const usersHandlers = createHandlers(routes.users, [authMiddleware, adminMiddleware], {
   index() {

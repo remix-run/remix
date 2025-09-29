@@ -45,7 +45,7 @@
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
-    "test": "node --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
+    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
     "prepublishOnly": "pnpm run build"
   },
   "keywords": [

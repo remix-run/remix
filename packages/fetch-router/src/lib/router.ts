@@ -65,11 +65,11 @@ export function isRouteMap(value: any): value is RouteMap {
 }
 
 export class Route<M extends RequestMethod = RequestMethod, P extends string = string> {
-  readonly methods: M[]
+  readonly method: M
   readonly pattern: RoutePattern<P>
 
-  constructor(methods: M | M[], pattern: P | RoutePattern<P>) {
-    this.methods = Array.isArray(methods) ? methods : [methods]
+  constructor(method: M, pattern: P | RoutePattern<P>) {
+    this.method = method
     this.pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
   }
 
@@ -111,12 +111,10 @@ function _createRoutes<P extends string, D extends RouteDefs>(
     }
 
     if (typeof routeDef === 'string' || routeDef instanceof RoutePattern) {
-      routes[key] = new Route(RequestMethods, base.join(routeDef))
-    } else if (isMultiMethodRouteDef(routeDef)) {
-      routes[key] = new Route(routeDef.methods, base.join(routeDef.pattern))
-    } else if (isSingleMethodRouteDef(routeDef)) {
-      routes[key] = new Route(routeDef.method ?? RequestMethods, base.join(routeDef.pattern))
-    } else if (typeof routeDef === 'object' && routeDef != null) {
+      routes[key] = new Route('GET', base.join(routeDef))
+    } else if (isObjectRouteDef(routeDef)) {
+      routes[key] = new Route(routeDef.method ?? 'GET', base.join(routeDef.pattern))
+    } else {
       routes[key] = _createRoutes(base, routeDef, keys)
     }
   }
@@ -135,49 +133,27 @@ export type BuildRouteMap<B extends string, D extends RouteDefs> = Simplify<{
 
 // prettier-ignore
 type BuildRoute<B extends string, T extends RouteDef> =
-  T extends string ? Route<RequestMethod, Join<B, T>> :
-  T extends RoutePattern<infer P extends string> ? Route<RequestMethod, Join<B, P>> :
-  T extends MultiMethodRouteDef<infer P extends string> ?
-    T['methods'] extends readonly RequestMethod[] ? Route<T['methods'][number], Join<B, P>> :
-    never :
-  T extends SingleMethodRouteDef<infer P extends string> ?
-    undefined extends T['method'] ? Route<RequestMethod, Join<B, P>> :
+  T extends string ? Route<'GET', Join<B, T>> :
+  T extends RoutePattern<infer P extends string> ? Route<'GET', Join<B, P>> :
+  T extends ObjectRouteDef<infer P extends string> ?
+    // TODO: Is this necessary? Or can we do this in just two lines?
+    // undefined extends T['method'] ? Route<'GET', Join<B, P>> :
     T['method'] extends RequestMethod ? Route<T['method'], Join<B, P>> :
-    Route<RequestMethod, Join<B, P>> :
+    Route<'GET', Join<B, P>> :
   never
 
 type RouteDefs = {
   [key: string]: RouteDef | RouteDefs
 }
 
-type RouteDef<P extends string = string> =
-  | P
-  | RoutePattern<P>
-  | MultiMethodRouteDef<P>
-  | SingleMethodRouteDef<P>
+type RouteDef<P extends string = string> = P | RoutePattern<P> | ObjectRouteDef<P>
 
-type MultiMethodRouteDef<P extends string = string> = {
-  methods: RequestMethod[]
-  pattern: P | RoutePattern<P>
-}
-
-function isMultiMethodRouteDef<P extends string>(value: any): value is MultiMethodRouteDef<P> {
-  return (
-    typeof value === 'object' &&
-    value != null &&
-    'methods' in value &&
-    Array.isArray(value.methods) &&
-    'pattern' in value &&
-    value.pattern != null
-  )
-}
-
-type SingleMethodRouteDef<P extends string = string> = {
+type ObjectRouteDef<P extends string = string> = {
   method?: RequestMethod
   pattern: P | RoutePattern<P>
 }
 
-function isSingleMethodRouteDef<P extends string>(value: any): value is SingleMethodRouteDef<P> {
+function isObjectRouteDef<P extends string>(value: any): value is ObjectRouteDef<P> {
   return typeof value === 'object' && value != null && 'pattern' in value && value.pattern != null
 }
 
@@ -203,35 +179,24 @@ export function isRouteHandlerMap(value: any): value is RouteHandlerMap {
 export class RouteHandler<R extends Route = Route> {
   readonly route: R
   readonly middleware: Middleware<RouteParams<R>>[] | null
-  readonly handlers: NormalizedHandlerMap<R>
+  readonly requestHandler: RequestHandler<RouteParams<R>>
 
   constructor(
     route: R,
     middleware: Middleware<RouteParams<R>>[] | null,
-    handlers: NormalizedHandlerMap<R>,
+    requestHandler: RequestHandler<RouteParams<R>>,
   ) {
     this.route = route
     this.middleware = middleware
-    this.handlers = handlers
+    this.requestHandler = requestHandler
   }
 
   dispatch(ctx: RequestContext<RouteParams<R>>): Response | Promise<Response> {
     if (this.middleware != null) {
-      return runMiddleware(this.middleware, ctx, () => this.#handleRequest(ctx))
+      return runMiddleware(this.middleware, ctx, () => this.requestHandler(ctx))
     }
 
-    return this.#handleRequest(ctx)
-  }
-
-  #handleRequest(ctx: RequestContext<RouteParams<R>>): Response | Promise<Response> {
-    let method = ctx.request.method as RequestMethod
-    let requestHandler = this.handlers[method]
-
-    if (requestHandler == null) {
-      throw new Error(`Missing request handler for ${method}`)
-    }
-
-    return requestHandler(ctx) as Response | Promise<Response>
+    return this.requestHandler(ctx)
   }
 }
 
@@ -278,36 +243,21 @@ function _createHandlers<T extends RouteMap>(
 
     if (value instanceof Route) {
       let route = value as Route
-      let handlerMap: NormalizedHandlerMap<Route>
-
       if (typeof handlerDef === 'function') {
-        // Single function handler - use for all methods
-        handlerMap = createSingleMethodHandlerMap(route, null, handlerDef as any)
-      } else if (isSingleMethodRouteHandlerDef(handlerDef)) {
-        // Single method handler definition with middleware
-        handlerMap = createSingleMethodHandlerMap(
+        handlers[key] = new RouteHandler(route, middleware, handlerDef as any)
+      } else if (isObjectRouteHandlerDef(handlerDef)) {
+        let routeMiddleware = middleware ? [...middleware] : []
+        if (handlerDef.use) {
+          routeMiddleware.push(...handlerDef.use)
+        }
+        handlers[key] = new RouteHandler(
           route,
-          handlerDef.use ?? null,
+          routeMiddleware.length > 0 ? routeMiddleware : null,
           handlerDef.handler as any,
         )
       } else {
-        // Multi-method handler definition
-        handlerMap = createMultiMethodHandlerMap(route, handlerDef as any)
-
-        // Verify all required method handlers are present
-        for (let method of route.methods) {
-          // HEAD and OPTIONS are optional
-          if (method !== 'HEAD' && method !== 'OPTIONS' && handlerMap[method] == null) {
-            throw new Error(`Missing request handler for ${method} on ${keys.join('.')}`)
-          }
-        }
+        throw new Error(`Invalid handler definition for ${keys.join('.')}`)
       }
-
-      handlers[key] = new RouteHandler(
-        route,
-        concatMiddleware(middleware, handlerMap.use),
-        handlerMap,
-      )
     } else if (isRouteHandlerMap(handlerDef)) {
       handlers[key] = handlerDef // re-use existing RouteHandlerMap
     } else {
@@ -316,17 +266,6 @@ function _createHandlers<T extends RouteMap>(
   }
 
   return handlers
-}
-
-function concatMiddleware(
-  middleware: Middleware[] | null,
-  routeMiddleware: any,
-): Middleware[] | null {
-  return routeMiddleware == null || !Array.isArray(routeMiddleware)
-    ? middleware
-    : middleware == null
-      ? routeMiddleware
-      : [...middleware, ...routeMiddleware]
 }
 
 // prettier-ignore
@@ -347,96 +286,18 @@ type RouteHandlerDefs<T extends RouteMap> = {
   )
 }
 
-type RouteHandlerDef<R extends Route> =
-  | FunctionRouteHandlerDef<R>
-  | SingleMethodRouteHandlerDef<R>
-  | MultiMethodRouteHandlerDef<R>
+type RouteHandlerDef<R extends Route> = FunctionRouteHandlerDef<R> | ObjectRouteHandlerDef<R>
 
 type FunctionRouteHandlerDef<R extends Route, T = unknown> =
   R extends Route<infer _, infer P extends string> ? RequestHandler<Params<P>, T> : never
 
-interface SingleMethodRouteHandlerDef<R extends Route, T = unknown> {
+interface ObjectRouteHandlerDef<R extends Route, T = unknown> {
   use?: Middleware<RouteParams<R>>[]
   handler: RequestHandler<RouteParams<R>, T>
 }
 
-function isSingleMethodRouteHandlerDef<R extends Route>(
-  value: any,
-): value is SingleMethodRouteHandlerDef<R> {
+function isObjectRouteHandlerDef<R extends Route>(value: any): value is ObjectRouteHandlerDef<R> {
   return typeof value === 'object' && value != null && 'handler' in value && value.handler != null
-}
-
-// prettier-ignore
-type MultiMethodRouteHandlerDef<R extends Route, T = unknown> =
-  { use?: Middleware<RouteParams<R>>[] } & (
-    R extends Route<infer M extends RequestMethod, infer P extends string> ? (
-      ('GET' extends M ? { GET: RequestHandler<Params<P>, T> } | { get: RequestHandler<Params<P>, T> } : {}) &
-      ('HEAD' extends M ? { HEAD?: RequestHandler<Params<P>, T> } | { head?: RequestHandler<Params<P>, T> } : {}) & // optional
-      ('POST' extends M ? { POST: RequestHandler<Params<P>, T> } | { post: RequestHandler<Params<P>, T> } : {}) &
-      ('PUT' extends M ? { PUT: RequestHandler<Params<P>, T> } | { put: RequestHandler<Params<P>, T> } : {}) &
-      ('PATCH' extends M ? { PATCH: RequestHandler<Params<P>, T> } | { patch: RequestHandler<Params<P>, T> } : {}) &
-      ('DELETE' extends M ? { DELETE: RequestHandler<Params<P>, T> } | { delete: RequestHandler<Params<P>, T> } : {}) &
-      ('OPTIONS' extends M ? { OPTIONS?: RequestHandler<Params<P>, T> } | { options?: RequestHandler<Params<P>, T> } : {}) // optional
-    ) :
-    never
-  )
-
-/**
- * A normalized runtime-friendly handler map that stores handlers by
- * request method names.
- */
-type NormalizedHandlerMap<R extends Route, T = unknown> = {
-  use?: Middleware<RouteParams<R>>[]
-} & (R extends Route<infer M extends RequestMethod, infer P extends string>
-  ? {
-      [K in M]: RequestHandler<Params<P>, T>
-    } & {
-      // Optional methods that might not be provided
-      HEAD?: RequestHandler<Params<P>, T>
-      OPTIONS?: RequestHandler<Params<P>, T>
-    }
-  : never)
-
-function createSingleMethodHandlerMap(
-  route: Route,
-  middleware: Middleware<any>[] | null,
-  handler: RequestHandler<any>,
-): NormalizedHandlerMap<Route> {
-  let map: any = {
-    use: middleware,
-  }
-
-  // Assign the same handler to all supported methods
-  for (let method of route.methods) {
-    map[method] = handler
-  }
-
-  return map
-}
-
-function createMultiMethodHandlerMap(route: Route, handlerDef: any): NormalizedHandlerMap<Route> {
-  let map: any = {
-    use: handlerDef.use,
-  }
-
-  // Convert both uppercase and lowercase method names to uppercase
-  for (let method of route.methods) {
-    let handler = (handlerDef as any)[method] ?? (handlerDef as any)[method.toLowerCase()]
-    if (handler != null) {
-      map[method] = handler
-    }
-  }
-
-  // If HEAD is supported but no HEAD handler is provided,
-  // use the GET handler if one is available
-  if (route.methods.includes('HEAD') && !map.HEAD) {
-    let getHandler = map.GET ?? (handlerDef as any).get ?? (handlerDef as any).GET
-    if (getHandler != null) {
-      map.HEAD = getHandler
-    }
-  }
-
-  return map
 }
 
 // Router //////////////////////////////////////////////////////////////////////////////////////////
@@ -475,9 +336,7 @@ export class Router {
   }
 
   #addRouteHandler<M extends RequestMethod>(handler: RouteHandler<Route<M, string>>): void {
-    for (let method of handler.route.methods) {
-      this.#routeHandlers[method].push(handler)
-    }
+    this.#routeHandlers[handler.route.method].push(handler)
   }
 
   async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
@@ -495,36 +354,54 @@ export class Router {
           ? input
           : new URL(request.url)
 
-    let context = new RequestContext({}, request, url)
+    let ctx = new RequestContext({}, request, url)
 
     if (this.globalMiddleware != null) {
-      return runMiddleware(this.globalMiddleware, context, () => this.#dispatch(context))
+      return runMiddleware(this.globalMiddleware, ctx, () => this.#dispatch(ctx))
     }
 
-    return this.#dispatch(context)
+    return this.#dispatch(ctx)
   }
 
-  async #dispatch(context: RequestContext): Promise<Response> {
+  async #dispatch(ctx: RequestContext): Promise<Response> {
+    let requestMethod = ctx.request.method as RequestMethod
+
     let response: Response | undefined
-
-    let routeHandlers = this.#routeHandlers[context.request.method as RequestMethod]
-
+    let routeHandlers = this.#routeHandlers[requestMethod]
     if (routeHandlers?.length > 0) {
-      for (let routeHandler of routeHandlers) {
-        let match = routeHandler.route.pattern.match(context.url)
-        if (match != null) {
-          Object.assign(context.params, match.params)
-          response = await routeHandler.dispatch(context)
-          break
-        }
+      response = await this.#runHandlers(ctx, routeHandlers)
+    }
+
+    if (response == null && requestMethod === 'HEAD') {
+      // Try running GET handlers for HEAD requests
+      let getHandlers = this.#routeHandlers['GET']
+      if (getHandlers.length > 0) {
+        response = await this.#runHandlers(ctx, getHandlers)
       }
     }
 
     if (response == null) {
       response = new Response('Not Found', { status: 404 })
     }
-    if (context.request.method === 'HEAD') {
+    if (requestMethod === 'HEAD') {
       return new Response(null, response)
+    }
+
+    return response
+  }
+
+  async #runHandlers(ctx: RequestContext, handlers: RouteHandler[]): Promise<Response | undefined> {
+    let response: Response | undefined
+
+    if (handlers.length > 0) {
+      for (let routeHandler of handlers) {
+        let match = routeHandler.route.pattern.match(ctx.url)
+        if (match != null) {
+          Object.assign(ctx.params, match.params)
+          response = await routeHandler.dispatch(ctx)
+          break
+        }
+      }
     }
 
     return response
@@ -534,7 +411,7 @@ export class Router {
 function runMiddleware<P extends AnyParams>(
   middleware: Middleware<P>[],
   context: RequestContext<P>,
-  routeHandler: () => Response | Promise<Response>,
+  requestHandler: RequestHandler<P, Response>,
 ): Promise<Response> {
   let index = -1
 
@@ -543,7 +420,7 @@ function runMiddleware<P extends AnyParams>(
     index = i
 
     let fn = middleware[i]
-    if (!fn) return routeHandler()
+    if (!fn) return requestHandler(context)
 
     let nextPromise: Promise<Response> | undefined
     let next: NextFunction = () => {
@@ -600,11 +477,11 @@ export function applyMiddleware<T extends RouteHandlerMap>(
     let handler = handlers[key]
 
     if (handler instanceof RouteHandler) {
-      // Create a new normalized handler map with the additional middleware
-      let newHandlerMap = { ...handler.handlers }
-      newHandlerMap.use = middleware.concat(handler.middleware ?? [])
-
-      newHandlers[key] = new RouteHandler(handler.route, newHandlerMap.use, newHandlerMap) as any
+      newHandlers[key] = new RouteHandler(
+        handler.route,
+        middleware.concat(handler.middleware ?? []),
+        handler.requestHandler,
+      ) as any
     } else if (isRouteHandlerMap(handler)) {
       newHandlers[key] = applyMiddleware(middleware, handler)
     }

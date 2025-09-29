@@ -1,15 +1,27 @@
-import { createHandlers } from '@remix-run/fetch-router'
+import { createHandlers, html } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
-import { html } from './utils/response.ts'
 import { userKey } from './storage-keys.ts'
 
 export const authHandlers = createHandlers(routes.auth, {
   login: {
-    get() {
-      return html(renderLoginForm())
+    show() {
+      return html(`
+        <html>
+          <head><title>Login - Bookstore</title></head>
+          <body>
+            <h1>🔐 Login</h1>
+            <form method="POST">
+              <p><label>Email: <input name="email" type="email" required></label></p>
+              <p><label>Password: <input name="password" type="password" required></label></p>
+              <p><button type="submit">Login</button></p>
+            </form>
+            <p><a href="${routes.auth.signup.show.href()}">Don't have an account? Sign up</a></p>
+          </body>
+        </html>
+      `)
     },
-    async post({ request, storage }) {
+    async action({ request, storage }) {
       let formData = await request.formData()
       let email = formData.get('email')
       let password = formData.get('password')
@@ -24,8 +36,7 @@ export const authHandlers = createHandlers(routes.auth, {
         }
         storage.set(userKey, user)
 
-        return new Response(
-          `
+        return html(`
           <html>
             <head><title>Login Success</title></head>
             <body>
@@ -36,9 +47,7 @@ export const authHandlers = createHandlers(routes.auth, {
               ${user.id.startsWith('admin') ? `<p><a href="${routes.admin.dashboard.href()}">Admin Dashboard</a></p>` : ''}
             </body>
           </html>
-        `,
-          { headers: { 'Content-Type': 'text/html; charset=UTF-8' } },
-        )
+        `)
       } else {
         return html(
           `
@@ -47,7 +56,7 @@ export const authHandlers = createHandlers(routes.auth, {
             <body>
               <h1>❌ Login Failed</h1>
               <p>Please provide both email and password.</p>
-              <p><a href="${routes.auth.login.href()}">Try Again</a></p>
+              <p><a href="${routes.auth.login.show.href()}">Try Again</a></p>
             </body>
           </html>
         `,
@@ -57,10 +66,24 @@ export const authHandlers = createHandlers(routes.auth, {
     },
   },
   signup: {
-    get() {
-      return html(renderSignupForm())
+    show() {
+      return html(`
+        <html>
+          <head><title>Sign Up - Bookstore</title></head>
+          <body>
+            <h1>📝 Create Account</h1>
+            <form method="POST">
+              <p><label>Name: <input name="name" required></label></p>
+              <p><label>Email: <input name="email" type="email" required></label></p>
+              <p><label>Password: <input name="password" type="password" required></label></p>
+              <p><button type="submit">Create Account</button></p>
+            </form>
+            <p><a href="${routes.auth.login.show.href()}">Already have an account? Login</a></p>
+          </body>
+        </html>
+      `)
     },
-    async post({ request, storage }) {
+    async action({ request, storage }) {
       let formData = await request.formData()
       let name = formData.get('name')
       let email = formData.get('email')
@@ -94,7 +117,7 @@ export const authHandlers = createHandlers(routes.auth, {
             <body>
               <h1>❌ Signup Failed</h1>
               <p>Please fill in all fields.</p>
-              <p><a href="${routes.auth.signup.href()}">Try Again</a></p>
+              <p><a href="${routes.auth.signup.show.href()}">Try Again</a></p>
             </body>
           </html>
         `,
@@ -103,57 +126,20 @@ export const authHandlers = createHandlers(routes.auth, {
       }
     },
   },
-  logout: {
-    async post({ storage }) {
-      // Clear user from storage (set to null/default)
-      storage.set(userKey, null)
+  async logout({ storage }) {
+    // Clear user from storage (set to null/default)
+    storage.set(userKey, null)
 
-      return html(`
-        <html>
-          <head><title>Logged Out</title></head>
-          <body>
-            <h1>👋 Logged Out</h1>
-            <p>You have been successfully logged out.</p>
-            <p><a href="${routes.home.href()}">Go to Homepage</a></p>
-            <p><a href="${routes.auth.login.href()}">Login Again</a></p>
-          </body>
-        </html>
-      `)
-    },
+    return html(`
+      <html>
+        <head><title>Logged Out</title></head>
+        <body>
+          <h1>👋 Logged Out</h1>
+          <p>You have been successfully logged out.</p>
+          <p><a href="${routes.home.href()}">Go to Homepage</a></p>
+          <p><a href="${routes.auth.login.show.href()}">Login Again</a></p>
+        </body>
+      </html>
+    `)
   },
 })
-
-function renderLoginForm() {
-  return `
-    <html>
-      <head><title>Login - Bookstore</title></head>
-      <body>
-        <h1>🔐 Login</h1>
-        <form method="POST">
-          <p><label>Email: <input name="email" type="email" required></label></p>
-          <p><label>Password: <input name="password" type="password" required></label></p>
-          <p><button type="submit">Login</button></p>
-        </form>
-        <p><a href="${routes.auth.signup.href()}">Don't have an account? Sign up</a></p>
-      </body>
-    </html>
-  `
-}
-
-function renderSignupForm() {
-  return `
-    <html>
-      <head><title>Sign Up - Bookstore</title></head>
-      <body>
-        <h1>📝 Create Account</h1>
-        <form method="POST">
-          <p><label>Name: <input name="name" required></label></p>
-          <p><label>Email: <input name="email" type="email" required></label></p>
-          <p><label>Password: <input name="password" type="password" required></label></p>
-          <p><button type="submit">Create Account</button></p>
-        </form>
-        <p><a href="${routes.auth.login.href()}">Already have an account? Login</a></p>
-      </body>
-    </html>
-  `
-}

@@ -1,7 +1,6 @@
-import { createHandlers } from '@remix-run/fetch-router'
+import { createHandlers, html } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
-import { html } from './utils/response.ts'
 
 export const blogHandlers = createHandlers(routes.blog, {
   index() {

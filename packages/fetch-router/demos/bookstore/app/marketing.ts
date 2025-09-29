@@ -1,7 +1,7 @@
+import { html } from '@remix-run/fetch-router'
 import type { RequestContext } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
-import { html } from './utils/response.ts'
 
 export function homeHandler() {
   return html(renderHomePage())
@@ -16,10 +16,10 @@ export function pricingHandler() {
 }
 
 export const contactHandlers = {
-  get() {
+  show() {
     return html(renderContactForm())
   },
-  async post({ request }: RequestContext) {
+  async action({ request }: RequestContext) {
     let formData = await request.formData()
     let name = formData.get('name')
     let email = formData.get('email')
@@ -40,9 +40,9 @@ function renderHomePage() {
           <a href="${routes.books.catalog.href()}">Browse Books</a> |
           <a href="${routes.blog.index.href()}">Blog</a> |
           <a href="${routes.about.href()}">About</a> |
-          <a href="${routes.contact.href()}">Contact</a> |
-          <a href="${routes.auth.login.href()}">Login</a> |
-          <a href="${routes.auth.signup.href()}">Sign Up</a>
+          <a href="${routes.contact.show.href()}">Contact</a> |
+          <a href="${routes.auth.login.show.href()}">Login</a> |
+          <a href="${routes.auth.signup.show.href()}">Sign Up</a>
         </nav>
       </body>
     </html>

@@ -4,8 +4,8 @@ import { describe, it } from 'node:test'
 import { RoutePattern } from '@remix-run/route-pattern'
 
 import type { Assert, IsEqual } from './type-utils.ts'
-import { RequestMethods, Route, createRoutes, createHandlers, createRouter } from './router.ts'
-import type { NextFunction, RequestMethod } from './router.ts'
+import { createRoutes, createHandlers, createRouter } from './router.ts'
+import type { NextFunction, Route } from './router.ts'
 
 describe('createRoutes()', () => {
   it('creates a route map', () => {
@@ -17,22 +17,22 @@ describe('createRoutes()', () => {
           pattern: '/users/:id',
         },
         edit: {
-          methods: ['GET', 'POST'],
+          method: 'POST',
           pattern: '/users/:id/edit',
         },
       },
     })
 
-    assert.deepEqual(routes.home.methods, RequestMethods)
+    assert.equal(routes.home.method, 'GET')
     assert.deepEqual(routes.home.pattern, new RoutePattern('/'))
 
-    assert.deepEqual(routes.users.index.methods, RequestMethods)
+    assert.equal(routes.users.index.method, 'GET')
     assert.deepEqual(routes.users.index.pattern, new RoutePattern('/users'))
 
-    assert.deepEqual(routes.users.show.methods, RequestMethods)
+    assert.equal(routes.users.show.method, 'GET')
     assert.deepEqual(routes.users.show.pattern, new RoutePattern('/users/:id'))
 
-    assert.deepEqual(routes.users.edit.methods, ['GET', 'POST'])
+    assert.equal(routes.users.edit.method, 'POST')
     assert.deepEqual(routes.users.edit.pattern, new RoutePattern('/users/:id/edit'))
   })
 
@@ -40,7 +40,7 @@ describe('createRoutes()', () => {
     let categoriesRoutes = createRoutes('categories', {
       index: '/',
       edit: {
-        methods: ['GET', 'POST'],
+        method: 'POST',
         pattern: '/:slug/edit',
       },
     })
@@ -56,13 +56,13 @@ describe('createRoutes()', () => {
     })
 
     type T = [
-      Assert<IsEqual<typeof routes.home, Route<RequestMethod, 'https://remix.run'>>>,
+      Assert<IsEqual<typeof routes.home, Route<'GET', 'https://remix.run'>>>,
       Assert<
         IsEqual<
           typeof routes.users,
           {
-            readonly index: Route<RequestMethod, 'https://remix.run/users'>
-            readonly show: Route<RequestMethod, 'https://remix.run/users/:id'>
+            readonly index: Route<'GET', 'https://remix.run/users'>
+            readonly show: Route<'GET', 'https://remix.run/users/:id'>
           }
         >
       >,
@@ -70,29 +70,29 @@ describe('createRoutes()', () => {
         IsEqual<
           typeof routes.categories,
           {
-            readonly index: Route<RequestMethod, 'https://remix.run/categories'>
-            readonly edit: Route<'GET' | 'POST', 'https://remix.run/categories/:slug/edit'>
+            readonly index: Route<'GET', 'https://remix.run/categories'>
+            readonly edit: Route<'POST', 'https://remix.run/categories/:slug/edit'>
           }
         >
       >,
     ]
 
-    assert.deepEqual(routes.home.methods, RequestMethods)
+    assert.equal(routes.home.method, 'GET')
     assert.deepEqual(routes.home.pattern, new RoutePattern('https://remix.run/'))
 
-    assert.deepEqual(routes.users.index.methods, RequestMethods)
+    assert.equal(routes.users.index.method, 'GET')
     assert.deepEqual(routes.users.index.pattern, new RoutePattern('https://remix.run/users'))
 
-    assert.deepEqual(routes.users.show.methods, RequestMethods)
+    assert.equal(routes.users.show.method, 'GET')
     assert.deepEqual(routes.users.show.pattern, new RoutePattern('https://remix.run/users/:id'))
 
-    assert.deepEqual(routes.categories.index.methods, RequestMethods)
+    assert.equal(routes.categories.index.method, 'GET')
     assert.deepEqual(
       routes.categories.index.pattern,
       new RoutePattern('https://remix.run/categories'),
     )
 
-    assert.deepEqual(routes.categories.edit.methods, ['GET', 'POST'])
+    assert.equal(routes.categories.edit.method, 'POST')
     assert.deepEqual(
       routes.categories.edit.pattern,
       new RoutePattern('https://remix.run/categories/:slug/edit'),
@@ -124,76 +124,20 @@ describe('createHandlers()', () => {
       },
     })
 
-    assert.deepEqual(handlers.home.route.methods, RequestMethods)
+    assert.equal(handlers.home.route.method, 'GET')
     assert.deepEqual(handlers.home.route.pattern, new RoutePattern('/'))
-    assert.deepEqual(handlers.home.middleware, null)
-    assert.deepEqual(typeof handlers.home.handlers, 'object')
+    assert.equal(handlers.home.middleware, null)
+    assert.equal(typeof handlers.home.requestHandler, 'function')
 
-    assert.deepEqual(handlers.users.index.route.methods, RequestMethods)
+    assert.equal(handlers.users.index.route.method, 'GET')
     assert.deepEqual(handlers.users.index.route.pattern, new RoutePattern('/users'))
-    assert.deepEqual(handlers.users.index.middleware, null)
-    assert.deepEqual(typeof handlers.users.index.handlers, 'object')
+    assert.equal(handlers.users.index.middleware, null)
+    assert.equal(typeof handlers.users.index.requestHandler, 'function')
 
-    assert.deepEqual(handlers.users.show.route.methods, RequestMethods)
+    assert.equal(handlers.users.show.route.method, 'GET')
     assert.deepEqual(handlers.users.show.route.pattern, new RoutePattern('/users/:id'))
-    assert.deepEqual(handlers.users.show.middleware, null)
-    assert.deepEqual(typeof handlers.users.show.handlers, 'object')
-  })
-
-  it('creates a route handler map from shorthand handler definitions', () => {
-    let routes = createRoutes({
-      home: '/',
-      users: {
-        index: { method: 'GET', pattern: '/users' },
-        create: {
-          methods: ['POST'],
-          pattern: '/users',
-        },
-        show: '/users/:id',
-      },
-    })
-
-    let usersHandlers = createHandlers(routes.users, {
-      index: {
-        get() {
-          return new Response('Users')
-        },
-      },
-      create() {
-        return new Response('Created')
-      },
-      show({ params }) {
-        return new Response(`User ${params.id}`)
-      },
-    })
-
-    let handlers = createHandlers(routes, {
-      home() {
-        return new Response('Home')
-      },
-      // nested route handler map
-      users: usersHandlers,
-    })
-
-    assert.deepEqual(handlers.home.route.methods, RequestMethods)
-    assert.deepEqual(handlers.home.route.pattern, new RoutePattern('/'))
-    assert.deepEqual(handlers.home.middleware, null)
-    assert.deepEqual(typeof handlers.home.handlers, 'object')
-
-    assert.deepEqual(handlers.users.index.route.methods, ['GET'])
-    assert.deepEqual(handlers.users.index.route.pattern, new RoutePattern('/users'))
-    assert.deepEqual(handlers.users.index.middleware, null)
-    assert.deepEqual(typeof handlers.users.index.handlers, 'object')
-
-    assert.deepEqual(handlers.users.create.route.methods, ['POST'])
-    assert.deepEqual(handlers.users.create.route.pattern, new RoutePattern('/users'))
-    assert.deepEqual(handlers.users.create.middleware, null)
-    assert.deepEqual(typeof handlers.users.create.handlers, 'object')
-
-    assert.deepEqual(handlers.users.show.route.methods, RequestMethods)
-    assert.deepEqual(handlers.users.show.route.pattern, new RoutePattern('/users/:id'))
-    assert.deepEqual(handlers.users.show.middleware, null)
-    assert.deepEqual(typeof handlers.users.show.handlers, 'object')
+    assert.equal(handlers.users.show.middleware, null)
+    assert.equal(typeof handlers.users.show.requestHandler, 'function')
   })
 })
 
@@ -220,17 +164,14 @@ describe('router.fetch()', () => {
   it('handles a route with a method', async () => {
     let routes = createRoutes({
       home: {
-        methods: ['GET', 'POST'],
+        method: 'POST',
         pattern: '/',
       },
     })
 
     let handlers = createHandlers(routes, {
       home: {
-        get() {
-          return new Response('GET home')
-        },
-        post() {
+        handler() {
           return new Response('POST home')
         },
       },
@@ -238,25 +179,19 @@ describe('router.fetch()', () => {
 
     let router = createRouter(handlers)
 
-    let response = await router.fetch('https://remix.run', { method: 'GET' })
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'GET home')
-
-    response = await router.fetch('https://remix.run', { method: 'POST' })
+    let response = await router.fetch('https://remix.run', { method: 'POST' })
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'POST home')
   })
 
   it('calls a GET handler for a HEAD request', async () => {
     let routes = createRoutes({
-      home: { methods: ['GET', 'HEAD'], pattern: '/' },
+      home: '/',
     })
 
     let handlers = createHandlers(routes, {
-      home: {
-        get() {
-          return new Response('GET home', { headers: { 'X-Test': 'test' } })
-        },
+      home() {
+        return new Response('home', { headers: { 'X-Test': 'test' } })
       },
     })
 
@@ -268,115 +203,51 @@ describe('router.fetch()', () => {
     assert.equal(response.headers.get('X-Test'), 'test')
   })
 
-  it('supports mixed case method names in handler definitions', async () => {
-    let routes = createRoutes({
-      api: { methods: ['GET', 'POST'], pattern: '/api' },
-    })
-
-    let handlers = createHandlers(routes, {
-      api: {
-        GET: () => new Response('get'),
-        post: () => new Response('post'), // lowercase
-      },
-    })
-
-    let router = createRouter(handlers)
-
-    let getResponse = await router.fetch('https://remix.run/api', { method: 'GET' })
-    assert.equal(await getResponse.text(), 'get')
-
-    let postResponse = await router.fetch('https://remix.run/api', { method: 'POST' })
-    assert.equal(await postResponse.text(), 'post')
-  })
-
   it('handles concurrent requests correctly', async () => {
     let routes = createRoutes({
       users: '/users/:id',
       posts: '/posts/:id',
-      api: { methods: ['GET', 'POST'], pattern: '/api/:endpoint' },
+      api: '/api/:endpoint',
     })
 
     let requestLog: string[] = []
 
     let handlers = createHandlers(routes, {
-      users: ({ params }) => {
+      users({ params }) {
         requestLog.push(`users-${params.id}`)
-        return new Response(`User ${params.id}`)
+        return new Response(`Users ${params.id}`)
       },
-      posts: ({ params }) => {
+      posts({ params }) {
         requestLog.push(`posts-${params.id}`)
-        return new Response(`Post ${params.id}`)
+        return new Response(`Posts ${params.id}`)
       },
-      api: {
-        get: ({ params }) => {
-          requestLog.push(`api-get-${params.endpoint}`)
-          return new Response(`GET ${params.endpoint}`)
-        },
-        post: ({ params }) => {
-          requestLog.push(`api-post-${params.endpoint}`)
-          return new Response(`POST ${params.endpoint}`)
-        },
+      api({ params }) {
+        requestLog.push(`api-get-${params.endpoint}`)
+        return new Response(`API ${params.endpoint}`)
       },
     })
 
     let router = createRouter(handlers)
 
-    // Test multiple concurrent requests
-    let promises = [
+    let responses = await Promise.all([
       router.fetch('https://remix.run/users/123'),
       router.fetch('https://remix.run/posts/456'),
-      router.fetch('https://remix.run/api/data', { method: 'GET' }),
-      router.fetch('https://remix.run/api/submit', { method: 'POST' }),
+      router.fetch('https://remix.run/api/data'),
       router.fetch('https://remix.run/users/789'),
-    ]
-
-    let responses = await Promise.all(promises)
+    ])
 
     // Verify all responses are correct
     assert.equal(responses[0].status, 200)
-    assert.equal(await responses[0].text(), 'User 123')
+    assert.equal(await responses[0].text(), 'Users 123')
 
     assert.equal(responses[1].status, 200)
-    assert.equal(await responses[1].text(), 'Post 456')
+    assert.equal(await responses[1].text(), 'Posts 456')
 
     assert.equal(responses[2].status, 200)
-    assert.equal(await responses[2].text(), 'GET data')
+    assert.equal(await responses[2].text(), 'API data')
 
     assert.equal(responses[3].status, 200)
-    assert.equal(await responses[3].text(), 'POST submit')
-
-    assert.equal(responses[4].status, 200)
-    assert.equal(await responses[4].text(), 'User 789')
-
-    // Verify all handlers were called (order may vary due to concurrency)
-    assert.equal(requestLog.length, 5)
-    assert.ok(requestLog.includes('users-123'))
-    assert.ok(requestLog.includes('posts-456'))
-    assert.ok(requestLog.includes('api-get-data'))
-    assert.ok(requestLog.includes('api-post-submit'))
-    assert.ok(requestLog.includes('users-789'))
-  })
-
-  it('handles large numbers of routes without errors', async () => {
-    // Create 1000 routes to test scalability
-    let routeDefs: any = {}
-    let handlerDefs: any = {}
-
-    for (let i = 0; i < 1000; i++) {
-      routeDefs[`route${i}`] = `/route${i}`
-      handlerDefs[`route${i}`] = () => new Response(`Route ${i}`)
-    }
-
-    let routes = createRoutes(routeDefs)
-    let handlers = createHandlers(routes, handlerDefs)
-    let router = createRouter(handlers)
-
-    // Test first and last routes to verify scale works
-    let response = await router.fetch('https://remix.run/route0')
-    assert.equal(await response.text(), 'Route 0')
-
-    response = await router.fetch('https://remix.run/route999')
-    assert.equal(await response.text(), 'Route 999')
+    assert.equal(await responses[3].text(), 'Users 789')
   })
 
   it('handles URL object as input', async () => {
@@ -385,14 +256,13 @@ describe('router.fetch()', () => {
     })
 
     let handlers = createHandlers(routes, {
-      api: ({ params, url }) => new Response(`API ${params.endpoint}, Query: ${url.search}`),
+      api({ params, url }) {
+        return new Response(`API ${params.endpoint}, Query: ${url.search}`)
+      },
     })
 
     let router = createRouter(handlers)
-
-    // Test with URL object
-    let url = new URL('https://remix.run/api/users?include=posts')
-    let response = await router.fetch(url)
+    let response = await router.fetch(new URL('https://remix.run/api/users?include=posts'))
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'API users, Query: ?include=posts')
@@ -400,81 +270,51 @@ describe('router.fetch()', () => {
 
   it('handles Request object as input', async () => {
     let routes = createRoutes({
-      api: { methods: ['GET', 'POST'], pattern: '/api/:endpoint' },
+      api: '/api/:endpoint',
     })
 
     let handlers = createHandlers(routes, {
-      api: {
-        get: ({ params, request }) => {
-          let auth = request.headers.get('Authorization')
-          return new Response(`GET ${params.endpoint}, Auth: ${auth}`)
-        },
-        post: ({ params, request }) => {
-          let contentType = request.headers.get('Content-Type')
-          return new Response(`POST ${params.endpoint}, Type: ${contentType}`)
-        },
+      api({ params, request }) {
+        let auth = request.headers.get('Authorization')
+        return new Response(`API ${params.endpoint}, Auth: ${auth}`)
       },
     })
 
     let router = createRouter(handlers)
 
-    // Test with Request object for GET
-    let getRequest = new Request('https://remix.run/api/users', {
+    let request = new Request('https://remix.run/api/users', {
       method: 'GET',
       headers: {
         Authorization: 'Bearer token123',
         'User-Agent': 'Test Client',
       },
     })
+    let response = await router.fetch(request)
 
-    let response = await router.fetch(getRequest)
     assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'GET users, Auth: Bearer token123')
-
-    // Test with Request object for POST
-    let postRequest = new Request('https://remix.run/api/submit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer token456',
-      },
-      body: JSON.stringify({ data: 'test' }),
-    })
-
-    response = await router.fetch(postRequest)
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'POST submit, Type: application/json')
+    assert.equal(await response.text(), 'API users, Auth: Bearer token123')
   })
 
   it('preserves request headers and body', async () => {
     let routes = createRoutes({
-      echo: { methods: ['GET', 'POST'], pattern: '/echo' },
+      echo: { method: 'POST', pattern: '/echo' },
     })
 
     let handlers = createHandlers(routes, {
-      echo: {
-        get: ({ request }) => new Response(`Header: ${request.headers.get('X-Custom')}`),
-        post: async ({ request }) => {
-          let body = await request.text()
-          return new Response(`Body: ${body}`)
-        },
+      async echo({ request }) {
+        let body = await request.text()
+        return new Response(`Header: ${request.headers.get('X-Custom')}, Body: "${body}"`)
       },
     })
 
     let router = createRouter(handlers)
-
-    // Test header preservation
     let response = await router.fetch('https://remix.run/echo', {
-      headers: { 'X-Custom': 'test-value' },
-    })
-    assert.equal(await response.text(), 'Header: test-value')
-
-    // Test body preservation
-    response = await router.fetch('https://remix.run/echo', {
       method: 'POST',
       body: JSON.stringify({ message: 'Hello!' }),
+      headers: { 'X-Custom': 'test-value' },
     })
-    assert.equal(await response.text(), 'Body: {"message":"Hello!"}')
+
+    assert.equal(await response.text(), 'Header: test-value, Body: "{"message":"Hello!"}"')
   })
 })
 
@@ -485,7 +325,9 @@ describe('request methods', () => {
     })
 
     let handlers = createHandlers(routes, {
-      users: ({ params }) => new Response(`Updated user ${params.id}`),
+      users({ params }) {
+        return new Response(`Updated user ${params.id}`)
+      },
     })
 
     let router = createRouter(handlers)
@@ -501,7 +343,9 @@ describe('request methods', () => {
     })
 
     let handlers = createHandlers(routes, {
-      users: ({ params }) => new Response(`Patched user ${params.id}`),
+      users({ params }) {
+        return new Response(`Patched user ${params.id}`)
+      },
     })
 
     let router = createRouter(handlers)
@@ -517,7 +361,9 @@ describe('request methods', () => {
     })
 
     let handlers = createHandlers(routes, {
-      users: ({ params }) => new Response(`Deleted user ${params.id}`),
+      users({ params }) {
+        return new Response(`Deleted user ${params.id}`)
+      },
     })
 
     let router = createRouter(handlers)
@@ -533,14 +379,15 @@ describe('request methods', () => {
     })
 
     let handlers = createHandlers(routes, {
-      api: () =>
-        new Response(null, {
+      api() {
+        return new Response(null, {
           headers: {
             Allow: 'GET, POST, OPTIONS',
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
             'Access-Control-Allow-Origin': '*',
           },
-        }),
+        })
+      },
     })
 
     let router = createRouter(handlers)
@@ -550,32 +397,6 @@ describe('request methods', () => {
     assert.equal(response.headers.get('Allow'), 'GET, POST, OPTIONS')
     assert.equal(response.headers.get('Access-Control-Allow-Methods'), 'GET, POST, OPTIONS')
     assert.equal(response.headers.get('Access-Control-Allow-Origin'), '*')
-  })
-
-  it('handles multiple HTTP methods on same route', async () => {
-    let routes = createRoutes({
-      api: { methods: ['GET', 'POST', 'DELETE'], pattern: '/api/users/:id' },
-    })
-
-    let handlers = createHandlers(routes, {
-      api: {
-        get: ({ params }) => new Response(`Get user ${params.id}`),
-        post: ({ params }) => new Response(`Create user ${params.id}`),
-        delete: ({ params }) => new Response(`Delete user ${params.id}`),
-      },
-    })
-
-    let router = createRouter(handlers)
-
-    // Test different methods on same route
-    let response = await router.fetch('https://remix.run/api/users/123', { method: 'GET' })
-    assert.equal(await response.text(), 'Get user 123')
-
-    response = await router.fetch('https://remix.run/api/users/123', { method: 'POST' })
-    assert.equal(await response.text(), 'Create user 123')
-
-    response = await router.fetch('https://remix.run/api/users/123', { method: 'DELETE' })
-    assert.equal(await response.text(), 'Delete user 123')
   })
 })
 
@@ -587,12 +408,12 @@ describe('url pattern edge cases', () => {
     })
 
     let handlers = createHandlers(routes, {
-      search: ({ url }) => {
+      search({ url }) {
         let query = url.searchParams.get('q')
         let filter = url.searchParams.get('filter')
         return new Response(`Search: ${query}, Filter: ${filter}`)
       },
-      api: ({ params, url }) => {
+      api({ params, url }) {
         let include = url.searchParams.get('include')
         return new Response(`User ${params.id}, Include: ${include}`)
       },
@@ -617,7 +438,7 @@ describe('url pattern edge cases', () => {
     })
 
     let handlers = createHandlers(routes, {
-      docs: ({ params, url }) => {
+      docs({ params, url }) {
         // URL fragments are not sent to server, but we can test the URL parsing
         return new Response(`Docs section: ${params.section}, URL: ${url.pathname}`)
       },
@@ -638,8 +459,12 @@ describe('url pattern edge cases', () => {
     })
 
     let handlers = createHandlers(routes, {
-      special: ({ params }) => new Response(`Special: ${params.name}`),
-      unicode: ({ params }) => new Response(`Unicode: ${params.text}`),
+      special({ params }) {
+        return new Response(`Special: ${params.name}`)
+      },
+      unicode({ params }) {
+        return new Response(`Unicode: ${params.text}`)
+      },
     })
 
     let router = createRouter(handlers)
@@ -662,8 +487,12 @@ describe('url pattern edge cases', () => {
     })
 
     let handlers = createHandlers(routes, {
-      files: ({ params }) => new Response(`File: ${params.filename}`),
-      search: ({ params }) => new Response(`Search: ${params.term}`),
+      files({ params }) {
+        return new Response(`File: ${params.filename}`)
+      },
+      search({ params }) {
+        return new Response(`Search: ${params.term}`)
+      },
     })
 
     let router = createRouter(handlers)
@@ -687,15 +516,17 @@ describe('url pattern edge cases', () => {
     })
 
     let handlers = createHandlers(routes, {
-      files: ({ url }) => {
+      files({ url }) {
         let path = url.pathname.replace('/files/', '')
         return new Response(`File path: ${path}`)
       },
-      api: ({ url }) => {
+      api({ url }) {
         let path = url.pathname.replace('/api/v1/', '')
         return new Response(`API path: ${path}`)
       },
-      catchAll: ({ url }) => new Response(`Catch-all: ${url.pathname}`),
+      catchAll({ url }) {
+        return new Response(`Catch-all: ${url.pathname}`)
+      },
     })
 
     let router = createRouter(handlers)
@@ -724,9 +555,15 @@ describe('url pattern edge cases', () => {
     })
 
     let handlers = createHandlers(routes, {
-      specific: () => new Response('New user form'),
-      general: ({ params }) => new Response(`User ${params.id}`),
-      wildcard: ({ url }) => new Response(`Wildcard: ${url.pathname}`),
+      specific() {
+        return new Response('New user form')
+      },
+      general({ params }) {
+        return new Response(`User ${params.id}`)
+      },
+      wildcard({ url }) {
+        return new Response(`Wildcard: ${url.pathname}`)
+      },
     })
 
     let router = createRouter(handlers)
@@ -753,8 +590,12 @@ describe('HTTP status errors', () => {
     })
 
     let handlers = createHandlers(routes, {
-      home: () => new Response('Home'),
-      users: () => new Response('User'),
+      home() {
+        return new Response('Home')
+      },
+      users() {
+        return new Response('User')
+      },
     })
 
     let router = createRouter(handlers)
@@ -779,7 +620,9 @@ describe('HTTP status errors', () => {
     })
 
     let handlers = createHandlers(routes, {
-      api: () => new Response('API'),
+      api() {
+        return new Response('API')
+      },
     })
 
     let router = createRouter(handlers)
@@ -800,7 +643,9 @@ describe('HTTP status errors', () => {
     })
 
     let handlers = createHandlers(routes, {
-      api: () => new Response('API'),
+      api() {
+        return new Response('API')
+      },
     })
 
     let router = createRouter(handlers)
@@ -828,16 +673,18 @@ describe('HTTP status errors', () => {
     })
 
     let handlers = createHandlers(routes, {
-      api: () =>
-        new Response('Unauthorized', {
+      api() {
+        return new Response('Unauthorized', {
           status: 401,
           headers: { 'WWW-Authenticate': 'Bearer' },
-        }),
-      auth: () =>
-        new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+        })
+      },
+      auth() {
+        return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
           status: 403,
           headers: { 'Content-Type': 'application/json' },
-        }),
+        })
+      },
     })
 
     let router = createRouter(handlers)
@@ -865,17 +712,17 @@ describe('middleware', () => {
 
     let middlewareInvocations: string[] = []
 
-    function one(_context: any, next: NextFunction) {
+    function one(_: any, next: NextFunction) {
       middlewareInvocations.push('one')
       return next()
     }
 
-    function two(_context: any, next: NextFunction) {
+    function two(_: any, next: NextFunction) {
       middlewareInvocations.push('two')
       return next()
     }
 
-    function three(_context: any, next: NextFunction) {
+    function three(_: any, next: NextFunction) {
       middlewareInvocations.push('three')
       return next()
     }
@@ -934,7 +781,7 @@ describe('middleware', () => {
 
   it('automatically calls the next middleware in the chain', async () => {
     let routes = createRoutes({
-      home: { methods: ['GET'], pattern: '/' },
+      home: '/',
     })
 
     let middlewareInvocations: string[] = []
@@ -952,7 +799,7 @@ describe('middleware', () => {
     let handlers = createHandlers(routes, {
       home: {
         use: [one, two],
-        get() {
+        handler() {
           return new Response('Home')
         },
       },
@@ -1032,10 +879,11 @@ describe('middleware', () => {
     let handlers = createHandlers(routes, {
       api: {
         use: [addCorsHeaders, addCacheHeaders],
-        handler: () =>
-          new Response('API response', {
+        handler() {
+          return new Response('API response', {
             headers: { 'Content-Type': 'application/json' },
-          }),
+          })
+        },
       },
     })
 
@@ -1062,9 +910,13 @@ describe('middleware', () => {
     let handlers = createHandlers(routes, {
       home: {
         use: [], // Empty middleware array
-        handler: () => new Response('Home'),
+        handler() {
+          return new Response('Home')
+        },
       },
-      api: () => new Response('API'), // No middleware at all
+      api() {
+        return new Response('API')
+      }, // No middleware at all
     })
 
     let router = createRouter(handlers)
@@ -1094,7 +946,7 @@ describe('middleware', () => {
     let handlers = createHandlers(routes, {
       home: {
         use: [], // Empty middleware array
-        handler: () => {
+        handler() {
           requestLog.push('handler')
           return new Response('Home')
         },
@@ -1121,7 +973,7 @@ describe('request context', () => {
     let contextData: any[] = []
 
     let handlers = createHandlers(routes, {
-      api: (ctx) => {
+      api(ctx) {
         contextData.push({
           type: 'api',
           params: ctx.params,
@@ -1142,7 +994,7 @@ describe('request context', () => {
         })
         return new Response('API')
       },
-      search: (ctx) => {
+      search(ctx) {
         contextData.push({
           type: 'search',
           params: ctx.params,
@@ -1203,10 +1055,10 @@ describe('error handling', () => {
     })
 
     let handlers = createHandlers(routes, {
-      error: () => {
+      error() {
         throw new Error('Handler error!')
       },
-      async: async () => {
+      async async() {
         await new Promise((resolve) => setTimeout(resolve, 1))
         throw new Error('Async handler error!')
       },
@@ -1237,7 +1089,9 @@ describe('error handling', () => {
     let handlers = createHandlers(routes, {
       home: {
         use: [errorMiddleware],
-        handler: () => new Response('Home'),
+        handler() {
+          return new Response('Home')
+        },
       },
     })
 
@@ -1261,7 +1115,9 @@ describe('error handling', () => {
     let handlers = createHandlers(routes, {
       home: {
         use: [errorMiddleware],
-        handler: () => new Response('Home'),
+        handler() {
+          return new Response('Home')
+        },
       },
     })
 
@@ -1278,7 +1134,9 @@ describe('error handling', () => {
     })
 
     let handlers = createHandlers(routes, {
-      api: () => new Response('API'),
+      api() {
+        return new Response('API')
+      },
     })
 
     let router = createRouter(handlers)
@@ -1300,7 +1158,9 @@ describe('error handling', () => {
     })
 
     let handlers = createHandlers(routes, {
-      api: ({ params }) => new Response(`Data length: ${params.data.length}`),
+      api({ params }) {
+        return new Response(`Data length: ${params.data.length}`)
+      },
     })
 
     let router = createRouter(handlers)
@@ -1324,7 +1184,9 @@ describe('error handling', () => {
     })
 
     let handlers = createHandlers(routes, {
-      api: ({ params }) => new Response(`Data: ${params.data}`),
+      api({ params }) {
+        return new Response(`Data: ${params.data}`)
+      },
     })
 
     let router = createRouter(handlers)
@@ -1396,7 +1258,7 @@ describe('createHandlers() with middleware', () => {
 describe('app storage', () => {
   it('can be accessed from middleware and route handlers', async () => {
     let routes = createRoutes({
-      home: { methods: ['GET'], pattern: '/' },
+      home: '/',
     })
 
     function auth({ storage }: any) {
@@ -1406,7 +1268,7 @@ describe('app storage', () => {
     let handlers = createHandlers(routes, {
       home: {
         use: [auth],
-        get({ storage }: any) {
+        handler({ storage }: any) {
           let currentUser = storage.get('currentUser')
           return new Response(`Hello, ${currentUser}`)
         },

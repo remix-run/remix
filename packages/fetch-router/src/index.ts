@@ -25,3 +25,5 @@ export type {
   RouteMap,
   RouteHandlerMap,
 } from './lib/router.ts'
+
+export { html } from './lib/utils/response.ts'

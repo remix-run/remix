@@ -27,25 +27,25 @@ describe('createResources', () => {
       >,
     ]
 
-    assert.deepEqual(articles.index.methods, ['GET'])
+    assert.equal(articles.index.method, 'GET')
     assert.equal(articles.index.pattern.source, '/articles')
 
-    assert.deepEqual(articles.new.methods, ['GET'])
+    assert.equal(articles.new.method, 'GET')
     assert.equal(articles.new.pattern.source, '/articles/new')
 
-    assert.deepEqual(articles.create.methods, ['POST'])
+    assert.equal(articles.create.method, 'POST')
     assert.equal(articles.create.pattern.source, '/articles')
 
-    assert.deepEqual(articles.show.methods, ['GET'])
+    assert.equal(articles.show.method, 'GET')
     assert.equal(articles.show.pattern.source, '/articles/:id')
 
-    assert.deepEqual(articles.edit.methods, ['GET'])
+    assert.equal(articles.edit.method, 'GET')
     assert.equal(articles.edit.pattern.source, '/articles/:id/edit')
 
-    assert.deepEqual(articles.update.methods, ['PUT'])
+    assert.equal(articles.update.method, 'PUT')
     assert.equal(articles.update.pattern.source, '/articles/:id')
 
-    assert.deepEqual(articles.destroy.methods, ['DELETE'])
+    assert.equal(articles.destroy.method, 'DELETE')
     assert.equal(articles.destroy.pattern.source, '/articles/:id')
   })
 
@@ -69,25 +69,25 @@ describe('createResources', () => {
       >,
     ]
 
-    assert.deepEqual(articles.index.methods, ['GET'])
+    assert.equal(articles.index.method, 'GET')
     assert.equal(articles.index.pattern.source, '/admin/articles')
 
-    assert.deepEqual(articles.new.methods, ['GET'])
+    assert.equal(articles.new.method, 'GET')
     assert.equal(articles.new.pattern.source, '/admin/articles/new')
 
-    assert.deepEqual(articles.create.methods, ['POST'])
+    assert.equal(articles.create.method, 'POST')
     assert.equal(articles.create.pattern.source, '/admin/articles')
 
-    assert.deepEqual(articles.show.methods, ['GET'])
+    assert.equal(articles.show.method, 'GET')
     assert.equal(articles.show.pattern.source, '/admin/articles/:id')
 
-    assert.deepEqual(articles.edit.methods, ['GET'])
+    assert.equal(articles.edit.method, 'GET')
     assert.equal(articles.edit.pattern.source, '/admin/articles/:id/edit')
 
-    assert.deepEqual(articles.update.methods, ['PUT'])
+    assert.equal(articles.update.method, 'PUT')
     assert.equal(articles.update.pattern.source, '/admin/articles/:id')
 
-    assert.deepEqual(articles.destroy.methods, ['DELETE'])
+    assert.equal(articles.destroy.method, 'DELETE')
     assert.equal(articles.destroy.pattern.source, '/admin/articles/:id')
   })
 
@@ -111,25 +111,25 @@ describe('createResources', () => {
       >,
     ]
 
-    assert.deepEqual(articles.index.methods, ['GET'])
+    assert.equal(articles.index.method, 'GET')
     assert.equal(articles.index.pattern.source, '/articles')
 
-    assert.deepEqual(articles.new.methods, ['GET'])
+    assert.equal(articles.new.method, 'GET')
     assert.equal(articles.new.pattern.source, '/articles/new')
 
-    assert.deepEqual(articles.create.methods, ['POST'])
+    assert.equal(articles.create.method, 'POST')
     assert.equal(articles.create.pattern.source, '/articles')
 
-    assert.deepEqual(articles.show.methods, ['GET'])
+    assert.equal(articles.show.method, 'GET')
     assert.equal(articles.show.pattern.source, '/articles/:article_id')
 
-    assert.deepEqual(articles.edit.methods, ['GET'])
+    assert.equal(articles.edit.method, 'GET')
     assert.equal(articles.edit.pattern.source, '/articles/:article_id/edit')
 
-    assert.deepEqual(articles.update.methods, ['PUT'])
+    assert.equal(articles.update.method, 'PUT')
     assert.equal(articles.update.pattern.source, '/articles/:article_id')
 
-    assert.deepEqual(articles.destroy.methods, ['DELETE'])
+    assert.equal(articles.destroy.method, 'DELETE')
     assert.equal(articles.destroy.pattern.source, '/articles/:article_id')
   })
 
@@ -148,10 +148,10 @@ describe('createResources', () => {
       >,
     ]
 
-    assert.deepEqual(articles.index.methods, ['GET'])
+    assert.equal(articles.index.method, 'GET')
     assert.equal(articles.index.pattern.source, '/articles')
 
-    assert.deepEqual(articles.show.methods, ['GET'])
+    assert.equal(articles.show.method, 'GET')
     assert.equal(articles.show.pattern.source, '/articles/:id')
   })
 })
@@ -176,22 +176,22 @@ describe('createResource', () => {
       >,
     ]
 
-    assert.deepEqual(article.new.methods, ['GET'])
+    assert.equal(article.new.method, 'GET')
     assert.equal(article.new.pattern.source, '/article/new')
 
-    assert.deepEqual(article.create.methods, ['POST'])
+    assert.equal(article.create.method, 'POST')
     assert.equal(article.create.pattern.source, '/article')
 
-    assert.deepEqual(article.show.methods, ['GET'])
+    assert.equal(article.show.method, 'GET')
     assert.equal(article.show.pattern.source, '/article')
 
-    assert.deepEqual(article.edit.methods, ['GET'])
+    assert.equal(article.edit.method, 'GET')
     assert.equal(article.edit.pattern.source, '/article/edit')
 
-    assert.deepEqual(article.update.methods, ['PUT'])
+    assert.equal(article.update.method, 'PUT')
     assert.equal(article.update.pattern.source, '/article')
 
-    assert.deepEqual(article.destroy.methods, ['DELETE'])
+    assert.equal(article.destroy.method, 'DELETE')
     assert.equal(article.destroy.pattern.source, '/article')
   })
 
@@ -214,22 +214,22 @@ describe('createResource', () => {
       >,
     ]
 
-    assert.deepEqual(article.new.methods, ['GET'])
+    assert.equal(article.new.method, 'GET')
     assert.equal(article.new.pattern.source, '/admin/article/new')
 
-    assert.deepEqual(article.create.methods, ['POST'])
+    assert.equal(article.create.method, 'POST')
     assert.equal(article.create.pattern.source, '/admin/article')
 
-    assert.deepEqual(article.show.methods, ['GET'])
+    assert.equal(article.show.method, 'GET')
     assert.equal(article.show.pattern.source, '/admin/article')
 
-    assert.deepEqual(article.edit.methods, ['GET'])
+    assert.equal(article.edit.method, 'GET')
     assert.equal(article.edit.pattern.source, '/admin/article/edit')
 
-    assert.deepEqual(article.update.methods, ['PUT'])
+    assert.equal(article.update.method, 'PUT')
     assert.equal(article.update.pattern.source, '/admin/article')
 
-    assert.deepEqual(article.destroy.methods, ['DELETE'])
+    assert.equal(article.destroy.method, 'DELETE')
     assert.equal(article.destroy.pattern.source, '/admin/article')
   })
 
@@ -248,10 +248,10 @@ describe('createResource', () => {
       >,
     ]
 
-    assert.deepEqual(article.new.methods, ['GET'])
+    assert.equal(article.new.method, 'GET')
     assert.equal(article.new.pattern.source, '/article/new')
 
-    assert.deepEqual(article.show.methods, ['GET'])
+    assert.equal(article.show.method, 'GET')
     assert.equal(article.show.pattern.source, '/article')
   })
 })

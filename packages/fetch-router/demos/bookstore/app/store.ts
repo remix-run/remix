@@ -1,7 +1,6 @@
-import { createHandlers } from '@remix-run/fetch-router'
+import { createHandlers, html } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
-import { html } from './utils/response.ts'
 
 export const storeHandlers = createHandlers(routes.store, {
   cart() {
@@ -15,10 +14,10 @@ export const storeHandlers = createHandlers(routes.store, {
     return new Response(`Removed item ${params.itemId} from cart`)
   },
   checkout: {
-    get() {
+    show() {
       return html(renderCheckout())
     },
-    async post({ request }) {
+    async action({ request }) {
       let orderData = await request.json()
       return new Response(`Order placed! Total: $${orderData.total}`)
     },
@@ -42,7 +41,7 @@ function renderCart() {
           <div>📚 Programming Guide - $29.99 <button>Remove</button></div>
         </div>
         <p><strong>Total: $49.98</strong></p>
-        <a href="${routes.store.checkout.href()}">Proceed to Checkout</a>
+        <a href="${routes.store.checkout.show.href()}">Proceed to Checkout</a>
       </body>
     </html>
   `

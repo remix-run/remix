@@ -8,14 +8,20 @@ export const routes = createRoutes({
   // Marketing pages
   home: '/',
   about: '/about',
-  contact: { methods: ['GET', 'POST'], pattern: '/contact' },
+  contact: {
+    show: { method: 'GET', pattern: '/contact' },
+    action: { method: 'POST', pattern: '/contact' },
+  },
   pricing: '/pricing',
 
   // Book catalog
   books: {
     catalog: '/books',
     details: '/books/:isbn',
-    reviews: { methods: ['GET', 'POST'], pattern: '/books/:isbn/reviews' },
+    reviews: {
+      show: { method: 'GET', pattern: '/books/:isbn/reviews' },
+      action: { method: 'POST', pattern: '/books/:isbn/reviews' },
+    },
     category: '/books/category/:category',
     author: '/books/author/:author',
   },
@@ -25,15 +31,24 @@ export const routes = createRoutes({
     cart: '/cart',
     addToCart: { method: 'POST', pattern: '/cart/add' },
     removeFromCart: { method: 'DELETE', pattern: '/cart/:itemId' },
-    checkout: { methods: ['GET', 'POST'], pattern: '/checkout' },
+    checkout: {
+      show: { method: 'GET', pattern: '/checkout' },
+      action: { method: 'POST', pattern: '/checkout' },
+    },
     orders: '/orders',
     orderDetails: '/orders/:orderId',
   },
 
   // Authentication
   auth: {
-    login: { methods: ['GET', 'POST'], pattern: '/login' },
-    signup: { methods: ['GET', 'POST'], pattern: '/signup' },
+    login: {
+      show: { method: 'GET', pattern: '/login' },
+      action: { method: 'POST', pattern: '/login' },
+    },
+    signup: {
+      show: { method: 'GET', pattern: '/signup' },
+      action: { method: 'POST', pattern: '/signup' },
+    },
     logout: { method: 'POST', pattern: '/logout' },
   },
 
