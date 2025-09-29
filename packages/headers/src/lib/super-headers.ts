@@ -280,7 +280,7 @@ export class SuperHeaders extends Headers {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/keys)
    */
-  *keys(): IterableIterator<string> {
+  *keys(): HeadersIterator<string> {
     for (let [key] of this) yield key
   }
 
@@ -289,7 +289,7 @@ export class SuperHeaders extends Headers {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/values)
    */
-  *values(): IterableIterator<string> {
+  *values(): HeadersIterator<string> {
     for (let [, value] of this) yield value
   }
 
@@ -298,7 +298,7 @@ export class SuperHeaders extends Headers {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/entries)
    */
-  *entries(): IterableIterator<[string, string]> {
+  *entries(): HeadersIterator<[string, string]> {
     for (let [key] of this.#map) {
       let str = this.get(key)
       if (str) yield [key, str]
@@ -309,7 +309,7 @@ export class SuperHeaders extends Headers {
     }
   }
 
-  [Symbol.iterator](): IterableIterator<[string, string]> {
+  [Symbol.iterator](): HeadersIterator<[string, string]> {
     return this.entries()
   }
 
@@ -318,10 +318,7 @@ export class SuperHeaders extends Headers {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/forEach)
    */
-  forEach(
-    callback: (value: string, key: string, headers: SuperHeaders) => void,
-    thisArg?: any,
-  ): void {
+  forEach(callback: (value: string, key: string, parent: Headers) => void, thisArg?: any): void {
     for (let [key, value] of this) {
       callback.call(thisArg, value, key, this)
     }
