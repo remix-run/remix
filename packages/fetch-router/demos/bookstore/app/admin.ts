@@ -4,10 +4,8 @@ import { routes } from '../routes.ts'
 import { adminMiddleware } from './middleware/admin.ts'
 
 export const adminHandlers = createHandlers(routes.admin, [adminMiddleware], {
-  dashboard: {
-    handler() {
-      return html(renderAdminDashboard())
-    },
+  dashboard() {
+    return html(renderAdminDashboard())
   },
   books() {
     return html(renderBookManagement())

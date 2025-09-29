@@ -1,4 +1,4 @@
-import { html } from '@remix-run/fetch-router'
+import { createHandlers, html } from '@remix-run/fetch-router'
 import type { RequestContext } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
@@ -15,7 +15,7 @@ export function pricingHandler() {
   return html(renderPricingPage())
 }
 
-export const contactHandlers = {
+export const contactHandlers = createHandlers(routes.contact, {
   show() {
     return html(renderContactForm())
   },
@@ -26,7 +26,7 @@ export const contactHandlers = {
 
     return new Response(`Thank you ${name}! We'll respond to ${email} soon.`)
   },
-}
+})
 
 // Simple HTML rendering functions
 function renderHomePage() {
