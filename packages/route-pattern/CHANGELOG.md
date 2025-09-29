@@ -2,7 +2,7 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.13.0 (2025-09-29)
 
 - BREAKING CHANGE: removed `createRoutes` and corresponding types (`RouteMap`, `RouteDefs`, and `RouteDef`). This functionality will be re-introduced in a future "router" package.
 - BREAKING CHANGE: removed `RouteMap` from `createHrefBuilder` generic type.
