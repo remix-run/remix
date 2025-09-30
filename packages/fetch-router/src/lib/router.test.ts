@@ -4,8 +4,9 @@ import { describe, it } from 'node:test'
 import { RoutePattern } from '@remix-run/route-pattern'
 
 import type { Assert, IsEqual } from './type-utils.ts'
-import { createRoutes, createHandlers, createRouter } from './router.ts'
-import type { NextFunction, Route } from './router.ts'
+import { createRoutes, createHandlers, createRouter, createRoute, createHandler } from './router.ts'
+import type { NextFunction, RequestContext, Route } from './router.ts'
+import { createStorageKey } from './app-storage.ts'
 
 describe('createRoutes()', () => {
   it('creates a route map', () => {
@@ -98,6 +99,27 @@ describe('createRoutes()', () => {
       new RoutePattern('https://remix.run/categories/:slug/edit'),
     )
   })
+
+  it('creates a route map with nested routes', () => {
+    let showUserRoute = createRoute('users/:id')
+    let routes = createRoutes({
+      home: '/',
+      users: {
+        index: '/users',
+        // nested route
+        show: showUserRoute,
+      },
+    })
+
+    assert.equal(routes.home.method, 'GET')
+    assert.deepEqual(routes.home.pattern, new RoutePattern('/'))
+
+    assert.equal(routes.users.index.method, 'GET')
+    assert.deepEqual(routes.users.index.pattern, new RoutePattern('/users'))
+
+    assert.equal(routes.users.show.method, 'GET')
+    assert.deepEqual(routes.users.show.pattern, new RoutePattern('/users/:id'))
+  })
 })
 
 describe('createHandlers()', () => {
@@ -126,18 +148,83 @@ describe('createHandlers()', () => {
 
     assert.equal(handlers.home.route.method, 'GET')
     assert.deepEqual(handlers.home.route.pattern, new RoutePattern('/'))
-    assert.equal(handlers.home.middleware, null)
-    assert.equal(typeof handlers.home.requestHandler, 'function')
+    assert.equal(handlers.home.use, undefined)
+    assert.equal(typeof handlers.home.handler, 'function')
 
     assert.equal(handlers.users.index.route.method, 'GET')
     assert.deepEqual(handlers.users.index.route.pattern, new RoutePattern('/users'))
-    assert.equal(handlers.users.index.middleware, null)
-    assert.equal(typeof handlers.users.index.requestHandler, 'function')
+    assert.equal(handlers.users.index.use, undefined)
+    assert.equal(typeof handlers.users.index.handler, 'function')
 
     assert.equal(handlers.users.show.route.method, 'GET')
     assert.deepEqual(handlers.users.show.route.pattern, new RoutePattern('/users/:id'))
-    assert.equal(handlers.users.show.middleware, null)
-    assert.equal(typeof handlers.users.show.requestHandler, 'function')
+    assert.equal(handlers.users.show.use, undefined)
+    assert.equal(typeof handlers.users.show.handler, 'function')
+  })
+
+  it('creates a route handler map with middleware', async () => {
+    let routes = createRoutes({
+      home: '/',
+      posts: {
+        comments: '/posts/:id/comments',
+      },
+    })
+
+    let requestLog: string[] = []
+
+    function pushUrl({ url }: any) {
+      requestLog.push(url.toString())
+    }
+
+    let router = createRouter()
+
+    router.addRoutes(routes, [pushUrl], {
+      home() {
+        return new Response('Home')
+      },
+      posts: {
+        comments({ params }) {
+          return new Response(`Comments on post ${params.id}`)
+        },
+      },
+    })
+
+    let response = await router.fetch('https://remix.run')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Home')
+
+    response = await router.fetch('https://remix.run/posts/1/comments')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Comments on post 1')
+
+    assert.deepEqual(requestLog, ['https://remix.run/', 'https://remix.run/posts/1/comments'])
+  })
+
+  it('creates a route handler map with nested route handlers', async () => {
+    let routes = createRoutes({
+      home: '/',
+      posts: {
+        index: '/posts',
+        comments: '/posts/:id/comments',
+      },
+    })
+
+    let commentsHandler = createHandler(routes.posts.comments, ({ params }) => {
+      return new Response(`Comments on post ${params.id}`)
+    })
+
+    let handlers = createHandlers(routes, {
+      home() {
+        return new Response('Home')
+      },
+      posts: {
+        index() {
+          return new Response('Posts')
+        },
+        // nested route handler
+        comments: commentsHandler,
+      },
+    })
   })
 })
 
@@ -227,7 +314,7 @@ describe('router.fetch()', () => {
       },
     })
 
-    let router = createRouter(null, handlers)
+    let router = createRouter(undefined, handlers)
 
     let responses = await Promise.all([
       router.fetch('https://remix.run/users/123'),
@@ -584,7 +671,7 @@ describe('url pattern edge cases', () => {
   })
 })
 
-describe('HTTP status errors', () => {
+describe('HTTP client errors', () => {
   it('returns 404 for unmatched routes', async () => {
     let routes = createRoutes({
       home: '/',
@@ -1205,66 +1292,16 @@ describe('error handling', () => {
   })
 })
 
-describe('createHandlers() with middleware', () => {
-  it('applies middleware to all route handlers', async () => {
-    let routes = createRoutes({
-      home: '/',
-      post: '/posts/:id',
-      posts: {
-        comments: '/posts/:id/comments',
-      },
-    })
-
-    let calledUrls: string[] = []
-
-    function pushUrl({ url }: any) {
-      calledUrls.push(url.toString())
-    }
-
-    let router = createRouter()
-
-    router.addRoutes(routes, [pushUrl], {
-      home() {
-        return new Response('Home')
-      },
-      post({ params }: any) {
-        return new Response(`Post ${params.id}`)
-      },
-      posts: {
-        comments({ params }: any) {
-          return new Response(`Comments on post ${params.id}`)
-        },
-      },
-    })
-
-    let response = await router.fetch('https://remix.run')
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Home')
-
-    response = await router.fetch('https://remix.run/posts/1')
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Post 1')
-
-    response = await router.fetch('https://remix.run/posts/1/comments')
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Comments on post 1')
-
-    assert.deepEqual(calledUrls, [
-      'https://remix.run/',
-      'https://remix.run/posts/1',
-      'https://remix.run/posts/1/comments',
-    ])
-  })
-})
-
 describe('app storage', () => {
   it('can be accessed from middleware and route handlers', async () => {
     let routes = createRoutes({
       home: '/',
     })
 
-    function auth({ storage }: any) {
-      storage.set('currentUser', 'mj')
+    let userKey = createStorageKey('')
+
+    function auth({ storage }: RequestContext) {
+      storage.set(userKey, 'mj')
     }
 
     let router = createRouter()
@@ -1272,8 +1309,8 @@ describe('app storage', () => {
     router.addRoutes(routes, {
       home: {
         use: [auth],
-        handler({ storage }: any) {
-          let currentUser = storage.get('currentUser')
+        handler({ storage }) {
+          let currentUser = storage.get(userKey)
           return new Response(`Hello, ${currentUser}`)
         },
       },

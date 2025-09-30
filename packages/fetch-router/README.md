@@ -40,7 +40,7 @@ console.log(response.status) // 200
 console.log(await response.text()) // "About"
 ```
 
-A "route handler" is a function that returns a response. By default, route handlers run on GET (and HEAD) requests. To restrict a route handler to a specific HTTP method, use an object with `method` and `handler` properties.
+A "route handler" is a function that returns a response. By default, route handlers run on GET (and HEAD) requests. To restrict a route handler to a specific HTTP method, define the route as an object with `method` and `pattern` properties.
 
 ```tsx
 let routes = createRoutes({

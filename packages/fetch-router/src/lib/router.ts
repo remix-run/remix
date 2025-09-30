@@ -64,7 +64,9 @@ export function isRouteMap(value: any): value is RouteMap {
   return true
 }
 
-export class Route<M extends RequestMethod = RequestMethod, P extends string = string> {
+export class Route<M extends RequestMethod = RequestMethod, P extends string = string>
+  implements RouteDef<M, P>
+{
   readonly method: M
   readonly pattern: RoutePattern<P>
 
@@ -79,23 +81,26 @@ export class Route<M extends RequestMethod = RequestMethod, P extends string = s
 }
 
 /**
- * Create a route from a pattern and a route definition.
+ * Create a Route from a pattern or route definition.
  */
+export function createRoute<P extends string>(def: P | RoutePattern<P>): Route<'GET', P>
+export function createRoute<M extends RequestMethod, P extends string>(
+  def: RouteDef<M, P>,
+): Route<M, P>
 export function createRoute<P extends string>(
-  pattern: P | RoutePattern<P>,
-  routeDef: RouteDef<P>,
+  def: P | RoutePattern<P> | RouteDef<RequestMethod, P>,
 ): Route<RequestMethod, P> {
-  if (typeof routeDef === 'string') {
-    return new Route('GET', new RoutePattern(pattern))
-  } else if (isObjectRouteDef(routeDef)) {
-    return new Route(routeDef.method ?? 'GET', new RoutePattern(routeDef.pattern))
+  if (typeof def === 'string' || def instanceof RoutePattern) {
+    return new Route('GET', typeof def === 'string' ? new RoutePattern(def) : def)
+  } else if (isRouteDef(def)) {
+    return new Route(def.method ?? 'GET', new RoutePattern(def.pattern))
   } else {
     throw new Error(`Invalid route definition`)
   }
 }
 
 /**
- * Create a route map from a set of route definitions.
+ * Create a route map from a set of route patterns and/or route definitions.
  */
 export function createRoutes<P extends string, const D extends RouteDefs>(
   base: P | RoutePattern<P>,
@@ -113,25 +118,25 @@ export function createRoutes(baseOrRouteDefs: any, routeDefs?: RouteDefs): Route
 
 function _createRoutes<P extends string, D extends RouteDefs>(
   base: RoutePattern<P>,
-  routeDefs: D,
+  defs: D,
   parentKeys: string[] = [],
 ): BuildRouteMap<P, D> {
   let routes = {} as any
 
-  for (let key in routeDefs) {
+  for (let key in defs) {
     let keys = [...parentKeys, key]
-    let routeDef = routeDefs[key]
+    let def = defs[key]
 
-    if (routeDef == null) {
+    if (def == null) {
       throw new Error(`Missing route definition for ${keys.join('.')}`)
     }
 
-    if (typeof routeDef === 'string' || routeDef instanceof RoutePattern) {
-      routes[key] = new Route('GET', base.join(routeDef))
-    } else if (isObjectRouteDef(routeDef)) {
-      routes[key] = new Route(routeDef.method ?? 'GET', base.join(routeDef.pattern))
+    if (typeof def === 'string' || def instanceof RoutePattern) {
+      routes[key] = new Route('GET', base.join(def))
+    } else if (isRouteDef(def)) {
+      routes[key] = new Route(def.method ?? 'GET', base.join(def.pattern))
     } else {
-      routes[key] = _createRoutes(base, routeDef, keys)
+      routes[key] = _createRoutes(base, def, keys)
     }
   }
 
@@ -141,35 +146,24 @@ function _createRoutes<P extends string, D extends RouteDefs>(
 // prettier-ignore
 export type BuildRouteMap<B extends string, D extends RouteDefs> = Simplify<{
   [K in keyof D]: (
-    D[K] extends RouteDef ? BuildRoute<B, D[K]> :
+    D[K] extends string ? Route<'GET', Join<B, D[K]>> :
+    D[K] extends RoutePattern<infer P extends string> ? Route<'GET', Join<B, P>> :
+    D[K] extends RouteDef<infer M extends RequestMethod, infer P extends string> ? Route<M, Join<B, P>> :
     D[K] extends RouteDefs ? BuildRouteMap<B, D[K]> :
     never
   )
 }>
 
-// prettier-ignore
-type BuildRoute<B extends string, T extends RouteDef> =
-  T extends string ? Route<'GET', Join<B, T>> :
-  T extends RoutePattern<infer P extends string> ? Route<'GET', Join<B, P>> :
-  T extends ObjectRouteDef<infer P extends string> ?
-    // TODO: Is this necessary? Or can we do this in just two lines?
-    // undefined extends T['method'] ? Route<'GET', Join<B, P>> :
-    T['method'] extends RequestMethod ? Route<T['method'], Join<B, P>> :
-    Route<'GET', Join<B, P>> :
-  never
-
-type RouteDefs = {
-  [key: string]: RouteDef | RouteDefs
+interface RouteDefs<P extends string = string> {
+  [key: string]: P | RoutePattern<P> | RouteDef<RequestMethod, P> | RouteDefs<P>
 }
 
-type RouteDef<P extends string = string> = P | RoutePattern<P> | ObjectRouteDef<P>
-
-type ObjectRouteDef<P extends string = string> = {
-  method?: RequestMethod
+interface RouteDef<M extends RequestMethod = RequestMethod, P extends string = string> {
+  method?: M
   pattern: P | RoutePattern<P>
 }
 
-function isObjectRouteDef<P extends string>(value: any): value is ObjectRouteDef<P> {
+function isRouteDef(value: any): value is RouteDef {
   return typeof value === 'object' && value != null && 'pattern' in value && value.pattern != null
 }
 
@@ -192,27 +186,27 @@ export function isRouteHandlerMap(value: any): value is RouteHandlerMap {
   return true
 }
 
-export class RouteHandler<R extends Route = Route> {
+export class RouteHandler<R extends Route = Route> implements RouteHandlerDef<R> {
   readonly route: R
-  readonly middleware: Middleware<RouteParams<R>>[] | null
-  readonly requestHandler: RequestHandler<RouteParams<R>>
+  readonly use: Middleware<RouteParams<R>>[] | undefined
+  readonly handler: RequestHandler<RouteParams<R>>
 
   constructor(
     route: R,
-    middleware: Middleware<RouteParams<R>>[] | null,
-    requestHandler: RequestHandler<RouteParams<R>>,
+    use: Middleware<RouteParams<R>>[] | undefined,
+    handler: RequestHandler<RouteParams<R>>,
   ) {
     this.route = route
-    this.middleware = middleware
-    this.requestHandler = requestHandler
+    this.use = use
+    this.handler = handler
   }
 
   dispatch(ctx: RequestContext<RouteParams<R>>): Response | Promise<Response> {
-    if (this.middleware != null) {
-      return runMiddleware(this.middleware, ctx, () => this.requestHandler(ctx))
+    if (this.use != null) {
+      return runMiddleware(this.use, ctx, () => this.handler(ctx))
     }
 
-    return this.requestHandler(ctx)
+    return this.handler(ctx)
   }
 }
 
@@ -223,12 +217,12 @@ type RouteParams<R extends Route> = R extends Route<any, infer P extends string>
  */
 export function createHandler<R extends Route>(
   route: R,
-  handlerDef: RouteHandlerDef<R>,
+  def: RequestHandler<RouteParams<R>> | RouteHandlerDef<R, Response>,
 ): RouteHandler<R> {
-  if (typeof handlerDef === 'function') {
-    return new RouteHandler(route, null, handlerDef as any)
-  } else if (isObjectRouteHandlerDef(handlerDef)) {
-    return new RouteHandler(route, handlerDef.use ?? null, handlerDef.handler as any)
+  if (typeof def === 'function') {
+    return new RouteHandler(route, undefined, def)
+  } else if (isRouteHandlerDef(def)) {
+    return new RouteHandler(route, def.use, def.handler)
   } else {
     throw new Error(`Invalid route handler definition`)
   }
@@ -253,13 +247,13 @@ export function createHandlers<T extends RouteMap>(
 ): RouteHandlerMap {
   return Array.isArray(middlewareOrHandlerDefs)
     ? _createHandlers(routes, handlerDefs!, middlewareOrHandlerDefs)
-    : _createHandlers(routes, middlewareOrHandlerDefs, null)
+    : _createHandlers(routes, middlewareOrHandlerDefs, undefined)
 }
 
 function _createHandlers<T extends RouteMap>(
   routes: T,
   handlerDefs: RouteHandlerDefs<T>,
-  middleware: Middleware<any>[] | null,
+  middleware: Middleware<any>[] | undefined,
   parentKeys: string[] = [],
 ): BuildRouteHandlerMap<T> {
   let handlers = {} as any
@@ -267,33 +261,29 @@ function _createHandlers<T extends RouteMap>(
   for (let key in routes) {
     let keys = [...parentKeys, key]
     let value = routes[key]
-    let handlerDef = handlerDefs[key]
+    let def = handlerDefs[key]
 
-    if (handlerDef == null) {
+    if (def == null) {
       throw new Error(`Missing handler definition for ${keys.join('.')}`)
     }
 
     if (value instanceof Route) {
       let route = value as Route
-      if (typeof handlerDef === 'function') {
-        handlers[key] = new RouteHandler(route, middleware, handlerDef as any)
-      } else if (isObjectRouteHandlerDef(handlerDef)) {
+      if (typeof def === 'function') {
+        handlers[key] = new RouteHandler(route, middleware, def as any)
+      } else if (isRouteHandlerDef(def)) {
         let routeMiddleware = middleware ? [...middleware] : []
-        if (handlerDef.use) {
-          routeMiddleware.push(...handlerDef.use)
-        }
+        if (def.use) routeMiddleware.push(...def.use)
         handlers[key] = new RouteHandler(
           route,
-          routeMiddleware.length > 0 ? routeMiddleware : null,
-          handlerDef.handler as any,
+          routeMiddleware.length > 0 ? routeMiddleware : undefined,
+          def.handler as any,
         )
       } else {
         throw new Error(`Invalid handler definition for ${keys.join('.')}`)
       }
-    } else if (isRouteHandlerMap(handlerDef)) {
-      handlers[key] = handlerDef // re-use existing RouteHandlerMap
     } else {
-      handlers[key] = _createHandlers(value, handlerDef as any, middleware, keys)
+      handlers[key] = _createHandlers(value, def as any, middleware, keys)
     }
   }
 
@@ -312,23 +302,18 @@ export type BuildRouteHandlerMap<T extends RouteMap> = Simplify<{
 // prettier-ignore
 type RouteHandlerDefs<T extends RouteMap> = {
   [K in keyof T]: (
-    T[K] extends Route ? RouteHandlerDef<T[K]> :
-    T[K] extends RouteMap ? RouteHandlerMap | RouteHandlerDefs<T[K]> :
+    T[K] extends Route<infer _, infer P extends string> ? RequestHandler<Params<P>> | RouteHandlerDef<T[K]> :
+    T[K] extends RouteMap ? RouteHandlerDefs<T[K]> :
     never
   )
 }
 
-type RouteHandlerDef<R extends Route> = FunctionRouteHandlerDef<R> | ObjectRouteHandlerDef<R>
-
-type FunctionRouteHandlerDef<R extends Route, T = unknown> =
-  R extends Route<infer _, infer P extends string> ? RequestHandler<Params<P>, T> : never
-
-interface ObjectRouteHandlerDef<R extends Route, T = unknown> {
+interface RouteHandlerDef<R extends Route = Route, T = unknown> {
   use?: Middleware<RouteParams<R>>[]
   handler: RequestHandler<RouteParams<R>, T>
 }
 
-function isObjectRouteHandlerDef<R extends Route>(value: any): value is ObjectRouteHandlerDef<R> {
+function isRouteHandlerDef(value: any): value is RouteHandlerDef {
   return typeof value === 'object' && value != null && 'handler' in value && value.handler != null
 }
 
@@ -340,18 +325,18 @@ type RouteHandlerStorage = {
 
 export class Router {
   // Middleware that runs on every request, regardless of the route.
-  #globalMiddleware: Middleware[] | null
+  #globalMiddleware: Middleware[] | undefined
   // prettier-ignore
   #routeHandlers: RouteHandlerStorage = { GET: [], HEAD: [], POST: [], PUT: [], PATCH: [], DELETE: [], OPTIONS: [] }
 
-  constructor(globalMiddleware: Middleware[] | null = null) {
+  constructor(globalMiddleware?: Middleware[]) {
     this.#globalMiddleware = globalMiddleware
   }
 
   /**
    * Add an individual route and its handler to the router.
    */
-  addRoute<R extends Route>(route: R, handlerDef: RouteHandlerDef<R>): RouteHandler<R> {
+  addRoute<R extends Route>(route: R, handlerDef: RouteHandlerDef<R, any>): RouteHandler<R> {
     let handler = createHandler(route, handlerDef)
     this.addHandler(handler)
     return handler
@@ -519,10 +504,7 @@ function runMiddleware<P extends AnyParams>(
 /**
  * Create a router.
  */
-export function createRouter(
-  globalMiddleware?: Middleware[] | null,
-  handlers?: RouteHandlerMap,
-): Router {
+export function createRouter(globalMiddleware?: Middleware[], handlers?: RouteHandlerMap): Router {
   let router = new Router(globalMiddleware)
   if (handlers != null) router.addHandlers(handlers)
   return router
@@ -545,8 +527,8 @@ export function applyMiddleware<T extends RouteHandlerMap>(
     if (handler instanceof RouteHandler) {
       newHandlers[key] = new RouteHandler(
         handler.route,
-        middleware.concat(handler.middleware ?? []),
-        handler.requestHandler,
+        middleware.concat(handler.use ?? []),
+        handler.handler,
       ) as any
     } else if (isRouteHandlerMap(handler)) {
       newHandlers[key] = applyMiddleware(middleware, handler)
