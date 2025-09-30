@@ -79,6 +79,22 @@ export class Route<M extends RequestMethod = RequestMethod, P extends string = s
 }
 
 /**
+ * Create a route from a pattern and a route definition.
+ */
+export function createRoute<P extends string>(
+  pattern: P | RoutePattern<P>,
+  routeDef: RouteDef<P>,
+): Route<RequestMethod, P> {
+  if (typeof routeDef === 'string') {
+    return new Route('GET', new RoutePattern(pattern))
+  } else if (isObjectRouteDef(routeDef)) {
+    return new Route(routeDef.method ?? 'GET', new RoutePattern(routeDef.pattern))
+  } else {
+    throw new Error(`Invalid route definition`)
+  }
+}
+
+/**
  * Create a route map from a set of route definitions.
  */
 export function createRoutes<P extends string, const D extends RouteDefs>(

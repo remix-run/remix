@@ -9,6 +9,7 @@ export {
   RequestContext,
   isRouteMap,
   Route,
+  createRoute,
   createRoutes,
   isRouteHandlerMap,
   RouteHandler,
