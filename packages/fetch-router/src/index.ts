@@ -12,6 +12,7 @@ export {
   createRoutes,
   isRouteHandlerMap,
   RouteHandler,
+  createHandler,
   createHandlers,
   Router,
   createRouter,

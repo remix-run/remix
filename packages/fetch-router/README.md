@@ -1,6 +1,6 @@
 # fetch-router
 
-A minimal router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](../route-pattern).
+A minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](../route-pattern).
 
 ## Features
 
@@ -9,13 +9,10 @@ A minimal router built on the [web Fetch API](https://developer.mozilla.org/en-U
 - Powerful middleware system with strong typing
 - Universal runtime support (Node.js, Bun, Deno, Cloudflare Workers, browsers)
 
-## Examples
-
-### Basic Routing
+## Basic Routing
 
 ```tsx
-import { createRoutes } from '@remix-run/route-pattern'
-import { createRouter } from '@remix-run/fetch-router'
+import { createRoutes, createRouter } from '@remix-run/fetch-router'
 
 // Create a route map
 let routes = createRoutes({
@@ -23,8 +20,11 @@ let routes = createRoutes({
   about: '/about',
 })
 
-// Create a router with route handlers for each route in the route map
-let router = createRouter(routes, {
+// Create a router
+let router = createRouter()
+
+// Add some "route handlers" to the router
+router.addRoutes(routes, {
   home() {
     return new Response('Home')
   },
@@ -33,117 +33,144 @@ let router = createRouter(routes, {
   },
 })
 
+// Fetch the about page
 let response = await router.fetch('https://remix.run/about')
 
 console.log(response.status) // 200
 console.log(await response.text()) // "About"
 ```
 
-Route handlers that are functions are run for any HTTP method that matches the route pattern. To restrict a route handler to a specific HTTP method, use the `method` or `methods` properties.
+A "route handler" is a function that returns a response. By default, route handlers run on GET (and HEAD) requests. To restrict a route handler to a specific HTTP method, use an object with `method` and `handler` properties.
 
 ```tsx
 let routes = createRoutes({
   home: '/',
-  articles: '/articles',
-})
-
-let router = createRouter(routes, {
-  home: {
-    method: 'GET',
-    handler() {
-      return new Response('Home')
-    },
-  },
-  articles: {
-    methods: ['GET', 'POST'],
-    handler({ request }) {
-      if (request.method === 'GET') {
-        return new Response('Articles')
-      }
-
-      // You know this is a POST because the router will only call this
-      // handler for HTTP methods specified in the `methods` property.
-      invariant(request.method === 'POST')
-
-      return new Response('Create article')
-    },
-  },
-})
-```
-
-### HTTP Method Shorthand Handlers
-
-A convenient shorthand for declaring HTTP method-specific route handlers is to use an object keyed by HTTP method names as the route handler.
-
-The following is a Rails-inspired example of a router with an "articles" resource.
-
-```tsx
-import { createRoutes } from '@remix-run/route-pattern'
-import { createRouter } from '@remix-run/fetch-router'
-
-let routes = createRoutes({
   articles: {
     index: '/articles',
-    new: '/articles/new',
-    edit: '/articles/:id/edit',
+    create: { method: 'POST', pattern: '/articles' },
+    show: '/articles/:id',
   },
-  article: '/articles/:id',
 })
 
-let router = createRouter(routes, {
-  articles: {
-    index: {
-      // GET /articles
-      get() {
-        return new Response('Articles')
-      },
-      // POST /articles
-      post() {
-        return new Response('Create article')
-      },
-    },
-    new: {
-      // GET /articles/new
-      get() {
-        return new Response('New article')
-      },
-    },
-    edit: {
-      // GET /articles/:id/edit
-      get({ params }) {
-        return new Response(`Edit article ${params.id}`)
-      },
-    },
-  },
+let router = createRouter()
 
-  // Note: /articles/:id and /articles/new overlap each other, so add
-  // /articles/:id route handlers AFTER /articles/new (defined above).
-  article: {
-    // GET /articles/:id
-    get({ params }) {
-      return new Response(`Show article ${params.id}`)
+router.addRoutes(routes, {
+  home() {
+    return new Response('Home')
+  },
+  articles: {
+    index() {
+      return new Response('Articles')
     },
-    // PUT /articles/:id
-    put({ params }) {
-      return new Response(`Update article ${params.id}`)
+    create() {
+      return new Response('Create article')
     },
-    // DELETE /articles/:id
-    delete({ params }) {
-      return new Response(`Delete article ${params.id}`)
+    show({ params }) {
+      // `params` is type-safe
+      return new Response(`Article ${params.id}`)
     },
   },
 })
 ```
 
-### Using Middleware
+## Using Resources
 
-`fetch-router` supports Express-style middleware. Middleware is run in order from left to right, and can short-circuit the chain by returning a `Response` object.
+A resource is a collection of routes that are related to a single entity. For example, an "articles" resource might have routes for creating, reading, updating, and deleting articles. You can think about these like Rails' `resource`/`resources` helpers.
 
-Middleware that returns `undefined` will invoke the downstream handler automatically.
+`fetch-router` provides `createResource` and `createResources` helpers for creating route maps with sets of related routes.
+
+```tsx
+import {
+  createRoutes,
+  createResources as resources,
+  createResource as resource,
+} from '@remix-run/fetch-router'
+
+let routes = createRoutes({
+  api: {
+    // The `resources` helper is the same as the following:
+    // articles: {
+    //   index: { method: 'GET', pattern: '/api/articles' },
+    //   new: { method: 'GET', pattern: '/api/articles/new' },
+    //   create: { method: 'POST', pattern: '/api/articles' },
+    //   show: { method: 'GET', pattern: '/api/articles/:id' },
+    //   edit: { method: 'GET', pattern: '/api/articles/:id/edit' },
+    //   update: { method: 'PUT', pattern: '/api/articles/:id' },
+    //   destroy: { method: 'DELETE', pattern: '/api/articles/:id' },
+    // }
+    articles: resources('articles'),
+  },
+})
+
+let router = createRouter()
+
+router.addRoutes(routes, {
+  api: {
+    articles: {
+      async index() {
+        let articles = await Article.all()
+        return Response.json({ articles })
+      },
+      async new() {
+        let article = await Article.new()
+        return Response.json(article)
+      },
+      async create({ request }) {
+        let article = await Article.create(request)
+        return Response.json(article, { status: 201 })
+      },
+      async show({ params }) {
+        let article = await Article.get(params.id)
+        return Response.json(article)
+      },
+      async edit({ params }) {
+        let article = await Article.get(params.id)
+        return Response.json(article)
+      },
+      async update({ params, request }) {
+        await Article.update(params.id, request)
+        return new Response(null, { status: 204 })
+      },
+      async destroy({ params }) {
+        await Article.destroy(params.id)
+        return new Response(null, { status: 204 })
+      },
+    },
+  },
+})
+
+let response = await router.fetch('https://remix.run/api/articles')
+
+console.log(response.status) // 200
+console.log(await response.json()) // { articles: ... }
+```
+
+## Using Middleware
+
+`fetch-router` is extensible via middleware. Middleware is run in order from left to right, and comes in two flavors:
+
+- **Global middleware** is provided up front to `createRouter` and runs on every request, regardless of the route. This is generic middleware that doesn't know anything about which route matches the request, but can be useful for things like logging, rate limiting, and authentication.
+- **Route middleware** is defined directly on the route handler and runs only on the routes it's defined on. This gives middleware type-safe access to the current route's `params`.
 
 ```tsx
 import type { RequestContext, NextFunction } from '@remix-run/fetch-router'
 
+// A middleware that checks if the request is authorized
+function auth({ request }: RequestContext) {
+  if (request.headers.get('Authorization') !== 'Bearer 123') {
+    // Middleware that returns a response short-circuits the chain
+    return new Response('Unauthorized', { status: 401 })
+  }
+
+  // Middleware that returns undefined automatically invokes the
+  // downstream middleware or route handler
+}
+
+// A middleware that logs the profile view
+function profileLogger({ params }: RequestContext<{ id: string }>) {
+  console.log(`Viewing profile ${params.id}`)
+}
+
 let routes = createRoutes({
   admin: {
     index: '/admin',
@@ -151,83 +178,58 @@ let routes = createRoutes({
   },
 })
 
-// Log the request and response
-function logger({ request, url }: RequestContext, next: NextFunction) {
-  console.log(`${request.method} ${url.pathname}`)
-  let response = await next() // Invoke the downstream handler and get its response
-  console.log(`${response.status} ${response.statusText}`)
-  return response
-}
+// The `auth` middleware runs on every request
+let router = createRouter([auth])
 
-// Check if the request is authorized
-function auth({ request }: RequestContext) {
-  if (request.headers.get('Authorization') !== 'Bearer 123') {
-    return new Response('Unauthorized', { status: 401 })
-  }
-}
-
-let router = createRouter(routes, {
+router.addRoutes(routes, {
   admin: {
-    use: [logger, auth],
     index() {
       return new Response('Admin dashboard')
     },
-    profile({ params }) {
-      return new Response(`Viewing profile ${params.id}`)
+    profile: {
+      // The `profileLogger` middleware runs only on this route
+      use: [profileLogger],
+      handler({ params }) {
+        return new Response(`Viewing profile ${params.id}`)
+      },
     },
   },
 })
 ```
 
-Middleware is defined directly on the route handler object, not on the router itself. This means that middleware has type-safe access to the current route's params.
+## Route Composition
+
+`fetch-router` is designed to be composable. Both route and route handler maps may be composed of smaller pieces, preserving full type-safety along the way. This is useful for building larger applications by breaking down the route handlers into separate files.
 
 ```tsx
+import { createHandlers, createRoutes, createRouter } from '@remix-run/fetch-router'
 import type { RequestContext } from '@remix-run/fetch-router'
 
-let routes = createRoutes({
-  admin: {
-    profile: '/admin/profiles/:id',
-  },
+// routes.ts
+let blogRoutes = createResource('blog', {
+  base: '/blog',
+  param: 'slug',
+  only: ['index', 'show'],
 })
-
-function logger({ params }: RequestContext<{ id: string }>, next) {
-  // `params` is type-safe
-  console.log(`Viewing profile ${params.id}`)
-  let response = await next()
-  console.log(`${response.status} ${response.statusText}`)
-  return response
-}
-
-let router = createRouter(routes, {
-  admin: {
-    use: [logger],
-    profile({ params }) {
-      return new Response(`Viewing profile ${params.id}`)
-    },
-  },
-})
-```
-
-You can define middlware for many route handlers at once by using the `createHandlers` helper.
-
-```tsx
-import { createHandlers, createRouter } from '@remix-run/fetch-router'
-import type { RequestContext } from '@remix-run/fetch-router'
 
 let routes = createRoutes({
   admin: {
     index: '/admin',
     profile: '/admin/profiles/:id',
   },
+  // Attach the blog routes map to this map
+  blog: blogRoutes,
 })
 
-function auth({ request }: RequestContext) {
+// app/admin.ts
+function authAdmin({ request }: RequestContext) {
   if (request.headers.get('Authorization') !== 'Bearer 123') {
     return new Response('Unauthorized', { status: 401 })
   }
 }
 
-let adminHandlers = createHandlers(routes.admin, [auth], {
+// Define handlers for all routes in `routes.admin`
+let adminHandlers = createHandlers(routes.admin, [authAdmin], {
   index() {
     return new Response('Admin dashboard')
   },
@@ -236,8 +238,25 @@ let adminHandlers = createHandlers(routes.admin, [auth], {
   },
 })
 
-let router = createRouter(routes, {
+// app/blog.ts
+// Define handlers for all routes in `routes.blog`
+let blogHandlers = createHandlers(routes.blog, {
+  index() {
+    return new Response('Blog index')
+  },
+  show({ params }) {
+    return new Response(`Blog post ${params.slug}`)
+  },
+})
+
+// server.ts
+let router = createRouter()
+
+router.addRoutes(routes, {
+  // Stitch them all together in a final route handler map that defines
+  // handlers for all routes in the map
   admin: adminHandlers,
+  blog: blogHandlers,
 })
 ```
 

@@ -203,6 +203,22 @@ export class RouteHandler<R extends Route = Route> {
 type RouteParams<R extends Route> = R extends Route<any, infer P extends string> ? Params<P> : never
 
 /**
+ * Create an individual route handler from a route and a handler definition.
+ */
+export function createHandler<R extends Route>(
+  route: R,
+  handlerDef: RouteHandlerDef<R>,
+): RouteHandler<R> {
+  if (typeof handlerDef === 'function') {
+    return new RouteHandler(route, null, handlerDef as any)
+  } else if (isObjectRouteHandlerDef(handlerDef)) {
+    return new RouteHandler(route, handlerDef.use ?? null, handlerDef.handler as any)
+  } else {
+    throw new Error(`Invalid route handler definition`)
+  }
+}
+
+/**
  * Create a route handler map from a route map and route handler definitions.
  */
 export function createHandlers<T extends RouteMap>(
@@ -307,18 +323,56 @@ type RouteHandlerStorage = {
 }
 
 export class Router {
-  /**
-   * Middleware that runs on every request, regardless of the route.
-   */
-  readonly globalMiddleware: Middleware[] | null
-
+  // Middleware that runs on every request, regardless of the route.
+  #globalMiddleware: Middleware[] | null
   // prettier-ignore
   #routeHandlers: RouteHandlerStorage = { GET: [], HEAD: [], POST: [], PUT: [], PATCH: [], DELETE: [], OPTIONS: [] }
 
-  constructor(globalMiddleware: Middleware<{}>[] | null = null) {
-    this.globalMiddleware = globalMiddleware
+  constructor(globalMiddleware: Middleware[] | null = null) {
+    this.#globalMiddleware = globalMiddleware
   }
 
+  /**
+   * Add an individual route and its handler to the router.
+   */
+  addRoute<R extends Route>(route: R, handlerDef: RouteHandlerDef<R>): RouteHandler<R> {
+    let handler = createHandler(route, handlerDef)
+    this.addHandler(handler)
+    return handler
+  }
+
+  /**
+   * Add an individual route handler to the router.
+   */
+  addHandler<M extends RequestMethod>(handler: RouteHandler<Route<M, string>>): void {
+    this.#routeHandlers[handler.route.method].push(handler)
+  }
+
+  /**
+   * Add routes and their handlers to the router, optionally with middleware.
+   */
+  addRoutes<T extends RouteMap>(
+    routes: T,
+    handlerDefs: RouteHandlerDefs<T>,
+  ): BuildRouteHandlerMap<T>
+  addRoutes<T extends RouteMap>(
+    routes: T,
+    middleware: Middleware[],
+    handlerDefs: RouteHandlerDefs<T>,
+  ): BuildRouteHandlerMap<T>
+  addRoutes<T extends RouteMap>(
+    routes: T,
+    middlewareOrHandlerDefs: any,
+    handlerDefs?: RouteHandlerDefs<T>,
+  ): RouteHandlerMap {
+    let handlers = createHandlers(routes, middlewareOrHandlerDefs, handlerDefs!)
+    this.#addHandlers(handlers)
+    return handlers
+  }
+
+  /**
+   * Add pre-built route handlers directly to the router.
+   */
   addHandlers(handlers: RouteHandlerMap): void {
     this.#addHandlers(handlers)
   }
@@ -328,17 +382,16 @@ export class Router {
       let handler = handlers[key]
 
       if (handler instanceof RouteHandler) {
-        this.#addRouteHandler(handler)
+        this.addHandler(handler)
       } else if (isRouteHandlerMap(handler)) {
         this.#addHandlers(handler)
       }
     }
   }
 
-  #addRouteHandler<M extends RequestMethod>(handler: RouteHandler<Route<M, string>>): void {
-    this.#routeHandlers[handler.route.method].push(handler)
-  }
-
+  /**
+   * Dispatch a request and return a response.
+   */
   async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
     let request =
       typeof input === 'string' || input instanceof URL ? new Request(input, init) : input
@@ -356,8 +409,8 @@ export class Router {
 
     let ctx = new RequestContext({}, request, url)
 
-    if (this.globalMiddleware != null) {
-      return runMiddleware(this.globalMiddleware, ctx, () => this.#dispatch(ctx))
+    if (this.#globalMiddleware != null) {
+      return runMiddleware(this.#globalMiddleware, ctx, () => this.#dispatch(ctx))
     }
 
     return this.#dispatch(ctx)
@@ -447,18 +500,15 @@ function runMiddleware<P extends AnyParams>(
   return dispatch(0)
 }
 
-export function createRouter(handlers: RouteHandlerMap): Router
-export function createRouter(middleware: Middleware[], handlers: RouteHandlerMap): Router
-export function createRouter(middlewareOrHandlers: any, handlers?: RouteHandlerMap): Router {
-  let router: Router
-  if (Array.isArray(middlewareOrHandlers)) {
-    router = new Router(middlewareOrHandlers)
-    router.addHandlers(handlers!)
-  } else {
-    router = new Router(null)
-    router.addHandlers(middlewareOrHandlers)
-  }
-
+/**
+ * Create a router.
+ */
+export function createRouter(
+  globalMiddleware?: Middleware[] | null,
+  handlers?: RouteHandlerMap,
+): Router {
+  let router = new Router(globalMiddleware)
+  if (handlers != null) router.addHandlers(handlers)
   return router
 }
 

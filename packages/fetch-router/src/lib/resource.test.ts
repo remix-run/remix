@@ -266,12 +266,16 @@ describe('integration', () => {
       requestLog.push(`${request.method} ${new URL(request.url).pathname}`)
     }
 
-    let handlers = createHandlers(articles, [logMiddleware], {
-      index: () => new Response('Article list'),
-      show: ({ params }: any) => new Response(`Article ${params.id}`),
-    })
+    let router = createRouter([logMiddleware])
 
-    let router = createRouter(handlers)
+    router.addRoutes(articles, {
+      index() {
+        return new Response('Article list')
+      },
+      show({ params }) {
+        return new Response(`Article ${params.id}`)
+      },
+    })
 
     let indexResponse = await router.fetch('https://example.com/articles')
     assert.equal(indexResponse.status, 200)

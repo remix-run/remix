@@ -1,6 +1,6 @@
 import * as http from 'node:http'
 import { createRequestListener } from '@remix-run/node-fetch-server'
-import { createRouter, createHandlers } from '@remix-run/fetch-router'
+import { createRouter } from '@remix-run/fetch-router'
 
 import { routes } from './routes.ts'
 
@@ -20,7 +20,9 @@ import { searchHandler } from './app/search.ts'
 
 import { globalMiddleware } from './app/middleware/index.ts'
 
-let allHandlers = createHandlers(routes, {
+let router = createRouter(globalMiddleware)
+
+router.addRoutes(routes, {
   home: homeHandler,
   about: aboutHandler,
   contact: contactHandlers,
@@ -41,18 +43,16 @@ let allHandlers = createHandlers(routes, {
   },
 })
 
-let router = createRouter(globalMiddleware, allHandlers)
-
-let listener = createRequestListener(async (request) => {
-  try {
-    return await router.fetch(request)
-  } catch (error) {
-    console.error(error)
-    return new Response('Internal Server Error', { status: 500 })
-  }
-})
-
-let server = http.createServer(listener)
+let server = http.createServer(
+  createRequestListener(async (request) => {
+    try {
+      return await router.fetch(request)
+    } catch (error) {
+      console.error(error)
+      return new Response('Internal Server Error', { status: 500 })
+    }
+  }),
+)
 
 server.listen(3000, () => {
   console.log('Server running on http://localhost:3000')

@@ -12,7 +12,9 @@ describe('logger', () => {
 
     let messages: string[] = []
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home: {
         use: [logger({ log: (message) => messages.push(message) })],
         handler() {
@@ -25,8 +27,6 @@ describe('logger', () => {
         },
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run')
 

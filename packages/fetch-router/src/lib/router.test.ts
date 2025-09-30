@@ -147,13 +147,13 @@ describe('router.fetch()', () => {
       home: '/',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home() {
         return new Response('Home')
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run')
 
@@ -169,15 +169,15 @@ describe('router.fetch()', () => {
       },
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home: {
         handler() {
           return new Response('POST home')
         },
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run', { method: 'POST' })
     assert.equal(response.status, 200)
@@ -189,13 +189,13 @@ describe('router.fetch()', () => {
       home: '/',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home() {
         return new Response('home', { headers: { 'X-Test': 'test' } })
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run', { method: 'HEAD' })
     assert.equal(response.status, 200)
@@ -227,7 +227,7 @@ describe('router.fetch()', () => {
       },
     })
 
-    let router = createRouter(handlers)
+    let router = createRouter(null, handlers)
 
     let responses = await Promise.all([
       router.fetch('https://remix.run/users/123'),
@@ -255,13 +255,14 @@ describe('router.fetch()', () => {
       api: '/api/:endpoint',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       api({ params, url }) {
         return new Response(`API ${params.endpoint}, Query: ${url.search}`)
       },
     })
 
-    let router = createRouter(handlers)
     let response = await router.fetch(new URL('https://remix.run/api/users?include=posts'))
 
     assert.equal(response.status, 200)
@@ -273,14 +274,14 @@ describe('router.fetch()', () => {
       api: '/api/:endpoint',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       api({ params, request }) {
         let auth = request.headers.get('Authorization')
         return new Response(`API ${params.endpoint}, Auth: ${auth}`)
       },
     })
-
-    let router = createRouter(handlers)
 
     let request = new Request('https://remix.run/api/users', {
       method: 'GET',
@@ -300,14 +301,15 @@ describe('router.fetch()', () => {
       echo: { method: 'POST', pattern: '/echo' },
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       async echo({ request }) {
         let body = await request.text()
         return new Response(`Header: ${request.headers.get('X-Custom')}, Body: "${body}"`)
       },
     })
 
-    let router = createRouter(handlers)
     let response = await router.fetch('https://remix.run/echo', {
       method: 'POST',
       body: JSON.stringify({ message: 'Hello!' }),
@@ -324,13 +326,13 @@ describe('request methods', () => {
       users: { method: 'PUT', pattern: '/users/:id' },
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       users({ params }) {
         return new Response(`Updated user ${params.id}`)
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run/users/123', { method: 'PUT' })
     assert.equal(response.status, 200)
@@ -342,13 +344,13 @@ describe('request methods', () => {
       users: { method: 'PATCH', pattern: '/users/:id' },
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       users({ params }) {
         return new Response(`Patched user ${params.id}`)
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run/users/456', { method: 'PATCH' })
     assert.equal(response.status, 200)
@@ -360,13 +362,13 @@ describe('request methods', () => {
       users: { method: 'DELETE', pattern: '/users/:id' },
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       users({ params }) {
         return new Response(`Deleted user ${params.id}`)
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run/users/789', { method: 'DELETE' })
     assert.equal(response.status, 200)
@@ -378,7 +380,9 @@ describe('request methods', () => {
       api: { method: 'OPTIONS', pattern: '/api' },
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       api() {
         return new Response(null, {
           headers: {
@@ -389,8 +393,6 @@ describe('request methods', () => {
         })
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run/api', { method: 'OPTIONS' })
     assert.equal(response.status, 200)
@@ -407,7 +409,9 @@ describe('url pattern edge cases', () => {
       api: '/api/users/:id',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       search({ url }) {
         let query = url.searchParams.get('q')
         let filter = url.searchParams.get('filter')
@@ -418,8 +422,6 @@ describe('url pattern edge cases', () => {
         return new Response(`User ${params.id}, Include: ${include}`)
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test query parameters
     let response = await router.fetch('https://remix.run/search?q=test&filter=active')
@@ -437,14 +439,14 @@ describe('url pattern edge cases', () => {
       docs: '/docs/:section',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       docs({ params, url }) {
         // URL fragments are not sent to server, but we can test the URL parsing
         return new Response(`Docs section: ${params.section}, URL: ${url.pathname}`)
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test URL with fragment (fragment won't be sent to server, but URL parsing should work)
     let response = await router.fetch('https://remix.run/docs/api#authentication')
@@ -458,7 +460,9 @@ describe('url pattern edge cases', () => {
       unicode: '/unicode/:text',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       special({ params }) {
         return new Response(`Special: ${params.name}`)
       },
@@ -466,8 +470,6 @@ describe('url pattern edge cases', () => {
         return new Response(`Unicode: ${params.text}`)
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test with special characters
     let response = await router.fetch('https://remix.run/special/hello-world_123')
@@ -486,7 +488,9 @@ describe('url pattern edge cases', () => {
       search: '/search/:term',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       files({ params }) {
         return new Response(`File: ${params.filename}`)
       },
@@ -494,8 +498,6 @@ describe('url pattern edge cases', () => {
         return new Response(`Search: ${params.term}`)
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test with URL encoded spaces (parameters are not auto-decoded)
     let response = await router.fetch('https://remix.run/files/my%20file.txt')
@@ -515,7 +517,9 @@ describe('url pattern edge cases', () => {
       catchAll: '*',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       files({ url }) {
         let path = url.pathname.replace('/files/', '')
         return new Response(`File path: ${path}`)
@@ -528,8 +532,6 @@ describe('url pattern edge cases', () => {
         return new Response(`Catch-all: ${url.pathname}`)
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test file wildcard
     let response = await router.fetch('https://remix.run/files/documents/report.pdf')
@@ -554,7 +556,9 @@ describe('url pattern edge cases', () => {
       wildcard: '/users/*',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       specific() {
         return new Response('New user form')
       },
@@ -565,8 +569,6 @@ describe('url pattern edge cases', () => {
         return new Response(`Wildcard: ${url.pathname}`)
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test specific route takes precedence
     let response = await router.fetch('https://remix.run/users/new')
@@ -589,7 +591,9 @@ describe('HTTP status errors', () => {
       users: '/users/:id',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home() {
         return new Response('Home')
       },
@@ -597,8 +601,6 @@ describe('HTTP status errors', () => {
         return new Response('User')
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run/nonexistent')
     assert.equal(response.status, 404)
@@ -619,13 +621,13 @@ describe('HTTP status errors', () => {
       api: { method: 'GET', pattern: '/api' },
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       api() {
         return new Response('API')
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test with a method that's not in the RequestMethods array
     // We need to manually create a request with an invalid method
@@ -642,13 +644,13 @@ describe('HTTP status errors', () => {
       api: { method: 'GET', pattern: '/api' },
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       api() {
         return new Response('API')
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test valid HTTP method that no routes handle - should be 404
     let response = await router.fetch('https://remix.run/api', { method: 'POST' })
@@ -672,7 +674,9 @@ describe('HTTP status errors', () => {
       auth: '/auth',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       api() {
         return new Response('Unauthorized', {
           status: 401,
@@ -686,8 +690,6 @@ describe('HTTP status errors', () => {
         })
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test custom 401 response
     let response = await router.fetch('https://remix.run/api')
@@ -727,7 +729,9 @@ describe('middleware', () => {
       return next()
     }
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home: {
         use: [one, two, three],
         handler() {
@@ -735,8 +739,6 @@ describe('middleware', () => {
         },
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run')
 
@@ -761,7 +763,9 @@ describe('middleware', () => {
       middlewareInvocations.push('two')
     }
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home: {
         use: [one, two],
         handler() {
@@ -769,8 +773,6 @@ describe('middleware', () => {
         },
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run')
 
@@ -796,7 +798,9 @@ describe('middleware', () => {
       // no next()
     }
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home: {
         use: [one, two],
         handler() {
@@ -804,8 +808,6 @@ describe('middleware', () => {
         },
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run')
 
@@ -824,7 +826,9 @@ describe('middleware', () => {
       await next() // This second call should throw
     }
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home: {
         use: [badMiddleware],
         handler() {
@@ -832,8 +836,6 @@ describe('middleware', () => {
         },
       },
     })
-
-    let router = createRouter(handlers)
 
     await assert.rejects(async () => {
       await router.fetch('https://remix.run')
@@ -876,7 +878,9 @@ describe('middleware', () => {
       })
     }
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       api: {
         use: [addCorsHeaders, addCacheHeaders],
         handler() {
@@ -886,8 +890,6 @@ describe('middleware', () => {
         },
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run/api')
 
@@ -907,7 +909,9 @@ describe('middleware', () => {
       api: '/api',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home: {
         use: [], // Empty middleware array
         handler() {
@@ -918,8 +922,6 @@ describe('middleware', () => {
         return new Response('API')
       }, // No middleware at all
     })
-
-    let router = createRouter(handlers)
 
     // Test route with empty middleware array
     let response = await router.fetch('https://remix.run')
@@ -943,7 +945,9 @@ describe('middleware', () => {
       requestLog.push('global')
     }
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter([globalMiddleware])
+
+    router.addRoutes(routes, {
       home: {
         use: [], // Empty middleware array
         handler() {
@@ -952,8 +956,6 @@ describe('middleware', () => {
         },
       },
     })
-
-    let router = createRouter([globalMiddleware], handlers)
 
     let response = await router.fetch('https://remix.run')
 
@@ -972,7 +974,9 @@ describe('request context', () => {
 
     let contextData: any[] = []
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       api(ctx) {
         contextData.push({
           type: 'api',
@@ -1004,8 +1008,6 @@ describe('request context', () => {
         return new Response('Search')
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test parameter extraction and URL parsing
     let response = await router.fetch(
@@ -1054,7 +1056,9 @@ describe('error handling', () => {
       async: '/async',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       error() {
         throw new Error('Handler error!')
       },
@@ -1063,8 +1067,6 @@ describe('error handling', () => {
         throw new Error('Async handler error!')
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test synchronous handler error
     await assert.rejects(async () => {
@@ -1086,7 +1088,9 @@ describe('error handling', () => {
       throw new Error('Sync middleware error!')
     }
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home: {
         use: [errorMiddleware],
         handler() {
@@ -1094,8 +1098,6 @@ describe('error handling', () => {
         },
       },
     })
-
-    let router = createRouter(handlers)
 
     await assert.rejects(async () => {
       await router.fetch('https://remix.run')
@@ -1112,7 +1114,9 @@ describe('error handling', () => {
       throw new Error('Async middleware error!')
     }
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home: {
         use: [errorMiddleware],
         handler() {
@@ -1120,8 +1124,6 @@ describe('error handling', () => {
         },
       },
     })
-
-    let router = createRouter(handlers)
 
     await assert.rejects(async () => {
       await router.fetch('https://remix.run')
@@ -1133,13 +1135,13 @@ describe('error handling', () => {
       api: '/api',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       api() {
         return new Response('API')
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test with invalid URL that can't be parsed
     await assert.rejects(async () => {
@@ -1157,13 +1159,13 @@ describe('error handling', () => {
       api: '/api/:data',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       api({ params }) {
         return new Response(`Data length: ${params.data.length}`)
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test with very long parameter
     let longData = 'x'.repeat(10000)
@@ -1183,13 +1185,13 @@ describe('error handling', () => {
       api: '/api/:data',
     })
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       api({ params }) {
         return new Response(`Data: ${params.data}`)
       },
     })
-
-    let router = createRouter(handlers)
 
     // Test with characters that need encoding (spaces get encoded)
     let response = await router.fetch('https://remix.run/api/data with spaces')
@@ -1219,7 +1221,9 @@ describe('createHandlers() with middleware', () => {
       calledUrls.push(url.toString())
     }
 
-    let handlers = createHandlers(routes, [pushUrl], {
+    let router = createRouter()
+
+    router.addRoutes(routes, [pushUrl], {
       home() {
         return new Response('Home')
       },
@@ -1232,8 +1236,6 @@ describe('createHandlers() with middleware', () => {
         },
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run')
     assert.equal(response.status, 200)
@@ -1265,7 +1267,9 @@ describe('app storage', () => {
       storage.set('currentUser', 'mj')
     }
 
-    let handlers = createHandlers(routes, {
+    let router = createRouter()
+
+    router.addRoutes(routes, {
       home: {
         use: [auth],
         handler({ storage }: any) {
@@ -1274,8 +1278,6 @@ describe('app storage', () => {
         },
       },
     })
-
-    let router = createRouter(handlers)
 
     let response = await router.fetch('https://remix.run')
     assert.equal(response.status, 200)
