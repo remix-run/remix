@@ -98,7 +98,7 @@ let routes = createRoutes({
     //   update: { method: 'PUT', pattern: '/api/articles/:id' },
     //   destroy: { method: 'DELETE', pattern: '/api/articles/:id' },
     // }
-    articles: resources('articles'),
+    articles: resources('api/articles'),
   },
 })
 
