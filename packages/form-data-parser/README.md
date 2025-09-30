@@ -125,6 +125,12 @@ async function uploadHandler(fileUpload: FileUpload) {
 }
 ```
 
+## Demos
+
+The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/form-data-parser/demos) contains working demos:
+
+- [`demos/node`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser/demos/node) - using form-data-parser with file-storage in Node.js
+
 ## Related Packages
 
 - [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - A simple key/value interface for storing `FileUpload` objects you get from the parser

@@ -313,6 +313,12 @@ async function handler(request: Request) {
 http.createServer(createRequestListener(handler)).listen(3000)
 ```
 
+## Demos
+
+The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server/demos) contains working demos:
+
+- [`demos/http2`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server/demos/http2) - HTTP/2 server with TLS certificates
+
 ## Related Packages
 
 - [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API

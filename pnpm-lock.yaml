@@ -95,7 +95,7 @@ importers:
         specifier: ^0.25.10
         version: 0.25.10
 
-  packages/form-data-parser/examples/node:
+  packages/form-data-parser/demos/node:
     dependencies:
       '@remix-run/file-storage':
         specifier: workspace:*
@@ -174,7 +174,7 @@ importers:
         specifier: ^1.5.4
         version: 1.5.4
 
-  packages/multipart-parser/examples/bun:
+  packages/multipart-parser/demos/bun:
     dependencies:
       '@remix-run/multipart-parser':
         specifier: workspace:*
@@ -193,7 +193,7 @@ importers:
         specifier: ^5.7.2
         version: 5.7.2
 
-  packages/multipart-parser/examples/cf-workers:
+  packages/multipart-parser/demos/cf-workers:
     dependencies:
       '@remix-run/multipart-parser':
         specifier: workspace:*
@@ -209,7 +209,7 @@ importers:
         specifier: ^4.20.0
         version: 4.20.0(@cloudflare/workers-types@4.20240821.1)
 
-  packages/multipart-parser/examples/deno:
+  packages/multipart-parser/demos/deno:
     dependencies:
       '@remix-run/multipart-parser':
         specifier: workspace:*
@@ -225,7 +225,7 @@ importers:
         specifier: ^5.7.2
         version: 5.7.2
 
-  packages/multipart-parser/examples/node:
+  packages/multipart-parser/demos/node:
     dependencies:
       '@remix-run/multipart-parser':
         specifier: workspace:*
@@ -266,10 +266,10 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
 
-  packages/node-fetch-server/examples/http2:
+  packages/node-fetch-server/demos/http2:
     dependencies:
       '@remix-run/node-fetch-server':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../..
 
   packages/route-pattern:
@@ -2641,7 +2641,7 @@ snapshots:
 
   '@types/ws@8.5.12':
     dependencies:
-      '@types/node': 20.12.14
+      '@types/node': 24.6.0
 
   '@typescript-eslint/eslint-plugin@8.40.0(@typescript-eslint/parser@8.40.0(eslint@9.33.0)(typescript@5.7.2))(eslint@9.33.0)(typescript@5.7.2)':
     dependencies:

@@ -9,5 +9,5 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "exclude": ["examples"]
+  "exclude": ["demos"]
 }

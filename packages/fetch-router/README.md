@@ -241,6 +241,12 @@ let router = createRouter(routes, {
 })
 ```
 
+## Demos
+
+The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/fetch-router/demos) contains working demos:
+
+- [`demos/bookstore`](https://github.com/remix-run/remix/tree/main/packages/fetch-router/demos/bookstore) - A full-featured bookstore application with authentication, middleware, and resource routes
+
 ## Related Packages
 
 - [`route-pattern`](../route-pattern) - Flexible URL pattern matching

@@ -19,7 +19,7 @@
 - Convenient `MultipartPart` API with `arrayBuffer`, `bytes`, `text`, `size`, and metadata access
 - Built-in file size limiting to prevent abuse
 - First-class Node.js support with native `http.IncomingMessage` compatibility
-- [Examples for every major runtime](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/examples)
+- [Demos for every major runtime](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos)
 
 ## Installation
 
@@ -150,14 +150,14 @@ for await (let part of parseMultipartStream(message, { boundary })) {
 }
 ```
 
-## Examples
+## Demos
 
-The [`examples` directory](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/examples) contains a few working examples of how you can use this library:
+The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos) contains a few working demos of how you can use this library:
 
-- [`examples/bun`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/examples/bun) - using multipart-parser in Bun
-- [`examples/cf-workers`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/examples/cf-workers) - using multipart-parser in a Cloudflare Worker and storing file uploads in R2
-- [`examples/deno`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/examples/deno) - using multipart-parser in Deno
-- [`examples/node`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/examples/node) - using multipart-parser in Node.js
+- [`demos/bun`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos/bun) - using multipart-parser in Bun
+- [`demos/cf-workers`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos/cf-workers) - using multipart-parser in a Cloudflare Worker and storing file uploads in R2
+- [`demos/deno`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos/deno) - using multipart-parser in Deno
+- [`demos/node`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos/node) - using multipart-parser in Node.js
 
 ## Benchmark
 

@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@remix-run/node-fetch-server": "workspace:^"
+    "@remix-run/node-fetch-server": "workspace:*"
   }
 }

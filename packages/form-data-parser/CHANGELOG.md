@@ -57,7 +57,7 @@ await parseFormData(request, { maxFileSize }, (fileUpload) => {
 ```
 
 - Upgrade [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser) to v0.8 to fix an issue where errors would crash the process when `maxFileSize` was exceeded (see #28)
-- Add an [example of how to use `form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser/examples/node) together with [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) to handle multipart uploads on Node.js
+- Add a [demo of how to use `form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser/demos/node) together with [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) to handle multipart uploads on Node.js
 - Expand `FileUploadHandler` interface to support returning `Blob` from the upload handler, which is the superclass of `File`
 
 ## v0.6.0 (2025-01-15)
