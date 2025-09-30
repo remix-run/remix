@@ -67,10 +67,10 @@ export const routes = createRoutes({
   // API with multiple resources
   api: {
     books: {
-      ...resources('books', { base: '/api' }),
-      author: resource('author', { base: '/api/books/:id' }),
+      ...resources('api/books'),
+      author: resource('api/books/:id/author'),
     },
-    orders: resources('orders', { base: '/api' }),
+    orders: resources('api/orders'),
     search: '/api/search',
   },
 })

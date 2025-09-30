@@ -50,7 +50,7 @@ describe('createResources', () => {
   })
 
   it('creates a route map with a base path', () => {
-    let articles = createResources('articles', { base: '/admin' })
+    let articles = createResources('admin/articles')
 
     type T1 = [
       Assert<
@@ -196,7 +196,7 @@ describe('createResource', () => {
   })
 
   it('creates a route map with a base path', () => {
-    let article = createResource('article', { base: '/admin' })
+    let article = createResource('admin/article')
 
     type T1 = [
       Assert<

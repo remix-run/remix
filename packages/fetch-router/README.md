@@ -207,7 +207,6 @@ import type { RequestContext } from '@remix-run/fetch-router'
 
 // routes.ts
 let blogRoutes = createResource('blog', {
-  base: '/blog',
   param: 'slug',
   only: ['index', 'show'],
 })
