@@ -54,6 +54,9 @@ export interface ParseMultipartOptions {
    * Default: 2 MiB
    */
   maxFileSize?: number
+
+  useContentPart?: boolean
+  onCreatePart?(part: MultipartPart): Promise<void> | void
 }
 
 /**
@@ -66,10 +69,10 @@ export interface ParseMultipartOptions {
  * @param options Options for the parser
  * @return A generator that yields `MultipartPart` objects
  */
-export function* parseMultipart(
+export async function* parseMultipart(
   message: Uint8Array | Iterable<Uint8Array>,
   options: ParseMultipartOptions,
-): Generator<MultipartPart, void, unknown> {
+): AsyncGenerator<MultipartPart, void, unknown> {
   let parser = new MultipartParser(options.boundary, {
     maxHeaderSize: options.maxHeaderSize,
     maxFileSize: options.maxFileSize,
@@ -152,6 +155,9 @@ export class MultipartParser {
   #currentPart: MultipartPart | null = null
   #contentLength = 0
 
+  #useContentPart: MultipartParserOptions['useContentPart']
+  #onCreatePart: MultipartParserOptions['onCreatePart']
+
   constructor(boundary: string, options?: MultipartParserOptions) {
     this.boundary = boundary
     this.maxHeaderSize = options?.maxHeaderSize ?? 8 * oneKb
@@ -162,6 +168,9 @@ export class MultipartParser {
     this.#findBoundary = createSearch(`\r\n--${boundary}`)
     this.#findPartialTailBoundary = createPartialTailSearch(`\r\n--${boundary}`)
     this.#boundaryLength = 4 + boundary.length // length of '\r\n--' + boundary
+
+    this.#onCreatePart = options?.onCreatePart
+    this.#useContentPart = options?.useContentPart ?? true
   }
 
   /**
@@ -170,7 +179,7 @@ export class MultipartParser {
    * @param chunk A chunk of data to write to the parser
    * @return A generator yielding `MultipartPart` objects as they are parsed
    */
-  *write(chunk: Uint8Array): Generator<MultipartPart, void, unknown> {
+  async *write(chunk: Uint8Array): AsyncGenerator<MultipartPart, void, unknown> {
     if (this.#state === MultipartParserStateDone) {
       throw new MultipartParseError('Unexpected data after end of stream')
     }
@@ -201,16 +210,16 @@ export class MultipartParser {
           let partialTailIndex = this.#findPartialTailBoundary(chunk)
 
           if (partialTailIndex === -1) {
-            this.#append(index === 0 ? chunk : chunk.subarray(index))
+            await this.#append(index === 0 ? chunk : chunk.subarray(index))
           } else {
-            this.#append(chunk.subarray(index, partialTailIndex))
+            await this.#append(chunk.subarray(index, partialTailIndex))
             this.#buffer = chunk.subarray(partialTailIndex)
           }
 
           break
         }
 
-        this.#append(chunk.subarray(index, boundaryIndex))
+        await this.#append(chunk.subarray(index, boundaryIndex))
 
         yield this.#currentPart!
 
@@ -256,12 +265,18 @@ export class MultipartParser {
           throw new MaxHeaderSizeExceededError(this.maxHeaderSize)
         }
 
-        this.#currentPart = new MultipartPart(chunk.subarray(index, headerEndIndex), [])
+        const header = chunk.subarray(index, headerEndIndex);
+        this.#currentPart = this.#useContentPart
+          ? new MultipartContentPart(header, [])
+          : new MultipartPart(header)
+
         this.#contentLength = 0
 
         index = headerEndIndex + 4 // Skip header + \r\n\r\n
 
         this.#state = MultipartParserStateBody
+
+        await this.#onCreatePart?.(this.#currentPart)
 
         continue
       }
@@ -283,12 +298,12 @@ export class MultipartParser {
     }
   }
 
-  #append(chunk: Uint8Array): void {
+  async #append(chunk: Uint8Array): Promise<void> {
     if (this.#contentLength + chunk.length > this.maxFileSize) {
       throw new MaxFileSizeExceededError(this.maxFileSize)
     }
 
-    this.#currentPart!.content.push(chunk)
+    await this.#currentPart!.append(chunk)
     this.#contentLength += chunk.length
   }
 
@@ -313,40 +328,16 @@ const decoder = new TextDecoder('utf-8', { fatal: true })
  * A part of a `multipart/*` HTTP message.
  */
 export class MultipartPart {
-  /**
-   * The raw content of this part as an array of `Uint8Array` chunks.
-   */
-  readonly content: Uint8Array[]
 
   #header: Uint8Array
   #headers?: Headers
 
-  constructor(header: Uint8Array, content: Uint8Array[]) {
+  constructor(header: Uint8Array) {
     this.#header = header
-    this.content = content
   }
 
-  /**
-   * The content of this part as an `ArrayBuffer`.
-   */
-  get arrayBuffer(): ArrayBuffer {
-    return this.bytes.buffer as ArrayBuffer
-  }
-
-  /**
-   * The content of this part as a single `Uint8Array`. In `multipart/form-data` messages, this is useful
-   * for reading the value of files that were uploaded using `<input type="file">` fields.
-   */
-  get bytes(): Uint8Array {
-    let buffer = new Uint8Array(this.size)
-
-    let offset = 0
-    for (let chunk of this.content) {
-      buffer.set(chunk, offset)
-      offset += chunk.length
-    }
-
-    return buffer
+  async append(chunk: Uint8Array) {
+    throw new Error("Not implemented. Please assign or override this method.");
   }
 
   /**
@@ -393,6 +384,47 @@ export class MultipartPart {
    */
   get name(): string | undefined {
     return this.headers.contentDisposition.name
+  }
+
+}
+
+export class MultipartContentPart extends MultipartPart {
+
+  /**
+   * The raw content of this part as an array of `Uint8Array` chunks.
+   */
+  readonly content: Uint8Array[]
+
+  async append(chunk: Uint8Array): Promise<void> {
+    this.content.push(chunk)
+  }
+
+  constructor(header: Uint8Array, content: Uint8Array[]) {
+    super(header);
+    this.content = content
+  }
+
+  /**
+   * The content of this part as an `ArrayBuffer`.
+   */
+  get arrayBuffer(): ArrayBuffer {
+    return this.bytes.buffer as ArrayBuffer
+  }
+
+  /**
+   * The content of this part as a single `Uint8Array`. In `multipart/form-data` messages, this is useful
+   * for reading the value of files that were uploaded using `<input type="file">` fields.
+   */
+  get bytes(): Uint8Array {
+    let buffer = new Uint8Array(this.size)
+
+    let offset = 0
+    for (let chunk of this.content) {
+      buffer.set(chunk, offset)
+      offset += chunk.length
+    }
+
+    return buffer
   }
 
   /**
