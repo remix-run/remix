@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/fetch-router",
-  "version": "0.1.0",
-  "description": "A tiny, runtime-agnostic fetch-based router with Koa-style middleware and strong types, powered by @remix-run/route-pattern",
+  "version": "0.0.0",
+  "description": "A minimal, composable router for the web Fetch API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
