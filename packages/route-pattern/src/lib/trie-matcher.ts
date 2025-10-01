@@ -164,7 +164,6 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   #maxTraversalStates: number
   #nodeIdCounter = 0
   #maxOptionalDepth = 5
-  #tempUrl!: URL // Added for tryStaticPathMatch/All
 
   constructor(options?: TrieMatcherOptions) {
     this.#pathnameOnlyRoot = this.#createNode()
@@ -291,7 +290,6 @@ export class TrieMatcher<T = any> implements Matcher<T> {
    */
   match(url: string | URL): MatchResult<T> | null {
     let urlObj = typeof url === 'string' ? new URL(url) : url
-    this.#tempUrl = urlObj // Set for tryStaticPathMatch/All
 
     let parsedUrl: ParsedURL = {
       protocol: urlObj.protocol.slice(0, -1).toLowerCase(),
@@ -316,7 +314,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
       if (originMatch) return originMatch
     }
 
-    let staticMatch = this.#tryStaticPathMatch(segments, urlObj.search)
+    let staticMatch = this.#tryStaticPathMatch(segments, urlObj.search, urlObj)
     if (staticMatch) return staticMatch
 
     let pathnameMatches = this.#findPathnameMatches(segments, urlObj.search, true)
@@ -351,7 +349,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     // Add origin matches (higher priority) - no early exit
     allMatches.push(...this.#findOriginMatches(urlObj, segments, urlObj.search, false))
 
-    let staticAll = this.#tryStaticPathAll(segments, urlObj.search)
+    let staticAll = this.#tryStaticPathAll(segments, urlObj.search, urlObj)
     allMatches.push(...staticAll)
 
     // Add pathname matches (lower priority) - no early exit
@@ -385,57 +383,29 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   }
 
   #updateDepthUp(node: TrieNode): void {
-    // Recompute local min/max
     let minD = node.patterns.length > 0 ? 0 : Infinity
     let maxD = node.patterns.length > 0 ? 0 : 0
 
-    // static
-    for (let child of node.staticChildren.values()) {
+    let updateDepth = (child: TrieNode, minIncrement: number, maxIncrement: number) => {
       let childDMin = child.minDepthToTerminal ?? Infinity
       let childDMax = child.maxDepthToTerminal ?? 0
-      minD = Math.min(minD, childDMin + 1)
-      maxD = Math.max(maxD, childDMax + 1)
+      minD = Math.min(minD, childDMin + minIncrement)
+      maxD = Math.max(maxD, childDMax + maxIncrement)
     }
 
-    // shape
-    for (let entry of node.shapeChildren.values()) {
-      let childDMin = entry.node.minDepthToTerminal ?? Infinity
-      let childDMax = entry.node.maxDepthToTerminal ?? 0
-      minD = Math.min(minD, childDMin + 1)
-      maxD = Math.max(maxD, childDMax + 1)
-    }
+    // Static, shape, and variable children all increment depth by 1
+    for (let child of node.staticChildren.values()) updateDepth(child, 1, 1)
+    for (let entry of node.shapeChildren.values()) updateDepth(entry.node, 1, 1)
+    if (node.variableChild) updateDepth(node.variableChild, 1, 1)
 
-    // var
-    if (node.variableChild) {
-      let childDMin = node.variableChild.minDepthToTerminal ?? Infinity
-      let childDMax = node.variableChild.maxDepthToTerminal ?? 0
-      minD = Math.min(minD, childDMin + 1)
-      maxD = Math.max(maxD, childDMax + 1)
-    }
-
-    // wild
-    if (node.wildcardEdge) {
-      let childDMin = node.wildcardEdge.continuation.minDepthToTerminal ?? Infinity
-      let childDMax = node.wildcardEdge.continuation.maxDepthToTerminal ?? 0
-      minD = Math.min(minD, childDMin)
-      maxD = Math.max(maxD, childDMax + 100)
-    }
-
-    // opt
-    for (let opt of node.optionalEdges) {
-      let childDMin = opt.continuation.minDepthToTerminal ?? Infinity
-      let childDMax = opt.continuation.maxDepthToTerminal ?? 0
-      minD = Math.min(minD, childDMin)
-      maxD = Math.max(maxD, childDMax)
-    }
+    // Wildcard and optional edges don't increment min depth
+    if (node.wildcardEdge) updateDepth(node.wildcardEdge.continuation, 0, 100)
+    for (let opt of node.optionalEdges) updateDepth(opt.continuation, 0, 0)
 
     node.minDepthToTerminal = minD === Infinity ? undefined : minD
     node.maxDepthToTerminal = maxD
 
-    // Propagate to parent
-    if (node.parent) {
-      this.#updateDepthUp(node.parent)
-    }
+    if (node.parent) this.#updateDepthUp(node.parent)
   }
 
   #createNode(): TrieNode {
@@ -467,31 +437,24 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   }
 
   #expandProtocolOptionals(protocolTokens: Token[]): string[] {
-    // This handles patterns like: http(s):// -> ["http", "https"]
-
-    // Check if this is a simple "text + optional(text)" pattern
+    // Handle simple "text + optional(text)" pattern like http(s):// -> ["http", "https"]
     if (
-      protocolTokens.length === 2 &&
-      protocolTokens[0].type === 'text' &&
-      protocolTokens[1].type === 'optional'
+      protocolTokens.length !== 2 ||
+      protocolTokens[0].type !== 'text' ||
+      protocolTokens[1].type !== 'optional'
     ) {
-      let baseText = protocolTokens[0].value
-      let optionalToken = protocolTokens[1] as { type: 'optional'; tokens: Token[] }
-
-      // Check if optional contains only a single text token
-      if (optionalToken.tokens.length === 1 && optionalToken.tokens[0].type === 'text') {
-        let optionalText = optionalToken.tokens[0].value
-
-        // Generate both variants
-        return [
-          baseText.toLowerCase(), // Without optional: "http"
-          (baseText + optionalText).toLowerCase(), // With optional: "https"
-        ]
-      }
+      return [stringifyTokens(protocolTokens).toLowerCase()]
     }
 
-    // Fallback: stringify the entire protocol (no expansion)
-    return [stringifyTokens(protocolTokens).toLowerCase()]
+    let baseText = protocolTokens[0].value
+    let optionalToken = protocolTokens[1] as { type: 'optional'; tokens: Token[] }
+
+    if (optionalToken.tokens.length !== 1 || optionalToken.tokens[0].type !== 'text') {
+      return [stringifyTokens(protocolTokens).toLowerCase()]
+    }
+
+    let optionalText = optionalToken.tokens[0].value
+    return [baseText.toLowerCase(), (baseText + optionalText).toLowerCase()]
   }
 
   #addHostnamePattern(
@@ -1231,20 +1194,16 @@ export class TrieMatcher<T = any> implements Matcher<T> {
         }
       }
 
-      // Optional edges with limit
-      let optionalDepth = 0 // Track per path, but for simplicity, global limit in class options
+      // Optional edges
       let optionalStates: TraversalState[] = []
-      if (optionalDepth < this.#maxOptionalDepth) {
-        // Add to options, default 5
-        for (let optionalEdge of node.optionalEdges) {
-          this.#expandOptionalStates(optionalEdge, node, state, optionalStates, earlyExit, bestSpec)
-        }
-        // Prune low priority
-        optionalStates = optionalStates.filter((s) => !earlyExit || s.priority >= bestSpec - 50)
-        optionalStates.sort((a, b) => b.priority - a.priority)
-        for (let i = optionalStates.length - 1; i >= 0; i--) {
-          stack.push(optionalStates[i])
-        }
+      for (let optionalEdge of node.optionalEdges) {
+        this.#expandOptionalStates(optionalEdge, node, state, optionalStates, earlyExit, bestSpec)
+      }
+      // Prune low priority
+      optionalStates = optionalStates.filter((s) => !earlyExit || s.priority >= bestSpec - 50)
+      optionalStates.sort((a, b) => b.priority - a.priority)
+      for (let i = optionalStates.length - 1; i >= 0; i--) {
+        stack.push(optionalStates[i])
       }
 
       if (state.segmentIndex >= state.segments.length) continue
@@ -1278,6 +1237,14 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     return currentSpecificity + estimatedRemaining
   }
 
+  #getStaticChild(node: TrieNode, segment: string): TrieNode | undefined {
+    let child = node.staticChildren.get(segment)
+    if (!child && node.hasIgnoreCasePatterns) {
+      child = node.staticChildren.get(segment.toLowerCase())
+    }
+    return child
+  }
+
   #expandTraversalState(
     node: TrieNode,
     state: MatchState,
@@ -1288,12 +1255,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     let currentSegment = state.segments[state.segmentIndex]
 
     // Try static children first (highest priority)
-    let staticChild = node.staticChildren.get(currentSegment)
-
-    // If no exact match and node has ignoreCase patterns, try lowercase
-    if (!staticChild && node.hasIgnoreCasePatterns) {
-      staticChild = node.staticChildren.get(currentSegment.toLowerCase())
-    }
+    let staticChild = this.#getStaticChild(node, currentSegment)
 
     if (staticChild) {
       let newState: MatchState = {
@@ -1384,8 +1346,6 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     if (!earlyExit || skipTraversal.priority >= bestSpec - 50) {
       states.push(skipTraversal)
     }
-
-    // Option 2: Take the optional - already in trie, explored via children
   }
 
   #expandWildcardStates(
@@ -1439,92 +1399,11 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   }
 
   #tryOriginMatch(parsedUrl: ParsedURL, segments: string[], urlObj: URL): MatchResult<T> | null {
-    // Try specific protocol patterns
-    let protocolNode = this.#originRoot.protocolChildren.get(parsedUrl.protocol)
-    if (protocolNode) {
-      let result = this.#matchHostnameWithPathname(
-        protocolNode.hostnameRoot,
-        parsedUrl,
-        segments,
-        {},
-        urlObj,
-      )
-      if (result) return result
+    let results = this.#findOriginMatches(urlObj, segments, parsedUrl.search, true)
+    if (results.length > 0) {
+      let best = results[0]
+      return { data: best.match.node, params: best.state.params, url: urlObj }
     }
-
-    // Try variable protocol patterns
-    if (this.#originRoot.protocolVariableChild) {
-      let protocolParams = {
-        [this.#originRoot.protocolVariableChild.paramName]: parsedUrl.protocol,
-      }
-      let result = this.#matchHostnameWithPathname(
-        this.#originRoot.protocolVariableChild.node.hostnameRoot,
-        parsedUrl,
-        segments,
-        protocolParams,
-        urlObj,
-      )
-      if (result) return result
-    }
-
-    // Try any-protocol patterns
-    if (this.#originRoot.anyProtocolChild) {
-      let result = this.#matchHostnameWithPathname(
-        this.#originRoot.anyProtocolChild.hostnameRoot,
-        parsedUrl,
-        segments,
-        {},
-        urlObj,
-      )
-      if (result) return result
-    }
-
-    return null
-  }
-
-  #matchHostnameWithPathname(
-    hostnameRoot: HostnameTrieNode,
-    parsedUrl: ParsedURL,
-    segments: string[],
-    baseParams: Record<string, string>,
-    urlObj: URL,
-  ): MatchResult<T> | null {
-    let hostnameMatches = this.#matchHostnameLabels(
-      hostnameRoot,
-      parsedUrl.hostnameLabels,
-      0,
-      baseParams,
-    )
-
-    for (let { node: hostnameNode, params: hostnameParams } of hostnameMatches) {
-      // Try port-specific pathname trie
-      if (parsedUrl.port) {
-        let portTrie = hostnameNode.portChildren.get(parsedUrl.port)
-        if (portTrie) {
-          let result = this.#tryPathnameMatch(
-            portTrie,
-            segments,
-            hostnameParams,
-            parsedUrl.search,
-            urlObj,
-          )
-          if (result) return result
-        }
-      }
-
-      // Try default pathname trie
-      if (hostnameNode.defaultPathnameTrie) {
-        let result = this.#tryPathnameMatch(
-          hostnameNode.defaultPathnameTrie,
-          segments,
-          hostnameParams,
-          parsedUrl.search,
-          urlObj,
-        )
-        if (result) return result
-      }
-    }
-
     return null
   }
 
@@ -1550,11 +1429,11 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     return null
   }
 
-  #tryStaticPathMatch(segments: string[], search: string): MatchResult<T> | null {
+  #tryStaticPathMatch(segments: string[], search: string, url: URL): MatchResult<T> | null {
     let results = this.#walkStaticPath(segments, search, false)
     if (results.length > 0) {
       let best = results[0]
-      return { data: best.match.node, params: {}, url: this.#tempUrl }
+      return { data: best.match.node, params: {}, url }
     }
     return null
   }
@@ -1562,6 +1441,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   #tryStaticPathAll(
     segments: string[],
     search: string,
+    url: URL,
   ): { match: PatternMatch<any>; state: MatchState }[] {
     return this.#walkStaticPath(segments, search, true)
   }
@@ -1575,10 +1455,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     let pathNodes: TrieNode[] = collectAll ? [current] : []
 
     for (let seg of segments) {
-      let child = current.staticChildren.get(seg)
-      if (!child && current.hasIgnoreCasePatterns) {
-        child = current.staticChildren.get(seg.toLowerCase())
-      }
+      let child = this.#getStaticChild(current, seg)
       if (!child) return []
       current = child
       if (collectAll) pathNodes.push(current)
@@ -1603,6 +1480,6 @@ export class TrieMatcher<T = any> implements Matcher<T> {
       }
     }
 
-    return collectAll ? matches.sort((a, b) => b.match.specificity - a.match.specificity) : matches
+    return matches.sort((a, b) => b.match.specificity - a.match.specificity)
   }
 }
