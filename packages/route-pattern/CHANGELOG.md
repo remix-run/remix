@@ -2,6 +2,25 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Add `Matcher` and `MatchResult` interfaces. These are new public APIs for matching sets of patterns.
+- Add `RegExpMatcher` and `TrieMatcher` concrete implementations of the `Matcher` interface
+
+  - `RegExpMatcher` is a simple array-based matcher that compiles route patterns to regular expressions.
+  - `TrieMatcher` is a trie-based matcher optimized for large route sets and long-running server applications.
+
+  ```tsx
+  import { TrieMatcher } from '@remix-run/route-pattern'
+
+  let matcher = new TrieMatcher<{ name: string }>()
+  matcher.add('users/:id', { name: 'user' })
+  matcher.add('posts/:id', { name: 'post' })
+
+  let match = matcher.match('https://example.com/users/123')
+  // { data: { name: 'user' }, params: { id: '123' }, url: ... }
+  ```
+
 ## v0.13.0 (2025-09-29)
 
 - BREAKING CHANGE: removed `createRoutes` and corresponding types (`RouteMap`, `RouteDefs`, and `RouteDef`). This functionality will be re-introduced in a future "router" package.
