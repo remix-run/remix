@@ -1,5 +1,5 @@
 import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
-import type { Matcher, MatchResult, Params } from '@remix-run/route-pattern'
+import type { Matcher, Params } from '@remix-run/route-pattern'
 
 import { RequestContext, runMiddleware } from './request-handler.ts'
 import type { Middleware, RequestHandler, RequestMethod } from './request-handler.ts'
@@ -14,22 +14,35 @@ export interface RouterOptions {
    * The matcher to use for matching routes.
    * Default is a `new RegExpMatcher()`.
    */
-  matcher?: Matcher<RouteData>
+  matcher?: Matcher<MatchData>
 }
 
-interface RouteData {
-  method: RequestMethod | 'ALL'
-  middleware: Middleware[] | undefined
-  handler: RequestHandler
+type MatchData =
+  | {
+      method: RequestMethod | 'ALL'
+      middleware: Middleware[] | undefined
+      handler: RequestHandler
+    }
+  | {
+      middleware: Middleware[] | undefined
+      prefix: string
+      router: Router
+    }
+
+function defaultHandler({ url }: RequestContext): Response {
+  return new Response(`Not Found: ${url.pathname}`, { status: 404 })
 }
 
+/**
+ * Create a new router.
+ */
 export function createRouter(options?: RouterOptions): Router {
   return new Router(options)
 }
 
 export class Router {
   #defaultHandler: RequestHandler
-  #matcher: Matcher<RouteData>
+  #matcher: Matcher<MatchData>
   #middleware: Middleware[] | undefined
 
   constructor(options?: RouterOptions) {
@@ -44,148 +57,152 @@ export class Router {
     let request = input instanceof Request ? input : new Request(input, init)
     let response = await this.dispatch(request)
 
-    if (response != null) {
-      return response
+    if (response == null) {
+      let context = new RequestContext(request, new URL(request.url), {})
+      response = await this.#defaultHandler(context)
     }
 
-    let defaultContext = new RequestContext({}, request, new URL(request.url))
-
-    return this.#defaultHandler(defaultContext)
+    return response
   }
 
   /**
    * Low-level method that runs a request through the router and returns a response or null if no
    * match is found.
+   *
+   * Note: This method does not invoke the router's default handler when no match is found. If
+   * that's what you want, use `router.fetch()` instead.
    */
-  async dispatch(request: Request | RequestContext): Promise<Response | null> {
-    let match = this.match(request instanceof Request ? request : request.request)
+  async dispatch(
+    context: RequestContext | Request,
+    upstreamMiddleware?: Middleware[],
+  ): Promise<Response | null> {
+    let request = context instanceof Request ? context : context.request
+    let url = context instanceof Request ? new URL(request.url) : context.url
 
-    if (match) {
-      let { handler, middleware } = match.data
-      let context =
-        request instanceof Request
-          ? new RequestContext(match.params, request, match.url)
-          : new RequestContext(match.params, request.request, request.url, request.storage)
+    for (let match of this.#matcher.matchAll(url)) {
+      if ('method' in match.data) {
+        let { method, middleware, handler } = match.data
 
-      if (middleware != null) {
-        return await runMiddleware(middleware, context, handler)
+        if (method === request.method || method === 'ALL') {
+          let allMiddleware =
+            middleware == null
+              ? upstreamMiddleware
+              : upstreamMiddleware == null
+                ? middleware
+                : upstreamMiddleware.concat(middleware)
+          let downstreamContext =
+            context instanceof Request
+              ? new RequestContext(request, match.url, match.params)
+              : new RequestContext(request, match.url, match.params, context.storage)
+
+          return allMiddleware != null
+            ? await runMiddleware(allMiddleware, downstreamContext, handler)
+            : await handler(downstreamContext)
+        }
+      } else {
+        let { middleware, prefix, router } = match.data
+
+        let allMiddleware =
+          middleware == null
+            ? upstreamMiddleware
+            : upstreamMiddleware == null
+              ? middleware
+              : upstreamMiddleware.concat(middleware)
+        // Strip the prefix from context.url.pathname
+        let downstreamUrl = new URL(match.url)
+        downstreamUrl.pathname = downstreamUrl.pathname.slice(prefix.length)
+        let downstreamContext =
+          context instanceof Request
+            ? new RequestContext(request, downstreamUrl, {})
+            : new RequestContext(request, downstreamUrl, {}, context.storage)
+
+        let response = await router.dispatch(downstreamContext, allMiddleware)
+
+        // If we get a response from the downstream router, use it.
+        // Otherwise, continue to the next match.
+        if (response != null) {
+          return response
+        }
       }
-
-      return handler(context)
     }
 
     return null
   }
 
-  match(input: string | URL | Request): MatchResult<RouteData> | null {
-    return input instanceof Request ? this.#matchRequest(input) : this.#matcher.match(input)
-  }
-
-  #matchRequest(request: Request): MatchResult<RouteData> | null {
-    for (let match of this.#matcher.matchAll(request.url)) {
-      if (match.data.method === request.method || match.data.method === 'ALL') {
-        return match
+  mount(router: Router): void
+  mount(pathnamePrefix: string, router: Router): void
+  mount(arg: string | Router, router?: Router): void {
+    let pathnamePrefix = '/'
+    if (typeof arg === 'string') {
+      if (!arg.startsWith('/') || arg.includes('?') || arg.includes(':')) {
+        throw new Error(`Invalid mount point: "${arg}"`)
       }
-    }
 
-    return null
-  }
-
-  // Middleware/sub-router registration
-
-  use(middleware: Middleware | Middleware[]): void
-  use(router: Router): void
-  use(arg: any): void {
-    if (typeof arg === 'function' || Array.isArray(arg)) {
-      this.#middleware = this.#middleware?.concat(arg) ?? [arg]
+      pathnamePrefix = arg
     } else {
-      this.#middleware = this.#middleware?.concat(tryRouter(arg)) ?? [tryRouter(arg)]
+      router = arg
     }
+
+    // The pattern for the mount point should match only the pathname prefix.
+    let pattern = pathnamePrefix.replace(/\/*$/, '(/*)')
+
+    this.#matcher.add(pattern, {
+      middleware: this.#middleware?.slice(0) ?? undefined,
+      prefix: pathnamePrefix,
+      router: router!,
+    })
+  }
+
+  use(middleware: Middleware | Middleware[]): void {
+    this.#middleware = (this.#middleware ?? []).concat(middleware)
   }
 
   // Route registration
 
   get<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#matcher.add(pattern, {
-      method: 'GET',
-      middleware: this.#middleware?.slice(0) ?? undefined,
-      handler,
-    })
+    this.#route('GET', pattern, handler)
   }
 
   post<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#matcher.add(pattern, {
-      method: 'POST',
-      middleware: this.#middleware?.slice(0) ?? undefined,
-      handler,
-    })
+    this.#route('POST', pattern, handler)
   }
 
   put<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#matcher.add(pattern, {
-      method: 'PUT',
-      middleware: this.#middleware?.slice(0) ?? undefined,
-      handler,
-    })
+    this.#route('PUT', pattern, handler)
   }
 
   patch<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#matcher.add(pattern, {
-      method: 'PATCH',
-      middleware: this.#middleware?.slice(0) ?? undefined,
-      handler,
-    })
+    this.#route('PATCH', pattern, handler)
   }
 
   delete<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#matcher.add(pattern, {
-      method: 'DELETE',
-      middleware: this.#middleware?.slice(0) ?? undefined,
-      handler,
-    })
+    this.#route('DELETE', pattern, handler)
   }
 
   options<P extends string>(
     pattern: P | RoutePattern<P>,
     handler: RequestHandler<Params<P>>,
   ): void {
-    this.#matcher.add(pattern, {
-      method: 'OPTIONS',
-      middleware: this.#middleware?.slice(0) ?? undefined,
-      handler,
-    })
+    this.#route('OPTIONS', pattern, handler)
   }
 
   head<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#matcher.add(pattern, {
-      method: 'HEAD',
-      middleware: this.#middleware?.slice(0) ?? undefined,
-      handler,
-    })
+    this.#route('HEAD', pattern, handler)
   }
 
   all<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
+    this.#route('ALL', pattern, handler)
+  }
+
+  #route(
+    method: RequestMethod | 'ALL',
+    pattern: string | RoutePattern,
+    handler: RequestHandler<Params<string>>,
+  ): void {
     this.#matcher.add(pattern, {
-      method: 'ALL',
+      method,
       middleware: this.#middleware?.slice(0) ?? undefined,
       handler,
     })
-  }
-}
-
-function defaultHandler(): Response {
-  return new Response('Not Found', { status: 404 })
-}
-
-/**
- * A middleware that delegates to another router.
- */
-function tryRouter(router: Router): Middleware {
-  return async (context) => {
-    let response = await router.dispatch(context)
-
-    if (response != null) {
-      return response
-    }
   }
 }

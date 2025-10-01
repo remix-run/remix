@@ -176,11 +176,11 @@ router.use(logger())
 // Use an array of middleware
 router.use([logger(), otherMiddleware()])
 
-// Delegate request handling to `otherRouter`
-router.use(otherRouter)
+// Delegate request handling to `apiRouter`
+router.use(apiRouter)
 
-// Delegate request handling to `otherRouter`, but only under `/some/prefix`.
+// Delegate request handling to `apiRouter`, but only under `/api`.
 // When the request comes in, the prefix is stripped from the URL pathname
-// before calling `otherRouter`'s fetch.
-router.use('/some/prefix', otherRouter)
+// before calling `apiRouter`'s fetch.
+router.use('/api', apiRouter)
 ```

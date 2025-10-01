@@ -39,34 +39,44 @@ describe('Router', () => {
     assert.deepEqual(requestLog, ['middleware'])
   })
 
-  it.todo('delegates to another router')
-  // , async () => {
-  //   let adminRouter = createRouter()
-  //   adminRouter.get('/', () => new Response('Admin'))
-  //   adminRouter.get('/users', () => new Response('Admin Users'))
+  it('delegates to another router and runs all middleware from both', async () => {
+    let requestLog: string[] = []
 
-  //   let router = createRouter()
-  //   router.get('/', () => new Response('Home'))
+    let adminRouter = createRouter()
+    adminRouter.use(({ url }) => {
+      requestLog.push(url.href)
+    })
+    adminRouter.get('/', () => new Response('Admin'))
+    adminRouter.get('/users', () => new Response('Admin Users'))
 
-  //   // TODO: This is a hack to get the admin router to work. What we
-  //   // really want here is a mount(prefix, router) method that strips
-  //   // the pathname prefix from the request URL and delegates to the
-  //   // admin router.
-  //   router.all('/admin/*', async (context) => {
-  //     let response = await adminRouter.dispatch(context)
-  //     return response ?? new Response('Not Found', { status: 404 })
-  //   })
+    let router = createRouter()
+    router.use(({ url }) => {
+      requestLog.push(url.href)
+    })
+    router.get('/', () => new Response('Home'))
 
-  //   let response = await router.fetch('https://remix.run')
-  //   assert.equal(response.status, 200)
-  //   assert.equal(await response.text(), 'Home')
+    router.mount('/admin', adminRouter)
 
-  //   response = await router.fetch('https://remix.run/admin')
-  //   assert.equal(response.status, 200)
-  //   assert.equal(await response.text(), 'Admin')
+    let response = await router.fetch('https://remix.run')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Home')
+    assert.equal(requestLog.length, 1)
+    assert.deepEqual(requestLog, ['https://remix.run/'])
 
-  //   response = await router.fetch('https://remix.run/admin/users')
-  //   assert.equal(response.status, 200)
-  //   assert.equal(await response.text(), 'Admin Users')
-  // })
+    requestLog = []
+
+    response = await router.fetch('https://remix.run/admin')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Admin')
+    assert.equal(requestLog.length, 2)
+    assert.deepEqual(requestLog, ['https://remix.run/', 'https://remix.run/'])
+
+    requestLog = []
+
+    response = await router.fetch('https://remix.run/admin/users')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Admin Users')
+    assert.equal(requestLog.length, 2)
+    assert.deepEqual(requestLog, ['https://remix.run/users', 'https://remix.run/users'])
+  })
 })

@@ -9,7 +9,7 @@ export const RequestMethods: RequestMethod[] = ['GET', 'HEAD', 'POST', 'PUT', 'P
  * A request handler function that returns some kind of response.
  */
 export interface RequestHandler<P extends AnyParams = {}, T = Response> {
-  (ctx: RequestContext<P>): T | Promise<T>
+  (context: RequestContext<P>): T | Promise<T>
 }
 
 /**
@@ -18,7 +18,7 @@ export interface RequestHandler<P extends AnyParams = {}, T = Response> {
  */
 export interface Middleware<P extends AnyParams = {}> {
   (
-    ctx: RequestContext<P>,
+    context: RequestContext<P>,
     next: NextFunction,
   ): Response | undefined | void | Promise<Response | undefined | void>
 }
@@ -69,15 +69,30 @@ export function runMiddleware<P extends AnyParams>(
  * handler or middleware in the lifecycle of a request receives the same context object.
  */
 export class RequestContext<P extends AnyParams = {}> {
-  params: P
+  /**
+   * The original request that was dispatched to the router.
+   */
   request: Request
+  /**
+   * The URL that was matched by the route.
+   *
+   * Note: This may be different from the original request URL if the request was routed to a
+   * downstream router.
+   */
   url: URL
+  /**
+   * Params that were parsed from the URL.
+   */
+  params: P
+  /**
+   * Shared application-specific storage.
+   */
   storage: AppStorage
 
-  constructor(params: P, request: Request, url: URL, storage = new AppStorage()) {
-    this.params = params
+  constructor(request: Request, url: URL, params: P, storage = new AppStorage()) {
     this.request = request
     this.url = url
+    this.params = params
     this.storage = storage
   }
 }

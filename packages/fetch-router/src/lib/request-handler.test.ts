@@ -9,11 +9,11 @@ function mockContext(
   params: Record<string, any> = {},
 ): RequestContext {
   if (input instanceof Request) {
-    return new RequestContext(params, input, new URL(input.url))
+    return new RequestContext(input, new URL(input.url), params)
   }
 
   let url = typeof input === 'string' ? new URL(input) : input
-  return new RequestContext(params, new Request(url), url)
+  return new RequestContext(new Request(url), url, params)
 }
 
 describe('runMiddleware', () => {
