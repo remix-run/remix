@@ -1,4 +1,5 @@
-import type { Parse, ParsedPattern, ParseResult, SearchConstraints, Token } from './parse.ts'
+import type { Parse, ParsedPattern, ParseResult, Token } from './parse.ts'
+import type { SearchConstraints } from './search-constraints.ts'
 import { stringify, startsWithSeparator } from './stringify.ts'
 import type { Stringify, StartsWithSeparator } from './stringify.ts'
 

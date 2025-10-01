@@ -1,4 +1,5 @@
-import type { Token, SearchConstraints, ParseResult, ParsedPattern } from './parse.ts'
+import type { Token, ParseResult, ParsedPattern } from './parse.ts'
+import type { SearchConstraints } from './search-constraints.ts'
 
 export function stringify(parsed: Partial<ParseResult>): string {
   let str = ''
