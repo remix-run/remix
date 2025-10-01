@@ -1,272 +1,186 @@
 # fetch-router
 
-A minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](../route-pattern).
-
-## Features
-
-- Built on the web Fetch API (`Request`, `Response`, `ReadableStream`, etc.)
-- Flexible URL pattern matching using [`route-pattern`](../route-pattern)
-- Powerful middleware system with strong typing
-- Universal runtime support (Node.js, Bun, Deno, Cloudflare Workers, browsers)
-
-## Basic Routing
+This is the spec for the `@remix-run/fetch-router` package, a minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](../route-pattern).
 
 ```tsx
 import { createRoutes, createRouter } from '@remix-run/fetch-router'
 
 // Create a route map
+// A route map is an object with string keys and `RoutePattern` values
+// Keys are "route names" and may be arbitrarily nested
 let routes = createRoutes({
   home: '/',
   about: '/about',
 })
 
-// Create a router
 let router = createRouter()
 
-// Add some "route handlers" to the router
-router.addRoutes(routes, {
-  home() {
-    return new Response('Home')
-  },
-  about() {
-    return new Response('About')
-  },
-})
+// Add middleware
+// Middleware run in the order they are added
+router.use(logger())
 
-// Fetch the about page
+// Add route handlers
+// Route handlers are functions that return a response
+// Route handlers run in the order they are added, same as middleware
+router.get(routes.home, () => new Response('Home'))
+router.get(routes.about, () => new Response('About'))
+
+// "Fetch" the about page
 let response = await router.fetch('https://remix.run/about')
 
 console.log(response.status) // 200
 console.log(await response.text()) // "About"
 ```
 
-A "route handler" is a function that returns a response. By default, route handlers run on GET (and HEAD) requests. To restrict a route handler to a specific HTTP method, define the route as an object with `method` and `pattern` properties.
+A more elaborate example, for a blog is below. This example uses the `html` helper to render HTML responses, the `route.href()` helper for generating type-safe URLs, and `router.post()` to handle a mutation.
 
 ```tsx
+import { createRoutes, createRouter, html } from '@remix-run/fetch-router'
+
 let routes = createRoutes({
   home: '/',
-  articles: {
-    index: '/articles',
-    create: { method: 'POST', pattern: '/articles' },
-    show: '/articles/:id',
+  blog: {
+    index: '/blog',
+    new: '/blog/new',
+    post: '/blog/:id',
   },
 })
 
 let router = createRouter()
 
-router.addRoutes(routes, {
-  home() {
-    return new Response('Home')
-  },
-  articles: {
-    index() {
-      return new Response('Articles')
-    },
-    create() {
-      return new Response('Create article')
-    },
-    show({ params }) {
-      // `params` is type-safe
-      return new Response(`Article ${params.id}`)
-    },
-  },
-})
-```
+router.use(logger())
 
-## Using Resources
+router.get(routes.home, () =>
+  html(
+    `
+  <html>
+    <head><title>Blog</title></head>
+    <body>
+      <h1>Blog</h1>
+      <p><a href="${routes.blog.index.href()}">Blog</a></p>
+    </body>
+  </html>
+  `,
+    { status: 200 },
+  ),
+)
 
-A resource is a collection of routes that are related to a single entity. For example, an "articles" resource might have routes for creating, reading, updating, and deleting articles. You can think about these like Rails' `resource`/`resources` helpers.
+router.get(routes.blog.index, () =>
+  html(`
+  <html>
+    <head><title>Blog</title></head>
+    <body>
+      <p><a href="${routes.home.href()}">Home</a></p>
 
-`fetch-router` provides `createResource` and `createResources` helpers for creating route maps with sets of related routes.
+      <h1>Blog</h1>
+      <p><a href="${routes.blog.post.href({ id: '1' })}">Blog post 1</a></p>
 
-```tsx
-import {
-  createRoutes,
-  createResources as resources,
-  createResource as resource,
-} from '@remix-run/fetch-router'
+      <p><a href="${routes.blog.new.href()}">Make a new blog post</a></p>
+    </body>
+  </html>
+  `),
+)
 
-let routes = createRoutes({
-  api: {
-    // The `resources` helper is the same as the following:
-    // articles: {
-    //   index: { method: 'GET', pattern: '/api/articles' },
-    //   new: { method: 'GET', pattern: '/api/articles/new' },
-    //   create: { method: 'POST', pattern: '/api/articles' },
-    //   show: { method: 'GET', pattern: '/api/articles/:id' },
-    //   edit: { method: 'GET', pattern: '/api/articles/:id/edit' },
-    //   update: { method: 'PUT', pattern: '/api/articles/:id' },
-    //   destroy: { method: 'DELETE', pattern: '/api/articles/:id' },
-    // }
-    articles: resources('api/articles'),
-  },
-})
+router.get(routes.blog.new, () => renderNewPostForm())
 
-let router = createRouter()
+function renderNewPostForm() {
+  return html(`
+  <html>
+    <head><title>Blog</title></head>
+    <body>
+      <p><a href="${routes.home.href()}">Home</a></p>
+      <h1>New Blog Post</h1>
+      <form action="${routes.blog.index.href()}" method="POST">
+        <p><label>Title: <input name="title" required></label></p>
+        <p><label>Slug: <input name="slug" required></label></p>
+        <p><label>Content: <textarea name="content" required></textarea></label></p>
+        <p><button type="submit">Create Post</button></p>
+      </form>
+    </body>
+  </html>
+  `)
+}
 
-router.addRoutes(routes, {
-  api: {
-    articles: {
-      async index() {
-        let articles = await Article.all()
-        return Response.json({ articles })
-      },
-      async new() {
-        let article = await Article.new()
-        return Response.json(article)
-      },
-      async create({ request }) {
-        let article = await Article.create(request)
-        return Response.json(article, { status: 201 })
-      },
-      async show({ params }) {
-        let article = await Article.get(params.id)
-        return Response.json(article)
-      },
-      async edit({ params }) {
-        let article = await Article.get(params.id)
-        return Response.json(article)
-      },
-      async update({ params, request }) {
-        await Article.update(params.id, request)
-        return new Response(null, { status: 204 })
-      },
-      async destroy({ params }) {
-        await Article.destroy(params.id)
-        return new Response(null, { status: 204 })
-      },
-    },
-  },
+router.post(routes.blog.index, async ({ request }) => {
+  let formData = await request.formData()
+
+  let title = formData.get('title')
+  let slug = formData.get('slug')
+  let content = formData.get('content')
+
+  let newPost = await createBlogPost(title, slug, content)
+
+  if (newPost) {
+    return Response.redirect(routes.blog.post.href({ slug: newPost.slug }), 302)
+  }
+
+  return renderNewPostForm()
 })
 
-let response = await router.fetch('https://remix.run/api/articles')
+router.get(routes.blog.post, ({ params }) =>
+  html(`
+  <html>
+    <head><title>Blog</title></head>
+    <body>
+      <p><a href="${routes.home.href()}">Home</a></p>
+      <p><a href="${routes.blog.index.href()}">Blog</a></p>
+      <h1>Blog post ${params.id}</h1>
+    </body>
+  </html>
+  `),
+)
+
+// "Fetch" the blog post
+let response = await router.fetch('https://remix.run/blog/1')
 
 console.log(response.status) // 200
-console.log(await response.json()) // { articles: ... }
+console.log(await response.text()) // "Blog post 1"
 ```
 
-## Using Middleware
+## Testing Mutations
 
-`fetch-router` is extensible via middleware. Middleware is run in order from left to right, and comes in two flavors:
-
-- **Global middleware** is provided up front to `createRouter` and runs on every request, regardless of the route. This is generic middleware that doesn't know anything about which route matches the request, but can be useful for things like logging, rate limiting, and authentication.
-- **Route middleware** is defined directly on the route handler and runs only on the routes it's defined on. This gives middleware type-safe access to the current route's `params`.
+Testing `fetch-router` is easy since developers can use the fetch primitives instead of using the Node.js `req`/`res` APIs. Continuing from the example above, we can test the mutation by sending a POST request to the blog index route.
 
 ```tsx
-import type { RequestContext, NextFunction } from '@remix-run/fetch-router'
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 
-// A middleware that checks if the request is authorized
-function auth({ request }: RequestContext) {
-  if (request.headers.get('Authorization') !== 'Bearer 123') {
-    // Middleware that returns a response short-circuits the chain
-    return new Response('Unauthorized', { status: 401 })
-  }
-
-  // Middleware that returns undefined automatically invokes the
-  // downstream middleware or route handler
-}
-
-// A middleware that logs the profile view
-function profileLogger({ params }: RequestContext<{ id: string }>) {
-  console.log(`Viewing profile ${params.id}`)
-}
-
-let routes = createRoutes({
-  admin: {
-    index: '/admin',
-    profile: '/admin/profiles/:id',
-  },
-})
-
-// The `auth` middleware runs on every request
-let router = createRouter([auth])
-
-router.addRoutes(routes, {
-  admin: {
-    index() {
-      return new Response('Admin dashboard')
-    },
-    profile: {
-      // The `profileLogger` middleware runs only on this route
-      use: [profileLogger],
-      handler({ params }) {
-        return new Response(`Viewing profile ${params.id}`)
+describe('creating a new blog post', () => {
+  it('creates a new blog post', async () => {
+    let response = await router.fetch('https://remix.run/blog/new', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    },
-  },
+      body: JSON.stringify({ title: 'Test', slug: 'test', content: 'Test' }),
+    })
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), 'https://remix.run/blog/test')
+  })
 })
 ```
 
-## Route Composition
+The `router.fetch()` method works just like the `fetch` API, so you can use all the fetch primitives to test your router.
 
-`fetch-router` is designed to be composable. Both route and route handler maps may be composed of smaller pieces, preserving full type-safety along the way. This is useful for building larger applications by breaking down the route handlers into separate files.
+## Router Composition
+
+`fetch-router` is designed to be composable.
 
 ```tsx
-import { createHandlers, createRoutes, createRouter } from '@remix-run/fetch-router'
-import type { RequestContext } from '@remix-run/fetch-router'
-
-// routes.ts
-let blogRoutes = createResource('blog', {
-  param: 'slug',
-  only: ['index', 'show'],
-})
-
-let routes = createRoutes({
-  admin: {
-    index: '/admin',
-    profile: '/admin/profiles/:id',
-  },
-  // Attach the blog routes map to this map
-  blog: blogRoutes,
-})
-
-// app/admin.ts
-function authAdmin({ request }: RequestContext) {
-  if (request.headers.get('Authorization') !== 'Bearer 123') {
-    return new Response('Unauthorized', { status: 401 })
-  }
-}
-
-// Define handlers for all routes in `routes.admin`
-let adminHandlers = createHandlers(routes.admin, [authAdmin], {
-  index() {
-    return new Response('Admin dashboard')
-  },
-  profile({ params }) {
-    return new Response(`Viewing profile ${params.id}`)
-  },
-})
-
-// app/blog.ts
-// Define handlers for all routes in `routes.blog`
-let blogHandlers = createHandlers(routes.blog, {
-  index() {
-    return new Response('Blog index')
-  },
-  show({ params }) {
-    return new Response(`Blog post ${params.slug}`)
-  },
-})
-
-// server.ts
 let router = createRouter()
 
-router.addRoutes(routes, {
-  // Stitch them all together in a final route handler map that defines
-  // handlers for all routes in the map
-  admin: adminHandlers,
-  blog: blogHandlers,
-})
+// Use a middleware
+router.use(logger())
+
+// Use an array of middleware
+router.use([logger(), otherMiddleware()])
+
+// Delegate request handling to `otherRouter`
+router.use(otherRouter)
+
+// Delegate request handling to `otherRouter`, but only under `/some/prefix`.
+// When the request comes in, the prefix is stripped from the URL pathname
+// before calling `otherRouter`'s fetch.
+router.use('/some/prefix', otherRouter)
 ```
-
-## Demos
-
-The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/fetch-router/demos) contains working demos:
-
-- [`demos/bookstore`](https://github.com/remix-run/remix/tree/main/packages/fetch-router/demos/bookstore) - A full-featured bookstore application with authentication, middleware, and resource routes
-
-## Related Packages
-
-- [`route-pattern`](../route-pattern) - Flexible URL pattern matching
-- [`fetch-proxy`](../fetch-proxy) - Build HTTP proxy servers using the web fetch API
-- [`node-fetch-server`](../node-fetch-server) - Build HTTP servers on Node.js using the web fetch API

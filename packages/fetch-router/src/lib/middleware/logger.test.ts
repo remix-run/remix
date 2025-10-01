@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createRoutes, createHandlers, createRouter } from '../router.ts'
+import { createRoutes } from '../route-map.ts'
+import { createRouter } from '../router.ts'
 import { logger } from './logger.ts'
 
 describe('logger', () => {
@@ -14,18 +15,15 @@ describe('logger', () => {
 
     let router = createRouter()
 
-    router.addRoutes(routes, {
-      home: {
-        use: [logger({ log: (message) => messages.push(message) })],
-        handler() {
-          return new Response('Home', {
-            headers: {
-              'Content-Length': '4',
-              'Content-Type': 'text/plain',
-            },
-          })
+    router.use(logger({ log: (message) => messages.push(message) }))
+
+    router.get(routes.home, () => {
+      return new Response('Home', {
+        headers: {
+          'Content-Length': '4',
+          'Content-Type': 'text/plain',
         },
-      },
+      })
     })
 
     let response = await router.fetch('https://remix.run')
