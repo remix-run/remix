@@ -160,7 +160,7 @@ export interface ParsedPattern {
 
 // prettier-ignore
 export type Parse<T extends string> =
-  T extends any ?
+  [T] extends [string] ?
     Split<T> extends infer S extends SplitPattern ?
       {
         protocol: S['protocol'] extends string ? ParsePart<S['protocol']> : undefined

@@ -127,7 +127,7 @@ type StringifySearch<T extends string | undefined> = T extends string ? `?${T}` 
 // prettier-ignore
 export type StartsWithSeparator<T extends Token[]> =
   T extends [] ? false :
-  T extends [{ type: 'separator' }, ...any] ? true :
-  T extends [{ type: 'optional', tokens: infer Tokens extends Token[] }, ...any] ?
+  T extends [{ type: 'separator' }, ...Token[]] ? true :
+  T extends [{ type: 'optional', tokens: infer Tokens extends Token[] }, ...Token[]] ?
     StartsWithSeparator<Tokens> :
     false

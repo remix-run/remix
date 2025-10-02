@@ -31,6 +31,12 @@ function joinPathnames(a: Token[] | undefined, b: Token[] | undefined): Token[] 
   // Check if input starts with a separator (including inside optionals)
   let inputStartsWithSeparator = startsWithSeparator(b)
 
+  // If input is exactly a single separator, there is nothing to append.
+  // This avoids creating a trailing slash like "/hello/" when joining with base '/'.
+  if (b.length === 1 && b[0].type === 'separator') {
+    return tokens
+  }
+
   // Only add separator between base and input if input doesn't start with one
   if (!inputStartsWithSeparator) {
     tokens.push({ type: 'separator' })
@@ -115,9 +121,11 @@ type RemoveTrailingSeparator<T extends Token[]> =
 type JoinPathnameTokens<
   A extends Token[],
   B extends Token[]
-> = StartsWithSeparator<B> extends true ?
-    [...A, ...B] :
-    [...A, Separator, ...B]
+> = B extends [Separator] ?
+    A :
+    StartsWithSeparator<B> extends true ?
+      [...A, ...B] :
+      [...A, Separator, ...B]
 
 // prettier-ignore
 type JoinSearch<
