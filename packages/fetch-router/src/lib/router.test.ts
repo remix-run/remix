@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import { describe, it, mock } from 'node:test'
 
 import { createRoutes } from './route-map.ts'
 import { createRouter } from './router.ts'
@@ -60,7 +60,6 @@ describe('Router', () => {
     let response = await router.fetch('https://remix.run')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Home')
-    assert.equal(requestLog.length, 1)
     assert.deepEqual(requestLog, ['https://remix.run/'])
 
     requestLog = []
@@ -68,7 +67,6 @@ describe('Router', () => {
     response = await router.fetch('https://remix.run/admin')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Admin')
-    assert.equal(requestLog.length, 2)
     assert.deepEqual(requestLog, ['https://remix.run/', 'https://remix.run/'])
 
     requestLog = []
@@ -76,7 +74,29 @@ describe('Router', () => {
     response = await router.fetch('https://remix.run/admin/users')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Admin Users')
-    assert.equal(requestLog.length, 2)
     assert.deepEqual(requestLog, ['https://remix.run/users', 'https://remix.run/users'])
+  })
+
+  it('continues matching routes registered after a mount', async () => {
+    let router = createRouter()
+    router.get('/', () => new Response('Home'))
+
+    let adminRouter = createRouter()
+    adminRouter.get('/profile', () => new Response('Admin Profile'))
+
+    let dispatchSpy = mock.method(adminRouter, 'dispatch')
+
+    // This is a miss
+    router.mount('/admin', adminRouter)
+
+    router.get('/admin', () => new Response('Admin'))
+
+    let response = await router.fetch('https://remix.run/admin')
+
+    // The dispatch method should have been called
+    assert.equal(dispatchSpy.mock.calls.length, 1)
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Admin')
   })
 })
