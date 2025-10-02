@@ -72,24 +72,24 @@ export class RequestContext<P extends AnyParams = {}> {
   /**
    * The original request that was dispatched to the router.
    */
-  request: Request
+  readonly request: Request
   /**
    * The URL that was matched by the route.
    *
    * Note: This may be different from the original request URL if the request was routed to a
    * downstream router.
    */
-  url: URL
+  readonly url: URL
   /**
    * Params that were parsed from the URL.
    */
-  params: P
+  readonly params: P
   /**
    * Shared application-specific storage.
    */
-  storage: AppStorage
+  readonly storage: AppStorage
 
-  constructor(request: Request, url: URL, params: P, storage = new AppStorage()) {
+  constructor(request: Request, url: URL, params: P = {} as P, storage = new AppStorage()) {
     this.request = request
     this.url = url
     this.params = params

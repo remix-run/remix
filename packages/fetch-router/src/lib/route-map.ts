@@ -38,30 +38,21 @@ function _createRoutes<P extends string, R extends RouteDefs>(
   return routes
 }
 
+// prettier-ignore
+type BuildRouteMap<P extends string = string, R extends RouteDefs = RouteDefs> = Simplify<{
+  [K in keyof R]: (
+    R[K] extends RouteDef<infer S extends string> ? RoutePattern<Join<P, S>> :
+    R[K] extends RouteDefs ? BuildRouteMap<P, R[K]> :
+    never
+  )
+}>
+
 export interface RouteMap<T extends string = string> {
   [K: string]: RoutePattern<T> | RouteMap<T>
 }
 
-export type RouteDef = string | RoutePattern
-export type RouteDefs = {
+export interface RouteDefs {
   [K: string]: RouteDef | RouteDefs
 }
 
-type BuildRouteMap<P extends string = string, R extends RouteDefs = RouteDefs> = Simplify<
-  BuildMap<P, R>
->
-
-// prettier-ignore
-type BuildMap<P extends string , R extends RouteDefs > = {
-  [K in keyof R]: (
-    R[K] extends RouteDef ? RoutePattern<Join<P, SourceOf<R[K]>>> :
-    R[K] extends RouteDefs ? BuildRouteMap<P, R[K]> :
-    never
-  )
-}
-
-// prettier-ignore
-type SourceOf<T extends RouteDef> =
-  T extends string ? T :
-  T extends RoutePattern<infer S extends string> ? S :
-  never
+export type RouteDef<T extends string = string> = T | RoutePattern<T>

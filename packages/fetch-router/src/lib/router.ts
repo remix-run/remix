@@ -113,7 +113,7 @@ export class Router {
         downstreamUrl.pathname = downstreamUrl.pathname.slice(prefix.length)
         let downstreamContext =
           context instanceof Request
-            ? new RequestContext(request, downstreamUrl, {})
+            ? new RequestContext(request, downstreamUrl)
             : new RequestContext(request, downstreamUrl, {}, context.storage)
 
         let response = await router.dispatch(downstreamContext, allMiddleware)
@@ -129,6 +129,9 @@ export class Router {
     return null
   }
 
+  /**
+   * Mount a router at a given pathname prefix in the current router.
+   */
   mount(router: Router): void
   mount(pathnamePrefix: string, router: Router): void
   mount(arg: string | Router, router?: Router): void {
@@ -153,8 +156,18 @@ export class Router {
     })
   }
 
+  /**
+   * Add middleware to the router.
+   */
   use(middleware: Middleware | Middleware[]): void {
     this.#middleware = (this.#middleware ?? []).concat(middleware)
+  }
+
+  /**
+   * The number of routes in the router.
+   */
+  get size(): number {
+    return this.#matcher.size
   }
 
   // Route registration

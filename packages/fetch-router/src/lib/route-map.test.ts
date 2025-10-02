@@ -31,6 +31,13 @@ let routes = createRoutes({
 
 describe('createRoutes', () => {
   it('creates a route map', () => {
+    assert.deepEqual(categoriesRoutes.index, new RoutePattern('/categories'))
+    assert.deepEqual(categoriesRoutes.edit, new RoutePattern('/categories/:slug/edit'))
+    assert.deepEqual(
+      categoriesRoutes.products.index,
+      new RoutePattern('/categories/:slug/products'),
+    )
+
     assert.deepEqual(routes.home, new RoutePattern('/'))
     assert.deepEqual(routes.promo, new RoutePattern('(/:lang)/promo'))
     assert.deepEqual(routes.about.index, new RoutePattern('/about'))
@@ -48,6 +55,12 @@ describe('createRoutes', () => {
 })
 
 type Tests = [
+  Assert<IsEqual<typeof categoriesRoutes.index, RoutePattern<'/categories'>>>,
+  Assert<IsEqual<typeof categoriesRoutes.edit, RoutePattern<'/categories/:slug/edit'>>>,
+  Assert<
+    IsEqual<typeof categoriesRoutes.products.index, RoutePattern<'/categories/:slug/products'>>
+  >,
+
   Assert<IsEqual<typeof routes.home, RoutePattern<'/'>>>,
   Assert<IsEqual<typeof routes.promo, RoutePattern<'(/:lang)/promo'>>>,
   Assert<IsEqual<typeof routes.about.index, RoutePattern<'/about'>>>,

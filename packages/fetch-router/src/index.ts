@@ -7,7 +7,7 @@ export type { RequestHandler, Middleware, NextFunction } from './lib/request-han
 export { logger } from './lib/middleware/logger.ts'
 
 export { createRoutes } from './lib/route-map.ts'
-export type { RouteMap, RouteDef, RouteDefs } from './lib/route-map.ts'
+export type { RouteMap, RouteDefs, RouteDef } from './lib/route-map.ts'
 
 export { createRouter, Router } from './lib/router.ts'
 export type { RouterOptions } from './lib/router.ts'
