@@ -1,6 +1,6 @@
 # fetch-router
 
-This is the spec for the `@remix-run/fetch-router` package, a minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](../route-pattern).
+`fetch-router` is a minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](../route-pattern).
 
 ```tsx
 import { createRoutes, createRouter } from '@remix-run/fetch-router'
@@ -42,7 +42,7 @@ let routes = createRoutes({
   blog: {
     index: '/blog',
     new: '/blog/new',
-    post: '/blog/:id',
+    show: '/blog/:id',
   },
 })
 
@@ -73,7 +73,7 @@ router.get(routes.blog.index, () =>
       <p><a href="${routes.home.href()}">Home</a></p>
 
       <h1>Blog</h1>
-      <p><a href="${routes.blog.post.href({ id: '1' })}">Blog post 1</a></p>
+      <p><a href="${routes.blog.show.href({ id: '1' })}">Blog post 1</a></p>
 
       <p><a href="${routes.blog.new.href()}">Make a new blog post</a></p>
     </body>
@@ -111,13 +111,13 @@ router.post(routes.blog.index, async ({ request }) => {
   let newPost = await createBlogPost(title, slug, content)
 
   if (newPost) {
-    return Response.redirect(routes.blog.post.href({ slug: newPost.slug }), 302)
+    return Response.redirect(routes.blog.show.href({ slug: newPost.slug }), 302)
   }
 
   return renderNewPostForm()
 })
 
-router.get(routes.blog.post, ({ params }) =>
+router.get(routes.blog.show, ({ params }) =>
   html(`
   <html>
     <head><title>Blog</title></head>

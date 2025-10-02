@@ -187,6 +187,10 @@ export class Router {
     })
   }
 
+  all<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
+    this.route('ALL', pattern, handler)
+  }
+
   get<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
     this.route('GET', pattern, handler)
   }
@@ -216,9 +220,5 @@ export class Router {
 
   head<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
     this.route('HEAD', pattern, handler)
-  }
-
-  all<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.route('ALL', pattern, handler)
   }
 }
