@@ -2,7 +2,7 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.2.0 (2025-10-02)
 
 - Add `router.mount(prefix, router)` method for mounting a router at a given pathname prefix in another router
 
