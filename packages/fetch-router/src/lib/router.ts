@@ -21,7 +21,7 @@ type MatchData =
   | {
       method: RequestMethod | 'ALL'
       middleware: Middleware[] | undefined
-      handler: RequestHandler
+      handler: RequestHandler<any>
     }
   | {
       middleware: Middleware[] | undefined

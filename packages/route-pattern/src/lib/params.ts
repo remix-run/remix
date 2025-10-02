@@ -23,11 +23,11 @@ type ParamsFromTokens<T extends Token[] | undefined, IsOptional extends boolean 
       ParamsFromTokens<Head['tokens'], true> & ParamsFromTokens<Tail, IsOptional> :
     Head extends { type: 'variable' | 'wildcard', name: infer N extends string } ?
       IsOptional extends true ?
-        { [K in N]?: string } & ParamsFromTokens<Tail, IsOptional> :
+        { [K in N]: string | undefined } & ParamsFromTokens<Tail, IsOptional> :
         { [K in N]: string } & ParamsFromTokens<Tail, IsOptional> :
     Head extends { type: 'wildcard' } ?
       IsOptional extends true ?
-        { '*'?: string } & ParamsFromTokens<Tail, IsOptional> :
+        { '*': string | undefined } & ParamsFromTokens<Tail, IsOptional> :
         { '*': string } & ParamsFromTokens<Tail, IsOptional> :
       ParamsFromTokens<Tail, IsOptional> :
     {}
