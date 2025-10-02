@@ -36,7 +36,8 @@
     "esbuild": "^0.25.10"
   },
   "scripts": {
-    "bench": "node src/lib/parse.types.bench.ts",
+    "bench:matcher": "node src/lib/matcher.bench.ts",
+    "bench:types": "node src/lib/parse.types.bench.ts",
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm",
     "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
