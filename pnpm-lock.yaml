@@ -24,6 +24,31 @@ importers:
         specifier: ^8.40.0
         version: 8.40.0(eslint@9.33.0)(typescript@5.7.2)
 
+  demos/remix-jam:
+    dependencies:
+      '@remix-run/dom':
+        specifier: 0.0.0-experimental-remix-jam.1
+        version: 0.0.0-experimental-remix-jam.1
+      '@remix-run/events':
+        specifier: 0.0.0-experimental-remix-jam.1
+        version: 0.0.0-experimental-remix-jam.1
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../../packages/fetch-router
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../../packages/node-fetch-server
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.10
+      tsx:
+        specifier: ^4.20.6
+        version: 4.20.6
+
   packages/fetch-proxy:
     dependencies:
       '@remix-run/headers':
@@ -49,22 +74,6 @@ importers:
       esbuild:
         specifier: ^0.25.10
         version: 0.25.10
-
-  packages/fetch-router/demos/bookstore:
-    dependencies:
-      '@remix-run/fetch-router':
-        specifier: workspace:*
-        version: link:../..
-      '@remix-run/node-fetch-server':
-        specifier: workspace:*
-        version: link:../../../node-fetch-server
-      '@remix-run/route-pattern':
-        specifier: workspace:*
-        version: link:../../../route-pattern
-    devDependencies:
-      typescript:
-        specifier: ^5.0.0
-        version: 5.7.2
 
   packages/file-storage:
     dependencies:
@@ -942,6 +951,15 @@ packages:
     peerDependencies:
       prettier: '*'
 
+  '@remix-run/dom@0.0.0-experimental-remix-jam.1':
+    resolution: {integrity: sha512-HLLrUpSz7EicCAWQKqJt7RK2Y04sruwASP5gNgTK3GQzL216XCGoh+LjrMRQ8Aw7GFgHSkvQuyhVb6Y4xY2aDw==}
+
+  '@remix-run/events@0.0.0-experimental-remix-jam.1':
+    resolution: {integrity: sha512-4Xs0Ek3QYsx2Tq64ZkSMXN9gAwBOg42vzK/5aTkACktb6asljm/wf8mgFPtf+IUegh4BBzkapNXAdmXEh4UqNg==}
+
+  '@remix-run/style@0.0.0-experimental-remix-jam.1':
+    resolution: {integrity: sha512-aRETYid6C1V1smXnhbxoFdsOi+qxvXM9NZ9UIQeRQ9ZEWT2TS1dtyeNTv6QXO1Swp9QtdWlnPb6RlzUBvG5h4Q==}
+
   '@types/body-parser@1.19.5':
     resolution: {integrity: sha512-fB3Zu92ucau0iQ0JMCFQE7b/dv8Ot07NI3KaZIkIUNXq82k4eBAqUaneXfleGY9JWskeS9y+u0nXMyspcuQrCg==}
 
@@ -1470,6 +1488,9 @@ packages:
   get-source@2.0.12:
     resolution: {integrity: sha512-X5+4+iD+HoSeEED+uwrQ07BOQr0kEDFMVqqpBuI+RaZBpBpHCuXxo70bjar6f0b0u/DQJsJ7ssurpP0V60Az+w==}
 
+  get-tsconfig@4.10.1:
+    resolution: {integrity: sha512-auHyJ4AgMz7vgS8Hp3N6HXSmlMdUyhSUrfBF16w153rxtLIEOE+HGqaBppczZvnHLqQJfiHotCYpNhl0lUROFQ==}
+
   glob-parent@5.1.2:
     resolution: {integrity: sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==}
     engines: {node: '>= 6'}
@@ -1855,6 +1876,9 @@ packages:
     resolution: {integrity: sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g==}
     engines: {node: '>=4'}
 
+  resolve-pkg-maps@1.0.0:
+    resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
+
   reusify@1.1.0:
     resolution: {integrity: sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==}
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
@@ -2013,6 +2037,11 @@ packages:
 
   tslib@2.7.0:
     resolution: {integrity: sha512-gLXCKdN1/j47AiHiOkJN69hJmcbGTHI0ImLmbYLHykhgeN0jVGola9yVjFgzCUklsZQMW55o+dW7IXv3RCXDzA==}
+
+  tsx@4.20.6:
+    resolution: {integrity: sha512-ytQKuwgmrrkDTFP4LjR0ToE2nqgy886GpvRSpU0JAnrdBYppuY5rLkRUYPU1yCryb24SsKBTL/hlDQAEFVwtZg==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
 
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -2559,6 +2588,15 @@ snapshots:
     dependencies:
       make-synchronized: 0.4.2
       prettier: 3.5.3
+
+  '@remix-run/dom@0.0.0-experimental-remix-jam.1':
+    dependencies:
+      '@remix-run/events': 0.0.0-experimental-remix-jam.1
+      '@remix-run/style': 0.0.0-experimental-remix-jam.1
+
+  '@remix-run/events@0.0.0-experimental-remix-jam.1': {}
+
+  '@remix-run/style@0.0.0-experimental-remix-jam.1': {}
 
   '@types/body-parser@1.19.5':
     dependencies:
@@ -3234,6 +3272,10 @@ snapshots:
       data-uri-to-buffer: 2.0.2
       source-map: 0.6.1
 
+  get-tsconfig@4.10.1:
+    dependencies:
+      resolve-pkg-maps: 1.0.0
+
   glob-parent@5.1.2:
     dependencies:
       is-glob: 4.0.3
@@ -3576,6 +3618,8 @@ snapshots:
 
   resolve-from@4.0.0: {}
 
+  resolve-pkg-maps@1.0.0: {}
+
   reusify@1.1.0: {}
 
   rimraf@5.0.10:
@@ -3776,6 +3820,13 @@ snapshots:
 
   tslib@2.7.0:
     optional: true
+
+  tsx@4.20.6:
+    dependencies:
+      esbuild: 0.25.10
+      get-tsconfig: 4.10.1
+    optionalDependencies:
+      fsevents: 2.3.3
 
   type-check@0.4.0:
     dependencies:

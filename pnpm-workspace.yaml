@@ -1,4 +1,5 @@
 packages:
+  - demos/*
   - packages/*
   - packages/form-data-parser/demos/*
   - packages/multipart-parser/bench

@@ -30,6 +30,9 @@
   ],
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@remix-run/dom",
+      "@remix-run/events",
+      "@remix-run/style",
       "@swc/core",
       "esbuild",
       "sharp",
