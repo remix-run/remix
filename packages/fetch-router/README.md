@@ -1,13 +1,212 @@
 # fetch-router
 
-`fetch-router` is a minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](../route-pattern).
+A minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](../route-pattern). Ideal for building APIs, web services, and server-rendered applications across any JavaScript runtime.
 
-```tsx
+## Features
+
+- **Fetch API**: Built on standard web APIs that work everywhere - Node.js, Bun, Deno, Cloudflare Workers, and browsers
+- **Type-Safe Routing**: Leverage TypeScript for compile-time route validation and parameter inference
+- **Composable Architecture**: Nest routers, combine middleware, and organize routes hierarchically
+- **Declarative Route Maps**: Define your entire route structure upfront with type-safe route names and HTTP methods
+- **Flexible Middleware**: Apply middleware globally, per-route, or to entire route hierarchies
+- **Easy Testing**: Use standard `fetch()` to test your routes - no special test harness required
+
+## Goals
+
+- **Simplicity**: A router should be simple to understand and use. The entire API surface fits in your head.
+- **Composability**: Small routers combine to build large applications. Middleware and nested routers make organization natural.
+- **Standards-Based**: Built on web standards that work across runtimes. No proprietary APIs or Node.js-specific code.
+
+## Examples
+
+### Basic Usage
+
+```ts
+import { createRouter } from '@remix-run/fetch-router'
+
+let router = createRouter()
+
+router.get('/', () => new Response('Home'))
+router.get('/about', () => new Response('About'))
+
+let response = await router.fetch('https://example.com/about')
+console.log(await response.text()) // "About"
+```
+
+### Route Maps with Type-Safe URLs
+
+Create a route map to organize your routes by name and generate type-safe URLs:
+
+```ts
 import { createRoutes, createRouter } from '@remix-run/fetch-router'
 
-// Create a route map
-// A route map is an object with string keys and `RoutePattern` values
-// Keys are "route names" and may be arbitrarily nested
+let routes = createRoutes({
+  home: '/',
+  about: '/about',
+  blog: {
+    index: '/blog',
+    show: '/blog/:slug',
+  },
+})
+
+let router = createRouter()
+
+router.get(routes.home, () => new Response('Home'))
+router.get(routes.about, () => new Response('About'))
+router.get(routes.blog.index, () => new Response('Blog'))
+router.get(routes.blog.show, ({ params }) => {
+  return new Response(`Blog post: ${params.slug}`)
+})
+
+// Generate type-safe URLs
+routes.blog.show.href({ slug: 'hello-world' }) // "/blog/hello-world"
+```
+
+### Route Mapping
+
+Define routes that respond only to specific HTTP methods:
+
+```ts
+let routes = createRoutes({
+  posts: {
+    index: { method: 'GET', pattern: '/posts' },
+    create: { method: 'POST', pattern: '/posts' },
+    show: { method: 'GET', pattern: '/posts/:id' },
+    update: { method: 'PUT', pattern: '/posts/:id' },
+    destroy: { method: 'DELETE', pattern: '/posts/:id' },
+  },
+})
+
+let router = createRouter()
+
+// The structure of your handler map mirrors your route map
+// exactly, with full type safety.
+router.map(routes, {
+  posts: {
+    index() {
+      return new Response('Posts')
+    },
+    create() {
+      return new Response('Post Created', { status: 201 })
+    },
+    show({ params }) {
+      return new Response(`Post ${params.id}`)
+    },
+    update({ params }) {
+      return new Response(`Updated Post ${params.id}`)
+    },
+    destroy({ params }) {
+      return new Response(`Deleted Post ${params.id}`)
+    },
+  },
+})
+```
+
+### Middleware
+
+Apply middleware globally, per-route, or to entire route hierarchies:
+
+```ts
+import { createRouter } from '@remix-run/fetch-router'
+
+let router = createRouter()
+
+// Global middleware - runs for all routes
+router.use((context, next) => {
+  console.log(`${context.request.method} ${context.url.pathname}`)
+  return next()
+})
+
+// Per-route middleware
+router.get('/admin', [authenticate, authorize], () => new Response('Admin Dashboard'))
+
+// Multiple middleware
+router.post('/api/posts', [authenticate, validatePostData, rateLimit], async ({ request }) => {
+  let data = await request.json()
+  let post = await db.createPost(data)
+  return new Response(JSON.stringify(post), { status: 201 })
+})
+```
+
+### Middleware with `router.map()`
+
+Apply middleware to all routes in a map, including nested routes:
+
+```ts
+let routes = createRoutes({
+  public: '/',
+  api: {
+    users: '/api/users',
+    posts: '/api/posts',
+  },
+  admin: {
+    dashboard: '/admin/dashboard',
+    users: '/admin/users',
+  },
+})
+
+let router = createRouter()
+
+// No middleware for public route
+router.map(routes.public, () => new Response('Public'))
+
+// CORS middleware for all API routes
+router.map(routes.api, [cors({ origin: '*' })], {
+  users() {
+    return new Response(JSON.stringify(users))
+  },
+  posts() {
+    return new Response(JSON.stringify(posts))
+  },
+})
+
+// Auth middleware for all admin routes
+router.map(routes.admin, [authenticate, requireAdmin], {
+  dashboard() {
+    return new Response('Dashboard')
+  },
+  users() {
+    return new Response('User Management')
+  },
+})
+```
+
+Middleware defined in `router.map()` cascades to all nested routes, giving you fine-grained control over which routes get which middleware.
+
+### Nested Routers
+
+Compose routers to organize large applications:
+
+```ts
+let apiRouter = createRouter()
+apiRouter.get('/users', () => new Response('Users'))
+apiRouter.get('/posts', () => new Response('Posts'))
+
+let adminRouter = createRouter()
+adminRouter.get('/dashboard', () => new Response('Dashboard'))
+adminRouter.get('/settings', () => new Response('Settings'))
+
+let mainRouter = createRouter()
+
+// Mount routers at specific paths
+mainRouter.mount('/api', apiRouter)
+mainRouter.mount('/admin', adminRouter)
+
+mainRouter.get('/', () => new Response('Home'))
+
+await mainRouter.fetch('https://example.com/api/users') // "Users"
+await mainRouter.fetch('https://example.com/admin/dashboard') // "Dashboard"
+```
+
+Nested routers can have their own middleware, and parent middleware applies to all children.
+
+### HTML Responses with the `html()` Helper
+
+The `html()` helper makes it easy to return HTML responses with automatic content-type headers:
+
+```ts
+import { createRoutes, createRouter, html } from '@remix-run/fetch-router'
+
 let routes = createRoutes({
   home: '/',
   about: '/about',
@@ -15,172 +214,233 @@ let routes = createRoutes({
 
 let router = createRouter()
 
-// Add middleware
-// Middleware run in the order they are added
-router.use(logger())
+router.get(routes.home, () =>
+  html(`
+    <!DOCTYPE html>
+    <html>
+      <head><title>Home</title></head>
+      <body>
+        <h1>Welcome</h1>
+        <p><a href="${routes.about.href()}">About</a></p>
+      </body>
+    </html>
+  `),
+)
 
-// Add route handlers
-// Route handlers are functions that return a response
-// Route handlers run in the order they are added, same as middleware
-router.get(routes.home, () => new Response('Home'))
-router.get(routes.about, () => new Response('About'))
-
-// "Fetch" the about page
-let response = await router.fetch('https://remix.run/about')
-
-console.log(response.status) // 200
-console.log(await response.text()) // "About"
+router.get(routes.about, () =>
+  html(
+    `
+    <!DOCTYPE html>
+    <html>
+      <head><title>About</title></head>
+      <body>
+        <h1>About Us</h1>
+        <p><a href="${routes.home.href()}">Home</a></p>
+      </body>
+    </html>
+  `,
+    { status: 200 },
+  ),
+)
 ```
 
-A more elaborate example, for a blog is below. This example uses the `html` helper to render HTML responses, the `route.href()` helper for generating type-safe URLs, and `router.post()` to handle a mutation.
+The `html()` helper automatically dedents template strings, so your inline HTML looks clean in your code.
 
-```tsx
+### Request Context
+
+Every handler and middleware receives a request context with useful properties:
+
+```ts
+router.get('/posts/:id', ({ request, url, params, storage }) => {
+  // request: The original Request object
+  console.log(request.method) // "GET"
+  console.log(request.headers.get('Accept'))
+
+  // url: Parsed URL object
+  console.log(url.pathname) // "/posts/123"
+  console.log(url.searchParams.get('sort'))
+
+  // params: Route parameters (fully typed!)
+  console.log(params.id) // "123"
+
+  // storage: AppStorage for type-safe access to request-scoped data
+  storage.set('user', currentUser)
+
+  return new Response(`Post ${params.id}`)
+})
+```
+
+### Testing
+
+Testing is simple because routers use the standard `fetch()` API:
+
+```ts
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
+
+describe('blog routes', () => {
+  it('creates a new post', async () => {
+    let response = await router.fetch('https://example.com/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Hello', content: 'World' }),
+    })
+
+    assert.equal(response.status, 201)
+    let post = await response.json()
+    assert.equal(post.title, 'Hello')
+  })
+
+  it('returns 404 for missing posts', async () => {
+    let response = await router.fetch('https://example.com/posts/999')
+    assert.equal(response.status, 404)
+  })
+})
+```
+
+No special test harness or mocking required - just use `fetch()` like you would in production.
+
+### Complete Example: Blog API
+
+Here's a complete example showing many features working together:
+
+```ts
 import { createRoutes, createRouter, html } from '@remix-run/fetch-router'
 
+// Define all routes upfront
 let routes = createRoutes({
   home: '/',
   blog: {
-    index: '/blog',
-    new: '/blog/new',
-    show: '/blog/:id',
+    index: { method: 'GET', pattern: '/blog' },
+    create: { method: 'POST', pattern: '/blog' },
+    new: { method: 'GET', pattern: '/blog/new' },
+    show: { method: 'GET', pattern: '/blog/:slug' },
+    edit: { method: 'GET', pattern: '/blog/:slug/edit' },
+    update: { method: 'PUT', pattern: '/blog/:slug' },
+    destroy: { method: 'DELETE', pattern: '/blog/:slug' },
   },
 })
 
 let router = createRouter()
 
-router.use(logger())
-
-router.get(routes.home, () =>
-  html(
-    `
-  <html>
-    <head><title>Blog</title></head>
-    <body>
-      <h1>Blog</h1>
-      <p><a href="${routes.blog.index.href()}">Blog</a></p>
-    </body>
-  </html>
-  `,
-    { status: 200 },
-  ),
-)
-
-router.get(routes.blog.index, () =>
-  html(`
-  <html>
-    <head><title>Blog</title></head>
-    <body>
-      <p><a href="${routes.home.href()}">Home</a></p>
-
-      <h1>Blog</h1>
-      <p><a href="${routes.blog.show.href({ id: '1' })}">Blog post 1</a></p>
-
-      <p><a href="${routes.blog.new.href()}">Make a new blog post</a></p>
-    </body>
-  </html>
-  `),
-)
-
-router.get(routes.blog.new, () => renderNewPostForm())
-
-function renderNewPostForm() {
-  return html(`
-  <html>
-    <head><title>Blog</title></head>
-    <body>
-      <p><a href="${routes.home.href()}">Home</a></p>
-      <h1>New Blog Post</h1>
-      <form action="${routes.blog.index.href()}" method="POST">
-        <p><label>Title: <input name="title" required></label></p>
-        <p><label>Slug: <input name="slug" required></label></p>
-        <p><label>Content: <textarea name="content" required></textarea></label></p>
-        <p><button type="submit">Create Post</button></p>
-      </form>
-    </body>
-  </html>
-  `)
-}
-
-router.post(routes.blog.index, async ({ request }) => {
-  let formData = await request.formData()
-
-  let title = formData.get('title')
-  let slug = formData.get('slug')
-  let content = formData.get('content')
-
-  let newPost = await createBlogPost(title, slug, content)
-
-  if (newPost) {
-    return Response.redirect(routes.blog.show.href({ slug: newPost.slug }), 302)
-  }
-
-  return renderNewPostForm()
+// Global logging middleware
+router.use((context, next) => {
+  console.log(`${context.request.method} ${context.url.pathname}`)
+  return next()
 })
 
-router.get(routes.blog.show, ({ params }) =>
-  html(`
-  <html>
-    <head><title>Blog</title></head>
-    <body>
-      <p><a href="${routes.home.href()}">Home</a></p>
-      <p><a href="${routes.blog.index.href()}">Blog</a></p>
-      <h1>Blog post ${params.id}</h1>
-    </body>
-  </html>
-  `),
-)
+// Bulk register routes with middleware
+router.map(routes, {
+  home() {
+    return html(`
+      <!DOCTYPE html>
+      <html>
+        <head><title>Blog</title></head>
+        <body>
+          <h1>My Blog</h1>
+          <a href="${routes.blog.index.href()}">View Posts</a>
+        </body>
+      </html>
+    `)
+  },
+  blog: {
+    index() {
+      let posts = db.getAllPosts()
+      return html(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>Posts</title></head>
+          <body>
+            <h1>Blog Posts</h1>
+            <a href="${routes.blog.new.href()}">New Post</a>
+            <ul>
+              ${posts.map((p) => `<li><a href="${routes.blog.show.href({ slug: p.slug })}">${p.title}</a></li>`).join('')}
+            </ul>
+          </body>
+        </html>
+      `)
+    },
+    new() {
+      return html(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>New Post</title></head>
+          <body>
+            <h1>New Post</h1>
+            <form action="${routes.blog.index.href()}" method="POST">
+              <input name="title" required>
+              <textarea name="content" required></textarea>
+              <button type="submit">Create</button>
+            </form>
+          </body>
+        </html>
+      `)
+    },
+    async create({ request }) {
+      let formData = await request.formData()
+      let post = await db.createPost({
+        title: formData.get('title'),
+        content: formData.get('content'),
+      })
+      return Response.redirect(routes.blog.show.href({ slug: post.slug }), 303)
+    },
+    show({ params }) {
+      let post = db.getPost(params.slug)
+      if (!post) return new Response('Not Found', { status: 404 })
 
-// "Fetch" the blog post
-let response = await router.fetch('https://remix.run/blog/1')
-
-console.log(response.status) // 200
-console.log(await response.text()) // "Blog post 1"
-```
-
-## Testing Mutations
-
-Testing `fetch-router` is easy since developers can use the fetch primitives instead of using the Node.js `req`/`res` APIs. Continuing from the example above, we can test the mutation by sending a POST request to the blog index route.
-
-```tsx
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
-
-describe('creating a new blog post', () => {
-  it('creates a new blog post', async () => {
-    let response = await router.fetch('https://remix.run/blog/new', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ title: 'Test', slug: 'test', content: 'Test' }),
-    })
-
-    assert.equal(response.status, 302)
-    assert.equal(response.headers.get('Location'), 'https://remix.run/blog/test')
-  })
+      return html(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>${post.title}</title></head>
+          <body>
+            <h1>${post.title}</h1>
+            <div>${post.content}</div>
+            <a href="${routes.blog.edit.href({ slug: post.slug })}">Edit</a>
+          </body>
+        </html>
+      `)
+    },
+    edit({ params }) {
+      let post = db.getPost(params.slug)
+      return html(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>Edit ${post.title}</title></head>
+          <body>
+            <h1>Edit Post</h1>
+            <form action="${routes.blog.show.href({ slug: params.slug })}" method="POST">
+              <input type="hidden" name="_method" value="PUT">
+              <input name="title" value="${post.title}" required>
+              <textarea name="content" required>${post.content}</textarea>
+              <button type="submit">Update</button>
+            </form>
+          </body>
+        </html>
+      `)
+    },
+    async update({ params, request }) {
+      let formData = await request.formData()
+      await db.updatePost(params.slug, {
+        title: formData.get('title'),
+        content: formData.get('content'),
+      })
+      return Response.redirect(routes.blog.show.href({ slug: params.slug }), 303)
+    },
+    destroy({ params }) {
+      db.deletePost(params.slug)
+      return Response.redirect(routes.blog.index.href(), 303)
+    },
+  },
 })
+
+export { router }
 ```
 
-The `router.fetch()` method works just like the `fetch` API, so you can use all the fetch primitives to test your router.
+## Related Work
 
-## Router Composition
+- [@remix-run/route-pattern](../route-pattern) - The pattern matching library that powers `fetch-router`
+- [Express](https://expressjs.com/) - The classic Node.js web framework
 
-`fetch-router` is designed to be composable.
+## License
 
-```tsx
-let router = createRouter()
-
-// Use a middleware
-router.use(logger())
-
-// Use an array of middleware
-router.use([logger(), otherMiddleware()])
-
-// Delegate request handling to `apiRouter`
-router.use(apiRouter)
-
-// Delegate request handling to `apiRouter`, but only under `/api`.
-// When the request comes in, the prefix is stripped from the URL pathname
-// before calling `apiRouter`'s fetch.
-router.use('/api', apiRouter)
-```
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

@@ -1,14 +1,66 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { RoutePattern } from '@remix-run/route-pattern'
-
+import type { RequestMethod } from './request-handler.ts'
 import type { Assert, IsEqual } from './type-utils.ts'
-import { createRoutes } from './route-map.ts'
+import { Route, createRoutes } from './route-map.ts'
+
+describe('createRoutes', () => {
+  it('creates a route map', () => {
+    let routes = createRoutes({
+      home: '/',
+      about: {
+        index: 'about',
+        company: 'about/company',
+      },
+    })
+
+    assert.deepEqual(routes.home, new Route('ANY', '/'))
+    assert.deepEqual(routes.about.index, new Route('ANY', '/about'))
+    assert.deepEqual(routes.about.company, new Route('ANY', '/about/company'))
+  })
+
+  it('creates a route map with a base', () => {
+    let routes = createRoutes('categories', {
+      index: '/',
+      new: '/new',
+      show: '/:slug',
+      edit: '/:slug/edit',
+    })
+
+    assert.deepEqual(routes.index, new Route('ANY', '/categories'))
+    assert.deepEqual(routes.new, new Route('ANY', '/categories/new'))
+    assert.deepEqual(routes.show, new Route('ANY', '/categories/:slug'))
+    assert.deepEqual(routes.edit, new Route('ANY', '/categories/:slug/edit'))
+  })
+
+  it('creates a route map with a nested route map', () => {
+    let categoriesRoutes = createRoutes('categories', {
+      index: '/',
+      new: '/new',
+      show: '/:slug',
+      edit: '/:slug/edit',
+    })
+
+    let routes = createRoutes({
+      home: '/',
+      about: '/about',
+      // nested route map
+      categories: categoriesRoutes,
+    })
+
+    assert.deepEqual(routes.home, new Route('ANY', '/'))
+    assert.deepEqual(routes.about, new Route('ANY', '/about'))
+    assert.deepEqual(routes.categories.index, new Route('ANY', '/categories'))
+    assert.deepEqual(routes.categories.new, new Route('ANY', '/categories/new'))
+    assert.deepEqual(routes.categories.show, new Route('ANY', '/categories/:slug'))
+    assert.deepEqual(routes.categories.edit, new Route('ANY', '/categories/:slug/edit'))
+  })
+})
 
 let categoriesRoutes = createRoutes('categories', {
   index: '/',
-  edit: '/:slug/edit',
+  create: { method: 'POST', pattern: '/:slug/edit' },
   products: {
     index: '/:slug/products',
   },
@@ -23,54 +75,35 @@ let routes = createRoutes({
   },
   blog: {
     index: '/blog',
-    post: '/blog(/:lang)/:slug',
+    show: '/blog(/:lang)/:slug',
   },
   category: '/categories/:slug',
   categories: categoriesRoutes,
 })
 
-describe('createRoutes', () => {
-  it('creates a route map', () => {
-    assert.deepEqual(categoriesRoutes.index, new RoutePattern('/categories'))
-    assert.deepEqual(categoriesRoutes.edit, new RoutePattern('/categories/:slug/edit'))
-    assert.deepEqual(
-      categoriesRoutes.products.index,
-      new RoutePattern('/categories/:slug/products'),
-    )
-
-    assert.deepEqual(routes.home, new RoutePattern('/'))
-    assert.deepEqual(routes.promo, new RoutePattern('(/:lang)/promo'))
-    assert.deepEqual(routes.about.index, new RoutePattern('/about'))
-    assert.deepEqual(routes.about.company, new RoutePattern('/about/company'))
-    assert.deepEqual(routes.blog.index, new RoutePattern('/blog'))
-    assert.deepEqual(routes.blog.post, new RoutePattern('/blog(/:lang)/:slug'))
-    assert.deepEqual(routes.category, new RoutePattern('/categories/:slug'))
-    assert.deepEqual(routes.categories.index, new RoutePattern('/categories'))
-    assert.deepEqual(routes.categories.edit, new RoutePattern('/categories/:slug/edit'))
-    assert.deepEqual(
-      routes.categories.products.index,
-      new RoutePattern('/categories/:slug/products'),
-    )
-  })
-})
-
 type Tests = [
-  Assert<IsEqual<typeof categoriesRoutes.index, RoutePattern<'/categories'>>>,
-  Assert<IsEqual<typeof categoriesRoutes.edit, RoutePattern<'/categories/:slug/edit'>>>,
+  Assert<IsEqual<typeof categoriesRoutes.index, Route<RequestMethod, '/categories'>>>,
+  Assert<IsEqual<typeof categoriesRoutes.create, Route<'POST', '/categories/:slug/edit'>>>,
   Assert<
-    IsEqual<typeof categoriesRoutes.products.index, RoutePattern<'/categories/:slug/products'>>
+    IsEqual<
+      typeof categoriesRoutes.products.index,
+      Route<RequestMethod, '/categories/:slug/products'>
+    >
   >,
 
-  Assert<IsEqual<typeof routes.home, RoutePattern<'/'>>>,
-  Assert<IsEqual<typeof routes.promo, RoutePattern<'(/:lang)/promo'>>>,
-  Assert<IsEqual<typeof routes.about.index, RoutePattern<'/about'>>>,
-  Assert<IsEqual<typeof routes.about.company, RoutePattern<'/about/company'>>>,
-  Assert<IsEqual<typeof routes.blog.index, RoutePattern<'/blog'>>>,
-  Assert<IsEqual<typeof routes.blog.post, RoutePattern<'/blog(/:lang)/:slug'>>>,
-  Assert<IsEqual<typeof routes.category, RoutePattern<'/categories/:slug'>>>,
-  Assert<IsEqual<typeof routes.categories.index, RoutePattern<'/categories'>>>,
-  Assert<IsEqual<typeof routes.categories.edit, RoutePattern<'/categories/:slug/edit'>>>,
+  Assert<IsEqual<typeof routes.home, Route<RequestMethod, '/'>>>,
+  Assert<IsEqual<typeof routes.promo, Route<RequestMethod, '(/:lang)/promo'>>>,
+  Assert<IsEqual<typeof routes.about.index, Route<RequestMethod, '/about'>>>,
+  Assert<IsEqual<typeof routes.about.company, Route<RequestMethod, '/about/company'>>>,
+  Assert<IsEqual<typeof routes.blog.index, Route<RequestMethod, '/blog'>>>,
+  Assert<IsEqual<typeof routes.blog.show, Route<RequestMethod, '/blog(/:lang)/:slug'>>>,
+  Assert<IsEqual<typeof routes.category, Route<RequestMethod, '/categories/:slug'>>>,
+  Assert<IsEqual<typeof routes.categories.index, Route<RequestMethod, '/categories'>>>,
+  Assert<IsEqual<typeof routes.categories.create, Route<'POST', '/categories/:slug/edit'>>>,
   Assert<
-    IsEqual<typeof routes.categories.products.index, RoutePattern<'/categories/:slug/products'>>
+    IsEqual<
+      typeof routes.categories.products.index,
+      Route<RequestMethod, '/categories/:slug/products'>
+    >
   >,
 ]
