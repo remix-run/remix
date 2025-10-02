@@ -4,7 +4,9 @@ import type { Simplify } from './type-utils.ts'
 /**
  * The parameters that are parsed when a pattern matches a URL.
  */
-export type Params<T extends string> = Simplify<
+export type Params<T extends string> = T extends string ? BuildParams<T> : never
+
+type BuildParams<T extends string> = Simplify<
   Record<RequiredParams<T>, string> & Record<OptionalParams<T>, string | undefined>
 >
 
