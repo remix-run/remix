@@ -137,8 +137,10 @@ export class Router {
   mount(arg: string | Router, router?: Router): void {
     let pathnamePrefix = '/'
     if (typeof arg === 'string') {
-      if (!arg.startsWith('/') || arg.includes('?') || arg.includes(':')) {
-        throw new Error(`Invalid mount point: "${arg}"`)
+      if (!arg.startsWith('/') || arg.includes('?') || arg.includes(':') || arg.includes('*')) {
+        throw new Error(
+          `Invalid mount prefix: "${arg}"; prefix must start with "/" and contain only static segments`,
+        )
       }
 
       pathnamePrefix = arg
@@ -146,7 +148,8 @@ export class Router {
       router = arg
     }
 
-    // The pattern for the mount point should match only the pathname prefix.
+    // Add an optional catch-all segment so the pattern matches any pathname
+    // that starts with the prefix.
     let pattern = pathnamePrefix.replace(/\/*$/, '(/*)')
 
     this.#matcher.add(pattern, {
@@ -172,50 +175,50 @@ export class Router {
 
   // Route registration
 
+  route<P extends string>(
+    method: RequestMethod | 'ALL',
+    pattern: P | RoutePattern<P>,
+    handler: RequestHandler<Params<P>>,
+  ): void {
+    this.#matcher.add(pattern, {
+      method,
+      middleware: this.#middleware?.slice(0),
+      handler,
+    })
+  }
+
   get<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#route('GET', pattern, handler)
+    this.route('GET', pattern, handler)
   }
 
   post<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#route('POST', pattern, handler)
+    this.route('POST', pattern, handler)
   }
 
   put<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#route('PUT', pattern, handler)
+    this.route('PUT', pattern, handler)
   }
 
   patch<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#route('PATCH', pattern, handler)
+    this.route('PATCH', pattern, handler)
   }
 
   delete<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#route('DELETE', pattern, handler)
+    this.route('DELETE', pattern, handler)
   }
 
   options<P extends string>(
     pattern: P | RoutePattern<P>,
     handler: RequestHandler<Params<P>>,
   ): void {
-    this.#route('OPTIONS', pattern, handler)
+    this.route('OPTIONS', pattern, handler)
   }
 
   head<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#route('HEAD', pattern, handler)
+    this.route('HEAD', pattern, handler)
   }
 
   all<P extends string>(pattern: P | RoutePattern<P>, handler: RequestHandler<Params<P>>): void {
-    this.#route('ALL', pattern, handler)
-  }
-
-  #route(
-    method: RequestMethod | 'ALL',
-    pattern: string | RoutePattern,
-    handler: RequestHandler<Params<string>>,
-  ): void {
-    this.#matcher.add(pattern, {
-      method,
-      middleware: this.#middleware?.slice(0) ?? undefined,
-      handler,
-    })
+    this.route('ALL', pattern, handler)
   }
 }
