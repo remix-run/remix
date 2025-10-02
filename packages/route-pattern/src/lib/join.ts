@@ -1,4 +1,4 @@
-import type { Parse, ParsedPattern, ParseResult, Token } from './parse.ts'
+import type { Parse, ParsedPattern, ParseResult, Separator, Token } from './parse.ts'
 import type { SearchConstraints } from './search-constraints.ts'
 import { stringify, startsWithSeparator } from './stringify.ts'
 import type { Stringify, StartsWithSeparator } from './stringify.ts'
@@ -79,12 +79,7 @@ function joinSearchConstraints(
   return merged
 }
 
-// prettier-ignore
-export type Join<A extends string, B extends string> =
-  B extends '' ? A :
-  A extends '' ? B :
-  B extends '/' ? A :
-  _Join<Parse<A>, Parse<B>>
+export type Join<A extends string, B extends string> = _Join<Parse<A>, Parse<B>>
 
 type _Join<A extends ParsedPattern, B extends ParsedPattern> = Stringify<{
   protocol: JoinOriginField<A, B, 'protocol'>
@@ -114,7 +109,7 @@ type JoinPathnames<A extends Token[] | undefined, B extends Token[] | undefined>
 
 // prettier-ignore
 type RemoveTrailingSeparator<T extends Token[]> =
-  T extends [...infer Rest extends Token[], { type: 'separator' }] ? Rest : T
+  T extends [...infer Rest extends Token[], Separator] ? Rest : T
 
 // prettier-ignore
 type JoinPathnameTokens<
@@ -122,7 +117,7 @@ type JoinPathnameTokens<
   B extends Token[]
 > = StartsWithSeparator<B> extends true ?
     [...A, ...B] :
-    [...A, { type: 'separator' }, ...B]
+    [...A, Separator, ...B]
 
 // prettier-ignore
 type JoinSearch<

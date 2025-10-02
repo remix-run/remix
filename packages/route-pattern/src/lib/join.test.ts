@@ -83,10 +83,10 @@ describe('join', () => {
 // prettier-ignore
 export type Tests = [
   // empty input/base
-  Assert<IsEqual<Join<'', ''>, ''>>,
+  Assert<IsEqual<Join<'', ''>, '/'>>,
   Assert<IsEqual<Join<'/', '/'>, '/'>>,
-  Assert<IsEqual<Join<'hello', ''>, 'hello'>>,
-  Assert<IsEqual<Join<'', 'hello'>, 'hello'>>,
+  Assert<IsEqual<Join<'hello', ''>, '/hello'>>,
+  Assert<IsEqual<Join<'', 'hello'>, '/hello'>>,
 
   // input origin overrides base origin
   Assert<IsEqual<Join<'http://example.com:8080', 'https://remix.run'>, 'https://remix.run/'>>,
@@ -104,7 +104,7 @@ export type Tests = [
   Assert<IsEqual<Join<'/', '/hello'>, '/hello'>>,
 
   // root input with existing pathname
-  Assert<IsEqual<Join<'hello', '/'>, 'hello'>>,
+  Assert<IsEqual<Join<'hello', '/'>, '/hello'>>,
   Assert<IsEqual<Join<'/hello', '/'>, '/hello'>>,
 
   // absolute pathname join
