@@ -6,9 +6,31 @@ import type { Simplify } from './type-utils.ts'
  */
 export type Params<T extends string> = T extends string ? BuildParams<T> : never
 
-type BuildParams<T extends string> = Simplify<
-  Record<RequiredParams<T>, string> & Record<OptionalParams<T>, string | undefined>
->
+// prettier-ignore
+type BuildParams<T extends string> =
+  Parse<T> extends infer A extends ParsedPattern ?
+    Simplify<
+      ParamsFromTokens<A['protocol']> &
+      ParamsFromTokens<A['hostname']> &
+      ParamsFromTokens<A['pathname']>
+    > :
+    never
+
+// prettier-ignore
+type ParamsFromTokens<T extends Token[] | undefined, IsOptional extends boolean = false> =
+  T extends [infer Head extends Token, ...infer Tail extends Token[]] ?
+    Head extends Optional ?
+      ParamsFromTokens<Head['tokens'], true> & ParamsFromTokens<Tail, IsOptional> :
+    Head extends { type: 'variable' | 'wildcard', name: infer N extends string } ?
+      IsOptional extends true ?
+        { [K in N]?: string } & ParamsFromTokens<Tail, IsOptional> :
+        { [K in N]: string } & ParamsFromTokens<Tail, IsOptional> :
+    Head extends { type: 'wildcard' } ?
+      IsOptional extends true ?
+        { '*'?: string } & ParamsFromTokens<Tail, IsOptional> :
+        { '*': string } & ParamsFromTokens<Tail, IsOptional> :
+      ParamsFromTokens<Tail, IsOptional> :
+    {}
 
 // prettier-ignore
 export type RequiredParams<T extends string> =

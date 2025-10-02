@@ -5,7 +5,7 @@ import type { Params } from './params.ts'
 // Simple benchmark: Basic route patterns with single features
 bench('Params - Small', () => {
   return {} as Params<'users/:id'>
-}).types([1430, 'instantiations'])
+}).types([1206, 'instantiations'])
 
 // Medium benchmark: Moderate complexity with combined features (~10 patterns)
 bench('Params - Medium', () => {
@@ -21,7 +21,7 @@ bench('Params - Medium', () => {
     | '(/:locale)/products/:category'
     | 'admin/users/:id/edit'
   >
-}).types([22081, 'instantiations'])
+}).types([19799, 'instantiations'])
 
 // Large/Complex benchmark: 100 route patterns with various feature combinations
 bench('Params - Large', () => {
@@ -123,4 +123,4 @@ bench('Params - Large', () => {
     | 'https://api.example.com:8080/v:version/users/:id'
     | ':protocol://:subdomain.example.com:port/api/*path.:format'
   >
-}).types([228435, 'instantiations'])
+}).types([204789, 'instantiations'])
