@@ -11,7 +11,7 @@ import type {
 
 // prettier-ignore
 export type Variant<T extends string> =
-  T extends any ?
+  [T] extends [string] ?
     string extends T ? string : VariantString<Parse<T>, HasLeadingSlash<T>> :
   never
 
