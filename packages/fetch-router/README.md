@@ -102,6 +102,69 @@ router.map(routes, {
 })
 ```
 
+### Resource-based Routes
+
+Create resource-based route maps with the `resource` and `resources` functions. This can help DRY up your route definitions when creating RESTful APIs, Rails-style routes, etc.
+
+```ts
+import { resource, resources, createRoutes } from '@remix-run/fetch-router'
+
+let routes = createRoutes({
+  home: '/',
+  books: resources('books'), // Plural resources
+  profile: resource('profile'), // Singleton resource
+})
+
+let router = createRouter()
+
+// Plural resources
+router.map(routes.books, {
+  index() {
+    return new Response('Books')
+  },
+  create() {
+    return new Response('Book Created', { status: 201 })
+  },
+  new() {
+    return new Response('New Book')
+  },
+  show({ params }) {
+    return new Response(`Book ${params.id}`)
+  },
+  edit({ params }) {
+    return new Response(`Edit Book ${params.id}`)
+  },
+  update({ params }) {
+    return new Response(`Updated Book ${params.id}`)
+  },
+  destroy({ params }) {
+    return new Response(`Destroyed Book ${params.id}`)
+  },
+})
+
+// Singleton resource
+router.map(routes.profile, {
+  show({ params }) {
+    return new Response(`Profile ${params.id}`)
+  },
+  new() {
+    return new Response('New Profile')
+  },
+  create() {
+    return new Response('Profile Created', { status: 201 })
+  },
+  edit({ params }) {
+    return new Response(`Edit Profile ${params.id}`)
+  },
+  update({ params }) {
+    return new Response(`Updated Profile ${params.id}`)
+  },
+  destroy({ params }) {
+    return new Response(`Destroyed Profile ${params.id}`)
+  },
+})
+```
+
 ### Middleware
 
 Apply middleware globally, per-route, or to entire route hierarchies:
