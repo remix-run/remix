@@ -25,15 +25,15 @@ export default {
 
     let booksHtml = books
       .map(
-        (book) => `
+        ({ title, author, price, slug }) => `
     <div class="book-card">
-      <img src="https://via.placeholder.com/280x300?text=${encodeURIComponent(book.title)}" alt="${escapeHtml(book.title)}">
+      <img src="https://via.placeholder.com/280x300?text=${encodeURIComponent(title)}" alt="${escapeHtml(title)}">
       <div class="book-card-body">
-        <h3>${escapeHtml(book.title)}</h3>
-        <p class="author">by ${escapeHtml(book.author)}</p>
-        <p class="price">$${book.price.toFixed(2)}</p>
+        <h3>${escapeHtml(title)}</h3>
+        <p class="author">by ${escapeHtml(author)}</p>
+        <p class="price">$${price.toFixed(2)}</p>
         <div style="display: flex; gap: 0.5rem;">
-          <a href="${routes.books.show.href({ slug: book.slug })}" class="btn">View Details</a>
+          <a href="${routes.books.show.href({ slug })}" class="btn">View Details</a>
         </div>
       </div>
     </div>
@@ -45,7 +45,7 @@ export default {
     let genreLinks = genres
       .map(
         (genre) =>
-          `<a href="${routes.genres.show.href({ genre })}" class="btn btn-secondary">${escapeHtml(genre)}</a>`,
+          `<a href="${routes.books.genre.href({ genre })}" class="btn btn-secondary">${escapeHtml(genre)}</a>`,
       )
       .join(' ')
 
@@ -67,6 +67,60 @@ export default {
     </div>
     
     <div class="grid">
+      ${booksHtml}
+    </div>
+  `
+
+    return html(layout(content, user))
+  },
+
+  genre({ storage, params }) {
+    let user: User | null = null
+    try {
+      user = storage.get(USER_KEY)
+    } catch {
+      // USER_KEY not set (user not authenticated)
+    }
+    let genre = params.genre
+    let books = getBooksByGenre(genre)
+
+    if (books.length === 0) {
+      let content = `
+      <div class="card">
+        <h1>Genre Not Found</h1>
+        <p>No books found in the "${escapeHtml(genre)}" genre.</p>
+        <p style="margin-top: 1rem;">
+          <a href="${routes.books.index.href()}" class="btn">Browse All Books</a>
+        </p>
+      </div>
+    `
+
+      return html(layout(content, user), { status: 404 })
+    }
+
+    let booksHtml = books
+      .map(
+        (book) => `
+    <div class="book-card">
+      <img src="https://via.placeholder.com/280x300?text=${encodeURIComponent(book.title)}" alt="${escapeHtml(book.title)}">
+      <div class="book-card-body">
+        <h3>${escapeHtml(book.title)}</h3>
+        <p class="author">by ${escapeHtml(book.author)}</p>
+        <p class="price">$${book.price.toFixed(2)}</p>
+        <a href="${routes.books.show.href({ slug: book.slug })}" class="btn">View Details</a>
+      </div>
+    </div>
+  `,
+      )
+      .join('')
+
+    let content = `
+    <h1>${escapeHtml(genre.charAt(0).toUpperCase() + genre.slice(1))} Books</h1>
+    <p style="margin: 1rem 0;">
+      <a href="${routes.books.index.href()}" class="btn btn-secondary">View All Books</a>
+    </p>
+    
+    <div class="grid" style="margin-top: 2rem;">
       ${booksHtml}
     </div>
   `
@@ -141,62 +195,6 @@ export default {
     return html(layout(content, user))
   },
 } satisfies RouteHandlers<typeof routes.books>
-
-export let genresHandlers = {
-  show({ storage, params }) {
-    let user: User | null = null
-    try {
-      user = storage.get(USER_KEY)
-    } catch {
-      // USER_KEY not set (user not authenticated)
-    }
-    let genre = params.genre
-    let books = getBooksByGenre(genre)
-
-    if (books.length === 0) {
-      let content = `
-      <div class="card">
-        <h1>Genre Not Found</h1>
-        <p>No books found in the "${escapeHtml(genre)}" genre.</p>
-        <p style="margin-top: 1rem;">
-          <a href="${routes.books.index.href()}" class="btn">Browse All Books</a>
-        </p>
-      </div>
-    `
-
-      return html(layout(content, user), { status: 404 })
-    }
-
-    let booksHtml = books
-      .map(
-        (book) => `
-    <div class="book-card">
-      <img src="https://via.placeholder.com/280x300?text=${encodeURIComponent(book.title)}" alt="${escapeHtml(book.title)}">
-      <div class="book-card-body">
-        <h3>${escapeHtml(book.title)}</h3>
-        <p class="author">by ${escapeHtml(book.author)}</p>
-        <p class="price">$${book.price.toFixed(2)}</p>
-        <a href="${routes.books.show.href({ slug: book.slug })}" class="btn">View Details</a>
-      </div>
-    </div>
-  `,
-      )
-      .join('')
-
-    let content = `
-    <h1>${escapeHtml(genre.charAt(0).toUpperCase() + genre.slice(1))} Books</h1>
-    <p style="margin: 1rem 0;">
-      <a href="${routes.books.index.href()}" class="btn btn-secondary">View All Books</a>
-    </p>
-    
-    <div class="grid" style="margin-top: 2rem;">
-      ${booksHtml}
-    </div>
-  `
-
-    return html(layout(content, user))
-  },
-} satisfies RouteHandlers<typeof routes.genres>
 
 export let searchHandler: RouteHandler<typeof routes.search> = ({ storage, request }) => {
   let user: User | null = null

@@ -13,13 +13,9 @@ export let routes = createRoutes({
   // Public book routes (read-only)
   books: {
     index: { method: 'GET', pattern: '/books' },
+    genre: { method: 'GET', pattern: '/books/genre/:genre' },
     show: { method: 'GET', pattern: '/books/:slug' },
   },
-
-  // Genre browsing (nested under books to show hierarchy)
-  genres: createRoutes('/books/genre', {
-    show: { method: 'GET', pattern: '/:genre' },
-  }),
 
   // Auth routes (custom routes, not resources)
   auth: {
