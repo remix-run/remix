@@ -26,6 +26,9 @@ importers:
 
   demos/remix-books:
     dependencies:
+      '@remix-run/dom':
+        specifier: jam
+        version: 0.0.0-experimental-remix-jam.3
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../../packages/fetch-router
@@ -972,6 +975,9 @@ packages:
 
   '@remix-run/dom@0.0.0-experimental-remix-jam.1':
     resolution: {integrity: sha512-HLLrUpSz7EicCAWQKqJt7RK2Y04sruwASP5gNgTK3GQzL216XCGoh+LjrMRQ8Aw7GFgHSkvQuyhVb6Y4xY2aDw==}
+
+  '@remix-run/dom@0.0.0-experimental-remix-jam.3':
+    resolution: {integrity: sha512-iTeUTXcxgULVA3b3pUzy40w0i7homa8qdmDPzCSnfjpahYDLcBhNxr2fw7WaT589zVqAvO+VsIe7a7xwcabPiw==}
 
   '@remix-run/events@0.0.0-experimental-remix-jam.1':
     resolution: {integrity: sha512-4Xs0Ek3QYsx2Tq64ZkSMXN9gAwBOg42vzK/5aTkACktb6asljm/wf8mgFPtf+IUegh4BBzkapNXAdmXEh4UqNg==}
@@ -2609,6 +2615,11 @@ snapshots:
       prettier: 3.5.3
 
   '@remix-run/dom@0.0.0-experimental-remix-jam.1':
+    dependencies:
+      '@remix-run/events': 0.0.0-experimental-remix-jam.1
+      '@remix-run/style': 0.0.0-experimental-remix-jam.1
+
+  '@remix-run/dom@0.0.0-experimental-remix-jam.3':
     dependencies:
       '@remix-run/events': 0.0.0-experimental-remix-jam.1
       '@remix-run/style': 0.0.0-experimental-remix-jam.1

@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@remix-run/dom": "jam",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*"
   },
@@ -14,7 +15,7 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server.ts",
     "start": "tsx server.ts",
-    "test": "NODE_ENV=test node --disable-warning=ExperimentalWarning --test",
+    "test": "NODE_ENV=test tsx --test",
     "typecheck": "tsc --noEmit"
   }
 }

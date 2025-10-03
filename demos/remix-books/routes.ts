@@ -1,11 +1,13 @@
-import { createRoutes, createResources } from '@remix-run/fetch-router'
+import { route, formAction, resources } from '@remix-run/fetch-router'
 
-export let routes = createRoutes({
+export let routes = route({
   // Simple static routes
   home: '/',
   about: '/about',
-  contact: { method: 'GET', pattern: '/contact' },
-  contactSubmit: { method: 'POST', pattern: '/contact' },
+  contact: route('/contact', {
+    index: { method: 'GET', pattern: '/' },
+    action: { method: 'POST', pattern: '/' },
+  }),
   search: '/search',
 
   // Public book routes
@@ -17,32 +19,27 @@ export let routes = createRoutes({
 
   // Auth routes
   auth: {
-    login: { method: 'GET', pattern: '/login' },
-    loginSubmit: { method: 'POST', pattern: '/login' },
-    register: { method: 'GET', pattern: '/register' },
-    registerSubmit: { method: 'POST', pattern: '/register' },
+    login: formAction('login'),
+    register: formAction('register'),
     logout: { method: 'POST', pattern: '/logout' },
-    forgotPassword: { method: 'GET', pattern: '/forgot-password' },
-    forgotPasswordSubmit: { method: 'POST', pattern: '/forgot-password' },
-    resetPassword: { method: 'GET', pattern: '/reset-password/:token' },
-    resetPasswordSubmit: { method: 'POST', pattern: '/reset-password/:token' },
+    forgotPassword: formAction('forgot-password'),
+    resetPassword: formAction('reset-password/:token'),
   },
 
   // Account section (protected, nested routes)
-  account: createRoutes('/account', {
-    index: { method: 'GET', pattern: '/' },
-    settings: { method: 'GET', pattern: '/settings' },
-    settingsUpdate: { method: 'PUT', pattern: '/settings' },
+  account: route('/account', {
+    index: '/',
+    settings: formAction('settings'),
 
     // Orders as nested resources with custom param
-    orders: createResources('/orders', {
+    orders: resources('/orders', {
       param: 'orderId',
       only: ['index', 'show'], // Read-only, no create/edit/delete
     }),
   }),
 
   // Cart and shopping
-  cart: createRoutes('/cart', {
+  cart: route('/cart', {
     index: { method: 'GET', pattern: '/' },
 
     // API-style endpoints under /cart/api
@@ -54,27 +51,27 @@ export let routes = createRoutes({
   }),
 
   // Checkout flow
-  checkout: createRoutes('/checkout', {
+  checkout: route('/checkout', {
     index: { method: 'GET', pattern: '/' },
-    submit: { method: 'POST', pattern: '/' },
+    action: { method: 'POST', pattern: '/' },
     confirmation: { method: 'GET', pattern: '/:orderId/confirmation' },
   }),
 
   // Admin section (protected, showcases full CRUD on multiple resources)
-  admin: createRoutes('/admin', {
+  admin: route('/admin', {
     index: { method: 'GET', pattern: '/' },
 
     // Full CRUD on books
-    books: createResources('/books', { param: 'bookId' }),
+    books: resources('/books', { param: 'bookId' }),
 
     // Partial CRUD on users (no create, users self-register)
-    users: createResources('/users', {
+    users: resources('/users', {
       param: 'userId',
       only: ['index', 'show', 'edit', 'update', 'destroy'],
     }),
 
     // Orders view-only
-    orders: createResources('/orders', {
+    orders: resources('/orders', {
       param: 'orderId',
       only: ['index', 'show'],
     }),

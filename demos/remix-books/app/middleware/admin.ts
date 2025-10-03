@@ -7,12 +7,10 @@ import { USER_KEY } from './auth.ts'
  * Returns 403 Forbidden if user is not an admin.
  * Must be used after requireAuth middleware.
  */
-export let requireAdmin: Middleware = async ({ storage }, next) => {
+export let requireAdmin: Middleware = async ({ storage }) => {
   let user = storage.get(USER_KEY)
 
   if (user.role !== 'admin') {
     return new Response('Forbidden', { status: 403 })
   }
-
-  return next()
 }
