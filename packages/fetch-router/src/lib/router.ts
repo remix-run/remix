@@ -197,20 +197,19 @@ export class Router {
   ): void
   map<T extends RouteMap>(routes: T, handlers: HandlerMap<T>): void
   map<T extends RouteMap>(routes: T, middleware: Middleware[], handlers: HandlerMap<T>): void
-  map(routeOrRoutes: any, middlewareOrHandlers: any, maybeHandlers?: any): void {
+  map(routeOrRoutes: any, middlewareOrHandler: any, handler?: any): void {
     if (typeof routeOrRoutes === 'string' || routeOrRoutes instanceof RoutePattern) {
-      this.route('ANY', routeOrRoutes, middlewareOrHandlers, maybeHandlers)
+      this.route('ANY', routeOrRoutes, middlewareOrHandler, handler)
     } else if (routeOrRoutes instanceof Route) {
-      this.route(routeOrRoutes.method, routeOrRoutes.pattern, middlewareOrHandlers, maybeHandlers)
+      this.route(routeOrRoutes.method, routeOrRoutes.pattern, middlewareOrHandler, handler)
     } else {
-      let handlers = maybeHandlers == null ? middlewareOrHandlers : maybeHandlers
+      let handlers = handler == null ? middlewareOrHandler : handler
       for (let key in routeOrRoutes) {
         let route = routeOrRoutes[key]
-        let handler = handlers[key]
         if (route instanceof Route) {
-          this.route(route.method, route.pattern, middlewareOrHandlers, handler)
+          this.route(route.method, route.pattern, middlewareOrHandler, handlers[key])
         } else {
-          this.map(route, middlewareOrHandlers, handler)
+          this.map(route, middlewareOrHandler, handlers[key])
         }
       }
     }
@@ -231,16 +230,14 @@ export class Router {
     method: M,
     pattern: P | RoutePattern<P> | Route<M, P>,
     middlewareOrHandler: any,
-    maybeHandler?: RequestHandler<Params<P>>,
+    handler?: RequestHandler<Params<P>>,
   ): void {
     let routeMiddleware: Middleware[] | undefined
-    let handler: RequestHandler<Params<P>>
-    if (maybeHandler != null) {
+    if (handler != null) {
       routeMiddleware =
         Array.isArray(middlewareOrHandler) && middlewareOrHandler.length > 0
           ? middlewareOrHandler
           : undefined
-      handler = maybeHandler
     } else {
       routeMiddleware = undefined
       handler = middlewareOrHandler
@@ -255,7 +252,7 @@ export class Router {
     this.#matcher.add(pattern instanceof Route ? pattern.pattern : pattern, {
       method,
       middleware,
-      handler,
+      handler: handler!,
     })
   }
 

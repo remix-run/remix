@@ -1,6 +1,5 @@
 packages:
   - packages/*
-  - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*
   - packages/multipart-parser/bench
   - packages/multipart-parser/demos/*
