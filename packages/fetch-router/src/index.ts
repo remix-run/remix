@@ -1,6 +1,11 @@
 export { createStorageKey } from './lib/app-storage.ts'
 export { AppStorage } from './lib/app-storage.ts'
 
+export {
+  createFormAction,
+  createFormAction as formAction, // shorthand
+} from './lib/form-action.ts'
+
 export { RequestContext } from './lib/request-handler.ts'
 export type { RequestHandler, Middleware, NextFunction } from './lib/request-handler.ts'
 

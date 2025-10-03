@@ -4,6 +4,9 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## HEAD
 
+- Add `route` shorthand for `createRoutes` to public exports
+- Add support for any `BodyInit` in `html(body)` response helper
+- Add `createFormAction` (also exported as `formAction` for short) for creating route maps with `index` (`GET`) and `action` (`POST`) routes. This is well-suited to showing a standard HTML `<form>` and handling its submit action at the same URL.
 - Export `RouteHandlers` and `RouteHandler` types
 
 ## v0.3.0 (2025-10-03)
