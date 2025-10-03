@@ -20,13 +20,16 @@ export interface RouterOptions {
 }
 
 // prettier-ignore
-type HandlerMap<T> = {
+export type RouteHandlers<T extends RouteMap> = {
   [K in keyof T]: (
-    T[K] extends Route<any, infer P> ? RequestHandler<Params<P>> :
-    T[K] extends RouteMap ? HandlerMap<T[K]> :
+    T[K] extends Route ? RouteHandler<T[K]> :
+    T[K] extends RouteMap ? RouteHandlers<T[K]> :
     never
   )
 }
+
+export type RouteHandler<T extends Route> =
+  T extends Route<any, infer P> ? RequestHandler<Params<P>> : never
 
 type MatchData =
   | {
@@ -195,8 +198,8 @@ export class Router {
     middleware: Middleware<Params<P>>[],
     handler: RequestHandler<Params<P>>,
   ): void
-  map<T extends RouteMap>(routes: T, handlers: HandlerMap<T>): void
-  map<T extends RouteMap>(routes: T, middleware: Middleware[], handlers: HandlerMap<T>): void
+  map<T extends RouteMap>(routes: T, handlers: RouteHandlers<T>): void
+  map<T extends RouteMap>(routes: T, middleware: Middleware[], handlers: RouteHandlers<T>): void
   map(routeOrRoutes: any, middlewareOrHandler: any, handler?: any): void {
     if (typeof routeOrRoutes === 'string' || routeOrRoutes instanceof RoutePattern) {
       this.route('ANY', routeOrRoutes, middlewareOrHandler, handler)

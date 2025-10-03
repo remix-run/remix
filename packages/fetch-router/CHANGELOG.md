@@ -2,6 +2,10 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Export `RouteHandlers` and `RouteHandler` types
+
 ## v0.3.0 (2025-10-03)
 
 - Add `router.map()` for registering routes and middleware either one at a time or in bulk
