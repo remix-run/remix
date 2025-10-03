@@ -14,23 +14,23 @@ describe('createResource', () => {
         IsEqual<
           typeof book,
           {
-            show: Route<'GET', '/book/:id'>
+            show: Route<'GET', '/book'>
             new: Route<'GET', '/book/new'>
             create: Route<'POST', '/book'>
-            edit: Route<'GET', '/book/:id/edit'>
-            update: Route<'PUT', '/book/:id'>
-            destroy: Route<'DELETE', '/book/:id'>
+            edit: Route<'GET', '/book/edit'>
+            update: Route<'PUT', '/book'>
+            destroy: Route<'DELETE', '/book'>
           }
         >
       >,
     ]
 
-    assert.deepEqual(book.show, new Route('GET', '/book/:id'))
+    assert.deepEqual(book.show, new Route('GET', '/book'))
     assert.deepEqual(book.new, new Route('GET', '/book/new'))
     assert.deepEqual(book.create, new Route('POST', '/book'))
-    assert.deepEqual(book.edit, new Route('GET', '/book/:id/edit'))
-    assert.deepEqual(book.update, new Route('PUT', '/book/:id'))
-    assert.deepEqual(book.destroy, new Route('DELETE', '/book/:id'))
+    assert.deepEqual(book.edit, new Route('GET', '/book/edit'))
+    assert.deepEqual(book.update, new Route('PUT', '/book'))
+    assert.deepEqual(book.destroy, new Route('DELETE', '/book'))
   })
 
   it('creates a resource with only option', () => {
@@ -41,15 +41,15 @@ describe('createResource', () => {
         IsEqual<
           typeof book,
           {
-            show: Route<'GET', '/book/:id'>
-            update: Route<'PUT', '/book/:id'>
+            show: Route<'GET', '/book'>
+            update: Route<'PUT', '/book'>
           }
         >
       >,
     ]
 
-    assert.deepEqual(book.show, new Route('GET', '/book/:id'))
-    assert.deepEqual(book.update, new Route('PUT', '/book/:id'))
+    assert.deepEqual(book.show, new Route('GET', '/book'))
+    assert.deepEqual(book.update, new Route('PUT', '/book'))
     // Other routes are excluded from the type
     assert.equal((book as any).new, undefined)
     assert.equal((book as any).create, undefined)
