@@ -24,6 +24,25 @@ importers:
         specifier: ^8.40.0
         version: 8.40.0(eslint@9.33.0)(typescript@5.7.2)
 
+  demos/remix-books:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../../packages/fetch-router
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../../packages/node-fetch-server
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.10
+      tsx:
+        specifier: ^4.20.6
+        version: 4.20.6
+
   demos/remix-jam:
     dependencies:
       '@remix-run/dom':

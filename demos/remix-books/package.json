@@ -1,0 +1,20 @@
+{
+  "name": "bookstore-demo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "esbuild": "^0.25.10",
+    "tsx": "^4.20.6"
+  },
+  "scripts": {
+    "dev": "NODE_ENV=development tsx watch server.ts",
+    "start": "tsx server.ts",
+    "test": "NODE_ENV=test node --disable-warning=ExperimentalWarning --test",
+    "typecheck": "tsc --noEmit"
+  }
+}
