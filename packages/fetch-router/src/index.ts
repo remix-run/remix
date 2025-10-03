@@ -19,7 +19,11 @@ export type {
 
 export { logger } from './lib/middleware/logger.ts'
 
-export { Route, createRoutes } from './lib/route-map.ts'
+export {
+  Route,
+  createRoutes,
+  createRoutes as route, // shorthand
+} from './lib/route-map.ts'
 export type { RouteMap, RouteDefs, RouteDef } from './lib/route-map.ts'
 
 export { createRouter, Router } from './lib/router.ts'
