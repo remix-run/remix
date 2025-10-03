@@ -39,6 +39,28 @@ describe('router.fetch()', () => {
     assert.deepEqual(requestLog, ['middleware'])
   })
 
+  it('fetches a route with specific method handlers', async () => {
+    let routes = createRoutes({
+      home: '/',
+    })
+
+    let router = createRouter()
+
+    router.get(routes.home, () => new Response('GET'))
+    router.head(routes.home, () => new Response('HEAD'))
+    router.post(routes.home, () => new Response('POST'))
+    router.put(routes.home, () => new Response('PUT'))
+    router.patch(routes.home, () => new Response('PATCH'))
+    router.delete(routes.home, () => new Response('DELETE'))
+    router.options(routes.home, () => new Response('OPTIONS'))
+
+    for (let method of ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']) {
+      let response = await router.fetch('https://remix.run', { method })
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), method)
+    }
+  })
+
   it('delegates to another router and runs all middleware from both', async () => {
     let requestLog: string[] = []
 
@@ -170,17 +192,17 @@ describe('router.map() with middleware', () => {
   it('applies middleware to single route', async () => {
     let routes = createRoutes({ home: '/' })
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.map(
       routes.home,
       [
         () => {
-          log.push('middleware')
+          requestLog.push('middleware')
         },
       ],
       () => {
-        log.push('handler')
+        requestLog.push('handler')
         return new Response('OK')
       },
     )
@@ -188,7 +210,7 @@ describe('router.map() with middleware', () => {
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'OK')
-    assert.deepEqual(log, ['middleware', 'handler'])
+    assert.deepEqual(requestLog, ['middleware', 'handler'])
   })
 
   it('applies middleware to all routes including nested', async () => {
@@ -200,27 +222,27 @@ describe('router.map() with middleware', () => {
       },
     })
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.map(
       routes,
       [
         () => {
-          log.push('shared')
+          requestLog.push('shared')
         },
       ],
       {
         home() {
-          log.push('home')
+          requestLog.push('home')
           return new Response('Home')
         },
         blog: {
           index() {
-            log.push('blog-index')
+            requestLog.push('blog-index')
             return new Response('Blog')
           },
           show() {
-            log.push('blog-show')
+            requestLog.push('blog-show')
             return new Response('Post')
           },
         },
@@ -228,15 +250,15 @@ describe('router.map() with middleware', () => {
     )
 
     let response = await router.fetch('https://remix.run/')
-    assert.deepEqual(log, ['shared', 'home'])
+    assert.deepEqual(requestLog, ['shared', 'home'])
 
-    log = []
+    requestLog = []
     response = await router.fetch('https://remix.run/blog')
-    assert.deepEqual(log, ['shared', 'blog-index'])
+    assert.deepEqual(requestLog, ['shared', 'blog-index'])
 
-    log = []
+    requestLog = []
     response = await router.fetch('https://remix.run/blog/1')
-    assert.deepEqual(log, ['shared', 'blog-show'])
+    assert.deepEqual(requestLog, ['shared', 'blog-show'])
   })
 
   it('applies middleware to deeply nested routes', async () => {
@@ -251,13 +273,13 @@ describe('router.map() with middleware', () => {
       },
     })
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.map(
       routes,
       [
         () => {
-          log.push('api-middleware')
+          requestLog.push('api-middleware')
         },
       ],
       {
@@ -265,11 +287,11 @@ describe('router.map() with middleware', () => {
           v1: {
             users: {
               index() {
-                log.push('users-index')
+                requestLog.push('users-index')
                 return new Response('Users')
               },
               show() {
-                log.push('user-show')
+                requestLog.push('user-show')
                 return new Response('User')
               },
             },
@@ -279,11 +301,11 @@ describe('router.map() with middleware', () => {
     )
 
     let response = await router.fetch('https://remix.run/api/v1/users')
-    assert.deepEqual(log, ['api-middleware', 'users-index'])
+    assert.deepEqual(requestLog, ['api-middleware', 'users-index'])
 
-    log = []
+    requestLog = []
     response = await router.fetch('https://remix.run/api/v1/users/1')
-    assert.deepEqual(log, ['api-middleware', 'user-show'])
+    assert.deepEqual(requestLog, ['api-middleware', 'user-show'])
   })
 
   it('allows selective middleware by mapping specific nested paths', async () => {
@@ -295,11 +317,11 @@ describe('router.map() with middleware', () => {
       },
     })
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     // Public route - no middleware
     router.map(routes.public, () => {
-      log.push('public')
+      requestLog.push('public')
       return new Response('Public')
     })
 
@@ -308,71 +330,72 @@ describe('router.map() with middleware', () => {
       routes.admin,
       [
         () => {
-          log.push('auth')
+          requestLog.push('auth')
         },
       ],
       {
         dashboard() {
-          log.push('dashboard')
+          requestLog.push('dashboard')
           return new Response('Dashboard')
         },
         users() {
-          log.push('users')
+          requestLog.push('users')
           return new Response('Users')
         },
       },
     )
 
     let response = await router.fetch('https://remix.run/public')
-    assert.deepEqual(log, ['public'])
+    assert.deepEqual(requestLog, ['public'])
 
-    log = []
+    requestLog = []
     response = await router.fetch('https://remix.run/admin/dashboard')
-    assert.deepEqual(log, ['auth', 'dashboard'])
+    assert.deepEqual(requestLog, ['auth', 'dashboard'])
 
-    log = []
+    requestLog = []
     response = await router.fetch('https://remix.run/admin/users')
-    assert.deepEqual(log, ['auth', 'users'])
+    assert.deepEqual(requestLog, ['auth', 'users'])
   })
 
   it('merges map middleware with global middleware', async () => {
     let routes = createRoutes({ home: '/' })
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.use(() => {
-      log.push('global')
+      requestLog.push('global')
     })
 
     router.map(
       routes.home,
       [
         () => {
-          log.push('map')
+          requestLog.push('map')
         },
       ],
       () => {
-        log.push('handler')
+        requestLog.push('handler')
         return new Response('OK')
       },
     )
 
     let response = await router.fetch('https://remix.run/')
-    assert.deepEqual(log, ['global', 'map', 'handler'])
+    assert.deepEqual(requestLog, ['global', 'map', 'handler'])
   })
 
   it('works with empty middleware array', async () => {
     let routes = createRoutes({ home: '/' })
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.map(routes.home, [], () => {
-      log.push('handler')
+      requestLog.push('handler')
       return new Response('OK')
     })
 
-    let response = await router.fetch('https://remix.run/')
-    assert.deepEqual(log, ['handler'])
+    await router.fetch('https://remix.run/')
+
+    assert.deepEqual(requestLog, ['handler'])
   })
 
   it('combines map middleware with nested route maps', async () => {
@@ -383,23 +406,23 @@ describe('router.map() with middleware', () => {
       },
     })
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.map(
       routes,
       [
         () => {
-          log.push('outer')
+          requestLog.push('outer')
         },
       ],
       {
         blog: {
           index() {
-            log.push('blog-index')
+            requestLog.push('blog-index')
             return new Response('Blog')
           },
           show() {
-            log.push('blog-show')
+            requestLog.push('blog-show')
             return new Response('Post')
           },
         },
@@ -407,11 +430,11 @@ describe('router.map() with middleware', () => {
     )
 
     let response = await router.fetch('https://remix.run/blog')
-    assert.deepEqual(log, ['outer', 'blog-index'])
+    assert.deepEqual(requestLog, ['outer', 'blog-index'])
 
-    log = []
+    requestLog = []
     response = await router.fetch('https://remix.run/blog/1')
-    assert.deepEqual(log, ['outer', 'blog-show'])
+    assert.deepEqual(requestLog, ['outer', 'blog-show'])
   })
 
   it('works with routes that have specific methods', async () => {
@@ -422,33 +445,33 @@ describe('router.map() with middleware', () => {
       },
     })
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.map(
       routes.blog,
       [
         () => {
-          log.push('blog-middleware')
+          requestLog.push('blog-middleware')
         },
       ],
       {
         index() {
-          log.push('index')
+          requestLog.push('index')
           return new Response('Blog')
         },
         create() {
-          log.push('create')
+          requestLog.push('create')
           return new Response('Created')
         },
       },
     )
 
     let response = await router.fetch('https://remix.run/blog')
-    assert.deepEqual(log, ['blog-middleware', 'index'])
+    assert.deepEqual(requestLog, ['blog-middleware', 'index'])
 
-    log = []
+    requestLog = []
     response = await router.fetch('https://remix.run/blog', { method: 'POST' })
-    assert.deepEqual(log, ['blog-middleware', 'create'])
+    assert.deepEqual(requestLog, ['blog-middleware', 'create'])
   })
 
   it('middleware cascades through multiple levels of nesting', async () => {
@@ -462,16 +485,16 @@ describe('router.map() with middleware', () => {
       },
     })
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.map(
       routes,
       [
         () => {
-          log.push('m1')
+          requestLog.push('m1')
         },
         () => {
-          log.push('m2')
+          requestLog.push('m2')
         },
       ],
       {
@@ -479,7 +502,7 @@ describe('router.map() with middleware', () => {
           level2: {
             level3: {
               index() {
-                log.push('handler')
+                requestLog.push('handler')
                 return new Response('OK')
               },
             },
@@ -489,24 +512,24 @@ describe('router.map() with middleware', () => {
     )
 
     let response = await router.fetch('https://remix.run/l1/l2/l3')
-    assert.deepEqual(log, ['m1', 'm2', 'handler'])
+    assert.deepEqual(requestLog, ['m1', 'm2', 'handler'])
   })
 })
 
 describe('per-route middleware', () => {
   it('registers a route with single middleware in array', async () => {
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.get(
       '/',
       [
         () => {
-          log.push('middleware')
+          requestLog.push('middleware')
         },
       ],
       () => {
-        log.push('handler')
+        requestLog.push('handler')
         return new Response('OK')
       },
     )
@@ -514,141 +537,141 @@ describe('per-route middleware', () => {
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'OK')
-    assert.deepEqual(log, ['middleware', 'handler'])
+    assert.deepEqual(requestLog, ['middleware', 'handler'])
   })
 
   it('registers a route with multiple middleware', async () => {
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.get(
       '/',
       [
         () => {
-          log.push('m1')
+          requestLog.push('m1')
         },
         () => {
-          log.push('m2')
+          requestLog.push('m2')
         },
         () => {
-          log.push('m3')
+          requestLog.push('m3')
         },
       ],
       () => {
-        log.push('handler')
+        requestLog.push('handler')
         return new Response('OK')
       },
     )
 
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 200)
-    assert.deepEqual(log, ['m1', 'm2', 'm3', 'handler'])
+    assert.deepEqual(requestLog, ['m1', 'm2', 'm3', 'handler'])
   })
 
   it('registers a route without middleware', async () => {
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.get('/', () => {
-      log.push('handler')
+      requestLog.push('handler')
       return new Response('OK')
     })
 
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 200)
-    assert.deepEqual(log, ['handler'])
+    assert.deepEqual(requestLog, ['handler'])
   })
 
   it('executes per-route middleware after global middleware', async () => {
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.use(() => {
-      log.push('global')
+      requestLog.push('global')
     })
 
     router.get(
       '/',
       [
         () => {
-          log.push('route-1')
+          requestLog.push('route-1')
         },
         () => {
-          log.push('route-2')
+          requestLog.push('route-2')
         },
       ],
       () => {
-        log.push('handler')
+        requestLog.push('handler')
         return new Response('OK')
       },
     )
 
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 200)
-    assert.deepEqual(log, ['global', 'route-1', 'route-2', 'handler'])
+    assert.deepEqual(requestLog, ['global', 'route-1', 'route-2', 'handler'])
   })
 
   it('applies middleware only to specific route', async () => {
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.get(
       '/a',
       [
         () => {
-          log.push('middleware-a')
+          requestLog.push('middleware-a')
         },
       ],
       () => {
-        log.push('handler-a')
+        requestLog.push('handler-a')
         return new Response('A')
       },
     )
 
     router.get('/b', () => {
-      log.push('handler-b')
+      requestLog.push('handler-b')
       return new Response('B')
     })
 
     let response = await router.fetch('https://remix.run/a')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'A')
-    assert.deepEqual(log, ['middleware-a', 'handler-a'])
+    assert.deepEqual(requestLog, ['middleware-a', 'handler-a'])
 
-    log = []
+    requestLog = []
     response = await router.fetch('https://remix.run/b')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'B')
-    assert.deepEqual(log, ['handler-b'])
+    assert.deepEqual(requestLog, ['handler-b'])
   })
 
   it('works with empty middleware array', async () => {
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.get('/', [], () => {
-      log.push('handler')
+      requestLog.push('handler')
       return new Response('OK')
     })
 
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 200)
-    assert.deepEqual(log, ['handler'])
+    assert.deepEqual(requestLog, ['handler'])
   })
 
   it('allows different routes to have different middleware', async () => {
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.get(
       '/a',
       [
         () => {
-          log.push('auth')
+          requestLog.push('auth')
         },
       ],
       () => {
-        log.push('handler-a')
+        requestLog.push('handler-a')
         return new Response('A')
       },
     )
@@ -657,24 +680,24 @@ describe('per-route middleware', () => {
       '/b',
       [
         () => {
-          log.push('validate')
+          requestLog.push('validate')
         },
         () => {
-          log.push('sanitize')
+          requestLog.push('sanitize')
         },
       ],
       () => {
-        log.push('handler-b')
+        requestLog.push('handler-b')
         return new Response('B')
       },
     )
 
     let response = await router.fetch('https://remix.run/a')
-    assert.deepEqual(log, ['auth', 'handler-a'])
+    assert.deepEqual(requestLog, ['auth', 'handler-a'])
 
-    log = []
+    requestLog = []
     response = await router.fetch('https://remix.run/b', { method: 'POST' })
-    assert.deepEqual(log, ['validate', 'sanitize', 'handler-b'])
+    assert.deepEqual(requestLog, ['validate', 'sanitize', 'handler-b'])
   })
 
   it('works with all HTTP methods', async () => {
@@ -694,72 +717,67 @@ describe('per-route middleware', () => {
     router.delete('/', middleware, () => new Response('DELETE'))
     router.options('/', middleware, () => new Response('OPTIONS'))
     router.head('/', middleware, () => new Response('HEAD'))
-    router.any('/any', middleware, () => new Response('ANY'))
 
     for (let method of ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD']) {
       methods = []
       await router.fetch('https://remix.run/', { method })
       assert.deepEqual(methods, ['middleware'], `Failed for ${method}`)
     }
-
-    methods = []
-    await router.fetch('https://remix.run/any', { method: 'GET' })
-    assert.deepEqual(methods, ['middleware'])
   })
 
   it('merges with multiple global middleware', async () => {
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.use(() => {
-      log.push('global-1')
+      requestLog.push('global-1')
     })
 
     router.use(() => {
-      log.push('global-2')
+      requestLog.push('global-2')
     })
 
     router.get(
       '/',
       [
         () => {
-          log.push('route-1')
+          requestLog.push('route-1')
         },
         () => {
-          log.push('route-2')
+          requestLog.push('route-2')
         },
       ],
       () => {
-        log.push('handler')
+        requestLog.push('handler')
         return new Response('OK')
       },
     )
 
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 200)
-    assert.deepEqual(log, ['global-1', 'global-2', 'route-1', 'route-2', 'handler'])
+    assert.deepEqual(requestLog, ['global-1', 'global-2', 'route-1', 'route-2', 'handler'])
   })
 
   it('handles middleware that returns a response (short-circuits)', async () => {
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
     router.get(
       '/',
       [
         () => {
-          log.push('m1')
+          requestLog.push('m1')
         },
         () => {
-          log.push('m2-short-circuit')
+          requestLog.push('m2-short-circuit')
           return new Response('Blocked', { status: 403 })
         },
         () => {
-          log.push('m3')
+          requestLog.push('m3')
         },
       ],
       () => {
-        log.push('handler')
+        requestLog.push('handler')
         return new Response('OK')
       },
     )
@@ -767,7 +785,7 @@ describe('per-route middleware', () => {
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 403)
     assert.equal(await response.text(), 'Blocked')
-    assert.deepEqual(log, ['m1', 'm2-short-circuit'])
+    assert.deepEqual(requestLog, ['m1', 'm2-short-circuit'])
   })
 
   it('works with Route objects from createRoutes()', async () => {
@@ -776,23 +794,23 @@ describe('per-route middleware', () => {
     })
 
     let router = createRouter()
-    let log: string[] = []
+    let requestLog: string[] = []
 
-    router.get(
+    router.map(
       routes.home,
       [
         () => {
-          log.push('middleware')
+          requestLog.push('middleware')
         },
       ],
       () => {
-        log.push('handler')
+        requestLog.push('handler')
         return new Response('OK')
       },
     )
 
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 200)
-    assert.deepEqual(log, ['middleware', 'handler'])
+    assert.deepEqual(requestLog, ['middleware', 'handler'])
   })
 })

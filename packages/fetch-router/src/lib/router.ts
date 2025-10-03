@@ -2,7 +2,7 @@ import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
 import type { Matcher, Params } from '@remix-run/route-pattern'
 
 import { RequestContext, runMiddleware } from './request-handler.ts'
-import type { Middleware, RequestHandler, RequestMethod } from './request-handler.ts'
+import type { Middleware, RequestHandler, RequestMethod, AnyMethod } from './request-handler.ts'
 import { Route } from './route-map.ts'
 import type { RouteMap } from './route-map.ts'
 
@@ -30,7 +30,7 @@ type HandlerMap<T> = {
 
 type MatchData =
   | {
-      method: RequestMethod | 'ANY'
+      method: RequestMethod | AnyMethod
       middleware: Middleware[] | undefined
       handler: RequestHandler<any>
     }
@@ -184,218 +184,66 @@ export class Router {
     return this.#matcher.size
   }
 
-  // Bulk route mapping
+  // Route mapping
 
-  map<M extends RequestMethod, P extends string>(
-    route: Route<M, P>,
+  map<M extends RequestMethod | AnyMethod, P extends string>(
+    route: P | RoutePattern<P> | Route<M, P>,
     handler: RequestHandler<Params<P>>,
   ): void
-  map<M extends RequestMethod, P extends string>(
-    route: Route<M, P>,
+  map<M extends RequestMethod | AnyMethod, P extends string>(
+    route: P | RoutePattern<P> | Route<M, P>,
     middleware: Middleware<Params<P>>[],
     handler: RequestHandler<Params<P>>,
   ): void
   map<T extends RouteMap>(routes: T, handlers: HandlerMap<T>): void
   map<T extends RouteMap>(routes: T, middleware: Middleware[], handlers: HandlerMap<T>): void
-  map(routeOrRoutes: any, middlewareOrHandlers: any, handlers?: any): void {
-    // Detect if middlewareOrHandlers is actually middleware array
-    let routeMiddleware: Middleware[] | undefined
-    let actualHandlers: any
-
-    if (handlers !== undefined) {
-      // Called with middleware: map(routes, middleware, handlers)
-      routeMiddleware = middlewareOrHandlers
-      actualHandlers = handlers
+  map(routeOrRoutes: any, middlewareOrHandlers: any, maybeHandlers?: any): void {
+    if (typeof routeOrRoutes === 'string' || routeOrRoutes instanceof RoutePattern) {
+      this.route('ANY', routeOrRoutes, middlewareOrHandlers, maybeHandlers)
+    } else if (routeOrRoutes instanceof Route) {
+      this.route(routeOrRoutes.method, routeOrRoutes.pattern, middlewareOrHandlers, maybeHandlers)
     } else {
-      // Called without middleware: map(routes, handlers)
-      routeMiddleware = undefined
-      actualHandlers = middlewareOrHandlers
-    }
-
-    if (routeOrRoutes instanceof Route) {
-      // Single route mapping
-      if (routeMiddleware && routeMiddleware.length > 0) {
-        this.#route(routeOrRoutes.method, routeOrRoutes.pattern, routeMiddleware, actualHandlers)
-      } else {
-        this.#route(routeOrRoutes.method, routeOrRoutes.pattern, actualHandlers)
-      }
-    } else {
-      // Bulk route mapping
+      let handlers = maybeHandlers == null ? middlewareOrHandlers : maybeHandlers
       for (let key in routeOrRoutes) {
         let route = routeOrRoutes[key]
-        let handler = actualHandlers[key]
-
+        let handler = handlers[key]
         if (route instanceof Route) {
-          if (routeMiddleware && routeMiddleware.length > 0) {
-            this.#route(route.method, route.pattern, routeMiddleware, handler)
-          } else {
-            this.#route(route.method, route.pattern, handler)
-          }
+          this.route(route.method, route.pattern, middlewareOrHandlers, handler)
         } else {
-          // Recursive mapping - pass middleware down to nested routes
-          if (routeMiddleware && routeMiddleware.length > 0) {
-            this.map(route, routeMiddleware, handler)
-          } else {
-            this.map(route, handler)
-          }
+          this.map(route, middlewareOrHandlers, handler)
         }
       }
     }
   }
 
-  // Individual route mapping
-
-  any<P extends string>(
-    pattern: P | RoutePattern<P> | Route<RequestMethod, P>,
-    handler: RequestHandler<Params<P>>,
-  ): void
-  any<P extends string>(
-    pattern: P | RoutePattern<P> | Route<RequestMethod, P>,
-    middleware: Middleware<Params<P>>[],
-    handler: RequestHandler<Params<P>>,
-  ): void
-  any<P extends string>(
-    pattern: P | RoutePattern<P> | Route<RequestMethod, P>,
-    middlewareOrHandler: Middleware[] | RequestHandler<Params<P>>,
-    handler?: RequestHandler<Params<P>>,
-  ): void {
-    this.#route('ANY', pattern, middlewareOrHandler as any, handler as any)
-  }
-
-  get<M extends 'GET' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    handler: RequestHandler<Params<P>>,
-  ): void
-  get<M extends 'GET' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middleware: Middleware<Params<P>>[],
-    handler: RequestHandler<Params<P>>,
-  ): void
-  get<M extends 'GET' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middlewareOrHandler: Middleware[] | RequestHandler<Params<P>>,
-    handler?: RequestHandler<Params<P>>,
-  ): void {
-    this.#route('GET', pattern, middlewareOrHandler as any, handler as any)
-  }
-
-  post<M extends 'POST' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    handler: RequestHandler<Params<P>>,
-  ): void
-  post<M extends 'POST' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middleware: Middleware<Params<P>>[],
-    handler: RequestHandler<Params<P>>,
-  ): void
-  post<M extends 'POST' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middlewareOrHandler: Middleware[] | RequestHandler<Params<P>>,
-    handler?: RequestHandler<Params<P>>,
-  ): void {
-    this.#route('POST', pattern, middlewareOrHandler as any, handler as any)
-  }
-
-  put<M extends 'PUT' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    handler: RequestHandler<Params<P>>,
-  ): void
-  put<M extends 'PUT' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middleware: Middleware<Params<P>>[],
-    handler: RequestHandler<Params<P>>,
-  ): void
-  put<M extends 'PUT' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middlewareOrHandler: Middleware[] | RequestHandler<Params<P>>,
-    handler?: RequestHandler<Params<P>>,
-  ): void {
-    this.#route('PUT', pattern, middlewareOrHandler as any, handler as any)
-  }
-
-  patch<M extends 'PATCH' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    handler: RequestHandler<Params<P>>,
-  ): void
-  patch<M extends 'PATCH' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middleware: Middleware<Params<P>>[],
-    handler: RequestHandler<Params<P>>,
-  ): void
-  patch<M extends 'PATCH' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middlewareOrHandler: Middleware[] | RequestHandler<Params<P>>,
-    handler?: RequestHandler<Params<P>>,
-  ): void {
-    this.#route('PATCH', pattern, middlewareOrHandler as any, handler as any)
-  }
-
-  delete<M extends 'DELETE' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    handler: RequestHandler<Params<P>>,
-  ): void
-  delete<M extends 'DELETE' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middleware: Middleware<Params<P>>[],
-    handler: RequestHandler<Params<P>>,
-  ): void
-  delete<M extends 'DELETE' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middlewareOrHandler: Middleware[] | RequestHandler<Params<P>>,
-    handler?: RequestHandler<Params<P>>,
-  ): void {
-    this.#route('DELETE', pattern, middlewareOrHandler as any, handler as any)
-  }
-
-  options<M extends 'OPTIONS' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    handler: RequestHandler<Params<P>>,
-  ): void
-  options<M extends 'OPTIONS' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middleware: Middleware<Params<P>>[],
-    handler: RequestHandler<Params<P>>,
-  ): void
-  options<M extends 'OPTIONS' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middlewareOrHandler: Middleware[] | RequestHandler<Params<P>>,
-    handler?: RequestHandler<Params<P>>,
-  ): void {
-    this.#route('OPTIONS', pattern, middlewareOrHandler as any, handler as any)
-  }
-
-  head<M extends 'HEAD' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    handler: RequestHandler<Params<P>>,
-  ): void
-  head<M extends 'HEAD' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middleware: Middleware<Params<P>>[],
-    handler: RequestHandler<Params<P>>,
-  ): void
-  head<M extends 'HEAD' | RequestMethod, P extends string>(
-    pattern: P | RoutePattern<P> | Route<M, P>,
-    middlewareOrHandler: Middleware[] | RequestHandler<Params<P>>,
-    handler?: RequestHandler<Params<P>>,
-  ): void {
-    this.#route('HEAD', pattern, middlewareOrHandler as any, handler as any)
-  }
-
-  #route<M extends RequestMethod | 'ANY', P extends string>(
+  route<M extends RequestMethod | AnyMethod, P extends string>(
     method: M,
-    pattern: P | RoutePattern<P> | Route<any, P>,
-    middlewareOrHandler: Middleware[] | RequestHandler<Params<P>>,
-    handler?: RequestHandler<Params<P>>,
+    pattern: P | RoutePattern<P> | Route<M, P>,
+    handler: RequestHandler<Params<P>>,
+  ): void
+  route<M extends RequestMethod | AnyMethod, P extends string>(
+    method: M,
+    pattern: P | RoutePattern<P> | Route<M, P>,
+    middleware: Middleware<Params<P>>[] | undefined,
+    handler: RequestHandler<Params<P>>,
+  ): void
+  route<M extends RequestMethod | AnyMethod, P extends string>(
+    method: M,
+    pattern: P | RoutePattern<P> | Route<M, P>,
+    middlewareOrHandler: any,
+    maybeHandler?: RequestHandler<Params<P>>,
   ): void {
-    let routeHandler: RequestHandler<Params<P>>
     let routeMiddleware: Middleware[] | undefined
-
-    if (Array.isArray(middlewareOrHandler)) {
-      routeMiddleware = middlewareOrHandler
-      routeHandler = handler!
+    let handler: RequestHandler<Params<P>>
+    if (maybeHandler != null) {
+      routeMiddleware =
+        Array.isArray(middlewareOrHandler) && middlewareOrHandler.length > 0
+          ? middlewareOrHandler
+          : undefined
+      handler = maybeHandler
     } else {
       routeMiddleware = undefined
-      routeHandler = middlewareOrHandler
+      handler = middlewareOrHandler
     }
 
     // prettier-ignore
@@ -404,10 +252,131 @@ export class Router {
       routeMiddleware == null ? this.#middleware?.slice(0) :
       this.#middleware.concat(routeMiddleware)
 
-    this.#matcher.add((pattern as any).pattern ?? pattern, {
+    this.#matcher.add(pattern instanceof Route ? pattern.pattern : pattern, {
       method,
       middleware,
-      handler: routeHandler,
+      handler,
     })
+  }
+
+  // HTTP-method specific route mapping
+
+  get<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'GET' | AnyMethod, P>,
+    handler: RequestHandler<Params<P>>,
+  ): void
+  get<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'GET' | AnyMethod, P>,
+    middleware: Middleware<Params<P>>[],
+    handler: RequestHandler<Params<P>>,
+  ): void
+  get<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'GET' | AnyMethod, P>,
+    middlewareOrHandler: any,
+    handler?: any,
+  ): void {
+    this.route('GET', pattern, middlewareOrHandler, handler)
+  }
+
+  head<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'HEAD' | AnyMethod, P>,
+    handler: RequestHandler<Params<P>>,
+  ): void
+  head<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'HEAD' | AnyMethod, P>,
+    middleware: Middleware<Params<P>>[],
+    handler: RequestHandler<Params<P>>,
+  ): void
+  head<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'HEAD' | AnyMethod, P>,
+    middlewareOrHandler: any,
+    handler?: any,
+  ): void {
+    this.route('HEAD', pattern, middlewareOrHandler, handler)
+  }
+
+  post<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'POST' | AnyMethod, P>,
+    handler: RequestHandler<Params<P>>,
+  ): void
+  post<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'POST' | AnyMethod, P>,
+    middleware: Middleware<Params<P>>[],
+    handler: RequestHandler<Params<P>>,
+  ): void
+  post<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'POST' | AnyMethod, P>,
+    middlewareOrHandler: any,
+    handler?: any,
+  ): void {
+    this.route('POST', pattern, middlewareOrHandler, handler)
+  }
+
+  put<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'PUT' | AnyMethod, P>,
+    handler: RequestHandler<Params<P>>,
+  ): void
+  put<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'PUT' | AnyMethod, P>,
+    middleware: Middleware<Params<P>>[],
+    handler: RequestHandler<Params<P>>,
+  ): void
+  put<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'PUT' | AnyMethod, P>,
+    middlewareOrHandler: any,
+    handler?: any,
+  ): void {
+    this.route('PUT', pattern, middlewareOrHandler, handler)
+  }
+
+  patch<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'PATCH' | AnyMethod, P>,
+    handler: RequestHandler<Params<P>>,
+  ): void
+  patch<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'PATCH' | AnyMethod, P>,
+    middleware: Middleware<Params<P>>[],
+    handler: RequestHandler<Params<P>>,
+  ): void
+  patch<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'PATCH' | AnyMethod, P>,
+    middlewareOrHandler: any,
+    handler?: any,
+  ): void {
+    this.route('PATCH', pattern, middlewareOrHandler, handler)
+  }
+
+  delete<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'DELETE' | AnyMethod, P>,
+    handler: RequestHandler<Params<P>>,
+  ): void
+  delete<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'DELETE' | AnyMethod, P>,
+    middleware: Middleware<Params<P>>[],
+    handler: RequestHandler<Params<P>>,
+  ): void
+  delete<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'DELETE' | AnyMethod, P>,
+    middlewareOrHandler: any,
+    handler?: any,
+  ): void {
+    this.route('DELETE', pattern, middlewareOrHandler, handler)
+  }
+
+  options<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'OPTIONS' | AnyMethod, P>,
+    handler: RequestHandler<Params<P>>,
+  ): void
+  options<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'OPTIONS' | AnyMethod, P>,
+    middleware: Middleware<Params<P>>[],
+    handler: RequestHandler<Params<P>>,
+  ): void
+  options<P extends string>(
+    pattern: P | RoutePattern<P> | Route<'OPTIONS' | AnyMethod, P>,
+    middlewareOrHandler: any,
+    handler?: any,
+  ): void {
+    this.route('OPTIONS', pattern, middlewareOrHandler, handler)
   }
 }

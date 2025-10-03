@@ -1,18 +1,21 @@
 import { RoutePattern } from '@remix-run/route-pattern'
 import type { HrefBuilderArgs, Join } from '@remix-run/route-pattern'
 
-import type { RequestMethod } from './request-handler.ts'
+import type { AnyMethod, RequestMethod } from './request-handler.ts'
 import type { Simplify } from './type-utils.ts'
 
 export interface RouteMap<T extends string = string> {
-  [K: string]: Route<RequestMethod, T> | RouteMap<T>
+  [K: string]: Route<RequestMethod | AnyMethod, T> | RouteMap<T>
 }
 
-export class Route<M extends RequestMethod = RequestMethod, P extends string = string> {
-  readonly method: M | 'ANY'
+export class Route<
+  M extends RequestMethod | AnyMethod = RequestMethod | AnyMethod,
+  P extends string = string,
+> {
+  readonly method: M | AnyMethod
   readonly pattern: RoutePattern<P>
 
-  constructor(method: M | 'ANY', pattern: P | RoutePattern<P>) {
+  constructor(method: M | AnyMethod, pattern: P | RoutePattern<P>) {
     this.method = method
     this.pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
   }
@@ -65,7 +68,7 @@ function buildRouteMap<P extends string, R extends RouteDefs>(
 // prettier-ignore
 export type BuildRouteMap<P extends string = string, R extends RouteDefs = RouteDefs> = Simplify<{
   [K in keyof R]: (
-    R[K] extends Route<infer M extends RequestMethod, infer S extends string> ? Route<M, Join<P, S>> :
+    R[K] extends Route<infer M extends RequestMethod | AnyMethod, infer S extends string> ? Route<M, Join<P, S>> :
     R[K] extends RouteDef ? BuildRoute<P, R[K]> :
     R[K] extends RouteDefs ? BuildRouteMap<P, R[K]> :
     never
@@ -74,11 +77,11 @@ export type BuildRouteMap<P extends string = string, R extends RouteDefs = Route
 
 // prettier-ignore
 type BuildRoute<P extends string, D extends RouteDef> = 
-  D extends string ? Route<RequestMethod, Join<P, D>> :
-  D extends RoutePattern<infer S extends string> ? Route<RequestMethod, Join<P, S>> :
+  D extends string ? Route<AnyMethod, Join<P, D>> :
+  D extends RoutePattern<infer S extends string> ? Route<AnyMethod, Join<P, S>> :
   D extends { method: infer M, pattern: infer S } ? (
-    S extends string ? Route<M extends RequestMethod ? M : RequestMethod, Join<P, S>> :
-    S extends RoutePattern<infer S extends string> ? Route<M extends RequestMethod ? M : RequestMethod, Join<P, S>> :
+    S extends string ? Route<M extends RequestMethod ? M : AnyMethod, Join<P, S>> :
+    S extends RoutePattern<infer S extends string> ? Route<M extends RequestMethod ? M : AnyMethod, Join<P, S>> :
     never
   ) :
   never

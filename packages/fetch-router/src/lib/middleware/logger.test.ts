@@ -17,7 +17,7 @@ describe('logger', () => {
 
     router.use(logger({ log: (message) => messages.push(message) }))
 
-    router.get(routes.home, () => {
+    router.map(routes.home, () => {
       return new Response('Home', {
         headers: {
           'Content-Length': '4',

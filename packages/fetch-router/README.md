@@ -33,7 +33,7 @@ let response = await router.fetch('https://example.com/about')
 console.log(await response.text()) // "About"
 ```
 
-### Route Maps with Type-Safe URLs
+### Route Mapping with Type-Safe URLs
 
 Create a route map to organize your routes by name and generate type-safe URLs:
 
@@ -51,9 +51,11 @@ let routes = createRoutes({
 
 let router = createRouter()
 
+// Map routes one at a time to their respective handlers
 router.get(routes.home, () => new Response('Home'))
 router.get(routes.about, () => new Response('About'))
 router.get(routes.blog.index, () => new Response('Blog'))
+// Params are fully type-safe
 router.get(routes.blog.show, ({ params }) => {
   return new Response(`Blog post: ${params.slug}`)
 })
@@ -62,7 +64,7 @@ router.get(routes.blog.show, ({ params }) => {
 routes.blog.show.href({ slug: 'hello-world' }) // "/blog/hello-world"
 ```
 
-### Route Mapping
+### Route Mapping with Specific HTTP Methods
 
 Define routes that respond only to specific HTTP methods:
 
@@ -116,6 +118,8 @@ let routes = createRoutes({
 })
 
 let router = createRouter()
+
+router.map(routes.home, () => new Response('Home'))
 
 // Plural resources
 router.map(routes.books, {

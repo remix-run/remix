@@ -1,5 +1,7 @@
 import { AppStorage } from './app-storage.ts'
 
+export type AnyMethod = 'ANY'
+
 export type RequestMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
 
 // prettier-ignore

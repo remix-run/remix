@@ -1,7 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { RequestMethod } from './request-handler.ts'
 import type { Assert, IsEqual } from './type-utils.ts'
 import { Route, createRoutes } from './route-map.ts'
 
@@ -82,28 +81,22 @@ let routes = createRoutes({
 })
 
 type Tests = [
-  Assert<IsEqual<typeof categoriesRoutes.index, Route<RequestMethod, '/categories'>>>,
+  Assert<IsEqual<typeof categoriesRoutes.index, Route<'ANY', '/categories'>>>,
   Assert<IsEqual<typeof categoriesRoutes.create, Route<'POST', '/categories/:slug/edit'>>>,
   Assert<
-    IsEqual<
-      typeof categoriesRoutes.products.index,
-      Route<RequestMethod, '/categories/:slug/products'>
-    >
+    IsEqual<typeof categoriesRoutes.products.index, Route<'ANY', '/categories/:slug/products'>>
   >,
 
-  Assert<IsEqual<typeof routes.home, Route<RequestMethod, '/'>>>,
-  Assert<IsEqual<typeof routes.promo, Route<RequestMethod, '(/:lang)/promo'>>>,
-  Assert<IsEqual<typeof routes.about.index, Route<RequestMethod, '/about'>>>,
-  Assert<IsEqual<typeof routes.about.company, Route<RequestMethod, '/about/company'>>>,
-  Assert<IsEqual<typeof routes.blog.index, Route<RequestMethod, '/blog'>>>,
-  Assert<IsEqual<typeof routes.blog.show, Route<RequestMethod, '/blog(/:lang)/:slug'>>>,
-  Assert<IsEqual<typeof routes.category, Route<RequestMethod, '/categories/:slug'>>>,
-  Assert<IsEqual<typeof routes.categories.index, Route<RequestMethod, '/categories'>>>,
+  Assert<IsEqual<typeof routes.home, Route<'ANY', '/'>>>,
+  Assert<IsEqual<typeof routes.promo, Route<'ANY', '(/:lang)/promo'>>>,
+  Assert<IsEqual<typeof routes.about.index, Route<'ANY', '/about'>>>,
+  Assert<IsEqual<typeof routes.about.company, Route<'ANY', '/about/company'>>>,
+  Assert<IsEqual<typeof routes.blog.index, Route<'ANY', '/blog'>>>,
+  Assert<IsEqual<typeof routes.blog.show, Route<'ANY', '/blog(/:lang)/:slug'>>>,
+  Assert<IsEqual<typeof routes.category, Route<'ANY', '/categories/:slug'>>>,
+  Assert<IsEqual<typeof routes.categories.index, Route<'ANY', '/categories'>>>,
   Assert<IsEqual<typeof routes.categories.create, Route<'POST', '/categories/:slug/edit'>>>,
   Assert<
-    IsEqual<
-      typeof routes.categories.products.index,
-      Route<RequestMethod, '/categories/:slug/products'>
-    >
+    IsEqual<typeof routes.categories.products.index, Route<'ANY', '/categories/:slug/products'>>
   >,
 ]
