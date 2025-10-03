@@ -1,5 +1,5 @@
 import { html } from '@remix-run/fetch-router'
-import type { RequestHandler } from '@remix-run/fetch-router'
+import type { RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { layout, redirect } from './views/layout.ts'
@@ -12,8 +12,9 @@ import {
   resetPassword,
 } from './models/users.ts'
 
-let loginHandler: RequestHandler = () => {
-  let content = `
+export default {
+  login() {
+    let content = `
     <div class="card" style="max-width: 500px; margin: 2rem auto;">
       <h1>Login</h1>
       <form method="POST" action="${routes.auth.loginSubmit.href()}">
@@ -45,18 +46,18 @@ let loginHandler: RequestHandler = () => {
     </div>
   `
 
-  return html(layout(content))
-}
+    return html(layout(content))
+  },
 
-let loginSubmitHandler: RequestHandler = async (ctx) => {
-  let formData = await ctx.request.formData()
-  let email = formData.get('email')?.toString() || ''
-  let password = formData.get('password')?.toString() || ''
+  async loginSubmit({ request, url }) {
+    let formData = await request.formData()
+    let email = formData.get('email')?.toString() || ''
+    let password = formData.get('password')?.toString() || ''
 
-  let user = authenticateUser(email, password)
+    let user = authenticateUser(email, password)
 
-  if (!user) {
-    let content = `
+    if (!user) {
+      let content = `
       <div class="card" style="max-width: 500px; margin: 2rem auto;">
         <div class="alert alert-error">
           Invalid email or password. Please try again.
@@ -67,21 +68,21 @@ let loginSubmitHandler: RequestHandler = async (ctx) => {
       </div>
     `
 
-    return html(layout(content), { status: 401 })
-  }
+      return html(layout(content), { status: 401 })
+    }
 
-  let session = getSession(ctx.request)
-  login(session.sessionId, user)
+    let session = getSession(request)
+    login(session.sessionId, user)
 
-  let headers = new Headers()
-  setSessionCookie(headers, session.sessionId)
-  headers.set('Location', new URL(routes.account.index.href(), ctx.url).href)
+    let headers = new Headers()
+    setSessionCookie(headers, session.sessionId)
+    headers.set('Location', new URL(routes.account.index.href(), url).href)
 
-  return new Response(null, { status: 302, headers })
-}
+    return new Response(null, { status: 302, headers })
+  },
 
-let registerHandler: RequestHandler = () => {
-  let content = `
+  register() {
+    let content = `
     <div class="card" style="max-width: 500px; margin: 2rem auto;">
       <h1>Register</h1>
       <form method="POST" action="${routes.auth.registerSubmit.href()}">
@@ -109,18 +110,18 @@ let registerHandler: RequestHandler = () => {
     </div>
   `
 
-  return html(layout(content))
-}
+    return html(layout(content))
+  },
 
-let registerSubmitHandler: RequestHandler = async (ctx) => {
-  let formData = await ctx.request.formData()
-  let name = formData.get('name')?.toString() || ''
-  let email = formData.get('email')?.toString() || ''
-  let password = formData.get('password')?.toString() || ''
+  async registerSubmit({ request, url }) {
+    let formData = await request.formData()
+    let name = formData.get('name')?.toString() || ''
+    let email = formData.get('email')?.toString() || ''
+    let password = formData.get('password')?.toString() || ''
 
-  // Check if user already exists
-  if (getUserByEmail(email)) {
-    let content = `
+    // Check if user already exists
+    if (getUserByEmail(email)) {
+      let content = `
       <div class="card" style="max-width: 500px; margin: 2rem auto;">
         <div class="alert alert-error">
           An account with this email already exists.
@@ -132,30 +133,30 @@ let registerSubmitHandler: RequestHandler = async (ctx) => {
       </div>
     `
 
-    return html(layout(content), { status: 400 })
-  }
+      return html(layout(content), { status: 400 })
+    }
 
-  let user = createUser(email, password, name)
+    let user = createUser(email, password, name)
 
-  let session = getSession(ctx.request)
-  login(session.sessionId, user)
+    let session = getSession(request)
+    login(session.sessionId, user)
 
-  let headers = new Headers()
-  setSessionCookie(headers, session.sessionId)
-  headers.set('Location', new URL(routes.account.index.href(), ctx.url).href)
+    let headers = new Headers()
+    setSessionCookie(headers, session.sessionId)
+    headers.set('Location', new URL(routes.account.index.href(), url).href)
 
-  return new Response(null, { status: 302, headers })
-}
+    return new Response(null, { status: 302, headers })
+  },
 
-let logoutHandler: RequestHandler = (ctx) => {
-  let session = getSession(ctx.request)
-  logout(session.sessionId)
+  logout({ request, url }) {
+    let session = getSession(request)
+    logout(session.sessionId)
 
-  return redirect(routes.home.href(), ctx.url)
-}
+    return redirect(routes.home.href(), url)
+  },
 
-let forgotPasswordHandler: RequestHandler = () => {
-  let content = `
+  forgotPassword() {
+    let content = `
     <div class="card" style="max-width: 500px; margin: 2rem auto;">
       <h1>Forgot Password</h1>
       <p>Enter your email address and we'll send you a link to reset your password.</p>
@@ -175,19 +176,19 @@ let forgotPasswordHandler: RequestHandler = () => {
     </div>
   `
 
-  return html(layout(content))
-}
+    return html(layout(content))
+  },
 
-let forgotPasswordSubmitHandler: RequestHandler = async (ctx) => {
-  let formData = await ctx.request.formData()
-  let email = formData.get('email')?.toString() || ''
+  async forgotPasswordSubmit({ request }) {
+    let formData = await request.formData()
+    let email = formData.get('email')?.toString() || ''
 
-  let token = createPasswordResetToken(email)
+    let token = createPasswordResetToken(email)
 
-  // In production, send an email with the reset link
-  // For demo, just show the link
+    // In production, send an email with the reset link
+    // For demo, just show the link
 
-  let content = `
+    let content = `
     <div class="card" style="max-width: 500px; margin: 2rem auto;">
       <div class="alert alert-success">
         Password reset link sent! Check your email.
@@ -212,13 +213,13 @@ let forgotPasswordSubmitHandler: RequestHandler = async (ctx) => {
     </div>
   `
 
-  return html(layout(content))
-}
+    return html(layout(content))
+  },
 
-let resetPasswordHandler: RequestHandler<{ token: string }> = (ctx) => {
-  let token = ctx.params.token
+  resetPassword({ params }) {
+    let token = params.token
 
-  let content = `
+    let content = `
     <div class="card" style="max-width: 500px; margin: 2rem auto;">
       <h1>Reset Password</h1>
       <p>Enter your new password below.</p>
@@ -239,33 +240,33 @@ let resetPasswordHandler: RequestHandler<{ token: string }> = (ctx) => {
     </div>
   `
 
-  return html(layout(content))
-}
+    return html(layout(content))
+  },
 
-let resetPasswordSubmitHandler: RequestHandler<{ token: string }> = async (ctx) => {
-  let formData = await ctx.request.formData()
-  let password = formData.get('password')?.toString() || ''
-  let confirmPassword = formData.get('confirmPassword')?.toString() || ''
+  async resetPasswordSubmit({ request, params }) {
+    let formData = await request.formData()
+    let password = formData.get('password')?.toString() || ''
+    let confirmPassword = formData.get('confirmPassword')?.toString() || ''
 
-  if (password !== confirmPassword) {
-    let content = `
+    if (password !== confirmPassword) {
+      let content = `
       <div class="card" style="max-width: 500px; margin: 2rem auto;">
         <div class="alert alert-error">
           Passwords do not match.
         </div>
         <p>
-          <a href="${routes.auth.resetPassword.href({ token: ctx.params.token })}" class="btn">Try Again</a>
+          <a href="${routes.auth.resetPassword.href({ token: params.token })}" class="btn">Try Again</a>
         </p>
       </div>
     `
 
-    return html(layout(content), { status: 400 })
-  }
+      return html(layout(content), { status: 400 })
+    }
 
-  let success = resetPassword(ctx.params.token, password)
+    let success = resetPassword(params.token, password)
 
-  if (!success) {
-    let content = `
+    if (!success) {
+      let content = `
       <div class="card" style="max-width: 500px; margin: 2rem auto;">
         <div class="alert alert-error">
           Invalid or expired reset token.
@@ -276,10 +277,10 @@ let resetPasswordSubmitHandler: RequestHandler<{ token: string }> = async (ctx) 
       </div>
     `
 
-    return html(layout(content), { status: 400 })
-  }
+      return html(layout(content), { status: 400 })
+    }
 
-  let content = `
+    let content = `
     <div class="card" style="max-width: 500px; margin: 2rem auto;">
       <div class="alert alert-success">
         Password reset successfully! You can now login with your new password.
@@ -290,19 +291,6 @@ let resetPasswordSubmitHandler: RequestHandler<{ token: string }> = async (ctx) 
     </div>
   `
 
-  return html(layout(content))
-}
-
-export default {
-  auth: {
-    login: loginHandler,
-    loginSubmit: loginSubmitHandler,
-    register: registerHandler,
-    registerSubmit: registerSubmitHandler,
-    logout: logoutHandler,
-    forgotPassword: forgotPasswordHandler,
-    forgotPasswordSubmit: forgotPasswordSubmitHandler,
-    resetPassword: resetPasswordHandler,
-    resetPasswordSubmit: resetPasswordSubmitHandler,
+    return html(layout(content))
   },
-}
+} satisfies RouteHandlers<typeof routes.auth>

@@ -6,7 +6,7 @@ import { requireAdmin } from './middleware/admin.ts'
 
 // Import handler maps
 import marketingHandlers from './marketing.ts'
-import booksHandlers from './books.ts'
+import booksHandlers, { genresHandlers, searchHandler } from './books.ts'
 import authHandlers from './auth.ts'
 import accountHandlers from './account.ts'
 import cartHandlers from './cart.ts'
@@ -24,23 +24,23 @@ router.map(routes.home, [loadAuth], marketingHandlers.home)
 router.map(routes.about, [loadAuth], marketingHandlers.about)
 router.map(routes.contact, [loadAuth], marketingHandlers.contact)
 router.map(routes.contactSubmit, [loadAuth], marketingHandlers.contactSubmit)
-router.map(routes.search, [loadAuth], booksHandlers.search)
+router.map(routes.search, [loadAuth], searchHandler)
 
 // Public book routes with optional auth
-router.map(routes.books, [loadAuth], booksHandlers.books)
-router.map(routes.genres, [loadAuth], booksHandlers.genres)
+router.map(routes.books, [loadAuth], booksHandlers)
+router.map(routes.genres, [loadAuth], genresHandlers)
 
 // Auth routes with optional auth (to show user info if logged in)
-router.map(routes.auth, [loadAuth], authHandlers.auth)
+router.map(routes.auth, [loadAuth], authHandlers)
 
 // Cart routes with optional auth (works for both guests and logged-in users)
-router.map(routes.cart, [loadAuth], cartHandlers.cart)
+router.map(routes.cart, [loadAuth], cartHandlers)
 
 // Protected account routes - require authentication
-router.map(routes.account, [requireAuth], accountHandlers.account)
+router.map(routes.account, [requireAuth], accountHandlers)
 
 // Protected checkout routes - require authentication
-router.map(routes.checkout, [requireAuth], checkoutHandlers.checkout)
+router.map(routes.checkout, [requireAuth], checkoutHandlers)
 
 // Admin routes - require authentication AND admin role
 router.map(routes.admin, [requireAuth, requireAdmin], adminHandlers)

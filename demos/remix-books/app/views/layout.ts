@@ -67,7 +67,7 @@ export function page(body: string, title: string = 'Bookstore'): string {
 </html>`
 }
 
-export function layout(content: string, user?: User): string {
+export function layout(content: string, user: User | null = null): string {
   return page(
     `
   <header>

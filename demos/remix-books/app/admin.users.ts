@@ -1,19 +1,17 @@
-// Admin user management handlers
-
-import type { RequestHandler } from '@remix-run/fetch-router'
 import { html } from '@remix-run/fetch-router'
+import type { RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { layout, escapeHtml, redirect } from './views/layout.ts'
-import { getUser } from './middleware/auth.ts'
+import { USER_KEY } from './middleware/auth.ts'
 import { getAllUsers, getUserById, updateUser, deleteUser } from './models/users.ts'
 
-let indexHandler: RequestHandler = (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
-  let user = getUser(ctx)!
-  let users = getAllUsers()
+export default {
+  index({ storage }) {
+    let user = storage.get(USER_KEY)
+    let users = getAllUsers()
 
-  let usersHtml = `
+    let usersHtml = `
     <table>
       <thead>
         <tr>
@@ -53,7 +51,7 @@ let indexHandler: RequestHandler = (ctx) => {
     </table>
   `
 
-  let content = `
+    let content = `
     <h1>Manage Users</h1>
     
     <p style="margin-bottom: 1rem;">
@@ -65,19 +63,18 @@ let indexHandler: RequestHandler = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let showHandler: RequestHandler<{ userId: string }> = (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
-  let user = getUser(ctx)!
-  let targetUser = getUserById(ctx.params.userId)
+  show({ storage, params }) {
+    let user = storage.get(USER_KEY)
+    let targetUser = getUserById(params.userId)
 
-  if (!targetUser) {
-    return html(layout('<div class="card"><h1>User Not Found</h1></div>', user), { status: 404 })
-  }
+    if (!targetUser) {
+      return html(layout('<div class="card"><h1>User Not Found</h1></div>', user), { status: 404 })
+    }
 
-  let content = `
+    let content = `
     <h1>User Details</h1>
     
     <div class="card">
@@ -93,19 +90,18 @@ let showHandler: RequestHandler<{ userId: string }> = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let editHandler: RequestHandler<{ userId: string }> = (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
-  let user = getUser(ctx)!
-  let targetUser = getUserById(ctx.params.userId)
+  edit({ storage, params }) {
+    let user = storage.get(USER_KEY)
+    let targetUser = getUserById(params.userId)
 
-  if (!targetUser) {
-    return html(layout('<div class="card"><h1>User Not Found</h1></div>', user), { status: 404 })
-  }
+    if (!targetUser) {
+      return html(layout('<div class="card"><h1>User Not Found</h1></div>', user), { status: 404 })
+    }
 
-  let content = `
+    let content = `
     <h1>Edit User</h1>
     
     <div class="card">
@@ -134,35 +130,24 @@ let editHandler: RequestHandler<{ userId: string }> = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let updateHandler: RequestHandler<{ userId: string }> = async (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
+  async update({ request, params, url }) {
+    let formData = await request.formData()
 
-  let formData = await ctx.request.formData()
+    updateUser(params.userId, {
+      name: formData.get('name')?.toString() || '',
+      email: formData.get('email')?.toString() || '',
+      role: (formData.get('role')?.toString() || 'customer') as 'customer' | 'admin',
+    })
 
-  updateUser(ctx.params.userId, {
-    name: formData.get('name')?.toString() || '',
-    email: formData.get('email')?.toString() || '',
-    role: (formData.get('role')?.toString() || 'customer') as 'customer' | 'admin',
-  })
+    return redirect(routes.admin.users.index.href(), url)
+  },
 
-  return redirect(routes.admin.users.index.href(), ctx.url)
-}
+  destroy({ params, url }) {
+    deleteUser(params.userId)
 
-let destroyHandler: RequestHandler<{ userId: string }> = (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
-
-  deleteUser(ctx.params.userId)
-
-  return redirect(routes.admin.users.index.href(), ctx.url)
-}
-
-export default {
-  index: indexHandler,
-  show: showHandler,
-  edit: editHandler,
-  update: updateHandler,
-  destroy: destroyHandler,
-}
+    return redirect(routes.admin.users.index.href(), url)
+  },
+} satisfies RouteHandlers<typeof routes.admin.users>

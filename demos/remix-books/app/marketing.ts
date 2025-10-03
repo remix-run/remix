@@ -1,14 +1,21 @@
-import type { RequestHandler } from '@remix-run/fetch-router'
 import { html } from '@remix-run/fetch-router'
+import type { RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
-import { getUser } from './middleware/auth.ts'
+import { USER_KEY } from './middleware/auth.ts'
+import type { User } from './models/users.ts'
 import { layout } from './views/layout.ts'
 
-let homeHandler: RequestHandler = (ctx) => {
-  let user = getUser(ctx)
+export default {
+  home({ storage }) {
+    let user: User | null = null
+    try {
+      user = storage.get(USER_KEY)
+    } catch {
+      // USER_KEY not set (user not authenticated)
+    }
 
-  let content = `
+    let content = `
     <div class="card">
       <h1>Welcome to the Bookstore</h1>
       <p style="margin: 1rem 0;">
@@ -51,13 +58,18 @@ let homeHandler: RequestHandler = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let aboutHandler: RequestHandler = (ctx) => {
-  let user = getUser(ctx)
+  about({ storage }) {
+    let user: User | null = null
+    try {
+      user = storage.get(USER_KEY)
+    } catch {
+      // USER_KEY not set (user not authenticated)
+    }
 
-  let content = `
+    let content = `
     <div class="card">
       <h1>About Our Bookstore</h1>
       <p style="margin: 1rem 0;">
@@ -88,13 +100,18 @@ let aboutHandler: RequestHandler = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let contactHandler: RequestHandler = (ctx) => {
-  let user = getUser(ctx)
+  contact({ storage }) {
+    let user: User | null = null
+    try {
+      user = storage.get(USER_KEY)
+    } catch {
+      // USER_KEY not set (user not authenticated)
+    }
 
-  let content = `
+    let content = `
     <div class="card">
       <h1>Contact Us</h1>
       <p style="margin: 1rem 0;">Have a question or feedback? We'd love to hear from you!</p>
@@ -120,16 +137,21 @@ let contactHandler: RequestHandler = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let contactSubmitHandler: RequestHandler = async (ctx) => {
-  let user = getUser(ctx)
+  async contactSubmit({ storage }) {
+    let user: User | null = null
+    try {
+      user = storage.get(USER_KEY)
+    } catch {
+      // USER_KEY not set (user not authenticated)
+    }
 
-  // In a real app, you would process the form and send an email
-  // For demo purposes, just show a success message
+    // In a real app, you would process the form and send an email
+    // For demo purposes, just show a success message
 
-  let content = `
+    let content = `
     <div class="alert alert-success">
       Thank you for your message! We'll get back to you soon.
     </div>
@@ -140,13 +162,6 @@ let contactSubmitHandler: RequestHandler = async (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
-
-export default {
-  home: homeHandler,
-  about: aboutHandler,
-  contact: contactHandler,
-  contactSubmit: contactSubmitHandler,
-  search: () => {}, // Placeholder for search route in root map
-}
+    return html(layout(content, user))
+  },
+} satisfies Pick<RouteHandlers<typeof routes>, 'home' | 'about' | 'contact' | 'contactSubmit'>

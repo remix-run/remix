@@ -1,9 +1,10 @@
-import type { RequestHandler } from '@remix-run/fetch-router'
 import { html } from '@remix-run/fetch-router'
+import type { RouteHandler, RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { layout, escapeHtml } from './views/layout.ts'
-import { getUser } from './middleware/auth.ts'
+import { USER_KEY } from './middleware/auth.ts'
+import type { User } from './models/users.ts'
 import {
   getAllBooks,
   getBookBySlug,
@@ -12,13 +13,19 @@ import {
   getAvailableGenres,
 } from './models/books.ts'
 
-let booksIndexHandler: RequestHandler = (ctx) => {
-  let user = getUser(ctx)
-  let books = getAllBooks()
+export default {
+  index({ storage }) {
+    let user: User | null = null
+    try {
+      user = storage.get(USER_KEY)
+    } catch {
+      // USER_KEY not set (user not authenticated)
+    }
+    let books = getAllBooks()
 
-  let booksHtml = books
-    .map(
-      (book) => `
+    let booksHtml = books
+      .map(
+        (book) => `
     <div class="book-card">
       <img src="https://via.placeholder.com/280x300?text=${encodeURIComponent(book.title)}" alt="${escapeHtml(book.title)}">
       <div class="book-card-body">
@@ -31,18 +38,18 @@ let booksIndexHandler: RequestHandler = (ctx) => {
       </div>
     </div>
   `,
-    )
-    .join('')
+      )
+      .join('')
 
-  let genres = getAvailableGenres()
-  let genreLinks = genres
-    .map(
-      (genre) =>
-        `<a href="${routes.genres.show.href({ genre })}" class="btn btn-secondary">${escapeHtml(genre)}</a>`,
-    )
-    .join(' ')
+    let genres = getAvailableGenres()
+    let genreLinks = genres
+      .map(
+        (genre) =>
+          `<a href="${routes.genres.show.href({ genre })}" class="btn btn-secondary">${escapeHtml(genre)}</a>`,
+      )
+      .join(' ')
 
-  let content = `
+    let content = `
     <h1>Browse Books</h1>
     
     <div class="card" style="margin-bottom: 2rem;">
@@ -64,18 +71,23 @@ let booksIndexHandler: RequestHandler = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let bookShowHandler: RequestHandler<{ slug: string }> = (ctx) => {
-  let user = getUser(ctx)
-  let book = getBookBySlug(ctx.params.slug)
+  show({ storage, params }) {
+    let user: User | null = null
+    try {
+      user = storage.get(USER_KEY)
+    } catch {
+      // USER_KEY not set (user not authenticated)
+    }
+    let book = getBookBySlug(params.slug)
 
-  if (!book) {
-    return html(layout('<div class="card"><h1>Book Not Found</h1></div>', user), { status: 404 })
-  }
+    if (!book) {
+      return html(layout('<div class="card"><h1>Book Not Found</h1></div>', user), { status: 404 })
+    }
 
-  let content = `
+    let content = `
     <div style="display: grid; grid-template-columns: 300px 1fr; gap: 2rem;">
       <div>
         <img src="https://via.placeholder.com/300x400?text=${encodeURIComponent(book.title)}" 
@@ -126,16 +138,23 @@ let bookShowHandler: RequestHandler<{ slug: string }> = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
+} satisfies RouteHandlers<typeof routes.books>
 
-let genreShowHandler: RequestHandler<{ genre: string }> = (ctx) => {
-  let user = getUser(ctx)
-  let genre = ctx.params.genre
-  let books = getBooksByGenre(genre)
+export let genresHandlers = {
+  show({ storage, params }) {
+    let user: User | null = null
+    try {
+      user = storage.get(USER_KEY)
+    } catch {
+      // USER_KEY not set (user not authenticated)
+    }
+    let genre = params.genre
+    let books = getBooksByGenre(genre)
 
-  if (books.length === 0) {
-    let content = `
+    if (books.length === 0) {
+      let content = `
       <div class="card">
         <h1>Genre Not Found</h1>
         <p>No books found in the "${escapeHtml(genre)}" genre.</p>
@@ -145,12 +164,12 @@ let genreShowHandler: RequestHandler<{ genre: string }> = (ctx) => {
       </div>
     `
 
-    return html(layout(content, user), { status: 404 })
-  }
+      return html(layout(content, user), { status: 404 })
+    }
 
-  let booksHtml = books
-    .map(
-      (book) => `
+    let booksHtml = books
+      .map(
+        (book) => `
     <div class="book-card">
       <img src="https://via.placeholder.com/280x300?text=${encodeURIComponent(book.title)}" alt="${escapeHtml(book.title)}">
       <div class="book-card-body">
@@ -161,10 +180,10 @@ let genreShowHandler: RequestHandler<{ genre: string }> = (ctx) => {
       </div>
     </div>
   `,
-    )
-    .join('')
+      )
+      .join('')
 
-  let content = `
+    let content = `
     <h1>${escapeHtml(genre.charAt(0).toUpperCase() + genre.slice(1))} Books</h1>
     <p style="margin: 1rem 0;">
       <a href="${routes.books.index.href()}" class="btn btn-secondary">View All Books</a>
@@ -175,12 +194,18 @@ let genreShowHandler: RequestHandler<{ genre: string }> = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
+} satisfies RouteHandlers<typeof routes.genres>
 
-let searchHandler: RequestHandler = (ctx) => {
-  let user = getUser(ctx)
-  let url = new URL(ctx.request.url)
+export let searchHandler: RouteHandler<typeof routes.search> = ({ storage, request }) => {
+  let user: User | null = null
+  try {
+    user = storage.get(USER_KEY)
+  } catch {
+    // USER_KEY not set (user not authenticated)
+  }
+  let url = new URL(request.url)
   let query = url.searchParams.get('q') || ''
 
   let books = query ? searchBooks(query) : []
@@ -222,15 +247,4 @@ let searchHandler: RequestHandler = (ctx) => {
   `
 
   return html(layout(content, user))
-}
-
-export default {
-  books: {
-    index: booksIndexHandler,
-    show: bookShowHandler,
-  },
-  genres: {
-    show: genreShowHandler,
-  },
-  search: searchHandler,
 }

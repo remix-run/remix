@@ -1,18 +1,18 @@
-import type { RequestHandler } from '@remix-run/fetch-router'
 import { html } from '@remix-run/fetch-router'
+import type { RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { layout } from './views/layout.ts'
-import { getUser } from './middleware/auth.ts'
+import { USER_KEY } from './middleware/auth.ts'
 import adminBooksHandlers from './admin.books.ts'
 import adminUsersHandlers from './admin.users.ts'
 import adminOrdersHandlers from './admin.orders.ts'
 
-let indexHandler: RequestHandler = (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
-  let user = getUser(ctx)!
+export default {
+  index({ storage }) {
+    let user = storage.get(USER_KEY)
 
-  let content = `
+    let content = `
     <h1>Admin Dashboard</h1>
     
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
@@ -36,12 +36,10 @@ let indexHandler: RequestHandler = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-export default {
-  index: indexHandler,
   books: adminBooksHandlers,
   users: adminUsersHandlers,
   orders: adminOrdersHandlers,
-}
+} satisfies RouteHandlers<typeof routes.admin>

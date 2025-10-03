@@ -1,20 +1,21 @@
-import type { RequestHandler } from '@remix-run/fetch-router'
 import { html } from '@remix-run/fetch-router'
+import type { RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { layout, escapeHtml, redirect } from './views/layout.ts'
-import { getUser, getSessionId as getSessionIdFromContext } from './middleware/auth.ts'
+import { USER_KEY, SESSION_ID_KEY } from './middleware/auth.ts'
 import { getCart, clearCart, getCartTotal } from './models/cart.ts'
 import { createOrder, getOrderById } from './models/orders.ts'
 
-let checkoutIndexHandler: RequestHandler = (ctx) => {
-  let user = getUser(ctx)!
-  let sessionId = getSessionIdFromContext(ctx)
-  let cart = getCart(sessionId)
-  let total = getCartTotal(cart)
+export default {
+  index({ storage }) {
+    let user = storage.get(USER_KEY)
+    let sessionId = storage.get(SESSION_ID_KEY)
+    let cart = getCart(sessionId)
+    let total = getCartTotal(cart)
 
-  if (cart.items.length === 0) {
-    let content = `
+    if (cart.items.length === 0) {
+      let content = `
       <div class="card">
         <h1>Checkout</h1>
         <p>Your cart is empty. Add some books before checking out.</p>
@@ -24,14 +25,12 @@ let checkoutIndexHandler: RequestHandler = (ctx) => {
       </div>
     `
 
-    return new Response(layout(content, user), {
-      headers: { 'Content-Type': 'text/html' },
-    })
-  }
+      return html(layout(content, user))
+    }
 
-  let itemsHtml = cart.items
-    .map(
-      (item) => `
+    let itemsHtml = cart.items
+      .map(
+        (item) => `
     <tr>
       <td>${escapeHtml(item.title)}</td>
       <td>${item.quantity}</td>
@@ -39,10 +38,10 @@ let checkoutIndexHandler: RequestHandler = (ctx) => {
       <td>$${(item.price * item.quantity).toFixed(2)}</td>
     </tr>
   `,
-    )
-    .join('')
+      )
+      .join('')
 
-  let content = `
+    let content = `
     <h1>Checkout</h1>
     
     <div class="card">
@@ -97,48 +96,48 @@ let checkoutIndexHandler: RequestHandler = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let checkoutSubmitHandler: RequestHandler = async (ctx) => {
-  let user = getUser(ctx)!
-  let sessionId = getSessionIdFromContext(ctx)
-  let cart = getCart(sessionId)
+  async submit({ storage, request, url }) {
+    let user = storage.get(USER_KEY)
+    let sessionId = storage.get(SESSION_ID_KEY)
+    let cart = getCart(sessionId)
 
-  if (cart.items.length === 0) {
-    return redirect(routes.cart.index.href(), ctx.url)
-  }
+    if (cart.items.length === 0) {
+      return redirect(routes.cart.index.href(), url)
+    }
 
-  let formData = await ctx.request.formData()
-  let shippingAddress = {
-    street: formData.get('street')?.toString() || '',
-    city: formData.get('city')?.toString() || '',
-    state: formData.get('state')?.toString() || '',
-    zip: formData.get('zip')?.toString() || '',
-  }
+    let formData = await request.formData()
+    let shippingAddress = {
+      street: formData.get('street')?.toString() || '',
+      city: formData.get('city')?.toString() || '',
+      state: formData.get('state')?.toString() || '',
+      zip: formData.get('zip')?.toString() || '',
+    }
 
-  let order = createOrder(
-    user.id,
-    cart.items.map((item) => ({
-      bookId: item.bookId,
-      title: item.title,
-      price: item.price,
-      quantity: item.quantity,
-    })),
-    shippingAddress,
-  )
+    let order = createOrder(
+      user.id,
+      cart.items.map((item) => ({
+        bookId: item.bookId,
+        title: item.title,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+      shippingAddress,
+    )
 
-  clearCart(sessionId)
+    clearCart(sessionId)
 
-  return redirect(routes.checkout.confirmation.href({ orderId: order.id }), ctx.url)
-}
+    return redirect(routes.checkout.confirmation.href({ orderId: order.id }), url)
+  },
 
-let checkoutConfirmationHandler: RequestHandler<{ orderId: string }> = (ctx) => {
-  let user = getUser(ctx)!
-  let order = getOrderById(ctx.params.orderId)
+  confirmation({ storage, params }) {
+    let user = storage.get(USER_KEY)
+    let order = getOrderById(params.orderId)
 
-  if (!order || order.userId !== user.id) {
-    let content = `
+    if (!order || order.userId !== user.id) {
+      let content = `
       <div class="card">
         <h1>Order Not Found</h1>
         <p>
@@ -147,10 +146,10 @@ let checkoutConfirmationHandler: RequestHandler<{ orderId: string }> = (ctx) => 
       </div>
     `
 
-    return html(layout(content, user), { status: 404 })
-  }
+      return html(layout(content, user), { status: 404 })
+    }
 
-  let content = `
+    let content = `
     <div class="alert alert-success">
       <h1 style="margin-bottom: 0.5rem;">Order Confirmed!</h1>
       <p>Thank you for your purchase. Your order has been placed successfully.</p>
@@ -173,13 +172,6 @@ let checkoutConfirmationHandler: RequestHandler<{ orderId: string }> = (ctx) => 
     </div>
   `
 
-  return html(layout(content, user))
-}
-
-export default {
-  checkout: {
-    index: checkoutIndexHandler,
-    submit: checkoutSubmitHandler,
-    confirmation: checkoutConfirmationHandler,
+    return html(layout(content, user))
   },
-}
+} satisfies RouteHandlers<typeof routes.checkout>

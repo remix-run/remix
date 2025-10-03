@@ -1,19 +1,17 @@
-// Admin order management handlers
-
-import type { RequestHandler } from '@remix-run/fetch-router'
 import { html } from '@remix-run/fetch-router'
+import type { RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { layout, escapeHtml } from './views/layout.ts'
-import { getUser } from './middleware/auth.ts'
+import { USER_KEY } from './middleware/auth.ts'
 import { getAllOrders, getOrderById } from './models/orders.ts'
 
-let indexHandler: RequestHandler = (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
-  let user = getUser(ctx)!
-  let orders = getAllOrders()
+export default {
+  index({ storage }) {
+    let user = storage.get(USER_KEY)
+    let orders = getAllOrders()
 
-  let ordersHtml = `
+    let ordersHtml = `
     <table>
       <thead>
         <tr>
@@ -46,7 +44,7 @@ let indexHandler: RequestHandler = (ctx) => {
     </table>
   `
 
-  let content = `
+    let content = `
     <h1>Manage Orders</h1>
     
     <p style="margin-bottom: 1rem;">
@@ -58,21 +56,20 @@ let indexHandler: RequestHandler = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let showHandler: RequestHandler<{ orderId: string }> = (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
-  let user = getUser(ctx)!
-  let order = getOrderById(ctx.params.orderId)
+  show({ storage, params }) {
+    let user = storage.get(USER_KEY)
+    let order = getOrderById(params.orderId)
 
-  if (!order) {
-    return html(layout('<div class="card"><h1>Order Not Found</h1></div>', user), { status: 404 })
-  }
+    if (!order) {
+      return html(layout('<div class="card"><h1>Order Not Found</h1></div>', user), { status: 404 })
+    }
 
-  let itemsHtml = order.items
-    .map(
-      (item) => `
+    let itemsHtml = order.items
+      .map(
+        (item) => `
     <tr>
       <td>${escapeHtml(item.title)}</td>
       <td>${item.quantity}</td>
@@ -80,10 +77,10 @@ let showHandler: RequestHandler<{ orderId: string }> = (ctx) => {
       <td>$${(item.price * item.quantity).toFixed(2)}</td>
     </tr>
   `,
-    )
-    .join('')
+      )
+      .join('')
 
-  let content = `
+    let content = `
     <h1>Order #${order.id}</h1>
     
     <div class="card">
@@ -122,10 +119,6 @@ let showHandler: RequestHandler<{ orderId: string }> = (ctx) => {
     </p>
   `
 
-  return html(layout(content, user))
-}
-
-export default {
-  index: indexHandler,
-  show: showHandler,
-}
+    return html(layout(content, user))
+  },
+} satisfies RouteHandlers<typeof routes.admin.orders>

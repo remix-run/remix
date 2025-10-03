@@ -1,17 +1,17 @@
-import type { RequestHandler } from '@remix-run/fetch-router'
 import { html } from '@remix-run/fetch-router'
+import type { RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { layout, escapeHtml, redirect } from './views/layout.ts'
-import { getUser } from './middleware/auth.ts'
+import { USER_KEY } from './middleware/auth.ts'
 import { getOrdersByUserId, getOrderById } from './models/orders.ts'
 import { updateUser } from './models/users.ts'
 
-let accountIndexHandler: RequestHandler = (ctx) => {
-  // User is guaranteed to exist because requireAuth middleware ran
-  let user = getUser(ctx)!
+export default {
+  index({ storage }) {
+    let user = storage.get(USER_KEY)
 
-  let content = `
+    let content = `
     <h1>My Account</h1>
     
     <div class="card">
@@ -35,13 +35,13 @@ let accountIndexHandler: RequestHandler = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let accountSettingsHandler: RequestHandler = (ctx) => {
-  let user = getUser(ctx)!
+  settings({ storage }) {
+    let user = storage.get(USER_KEY)
 
-  let content = `
+    let content = `
     <h1>Account Settings</h1>
     
     <div class="card">
@@ -67,34 +67,35 @@ let accountSettingsHandler: RequestHandler = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let accountSettingsUpdateHandler: RequestHandler = async (ctx) => {
-  let user = getUser(ctx)!
+  async settingsUpdate({ storage, request, url }) {
+    let user = storage.get(USER_KEY)
 
-  let formData = await ctx.request.formData()
-  let name = formData.get('name')?.toString() || ''
-  let email = formData.get('email')?.toString() || ''
-  let password = formData.get('password')?.toString() || ''
+    let formData = await request.formData()
+    let name = formData.get('name')?.toString() || ''
+    let email = formData.get('email')?.toString() || ''
+    let password = formData.get('password')?.toString() || ''
 
-  let updateData: any = { name, email }
-  if (password) {
-    updateData.password = password
-  }
+    let updateData: any = { name, email }
+    if (password) {
+      updateData.password = password
+    }
 
-  updateUser(user.id, updateData)
+    updateUser(user.id, updateData)
 
-  return redirect(routes.account.index.href(), ctx.url)
-}
+    return redirect(routes.account.index.href(), url)
+  },
 
-let ordersIndexHandler: RequestHandler = (ctx) => {
-  let user = getUser(ctx)!
-  let orders = getOrdersByUserId(user.id)
+  orders: {
+    index({ storage }) {
+      let user = storage.get(USER_KEY)
+      let orders = getOrdersByUserId(user.id)
 
-  let ordersHtml =
-    orders.length > 0
-      ? `
+      let ordersHtml =
+        orders.length > 0
+          ? `
     <table>
       <thead>
         <tr>
@@ -126,9 +127,9 @@ let ordersIndexHandler: RequestHandler = (ctx) => {
       </tbody>
     </table>
   `
-      : '<p>You have no orders yet.</p>'
+          : '<p>You have no orders yet.</p>'
 
-  let content = `
+      let content = `
     <h1>My Orders</h1>
     
     <div class="card">
@@ -140,15 +141,15 @@ let ordersIndexHandler: RequestHandler = (ctx) => {
     </p>
   `
 
-  return html(layout(content, user))
-}
+      return html(layout(content, user))
+    },
 
-let orderShowHandler: RequestHandler<{ orderId: string }> = (ctx) => {
-  let user = getUser(ctx)!
-  let order = getOrderById(ctx.params.orderId)
+    show({ storage, params }) {
+      let user = storage.get(USER_KEY)
+      let order = getOrderById(params.orderId)
 
-  if (!order || order.userId !== user.id) {
-    let content = `
+      if (!order || order.userId !== user.id) {
+        let content = `
       <div class="card">
         <h1>Order Not Found</h1>
         <p>
@@ -157,12 +158,12 @@ let orderShowHandler: RequestHandler<{ orderId: string }> = (ctx) => {
       </div>
     `
 
-    return html(layout(content, user), { status: 404 })
-  }
+        return html(layout(content, user), { status: 404 })
+      }
 
-  let itemsHtml = order.items
-    .map(
-      (item) => `
+      let itemsHtml = order.items
+        .map(
+          (item) => `
     <tr>
       <td>${escapeHtml(item.title)}</td>
       <td>${item.quantity}</td>
@@ -170,10 +171,10 @@ let orderShowHandler: RequestHandler<{ orderId: string }> = (ctx) => {
       <td>$${(item.price * item.quantity).toFixed(2)}</td>
     </tr>
   `,
-    )
-    .join('')
+        )
+        .join('')
 
-  let content = `
+      let content = `
     <h1>Order #${order.id}</h1>
     
     <div class="card">
@@ -211,17 +212,7 @@ let orderShowHandler: RequestHandler<{ orderId: string }> = (ctx) => {
     </p>
   `
 
-  return html(layout(content, user))
-}
-
-export default {
-  account: {
-    index: accountIndexHandler,
-    settings: accountSettingsHandler,
-    settingsUpdate: accountSettingsUpdateHandler,
-    orders: {
-      index: ordersIndexHandler,
-      show: orderShowHandler,
+      return html(layout(content, user))
     },
   },
-}
+} satisfies RouteHandlers<typeof routes.account>

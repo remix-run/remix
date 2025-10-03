@@ -1,19 +1,17 @@
-// Admin book management handlers
-
-import type { RequestHandler } from '@remix-run/fetch-router'
 import { html } from '@remix-run/fetch-router'
+import type { RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { layout, escapeHtml, redirect } from './views/layout.ts'
-import { getUser } from './middleware/auth.ts'
+import { USER_KEY } from './middleware/auth.ts'
 import { getAllBooks, getBookById, createBook, updateBook, deleteBook } from './models/books.ts'
 
-let indexHandler: RequestHandler = (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
-  let user = getUser(ctx)!
-  let books = getAllBooks()
+export default {
+  index({ storage }) {
+    let user = storage.get(USER_KEY)
+    let books = getAllBooks()
 
-  let booksHtml = `
+    let booksHtml = `
     <table>
       <thead>
         <tr>
@@ -49,7 +47,7 @@ let indexHandler: RequestHandler = (ctx) => {
     </table>
   `
 
-  let content = `
+    let content = `
     <h1>Manage Books</h1>
     
     <p style="margin-bottom: 1rem;">
@@ -62,19 +60,18 @@ let indexHandler: RequestHandler = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let showHandler: RequestHandler<{ bookId: string }> = (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
-  let user = getUser(ctx)!
-  let book = getBookById(ctx.params.bookId)
+  show({ storage, params }) {
+    let user = storage.get(USER_KEY)
+    let book = getBookById(params.bookId)
 
-  if (!book) {
-    return html(layout('<div class="card"><h1>Book Not Found</h1></div>', user), { status: 404 })
-  }
+    if (!book) {
+      return html(layout('<div class="card"><h1>Book Not Found</h1></div>', user), { status: 404 })
+    }
 
-  let content = `
+    let content = `
     <h1>Book Details</h1>
     
     <div class="card">
@@ -95,14 +92,13 @@ let showHandler: RequestHandler<{ bookId: string }> = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let newHandler: RequestHandler = (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
-  let user = getUser(ctx)!
+  new({ storage }) {
+    let user = storage.get(USER_KEY)
 
-  let content = `
+    let content = `
     <h1>Add New Book</h1>
     
     <div class="card">
@@ -161,40 +157,37 @@ let newHandler: RequestHandler = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let createHandler: RequestHandler = async (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
+  async create({ request, url }) {
+    let formData = await request.formData()
 
-  let formData = await ctx.request.formData()
+    createBook({
+      slug: formData.get('slug')?.toString() || '',
+      title: formData.get('title')?.toString() || '',
+      author: formData.get('author')?.toString() || '',
+      description: formData.get('description')?.toString() || '',
+      price: parseFloat(formData.get('price')?.toString() || '0'),
+      genre: formData.get('genre')?.toString() || '',
+      coverUrl: '/images/placeholder.jpg',
+      isbn: formData.get('isbn')?.toString() || '',
+      publishedYear: parseInt(formData.get('publishedYear')?.toString() || '2024', 10),
+      inStock: formData.get('inStock')?.toString() === 'true',
+    })
 
-  createBook({
-    slug: formData.get('slug')?.toString() || '',
-    title: formData.get('title')?.toString() || '',
-    author: formData.get('author')?.toString() || '',
-    description: formData.get('description')?.toString() || '',
-    price: parseFloat(formData.get('price')?.toString() || '0'),
-    genre: formData.get('genre')?.toString() || '',
-    coverUrl: '/images/placeholder.jpg',
-    isbn: formData.get('isbn')?.toString() || '',
-    publishedYear: parseInt(formData.get('publishedYear')?.toString() || '2024', 10),
-    inStock: formData.get('inStock')?.toString() === 'true',
-  })
+    return redirect(routes.admin.books.index.href(), url)
+  },
 
-  return redirect(routes.admin.books.index.href(), ctx.url)
-}
+  edit({ storage, params }) {
+    let user = storage.get(USER_KEY)
+    let book = getBookById(params.bookId)
 
-let editHandler: RequestHandler<{ bookId: string }> = (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
-  let user = getUser(ctx)!
-  let book = getBookById(ctx.params.bookId)
+    if (!book) {
+      return html(layout('<div class="card"><h1>Book Not Found</h1></div>', user), { status: 404 })
+    }
 
-  if (!book) {
-    return html(layout('<div class="card"><h1>Book Not Found</h1></div>', user), { status: 404 })
-  }
-
-  let content = `
+    let content = `
     <h1>Edit Book</h1>
     
     <div class="card">
@@ -253,43 +246,30 @@ let editHandler: RequestHandler<{ bookId: string }> = (ctx) => {
     </div>
   `
 
-  return html(layout(content, user))
-}
+    return html(layout(content, user))
+  },
 
-let updateHandler: RequestHandler<{ bookId: string }> = async (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
+  async update({ request, params, url }) {
+    let formData = await request.formData()
 
-  let formData = await ctx.request.formData()
+    updateBook(params.bookId, {
+      slug: formData.get('slug')?.toString() || '',
+      title: formData.get('title')?.toString() || '',
+      author: formData.get('author')?.toString() || '',
+      description: formData.get('description')?.toString() || '',
+      price: parseFloat(formData.get('price')?.toString() || '0'),
+      genre: formData.get('genre')?.toString() || '',
+      isbn: formData.get('isbn')?.toString() || '',
+      publishedYear: parseInt(formData.get('publishedYear')?.toString() || '2024', 10),
+      inStock: formData.get('inStock')?.toString() === 'true',
+    })
 
-  updateBook(ctx.params.bookId, {
-    slug: formData.get('slug')?.toString() || '',
-    title: formData.get('title')?.toString() || '',
-    author: formData.get('author')?.toString() || '',
-    description: formData.get('description')?.toString() || '',
-    price: parseFloat(formData.get('price')?.toString() || '0'),
-    genre: formData.get('genre')?.toString() || '',
-    isbn: formData.get('isbn')?.toString() || '',
-    publishedYear: parseInt(formData.get('publishedYear')?.toString() || '2024', 10),
-    inStock: formData.get('inStock')?.toString() === 'true',
-  })
+    return redirect(routes.admin.books.index.href(), url)
+  },
 
-  return redirect(routes.admin.books.index.href(), ctx.url)
-}
+  destroy({ params, url }) {
+    deleteBook(params.bookId)
 
-let destroyHandler: RequestHandler<{ bookId: string }> = (ctx) => {
-  // User is guaranteed to exist and be admin because middleware ran
-
-  deleteBook(ctx.params.bookId)
-
-  return redirect(routes.admin.books.index.href(), ctx.url)
-}
-
-export default {
-  index: indexHandler,
-  show: showHandler,
-  new: newHandler,
-  create: createHandler,
-  edit: editHandler,
-  update: updateHandler,
-  destroy: destroyHandler,
-}
+    return redirect(routes.admin.books.index.href(), url)
+  },
+} satisfies RouteHandlers<typeof routes.admin.books>
