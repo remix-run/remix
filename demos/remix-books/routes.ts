@@ -6,18 +6,16 @@ export let routes = createRoutes({
   about: '/about',
   contact: { method: 'GET', pattern: '/contact' },
   contactSubmit: { method: 'POST', pattern: '/contact' },
-
-  // Search (query params showcase)
   search: '/search',
 
-  // Public book routes (read-only)
+  // Public book routes
   books: {
     index: { method: 'GET', pattern: '/books' },
     genre: { method: 'GET', pattern: '/books/genre/:genre' },
     show: { method: 'GET', pattern: '/books/:slug' },
   },
 
-  // Auth routes (custom routes, not resources)
+  // Auth routes
   auth: {
     login: { method: 'GET', pattern: '/login' },
     loginSubmit: { method: 'POST', pattern: '/login' },

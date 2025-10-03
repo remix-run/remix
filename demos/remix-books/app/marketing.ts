@@ -3,8 +3,9 @@ import type { RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { USER_KEY } from './middleware/auth.ts'
+import { searchBooks } from './models/books.ts'
 import type { User } from './models/users.ts'
-import { layout } from './views/layout.ts'
+import { layout, escapeHtml } from './views/layout.ts'
 
 export default {
   home({ storage }) {
@@ -164,4 +165,58 @@ export default {
 
     return html(layout(content, user))
   },
-} satisfies Pick<RouteHandlers<typeof routes>, 'home' | 'about' | 'contact' | 'contactSubmit'>
+
+  search({ storage, request }) {
+    let user: User | null = null
+    try {
+      user = storage.get(USER_KEY)
+    } catch {
+      // USER_KEY not set (user not authenticated)
+    }
+    let url = new URL(request.url)
+    let query = url.searchParams.get('q') || ''
+
+    let books = query ? searchBooks(query) : []
+
+    let booksHtml =
+      books.length > 0
+        ? books
+            .map(
+              (book) => `
+      <div class="book-card">
+        <img src="https://via.placeholder.com/280x300?text=${encodeURIComponent(book.title)}" alt="${escapeHtml(book.title)}">
+        <div class="book-card-body">
+          <h3>${escapeHtml(book.title)}</h3>
+          <p class="author">by ${escapeHtml(book.author)}</p>
+          <p class="price">$${book.price.toFixed(2)}</p>
+          <a href="${routes.books.show.href({ slug: book.slug })}" class="btn">View Details</a>
+        </div>
+      </div>
+    `,
+            )
+            .join('')
+        : '<p>No books found matching your search.</p>'
+
+    let content = `
+    <h1>Search Results</h1>
+    
+    <div class="card" style="margin-bottom: 2rem;">
+      <form action="${routes.search.href()}" method="GET" style="display: flex; gap: 0.5rem;">
+        <input type="search" name="q" placeholder="Search books..." value="${escapeHtml(query)}" style="flex: 1;">
+        <button type="submit" class="btn">Search</button>
+      </form>
+    </div>
+
+    ${query ? `<p style="margin-bottom: 1rem;">Found ${books.length} result(s) for "${escapeHtml(query)}"</p>` : ''}
+    
+    <div class="grid">
+      ${booksHtml}
+    </div>
+  `
+
+    return html(layout(content, user))
+  },
+} satisfies Pick<
+  RouteHandlers<typeof routes>,
+  'home' | 'about' | 'contact' | 'contactSubmit' | 'search'
+>

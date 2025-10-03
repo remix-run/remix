@@ -6,7 +6,7 @@ import { requireAdmin } from './middleware/admin.ts'
 
 // Import handler maps
 import marketingHandlers from './marketing.ts'
-import booksHandlers, { searchHandler } from './books.ts'
+import booksHandlers from './books.ts'
 import authHandlers from './auth.ts'
 import accountHandlers from './account.ts'
 import cartHandlers from './cart.ts'
@@ -24,7 +24,7 @@ router.map(routes.home, [loadAuth], marketingHandlers.home)
 router.map(routes.about, [loadAuth], marketingHandlers.about)
 router.map(routes.contact, [loadAuth], marketingHandlers.contact)
 router.map(routes.contactSubmit, [loadAuth], marketingHandlers.contactSubmit)
-router.map(routes.search, [loadAuth], searchHandler)
+router.map(routes.search, [loadAuth], marketingHandlers.search)
 
 // Public book routes with optional auth
 router.map(routes.books, [loadAuth], booksHandlers)
