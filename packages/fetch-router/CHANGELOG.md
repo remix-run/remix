@@ -2,6 +2,25 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Add `json` and `redirect` response helpers
+
+  ```tsx
+  import { json, redirect, createRouter } from '@remix-run/fetch-router'
+
+  let router = createRouter()
+
+  router.map('/api', () => {
+    return json({ message: 'Hello, world!' })
+  })
+
+  router.map('/*path/', ({ params }) => {
+    // Strip all trailing slashes from URL paths
+    return redirect(`/${params.path}`, 301)
+  })
+  ```
+
 ## v0.4.0 (2025-10-04)
 
 - BREAKING CHANGE: Remove "middleware as an optional 2nd arg" from all router methods and introduced support for defining middleware inline in route handler definitions. This greatly reduces the number of overloads required in the router API and also provides a means whereby middleware may be coupled to request handler definitions
