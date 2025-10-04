@@ -24,11 +24,11 @@ importers:
         specifier: ^8.40.0
         version: 8.40.0(eslint@9.33.0)(typescript@5.7.2)
 
-  demos/remix-books:
+  demos/bookstore:
     dependencies:
       '@remix-run/dom':
         specifier: jam
-        version: 0.0.0-experimental-remix-jam.3
+        version: 0.0.0-experimental-remix-jam.4
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../../packages/fetch-router
@@ -976,14 +976,20 @@ packages:
   '@remix-run/dom@0.0.0-experimental-remix-jam.1':
     resolution: {integrity: sha512-HLLrUpSz7EicCAWQKqJt7RK2Y04sruwASP5gNgTK3GQzL216XCGoh+LjrMRQ8Aw7GFgHSkvQuyhVb6Y4xY2aDw==}
 
-  '@remix-run/dom@0.0.0-experimental-remix-jam.3':
-    resolution: {integrity: sha512-iTeUTXcxgULVA3b3pUzy40w0i7homa8qdmDPzCSnfjpahYDLcBhNxr2fw7WaT589zVqAvO+VsIe7a7xwcabPiw==}
+  '@remix-run/dom@0.0.0-experimental-remix-jam.4':
+    resolution: {integrity: sha512-0z8TqMrrRJoEE5t9NzdF37kVuXH/LFDnpejf2fpGRm9ADz0ndf7AXNktsCAKqWA0CKw4jj66xS4rki6FePCjzQ==}
 
   '@remix-run/events@0.0.0-experimental-remix-jam.1':
     resolution: {integrity: sha512-4Xs0Ek3QYsx2Tq64ZkSMXN9gAwBOg42vzK/5aTkACktb6asljm/wf8mgFPtf+IUegh4BBzkapNXAdmXEh4UqNg==}
 
+  '@remix-run/events@0.0.0-experimental-remix-jam.4':
+    resolution: {integrity: sha512-at0hgDG7Km/yRdk3myeyFwt8BXTBHnPSD4oaAB3VGDDB10q4wkqT05EAhxX+1Qh8TSIPSPst+fkmnU7vjWyIYA==}
+
   '@remix-run/style@0.0.0-experimental-remix-jam.1':
     resolution: {integrity: sha512-aRETYid6C1V1smXnhbxoFdsOi+qxvXM9NZ9UIQeRQ9ZEWT2TS1dtyeNTv6QXO1Swp9QtdWlnPb6RlzUBvG5h4Q==}
+
+  '@remix-run/style@0.0.0-experimental-remix-jam.4':
+    resolution: {integrity: sha512-lkWJp2B6taEMHsNlUqktzAW/3LERri2NrvzSdZocBesJ/+fFwHPSLXWJ54xk+qtkOrqgrX7NJblNjVfPWk54IA==}
 
   '@types/body-parser@1.19.5':
     resolution: {integrity: sha512-fB3Zu92ucau0iQ0JMCFQE7b/dv8Ot07NI3KaZIkIUNXq82k4eBAqUaneXfleGY9JWskeS9y+u0nXMyspcuQrCg==}
@@ -2619,14 +2625,18 @@ snapshots:
       '@remix-run/events': 0.0.0-experimental-remix-jam.1
       '@remix-run/style': 0.0.0-experimental-remix-jam.1
 
-  '@remix-run/dom@0.0.0-experimental-remix-jam.3':
+  '@remix-run/dom@0.0.0-experimental-remix-jam.4':
     dependencies:
-      '@remix-run/events': 0.0.0-experimental-remix-jam.1
-      '@remix-run/style': 0.0.0-experimental-remix-jam.1
+      '@remix-run/events': 0.0.0-experimental-remix-jam.4
+      '@remix-run/style': 0.0.0-experimental-remix-jam.4
 
   '@remix-run/events@0.0.0-experimental-remix-jam.1': {}
 
+  '@remix-run/events@0.0.0-experimental-remix-jam.4': {}
+
   '@remix-run/style@0.0.0-experimental-remix-jam.1': {}
+
+  '@remix-run/style@0.0.0-experimental-remix-jam.4': {}
 
   '@types/body-parser@1.19.5':
     dependencies:
