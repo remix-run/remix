@@ -9,7 +9,7 @@ describe('account handlers', () => {
     let response = await router.fetch('http://localhost:3000/account')
 
     assert.equal(response.status, 302)
-    assert.equal(response.headers.get('Location'), 'http://localhost:3000/login')
+    assert.equal(response.headers.get('Location'), '/login')
   })
 
   it('GET /account returns account page when authenticated', async () => {

@@ -1,10 +1,9 @@
 import type { Middleware } from '@remix-run/fetch-router'
-import { createStorageKey } from '@remix-run/fetch-router'
+import { createStorageKey, redirect } from '@remix-run/fetch-router'
 
 import { routes } from '../../routes.ts'
 import { getUserById } from '../models/users.ts'
 import type { User } from '../models/users.ts'
-import { redirect } from '../utils/response.ts'
 import { getSession, getUserIdFromSession } from '../utils/session.ts'
 
 // Storage keys for attaching data to request context
@@ -37,17 +36,17 @@ export let loadAuth: Middleware = async ({ request, storage }) => {
  * Redirects to login if not authenticated.
  * Attaches user and sessionId to context.storage.
  */
-export let requireAuth: Middleware = async ({ request, url, storage }) => {
+export let requireAuth: Middleware = async ({ request, storage }) => {
   let session = getSession(request)
   let userId = getUserIdFromSession(session.sessionId)
 
   if (!userId) {
-    return redirect(routes.auth.login.index.href(), url)
+    return redirect(routes.auth.login.index, 302)
   }
 
   let user = getUserById(userId)
   if (!user) {
-    return redirect(routes.auth.login.index.href(), url)
+    return redirect(routes.auth.login.index, 302)
   }
 
   storage.set(USER_KEY, user)

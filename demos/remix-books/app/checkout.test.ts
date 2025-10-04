@@ -9,7 +9,7 @@ describe('checkout handlers', () => {
     let response = await router.fetch('http://localhost:3000/checkout')
 
     assert.equal(response.status, 302)
-    assert.equal(response.headers.get('Location'), 'http://localhost:3000/login')
+    assert.equal(response.headers.get('Location'), '/login')
   })
 
   it('POST /checkout creates order when authenticated with items in cart', async () => {

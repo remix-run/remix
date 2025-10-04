@@ -1,4 +1,5 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
+import { redirect } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { Layout } from './layout.tsx'
@@ -134,7 +135,7 @@ export default {
     },
 
     api: {
-      async add({ storage, request, url }) {
+      async add({ storage, request }) {
         let sessionId = storage.get(SESSION_ID_KEY)
         let formData = await request.formData()
         let bookId = formData.get('bookId')?.toString() ?? ''
@@ -148,12 +149,11 @@ export default {
 
         let headers = new Headers()
         setSessionCookie(headers, sessionId)
-        headers.set('Location', new URL(routes.cart.index.href(), url).href)
 
-        return new Response(null, { status: 302, headers })
+        return redirect(routes.cart.index, { headers })
       },
 
-      async update({ storage, request, url }) {
+      async update({ storage, request }) {
         let sessionId = storage.get(SESSION_ID_KEY)
         let formData = await request.formData()
         let bookId = formData.get('bookId')?.toString() ?? ''
@@ -163,12 +163,11 @@ export default {
 
         let headers = new Headers()
         setSessionCookie(headers, sessionId)
-        headers.set('Location', new URL(routes.cart.index.href(), url).href)
 
-        return new Response(null, { status: 302, headers })
+        return redirect(routes.cart.index, { headers })
       },
 
-      async remove({ storage, request, url }) {
+      async remove({ storage, request }) {
         let sessionId = storage.get(SESSION_ID_KEY)
         let formData = await request.formData()
         let bookId = formData.get('bookId')?.toString() ?? ''
@@ -177,9 +176,8 @@ export default {
 
         let headers = new Headers()
         setSessionCookie(headers, sessionId)
-        headers.set('Location', new URL(routes.cart.index.href(), url).href)
 
-        return new Response(null, { status: 302, headers })
+        return redirect(routes.cart.index, { headers })
       },
     },
   },
