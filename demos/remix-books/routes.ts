@@ -29,7 +29,12 @@ export let routes = route({
   // Account section (protected, nested routes)
   account: route('/account', {
     index: '/',
-    settings: formAction('settings'),
+    settings: formAction('settings', {
+      submitMethod: 'PUT',
+      routeNames: {
+        action: 'update',
+      },
+    }),
 
     // Orders as nested resources with custom param
     orders: resources('/orders', {

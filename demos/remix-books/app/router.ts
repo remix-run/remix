@@ -1,8 +1,6 @@
 import { createRouter, logger } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
-import { loadAuth, requireAuth } from './middleware/auth.ts'
-import { requireAdmin } from './middleware/admin.ts'
 import { storeContext } from './middleware/context.ts'
 
 import adminHandlers from './admin.tsx'
@@ -11,7 +9,7 @@ import authHandlers from './auth.tsx'
 import booksHandlers from './books.tsx'
 import cartHandlers from './cart.tsx'
 import checkoutHandlers from './checkout.tsx'
-import marketingHandlers from './marketing.tsx'
+import * as marketingHandlers from './marketing.tsx'
 
 export let router = createRouter()
 
@@ -22,25 +20,25 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Public marketing routes with optional auth (for nav display)
-router.map(routes.home, [loadAuth], marketingHandlers.home)
-router.map(routes.about, [loadAuth], marketingHandlers.about)
-router.map(routes.contact, [loadAuth], marketingHandlers.contact)
-router.map(routes.search, [loadAuth], marketingHandlers.search)
+router.map(routes.home, marketingHandlers.home)
+router.map(routes.about, marketingHandlers.about)
+router.map(routes.contact, marketingHandlers.contact)
+router.map(routes.search, marketingHandlers.search)
 
 // Public book routes with optional auth
-router.map(routes.books, [loadAuth], booksHandlers)
+router.map(routes.books, booksHandlers)
 
 // Auth routes with optional auth (to show user info if logged in)
-router.map(routes.auth, [loadAuth], authHandlers)
+router.map(routes.auth, authHandlers)
 
 // Cart routes with optional auth (works for both guests and logged-in users)
-router.map(routes.cart, [loadAuth], cartHandlers)
+router.map(routes.cart, cartHandlers)
 
 // Protected account routes - require authentication
-router.map(routes.account, [requireAuth], accountHandlers)
+router.map(routes.account, accountHandlers)
 
 // Protected checkout routes - require authentication
-router.map(routes.checkout, [requireAuth], checkoutHandlers)
+router.map(routes.checkout, checkoutHandlers)
 
 // Admin routes - require authentication AND admin role
-router.map(routes.admin, [requireAuth, requireAdmin], adminHandlers)
+router.map(routes.admin, adminHandlers)

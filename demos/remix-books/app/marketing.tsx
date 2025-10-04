@@ -1,12 +1,14 @@
-import type { RouteHandlers } from '@remix-run/fetch-router'
+import type { RouteHandler, RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
-import { searchBooks } from './models/books.ts'
 import { Layout } from './layout.tsx'
+import { loadAuth } from './middleware/auth.ts'
+import { searchBooks } from './models/books.ts'
 import { render } from './utils/render.ts'
 
-export default {
-  home() {
+export let home: RouteHandler<typeof routes.home> = {
+  use: [loadAuth],
+  handler() {
     return render(
       <Layout>
         <div class="card">
@@ -67,8 +69,11 @@ export default {
       </Layout>,
     )
   },
+}
 
-  about() {
+export let about: RouteHandler<typeof routes.about> = {
+  use: [loadAuth],
+  handler() {
     return render(
       <Layout>
         <div class="card">
@@ -125,8 +130,11 @@ export default {
       </Layout>,
     )
   },
+}
 
-  contact: {
+export let contact: RouteHandlers<typeof routes.contact> = {
+  use: [loadAuth],
+  handlers: {
     index() {
       return render(
         <Layout>
@@ -177,8 +185,11 @@ export default {
       )
     },
   },
+}
 
-  search({ request }) {
+export let search: RouteHandler<typeof routes.search> = {
+  use: [loadAuth],
+  handler({ request }) {
     let url = new URL(request.url)
     let query = url.searchParams.get('q') || ''
 
@@ -234,4 +245,4 @@ export default {
       </Layout>,
     )
   },
-} satisfies Pick<RouteHandlers<typeof routes>, 'home' | 'about' | 'contact' | 'search'>
+}
