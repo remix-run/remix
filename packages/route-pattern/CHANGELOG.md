@@ -2,7 +2,7 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.14.0 (2025-10-04)
 
 - Add `Matcher` and `MatchResult` interfaces. These are new public APIs for matching sets of patterns.
 - Add `RegExpMatcher` and `TrieMatcher` concrete implementations of the `Matcher` interface
