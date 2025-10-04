@@ -21,6 +21,17 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   })
   ```
 
+- Add `routeNames` option to `createResource` and `createResources` for customizing the names of the resource routes. This is a map of the default route name to a custom name.
+
+  ```tsx
+  let books = createResources('books', {
+    routeNames: { index: 'list', show: 'view' },
+  })
+
+  books.list // Route<'GET', '/books'>
+  books.view // Route<'GET', '/books/:id'>
+  ```
+
 - Add `route` shorthand for `createRoutes` to public exports
 - Add support for any `BodyInit` in `html(body)` response helper
 - Add `createFormAction` (also exported as `formAction` for short) for creating route maps with `index` (`GET`) and `action` (`POST`) routes. This is well-suited to showing a standard HTML `<form>` and handling its submit action at the same URL.

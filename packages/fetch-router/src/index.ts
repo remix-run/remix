@@ -6,8 +6,13 @@ export {
   createFormAction as formAction, // shorthand
 } from './lib/form-action.ts'
 
-export { RequestContext } from './lib/request-handler.ts'
-export type { RequestHandler, Middleware, NextFunction } from './lib/request-handler.ts'
+export { RequestContext, RequestMethods } from './lib/request-handler.ts'
+export type {
+  Middleware,
+  NextFunction,
+  RequestHandler,
+  RequestMethod,
+} from './lib/request-handler.ts'
 
 export {
   createResource,

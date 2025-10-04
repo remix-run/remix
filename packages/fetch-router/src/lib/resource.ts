@@ -15,6 +15,17 @@ export interface ResourceOptions {
    * included.
    */
   only?: ResourceMethod[]
+  /**
+   * Custom names to use for the resource routes.
+   */
+  routeNames?: {
+    show?: string
+    new?: string
+    create?: string
+    edit?: string
+    update?: string
+    destroy?: string
+  }
 }
 
 /**
@@ -28,26 +39,32 @@ export function createResource<P extends string, const O extends ResourceOptions
   options?: O,
 ): BuildResourceMap<P, O> {
   let only = options?.only ?? (ResourceMethods as readonly ResourceMethod[])
+  let showName = options?.routeNames?.show ?? 'show'
+  let newName = options?.routeNames?.new ?? 'new'
+  let createName = options?.routeNames?.create ?? 'create'
+  let editName = options?.routeNames?.edit ?? 'edit'
+  let updateName = options?.routeNames?.update ?? 'update'
+  let destroyName = options?.routeNames?.destroy ?? 'destroy'
 
   let routes: any = {}
 
   if (only.includes('show')) {
-    routes.show = { method: 'GET', pattern: `/` }
+    routes[showName] = { method: 'GET', pattern: `/` }
   }
   if (only.includes('new')) {
-    routes.new = { method: 'GET', pattern: `/new` }
+    routes[newName] = { method: 'GET', pattern: `/new` }
   }
   if (only.includes('create')) {
-    routes.create = { method: 'POST', pattern: `/` }
+    routes[createName] = { method: 'POST', pattern: `/` }
   }
   if (only.includes('edit')) {
-    routes.edit = { method: 'GET', pattern: `/edit` }
+    routes[editName] = { method: 'GET', pattern: `/edit` }
   }
   if (only.includes('update')) {
-    routes.update = { method: 'PUT', pattern: `/` }
+    routes[updateName] = { method: 'PUT', pattern: `/` }
   }
   if (only.includes('destroy')) {
-    routes.destroy = { method: 'DELETE', pattern: `/` }
+    routes[destroyName] = { method: 'DELETE', pattern: `/` }
   }
 
   return createRoutes(base, routes) as BuildResourceMap<P, O>
@@ -55,13 +72,23 @@ export function createResource<P extends string, const O extends ResourceOptions
 
 type BuildResourceMap<B extends string, O extends ResourceOptions> = BuildRouteMap<
   B,
-  Pick<
-    EveryResourceRoute,
+  BuildResourceRoutes<
+    O,
     O extends { only: readonly ResourceMethod[] } ? O['only'][number] : ResourceMethod
   >
 >
 
-type EveryResourceRoute = {
+type BuildResourceRoutes<O extends ResourceOptions, M extends ResourceMethod> = {
+  [K in M as GetRouteName<O, K>]: ResourceRoutes[K]
+}
+
+type GetRouteName<O extends ResourceOptions, M extends ResourceMethod> = M extends ResourceMethod
+  ? O extends { routeNames: { [K in M]: infer N extends string } }
+    ? N
+    : M
+  : never
+
+type ResourceRoutes = {
   show: { method: 'GET'; pattern: `/` }
   new: { method: 'GET'; pattern: `/new` }
   create: { method: 'POST'; pattern: `/` }
@@ -86,6 +113,18 @@ export type ResourcesOptions = {
    * The parameter name to use for the resource. Defaults to `id`.
    */
   param?: string
+  /**
+   * Custom names to use for the resource routes.
+   */
+  routeNames?: {
+    index?: string
+    show?: string
+    new?: string
+    create?: string
+    edit?: string
+    update?: string
+    destroy?: string
+  }
 }
 
 /**
@@ -100,29 +139,36 @@ export function createResources<P extends string, const O extends ResourcesOptio
 ): BuildResourcesMap<P, O> {
   let only = options?.only ?? (ResourcesMethods as readonly ResourcesMethod[])
   let param = options?.param ?? 'id'
+  let indexName = options?.routeNames?.index ?? 'index'
+  let showName = options?.routeNames?.show ?? 'show'
+  let newName = options?.routeNames?.new ?? 'new'
+  let createName = options?.routeNames?.create ?? 'create'
+  let editName = options?.routeNames?.edit ?? 'edit'
+  let updateName = options?.routeNames?.update ?? 'update'
+  let destroyName = options?.routeNames?.destroy ?? 'destroy'
 
   let routes: any = {}
 
   if (only.includes('index')) {
-    routes.index = { method: 'GET', pattern: `/` }
+    routes[indexName] = { method: 'GET', pattern: `/` }
   }
   if (only.includes('show')) {
-    routes.show = { method: 'GET', pattern: `/:${param}` }
+    routes[showName] = { method: 'GET', pattern: `/:${param}` }
   }
   if (only.includes('new')) {
-    routes.new = { method: 'GET', pattern: `/new` }
+    routes[newName] = { method: 'GET', pattern: `/new` }
   }
   if (only.includes('create')) {
-    routes.create = { method: 'POST', pattern: `/` }
+    routes[createName] = { method: 'POST', pattern: `/` }
   }
   if (only.includes('edit')) {
-    routes.edit = { method: 'GET', pattern: `/:${param}/edit` }
+    routes[editName] = { method: 'GET', pattern: `/:${param}/edit` }
   }
   if (only.includes('update')) {
-    routes.update = { method: 'PUT', pattern: `/:${param}` }
+    routes[updateName] = { method: 'PUT', pattern: `/:${param}` }
   }
   if (only.includes('destroy')) {
-    routes.destroy = { method: 'DELETE', pattern: `/:${param}` }
+    routes[destroyName] = { method: 'DELETE', pattern: `/:${param}` }
   }
 
   return createRoutes(base, routes) as BuildResourcesMap<P, O>
@@ -130,15 +176,31 @@ export function createResources<P extends string, const O extends ResourcesOptio
 
 type BuildResourcesMap<B extends string, O extends ResourcesOptions> = BuildRouteMap<
   B,
-  Pick<
-    EveryResourcesRoute<GetParam<O>>,
-    O extends { only: readonly ResourcesMethod[] } ? O['only'][number] : ResourcesMethod
+  BuildResourcesRoutes<
+    O,
+    O extends { only: readonly ResourcesMethod[] } ? O['only'][number] : ResourcesMethod,
+    GetParam<O>
   >
 >
 
-type GetParam<O extends ResourcesOptions> = O extends { param: infer P extends string } ? P : 'id'
+type BuildResourcesRoutes<
+  O extends ResourcesOptions,
+  M extends ResourcesMethod,
+  Param extends string,
+> = {
+  [K in M as GetResourcesRouteName<O, K>]: ResourcesRoutes<Param>[K]
+}
 
-type EveryResourcesRoute<Param extends string> = {
+type GetResourcesRouteName<
+  O extends ResourcesOptions,
+  M extends ResourcesMethod,
+> = M extends ResourcesMethod
+  ? O extends { routeNames: { [K in M]: infer N extends string } }
+    ? N
+    : M
+  : never
+
+type ResourcesRoutes<Param extends string> = {
   index: { method: 'GET'; pattern: `/` }
   show: { method: 'GET'; pattern: `/:${Param}` }
   new: { method: 'GET'; pattern: `/new` }
@@ -147,3 +209,5 @@ type EveryResourcesRoute<Param extends string> = {
   update: { method: 'PUT'; pattern: `/:${Param}` }
   destroy: { method: 'DELETE'; pattern: `/:${Param}` }
 }
+
+type GetParam<O extends ResourcesOptions> = O extends { param: infer P extends string } ? P : 'id'

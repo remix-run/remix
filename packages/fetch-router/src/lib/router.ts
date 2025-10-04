@@ -221,6 +221,33 @@ export class Router {
 
   // Route mapping
 
+  route<M extends RequestMethod | AnyMethod, P extends string>(
+    method: M,
+    pattern: P | RoutePattern<P> | Route<M | AnyMethod, P>,
+    routeHandler: RouteHandler<P>,
+  ): void {
+    let routeMiddleware: Middleware[] | undefined
+    let handler: RequestHandler
+    if (isRequestHandlerWithMiddleware(routeHandler)) {
+      routeMiddleware = routeHandler.use
+      handler = routeHandler.handler
+    } else {
+      handler = routeHandler
+    }
+
+    // prettier-ignore
+    let middleware =
+      this.#middleware == null ? routeMiddleware :
+      routeMiddleware == null ? this.#middleware?.slice(0) :
+      this.#middleware.concat(routeMiddleware)
+
+    this.#matcher.add(pattern instanceof Route ? pattern.pattern : pattern, {
+      method,
+      middleware,
+      handler,
+    })
+  }
+
   map<M extends RequestMethod | AnyMethod, P extends string>(
     route: P | RoutePattern<P> | Route<M, P>,
     handler: RouteHandler<P>,
@@ -265,34 +292,7 @@ export class Router {
     }
   }
 
-  route<M extends RequestMethod | AnyMethod, P extends string>(
-    method: M,
-    pattern: P | RoutePattern<P> | Route<M | AnyMethod, P>,
-    routeHandler: RouteHandler<P>,
-  ): void {
-    let routeMiddleware: Middleware[] | undefined
-    let handler: RequestHandler
-    if (isRequestHandlerWithMiddleware(routeHandler)) {
-      routeMiddleware = routeHandler.use
-      handler = routeHandler.handler
-    } else {
-      handler = routeHandler
-    }
-
-    // prettier-ignore
-    let middleware =
-      this.#middleware == null ? routeMiddleware :
-      routeMiddleware == null ? this.#middleware?.slice(0) :
-      this.#middleware.concat(routeMiddleware)
-
-    this.#matcher.add(pattern instanceof Route ? pattern.pattern : pattern, {
-      method,
-      middleware,
-      handler,
-    })
-  }
-
-  // HTTP-method specific route mapping
+  // HTTP-method specific shorthand
 
   get<P extends string>(
     pattern: P | RoutePattern<P> | Route<'GET' | AnyMethod, P>,
