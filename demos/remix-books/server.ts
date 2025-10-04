@@ -14,10 +14,10 @@ let server = http.createServer(
   }),
 )
 
-let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000
+let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
-  console.log(`Bookstore demo is running on http://localhost:${port}`)
+  console.log(`Bookstore is running on http://localhost:${port}`)
   console.log('')
   console.log('Demo accounts:')
   console.log('  Admin:    admin@bookstore.com / admin123')

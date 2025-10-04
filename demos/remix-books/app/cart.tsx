@@ -137,8 +137,7 @@ export default {
       async add({ storage, request, url }) {
         let sessionId = storage.get(SESSION_ID_KEY)
         let formData = await request.formData()
-        let bookId = formData.get('bookId')?.toString() || ''
-        let slug = formData.get('slug')?.toString() || ''
+        let bookId = formData.get('bookId')?.toString() ?? ''
 
         let book = getBookById(bookId)
         if (!book) {
@@ -157,8 +156,8 @@ export default {
       async update({ storage, request, url }) {
         let sessionId = storage.get(SESSION_ID_KEY)
         let formData = await request.formData()
-        let bookId = formData.get('bookId')?.toString() || ''
-        let quantity = parseInt(formData.get('quantity')?.toString() || '1', 10)
+        let bookId = formData.get('bookId')?.toString() ?? ''
+        let quantity = parseInt(formData.get('quantity')?.toString() ?? '1', 10)
 
         updateCartItem(sessionId, bookId, quantity)
 
@@ -172,7 +171,7 @@ export default {
       async remove({ storage, request, url }) {
         let sessionId = storage.get(SESSION_ID_KEY)
         let formData = await request.formData()
-        let bookId = formData.get('bookId')?.toString() || ''
+        let bookId = formData.get('bookId')?.toString() ?? ''
 
         removeFromCart(sessionId, bookId)
 
