@@ -2,7 +2,7 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.13.0 (2025-10-04)
 
 - Drop support for TypeScript < 5.7
 
