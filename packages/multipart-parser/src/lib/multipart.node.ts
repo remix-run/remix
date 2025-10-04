@@ -19,10 +19,10 @@ import { getMultipartBoundary } from './multipart-request.ts'
  * @param options Options for the parser
  * @return A generator yielding `MultipartPart` objects
  */
-export function* parseMultipart(
+export async function* parseMultipart(
   message: Buffer | Iterable<Buffer>,
   options: ParseMultipartOptions,
-): Generator<MultipartPart, void, unknown> {
+): AsyncGenerator<MultipartPart, void, unknown> {
   yield* parseMultipartWeb(message as Uint8Array | Iterable<Uint8Array>, options)
 }
 
