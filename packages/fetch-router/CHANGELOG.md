@@ -21,6 +21,16 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   })
   ```
 
+  `redirect` also accepts a `Route` object for type-safe redirects:
+
+  ```tsx
+  let routes = createRoutes({
+    home: '/',
+  })
+
+  let response = redirect(routes.home)
+  ```
+
 ## v0.4.0 (2025-10-04)
 
 - BREAKING CHANGE: Remove "middleware as an optional 2nd arg" from all router methods and introduced support for defining middleware inline in route handler definitions. This greatly reduces the number of overloads required in the router API and also provides a means whereby middleware may be coupled to request handler definitions

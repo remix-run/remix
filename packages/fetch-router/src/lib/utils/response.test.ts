@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import { Route } from '../route-map.ts'
 import { html, json, redirect } from './response.ts'
 
 describe('html()', () => {
@@ -122,5 +123,72 @@ describe('redirect()', () => {
 
     assert.equal(response.status, 303)
     assert.equal(response.headers.get('Location'), '../parent')
+  })
+
+  it('allows overriding Location header', () => {
+    let response = redirect('/default', {
+      headers: { Location: '/override' },
+    })
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), '/override')
+  })
+
+  it('allows overriding Location header with Headers object', () => {
+    let headers = new Headers()
+    headers.set('Location', '/custom-location')
+    headers.set('X-Custom', 'value')
+
+    let response = redirect('/default', { headers })
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), '/custom-location')
+    assert.equal(response.headers.get('X-Custom'), 'value')
+  })
+
+  it('accepts a Route with no required params', () => {
+    let route = new Route('GET', '/home')
+    let response = redirect(route)
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), '/home')
+  })
+
+  it('accepts a Route with no required params and custom status', () => {
+    let route = new Route('ANY', '/login')
+    let response = redirect(route, 301)
+
+    assert.equal(response.status, 301)
+    assert.equal(response.headers.get('Location'), '/login')
+  })
+
+  it('accepts a Route with no required params and ResponseInit', () => {
+    let route = new Route('GET', '/dashboard')
+    let response = redirect(route, {
+      status: 303,
+      headers: { 'X-Reason': 'post-redirect' },
+    })
+
+    assert.equal(response.status, 303)
+    assert.equal(response.headers.get('Location'), '/dashboard')
+    assert.equal(response.headers.get('X-Reason'), 'post-redirect')
+  })
+
+  it('works with Routes that have optional params', () => {
+    let route = new Route('GET', '/search?q')
+    let response = redirect(route)
+
+    assert.equal(response.status, 302)
+    // Optional params are included in the pattern
+    assert.equal(response.headers.get('Location'), '/search?q')
+  })
+
+  it('prevents passing Routes with required params (compile-time check)', () => {
+    let routeWithRequiredParam = new Route('GET', '/books/:slug')
+
+    assert.throws(() => {
+      // @ts-expect-error - Should not allow routes with required params
+      redirect(routeWithRequiredParam)
+    }, /Missing required parameter/)
   })
 })
