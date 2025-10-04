@@ -4,6 +4,23 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## HEAD
 
+- BREAKING CHANGE: Remove "middleware as an optional 2nd arg" from all router methods and introduced support for defining middleware inline in route handler definitions. This greatly reduces the number of overloads required in the router API and also provides a means whereby middleware may be coupled to request handler definitions
+
+  ```tsx
+  // before
+  router.map('/', [middleware], () => {
+    return new Response('Home')
+  })
+
+  // after
+  router.map('/', {
+    use: [middleware],
+    handler(ctx) {
+      return new Response('Home')
+    },
+  })
+  ```
+
 - Add `route` shorthand for `createRoutes` to public exports
 - Add support for any `BodyInit` in `html(body)` response helper
 - Add `createFormAction` (also exported as `formAction` for short) for creating route maps with `index` (`GET`) and `action` (`POST`) routes. This is well-suited to showing a standard HTML `<form>` and handling its submit action at the same URL.
