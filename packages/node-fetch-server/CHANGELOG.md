@@ -2,7 +2,7 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.10.0 (2025-10-04)
 
 - Fire `close` and `finish` listeners only once (#10757)
 
