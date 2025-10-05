@@ -2,11 +2,11 @@ import * as assert from 'node:assert/strict'
 import { describe, it, mock } from 'node:test'
 
 import type { FileUploadHandler } from './form-data.ts'
-import { MaxFilesExceededError, parseFormData } from './form-data.ts'
+import { FormDataParseError, MaxFilesExceededError, parseFormData } from './form-data.ts'
 
 describe('parseFormData', () => {
   it('parses a application/x-www-form-urlencoded request', async () => {
-    let request = new Request('http://localhost:8080', {
+    let request = new Request('https://remix.run', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -20,7 +20,7 @@ describe('parseFormData', () => {
   })
 
   it('parses a multipart/form-data request', async () => {
-    let request = new Request('http://localhost:8080', {
+    let request = new Request('https://remix.run', {
       method: 'POST',
       headers: {
         'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
@@ -51,7 +51,7 @@ describe('parseFormData', () => {
   })
 
   it('calls the file upload handler for each file part', async () => {
-    let request = new Request('http://localhost:8080', {
+    let request = new Request('https://remix.run', {
       method: 'POST',
       headers: {
         'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
@@ -79,7 +79,7 @@ describe('parseFormData', () => {
   })
 
   it('allows returning `null` from the upload handler', async () => {
-    let request = new Request('http://localhost:8080', {
+    let request = new Request('https://remix.run', {
       method: 'POST',
       headers: {
         'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
@@ -100,7 +100,7 @@ describe('parseFormData', () => {
   })
 
   it('allows returning strings from the upload handler', async () => {
-    let request = new Request('http://localhost:8080', {
+    let request = new Request('https://remix.run', {
       method: 'POST',
       headers: {
         'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
@@ -121,7 +121,7 @@ describe('parseFormData', () => {
   })
 
   it('allows returning files from the upload handler', async () => {
-    let request = new Request('http://localhost:8080', {
+    let request = new Request('https://remix.run', {
       method: 'POST',
       headers: {
         'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
@@ -149,7 +149,7 @@ describe('parseFormData', () => {
   })
 
   it('throws MaxFilesExceededError when the number of files exceeds the limit', async () => {
-    let request = new Request('http://localhost:8080', {
+    let request = new Request('https://remix.run', {
       method: 'POST',
       headers: {
         'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
@@ -178,5 +178,19 @@ describe('parseFormData', () => {
       async () => await parseFormData(request, { maxFiles: 2 }),
       MaxFilesExceededError,
     )
+  })
+
+  it('throws when the request does not contain parseable content', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain',
+      },
+      body: 'Hello, World!',
+    })
+
+    await assert.rejects(async () => {
+      await parseFormData(request)
+    }, FormDataParseError)
   })
 })

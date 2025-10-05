@@ -5,8 +5,8 @@ import { isMultipartRequest, parseMultipartRequest } from '@remix-run/multipart-
  * The base class for errors thrown by the form data parser.
  */
 export class FormDataParseError extends Error {
-  constructor(message: string) {
-    super(message)
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options)
     this.name = 'FormDataParseError'
   }
 }
@@ -31,7 +31,7 @@ export class FileUpload extends File {
   readonly fieldName: string
 
   constructor(part: MultipartPart, fieldName: string) {
-    super(part.content, part.filename ?? 'file-upload', {
+    super(part.content as BlobPart[], part.filename ?? 'file-upload', {
       type: part.mediaType ?? 'application/octet-stream',
     })
 
@@ -72,6 +72,7 @@ export interface ParseFormDataOptions extends MultipartParserOptions {
  * cloud storage service.
  *
  * @param request The `Request` object to parse
+ * @param options Options for the parser
  * @param uploadHandler A function that handles file uploads. It receives a `File` object and may return any value that is valid in a `FormData` object
  * @return A `Promise` that resolves to a `FormData` object containing the parsed data
  */
@@ -81,26 +82,35 @@ export async function parseFormData(
 ): Promise<FormData>
 export async function parseFormData(
   request: Request,
-  options: ParseFormDataOptions,
+  options?: ParseFormDataOptions,
   uploadHandler?: FileUploadHandler,
 ): Promise<FormData>
 export async function parseFormData(
   request: Request,
-  options?: ParseFormDataOptions | FileUploadHandler,
-  uploadHandler: FileUploadHandler = defaultFileUploadHandler,
+  optionsOrUploadHandler?: ParseFormDataOptions | FileUploadHandler,
+  uploadHandler?: FileUploadHandler,
 ): Promise<FormData> {
-  if (typeof options === 'function') {
-    uploadHandler = options
-    options = {}
-  } else if (options == null) {
-    options = {}
+  if (typeof optionsOrUploadHandler === 'function') {
+    uploadHandler = optionsOrUploadHandler
+    optionsOrUploadHandler = {}
+  } else if (optionsOrUploadHandler == null) {
+    optionsOrUploadHandler = {}
+  }
+  if (uploadHandler == null) {
+    uploadHandler = defaultFileUploadHandler
   }
 
   if (!isMultipartRequest(request)) {
-    return request.formData()
+    try {
+      return await request.formData()
+    } catch (error) {
+      throw new FormDataParseError('Cannot parse form data', {
+        cause: error,
+      })
+    }
   }
 
-  let { maxFiles = 20, ...parserOptions } = options
+  let { maxFiles = 20, ...parserOptions } = optionsOrUploadHandler
 
   let formData = new FormData()
   let fileCount = 0
