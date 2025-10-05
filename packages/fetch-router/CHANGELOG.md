@@ -7,7 +7,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 - Add `formData` middleware for parsing `FormData` objects from the request body
 
   ```tsx
-  import { formData } from '@remix-run/fetch-router/formdata-middleware'
+  import { formData } from '@remix-run/fetch-router/form-data-middleware'
 
   let router = createRouter()
 
