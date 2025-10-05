@@ -4,10 +4,26 @@
 export class AppStorage {
   #map: Map<StorageKey<any>, StorageValue<any>> = new Map()
 
+  /**
+   * Check if a value is stored for the given key.
+   *
+   * @param key The key to check
+   * @returns `true` if a value is stored for the given key, `false` otherwise
+   */
+  has<K extends StorageKey<any>>(key: K): boolean {
+    return this.#map.has(key)
+  }
+
+  /**
+   * Get a value from storage.
+   *
+   * @param key The key to get
+   * @returns The value for the given key
+   */
   get<K extends StorageKey<any>>(key: K): StorageValue<K> {
     if (!this.#map.has(key)) {
       if (key.defaultValue === undefined) {
-        throw new Error(`Missing storage value for key ${key}`)
+        throw new Error(`Missing default value in storage for key ${key}`)
       }
 
       return key.defaultValue
@@ -16,6 +32,12 @@ export class AppStorage {
     return this.#map.get(key) as StorageValue<K>
   }
 
+  /**
+   * Set a value in storage.
+   *
+   * @param key The key to set
+   * @param value The value to set
+   */
   set<K extends StorageKey<any>>(key: K, value: StorageValue<K>): void {
     this.#map.set(key, value)
   }
