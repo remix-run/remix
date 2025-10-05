@@ -4,6 +4,22 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## HEAD
 
+- Add `formData` middleware for parsing `FormData` objects from the request body
+
+  ```tsx
+  import { formData } from '@remix-run/fetch-router/formdata-middleware'
+
+  let router = createRouter()
+
+  router.use(formData())
+
+  router.map('/', ({ formData, files }) => {
+    console.log(formData) // FormData from the request body
+    console.log(files) // Record<string, File> from the request body
+    return new Response('Home')
+  })
+  ```
+
 - Add `storage.has(key)` for checking if a value is stored for a given key
 - Add `next(moreContext)` API for passing additional context to the next middleware or handler in the chain
 - Move `logger` middleware to `@remix-run/fetch-router/logger-middleware` export

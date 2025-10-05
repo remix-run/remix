@@ -86,6 +86,9 @@ importers:
 
   packages/fetch-router:
     dependencies:
+      '@remix-run/form-data-parser':
+        specifier: workspace:*
+        version: link:../form-data-parser
       '@remix-run/route-pattern':
         specifier: workspace:*
         version: link:../route-pattern
