@@ -209,6 +209,9 @@ describe('createResources', () => {
       >,
     ]
 
+    assert.deepEqual(posts.index, new Route('GET', '/posts'))
+    assert.deepEqual(posts.new, new Route('GET', '/posts/new'))
+    assert.deepEqual(posts.create, new Route('POST', '/posts'))
     assert.deepEqual(posts.show, new Route('GET', '/posts/:slug'))
     assert.deepEqual(posts.edit, new Route('GET', '/posts/:slug/edit'))
     assert.deepEqual(posts.update, new Route('PUT', '/posts/:slug'))

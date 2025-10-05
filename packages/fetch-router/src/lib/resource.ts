@@ -3,10 +3,8 @@ import type { RoutePattern } from '@remix-run/route-pattern'
 import { createRoutes } from './route-map.ts'
 import type { BuildRouteMap } from './route-map.ts'
 
-export type ResourceMethod = 'show' | 'new' | 'create' | 'edit' | 'update' | 'destroy'
-
-// prettier-ignore
-export const ResourceMethods: readonly ResourceMethod[] = ['show', 'new', 'create', 'edit', 'update', 'destroy']
+export const ResourceMethods = ['show', 'new', 'create', 'edit', 'update', 'destroy'] as const
+export type ResourceMethod = (typeof ResourceMethods)[number]
 
 export interface ResourceOptions {
   /**
@@ -97,10 +95,9 @@ type ResourceRoutes = {
   destroy: { method: 'DELETE'; pattern: `/` }
 }
 
-export type ResourcesMethod = 'index' | 'show' | 'new' | 'create' | 'edit' | 'update' | 'destroy'
-
 // prettier-ignore
-export const ResourcesMethods: readonly ResourcesMethod[] = ['index', 'show', 'new', 'create', 'edit', 'update', 'destroy']
+export const ResourcesMethods = ['index', 'show', 'new', 'create', 'edit', 'update', 'destroy'] as const
+export type ResourcesMethod = (typeof ResourcesMethods)[number]
 
 export type ResourcesOptions = {
   /**
