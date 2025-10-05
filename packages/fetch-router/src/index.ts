@@ -6,13 +6,16 @@ export {
   createFormAction as formAction, // shorthand
 } from './lib/form-action.ts'
 
-export { RequestContext, RequestMethods } from './lib/request-handler.ts'
-export type {
-  Middleware,
-  NextFunction,
-  RequestHandler,
-  RequestMethod,
-} from './lib/request-handler.ts'
+export type { Middleware, NextFunction } from './lib/middleware.ts'
+
+export { html, json, redirect } from './lib/response-helpers.ts'
+
+export { RequestContext } from './lib/request-context.ts'
+
+export { RequestMethods } from './lib/request-methods.ts'
+export type { RequestMethod } from './lib/request-methods.ts'
+
+export type { RequestHandler } from './lib/request-handler.ts'
 
 export {
   createResource,
@@ -27,7 +30,7 @@ export type {
   ResourcesOptions,
 } from './lib/resource.ts'
 
-export { logger } from './lib/middleware/logger.ts'
+export type { RouteHandlers, RouteHandler } from './lib/route-handlers.ts'
 
 export {
   Route,
@@ -37,6 +40,4 @@ export {
 export type { RouteMap, RouteDefs, RouteDef } from './lib/route-map.ts'
 
 export { createRouter, Router } from './lib/router.ts'
-export type { RouteHandlers, RouteHandler, RouterOptions } from './lib/router.ts'
-
-export { html, json, redirect } from './lib/utils/response.ts'
+export type { RouterOptions } from './lib/router.ts'

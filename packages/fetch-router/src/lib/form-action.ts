@@ -1,8 +1,8 @@
 import type { RoutePattern } from '@remix-run/route-pattern'
 
+import type { RequestMethod } from './request-methods.ts'
 import { createRoutes } from './route-map.ts'
 import type { BuildRouteMap } from './route-map.ts'
-import type { RequestMethod } from './request-handler.ts'
 
 export interface FormActionOptions {
   /**

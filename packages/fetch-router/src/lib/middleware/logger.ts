@@ -1,4 +1,4 @@
-import type { Middleware } from '../request-handler.ts'
+import type { Middleware } from '../middleware.ts'
 
 export interface LoggerOptions {
   /**

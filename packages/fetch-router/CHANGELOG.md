@@ -4,6 +4,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## HEAD
 
+- Move `logger` middleware to `@remix-run/fetch-router/logger-middleware` export
 - Add `json` and `redirect` response helpers
 
   ```tsx
@@ -30,6 +31,8 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
   let response = redirect(routes.home)
   ```
+
+  Note: the route must support `GET` (or `ANY`) for redirects and must not have any required params, so the helper can safely construct the redirect URL.
 
 ## v0.4.0 (2025-10-04)
 

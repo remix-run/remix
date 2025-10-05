@@ -1,8 +1,13 @@
 import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
-import type { Matcher, Params } from '@remix-run/route-pattern'
+import type { Matcher } from '@remix-run/route-pattern'
 
-import { RequestContext, runMiddleware } from './request-handler.ts'
-import type { Middleware, RequestHandler, RequestMethod, AnyMethod } from './request-handler.ts'
+import { runMiddleware } from './middleware.ts'
+import type { Middleware } from './middleware.ts'
+import { RequestContext } from './request-context.ts'
+import type { RequestHandler } from './request-handler.ts'
+import type { RequestMethod } from './request-methods.ts'
+import { isRequestHandlerWithMiddleware, isRouteHandlersWithMiddleware } from './route-handlers.ts'
+import type { RouteHandlers, RouteHandler } from './route-handlers.ts'
 import { Route } from './route-map.ts'
 import type { RouteMap } from './route-map.ts'
 
@@ -19,53 +24,9 @@ export interface RouterOptions {
   matcher?: Matcher<MatchData>
 }
 
-/**
- * A (nested) object mapping of route names to their respective handlers.
- */
-export type RouteHandlers<T extends RouteMap> = RouteHandlersWithMiddleware<T> | RouteHandlerMap<T>
-
-type RouteHandlersWithMiddleware<T extends RouteMap> = {
-  use: Middleware[]
-  handlers: RouteHandlerMap<T>
-}
-
-function isRouteHandlersWithMiddleware<T extends RouteMap>(
-  handlers: any,
-): handlers is RouteHandlersWithMiddleware<T> {
-  return (
-    typeof handlers === 'object' && handlers != null && 'use' in handlers && 'handlers' in handlers
-  )
-}
-
-// prettier-ignore
-type RouteHandlerMap<T extends RouteMap> = {
-  [K in keyof T]: (
-    T[K] extends Route ? RouteHandler<T[K]> :
-    T[K] extends RouteMap ? RouteHandlers<T[K]> :
-    never
-  )
-}
-
-// prettier-ignore
-export type RouteHandler<T extends string | Route> =
-  T extends string ? RequestHandlerWithMiddleware<T> | RequestHandler<Params<T>> :
-  T extends Route<any, infer P> ? RequestHandlerWithMiddleware<P> | RequestHandler<Params<P>> :
-  never
-
-type RequestHandlerWithMiddleware<T extends string> = {
-  use: Middleware<Params<T>>[]
-  handler: RequestHandler<Params<T>>
-}
-
-function isRequestHandlerWithMiddleware<T extends string>(
-  handler: any,
-): handler is RequestHandlerWithMiddleware<T> {
-  return typeof handler === 'object' && handler != null && 'use' in handler && 'handler' in handler
-}
-
 type MatchData =
   | {
-      method: RequestMethod | AnyMethod
+      method: RequestMethod | 'ANY'
       middleware: Middleware<any>[] | undefined
       handler: RequestHandler<any>
     }
@@ -221,9 +182,9 @@ export class Router {
 
   // Route mapping
 
-  route<M extends RequestMethod | AnyMethod, P extends string>(
+  route<M extends RequestMethod | 'ANY', P extends string>(
     method: M,
-    pattern: P | RoutePattern<P> | Route<M | AnyMethod, P>,
+    pattern: P | RoutePattern<P> | Route<M | 'ANY', P>,
     routeHandler: RouteHandler<P>,
   ): void {
     let routeMiddleware: Middleware[] | undefined
@@ -248,7 +209,7 @@ export class Router {
     })
   }
 
-  map<M extends RequestMethod | AnyMethod, P extends string>(
+  map<M extends RequestMethod | 'ANY', P extends string>(
     route: P | RoutePattern<P> | Route<M, P>,
     handler: RouteHandler<P>,
   ): void
@@ -295,49 +256,49 @@ export class Router {
   // HTTP-method specific shorthand
 
   get<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'GET' | AnyMethod, P>,
+    pattern: P | RoutePattern<P> | Route<'GET' | 'ANY', P>,
     handler: RouteHandler<P>,
   ): void {
     this.route('GET', pattern, handler)
   }
 
   head<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'HEAD' | AnyMethod, P>,
+    pattern: P | RoutePattern<P> | Route<'HEAD' | 'ANY', P>,
     handler: RouteHandler<P>,
   ): void {
     this.route('HEAD', pattern, handler)
   }
 
   post<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'POST' | AnyMethod, P>,
+    pattern: P | RoutePattern<P> | Route<'POST' | 'ANY', P>,
     handler: RouteHandler<P>,
   ): void {
     this.route('POST', pattern, handler)
   }
 
   put<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'PUT' | AnyMethod, P>,
+    pattern: P | RoutePattern<P> | Route<'PUT' | 'ANY', P>,
     handler: RouteHandler<P>,
   ): void {
     this.route('PUT', pattern, handler)
   }
 
   patch<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'PATCH' | AnyMethod, P>,
+    pattern: P | RoutePattern<P> | Route<'PATCH' | 'ANY', P>,
     handler: RouteHandler<P>,
   ): void {
     this.route('PATCH', pattern, handler)
   }
 
   delete<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'DELETE' | AnyMethod, P>,
+    pattern: P | RoutePattern<P> | Route<'DELETE' | 'ANY', P>,
     handler: RouteHandler<P>,
   ): void {
     this.route('DELETE', pattern, handler)
   }
 
   options<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'OPTIONS' | AnyMethod, P>,
+    pattern: P | RoutePattern<P> | Route<'OPTIONS' | 'ANY', P>,
     handler: RouteHandler<P>,
   ): void {
     this.route('OPTIONS', pattern, handler)

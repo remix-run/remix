@@ -1,9 +1,9 @@
 import * as assert from 'node:assert/strict'
 import { describe, it, mock } from 'node:test'
 
+import type { RequestContext } from './request-context.ts'
 import { createRoutes } from './route-map.ts'
 import { createRouter } from './router.ts'
-import type { RequestContext } from './request-handler.ts'
 
 describe('router.fetch()', () => {
   it('fetches a route', async () => {

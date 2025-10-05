@@ -1,8 +1,9 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { RequestContext, runMiddleware } from './request-handler.ts'
-import type { NextFunction } from './request-handler.ts'
+import { runMiddleware } from './middleware.ts'
+import type { NextFunction } from './middleware.ts'
+import { RequestContext } from './request-context.ts'
 
 function mockContext(
   input: string | URL | Request,

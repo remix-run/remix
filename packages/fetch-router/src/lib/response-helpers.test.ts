@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { Route } from '../route-map.ts'
-import { html, json, redirect } from './response.ts'
+import { html, json, redirect } from './response-helpers.ts'
+import { Route } from './route-map.ts'
 
 describe('html()', () => {
   it('creates a Response with HTML content-type header', async () => {
@@ -183,12 +183,21 @@ describe('redirect()', () => {
     assert.equal(response.headers.get('Location'), '/search?q')
   })
 
-  it('prevents passing Routes with required params (compile-time check)', () => {
-    let routeWithRequiredParam = new Route('GET', '/books/:slug')
+  it('prevents using routes that do not support GET', () => {
+    let route = new Route('POST', '/books')
+
+    assert.throws(() => {
+      // @ts-expect-error - Should not allow routes that do not support GET
+      redirect(route)
+    }, /Route does not support GET/)
+  })
+
+  it('prevents using routes with required params', () => {
+    let route = new Route('GET', '/books/:slug')
 
     assert.throws(() => {
       // @ts-expect-error - Should not allow routes with required params
-      redirect(routeWithRequiredParam)
+      redirect(route)
     }, /Missing required parameter/)
   })
 })

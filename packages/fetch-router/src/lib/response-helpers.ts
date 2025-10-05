@@ -1,6 +1,6 @@
 import type { HrefBuilderArgs } from '@remix-run/route-pattern'
 
-import type { Route } from '../route-map.ts'
+import type { Route } from './route-map.ts'
 
 /**
  * Creates an HTML Response with proper Content-Type header.
@@ -57,7 +57,16 @@ export function redirect<P extends string>(
     status = 302
   }
 
-  let href = typeof location === 'string' ? location : location.href()
+  let href: string
+  if (typeof location === 'string') {
+    href = location
+  } else {
+    if (location.method !== 'GET' && location.method !== 'ANY') {
+      throw new Error('Route does not support GET')
+    }
+
+    href = location.href()
+  }
 
   let headers = new Headers(init?.headers)
   if (!headers.has('Location')) {
