@@ -416,6 +416,29 @@ describe('router.map() with middleware', () => {
 
     assert.deepEqual(requestLog, ['global', 'inline', 'handler'])
   })
+
+  it('does not run middleware defined after a route', async () => {
+    let router = createRouter()
+    let requestLog: string[] = []
+
+    router.use(() => {
+      requestLog.push('a')
+    })
+
+    router.get('/', () => {
+      requestLog.push('handler')
+      return new Response('OK')
+    })
+
+    router.use(() => {
+      requestLog.push('b')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'OK')
+    assert.deepEqual(requestLog, ['a', 'handler']) // no 'b'
+  })
 })
 
 describe('per-route middleware', () => {

@@ -164,7 +164,7 @@ export class Router {
     let pattern = pathnamePrefix.replace(/\/*$/, '(/*)')
 
     this.#matcher.add(pattern, {
-      middleware: this.#middleware?.slice(0),
+      middleware: this.#middleware,
       prefix: pathnamePrefix,
       router: router!,
     })
