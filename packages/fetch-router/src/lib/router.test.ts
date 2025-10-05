@@ -1,7 +1,9 @@
 import * as assert from 'node:assert/strict'
 import { describe, it, mock } from 'node:test'
 
-import type { RequestContext } from './request-context.ts'
+import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { createStorageKey } from './app-storage.ts'
+import { RequestContext } from './request-context.ts'
 import { createRoutes } from './route-map.ts'
 import { createRouter } from './router.ts'
 
@@ -681,5 +683,374 @@ describe('per-route middleware', () => {
     assert.equal(response.status, 403)
     assert.equal(await response.text(), 'Blocked')
     assert.deepEqual(requestLog, ['m1', 'm2-short-circuit'])
+  })
+})
+
+describe('404 handling', () => {
+  it('returns a 404 response when no route matches', async () => {
+    let router = createRouter()
+    router.get('/home', () => new Response('Home'))
+
+    let response = await router.fetch('https://remix.run/nonexistent')
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Not Found: /nonexistent')
+  })
+
+  it('supports a custom defaultHandler', async () => {
+    let router = createRouter({
+      defaultHandler: ({ url }) => {
+        return new Response(`Custom 404: ${url.pathname}`, {
+          status: 404,
+          headers: { 'X-Custom': 'true' },
+        })
+      },
+    })
+
+    router.get('/home', () => new Response('Home'))
+
+    let response = await router.fetch('https://remix.run/missing')
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Custom 404: /missing')
+    assert.equal(response.headers.get('X-Custom'), 'true')
+  })
+
+  it('calls defaultHandler only when no routes match', async () => {
+    let defaultCalls = 0
+    let router = createRouter({
+      defaultHandler: () => {
+        defaultCalls++
+        return new Response('Not Found', { status: 404 })
+      },
+    })
+
+    router.get('/', () => new Response('Home'))
+    router.get('/about', () => new Response('About'))
+
+    await router.fetch('https://remix.run/')
+    assert.equal(defaultCalls, 0)
+
+    await router.fetch('https://remix.run/about')
+    assert.equal(defaultCalls, 0)
+
+    await router.fetch('https://remix.run/missing')
+    assert.equal(defaultCalls, 1)
+  })
+})
+
+describe('error handling', () => {
+  it('propagates errors thrown in route handlers', async () => {
+    let router = createRouter()
+    router.get('/', () => {
+      throw new Error('Handler error')
+    })
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/')
+    }, new Error('Handler error'))
+  })
+
+  it('propagates async errors thrown in route handlers', async () => {
+    let router = createRouter()
+    router.get('/', async () => {
+      await Promise.resolve()
+      throw new Error('Async handler error')
+    })
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/')
+    }, new Error('Async handler error'))
+  })
+
+  it('propagates errors thrown in global middleware', async () => {
+    let router = createRouter()
+
+    router.use(() => {
+      throw new Error('Global middleware error')
+    })
+
+    router.get('/', () => new Response('OK'))
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/')
+    }, new Error('Global middleware error'))
+  })
+
+  it('propagates errors thrown in per-route middleware', async () => {
+    let router = createRouter()
+
+    router.get('/', {
+      use: [
+        () => {
+          throw new Error('Per-route middleware error')
+        },
+      ],
+      handler() {
+        return new Response('OK')
+      },
+    })
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/')
+    }, new Error('Per-route middleware error'))
+  })
+
+  it('propagates errors thrown in defaultHandler', async () => {
+    let router = createRouter({
+      defaultHandler: () => {
+        throw new Error('Default handler error')
+      },
+    })
+
+    router.get('/home', () => new Response('Home'))
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/missing')
+    }, new Error('Default handler error'))
+  })
+
+  it('allows middleware to catch and handle errors from downstream', async () => {
+    let router = createRouter()
+
+    router.use(async (_, next) => {
+      try {
+        return await next()
+      } catch (error) {
+        return new Response(`Caught: ${(error as Error).message}`, { status: 500 })
+      }
+    })
+
+    router.get('/', () => {
+      throw new Error('Handler error')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    assert.equal(response.status, 500)
+    assert.equal(await response.text(), 'Caught: Handler error')
+  })
+})
+
+describe('router.dispatch()', () => {
+  it('returns null when no route matches', async () => {
+    let router = createRouter()
+    router.get('/home', () => new Response('Home'))
+
+    let response = await router.dispatch(new Request('https://remix.run/missing'))
+
+    assert.equal(response, null)
+  })
+
+  it('returns a response when a route matches', async () => {
+    let router = createRouter()
+    router.get('/home', () => new Response('Home'))
+
+    let response = await router.dispatch(new Request('https://remix.run/home'))
+
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Home')
+  })
+
+  it('does not call the defaultHandler', async () => {
+    let defaultHandlerCalled = false
+    let router = createRouter({
+      defaultHandler: () => {
+        defaultHandlerCalled = true
+        return new Response('Default', { status: 404 })
+      },
+    })
+
+    router.get('/home', () => new Response('Home'))
+
+    let response = await router.dispatch(new Request('https://remix.run/missing'))
+
+    assert.equal(response, null)
+    assert.equal(defaultHandlerCalled, false)
+  })
+
+  it('accepts a RequestContext instead of a Request', async () => {
+    let storageKey = createStorageKey<string>()
+    let router = createRouter()
+    router.get('/:id', ({ params, storage }) => {
+      return new Response(`ID: ${params.id}, Storage: ${storage.get(storageKey)}`)
+    })
+
+    let request = new Request('https://remix.run/123')
+    let context = new RequestContext({ request, params: {} })
+    context.storage.set(storageKey, 'value')
+
+    let response = await router.dispatch(context)
+
+    assert.ok(response)
+    assert.equal(await response.text(), 'ID: 123, Storage: value')
+  })
+
+  it('passes upstream middleware to nested routes', async () => {
+    let requestLog: string[] = []
+
+    let router = createRouter()
+    router.get('/', () => {
+      requestLog.push('handler')
+      return new Response('OK')
+    })
+
+    let request = new Request('https://remix.run/')
+    let upstreamMiddleware = [
+      () => {
+        requestLog.push('upstream')
+      },
+    ]
+
+    let response = await router.dispatch(request, upstreamMiddleware)
+
+    assert.ok(response)
+    assert.deepEqual(requestLog, ['upstream', 'handler'])
+  })
+})
+
+describe('trailing slash handling', () => {
+  it('matches routes with and without trailing slashes for single-path routes', async () => {
+    let router = createRouter()
+    router.get('/about', () => new Response('About'))
+    router.get('/contact/', () => new Response('Contact'))
+
+    // Route defined without trailing slash
+    let response1 = await router.fetch('https://remix.run/about')
+    assert.equal(response1.status, 200)
+    assert.equal(await response1.text(), 'About')
+
+    let response2 = await router.fetch('https://remix.run/about/')
+    assert.equal(response2.status, 404) // Trailing slash doesn't match
+
+    // Route defined with trailing slash
+    let response3 = await router.fetch('https://remix.run/contact/')
+    assert.equal(response3.status, 200)
+    assert.equal(await response3.text(), 'Contact')
+
+    let response4 = await router.fetch('https://remix.run/contact')
+    assert.equal(response4.status, 404) // Without trailing slash doesn't match
+  })
+
+  it('matches routes with and without trailing slashes for createRoutes', async () => {
+    let routes = createRoutes('api', {
+      users: '/users',
+      posts: '/posts/',
+    })
+
+    let router = createRouter()
+    router.get(routes.users, () => new Response('Users'))
+    router.get(routes.posts, () => new Response('Posts'))
+
+    // Route defined without trailing slash in createRoutes
+    let response1 = await router.fetch('https://remix.run/api/users')
+    assert.equal(response1.status, 200)
+    assert.equal(await response1.text(), 'Users')
+
+    let response2 = await router.fetch('https://remix.run/api/users/')
+    assert.equal(response2.status, 404) // Trailing slash doesn't match
+
+    // Route defined with trailing slash in createRoutes
+    let response3 = await router.fetch('https://remix.run/api/posts/')
+    assert.equal(response3.status, 200)
+    assert.equal(await response3.text(), 'Posts')
+
+    let response4 = await router.fetch('https://remix.run/api/posts')
+    assert.equal(response4.status, 404) // Without trailing slash doesn't match
+  })
+
+  it('handles root path with and without trailing slash', async () => {
+    let router = createRouter()
+    router.get('/', () => new Response('Home'))
+
+    // Root with trailing slash
+    let response1 = await router.fetch('https://remix.run/')
+    assert.equal(response1.status, 200)
+    assert.equal(await response1.text(), 'Home')
+
+    // Root without trailing slash (edge case)
+    let response2 = await router.fetch('https://remix.run')
+    assert.equal(response2.status, 200)
+    assert.equal(await response2.text(), 'Home')
+  })
+
+  it('handles nested routes with trailing slash combinations', async () => {
+    let routes = createRoutes('admin', {
+      dashboard: '/',
+      users: {
+        index: '/users',
+        show: '/users/:id',
+      },
+    })
+
+    let router = createRouter()
+    router.get(routes.dashboard, () => new Response('Admin Dashboard'))
+    router.get(routes.users.index, () => new Response('Users List'))
+    router.get(routes.users.show, ({ params }) => new Response(`User ${params.id}`))
+
+    // Dashboard (base path - createRoutes('admin', { dashboard: '/' }) produces '/admin')
+    let response1 = await router.fetch('https://remix.run/admin')
+    assert.equal(response1.status, 200)
+    assert.equal(await response1.text(), 'Admin Dashboard')
+
+    let response2 = await router.fetch('https://remix.run/admin/')
+    assert.equal(response2.status, 404) // Trailing slash doesn't match '/admin'
+
+    // Nested users index
+    let response3 = await router.fetch('https://remix.run/admin/users')
+    assert.equal(response3.status, 200)
+    assert.equal(await response3.text(), 'Users List')
+
+    let response4 = await router.fetch('https://remix.run/admin/users/')
+    assert.equal(response4.status, 404) // Trailing slash doesn't match
+
+    // Nested users show
+    let response5 = await router.fetch('https://remix.run/admin/users/123')
+    assert.equal(response5.status, 200)
+    assert.equal(await response5.text(), 'User 123')
+
+    let response6 = await router.fetch('https://remix.run/admin/users/123/')
+    assert.equal(response6.status, 404) // Trailing slash doesn't match
+  })
+})
+
+describe('custom matcher', () => {
+  it('uses a custom matcher when provided', async () => {
+    let matchAllCalls = 0
+
+    // Create a custom matcher that tracks calls
+    class CustomMatcher extends RegExpMatcher {
+      *matchAll(url: string | URL) {
+        matchAllCalls++
+        yield* super.matchAll(url)
+      }
+    }
+
+    let customMatcher = new CustomMatcher()
+    let router = createRouter({ matcher: customMatcher })
+    router.get('/', () => new Response('Home'))
+
+    await router.fetch('https://remix.run/')
+
+    assert.ok(matchAllCalls > 0, 'Custom matcher should be called')
+  })
+
+  it('adds routes to the custom matcher', async () => {
+    let addedPatterns: string[] = []
+
+    class CustomMatcher extends RegExpMatcher {
+      add<P extends string>(pattern: P | RoutePattern<P>, data: any): void {
+        let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
+        addedPatterns.push(routePattern.source)
+        super.add(pattern, data)
+      }
+    }
+
+    let customMatcher = new CustomMatcher()
+    let router = createRouter({ matcher: customMatcher })
+    router.get('/home', () => new Response('Home'))
+    router.get('/about', () => new Response('About'))
+
+    assert.deepEqual(addedPatterns, ['/home', '/about'])
   })
 })
