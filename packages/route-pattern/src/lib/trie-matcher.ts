@@ -10,8 +10,8 @@ interface TrieNode {
   // Unique ID for deduplication
   id?: number
 
-  // Exact literal segments (fast path)
-  staticChildren: Map<string, TrieNode>
+  // Exact literal segments (fast path) - using plain object for better V8 optimization
+  staticChildren: Record<string, TrieNode>
 
   // Parametric segment shapes with precompiled matchers
   shapeChildren: Map<string, { node: TrieNode; tokens: Token[]; ignoreCase: boolean }>
@@ -82,8 +82,8 @@ interface ProtocolNode {
 }
 
 interface HostnameTrieNode {
-  // Literal hostname labels (reversed: com -> example -> api)
-  staticChildren: Map<string, HostnameTrieNode>
+  // Literal hostname labels (reversed: com -> example -> api) - using plain object for better V8 optimization
+  staticChildren: Record<string, HostnameTrieNode>
   // Variable hostname labels
   variableChild?: { paramName: string; node: HostnameTrieNode }
   // Wildcard hostname labels
@@ -164,6 +164,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   #maxTraversalStates: number
   #nodeIdCounter = 0
   #maxOptionalDepth = 5
+  #prefixMatcherCache = new Map<string, (segment: string) => boolean>()
 
   constructor(options?: TrieMatcherOptions) {
     this.#pathnameOnlyRoot = this.#createNode()
@@ -394,7 +395,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     }
 
     // Static, shape, and variable children all increment depth by 1
-    for (let child of node.staticChildren.values()) updateDepth(child, 1, 1)
+    for (let child of Object.values(node.staticChildren)) updateDepth(child, 1, 1)
     for (let entry of node.shapeChildren.values()) updateDepth(entry.node, 1, 1)
     if (node.variableChild) updateDepth(node.variableChild, 1, 1)
 
@@ -410,7 +411,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
 
   #createNode(): TrieNode {
     let node: any = {
-      staticChildren: new Map(),
+      staticChildren: {},
       shapeChildren: new Map(),
       optionalEdges: [],
       patterns: [],
@@ -431,7 +432,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
 
   #createHostnameNode(): HostnameTrieNode {
     return {
-      staticChildren: new Map(),
+      staticChildren: {},
       portChildren: new Map(),
     }
   }
@@ -517,10 +518,10 @@ export class TrieMatcher<T = any> implements Matcher<T> {
       if (label.length === 1 && label[0].type === 'text') {
         // Static label
         let labelText = label[0].value.toLowerCase()
-        let child = currentNode.staticChildren.get(labelText)
+        let child = currentNode.staticChildren[labelText]
         if (!child) {
           child = this.#createHostnameNode()
-          currentNode.staticChildren.set(labelText, child)
+          currentNode.staticChildren[labelText] = child
           child.parent = currentNode
         }
         currentNode = child
@@ -662,9 +663,10 @@ export class TrieMatcher<T = any> implements Matcher<T> {
 
       if (token.type === 'text') {
         let key = pattern.ignoreCase ? token.value.toLowerCase() : token.value
-        let child = node.staticChildren.get(key) ?? this.#createNode()
-        if (!node.staticChildren.has(key)) {
-          node.staticChildren.set(key, child)
+        let child = node.staticChildren[key]
+        if (!child) {
+          child = this.#createNode()
+          node.staticChildren[key] = child
           child.parent = node
           if (pattern.ignoreCase) {
             node.hasIgnoreCasePatterns = true
@@ -1051,7 +1053,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     let currentLabel = labels[labelIndex]
 
     // Try static children
-    let staticChild = node.staticChildren.get(currentLabel)
+    let staticChild = node.staticChildren[currentLabel]
     if (staticChild) {
       results.push(...this.#matchHostnameLabels(staticChild, labels, labelIndex + 1, params))
     }
@@ -1153,7 +1155,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     }
     stack.push(initial)
 
-    let visited = new Set<string>()
+    let visited = new Set<number | string>()
     let statesExplored = 0
 
     while (stack.length > 0 && statesExplored < this.#maxTraversalStates) {
@@ -1162,9 +1164,14 @@ export class TrieMatcher<T = any> implements Matcher<T> {
 
       let { node, state } = current
 
-      let dedupKey = `${state.nodeId ?? node.id}:${state.segmentIndex}`
+      // Optimize dedup key: use numeric key for common case (no wildcard)
+      let dedupKey: number | string
       if (state.wildcardSpan) {
-        dedupKey += `:${state.wildcardSpan}`
+        // Wildcard case: use string key
+        dedupKey = `${state.nodeId ?? node.id}:${state.segmentIndex}:${state.wildcardSpan}`
+      } else {
+        // Common case: use numeric key (nodeId in high 16 bits, segmentIndex in low 16 bits)
+        dedupKey = ((state.nodeId ?? node.id ?? 0) << 16) | state.segmentIndex
       }
 
       if (visited.has(dedupKey)) continue
@@ -1174,22 +1181,33 @@ export class TrieMatcher<T = any> implements Matcher<T> {
       if (earlyExit && state.specificity < bestSpec - 100) continue // Threshold for low spec
 
       if (state.segmentIndex === state.segments.length) {
-        for (let pattern of node.patterns) {
-          if (pattern.searchConstraints) {
-            let searchToMatch = urlSearch ?? ''
-            if (!this.#matchSearch(searchToMatch, pattern.searchConstraints)) continue
-          }
-
+        // Fast path: single pattern with no search constraints
+        if (node.patterns.length === 1 && !node.patterns[0].searchConstraints) {
+          let pattern = node.patterns[0]
           let score = this.#finalScore(pattern, state)
           results.push({ match: pattern, state: { ...state } })
           if (earlyExit) {
-            bestSpec = Math.max(bestSpec, score)
-            // Sort results if multiple, but early exit after first batch
-            if (results.length > 1)
-              results.sort(
-                (a, b) => this.#finalScore(b.match, b.state) - this.#finalScore(a.match, a.state),
-              )
-            return results.slice(0, 1) // Only best
+            return results.slice(0, 1)
+          }
+        } else {
+          // General case: multiple patterns or search constraints
+          for (let pattern of node.patterns) {
+            if (pattern.searchConstraints) {
+              let searchToMatch = urlSearch ?? ''
+              if (!this.#matchSearch(searchToMatch, pattern.searchConstraints)) continue
+            }
+
+            let score = this.#finalScore(pattern, state)
+            results.push({ match: pattern, state: { ...state } })
+            if (earlyExit) {
+              bestSpec = Math.max(bestSpec, score)
+              // Sort results if multiple, but early exit after first batch
+              if (results.length > 1)
+                results.sort(
+                  (a, b) => this.#finalScore(b.match, b.state) - this.#finalScore(a.match, a.state),
+                )
+              return results.slice(0, 1) // Only best
+            }
           }
         }
       }
@@ -1222,6 +1240,70 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     return results
   }
 
+  /**
+   * Helper to create MatchState without object spreading (faster allocation)
+   */
+  #createMatchState(
+    baseState: MatchState,
+    segmentIndex: number,
+    params: Record<string, string>,
+    specificity: number,
+    nodeId: number | undefined,
+    wildcardSpan?: string,
+  ): MatchState {
+    return {
+      segments: baseState.segments,
+      segmentIndex,
+      params,
+      specificity,
+      nodeId,
+      wildcardSpan,
+    }
+  }
+
+  /**
+   * JIT-compile a fast prefix matching function for static segments
+   * Inspired by find-my-way's optimization technique
+   */
+  #compilePrefixMatcher(prefix: string, ignoreCase: boolean): (segment: string) => boolean {
+    if (prefix.length === 1) {
+      // Single character - ultra fast path
+      let charCode = ignoreCase ? prefix.toLowerCase().charCodeAt(0) : prefix.charCodeAt(0)
+      if (ignoreCase) {
+        return new Function(
+          'segment',
+          `return segment.length === 1 && (segment.charCodeAt(0) === ${charCode} || segment.charCodeAt(0) === ${prefix.toUpperCase().charCodeAt(0)})`,
+        ) as (segment: string) => boolean
+      }
+      return new Function(
+        'segment',
+        `return segment.length === 1 && segment.charCodeAt(0) === ${charCode}`,
+      ) as (segment: string) => boolean
+    }
+
+    // Multi-character - generate inline character code checks
+    let checks: string[] = []
+    let targetPrefix = ignoreCase ? prefix.toLowerCase() : prefix
+
+    for (let i = 0; i < targetPrefix.length; i++) {
+      let charCode = targetPrefix.charCodeAt(i)
+      if (ignoreCase && prefix.charCodeAt(i) >= 65 && prefix.charCodeAt(i) <= 90) {
+        // Uppercase letter - check both cases
+        let upperCode = prefix.toUpperCase().charCodeAt(i)
+        let lowerCode = prefix.toLowerCase().charCodeAt(i)
+        checks.push(
+          `(segment.charCodeAt(${i}) === ${upperCode} || segment.charCodeAt(${i}) === ${lowerCode})`,
+        )
+      } else {
+        checks.push(`segment.charCodeAt(${i}) === ${charCode}`)
+      }
+    }
+
+    // Generate optimized function
+    let fnBody = `return segment.length === ${targetPrefix.length} && ${checks.join(' && ')}`
+    return new Function('segment', fnBody) as (segment: string) => boolean
+  }
+
   #calculatePriority(node: TrieNode, state: MatchState): number {
     let currentSpecificity = state.specificity
     let remainingSegments = state.segments.length - state.segmentIndex
@@ -1238,10 +1320,15 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   }
 
   #getStaticChild(node: TrieNode, segment: string): TrieNode | undefined {
-    let child = node.staticChildren.get(segment)
-    if (!child && node.hasIgnoreCasePatterns) {
-      child = node.staticChildren.get(segment.toLowerCase())
+    // Fast path: exact lookup
+    let child = node.staticChildren[segment]
+    if (child) return child
+
+    // Case-insensitive fallback
+    if (node.hasIgnoreCasePatterns) {
+      child = node.staticChildren[segment.toLowerCase()]
     }
+
     return child
   }
 
@@ -1258,12 +1345,13 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     let staticChild = this.#getStaticChild(node, currentSegment)
 
     if (staticChild) {
-      let newState: MatchState = {
-        ...state,
-        segmentIndex: state.segmentIndex + 1,
-        specificity: state.specificity + 100,
-        nodeId: staticChild.id,
-      }
+      let newState = this.#createMatchState(
+        state,
+        state.segmentIndex + 1,
+        state.params,
+        state.specificity + 100,
+        staticChild.id,
+      )
       let ts: TraversalState = {
         node: staticChild,
         state: newState,
@@ -1278,13 +1366,13 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     for (let [shapeKey, shapeEntry] of node.shapeChildren) {
       let matchResult = this.#matchShape(shapeEntry, currentSegment)
       if (matchResult) {
-        let newState: MatchState = {
-          ...state,
-          segmentIndex: state.segmentIndex + 1,
-          params: { ...state.params, ...matchResult.params },
-          specificity: state.specificity + matchResult.specificity,
-          nodeId: shapeEntry.node.id,
-        }
+        let newState = this.#createMatchState(
+          state,
+          state.segmentIndex + 1,
+          { ...state.params, ...matchResult.params },
+          state.specificity + matchResult.specificity,
+          shapeEntry.node.id,
+        )
         let ts: TraversalState = {
           node: shapeEntry.node,
           state: newState,
@@ -1300,13 +1388,13 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     if (node.variableChild) {
       let newParams = { ...state.params }
       newParams[node.variableChild.paramName] = currentSegment
-      let newState: MatchState = {
-        ...state,
-        segmentIndex: state.segmentIndex + 1,
-        params: newParams,
-        specificity: state.specificity + 10,
-        nodeId: node.variableChild.id,
-      }
+      let newState = this.#createMatchState(
+        state,
+        state.segmentIndex + 1,
+        newParams,
+        state.specificity + 10,
+        node.variableChild.id,
+      )
       let ts: TraversalState = {
         node: node.variableChild,
         state: newState,
@@ -1379,14 +1467,14 @@ export class TrieMatcher<T = any> implements Matcher<T> {
       if (wildcardEdge.paramName) {
         newParams[wildcardEdge.paramName] = consumedSegments.join('/')
       }
-      let newState: MatchState = {
-        ...state,
-        segmentIndex: state.segmentIndex + consumeCount,
-        params: newParams,
-        specificity: state.specificity + 1,
-        nodeId: continuation.id,
-        wildcardSpan: `${state.segmentIndex}-${state.segmentIndex + consumeCount}`,
-      }
+      let newState = this.#createMatchState(
+        state,
+        state.segmentIndex + consumeCount,
+        newParams,
+        state.specificity + 1,
+        continuation.id,
+        `${state.segmentIndex}-${state.segmentIndex + consumeCount}`,
+      )
       let ts: TraversalState = {
         node: continuation,
         state: newState,
@@ -1454,7 +1542,9 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     let current = this.#pathnameOnlyRoot
     let pathNodes: TrieNode[] = collectAll ? [current] : []
 
-    for (let seg of segments) {
+    // Fast path: walk static children only
+    for (let i = 0; i < segments.length; i++) {
+      let seg = segments[i]
       let child = this.#getStaticChild(current, seg)
       if (!child) return []
       current = child
@@ -1465,6 +1555,22 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     let nodesToCheck = collectAll ? pathNodes : [current]
 
     for (let node of nodesToCheck) {
+      // Fast path: single pattern with no constraints
+      if (node.patterns.length === 1 && !node.patterns[0].searchConstraints) {
+        let pattern = node.patterns[0]
+        let state: MatchState = {
+          segments,
+          segmentIndex: segments.length,
+          params: {},
+          specificity: pattern.specificity,
+          nodeId: node.id,
+        }
+        matches.push({ match: pattern, state })
+        if (!collectAll) return matches
+        continue
+      }
+
+      // General case: check all patterns
       for (let pattern of node.patterns) {
         if (pattern.searchConstraints && !this.#matchSearch(search, pattern.searchConstraints))
           continue
@@ -1472,7 +1578,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
           segments,
           segmentIndex: segments.length,
           params: {},
-          specificity: 0,
+          specificity: pattern.specificity,
           nodeId: node.id,
         }
         matches.push({ match: pattern, state })
