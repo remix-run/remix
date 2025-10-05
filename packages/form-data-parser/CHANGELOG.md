@@ -2,7 +2,7 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.11.0 (2025-10-05)
 
 - Make `options` optional in `parseFormData` signature
 - Export `ParseFormDataOptions` type
