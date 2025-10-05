@@ -1,4 +1,5 @@
-import { createRouter, logger } from '@remix-run/fetch-router'
+import { createRouter } from '@remix-run/fetch-router'
+import { logger } from '@remix-run/fetch-router/logger-middleware'
 
 import { routes } from '../routes.ts'
 import { storeContext } from './middleware/context.ts'
