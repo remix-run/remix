@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { router } from './router.ts'
-import { getSessionCookie, requestWithSession } from '../test/helpers.ts'
+import { loginAsCustomer, requestWithSession } from '../test/helpers.ts'
 
 describe('checkout handlers', () => {
   it('GET /checkout redirects when not authenticated', async () => {
@@ -13,18 +13,7 @@ describe('checkout handlers', () => {
   })
 
   it('POST /checkout creates order when authenticated with items in cart', async () => {
-    // Log in first
-    let loginResponse = await router.fetch('http://localhost:3000/login', {
-      method: 'POST',
-      body: new URLSearchParams({
-        email: 'customer@example.com',
-        password: 'password123',
-      }),
-      redirect: 'manual',
-    })
-
-    let sessionId = getSessionCookie(loginResponse)
-    assert.ok(sessionId)
+    let sessionId = await loginAsCustomer(router)
 
     // Add item to cart
     let addRequest = requestWithSession('http://localhost:3000/cart/api/add', sessionId, {

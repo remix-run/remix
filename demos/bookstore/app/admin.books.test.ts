@@ -2,26 +2,18 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { router } from './router.ts'
-import { getSessionCookie, requestWithSession } from '../test/helpers.ts'
+import { loginAsAdmin, requestWithSession } from '../test/helpers.ts'
 
 describe('admin books handlers', () => {
   it('POST /admin/books creates new book when admin', async () => {
-    // Log in as admin
-    let loginResponse = await router.fetch('http://localhost:3000/login', {
-      method: 'POST',
-      body: new URLSearchParams({
-        email: 'admin@bookstore.com',
-        password: 'admin123',
-      }),
-      redirect: 'manual',
-    })
-
-    let sessionId = getSessionCookie(loginResponse)
-    assert.ok(sessionId)
+    let sessionId = await loginAsAdmin(router)
 
     // Create new book
     let createRequest = requestWithSession('http://localhost:3000/admin/books', sessionId, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
       body: new URLSearchParams({
         slug: 'test-book',
         title: 'Test Book',

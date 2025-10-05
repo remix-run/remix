@@ -1,10 +1,12 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
 import { redirect } from '@remix-run/fetch-router'
+import { formData } from '@remix-run/fetch-router/form-data-middleware'
 
 import { routes } from '../routes.ts'
 import { getAllBooks, getBookById, createBook, updateBook, deleteBook } from './models/books.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
+import { uploadHandler } from './utils/uploads.ts'
 
 export default {
   index() {
@@ -155,7 +157,11 @@ export default {
         <h1>Add New Book</h1>
 
         <div class="card">
-          <form method="POST" action={routes.admin.books.create.href()}>
+          <form
+            method="POST"
+            action={routes.admin.books.create.href()}
+            encType="multipart/form-data"
+          >
             <div class="form-group">
               <label for="title">Title</label>
               <input type="text" id="title" name="title" required />
@@ -204,6 +210,12 @@ export default {
               </select>
             </div>
 
+            <div class="form-group">
+              <label for="cover">Book Cover Image</label>
+              <input type="file" id="cover" name="cover" accept="image/*" />
+              <small style="color: #666;">Optional. Upload a cover image for this book.</small>
+            </div>
+
             <button type="submit" class="btn">
               Create Book
             </button>
@@ -220,23 +232,27 @@ export default {
     )
   },
 
-  async create({ request }) {
-    let formData = await request.formData()
+  create: {
+    use: [formData({ uploadHandler })],
+    async handler({ formData: data }) {
+      // The uploadHandler automatically saves the file and returns the URL path
+      let coverUrl = data?.get('cover')?.toString() || '/images/placeholder.jpg'
 
-    createBook({
-      slug: formData.get('slug')?.toString() || '',
-      title: formData.get('title')?.toString() || '',
-      author: formData.get('author')?.toString() || '',
-      description: formData.get('description')?.toString() || '',
-      price: parseFloat(formData.get('price')?.toString() || '0'),
-      genre: formData.get('genre')?.toString() || '',
-      coverUrl: '/images/placeholder.jpg',
-      isbn: formData.get('isbn')?.toString() || '',
-      publishedYear: parseInt(formData.get('publishedYear')?.toString() || '2024', 10),
-      inStock: formData.get('inStock')?.toString() === 'true',
-    })
+      createBook({
+        slug: data?.get('slug')?.toString() || '',
+        title: data?.get('title')?.toString() || '',
+        author: data?.get('author')?.toString() || '',
+        description: data?.get('description')?.toString() || '',
+        price: parseFloat(data?.get('price')?.toString() || '0'),
+        genre: data?.get('genre')?.toString() || '',
+        coverUrl,
+        isbn: data?.get('isbn')?.toString() || '',
+        publishedYear: parseInt(data?.get('publishedYear')?.toString() || '2024', 10),
+        inStock: data?.get('inStock')?.toString() === 'true',
+      })
 
-    return redirect(routes.admin.books.index)
+      return redirect(routes.admin.books.index)
+    },
   },
 
   edit({ params }) {
@@ -258,7 +274,11 @@ export default {
         <h1>Edit Book</h1>
 
         <div class="card">
-          <form method="POST" action={routes.admin.books.update.href({ bookId: book.id })}>
+          <form
+            method="POST"
+            action={routes.admin.books.update.href({ bookId: book.id })}
+            encType="multipart/form-data"
+          >
             <div class="form-group">
               <label for="title">Title</label>
               <input type="text" id="title" name="title" value={book.title} required />
@@ -326,6 +346,24 @@ export default {
               </select>
             </div>
 
+            <div class="form-group">
+              <label for="cover">Book Cover Image</label>
+              {book.coverUrl !== '/images/placeholder.jpg' && (
+                <div style="margin-bottom: 0.5rem;">
+                  <img
+                    src={book.coverUrl}
+                    alt={book.title}
+                    style="max-width: 200px; height: auto; border-radius: 4px;"
+                  />
+                  <p style="font-size: 0.875rem; color: #666;">Current cover image</p>
+                </div>
+              )}
+              <input type="file" id="cover" name="cover" accept="image/*" />
+              <small style="color: #666;">
+                Optional. Upload a new cover image to replace the current one.
+              </small>
+            </div>
+
             <button type="submit" class="btn">
               Update Book
             </button>
@@ -342,22 +380,33 @@ export default {
     )
   },
 
-  async update({ request, params }) {
-    let formData = await request.formData()
+  update: {
+    use: [formData({ uploadHandler })],
+    async handler({ formData: data, params }) {
+      let book = getBookById(params.bookId)
+      if (!book) {
+        return new Response('Book not found', { status: 404 })
+      }
 
-    updateBook(params.bookId, {
-      slug: formData.get('slug')?.toString() ?? '',
-      title: formData.get('title')?.toString() ?? '',
-      author: formData.get('author')?.toString() ?? '',
-      description: formData.get('description')?.toString() ?? '',
-      price: parseFloat(formData.get('price')?.toString() ?? '0'),
-      genre: formData.get('genre')?.toString() ?? '',
-      isbn: formData.get('isbn')?.toString() ?? '',
-      publishedYear: parseInt(formData.get('publishedYear')?.toString() ?? '2024', 10),
-      inStock: formData.get('inStock')?.toString() === 'true',
-    })
+      // The uploadHandler automatically saves the file and returns the URL path
+      // If no file was uploaded, the form field will be empty and we keep the existing coverUrl
+      let coverUrl = data?.get('cover')?.toString() || book.coverUrl
 
-    return redirect(routes.admin.books.index)
+      updateBook(params.bookId, {
+        slug: data?.get('slug')?.toString() ?? '',
+        title: data?.get('title')?.toString() ?? '',
+        author: data?.get('author')?.toString() ?? '',
+        description: data?.get('description')?.toString() ?? '',
+        price: parseFloat(data?.get('price')?.toString() ?? '0'),
+        genre: data?.get('genre')?.toString() ?? '',
+        coverUrl,
+        isbn: data?.get('isbn')?.toString() ?? '',
+        publishedYear: parseInt(data?.get('publishedYear')?.toString() ?? '2024', 10),
+        inStock: data?.get('inStock')?.toString() === 'true',
+      })
+
+      return redirect(routes.admin.books.index)
+    },
   },
 
   destroy({ params }) {

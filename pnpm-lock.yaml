@@ -32,31 +32,12 @@ importers:
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../../packages/fetch-router
-      '@remix-run/node-fetch-server':
+      '@remix-run/file-storage':
         specifier: workspace:*
-        version: link:../../packages/node-fetch-server
-    devDependencies:
-      '@types/node':
-        specifier: ^24.6.0
-        version: 24.6.0
-      esbuild:
-        specifier: ^0.25.10
-        version: 0.25.10
-      tsx:
-        specifier: ^4.20.6
-        version: 4.20.6
-
-  demos/remix-jam:
-    dependencies:
-      '@remix-run/dom':
-        specifier: 0.0.0-experimental-remix-jam.1
-        version: 0.0.0-experimental-remix-jam.1
-      '@remix-run/events':
-        specifier: 0.0.0-experimental-remix-jam.1
-        version: 0.0.0-experimental-remix-jam.1
-      '@remix-run/fetch-router':
+        version: link:../../packages/file-storage
+      '@remix-run/headers':
         specifier: workspace:*
-        version: link:../../packages/fetch-router
+        version: link:../../packages/headers
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../packages/node-fetch-server
@@ -976,20 +957,11 @@ packages:
     peerDependencies:
       prettier: '*'
 
-  '@remix-run/dom@0.0.0-experimental-remix-jam.1':
-    resolution: {integrity: sha512-HLLrUpSz7EicCAWQKqJt7RK2Y04sruwASP5gNgTK3GQzL216XCGoh+LjrMRQ8Aw7GFgHSkvQuyhVb6Y4xY2aDw==}
-
   '@remix-run/dom@0.0.0-experimental-remix-jam.4':
     resolution: {integrity: sha512-0z8TqMrrRJoEE5t9NzdF37kVuXH/LFDnpejf2fpGRm9ADz0ndf7AXNktsCAKqWA0CKw4jj66xS4rki6FePCjzQ==}
 
-  '@remix-run/events@0.0.0-experimental-remix-jam.1':
-    resolution: {integrity: sha512-4Xs0Ek3QYsx2Tq64ZkSMXN9gAwBOg42vzK/5aTkACktb6asljm/wf8mgFPtf+IUegh4BBzkapNXAdmXEh4UqNg==}
-
   '@remix-run/events@0.0.0-experimental-remix-jam.4':
     resolution: {integrity: sha512-at0hgDG7Km/yRdk3myeyFwt8BXTBHnPSD4oaAB3VGDDB10q4wkqT05EAhxX+1Qh8TSIPSPst+fkmnU7vjWyIYA==}
-
-  '@remix-run/style@0.0.0-experimental-remix-jam.1':
-    resolution: {integrity: sha512-aRETYid6C1V1smXnhbxoFdsOi+qxvXM9NZ9UIQeRQ9ZEWT2TS1dtyeNTv6QXO1Swp9QtdWlnPb6RlzUBvG5h4Q==}
 
   '@remix-run/style@0.0.0-experimental-remix-jam.4':
     resolution: {integrity: sha512-lkWJp2B6taEMHsNlUqktzAW/3LERri2NrvzSdZocBesJ/+fFwHPSLXWJ54xk+qtkOrqgrX7NJblNjVfPWk54IA==}
@@ -2623,21 +2595,12 @@ snapshots:
       make-synchronized: 0.4.2
       prettier: 3.5.3
 
-  '@remix-run/dom@0.0.0-experimental-remix-jam.1':
-    dependencies:
-      '@remix-run/events': 0.0.0-experimental-remix-jam.1
-      '@remix-run/style': 0.0.0-experimental-remix-jam.1
-
   '@remix-run/dom@0.0.0-experimental-remix-jam.4':
     dependencies:
       '@remix-run/events': 0.0.0-experimental-remix-jam.4
       '@remix-run/style': 0.0.0-experimental-remix-jam.4
 
-  '@remix-run/events@0.0.0-experimental-remix-jam.1': {}
-
   '@remix-run/events@0.0.0-experimental-remix-jam.4': {}
-
-  '@remix-run/style@0.0.0-experimental-remix-jam.1': {}
 
   '@remix-run/style@0.0.0-experimental-remix-jam.4': {}
 

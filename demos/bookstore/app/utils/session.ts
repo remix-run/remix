@@ -1,3 +1,4 @@
+import { Cookie, SetCookie } from '@remix-run/headers'
 import type { User } from '../models/users.ts'
 
 export interface SessionData {
@@ -9,13 +10,14 @@ export interface SessionData {
 let sessions = new Map<string, SessionData>()
 
 export function getSessionId(request: Request): string {
-  let cookie = request.headers.get('Cookie')
-  if (!cookie) return createSessionId()
+  let cookieHeader = request.headers.get('Cookie')
+  if (!cookieHeader) return createSessionId()
 
-  let match = cookie.match(/sessionId=([^;]+)/)
-  if (!match) return createSessionId()
+  let cookie = new Cookie(cookieHeader)
+  let sessionId = cookie.get('sessionId')
 
-  let sessionId = match[1]
+  if (!sessionId) return createSessionId()
+
   if (!sessions.has(sessionId)) {
     sessions.set(sessionId, { sessionId })
   }
@@ -40,10 +42,16 @@ export function getSession(request: Request): SessionData {
 }
 
 export function setSessionCookie(headers: Headers, sessionId: string): void {
-  headers.set(
-    'Set-Cookie',
-    `sessionId=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
-  )
+  let cookie = new SetCookie({
+    name: 'sessionId',
+    value: sessionId,
+    path: '/',
+    httpOnly: true,
+    sameSite: 'Lax',
+    maxAge: 2592000, // 30 days
+  })
+
+  headers.set('Set-Cookie', cookie.toString())
 }
 
 export function login(sessionId: string, user: User): void {

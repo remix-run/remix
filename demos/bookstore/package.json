@@ -5,6 +5,8 @@
   "dependencies": {
     "@remix-run/dom": "jam",
     "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/file-storage": "workspace:*",
+    "@remix-run/headers": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*"
   },
   "devDependencies": {

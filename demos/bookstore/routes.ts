@@ -10,6 +10,9 @@ export let routes = route({
   }),
   search: '/search',
 
+  // Uploaded files
+  uploads: '/uploads/*key',
+
   // Public book routes
   books: {
     index: '/books',

@@ -11,6 +11,7 @@ import booksHandlers from './books.tsx'
 import cartHandlers from './cart.tsx'
 import checkoutHandlers from './checkout.tsx'
 import * as marketingHandlers from './marketing.tsx'
+import uploadsHandler from './uploads.tsx'
 
 export let router = createRouter()
 
@@ -25,6 +26,9 @@ router.map(routes.home, marketingHandlers.home)
 router.map(routes.about, marketingHandlers.about)
 router.map(routes.contact, marketingHandlers.contact)
 router.map(routes.search, marketingHandlers.search)
+
+// Uploaded files route
+router.get(routes.uploads, uploadsHandler)
 
 // Public book routes with optional auth
 router.map(routes.books, booksHandlers)
