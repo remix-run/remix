@@ -228,7 +228,14 @@ export class Router {
         let handler = handlers[key] as any
 
         if (route instanceof Route) {
-          this.route(route.method, route.pattern, { use, handler })
+          if (isRequestHandlerWithMiddleware(handler)) {
+            this.route(route.method, route.pattern, {
+              use: use.concat(handler.use),
+              handler: handler.handler,
+            })
+          } else {
+            this.route(route.method, route.pattern, { use, handler })
+          }
         } else if (isRouteHandlersWithMiddleware(handler)) {
           this.map(route, { use: use.concat(handler.use), handlers: handler.handlers })
         } else {

@@ -684,6 +684,61 @@ describe('per-route middleware', () => {
     assert.equal(await response.text(), 'Blocked')
     assert.deepEqual(requestLog, ['m1', 'm2-short-circuit'])
   })
+
+  it('merges per-route middleware with parent route map middleware', async () => {
+    let routes = createRoutes({
+      admin: {
+        dashboard: '/admin/dashboard',
+        users: '/admin/users',
+      },
+    })
+
+    let router = createRouter()
+    let requestLog: string[] = []
+
+    // Map routes with parent middleware and a child route with its own per-route middleware
+    router.map(routes.admin, {
+      use: [
+        () => {
+          requestLog.push('auth')
+        },
+        () => {
+          requestLog.push('admin')
+        },
+      ],
+      handlers: {
+        dashboard() {
+          requestLog.push('dashboard-handler')
+          return new Response('Dashboard')
+        },
+        users: {
+          use: [
+            () => {
+              requestLog.push('users-middleware')
+            },
+          ],
+          handler() {
+            requestLog.push('users-handler')
+            return new Response('Users')
+          },
+        },
+      },
+    })
+
+    // Dashboard should only have parent middleware
+    let response1 = await router.fetch('https://remix.run/admin/dashboard')
+    assert.equal(response1.status, 200)
+    assert.equal(await response1.text(), 'Dashboard')
+    assert.deepEqual(requestLog, ['auth', 'admin', 'dashboard-handler'])
+
+    requestLog = []
+
+    // Users should have both parent and per-route middleware
+    let response2 = await router.fetch('https://remix.run/admin/users')
+    assert.equal(response2.status, 200)
+    assert.equal(await response2.text(), 'Users')
+    assert.deepEqual(requestLog, ['auth', 'admin', 'users-middleware', 'users-handler'])
+  })
 })
 
 describe('404 handling', () => {

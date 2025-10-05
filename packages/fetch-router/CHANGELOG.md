@@ -2,6 +2,10 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Fixed an issue where per-route middleware was not being applied to a route handler nested inside a route map with its own middleware
+
 ## v0.5.0 (2025-10-05)
 
 - Add `formData` middleware for parsing `FormData` objects from the request body
