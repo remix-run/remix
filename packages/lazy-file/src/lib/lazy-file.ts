@@ -233,7 +233,7 @@ class BlobContent {
   }
 
   async arrayBuffer(): Promise<ArrayBuffer> {
-    return (await this.bytes()).buffer
+    return (await this.bytes()).buffer as ArrayBuffer
   }
 
   async bytes(): Promise<Uint8Array> {
