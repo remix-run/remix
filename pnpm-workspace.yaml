@@ -6,5 +6,6 @@ packages:
   - packages/multipart-parser/demos/*
   - packages/node-fetch-server/bench
   - packages/node-fetch-server/demos/*
+  - packages/route-pattern/bench
   - packages/tar-parser/bench
   - scripts
