@@ -5,25 +5,19 @@ import { runMiddleware } from './middleware.ts'
 import type { NextFunction } from './middleware.ts'
 import { RequestContext } from './request-context.ts'
 
-function mockContext(
-  input: string | URL | Request,
-  params: Record<string, any> = {},
-): RequestContext {
-  if (input instanceof Request) {
-    return new RequestContext(input, new URL(input.url), params)
-  }
-
-  let url = typeof input === 'string' ? new URL(input) : input
-  return new RequestContext(new Request(url), url, params)
+function mockContext(input: string | Request, params: Record<string, any> = {}): RequestContext {
+  return input instanceof Request
+    ? new RequestContext({ request: input, params })
+    : new RequestContext({ request: new Request(input), params })
 }
 
 describe('runMiddleware', () => {
   it('runs middleware and returns a response', async () => {
     let middleware = [() => new Response('Hello, world!')]
-    let ctx = mockContext('https://remix.run')
+    let context = mockContext('https://remix.run')
     let handler = () => new Response('Hello, world!')
 
-    let response = await runMiddleware(middleware, ctx, handler)
+    let response = await runMiddleware(middleware, context, handler)
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, world!')
@@ -42,10 +36,10 @@ describe('runMiddleware', () => {
         return next()
       },
     ]
-    let ctx = mockContext('https://remix.run')
+    let context = mockContext('https://remix.run')
     let handler = () => new Response('Hello, world!')
 
-    let response = await runMiddleware(middleware, ctx, handler)
+    let response = await runMiddleware(middleware, context, handler)
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, world!')
@@ -65,10 +59,10 @@ describe('runMiddleware', () => {
         return next()
       },
     ]
-    let ctx = mockContext('https://remix.run')
+    let context = mockContext('https://remix.run')
     let handler = () => new Response('Hello, world!')
 
-    let response = await runMiddleware(middleware, ctx, handler)
+    let response = await runMiddleware(middleware, context, handler)
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, middleware!')
@@ -89,10 +83,10 @@ describe('runMiddleware', () => {
         // no next()
       },
     ]
-    let ctx = mockContext('https://remix.run')
+    let context = mockContext('https://remix.run')
     let handler = () => new Response('Hello, world!')
 
-    let response = await runMiddleware(middleware, ctx, handler)
+    let response = await runMiddleware(middleware, context, handler)
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, world!')
@@ -106,23 +100,23 @@ describe('runMiddleware', () => {
         await next() // error
       },
     ]
-    let ctx = mockContext('https://remix.run')
+    let context = mockContext('https://remix.run')
     let handler = () => new Response('Hello, world!')
 
     await assert.rejects(async () => {
-      await runMiddleware(middleware, ctx, handler)
+      await runMiddleware(middleware, context, handler)
     }, new Error('next() called multiple times'))
   })
 
   it('rejects when a handler throws an error', async () => {
     let middleware = [() => {}]
-    let ctx = mockContext('https://remix.run')
+    let context = mockContext('https://remix.run')
     let handler = () => {
       throw new Error('Handler error!')
     }
 
     await assert.rejects(async () => {
-      await runMiddleware(middleware, ctx, handler)
+      await runMiddleware(middleware, context, handler)
     }, new Error('Handler error!'))
   })
 
@@ -132,11 +126,27 @@ describe('runMiddleware', () => {
         throw new Error('Middleware error!')
       },
     ]
-    let ctx = mockContext('https://remix.run')
+    let context = mockContext('https://remix.run')
     let handler = () => new Response('Hello, world!')
 
     await assert.rejects(async () => {
-      await runMiddleware(middleware, ctx, handler)
+      await runMiddleware(middleware, context, handler)
     }, new Error('Middleware error!'))
+  })
+
+  it('merges additional context when next() is called', async () => {
+    let middleware = [
+      (_: any, next: NextFunction) => {
+        return next({ params: { id: '1' } })
+      },
+    ]
+    let context = mockContext('https://remix.run')
+    let handler = ({ params }: RequestContext<{ id: string }>) =>
+      new Response(`Hello, ${params.id}!`)
+
+    let response = await runMiddleware(middleware, context as RequestContext<any>, handler)
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Hello, 1!')
   })
 })

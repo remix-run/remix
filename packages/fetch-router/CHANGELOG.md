@@ -4,6 +4,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## HEAD
 
+- Add `next(moreContext)` API for passing additional context to the next middleware or handler in the chain
 - Move `logger` middleware to `@remix-run/fetch-router/logger-middleware` export
 - Add `json` and `redirect` response helpers
 

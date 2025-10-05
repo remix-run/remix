@@ -36,7 +36,7 @@ type MatchData =
       router: Router
     }
 
-function defaultHandler({ url }: RequestContext): Response {
+function noMatchHandler({ url }: RequestContext): Response {
   return new Response(`Not Found: ${url.pathname}`, { status: 404 })
 }
 
@@ -53,7 +53,7 @@ export class Router {
   #middleware: Middleware[] | undefined
 
   constructor(options?: RouterOptions) {
-    this.#defaultHandler = options?.defaultHandler ?? defaultHandler
+    this.#defaultHandler = options?.defaultHandler ?? noMatchHandler
     this.#matcher = options?.matcher ?? new RegExpMatcher()
   }
 
@@ -65,8 +65,7 @@ export class Router {
     let response = await this.dispatch(request)
 
     if (response == null) {
-      let context = new RequestContext(request, new URL(request.url), {})
-      response = await this.#defaultHandler(context)
+      response = await this.#defaultHandler(new RequestContext(request))
     }
 
     return response
@@ -80,34 +79,33 @@ export class Router {
    * that's what you want, use `router.fetch()` instead.
    */
   async dispatch(
-    context: RequestContext | Request,
+    request: Request | RequestContext,
     upstreamMiddleware?: Middleware[],
   ): Promise<Response | null> {
-    let request = context instanceof Request ? context : context.request
-    let url = context instanceof Request ? new URL(request.url) : context.url
+    let upstreamContext: RequestContext | undefined
+    let url: URL
+    if (request instanceof Request) {
+      url = new URL(request.url)
+    } else {
+      upstreamContext = request
+      request = upstreamContext.request
+      url = upstreamContext.url
+    }
 
     for (let match of this.#matcher.matchAll(url)) {
-      if ('method' in match.data) {
-        let { method, middleware, handler } = match.data
-
-        if (method === request.method || method === 'ANY') {
-          let allMiddleware =
-            middleware == null
-              ? upstreamMiddleware
-              : upstreamMiddleware == null
-                ? middleware
-                : upstreamMiddleware.concat(middleware)
-          let downstreamContext =
-            context instanceof Request
-              ? new RequestContext(request, match.url, match.params)
-              : new RequestContext(request, match.url, match.params, context.storage)
-
-          return allMiddleware != null
-            ? await runMiddleware(allMiddleware, downstreamContext, handler)
-            : await handler(downstreamContext)
-        }
-      } else {
+      if ('router' in match.data) {
+        // Matched a sub-router, try to dispatch to it
         let { middleware, prefix, router } = match.data
+
+        // Strip the prefix from the matched URL
+        let downstreamUrl = new URL(match.url)
+        downstreamUrl.pathname = downstreamUrl.pathname.slice(prefix.length)
+
+        let downstreamContext = new RequestContext({
+          ...upstreamContext,
+          request,
+          url: downstreamUrl,
+        })
 
         let allMiddleware =
           middleware == null
@@ -115,22 +113,41 @@ export class Router {
             : upstreamMiddleware == null
               ? middleware
               : upstreamMiddleware.concat(middleware)
-        // Strip the prefix from context.url.pathname
-        let downstreamUrl = new URL(match.url)
-        downstreamUrl.pathname = downstreamUrl.pathname.slice(prefix.length)
-        let downstreamContext =
-          context instanceof Request
-            ? new RequestContext(request, downstreamUrl)
-            : new RequestContext(request, downstreamUrl, {}, context.storage)
 
         let response = await router.dispatch(downstreamContext, allMiddleware)
 
-        // If we get a response from the downstream router, use it.
-        // Otherwise, continue to the next match.
-        if (response != null) {
-          return response
+        if (response == null) {
+          // No response from sub-router, continue to the next match
+          continue
         }
+
+        return response
       }
+
+      let { method, middleware, handler } = match.data
+
+      if (method !== request.method && method !== 'ANY') {
+        // Method does not match, continue to the next match
+        continue
+      }
+
+      let downstreamContext = new RequestContext({
+        ...upstreamContext,
+        params: match.params,
+        request,
+        url: match.url,
+      })
+
+      let allMiddleware =
+        middleware == null
+          ? upstreamMiddleware
+          : upstreamMiddleware == null
+            ? middleware
+            : upstreamMiddleware.concat(middleware)
+
+      return allMiddleware != null
+        ? await runMiddleware(allMiddleware, downstreamContext, handler)
+        : await handler(downstreamContext)
     }
 
     return null
@@ -185,15 +202,15 @@ export class Router {
   route<M extends RequestMethod | 'ANY', P extends string>(
     method: M,
     pattern: P | RoutePattern<P> | Route<M | 'ANY', P>,
-    routeHandler: RouteHandler<P>,
+    handler: RouteHandler<P>,
   ): void {
     let routeMiddleware: Middleware[] | undefined
-    let handler: RequestHandler
-    if (isRequestHandlerWithMiddleware(routeHandler)) {
-      routeMiddleware = routeHandler.use
-      handler = routeHandler.handler
+    let requestHandler: RequestHandler
+    if (isRequestHandlerWithMiddleware(handler)) {
+      routeMiddleware = handler.use
+      requestHandler = handler.handler
     } else {
-      handler = routeHandler
+      requestHandler = handler
     }
 
     // prettier-ignore
@@ -205,7 +222,7 @@ export class Router {
     this.#matcher.add(pattern instanceof Route ? pattern.pattern : pattern, {
       method,
       middleware,
-      handler,
+      handler: requestHandler,
     })
   }
 

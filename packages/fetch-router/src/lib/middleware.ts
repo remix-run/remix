@@ -1,4 +1,4 @@
-import type { RequestContext } from './request-context.ts'
+import { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 
 /**
@@ -12,7 +12,7 @@ export interface Middleware<Params extends Record<string, any> = {}> {
   ): Response | undefined | void | Promise<Response | undefined | void>
 }
 
-export type NextFunction = () => Promise<Response>
+export type NextFunction = (moreContext?: Partial<RequestContext>) => Promise<Response>
 
 export function runMiddleware<Params extends Record<string, any>>(
   middleware: Middleware<Params>[],
@@ -29,7 +29,11 @@ export function runMiddleware<Params extends Record<string, any>>(
     if (!fn) return handler(context)
 
     let nextPromise: Promise<Response> | undefined
-    let next: NextFunction = () => {
+    let next: NextFunction = (moreContext?: Partial<RequestContext>) => {
+      if (moreContext != null) {
+        context = new RequestContext({ ...context, ...moreContext }) as RequestContext<Params>
+      }
+
       nextPromise = dispatch(i + 1)
       return nextPromise
     }
