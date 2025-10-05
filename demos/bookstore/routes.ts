@@ -12,9 +12,9 @@ export let routes = route({
 
   // Public book routes
   books: {
-    index: { method: 'GET', pattern: '/books' },
-    genre: { method: 'GET', pattern: '/books/genre/:genre' },
-    show: { method: 'GET', pattern: '/books/:slug' },
+    index: '/books',
+    genre: '/books/genre/:genre',
+    show: '/books/:slug',
   },
 
   // Auth routes
