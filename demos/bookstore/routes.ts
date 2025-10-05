@@ -37,9 +37,9 @@ export let routes = route({
     }),
 
     // Orders as nested resources with custom param
-    orders: resources('/orders', {
-      param: 'orderId',
+    orders: resources('orders', {
       only: ['index', 'show'], // Read-only, no create/edit/delete
+      param: 'orderId',
     }),
   }),
 
@@ -67,18 +67,18 @@ export let routes = route({
     index: { method: 'GET', pattern: '/' },
 
     // Full CRUD on books
-    books: resources('/books', { param: 'bookId' }),
+    books: resources('books', { param: 'bookId' }),
 
     // Partial CRUD on users (no create, users self-register)
-    users: resources('/users', {
-      param: 'userId',
+    users: resources('users', {
       only: ['index', 'show', 'edit', 'update', 'destroy'],
+      param: 'userId',
     }),
 
     // Orders view-only
-    orders: resources('/orders', {
-      param: 'orderId',
+    orders: resources('orders', {
       only: ['index', 'show'],
+      param: 'orderId',
     }),
   }),
 })

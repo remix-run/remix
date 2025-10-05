@@ -1,4 +1,5 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
+import { redirect } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { getAllBooks, getBookById, createBook, updateBook, deleteBook } from './models/books.ts'
@@ -219,7 +220,7 @@ export default {
     )
   },
 
-  async create({ request, url }) {
+  async create({ request }) {
     let formData = await request.formData()
 
     createBook({
@@ -235,9 +236,7 @@ export default {
       inStock: formData.get('inStock')?.toString() === 'true',
     })
 
-    let headers = new Headers()
-    headers.set('Location', new URL(routes.admin.books.index.href(), url).href)
-    return new Response(null, { status: 302, headers })
+    return redirect(routes.admin.books.index)
   },
 
   edit({ params }) {
@@ -343,31 +342,27 @@ export default {
     )
   },
 
-  async update({ request, params, url }) {
+  async update({ request, params }) {
     let formData = await request.formData()
 
     updateBook(params.bookId, {
-      slug: formData.get('slug')?.toString() || '',
-      title: formData.get('title')?.toString() || '',
-      author: formData.get('author')?.toString() || '',
-      description: formData.get('description')?.toString() || '',
-      price: parseFloat(formData.get('price')?.toString() || '0'),
-      genre: formData.get('genre')?.toString() || '',
-      isbn: formData.get('isbn')?.toString() || '',
-      publishedYear: parseInt(formData.get('publishedYear')?.toString() || '2024', 10),
+      slug: formData.get('slug')?.toString() ?? '',
+      title: formData.get('title')?.toString() ?? '',
+      author: formData.get('author')?.toString() ?? '',
+      description: formData.get('description')?.toString() ?? '',
+      price: parseFloat(formData.get('price')?.toString() ?? '0'),
+      genre: formData.get('genre')?.toString() ?? '',
+      isbn: formData.get('isbn')?.toString() ?? '',
+      publishedYear: parseInt(formData.get('publishedYear')?.toString() ?? '2024', 10),
       inStock: formData.get('inStock')?.toString() === 'true',
     })
 
-    let headers = new Headers()
-    headers.set('Location', new URL(routes.admin.books.index.href(), url).href)
-    return new Response(null, { status: 302, headers })
+    return redirect(routes.admin.books.index)
   },
 
-  destroy({ params, url }) {
+  destroy({ params }) {
     deleteBook(params.bookId)
 
-    let headers = new Headers()
-    headers.set('Location', new URL(routes.admin.books.index.href(), url).href)
-    return new Response(null, { status: 302, headers })
+    return redirect(routes.admin.books.index)
   },
 } satisfies RouteHandlers<typeof routes.admin.books>

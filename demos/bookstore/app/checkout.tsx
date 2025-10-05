@@ -1,4 +1,5 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
+import { redirect } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { requireAuth, SESSION_ID_KEY } from './middleware/auth.ts'
@@ -107,15 +108,13 @@ export default {
       )
     },
 
-    async action({ request, url }) {
+    async action({ request }) {
       let user = getCurrentUser()
       let sessionId = getStorage().get(SESSION_ID_KEY)
       let cart = getCart(sessionId)
 
       if (cart.items.length === 0) {
-        let headers = new Headers()
-        headers.set('Location', new URL(routes.cart.index.href(), url).href)
-        return new Response(null, { status: 302, headers })
+        return redirect(routes.cart.index)
       }
 
       let formData = await request.formData()
@@ -139,12 +138,7 @@ export default {
 
       clearCart(sessionId)
 
-      let headers = new Headers()
-      headers.set(
-        'Location',
-        new URL(routes.checkout.confirmation.href({ orderId: order.id }), url).href,
-      )
-      return new Response(null, { status: 302, headers })
+      return redirect(routes.checkout.confirmation.href({ orderId: order.id }))
     },
 
     confirmation({ params }) {

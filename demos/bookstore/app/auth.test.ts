@@ -16,7 +16,7 @@ describe('auth handlers', () => {
     })
 
     assert.equal(response.status, 302)
-    assert.equal(response.headers.get('Location'), 'http://localhost:3000/account')
+    assert.equal(response.headers.get('Location'), '/account')
 
     let sessionId = getSessionCookie(response)
     assert.ok(sessionId, 'Expected session cookie to be set')
@@ -50,7 +50,7 @@ describe('auth handlers', () => {
     })
 
     assert.equal(response.status, 302)
-    assert.equal(response.headers.get('Location'), 'http://localhost:3000/account')
+    assert.equal(response.headers.get('Location'), '/account')
 
     let sessionId = getSessionCookie(response)
     assert.ok(sessionId, 'Expected session cookie to be set')

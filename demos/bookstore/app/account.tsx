@@ -1,11 +1,12 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
+import { redirect } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { Form } from './components/form.tsx'
-import { getOrdersByUserId, getOrderById } from './models/orders.ts'
-import { updateUser } from './models/users.ts'
 import { Layout } from './layout.tsx'
 import { requireAuth } from './middleware/auth.ts'
+import { getOrdersByUserId, getOrderById } from './models/orders.ts'
+import { updateUser } from './models/users.ts'
 import { getCurrentUser } from './utils/context.ts'
 import { render } from './utils/render.ts'
 
@@ -106,7 +107,7 @@ export default {
         )
       },
 
-      async update({ request, url }) {
+      async update({ request }) {
         let user = getCurrentUser()
 
         let formData = await request.formData()
@@ -121,9 +122,7 @@ export default {
 
         updateUser(user.id, updateData)
 
-        let headers = new Headers()
-        headers.set('Location', new URL(routes.account.index.href(), url).href)
-        return new Response(null, { status: 302, headers })
+        return redirect(routes.account.index)
       },
     },
 

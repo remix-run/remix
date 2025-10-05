@@ -1,4 +1,5 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
+import { redirect } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { getAllUsers, getUserById, updateUser, deleteUser } from './models/users.ts'
@@ -186,7 +187,7 @@ export default {
     )
   },
 
-  async update({ request, params, url }) {
+  async update({ request, params }) {
     let formData = await request.formData()
 
     updateUser(params.userId, {
@@ -195,17 +196,12 @@ export default {
       role: (formData.get('role')?.toString() ?? 'customer') as 'customer' | 'admin',
     })
 
-    let headers = new Headers()
-    headers.set('Location', new URL(routes.admin.users.index.href(), url).href)
-
-    return new Response(null, { status: 302, headers })
+    return redirect(routes.admin.users.index)
   },
 
-  destroy({ params, url }) {
+  destroy({ params }) {
     deleteUser(params.userId)
 
-    let headers = new Headers()
-    headers.set('Location', new URL(routes.admin.users.index.href(), url).href)
-    return new Response(null, { status: 302, headers })
+    return redirect(routes.admin.users.index)
   },
 } satisfies RouteHandlers<typeof routes.admin.users>

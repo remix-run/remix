@@ -1,4 +1,5 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
+import { redirect } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { getSession, setSessionCookie, login, logout } from './utils/session.ts'
@@ -63,7 +64,7 @@ export default {
         )
       },
 
-      async action({ request, url }) {
+      async action({ request }) {
         let formData = await request.formData()
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
@@ -90,9 +91,8 @@ export default {
 
         let headers = new Headers()
         setSessionCookie(headers, session.sessionId)
-        headers.set('Location', new URL(routes.account.index.href(), url).href)
 
-        return new Response(null, { status: 302, headers })
+        return redirect(routes.account.index, { headers })
       },
     },
 
@@ -137,7 +137,7 @@ export default {
         )
       },
 
-      async action({ request, url }) {
+      async action({ request }) {
         let formData = await request.formData()
         let name = formData.get('name')?.toString() ?? ''
         let email = formData.get('email')?.toString() ?? ''
@@ -174,19 +174,16 @@ export default {
 
         let headers = new Headers()
         setSessionCookie(headers, session.sessionId)
-        headers.set('Location', new URL(routes.account.index.href(), url).href)
 
-        return new Response(null, { status: 302, headers })
+        return redirect(routes.account.index, { headers })
       },
     },
 
-    logout({ request, url }) {
+    logout({ request }) {
       let session = getSession(request)
       logout(session.sessionId)
 
-      let headers = new Headers()
-      headers.set('Location', new URL(routes.home.href(), url).href)
-      return new Response(null, { status: 302, headers })
+      return redirect(routes.home)
     },
 
     forgotPassword: {
