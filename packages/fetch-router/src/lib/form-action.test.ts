@@ -26,7 +26,7 @@ describe('createFormAction', () => {
   })
 
   it('supports a custom form method', () => {
-    let settings = createFormAction('settings', { submitMethod: 'PUT' })
+    let settings = createFormAction('settings', { formMethod: 'PUT' })
 
     type T = [
       Assert<
@@ -45,7 +45,7 @@ describe('createFormAction', () => {
   })
 
   it('supports a custom index name', () => {
-    let profile = createFormAction('profile', { routeNames: { index: 'show' } })
+    let profile = createFormAction('profile', { names: { index: 'show' } })
 
     type T = [
       Assert<
@@ -64,7 +64,7 @@ describe('createFormAction', () => {
   })
 
   it('supports a custom action name', () => {
-    let signup = createFormAction('signup', { routeNames: { action: 'register' } })
+    let signup = createFormAction('signup', { names: { action: 'register' } })
 
     type T = [
       Assert<
@@ -84,7 +84,10 @@ describe('createFormAction', () => {
 
   it('supports custom names for both index and action', () => {
     let contact = createFormAction('contact', {
-      routeNames: { index: 'form', action: 'submit' },
+      names: {
+        index: 'form',
+        action: 'submit',
+      },
     })
 
     type T = [
@@ -105,8 +108,11 @@ describe('createFormAction', () => {
 
   it('supports custom names with custom form method', () => {
     let account = createFormAction('account', {
-      submitMethod: 'PATCH',
-      routeNames: { index: 'edit', action: 'update' },
+      formMethod: 'PATCH',
+      names: {
+        index: 'edit',
+        action: 'update',
+      },
     })
 
     type T = [

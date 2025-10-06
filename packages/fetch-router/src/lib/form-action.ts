@@ -6,14 +6,14 @@ import type { BuildRouteMap } from './route-map.ts'
 
 export interface FormActionOptions {
   /**
-   * The method the `<form>` uses to submit to the action route.
+   * The method the `<form>` uses to submit the action.
    * Default is `POST`.
    */
-  submitMethod?: RequestMethod
+  formMethod?: RequestMethod
   /**
    * Custom names to use for the `index` and `action` routes.
    */
-  routeNames?: {
+  names?: {
     index?: string
     action?: string
   }
@@ -30,13 +30,13 @@ export function createFormAction<P extends string, const O extends FormActionOpt
   pattern: P | RoutePattern<P>,
   options?: O,
 ): BuildFormActionMap<P, O> {
-  let submitMethod = options?.submitMethod ?? 'POST'
-  let indexName = options?.routeNames?.index ?? 'index'
-  let actionName = options?.routeNames?.action ?? 'action'
+  let formMethod = options?.formMethod ?? 'POST'
+  let indexName = options?.names?.index ?? 'index'
+  let actionName = options?.names?.action ?? 'action'
 
   return createRoutes(pattern, {
     [indexName]: { method: 'GET', pattern: '/' },
-    [actionName]: { method: submitMethod, pattern: '/' },
+    [actionName]: { method: formMethod, pattern: '/' },
   }) as BuildFormActionMap<P, O>
 }
 
@@ -45,7 +45,7 @@ type BuildFormActionMap<P extends string, O extends FormActionOptions> = BuildRo
   P,
   {
     [
-      K in O extends { routeNames: { index: infer I } }
+      K in O extends { names: { index: infer I } }
         ? I extends string
           ? I
           : 'index'
@@ -56,13 +56,13 @@ type BuildFormActionMap<P extends string, O extends FormActionOptions> = BuildRo
     }
   } & {
     [
-      K in O extends { routeNames: { action: infer A } }
+      K in O extends { names: { action: infer A } }
         ? A extends string
           ? A
           : 'action'
         : 'action'
     ]: {
-      method: O extends { submitMethod: infer M } ? M : 'POST'
+      method: O extends { formMethod: infer M } ? M : 'POST'
       pattern: '/'
     }
   }
