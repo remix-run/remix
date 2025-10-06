@@ -1,7 +1,7 @@
 import type * as http from 'node:http'
 import { Readable } from 'node:stream'
 
-import type { ParseMultipartOptions, MultipartParserOptions, MultipartPart } from './multipart.ts'
+import type { ParseMultipartOptions, MultipartParserOptions, MultipartPart, MultipartPartType } from './multipart.ts'
 import {
   MultipartParseError,
   parseMultipart as parseMultipartWeb,
@@ -19,10 +19,10 @@ import { getMultipartBoundary } from './multipart-request.ts'
  * @param options Options for the parser
  * @return A generator yielding `MultipartPart` objects
  */
-export async function* parseMultipart(
+export async function* parseMultipart<S extends boolean | undefined>(
   message: Buffer | Iterable<Buffer>,
-  options: ParseMultipartOptions,
-): AsyncGenerator<MultipartPart, void, unknown> {
+  options: ParseMultipartOptions<S>,
+): AsyncGenerator<MultipartPartType<S>, void, unknown> {
   yield* parseMultipartWeb(message as Uint8Array | Iterable<Uint8Array>, options)
 }
 
@@ -36,10 +36,10 @@ export async function* parseMultipart(
  * @param options Options for the parser
  * @return An async generator yielding `MultipartPart` objects
  */
-export async function* parseMultipartStream(
+export async function* parseMultipartStream<S extends boolean | undefined>(
   stream: Readable,
-  options: ParseMultipartOptions,
-): AsyncGenerator<MultipartPart, void, unknown> {
+  options: ParseMultipartOptions<S>,
+): AsyncGenerator<MultipartPartType<S>, void, unknown> {
   yield* parseMultipartStreamWeb(Readable.toWeb(stream) as ReadableStream, options)
 }
 
@@ -61,10 +61,10 @@ export function isMultipartRequest(req: http.IncomingMessage): boolean {
  * @param options Options for the parser
  * @return An async generator yielding `MultipartPart` objects
  */
-export async function* parseMultipartRequest(
+export async function* parseMultipartRequest<S extends boolean | undefined>(
   req: http.IncomingMessage,
-  options?: MultipartParserOptions,
-): AsyncGenerator<MultipartPart, void, unknown> {
+  options?: MultipartParserOptions<S>,
+): AsyncGenerator<MultipartPartType<S>, void, unknown> {
   if (!isMultipartRequest(req)) {
     throw new MultipartParseError('Request is not a multipart request')
   }

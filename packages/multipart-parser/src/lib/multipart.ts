@@ -34,7 +34,9 @@ export class MaxFileSizeExceededError extends MultipartParseError {
   }
 }
 
-export interface ParseMultipartOptions {
+export type MultipartPartType<S extends boolean | undefined> = S extends true ? MultipartPart : MultipartContentPart
+
+export interface ParseMultipartOptions<S extends boolean | undefined> {
   /**
    * The boundary string used to separate parts in the multipart message,
    * e.g. the `boundary` parameter in the `Content-Type` header.
@@ -56,21 +58,46 @@ export interface ParseMultipartOptions {
   maxFileSize?: number
 
   /**
-   * If this is true, or not defined, use MultipartContentPart class, which includes a contents array and getters referencing it, and stores the entire file in the contents array in memory.
+   * If `true`, the parser will only store the size of each part's content,
+   * and will not store the actual content in memory. You must set `onEmitBytes`
+   * to get the content of each part as it is received.
    * 
-   * If this is false, use the MultipartPart class, which only has header related fields. The append method must be overriden in the onCreatePart callback to receive each chunk and process it as desired. 
+   * This is useful for handling large file uploads without consuming
+   * large amounts of memory.
    * 
+   * If this is set to `true`, the `content`, `bytes`, and `text` properties of each part
+   * will be undefined, and only the `size` property will be available.
+   * 
+   * Default: `false`
    */
-  useContentPart?: boolean
+  onlyStreamContents?: S
+
   /**
-   * A callback called for each multipart part created. This is called immediately after the header is parsed, and before any body chunks are processed, including the partial chunk after the header. 
+   * A callback that is called each time a new part is created. This can be used to
+   * perform any setup or initialization for the part before any data is received.
    * 
-   * If you want to immediately write chunks to the file system, set useContentPart to false, and then set the part.append method of each part this callback is called with. part.append will be called with each chunk, including partial chunks, after the returned promise resolves, and before the iterator yields the completed chunk. 
-   *
-   * This callback and part.append are both awaited.
+   * The part will contain the full header information, but the content will be empty.
    * 
+   * The callback will be awaited so you can return a promise to create backpressure.
+   * 
+   * @param part The multipart part that was just created
+   * @returns Promise to be awaited before continuing parsing
    */
-  onCreatePart?(part: MultipartPart): Promise<void> | void
+  onCreatePart?(part: MultipartPartType<S>): Promise<void> | void
+
+  /**
+   * A callback that is called each time a chunk of bytes is received and parsed.
+   * This can be used to process the data as it is received, to stream 
+   * it to disk or to a cloud storage service.
+   * 
+   * The callback will be awaited so you can return a promise to create backpressure.
+   * 
+   * @param part The multipart part being emitted
+   * @param chunk The chunk of data being emitted
+   * @returns Promise to be awaited before continuing parsing
+   */
+  onEmitBytes?(part: MultipartPartType<S>, chunk: Uint8Array): Promise<void> | void
+
 }
 
 /**
@@ -83,11 +110,11 @@ export interface ParseMultipartOptions {
  * @param options Options for the parser
  * @return A generator that yields `MultipartPart` objects
  */
-export async function* parseMultipart(
+export async function* parseMultipart<S extends boolean | undefined>(
   message: Uint8Array | Iterable<Uint8Array>,
-  options: ParseMultipartOptions,
-): AsyncGenerator<MultipartPart, void, unknown> {
-  let parser = new MultipartParser(options.boundary, {
+  options: ParseMultipartOptions<S>,
+): AsyncGenerator<MultipartPartType<S>, void, unknown> {
+  let parser = new MultipartParser<S>(options.boundary, {
     maxHeaderSize: options.maxHeaderSize,
     maxFileSize: options.maxFileSize,
   })
@@ -117,11 +144,11 @@ export async function* parseMultipart(
  * @param options Options for the parser
  * @return An async generator that yields `MultipartPart` objects
  */
-export async function* parseMultipartStream(
+export async function* parseMultipartStream<S extends boolean | undefined>(
   stream: ReadableStream<Uint8Array>,
-  options: ParseMultipartOptions,
-): AsyncGenerator<MultipartPart, void, unknown> {
-  let parser = new MultipartParser(options.boundary, {
+  options: ParseMultipartOptions<S>,
+): AsyncGenerator<MultipartPartType<S>, void, unknown> {
+  let parser = new MultipartParser<S>(options.boundary, {
     maxHeaderSize: options.maxHeaderSize,
     maxFileSize: options.maxFileSize,
   })
@@ -137,7 +164,7 @@ export async function* parseMultipartStream(
   parser.finish()
 }
 
-export type MultipartParserOptions = Omit<ParseMultipartOptions, 'boundary'>
+export type MultipartParserOptions<S extends boolean | undefined> = Omit<ParseMultipartOptions<S>, 'boundary'>
 
 const MultipartParserStateStart = 0
 const MultipartParserStateAfterBoundary = 1
@@ -153,7 +180,7 @@ const oneMb = 1024 * oneKb
 /**
  * A streaming parser for `multipart/*` HTTP messages.
  */
-export class MultipartParser {
+export class MultipartParser<S extends boolean | undefined> {
   readonly boundary: string
   readonly maxHeaderSize: number
   readonly maxFileSize: number
@@ -166,13 +193,14 @@ export class MultipartParser {
 
   #state = MultipartParserStateStart
   #buffer: Uint8Array | null = null
-  #currentPart: MultipartPart | null = null
+  #currentPart: MultipartContentPart | MultipartPart | null = null
   #contentLength = 0
 
-  #useContentPart: MultipartParserOptions['useContentPart']
-  #onCreatePart: MultipartParserOptions['onCreatePart']
+  #onlyStreamContents: boolean
+  #onCreatePart?: (part: MultipartPart) => Promise<void> | void
+  #onEmitBytes?: (part: MultipartPart, chunk: Uint8Array) => Promise<void> | void
 
-  constructor(boundary: string, options?: MultipartParserOptions) {
+  constructor(boundary: string, options?: MultipartParserOptions<any>) {
     this.boundary = boundary
     this.maxHeaderSize = options?.maxHeaderSize ?? 8 * oneKb
     this.maxFileSize = options?.maxFileSize ?? 2 * oneMb
@@ -184,7 +212,8 @@ export class MultipartParser {
     this.#boundaryLength = 4 + boundary.length // length of '\r\n--' + boundary
 
     this.#onCreatePart = options?.onCreatePart
-    this.#useContentPart = options?.useContentPart ?? true
+    this.#onEmitBytes = options?.onEmitBytes
+    this.#onlyStreamContents = options?.onlyStreamContents ?? false
   }
 
   /**
@@ -193,7 +222,8 @@ export class MultipartParser {
    * @param chunk A chunk of data to write to the parser
    * @return A generator yielding `MultipartPart` objects as they are parsed
    */
-  async *write(chunk: Uint8Array): AsyncGenerator<MultipartPart, void, unknown> {
+  write(chunk: Uint8Array): AsyncGenerator<MultipartPartType<S>, void, unknown>;
+  async *write(chunk: Uint8Array): AsyncGenerator<MultipartPart | MultipartContentPart, void, unknown> {
     if (this.#state === MultipartParserStateDone) {
       throw new MultipartParseError('Unexpected data after end of stream')
     }
@@ -280,9 +310,9 @@ export class MultipartParser {
         }
 
         const header = chunk.subarray(index, headerEndIndex)
-        this.#currentPart = this.#useContentPart
-          ? new MultipartContentPart(header, [])
-          : new MultipartPart(header)
+        this.#currentPart = this.#onlyStreamContents
+          ? new MultipartPart(header)
+          : new MultipartContentPart(header, [])
 
         this.#contentLength = 0
 
@@ -317,7 +347,14 @@ export class MultipartParser {
       throw new MaxFileSizeExceededError(this.maxFileSize)
     }
 
-    await this.#currentPart!.append(chunk)
+    if (this.#currentPart!.hasContents()) {
+      this.#currentPart!.content.push(chunk)
+    } else {
+      this.#currentPart!.size += chunk.length
+    }
+
+    await this.#onEmitBytes?.(this.#currentPart!, chunk)
+
     this.#contentLength += chunk.length
   }
 
@@ -345,13 +382,20 @@ export class MultipartPart {
 
   #header: Uint8Array
   #headers?: Headers
+  #size: number = 0
 
   constructor(header: Uint8Array) {
     this.#header = header
   }
 
-  async append(chunk: Uint8Array): Promise<void> {
-    throw new Error("Not implemented. Please assign or override this method.");
+  /**
+   * The size of the content emitted so far in bytes.
+   */
+  get size(): number {
+    return this.#size
+  }
+  set size(value: number) {
+    this.#size = value
   }
 
   /**
@@ -400,6 +444,10 @@ export class MultipartPart {
     return this.headers.contentDisposition.name
   }
 
+  hasContents(): this is MultipartContentPart {
+    return false;
+  }
+
 }
 
 export class MultipartContentPart extends MultipartPart {
@@ -408,10 +456,6 @@ export class MultipartContentPart extends MultipartPart {
    * The raw content of this part as an array of `Uint8Array` chunks.
    */
   readonly content: Uint8Array[]
-
-  async append(chunk: Uint8Array): Promise<void> {
-    this.content.push(chunk)
-  }
 
   constructor(header: Uint8Array, content: Uint8Array[]) {
     super(header);
@@ -462,5 +506,9 @@ export class MultipartContentPart extends MultipartPart {
    */
   get text(): string {
     return decoder.decode(this.bytes)
+  }
+
+  hasContents(): this is MultipartContentPart {
+    return true;
   }
 }
