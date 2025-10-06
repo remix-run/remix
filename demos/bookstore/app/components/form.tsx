@@ -1,4 +1,4 @@
-import type { Route, RequestMethod } from '@remix-run/fetch-router'
+import type { Route } from '@remix-run/fetch-router'
 import type { Remix } from '@remix-run/dom'
 
 export interface FormProps extends Remix.Props<'form'> {

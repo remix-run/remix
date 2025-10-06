@@ -6,6 +6,7 @@ import { getAllUsers, getUserById, updateUser, deleteUser } from './models/users
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { getCurrentUser } from './utils/context.ts'
+import { invariant } from './utils/invariant.ts'
 
 export default {
   index() {
@@ -187,8 +188,8 @@ export default {
     )
   },
 
-  async update({ request, params }) {
-    let formData = await request.formData()
+  async update({ formData, params }) {
+    invariant(formData, 'Missing formData')
 
     updateUser(params.userId, {
       name: formData.get('name')?.toString() ?? '',

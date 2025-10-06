@@ -8,6 +8,7 @@ import { getBookById } from './models/books.ts'
 import { getCart, addToCart, updateCartItem, removeFromCart, getCartTotal } from './models/cart.ts'
 import type { User } from './models/users.ts'
 import { getCurrentUser, getStorage } from './utils/context.ts'
+import { invariant } from './utils/invariant.ts'
 import { render } from './utils/render.ts'
 import { setSessionCookie } from './utils/session.ts'
 
@@ -135,9 +136,10 @@ export default {
     },
 
     api: {
-      async add({ storage, request }) {
+      async add({ storage, formData }) {
+        invariant(formData, 'Missing formData')
+
         let sessionId = storage.get(SESSION_ID_KEY)
-        let formData = await request.formData()
         let bookId = formData.get('bookId')?.toString() ?? ''
 
         let book = getBookById(bookId)
@@ -153,9 +155,10 @@ export default {
         return redirect(routes.cart.index, { headers })
       },
 
-      async update({ storage, request }) {
+      async update({ storage, formData }) {
+        invariant(formData, 'Missing formData')
+
         let sessionId = storage.get(SESSION_ID_KEY)
-        let formData = await request.formData()
         let bookId = formData.get('bookId')?.toString() ?? ''
         let quantity = parseInt(formData.get('quantity')?.toString() ?? '1', 10)
 
@@ -167,9 +170,10 @@ export default {
         return redirect(routes.cart.index, { headers })
       },
 
-      async remove({ storage, request }) {
+      async remove({ storage, formData }) {
+        invariant(formData, 'Missing formData')
+
         let sessionId = storage.get(SESSION_ID_KEY)
-        let formData = await request.formData()
         let bookId = formData.get('bookId')?.toString() ?? ''
 
         removeFromCart(sessionId, bookId)

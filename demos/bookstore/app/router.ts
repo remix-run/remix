@@ -3,6 +3,7 @@ import { logger } from '@remix-run/fetch-router/logger-middleware'
 
 import { routes } from '../routes.ts'
 import { storeContext } from './middleware/context.ts'
+import { uploadHandler } from './utils/uploads.ts'
 
 import adminHandlers from './admin.tsx'
 import accountHandlers from './account.tsx'
@@ -13,7 +14,7 @@ import checkoutHandlers from './checkout.tsx'
 import * as marketingHandlers from './marketing.tsx'
 import uploadsHandler from './uploads.tsx'
 
-export let router = createRouter()
+export let router = createRouter({ parseFormData: true, uploadHandler })
 
 router.use(storeContext)
 

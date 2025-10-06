@@ -33,8 +33,8 @@ export let routes = route({
   account: route('/account', {
     index: '/',
     settings: formAction('settings', {
-      submitMethod: 'PUT',
-      routeNames: {
+      formMethod: 'PUT',
+      names: {
         action: 'update',
       },
     }),

@@ -2,12 +2,12 @@ import type { RouteHandlers } from '@remix-run/fetch-router'
 import { redirect } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
-import { Form } from './components/form.tsx'
 import { Layout } from './layout.tsx'
 import { requireAuth } from './middleware/auth.ts'
 import { getOrdersByUserId, getOrderById } from './models/orders.ts'
 import { updateUser } from './models/users.ts'
 import { getCurrentUser } from './utils/context.ts'
+import { invariant } from './utils/invariant.ts'
 import { render } from './utils/render.ts'
 
 export default {
@@ -70,7 +70,9 @@ export default {
             <h1>Account Settings</h1>
 
             <div class="card">
-              <Form route={routes.account.settings.update}>
+              <form method="POST" action={routes.account.settings.update.href()}>
+                <input type="hidden" name="_method" value="PUT" />
+
                 <div class="form-group">
                   <label for="name">Name</label>
                   <input type="text" id="name" name="name" value={user.name} required />
@@ -101,16 +103,17 @@ export default {
                 >
                   Cancel
                 </a>
-              </Form>
+              </form>
             </div>
           </Layout>,
         )
       },
 
-      async update({ request }) {
+      async update({ formData }) {
+        invariant(formData, 'Missing formData')
+
         let user = getCurrentUser()
 
-        let formData = await request.formData()
         let name = formData.get('name')?.toString() ?? ''
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
