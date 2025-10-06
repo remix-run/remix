@@ -445,7 +445,7 @@ export class MultipartPart {
   }
 
   hasContents(): this is MultipartContentPart {
-    return false;
+    return false
   }
 
 }
@@ -509,6 +509,6 @@ export class MultipartContentPart extends MultipartPart {
   }
 
   hasContents(): this is MultipartContentPart {
-    return true;
+    return true
   }
 }
