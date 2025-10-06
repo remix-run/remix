@@ -10,9 +10,11 @@ export class RequestContext<
   Params extends Record<string, any> = {},
 > {
   /**
-   * Parsed `FormData` object from the request body.
+   * Parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) from the request body.
    *
    * Note: This is only available for requests with a body (not `GET` or `HEAD`).
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/FormData)
    */
   formData: Method extends RequestBodyMethod ? FormData : undefined
   /**
