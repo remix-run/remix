@@ -4,6 +4,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## HEAD
 
+- BREAKING CHANGE: Rename `resource('...', { routeNames })` to `resource('...', { names })` and `resources('...', { routeNames })` to `resources('...', { names })`
 - Integrate form data handling directly into the router, along with support for method override and file uploads. The `methodOverride` field overrides the request method used for matching with the value submitted in the request body. This makes it possible to use HTML forms to simulate RESTful API request methods like PUT and DELETE.
 
   ```tsx

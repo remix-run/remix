@@ -57,7 +57,7 @@ describe('createResource', () => {
 
   it('creates a resource with custom route names', () => {
     let book = createResource('book', {
-      routeNames: {
+      names: {
         show: 'view',
         new: 'newForm',
         create: 'store',
@@ -97,7 +97,7 @@ describe('createResource', () => {
 
   it('creates a resource with partial custom route names', () => {
     let book = createResource('book', {
-      routeNames: {
+      names: {
         show: 'view',
         create: 'store',
       },
@@ -130,7 +130,7 @@ describe('createResource', () => {
   it('creates a resource with custom route names and only option', () => {
     let book = createResource('book', {
       only: ['show', 'create'],
-      routeNames: {
+      names: {
         show: 'view',
         create: 'store',
         update: 'save',
@@ -271,7 +271,7 @@ describe('createResources', () => {
 
   it('creates resources with custom route names', () => {
     let books = createResources('books', {
-      routeNames: {
+      names: {
         index: 'list',
         show: 'view',
         new: 'newForm',
@@ -314,7 +314,7 @@ describe('createResources', () => {
 
   it('creates resources with partial custom route names', () => {
     let books = createResources('books', {
-      routeNames: {
+      names: {
         index: 'list',
         show: 'view',
         create: 'store',
@@ -350,7 +350,7 @@ describe('createResources', () => {
   it('creates resources with custom route names and only option', () => {
     let books = createResources('books', {
       only: ['index', 'show'],
-      routeNames: {
+      names: {
         index: 'list',
         show: 'view',
         create: 'store',
@@ -382,7 +382,7 @@ describe('createResources', () => {
   it('creates resources with custom route names and custom param', () => {
     let posts = createResources('posts', {
       param: 'slug',
-      routeNames: {
+      names: {
         index: 'list',
         show: 'view',
         edit: 'editForm',

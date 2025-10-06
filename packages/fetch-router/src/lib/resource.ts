@@ -16,7 +16,7 @@ export interface ResourceOptions {
   /**
    * Custom names to use for the resource routes.
    */
-  routeNames?: {
+  names?: {
     show?: string
     new?: string
     create?: string
@@ -37,12 +37,12 @@ export function createResource<P extends string, const O extends ResourceOptions
   options?: O,
 ): BuildResourceMap<P, O> {
   let only = options?.only ?? (ResourceMethods as readonly ResourceMethod[])
-  let showName = options?.routeNames?.show ?? 'show'
-  let newName = options?.routeNames?.new ?? 'new'
-  let createName = options?.routeNames?.create ?? 'create'
-  let editName = options?.routeNames?.edit ?? 'edit'
-  let updateName = options?.routeNames?.update ?? 'update'
-  let destroyName = options?.routeNames?.destroy ?? 'destroy'
+  let showName = options?.names?.show ?? 'show'
+  let newName = options?.names?.new ?? 'new'
+  let createName = options?.names?.create ?? 'create'
+  let editName = options?.names?.edit ?? 'edit'
+  let updateName = options?.names?.update ?? 'update'
+  let destroyName = options?.names?.destroy ?? 'destroy'
 
   let routes: any = {}
 
@@ -81,7 +81,7 @@ type BuildResourceRoutes<O extends ResourceOptions, M extends ResourceMethod> = 
 }
 
 type GetRouteName<O extends ResourceOptions, M extends ResourceMethod> = M extends ResourceMethod
-  ? O extends { routeNames: { [K in M]: infer N extends string } }
+  ? O extends { names: { [K in M]: infer N extends string } }
     ? N
     : M
   : never
@@ -113,7 +113,7 @@ export type ResourcesOptions = {
   /**
    * Custom names to use for the resource routes.
    */
-  routeNames?: {
+  names?: {
     index?: string
     show?: string
     new?: string
@@ -136,13 +136,13 @@ export function createResources<P extends string, const O extends ResourcesOptio
 ): BuildResourcesMap<P, O> {
   let only = options?.only ?? (ResourcesMethods as readonly ResourcesMethod[])
   let param = options?.param ?? 'id'
-  let indexName = options?.routeNames?.index ?? 'index'
-  let showName = options?.routeNames?.show ?? 'show'
-  let newName = options?.routeNames?.new ?? 'new'
-  let createName = options?.routeNames?.create ?? 'create'
-  let editName = options?.routeNames?.edit ?? 'edit'
-  let updateName = options?.routeNames?.update ?? 'update'
-  let destroyName = options?.routeNames?.destroy ?? 'destroy'
+  let indexName = options?.names?.index ?? 'index'
+  let showName = options?.names?.show ?? 'show'
+  let newName = options?.names?.new ?? 'new'
+  let createName = options?.names?.create ?? 'create'
+  let editName = options?.names?.edit ?? 'edit'
+  let updateName = options?.names?.update ?? 'update'
+  let destroyName = options?.names?.destroy ?? 'destroy'
 
   let routes: any = {}
 
@@ -192,7 +192,7 @@ type GetResourcesRouteName<
   O extends ResourcesOptions,
   M extends ResourcesMethod,
 > = M extends ResourcesMethod
-  ? O extends { routeNames: { [K in M]: infer N extends string } }
+  ? O extends { names: { [K in M]: infer N extends string } }
     ? N
     : M
   : never
