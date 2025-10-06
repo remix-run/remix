@@ -3,10 +3,11 @@
   "type": "module",
   "private": true,
   "packageManager": "pnpm@10.17.1",
-  "devDependencies": {
+  "dependencies": {
     "eslint": "^9.33.0",
     "eslint-plugin-prefer-let": "^4.0.0",
     "prettier": "^3.3.3",
+    "tsx": "^4.20.6",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.40.0"
   },
