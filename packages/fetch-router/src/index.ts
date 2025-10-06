@@ -21,7 +21,7 @@ export type { RequestContext } from './lib/request-context.ts'
 export { RequestMethods } from './lib/request-methods.ts'
 export type { RequestMethod } from './lib/request-methods.ts'
 
-export type { RequestHandler } from './lib/request-handler.ts'
+export type { RequestHandler, InferRequestHandler } from './lib/request-handler.ts'
 
 export {
   createResource,
@@ -36,7 +36,7 @@ export type {
   ResourcesOptions,
 } from './lib/resource.ts'
 
-export type { RouteHandlers, RouteHandler } from './lib/route-handlers.ts'
+export type { RouteHandlers, InferRouteHandler, RouteHandler } from './lib/route-handlers.ts'
 
 export {
   Route,
