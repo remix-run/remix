@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it, mock } from 'node:test'
-
 import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
+
 import { createStorageKey } from './app-storage.ts'
 import { RequestContext } from './request-context.ts'
 import { createRoutes } from './route-map.ts'
@@ -201,7 +201,7 @@ describe('router.map() with middleware', () => {
     let router = createRouter()
     let requestLog: string[] = []
 
-    function middleware(context: RequestContext<{ id: string }>) {
+    function middleware(context: RequestContext<'ANY', { id: string }>) {
       requestLog.push(`middleware ${context.params.id}`)
     }
 

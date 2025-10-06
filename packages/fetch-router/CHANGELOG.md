@@ -13,7 +13,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
   ```tsx
   let router = createRouter({
-    // Options for parsing form data, or `true` to enable
+    // Options for parsing form data, or `false` to disable
     parseFormData: {
       maxFiles: 5, // Maximum number of files that can be uploaded in a single request
       maxFileSize: 10 * 1024 * 1024, // 10MB maximum size of each file

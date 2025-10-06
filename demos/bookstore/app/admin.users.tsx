@@ -6,7 +6,6 @@ import { getAllUsers, getUserById, updateUser, deleteUser } from './models/users
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { getCurrentUser } from './utils/context.ts'
-import { invariant } from './utils/invariant.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
@@ -193,8 +192,6 @@ export default {
   },
 
   async update({ formData, params }) {
-    invariant(formData, 'Missing formData')
-
     updateUser(params.userId, {
       name: formData.get('name')?.toString() ?? '',
       email: formData.get('email')?.toString() ?? '',

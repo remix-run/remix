@@ -1,16 +1,20 @@
 import { AppStorage } from './app-storage.ts'
-import type { RequestMethod } from './request-methods.ts'
+import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
 
 /**
  * A context object that contains information about the current request. Every request
  * handler or middleware in the lifecycle of a request receives the same context object.
  */
-export class RequestContext<Params extends Record<string, any> = {}> {
+export class RequestContext<
+  Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+  Params extends Record<string, any> = {},
+> {
   /**
-   * Parsed `FormData` object from the request body. This is only available if the `formData` middleware
-   * has been used.
+   * Parsed `FormData` object from the request body.
+   *
+   * Note: This is only available for requests with a body (not `GET` or `HEAD`).
    */
-  formData: FormData | undefined
+  formData: Method extends RequestBodyMethod ? FormData : undefined
   /**
    * The request method. This may differ from `request.method` if the request body
    * contained a method override field (e.g. `_method=DELETE`), allowing HTML forms to simulate
@@ -38,7 +42,7 @@ export class RequestContext<Params extends Record<string, any> = {}> {
   url: URL
 
   constructor(request: Request) {
-    this.formData = undefined
+    this.formData = undefined as any
     this.method = request.method.toUpperCase() as RequestMethod
     this.params = {} as Params
     this.request = request
@@ -47,7 +51,15 @@ export class RequestContext<Params extends Record<string, any> = {}> {
   }
 
   /**
-   * A map of files that were uploaded in the request body.
+   * The headers of the request.
+   */
+  get headers(): Headers {
+    // TODO: Make this a SuperHeaders object?
+    return this.request.headers
+  }
+
+  /**
+   * Files that were uploaded in the request body, in a map.
    */
   get files(): Map<string, File> | null {
     let formData = this.formData

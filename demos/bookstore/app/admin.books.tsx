@@ -4,7 +4,6 @@ import { redirect } from '@remix-run/fetch-router'
 import { routes } from '../routes.ts'
 import { getAllBooks, getBookById, createBook, updateBook, deleteBook } from './models/books.ts'
 import { Layout } from './layout.tsx'
-import { invariant } from './utils/invariant.ts'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
@@ -233,8 +232,6 @@ export default {
   },
 
   async create({ formData }) {
-    invariant(formData, 'Missing formData')
-
     createBook({
       slug: formData.get('slug')?.toString() ?? '',
       title: formData.get('title')?.toString() ?? '',
@@ -377,8 +374,6 @@ export default {
   },
 
   async update({ formData, params }) {
-    invariant(formData, 'Missing formData')
-
     let book = getBookById(params.bookId)
     if (!book) {
       return new Response('Book not found', { status: 404 })

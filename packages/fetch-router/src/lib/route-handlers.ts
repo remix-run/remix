@@ -2,6 +2,7 @@ import type { Params } from '@remix-run/route-pattern'
 
 import type { Middleware } from './middleware.ts'
 import type { RequestHandler } from './request-handler.ts'
+import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
 
 /**
@@ -25,25 +26,29 @@ export function isRouteHandlersWithMiddleware<T extends RouteMap>(
 // prettier-ignore
 type RouteHandlerMap<T extends RouteMap> = {
   [K in keyof T]: (
-    T[K] extends Route ? RouteHandler<T[K]> :
+    T[K] extends Route<infer M, infer P> ? RouteHandler<M, P> :
     T[K] extends RouteMap ? RouteHandlers<T[K]> :
     never
   )
 }
 
-// prettier-ignore
-export type RouteHandler<T extends string | Route> =
-  T extends string ? RequestHandlerWithMiddleware<T> | RequestHandler<Params<T>> :
-  T extends Route<any, infer P> ? RequestHandlerWithMiddleware<P> | RequestHandler<Params<P>> :
-  never
+export type RouteHandler<M extends RequestMethod | 'ANY', T extends string> =
+  | RequestHandlerWithMiddleware<M, T>
+  | RequestHandler<M, Params<T>>
 
-type RequestHandlerWithMiddleware<T extends string> = {
-  use: Middleware<Params<T>>[]
-  handler: RequestHandler<Params<T>>
+type RequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', T extends string> = {
+  use: Middleware<M, Params<T>>[]
+  handler: RequestHandler<M, Params<T>>
 }
 
-export function isRequestHandlerWithMiddleware<T extends string>(
+export function isRequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', T extends string>(
   handler: any,
-): handler is RequestHandlerWithMiddleware<T> {
+): handler is RequestHandlerWithMiddleware<M, T> {
   return typeof handler === 'object' && handler != null && 'use' in handler && 'handler' in handler
 }
+
+// prettier-ignore
+export type RouteHandlerFor<T extends Route | string> =
+  T extends Route<infer M, infer P> ? RouteHandler<M, P> :
+  T extends string ? RouteHandler<'ANY', T> :
+  never

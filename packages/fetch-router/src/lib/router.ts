@@ -7,16 +7,17 @@ import { runMiddleware } from './middleware.ts'
 import type { Middleware } from './middleware.ts'
 import { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
-import type { RequestMethod } from './request-methods.ts'
+import { RequestBodyMethods } from './request-methods.ts'
+import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
 import { isRequestHandlerWithMiddleware, isRouteHandlersWithMiddleware } from './route-handlers.ts'
-import type { RouteHandlers, RouteHandler } from './route-handlers.ts'
+import type { RouteHandlers, RouteHandlerFor } from './route-handlers.ts'
 import { Route } from './route-map.ts'
 import type { RouteMap } from './route-map.ts'
 
 export interface RouterOptions {
   /**
    * The default request handler that runs when no route matches.
-   * Default is a 404.
+   * Default is a 404 "Not Found" response.
    */
   defaultHandler?: RequestHandler
   /**
@@ -25,19 +26,15 @@ export interface RouterOptions {
    */
   matcher?: Matcher<MatchData>
   /**
-   * The name of the form field to check for method override. Default is `_method`.
-   * Set `false` to disable method override.
+   * The name of the form field to check for request method override. Default is `_method`.
+   * Set `false` to disable method override support.
    */
   methodOverride?: string | boolean
   /**
-   * Options for parsing form data. Default is an empty object.
+   * Options for parsing form data.
    * Set `false` to disable form data parsing.
    */
-  parseFormData?: ParseFormDataOptions | boolean
-  /**
-   * Set `true` to suppress parse errors that may arise when parsing invalid form data.
-   */
-  suppressParseErrors?: boolean
+  parseFormData?: (ParseFormDataOptions & { suppressErrors?: boolean }) | boolean
   /**
    * A function that handles file uploads. It receives a `FileUpload` object and may return any
    * value that is a valid `FormData` value.
@@ -72,16 +69,14 @@ export class Router {
   #defaultHandler: RequestHandler
   #matcher: Matcher<MatchData>
   #middleware: Middleware[] | undefined
-  #parseFormData: ParseFormDataOptions | boolean
-  #suppressParseErrors: boolean
+  #parseFormData: (ParseFormDataOptions & { suppressErrors?: boolean }) | boolean
   #uploadHandler: FileUploadHandler | undefined
   #methodOverride: string | boolean
 
   constructor(options?: RouterOptions) {
     this.#defaultHandler = options?.defaultHandler ?? noMatchHandler
     this.#matcher = options?.matcher ?? new RegExpMatcher()
-    this.#parseFormData = options?.parseFormData ?? false
-    this.#suppressParseErrors = options?.suppressParseErrors ?? false
+    this.#parseFormData = options?.parseFormData ?? true
     this.#uploadHandler = options?.uploadHandler
     this.#methodOverride = options?.methodOverride ?? true
   }
@@ -162,24 +157,41 @@ export class Router {
   async #parseRequest(request: Request): Promise<RequestContext> {
     let context = new RequestContext(request)
 
-    if (this.#parseFormData && shouldParseFormData(request)) {
-      try {
-        let parseOptions = this.#parseFormData === true ? {} : this.#parseFormData
-        context.formData = await parseFormData(request, parseOptions, this.#uploadHandler)
+    if (this.#parseFormData === false) {
+      return context
+    }
 
-        // Check for method override
-        if (this.#methodOverride) {
-          let fieldName = this.#methodOverride === true ? '_method' : this.#methodOverride
-          let methodOverride = context.formData.get(fieldName)
-          if (typeof methodOverride === 'string' && methodOverride !== '') {
-            context.method = methodOverride.toUpperCase() as RequestMethod
-          }
-        }
+    if (shouldParseFormData(request)) {
+      let suppressParseErrors: boolean
+      let parseOptions: ParseFormDataOptions
+      if (this.#parseFormData === true) {
+        suppressParseErrors = false
+        parseOptions = {}
+      } else {
+        suppressParseErrors = this.#parseFormData.suppressErrors ?? false
+        parseOptions = this.#parseFormData
+      }
+
+      try {
+        context.formData = await parseFormData(request, parseOptions, this.#uploadHandler)
       } catch (error) {
-        if (!this.#suppressParseErrors || !(error instanceof FormDataParseError)) {
+        if (!suppressParseErrors || !(error instanceof FormDataParseError)) {
           throw error
         }
-        // Suppress parse error, continue without formData
+
+        // Suppress parse error, continue with empty formData
+        context.formData = new FormData()
+      }
+    } else {
+      // No form data to parse, continue with empty formData
+      context.formData = new FormData()
+    }
+
+    if (this.#methodOverride) {
+      let fieldName = this.#methodOverride === true ? '_method' : this.#methodOverride
+      let methodOverride = context.formData.get(fieldName)
+      if (typeof methodOverride === 'string' && methodOverride !== '') {
+        context.method = methodOverride.toUpperCase() as RequestMethod
       }
     }
 
@@ -235,7 +247,7 @@ export class Router {
   route<M extends RequestMethod | 'ANY', P extends string>(
     method: M,
     pattern: P | RoutePattern<P> | Route<M | 'ANY', P>,
-    handler: RouteHandler<P>,
+    handler: RouteHandlerFor<P>,
   ): void {
     let routeMiddleware: Middleware[] | undefined
     let requestHandler: RequestHandler
@@ -255,7 +267,7 @@ export class Router {
 
   map<M extends RequestMethod | 'ANY', P extends string>(
     route: P | RoutePattern<P> | Route<M, P>,
-    handler: RouteHandler<P>,
+    handler: RouteHandlerFor<P>,
   ): void
   map<T extends RouteMap>(routes: T, handlers: RouteHandlers<T>): void
   map(routeOrRoutes: any, handler: any): void {
@@ -308,56 +320,56 @@ export class Router {
 
   get<P extends string>(
     pattern: P | RoutePattern<P> | Route<'GET' | 'ANY', P>,
-    handler: RouteHandler<P>,
+    handler: RouteHandlerFor<P>,
   ): void {
     this.route('GET', pattern, handler)
   }
 
   head<P extends string>(
     pattern: P | RoutePattern<P> | Route<'HEAD' | 'ANY', P>,
-    handler: RouteHandler<P>,
+    handler: RouteHandlerFor<P>,
   ): void {
     this.route('HEAD', pattern, handler)
   }
 
   post<P extends string>(
     pattern: P | RoutePattern<P> | Route<'POST' | 'ANY', P>,
-    handler: RouteHandler<P>,
+    handler: RouteHandlerFor<P>,
   ): void {
     this.route('POST', pattern, handler)
   }
 
   put<P extends string>(
     pattern: P | RoutePattern<P> | Route<'PUT' | 'ANY', P>,
-    handler: RouteHandler<P>,
+    handler: RouteHandlerFor<P>,
   ): void {
     this.route('PUT', pattern, handler)
   }
 
   patch<P extends string>(
     pattern: P | RoutePattern<P> | Route<'PATCH' | 'ANY', P>,
-    handler: RouteHandler<P>,
+    handler: RouteHandlerFor<P>,
   ): void {
     this.route('PATCH', pattern, handler)
   }
 
   delete<P extends string>(
     pattern: P | RoutePattern<P> | Route<'DELETE' | 'ANY', P>,
-    handler: RouteHandler<P>,
+    handler: RouteHandlerFor<P>,
   ): void {
     this.route('DELETE', pattern, handler)
   }
 
   options<P extends string>(
     pattern: P | RoutePattern<P> | Route<'OPTIONS' | 'ANY', P>,
-    handler: RouteHandler<P>,
+    handler: RouteHandlerFor<P>,
   ): void {
     this.route('OPTIONS', pattern, handler)
   }
 }
 
 function shouldParseFormData(request: Request): boolean {
-  if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH') {
+  if (!RequestBodyMethods.includes(request.method as RequestBodyMethod)) {
     return false
   }
 

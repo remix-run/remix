@@ -8,7 +8,6 @@ import { getBookById } from './models/books.ts'
 import { getCart, addToCart, updateCartItem, removeFromCart, getCartTotal } from './models/cart.ts'
 import type { User } from './models/users.ts'
 import { getCurrentUser, getStorage } from './utils/context.ts'
-import { invariant } from './utils/invariant.ts'
 import { render } from './utils/render.ts'
 import { setSessionCookie } from './utils/session.ts'
 import { RestfulForm } from './components/restful-form.tsx'
@@ -138,8 +137,6 @@ export default {
 
     api: {
       async add({ storage, formData }) {
-        invariant(formData, 'Missing formData')
-
         let sessionId = storage.get(SESSION_ID_KEY)
         let bookId = formData.get('bookId')?.toString() ?? ''
 
@@ -157,8 +154,6 @@ export default {
       },
 
       async update({ storage, formData }) {
-        invariant(formData, 'Missing formData')
-
         let sessionId = storage.get(SESSION_ID_KEY)
         let bookId = formData.get('bookId')?.toString() ?? ''
         let quantity = parseInt(formData.get('quantity')?.toString() ?? '1', 10)
@@ -172,8 +167,6 @@ export default {
       },
 
       async remove({ storage, formData }) {
-        invariant(formData, 'Missing formData')
-
         let sessionId = storage.get(SESSION_ID_KEY)
         let bookId = formData.get('bookId')?.toString() ?? ''
 

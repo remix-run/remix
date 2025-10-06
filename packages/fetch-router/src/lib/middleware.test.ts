@@ -142,10 +142,10 @@ describe('runMiddleware', () => {
       },
     ]
     let context = mockContext('https://remix.run')
-    let handler = ({ params }: RequestContext<{ id: string }>) =>
+    let handler = ({ params }: RequestContext<'ANY', { id: string }>) =>
       new Response(`Hello, ${params.id}!`)
 
-    let response = await runMiddleware(middleware, context as RequestContext<any>, handler)
+    let response = await runMiddleware(middleware, context as any, handler)
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, 1!')

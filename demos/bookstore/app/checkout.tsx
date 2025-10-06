@@ -8,7 +8,6 @@ import { createOrder, getOrderById } from './models/orders.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { getCurrentUser, getStorage } from './utils/context.ts'
-import { invariant } from './utils/invariant.ts'
 
 export default {
   use: [requireAuth],
@@ -110,8 +109,6 @@ export default {
     },
 
     async action({ formData }) {
-      invariant(formData, 'Missing formData')
-
       let user = getCurrentUser()
       let sessionId = getStorage().get(SESSION_ID_KEY)
       let cart = getCart(sessionId)

@@ -12,7 +12,6 @@ import {
 } from './models/users.ts'
 import { Document } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
-import { invariant } from './utils/invariant.ts'
 import { render } from './utils/render.ts'
 
 export default {
@@ -66,7 +65,6 @@ export default {
       },
 
       async action({ request, formData }) {
-        invariant(formData, 'Expected formData to be defined')
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
         let user = authenticateUser(email, password)
@@ -139,8 +137,6 @@ export default {
       },
 
       async action({ request, formData }) {
-        invariant(formData, 'Missing formData')
-
         let name = formData.get('name')?.toString() ?? ''
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
@@ -216,8 +212,6 @@ export default {
       },
 
       async action({ formData }) {
-        invariant(formData, 'Missing formData')
-
         let email = formData.get('email')?.toString() ?? ''
         let token = createPasswordResetToken(email)
 
@@ -296,8 +290,6 @@ export default {
       },
 
       async action({ formData, params }) {
-        invariant(formData, 'Missing formData')
-
         let password = formData.get('password')?.toString() ?? ''
         let confirmPassword = formData.get('confirmPassword')?.toString() ?? ''
 

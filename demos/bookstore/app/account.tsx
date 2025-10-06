@@ -7,7 +7,6 @@ import { requireAuth } from './middleware/auth.ts'
 import { getOrdersByUserId, getOrderById } from './models/orders.ts'
 import { updateUser } from './models/users.ts'
 import { getCurrentUser } from './utils/context.ts'
-import { invariant } from './utils/invariant.ts'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
@@ -109,8 +108,6 @@ export default {
       },
 
       async update({ formData }) {
-        invariant(formData, 'Missing formData')
-
         let user = getCurrentUser()
 
         let name = formData.get('name')?.toString() ?? ''

@@ -1,23 +1,30 @@
 import type { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
+import type { RequestMethod } from './request-methods.ts'
 
 /**
  * A special kind of request handler that either returns a response or passes control
  * to the next middleware or request handler in the chain.
  */
-export interface Middleware<Params extends Record<string, any> = {}> {
+export interface Middleware<
+  Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+  Params extends Record<string, any> = {},
+> {
   (
-    context: RequestContext<Params>,
+    context: RequestContext<Method, Params>,
     next: NextFunction,
   ): Response | undefined | void | Promise<Response | undefined | void>
 }
 
 export type NextFunction = (moreContext?: Partial<RequestContext>) => Promise<Response>
 
-export function runMiddleware<Params extends Record<string, any>>(
-  middleware: Middleware<Params>[],
-  context: RequestContext<Params>,
-  handler: RequestHandler<Params, Response>,
+export function runMiddleware<
+  Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+  Params extends Record<string, any> = {},
+>(
+  middleware: Middleware<Method, Params>[],
+  context: RequestContext<Method, Params>,
+  handler: RequestHandler<Method, Params, Response>,
 ): Promise<Response> {
   let index = -1
 
