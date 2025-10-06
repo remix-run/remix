@@ -1,4 +1,4 @@
-import type { RouteHandler, RouteHandlers } from '@remix-run/fetch-router'
+import type { InferRouteHandler, RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { Layout } from './layout.tsx'
@@ -6,7 +6,7 @@ import { loadAuth } from './middleware/auth.ts'
 import { searchBooks } from './models/books.ts'
 import { render } from './utils/render.ts'
 
-export let home: RouteHandler<typeof routes.home> = {
+export let home: InferRouteHandler<typeof routes.home> = {
   use: [loadAuth],
   handler() {
     return render(
@@ -71,7 +71,7 @@ export let home: RouteHandler<typeof routes.home> = {
   },
 }
 
-export let about: RouteHandler<typeof routes.about> = {
+export let about: InferRouteHandler<typeof routes.about> = {
   use: [loadAuth],
   handler() {
     return render(
@@ -187,7 +187,7 @@ export let contact: RouteHandlers<typeof routes.contact> = {
   },
 }
 
-export let search: RouteHandler<typeof routes.search> = {
+export let search: InferRouteHandler<typeof routes.search> = {
   use: [loadAuth],
   handler({ request }) {
     let url = new URL(request.url)

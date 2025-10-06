@@ -1,9 +1,9 @@
-import type { RouteHandler } from '@remix-run/fetch-router'
+import type { InferRouteHandler } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
 import { uploadsStorage } from './utils/uploads.ts'
 
-let handler: RouteHandler<typeof routes.uploads> = async ({ params }) => {
+let handler: InferRouteHandler<typeof routes.uploads> = async ({ params }) => {
   let file = await uploadsStorage.get(params.key)
 
   if (!file) {
