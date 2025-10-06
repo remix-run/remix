@@ -55,7 +55,21 @@ export interface ParseMultipartOptions {
    */
   maxFileSize?: number
 
+  /**
+   * If this is true, or not defined, use MultipartContentPart class, which includes a contents array and getters referencing it, and stores the entire file in the contents array in memory.
+   * 
+   * If this is false, use the MultipartPart class, which only has header related fields. The append method must be overriden in the onCreatePart callback to receive each chunk and process it as desired. 
+   * 
+   */
   useContentPart?: boolean
+  /**
+   * A callback called for each multipart part created. This is called immediately after the header is parsed, and before any body chunks are processed, including the partial chunk after the header. 
+   * 
+   * If you want to immediately write chunks to the file system, set useContentPart to false, and then set the part.append method of each part this callback is called with. part.append will be called with each chunk, including partial chunks, after the returned promise resolves, and before the iterator yields the completed chunk. 
+   *
+   * This callback and part.append are both awaited.
+   * 
+   */
   onCreatePart?(part: MultipartPart): Promise<void> | void
 }
 
@@ -265,7 +279,7 @@ export class MultipartParser {
           throw new MaxHeaderSizeExceededError(this.maxHeaderSize)
         }
 
-        const header = chunk.subarray(index, headerEndIndex);
+        const header = chunk.subarray(index, headerEndIndex)
         this.#currentPart = this.#useContentPart
           ? new MultipartContentPart(header, [])
           : new MultipartPart(header)
@@ -336,7 +350,7 @@ export class MultipartPart {
     this.#header = header
   }
 
-  async append(chunk: Uint8Array) {
+  async append(chunk: Uint8Array): Promise<void> {
     throw new Error("Not implemented. Please assign or override this method.");
   }
 
