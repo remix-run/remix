@@ -9,6 +9,7 @@ import { updateUser } from './models/users.ts'
 import { getCurrentUser } from './utils/context.ts'
 import { invariant } from './utils/invariant.ts'
 import { render } from './utils/render.ts'
+import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
   use: [requireAuth],
@@ -70,9 +71,7 @@ export default {
             <h1>Account Settings</h1>
 
             <div class="card">
-              <form method="POST" action={routes.account.settings.update.href()}>
-                <input type="hidden" name="_method" value="PUT" />
-
+              <RestfulForm method="PUT" action={routes.account.settings.update.href()}>
                 <div class="form-group">
                   <label for="name">Name</label>
                   <input type="text" id="name" name="name" value={user.name} required />
@@ -103,7 +102,7 @@ export default {
                 >
                   Cancel
                 </a>
-              </form>
+              </RestfulForm>
             </div>
           </Layout>,
         )

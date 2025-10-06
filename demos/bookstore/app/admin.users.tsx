@@ -7,6 +7,7 @@ import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { getCurrentUser } from './utils/context.ts'
 import { invariant } from './utils/invariant.ts'
+import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
   index() {
@@ -54,8 +55,8 @@ export default {
                       Edit
                     </a>
                     {u.id !== user.id ? (
-                      <form
-                        method="POST"
+                      <RestfulForm
+                        method="DELETE"
                         action={routes.admin.users.destroy.href({ userId: u.id })}
                         style="display: inline;"
                       >
@@ -66,7 +67,7 @@ export default {
                         >
                           Delete
                         </button>
-                      </form>
+                      </RestfulForm>
                     ) : null}
                   </td>
                 </tr>
@@ -149,7 +150,10 @@ export default {
         <h1>Edit User</h1>
 
         <div class="card">
-          <form method="POST" action={routes.admin.users.update.href({ userId: targetUser.id })}>
+          <RestfulForm
+            method="PUT"
+            action={routes.admin.users.update.href({ userId: targetUser.id })}
+          >
             <div class="form-group">
               <label for="name">Name</label>
               <input type="text" id="name" name="name" value={targetUser.name} required />
@@ -182,7 +186,7 @@ export default {
             >
               Cancel
             </a>
-          </form>
+          </RestfulForm>
         </div>
       </Layout>,
     )

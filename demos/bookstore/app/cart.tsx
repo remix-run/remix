@@ -11,6 +11,7 @@ import { getCurrentUser, getStorage } from './utils/context.ts'
 import { invariant } from './utils/invariant.ts'
 import { render } from './utils/render.ts'
 import { setSessionCookie } from './utils/session.ts'
+import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
   use: [loadAuth],
@@ -52,8 +53,8 @@ export default {
                         </td>
                         <td>${item.price.toFixed(2)}</td>
                         <td>
-                          <form
-                            method="POST"
+                          <RestfulForm
+                            method="PUT"
                             action={routes.cart.api.update.href()}
                             style="display: inline-flex; gap: 0.5rem; align-items: center;"
                           >
@@ -72,12 +73,12 @@ export default {
                             >
                               Update
                             </button>
-                          </form>
+                          </RestfulForm>
                         </td>
                         <td>${(item.price * item.quantity).toFixed(2)}</td>
                         <td>
-                          <form
-                            method="POST"
+                          <RestfulForm
+                            method="DELETE"
                             action={routes.cart.api.remove.href()}
                             style="display: inline;"
                           >
@@ -89,7 +90,7 @@ export default {
                             >
                               Remove
                             </button>
-                          </form>
+                          </RestfulForm>
                         </td>
                       </tr>
                     ))}

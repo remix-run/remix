@@ -4,17 +4,17 @@ import type { RequestContext } from '@remix-run/fetch-router'
 import { USER_KEY } from '../middleware/auth.ts'
 import type { User } from '../models/users.ts'
 
-export const requestContext = new AsyncLocalStorage<RequestContext>()
+export const requestContextStorage = new AsyncLocalStorage<RequestContext>()
 
 /**
  * Get the current RequestContext from AsyncLocalStorage.
  * This can be called from anywhere in your application during a request.
  */
 export function getContext(): RequestContext {
-  let context = requestContext.getStore()
+  let context = requestContextStorage.getStore()
 
   if (!context) {
-    throw new Error('RequestContext not found. Make sure context middleware is installed.')
+    throw new Error('No request context found. Make sure the storeContext middleware is installed.')
   }
 
   return context

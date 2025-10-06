@@ -1,5 +1,6 @@
 import type { Middleware } from '@remix-run/fetch-router'
-import { requestContext } from '../utils/context.ts'
+
+import { requestContextStorage } from '../utils/context.ts'
 
 /**
  * Middleware that stores the RequestContext in AsyncLocalStorage.
@@ -7,5 +8,5 @@ import { requestContext } from '../utils/context.ts'
  * the context is available to all subsequent middleware and handlers.
  */
 export let storeContext: Middleware = (context, next) => {
-  return requestContext.run(context, () => next())
+  return requestContextStorage.run(context, () => next())
 }

@@ -6,6 +6,7 @@ import { getAllBooks, getBookById, createBook, updateBook, deleteBook } from './
 import { Layout } from './layout.tsx'
 import { invariant } from './utils/invariant.ts'
 import { render } from './utils/render.ts'
+import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
   index() {
@@ -60,8 +61,8 @@ export default {
                     >
                       Edit
                     </a>
-                    <form
-                      method="POST"
+                    <RestfulForm
+                      method="DELETE"
                       action={routes.admin.books.destroy.href({ bookId: book.id })}
                       style={{ display: 'inline' }}
                     >
@@ -72,7 +73,7 @@ export default {
                       >
                         Delete
                       </button>
-                    </form>
+                    </RestfulForm>
                   </td>
                 </tr>
               ))}
@@ -269,13 +270,11 @@ export default {
         <h1>Edit Book</h1>
 
         <div class="card">
-          <form
-            method="POST"
+          <RestfulForm
+            method="PUT"
             action={routes.admin.books.update.href({ bookId: book.id })}
             encType="multipart/form-data"
           >
-            <input type="hidden" name="_method" value="PUT" />
-
             <div class="form-group">
               <label for="title">Title</label>
               <input type="text" id="title" name="title" value={book.title} required />
@@ -371,7 +370,7 @@ export default {
             >
               Cancel
             </a>
-          </form>
+          </RestfulForm>
         </div>
       </Layout>,
     )
