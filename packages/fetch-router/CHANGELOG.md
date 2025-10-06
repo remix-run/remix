@@ -25,6 +25,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   })
   ```
 
+- Re-export `FormDataParseError`, `FileUpload`, and `FileUploadHandler` from `@remix-run/form-data-parser`
 - Fix an issue where per-route middleware was not being applied to a route handler nested inside a route map with its own middleware
 
 ## v0.5.0 (2025-10-05)
