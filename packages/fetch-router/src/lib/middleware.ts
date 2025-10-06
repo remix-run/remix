@@ -1,4 +1,4 @@
-import { RequestContext } from './request-context.ts'
+import type { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 
 /**
@@ -31,7 +31,7 @@ export function runMiddleware<Params extends Record<string, any>>(
     let nextPromise: Promise<Response> | undefined
     let next: NextFunction = (moreContext?: Partial<RequestContext>) => {
       if (moreContext != null) {
-        context = new RequestContext({ ...context, ...moreContext }) as RequestContext<Params>
+        Object.assign(context, moreContext)
       }
 
       nextPromise = dispatch(i + 1)

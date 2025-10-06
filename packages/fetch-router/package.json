@@ -21,7 +21,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./form-data-middleware": "./src/form-data-middleware.ts",
     "./logger-middleware": "./src/logger-middleware.ts",
     "./package.json": "./package.json"
   },
@@ -30,10 +29,6 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      },
-      "./form-data-middleware": {
-        "types": "./dist/form-data-middleware.d.ts",
-        "default": "./dist/form-data-middleware.js"
       },
       "./logger-middleware": {
         "types": "./dist/logger-middleware.d.ts",
@@ -51,9 +46,8 @@
     "@remix-run/route-pattern": "workspace:*"
   },
   "scripts": {
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:form-data-middleware && pnpm run build:logger-middleware",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:logger-middleware",
     "build:index": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
-    "build:form-data-middleware": "esbuild src/form-data-middleware.ts --bundle --outfile=dist/form-data-middleware.js --format=esm --platform=neutral --sourcemap",
     "build:logger-middleware": "esbuild src/logger-middleware.ts --bundle --outfile=dist/logger-middleware.js --format=esm --platform=neutral --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",

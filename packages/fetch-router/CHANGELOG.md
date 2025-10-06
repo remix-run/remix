@@ -4,7 +4,27 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## HEAD
 
-- Fixed an issue where per-route middleware was not being applied to a route handler nested inside a route map with its own middleware
+- Integrate form data handling directly into the router, along with support for method override and file uploads. The `methodOverride` field overrides the request method used for matching with the value submitted in the request body. This makes it possible to use HTML forms to simulate RESTful API request methods like PUT and DELETE.
+
+  ```tsx
+  let router = createRouter({
+    // Options for parsing form data, or `true` to enable
+    parseFormData: {
+      maxFiles: 5, // Maximum number of files that can be uploaded in a single request
+      maxFileSize: 10 * 1024 * 1024, // 10MB maximum size of each file
+      maxHeaderSize: 1024 * 1024, // 1MB maximum size of the header
+    },
+    // A function that handles file uploads. It receives a `FileUpload` object and may return any value that is valid in a `FormData` object
+    uploadHandler(file: FileUpload) {
+      // save the file to disk/storage...
+      return '/uploads/file.jpg'
+    },
+    // The name of the form field to check for method override, or `false` to disable
+    methodOverride: '_method',
+  })
+  ```
+
+- Fix an issue where per-route middleware was not being applied to a route handler nested inside a route map with its own middleware
 
 ## v0.5.0 (2025-10-05)
 

@@ -1,3 +1,5 @@
+export type { FileUpload, FileUploadHandler } from '@remix-run/form-data-parser'
+
 export { createStorageKey } from './lib/app-storage.ts'
 export { AppStorage } from './lib/app-storage.ts'
 

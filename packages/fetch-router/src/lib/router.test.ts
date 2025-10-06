@@ -932,7 +932,7 @@ describe('router.dispatch()', () => {
     })
 
     let request = new Request('https://remix.run/123')
-    let context = new RequestContext({ request, params: {} })
+    let context = new RequestContext(request)
     context.storage.set(storageKey, 'value')
 
     let response = await router.dispatch(context)
@@ -1066,6 +1066,146 @@ describe('trailing slash handling', () => {
 
     let response6 = await router.fetch('https://remix.run/admin/users/123/')
     assert.equal(response6.status, 404) // Trailing slash doesn't match
+  })
+})
+
+describe('method override', () => {
+  it('allows POST with _method=DELETE to match a DELETE route', async () => {
+    let router = createRouter({ parseFormData: true })
+
+    router.delete('/posts/:id', ({ params }) => {
+      return new Response(`Deleted post ${params.id}`)
+    })
+
+    let response = await router.fetch('https://remix.run/posts/123', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: '_method=DELETE',
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Deleted post 123')
+  })
+
+  it('allows POST with _method=PUT to match a PUT route', async () => {
+    let router = createRouter({ parseFormData: true })
+
+    router.put('/posts/:id', ({ params }) => {
+      return new Response(`Updated post ${params.id}`)
+    })
+
+    let response = await router.fetch('https://remix.run/posts/456', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: '_method=PUT&title=New+Title',
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Updated post 456')
+  })
+
+  it('allows POST with _method=PATCH to match a PATCH route', async () => {
+    let router = createRouter({ parseFormData: true })
+
+    router.patch('/posts/:id', ({ params }) => {
+      return new Response(`Patched post ${params.id}`)
+    })
+
+    let response = await router.fetch('https://remix.run/posts/789', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: '_method=PATCH',
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Patched post 789')
+  })
+
+  it('supports custom method override field name', async () => {
+    let router = createRouter({ parseFormData: true, methodOverride: '__method' })
+
+    router.delete('/posts/:id', ({ params }) => {
+      return new Response(`Deleted post ${params.id}`)
+    })
+
+    let response = await router.fetch('https://remix.run/posts/123', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: '__method=DELETE',
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Deleted post 123')
+  })
+
+  it('disables method override when set to false', async () => {
+    let router = createRouter({ parseFormData: true, methodOverride: false })
+
+    router.delete('/posts/:id', () => {
+      return new Response('Deleted')
+    })
+
+    // POST with _method=DELETE should not match DELETE route
+    let response = await router.fetch('https://remix.run/posts/123', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: '_method=DELETE',
+    })
+
+    assert.equal(response.status, 404)
+  })
+
+  it('ignores empty method override values', async () => {
+    let router = createRouter({ parseFormData: true })
+
+    router.post('/posts', () => {
+      return new Response('Created')
+    })
+
+    router.delete('/posts/:id', () => {
+      return new Response('Deleted')
+    })
+
+    // POST with empty _method should match POST route
+    let response = await router.fetch('https://remix.run/posts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: '_method=',
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Created')
+  })
+
+  it('uppercases method override values', async () => {
+    let router = createRouter({ parseFormData: true })
+
+    router.delete('/posts/:id', ({ params }) => {
+      return new Response(`Deleted post ${params.id}`)
+    })
+
+    let response = await router.fetch('https://remix.run/posts/123', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: '_method=delete', // lowercase
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Deleted post 123')
   })
 })
 

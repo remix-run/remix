@@ -1,13 +1,5 @@
 import { AppStorage } from './app-storage.ts'
-
-export interface RequestContextOptions<Params extends Record<string, any> = {}> {
-  files?: Record<string, File>
-  formData?: FormData
-  params?: Params
-  request: Request
-  storage?: AppStorage
-  url?: URL
-}
+import type { RequestMethod } from './request-methods.ts'
 
 /**
  * A context object that contains information about the current request. Every request
@@ -15,49 +7,63 @@ export interface RequestContextOptions<Params extends Record<string, any> = {}> 
  */
 export class RequestContext<Params extends Record<string, any> = {}> {
   /**
-   * Files that were uploaded in the request body. This is only available if the `formData` middleware
-   * has been used.
-   */
-  readonly files: Record<string, File> | undefined
-  /**
    * Parsed `FormData` object from the request body. This is only available if the `formData` middleware
    * has been used.
    */
-  readonly formData: FormData | undefined
+  formData: FormData | undefined
+  /**
+   * The request method. This may differ from `request.method` if the request body
+   * contained a method override field (e.g. `_method=DELETE`), allowing HTML forms to simulate
+   * RESTful API request methods like PUT and DELETE.
+   */
+  method: RequestMethod
   /**
    * Params that were parsed from the URL.
    */
-  readonly params: Params
+  params: Params
   /**
    * The original request that was dispatched to the router.
    */
-  readonly request: Request
+  request: Request
   /**
    * Shared application-specific storage.
    */
-  readonly storage: AppStorage
+  storage: AppStorage
   /**
    * The URL that was matched by the route.
    *
-   * Note: This may be different from the original request URL if the request was routed to a
-   * downstream router.
+   * Note: This may be different from `request.url` if the request was routed to a
+   * sub-router, in which case the URL mount point is stripped from the pathname.
    */
-  readonly url: URL
+  url: URL
 
-  constructor(options: RequestContextOptions<Params> | Request) {
-    let request: Request
-    if (options instanceof Request) {
-      request = options
-      options = {} as RequestContextOptions<Params>
-    } else {
-      request = options.request
+  constructor(request: Request) {
+    this.formData = undefined
+    this.method = request.method.toUpperCase() as RequestMethod
+    this.params = {} as Params
+    this.request = request
+    this.storage = new AppStorage()
+    this.url = new URL(request.url)
+  }
+
+  /**
+   * A map of files that were uploaded in the request body.
+   */
+  get files(): Map<string, File> | null {
+    let formData = this.formData
+
+    if (formData == null) {
+      return null
     }
 
-    this.files = options.files
-    this.formData = options.formData
-    this.params = options.params ?? ({} as Params)
-    this.request = request
-    this.storage = options.storage ?? new AppStorage()
-    this.url = options.url ?? new URL(request.url)
+    let files: Map<string, File> = new Map()
+
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        files.set(key, value)
+      }
+    }
+
+    return files
   }
 }

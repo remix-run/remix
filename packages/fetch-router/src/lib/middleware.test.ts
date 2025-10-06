@@ -6,9 +6,10 @@ import type { NextFunction } from './middleware.ts'
 import { RequestContext } from './request-context.ts'
 
 function mockContext(input: string | Request, params: Record<string, any> = {}): RequestContext {
-  return input instanceof Request
-    ? new RequestContext({ request: input, params })
-    : new RequestContext({ request: new Request(input), params })
+  let context =
+    input instanceof Request ? new RequestContext(input) : new RequestContext(new Request(input))
+  context.params = params
+  return context
 }
 
 describe('runMiddleware', () => {

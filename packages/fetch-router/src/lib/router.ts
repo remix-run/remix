@@ -1,3 +1,5 @@
+import { FormDataParseError, parseFormData } from '@remix-run/form-data-parser'
+import type { ParseFormDataOptions, FileUploadHandler } from '@remix-run/form-data-parser'
 import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
 import type { Matcher } from '@remix-run/route-pattern'
 
@@ -22,6 +24,25 @@ export interface RouterOptions {
    * Default is a `new RegExpMatcher()`.
    */
   matcher?: Matcher<MatchData>
+  /**
+   * The name of the form field to check for method override. Default is `_method`.
+   * Set `false` to disable method override.
+   */
+  methodOverride?: string | boolean
+  /**
+   * Options for parsing form data. Default is an empty object.
+   * Set `false` to disable form data parsing.
+   */
+  parseFormData?: ParseFormDataOptions | boolean
+  /**
+   * Set `true` to suppress parse errors that may arise when parsing invalid form data.
+   */
+  suppressParseErrors?: boolean
+  /**
+   * A function that handles file uploads. It receives a `FileUpload` object and may return any
+   * value that is a valid `FormData` value.
+   */
+  uploadHandler?: FileUploadHandler
 }
 
 type MatchData =
@@ -51,10 +72,18 @@ export class Router {
   #defaultHandler: RequestHandler
   #matcher: Matcher<MatchData>
   #middleware: Middleware[] | undefined
+  #parseFormData: ParseFormDataOptions | boolean
+  #suppressParseErrors: boolean
+  #uploadHandler: FileUploadHandler | undefined
+  #methodOverride: string | boolean
 
   constructor(options?: RouterOptions) {
     this.#defaultHandler = options?.defaultHandler ?? noMatchHandler
     this.#matcher = options?.matcher ?? new RegExpMatcher()
+    this.#parseFormData = options?.parseFormData ?? false
+    this.#suppressParseErrors = options?.suppressParseErrors ?? false
+    this.#uploadHandler = options?.uploadHandler
+    this.#methodOverride = options?.methodOverride ?? true
   }
 
   /**
@@ -82,62 +111,79 @@ export class Router {
     request: Request | RequestContext,
     upstreamMiddleware?: Middleware[],
   ): Promise<Response | null> {
-    let upstreamContext: RequestContext | undefined
-    let url: URL
-    if (request instanceof Request) {
-      url = new URL(request.url)
-    } else {
-      upstreamContext = request
-      request = upstreamContext.request
-      url = upstreamContext.url
-    }
+    let context = request instanceof Request ? await this.#parseRequest(request) : request
 
-    for (let match of this.#matcher.matchAll(url)) {
+    for (let match of this.#matcher.matchAll(context.url)) {
       if ('router' in match.data) {
         // Matched a sub-router, try to dispatch to it
-        let { middleware: routeMiddleware, prefix, router } = match.data
+        let { middleware: mountMiddleware, prefix, router } = match.data
 
-        // Strip the prefix from the matched URL
+        // Save original URL and create new URL with stripped pathname
+        let originalUrl = context.url
         let strippedUrl = new URL(match.url)
         strippedUrl.pathname = strippedUrl.pathname.slice(prefix.length)
+        context.url = strippedUrl
 
-        let context = new RequestContext({
-          ...upstreamContext,
-          request,
-          url: strippedUrl,
-        })
-        let middleware = concatMiddleware(upstreamMiddleware, routeMiddleware)
+        let response = await router.dispatch(
+          context,
+          // For mounts, pass upstream + mount middleware
+          concatMiddleware(upstreamMiddleware, mountMiddleware),
+        )
 
-        let response = await router.dispatch(context, middleware)
-        if (response == null) {
-          // No response from sub-router, continue to the next match
-          continue
+        // Always restore original URL
+        context.url = originalUrl
+
+        if (response != null) {
+          return response
         }
 
-        return response
+        // No match in sub-router, continue to next match
+        continue
       }
 
       let { method, middleware: routeMiddleware, handler } = match.data
 
-      if (method !== request.method && method !== 'ANY') {
-        // Method does not match, continue to the next match
+      if (method !== context.method && method !== 'ANY') {
         continue
       }
 
-      let context = new RequestContext({
-        ...upstreamContext,
-        params: match.params,
-        request,
-        url: match.url,
-      })
-      let middleware = concatMiddleware(upstreamMiddleware, routeMiddleware)
+      context.params = match.params
+      context.url = match.url
 
+      let middleware = concatMiddleware(upstreamMiddleware, routeMiddleware)
       return middleware != null
         ? await runMiddleware(middleware, context, handler)
         : await handler(context)
     }
 
     return null
+  }
+
+  async #parseRequest(request: Request): Promise<RequestContext> {
+    let context = new RequestContext(request)
+
+    if (this.#parseFormData && shouldParseFormData(request)) {
+      try {
+        let parseOptions = this.#parseFormData === true ? {} : this.#parseFormData
+        context.formData = await parseFormData(request, parseOptions, this.#uploadHandler)
+
+        // Check for method override
+        if (this.#methodOverride) {
+          let fieldName = this.#methodOverride === true ? '_method' : this.#methodOverride
+          let methodOverride = context.formData.get(fieldName)
+          if (typeof methodOverride === 'string' && methodOverride !== '') {
+            context.method = methodOverride.toUpperCase() as RequestMethod
+          }
+        }
+      } catch (error) {
+        if (!this.#suppressParseErrors || !(error instanceof FormDataParseError)) {
+          throw error
+        }
+        // Suppress parse error, continue without formData
+      }
+    }
+
+    return context
   }
 
   /**
@@ -308,6 +354,20 @@ export class Router {
   ): void {
     this.route('OPTIONS', pattern, handler)
   }
+}
+
+function shouldParseFormData(request: Request): boolean {
+  if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH') {
+    return false
+  }
+
+  let contentType = request.headers.get('Content-Type')
+
+  return (
+    contentType != null &&
+    (contentType.startsWith('multipart/') ||
+      contentType.startsWith('application/x-www-form-urlencoded'))
+  )
 }
 
 function concatMiddleware(
