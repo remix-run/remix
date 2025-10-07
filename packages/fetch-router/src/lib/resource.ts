@@ -3,7 +3,7 @@ import type { RoutePattern } from '@remix-run/route-pattern'
 import { createRoutes } from './route-map.ts'
 import type { BuildRouteMap } from './route-map.ts'
 
-export const ResourceMethods = ['show', 'new', 'create', 'edit', 'update', 'destroy'] as const
+export const ResourceMethods = ['new', 'show', 'create', 'edit', 'update', 'destroy'] as const
 export type ResourceMethod = (typeof ResourceMethods)[number]
 
 export interface ResourceOptions {
@@ -17,8 +17,8 @@ export interface ResourceOptions {
    * Custom names to use for the resource routes.
    */
   names?: {
-    show?: string
     new?: string
+    show?: string
     create?: string
     edit?: string
     update?: string
@@ -37,8 +37,8 @@ export function createResource<P extends string, const O extends ResourceOptions
   options?: O,
 ): BuildResourceMap<P, O> {
   let only = options?.only ?? (ResourceMethods as readonly ResourceMethod[])
-  let showName = options?.names?.show ?? 'show'
   let newName = options?.names?.new ?? 'new'
+  let showName = options?.names?.show ?? 'show'
   let createName = options?.names?.create ?? 'create'
   let editName = options?.names?.edit ?? 'edit'
   let updateName = options?.names?.update ?? 'update'
@@ -46,11 +46,11 @@ export function createResource<P extends string, const O extends ResourceOptions
 
   let routes: any = {}
 
-  if (only.includes('show')) {
-    routes[showName] = { method: 'GET', pattern: `/` }
-  }
   if (only.includes('new')) {
     routes[newName] = { method: 'GET', pattern: `/new` }
+  }
+  if (only.includes('show')) {
+    routes[showName] = { method: 'GET', pattern: `/` }
   }
   if (only.includes('create')) {
     routes[createName] = { method: 'POST', pattern: `/` }
@@ -87,8 +87,8 @@ type GetRouteName<O extends ResourceOptions, M extends ResourceMethod> = M exten
   : never
 
 type ResourceRoutes = {
-  show: { method: 'GET'; pattern: `/` }
   new: { method: 'GET'; pattern: `/new` }
+  show: { method: 'GET'; pattern: `/` }
   create: { method: 'POST'; pattern: `/` }
   edit: { method: 'GET'; pattern: `/edit` }
   update: { method: 'PUT'; pattern: `/` }
@@ -96,7 +96,7 @@ type ResourceRoutes = {
 }
 
 // prettier-ignore
-export const ResourcesMethods = ['index', 'show', 'new', 'create', 'edit', 'update', 'destroy'] as const
+export const ResourcesMethods = ['index', 'new', 'show', 'create', 'edit', 'update', 'destroy'] as const
 export type ResourcesMethod = (typeof ResourcesMethods)[number]
 
 export type ResourcesOptions = {
@@ -115,8 +115,8 @@ export type ResourcesOptions = {
    */
   names?: {
     index?: string
-    show?: string
     new?: string
+    show?: string
     create?: string
     edit?: string
     update?: string
@@ -137,8 +137,8 @@ export function createResources<P extends string, const O extends ResourcesOptio
   let only = options?.only ?? (ResourcesMethods as readonly ResourcesMethod[])
   let param = options?.param ?? 'id'
   let indexName = options?.names?.index ?? 'index'
-  let showName = options?.names?.show ?? 'show'
   let newName = options?.names?.new ?? 'new'
+  let showName = options?.names?.show ?? 'show'
   let createName = options?.names?.create ?? 'create'
   let editName = options?.names?.edit ?? 'edit'
   let updateName = options?.names?.update ?? 'update'
@@ -149,11 +149,11 @@ export function createResources<P extends string, const O extends ResourcesOptio
   if (only.includes('index')) {
     routes[indexName] = { method: 'GET', pattern: `/` }
   }
-  if (only.includes('show')) {
-    routes[showName] = { method: 'GET', pattern: `/:${param}` }
-  }
   if (only.includes('new')) {
     routes[newName] = { method: 'GET', pattern: `/new` }
+  }
+  if (only.includes('show')) {
+    routes[showName] = { method: 'GET', pattern: `/:${param}` }
   }
   if (only.includes('create')) {
     routes[createName] = { method: 'POST', pattern: `/` }
@@ -199,8 +199,8 @@ type GetResourcesRouteName<
 
 type ResourcesRoutes<Param extends string> = {
   index: { method: 'GET'; pattern: `/` }
-  show: { method: 'GET'; pattern: `/:${Param}` }
   new: { method: 'GET'; pattern: `/new` }
+  show: { method: 'GET'; pattern: `/:${Param}` }
   create: { method: 'POST'; pattern: `/` }
   edit: { method: 'GET'; pattern: `/:${Param}/edit` }
   update: { method: 'PUT'; pattern: `/:${Param}` }

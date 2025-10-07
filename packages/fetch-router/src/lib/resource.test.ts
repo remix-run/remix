@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createResource, createResources } from './resource.ts'
+import { ResourceMethods, createResource, ResourcesMethods, createResources } from './resource.ts'
 import { Route } from './route-map.ts'
 import type { Assert, IsEqual } from './type-utils.ts'
 
@@ -24,6 +24,9 @@ describe('createResource', () => {
         >
       >,
     ]
+
+    // Key order is important. new must come before show.
+    assert.deepEqual(Object.keys(book), ResourceMethods)
 
     assert.deepEqual(book.show, new Route('GET', '/book'))
     assert.deepEqual(book.new, new Route('GET', '/book/new'))
@@ -180,9 +183,12 @@ describe('createResources', () => {
       >,
     ]
 
+    // Key order is important. new must come before show.
+    assert.deepEqual(Object.keys(books), ResourcesMethods)
+
     assert.deepEqual(books.index, new Route('GET', '/books'))
-    assert.deepEqual(books.show, new Route('GET', '/books/:id'))
     assert.deepEqual(books.new, new Route('GET', '/books/new'))
+    assert.deepEqual(books.show, new Route('GET', '/books/:id'))
     assert.deepEqual(books.create, new Route('POST', '/books'))
     assert.deepEqual(books.edit, new Route('GET', '/books/:id/edit'))
     assert.deepEqual(books.update, new Route('PUT', '/books/:id'))
@@ -198,8 +204,8 @@ describe('createResources', () => {
           typeof posts,
           {
             index: Route<'GET', '/posts'>
-            show: Route<'GET', '/posts/:slug'>
             new: Route<'GET', '/posts/new'>
+            show: Route<'GET', '/posts/:slug'>
             create: Route<'POST', '/posts'>
             edit: Route<'GET', '/posts/:slug/edit'>
             update: Route<'PUT', '/posts/:slug'>
@@ -211,8 +217,8 @@ describe('createResources', () => {
 
     assert.deepEqual(posts.index, new Route('GET', '/posts'))
     assert.deepEqual(posts.new, new Route('GET', '/posts/new'))
-    assert.deepEqual(posts.create, new Route('POST', '/posts'))
     assert.deepEqual(posts.show, new Route('GET', '/posts/:slug'))
+    assert.deepEqual(posts.create, new Route('POST', '/posts'))
     assert.deepEqual(posts.edit, new Route('GET', '/posts/:slug/edit'))
     assert.deepEqual(posts.update, new Route('PUT', '/posts/:slug'))
     assert.deepEqual(posts.destroy, new Route('DELETE', '/posts/:slug'))
@@ -273,8 +279,8 @@ describe('createResources', () => {
     let books = createResources('books', {
       names: {
         index: 'list',
-        show: 'view',
         new: 'newForm',
+        show: 'view',
         create: 'store',
         edit: 'editForm',
         update: 'save',
@@ -288,8 +294,8 @@ describe('createResources', () => {
           typeof books,
           {
             list: Route<'GET', '/books'>
-            view: Route<'GET', '/books/:id'>
             newForm: Route<'GET', '/books/new'>
+            view: Route<'GET', '/books/:id'>
             store: Route<'POST', '/books'>
             editForm: Route<'GET', '/books/:id/edit'>
             save: Route<'PUT', '/books/:id'>
@@ -300,8 +306,8 @@ describe('createResources', () => {
     ]
 
     assert.deepEqual(books.list, new Route('GET', '/books'))
-    assert.deepEqual(books.view, new Route('GET', '/books/:id'))
     assert.deepEqual(books.newForm, new Route('GET', '/books/new'))
+    assert.deepEqual(books.view, new Route('GET', '/books/:id'))
     assert.deepEqual(books.store, new Route('POST', '/books'))
     assert.deepEqual(books.editForm, new Route('GET', '/books/:id/edit'))
     assert.deepEqual(books.save, new Route('PUT', '/books/:id'))
@@ -327,8 +333,8 @@ describe('createResources', () => {
           typeof books,
           {
             list: Route<'GET', '/books'>
-            view: Route<'GET', '/books/:id'>
             new: Route<'GET', '/books/new'>
+            view: Route<'GET', '/books/:id'>
             store: Route<'POST', '/books'>
             edit: Route<'GET', '/books/:id/edit'>
             update: Route<'PUT', '/books/:id'>
@@ -339,8 +345,8 @@ describe('createResources', () => {
     ]
 
     assert.deepEqual(books.list, new Route('GET', '/books'))
-    assert.deepEqual(books.view, new Route('GET', '/books/:id'))
     assert.deepEqual(books.new, new Route('GET', '/books/new'))
+    assert.deepEqual(books.view, new Route('GET', '/books/:id'))
     assert.deepEqual(books.store, new Route('POST', '/books'))
     assert.deepEqual(books.edit, new Route('GET', '/books/:id/edit'))
     assert.deepEqual(books.update, new Route('PUT', '/books/:id'))
@@ -397,8 +403,8 @@ describe('createResources', () => {
           typeof posts,
           {
             list: Route<'GET', '/posts'>
-            view: Route<'GET', '/posts/:slug'>
             new: Route<'GET', '/posts/new'>
+            view: Route<'GET', '/posts/:slug'>
             create: Route<'POST', '/posts'>
             editForm: Route<'GET', '/posts/:slug/edit'>
             save: Route<'PUT', '/posts/:slug'>
@@ -409,8 +415,8 @@ describe('createResources', () => {
     ]
 
     assert.deepEqual(posts.list, new Route('GET', '/posts'))
-    assert.deepEqual(posts.view, new Route('GET', '/posts/:slug'))
     assert.deepEqual(posts.new, new Route('GET', '/posts/new'))
+    assert.deepEqual(posts.view, new Route('GET', '/posts/:slug'))
     assert.deepEqual(posts.create, new Route('POST', '/posts'))
     assert.deepEqual(posts.editForm, new Route('GET', '/posts/:slug/edit'))
     assert.deepEqual(posts.save, new Route('PUT', '/posts/:slug'))
