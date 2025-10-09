@@ -7,7 +7,7 @@ export interface User {
   createdAt: Date
 }
 
-let usersData: User[] = [
+const usersData: User[] = [
   {
     id: '1',
     email: 'admin@bookstore.com',
@@ -81,7 +81,7 @@ export function deleteUser(id: string): boolean {
 }
 
 // Password reset tokens (in production, use a proper token system)
-let resetTokens = new Map<string, { userId: string; expiresAt: Date }>()
+const resetTokens = new Map<string, { userId: string; expiresAt: Date }>()
 
 export function createPasswordResetToken(email: string): string | undefined {
   let user = getUserByEmail(email)

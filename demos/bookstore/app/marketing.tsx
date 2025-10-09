@@ -1,11 +1,11 @@
 import type { InferRouteHandler, RouteHandlers } from '@remix-run/fetch-router'
+import { Frame } from '@remix-run/dom'
 
 import { routes } from '../routes.ts'
 
-import { BookCard } from './components/book-card.tsx'
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
-import { getBookBySlug, searchBooks } from './models/books.ts'
+import { searchBooks } from './models/books.ts'
 import { render } from './utils/render.ts'
 
 export let home: InferRouteHandler<typeof routes.home> = {
@@ -28,9 +28,18 @@ export let home: InferRouteHandler<typeof routes.home> = {
 
         <h2 style="margin: 2rem 0 1rem;">Featured Books</h2>
         <div class="grid">
-          <BookCard book={getBookBySlug('the-midnight-library')!} />
-          <BookCard book={getBookBySlug('project-hail-mary')!} />
-          <BookCard book={getBookBySlug('atomic-habits')!} />
+          <Frame
+            fallback={<div>Loading...</div>}
+            src={routes.fragments.bookCard.href({ slug: 'the-midnight-library' })}
+          />
+          <Frame
+            fallback={<div>Loading...</div>}
+            src={routes.fragments.bookCard.href({ slug: 'project-hail-mary' })}
+          />
+          <Frame
+            fallback={<div>Loading...</div>}
+            src={routes.fragments.bookCard.href({ slug: 'atomic-habits' })}
+          />
         </div>
       </Layout>,
     )

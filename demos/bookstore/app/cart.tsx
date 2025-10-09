@@ -2,6 +2,7 @@ import type { RouteHandlers } from '@remix-run/fetch-router'
 import { redirect } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
+
 import { Layout } from './layout.tsx'
 import { loadAuth, SESSION_ID_KEY } from './middleware/auth.ts'
 import { getBookById } from './models/books.ts'
@@ -150,6 +151,10 @@ export default {
         let headers = new Headers()
         setSessionCookie(headers, sessionId)
 
+        if (formData.get('redirect') === 'none') {
+          return new Response(null, { status: 204 })
+        }
+
         return redirect(routes.cart.index, { headers })
       },
 
@@ -163,6 +168,10 @@ export default {
         let headers = new Headers()
         setSessionCookie(headers, sessionId)
 
+        if (formData.get('redirect') === 'none') {
+          return new Response(null, { status: 204 })
+        }
+
         return redirect(routes.cart.index, { headers })
       },
 
@@ -174,6 +183,10 @@ export default {
 
         let headers = new Headers()
         setSessionCookie(headers, sessionId)
+
+        if (formData.get('redirect') === 'none') {
+          return new Response(null, { status: 204 })
+        }
 
         return redirect(routes.cart.index, { headers })
       },

@@ -7,12 +7,13 @@ import { uploadHandler } from './utils/uploads.ts'
 
 import adminHandlers from './admin.tsx'
 import accountHandlers from './account.tsx'
+import { assetsHandler } from './assets.ts'
 import authHandlers from './auth.tsx'
 import booksHandlers from './books.tsx'
 import cartHandlers from './cart.tsx'
 import checkoutHandlers from './checkout.tsx'
+import fragmentsHandlers from './fragments.tsx'
 import * as marketingHandlers from './marketing.tsx'
-import { assetsHandler } from './assets.ts'
 import { uploadsHandler } from './uploads.tsx'
 
 export let router = createRouter({ uploadHandler })
@@ -30,6 +31,8 @@ router.map(routes.home, marketingHandlers.home)
 router.map(routes.about, marketingHandlers.about)
 router.map(routes.contact, marketingHandlers.contact)
 router.map(routes.search, marketingHandlers.search)
+
+router.map(routes.fragments, fragmentsHandlers)
 
 router.map(routes.books, booksHandlers)
 router.map(routes.auth, authHandlers)

@@ -13,6 +13,11 @@ export let routes = route({
   }),
   search: '/search',
 
+  // Fragments
+  fragments: {
+    bookCard: '/fragments/book-card/:slug',
+  },
+
   // Public book routes
   books: {
     index: '/books',

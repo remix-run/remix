@@ -20,7 +20,7 @@ export interface Order {
   createdAt: Date
 }
 
-let ordersData: Order[] = [
+const ordersData: Order[] = [
   {
     id: '1001',
     userId: '2',

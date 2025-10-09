@@ -13,7 +13,7 @@ export interface Book {
 }
 
 // Sample book data
-let booksData: Book[] = [
+const booksData: Book[] = [
   {
     id: '1',
     slug: 'the-midnight-library',

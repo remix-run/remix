@@ -1,4 +1,5 @@
 import { Cookie, SetCookie } from '@remix-run/headers'
+
 import type { User } from '../models/users.ts'
 
 export interface SessionData {
@@ -7,7 +8,7 @@ export interface SessionData {
 }
 
 // Simple, in-memory session store for demo purposes
-let sessions = new Map<string, SessionData>()
+const sessions = new Map<string, SessionData>()
 
 export function getSessionId(request: Request): string {
   let cookieHeader = request.headers.get('Cookie')

@@ -11,7 +11,7 @@ export interface Cart {
 }
 
 // Store carts by session ID
-let carts = new Map<string, Cart>()
+const carts = new Map<string, Cart>()
 
 export function getCart(sessionId: string): Cart {
   let cart = carts.get(sessionId)

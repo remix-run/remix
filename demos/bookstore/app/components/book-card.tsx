@@ -1,12 +1,14 @@
 import { routes } from '../../routes.ts'
 
+import { CartButton } from '../assets/cart-button.tsx'
 import type { Book } from '../models/books.ts'
 
 export interface BookCardProps {
   book: Book
+  inCart: boolean
 }
 
-export function BookCard({ book }: BookCardProps) {
+export function BookCard({ book, inCart }: BookCardProps) {
   return (
     <div class="book-card">
       <img
@@ -20,6 +22,8 @@ export function BookCard({ book }: BookCardProps) {
         <a href={routes.books.show.href({ slug: book.slug })} class="btn">
           View Details
         </a>
+
+        <CartButton inCart={inCart} id={book.id} slug={book.slug} />
       </div>
     </div>
   )

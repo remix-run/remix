@@ -1,6 +1,8 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
+import { Frame } from '@remix-run/dom'
 
 import { routes } from '../routes.ts'
+
 import { getAllBooks, getBookBySlug, getBooksByGenre, getAvailableGenres } from './models/books.ts'
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
@@ -43,23 +45,11 @@ export default {
           </div>
 
           <div class="grid">
-            {books.map(({ title, author, price, slug }) => (
-              <div class="book-card">
-                <img
-                  src={`https://via.placeholder.com/280x300?text=${encodeURIComponent(title)}`}
-                  alt={title}
-                />
-                <div class="book-card-body">
-                  <h3>{title}</h3>
-                  <p class="author">by {author}</p>
-                  <p class="price">${price.toFixed(2)}</p>
-                  <div style="display: flex; gap: 0.5rem;">
-                    <a href={routes.books.show.href({ slug })} class="btn">
-                      View Details
-                    </a>
-                  </div>
-                </div>
-              </div>
+            {books.map((book) => (
+              <Frame
+                fallback={<div>Loading...</div>}
+                src={routes.fragments.bookCard.href({ slug: book.slug })}
+              />
             ))}
           </div>
         </Layout>,
