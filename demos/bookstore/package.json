@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "@remix-run/dom": "jam",
+    "@remix-run/events": "jam",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/file-storage": "workspace:*",
     "@remix-run/headers": "workspace:*",
@@ -16,6 +17,7 @@
   },
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server.ts",
+    "dev:browser": "esbuild app/assets/*.tsx --outbase=app --outdir=public --bundle --minify --splitting --format=esm --entry-names='[dir]/[name]' --chunk-names='chunks/[name]-[hash]' --sourcemap --watch",
     "start": "tsx server.ts",
     "test": "NODE_ENV=test tsx --test",
     "typecheck": "tsc --noEmit"

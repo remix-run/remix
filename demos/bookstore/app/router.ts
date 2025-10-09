@@ -12,7 +12,8 @@ import booksHandlers from './books.tsx'
 import cartHandlers from './cart.tsx'
 import checkoutHandlers from './checkout.tsx'
 import * as marketingHandlers from './marketing.tsx'
-import uploadsHandler from './uploads.tsx'
+import { assetsHandler } from './assets.ts'
+import { uploadsHandler } from './uploads.tsx'
 
 export let router = createRouter({ uploadHandler })
 
@@ -22,11 +23,14 @@ if (process.env.NODE_ENV === 'development') {
   router.use(logger())
 }
 
+router.get(routes.assets, assetsHandler)
+router.get(routes.uploads, uploadsHandler)
+
 router.map(routes.home, marketingHandlers.home)
 router.map(routes.about, marketingHandlers.about)
 router.map(routes.contact, marketingHandlers.contact)
 router.map(routes.search, marketingHandlers.search)
-router.get(routes.uploads, uploadsHandler)
+
 router.map(routes.books, booksHandlers)
 router.map(routes.auth, authHandlers)
 router.map(routes.cart, cartHandlers)

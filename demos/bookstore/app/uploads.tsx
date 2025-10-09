@@ -3,7 +3,7 @@ import type { InferRouteHandler } from '@remix-run/fetch-router'
 import { routes } from '../routes.ts'
 import { uploadsStorage } from './utils/uploads.ts'
 
-let handler: InferRouteHandler<typeof routes.uploads> = async ({ params }) => {
+export let uploadsHandler: InferRouteHandler<typeof routes.uploads> = async ({ params }) => {
   let file = await uploadsStorage.get(params.key)
 
   if (!file) {
@@ -18,5 +18,3 @@ let handler: InferRouteHandler<typeof routes.uploads> = async ({ params }) => {
     },
   })
 }
-
-export default handler

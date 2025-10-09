@@ -17,6 +17,7 @@ export function Document({
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{title}</title>
+        <script type="module" async src={routes.assets.href({ path: 'entry.js' })} />
         <style
           innerHTML={`
           * { margin: 0; padding: 0; box-sizing: border-box; }
