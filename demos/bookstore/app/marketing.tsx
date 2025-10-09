@@ -1,9 +1,11 @@
 import type { InferRouteHandler, RouteHandlers } from '@remix-run/fetch-router'
 
 import { routes } from '../routes.ts'
+
+import { BookCard } from './components/book-card.tsx'
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
-import { searchBooks } from './models/books.ts'
+import { getBookBySlug, searchBooks } from './models/books.ts'
 import { render } from './utils/render.ts'
 
 export let home: InferRouteHandler<typeof routes.home> = {
@@ -26,45 +28,9 @@ export let home: InferRouteHandler<typeof routes.home> = {
 
         <h2 style="margin: 2rem 0 1rem;">Featured Books</h2>
         <div class="grid">
-          <div class="book-card">
-            <img
-              src="https://via.placeholder.com/280x300?text=The+Midnight+Library"
-              alt="The Midnight Library"
-            />
-            <div class="book-card-body">
-              <h3>The Midnight Library</h3>
-              <p class="author">by Matt Haig</p>
-              <p class="price">$16.99</p>
-              <a href={routes.books.show.href({ slug: 'the-midnight-library' })} class="btn">
-                View Details
-              </a>
-            </div>
-          </div>
-          <div class="book-card">
-            <img
-              src="https://via.placeholder.com/280x300?text=Project+Hail+Mary"
-              alt="Project Hail Mary"
-            />
-            <div class="book-card-body">
-              <h3>Project Hail Mary</h3>
-              <p class="author">by Andy Weir</p>
-              <p class="price">$28.99</p>
-              <a href={routes.books.show.href({ slug: 'project-hail-mary' })} class="btn">
-                View Details
-              </a>
-            </div>
-          </div>
-          <div class="book-card">
-            <img src="https://via.placeholder.com/280x300?text=Atomic+Habits" alt="Atomic Habits" />
-            <div class="book-card-body">
-              <h3>Atomic Habits</h3>
-              <p class="author">by James Clear</p>
-              <p class="price">$27.00</p>
-              <a href={routes.books.show.href({ slug: 'atomic-habits' })} class="btn">
-                View Details
-              </a>
-            </div>
-          </div>
+          <BookCard book={getBookBySlug('the-midnight-library')!} />
+          <BookCard book={getBookBySlug('project-hail-mary')!} />
+          <BookCard book={getBookBySlug('atomic-habits')!} />
         </div>
       </Layout>,
     )
