@@ -31,7 +31,10 @@ importers:
     dependencies:
       '@remix-run/dom':
         specifier: jam
-        version: 0.0.0-experimental-remix-jam.4
+        version: 0.0.0-experimental-remix-jam.6
+      '@remix-run/events':
+        specifier: jam
+        version: 0.0.0-experimental-remix-jam.5
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../../packages/fetch-router
@@ -41,6 +44,9 @@ importers:
       '@remix-run/headers':
         specifier: workspace:*
         version: link:../../packages/headers
+      '@remix-run/lazy-file':
+        specifier: workspace:*
+        version: link:../../packages/lazy-file
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../packages/node-fetch-server
@@ -972,14 +978,14 @@ packages:
     peerDependencies:
       prettier: '*'
 
-  '@remix-run/dom@0.0.0-experimental-remix-jam.4':
-    resolution: {integrity: sha512-0z8TqMrrRJoEE5t9NzdF37kVuXH/LFDnpejf2fpGRm9ADz0ndf7AXNktsCAKqWA0CKw4jj66xS4rki6FePCjzQ==}
+  '@remix-run/dom@0.0.0-experimental-remix-jam.6':
+    resolution: {integrity: sha512-eQguiFB+Qm0EAA1xK1jLew2M9jp2rGcN+tknPv9gQd5nhT+eetwt3BHaYt9UcJWd3+p0g0cBt23CJrQOK2WStQ==}
 
-  '@remix-run/events@0.0.0-experimental-remix-jam.4':
-    resolution: {integrity: sha512-at0hgDG7Km/yRdk3myeyFwt8BXTBHnPSD4oaAB3VGDDB10q4wkqT05EAhxX+1Qh8TSIPSPst+fkmnU7vjWyIYA==}
+  '@remix-run/events@0.0.0-experimental-remix-jam.5':
+    resolution: {integrity: sha512-rbKP27/YkLZq0gbCy3QpwaHQzJg41IgbC//8SggPgMtWxZdxkcnkWmQGMLH0xwQcBlZ3yLtZRDQvL+ir4GAA6g==}
 
-  '@remix-run/style@0.0.0-experimental-remix-jam.4':
-    resolution: {integrity: sha512-lkWJp2B6taEMHsNlUqktzAW/3LERri2NrvzSdZocBesJ/+fFwHPSLXWJ54xk+qtkOrqgrX7NJblNjVfPWk54IA==}
+  '@remix-run/style@0.0.0-experimental-remix-jam.5':
+    resolution: {integrity: sha512-XXCOWiY6lGqeJrGQ47JP5fFFuZXbBsFjBbTu46FNxsox1cny8ZPyZ7C674kX92UimGpOU+zv/lPOoU+ZWGim+w==}
 
   '@types/body-parser@1.19.5':
     resolution: {integrity: sha512-fB3Zu92ucau0iQ0JMCFQE7b/dv8Ot07NI3KaZIkIUNXq82k4eBAqUaneXfleGY9JWskeS9y+u0nXMyspcuQrCg==}
@@ -2630,14 +2636,14 @@ snapshots:
       make-synchronized: 0.4.2
       prettier: 3.5.3
 
-  '@remix-run/dom@0.0.0-experimental-remix-jam.4':
+  '@remix-run/dom@0.0.0-experimental-remix-jam.6':
     dependencies:
-      '@remix-run/events': 0.0.0-experimental-remix-jam.4
-      '@remix-run/style': 0.0.0-experimental-remix-jam.4
+      '@remix-run/events': 0.0.0-experimental-remix-jam.5
+      '@remix-run/style': 0.0.0-experimental-remix-jam.5
 
-  '@remix-run/events@0.0.0-experimental-remix-jam.4': {}
+  '@remix-run/events@0.0.0-experimental-remix-jam.5': {}
 
-  '@remix-run/style@0.0.0-experimental-remix-jam.4': {}
+  '@remix-run/style@0.0.0-experimental-remix-jam.5': {}
 
   '@types/body-parser@1.19.5':
     dependencies:

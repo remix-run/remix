@@ -14,7 +14,7 @@ export default {
   handlers: {
     async bookCard({ params }) {
       // Simulate network latency
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      // await new Promise((resolve) => setTimeout(resolve, 1000 * Math.random()))
 
       let book = getBookBySlug(params.slug)
 

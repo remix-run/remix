@@ -21,18 +21,20 @@ export const CartButton = hydrated(
             event.preventDefault()
 
             updating = true
-            this.render()
+            this.update()
 
             await fetch(action, {
               method,
               body: new FormData(event.currentTarget),
               signal,
             })
+            if (signal.aborted) return
 
             await this.frame.reload()
+            if (signal.aborted) return
 
             updating = false
-            this.render()
+            this.update()
           })}
         >
           <input type="hidden" name="bookId" value={id} />

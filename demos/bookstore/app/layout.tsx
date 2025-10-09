@@ -90,7 +90,7 @@ export function Layout({ children }: { children?: Remix.RemixNode }) {
             <a href={routes.books.index.href()}>Books</a>
             <a href={routes.about.href()}>About</a>
             <a href={routes.contact.index.href()}>Contact</a>
-            <a href={routes.cart.index.href()}>Cart</a>$
+            <a href={routes.cart.index.href()}>Cart</a>
             {user ? (
               <>
                 <a href={routes.account.index.href()}>Account</a>

@@ -8,6 +8,7 @@
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/file-storage": "workspace:*",
     "@remix-run/headers": "workspace:*",
+    "@remix-run/lazy-file": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*"
   },
   "devDependencies": {

@@ -138,6 +138,9 @@ export default {
 
     api: {
       async add({ storage, formData }) {
+        // Simulate network latency
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
         let sessionId = storage.get(SESSION_ID_KEY)
         let bookId = formData.get('bookId')?.toString() ?? ''
 
@@ -176,6 +179,9 @@ export default {
       },
 
       async remove({ storage, formData }) {
+        // Simulate network latency
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
         let sessionId = storage.get(SESSION_ID_KEY)
         let bookId = formData.get('bookId')?.toString() ?? ''
 

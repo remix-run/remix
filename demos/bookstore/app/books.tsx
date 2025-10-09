@@ -7,6 +7,7 @@ import { getAllBooks, getBookBySlug, getBooksByGenre, getAvailableGenres } from 
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
+import { ImageCarousel } from './assets/image-carousel.tsx'
 
 export default {
   use: [loadAuth],
@@ -125,12 +126,15 @@ export default {
       return render(
         <Layout>
           <div style="display: grid; grid-template-columns: 300px 1fr; gap: 2rem;">
-            <div>
-              <img
-                src={`https://via.placeholder.com/300x400?text=${encodeURIComponent(book.title)}`}
-                alt={book.title}
-                style="width: 100%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
-              />
+            <div
+              css={{
+                height: '400px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                overflow: 'hidden',
+              }}
+            >
+              <ImageCarousel images={book.imageUrls} />
             </div>
 
             <div class="card">

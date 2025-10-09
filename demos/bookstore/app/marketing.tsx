@@ -28,18 +28,9 @@ export let home: InferRouteHandler<typeof routes.home> = {
 
         <h2 style="margin: 2rem 0 1rem;">Featured Books</h2>
         <div class="grid">
-          <Frame
-            fallback={<div>Loading...</div>}
-            src={routes.fragments.bookCard.href({ slug: 'the-midnight-library' })}
-          />
-          <Frame
-            fallback={<div>Loading...</div>}
-            src={routes.fragments.bookCard.href({ slug: 'project-hail-mary' })}
-          />
-          <Frame
-            fallback={<div>Loading...</div>}
-            src={routes.fragments.bookCard.href({ slug: 'atomic-habits' })}
-          />
+          <Frame src={routes.fragments.bookCard.href({ slug: 'bbq' })} />
+          <Frame src={routes.fragments.bookCard.href({ slug: 'heavy-metal' })} />
+          <Frame src={routes.fragments.bookCard.href({ slug: 'three-ways' })} />
         </div>
       </Layout>,
     )

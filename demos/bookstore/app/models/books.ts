@@ -1,11 +1,12 @@
 export interface Book {
-  id: string
+  id: string // unique identifier
   slug: string
   title: string
   author: string
   description: string
   price: number
   genre: string
+  imageUrls: string[]
   coverUrl: string
   isbn: string
   publishedYear: number
@@ -15,88 +16,50 @@ export interface Book {
 // Sample book data
 const booksData: Book[] = [
   {
-    id: '1',
-    slug: 'the-midnight-library',
-    title: 'The Midnight Library',
-    author: 'Matt Haig',
-    description:
-      'Between life and death there is a library, and within that library, the shelves go on forever. Every book provides a chance to try another life you could have lived.',
+    id: '001',
+    slug: 'bbq',
+    title: 'Ash & Smoke',
+    author: 'Rusty Char-Broil',
+    description: 'The perfect gift for the BBQ enthusiast in your life!',
     price: 16.99,
-    genre: 'fiction',
-    coverUrl: '/images/midnight-library.jpg',
+    genre: 'cookbook',
+    coverUrl: '/images/bbq-1.png',
+    imageUrls: ['/images/bbq-1.png', '/images/bbq-2.png', '/images/bbq-3.png'],
     isbn: '978-0525559474',
     publishedYear: 2020,
     inStock: true,
   },
   {
-    id: '2',
-    slug: 'atomic-habits',
-    title: 'Atomic Habits',
-    author: 'James Clear',
-    description:
-      'An Easy & Proven Way to Build Good Habits & Break Bad Ones. Tiny changes, remarkable results.',
+    id: '002',
+    slug: 'heavy-metal',
+    title: 'Heavy Metal Guitar Riffs',
+    author: 'Axe Master Krush',
+    description: 'The ultimate guide to heavy metal guitar riffs!',
     price: 27.0,
-    genre: 'self-help',
-    coverUrl: '/images/atomic-habits.jpg',
+    genre: 'music',
+    coverUrl: '/images/heavy-metal-1.png',
+    imageUrls: [
+      '/images/heavy-metal-1.png',
+      '/images/heavy-metal-2.png',
+      '/images/heavy-metal-3.png',
+    ],
     isbn: '978-0735211292',
     publishedYear: 2018,
     inStock: true,
   },
   {
-    id: '3',
-    slug: 'project-hail-mary',
-    title: 'Project Hail Mary',
-    author: 'Andy Weir',
-    description:
-      'A lone astronaut must save the earth from disaster in this incredible new science-based thriller from the author of The Martian.',
+    id: '003',
+    slug: 'three-ways',
+    title: 'Three Ways to Change Your Life',
+    author: 'The Great Change Wizard',
+    description: 'A practical guide to changing your life for the better.',
     price: 28.99,
     genre: 'science-fiction',
-    coverUrl: '/images/project-hail-mary.jpg',
+    coverUrl: '/images/three-ways-1.png',
+    imageUrls: ['/images/three-ways-1.png', '/images/three-ways-2.png', '/images/three-ways-3.png'],
     isbn: '978-0593135204',
     publishedYear: 2021,
     inStock: true,
-  },
-  {
-    id: '4',
-    slug: 'educated',
-    title: 'Educated',
-    author: 'Tara Westover',
-    description:
-      'A memoir about a young girl who, kept out of school, leaves her survivalist family and goes on to earn a PhD from Cambridge University.',
-    price: 18.0,
-    genre: 'biography',
-    coverUrl: '/images/educated.jpg',
-    isbn: '978-0399590504',
-    publishedYear: 2018,
-    inStock: true,
-  },
-  {
-    id: '5',
-    slug: 'dune',
-    title: 'Dune',
-    author: 'Frank Herbert',
-    description:
-      'Set on the desert planet Arrakis, Dune is the story of the boy Paul Atreides, heir to a noble family tasked with ruling an inhospitable world.',
-    price: 19.99,
-    genre: 'science-fiction',
-    coverUrl: '/images/dune.jpg',
-    isbn: '978-0441172719',
-    publishedYear: 1965,
-    inStock: true,
-  },
-  {
-    id: '6',
-    slug: 'the-psychology-of-money',
-    title: 'The Psychology of Money',
-    author: 'Morgan Housel',
-    description:
-      'Timeless lessons on wealth, greed, and happiness doing well with money has little to do with how smart you are and a lot to do with how you behave.',
-    price: 24.99,
-    genre: 'finance',
-    coverUrl: '/images/psychology-money.jpg',
-    isbn: '978-0857197689',
-    publishedYear: 2020,
-    inStock: false,
   },
 ]
 

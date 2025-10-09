@@ -9,8 +9,8 @@ import { SESSION_ID_KEY } from '../middleware/auth.ts'
 export async function resolveFrame(frameSrc: string) {
   let url = new URL(frameSrc, 'http://localhost:44100')
 
-  // Fake delay to simulate network latency when resolving frames
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  // Simulate network latency when resolving frames
+  // await new Promise((resolve) => setTimeout(resolve, 500))
 
   let bookCardMatch = routes.fragments.bookCard.match(url)
   if (bookCardMatch) {
