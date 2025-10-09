@@ -1,5 +1,5 @@
 import { RoutePattern } from '@remix-run/route-pattern'
-import type { HrefBuilderArgs, Join } from '@remix-run/route-pattern'
+import type { HrefBuilderArgs, Join, RouteMatch } from '@remix-run/route-pattern'
 
 import type { RequestMethod } from './request-methods.ts'
 import type { Simplify } from './type-utils.ts'
@@ -22,6 +22,10 @@ export class Route<
 
   href(...args: HrefBuilderArgs<P>): string {
     return this.pattern.href(...args)
+  }
+
+  match(url: string | URL): RouteMatch<P> | null {
+    return this.pattern.match(url)
   }
 }
 
