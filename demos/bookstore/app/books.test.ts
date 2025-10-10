@@ -11,18 +11,18 @@ describe('books handlers', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
     assertContains(html, 'Browse Books')
-    assertContains(html, 'The Midnight Library')
-    assertContains(html, 'Atomic Habits')
-    assertContains(html, 'Dune')
+    assertContains(html, 'Ash & Smoke')
+    assertContains(html, 'Heavy Metal Guitar Riffs')
+    assertContains(html, 'Three Ways to Change Your Life')
   })
 
   it('GET /books/:slug returns book details', async () => {
-    let response = await router.fetch('http://localhost:3000/books/dune')
+    let response = await router.fetch('http://localhost:3000/books/bbq')
 
     assert.equal(response.status, 200)
     let html = await response.text()
-    assertContains(html, 'Dune')
-    assertContains(html, 'Frank Herbert')
+    assertContains(html, 'Ash & Smoke')
+    assertContains(html, 'Rusty Char-Broil')
     assertContains(html, 'Add to Cart')
   })
 

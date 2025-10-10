@@ -19,8 +19,8 @@ describe('checkout handlers', () => {
     let addRequest = requestWithSession('http://localhost:3000/cart/api/add', sessionId, {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '5',
-        slug: 'dune',
+        bookId: '001',
+        slug: 'bbq',
       }),
     })
     await router.fetch(addRequest)

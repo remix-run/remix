@@ -9,8 +9,8 @@ describe('cart handlers', () => {
     let response = await router.fetch('http://localhost:3000/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '1',
-        slug: 'the-midnight-library',
+        bookId: '001',
+        slug: 'bbq',
       }),
       redirect: 'manual',
     })
@@ -24,8 +24,8 @@ describe('cart handlers', () => {
     let addResponse = await router.fetch('http://localhost:3000/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '2',
-        slug: 'atomic-habits',
+        bookId: '002',
+        slug: 'heavy-metal',
       }),
       redirect: 'manual',
     })
@@ -40,7 +40,7 @@ describe('cart handlers', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
     assertContains(html, 'Shopping Cart')
-    assertContains(html, 'Atomic Habits')
+    assertContains(html, 'Heavy Metal Guitar Riffs')
   })
 
   it('cart persists state across requests with same session', async () => {
@@ -48,8 +48,8 @@ describe('cart handlers', () => {
     let addResponse1 = await router.fetch('http://localhost:3000/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '1',
-        slug: 'the-midnight-library',
+        bookId: '001',
+        slug: 'bbq',
       }),
       redirect: 'manual',
     })
@@ -61,8 +61,8 @@ describe('cart handlers', () => {
     let addRequest2 = requestWithSession('http://localhost:3000/cart/api/add', sessionId, {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '3',
-        slug: 'project-hail-mary',
+        bookId: '003',
+        slug: 'three-ways',
       }),
     })
     await router.fetch(addRequest2)
@@ -72,7 +72,7 @@ describe('cart handlers', () => {
     let cartResponse = await router.fetch(cartRequest)
 
     let html = await cartResponse.text()
-    assertContains(html, 'The Midnight Library')
-    assertContains(html, 'Project Hail Mary')
+    assertContains(html, 'Ash & Smoke')
+    assertContains(html, 'Three Ways to Change Your Life')
   })
 })
