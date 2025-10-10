@@ -39,6 +39,17 @@ export type {
 export type { RouteHandlers, InferRouteHandler, RouteHandler } from './lib/route-handlers.ts'
 
 export {
+  createDelete,
+  createDelete as delete, // shorthand
+  createGet,
+  createGet as get, // shorthand
+  createPost,
+  createPost as post, // shorthand
+  createPut,
+  createPut as put // shorthand
+} from './lib/route-helpers.ts'
+
+export {
   Route,
   createRoutes,
   createRoutes as route, // shorthand
