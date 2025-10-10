@@ -45,7 +45,7 @@ export function openFile(filename: string, options?: OpenFileOptions): File {
   return new LazyFile(content, options?.name ?? path.basename(filename), {
     type: options?.type ?? lookup(filename),
     lastModified: options?.lastModified ?? stats.mtimeMs,
-  })
+  }) as File
 }
 
 function streamFile(filename: string, start = 0, end = Infinity): ReadableStream<Uint8Array> {
