@@ -155,10 +155,8 @@ export let contact: RouteHandlers<typeof routes.contact> = {
 
 export let search: InferRouteHandler<typeof routes.search> = {
   use: [loadAuth],
-  handler({ request }) {
-    let url = new URL(request.url)
-    let query = url.searchParams.get('q') || ''
-
+  handler({ url }) {
+    let query = url.searchParams.get('q') ?? ''
     let books = query ? searchBooks(query) : []
 
     return render(
@@ -172,7 +170,7 @@ export let search: InferRouteHandler<typeof routes.search> = {
               name="q"
               placeholder="Search books..."
               value={query}
-              style="flex: 1;"
+              css={{ flex: 1, padding: '0.5rem' }}
             />
             <button type="submit" class="btn">
               Search
@@ -188,22 +186,7 @@ export let search: InferRouteHandler<typeof routes.search> = {
 
         <div class="grid">
           {books.length > 0 ? (
-            books.map((book) => (
-              <div class="book-card">
-                <img
-                  src={`https://via.placeholder.com/280x300?text=${encodeURIComponent(book.title)}`}
-                  alt={book.title}
-                />
-                <div class="book-card-body">
-                  <h3>{book.title}</h3>
-                  <p class="author">by {book.author}</p>
-                  <p class="price">${book.price.toFixed(2)}</p>
-                  <a href={routes.books.show.href({ slug: book.slug })} class="btn">
-                    View Details
-                  </a>
-                </div>
-              </div>
-            ))
+            books.map((book) => <Frame src={routes.fragments.bookCard.href({ slug: book.slug })} />)
           ) : (
             <p>No books found matching your search.</p>
           )}

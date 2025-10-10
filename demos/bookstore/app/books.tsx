@@ -26,7 +26,7 @@ export default {
                 type="search"
                 name="q"
                 placeholder="Search books by title, author, or description..."
-                style="flex: 1;"
+                css={{ flex: 1, padding: '0.5rem' }}
               />
               <button type="submit" class="btn">
                 Search
@@ -89,20 +89,10 @@ export default {
 
           <div class="grid" style="margin-top: 2rem;">
             {books.map((book) => (
-              <div class="book-card">
-                <img
-                  src={`https://via.placeholder.com/280x300?text=${encodeURIComponent(book.title)}`}
-                  alt={book.title}
-                />
-                <div class="book-card-body">
-                  <h3>{book.title}</h3>
-                  <p class="author">by {book.author}</p>
-                  <p class="price">${book.price.toFixed(2)}</p>
-                  <a href={routes.books.show.href({ slug: book.slug })} class="btn">
-                    View Details
-                  </a>
-                </div>
-              </div>
+              <Frame
+                fallback={<div>Loading...</div>}
+                src={routes.fragments.bookCard.href({ slug: book.slug })}
+              />
             ))}
           </div>
         </Layout>,

@@ -1,6 +1,5 @@
 import { routes } from '../../routes.ts'
 
-import { ImageCarousel } from '../assets/image-carousel.tsx'
 import { CartButton } from '../assets/cart-button.tsx'
 import type { Book } from '../models/books.ts'
 
@@ -17,11 +16,13 @@ export function BookCard({ book, inCart }: BookCardProps) {
         <h3>{book.title}</h3>
         <p class="author">by {book.author}</p>
         <p class="price">${book.price.toFixed(2)}</p>
-        <a href={routes.books.show.href({ slug: book.slug })} class="btn">
-          View Details
-        </a>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <a href={routes.books.show.href({ slug: book.slug })} class="btn">
+            View Details
+          </a>
 
-        <CartButton inCart={inCart} id={book.id} slug={book.slug} />
+          <CartButton inCart={inCart} id={book.id} slug={book.slug} />
+        </div>
       </div>
     </div>
   )

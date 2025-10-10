@@ -20,7 +20,14 @@ export function Document({
         <script type="module" async src={routes.assets.href({ path: 'entry.js' })} />
         <style
           innerHTML={`
-          * { margin: 0; padding: 0; box-sizing: border-box; }
+          /* CSS Reset */
+          *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+          button, input, select, textarea { font: inherit; color: inherit; line-height: inherit; }
+          button { background: none; border: none; cursor: pointer; }
+          img { display: block; max-width: 100%; }
+          a { color: inherit; }
+          
+          /* Base Styles */
           body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
           .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
           header { background: #2c3e50; color: white; padding: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
