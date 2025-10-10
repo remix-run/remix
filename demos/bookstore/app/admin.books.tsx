@@ -240,6 +240,7 @@ export default {
       price: parseFloat(formData.get('price')?.toString() ?? '0'),
       genre: formData.get('genre')?.toString() ?? '',
       coverUrl: formData.get('cover')?.toString() ?? '/images/placeholder.jpg',
+      imageUrls: [],
       isbn: formData.get('isbn')?.toString() ?? '',
       publishedYear: parseInt(formData.get('publishedYear')?.toString() ?? '2024', 10),
       inStock: formData.get('inStock')?.toString() === 'true',
