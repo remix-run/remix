@@ -2,7 +2,7 @@
   "name": "remix-the-web",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.17.1",
+  "packageManager": "pnpm@10.18.1",
   "dependencies": {
     "eslint": "^9.33.0",
     "eslint-plugin-prefer-let": "^4.0.0",
