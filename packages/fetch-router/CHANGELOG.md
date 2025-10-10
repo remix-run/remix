@@ -2,7 +2,7 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.6.0 (2025-10-10)
 
 - BREAKING CHANGE: Rename
   - `resource('...', { routeNames })` to `resource('...', { names })`
