@@ -1,4 +1,5 @@
 import { AppStorage } from './app-storage.ts'
+import Headers from '@remix-run/headers'
 import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
 
 /**
@@ -42,6 +43,13 @@ export class RequestContext<
    * sub-router, in which case the URL mount point is stripped from the pathname.
    */
   url: URL
+  /**
+   * The headers of the request.
+   *
+   * Note: This is different from request.headers which is a Headers object
+   * from the Fetch API, while this headers field is a SuperHeaders object from @remix-run/headers.
+   */
+  headers: Headers
 
   constructor(request: Request) {
     this.formData = undefined as any
@@ -49,15 +57,8 @@ export class RequestContext<
     this.params = {} as Params
     this.request = request
     this.storage = new AppStorage()
+    this.headers = new Headers(request.headers)
     this.url = new URL(request.url)
-  }
-
-  /**
-   * The headers of the request.
-   */
-  get headers(): Headers {
-    // TODO: Make this a SuperHeaders object?
-    return this.request.headers
   }
 
   /**

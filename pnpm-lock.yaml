@@ -79,6 +79,9 @@ importers:
       '@remix-run/form-data-parser':
         specifier: workspace:*
         version: link:../form-data-parser
+      '@remix-run/headers':
+        specifier: workspace:*
+        version: link:../headers
       '@remix-run/route-pattern':
         specifier: workspace:*
         version: link:../route-pattern
