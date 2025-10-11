@@ -40,10 +40,10 @@ logAndExec(`git add ${packageJsonFile}`)
 //   logAndExec(`git add ${jsrJsonFile}`);
 // }
 
-// 4) Swap out "## HEAD" in CHANGELOG.md with the new release version + date
+// 4) Swap out "## Unreleased" in CHANGELOG.md with the new release version + date
 let changelogFile = getPackageFile(packageName, 'CHANGELOG.md')
 let changelog = readFile(changelogFile)
-let match = /^## HEAD\n/m.exec(changelog)
+let match = /^## Unreleased\n/m.exec(changelog)
 if (match) {
   let [today] = new Date().toISOString().split('T')
 

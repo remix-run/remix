@@ -17,7 +17,7 @@ if (packageName) {
     process.exit(1)
   }
 
-  let changes = getChanges(packageName, 'HEAD')
+  let changes = getChanges(packageName, 'Unreleased')
 
   if (changes) {
     printPackageChanges(packageName, changes)
@@ -30,7 +30,7 @@ if (packageName) {
 
   let packageNames = getAllPackageNames()
   packageNames.forEach((packageName) => {
-    let changes = getChanges(packageName, 'HEAD')
+    let changes = getChanges(packageName, 'Unreleased')
     if (changes) {
       hasChanges = true
       printPackageChanges(packageName, changes)

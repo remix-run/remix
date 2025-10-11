@@ -19,28 +19,13 @@ A minimal, composable router built on the [web Fetch API](https://developer.mozi
 
 ## Examples
 
-### Basic Usage
+The example below is a small site with 4 routes: a home page, an "about" page, and a blog.
 
 ```ts
-import { createRouter } from '@remix-run/fetch-router'
+import { createRouter, route, logger } from '@remix-run/fetch-router'
 
-let router = createRouter()
-
-router.get('/', () => new Response('Home'))
-router.get('/about', () => new Response('About'))
-
-let response = await router.fetch('https://example.com/about')
-console.log(await response.text()) // "About"
-```
-
-### Route Mapping with Type-Safe URLs
-
-Create a route map to organize your routes by name and generate type-safe URLs:
-
-```ts
-import { createRoutes, createRouter } from '@remix-run/fetch-router'
-
-let routes = createRoutes({
+// Create a route map to organize your routes by name
+let routes = route({
   home: '/',
   about: '/about',
   blog: {
@@ -51,17 +36,100 @@ let routes = createRoutes({
 
 let router = createRouter()
 
-// Map routes one at a time to their respective handlers
-router.get(routes.home, () => new Response('Home'))
-router.get(routes.about, () => new Response('About'))
-router.get(routes.blog.index, () => new Response('Blog'))
-// Params are fully type-safe
-router.get(routes.blog.show, ({ params }) => {
-  return new Response(`Blog post: ${params.slug}`)
+router.use(logger())
+
+// Provide handlers for your routes
+router.map(routes, {
+  home() {
+    return new Response('Home')
+  },
+  about() {
+    return new Response('About')
+  },
+  blog: {
+    index() {
+      return new Response('Blog')
+    },
+    async show({ params }) {
+      // params.slug is type-safe
+      return new Response(`Post ${params.slug}`)
+    },
+  },
 })
 
-// Generate type-safe URLs
-routes.blog.show.href({ slug: 'hello-world' }) // "/blog/hello-world"
+let response = await router.fetch('https://remix.run/blog/hello-remix')
+console.log(await response.text()) // "Post hello-remix"
+```
+
+You can link between the different pages on the site using the `href()` function on your routes. The example below is a small site with a simple "Contact Us" form.
+
+Note: The `html()` helper is used in the example below to create a `Response` with the correct `Content-Type`.
+
+```ts
+import { createRouter, route, html } from '@remix-run/fetch-router'
+
+let routes = route({
+  home: '/',
+  contact: '/contact',
+})
+
+let router = createRouter()
+
+// `router.get()` defines a single GET handler
+router.get(routes.home, () => {
+  return html(`
+    <html>
+      <body>
+        <h1>Home</h1>
+        <p>
+          <a href="${routes.contact.href()}">Contact Us</a>
+        </p>
+      </body>
+    </html>
+  `)
+})
+
+router.get(routes.contact, () => {
+  return html(`
+    <html>
+      <body>
+        <h1>Contact Us</h1>
+        <form method="POST" action="${routes.contact.href()}">
+          <div>
+            <label for="message">Message</label>
+            <input type="text" name="message" />
+          </div>
+          <button type="submit">Send</button>
+        </form>
+        <footer>
+          <p>
+            <a href="${routes.home.href()}">Home</a>
+          </p>
+        </footer>
+      </body>
+    </html>
+  `)
+})
+
+router.post(routes.contact, ({ formData }) => {
+  let message = formData.get('message') as string
+
+  return html(`
+    <html>
+      <body>
+        <h1>Thanks!</h1>
+        <div>
+          <p>You said: ${message}</p>
+        </div>
+        <footer>
+          <p>
+            <a href="${routes.home.href()}">Home</a>
+          </p>
+        </footer>
+      </body>
+    </html>
+  `)
+})
 ```
 
 ### Route Mapping with Specific HTTP Methods

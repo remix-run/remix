@@ -2,6 +2,10 @@
 
 This is the changelog for [`tar-parser`](https://github.com/remix-run/remix/tree/main/packages/tar-parser). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- BREAKING CHANGE: Removed CommonJS build. This package is now ESM-only. If you need to use this package in a CommonJS project, you will need to use dynamic `import()`.
+
 ## v0.4.0 (2025-07-24)
 
 - Renamed package from `@mjackson/tar-parser` to `@remix-run/tar-parser`
