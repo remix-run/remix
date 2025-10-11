@@ -43,7 +43,8 @@
   },
   "dependencies": {
     "@remix-run/form-data-parser": "workspace:*",
-    "@remix-run/route-pattern": "workspace:*"
+    "@remix-run/route-pattern": "workspace:*",
+    "@remix-run/headers": "workspace:*"
   },
   "scripts": {
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:logger-middleware",
