@@ -1,12 +1,17 @@
-import type { RoutePattern } from '@remix-run/route-pattern'
+import type { Join } from '@remix-run/route-pattern'
+import { RoutePattern } from '@remix-run/route-pattern'
 
-import { createRoutes } from './route-map.ts'
+import type { RequestMethod } from './request-methods.ts'
+import type { RouteDefs } from './route-map.ts'
+import { createRoutes, Route } from './route-map.ts'
 import type { BuildRouteMap } from './route-map.ts'
+import type { Simplify } from './type-utils.ts'
 
 export const ResourceMethods = ['new', 'show', 'create', 'edit', 'update', 'destroy'] as const
 export type ResourceMethod = (typeof ResourceMethods)[number]
 
 export interface ResourceOptions {
+  children?: RouteDefs
   /**
    * The resource methods to include in the route map. If not provided, all
    * methods (`show`, `new`, `create`, `edit`, `update`, and `destroy`) will be
@@ -44,7 +49,7 @@ export function createResource<P extends string, const O extends ResourceOptions
   let updateName = options?.names?.update ?? 'update'
   let destroyName = options?.names?.destroy ?? 'destroy'
 
-  let routes: any = {}
+  let routes: RouteDefs = options?.children ?? {}
 
   if (only.includes('new')) {
     routes[newName] = { method: 'GET', pattern: `/new` }
@@ -70,10 +75,11 @@ export function createResource<P extends string, const O extends ResourceOptions
 
 type BuildResourceMap<B extends string, O extends ResourceOptions> = BuildRouteMap<
   B,
-  BuildResourceRoutes<
-    O,
-    O extends { only: readonly ResourceMethod[] } ? O['only'][number] : ResourceMethod
-  >
+  (O extends { children: infer C extends RouteDefs } ? C : {}) &
+    BuildResourceRoutes<
+      O,
+      O extends { only: readonly ResourceMethod[] } ? O['only'][number] : ResourceMethod
+    >
 >
 
 type BuildResourceRoutes<O extends ResourceOptions, M extends ResourceMethod> = {
@@ -100,6 +106,7 @@ export const ResourcesMethods = ['index', 'new', 'show', 'create', 'edit', 'upda
 export type ResourcesMethod = (typeof ResourcesMethods)[number]
 
 export type ResourcesOptions = {
+  children?: RouteDefs
   /**
    * The resource methods to include in the route map. If not provided, all
    * methods (`index`, `show`, `new`, `create`, `edit`, `update`, and `destroy`)
@@ -124,6 +131,22 @@ export type ResourcesOptions = {
   }
 }
 
+const addParamToPatterns = (defs: RouteDefs, param: string): RouteDefs =>
+  Object.fromEntries(
+    Object.entries(defs).map(([key, value]) => {
+      let updatedValue =
+        value instanceof Route
+          ? new Route(value.method, new RoutePattern(`:${param}`).join(value.pattern))
+          : typeof value === 'string' || value instanceof RoutePattern
+            ? new RoutePattern(`:${param}`).join(value)
+            : typeof value === 'object' && 'pattern' in value
+              ? { ...value, pattern: new RoutePattern(`:${param}`).join((value as any).pattern) }
+              : addParamToPatterns(value, param)
+
+      return [key, updatedValue]
+    }),
+  )
+
 /**
  * Create a route map with standard CRUD routes for a resource collection.
  *
@@ -144,7 +167,7 @@ export function createResources<P extends string, const O extends ResourcesOptio
   let updateName = options?.names?.update ?? 'update'
   let destroyName = options?.names?.destroy ?? 'destroy'
 
-  let routes: any = {}
+  let routes: RouteDefs = addParamToPatterns(options?.children ?? {}, param)
 
   if (only.includes('index')) {
     routes[indexName] = { method: 'GET', pattern: `/` }
@@ -171,13 +194,42 @@ export function createResources<P extends string, const O extends ResourcesOptio
   return createRoutes(base, routes) as BuildResourcesMap<P, O>
 }
 
-type BuildResourcesMap<B extends string, O extends ResourcesOptions> = BuildRouteMap<
-  B,
-  BuildResourcesRoutes<
-    O,
-    O extends { only: readonly ResourcesMethod[] } ? O['only'][number] : ResourcesMethod,
-    GetParam<O>
+type AddParamToPatterns<RouteDefinitions extends RouteDefs, Param extends string> = Simplify<{
+  [K in keyof RouteDefinitions]: RouteDefinitions[K] extends Route<
+    infer Method extends RequestMethod | 'ANY',
+    infer Pattern extends string
   >
+    ? Route<Method, Join<`:${Param}`, Pattern>>
+    : RouteDefinitions[K] extends string
+      ? Join<`:${Param}`, RouteDefinitions[K]>
+      : RouteDefinitions[K] extends RoutePattern<infer Pattern extends string>
+        ? RoutePattern<Join<`:${Param}`, Pattern>>
+        : RouteDefinitions[K] extends { method: infer Method; pattern: infer Pattern }
+          ? {
+              method: Method
+              pattern: Pattern extends string
+                ? Join<`:${Param}`, Pattern>
+                : Pattern extends RoutePattern<infer P extends string>
+                  ? Join<`:${Param}`, P>
+                  : never
+            }
+          : RouteDefinitions[K] extends RouteDefs
+            ? AddParamToPatterns<RouteDefinitions[K], Param>
+            : never
+}>
+
+type BuildResourcesMap<
+  B extends string,
+  O extends ResourcesOptions,
+  Param extends GetParam<O> = GetParam<O>,
+> = BuildRouteMap<
+  B,
+  AddParamToPatterns<O extends { children: RouteDefs } ? O['children'] : {}, Param> &
+    BuildResourcesRoutes<
+      O,
+      O extends { only: readonly ResourcesMethod[] } ? O['only'][number] : ResourcesMethod,
+      Param
+    >
 >
 
 type BuildResourcesRoutes<

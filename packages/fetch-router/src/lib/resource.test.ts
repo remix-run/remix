@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import { ResourceMethods, createResource, ResourcesMethods, createResources } from './resource.ts'
 import { Route } from './route-map.ts'
 import type { Assert, IsEqual } from './type-utils.ts'
+import { RoutePattern } from '@remix-run/route-pattern'
 
 describe('createResource', () => {
   it('creates a resource', () => {
@@ -56,6 +57,36 @@ describe('createResource', () => {
     // Other routes are excluded from the type
     assert.equal((book as any).new, undefined)
     assert.equal((book as any).create, undefined)
+  })
+
+  it('creates a resource with `children` option', () => {
+    let profile = createResource('profile', {
+      children: {
+        admin: '/admin',
+        todos: createResource('todos', { only: ['show'] }),
+      },
+      only: ['show'],
+    })
+
+    type T = [
+      Assert<
+        IsEqual<
+          typeof profile,
+          {
+            show: Route<'GET', '/profile'>
+
+            readonly admin: Route<'ANY', '/profile/admin'>
+            readonly todos: {
+              show: Route<'GET', '/profile/todos'>
+            }
+          }
+        >
+      >,
+    ]
+
+    assert.deepEqual(profile.show, new Route('GET', '/profile'))
+    assert.deepEqual(profile.admin, new Route('ANY', '/profile/admin'))
+    assert.deepEqual(profile.todos.show, new Route('GET', '/profile/todos'))
   })
 
   it('creates a resource with custom route names', () => {
@@ -248,6 +279,49 @@ describe('createResources', () => {
     assert.equal((books as any).edit, undefined)
     assert.equal((books as any).update, undefined)
     assert.equal((books as any).destroy, undefined)
+  })
+
+  it('creates resources with `children` option', () => {
+    let books = createResources('books', {
+      children: {
+        author: '/author',
+        routePattern: new RoutePattern('/routePattern'),
+        objectWithPattern: { method: 'POST', pattern: 'objectWithPattern' },
+        reviews: createResources('reviews', { only: ['show'], param: 'reviewId' }),
+        todos: {
+          show: { method: 'GET', pattern: '/todos/:todoId' },
+        },
+      },
+      only: ['show'],
+    })
+
+    type T = [
+      Assert<
+        IsEqual<
+          typeof books,
+          {
+            show: Route<'GET', '/books/:id'>
+
+            readonly author: Route<'ANY', '/books/:id/author'>
+            readonly routePattern: Route<'ANY', '/books/:id/routePattern'>
+            readonly objectWithPattern: Route<'POST', '/books/:id/objectWithPattern'>
+            readonly reviews: {
+              show: Route<'GET', '/books/:id/reviews/:reviewId'>
+            }
+            readonly todos: {
+              readonly show: Route<'GET', '/books/:id/todos/:todoId'>
+            }
+          }
+        >
+      >,
+    ]
+
+    assert.deepEqual(books.show, new Route('GET', '/books/:id'))
+    assert.deepEqual(books.author, new Route('ANY', '/books/:id/author'))
+    assert.deepEqual(books.routePattern, new Route('ANY', '/books/:id/routePattern'))
+    assert.deepEqual(books.objectWithPattern, new Route('POST', '/books/:id/objectWithPattern'))
+    assert.deepEqual(books.todos.show, new Route('GET', '/books/:id/todos/:todoId'))
+    assert.deepEqual(books.reviews.show, new Route('GET', '/books/:id/reviews/:reviewId'))
   })
 
   it('creates resources with custom param and only option', () => {

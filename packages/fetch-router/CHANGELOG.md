@@ -2,6 +2,29 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Support nested routes in `createResource` & `createResources`
+  ```ts
+  let books = {
+    ...resources('books'),
+    author: 'books/:id/author',
+    reviews: resources('books/:id/reviews', { param: 'reviewId' }),
+  }
+  let profile = {
+    ...resource('profile'),
+    admin: '/profile/admin',
+    todos: resource('profile/todos'),
+  }
+  ```
+  Now becomes
+  ```ts
+  let books = resources('books', {
+    children: { author: 'author', reviews: resources('reviews', { param: 'reviewId' }) },
+  })
+  let profile = resource('profile', { children: { admin: 'admin', todos: resource('todos') } })
+  ```
+
 ## v0.6.0 (2025-10-10)
 
 - BREAKING CHANGE: Rename
