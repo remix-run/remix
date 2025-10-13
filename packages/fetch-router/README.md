@@ -61,7 +61,7 @@ let response = await router.fetch('https://remix.run/blog/hello-remix')
 console.log(await response.text()) // "Post hello-remix"
 ```
 
-You can link between the different pages on the site using the `href()` function on your routes. The example below is a small site with a simple "Contact Us" form.
+You can generate a `<a href>` or specify a `<form action>` using the `href()` function on your routes. The example below is a small site with a simple "Contact Us" form.
 
 Note: The `html()` helper is used in the example below to create a `Response` with the correct `Content-Type`.
 
