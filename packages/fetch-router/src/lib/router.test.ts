@@ -124,6 +124,23 @@ describe('router.fetch()', () => {
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Admin')
   })
+
+  it('replaces any corresponding options set in the original `Request` when options are provided', async () => {
+    let requestLog: Array<string | null> = []
+    let router = createRouter()
+    router.use(({ request }) => {
+      requestLog.push(request.headers.get('From'))
+    })
+    router.get('/', () => new Response('Home'))
+
+    await router.fetch('https://remix.run')
+    assert.deepEqual(requestLog, [null])
+
+    requestLog = []
+
+    await router.fetch('https://remix.run', { headers: { From: 'admin@remix.run' } })
+    assert.deepEqual(requestLog, ['admin@remix.run'])
+  })
 })
 
 describe('router.map()', () => {
