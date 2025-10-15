@@ -1,0 +1,54 @@
+{
+  "type": "module",
+  "name": "@remix-run/events",
+  "version": "0.0.0-experimental-remix-jam.5",
+  "description": "Remix event system: like components but for events",
+  "exports": {
+    ".": "./src/index.ts",
+    "./press": "./src/interactions/press.ts",
+    "./key": "./src/interactions/key.ts",
+    "./form-reset": "./src/interactions/form-reset.ts"
+  },
+  "files": [
+    "README.md",
+    "dist"
+  ],
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./press": {
+        "types": "./dist/interactions/press.d.ts",
+        "default": "./dist/interactions/press.js"
+      },
+      "./key": {
+        "types": "./dist/interactions/key.d.ts",
+        "default": "./dist/interactions/key.js"
+      },
+      "./form-reset": {
+        "types": "./dist/interactions/form-reset.d.ts",
+        "default": "./dist/interactions/form-reset.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "size": "esbuild src/index.ts --bundle --minify --outfile=.temp-bundle.js --format=esm && echo \"📦 Bundle sizes:\" && echo \"   Uncompressed: $(ls -lah .temp-bundle.js | awk '{print $5}')\" && echo \"   Gzipped: $(gzip -c .temp-bundle.js | wc -c | tr -d ' ') bytes\" && rm .temp-bundle.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "install:chromium": "playwright install chromium",
+    "prepublishOnly": "pnpm build"
+  },
+  "devDependencies": {
+    "@vitest/browser": "^3.2.4",
+    "esbuild": "^0.25.5",
+    "playwright": "^1.53.1",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.4"
+  }
+}
