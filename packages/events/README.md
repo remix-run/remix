@@ -298,326 +298,84 @@ function TripleClick(this: EventHandle) {
 }
 ```
 
-## API
-
-## events
-
-```ts
-events(target, initialDescriptors?: EventDescriptor<Target>[]): EventContainer | Cleanup
-```
-
-## EventHandle API
-
----
-
 ```tsx
-function MyButton() {
-  return (
-    <button
-      on={[
-        dom.click((event) => {
-          console.log('Clicked at', event.clientX, event.clientY)
-        }),
+class TempoEvent extends Event {
+  static readonly eventName = 'rmx:tempo'
+  readonly tempo: number
 
-        dom.keydown((event) => {
-          if (event.key === 'Enter') {
-            console.log('Enter pressed')
-          }
-        }),
-      ]}
-    >
-      Click me
-    </button>
-  )
+  constructor(tempo: number) {
+    super(TempoEvent.eventName, { bubbles: false })
+    this.tempo = tempo
+  }
 }
-```
 
-### Window and Document Events
+class Tempo extends Interaction {
+  static readonly eventName = 'rmx:tempo'
 
-Handle window and document events with `events` with the same API as the `on` prop.
+  constructor() {
+    super()
 
-```tsx
-import type { Handle } from 'remix/component'
-import { events, win, doc } from 'remix/events'
+    let taps: number[] = []
+    let minTaps = 4
+    let resetTimer: number
 
-function App(this: Handle) {
-  this.afterRender(() => {
-    let cleanupWindow = events(window, [
-      win.resize(() => {
-        console.log('Window resized')
-      }),
-    ])
+    this.signal.addEventListener('abort', () => {
+      clearTimeout(resetTimer)
+    })
 
-    let cleanupDocument = events(document, [
-      doc.visibilitychange(() => {
-        if (document.hidden) {
-          pauseAnimations()
-        } else {
-          resumeAnimations()
+    let handleTap = () => {
+      let now = Date.now()
+      taps.push(now)
+      taps = taps.filter((tap) => now - tap < maxInterval)
+    }
+
+    return [
+      dom.pointerdown(handleTap),
+      dom.keydown((event) => {
+        if (event.key === 'Enter') {
+          handleTap()
         }
       }),
-
-      doc.selectionchange(() => {
-        let selection = document.getSelection()
-        if (selection.toString().length > 0) {
-          showFormattingToolbar()
-        } else {
-          hideFormattingToolbar()
-        }
-      }),
-    ])
-
-    return [cleanupWindow, cleanupDocument]
-  })
-
-  return () => {
-    // ...
+    ]
   }
 }
-```
 
-If your handlers depend on render props, add handlers in the render scope, they will be updated efficiently.
-
-```tsx
-function KeyboardShortcuts() {
-  // create an event container in setup
-  let windowEvents = events(window)
-
-  return (props) => {
-    // add/update the handlers in render with container.on()
-    windowEvents.on([
-      win.keyup((event) => {
-        if (event.key === 'Escape') {
-          props.onClose()
-        }
-      }),
-    ])
-
-    return (
-      <div>
-        <h2>Available Keyboard Shortcuts</h2>
-        {/*...*/}
-      </div>
-    )
-  }
-}
-```
-
-## Built-in Interactions
-
-Interactions are stateful event handlers that compose multiple DOM events into higher-level user behaviors:
-
-```tsx
-import type { Handle } from 'remix/component'
-import { press, outerPress, escape, hoverAim } from 'remix/interactions'
-
-function ExampleModal(this: Handle) {
-  let isOpen = false
-
-  let openModal = () => {
-    isOpen = true
-    this.render()
-  }
-
-  let closeModal = () => {
-    isOpen = false
-    this.render()
-  }
-
-  return () => (
-    <>
-      <button
-        // open on normalized "click" (mouse/keyboard/pen/touch)
-        on={press(openModal)}
-      >
-        Open Modal
-      </button>
-
-      {isOpen && (
-        <div
-          on={[
-            // close on "outer click"
-            outerPress(closeModal),
-
-            // close on keyboard escape key
-            escape(closeModal),
-          ]}
-        >
-          <div>
-            <h2>Modal Content</h2>
-            <p>This modal closes when you click outside or press escape!</p>
-          </div>
-        </div>
-      )}
-    </>
-  )
-}
-```
-
-### Available Interactions
-
-- `press`, `pressDown`, `pressUp`, `pressMove`, `outerPress` - Normalized press across mouse, keyboard, touch, and pen input with hit/release boxes
-- `escape` - Handle escape key presses
-- And more...
-
-## Creating Custom Interactions
-
-Create your own stateful interactions with `createInteraction` and `events`:
-
-Here's a music app interaction that tracks tap timing to calculate tempo in BPM. Users tap repeatedly and the interaction dispatches the average tempo:
-
-The `tempoTap` interaction manages tap timing, interval calculations, and automatic reset logic with options:
-
-```ts
-import { createInteraction, dom } from 'remix/events'
-
-export let tempoTap = createInteraction('tempoTap', ({ target, dispatch }, options = {}) => {
-  let taps = []
-  let minTaps = options.minTaps ?? 4
-  let maxInterval = options.maxInterval ?? 2000 // Reset if gap too long
+export function Tempo(this: InteractionHandle<TempoEvent>) {
+  let taps: number[] = []
+  let minTaps = 4
   let resetTimer: number
 
-  // event handler for both touchstart and mousedown
+  this.signal.addEventListener('abort', () => {
+    clearTimeout(resetTimer)
+  })
+
   let handleTap = () => {
     let now = Date.now()
-
-    // Clear reset timer
     clearTimeout(resetTimer)
-
-    // Add this tap
     taps.push(now)
-
-    // Keep only recent taps within max interval
     taps = taps.filter((tap) => now - tap < maxInterval)
-
-    // Need at least minTaps to calculate tempo
     if (taps.length >= minTaps) {
-      // Calculate intervals between taps
       let intervals = []
       for (let i = 1; i < taps.length; i++) {
         intervals.push(taps[i] - taps[i - 1])
       }
-
-      // Average interval in milliseconds
-      let avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length
-
-      // Convert to BPM (beats per minute)
-      let bpm = Math.round(60000 / avgInterval)
-
-      // dispatch the event with the tempo
-      dispatch({ detail: { tempo: bpm } })
+      let tempos = intervals.map((interval) => 60000 / interval)
+      let tempo = Math.round(tempos.reduce((sum, value) => sum + value, 0) / tempos.length)
+      this.dispatch(new TempoEvent(tempo))
     }
 
-    // Reset if no taps for a while
-    resetTimer = setTimeout(() => {
+    resetTimer = window.setTimeout(() => {
       taps = []
-    }, maxInterval)
+    }, 4000)
   }
 
-  let cleanup = events(target, [
-    dom.mousedown((event) => handleTap()),
-    dom.touchstart((event) => handleTap()),
-  ])
-
-  // return cleanup functions
-  return [cleanup, () => clearTimeout(resetTimer)]
-})
-```
-
-Complex timing logic, state management, and cleanup are encapsulated in a reusable `tempoTap` interaction, allowing components to only manage the state relevant to rendering.
-
-```tsx
-import { tempoTap } from './tempoTap.ts'
-
-function TempoTapper(this: Handle) {
-  let tempo = 120
-
-  return () => (
-    <div>
-      <h2>Tap to Set Tempo</h2>
-
-      <button
-        on={tempoTap(
-          (event) => {
-            tempo = event.detail.tempo
-            this.render()
-          },
-          { minTaps: 3 },
-        )}
-      >
-        Tap for Tempo
-      </button>
-
-      <p>
-        Current Tempo: <strong>{tempo} BPM</strong>
-      </p>
-    </div>
-  )
+  return [
+    dom.pointerdown(handleTap),
+    dom.keydown((event) => {
+      if (event.key === 'Enter') {
+        handleTap()
+      }
+    }),
+  ]
 }
-```
-
-## Event Composition & preventDefault
-
-Events compose like middleware. When an event handler calls `preventDefault()`, later handlers of the same event type are skipped:
-
-```tsx
-function Link(this: Handle, { href, on, children }) {
-  return () => (
-    <a
-      href={href}
-      on={[
-        // Consumer's events run first
-        ...on,
-
-        // Our navigation logic runs only if not prevented
-        dom.click((event) => {
-          event.preventDefault()
-          window.history.pushState(null, '', href)
-          updatePage()
-        }),
-      ]}
-    >
-      {children}
-    </a>
-  )
-}
-
-// Usage - consumer can prevent default navigation
-function App() {
-  return (
-    <SmartLink
-      href="/about"
-      on={[
-        dom.click((event) => {
-          if (shouldPreventNavigation()) {
-            event.preventDefault() // Stops the navigation logic
-          }
-        }),
-      ]}
-    >
-      About Us
-    </SmartLink>
-  )
-}
-```
-
-This makes component composition intuitive: consumer handlers run first and can prevent component behavior automatically, no coordination boilerplate needed.
-
-## Beyond DOM Events
-
-Remix Events works with any `EventTarget`, including WebSockets and XMLHttpRequest:
-
-```tsx
-import { events, ws } from 'remix/events'
-
-let socket = new WebSocket('wss://api.example.com')
-
-events(socket, [
-  ws.open(() => console.log('Connected')),
-  ws.message((event) => console.log('Message:', event.data)),
-  ws.close((event) => console.log('Disconnected:', event.code)),
-  retry(() => {}),
-  slow(() => {}),
-  recover(() => {}),
-])
 ```

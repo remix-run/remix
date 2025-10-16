@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { bind, events, type EventDescriptor } from './events2.ts'
+import { bind, events, type EventDescriptor, type InteractionHandle } from './events2.ts'
 import type { Assert, Equal } from '../test/utils.ts'
 import { invariant } from './invariant.ts'
 
@@ -102,4 +102,148 @@ describe('events', () => {
     controller.abort()
     expect(capturedSignal.aborted).toBe(true)
   })
+
+  // This tests current behavior but we should think about if we want to
+  // complicate our implementation to automatically remove the event listener
+  // when a binding signal is provided and the container signal is aborted we
+  // don't control the binding controller, so we'd have to track if a binding
+  // signal was provided and then add an event the controller signal to remove
+  // the binding event listener.
+  it('defers to a bindings signal instead of the container signal', () => {
+    let target = new EventTarget()
+    let containerController = new AbortController()
+    let container = events(target, containerController.signal)
+    let bindingController = new AbortController()
+    let mock = vi.fn()
+
+    container.on([
+      bind('test', mock, {
+        signal: bindingController.signal,
+      }),
+    ])
+
+    target.dispatchEvent(new Event('test'))
+    expect(mock).toHaveBeenCalled()
+
+    containerController.abort()
+    target.dispatchEvent(new Event('test'))
+    expect(mock).toHaveBeenCalledTimes(2)
+    // Potential change in behavior would be this:
+    // expect(mock).toHaveBeenCalledTimes(1)
+  })
 })
+
+describe('Interactions', () => {
+  it('adds host events and dispatches custom events', () => {
+    function Test(this: InteractionHandle) {
+      return [
+        bind('host-event', () => {
+          this.dispatch()
+        }),
+      ]
+    }
+
+    let target = new EventTarget()
+    let container = events(target)
+    let mock = vi.fn()
+
+    container.on([bind(Test, mock)])
+    target.dispatchEvent(new Event('host-event'))
+    expect(mock).toHaveBeenCalled()
+  })
+
+  it('uses interaction eventName', () => {
+    let capturedType: string | undefined
+    function Test(this: InteractionHandle) {
+      capturedType = this.type
+      return [
+        bind('host-event', () => {
+          this.dispatch()
+        }),
+      ]
+    }
+    Test.eventType = 'interaction-event-name'
+
+    let target = new EventTarget()
+    let container = events(target)
+    let mock = vi.fn()
+
+    container.on([bind(Test, mock)])
+    expect(capturedType).toBe(Test.eventType)
+  })
+
+  it('has typesafe detail on dispatch', () => {
+    function Test(this: InteractionHandle<number>) {
+      return [
+        bind('', () => {
+          // @ts-expect-error
+          this.dispatch({ detail: 'wrong' })
+        }),
+      ]
+    }
+
+    expect(true).toBe(true)
+  })
+
+  it('dispatches with custom event init', () => {
+    const DETAIL_VALUE = 1
+    function Test(this: InteractionHandle<number>) {
+      return [
+        bind('host-event', () => {
+          this.dispatch({ detail: DETAIL_VALUE })
+        }),
+      ]
+    }
+
+    let target = new EventTarget()
+    let container = events(target)
+    let capturedDetail
+
+    container.on([
+      bind(Test, (event) => {
+        capturedDetail = event.detail
+      }),
+    ])
+    target.dispatchEvent(new Event('host-event'))
+    expect(capturedDetail).toBe(DETAIL_VALUE)
+  })
+
+  // it('enforces event type generic', () => {
+  //   class TestEvent extends Event {
+  //     val: string
+  //     constructor(name: string, val: string) {
+  //       super(name)
+  //       this.val = val
+  //     }
+  //   }
+
+  //   function Test(this: InteractionHandle<'test', TestEvent>) {
+  //     return [
+  //       bind('host-event', () => {
+  //         // @ts-expect-error
+  //         this.dispatch(new Event('test'))
+  //       }),
+  //     ]
+  //   }
+  //   expect(true).toBe(true)
+  // })
+})
+
+class TypedEvent<T extends string> extends Event {
+  declare readonly type: T
+  constructor(type: T, init?: EventInit) {
+    super(type, init)
+  }
+}
+
+class TempoEvent extends TypedEvent<'tempo'> {
+  tempo: number
+  constructor(tempo: number) {
+    super('tempo', { bubbles: false })
+    this.tempo = tempo
+  }
+}
+
+const e = new TempoEvent(120)
+e.type
+// ^?

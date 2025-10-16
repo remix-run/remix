@@ -74,7 +74,7 @@ export default [
   {
     files: ['**/*.{ts,tsx,js,jsx}'],
     plugins: {
-      'prefer-let': preferLet,
+      // 'prefer-let': preferLet,
     },
     rules: {
       // Prefer `let` for locals; allow `const` only at module scope
