@@ -1,15 +1,11 @@
-export type EventWithTarget<T = any, E = Event> = Omit<E, 'currentTarget'> & {
-  currentTarget: T
-}
-
-export type EventListenerWithSignal<T extends EventTarget = EventTarget> = (
-  event: EventWithTarget<T>,
+export type RemixEventListener<E extends Event = Event> = (
+  event: E,
   signal: AbortSignal,
 ) => void | Promise<void>
 
-export type EventDescriptor<T extends EventTarget = EventTarget> = {
-  type: string | Function
-  listener: EventListenerWithSignal<T>
+export type EventDescriptor<E extends Event = Event> = {
+  type: string | [Function, string]
+  listener: RemixEventListener<E>
   options: AddEventListenerOptions
 }
 
@@ -18,14 +14,16 @@ export interface EventContainer {
 }
 
 export interface Interaction<E extends Event = Event> {
+  signal: AbortSignal
+  target: EventTarget
   dispatchEvent(event: E): void
 }
 
-export function bind<T extends EventTarget = EventTarget>(
-  type: EventDescriptor<T>['type'],
-  listener: EventListenerWithSignal<T>,
+export function bind<E extends Event = Event>(
+  type: string | [Function, string],
+  listener: RemixEventListener<E>,
   options: AddEventListenerOptions = {},
-): EventDescriptor<T> {
+): EventDescriptor<E> {
   return { type, listener, options }
 }
 
@@ -41,27 +39,67 @@ export function events(target: EventTarget, signal?: AbortSignal): EventContaine
   }
 }
 
+let attachedInteractions = new WeakMap<EventTarget, Interaction>()
+
 function addEventListeners(
   target: EventTarget,
   descriptors: EventDescriptor[],
   signal: AbortSignal,
 ) {
   for (let descriptor of descriptors) {
-    if (typeof descriptor.type === 'function') {
-      throw new Error('Not implemented')
+    if (Array.isArray(descriptor.type)) {
+      let [interactionType, eventType] = descriptor.type
+
+      if (!attachedInteractions.has(target)) {
+        let handle: Interaction = {
+          target,
+          signal,
+          dispatchEvent: (event) => {
+            target.dispatchEvent(event)
+          },
+        }
+
+        let childDescriptors = interactionType.call(handle)
+        addEventListeners(target, childDescriptors, signal)
+        attachedInteractions.set(target, handle)
+      }
+
+      let interactionDescriptor = { ...descriptor, type: eventType }
+      addEventListeners(target, [interactionDescriptor], signal)
+      continue
     }
 
     let options = { signal, ...descriptor.options }
-    target.addEventListener(descriptor.type, withSignal(descriptor.listener, signal), options)
+    let listener = withSignal(descriptor.listener, signal)
+    target.addEventListener(descriptor.type, listener, options)
   }
 }
 
-function withSignal(listener: EventDescriptor['listener'], containerSignal: AbortSignal) {
+export function createBinder(
+  interactionType: Function,
+  eventType: string,
+): (listener: RemixEventListener) => EventDescriptor {
+  return (listener) => bind([interactionType, eventType], listener)
+}
+
+// export type InferEventType<E extends Event> = E extends { type: infer Type } ? Type : never
+// export function createBinder<
+//   I extends (this: Interaction<any>) => EventDescriptor[],
+//   T extends EventTarget = EventTarget,
+// >(
+//   interactionType: I,
+//   eventType: InferEventType<ThisParameterType<I> extends Interaction<infer E> ? E : Event>,
+// ): (listener: EventListenerWithSignal<Event, T>) => EventDescriptor<Event, T> {
+//   return (listener: EventListenerWithSignal<Event, T>) =>
+//     bind([interactionType, eventType], listener)
+// }
+
+function withSignal(listener: RemixEventListener, containerSignal: AbortSignal): EventListener {
   let controller = new AbortController()
 
   containerSignal.addEventListener('abort', () => controller.abort(), { once: true })
 
-  return (event: EventWithTarget) => {
+  return (event) => {
     controller.abort(new DOMException('', 'EventReentry'))
     controller = new AbortController()
     listener(event, controller.signal)
