@@ -3,7 +3,6 @@ import { describe, it } from 'node:test'
 
 import { createMultipartMessage, getRandomBytes } from '../../test/utils.ts'
 
-import type { MultipartPart } from './multipart.ts'
 import {
   MultipartParseError,
   MaxHeaderSizeExceededError,
@@ -82,7 +81,6 @@ describe('parseMultipartRequest', async () => {
     for await (let part of parseMultipartRequest(request)) {
       parts.push(part)
     }
-
     assert.equal(parts.length, 0)
   })
 
@@ -97,10 +95,11 @@ describe('parseMultipartRequest', async () => {
       }),
     })
 
-    let parts: MultipartPart[] = []
+    let buffering_parts = []
     for await (let part of parseMultipartRequest(request)) {
-      parts.push(part)
+      buffering_parts.push(part.toBuffered())
     }
+    let parts = await Promise.all(buffering_parts)
 
     assert.equal(parts.length, 1)
     assert.equal(parts[0].name, 'field1')
@@ -119,11 +118,11 @@ describe('parseMultipartRequest', async () => {
       }),
     })
 
-    let parts: MultipartPart[] = []
+    let buffering_parts = []
     for await (let part of parseMultipartRequest(request)) {
-      parts.push(part)
+      buffering_parts.push(part.toBuffered())
     }
-
+    let parts = await Promise.all(buffering_parts)
     assert.equal(parts.length, 2)
     assert.equal(parts[0].name, 'field1')
     assert.equal(parts[0].text, 'value1')
@@ -142,10 +141,11 @@ describe('parseMultipartRequest', async () => {
       }),
     })
 
-    let parts: MultipartPart[] = []
+    let buffering_parts = []
     for await (let part of parseMultipartRequest(request)) {
-      parts.push(part)
+      buffering_parts.push(part.toBuffered())
     }
+    let parts = await Promise.all(buffering_parts)
 
     assert.equal(parts.length, 1)
     assert.equal(parts[0].name, 'empty')
@@ -167,10 +167,11 @@ describe('parseMultipartRequest', async () => {
       }),
     })
 
-    let parts: MultipartPart[] = []
+    let buffering_parts = []
     for await (let part of parseMultipartRequest(request)) {
-      parts.push(part)
+      buffering_parts.push(part.toBuffered())
     }
+    let parts = await Promise.all(buffering_parts)
 
     assert.equal(parts.length, 1)
     assert.equal(parts[0].name, 'file1')
@@ -196,10 +197,11 @@ describe('parseMultipartRequest', async () => {
       }),
     })
 
-    let parts: MultipartPart[] = []
+    let buffering_parts = []
     for await (let part of parseMultipartRequest(request)) {
-      parts.push(part)
+      buffering_parts.push(part.toBuffered())
     }
+    let parts = await Promise.all(buffering_parts)
 
     assert.equal(parts.length, 3)
     assert.equal(parts[0].name, 'field1')
@@ -229,13 +231,13 @@ describe('parseMultipartRequest', async () => {
       }),
     })
 
-    let parts: { name?: string; filename?: string; mediaType?: string; content: Uint8Array }[] = []
+    let parts: { name?: string; filename?: string; mediaType?: string; content: Promise<Uint8Array> }[] = []
     for await (let part of parseMultipartRequest(request, { maxFileSize })) {
       parts.push({
         name: part.name,
         filename: part.filename,
         mediaType: part.mediaType,
-        content: part.bytes,
+        content: part.toBuffered().then(b => b.bytes),
       })
     }
 
@@ -243,7 +245,7 @@ describe('parseMultipartRequest', async () => {
     assert.equal(parts[0].name, 'file1')
     assert.equal(parts[0].filename, 'random.dat')
     assert.equal(parts[0].mediaType, 'application/octet-stream')
-    assert.deepEqual(parts[0].content, content)
+    assert.deepEqual(await parts[0].content, content)
   })
 
   it('throws when Content-Type is not multipart/form-data', async () => {
@@ -331,10 +333,11 @@ describe('parseMultipartRequest', async () => {
       body: [`--${boundary}`, 'Invalid-Header', '', 'Some content', `--${boundary}--`].join(CRLF),
     })
 
-    let parts: MultipartPart[] = []
+    let buffering_parts = []
     for await (let part of parseMultipartRequest(request)) {
-      parts.push(part)
+      buffering_parts.push(part.toBuffered())
     }
+    let parts = await Promise.all(buffering_parts)
 
     assert.equal(parts.length, 1)
     assert.equal(parts[0].headers.get('Invalid-Header'), null)

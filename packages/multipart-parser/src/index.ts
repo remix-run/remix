@@ -6,7 +6,8 @@ export {
   parseMultipart,
   parseMultipartStream,
   MultipartParser,
-  MultipartPart,
+  BufferedMultipartPart,
+  StreamedMultipartPart
 } from './lib/multipart.ts'
 
 export {

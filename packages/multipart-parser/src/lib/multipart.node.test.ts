@@ -1,11 +1,10 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { getRandomBytes } from '../../test/utils.ts'
+import { createMultipartMessage, getRandomBytes } from '../../test/utils.ts'
 import { createMultipartRequest } from '../../test/utils.node.ts'
 
-import type { MultipartPart } from './multipart.ts'
-import { parseMultipartRequest } from './multipart.node.ts'
+import { parseMultipartRequest, parseMultipart } from './multipart.node.ts'
 
 describe('parseMultipartRequest (node)', () => {
   let boundary = '----WebKitFormBoundaryzv5f5B2cY6tjQ0Rn'
@@ -26,10 +25,11 @@ describe('parseMultipartRequest (node)', () => {
       field1: 'value1',
     })
 
-    let parts: MultipartPart[] = []
+    let buffering_parts = []
     for await (let part of parseMultipartRequest(request)) {
-      parts.push(part)
+      buffering_parts.push(part.toBuffered())
     }
+    let parts = await Promise.all(buffering_parts)
 
     assert.equal(parts.length, 1)
     assert.equal(parts[0].name, 'field1')
@@ -47,13 +47,13 @@ describe('parseMultipartRequest (node)', () => {
       },
     })
 
-    let parts: { name?: string; filename?: string; mediaType?: string; content: Uint8Array }[] = []
+    let parts: { name?: string; filename?: string; mediaType?: string; content: Promise<Uint8Array> }[] = []
     for await (let part of parseMultipartRequest(request, { maxFileSize })) {
       parts.push({
         name: part.name,
         filename: part.filename,
         mediaType: part.mediaType,
-        content: part.bytes,
+        content: part.toBuffered().then((b) => b.bytes),
       })
     }
 
@@ -61,6 +61,24 @@ describe('parseMultipartRequest (node)', () => {
     assert.equal(parts[0].name, 'file1')
     assert.equal(parts[0].filename, 'tesla.jpg')
     assert.equal(parts[0].mediaType, 'image/jpeg')
-    assert.deepEqual(parts[0].content, content)
+    assert.deepEqual(await parts[0].content, content)
+  })
+
+  it('parses multiple parts correctly', async () => {
+    let message = Buffer.from(createMultipartMessage(boundary, {
+        field1: 'value1',
+        field2: 'value2',
+      }))
+
+    let parts = []
+    for await (let part of parseMultipart(message, {boundary})) {
+      parts.push(part)
+    }
+
+    assert.equal(parts.length, 2)
+    assert.equal(parts[0].name, 'field1')
+    assert.equal(parts[0].text, 'value1')
+    assert.equal(parts[1].name, 'field2')
+    assert.equal(parts[1].text, 'value2')
   })
 })

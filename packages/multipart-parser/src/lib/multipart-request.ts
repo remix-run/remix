@@ -1,4 +1,4 @@
-import type { MultipartParserOptions, MultipartPart } from './multipart.ts'
+import type { MultipartParserOptions, StreamedMultipartPart } from './multipart.ts'
 import { MultipartParseError, parseMultipartStream } from './multipart.ts'
 
 /**
@@ -34,7 +34,7 @@ export function isMultipartRequest(request: Request): boolean {
 export async function* parseMultipartRequest(
   request: Request,
   options?: MultipartParserOptions,
-): AsyncGenerator<MultipartPart, void, unknown> {
+): AsyncGenerator<StreamedMultipartPart, void, unknown> {
   if (!isMultipartRequest(request)) {
     throw new MultipartParseError('Request is not a multipart request')
   }

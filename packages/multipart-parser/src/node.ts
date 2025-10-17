@@ -5,7 +5,8 @@ export {
   MaxHeaderSizeExceededError,
   MaxFileSizeExceededError,
   MultipartParser,
-  MultipartPart,
+  StreamedMultipartPart,
+  BufferedMultipartPart
 } from './lib/multipart.ts'
 
 export { getMultipartBoundary } from './lib/multipart-request.ts'
