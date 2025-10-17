@@ -456,9 +456,7 @@ let routes = createRoutes({
   },
 })
 
-let router = createRouter({
-  parseFormData: false
-})
+let router = createRouter()
 
 // Global logging middleware
 router.use((context, next) => {
@@ -513,8 +511,7 @@ router.map(routes, {
         </html>
       `)
     },
-    async create({ request }) {
-      let formData = await request.formData()
+    async create({ formData, request }) {
       let post = await db.createPost({
         title: formData.get('title'),
         content: formData.get('content'),
@@ -555,8 +552,7 @@ router.map(routes, {
         </html>
       `)
     },
-    async update({ params, request }) {
-      let formData = await request.formData()
+    async update({ formData, params, request }) {
       await db.updatePost(params.slug, {
         title: formData.get('title'),
         content: formData.get('content'),
