@@ -19,11 +19,19 @@ export interface Interaction<E extends Event = Event> {
   dispatchEvent(event: E): void
 }
 
-export function bind<E extends Event = Event>(
-  type: string | [Function, string],
-  listener: RemixEventListener<E>,
+type EventsFor<T extends EventTarget> = T extends HTMLElement
+  ? HTMLElementEventMap
+  : Record<string, Event>
+
+export function bind<
+  Target extends EventTarget,
+  EventStringType extends keyof EventsFor<Target> & string,
+  EventType extends EventsFor<Target>[EventStringType] & Event,
+>(
+  type: EventStringType | [Function, EventStringType],
+  listener: RemixEventListener<Omit<EventType, 'currentTarget'> & { currentTarget: Target }>,
   options: AddEventListenerOptions = {},
-): EventDescriptor<E> {
+): EventDescriptor<Omit<EventType, 'currentTarget'> & { currentTarget: Target }> {
   return { type, listener, options }
 }
 
@@ -38,6 +46,8 @@ export function events(target: EventTarget, signal?: AbortSignal): EventContaine
     },
   }
 }
+
+events(document.createElement('button')).on(bind('click', (event) => {}))
 
 let attachedInteractions = new WeakMap<EventTarget, Interaction>()
 

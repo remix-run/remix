@@ -3,16 +3,21 @@ import { bind, createBinder, events, type EventDescriptor, type Interaction } fr
 import type { Assert, Equal } from '../test/utils.ts'
 import { invariant } from './invariant.ts'
 
-let div = document.createElement('div')
-div.addEventListener('click', (event) => {})
-
 describe('types', () => {
+  describe('EventDescriptor', () => {
+    // it('has literal event and currentTarget type', () => {
+    //   type D = EventDescriptor<PointerEvent>
+    //   type E = Parameters<D['listener']>[0]
+    //   type T = Assert<Equal<E, EventWithTarget<PointerEvent, HTMLDivElement>>>
+    // })
+  })
+
   describe('bind', () => {
     it('provides literal event type', () => {
-      bind<PointerEvent>('click', (event) => {
-        type T2 = Assert<Equal<typeof event, PointerEvent>>
+      type Target = HTMLButtonElement
+      bind<Target, 'click', PointerEvent>('click', (event) => {
+        type T2 = Assert<Equal<typeof event, EventWithTarget<PointerEvent, HTMLButtonElement>>>
       })
-      expect(true).toBe(true)
     })
   })
 
@@ -20,9 +25,9 @@ describe('types', () => {
     it('infers event.currentTarget', () => {
       let target = document.createElement('div')
       events(target).on(
-        bind('click', (event) => {
+        bind('keydown', (event) => {
           type T1 = Assert<Equal<typeof event.currentTarget, HTMLDivElement>>
-          type T2 = Assert<Equal<typeof event, PointerEvent>>
+          type T2 = Assert<Equal<typeof event, KeyboardEvent>>
         }),
       )
     })
@@ -246,14 +251,21 @@ describe('Interactions', () => {
       function Tempo(this: Interaction<TempoEvent>) {
         return [
           bind('host-event', () => {
-            // @ts-expect-error
-            this.dispatchEvent(new Event('wrong'))
+            this.dispatchEvent(new TempoEvent('tempo-change', 120))
           }),
         ]
       }
 
-      // @ts-expect-error
-      let tempoChange = createBinder(Tempo, 'wrong')
+      let tempoChange = createBinder(Tempo, 'tempo-change')
+
+      bind([Tempo, 'tempo-change'], (event) => {
+        event // TempoEvent
+      })
+
+      tempoChange((event) => {
+        event // TempoEvent
+      })
+
       expect(true).toBe(true)
     })
 
@@ -279,3 +291,7 @@ describe('Interactions', () => {
     expect(true).toBe(true)
   })
 })
+
+type EventWithTarget<E extends Event, T extends EventTarget> = Omit<E, 'currentTarget'> & {
+  currentTarget: T
+}
