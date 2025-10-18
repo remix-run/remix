@@ -3,9 +3,7 @@ export type RemixEventListener<E extends Event> = (
   signal: AbortSignal,
 ) => void | Promise<void>
 
-export type DispatchedEvent<E extends Event, T extends EventTarget> = Omit<E, 'currentTarget'> & {
-  currentTarget: T
-}
+export type DispatchedEvent<E extends Event, T extends EventTarget> = E & { currentTarget: T }
 
 // infer event names and event types for a given target
 type EventName<Target extends EventTarget> = Extract<keyof EventsFor<Target>, string>
@@ -13,7 +11,15 @@ type EventOf<Target extends EventTarget, Name extends EventName<Target>> = (Even
   Record<string, Event>)[Name]
 
 // descriptor type forms we support
-type DescriptorType<Target extends EventTarget> = EventName<Target> | [Function, string]
+type InteractionFn = (this: Interaction<any>, ...args: any[]) => any
+type DescriptorType<Target extends EventTarget> = EventName<Target> | [InteractionFn, string]
+
+// infer event type from an interaction function's `this: Interaction<E>`
+type InferInteractionEvent<I> = I extends (this: infer H, ...args: any[]) => any
+  ? H extends Interaction<infer E>
+    ? E
+    : Event
+  : Event
 
 export type EventDescriptor<
   Target extends EventTarget,
@@ -22,7 +28,9 @@ export type EventDescriptor<
   type: Type
   listener: Type extends string
     ? RemixEventListener<DispatchedEvent<EventOf<Target, Extract<Type, EventName<Target>>>, Target>>
-    : RemixEventListener<DispatchedEvent<Event, Target>>
+    : Type extends [infer I, string]
+      ? RemixEventListener<DispatchedEvent<InferInteractionEvent<I>, Target>>
+      : never
   options: AddEventListenerOptions
 }
 
@@ -60,7 +68,9 @@ export function bind<
   type: Type,
   listener: Type extends string
     ? RemixEventListener<DispatchedEvent<EventOf<Target, Extract<Type, EventName<Target>>>, Target>>
-    : RemixEventListener<DispatchedEvent<Event, Target>>,
+    : Type extends [infer I, string]
+      ? RemixEventListener<DispatchedEvent<InferInteractionEvent<I>, Target>>
+      : never,
   options: AddEventListenerOptions = {},
 ): EventDescriptor<Target, Type> {
   return { type, listener, options }
@@ -81,7 +91,7 @@ export function events<Target extends EventTarget>(
   }
 }
 
-let attachedInteractions = new WeakMap<EventTarget, Interaction>()
+let attachedInteractions = new WeakMap<EventTarget, Interaction<any>>()
 
 function addEventListeners(
   target: EventTarget,
@@ -93,7 +103,7 @@ function addEventListeners(
       let [interactionType, eventType] = descriptor.type
 
       if (!attachedInteractions.has(target)) {
-        let handle: Interaction = {
+        let handle: Interaction<any> = {
           target,
           signal,
           dispatchEvent: (event) => {
@@ -117,26 +127,14 @@ function addEventListeners(
   }
 }
 
-export function createBinder(
-  interactionType: Function,
+export function createBinder<I extends InteractionFn>(
+  interactionType: I,
   eventType: string,
-): (
-  listener: RemixEventListener<DispatchedEvent<Event, EventTarget>>,
-) => EventDescriptor<EventTarget, [Function, string]> {
+): <T extends EventTarget = EventTarget>(
+  listener: RemixEventListener<DispatchedEvent<InferInteractionEvent<I>, T>>,
+) => EventDescriptor<T, [I, string]> {
   return (listener) => bind([interactionType, eventType], listener)
 }
-
-// export type InferEventType<E extends Event> = E extends { type: infer Type } ? Type : never
-// export function createBinder<
-//   I extends (this: Interaction<any>) => EventDescriptor[],
-//   T extends EventTarget = EventTarget,
-// >(
-//   interactionType: I,
-//   eventType: InferEventType<ThisParameterType<I> extends Interaction<infer E> ? E : Event>,
-// ): (listener: EventListenerWithSignal<Event, T>) => EventDescriptor<Event, T> {
-//   return (listener: EventListenerWithSignal<Event, T>) =>
-//     bind([interactionType, eventType], listener)
-// }
 
 function withSignal(
   listener: RemixEventListener<any>,
