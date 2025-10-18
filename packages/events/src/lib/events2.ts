@@ -1,41 +1,71 @@
-export type RemixEventListener<E extends Event = Event> = (
+export type RemixEventListener<E extends Event> = (
   event: E,
   signal: AbortSignal,
 ) => void | Promise<void>
 
-export type EventDescriptor<E extends Event = Event> = {
-  type: string | [Function, string]
-  listener: RemixEventListener<E>
+// infer event names and event types for a given target
+type EventName<Target extends EventTarget> = Extract<keyof EventsFor<Target>, string>
+type EventOf<Target extends EventTarget, Name extends EventName<Target>> = (EventsFor<Target> &
+  Record<string, Event>)[Name]
+
+// descriptor type forms we support
+type DescriptorType<Target extends EventTarget> = EventName<Target> | [Function, string]
+
+export type EventDescriptor<
+  Target extends EventTarget,
+  Type extends DescriptorType<Target> = DescriptorType<Target>,
+> = {
+  type: Type
+  listener: Type extends string
+    ? RemixEventListener<EventOf<Target, Extract<Type, EventName<Target>>>>
+    : RemixEventListener<Event>
   options: AddEventListenerOptions
 }
 
-export interface EventContainer {
-  on(descriptors: EventDescriptor | EventDescriptor[] | undefined): void
+type T = EventsFor<HTMLButtonElement>['click']
+//   ^?
+
+export interface EventContainer<Target extends EventTarget> {
+  on<Type extends DescriptorType<Target>>(
+    descriptors: EventDescriptor<Target, Type> | EventDescriptor<Target, Type>[] | undefined,
+  ): void
 }
 
-export interface Interaction<E extends Event = Event> {
+export interface Interaction {
   signal: AbortSignal
   target: EventTarget
-  dispatchEvent(event: E): void
+  dispatchEvent(event: Event): void
 }
 
-type EventsFor<T extends EventTarget> = T extends HTMLElement
-  ? HTMLElementEventMap
-  : Record<string, Event>
+// prettier-ignore
+export type EventsFor<T extends EventTarget> = 
+  [T] extends [HTMLElement] ? HTMLElementEventMap :
+  [T] extends [Element] ? ElementEventMap :
+  [T] extends [Window] ? WindowEventMap :
+  [T] extends [Document] ? DocumentEventMap :
+  [T] extends [Worker] ? WorkerEventMap :
+  [T] extends [ServiceWorker] ? ServiceWorkerEventMap :
+  [T] extends [WebSocket] ? WebSocketEventMap :
+  [T] extends [MessagePort] ? MessagePortEventMap :
+  GlobalEventHandlersEventMap & Record<string, Event>
 
 export function bind<
-  Target extends EventTarget,
-  EventStringType extends keyof EventsFor<Target> & string,
-  EventType extends EventsFor<Target>[EventStringType] & Event,
+  Target extends EventTarget = EventTarget,
+  Type extends DescriptorType<Target> = DescriptorType<Target>,
 >(
-  type: EventStringType | [Function, EventStringType],
-  listener: RemixEventListener<Omit<EventType, 'currentTarget'> & { currentTarget: Target }>,
+  type: Type,
+  listener: Type extends string
+    ? RemixEventListener<EventOf<Target, Extract<Type, EventName<Target>>>>
+    : RemixEventListener<Event>,
   options: AddEventListenerOptions = {},
-): EventDescriptor<Omit<EventType, 'currentTarget'> & { currentTarget: Target }> {
+): EventDescriptor<Target, Type> {
   return { type, listener, options }
 }
 
-export function events(target: EventTarget, signal?: AbortSignal): EventContainer {
+export function events<Target extends EventTarget>(
+  target: Target,
+  signal?: AbortSignal,
+): EventContainer<Target> {
   signal = signal ?? new AbortController().signal
 
   return {
@@ -53,7 +83,7 @@ let attachedInteractions = new WeakMap<EventTarget, Interaction>()
 
 function addEventListeners(
   target: EventTarget,
-  descriptors: EventDescriptor[],
+  descriptors: EventDescriptor<any, any>[],
   signal: AbortSignal,
 ) {
   for (let descriptor of descriptors) {
@@ -88,7 +118,7 @@ function addEventListeners(
 export function createBinder(
   interactionType: Function,
   eventType: string,
-): (listener: RemixEventListener) => EventDescriptor {
+): (listener: RemixEventListener<Event>) => EventDescriptor<EventTarget, [Function, string]> {
   return (listener) => bind([interactionType, eventType], listener)
 }
 
@@ -104,7 +134,10 @@ export function createBinder(
 //     bind([interactionType, eventType], listener)
 // }
 
-function withSignal(listener: RemixEventListener, containerSignal: AbortSignal): EventListener {
+function withSignal(
+  listener: RemixEventListener<any>,
+  containerSignal: AbortSignal,
+): EventListener {
   let controller = new AbortController()
 
   containerSignal.addEventListener('abort', () => controller.abort(), { once: true })
