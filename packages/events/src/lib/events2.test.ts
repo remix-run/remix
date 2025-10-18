@@ -1,20 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import {
-  bind,
-  createBinder,
-  events,
-  type DispatchedEvent,
-  type EventDescriptor,
-  type Interaction,
-} from './events2.ts'
+import { bind, createBinder, events, type DispatchedEvent, type Interaction } from './events2.ts'
 import type { Assert, Equal } from '../test/utils.ts'
 import { invariant } from './invariant.ts'
-
-let container = events(document.createElement('button'))
-type T = typeof container
-//   ^?
-type T2 = typeof container.on
-//   ^?
 
 describe('types', () => {
   it('provides target and event on dispatched events', () => {
@@ -41,39 +28,27 @@ describe('types', () => {
     function Tempo(this: Interaction<TempoEvent>) {
       return [
         bind('host-event', () => {
+          // correct
           this.dispatchEvent(new TempoEvent('tempo-change', 120))
+          // @ts-expect-error - wrong event class
+          this.dispatchEvent(new Event('wrong'))
+          // @ts-expect-error - wrong event type
+          this.dispatchEvent(new TempoEvent('wrong', 120))
         }),
       ]
     }
 
     let target = document.createElement('div')
-    events(target).on(
+    events(target).on([
       bind([Tempo, 'tempo-change'], (event) => {
         let target = event.currentTarget
         let tempo = event.tempo
         type T2 = Assert<Equal<typeof event, DispatchedEvent<TempoEvent, HTMLDivElement>>>
       }),
-    )
+      // @ts-expect-error - wrong event name
+      bind([Tempo, 'wrong'], () => {}),
+    ])
   })
-
-  describe('EventDescriptor', () => {
-    // it('has literal event and currentTarget type', () => {
-    //   type D = EventDescriptor<PointerEvent>
-    //   type E = Parameters<D['listener']>[0]
-    //   type T = Assert<Equal<E, EventWithTarget<PointerEvent, HTMLDivElement>>>
-    // })
-  })
-
-  describe('bind', () => {
-    // it('provides literal event type', () => {
-    //   type Target = HTMLButtonElement
-    //   bind<Target, 'click', PointerEvent>('click', (event) => {
-    //     type T2 = Assert<Equal<typeof event, EventWithTarget<PointerEvent, HTMLButtonElement>>>
-    //   })
-    // })
-  })
-
-  describe('on', () => {})
 })
 
 describe('bind', () => {
@@ -91,27 +66,6 @@ describe('bind', () => {
     let descriptor = bind('click', () => {})
     expect(descriptor.options).toEqual({})
   })
-
-  // it('adds type to listener currentTarget', () => {
-  //   let descriptor = bind<HTMLButtonElement>('click', () => {})
-  //   type Target = Parameters<typeof descriptor.listener>[0]['currentTarget']
-  //   type T2 = Assert<Equal<Target, HTMLButtonElement>>
-  //   expect(true).toBe(true)
-  // })
-
-  // it('infers event type', () => {
-  //   function Test(this: Interaction<KeyboardEvent>) {
-  //     return []
-  //   }
-  //   let click = bind<MouseEvent>('click', (event) => {
-  //     event
-  //   })
-  //   let descriptor = bind([Test, 'test'], (event) => {
-  //     let E = typeof event
-  //     //  ^?
-  //     type T = Assert<Equal<E, KeyboardEvent>>
-  //   })
-  // })
 })
 
 describe('events', () => {
@@ -160,26 +114,26 @@ describe('events', () => {
     expect(mock).toHaveBeenCalledTimes(1)
   })
 
-  // it('aborts the reentry signal when the container is aborted', () => {
-  //   let target = new EventTarget()
-  //   let controller = new AbortController()
-  //   let container = events(target, controller.signal)
+  it('aborts the reentry signal when the container is aborted', () => {
+    let target = new EventTarget()
+    let controller = new AbortController()
+    let container = events(target, controller.signal)
 
-  //   let capturedSignal: AbortSignal | undefined
+    let capturedSignal: AbortSignal | undefined
 
-  //   container.on([
-  //     bind('test', (_, signal) => {
-  //       capturedSignal = signal
-  //     }),
-  //   ])
+    container.on([
+      bind('test', (_, signal) => {
+        capturedSignal = signal
+      }),
+    ])
 
-  //   target.dispatchEvent(new Event('test'))
-  //   invariant(capturedSignal)
-  //   expect(capturedSignal.aborted).toBe(false)
+    target.dispatchEvent(new Event('test'))
+    invariant(capturedSignal)
+    expect(capturedSignal.aborted).toBe(false)
 
-  //   controller.abort()
-  //   expect(capturedSignal.aborted).toBe(true)
-  // })
+    controller.abort()
+    expect(capturedSignal.aborted).toBe(true)
+  })
 
   // This tests current behavior but we should think about if we want to
   // complicate our implementation to automatically remove the event listener
@@ -251,6 +205,30 @@ describe('Interactions', () => {
     expect(capturedHostCalls).toBe(1)
   })
 
+  it('passes options with extras to the interaction', () => {
+    interface TestOptions extends AddEventListenerOptions {
+      extra: string
+    }
+
+    let capturedOptions: TestOptions | undefined
+    function Test(this: Interaction, options: TestOptions) {
+      capturedOptions = options
+      return [
+        bind('host-event', () => {
+          this.dispatchEvent(new Event('custom-event'))
+        }),
+      ]
+    }
+
+    let target = new EventTarget()
+    let container = events(target)
+    let mock = vi.fn()
+    container.on([bind([Test, 'custom-event'], mock, { once: true, extra: 'hello' })])
+    target.dispatchEvent(new Event('host-event'))
+    expect(mock).toHaveBeenCalled()
+    expect(capturedOptions).toEqual({ extra: 'hello', once: false })
+  })
+
   describe('createBinder', () => {
     it('creates a binder function', () => {
       function Test(this: Interaction) {
@@ -271,28 +249,30 @@ describe('Interactions', () => {
       expect(mock).toHaveBeenCalled()
     })
 
-    // it('infers interaction event types', () => {
-    //   class TempoEvent extends Event {
-    //     constructor(
-    //       public type: 'tempo-change' | 'tempo-reset',
-    //       public tempo: number,
-    //     ) {
-    //       super(type, { bubbles: false })
-    //     }
-    //   }
+    it('infers interaction event types', () => {
+      class TempoEvent extends Event {
+        constructor(
+          public type: 'tempo-change' | 'tempo-reset',
+          public tempo: number,
+        ) {
+          super(type, { bubbles: false })
+        }
+      }
 
-    //   function Tempo(this: Interaction<TempoEvent>) {
-    //     return [
-    //       bind('host-event', () => {
-    //         this.dispatchEvent(new TempoEvent('tempo-change', 120))
-    //       }),
-    //     ]
-    //   }
+      function Tempo(this: Interaction<TempoEvent>) {
+        return [
+          bind('host-event', () => {
+            this.dispatchEvent(new TempoEvent('tempo-change', 120))
+          }),
+        ]
+      }
 
-    //   let tempoChange = createBinder(Tempo, 'tempo-change')
+      let right = createBinder(Tempo, 'tempo-change')
+      // @ts-expect-error - wrong event name
+      let wrong = createBinder(Tempo, 'wrong')
 
-    //   expect(true).toBe(true)
-    // })
+      expect(true).toBe(true)
+    })
 
     it('does not require literal types on events', () => {
       function Test(this: Interaction) {
@@ -302,17 +282,21 @@ describe('Interactions', () => {
       expect(true).toBe(true)
     })
   })
+})
 
-  // it('infers event generic', () => {
-  //   function Test(this: Interaction<KeyboardEvent>) {
-  //     return [
-  //       bind('host-event', () => {
-  //         // @ts-expect-error
-  //         this.dispatchEvent(new Event('wrong'))
-  //       }),
-  //     ]
-  //   }
+describe('reconciliation', () => {
+  it('replaces handlers inline without remove/add event listeners', () => {
+    let target = new EventTarget()
+    let container = events(target)
+    let mock = vi.fn()
+    container.on([bind('test', mock)])
+    target.dispatchEvent(new Event('test'))
+    expect(mock).toHaveBeenCalled()
 
-  //   expect(true).toBe(true)
-  // })
+    let mock2 = vi.fn()
+    container.on([bind('test', mock2)])
+    target.dispatchEvent(new Event('test'))
+    expect(mock2).toHaveBeenCalled()
+    expect(mock).toHaveBeenCalledTimes(1)
+  })
 })

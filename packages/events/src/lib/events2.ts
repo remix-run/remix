@@ -1,4 +1,4 @@
-export type RemixEventListener<E extends Event> = (
+type EventListenerWithSignal<E extends Event> = (
   event: E,
   signal: AbortSignal,
 ) => void | Promise<void>
@@ -11,15 +11,17 @@ type EventOf<Target extends EventTarget, Name extends EventName<Target>> = (Even
   Record<string, Event>)[Name]
 
 // descriptor type forms we support
-type InteractionFn = (this: Interaction<any>, ...args: any[]) => any
+type InteractionFn = (this: Interaction<any>) => unknown
 type DescriptorType<Target extends EventTarget> = EventName<Target> | [InteractionFn, string]
 
-// infer event type from an interaction function's `this: Interaction<E>`
-type InferInteractionEvent<I> = I extends (this: infer H, ...args: any[]) => any
+type InferInteractionEvent<I> = I extends (this: infer H) => unknown
   ? H extends Interaction<infer E>
     ? E
     : Event
   : Event
+
+// infer literal type union from an Event subclass's `type` property
+type EventTypeOf<E extends Event> = E extends { type: infer T } ? Extract<T, string> : string
 
 export type EventDescriptor<
   Target extends EventTarget,
@@ -27,23 +29,23 @@ export type EventDescriptor<
 > = {
   type: Type
   listener: Type extends string
-    ? RemixEventListener<DispatchedEvent<EventOf<Target, Extract<Type, EventName<Target>>>, Target>>
+    ? EventListenerWithSignal<
+        DispatchedEvent<EventOf<Target, Extract<Type, EventName<Target>>>, Target>
+      >
     : Type extends [infer I, string]
-      ? RemixEventListener<DispatchedEvent<InferInteractionEvent<I>, Target>>
+      ? EventListenerWithSignal<DispatchedEvent<InferInteractionEvent<I>, Target>>
       : never
   options: AddEventListenerOptions
 }
-
-type T = EventsFor<HTMLButtonElement>['click']
-//   ^?
 
 export interface EventContainer<Target extends EventTarget> {
   on<Type extends DescriptorType<Target>>(
     descriptors: EventDescriptor<Target, Type> | EventDescriptor<Target, Type>[] | undefined,
   ): void
+  dispose(): void
 }
 
-export interface Interaction<E extends Event> {
+export interface Interaction<E extends Event = Event> {
   signal: AbortSignal
   target: EventTarget
   dispatchEvent(event: E): void
@@ -51,28 +53,44 @@ export interface Interaction<E extends Event> {
 
 // prettier-ignore
 export type EventsFor<T extends EventTarget> = 
-  [T] extends [HTMLElement] ? HTMLElementEventMap :
-  [T] extends [Element] ? ElementEventMap :
-  [T] extends [Window] ? WindowEventMap :
-  [T] extends [Document] ? DocumentEventMap :
-  [T] extends [Worker] ? WorkerEventMap :
-  [T] extends [ServiceWorker] ? ServiceWorkerEventMap :
-  [T] extends [WebSocket] ? WebSocketEventMap :
-  [T] extends [MessagePort] ? MessagePortEventMap :
+  T extends HTMLElement ? HTMLElementEventMap :
+  T extends Element ? ElementEventMap :
+  T extends Window ? WindowEventMap :
+  T extends Document ? DocumentEventMap :
+  T extends Worker ? WorkerEventMap :
+  T extends ServiceWorker ? ServiceWorkerEventMap :
+  T extends WebSocket ? WebSocketEventMap :
+  T extends MessagePort ? MessagePortEventMap :
   GlobalEventHandlersEventMap & Record<string, Event>
 
+// host event overload
+export function bind<
+  Target extends EventTarget = EventTarget,
+  Type extends EventName<Target> = EventName<Target>,
+>(
+  type: Type,
+  listener: EventListenerWithSignal<DispatchedEvent<EventOf<Target, Type>, Target>>,
+  options?: AddEventListenerOptions,
+): EventDescriptor<Target, Type>
+
+// interaction event overload (restrict Name to the event type literal union)
+export function bind<
+  Interaction extends InteractionFn,
+  Target extends EventTarget = EventTarget,
+  Type extends EventTypeOf<InferInteractionEvent<Interaction>> = EventTypeOf<
+    InferInteractionEvent<Interaction>
+  >,
+>(
+  type: [Interaction, Type],
+  listener: EventListenerWithSignal<DispatchedEvent<InferInteractionEvent<Interaction>, Target>>,
+  options?: AddEventListenerOptions,
+): EventDescriptor<Target, [Interaction, Type]>
+
+// implementation
 export function bind<
   Target extends EventTarget = EventTarget,
   Type extends DescriptorType<Target> = DescriptorType<Target>,
->(
-  type: Type,
-  listener: Type extends string
-    ? RemixEventListener<DispatchedEvent<EventOf<Target, Extract<Type, EventName<Target>>>, Target>>
-    : Type extends [infer I, string]
-      ? RemixEventListener<DispatchedEvent<InferInteractionEvent<I>, Target>>
-      : never,
-  options: AddEventListenerOptions = {},
-): EventDescriptor<Target, Type> {
+>(type: Type, listener: any, options: AddEventListenerOptions = {}): EventDescriptor<Target, Type> {
   return { type, listener, options }
 }
 
@@ -80,15 +98,48 @@ export function events<Target extends EventTarget>(
   target: Target,
   signal?: AbortSignal,
 ): EventContainer<Target> {
-  signal = signal ?? new AbortController().signal
+  let controller = new AbortController()
+  if (signal) {
+    signal.addEventListener(
+      'abort',
+      () => controller.abort(new DOMException('1', 'EventContainer')),
+      { once: true },
+    )
+  }
+
+  let descriptors: EventDescriptor<Target>[] = []
 
   return {
-    on: (descriptors) => {
-      if (!descriptors) descriptors = []
-      if (!Array.isArray(descriptors)) descriptors = [descriptors]
-      addEventListeners(target, descriptors, signal)
+    on: (nextDescriptors) => {
+      if (!nextDescriptors) nextDescriptors = []
+      if (!Array.isArray(nextDescriptors)) nextDescriptors = [nextDescriptors]
+      if (descriptorsChanged(descriptors, nextDescriptors)) {
+        controller.abort(new DOMException('descriptors changed', 'EventContainer'))
+        controller = new AbortController()
+        addEventListeners(target, nextDescriptors, controller.signal)
+      } else {
+        // update listeners in place
+        for (let i = 0; i < descriptors.length; i++) {
+          descriptors[i].listener = withSignal(nextDescriptors[i].listener, controller.signal)
+        }
+      }
     },
+    dispose: () => controller.abort(),
   }
+}
+
+// Simple diff, we can optimize this if we want to, this simply prevents
+// add/remove event listeners if the types/options/order is the same
+function descriptorsChanged(
+  descriptors: EventDescriptor<any, any>[],
+  nextDescriptors: EventDescriptor<any, any>[],
+): boolean {
+  if (descriptors.length !== nextDescriptors.length) return true
+  for (let i = 0; i < descriptors.length; i++) {
+    if (descriptors[i].type !== nextDescriptors[i].type) return true
+    if (descriptors[i].options !== nextDescriptors[i].options) return true
+  }
+  return false
 }
 
 let attachedInteractions = new WeakMap<EventTarget, Interaction<any>>()
@@ -129,15 +180,17 @@ function addEventListeners(
 
 export function createBinder<I extends InteractionFn>(
   interactionType: I,
-  eventType: string,
-): <T extends EventTarget = EventTarget>(
-  listener: RemixEventListener<DispatchedEvent<InferInteractionEvent<I>, T>>,
-) => EventDescriptor<T, [I, string]> {
-  return (listener) => bind([interactionType, eventType], listener)
+  eventType: EventTypeOf<InferInteractionEvent<I>>,
+) {
+  return function <T extends EventTarget = EventTarget>(
+    listener: EventListenerWithSignal<DispatchedEvent<InferInteractionEvent<I>, T>>,
+  ): EventDescriptor<T, [I, EventTypeOf<InferInteractionEvent<I>>]> {
+    return bind([interactionType, eventType], listener)
+  }
 }
 
 function withSignal(
-  listener: RemixEventListener<any>,
+  listener: EventListenerWithSignal<any>,
   containerSignal: AbortSignal,
 ): EventListener {
   let controller = new AbortController()
