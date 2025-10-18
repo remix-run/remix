@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
-import { bind, createBinder, events, type EventDescriptor, type Interaction } from './events2.ts'
+import {
+  bind,
+  createBinder,
+  events,
+  type DispatchedEvent,
+  type EventDescriptor,
+  type Interaction,
+} from './events2.ts'
 import type { Assert, Equal } from '../test/utils.ts'
 import { invariant } from './invariant.ts'
 
@@ -10,6 +17,45 @@ type T2 = typeof container.on
 //   ^?
 
 describe('types', () => {
+  it('provides target and event on dispatched events', () => {
+    let target = document.createElement('div')
+    events(target).on(
+      bind('keydown', (event) => {
+        let target = event.currentTarget
+        let key = event.key
+        type T2 = Assert<Equal<typeof event, DispatchedEvent<KeyboardEvent, HTMLDivElement>>>
+      }),
+    )
+  })
+
+  it('provides target and event on dispatched interaction events', () => {
+    class TempoEvent extends Event {
+      constructor(
+        public type: 'tempo-change' | 'tempo-reset',
+        public tempo: number,
+      ) {
+        super(type, { bubbles: false })
+      }
+    }
+
+    function Tempo(this: Interaction<TempoEvent>) {
+      return [
+        bind('host-event', () => {
+          this.dispatchEvent(new TempoEvent('tempo-change', 120))
+        }),
+      ]
+    }
+
+    let target = document.createElement('div')
+    events(target).on(
+      bind([Tempo, 'tempo-change'], (event) => {
+        let target = event.currentTarget
+        let tempo = event.tempo
+        type T2 = Assert<Equal<typeof event, DispatchedEvent<TempoEvent, HTMLDivElement>>>
+      }),
+    )
+  })
+
   describe('EventDescriptor', () => {
     // it('has literal event and currentTarget type', () => {
     //   type D = EventDescriptor<PointerEvent>
@@ -27,26 +73,7 @@ describe('types', () => {
     // })
   })
 
-  describe('on', () => {
-    it('infers event.currentTarget', () => {
-      let target = document.createElement('div')
-      events(target).on(
-        bind('keydown', (event) => {
-          event.currentTarget
-          type T2 = Assert<Equal<typeof event, KeyboardEvent>>
-        }),
-      )
-    })
-
-    // it('adds generic to event.currentTarget and event type', () => {
-    //   let target = document.createElement('div')
-    //   events(target).on(
-    //     bind('click', (event) => {
-    //       type T = Assert<Equal<typeof event.currentTarget, HTMLDivElement>>
-    //     }),
-    //   )
-    // })
-  })
+  describe('on', () => {})
 })
 
 describe('bind', () => {
@@ -289,7 +316,3 @@ describe('Interactions', () => {
   //   expect(true).toBe(true)
   // })
 })
-
-// type EventWithTarget<E extends Event, T extends EventTarget> = Omit<E, 'currentTarget'> & {
-//   currentTarget: T
-// }

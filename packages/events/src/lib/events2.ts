@@ -3,6 +3,10 @@ export type RemixEventListener<E extends Event> = (
   signal: AbortSignal,
 ) => void | Promise<void>
 
+export type DispatchedEvent<E extends Event, T extends EventTarget> = Omit<E, 'currentTarget'> & {
+  currentTarget: T
+}
+
 // infer event names and event types for a given target
 type EventName<Target extends EventTarget> = Extract<keyof EventsFor<Target>, string>
 type EventOf<Target extends EventTarget, Name extends EventName<Target>> = (EventsFor<Target> &
@@ -17,8 +21,8 @@ export type EventDescriptor<
 > = {
   type: Type
   listener: Type extends string
-    ? RemixEventListener<EventOf<Target, Extract<Type, EventName<Target>>>>
-    : RemixEventListener<Event>
+    ? RemixEventListener<DispatchedEvent<EventOf<Target, Extract<Type, EventName<Target>>>, Target>>
+    : RemixEventListener<DispatchedEvent<Event, Target>>
   options: AddEventListenerOptions
 }
 
@@ -31,10 +35,10 @@ export interface EventContainer<Target extends EventTarget> {
   ): void
 }
 
-export interface Interaction {
+export interface Interaction<E extends Event> {
   signal: AbortSignal
   target: EventTarget
-  dispatchEvent(event: Event): void
+  dispatchEvent(event: E): void
 }
 
 // prettier-ignore
@@ -55,8 +59,8 @@ export function bind<
 >(
   type: Type,
   listener: Type extends string
-    ? RemixEventListener<EventOf<Target, Extract<Type, EventName<Target>>>>
-    : RemixEventListener<Event>,
+    ? RemixEventListener<DispatchedEvent<EventOf<Target, Extract<Type, EventName<Target>>>, Target>>
+    : RemixEventListener<DispatchedEvent<Event, Target>>,
   options: AddEventListenerOptions = {},
 ): EventDescriptor<Target, Type> {
   return { type, listener, options }
@@ -76,8 +80,6 @@ export function events<Target extends EventTarget>(
     },
   }
 }
-
-events(document.createElement('button')).on(bind('click', (event) => {}))
 
 let attachedInteractions = new WeakMap<EventTarget, Interaction>()
 
@@ -118,7 +120,9 @@ function addEventListeners(
 export function createBinder(
   interactionType: Function,
   eventType: string,
-): (listener: RemixEventListener<Event>) => EventDescriptor<EventTarget, [Function, string]> {
+): (
+  listener: RemixEventListener<DispatchedEvent<Event, EventTarget>>,
+) => EventDescriptor<EventTarget, [Function, string]> {
   return (listener) => bind([interactionType, eventType], listener)
 }
 
