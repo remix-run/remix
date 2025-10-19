@@ -379,3 +379,45 @@ export function Tempo(this: InteractionHandle<TempoEvent>) {
   ]
 }
 ```
+
+```tsx
+function App() {
+  return (
+    <form
+      on={bind('submit', (event) => {
+        console.log('submitted')
+      })}
+    >
+      <button
+        on={[
+          bind('click', (event) => {
+            console.log('clicked')
+          }),
+          bind('focus', () => {}),
+          bind('pointerdown', () => {}),
+        ]}
+      />
+    </form>
+  )
+}
+
+function App() {
+  return (
+    <form
+      on={dom.submit((event) => {
+        console.log('submitted')
+      })}
+    >
+      <button
+        on={[
+          dom.click((event) => {
+            console.log('clicked')
+          }),
+          dom.focus(() => {}),
+          dom.pointerdown(() => {}),
+        ]}
+      />
+    </form>
+  )
+}
+```

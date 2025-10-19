@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { dom, xhr, win, doc, ws } from './targets.ts'
+import { dom, xhr, win, doc, ws } from './proxies.ts'
 import { events } from './events.ts'
 import type { EventWithTargets } from './events.ts'
 import type { Assert, Equal } from '../test/utils.ts'

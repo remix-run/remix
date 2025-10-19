@@ -1,6 +1,6 @@
 import { createInteraction } from '../lib/interactions.ts'
 import { events } from '../lib/events.ts'
-import { dom } from '../lib/targets.ts'
+import { dom } from '../lib/proxies.ts'
 
 export type FormResetEventDetail = {
   originalEvent: Event

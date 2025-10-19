@@ -1,6 +1,6 @@
 import { createInteraction } from '../lib/interactions.ts'
 import { events } from '../lib/events.ts'
-import { dom, doc } from '../lib/targets.ts'
+import { dom, doc } from '../lib/proxies.ts'
 import { invariant } from '../lib/invariant.ts'
 
 export interface PressOptions {
