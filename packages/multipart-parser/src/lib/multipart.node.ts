@@ -30,15 +30,21 @@ export class StreamedMultipartPart extends MultipartPart {
     this.contentReadable = Readable.fromWeb(webMultipartPart.content as NodeReadableStream<Uint8Array>)
     this.#webMultipartPart = webMultipartPart
   }
-
+  /**
+   * Consumes stream of content into buffered content,
+   * that could be used to create Blob
+   * 
+   * Note: This will throw if stream is started thus buffered can't be complete
+   * check if content is consumed
+   */
   async toBuffered(): Promise<BufferedMultipartPart> {
     return this.#webMultipartPart.toBufferedFromIterator(this.contentReadable)
   }
   /**
    * Signal end-of-stream
    */
-  finish() {
-    this.#webMultipartPart.finish()
+  close() {
+    this.#webMultipartPart.close()
   }
 }
 /**

@@ -226,7 +226,7 @@ export class MultipartParser {
 
         await this.#append(chunk.subarray(index, boundaryIndex))
 
-        this.#currentPart!.finish()
+        this.#currentPart!.close()
 
         index = boundaryIndex + this.#boundaryLength
 
@@ -417,10 +417,10 @@ export class StreamedMultipartPart extends MultipartPart {
    * Appends chunk to the stream
    */
   async appendChunk(chunk: Uint8Array) {
-    if (!this.#controller) {
-      throw new MultipartParseError('Cannot enqueue in part content stream');
+    if (!this.#controller || !this.#controller.desiredSize) {
+      return  // skip appending chunks if stream is closed or dropped
     }
-    while (this.#controller.desiredSize && this.#controller.desiredSize <= 0) {
+    while (this.#controller.desiredSize <= 0) {
       await new Promise((resolve) => {
         this.#continue = () => resolve(true);
       });
@@ -431,7 +431,7 @@ export class StreamedMultipartPart extends MultipartPart {
   /**
    * Signal end-of-stream
    */
-  finish() {
+  close() {
     if (this.#controller) {
       this.#controller.close()
     }
@@ -440,7 +440,7 @@ export class StreamedMultipartPart extends MultipartPart {
    * Consumes stream of content into buffered content,
    * that could be used to create Blob
    * 
-   * Note: This will throw if strem is started thus buffered can't be complete
+   * Note: This will throw if stream is started thus buffered can't be complete
    * check if content is consumed
    */
   async toBuffered(): Promise<BufferedMultipartPart> {
