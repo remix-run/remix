@@ -174,7 +174,7 @@ router.map(routes, {
 
 ### Resource-based Routes
 
-Create resource-based route maps with the `resource` and `resources` functions. This can help DRY up your route definitions when creating RESTful APIs, Rails-style routes, etc.
+Create resource-based route maps with the `resource` and `resources` functions. This can help DRY up your route definitions when creating RESTful APIs, Rails-style routes, etc. This example illustrates [Rails-style routes](https://guides.rubyonrails.org/routing.html#resource-routing-the-rails-default):
 
 ```ts
 import { resource, resources, createRoutes } from '@remix-run/fetch-router'
@@ -511,8 +511,7 @@ router.map(routes, {
         </html>
       `)
     },
-    async create({ request }) {
-      let formData = await request.formData()
+    async create({ formData, request }) {
       let post = await db.createPost({
         title: formData.get('title'),
         content: formData.get('content'),
@@ -553,8 +552,7 @@ router.map(routes, {
         </html>
       `)
     },
-    async update({ params, request }) {
-      let formData = await request.formData()
+    async update({ formData, params, request }) {
       await db.updatePost(params.slug, {
         title: formData.get('title'),
         content: formData.get('content'),
@@ -569,7 +567,15 @@ router.map(routes, {
 })
 
 export { router }
+
+// Use the router in server environments that deal in request/response objects, e.g.
+//
+// ```
+// import { router } from "./router"
+// export default async function handler(req: Request) { return router.fetch(req) }
+// ```
 ```
+
 
 ## Related Work
 
