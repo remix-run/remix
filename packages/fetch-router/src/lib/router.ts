@@ -85,7 +85,7 @@ export class Router {
    * Fetch a response from the router.
    */
   async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-    let request = input instanceof Request ? input : new Request(input, init)
+    let request = new Request(input, init)
 
     let response = await this.dispatch(request)
     if (response == null) {
