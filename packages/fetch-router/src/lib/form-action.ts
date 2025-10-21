@@ -45,24 +45,16 @@ type BuildFormActionMap<P extends string, O extends FormActionOptions> = BuildRo
   P,
   {
     [
-      K in O extends { names: { index: infer I } }
-        ? I extends string
-          ? I
-          : 'index'
-        : 'index'
+      K in O extends { names: { index: infer N extends string } } ? N : 'index'
     ]: {
       method: 'GET'
       pattern: '/'
     }
   } & {
     [
-      K in O extends { names: { action: infer A } }
-        ? A extends string
-          ? A
-          : 'action'
-        : 'action'
+      K in O extends { names: { action: infer N extends string } } ? N : 'action'
     ]: {
-      method: O extends { formMethod: infer M } ? M : 'POST'
+      method: O extends { formMethod: infer M extends RequestMethod } ? M : 'POST'
       pattern: '/'
     }
   }
