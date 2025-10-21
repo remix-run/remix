@@ -2,9 +2,10 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## Unreleased
 
 - Fix an issue where `Router`'s `fetch` wasn't spec-compliant
+- Provide empty `context.formData` to `POST`/`PUT`/etc handlers when `parseFormData: false`
 
 ## v0.6.0 (2025-10-10)
 

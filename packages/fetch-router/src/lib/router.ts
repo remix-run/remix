@@ -157,34 +157,37 @@ export class Router {
   async #parseRequest(request: Request): Promise<RequestContext> {
     let context = new RequestContext(request)
 
-    if (this.#parseFormData === false) {
+    if (!RequestBodyMethods.includes(request.method as RequestBodyMethod)) {
       return context
     }
 
-    if (shouldParseFormData(request)) {
-      let suppressParseErrors: boolean
-      let parseOptions: ParseFormDataOptions
-      if (this.#parseFormData === true) {
-        suppressParseErrors = false
-        parseOptions = {}
-      } else {
-        suppressParseErrors = this.#parseFormData.suppressErrors ?? false
-        parseOptions = this.#parseFormData
-      }
-
-      try {
-        context.formData = await parseFormData(request, parseOptions, this.#uploadHandler)
-      } catch (error) {
-        if (!suppressParseErrors || !(error instanceof FormDataParseError)) {
-          throw error
-        }
-
-        // Suppress parse error, continue with empty formData
-        context.formData = new FormData()
-      }
-    } else {
-      // No form data to parse, continue with empty formData
+    if (this.#parseFormData === false || !canParseFormData(request)) {
+      // Either form data parsing is disabled or the request body cannot be
+      // parsed as form data, so continue with an empty formData object
       context.formData = new FormData()
+      return context
+    }
+
+    let suppressParseErrors: boolean
+    let parseOptions: ParseFormDataOptions
+    if (this.#parseFormData === true) {
+      suppressParseErrors = false
+      parseOptions = {}
+    } else {
+      suppressParseErrors = this.#parseFormData.suppressErrors ?? false
+      parseOptions = this.#parseFormData
+    }
+
+    try {
+      context.formData = await parseFormData(request, parseOptions, this.#uploadHandler)
+    } catch (error) {
+      if (!suppressParseErrors || !(error instanceof FormDataParseError)) {
+        throw error
+      }
+
+      // Suppress parse error, continue with empty formData
+      context.formData = new FormData()
+      return context
     }
 
     if (this.#methodOverride) {
@@ -368,11 +371,7 @@ export class Router {
   }
 }
 
-function shouldParseFormData(request: Request): boolean {
-  if (!RequestBodyMethods.includes(request.method as RequestBodyMethod)) {
-    return false
-  }
-
+function canParseFormData(request: Request): boolean {
   let contentType = request.headers.get('Content-Type')
 
   return (

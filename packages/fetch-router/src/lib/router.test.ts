@@ -1086,6 +1086,68 @@ describe('trailing slash handling', () => {
   })
 })
 
+describe('form data parsing', () => {
+  it('does not provide context.formData on a GET request', async () => {
+    let router = createRouter({ parseFormData: false })
+    let formData: FormData | undefined
+
+    router.get('/', (context) => {
+      formData = context.formData
+      return new Response('OK')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    assert.equal(response.status, 200)
+    assert.equal(formData, undefined)
+  })
+
+  it('provides context.formData on a POST', async () => {
+    let router = createRouter({ parseFormData: true })
+    let formData: FormData | undefined
+
+    router.post('/', (context) => {
+      formData = context.formData
+      return new Response('OK')
+    })
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'name=test',
+    })
+
+    assert.equal(response.status, 200)
+    assert.ok(formData)
+    assert.ok(formData instanceof FormData)
+    assert.equal(formData.get('name'), 'test')
+  })
+
+  it('provides an empty context.formData on a POST when form data parsing is disabled', async () => {
+    let router = createRouter({ parseFormData: false })
+    let formData: FormData | undefined
+
+    router.post('/submit', (context) => {
+      formData = context.formData
+      return new Response('OK')
+    })
+
+    let response = await router.fetch('https://remix.run/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'name=test',
+    })
+
+    assert.equal(response.status, 200)
+    assert.ok(formData)
+    assert.ok(formData instanceof FormData)
+    assert.equal(formData.get('name'), null)
+  })
+})
+
 describe('method override', () => {
   it('allows POST with _method=DELETE to match a DELETE route', async () => {
     let router = createRouter({ parseFormData: true })
