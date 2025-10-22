@@ -1,5 +1,5 @@
 {
-  "name": "@remix-run/cookies",
+  "name": "@remix-run/cookie",
   "version": "0.1.0",
   "description": "A toolkit for working with cookies in JavaScript",
   "author": "Michael Jackson <mjijackson@gmail.com>",
@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/cookies"
+    "directory": "packages/cookie"
   },
   "homepage": "https://github.com/remix-run/remix/tree/main/packages/cookies#readme",
   "files": [

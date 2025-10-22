@@ -61,7 +61,7 @@ importers:
         specifier: ^4.20.6
         version: 4.20.6
 
-  packages/cookies:
+  packages/cookie:
     dependencies:
       cookie:
         specifier: ^1.0.2

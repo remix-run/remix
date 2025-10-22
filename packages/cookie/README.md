@@ -1,11 +1,11 @@
-# cookies
+# cookie
 
 TODO:
 
 ## Installation
 
 ```sh
-npm install @remix-run/cookies
+npm install @remix-run/cookie
 ```
 
 ## Overview
