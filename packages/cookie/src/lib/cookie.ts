@@ -25,8 +25,6 @@ export type CookieOptions = ParseOptions & SerializeOptions & CookieSignatureOpt
  * and options. But it doesn't contain a value. Instead, it has `parse()` and
  * `serialize()` methods that allow a single instance to be reused for
  * parsing/encoding multiple different values.
- *
- * @see https://remix.run/utils/cookies#cookie-api
  */
 export interface Cookie {
   /**
@@ -113,8 +111,6 @@ type IsCookieFunction = (object: any) => object is Cookie
 
 /**
  * Returns true if an object is a Remix cookie container.
- *
- * @see https://remix.run/utils/cookies#iscookie
  */
 export const isCookie: IsCookieFunction = (object): object is Cookie => {
   return (
