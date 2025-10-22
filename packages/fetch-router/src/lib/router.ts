@@ -5,6 +5,7 @@ import type { Matcher } from '@remix-run/route-pattern'
 
 import { runMiddleware } from './middleware.ts'
 import type { Middleware } from './middleware.ts'
+import { raceWithAbort, requestAbortedError } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 import { RequestBodyMethods } from './request-methods.ts'
@@ -87,6 +88,10 @@ export class Router {
   async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
     let request = new Request(input, init)
 
+    if (request.signal.aborted) {
+      throw requestAbortedError()
+    }
+
     let response = await this.dispatch(request)
     if (response == null) {
       response = await this.#defaultHandler(new RequestContext(request))
@@ -148,7 +153,7 @@ export class Router {
       let middleware = concatMiddleware(upstreamMiddleware, routeMiddleware)
       return middleware != null
         ? await runMiddleware(middleware, context, handler)
-        : await handler(context)
+        : await raceWithAbort(Promise.resolve(handler(context)), context.request.signal)
     }
 
     return null

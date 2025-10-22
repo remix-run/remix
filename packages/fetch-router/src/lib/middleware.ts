@@ -1,3 +1,4 @@
+import { raceWithAbort, requestAbortedError } from './request-abort.ts'
 import type { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 import type { RequestMethod } from './request-methods.ts'
@@ -32,8 +33,14 @@ export function runMiddleware<
     if (i <= index) throw new Error('next() called multiple times')
     index = i
 
+    if (context.request.signal.aborted) {
+      throw requestAbortedError()
+    }
+
     let fn = middleware[i]
-    if (!fn) return handler(context)
+    if (!fn) {
+      return await raceWithAbort(Promise.resolve(handler(context)), context.request.signal)
+    }
 
     let nextPromise: Promise<Response> | undefined
     let next: NextFunction = (moreContext?: Partial<RequestContext>) => {
@@ -45,7 +52,7 @@ export function runMiddleware<
       return nextPromise
     }
 
-    let response = await fn(context, next)
+    let response = await raceWithAbort(Promise.resolve(fn(context, next)), context.request.signal)
 
     // If a response was returned, short-circuit the chain
     if (response instanceof Response) {

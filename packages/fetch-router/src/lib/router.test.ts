@@ -1328,3 +1328,240 @@ describe('custom matcher', () => {
     assert.deepEqual(addedPatterns, ['/home', '/about'])
   })
 })
+
+describe('abort signal support', () => {
+  it('throws AbortError when signal is already aborted', async () => {
+    let router = createRouter()
+    router.get('/', () => new Response('Home'))
+
+    let controller = new AbortController()
+    controller.abort()
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        assert.ok(error instanceof DOMException)
+        return true
+      },
+    )
+  })
+
+  it('throws AbortError when signal is aborted during request processing', async () => {
+    let router = createRouter()
+    let controller = new AbortController()
+
+    router.get('/', async () => {
+      // Abort while handler is running
+      controller.abort()
+      // Simulate some async work
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      return new Response('Home')
+    })
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        assert.ok(error instanceof DOMException)
+        assert.equal(error.message, 'The request was aborted')
+        return true
+      },
+    )
+  })
+
+  it('handles signal from Request object passed to fetch()', async () => {
+    let router = createRouter()
+    router.get('/', () => new Response('Home'))
+
+    let controller = new AbortController()
+    let request = new Request('https://remix.run', { signal: controller.signal })
+    controller.abort()
+
+    await assert.rejects(
+      async () => {
+        await router.fetch(request)
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        assert.ok(error instanceof DOMException)
+        return true
+      },
+    )
+  })
+
+  it('handles signal from init object', async () => {
+    let router = createRouter()
+    router.get('/', () => new Response('Home'))
+
+    let controller = new AbortController()
+    controller.abort()
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        assert.ok(error instanceof DOMException)
+        return true
+      },
+    )
+  })
+
+  it('allows middleware to catch and handle abort errors', async () => {
+    let router = createRouter()
+    let controller = new AbortController()
+    let errorCaught = false
+
+    router.use(async (context, next) => {
+      try {
+        await next(context)
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          errorCaught = true
+        }
+        throw error
+      }
+    })
+
+    router.get('/', async () => {
+      // Simulate some async work that gets aborted
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      return new Response('Home')
+    })
+
+    // Abort while handler is running
+    setTimeout(() => controller.abort(), 10)
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        return true
+      },
+    )
+
+    // Middleware should have caught the error
+    assert.equal(errorCaught, true)
+  })
+
+  it('completes successfully if not aborted', async () => {
+    let router = createRouter()
+    let controller = new AbortController()
+
+    router.get('/', () => new Response('Home'))
+
+    let response = await router.fetch('https://remix.run', { signal: controller.signal })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Home')
+  })
+
+  it('throws AbortError when aborted before middleware completes', async () => {
+    let router = createRouter()
+    let controller = new AbortController()
+
+    router.use(async () => {
+      controller.abort()
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+
+    router.get('/', () => new Response('Home'))
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        return true
+      },
+    )
+  })
+
+  it('throws AbortError when aborted during sub-router dispatch', async () => {
+    let adminRouter = createRouter()
+    let controller = new AbortController()
+
+    adminRouter.get('/', async () => {
+      controller.abort()
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      return new Response('Admin')
+    })
+
+    let router = createRouter()
+    router.mount('/admin', adminRouter)
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run/admin', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        return true
+      },
+    )
+  })
+
+  it('allows handlers to access signal via context.request.signal', async () => {
+    let router = createRouter()
+    let controller = new AbortController()
+    let signalAccessible = false
+
+    router.get('/', (context) => {
+      // Handler can access the signal
+      signalAccessible = context.request.signal != null
+      assert.equal(context.request.signal.aborted, false)
+      return new Response('Home')
+    })
+
+    let response = await router.fetch('https://remix.run', { signal: controller.signal })
+
+    assert.equal(response.status, 200)
+    assert.equal(signalAccessible, true)
+  })
+
+  it('does not call downstream middleware or handler when aborted in upstream middleware', async () => {
+    let router = createRouter()
+    let controller = new AbortController()
+    let downstreamMiddlewareCalled = false
+    let handlerCalled = false
+
+    // Upstream middleware that aborts
+    router.use(async () => {
+      controller.abort()
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+
+    // Downstream middleware that should NOT be called
+    router.use(() => {
+      downstreamMiddlewareCalled = true
+    })
+
+    // Handler that should NOT be called
+    router.get('/', () => {
+      handlerCalled = true
+      return new Response('Home')
+    })
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        return true
+      },
+    )
+
+    assert.equal(downstreamMiddlewareCalled, false)
+    assert.equal(handlerCalled, false)
+  })
+})
