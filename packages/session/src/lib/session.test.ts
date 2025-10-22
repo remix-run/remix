@@ -194,7 +194,7 @@ describe('Cookie session storage', () => {
       assert.equal(warnings.length, 1)
       assert.equal(
         warnings[0],
-        'The "__session" cookie is not signed, but session cookies should be signed to prevent tampering on the client before they are sent back to the server. See https://reactrouter.com/explanation/sessions-and-cookies#signing-cookies for more information.',
+        'The "__session" cookie is not signed, but session cookies should be signed to prevent tampering on the client before they are sent back to the server.',
       )
       console.warn = originalWarn
     })
