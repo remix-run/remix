@@ -8,3 +8,6 @@ export {
   createSessionStorage,
   isSession,
 } from './lib/session.ts'
+
+export { createCookieSessionStorage } from './lib/cookie-storage.ts'
+export { createMemorySessionStorage } from './lib/memory-storage.ts'
