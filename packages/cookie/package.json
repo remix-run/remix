@@ -9,7 +9,7 @@
     "url": "git+https://github.com/remix-run/remix.git",
     "directory": "packages/cookie"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/cookies#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/cookie#readme",
   "files": [
     "LICENSE",
     "README.md",
