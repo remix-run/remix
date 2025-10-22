@@ -5,7 +5,7 @@ import type { Matcher } from '@remix-run/route-pattern'
 
 import { runMiddleware } from './middleware.ts'
 import type { Middleware } from './middleware.ts'
-import { raceRequestAbort, requestAbortError } from './request-abort.ts'
+import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 import { RequestBodyMethods } from './request-methods.ts'
@@ -89,7 +89,7 @@ export class Router {
     let request = new Request(input, init)
 
     if (request.signal.aborted) {
-      throw requestAbortError()
+      throw request.signal.reason
     }
 
     let response = await this.dispatch(request)
@@ -285,7 +285,20 @@ export class Router {
     } else if (routeOrRoutes instanceof Route) {
       // map(route, handler)
       this.route(routeOrRoutes.method, routeOrRoutes.pattern, handler)
-    } else if (isRouteHandlersWithMiddleware(handler)) {
+    } else if (!isRouteHandlersWithMiddleware(handler)) {
+      // map(routes, handlers)
+      let handlers = handler
+      for (let key in routeOrRoutes) {
+        let route = routeOrRoutes[key]
+        let handler = handlers[key]
+
+        if (route instanceof Route) {
+          this.route(route.method, route.pattern, handler)
+        } else {
+          this.map(route, handler)
+        }
+      }
+    } else {
       // map(routes, { use, handlers })
       let use = handler.use
       let handlers = handler.handlers
@@ -306,19 +319,6 @@ export class Router {
           this.map(route, { use: use.concat(handler.use), handlers: handler.handlers })
         } else {
           this.map(route, { use, handlers: handler })
-        }
-      }
-    } else {
-      // map(routes, handlers)
-      let handlers = handler
-      for (let key in routeOrRoutes) {
-        let route = routeOrRoutes[key]
-        let handler = handlers[key]
-
-        if (route instanceof Route) {
-          this.route(route.method, route.pattern, handler)
-        } else {
-          this.map(route, handler)
         }
       }
     }

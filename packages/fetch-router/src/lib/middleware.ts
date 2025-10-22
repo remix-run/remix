@@ -1,4 +1,4 @@
-import { raceRequestAbort, requestAbortError } from './request-abort.ts'
+import { raceRequestAbort } from './request-abort.ts'
 import type { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 import type { RequestMethod } from './request-methods.ts'
@@ -34,7 +34,7 @@ export function runMiddleware<
     index = i
 
     if (context.request.signal.aborted) {
-      throw requestAbortError()
+      throw context.request.signal.reason
     }
 
     let fn = middleware[i]

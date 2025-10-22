@@ -1367,8 +1367,6 @@ describe('abort signal support', () => {
       },
       (error: any) => {
         assert.equal(error.name, 'AbortError')
-        assert.ok(error instanceof DOMException)
-        assert.equal(error.message, 'The request was aborted')
         return true
       },
     )
