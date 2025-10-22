@@ -350,6 +350,22 @@ importers:
         specifier: ^8.2.0
         version: 8.3.0
 
+  packages/session:
+    dependencies:
+      '@remix-run/cookie':
+        specifier: workspace:^
+        version: link:../cookie
+      cookie:
+        specifier: ^1.0.2
+        version: 1.0.2
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.10
+
   packages/tar-parser:
     devDependencies:
       '@remix-run/lazy-file':
