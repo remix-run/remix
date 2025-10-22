@@ -16,7 +16,7 @@ interface CookieSignatureOptions {
   secrets?: string[]
 }
 
-type CookieOptions = ParseOptions & SerializeOptions & CookieSignatureOptions
+export type CookieOptions = ParseOptions & SerializeOptions & CookieSignatureOptions
 
 /**
  * A HTTP cookie.
@@ -28,7 +28,7 @@ type CookieOptions = ParseOptions & SerializeOptions & CookieSignatureOptions
  *
  * @see https://remix.run/utils/cookies#cookie-api
  */
-interface Cookie {
+export interface Cookie {
   /**
    * The name of the cookie, used in the `Cookie` and `Set-Cookie` headers.
    */
