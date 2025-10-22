@@ -13,8 +13,6 @@ export interface SessionData {
 
 /**
  * Session persists data across HTTP requests.
- *
- * @see https://reactrouter.com/explanation/sessions-and-cookies#sessions
  */
 export interface Session<Data = SessionData, FlashData = Data> {
   /**
@@ -133,9 +131,7 @@ export const createSession: CreateSessionFunction = <Data = SessionData, FlashDa
 type IsSessionFunction = (object: any) => object is Session
 
 /**
- * Returns true if an object is a React Router session.
- *
- * @see https://reactrouter.com/api/utils/isSession
+ * Returns true if an object is a Remix session.
  */
 export const isSession: IsSessionFunction = (object): object is Session => {
   return (
@@ -276,7 +272,6 @@ export function warnOnceAboutSigningSessionCookie(cookie: Cookie) {
     cookie.isSigned,
     `The "${cookie.name}" cookie is not signed, but session cookies should be ` +
       `signed to prevent tampering on the client before they are sent back to the ` +
-      `server. See https://reactrouter.com/explanation/sessions-and-cookies#signing-cookies ` +
-      `for more information.`,
+      `server.`,
   )
 }
