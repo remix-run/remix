@@ -1,25 +1,27 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { raceWithAbort } from './request-abort.ts'
+import { raceRequestAbort } from './request-abort.ts'
 
-describe('raceWithAbort', () => {
+describe('raceRequestAbort', () => {
   it('resolves when promise resolves before abort', async () => {
     let controller = new AbortController()
+    let request = new Request('https://remix.run', { signal: controller.signal })
     let promise = Promise.resolve('success')
 
-    let result = await raceWithAbort(promise, controller.signal)
+    let result = await raceRequestAbort(promise, request)
 
     assert.equal(result, 'success')
   })
 
   it('rejects when promise rejects before abort', async () => {
     let controller = new AbortController()
+    let request = new Request('https://remix.run', { signal: controller.signal })
     let promise = Promise.reject(new Error('failed'))
 
     await assert.rejects(
       async () => {
-        await raceWithAbort(promise, controller.signal)
+        await raceRequestAbort(promise, request)
       },
       (error: any) => {
         assert.equal(error.message, 'failed')
@@ -30,13 +32,14 @@ describe('raceWithAbort', () => {
 
   it('throws AbortError when signal is already aborted', async () => {
     let controller = new AbortController()
-    controller.abort()
-
+    let request = new Request('https://remix.run', { signal: controller.signal })
     let promise = Promise.resolve('success')
+
+    controller.abort()
 
     await assert.rejects(
       async () => {
-        await raceWithAbort(promise, controller.signal)
+        await raceRequestAbort(promise, request)
       },
       (error: any) => {
         assert.equal(error.name, 'AbortError')
@@ -48,13 +51,14 @@ describe('raceWithAbort', () => {
 
   it('throws AbortError when signal is aborted during promise execution', async () => {
     let controller = new AbortController()
+    let request = new Request('https://remix.run', { signal: controller.signal })
     let promise = new Promise((resolve) => setTimeout(() => resolve('success'), 100))
 
     setTimeout(() => controller.abort(), 10)
 
     await assert.rejects(
       async () => {
-        await raceWithAbort(promise, controller.signal)
+        await raceRequestAbort(promise, request)
       },
       (error: any) => {
         assert.equal(error.name, 'AbortError')
@@ -63,30 +67,5 @@ describe('raceWithAbort', () => {
         return true
       },
     )
-  })
-
-  it('removes event listener when promise resolves', async () => {
-    let controller = new AbortController()
-    let promise = Promise.resolve('success')
-
-    await raceWithAbort(promise, controller.signal)
-
-    // If the listener wasn't removed, aborting would cause issues
-    // This test ensures cleanup happens properly
-    controller.abort()
-  })
-
-  it('removes event listener when promise rejects', async () => {
-    let controller = new AbortController()
-    let promise = Promise.reject(new Error('failed'))
-
-    try {
-      await raceWithAbort(promise, controller.signal)
-    } catch {
-      // Expected
-    }
-
-    // If the listener wasn't removed, aborting would cause issues
-    controller.abort()
   })
 })

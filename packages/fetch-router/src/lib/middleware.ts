@@ -1,4 +1,4 @@
-import { raceWithAbort, requestAbortedError } from './request-abort.ts'
+import { raceRequestAbort, requestAbortError } from './request-abort.ts'
 import type { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 import type { RequestMethod } from './request-methods.ts'
@@ -34,12 +34,12 @@ export function runMiddleware<
     index = i
 
     if (context.request.signal.aborted) {
-      throw requestAbortedError()
+      throw requestAbortError()
     }
 
     let fn = middleware[i]
     if (!fn) {
-      return await raceWithAbort(Promise.resolve(handler(context)), context.request.signal)
+      return await raceRequestAbort(Promise.resolve(handler(context)), context.request)
     }
 
     let nextPromise: Promise<Response> | undefined
@@ -52,7 +52,7 @@ export function runMiddleware<
       return nextPromise
     }
 
-    let response = await raceWithAbort(Promise.resolve(fn(context, next)), context.request.signal)
+    let response = await raceRequestAbort(Promise.resolve(fn(context, next)), context.request)
 
     // If a response was returned, short-circuit the chain
     if (response instanceof Response) {
