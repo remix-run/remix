@@ -4,9 +4,7 @@ import { parse, serialize } from 'cookie'
 import { sign, unsign } from './crypto.ts'
 import { warnOnce } from './warnings.ts'
 
-export type { ParseOptions as CookieParseOptions, SerializeOptions as CookieSerializeOptions }
-
-export interface CookieSignatureOptions {
+interface CookieSignatureOptions {
   /**
    * An array of secrets that may be used to sign/unsign the value of a cookie.
    *
@@ -18,7 +16,7 @@ export interface CookieSignatureOptions {
   secrets?: string[]
 }
 
-export type CookieOptions = ParseOptions & SerializeOptions & CookieSignatureOptions
+type CookieOptions = ParseOptions & SerializeOptions & CookieSignatureOptions
 
 /**
  * A HTTP cookie.
@@ -30,7 +28,7 @@ export type CookieOptions = ParseOptions & SerializeOptions & CookieSignatureOpt
  *
  * @see https://remix.run/utils/cookies#cookie-api
  */
-export interface Cookie {
+interface Cookie {
   /**
    * The name of the cookie, used in the `Cookie` and `Set-Cookie` headers.
    */
@@ -111,7 +109,7 @@ export const createCookie = (name: string, cookieOptions: CookieOptions = {}): C
   }
 }
 
-export type IsCookieFunction = (object: any) => object is Cookie
+type IsCookieFunction = (object: any) => object is Cookie
 
 /**
  * Returns true if an object is a Remix cookie container.
