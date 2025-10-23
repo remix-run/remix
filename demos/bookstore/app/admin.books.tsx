@@ -246,7 +246,7 @@ export default {
       inStock: formData.get('inStock')?.toString() === 'true',
     })
 
-    return redirect(routes.admin.books.index)
+    return redirect(routes.admin.books.index.href())
   },
 
   edit({ params }) {
@@ -397,12 +397,12 @@ export default {
       inStock: formData.get('inStock')?.toString() === 'true',
     })
 
-    return redirect(routes.admin.books.index)
+    return redirect(routes.admin.books.index.href())
   },
 
   destroy({ params }) {
     deleteBook(params.bookId)
 
-    return redirect(routes.admin.books.index)
+    return redirect(routes.admin.books.index.href())
   },
 } satisfies RouteHandlers<typeof routes.admin.books>

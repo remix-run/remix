@@ -4,6 +4,42 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
+- BREAKING CHANGE: Removed support for passing a `Route` object to `redirect()` response helper. Use `redirect(routes.home.href())` instead.
+- Add support for nesting route maps via object spread syntax
+
+  ```tsx
+  import { route, resources } from '@remix-run/fetch-router'
+
+  let routes = route({
+    brands: {
+      ...resources('brands', { only: ['index', 'show'] }),
+      products: resources('brands/:brandId/products', { only: ['index', 'show'] }),
+    },
+  })
+
+  routes.brands.index // Route<'GET', '/brands'>
+  routes.brands.show // Route<'GET', '/brands/:id'>
+  routes.brands.products.index // Route<'GET', '/brands/:brandId/products'>
+  routes.brands.products.show // Route<'GET', '/brands/:brandId/products/:id'>
+  ```
+
+- Add support for `URL` objects in `redirect()` response helper
+- Improved `html()` response helper now supports tagged template literals and `html.raw()` for inserting raw (safe) HTML into a response
+
+  ```tsx
+  import * as assert from 'node:assert/strict'
+  import { html } from '@remix-run/fetch-router'
+
+  let unsafe = '<script>alert(1)</script>'
+  let response = html`<h1>${unsafe}</h1>` // Escapes HTML and returns a Response
+  let response = html(html.escape`<h1>${unsafe}</h1>`, { status: 200 }) // same, with response init
+
+  // use html.raw() to insert raw (safe) HTML into a response
+  let icon = '<b>OK</b>'
+  let response = html`<div>${html.raw(icon)}</div>`
+  assert.equal(await response.text(), '<div><b>OK</b></div>')
+  ```
+
 - Add support for `request.signal` abort, which now short-circuits the middleware chain. `router.fetch()` will now throw `DOMException` with `error.name === 'AbortError'` when a request is aborted
 - Fix an issue where `Router`'s `fetch` wasn't spec-compliant
 - Provide empty `context.formData` to `POST`/`PUT`/etc handlers when `parseFormData: false`

@@ -114,7 +114,7 @@ export default {
       let cart = getCart(sessionId)
 
       if (cart.items.length === 0) {
-        return redirect(routes.cart.index)
+        return redirect(routes.cart.index.href())
       }
 
       let shippingAddress = {

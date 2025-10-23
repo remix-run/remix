@@ -41,12 +41,12 @@ export let requireAuth: Middleware = async ({ request, storage }) => {
   let userId = getUserIdFromSession(session.sessionId)
 
   if (!userId) {
-    return redirect(routes.auth.login.index, 302)
+    return redirect(routes.auth.login.index.href(), 302)
   }
 
   let user = getUserById(userId)
   if (!user) {
-    return redirect(routes.auth.login.index, 302)
+    return redirect(routes.auth.login.index.href(), 302)
   }
 
   storage.set(USER_KEY, user)

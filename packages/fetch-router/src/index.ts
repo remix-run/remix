@@ -11,7 +11,9 @@ export {
 
 export type { Middleware, NextFunction } from './lib/middleware.ts'
 
-export { html, json, redirect } from './lib/response-helpers.ts'
+export { html } from './lib/response-helpers/html.ts'
+export { json } from './lib/response-helpers/json.ts'
+export { redirect } from './lib/response-helpers/redirect.ts'
 
 // Only export the type here, not the class. The `RequestContext` instance is
 // internal and managed by the router. Users should not need to make their own

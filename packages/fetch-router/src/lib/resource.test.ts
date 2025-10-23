@@ -432,7 +432,7 @@ describe('createResources', () => {
     let routes = route({
       brands: {
         ...resources('brands'),
-        products: resources('brands/:id/products'),
+        products: resources('brands/:brandId/products'),
       },
     })
 
@@ -449,13 +449,13 @@ describe('createResources', () => {
             update: Route<'PUT', '/brands/:id'>
             destroy: Route<'DELETE', '/brands/:id'>
             products: {
-              index: Route<'GET', '/brands/:id/products'>
-              new: Route<'GET', '/brands/:id/products/new'>
-              show: Route<'GET', '/brands/:id/products/:id'>
-              create: Route<'POST', '/brands/:id/products'>
-              edit: Route<'GET', '/brands/:id/products/:id/edit'>
-              update: Route<'PUT', '/brands/:id/products/:id'>
-              destroy: Route<'DELETE', '/brands/:id/products/:id'>
+              index: Route<'GET', '/brands/:brandId/products'>
+              new: Route<'GET', '/brands/:brandId/products/new'>
+              show: Route<'GET', '/brands/:brandId/products/:id'>
+              create: Route<'POST', '/brands/:brandId/products'>
+              edit: Route<'GET', '/brands/:brandId/products/:id/edit'>
+              update: Route<'PUT', '/brands/:brandId/products/:id'>
+              destroy: Route<'DELETE', '/brands/:brandId/products/:id'>
             }
           }
         >
@@ -470,15 +470,21 @@ describe('createResources', () => {
     assert.deepEqual(routes.brands.update, new Route('PUT', '/brands/:id'))
     assert.deepEqual(routes.brands.destroy, new Route('DELETE', '/brands/:id'))
 
-    assert.deepEqual(routes.brands.products.index, new Route('GET', '/brands/:id/products'))
-    assert.deepEqual(routes.brands.products.new, new Route('GET', '/brands/:id/products/new'))
-    assert.deepEqual(routes.brands.products.show, new Route('GET', '/brands/:id/products/:id'))
-    assert.deepEqual(routes.brands.products.create, new Route('POST', '/brands/:id/products'))
-    assert.deepEqual(routes.brands.products.edit, new Route('GET', '/brands/:id/products/:id/edit'))
-    assert.deepEqual(routes.brands.products.update, new Route('PUT', '/brands/:id/products/:id'))
+    assert.deepEqual(routes.brands.products.index, new Route('GET', '/brands/:brandId/products'))
+    assert.deepEqual(routes.brands.products.new, new Route('GET', '/brands/:brandId/products/new'))
+    assert.deepEqual(routes.brands.products.show, new Route('GET', '/brands/:brandId/products/:id'))
+    assert.deepEqual(routes.brands.products.create, new Route('POST', '/brands/:brandId/products'))
+    assert.deepEqual(
+      routes.brands.products.edit,
+      new Route('GET', '/brands/:brandId/products/:id/edit'),
+    )
+    assert.deepEqual(
+      routes.brands.products.update,
+      new Route('PUT', '/brands/:brandId/products/:id'),
+    )
     assert.deepEqual(
       routes.brands.products.destroy,
-      new Route('DELETE', '/brands/:id/products/:id'),
+      new Route('DELETE', '/brands/:brandId/products/:id'),
     )
   })
 })

@@ -158,7 +158,7 @@ export default {
           return new Response(null, { status: 204 })
         }
 
-        return redirect(routes.cart.index, { headers })
+        return redirect(routes.cart.index.href(), { headers })
       },
 
       async update({ storage, formData }) {
@@ -175,7 +175,7 @@ export default {
           return new Response(null, { status: 204 })
         }
 
-        return redirect(routes.cart.index, { headers })
+        return redirect(routes.cart.index.href(), { headers })
       },
 
       async remove({ storage, formData }) {
@@ -194,7 +194,7 @@ export default {
           return new Response(null, { status: 204 })
         }
 
-        return redirect(routes.cart.index, { headers })
+        return redirect(routes.cart.index.href(), { headers })
       },
     },
   },
