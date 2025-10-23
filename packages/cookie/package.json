@@ -31,16 +31,14 @@
       "./package.json": "./package.json"
     }
   },
-  "dependencies": {
-    "cookie": "^1.0.2"
-  },
   "devDependencies": {
     "@types/node": "^24.6.0",
+    "cookie": "^1.0.2",
     "esbuild": "^0.25.10"
   },
   "scripts": {
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm",
-    "build:esm": "esbuild src/index.ts --bundle --external:cookie --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:esm": "esbuild src/index.ts --main-fields=main --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
     "prepublishOnly": "pnpm run build",
