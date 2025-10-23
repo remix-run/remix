@@ -1,10 +1,15 @@
 # Remix Events
 
-Semantic, type-safe events for any EventTarget.
+Enhanced events for any [`EventTarget`](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget).
+
+- Semantic, reusable "Interactions" like `press`, `arrowUp`, etc.
+- Declarative bindings designed for component composition
+- Async listener reentry protection with AbortSignals
+- Type safety on any EventTarget or sub class
 
 ## Background
 
-Building interactive UIs often requires complex event patterns: hover intent, press gestures, escape handling, outer-click, etc. These patterns typically involve:
+Building interactive UIs often requires complex event patterns: press gestures, escape handling, outer-click, etc. Additionally a significant amount of application state is ephemeral among events until an eventual condition is met when the UI needs to update. These patterns typically involve:
 
 - Managing timers and state across multiple events
 - Coordinating between element, document, and window events
@@ -89,7 +94,7 @@ events(document).on([
 
 ### Event Semantics
 
-Each item in the array adds calls `target.addEventListener`, so event semantics are identical to the raw version (because they are the same thing in the end).
+Each item in the array maps to a call to `target.addEventListener`, so event semantics are identical to the raw version (because they are the same thing in the end).
 
 For example, `event.stopImmediatePropagation()` will stop later events from firing.
 
@@ -230,13 +235,13 @@ export function EnterKeyDown(this: EventHandle) {
   return [
     dom.keydown((event) => {
       if (event.key === 'Enter') {
-        this.dispatch(event)
+        this.dispatchEvent(new KeyboardEvent('keydown:enter', { key: 'Enter' }))
       }
     }),
   ]
 }
 
-export const enterKeyDown = createBinder(EnterKeyDown)
+export const enterKeyDown = createInteractionBinder(EnterKeyDown, 'keydown:enter')
 ```
 
 Usage:
@@ -247,12 +252,12 @@ import { enterKeyDown, EnterKeyDown } from './example/enter.ts'
 let button = document.createElement('button')
 
 events(button).on([
-  bind(EnterKeyDown, (event) => {
+  enterKeyDown((event) => {
     console.log('Enter key pressed')
   }),
 
-  // equivalent to above:
-  enterKeyDown((event) => {
+  // equivalent to above but manual
+  bind([EnterKeyDown, 'keydown:enter'], (event) => {
     console.log('Enter key pressed')
   }),
 ])
@@ -267,7 +272,7 @@ export function EnterKeyDown(this: EventHandle<KeyboardEvent>) {
   return [
     dom.keydown((event) => {
       if (event.key === 'Enter') {
-        this.dispatch(event)
+        this.dispatchEvent(new KeyboardEvent('keydown:enter', { key: 'Enter' }))
       }
     }),
   ]
@@ -292,7 +297,7 @@ function TripleClick(this: EventHandle) {
 
     if (++count === 3) {
       count = 0
-      this.dispatch(event)
+      this.dispatchEvent(new PointerEvent('triple-click'))
     }
   })
 }
@@ -300,72 +305,34 @@ function TripleClick(this: EventHandle) {
 
 ```tsx
 class TempoEvent extends Event {
-  static readonly eventName = 'rmx:tempo'
-  readonly tempo: number
-
-  constructor(tempo: number) {
-    super(TempoEvent.eventName, { bubbles: false })
-    this.tempo = tempo
-  }
-}
-
-class Tempo extends Interaction {
-  static readonly eventName = 'rmx:tempo'
-
-  constructor() {
-    super()
-
-    let taps: number[] = []
-    let minTaps = 4
-    let resetTimer: number
-
-    this.signal.addEventListener('abort', () => {
-      clearTimeout(resetTimer)
-    })
-
-    let handleTap = () => {
-      let now = Date.now()
-      taps.push(now)
-      taps = taps.filter((tap) => now - tap < maxInterval)
-    }
-
-    return [
-      dom.pointerdown(handleTap),
-      dom.keydown((event) => {
-        if (event.key === 'Enter') {
-          handleTap()
-        }
-      }),
-    ]
+  constructor(
+    public type: 'tempo-change' | 'tempo-reset',
+    public tempo: number,
+  ) {
+    super(type, { bubbles: false })
   }
 }
 
 export function Tempo(this: InteractionHandle<TempoEvent>) {
   let taps: number[] = []
-  let minTaps = 4
   let resetTimer: number
+  let tempo = 0
 
   this.signal.addEventListener('abort', () => {
     clearTimeout(resetTimer)
   })
 
-  let handleTap = () => {
-    let now = Date.now()
-    clearTimeout(resetTimer)
-    taps.push(now)
-    taps = taps.filter((tap) => now - tap < maxInterval)
-    if (taps.length >= minTaps) {
-      let intervals = []
-      for (let i = 1; i < taps.length; i++) {
-        intervals.push(taps[i] - taps[i - 1])
-      }
-      let tempos = intervals.map((interval) => 60000 / interval)
-      let tempo = Math.round(tempos.reduce((sum, value) => sum + value, 0) / tempos.length)
-      this.dispatch(new TempoEvent(tempo))
-    }
+  let calculateTempo = () => {
+    // ...
+  }
 
+  let handleTap = () => {
+    taps.push(Date.now())
+    tempo = calculateTempo()
+    this.dispatchEvent(new TempoEvent('tempo:change', tempo))
     resetTimer = window.setTimeout(() => {
       taps = []
+      this.dispatchEvent(new TempoEvent('tempo:reset', tempo))
     }, 4000)
   }
 

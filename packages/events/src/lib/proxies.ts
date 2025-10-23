@@ -61,9 +61,10 @@ export function createTargetProxy<ECurrentTarget, ETarget, EventMap>(): TargetFu
 }
 
 export let dom = createTargetProxy<HTMLElement, EventTarget, HTMLElementEventMap>()
-
 export let xhr = createTargetProxy<XMLHttpRequest, XMLHttpRequest, XMLHttpRequestEventMap>()
-
 export let win = createTargetProxy<Window, EventTarget, WindowEventMap>()
 export let doc = createTargetProxy<Document, EventTarget, DocumentEventMap>()
 export let ws = createTargetProxy<WebSocket, WebSocket, WebSocketEventMap>()
+export let sse = createTargetProxy<EventSource, EventSource, EventSourceEventMap>()
+export let messagePort = createTargetProxy<MessagePort, MessagePort, MessagePortEventMap>()
+export let worker = createTargetProxy<Worker, Worker, WorkerEventMap[]>()
