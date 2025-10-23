@@ -74,21 +74,16 @@ function flash<Key extends string>(name: Key): FlashDataKey<Key> {
   return `__flash_${name}__`
 }
 
-type CreateSessionFunction = <Data = SessionData, FlashData = Data>(
-  initialData?: Data,
-  id?: string,
-) => Session<Data, FlashData>
-
 /**
  * Creates a new Session object.
  *
  * Note: This function is typically not invoked directly by application code.
  * Instead, use a `SessionStorage` object's `getSession` method.
  */
-export const createSession: CreateSessionFunction = <Data = SessionData, FlashData = Data>(
+export function createSession<Data = SessionData, FlashData = Data>(
   initialData: Partial<Data> = {},
   id = '',
-): Session<Data, FlashData> => {
+): Session<Data, FlashData> {
   let map = new Map(Object.entries(initialData)) as Map<
     keyof Data | FlashDataKey<keyof FlashData & string>,
     any
@@ -128,12 +123,10 @@ export const createSession: CreateSessionFunction = <Data = SessionData, FlashDa
   }
 }
 
-type IsSessionFunction = (object: any) => object is Session
-
 /**
  * Returns true if an object is a Remix session.
  */
-export const isSession: IsSessionFunction = (object): object is Session => {
+export function isSession(object: any): object is Session {
   return (
     object != null &&
     typeof object.id === 'string' &&

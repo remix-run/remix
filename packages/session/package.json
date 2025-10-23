@@ -2,7 +2,7 @@
   "name": "@remix-run/session",
   "version": "0.1.0",
   "description": "A toolkit for working with sessions in JavaScript",
-  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "author": "Remix Software <hello@remix.run>",
   "license": "MIT",
   "repository": {
     "type": "git",
