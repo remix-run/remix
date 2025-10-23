@@ -111,7 +111,7 @@ export class Router {
     request: Request | RequestContext,
     upstreamMiddleware?: Middleware[],
   ): Promise<Response | null> {
-    let context = request instanceof Request ? await this.#parseRequest(request) : request
+    let context = request instanceof Request ? await this.#createContext(request) : request
 
     for (let match of this.#matcher.matchAll(context.url)) {
       if ('router' in match.data) {
@@ -159,7 +159,7 @@ export class Router {
     return null
   }
 
-  async #parseRequest(request: Request): Promise<RequestContext> {
+  async #createContext(request: Request): Promise<RequestContext> {
     let context = new RequestContext(request)
 
     if (!RequestBodyMethods.includes(request.method as RequestBodyMethod)) {
