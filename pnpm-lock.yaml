@@ -92,6 +92,9 @@ importers:
       esbuild:
         specifier: ^0.25.10
         version: 0.25.10
+      tsx:
+        specifier: ^4.20.6
+        version: 4.20.6
 
   packages/file-storage:
     dependencies:

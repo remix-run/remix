@@ -39,12 +39,13 @@
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
-    "esbuild": "^0.25.10"
+    "esbuild": "^0.25.10",
+    "tsx": "^4.20.6"
   },
   "dependencies": {
     "@remix-run/form-data-parser": "workspace:*",
-    "@remix-run/route-pattern": "workspace:*",
-    "@remix-run/headers": "workspace:*"
+    "@remix-run/headers": "workspace:*",
+    "@remix-run/route-pattern": "workspace:*"
   },
   "scripts": {
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:logger-middleware",
