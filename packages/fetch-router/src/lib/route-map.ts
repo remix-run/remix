@@ -70,8 +70,8 @@ function buildRouteMap<P extends string, R extends RouteDefs>(
 }
 
 // prettier-ignore
-export type BuildRouteMap<P extends string = string, R extends RouteDefs = RouteDefs> = Simplify<{
-  [K in keyof R]: (
+export type BuildRouteMap<P extends string, R extends RouteDefs> = Simplify<{
+  -readonly [K in keyof R]: (
     R[K] extends Route<infer M extends RequestMethod | 'ANY', infer S extends string> ? Route<M, Join<P, S>> :
     R[K] extends RouteDef ? BuildRoute<P, R[K]> :
     R[K] extends RouteDefs ? BuildRouteMap<P, R[K]> :
