@@ -2,7 +2,7 @@
   "name": "@remix-run/file-storage",
   "version": "0.10.0",
   "description": "Key/value storage for JavaScript File objects",
-  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "author": "Remix Software <hello@remix.run>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
