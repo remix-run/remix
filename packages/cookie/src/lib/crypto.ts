@@ -1,6 +1,6 @@
-const encoder = /* @__PURE__ */ new TextEncoder()
+const encoder = new TextEncoder()
 
-export const sign = async (value: string, secret: string): Promise<string> => {
+export async function sign(value: string, secret: string): Promise<string> {
   let data = encoder.encode(value)
   let key = await createKey(secret, ['sign'])
   let signature = await crypto.subtle.sign('HMAC', key, data)
@@ -9,7 +9,7 @@ export const sign = async (value: string, secret: string): Promise<string> => {
   return value + '.' + hash
 }
 
-export const unsign = async (cookie: string, secret: string): Promise<string | false> => {
+export async function unsign(cookie: string, secret: string): Promise<string | false> {
   let index = cookie.lastIndexOf('.')
   let value = cookie.slice(0, index)
   let hash = cookie.slice(index + 1)
@@ -30,14 +30,15 @@ export const unsign = async (cookie: string, secret: string): Promise<string | f
   }
 }
 
-const createKey = async (secret: string, usages: CryptoKey['usages']): Promise<CryptoKey> =>
-  crypto.subtle.importKey(
+async function createKey(secret: string, usages: CryptoKey['usages']): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
     'raw',
     encoder.encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     usages,
   )
+}
 
 function byteStringToUint8Array(byteString: string): Uint8Array {
   let array = new Uint8Array(byteString.length)
