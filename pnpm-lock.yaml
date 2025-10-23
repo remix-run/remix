@@ -62,14 +62,13 @@ importers:
         version: 4.20.6
 
   packages/cookie:
-    dependencies:
-      cookie:
-        specifier: ^1.0.2
-        version: 1.0.2
     devDependencies:
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
+      cookie:
+        specifier: ^1.0.2
+        version: 1.0.2
       esbuild:
         specifier: ^0.25.10
         version: 0.25.10
