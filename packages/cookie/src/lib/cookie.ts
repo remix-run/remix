@@ -61,7 +61,7 @@ export interface Cookie {
 /**
  * Creates a logical container for managing a browser cookie from the server.
  */
-export const createCookie = (name: string, cookieOptions: CookieOptions = {}): Cookie => {
+export function createCookie(name: string, cookieOptions: CookieOptions = {}): Cookie {
   let { secrets = [], ...options } = {
     path: '/',
     sameSite: 'lax' as const,
@@ -107,12 +107,10 @@ export const createCookie = (name: string, cookieOptions: CookieOptions = {}): C
   }
 }
 
-type IsCookieFunction = (object: any) => object is Cookie
-
 /**
  * Returns true if an object is a Remix cookie container.
  */
-export const isCookie: IsCookieFunction = (object): object is Cookie => {
+export function isCookie(object: any): object is Cookie {
   return (
     object != null &&
     typeof object.name === 'string' &&
