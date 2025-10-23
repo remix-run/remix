@@ -36,11 +36,12 @@ describe('types', () => {
 
   it('provides target and event on dispatched interaction events', () => {
     class TempoEvent extends Event {
-      constructor(
-        public type: 'tempo-change' | 'tempo-reset',
-        public tempo: number,
-      ) {
+      type: 'tempo-change' | 'tempo-reset'
+      tempo: number
+      constructor(type: TempoEvent['type'], tempo: TempoEvent['tempo']) {
         super(type, { bubbles: false })
+        this.type = type
+        this.tempo = tempo
       }
     }
 
@@ -247,11 +248,12 @@ describe('Interactions', () => {
 
     it('infers interaction event types', () => {
       class TempoEvent extends Event {
-        constructor(
-          public type: 'tempo-change' | 'tempo-reset',
-          public tempo: number,
-        ) {
+        type: 'tempo-change' | 'tempo-reset'
+        tempo: number
+        constructor(type: TempoEvent['type'], tempo: TempoEvent['tempo']) {
           super(type, { bubbles: false })
+          this.type = type
+          this.tempo = tempo
         }
       }
 
@@ -326,8 +328,10 @@ describe('TypedEventTarget', () => {
   }
 
   class DrummerEvent extends Event {
-    constructor(public type: keyof DrummerEventMap) {
+    type: keyof DrummerEventMap
+    constructor(type: DrummerEvent['type']) {
       super(type)
+      this.type = type
     }
   }
 
