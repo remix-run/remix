@@ -2,7 +2,7 @@
   "name": "@remix-run/tar-parser",
   "version": "0.5.0",
   "description": "A fast, efficient parser for tar streams in any JavaScript environment",
-  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "author": "Remix Software <hello@remix.run>",
   "license": "MIT",
   "repository": {
     "type": "git",

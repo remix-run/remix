@@ -2,7 +2,7 @@
   "name": "@remix-run/lazy-file",
   "version": "3.6.0",
   "description": "Lazy, streaming files for JavaScript",
-  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "author": "Remix Software <hello@remix.run>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
