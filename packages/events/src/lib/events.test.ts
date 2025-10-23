@@ -1,17 +1,37 @@
 import { describe, it, expect, vi } from 'vitest'
-import { bind, createBinder, events, type DispatchedEvent, type Interaction } from './events.ts'
+import {
+  bind,
+  createBinder,
+  events,
+  TypedEventTarget,
+  type DispatchedEvent,
+  type EventsFor,
+  type Interaction,
+} from './events.ts'
 import type { Assert, Equal } from '../test/utils.ts'
 
 describe('types', () => {
   it('provides target and event on dispatched events', () => {
-    let target = document.createElement('div')
+    let target = document.createElement('button')
     events(target).on(
       bind('keydown', (event) => {
         let target = event.currentTarget
         let key = event.key
-        type T2 = Assert<Equal<typeof event, DispatchedEvent<KeyboardEvent, HTMLDivElement>>>
+        type T2 = Assert<Equal<typeof event, DispatchedEvent<KeyboardEvent, HTMLButtonElement>>>
       }),
     )
+  })
+
+  it('provides types to multiple event bindings', () => {
+    let target = document.createElement('button')
+    events(target).on([
+      bind('click', (event) => {
+        type T2 = Assert<Equal<typeof event, DispatchedEvent<PointerEvent, HTMLButtonElement>>>
+      }),
+      bind('keydown', (event) => {
+        type T2 = Assert<Equal<typeof event, DispatchedEvent<KeyboardEvent, HTMLButtonElement>>>
+      }),
+    ])
   })
 
   it('provides target and event on dispatched interaction events', () => {
@@ -295,5 +315,43 @@ describe('reconciliation', () => {
     expect(removedMock).toHaveBeenCalledTimes(0)
     target.dispatchEvent(new Event('test-2'))
     expect(addedMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('TypedEventTarget', () => {
+  interface DrummerEventMap {
+    kick: DrummerEvent
+    snare: DrummerEvent
+    hat: DrummerEvent
+  }
+
+  class DrummerEvent extends Event {
+    constructor(public type: keyof DrummerEventMap) {
+      super(type)
+    }
+  }
+
+  class Drummer extends TypedEventTarget<DrummerEventMap> {}
+
+  it('infers event map from the typed event target subclass', () => {
+    type T = EventsFor<Drummer>
+    type T2 = Assert<Equal<T, DrummerEventMap>>
+    expect(true).toBe(true)
+  })
+
+  it('adds literal event class to listener', () => {
+    let drummer = new Drummer()
+    drummer.addEventListener('kick', (event) => {
+      type T = Assert<Equal<typeof event, DrummerEvent>>
+    })
+    expect(true).toBe(true)
+  })
+
+  it('allows any type of event to be added to listener', () => {
+    let drummer = new Drummer()
+    drummer.addEventListener('not-in-the-map', (event) => {
+      type T = Assert<Equal<typeof event, Event>>
+    })
+    expect(true).toBe(true)
   })
 })

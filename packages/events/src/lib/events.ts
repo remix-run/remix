@@ -101,7 +101,9 @@ export function createBinder<I extends InteractionFn>(
   }
 }
 
-export class TypedEventTarget<EventMap> extends EventTarget {}
+export class TypedEventTarget<EventMap> extends EventTarget {
+  declare readonly __eventMap?: EventMap
+}
 
 export interface TypedEventTarget<EventMap> {
   // typed
