@@ -32,6 +32,13 @@ export interface Session<Data = SessionData, FlashData = Data> {
   readonly data: FlashSessionData<Data, FlashData>
 
   /**
+   * A value indicating the status of the session.
+   *
+   * This is useful for middlewares to know if they need to commit the session.
+   */
+  readonly status: 'new' | 'clean' | 'dirty' | 'destroyed'
+
+  /**
    * Returns `true` if the session has a value for the given `name`, `false`
    * otherwise.
    */
@@ -62,6 +69,11 @@ export interface Session<Data = SessionData, FlashData = Data> {
    * Removes a value from the session.
    */
   unset(name: keyof Data & string): void
+
+  /**
+   * Clears a session for destruction
+   * */
+  destroy(): void
 }
 
 export type FlashSessionData<Data, FlashData> = Partial<
@@ -81,13 +93,26 @@ function flash<Key extends string>(name: Key): FlashDataKey<Key> {
  * Instead, use a `SessionStorage` object's `getSession` method.
  */
 export function createSession<Data = SessionData, FlashData = Data>(
-  initialData: Partial<Data> = {},
-  id = '',
+  initialData?: Partial<Data>,
+  id?: string,
 ): Session<Data, FlashData> {
+  // Brand new sessions start in a dirty state to force an initial commit
+  let status: 'new' | 'clean' | 'dirty' | 'destroyed' =
+    initialData == null && id == null ? 'new' : 'clean'
+
+  initialData ||= {}
+  id ??= ''
+
   let map = new Map(Object.entries(initialData)) as Map<
     keyof Data | FlashDataKey<keyof FlashData & string>,
     any
   >
+
+  let throwIfDestroyed = () => {
+    if (status === 'destroyed') {
+      throw new Error('Cannot operate on a destroyed session')
+    }
+  }
 
   return {
     get id() {
@@ -95,6 +120,9 @@ export function createSession<Data = SessionData, FlashData = Data>(
     },
     get data() {
       return Object.fromEntries(map) as FlashSessionData<Data, FlashData>
+    },
+    get status() {
+      return status
     },
     has(name) {
       return map.has(name as keyof Data) || map.has(flash(name as keyof FlashData & string))
@@ -106,19 +134,30 @@ export function createSession<Data = SessionData, FlashData = Data>(
       if (map.has(flashName)) {
         let value = map.get(flashName)
         map.delete(flashName)
+        status = 'dirty'
         return value
       }
 
       return undefined
     },
     set(name, value) {
+      throwIfDestroyed()
       map.set(name, value)
+      status = 'dirty'
     },
     flash(name, value) {
+      throwIfDestroyed()
       map.set(flash(name), value)
+      status = 'dirty'
     },
     unset(name) {
+      throwIfDestroyed()
       map.delete(name)
+      status = 'dirty'
+    },
+    destroy() {
+      map.clear()
+      status = 'destroyed'
     },
   }
 }
@@ -230,7 +269,7 @@ export function createSessionStorage<Data = SessionData, FlashData = Data>({
     async getSession(cookieHeader, options) {
       let id = cookieHeader && (await cookie.parse(cookieHeader, options))
       let data = id && (await readData(id))
-      return createSession(data || {}, id || '')
+      return createSession(data, id)
     },
     async commitSession(session, options) {
       let { id, data } = session

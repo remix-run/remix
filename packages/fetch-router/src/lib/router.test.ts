@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it, mock } from 'node:test'
 import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
-import { createMemorySessionStorage } from '@remix-run/session'
+import { createCookieSessionStorage, createMemorySessionStorage } from '@remix-run/session'
 
 import { createStorageKey } from './app-storage.ts'
 import { RequestContext } from './request-context.ts'
@@ -1685,6 +1685,8 @@ describe('abort signal support', () => {
 })
 
 describe('sessions', () => {
+  let getSessionCookie = (r: Response) => r.headers.get('Set-Cookie')?.split(';')[0] || ''
+
   it('automatically provides a cookie-based session', async () => {
     let routes = createRoutes({
       home: '/',
@@ -1892,5 +1894,258 @@ describe('sessions', () => {
       'middleware: Remix',
       'handler: Remix',
     ])
+  })
+
+  describe('cookie-backed sessions', () => {
+    it('sends a set-cookie header on initial session creation', async () => {
+      let routes = createRoutes({
+        home: '/',
+      })
+
+      let router = createRouter({ sessionStorage: createCookieSessionStorage() })
+
+      router.get(routes.home, () => {
+        return new Response('Home')
+      })
+
+      let response1 = await router.fetch('https://remix.run')
+      assert.equal(await response1.text(), 'Home')
+      assert.equal(response1.headers.has('Set-Cookie'), true)
+    })
+
+    it('does not send a set-cookie header on request that only read from a session', async () => {
+      let routes = createRoutes({
+        home: '/',
+      })
+
+      let router = createRouter({ sessionStorage: createCookieSessionStorage() })
+
+      router.get(routes.home, () => {
+        return new Response('Home')
+      })
+
+      let response = await router.fetch('https://remix.run')
+
+      response = await router.fetch('https://remix.run', {
+        headers: {
+          Cookie: getSessionCookie(response),
+        },
+      })
+
+      assert.equal(await response.text(), 'Home')
+      assert.equal(response.headers.has('Set-Cookie'), false)
+    })
+
+    it('sends a set-cookie header if the session data is modified', async () => {
+      let routes = createRoutes({
+        home: '/',
+      })
+
+      let router = createRouter({ sessionStorage: createCookieSessionStorage() })
+
+      router.get(routes.home, ({ session }) => {
+        return new Response('Home:' + (session.get('name') ?? ''))
+      })
+
+      router.post(routes.home, ({ session }) => {
+        session.set('name', 'Remix')
+        return new Response('Home (post):' + (session.get('name') ?? ''))
+      })
+
+      let response = await router.fetch('https://remix.run')
+      let cookie = getSessionCookie(response)
+
+      response = await router.fetch('https://remix.run', {
+        method: 'post',
+        body: '',
+        headers: {
+          Cookie: cookie,
+        },
+      })
+
+      assert.equal(await response.text(), 'Home (post):Remix')
+      assert.equal(response.headers.has('Set-Cookie'), true)
+      cookie = getSessionCookie(response)
+
+      // Another GET request - should read from the session but not send back a
+      // Set-Cookie header
+      response = await router.fetch('https://remix.run', {
+        headers: {
+          Cookie: cookie,
+        },
+      })
+
+      assert.equal(await response.text(), 'Home:Remix')
+      assert.equal(response.headers.has('Set-Cookie'), false)
+    })
+
+    it('sends a set-cookie header if the session is destroyed', async () => {
+      let routes = createRoutes({
+        home: '/',
+        logout: '/logout',
+      })
+
+      let router = createRouter({ sessionStorage: createCookieSessionStorage() })
+
+      router.get(routes.home, () => {
+        return new Response('Home')
+      })
+
+      router.post(routes.logout, ({ session }) => {
+        session.destroy()
+        return new Response('Logout')
+      })
+
+      let response = await router.fetch('https://remix.run')
+      assert.equal(response.headers.has('Set-Cookie'), true)
+      let cookie = getSessionCookie(response)
+
+      // Another GET request - ensure we're re-using the session
+      response = await router.fetch('https://remix.run', {
+        headers: {
+          Cookie: cookie,
+        },
+      })
+      assert.equal(response.headers.has('Set-Cookie'), false)
+
+      // Logout to destroy the session
+      let response5 = await router.fetch('https://remix.run/logout', {
+        method: 'post',
+        body: '',
+        headers: {
+          Cookie: cookie,
+        },
+      })
+      assert.equal(await response5.text(), 'Logout')
+      assert.equal(response5.headers.has('Set-Cookie'), true)
+      let logoutCookie = response5.headers.get('Set-Cookie') || ''
+      assert.ok(logoutCookie.includes('Expires=Thu, 01 Jan 1970 00:00:00 GMT'))
+    })
+  })
+
+  describe('non-cookie-backed-sessions', () => {
+    it('sends a set-cookie header on initial session creation', async () => {
+      let routes = createRoutes({
+        home: '/',
+      })
+
+      let router = createRouter({ sessionStorage: createMemorySessionStorage() })
+
+      router.get(routes.home, () => {
+        return new Response('Home')
+      })
+
+      let response1 = await router.fetch('https://remix.run')
+      assert.equal(await response1.text(), 'Home')
+      assert.equal(response1.headers.has('Set-Cookie'), true)
+    })
+
+    it('does not send a set-cookie header on request that only read from a session', async () => {
+      let routes = createRoutes({
+        home: '/',
+      })
+
+      let router = createRouter({ sessionStorage: createMemorySessionStorage() })
+
+      router.get(routes.home, () => {
+        return new Response('Home')
+      })
+
+      let response = await router.fetch('https://remix.run')
+
+      response = await router.fetch('https://remix.run', {
+        headers: {
+          Cookie: getSessionCookie(response),
+        },
+      })
+
+      assert.equal(await response.text(), 'Home')
+      assert.equal(response.headers.has('Set-Cookie'), false)
+    })
+
+    it('does not send a set-cookie header if the session data is modified', async () => {
+      let routes = createRoutes({
+        home: '/',
+      })
+
+      let router = createRouter({ sessionStorage: createMemorySessionStorage() })
+
+      router.get(routes.home, ({ session }) => {
+        return new Response('Home:' + (session.get('name') ?? ''))
+      })
+
+      router.post(routes.home, ({ session }) => {
+        session.set('name', 'Remix')
+        return new Response('Home (post):' + (session.get('name') ?? ''))
+      })
+
+      let response = await router.fetch('https://remix.run')
+      let cookie = getSessionCookie(response)
+
+      response = await router.fetch('https://remix.run', {
+        method: 'post',
+        body: '',
+        headers: {
+          Cookie: cookie,
+        },
+      })
+
+      assert.equal(await response.text(), 'Home (post):Remix')
+      assert.equal(response.headers.has('Set-Cookie'), false)
+
+      // Another GET request - should read from the session but not send back a
+      // Set-Cookie header
+      response = await router.fetch('https://remix.run', {
+        headers: {
+          Cookie: cookie,
+        },
+      })
+
+      assert.equal(await response.text(), 'Home:Remix')
+      assert.equal(response.headers.has('Set-Cookie'), false)
+    })
+
+    it('sends a set-cookie header if the session is destroyed', async () => {
+      let routes = createRoutes({
+        home: '/',
+        logout: '/logout',
+      })
+
+      let router = createRouter({ sessionStorage: createMemorySessionStorage() })
+
+      router.get(routes.home, () => {
+        return new Response('Home')
+      })
+
+      router.post(routes.logout, ({ session }) => {
+        session.destroy()
+        return new Response('Logout')
+      })
+
+      let response = await router.fetch('https://remix.run')
+      assert.equal(response.headers.has('Set-Cookie'), true)
+      let cookie = getSessionCookie(response)
+
+      // Another GET request - ensure we're re-using the session
+      response = await router.fetch('https://remix.run', {
+        headers: {
+          Cookie: cookie,
+        },
+      })
+      assert.equal(response.headers.has('Set-Cookie'), false)
+
+      // Logout to destroy the session
+      let response5 = await router.fetch('https://remix.run/logout', {
+        method: 'post',
+        body: '',
+        headers: {
+          Cookie: cookie,
+        },
+      })
+      assert.equal(await response5.text(), 'Logout')
+      assert.equal(response5.headers.has('Set-Cookie'), true)
+      let logoutCookie = response5.headers.get('Set-Cookie') || ''
+      assert.ok(logoutCookie.includes('Expires=Thu, 01 Jan 1970 00:00:00 GMT'))
+    })
   })
 })
