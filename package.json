@@ -8,7 +8,7 @@
     "eslint-plugin-prefer-let": "^4.0.0",
     "prettier": "^3.3.3",
     "tsx": "^4.20.6",
-    "typescript": "^5.7.2",
+    "typescript": "^5.9.3",
     "typescript-eslint": "^8.40.0"
   },
   "engines": {
