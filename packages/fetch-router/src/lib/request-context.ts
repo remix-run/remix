@@ -1,5 +1,6 @@
 import { AppStorage } from './app-storage.ts'
 import Headers from '@remix-run/headers'
+import { type Session } from '@remix-run/session'
 import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
 
 /**
@@ -33,6 +34,10 @@ export class RequestContext<
    */
   request: Request
   /**
+   * Active session for the request
+   */
+  session: Session
+  /**
    * Shared application-specific storage.
    */
   storage: AppStorage
@@ -51,12 +56,13 @@ export class RequestContext<
    */
   headers: Headers
 
-  constructor(request: Request) {
+  constructor(request: Request, session: Session) {
     this.formData = undefined as any
     this.method = request.method.toUpperCase() as RequestMethod
     this.params = {} as Params
     this.request = request
     this.storage = new AppStorage()
+    this.session = session
     this.headers = new Headers(request.headers)
     this.url = new URL(request.url)
   }

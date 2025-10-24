@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test'
-import  assert  from 'node:assert/strict'
-import {RequestContext} from "./request-context.ts";
+import assert from 'node:assert/strict'
+import { RequestContext } from './request-context.ts'
+import { createSession } from '@remix-run/session'
 
 describe('new RequestContext()', () => {
   it('has a header object that is SuperHeaders', () => {
@@ -9,11 +10,14 @@ describe('new RequestContext()', () => {
         'Content-Type': 'application/json',
       },
     })
-    let context = new RequestContext(req)
+    let context = new RequestContext(req, createSession())
 
     assert.equal('contentType' in context.headers, true)
     assert.equal('contentType' in context.request.headers, false)
     assert.equal(context.headers.contentType.toString(), 'application/json')
-    assert.equal(context.headers.contentType.toString(), context.request.headers.get('content-type'))
+    assert.equal(
+      context.headers.contentType.toString(),
+      context.request.headers.get('content-type'),
+    )
   })
-});
+})
