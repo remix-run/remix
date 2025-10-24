@@ -7,7 +7,7 @@ A minimal, composable router built on the [web Fetch API](https://developer.mozi
 - **Fetch API**: Built on standard web APIs that work everywhere - Node.js, Bun, Deno, Cloudflare Workers, and browsers
 - **Type-Safe Routing**: Leverage TypeScript for compile-time route validation and parameter inference
 - **Composable Architecture**: Nest routers, combine middleware, and organize routes hierarchically
-- **Declarative Route Maps**: Define your entire route structure upfront with type-safe route names and HTTP methods
+- **Declarative Route Maps**: Define your entire route structure upfront with type-safe route names and request methods
 - **Flexible Middleware**: Apply middleware globally, per-route, or to entire route hierarchies
 - **Easy Testing**: Use standard `fetch()` to test your routes - no special test harness required
 
@@ -24,11 +24,11 @@ The main purpose of the router is to map incoming requests to route handler func
 The example below is a small site with a home page, an "about" page, and a blog.
 
 ```ts
-import { createRouter, route, logger } from '@remix-run/fetch-router'
+import { createRouter, route } from '@remix-run/fetch-router'
+import { logger } from '@remix-run/fetch-router/logger-middleware'
 
-// The `route()` function creates a type-safe "route map" that allows you
-// to organize your routes by name. The route map is an object with the same
-// keys (even nested keys) that you use to define the routes.
+// `route()` creates a "route map" that organizes routes by name. The keys
+// of the map may be any name, and may be nested to group related routes.
 let routes = route({
   home: '/',
   about: '/about',
@@ -40,12 +40,12 @@ let routes = route({
 
 let router = createRouter()
 
-// Middleware can be used to run code before and/or after route handlers run.
+// Middleware may be used to run code before and/or after route handlers run.
 // In this case, the `logger()` middleware will log the request to the console.
 router.use(logger())
 
-// Map the routes to "handlers" for each route. The structure of the handler
-// map mirrors the structure of the route map, with full type safety.
+// Map the routes to "handlers" for each route. The structure of the route
+// handlers object mirrors the structure of the route map, with full type safety.
 router.map(routes, {
   home() {
     return new Response('Home')
@@ -57,7 +57,7 @@ router.map(routes, {
     index() {
       return new Response('Blog')
     },
-    async show({ params }) {
+    show({ params }) {
       // params is a type-safe object with the parameters from the route pattern
       return new Response(`Post ${params.slug}`)
     },
@@ -68,11 +68,27 @@ let response = await router.fetch('https://remix.run/blog/hello-remix')
 console.log(await response.text()) // "Post hello-remix"
 ```
 
+The route map is an object of the same shape as the object pass into `route()`, including nested objects. The leaves of the map are `Route` objects, which you can see if you inspect the type of the `routes` variable in your IDE.
+
+```ts
+type Routes = typeof routes
+// {
+//   home: Route<'ANY', '/'>
+//   about: Route<'ANY', '/about'>
+//   blog: {
+//     index: Route<'ANY', '/blog'>
+//     show: Route<'ANY', '/blog/:slug'>
+//   },
+// }
+```
+
+The `routes.home` route is a `Route<'ANY', '/'>`, which means it serves any request method (`GET`, `POST`, `PUT`, `DELETE`, etc.) when the URL path is `/`. We'll discuss [routing based on request method](#routing-based-on-request-method) in detail later. But first, let's talk about navigation.
+
 ### Links and Form Actions
 
-In addition to mapping routes to handler functions, you can also generate links and form actions using the `href()` function on a route. The example below is a small site with a home page and a "Contact Us" page.
+In addition to describing the structure of your routes, route maps also make it easy to generate type-safe links and form actions using the `href()` function on a route. The example below is a small site with a home page and a "Contact Us" page.
 
-Note: We're using the [`html()` response helper](#response-helpers) to create a `Response` with `Content-Type: text/html`.
+Note: We're using the [`html` response helper](#response-helpers) below to create `Response`s with `Content-Type: text/html`.
 
 ```ts
 import { createRouter, route, html } from '@remix-run/fetch-router'
@@ -84,7 +100,7 @@ let routes = route({
 
 let router = createRouter()
 
-// `router.get()` defines a single GET handler for a route.
+// Register a handler for `GET /`
 router.get(routes.home, () => {
   return html`
     <html>
@@ -98,6 +114,7 @@ router.get(routes.home, () => {
   `
 })
 
+// Register a handler for `GET /contact`
 router.get(routes.contact, () => {
   return html`
     <html>
@@ -120,10 +137,11 @@ router.get(routes.contact, () => {
   `
 })
 
-// `router.post()` defines a single POST handler for a route.
+// Register a handler for `POST /contact`
 router.post(routes.contact, ({ formData }) => {
-  // formData is a FormData object that contains the data from the form submission.
-  // It is automatically parsed from the request body and available in all POST handlers.
+  // POST handlers receive a `context` object with a `formData` property that
+  // contains the `FormData` from the form submission. It is automatically
+  // parsed from the request body and available in all POST handlers.
   let message = formData.get('message') as string
 
   return html`
@@ -155,7 +173,7 @@ type ContactRoute = typeof routes.contact // Route<'ANY', '/contact'>
 
 We used `router.get()` and `router.post()` to register handlers on each route specifically for the `GET` and `POST` request methods.
 
-However, we can also encode the request method into the route definition itself using the `method` property on the route. When you include the `method` in the route definition, `router.map()` will register the handler only for that specific request method.
+However, we can also encode the request method into the route definition itself using the `method` property on the route. When you include the `method` in the route definition, `router.map()` will register the handler only for that specific request method. This can be more convenient than using `router.get()` and `router.post()` to register handlers one at a time.
 
 ```ts
 import * as assert from 'node:assert/strict'
@@ -201,14 +219,14 @@ router.map(routes, {
 
 ### Declaring Routes
 
-In additon to the `{ method, pattern }` syntax shown above, `fetch-router` provides a few shorthand methods that help to eliminate some of the boilerplate when declaring complex route maps:
+In additon to the `{ method, pattern }` syntax shown above, the router provides a few shorthand methods that help to eliminate some of the boilerplate when building complex route maps:
 
 - [`formAction`](#declaring-form-routes) - creates a route map with an `index` (`GET`) and `action` (`POST`) route. This is well-suited to showing a standard HTML `<form>` and handling its submit action at the same URL.
 - [`resources` (and `resource`)](#resource-based-routes) - creates a route map with a set of resource-based routes, useful when defining RESTful API routes or [Rails-style resource-based routes](https://guides.rubyonrails.org/routing.html#resource-routing-the-rails-default).
 
-### Declaring Form Routes
+#### Declaring Form Routes
 
-Continuing with [the example of the contact page](#routing-based-on-request-method), let's use the `formAction` shorthand to make our route map a little less verbose.
+Continuing with [the example of the contact page](#routing-based-on-request-method), let's use the `formAction` shorthand to make the route map a little less verbose.
 
 A `formAction()` route map contains two routes: `index` and `action`. The `index` route is a `GET` route that shows the form, and the `action` route is a `POST` route that handles the form submission.
 
@@ -283,9 +301,9 @@ router.map(routes, {
 })
 ```
 
-### Resource-based Routes
+#### Resource-based Routes
 
-`fetch-router` provides a `resources()` helper that creates a route map with a set of resource-based routes, useful when defining RESTful API routes or modeling resources in a web application ([ala Rails](https://guides.rubyonrails.org/routing.html#resource-routing-the-rails-default)). You can think of "resources" as a way to define routes for a collection of related resources, like products, books, users, etc.
+The router provides a `resources()` helper that creates a route map with a set of resource-based routes, useful when defining RESTful API routes or modeling resources in a web application ([similar to Rails' `resources` helper](https://guides.rubyonrails.org/routing.html#resource-routing-the-rails-default)). You can think of "resources" as a way to define routes for a collection of related resources, like products, books, users, etc.
 
 ```ts
 import { createRouter, route, resources } from '@remix-run/fetch-router'
@@ -335,7 +353,7 @@ router.map(routes.brands, {
 })
 ```
 
-The `resource()` helper creates a route map for a single resource (i.e. not something that is part of a collection). This is useful when defining operations on a single resource, like a user profile.
+The `resource()` helper creates a route map for a single resource (i.e. not something that is part of a collection). This is useful when defining operations on a singleton resource, like a user profile.
 
 ```tsx
 import { createRouter, route, resources, resource } from '@remix-run/fetch-router'
@@ -377,7 +395,7 @@ type Routes = typeof routes
 // }
 ```
 
-Similarly, a `resource('profile')` route map contains 6 routes: `new`, `show`, `create`, `edit`, `update`, and `destroy`. There is no `index` route because a `resource()` represents a single resource, not a collection, so there is no collection view.
+Similarly, a `resource('profile')` route map contains 6 routes: `new`, `show`, `create`, `edit`, `update`, and `destroy`. There is no `index` route because a `resource()` represents a singleton resource, not a collection, so there is no collection view.
 
 ```tsx
 let routes = resource('profile')
@@ -392,7 +410,7 @@ type Routes = typeof routes
 // }
 ```
 
-Resource route names may be customized using the `names` option.
+Resource route names may be customized using the `names` option when you'd prefer not to use the default `index`/`new`/`show`/`create`/`edit`/`update`/`destroy` route names.
 
 ```tsx
 import { createRouter, route, resources } from '@remix-run/fetch-router'
@@ -430,46 +448,10 @@ type Routes = typeof routes.users
 // }
 ```
 
-### REST Request Method Override
+### Route Handlers and Middleware
 
-TODO
-
-- use a `_method` hidden input to override the request method
-- use the router's `methodOverride` option to enable/disable request method override
-
-### Route Handlers
-
-TODO
-
-### Middleware
-
-TODO
-
-### Nested Routers
-
-TODO
-
-### Handling File Uploads
-
-TODO
-
-- use the `formData` property of the context object to access the form data
-- use the `files` property of the context object to access the uploaded files
-- use the router's `uploadHandler` option to handle file uploads
-
-### Error Handling
-
-TODO
-
-- wrap `router.fetch()` in a try/catch to handle errors
-- wrap `next()` in a try/catch to handle errors from downstream middleware
-
-### Large Applications
-
-TODO
-
-- show how to use a TrieMatcher
-- how to spread route handlers across multiple files
+- request context
+- error handling in middleware
 
 ### Request Context
 
@@ -495,17 +477,55 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
 })
 ```
 
+### Additional Topics
+
+#### Scaling Your Application
+
+- how to use a TrieMatcher
+- how to spread route handlers across multiple files
+- use `mount` to mount sub-routers at a specific path
+
+#### Error Handling and Aborted Requests
+
+- wrap `router.fetch()` in a try/catch to handle errors
+- `AbortError` is thrown when a request is aborted
+
+#### Request Method Override
+
+- use a `_method` hidden input to override the request method
+- use the router's `methodOverride` option to enable/disable request method override
+
+#### Content Negotiation
+
+- use `headers.accept.accepts()` to serve different responses based on the client's `Accept` header
+  - maybe put this on `context.accepts()` for convenience?
+
+#### Sessions
+
+- use a custom `sessionStorage` implementation to store session data
+- use `session.get()` and `session.set()` to get and set session data
+- use `session.flash()` to set a flash message
+- use `session.destroy()` to destroy the session
+
+#### Handling File Uploads
+
+- use the `formData` property of the context object to access the form data
+- use the `files` property of the context object to access the uploaded files
+- use the router's `uploadHandler` option to handle file uploads
+
 ### Response Helpers
 
-`fetch-router` provides a few response helpers that make it easy to return responses with common patterns:
+The router provides a few response helpers that make it easy to return responses with common formats:
 
 - `html(body, init?)` - returns a `Response` with `Content-Type: text/html`
 - `json(data, init?)` - returns a `Response` with `Content-Type: application/json`
 - `redirect(location, init?)` - returns a `Response` with `Location` header
 
-These helpers are provided for consistency between different JavaScript runtime environments and also help fill in the gaps when working with web standard APIs.
+These helpers are provided for consistency between different JavaScript runtime environments and also help fill in the gaps when working with standard web APIs like `Response.redirect()`.
 
-The `html` helper supports sending HTML from any content type supported by the `Response` constructor including HTML strings, `ReadableStream`, `File`, `Blob`, and more.
+#### Working with HTML
+
+The `html` helper supports sending HTML from any type supported by the `Response` constructor including strings, `ReadableStream`, `File`, `Blob`, and more.
 
 When working with HTML strings, the `html` helper supports tagged template literals and `html.raw()` for inserting raw (safe) HTML into a response.
 
@@ -513,11 +533,17 @@ When working with HTML strings, the `html` helper supports tagged template liter
 import { html } from '@remix-run/fetch-router'
 
 let unsafe = '<script>alert(1)</script>'
-let response = html`<h1>${unsafe}</h1>` // Escapes HTML and returns a Response
-let response = html(html.escape`<h1>${unsafe}</h1>`) // same as above
 
-let icon = '<b>OK</b>'
-let response = html`<div>${html.raw(icon)}</div>` // Inserts raw (safe) HTML into a Response
+// Use the tagged template literal form to escape the HTML and create a Response.
+let response = html`<h1>${unsafe}</h1>`
+
+// If you need to use a response init for custom status, headers, etc., use `html.esc`
+// to escape the HTML and the `html()` helper to create the Response.
+let response = html(html.esc`<h1>${unsafe}</h1>`, { status: 400 })
+
+// If you have safe HTML to insert into a response, use `html.raw()` to insert it directly.
+let icon = html.raw('<b>OK</b>')
+let response = html`<div>${icon}</div>` // Inserts raw (safe) HTML into a Response
 ```
 
 ### Testing
@@ -552,6 +578,8 @@ No special test harness or mocking required! Just use `fetch()` like you would i
 
 ## Related Work
 
+- [@remix-run/headers](../headers) - A library for working with HTTP headers
+- [@remix-run/form-data-parser](../form-data-parser) - A library for parsing multipart/form-data requests
 - [@remix-run/route-pattern](../route-pattern) - The pattern matching library that powers `fetch-router`
 - [Express](https://expressjs.com/) - The classic Node.js web framework
 
