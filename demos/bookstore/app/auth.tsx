@@ -2,7 +2,7 @@ import type { RouteHandlers } from '@remix-run/fetch-router'
 import { redirect } from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../routes.ts'
-import { getSession, setSessionCookie, login, logout } from './utils/session.ts'
+import { login, logout } from './utils/session.ts'
 import {
   authenticateUser,
   createUser,
@@ -64,7 +64,7 @@ export default {
         )
       },
 
-      async action({ request, formData }) {
+      async action({ session, formData }) {
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
         let user = authenticateUser(email, password)
@@ -85,13 +85,9 @@ export default {
           )
         }
 
-        let session = getSession(request)
-        login(session.sessionId, user)
+        login(session, user)
 
-        let headers = new Headers()
-        setSessionCookie(headers, session.sessionId)
-
-        return redirect(routes.account.index.href(), { headers })
+        return redirect(routes.account.index.href())
       },
     },
 
@@ -136,7 +132,7 @@ export default {
         )
       },
 
-      async action({ request, formData }) {
+      async action({ session, formData }) {
         let name = formData.get('name')?.toString() ?? ''
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
@@ -167,19 +163,14 @@ export default {
 
         let user = createUser(email, password, name)
 
-        let session = getSession(request)
-        login(session.sessionId, user)
+        login(session, user)
 
-        let headers = new Headers()
-        setSessionCookie(headers, session.sessionId)
-
-        return redirect(routes.account.index.href(), { headers })
+        return redirect(routes.account.index.href())
       },
     },
 
-    logout({ request }) {
-      let session = getSession(request)
-      logout(session.sessionId)
+    logout({ session }) {
+      logout(session)
 
       return redirect(routes.home.href())
     },

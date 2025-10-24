@@ -50,6 +50,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../packages/node-fetch-server
+      '@remix-run/session':
+        specifier: workspace:*
+        version: link:../../packages/session
     devDependencies:
       '@types/node':
         specifier: ^24.6.0

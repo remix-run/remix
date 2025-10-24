@@ -2,9 +2,8 @@ import { routes } from '../../routes.ts'
 
 import { getBookBySlug } from '../models/books.ts'
 import { BookCard } from '../components/book-card.tsx'
-import { getStorage } from './context.ts'
+import { getSession } from './context.ts'
 import { getCart } from '../models/cart.ts'
-import { SESSION_ID_KEY } from '../middleware/auth.ts'
 
 export async function resolveFrame(frameSrc: string) {
   let url = new URL(frameSrc, 'http://localhost:44100')
@@ -21,7 +20,7 @@ export async function resolveFrame(frameSrc: string) {
       throw new Error(`Book not found: ${slug}`)
     }
 
-    let cart = getCart(getStorage().get(SESSION_ID_KEY))
+    let cart = getCart(getSession().get('userId'))
     let inCart = cart.items.some((item) => item.slug === slug)
 
     return <BookCard book={book} inCart={inCart} />
