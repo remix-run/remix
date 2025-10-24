@@ -11,7 +11,7 @@ import type { RequestHandler } from './request-handler.ts'
 import { RequestBodyMethods } from './request-methods.ts'
 import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
 import { isRequestHandlerWithMiddleware, isRouteHandlersWithMiddleware } from './route-handlers.ts'
-import type { RouteHandlers, InferRouteHandler } from './route-handlers.ts'
+import type { RouteHandlers, RouteHandler } from './route-handlers.ts'
 import { Route } from './route-map.ts'
 import type { RouteMap } from './route-map.ts'
 
@@ -255,10 +255,10 @@ export class Router {
   route<M extends RequestMethod | 'ANY', P extends string>(
     method: M,
     pattern: P | RoutePattern<P> | Route<M | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<M, P>,
   ): void {
-    let routeMiddleware: Middleware[] | undefined
-    let requestHandler: RequestHandler
+    let routeMiddleware: Middleware<any, any>[] | undefined
+    let requestHandler: RequestHandler<any, any>
     if (isRequestHandlerWithMiddleware(handler)) {
       routeMiddleware = handler.use
       requestHandler = handler.handler
@@ -275,7 +275,7 @@ export class Router {
 
   map<M extends RequestMethod | 'ANY', P extends string>(
     route: P | RoutePattern<P> | Route<M, P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<M, P>,
   ): void
   map<T extends RouteMap>(routes: T, handlers: RouteHandlers<T>): void
   map(routeOrRoutes: any, handler: any): void {
@@ -328,49 +328,49 @@ export class Router {
 
   get<P extends string>(
     pattern: P | RoutePattern<P> | Route<'GET' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'GET', P>,
   ): void {
     this.route('GET', pattern, handler)
   }
 
   head<P extends string>(
     pattern: P | RoutePattern<P> | Route<'HEAD' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'HEAD', P>,
   ): void {
     this.route('HEAD', pattern, handler)
   }
 
   post<P extends string>(
     pattern: P | RoutePattern<P> | Route<'POST' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'POST', P>,
   ): void {
     this.route('POST', pattern, handler)
   }
 
   put<P extends string>(
     pattern: P | RoutePattern<P> | Route<'PUT' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'PUT', P>,
   ): void {
     this.route('PUT', pattern, handler)
   }
 
   patch<P extends string>(
     pattern: P | RoutePattern<P> | Route<'PATCH' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'PATCH', P>,
   ): void {
     this.route('PATCH', pattern, handler)
   }
 
   delete<P extends string>(
     pattern: P | RoutePattern<P> | Route<'DELETE' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'DELETE', P>,
   ): void {
     this.route('DELETE', pattern, handler)
   }
 
   options<P extends string>(
     pattern: P | RoutePattern<P> | Route<'OPTIONS' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'OPTIONS', P>,
   ): void {
     this.route('OPTIONS', pattern, handler)
   }

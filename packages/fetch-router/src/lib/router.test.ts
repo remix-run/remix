@@ -6,6 +6,7 @@ import { createStorageKey } from './app-storage.ts'
 import { RequestContext } from './request-context.ts'
 import { createRoutes } from './route-map.ts'
 import { createRouter } from './router.ts'
+import type { Assert, IsEqual } from './type-utils.ts'
 
 describe('router.fetch()', () => {
   it('fetches a route', async () => {
@@ -1106,6 +1107,7 @@ describe('form data parsing', () => {
     let formData: FormData | undefined
 
     router.post('/', (context) => {
+      type T = Assert<IsEqual<typeof context.formData, FormData>>
       formData = context.formData
       return new Response('OK')
     })
@@ -1145,6 +1147,34 @@ describe('form data parsing', () => {
     assert.ok(formData)
     assert.ok(formData instanceof FormData)
     assert.equal(formData.get('name'), null)
+  })
+
+  it('provides context.formData on a POST registered with router.map(postRoute, handler)', async () => {
+    let routes = createRoutes({
+      action: { method: 'POST', pattern: '/' },
+    })
+
+    let router = createRouter()
+
+    let formData: FormData | undefined
+    router.map(routes.action, (context) => {
+      formData = context.formData
+      type T = Assert<IsEqual<typeof formData, FormData>>
+      return new Response('OK')
+    })
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'name=test',
+    })
+
+    assert.equal(response.status, 200)
+    assert.ok(formData)
+    assert.ok(formData instanceof FormData)
+    assert.equal(formData.get('name'), 'test')
   })
 })
 

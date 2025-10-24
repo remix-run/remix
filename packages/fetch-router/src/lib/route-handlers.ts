@@ -1,4 +1,4 @@
-import type { Params } from '@remix-run/route-pattern'
+import type { Params, RoutePattern } from '@remix-run/route-pattern'
 
 import type { Middleware } from './middleware.ts'
 import type { RequestHandler } from './request-handler.ts'
@@ -30,12 +30,13 @@ export function isRouteHandlersWithMiddleware<T extends RouteMap>(
 }
 
 /**
- * Infer the route handler type from a route or string.
+ * Infer the route handler type from a route or route pattern.
  */
 // prettier-ignore
-export type InferRouteHandler<T extends Route | string> =
-  T extends Route<infer M, infer P> ? RouteHandler<M, P> :
+export type InferRouteHandler<T extends string | Route | RoutePattern> =
   T extends string ? RouteHandler<'ANY', T> :
+  T extends RoutePattern<infer P> ? RouteHandler<'ANY', P> :
+  T extends Route<infer M, infer P> ? RouteHandler<M, P> :
   never
 
 /**
