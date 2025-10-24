@@ -1148,6 +1148,47 @@ describe('form data parsing', () => {
   })
 })
 
+describe('file uploads', () => {
+  it('provides context.files on a POST with a multipart/form-data body', async () => {
+    let router = createRouter()
+
+    let files: Map<string, File> | null
+    router.post('/', (context) => {
+      files = context.files
+      return new Response('OK')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
+        'Content-Type: text/plain',
+        '',
+        'test 1',
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file2"; filename="test2.txt"',
+        'Content-Type: text/plain',
+        '',
+        'test 2',
+        `--${boundary}--`,
+      ].join('\r\n'),
+    })
+
+    assert.equal(response.status, 200)
+    assert.ok(files!)
+    assert.equal(files.size, 2)
+    assert.equal(files.get('file1')?.name, 'test1.txt')
+    assert.equal(await files.get('file1')?.text(), 'test 1')
+    assert.equal(files.get('file2')?.name, 'test2.txt')
+    assert.equal(await files.get('file2')?.text(), 'test 2')
+  })
+})
+
 describe('method override', () => {
   it('allows POST with _method=DELETE to match a DELETE route', async () => {
     let router = createRouter({ parseFormData: true })
