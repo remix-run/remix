@@ -1416,9 +1416,9 @@ describe('abort signal support', () => {
     let controller = new AbortController()
     let errorCaught = false
 
-    router.use(async (context, next) => {
+    router.use(async (_, next) => {
       try {
-        await next(context)
+        await next()
       } catch (error: any) {
         if (error.name === 'AbortError') {
           errorCaught = true

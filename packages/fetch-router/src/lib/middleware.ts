@@ -17,7 +17,7 @@ export interface Middleware<
   ): Response | undefined | void | Promise<Response | undefined | void>
 }
 
-export type NextFunction = (moreContext?: Partial<RequestContext>) => Promise<Response>
+export type NextFunction = () => Promise<Response>
 
 export function runMiddleware<
   Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
@@ -43,11 +43,7 @@ export function runMiddleware<
     }
 
     let nextPromise: Promise<Response> | undefined
-    let next: NextFunction = (moreContext?: Partial<RequestContext>) => {
-      if (moreContext != null) {
-        Object.assign(context, moreContext)
-      }
-
+    let next: NextFunction = () => {
       nextPromise = dispatch(i + 1)
       return nextPromise
     }
