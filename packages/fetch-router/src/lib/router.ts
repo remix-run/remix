@@ -14,6 +14,9 @@ import { isRequestHandlerWithMiddleware, isRouteHandlersWithMiddleware } from '.
 import type { RouteHandlers, RouteHandler } from './route-handlers.ts'
 import { Route } from './route-map.ts'
 import type { RouteMap } from './route-map.ts'
+import type { SessionStorage } from '@remix-run/session'
+import { createCookieSessionStorage } from '@remix-run/session'
+import { session } from './middleware/session.ts'
 
 export interface RouterOptions {
   /**
@@ -36,6 +39,10 @@ export interface RouterOptions {
    * Set `false` to disable form data parsing.
    */
   parseFormData?: (ParseFormDataOptions & { suppressErrors?: boolean }) | boolean
+  /**
+   * Session storage instance to create user sessions.
+   */
+  sessionStorage?: SessionStorage
   /**
    * A function that handles file uploads. It receives a `FileUpload` object and may return any
    * value that is a valid `FormData` value.
@@ -71,6 +78,7 @@ export class Router {
   #matcher: Matcher<MatchData>
   #middleware: Middleware[] | undefined
   #parseFormData: (ParseFormDataOptions & { suppressErrors?: boolean }) | boolean
+  #sessionStorage: SessionStorage
   #uploadHandler: FileUploadHandler | undefined
   #methodOverride: string | boolean
 
@@ -78,6 +86,7 @@ export class Router {
     this.#defaultHandler = options?.defaultHandler ?? noMatchHandler
     this.#matcher = options?.matcher ?? new RegExpMatcher()
     this.#parseFormData = options?.parseFormData ?? true
+    this.#sessionStorage = options?.sessionStorage ?? createCookieSessionStorage()
     this.#uploadHandler = options?.uploadHandler
     this.#methodOverride = options?.methodOverride ?? true
   }
@@ -113,6 +122,12 @@ export class Router {
     upstreamMiddleware?: Middleware[],
   ): Promise<Response | null> {
     let context = request instanceof Request ? await this.#createContext(request) : request
+
+    // Prepend session middleware only for the root router
+    upstreamMiddleware =
+      upstreamMiddleware == null
+        ? [session({ sessionStorage: this.#sessionStorage })]
+        : upstreamMiddleware
 
     for (let match of this.#matcher.matchAll(context.url)) {
       if ('router' in match.data) {
@@ -162,7 +177,16 @@ export class Router {
   }
 
   async #createContext(request: Request): Promise<RequestContext> {
-    let context = new RequestContext(request)
+    // We have to create the session here because it's an async operation to
+    // parse the cookie internally using `cookie.parse()`.
+    // - We can't use a `get session()` getter to lazily create the session because
+    //   `getSession` is async
+    // - We can't create the session in the `RequestContext` constructor because
+    //   constructors can't be async
+    // - If we assign the session in the middleware, then `context.session` has
+    //   to have a type of `Session | undefined` which is inconvenient for users
+    let session = await this.#sessionStorage.getSession(request.headers.get('Cookie'))
+    let context = new RequestContext(request, session)
 
     if (!RequestBodyMethods.includes(request.method as RequestBodyMethod)) {
       return context

@@ -1,4 +1,5 @@
 import SuperHeaders from '@remix-run/headers'
+import { type Session } from '@remix-run/session'
 
 import { AppStorage } from './app-storage.ts'
 import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
@@ -35,6 +36,10 @@ export class RequestContext<
    */
   request: Request
   /**
+   * Active session for the request
+   */
+  session: Session
+  /**
    * Shared application-specific storage.
    */
   storage: AppStorage
@@ -50,12 +55,13 @@ export class RequestContext<
    */
   headers: SuperHeaders
 
-  constructor(request: Request) {
+  constructor(request: Request, session: Session) {
     this.formData = undefined as any
     this.method = request.method.toUpperCase() as RequestMethod
     this.params = {} as Params
     this.request = request
     this.storage = new AppStorage()
+    this.session = session
     this.headers = new SuperHeaders(request.headers)
     this.url = new URL(request.url)
   }

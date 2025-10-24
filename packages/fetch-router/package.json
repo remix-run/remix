@@ -51,11 +51,12 @@
     "@remix-run/form-data-parser": "workspace:*",
     "@remix-run/headers": "workspace:*",
     "@remix-run/html-template": "workspace:*",
-    "@remix-run/route-pattern": "workspace:*"
+    "@remix-run/route-pattern": "workspace:*",
+    "@remix-run/session": "workspace:*"
   },
   "scripts": {
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:logger-middleware && pnpm run build:response-helpers",
-    "build:index": "esbuild src/index.ts --bundle --external:@remix-run/form-data-parser --external:@remix-run/headers --external:@remix-run/route-pattern --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:index": "esbuild src/index.ts --bundle --external:@remix-run/form-data-parser --external:@remix-run/headers --external:@remix-run/route-pattern --external:@remix-run/session --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
     "build:logger-middleware": "esbuild src/logger-middleware.ts --bundle --outfile=dist/logger-middleware.js --format=esm --platform=neutral --sourcemap",
     "build:response-helpers": "esbuild src/response-helpers.ts --bundle --outfile=dist/response-helpers.js --format=esm --platform=neutral --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
