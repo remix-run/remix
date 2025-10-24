@@ -2,7 +2,7 @@
 const kSafeHtml: unique symbol = Symbol('safeHtml')
 export type SafeHtml = String & { readonly [kSafeHtml]: true }
 
-function brandSafeHtml(value: string): SafeHtml {
+function createSafeHtml(value: string): SafeHtml {
   let s = new String(value) as SafeHtml
   ;(s as any)[kSafeHtml] = true
   return s
@@ -12,25 +12,17 @@ function isSafeHtml(value: unknown): value is SafeHtml {
   return typeof value === 'object' && value != null && (value as any)[kSafeHtml] === true
 }
 
-export function raw(value: string | SafeHtml): SafeHtml {
-  if (isSafeHtml(value)) return value
-  return brandSafeHtml(String(value))
-}
-
-function isTemplateStringsArray(value: unknown): value is TemplateStringsArray {
-  return Array.isArray(value) && 'raw' in (value as any)
-}
-
-const needsEscape = /[&<>"']/
+const escapeRe = /[&<>"']/g
+const escapeMap = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+} as const
 
 function escapeHtml(text: string): string {
-  if (!needsEscape.test(text)) return text
-  return text
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
+  return text.replace(escapeRe, (c) => escapeMap[c as keyof typeof escapeMap])
 }
 
 type Interpolation = SafeHtml | string | number | boolean | null | undefined | Array<Interpolation>
@@ -51,11 +43,11 @@ function htmlFromTemplate(strings: TemplateStringsArray, values: Interpolation[]
     if (i < values.length) out += stringifyInterpolation(values[i])
   }
 
-  return brandSafeHtml(out)
+  return createSafeHtml(out)
 }
 
-export function escape(strings: TemplateStringsArray, ...values: Interpolation[]): SafeHtml {
-  return htmlFromTemplate(strings, values)
+function isTemplateStringsArray(value: unknown): value is TemplateStringsArray {
+  return Array.isArray(value) && 'raw' in (value as any)
 }
 
 /**
@@ -87,8 +79,8 @@ export function escape(strings: TemplateStringsArray, ...values: Interpolation[]
  * To insert raw (safe) HTML into a response, use `html.raw`.
  *
  * ```ts
- * let icon = '<b>OK</b>'
- * let response = html`<div>${html.raw(icon)}</div>`
+ * let icon = html.raw('<b>OK</b>')
+ * let response = html`<div>${icon}</div>`
  * assert.equal(await response.text(), '<div><b>OK</b></div>')
  * ```
  */
@@ -96,8 +88,21 @@ type HtmlHelper = {
   (body: SafeHtml, init?: ResponseInit): Response
   (body: BodyInit, init?: ResponseInit): Response
   (strings: TemplateStringsArray, ...values: Interpolation[]): Response
+  /**
+   * A tagged template function that escapes interpolated values as HTML.
+   *
+   * @param strings The template strings
+   * @param values The values to interpolate
+   * @returns A SafeHtml value
+   */
+  esc: (strings: TemplateStringsArray, ...values: Interpolation[]) => SafeHtml
+  /**
+   * Marks the given string as HTML that is safe (needs no escaping).
+   *
+   * @param value The string to mark as safe
+   * @returns A SafeHtml value
+   */
   raw: (value: string | SafeHtml) => SafeHtml
-  escape: (strings: TemplateStringsArray, ...values: Interpolation[]) => SafeHtml
 }
 
 function htmlHelper(
@@ -132,5 +137,5 @@ function htmlHelper(
 }
 
 export const html = htmlHelper as HtmlHelper
-html.escape = escape
-html.raw = raw
+html.esc = (strings, ...values) => htmlFromTemplate(strings, values)
+html.raw = (value) => (isSafeHtml(value) ? value : createSafeHtml(String(value)))

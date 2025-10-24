@@ -5,6 +5,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 ## Unreleased
 
 - BREAKING CHANGE: Removed support for passing a `Route` object to `redirect()` response helper. Use `redirect(routes.home.href())` instead.
+- More precise type inference for `router.get()`, `router.post()`, etc. route handlers.
 - Add support for nesting route maps via object spread syntax
 
   ```tsx
@@ -31,12 +32,16 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   import { html } from '@remix-run/fetch-router'
 
   let unsafe = '<script>alert(1)</script>'
-  let response = html`<h1>${unsafe}</h1>` // Escapes HTML and returns a Response
-  let response = html(html.escape`<h1>${unsafe}</h1>`, { status: 200 }) // same, with response init
+
+  // Use the tagged template literal form to escape the HTML and create a Response.
+  let response = html`<h1>${unsafe}</h1>`
+
+  // Use the html() helper together with html.esc to provide a custom response init object.
+  let response = html(html.esc`<h1>${unsafe}</h1>`, { status: 200 })
 
   // use html.raw() to insert raw (safe) HTML into a response
-  let icon = '<b>OK</b>'
-  let response = html`<div>${html.raw(icon)}</div>`
+  let icon = html.raw('<b>OK</b>')
+  let response = html`<div>${icon}</div>`
   assert.equal(await response.text(), '<div><b>OK</b></div>')
   ```
 

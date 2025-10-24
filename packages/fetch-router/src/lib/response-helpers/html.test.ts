@@ -35,7 +35,7 @@ describe('html(body, init?)', () => {
   })
 
   it('accepts SafeHtml from escape tag without re-escaping', async () => {
-    let snippet = html.escape`<strong>${'Hi'}</strong>`
+    let snippet = html.esc`<strong>${'Hi'}</strong>`
     let response = html(snippet)
     assert.equal(await response.text(), '<strong>Hi</strong>')
   })
@@ -55,7 +55,7 @@ describe('html`...` tagged template returns Response', () => {
   })
 
   it('flattens arrays recursively and escapes items', async () => {
-    let nested = ['<a>', ['<b>'], html.escape`<i>${'x'}</i>`]
+    let nested = ['<a>', ['<b>'], html.esc`<i>${'x'}</i>`]
     // prettier-ignore
     let response = html`<ul>${nested}</ul>`
     assert.equal(await response.text(), '<ul>&lt;a&gt;&lt;b&gt;<i>x</i></ul>')
@@ -63,36 +63,44 @@ describe('html`...` tagged template returns Response', () => {
 
   it('preserves nested SafeHtml fragments and supports html.raw', async () => {
     let icon = '<b>OK</b>'
-    let inner = html.escape`<span>${'Text'}</span>`
+    let inner = html.esc`<span>${'Text'}</span>`
     let response = html`<div>${inner}${html.raw(icon)}</div>`
     assert.equal(await response.text(), '<div><span>Text</span><b>OK</b></div>')
   })
 })
 
-describe('html.escape`...` tagged template returns SafeHtml', () => {
+describe('html.esc`...`', () => {
   it('escapes special characters', () => {
     let unsafe = '<script>alert(1)</script>'
-    let frag = html.escape`<p>${unsafe}</p>`
+    let frag = html.esc`<p>${unsafe}</p>`
     assert.equal(String(frag), '<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>')
   })
 
   it('flattens arrays and preserves nested escapes', () => {
-    let items = ['<a>', html.escape`<i>${'x'}</i>`]
-    let frag = html.escape`<ul>${items}</ul>`
+    let items = ['<a>', html.esc`<i>${'x'}</i>`]
+    let frag = html.esc`<ul>${items}</ul>`
     assert.equal(String(frag), '<ul>&lt;a&gt;<i>x</i></ul>')
   })
 
-  it('composes with html() function to send Response', async () => {
-    let frag = html.escape`<strong>${'Hi'}</strong>`
-    let response = html(frag)
-    assert.equal(await response.text(), '<strong>Hi</strong>')
+  it('composes with html() to create a Response', async () => {
+    let frag = html.esc`<strong>${'<script>alert(1)</script>'}</strong>`
+    let response = html(`<p>${frag}</p>`)
+    assert.equal(
+      await response.text(),
+      '<p><strong>&lt;script&gt;alert(1)&lt;/script&gt;</strong></p>',
+    )
   })
 })
 
 describe('html.raw(value)', () => {
   it('returns a SafeHtml fragment', () => {
-    let icon = '<b>OK</b>'
-    let frag = html.raw(icon)
-    assert.equal(String(frag), '<b>OK</b>')
+    let icon = html.raw('<b>OK</b>')
+    assert.equal(String(icon), '<b>OK</b>')
+  })
+
+  it('composes with html`...` to create a Response', async () => {
+    let icon = html.raw('<b>OK</b>')
+    let response = html`<p>${icon}</p>`
+    assert.equal(await response.text(), '<p><b>OK</b></p>')
   })
 })
