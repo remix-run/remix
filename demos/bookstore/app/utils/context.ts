@@ -29,6 +29,14 @@ export function getStorage() {
 }
 
 /**
+ * Get the session from the current RequestContext.
+ * This is a convenience helper for the most common use case.
+ */
+export function getSession() {
+  return getContext().session
+}
+
+/**
  * Get the current authenticated user from storage.
  * Throws if no user is authenticated.
  */
