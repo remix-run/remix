@@ -43,12 +43,13 @@
   },
   "dependencies": {
     "@remix-run/form-data-parser": "workspace:*",
+    "@remix-run/headers": "workspace:*",
     "@remix-run/route-pattern": "workspace:*",
-    "@remix-run/headers": "workspace:*"
+    "@remix-run/session": "workspace:*"
   },
   "scripts": {
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:logger-middleware",
-    "build:index": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:index": "esbuild src/index.ts --bundle --external:@remix-run/session --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
     "build:logger-middleware": "esbuild src/logger-middleware.ts --bundle --outfile=dist/logger-middleware.js --format=esm --platform=neutral --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
