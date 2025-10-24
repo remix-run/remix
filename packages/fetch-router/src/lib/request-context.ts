@@ -1,5 +1,6 @@
+import SuperHeaders from '@remix-run/headers'
+
 import { AppStorage } from './app-storage.ts'
-import Headers from '@remix-run/headers'
 import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
 
 /**
@@ -39,17 +40,14 @@ export class RequestContext<
   /**
    * The URL that was matched by the route.
    *
-   * Note: This may be different from `request.url` if the request was routed to a
-   * sub-router, in which case the URL mount point is stripped from the pathname.
+   * Note: This may be different from `request.url` if the request was routed to a sub-router,
+   * in which case the URL mount path is stripped from the beginning of the pathname.
    */
   url: URL
   /**
    * The headers of the request.
-   *
-   * Note: This is different from request.headers which is a Headers object
-   * from the Fetch API, while this headers field is a SuperHeaders object from @remix-run/headers.
    */
-  headers: Headers
+  headers: SuperHeaders
 
   constructor(request: Request) {
     this.formData = undefined as any
@@ -57,7 +55,7 @@ export class RequestContext<
     this.params = {} as Params
     this.request = request
     this.storage = new AppStorage()
-    this.headers = new Headers(request.headers)
+    this.headers = new SuperHeaders(request.headers)
     this.url = new URL(request.url)
   }
 
