@@ -37,6 +37,59 @@ describe('Session', () => {
     assert.equal(session.has('user'), false)
     assert.equal(session.get('user'), undefined)
   })
+
+  it('correctly destroys a session', () => {
+    let session = createSession()
+
+    session.set('user', 'mjackson')
+    assert.equal(session.get('user'), 'mjackson')
+
+    session.destroy()
+
+    assert.equal(session.has('user'), false)
+    assert.equal(session.get('user'), undefined)
+  })
+
+  it('tracks session status for newly created sessions', () => {
+    let session = createSession()
+    assert.equal(session.status, 'new')
+
+    session.get('user')
+    assert.equal(session.status, 'new')
+
+    session.set('user', 'mjackson')
+    assert.equal(session.status, 'dirty')
+
+    session.destroy()
+    assert.equal(session.status, 'destroyed')
+  })
+
+  it('tracks session status for existing sessions', () => {
+    let session = createSession({ user: 'brophdawg11' })
+    assert.equal(session.status, 'clean')
+
+    session.get('user')
+    assert.equal(session.status, 'clean')
+
+    session.set('user', 'mjackson')
+    assert.equal(session.status, 'dirty')
+
+    session.destroy()
+    assert.equal(session.status, 'destroyed')
+  })
+
+  it('throws an error if you try to operate on a destroyed session', () => {
+    let session = createSession({ user: 'brophdawg11' })
+    assert.equal(session.status, 'clean')
+
+    session.destroy()
+    assert.equal(session.status, 'destroyed')
+
+    assert.equal(session.get('user'), undefined)
+    assert.throws(() => session.set('user', 'mjackson'), {
+      message: 'Cannot operate on a destroyed session',
+    })
+  })
 })
 
 describe('isSession', () => {

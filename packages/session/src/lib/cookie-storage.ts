@@ -30,7 +30,7 @@ export function createCookieSessionStorage<Data = SessionData, FlashData = Data>
 
   return {
     async getSession(cookieHeader, options) {
-      return createSession((cookieHeader && (await cookie.parse(cookieHeader, options))) || {})
+      return createSession(cookieHeader ? await cookie.parse(cookieHeader, options) : undefined)
     },
     async commitSession(session, options) {
       let serializedCookie = await cookie.serialize(session.data, options)
