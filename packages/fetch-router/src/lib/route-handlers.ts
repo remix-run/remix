@@ -33,22 +33,25 @@ export function isRouteHandlersWithMiddleware<T extends RouteMap>(
  * Infer the route handler type from a route or route pattern.
  */
 // prettier-ignore
-export type InferRouteHandler<T extends string | Route | RoutePattern> =
-  T extends string ? RouteHandler<'ANY', T> :
-  T extends RoutePattern<infer P> ? RouteHandler<'ANY', P> :
-  T extends Route<infer M, infer P> ? RouteHandler<M, P> :
+export type InferRouteHandler<
+  Method extends RequestMethod | 'ANY',
+  P extends string | RoutePattern | Route,
+> =
+  P extends string ? RouteHandler<Method, P> :
+  P extends RoutePattern<infer S> ? RouteHandler<Method, S> :
+  P extends Route<infer _, infer S> ? RouteHandler<Method, S> :
   never
 
 /**
  * An individual route handler.
  */
-export type RouteHandler<M extends RequestMethod | 'ANY', T extends string> =
-  | RequestHandlerWithMiddleware<M, T>
-  | RequestHandler<M, Params<T>>
+export type RouteHandler<M extends RequestMethod | 'ANY', P extends string> =
+  | RequestHandlerWithMiddleware<M, P>
+  | RequestHandler<M, Params<P>>
 
-type RequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', T extends string> = {
-  use: Middleware<M, Params<T>>[]
-  handler: RequestHandler<M, Params<T>>
+type RequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', P extends string> = {
+  use: Middleware<M, Params<P>>[]
+  handler: RequestHandler<M, Params<P>>
 }
 
 export function isRequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', T extends string>(

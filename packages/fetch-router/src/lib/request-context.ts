@@ -1,7 +1,7 @@
 import SuperHeaders from '@remix-run/headers'
 
 import { AppStorage } from './app-storage.ts'
-import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
+import type { RequestMethod } from './request-methods.ts'
 
 /**
  * A context object that contains information about the current request. Every request
@@ -18,7 +18,11 @@ export class RequestContext<
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/FormData)
    */
-  formData: Method extends RequestBodyMethod ? FormData : undefined
+  formData: Method extends 'GET' | 'HEAD'
+    ? undefined
+    : Method extends 'ANY'
+      ? FormData | undefined
+      : FormData
   /**
    * The request method. This may differ from `request.method` if the request body
    * contained a method override field (e.g. `_method=DELETE`), allowing HTML forms to simulate

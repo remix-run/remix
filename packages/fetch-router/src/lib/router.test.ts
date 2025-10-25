@@ -1149,7 +1149,27 @@ describe('form data parsing', () => {
     assert.equal(formData.get('name'), null)
   })
 
-  it('provides context.formData on a POST registered with router.map(postRoute, handler)', async () => {
+  it('does not provide context.formData to a GET handler registered with router.map(getRoute, handler)', async () => {
+    let routes = createRoutes({
+      index: { method: 'GET', pattern: '/' },
+    })
+
+    let router = createRouter()
+
+    let formData: FormData | undefined
+    router.get(routes.index, (context) => {
+      formData = context.formData
+      type T = Assert<IsEqual<typeof formData, undefined>>
+      return new Response('OK')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 200)
+    assert.equal(formData, undefined)
+  })
+
+  it('provides context.formData to a POST handler registered with router.map(postRoute, handler)', async () => {
     let routes = createRoutes({
       action: { method: 'POST', pattern: '/' },
     })

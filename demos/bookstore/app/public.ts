@@ -8,11 +8,11 @@ const publicDir = path.join(import.meta.dirname, '..', 'public')
 const publicAssetsDir = path.join(publicDir, 'assets')
 const publicImagesDir = path.join(publicDir, 'images')
 
-export let assets: InferRouteHandler<typeof routes.assets> = async ({ params }) => {
+export let assets: InferRouteHandler<'GET', typeof routes.assets> = async ({ params }) => {
   return serveFile(path.join(publicAssetsDir, params.path))
 }
 
-export let images: InferRouteHandler<typeof routes.images> = async ({ params }) => {
+export let images: InferRouteHandler<'GET', typeof routes.images> = async ({ params }) => {
   return serveFile(path.join(publicImagesDir, params.path))
 }
 
