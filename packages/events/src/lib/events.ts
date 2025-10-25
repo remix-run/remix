@@ -218,15 +218,15 @@ type GetEvent<target extends EventTarget, type extends GetEventType<target>> =
 
 // TypedEventTarget --------------------------------------------------------------------------------
 
-export class TypedEventTarget<EventMap> extends EventTarget {
-  declare readonly __eventMap?: EventMap
+export class TypedEventTarget<eventMap> extends EventTarget {
+  declare readonly __eventMap?: eventMap
 }
 
-export interface TypedEventTarget<EventMap> {
+export interface TypedEventTarget<eventMap> {
   // typed
-  addEventListener<K extends Extract<keyof EventMap, string>>(
-    type: K,
-    listener: TypedEventListener<EventMap>[K],
+  addEventListener<type extends Extract<keyof eventMap, string>>(
+    type: type,
+    listener: TypedEventListener<eventMap>[type],
     options?: AddEventListenerOptions,
   ): void
   // base
@@ -237,9 +237,9 @@ export interface TypedEventTarget<EventMap> {
   ): void
 
   // typed
-  removeEventListener<K extends Extract<keyof EventMap, string>>(
-    type: K,
-    listener: TypedEventListener<EventMap>[K],
+  removeEventListener<type extends Extract<keyof eventMap, string>>(
+    type: type,
+    listener: TypedEventListener<eventMap>[type],
     options?: EventListenerOptions,
   ): void
   // base
@@ -249,16 +249,16 @@ export interface TypedEventTarget<EventMap> {
     options?: EventListenerOptions,
   ): void
 }
-type TypedEventListener<EventMap> = {
-  [K in keyof EventMap]: (event: EventMap[K]) => void
+type TypedEventListener<eventMap> = {
+  [key in keyof eventMap]: (event: eventMap[key]) => void
 }
 
 // Interaction -------------------------------------------------------------------------------------
 
-export type Interaction<E extends Event = Event> = {
+export type Interaction<event extends Event = Event> = {
   signal: AbortSignal
   target: EventTarget
-  dispatchEvent(event: E): void
+  dispatchEvent(event: event): void
 }
 type InteractionFn<event extends Event> = (this: Interaction<event>) => unknown
 
