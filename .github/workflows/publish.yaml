@@ -41,7 +41,7 @@ jobs:
         run: pnpm build
 
       - name: Publish to npm
-        run: pnpm publish --access public
+        run: pnpm publish --access public --no-git-checks
 
       - name: Create GitHub Release
         run: node ./scripts/create-github-release.js ${{ github.ref_name }}
