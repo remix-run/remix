@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/fetch-proxy",
-  "version": "0.6.0",
-  "description": "An HTTP proxy for the web Fetch API",
+  "name": "@remix-run/cookie",
+  "version": "0.1.0",
+  "description": "A toolkit for working with cookies in JavaScript",
   "author": "Remix Software <hello@remix.run>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/fetch-proxy"
+    "directory": "packages/cookie"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/fetch-proxy#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/cookie#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -31,16 +31,14 @@
       "./package.json": "./package.json"
     }
   },
-  "dependencies": {
-    "@remix-run/headers": "workspace:^"
-  },
   "devDependencies": {
     "@types/node": "^24.6.0",
+    "cookie": "^1.0.2",
     "esbuild": "^0.25.10"
   },
   "scripts": {
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:esm": "esbuild src/index.ts --main-fields=main --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
     "prepublishOnly": "pnpm run build",
@@ -48,8 +46,10 @@
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
-    "fetch",
     "http",
-    "proxy"
+    "cookie",
+    "cookies",
+    "http-cookies",
+    "set-cookie"
   ]
 }
