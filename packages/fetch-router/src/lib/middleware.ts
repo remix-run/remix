@@ -1,3 +1,4 @@
+import { raceRequestAbort } from './request-abort.ts'
 import type { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 import type { RequestMethod } from './request-methods.ts'
@@ -16,7 +17,7 @@ export interface Middleware<
   ): Response | undefined | void | Promise<Response | undefined | void>
 }
 
-export type NextFunction = (moreContext?: Partial<RequestContext>) => Promise<Response>
+export type NextFunction = () => Promise<Response>
 
 export function runMiddleware<
   Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
@@ -32,20 +33,22 @@ export function runMiddleware<
     if (i <= index) throw new Error('next() called multiple times')
     index = i
 
+    if (context.request.signal.aborted) {
+      throw context.request.signal.reason
+    }
+
     let fn = middleware[i]
-    if (!fn) return handler(context)
+    if (!fn) {
+      return await raceRequestAbort(Promise.resolve(handler(context)), context.request)
+    }
 
     let nextPromise: Promise<Response> | undefined
-    let next: NextFunction = (moreContext?: Partial<RequestContext>) => {
-      if (moreContext != null) {
-        Object.assign(context, moreContext)
-      }
-
+    let next: NextFunction = () => {
       nextPromise = dispatch(i + 1)
       return nextPromise
     }
 
-    let response = await fn(context, next)
+    let response = await raceRequestAbort(Promise.resolve(fn(context, next)), context.request)
 
     // If a response was returned, short-circuit the chain
     if (response instanceof Response) {

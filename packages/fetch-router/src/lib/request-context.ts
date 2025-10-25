@@ -1,5 +1,7 @@
+import SuperHeaders from '@remix-run/headers'
+
 import { AppStorage } from './app-storage.ts'
-import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
+import type { RequestMethod } from './request-methods.ts'
 
 /**
  * A context object that contains information about the current request. Every request
@@ -16,7 +18,11 @@ export class RequestContext<
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/FormData)
    */
-  formData: Method extends RequestBodyMethod ? FormData : undefined
+  formData: Method extends 'GET' | 'HEAD'
+    ? undefined
+    : Method extends 'ANY'
+      ? FormData | undefined
+      : FormData
   /**
    * The request method. This may differ from `request.method` if the request body
    * contained a method override field (e.g. `_method=DELETE`), allowing HTML forms to simulate
@@ -38,10 +44,14 @@ export class RequestContext<
   /**
    * The URL that was matched by the route.
    *
-   * Note: This may be different from `request.url` if the request was routed to a
-   * sub-router, in which case the URL mount point is stripped from the pathname.
+   * Note: This may be different from `request.url` if the request was routed to a sub-router,
+   * in which case the URL mount path is stripped from the beginning of the pathname.
    */
   url: URL
+  /**
+   * The headers of the request.
+   */
+  headers: SuperHeaders
 
   constructor(request: Request) {
     this.formData = undefined as any
@@ -49,15 +59,8 @@ export class RequestContext<
     this.params = {} as Params
     this.request = request
     this.storage = new AppStorage()
+    this.headers = new SuperHeaders(request.headers)
     this.url = new URL(request.url)
-  }
-
-  /**
-   * The headers of the request.
-   */
-  get headers(): Headers {
-    // TODO: Make this a SuperHeaders object?
-    return this.request.headers
   }
 
   /**

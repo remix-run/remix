@@ -39,15 +39,17 @@
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
-    "esbuild": "^0.25.10"
+    "esbuild": "^0.25.10",
+    "tsx": "^4.20.6"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@remix-run/form-data-parser": "workspace:*",
+    "@remix-run/headers": "workspace:*",
     "@remix-run/route-pattern": "workspace:*"
   },
   "scripts": {
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:logger-middleware",
-    "build:index": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:index": "esbuild src/index.ts --bundle --external:@remix-run/form-data-parser --external:@remix-run/headers --external:@remix-run/route-pattern --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
     "build:logger-middleware": "esbuild src/logger-middleware.ts --bundle --outfile=dist/logger-middleware.js --format=esm --platform=neutral --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",

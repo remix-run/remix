@@ -8,7 +8,7 @@ import { loadAuth } from './middleware/auth.ts'
 import { searchBooks } from './models/books.ts'
 import { render } from './utils/render.ts'
 
-export let home: InferRouteHandler<typeof routes.home> = {
+export let home: InferRouteHandler<'GET', typeof routes.home> = {
   use: [loadAuth],
   handler() {
     return render(
@@ -37,7 +37,7 @@ export let home: InferRouteHandler<typeof routes.home> = {
   },
 }
 
-export let about: InferRouteHandler<typeof routes.about> = {
+export let about: InferRouteHandler<'GET', typeof routes.about> = {
   use: [loadAuth],
   handler() {
     return render(
@@ -153,7 +153,7 @@ export let contact: RouteHandlers<typeof routes.contact> = {
   },
 }
 
-export let search: InferRouteHandler<typeof routes.search> = {
+export let search: InferRouteHandler<'GET', typeof routes.search> = {
   use: [loadAuth],
   handler({ url }) {
     let query = url.searchParams.get('q') ?? ''

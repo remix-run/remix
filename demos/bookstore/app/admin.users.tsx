@@ -198,12 +198,12 @@ export default {
       role: (formData.get('role')?.toString() ?? 'customer') as 'customer' | 'admin',
     })
 
-    return redirect(routes.admin.users.index)
+    return redirect(routes.admin.users.index.href())
   },
 
   destroy({ params }) {
     deleteUser(params.userId)
 
-    return redirect(routes.admin.users.index)
+    return redirect(routes.admin.users.index.href())
   },
 } satisfies RouteHandlers<typeof routes.admin.users>

@@ -6,6 +6,7 @@ import { createStorageKey } from './app-storage.ts'
 import { RequestContext } from './request-context.ts'
 import { createRoutes } from './route-map.ts'
 import { createRouter } from './router.ts'
+import type { Assert, IsEqual } from './type-utils.ts'
 
 describe('router.fetch()', () => {
   it('fetches a route', async () => {
@@ -123,6 +124,23 @@ describe('router.fetch()', () => {
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Admin')
+  })
+
+  it('replaces any corresponding options set in the original `Request` when options are provided', async () => {
+    let requestLog: Array<string | null> = []
+    let router = createRouter()
+    router.use(({ request }) => {
+      requestLog.push(request.headers.get('From'))
+    })
+    router.get('/', () => new Response('Home'))
+
+    await router.fetch('https://remix.run')
+    assert.deepEqual(requestLog, [null])
+
+    requestLog = []
+
+    await router.fetch('https://remix.run', { headers: { From: 'admin@remix.run' } })
+    assert.deepEqual(requestLog, ['admin@remix.run'])
   })
 })
 
@@ -1069,6 +1087,158 @@ describe('trailing slash handling', () => {
   })
 })
 
+describe('form data parsing', () => {
+  it('does not provide context.formData on a GET request', async () => {
+    let router = createRouter({ parseFormData: false })
+    let formData: FormData | undefined
+
+    router.get('/', (context) => {
+      formData = context.formData
+      return new Response('OK')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    assert.equal(response.status, 200)
+    assert.equal(formData, undefined)
+  })
+
+  it('provides context.formData on a POST', async () => {
+    let router = createRouter({ parseFormData: true })
+    let formData: FormData | undefined
+
+    router.post('/', (context) => {
+      type T = Assert<IsEqual<typeof context.formData, FormData>>
+      formData = context.formData
+      return new Response('OK')
+    })
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'name=test',
+    })
+
+    assert.equal(response.status, 200)
+    assert.ok(formData)
+    assert.ok(formData instanceof FormData)
+    assert.equal(formData.get('name'), 'test')
+  })
+
+  it('provides an empty context.formData on a POST when form data parsing is disabled', async () => {
+    let router = createRouter({ parseFormData: false })
+    let formData: FormData | undefined
+
+    router.post('/submit', (context) => {
+      formData = context.formData
+      return new Response('OK')
+    })
+
+    let response = await router.fetch('https://remix.run/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'name=test',
+    })
+
+    assert.equal(response.status, 200)
+    assert.ok(formData)
+    assert.ok(formData instanceof FormData)
+    assert.equal(formData.get('name'), null)
+  })
+
+  it('does not provide context.formData to a GET handler registered with router.map(getRoute, handler)', async () => {
+    let routes = createRoutes({
+      index: { method: 'GET', pattern: '/' },
+    })
+
+    let router = createRouter()
+
+    let formData: FormData | undefined
+    router.get(routes.index, (context) => {
+      formData = context.formData
+      type T = Assert<IsEqual<typeof formData, undefined>>
+      return new Response('OK')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 200)
+    assert.equal(formData, undefined)
+  })
+
+  it('provides context.formData to a POST handler registered with router.map(postRoute, handler)', async () => {
+    let routes = createRoutes({
+      action: { method: 'POST', pattern: '/' },
+    })
+
+    let router = createRouter()
+
+    let formData: FormData | undefined
+    router.map(routes.action, (context) => {
+      formData = context.formData
+      type T = Assert<IsEqual<typeof formData, FormData>>
+      return new Response('OK')
+    })
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'name=test',
+    })
+
+    assert.equal(response.status, 200)
+    assert.ok(formData)
+    assert.ok(formData instanceof FormData)
+    assert.equal(formData.get('name'), 'test')
+  })
+})
+
+describe('file uploads', () => {
+  it('provides context.files on a POST with a multipart/form-data body', async () => {
+    let router = createRouter()
+
+    let files: Map<string, File> | null
+    router.post('/', (context) => {
+      files = context.files
+      return new Response('OK')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
+        'Content-Type: text/plain',
+        '',
+        'test 1',
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file2"; filename="test2.txt"',
+        'Content-Type: text/plain',
+        '',
+        'test 2',
+        `--${boundary}--`,
+      ].join('\r\n'),
+    })
+
+    assert.equal(response.status, 200)
+    assert.ok(files!)
+    assert.equal(files.size, 2)
+    assert.equal(files.get('file1')?.name, 'test1.txt')
+    assert.equal(await files.get('file1')?.text(), 'test 1')
+    assert.equal(files.get('file2')?.name, 'test2.txt')
+    assert.equal(await files.get('file2')?.text(), 'test 2')
+  })
+})
+
 describe('method override', () => {
   it('allows POST with _method=DELETE to match a DELETE route', async () => {
     let router = createRouter({ parseFormData: true })
@@ -1247,5 +1417,240 @@ describe('custom matcher', () => {
     router.get('/about', () => new Response('About'))
 
     assert.deepEqual(addedPatterns, ['/home', '/about'])
+  })
+})
+
+describe('abort signal support', () => {
+  it('throws AbortError when signal is already aborted', async () => {
+    let router = createRouter()
+    router.get('/', () => new Response('Home'))
+
+    let controller = new AbortController()
+    controller.abort()
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        assert.ok(error instanceof DOMException)
+        return true
+      },
+    )
+  })
+
+  it('throws AbortError when signal is aborted during request processing', async () => {
+    let router = createRouter()
+    let controller = new AbortController()
+
+    router.get('/', async () => {
+      // Abort while handler is running
+      controller.abort()
+      // Simulate some async work
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      return new Response('Home')
+    })
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        return true
+      },
+    )
+  })
+
+  it('handles signal from Request object passed to fetch()', async () => {
+    let router = createRouter()
+    router.get('/', () => new Response('Home'))
+
+    let controller = new AbortController()
+    let request = new Request('https://remix.run', { signal: controller.signal })
+    controller.abort()
+
+    await assert.rejects(
+      async () => {
+        await router.fetch(request)
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        assert.ok(error instanceof DOMException)
+        return true
+      },
+    )
+  })
+
+  it('handles signal from init object', async () => {
+    let router = createRouter()
+    router.get('/', () => new Response('Home'))
+
+    let controller = new AbortController()
+    controller.abort()
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        assert.ok(error instanceof DOMException)
+        return true
+      },
+    )
+  })
+
+  it('allows middleware to catch and handle abort errors', async () => {
+    let router = createRouter()
+    let controller = new AbortController()
+    let errorCaught = false
+
+    router.use(async (_, next) => {
+      try {
+        await next()
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          errorCaught = true
+        }
+        throw error
+      }
+    })
+
+    router.get('/', async () => {
+      // Simulate some async work that gets aborted
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      return new Response('Home')
+    })
+
+    // Abort while handler is running
+    setTimeout(() => controller.abort(), 10)
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        return true
+      },
+    )
+
+    // Middleware should have caught the error
+    assert.equal(errorCaught, true)
+  })
+
+  it('completes successfully if not aborted', async () => {
+    let router = createRouter()
+    let controller = new AbortController()
+
+    router.get('/', () => new Response('Home'))
+
+    let response = await router.fetch('https://remix.run', { signal: controller.signal })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Home')
+  })
+
+  it('throws AbortError when aborted before middleware completes', async () => {
+    let router = createRouter()
+    let controller = new AbortController()
+
+    router.use(async () => {
+      controller.abort()
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+
+    router.get('/', () => new Response('Home'))
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        return true
+      },
+    )
+  })
+
+  it('throws AbortError when aborted during sub-router dispatch', async () => {
+    let adminRouter = createRouter()
+    let controller = new AbortController()
+
+    adminRouter.get('/', async () => {
+      controller.abort()
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      return new Response('Admin')
+    })
+
+    let router = createRouter()
+    router.mount('/admin', adminRouter)
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run/admin', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        return true
+      },
+    )
+  })
+
+  it('allows handlers to access signal via context.request.signal', async () => {
+    let router = createRouter()
+    let controller = new AbortController()
+    let signalAccessible = false
+
+    router.get('/', (context) => {
+      // Handler can access the signal
+      signalAccessible = context.request.signal != null
+      assert.equal(context.request.signal.aborted, false)
+      return new Response('Home')
+    })
+
+    let response = await router.fetch('https://remix.run', { signal: controller.signal })
+
+    assert.equal(response.status, 200)
+    assert.equal(signalAccessible, true)
+  })
+
+  it('does not call downstream middleware or handler when aborted in upstream middleware', async () => {
+    let router = createRouter()
+    let controller = new AbortController()
+    let downstreamMiddlewareCalled = false
+    let handlerCalled = false
+
+    // Upstream middleware that aborts
+    router.use(async () => {
+      controller.abort()
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+
+    // Downstream middleware that should NOT be called
+    router.use(() => {
+      downstreamMiddlewareCalled = true
+    })
+
+    // Handler that should NOT be called
+    router.get('/', () => {
+      handlerCalled = true
+      return new Response('Home')
+    })
+
+    await assert.rejects(
+      async () => {
+        await router.fetch('https://remix.run', { signal: controller.signal })
+      },
+      (error: any) => {
+        assert.equal(error.name, 'AbortError')
+        return true
+      },
+    )
+
+    assert.equal(downstreamMiddlewareCalled, false)
+    assert.equal(handlerCalled, false)
   })
 })

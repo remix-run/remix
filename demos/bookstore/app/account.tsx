@@ -121,7 +121,7 @@ export default {
 
         updateUser(user.id, updateData)
 
-        return redirect(routes.account.index)
+        return redirect(routes.account.index.href())
       },
     },
 

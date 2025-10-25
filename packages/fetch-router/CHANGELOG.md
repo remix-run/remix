@@ -2,6 +2,55 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- BREAKING CHANGE: Move `@remix-run/form-data-parser`, `@remix-run/headers`, and `@remix-run/route-pattern` to `peerDependencies`.
+- BREAKING CHANGE: Add `Method` generic parameter to `InferRouteHandler<Method, PatternLike>` type.
+- BREAKING CHANGE: Removed support for passing a `Route` object to `redirect()` response helper. Use `redirect(routes.home.href())` instead.
+- More precise type inference for `router.get()`, `router.post()`, etc. route handlers.
+- Add support for nesting route maps via object spread syntax
+
+  ```tsx
+  import { route, resources } from '@remix-run/fetch-router'
+
+  let routes = route({
+    brands: {
+      ...resources('brands', { only: ['index', 'show'] }),
+      products: resources('brands/:brandId/products', { only: ['index', 'show'] }),
+    },
+  })
+
+  routes.brands.index // Route<'GET', '/brands'>
+  routes.brands.show // Route<'GET', '/brands/:id'>
+  routes.brands.products.index // Route<'GET', '/brands/:brandId/products'>
+  routes.brands.products.show // Route<'GET', '/brands/:brandId/products/:id'>
+  ```
+
+- Add support for `URL` objects in `redirect()` response helper
+- Improved `html()` response helper now supports tagged template literals and `html.raw()` for inserting raw (safe) HTML into a response
+
+  ```tsx
+  import * as assert from 'node:assert/strict'
+  import { html } from '@remix-run/fetch-router'
+
+  let unsafe = '<script>alert(1)</script>'
+
+  // Use the tagged template literal form to escape the HTML and create a Response.
+  let response = html`<h1>${unsafe}</h1>`
+
+  // Use the html() helper together with html.esc to provide a custom response init object.
+  let response = html(html.esc`<h1>${unsafe}</h1>`, { status: 200 })
+
+  // use html.raw() to insert raw (safe) HTML into a response
+  let icon = html.raw('<b>OK</b>')
+  let response = html`<div>${icon}</div>`
+  assert.equal(await response.text(), '<div><b>OK</b></div>')
+  ```
+
+- Add support for `request.signal` abort, which now short-circuits the middleware chain. `router.fetch()` will now throw `DOMException` with `error.name === 'AbortError'` when a request is aborted
+- Fix an issue where `Router`'s `fetch` wasn't spec-compliant
+- Provide empty `context.formData` to `POST`/`PUT`/etc handlers when `parseFormData: false`
+
 ## v0.6.0 (2025-10-10)
 
 - BREAKING CHANGE: Rename

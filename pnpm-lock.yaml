@@ -79,6 +79,9 @@ importers:
       '@remix-run/form-data-parser':
         specifier: workspace:*
         version: link:../form-data-parser
+      '@remix-run/headers':
+        specifier: workspace:*
+        version: link:../headers
       '@remix-run/route-pattern':
         specifier: workspace:*
         version: link:../route-pattern
@@ -89,6 +92,9 @@ importers:
       esbuild:
         specifier: ^0.25.10
         version: 0.25.10
+      tsx:
+        specifier: ^4.20.6
+        version: 4.20.6
 
   packages/file-storage:
     dependencies:

@@ -5,12 +5,13 @@ import type { Matcher } from '@remix-run/route-pattern'
 
 import { runMiddleware } from './middleware.ts'
 import type { Middleware } from './middleware.ts'
+import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 import { RequestBodyMethods } from './request-methods.ts'
 import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
 import { isRequestHandlerWithMiddleware, isRouteHandlersWithMiddleware } from './route-handlers.ts'
-import type { RouteHandlers, InferRouteHandler } from './route-handlers.ts'
+import type { RouteHandlers, RouteHandler } from './route-handlers.ts'
 import { Route } from './route-map.ts'
 import type { RouteMap } from './route-map.ts'
 
@@ -85,7 +86,11 @@ export class Router {
    * Fetch a response from the router.
    */
   async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-    let request = input instanceof Request ? input : new Request(input, init)
+    let request = new Request(input, init)
+
+    if (request.signal.aborted) {
+      throw request.signal.reason
+    }
 
     let response = await this.dispatch(request)
     if (response == null) {
@@ -106,7 +111,7 @@ export class Router {
     request: Request | RequestContext,
     upstreamMiddleware?: Middleware[],
   ): Promise<Response | null> {
-    let context = request instanceof Request ? await this.#parseRequest(request) : request
+    let context = request instanceof Request ? await this.#createContext(request) : request
 
     for (let match of this.#matcher.matchAll(context.url)) {
       if ('router' in match.data) {
@@ -148,43 +153,46 @@ export class Router {
       let middleware = concatMiddleware(upstreamMiddleware, routeMiddleware)
       return middleware != null
         ? await runMiddleware(middleware, context, handler)
-        : await handler(context)
+        : await raceRequestAbort(Promise.resolve(handler(context)), context.request)
     }
 
     return null
   }
 
-  async #parseRequest(request: Request): Promise<RequestContext> {
+  async #createContext(request: Request): Promise<RequestContext> {
     let context = new RequestContext(request)
 
-    if (this.#parseFormData === false) {
+    if (!RequestBodyMethods.includes(request.method as RequestBodyMethod)) {
       return context
     }
 
-    if (shouldParseFormData(request)) {
-      let suppressParseErrors: boolean
-      let parseOptions: ParseFormDataOptions
-      if (this.#parseFormData === true) {
-        suppressParseErrors = false
-        parseOptions = {}
-      } else {
-        suppressParseErrors = this.#parseFormData.suppressErrors ?? false
-        parseOptions = this.#parseFormData
-      }
-
-      try {
-        context.formData = await parseFormData(request, parseOptions, this.#uploadHandler)
-      } catch (error) {
-        if (!suppressParseErrors || !(error instanceof FormDataParseError)) {
-          throw error
-        }
-
-        // Suppress parse error, continue with empty formData
-        context.formData = new FormData()
-      }
-    } else {
-      // No form data to parse, continue with empty formData
+    if (this.#parseFormData === false || !canParseFormData(request)) {
+      // Either form data parsing is disabled or the request body cannot be
+      // parsed as form data, so continue with an empty formData object
       context.formData = new FormData()
+      return context
+    }
+
+    let suppressParseErrors: boolean
+    let parseOptions: ParseFormDataOptions
+    if (this.#parseFormData === true) {
+      suppressParseErrors = false
+      parseOptions = {}
+    } else {
+      suppressParseErrors = this.#parseFormData.suppressErrors ?? false
+      parseOptions = this.#parseFormData
+    }
+
+    try {
+      context.formData = await parseFormData(request, parseOptions, this.#uploadHandler)
+    } catch (error) {
+      if (!suppressParseErrors || !(error instanceof FormDataParseError)) {
+        throw error
+      }
+
+      // Suppress parse error, continue with empty formData
+      context.formData = new FormData()
+      return context
     }
 
     if (this.#methodOverride) {
@@ -247,10 +255,10 @@ export class Router {
   route<M extends RequestMethod | 'ANY', P extends string>(
     method: M,
     pattern: P | RoutePattern<P> | Route<M | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<M, P>,
   ): void {
-    let routeMiddleware: Middleware[] | undefined
-    let requestHandler: RequestHandler
+    let routeMiddleware: Middleware<any, any>[] | undefined
+    let requestHandler: RequestHandler<any, any>
     if (isRequestHandlerWithMiddleware(handler)) {
       routeMiddleware = handler.use
       requestHandler = handler.handler
@@ -267,7 +275,7 @@ export class Router {
 
   map<M extends RequestMethod | 'ANY', P extends string>(
     route: P | RoutePattern<P> | Route<M, P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<M, P>,
   ): void
   map<T extends RouteMap>(routes: T, handlers: RouteHandlers<T>): void
   map(routeOrRoutes: any, handler: any): void {
@@ -277,7 +285,20 @@ export class Router {
     } else if (routeOrRoutes instanceof Route) {
       // map(route, handler)
       this.route(routeOrRoutes.method, routeOrRoutes.pattern, handler)
-    } else if (isRouteHandlersWithMiddleware(handler)) {
+    } else if (!isRouteHandlersWithMiddleware(handler)) {
+      // map(routes, handlers)
+      let handlers = handler
+      for (let key in routeOrRoutes) {
+        let route = routeOrRoutes[key]
+        let handler = handlers[key]
+
+        if (route instanceof Route) {
+          this.route(route.method, route.pattern, handler)
+        } else {
+          this.map(route, handler)
+        }
+      }
+    } else {
       // map(routes, { use, handlers })
       let use = handler.use
       let handlers = handler.handlers
@@ -300,19 +321,6 @@ export class Router {
           this.map(route, { use, handlers: handler })
         }
       }
-    } else {
-      // map(routes, handlers)
-      let handlers = handler
-      for (let key in routeOrRoutes) {
-        let route = routeOrRoutes[key]
-        let handler = handlers[key]
-
-        if (route instanceof Route) {
-          this.route(route.method, route.pattern, handler)
-        } else {
-          this.map(route, handler)
-        }
-      }
     }
   }
 
@@ -320,59 +328,55 @@ export class Router {
 
   get<P extends string>(
     pattern: P | RoutePattern<P> | Route<'GET' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'GET', P>,
   ): void {
     this.route('GET', pattern, handler)
   }
 
   head<P extends string>(
     pattern: P | RoutePattern<P> | Route<'HEAD' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'HEAD', P>,
   ): void {
     this.route('HEAD', pattern, handler)
   }
 
   post<P extends string>(
     pattern: P | RoutePattern<P> | Route<'POST' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'POST', P>,
   ): void {
     this.route('POST', pattern, handler)
   }
 
   put<P extends string>(
     pattern: P | RoutePattern<P> | Route<'PUT' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'PUT', P>,
   ): void {
     this.route('PUT', pattern, handler)
   }
 
   patch<P extends string>(
     pattern: P | RoutePattern<P> | Route<'PATCH' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'PATCH', P>,
   ): void {
     this.route('PATCH', pattern, handler)
   }
 
   delete<P extends string>(
     pattern: P | RoutePattern<P> | Route<'DELETE' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'DELETE', P>,
   ): void {
     this.route('DELETE', pattern, handler)
   }
 
   options<P extends string>(
     pattern: P | RoutePattern<P> | Route<'OPTIONS' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
+    handler: RouteHandler<'OPTIONS', P>,
   ): void {
     this.route('OPTIONS', pattern, handler)
   }
 }
 
-function shouldParseFormData(request: Request): boolean {
-  if (!RequestBodyMethods.includes(request.method as RequestBodyMethod)) {
-    return false
-  }
-
+function canParseFormData(request: Request): boolean {
   let contentType = request.headers.get('Content-Type')
 
   return (

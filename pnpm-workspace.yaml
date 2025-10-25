@@ -1,3 +1,5 @@
+shellEmulator: true
+
 packages:
   - demos/*
   - packages/*
