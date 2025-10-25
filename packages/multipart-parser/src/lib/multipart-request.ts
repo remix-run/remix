@@ -1,4 +1,4 @@
-import type { MultipartParserOptions, MultipartPart } from './multipart.ts'
+import type { MultipartParserOptions, MultipartPart, MultipartPartType } from './multipart.ts'
 import { MultipartParseError, parseMultipartStream } from './multipart.ts'
 
 /**
@@ -31,10 +31,10 @@ export function isMultipartRequest(request: Request): boolean {
  * @param options Optional parser options, such as `maxHeaderSize` and `maxFileSize`
  * @return An async generator yielding `MultipartPart` objects
  */
-export async function* parseMultipartRequest(
+export async function* parseMultipartRequest<S extends boolean | undefined>(
   request: Request,
-  options?: MultipartParserOptions,
-): AsyncGenerator<MultipartPart, void, unknown> {
+  options?: MultipartParserOptions<S>,
+): AsyncGenerator<MultipartPartType<S>, void, unknown> {
   if (!isMultipartRequest(request)) {
     throw new MultipartParseError('Request is not a multipart request')
   }
