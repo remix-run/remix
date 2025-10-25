@@ -5,7 +5,7 @@ import type { RequestMethod } from './request-methods'
 /**
  * Shorthand for a DELETE route.
  */
-export function createDelete<T extends string | RoutePattern>(pattern: T) {
+export function createDestroy<T extends string | RoutePattern>(pattern: T) {
   return { method: 'DELETE', pattern: pattern } as BuildRouteDef<'DELETE', T>
 }
 
