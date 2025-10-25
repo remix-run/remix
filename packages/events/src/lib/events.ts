@@ -1,68 +1,34 @@
-export type DispatchedEvent<E extends Event, T extends EventTarget> = E & { currentTarget: T }
+type EventListenerWithSignal<event extends Event> = (
+  event: event,
+  signal: AbortSignal,
+) => void | Promise<void>
 
-export type EventDescriptor<
-  Target extends EventTarget,
-  Type extends DescriptorType<Target> = DescriptorType<Target>,
+// prettier-ignore
+type EventDescriptor<
+  target extends EventTarget,
+  type extends GetEventType<target> | [InteractionFn<Event>, string],
 > = {
-  type: Type
-  listener: Type extends string
-    ? EventListenerWithSignal<
-        DispatchedEvent<EventOf<Target, Extract<Type, EventName<Target>>>, Target>
-      >
-    : Type extends [infer I, string]
-      ? EventListenerWithSignal<DispatchedEvent<InferInteractionEvent<I>, Target>>
-      : never
+  type: type extends string ? Autocomplete<type> : type
+  listener: EventListenerWithSignal<
+    type extends GetEventType<target> ? GetEvent<target, type> :
+    type extends InteractionFn<infer event> ? event :
+    never
+  >
   options: AddEventListenerOptions
 }
 
-export interface EventContainer<Target extends EventTarget> {
-  on<Type extends DescriptorType<Target>>(
-    descriptors: EventDescriptor<Target, Type> | EventDescriptor<Target, Type>[],
-  ): void
-  dispose(): void
-}
+type Autocomplete<T> = T | (string & {})
 
-export interface Interaction<E extends Event = Event> {
-  signal: AbortSignal
-  target: EventTarget
-  dispatchEvent(event: E): void
-}
+// prettier-ignore
+export type EventWithTarget<event extends Event, target extends EventTarget> =
+  Omit<event, 'currentTarget'> & { currentTarget: target }
 
-// host event overload
-export function bind<
-  Target extends EventTarget = EventTarget,
-  Type extends EventName<Target> = EventName<Target>,
->(
-  type: Type,
-  listener: EventListenerWithSignal<DispatchedEvent<EventOf<Target, Type>, Target>>,
-  options?: AddEventListenerOptions,
-): EventDescriptor<Target, Type>
+// events ------------------------------------------------------------------------------------------
 
-// interaction event overload (restrict Name to the event type literal union)
-export function bind<
-  Interaction extends InteractionFn,
-  Target extends EventTarget = EventTarget,
-  Type extends EventTypeOf<InferInteractionEvent<Interaction>> = EventTypeOf<
-    InferInteractionEvent<Interaction>
-  >,
->(
-  type: [Interaction, Type],
-  listener: EventListenerWithSignal<DispatchedEvent<InferInteractionEvent<Interaction>, Target>>,
-  options?: AddEventListenerOptions,
-): EventDescriptor<Target, [Interaction, Type]>
-
-// implementation
-export function bind<
-  Target extends EventTarget = EventTarget,
-  Type extends DescriptorType<Target> = DescriptorType<Target>,
->(type: Type, listener: any, options: AddEventListenerOptions = {}): EventDescriptor<Target, Type> {
-  return { type, listener, options }
-}
-
-export function events<Target extends EventTarget>(
-  target: Target,
+export function events<target extends EventTarget>(
+  target: target,
   signal?: AbortSignal,
-): EventContainer<Target> {
+): EventContainer<target> {
   let controller = new AbortController()
   if (signal) {
     signal.addEventListener(
@@ -72,69 +38,26 @@ export function events<Target extends EventTarget>(
     )
   }
 
-  let bindings: EventDescriptor<any, any>[] = []
+  let bindings: EventDescriptor<target, any>[] = []
 
   return {
     on: (nextDescriptors) => {
-      if (!nextDescriptors) nextDescriptors = []
-      if (!Array.isArray(nextDescriptors)) nextDescriptors = [nextDescriptors]
-      if (bindingsChanged(bindings, nextDescriptors)) {
+      // prettier-ignore
+      let descriptors: Array<EventDescriptor<target, any>> =
+        Array.isArray(nextDescriptors) ? nextDescriptors :
+        nextDescriptors === undefined ? [] :
+        [nextDescriptors]
+
+      if (bindingsChanged(bindings, descriptors)) {
         controller.abort(new DOMException('bindings changed', 'EventContainer'))
         controller = new AbortController()
-        bindings = addEventListeners(target, nextDescriptors, controller.signal)
+        bindings = addEventListeners(target, descriptors, controller.signal)
       } else {
-        bindings = updateBindingsInPlace(bindings, nextDescriptors, controller.signal)
+        bindings = updateBindingsInPlace(bindings, descriptors, controller.signal)
       }
     },
     dispose: () => controller.abort(),
   }
-}
-
-export function createBinder<I extends InteractionFn>(
-  interactionType: I,
-  eventType: EventTypeOf<InferInteractionEvent<I>>,
-) {
-  return function <T extends EventTarget = EventTarget>(
-    listener: EventListenerWithSignal<DispatchedEvent<InferInteractionEvent<I>, T>>,
-  ): EventDescriptor<T, [I, EventTypeOf<InferInteractionEvent<I>>]> {
-    return bind([interactionType, eventType], listener)
-  }
-}
-
-export class TypedEventTarget<EventMap> extends EventTarget {
-  declare readonly __eventMap?: EventMap
-}
-
-export interface TypedEventTarget<EventMap> {
-  // typed
-  addEventListener<K extends Extract<keyof EventMap, string>>(
-    type: K,
-    listener: TypedEventListener<EventMap>[K],
-    options?: AddEventListenerOptions,
-  ): void
-  // base
-  addEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject | null,
-    options?: boolean | AddEventListenerOptions,
-  ): void
-
-  // typed
-  removeEventListener<K extends Extract<keyof EventMap, string>>(
-    type: K,
-    listener: TypedEventListener<EventMap>[K],
-    options?: EventListenerOptions,
-  ): void
-  // base
-  removeEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject | null,
-    options?: EventListenerOptions,
-  ): void
-}
-
-type TypedEventListener<EventMap> = {
-  [K in keyof EventMap]: (event: EventMap[K]) => void
 }
 
 function updateBindingsInPlace(
@@ -153,8 +76,6 @@ function updateBindingsInPlace(
   return bindings
 }
 
-// Simple diff, we can optimize this if we want to, this simply prevents
-// add/remove event listeners if the types/options/order is the same
 function bindingsChanged(
   bindings: EventDescriptor<any, any>[],
   nextDescriptors: EventDescriptor<any, any>[],
@@ -175,11 +96,11 @@ function optionsChanged(a: AddEventListenerOptions, b: AddEventListenerOptions):
 
 let attachedInteractions = new WeakMap<EventTarget, Interaction<any>>()
 
-function addEventListeners(
-  target: EventTarget,
-  descriptors: EventDescriptor<any, any>[],
+function addEventListeners<target extends EventTarget>(
+  target: target,
+  descriptors: EventDescriptor<target, any>[],
   containerSignal: AbortSignal,
-  bindings: EventDescriptor<any, any>[] = [],
+  bindings: EventDescriptor<target, any>[] = [],
 ) {
   for (let descriptor of descriptors) {
     if (Array.isArray(descriptor.type)) {
@@ -232,50 +153,122 @@ function withSignal(
   }
 }
 
-type EventListenerWithSignal<E extends Event> = (
-  event: E,
-  signal: AbortSignal,
-) => void | Promise<void>
+// prettier-ignore
+type EventContainer<target extends EventTarget> = {
+  on: <arg, type extends GetEventType<target> | [InteractionFn<Event>, string]>(arg:
+    arg & { type: type } extends EventDescriptor<EventTarget, any> ? EventDescriptor<target, type> :
+    arg extends Array<EventDescriptor<target, any>> ? arg :
+    EventDescriptor<target, type>
+  ) => void
+  dispose: () => void
+}
+
+// bind --------------------------------------------------------------------------------------------
 
 // prettier-ignore
-type BuiltinEventsFor<T extends EventTarget> = 
-  T extends HTMLElement ? HTMLElementEventMap :
-  T extends Element ? ElementEventMap :
-  T extends Window ? WindowEventMap :
-  T extends Document ? DocumentEventMap :
-  T extends Worker ? WorkerEventMap :
-  T extends ServiceWorker ? ServiceWorkerEventMap :
-  T extends WebSocket ? WebSocketEventMap :
-  T extends MessagePort ? MessagePortEventMap :
+export function bind<target extends EventTarget, type extends GetEventType<target>>(
+  type: Autocomplete<type>,
+  listener: EventListenerWithSignal<GetEvent<target, type>>,
+  options?: AddEventListenerOptions,
+): EventDescriptor<target, type>
+
+// prettier-ignore
+export function bind<target extends EventTarget, event extends Event, type extends event['type']>(
+  type: [InteractionFn<event>, type],
+  listener: EventListenerWithSignal<EventWithTarget<event, target>>,
+  options?: AddEventListenerOptions,
+): EventDescriptor<target, [InteractionFn<event>, type]>
+
+export function bind(
+  type: string | [InteractionFn<any>, string],
+  listener: EventListenerWithSignal<any>,
+  options: AddEventListenerOptions = {},
+): EventDescriptor<any, any> {
+  return { type, listener, options }
+}
+
+// EventMaps ---------------------------------------------------------------------------------------
+
+// prettier-ignore
+type GetEventMap<target extends EventTarget> =
+  // TypedEventTarget
+  target extends { __eventMap?: infer eventMap } ? eventMap :
+
+  // builtins
+  target extends HTMLElement ? HTMLElementEventMap :
+  target extends Element ? ElementEventMap :
+  target extends Window ? WindowEventMap :
+  target extends Document ? DocumentEventMap :
+  target extends Worker ? WorkerEventMap :
+  target extends ServiceWorker ? ServiceWorkerEventMap :
+  target extends WebSocket ? WebSocketEventMap :
+  target extends MessagePort ? MessagePortEventMap :
+
+  // default
   GlobalEventHandlersEventMap & Record<string, Event>
 
-type EventMapOf<T> =
-  T extends TypedEventTarget<infer M>
-    ? '__eventMap' extends keyof T
-      ? M
-      : never
-    : '__eventMap' extends keyof T
-      ? Exclude<T['__eventMap'], undefined>
-      : never
+// prettier-ignore
+type GetEventType<target extends EventTarget> =
+  target extends { __eventMap?: infer eventMap } ? keyof eventMap : // TypedEventTarget
+  keyof GetEventMap<target>
 
-export type EventsFor<T extends EventTarget> = [EventMapOf<T>] extends [never]
-  ? BuiltinEventsFor<T>
-  : EventMapOf<T>
+// prettier-ignore
+type GetEvent<target extends EventTarget, type extends GetEventType<target>> =
+  EventWithTarget<GetEventMap<target>[type] & Event, target>
 
-// infer event names and event types for a given target
-type EventName<Target extends EventTarget> = Extract<keyof EventsFor<Target>, string>
-type EventOf<Target extends EventTarget, Name extends EventName<Target>> = (EventsFor<Target> &
-  Record<string, Event>)[Name]
+// TypedEventTarget --------------------------------------------------------------------------------
 
-// descriptor type forms we support
-type InteractionFn = (this: Interaction<any>) => unknown
-type DescriptorType<Target extends EventTarget> = EventName<Target> | [InteractionFn, string]
+export class TypedEventTarget<EventMap> extends EventTarget {
+  declare readonly __eventMap?: EventMap
+}
 
-type InferInteractionEvent<I> = I extends (this: infer H) => unknown
-  ? H extends Interaction<infer E>
-    ? E
-    : Event
-  : Event
+export interface TypedEventTarget<EventMap> {
+  // typed
+  addEventListener<K extends Extract<keyof EventMap, string>>(
+    type: K,
+    listener: TypedEventListener<EventMap>[K],
+    options?: AddEventListenerOptions,
+  ): void
+  // base
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ): void
 
-// infer literal type union from an Event subclass's `type` property
-type EventTypeOf<E extends Event> = E extends { type: infer T } ? Extract<T, string> : string
+  // typed
+  removeEventListener<K extends Extract<keyof EventMap, string>>(
+    type: K,
+    listener: TypedEventListener<EventMap>[K],
+    options?: EventListenerOptions,
+  ): void
+  // base
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: EventListenerOptions,
+  ): void
+}
+type TypedEventListener<EventMap> = {
+  [K in keyof EventMap]: (event: EventMap[K]) => void
+}
+
+// Interaction -------------------------------------------------------------------------------------
+
+export type Interaction<E extends Event = Event> = {
+  signal: AbortSignal
+  target: EventTarget
+  dispatchEvent(event: E): void
+}
+type InteractionFn<event extends Event> = (this: Interaction<event>) => unknown
+
+export function createBinder<event extends Event>(
+  interactionType: InteractionFn<event>,
+  eventType: event['type'],
+) {
+  return function <target extends EventTarget = EventTarget>(
+    listener: EventListenerWithSignal<EventWithTarget<event, target>>,
+  ): EventDescriptor<target, [InteractionFn<event>, event['type']]> {
+    return bind([interactionType, eventType], listener)
+  }
+}

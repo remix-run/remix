@@ -4,8 +4,7 @@ import {
   createBinder,
   events,
   TypedEventTarget,
-  type DispatchedEvent,
-  type EventsFor,
+  type EventWithTarget,
   type Interaction,
 } from './events.ts'
 import type { Assert, Equal } from '../test/utils.ts'
@@ -17,7 +16,7 @@ describe('types', () => {
       bind('keydown', (event) => {
         let target = event.currentTarget
         let key = event.key
-        type T2 = Assert<Equal<typeof event, DispatchedEvent<KeyboardEvent, HTMLButtonElement>>>
+        type T2 = Assert<Equal<typeof event, EventWithTarget<KeyboardEvent, HTMLButtonElement>>>
       }),
     )
   })
@@ -26,10 +25,10 @@ describe('types', () => {
     let target = document.createElement('button')
     events(target).on([
       bind('click', (event) => {
-        type T2 = Assert<Equal<typeof event, DispatchedEvent<PointerEvent, HTMLButtonElement>>>
+        type T2 = Assert<Equal<typeof event, EventWithTarget<PointerEvent, HTMLButtonElement>>>
       }),
       bind('keydown', (event) => {
-        type T2 = Assert<Equal<typeof event, DispatchedEvent<KeyboardEvent, HTMLButtonElement>>>
+        type T2 = Assert<Equal<typeof event, EventWithTarget<KeyboardEvent, HTMLButtonElement>>>
       }),
     ])
   })
@@ -63,7 +62,7 @@ describe('types', () => {
       bind([Tempo, 'tempo-change'], (event) => {
         let target = event.currentTarget
         let tempo = event.tempo
-        type T2 = Assert<Equal<typeof event, DispatchedEvent<TempoEvent, HTMLDivElement>>>
+        type T2 = Assert<Equal<typeof event, EventWithTarget<TempoEvent, HTMLDivElement>>>
       }),
       // @ts-expect-error - wrong event name
       bind([Tempo, 'wrong'], () => {}),
@@ -336,12 +335,6 @@ describe('TypedEventTarget', () => {
   }
 
   class Drummer extends TypedEventTarget<DrummerEventMap> {}
-
-  it('infers event map from the typed event target subclass', () => {
-    type T = EventsFor<Drummer>
-    type T2 = Assert<Equal<T, DrummerEventMap>>
-    expect(true).toBe(true)
-  })
 
   it('adds literal event class to listener', () => {
     let drummer = new Drummer()
