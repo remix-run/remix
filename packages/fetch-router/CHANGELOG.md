@@ -5,7 +5,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 ## Unreleased
 
 - BREAKING CHANGE: Move `@remix-run/form-data-parser`, `@remix-run/headers`, and `@remix-run/route-pattern` to `peerDependencies`.
-- BREAKING CHANGE: Add `Method` generic parameter to `InferRouteHandler<Method, PatternLike>` type.
+- BREAKING CHANGE: Rename `InferRouteHandler` => `BuildRouteHandler` and add a `Method` generic parameter to build a `RouteHandler` type from a string, route pattern, or route.
 - BREAKING CHANGE: Removed support for passing a `Route` object to `redirect()` response helper. Use `redirect(routes.home.href())` instead.
 - More precise type inference for `router.get()`, `router.post()`, etc. route handlers.
 - Add support for nesting route maps via object spread syntax

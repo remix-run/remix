@@ -1,5 +1,5 @@
 import * as path from 'node:path'
-import type { InferRouteHandler } from '@remix-run/fetch-router'
+import type { BuildRouteHandler } from '@remix-run/fetch-router'
 import { openFile } from '@remix-run/lazy-file/fs'
 
 import { routes } from '../routes.ts'
@@ -8,11 +8,11 @@ const publicDir = path.join(import.meta.dirname, '..', 'public')
 const publicAssetsDir = path.join(publicDir, 'assets')
 const publicImagesDir = path.join(publicDir, 'images')
 
-export let assets: InferRouteHandler<'GET', typeof routes.assets> = async ({ params }) => {
+export let assets: BuildRouteHandler<'GET', typeof routes.assets> = async ({ params }) => {
   return serveFile(path.join(publicAssetsDir, params.path))
 }
 
-export let images: InferRouteHandler<'GET', typeof routes.images> = async ({ params }) => {
+export let images: BuildRouteHandler<'GET', typeof routes.images> = async ({ params }) => {
   return serveFile(path.join(publicImagesDir, params.path))
 }
 

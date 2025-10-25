@@ -1090,8 +1090,8 @@ describe('trailing slash handling', () => {
 describe('form data parsing', () => {
   it('does not provide context.formData on a GET request', async () => {
     let router = createRouter({ parseFormData: false })
-    let formData: FormData | undefined
 
+    let formData: FormData | undefined
     router.get('/', (context) => {
       formData = context.formData
       return new Response('OK')
@@ -1104,8 +1104,8 @@ describe('form data parsing', () => {
 
   it('provides context.formData on a POST', async () => {
     let router = createRouter({ parseFormData: true })
-    let formData: FormData | undefined
 
+    let formData: FormData | undefined
     router.post('/', (context) => {
       type T = Assert<IsEqual<typeof context.formData, FormData>>
       formData = context.formData
@@ -1128,8 +1128,8 @@ describe('form data parsing', () => {
 
   it('provides an empty context.formData on a POST when form data parsing is disabled', async () => {
     let router = createRouter({ parseFormData: false })
-    let formData: FormData | undefined
 
+    let formData: FormData | undefined
     router.post('/submit', (context) => {
       formData = context.formData
       return new Response('OK')
@@ -1157,9 +1157,9 @@ describe('form data parsing', () => {
     let router = createRouter()
 
     let formData: FormData | undefined
-    router.get(routes.index, (context) => {
+    router.map(routes.index, (context) => {
       formData = context.formData
-      type T = Assert<IsEqual<typeof formData, undefined>>
+      type T = Assert<IsEqual<typeof formData, FormData | undefined>>
       return new Response('OK')
     })
 

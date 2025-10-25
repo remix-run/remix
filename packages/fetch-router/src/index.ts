@@ -38,7 +38,7 @@ export type {
   ResourcesOptions,
 } from './lib/resource.ts'
 
-export type { RouteHandlers, InferRouteHandler, RouteHandler } from './lib/route-handlers.ts'
+export type { RouteHandlers, RouteHandler, BuildRouteHandler } from './lib/route-handlers.ts'
 
 export {
   Route,

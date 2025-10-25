@@ -29,18 +29,6 @@ export function isRouteHandlersWithMiddleware<T extends RouteMap>(
   )
 }
 
-type PatternLike = string | RoutePattern | Route
-
-/**
- * Infer the route handler type from a route or route pattern.
- */
-// prettier-ignore
-export type InferRouteHandler<Method extends RequestMethod | 'ANY', P extends PatternLike> =
-  P extends string ? RouteHandler<Method, P> :
-  P extends RoutePattern<infer S> ? RouteHandler<Method, S> :
-  P extends Route<infer _, infer S> ? RouteHandler<Method, S> :
-  never
-
 /**
  * An individual route handler.
  */
@@ -53,8 +41,18 @@ type RequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', P extends str
   handler: RequestHandler<M, Params<P>>
 }
 
-export function isRequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', T extends string>(
+export function isRequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', P extends string>(
   handler: any,
-): handler is RequestHandlerWithMiddleware<M, T> {
+): handler is RequestHandlerWithMiddleware<M, P> {
   return typeof handler === 'object' && handler != null && 'use' in handler && 'handler' in handler
 }
+
+/**
+ * Build a `RouteHandler` type from a string, route pattern, or route.
+ */
+// prettier-ignore
+export type BuildRouteHandler<M extends RequestMethod | 'ANY', T extends string | RoutePattern | Route> =
+  T extends string ? RouteHandler<M, T> :
+  T extends RoutePattern<infer P> ? RouteHandler<M, P> :
+  T extends Route<infer _, infer P> ? RouteHandler<M, P> :
+  never

@@ -1,7 +1,7 @@
 import SuperHeaders from '@remix-run/headers'
 
 import { AppStorage } from './app-storage.ts'
-import type { RequestMethod } from './request-methods.ts'
+import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
 
 /**
  * A context object that contains information about the current request. Every request
@@ -12,21 +12,18 @@ export class RequestContext<
   Params extends Record<string, any> = {},
 > {
   /**
-   * Parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) from the request body.
+   * Parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) from the
+   * request body.
    *
    * Note: This is only available for requests with a body (not `GET` or `HEAD`).
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/FormData)
    */
-  formData: Method extends 'GET' | 'HEAD'
-    ? undefined
-    : Method extends 'ANY'
-      ? FormData | undefined
-      : FormData
+  formData: Method extends RequestBodyMethod ? FormData : FormData | undefined
   /**
-   * The request method. This may differ from `request.method` if the request body
-   * contained a method override field (e.g. `_method=DELETE`), allowing HTML forms to simulate
-   * RESTful API request methods like PUT and DELETE.
+   * The request method. This may differ from `request.method` if the request body contained a
+   * method override field (e.g. `_method=DELETE`), allowing HTML forms to simulate RESTful API
+   * request methods like `PUT` and `DELETE`.
    */
   method: RequestMethod
   /**
@@ -45,7 +42,7 @@ export class RequestContext<
    * The URL that was matched by the route.
    *
    * Note: This may be different from `request.url` if the request was routed to a sub-router,
-   * in which case the URL mount path is stripped from the beginning of the pathname.
+   * in which case the sub-router's mount path is stripped from the beginning of the pathname.
    */
   url: URL
   /**
