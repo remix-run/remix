@@ -29,14 +29,13 @@ export function isRouteHandlersWithMiddleware<T extends RouteMap>(
   )
 }
 
+type PatternLike = string | RoutePattern | Route
+
 /**
  * Infer the route handler type from a route or route pattern.
  */
 // prettier-ignore
-export type InferRouteHandler<
-  Method extends RequestMethod | 'ANY',
-  P extends string | RoutePattern | Route,
-> =
+export type InferRouteHandler<Method extends RequestMethod | 'ANY', P extends PatternLike> =
   P extends string ? RouteHandler<Method, P> :
   P extends RoutePattern<infer S> ? RouteHandler<Method, S> :
   P extends Route<infer _, infer S> ? RouteHandler<Method, S> :
