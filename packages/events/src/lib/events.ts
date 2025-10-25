@@ -1,3 +1,5 @@
+import type { Autocomplete } from '../type-utils'
+
 type EventListenerWithSignal<event extends Event> = (
   event: event,
   signal: AbortSignal,
@@ -16,8 +18,6 @@ export type EventDescriptor<
   >
   options: AddEventListenerOptions
 }
-
-type Autocomplete<T> = T | (string & {})
 
 // prettier-ignore
 export type DispatchedEvent<event extends Event, target extends EventTarget> =

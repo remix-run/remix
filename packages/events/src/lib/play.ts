@@ -1,4 +1,4 @@
-import type { Assert, Equal } from '../test/utils'
+import type { Assert, Equal } from '../type-utils'
 
 type TypedEventListener<EventMap> = {
   [K in keyof EventMap]: (event: EventMap[K]) => void

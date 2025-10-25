@@ -7,7 +7,7 @@ import {
   type DispatchedEvent,
   type Interaction,
 } from './events.ts'
-import type { Assert, Equal } from '../test/utils.ts'
+import type { Assert, Equal } from '../type-utils'
 
 describe('types', () => {
   it('provides target and event on dispatched events', () => {
