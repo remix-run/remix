@@ -4,7 +4,7 @@ import {
   createBinder,
   events,
   TypedEventTarget,
-  type EventWithTarget,
+  type DispatchedEvent,
   type Interaction,
 } from './events.ts'
 import type { Assert, Equal } from '../test/utils.ts'
@@ -16,7 +16,7 @@ describe('types', () => {
       bind('keydown', (event) => {
         let target = event.currentTarget
         let key = event.key
-        type T2 = Assert<Equal<typeof event, EventWithTarget<KeyboardEvent, HTMLButtonElement>>>
+        type T2 = Assert<Equal<typeof event, DispatchedEvent<KeyboardEvent, HTMLButtonElement>>>
       }),
     )
   })
@@ -25,10 +25,10 @@ describe('types', () => {
     let target = document.createElement('button')
     events(target).on([
       bind('click', (event) => {
-        type T2 = Assert<Equal<typeof event, EventWithTarget<PointerEvent, HTMLButtonElement>>>
+        type T2 = Assert<Equal<typeof event, DispatchedEvent<PointerEvent, HTMLButtonElement>>>
       }),
       bind('keydown', (event) => {
-        type T2 = Assert<Equal<typeof event, EventWithTarget<KeyboardEvent, HTMLButtonElement>>>
+        type T2 = Assert<Equal<typeof event, DispatchedEvent<KeyboardEvent, HTMLButtonElement>>>
       }),
     ])
   })
@@ -62,7 +62,7 @@ describe('types', () => {
       bind([Tempo, 'tempo-change'], (event) => {
         let target = event.currentTarget
         let tempo = event.tempo
-        type T2 = Assert<Equal<typeof event, EventWithTarget<TempoEvent, HTMLDivElement>>>
+        type T2 = Assert<Equal<typeof event, DispatchedEvent<TempoEvent, HTMLDivElement>>>
       }),
       // @ts-expect-error - wrong event name
       bind([Tempo, 'wrong'], () => {}),

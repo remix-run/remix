@@ -4,7 +4,7 @@ type EventListenerWithSignal<event extends Event> = (
 ) => void | Promise<void>
 
 // prettier-ignore
-type EventDescriptor<
+export type EventDescriptor<
   target extends EventTarget,
   type extends GetEventType<target> | [InteractionFn<Event>, string],
 > = {
@@ -20,10 +20,20 @@ type EventDescriptor<
 type Autocomplete<T> = T | (string & {})
 
 // prettier-ignore
-export type EventWithTarget<event extends Event, target extends EventTarget> =
+export type DispatchedEvent<event extends Event, target extends EventTarget> =
   Omit<event, 'currentTarget'> & { currentTarget: target }
 
 // events ------------------------------------------------------------------------------------------
+
+// prettier-ignore
+export type EventContainer<target extends EventTarget> = {
+  on: <arg, type extends GetEventType<target> | [InteractionFn<Event>, string]>(arg:
+    arg & { type: type } extends EventDescriptor<EventTarget, any> ? EventDescriptor<target, type> :
+    arg extends Array<EventDescriptor<target, any>> ? arg :
+    EventDescriptor<target, type>
+  ) => void
+  dispose: () => void
+}
 
 export function events<target extends EventTarget>(
   target: target,
@@ -153,16 +163,6 @@ function withSignal(
   }
 }
 
-// prettier-ignore
-type EventContainer<target extends EventTarget> = {
-  on: <arg, type extends GetEventType<target> | [InteractionFn<Event>, string]>(arg:
-    arg & { type: type } extends EventDescriptor<EventTarget, any> ? EventDescriptor<target, type> :
-    arg extends Array<EventDescriptor<target, any>> ? arg :
-    EventDescriptor<target, type>
-  ) => void
-  dispose: () => void
-}
-
 // bind --------------------------------------------------------------------------------------------
 
 // prettier-ignore
@@ -175,7 +175,7 @@ export function bind<target extends EventTarget, type extends GetEventType<targe
 // prettier-ignore
 export function bind<target extends EventTarget, event extends Event, type extends event['type']>(
   type: [InteractionFn<event>, type],
-  listener: EventListenerWithSignal<EventWithTarget<event, target>>,
+  listener: EventListenerWithSignal<DispatchedEvent<event, target>>,
   options?: AddEventListenerOptions,
 ): EventDescriptor<target, [InteractionFn<event>, type]>
 
@@ -214,7 +214,7 @@ type GetEventType<target extends EventTarget> =
 
 // prettier-ignore
 type GetEvent<target extends EventTarget, type extends GetEventType<target>> =
-  EventWithTarget<GetEventMap<target>[type] & Event, target>
+  DispatchedEvent<GetEventMap<target>[type] & Event, target>
 
 // TypedEventTarget --------------------------------------------------------------------------------
 
@@ -267,7 +267,7 @@ export function createBinder<event extends Event>(
   eventType: event['type'],
 ) {
   return function <target extends EventTarget = EventTarget>(
-    listener: EventListenerWithSignal<EventWithTarget<event, target>>,
+    listener: EventListenerWithSignal<DispatchedEvent<event, target>>,
   ): EventDescriptor<target, [InteractionFn<event>, event['type']]> {
     return bind([interactionType, eventType], listener)
   }
