@@ -189,6 +189,10 @@ export function bind(
 
 // EventMaps ---------------------------------------------------------------------------------------
 
+// TODO: consider using https://github.com/alexreardon/bind-event-listener/blob/6cf23e4632d9c9112447a7530d7c8a43791cfcfa/src/types.ts#L5-L15
+// so that we don't have to enumerate all the built-in EventMaps
+// though @Andarist did say that maybe handwritten EventMap registry may be more robust long term
+
 // prettier-ignore
 type GetEventMap<target extends EventTarget> =
   // TypedEventTarget
