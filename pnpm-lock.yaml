@@ -86,6 +86,9 @@ importers:
         specifier: workspace:*
         version: link:../route-pattern
     devDependencies:
+      '@remix-run/html-template':
+        specifier: workspace:*
+        version: link:../html-template
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0

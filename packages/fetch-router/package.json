@@ -55,6 +55,7 @@
   "peerDependencies": {
     "@remix-run/form-data-parser": "workspace:*",
     "@remix-run/headers": "workspace:*",
+    "@remix-run/html-template": "workspace:*",
     "@remix-run/route-pattern": "workspace:*"
   },
   "scripts": {

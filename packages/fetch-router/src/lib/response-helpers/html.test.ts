@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { html as safeHtml } from '@remix-run/html-template'
 
 import { html } from './html.ts'
-import { html as safeHtml } from '../safe-html.ts'
 
 describe('html()', () => {
   it('creates a Response with HTML content-type header', async () => {
