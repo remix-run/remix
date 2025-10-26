@@ -21,7 +21,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./html-template": "./src/html-template.ts",
     "./logger-middleware": "./src/logger-middleware.ts",
+    "./response-helpers": "./src/response-helpers.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -30,9 +32,17 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./html-template": {
+        "types": "./dist/html-template.d.ts",
+        "default": "./dist/html-template.js"
+      },
       "./logger-middleware": {
         "types": "./dist/logger-middleware.d.ts",
         "default": "./dist/logger-middleware.js"
+      },
+      "./response-helpers": {
+        "types": "./dist/response-helpers.d.ts",
+        "default": "./dist/response-helpers.js"
       },
       "./package.json": "./package.json"
     }
@@ -48,9 +58,11 @@
     "@remix-run/route-pattern": "workspace:*"
   },
   "scripts": {
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:logger-middleware",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:html-template && pnpm run build:logger-middleware && pnpm run build:response-helpers",
+    "build:html-template": "esbuild src/html-template.ts --bundle --outfile=dist/html-template.js --format=esm --platform=neutral --sourcemap",
     "build:index": "esbuild src/index.ts --bundle --external:@remix-run/form-data-parser --external:@remix-run/headers --external:@remix-run/route-pattern --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
     "build:logger-middleware": "esbuild src/logger-middleware.ts --bundle --outfile=dist/logger-middleware.js --format=esm --platform=neutral --sourcemap",
+    "build:response-helpers": "esbuild src/response-helpers.ts --bundle --outfile=dist/response-helpers.js --format=esm --platform=neutral --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
     "prepublishOnly": "pnpm run build",

@@ -88,10 +88,12 @@ The `routes.home` route is a `Route<'ANY', '/'>`, which means it serves any requ
 
 In addition to describing the structure of your routes, route maps also make it easy to generate type-safe links and form actions using the `href()` function on a route. The example below is a small site with a home page and a "Contact Us" page.
 
-Note: We're using the [`html` response helper](#response-helpers) below to create `Response`s with `Content-Type: text/html`.
+Note: We're using the [`html` response helper](#response-helpers) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
 
 ```ts
-import { createRouter, route, html } from '@remix-run/fetch-router'
+import { createRouter, route } from '@remix-run/fetch-router'
+import { html } from '@remix-run/html-template'
+import * as res from '@remix-run/fetch-router/response-helpers'
 
 let routes = route({
   home: '/',
@@ -102,7 +104,7 @@ let router = createRouter()
 
 // Register a handler for `GET /`
 router.get(routes.home, () => {
-  return html`
+  return res.html(`
     <html>
       <body>
         <h1>Home</h1>
@@ -111,12 +113,12 @@ router.get(routes.home, () => {
         </p>
       </body>
     </html>
-  `
+  `)
 })
 
 // Register a handler for `GET /contact`
 router.get(routes.contact, () => {
-  return html`
+  return res.html(`
     <html>
       <body>
         <h1>Contact Us</h1>
@@ -134,7 +136,7 @@ router.get(routes.contact, () => {
         </footer>
       </body>
     </html>
-  `
+  `)
 })
 
 // Register a handler for `POST /contact`
@@ -143,8 +145,7 @@ router.post(routes.contact, ({ formData }) => {
   // contains the `FormData` from the form submission. It is automatically
   // parsed from the request body and available in all POST handlers.
   let message = formData.get('message') as string
-
-  return html`
+  let body = html`
     <html>
       <body>
         <h1>Thanks!</h1>
@@ -159,6 +160,8 @@ router.post(routes.contact, ({ formData }) => {
       </body>
     </html>
   `
+
+  return res.html(body)
 })
 ```
 
@@ -231,7 +234,9 @@ Continuing with [the example of the contact page](#routing-based-on-request-meth
 A `formAction()` route map contains two routes: `index` and `action`. The `index` route is a `GET` route that shows the form, and the `action` route is a `POST` route that handles the form submission.
 
 ```tsx
-import { createRouter, route, formAction, html } from '@remix-run/fetch-router'
+import { createRouter, route, formAction } from '@remix-run/fetch-router'
+import { html } from '@remix-run/html-template'
+import * as res from '@remix-run/fetch-router/response-helpers'
 
 let routes = route({
   home: '/',
@@ -251,7 +256,7 @@ let router = createRouter()
 
 router.map(routes, {
   home() {
-    return html`
+    return res.html(`
       <html>
         <body>
           <h1>Home</h1>
@@ -262,12 +267,12 @@ router.map(routes, {
           </footer>
         </body>
       </html>
-    `
+    `)
   },
   contact: {
     // GET /contact - shows the form
     index() {
-      return html`
+      return res.html(`
         <html>
           <body>
             <h1>Contact Us</h1>
@@ -278,13 +283,12 @@ router.map(routes, {
             </form>
           </body>
         </html>
-      `
+      `)
     },
     // POST /contact - handles the form submission
     action({ formData }) {
       let message = formData.get('message') as string
-
-      return html`
+      let body = html`
         <html>
           <body>
             <h1>Thanks!</h1>
@@ -296,6 +300,8 @@ router.map(routes, {
           </body>
         </html>
       `
+
+      return res.html(body)
     },
   },
 })
@@ -515,7 +521,7 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
 
 ### Response Helpers
 
-The router provides a few response helpers that make it easy to return responses with common formats:
+The router provides a few response helpers that make it easy to return responses with common formats. They are available in the `@remix-run/fetch-router/response-helpers` export.
 
 - `html(body, init?)` - returns a `Response` with `Content-Type: text/html`
 - `json(data, init?)` - returns a `Response` with `Content-Type: application/json`
@@ -523,28 +529,58 @@ The router provides a few response helpers that make it easy to return responses
 
 These helpers are provided for consistency between different JavaScript runtime environments and also help fill in the gaps when working with standard web APIs like `Response.redirect()`.
 
-#### Working with HTML
+```tsx
+import * as res from '@remix-run/fetch-router/response-helpers'
 
-The `html` helper supports sending HTML from any type supported by the `Response` constructor including strings, `ReadableStream`, `File`, `Blob`, and more.
+let response = res.html('<h1>Hello</h1>')
+let response = res.json({ message: 'Hello' })
+let response = res.redirect('/')
+```
 
-When working with HTML strings, the `html` helper supports tagged template literals and `html.raw()` for inserting raw (safe) HTML into a response.
+### Working with HTML
+
+For working with HTML strings and safe HTML interpolation, see the [`@remix-run/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template) package. It provides a `html` template tag with automatic escaping to prevent XSS vulnerabilities.
 
 ```ts
-import { html } from '@remix-run/fetch-router'
+import { html } from '@remix-run/html-template'
+import * as res from '@remix-run/fetch-router/response-helpers'
 
+// Use the template tag to escape unsafe variables in HTML.
 let unsafe = '<script>alert(1)</script>'
-
-// Use the tagged template literal form to escape the HTML and create a Response.
-let response = html`<h1>${unsafe}</h1>`
-
-// If you need to use a response init for custom status, headers, etc., use `html.esc`
-// to escape the HTML and the `html()` helper to create the Response.
-let response = html(html.esc`<h1>${unsafe}</h1>`, { status: 400 })
-
-// If you have safe HTML to insert into a response, use `html.raw()` to insert it directly.
-let icon = html.raw('<b>OK</b>')
-let response = html`<div>${icon}</div>` // Inserts raw (safe) HTML into a Response
+let response = res.html(html`<h1>${unsafe}</h1>`, { status: 400 })
 ```
+
+The `html.raw` template tag can be used to interpolate values without escaping them. This has the same semantics as `String.raw` but for HTML snippets that have already been escaped or are from trusted sources:
+
+```ts
+// Use html.raw as a template tag to skip escaping interpolations
+let safeHtml = '<b>Bold</b>'
+let content = html.raw`<div class="content">${safeHtml}</div>`
+let response = res.html(content)
+
+// This is particularly useful when building HTML from multiple safe fragments
+let header = '<header>Title</header>'
+let body = '<main>Content</main>'
+let footer = '<footer>Footer</footer>'
+let page = html.raw`
+  <!DOCTYPE html>
+  <html>
+    <body>
+      ${header}
+      ${body}
+      ${footer}
+    </body>
+  </html>
+`
+
+// You can nest html.raw inside html to preserve SafeHtml fragments
+let icon = html.raw`<svg>...</svg>`
+let button = html`<button>${icon} Click me</button>` // icon is not escaped
+```
+
+**Warning**: Only use `html.raw` with trusted content. Unlike the regular `html` template tag, `html.raw` does not escape its interpolations, which can lead to XSS vulnerabilities if used with untrusted user input.
+
+See the [`@remix-run/html-template` documentation](https://github.com/remix-run/remix/tree/main/packages/html-template#readme) for more details.
 
 ### Testing
 

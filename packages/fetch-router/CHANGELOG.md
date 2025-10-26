@@ -7,6 +7,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 - BREAKING CHANGE: Move `@remix-run/form-data-parser`, `@remix-run/headers`, and `@remix-run/route-pattern` to `peerDependencies`.
 - BREAKING CHANGE: Rename `InferRouteHandler` => `BuildRouteHandler` and add a `Method` generic parameter to build a `RouteHandler` type from a string, route pattern, or route.
 - BREAKING CHANGE: Removed support for passing a `Route` object to `redirect()` response helper. Use `redirect(routes.home.href())` instead.
+- BREAKING CHANGE: Move `html()`, `json()`, and `redirect()` response helpers to `@remix-run/fetch-router/response-helpers` export
 - More precise type inference for `router.get()`, `router.post()`, etc. route handlers.
 - Add support for nesting route maps via object spread syntax
 
@@ -27,26 +28,6 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   ```
 
 - Add support for `URL` objects in `redirect()` response helper
-- Improved `html()` response helper now supports tagged template literals and `html.raw()` for inserting raw (safe) HTML into a response
-
-  ```tsx
-  import * as assert from 'node:assert/strict'
-  import { html } from '@remix-run/fetch-router'
-
-  let unsafe = '<script>alert(1)</script>'
-
-  // Use the tagged template literal form to escape the HTML and create a Response.
-  let response = html`<h1>${unsafe}</h1>`
-
-  // Use the html() helper together with html.esc to provide a custom response init object.
-  let response = html(html.esc`<h1>${unsafe}</h1>`, { status: 200 })
-
-  // use html.raw() to insert raw (safe) HTML into a response
-  let icon = html.raw('<b>OK</b>')
-  let response = html`<div>${icon}</div>`
-  assert.equal(await response.text(), '<div><b>OK</b></div>')
-  ```
-
 - Add support for `request.signal` abort, which now short-circuits the middleware chain. `router.fetch()` will now throw `DOMException` with `error.name === 'AbortError'` when a request is aborted
 - Fix an issue where `Router`'s `fetch` wasn't spec-compliant
 - Provide empty `context.formData` to `POST`/`PUT`/etc handlers when `parseFormData: false`

@@ -1,5 +1,5 @@
 /**
- * A helper for working with JSON [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) objects.
+ * A helper for working with JSON [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)s.
  *
  * @param body The body of the response.
  * @param init (optional) The `ResponseInit` object for the response.

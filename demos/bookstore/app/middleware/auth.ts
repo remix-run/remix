@@ -1,5 +1,6 @@
+import { createStorageKey } from '@remix-run/fetch-router'
 import type { Middleware } from '@remix-run/fetch-router'
-import { createStorageKey, redirect } from '@remix-run/fetch-router'
+import { redirect } from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../../routes.ts'
 import { getUserById } from '../models/users.ts'
