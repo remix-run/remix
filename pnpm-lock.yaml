@@ -156,6 +156,15 @@ importers:
         specifier: ^0.25.10
         version: 0.25.10
 
+  packages/html-template:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.10
+
   packages/lazy-file:
     dependencies:
       mrmime:
