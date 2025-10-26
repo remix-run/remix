@@ -58,6 +58,11 @@
     "@remix-run/html-template": "workspace:*",
     "@remix-run/route-pattern": "workspace:*"
   },
+  "peerDependenciesMeta": {
+    "@remix-run/html-template": {
+      "optional": true
+    }
+  },
   "scripts": {
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:html-template && pnpm run build:logger-middleware && pnpm run build:response-helpers",
     "build:html-template": "esbuild src/html-template.ts --bundle --outfile=dist/html-template.js --format=esm --platform=neutral --sourcemap",
