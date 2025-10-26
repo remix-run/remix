@@ -3,6 +3,7 @@ import { type Session } from '@remix-run/session'
 
 import { AppStorage } from './app-storage.ts'
 import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
+import { NoOpSession } from './middleware/session.ts'
 
 /**
  * A context object that contains information about the current request. Every request
@@ -55,13 +56,13 @@ export class RequestContext<
    */
   headers: SuperHeaders
 
-  constructor(request: Request, session: Session) {
+  constructor(request: Request) {
     this.formData = undefined as any
     this.method = request.method.toUpperCase() as RequestMethod
     this.params = {} as Params
     this.request = request
     this.storage = new AppStorage()
-    this.session = session
+    this.session = NoOpSession
     this.headers = new SuperHeaders(request.headers)
     this.url = new URL(request.url)
   }

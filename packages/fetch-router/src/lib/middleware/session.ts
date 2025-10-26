@@ -1,4 +1,4 @@
-import type { SessionStorage } from '@remix-run/session'
+import type { Session, SessionStorage } from '@remix-run/session'
 import type { Middleware } from '../middleware.ts'
 
 export interface SessionOptions {
@@ -8,21 +8,36 @@ export interface SessionOptions {
   sessionStorage: SessionStorage
 }
 
+// We use this no-op session approach so we can keep session logic contained
+// in this middleware.  Otherwise, in order to ensure `context.session` is always
+// populated, we would have to create it prior to creating the `RequestContext`
+// because session parsing is async so it can't be done in the constructor or a
+// `context.session` getter method.
+export const NoOpSession: Session = {
+  id: '',
+  data: {},
+  status: 'clean',
+  has: () => false,
+  get: () => undefined,
+  set() {},
+  unset() {},
+  flash() {},
+  destroy() {},
+}
+
 /**
  * Creates a middleware handler that manages user sessions.
  */
 export function session(options: SessionOptions): Middleware {
-  return async ({ session }, next) => {
-    // No session creation - that's handled by the router when we create the
-    // RouterContext.  This middleware just handles auto-committing sessions
-
-    // TODO: If we wanted to do the session creation in here and also keep
-    // `context.session` typed as `Session` (without an `| undefined`), we could
-    // go with a Symbol-driven empty session that we could detect in here and
-    // overwrite
+  return async (context, next) => {
+    if (context.session === NoOpSession) {
+      let cookie = context.request.headers.get('Cookie')
+      context.session = await options.sessionStorage.getSession(cookie)
+    }
 
     let response = await next()
 
+    let { session } = context
     if (session.status === 'destroyed') {
       let cookie = await options.sessionStorage.destroySession(session)
       response.headers.append('Set-Cookie', cookie)

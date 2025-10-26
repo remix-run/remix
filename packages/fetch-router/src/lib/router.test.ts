@@ -968,7 +968,7 @@ describe('router.dispatch()', () => {
 
     let request = new Request('https://remix.run/123')
     let session = await createMemorySessionStorage().getSession()
-    let context = new RequestContext(request, session)
+    let context = new RequestContext(request)
     context.storage.set(storageKey, 'value')
 
     let response = await router.dispatch(context)
