@@ -82,13 +82,13 @@ importers:
       '@remix-run/headers':
         specifier: workspace:*
         version: link:../headers
+      '@remix-run/html-template':
+        specifier: workspace:*
+        version: link:../html-template
       '@remix-run/route-pattern':
         specifier: workspace:*
         version: link:../route-pattern
     devDependencies:
-      '@remix-run/html-template':
-        specifier: workspace:*
-        version: link:../html-template
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
