@@ -21,7 +21,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./html-template": "./src/html-template.ts",
     "./logger-middleware": "./src/logger-middleware.ts",
     "./response-helpers": "./src/response-helpers.ts",
     "./package.json": "./package.json"
