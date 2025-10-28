@@ -8,6 +8,7 @@ import { RequestContext } from './request-context.ts'
 import { createRoutes } from './route-map.ts'
 import { createRouter } from './router.ts'
 import type { Assert, IsEqual } from './type-utils.ts'
+import type { RouteHandlers } from './route-handlers.ts'
 
 describe('router.fetch()', () => {
   it('fetches a route', async () => {
@@ -1899,6 +1900,95 @@ describe('sessions', () => {
       'middleware: Remix',
       'handler: Remix',
     ])
+  })
+
+  it('supports sibling path-specific sessions on sub routers', async () => {
+    let rootRoutes = createRoutes({
+      home: '/',
+    })
+
+    let router = createRouter({ sessionStorage: false })
+    router.get(rootRoutes.home, () => {
+      return new Response('Home')
+    })
+
+    let appRoutes = createRoutes({
+      index: '/',
+    })
+    let appHandlers = {
+      index({ request, method, url, session }) {
+        let subApp = new URL(request.url).pathname.split('/')[1]
+        if (method === 'POST') {
+          session.set('subRouter', subApp)
+        }
+        return new Response(`App Index: ${session.get('subRouter')}`)
+      },
+    } satisfies RouteHandlers<typeof appRoutes>
+
+    let aRouter = createRouter({
+      sessionStorage: createCookieSessionStorage({
+        cookie: {
+          path: '/a',
+        },
+      }),
+    })
+    aRouter.map(appRoutes, appHandlers)
+    router.mount('/a', aRouter)
+
+    let bRouter = createRouter({
+      sessionStorage: createCookieSessionStorage({
+        cookie: {
+          path: '/b',
+        },
+      }),
+    })
+    bRouter.map(appRoutes, appHandlers)
+    router.mount('/b', bRouter)
+
+    // No session on root
+    let response = await router.fetch('https://remix.run/')
+    assert.equal(await response.text(), 'Home')
+    assert.equal(response.headers.has('Set-Cookie'), false)
+
+    // No initial session on /a
+    response = await router.fetch('https://remix.run/a')
+    assert.equal(await response.text(), 'App Index: undefined')
+    assert.equal(response.headers.has('Set-Cookie'), false)
+
+    // Create session on /a
+    response = await router.fetch('https://remix.run/a', { method: 'POST' })
+    assert.equal(await response.text(), 'App Index: a')
+    assert.equal(response.headers.has('Set-Cookie'), true)
+    assert.match(response.headers.get('Set-Cookie')!, /Path=\/a/)
+
+    // Reuse session on /a
+    response = await router.fetch('https://remix.run/a', {
+      headers: {
+        Cookie: getSessionCookie(response),
+      },
+    })
+    assert.equal(await response.text(), 'App Index: a')
+    assert.equal(response.headers.has('Set-Cookie'), false)
+
+    // No initial session on /b
+    response = await router.fetch('https://remix.run/b')
+    assert.equal(await response.text(), 'App Index: undefined')
+    assert.equal(response.headers.has('Set-Cookie'), false)
+
+    // Create session on /b
+    response = await router.fetch('https://remix.run/b', { method: 'POST' })
+    assert.equal(await response.text(), 'App Index: b')
+    assert.equal(response.headers.has('Set-Cookie'), true)
+    assert.match(response.headers.get('Set-Cookie')!, /Path=\/b/)
+
+    // Reuse session on /b
+    response = await router.fetch('https://remix.run/b', {
+      headers: {
+        Cookie: getSessionCookie(response),
+      },
+    })
+    assert.equal(await response.text(), 'App Index: b')
+    assert.equal(response.headers.has('Set-Cookie'), false)
   })
 
   describe('cookie-backed sessions', () => {

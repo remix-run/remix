@@ -133,7 +133,20 @@ export class Router {
     request: Request | RequestContext,
     upstreamMiddleware?: Middleware[],
   ): Promise<Response | null> {
-    let context = request instanceof Request ? await this.#createContext(request) : request
+    let context: RequestContext
+
+    if (request instanceof Request) {
+      context = await this.#createContext(request)
+    } else {
+      context = request
+
+      // Setup sessions for sub-routers if no parent session exists and they didn't opt-out
+      if (!context._session && this.#sessionStorage) {
+        context._session = await this.#sessionStorage.getSession(
+          context.request.headers.get('Cookie'),
+        )
+      }
+    }
 
     for (let match of this.#matcher.matchAll(context.url)) {
       if ('router' in match.data) {
@@ -190,8 +203,9 @@ export class Router {
 
     // Only process sessions if they didn't opt-out
     if (this.#sessionStorage) {
-      let cookie = context.request.headers.get('Cookie')
-      context._session = await this.#sessionStorage.getSession(cookie)
+      context._session = await this.#sessionStorage.getSession(
+        context.request.headers.get('Cookie'),
+      )
     }
 
     if (!RequestBodyMethods.includes(request.method as RequestBodyMethod)) {
