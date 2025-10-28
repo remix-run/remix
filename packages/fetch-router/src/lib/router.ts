@@ -89,6 +89,9 @@ export class Router {
     this.#methodOverride = options?.methodOverride ?? true
 
     if (!options || options.sessionStorage == null || options.sessionStorage === true) {
+      // Unless they opt-out, we default to an `HttpOnly` cookie-based session that
+      // will only be "activated" in a `Set-Cookie` response if they mutate the
+      // session
       this.#sessionStorage = createCookieSessionStorage({
         cookie: {
           httpOnly: true,
@@ -185,6 +188,7 @@ export class Router {
   async #createContext(request: Request): Promise<RequestContext> {
     let context = new RequestContext(request)
 
+    // Only process sessions if they didn't opt-out
     if (this.#sessionStorage) {
       let cookie = context.request.headers.get('Cookie')
       context._session = await this.#sessionStorage.getSession(cookie)
@@ -248,27 +252,32 @@ export class Router {
     if (!this.#sessionStorage) {
       return
     }
+
     let { session } = context
-    if (session.status === 'destroyed') {
-      let cookie = await this.#sessionStorage.destroySession(session)
-      response.headers.append('Set-Cookie', cookie)
-    } else if (session.status === 'dirty') {
-      // Commit the session to persist the data to the backing store
+    if (session.status === 'dirty') {
+      // If the session has been mutated, commit to persist to the backing store
       let cookie = await this.#sessionStorage.commitSession(session)
 
-      // But only add the Set-Cookie header if info serialized in the cookie has changed:
+      // But only add the Set-Cookie header if info *serialized in the cookie* has changed:
       // - For cookie-backed session, `session.id` is always empty - they store all
       //   data in the cookie and thus _always_ need to be committed when the session
       //   is new or dirty
       // - For non-cookie-backed sessions (file, memory, etc), `session.id` is only
-      //   empty on initial creation, which means we need to commit. `session.id will
-      //   be populated for existing sessions read in from a cookie, and when that
-      //   happens we don't need to send up a new cookie because we already have the
-      //   ID in there
+      //   empty on initial creation, so if they've set any session data to put it
+      //   in a dirty state, we need to commit to store the session id in the cookie
+      //   for subsequent requests.  `session.id` be populated for existing sessions
+      //   read in from a cookie, and when that happens we don't need to send up
+      //   a new cookie because we already have the ID in there
       if (session.id === '') {
         response.headers.append('Set-Cookie', cookie)
       }
+    } else if (session.status === 'destroyed') {
+      let cookie = await this.#sessionStorage.destroySession(session)
+      response.headers.append('Set-Cookie', cookie)
     }
+
+    // Otherwise, the session is new|clean but hasn't been mutated and we don't
+    // need to send any Set-Cookie header
   }
 
   /**
