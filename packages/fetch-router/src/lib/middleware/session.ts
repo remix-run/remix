@@ -41,7 +41,7 @@ export function session(options: SessionOptions): Middleware {
     if (session.status === 'destroyed') {
       let cookie = await options.sessionStorage.destroySession(session)
       response.headers.append('Set-Cookie', cookie)
-    } else if (session.status === 'new' || session.status === 'dirty') {
+    } else if (session.status === 'dirty') {
       // Commit the session to persist the data to the backing store
       let cookie = await options.sessionStorage.commitSession(session)
 

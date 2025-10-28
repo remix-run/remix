@@ -47,7 +47,7 @@
     "esbuild": "^0.25.10",
     "tsx": "^4.20.6"
   },
-  "peerDependencies": {
+  "dependencies": {
     "@remix-run/form-data-parser": "workspace:*",
     "@remix-run/headers": "workspace:*",
     "@remix-run/html-template": "workspace:*",

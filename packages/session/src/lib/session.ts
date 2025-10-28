@@ -8,7 +8,7 @@ import { warnOnce } from './warnings.ts'
  * An object of name/value pairs to be used in the session.
  */
 export interface SessionData {
-  [name: string]: any
+  [name: string]: unknown
 }
 
 /**
@@ -72,7 +72,7 @@ export interface Session<Data = SessionData, FlashData = Data> {
 
   /**
    * Clears a session for destruction
-   * */
+   **/
   destroy(): void
 }
 
@@ -165,15 +165,23 @@ export function createSession<Data = SessionData, FlashData = Data>(
 /**
  * Returns true if an object is a Remix session.
  */
-export function isSession(object: any): object is Session {
+export function isSession(object: unknown): object is Session {
   return (
+    typeof object === 'object' &&
     object != null &&
+    'id' in object &&
     typeof object.id === 'string' &&
+    'data' in object &&
     typeof object.data !== 'undefined' &&
+    'has' in object &&
     typeof object.has === 'function' &&
+    'get' in object &&
     typeof object.get === 'function' &&
+    'set' in object &&
     typeof object.set === 'function' &&
+    'flash' in object &&
     typeof object.flash === 'function' &&
+    'unset' in object &&
     typeof object.unset === 'function'
   )
 }
