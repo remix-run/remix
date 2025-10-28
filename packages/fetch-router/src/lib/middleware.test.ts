@@ -4,14 +4,10 @@ import { describe, it } from 'node:test'
 import { runMiddleware } from './middleware.ts'
 import type { NextFunction } from './middleware.ts'
 import { RequestContext } from './request-context.ts'
-import { createSession } from '@remix-run/session'
 
 function mockContext(input: string | Request, params: Record<string, any> = {}): RequestContext {
-  let session = createSession()
   let context =
-    input instanceof Request
-      ? new RequestContext(input, session)
-      : new RequestContext(new Request(input), session)
+    input instanceof Request ? new RequestContext(input) : new RequestContext(new Request(input))
   context.params = params
   return context
 }

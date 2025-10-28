@@ -13,15 +13,43 @@ export interface SessionData {
 
 /**
  * Session persists data across HTTP requests.
+ *
+ * Note: This class is typically not invoked directly by application code.
+ * Instead, use a `SessionStorage` object's `getSession` method.
  */
-export interface Session<Data = SessionData, FlashData = Data> {
+export class Session<Data = SessionData, FlashData = Data> {
+  #id: string
+  #map: Map<keyof Data | FlashDataKey<keyof FlashData & string>, unknown>
+  #status: 'new' | 'clean' | 'dirty' | 'destroyed'
+
+  constructor(initialData?: Partial<Data>, id?: string) {
+    // Brand new sessions start in a dirty state to force an initial commit
+    this.#status = initialData == null && id == null ? 'new' : 'clean'
+    this.#id = id ?? ''
+    this.#map = new Map(initialData ? Object.entries(initialData) : undefined) as Map<
+      keyof Data | FlashDataKey<keyof FlashData & string>,
+      unknown
+    >
+  }
+
   /**
    * A unique identifier for this session.
    *
    * Note: This will be the empty string for newly created sessions and
    * sessions that are not backed by a database (i.e. cookie-based sessions).
    */
-  readonly id: string
+  get id() {
+    return this.#id
+  }
+
+  /**
+   * A value indicating the status of the session.
+   *
+   * This is useful for middlewares to know if they need to commit the session.
+   */
+  get status() {
+    return this.#status
+  }
 
   /**
    * The raw data contained in this session.
@@ -29,20 +57,19 @@ export interface Session<Data = SessionData, FlashData = Data> {
    * This is useful mostly for SessionStorage internally to access the raw
    * session data to persist.
    */
-  readonly data: FlashSessionData<Data, FlashData>
-
-  /**
-   * A value indicating the status of the session.
-   *
-   * This is useful for middlewares to know if they need to commit the session.
-   */
-  readonly status: 'new' | 'clean' | 'dirty' | 'destroyed'
+  get data() {
+    return Object.fromEntries(this.#map) as FlashSessionData<Data, FlashData>
+  }
 
   /**
    * Returns `true` if the session has a value for the given `name`, `false`
    * otherwise.
    */
-  has(name: (keyof Data | keyof FlashData) & string): boolean
+  has(name: (keyof Data | keyof FlashData) & string) {
+    return (
+      this.#map.has(name as keyof Data) || this.#map.has(flash(name as keyof FlashData & string))
+    )
+  }
 
   /**
    * Returns the value for the given `name` in this session.
@@ -52,28 +79,65 @@ export interface Session<Data = SessionData, FlashData = Data> {
   ):
     | (Key extends keyof Data ? Data[Key] : undefined)
     | (Key extends keyof FlashData ? FlashData[Key] : undefined)
-    | undefined
+    | undefined {
+    if (this.#map.has(name as keyof Data)) {
+      return this.#map.get(name as keyof Data) as Key extends keyof Data ? Data[Key] : undefined
+    }
+
+    let flashName = flash(name as keyof FlashData & string)
+    if (this.#map.has(flashName)) {
+      let value = this.#map.get(flashName) as Key extends keyof FlashData
+        ? FlashData[Key]
+        : undefined
+      this.#map.delete(flashName)
+      this.#status = 'dirty'
+      return value
+    }
+
+    return undefined
+  }
 
   /**
    * Sets a value in the session for the given `name`.
    */
-  set<Key extends keyof Data & string>(name: Key, value: Data[Key]): void
+  set<Key extends keyof Data & string>(name: Key, value: Data[Key]) {
+    this.#throwIfDestroyed()
+    this.#map.set(name, value)
+    this.#status = 'dirty'
+  }
 
   /**
    * Sets a value in the session that is only valid until the next `get()`.
    * This can be useful for temporary values, like error messages.
    */
-  flash<Key extends keyof FlashData & string>(name: Key, value: FlashData[Key]): void
+  flash<Key extends keyof FlashData & string>(name: Key, value: FlashData[Key]) {
+    this.#throwIfDestroyed()
+    this.#map.set(flash(name), value)
+    this.#status = 'dirty'
+  }
 
   /**
    * Removes a value from the session.
    */
-  unset(name: keyof Data & string): void
+  unset(name: keyof Data & string) {
+    this.#throwIfDestroyed()
+    this.#map.delete(name)
+    this.#status = 'dirty'
+  }
 
   /**
    * Clears a session for destruction
    **/
-  destroy(): void
+  destroy() {
+    this.#map.clear()
+    this.#status = 'destroyed'
+  }
+
+  #throwIfDestroyed() {
+    if (this.#status === 'destroyed') {
+      throw new Error('Cannot operate on a destroyed session')
+    }
+  }
 }
 
 export type FlashSessionData<Data, FlashData> = Partial<
@@ -84,106 +148,6 @@ export type FlashSessionData<Data, FlashData> = Partial<
 type FlashDataKey<Key extends string> = `__flash_${Key}__`
 function flash<Key extends string>(name: Key): FlashDataKey<Key> {
   return `__flash_${name}__`
-}
-
-/**
- * Creates a new Session object.
- *
- * Note: This function is typically not invoked directly by application code.
- * Instead, use a `SessionStorage` object's `getSession` method.
- */
-export function createSession<Data = SessionData, FlashData = Data>(
-  initialData?: Partial<Data>,
-  id?: string,
-): Session<Data, FlashData> {
-  // Brand new sessions start in a dirty state to force an initial commit
-  let status: 'new' | 'clean' | 'dirty' | 'destroyed' =
-    initialData == null && id == null ? 'new' : 'clean'
-
-  initialData ||= {}
-  id ??= ''
-
-  let map = new Map(Object.entries(initialData)) as Map<
-    keyof Data | FlashDataKey<keyof FlashData & string>,
-    any
-  >
-
-  let throwIfDestroyed = () => {
-    if (status === 'destroyed') {
-      throw new Error('Cannot operate on a destroyed session')
-    }
-  }
-
-  return {
-    get id() {
-      return id
-    },
-    get data() {
-      return Object.fromEntries(map) as FlashSessionData<Data, FlashData>
-    },
-    get status() {
-      return status
-    },
-    has(name) {
-      return map.has(name as keyof Data) || map.has(flash(name as keyof FlashData & string))
-    },
-    get(name) {
-      if (map.has(name as keyof Data)) return map.get(name as keyof Data)
-
-      let flashName = flash(name as keyof FlashData & string)
-      if (map.has(flashName)) {
-        let value = map.get(flashName)
-        map.delete(flashName)
-        status = 'dirty'
-        return value
-      }
-
-      return undefined
-    },
-    set(name, value) {
-      throwIfDestroyed()
-      map.set(name, value)
-      status = 'dirty'
-    },
-    flash(name, value) {
-      throwIfDestroyed()
-      map.set(flash(name), value)
-      status = 'dirty'
-    },
-    unset(name) {
-      throwIfDestroyed()
-      map.delete(name)
-      status = 'dirty'
-    },
-    destroy() {
-      map.clear()
-      status = 'destroyed'
-    },
-  }
-}
-
-/**
- * Returns true if an object is a Remix session.
- */
-export function isSession(object: unknown): object is Session {
-  return (
-    typeof object === 'object' &&
-    object != null &&
-    'id' in object &&
-    typeof object.id === 'string' &&
-    'data' in object &&
-    typeof object.data !== 'undefined' &&
-    'has' in object &&
-    typeof object.has === 'function' &&
-    'get' in object &&
-    typeof object.get === 'function' &&
-    'set' in object &&
-    typeof object.set === 'function' &&
-    'flash' in object &&
-    typeof object.flash === 'function' &&
-    'unset' in object &&
-    typeof object.unset === 'function'
-  )
 }
 
 /**
@@ -277,7 +241,7 @@ export function createSessionStorage<Data = SessionData, FlashData = Data>({
     async getSession(cookieHeader, options) {
       let id = cookieHeader && (await cookie.parse(cookieHeader, options))
       let data = id && (await readData(id))
-      return createSession(data, id)
+      return id ? new Session(data, id) : new Session()
     },
     async commitSession(session, options) {
       let { id, data } = session

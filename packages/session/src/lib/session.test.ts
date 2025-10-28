@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createSession, isSession } from './session.ts'
+import { Session } from './session.ts'
 import { createCookieSessionStorage } from './cookie-storage.ts'
 import { createMemorySessionStorage } from './memory-storage.ts'
 
@@ -11,11 +11,11 @@ function getCookieFromSetCookie(setCookie: string): string {
 
 describe('Session', () => {
   it('has an empty id by default', () => {
-    assert.equal(createSession().id, '')
+    assert.equal(new Session().id, '')
   })
 
   it('correctly stores and retrieves values', () => {
-    let session = createSession()
+    let session = new Session()
 
     session.set('user', 'mjackson')
     session.flash('error', 'boom')
@@ -39,7 +39,7 @@ describe('Session', () => {
   })
 
   it('correctly destroys a session', () => {
-    let session = createSession()
+    let session = new Session()
 
     session.set('user', 'mjackson')
     assert.equal(session.get('user'), 'mjackson')
@@ -51,7 +51,7 @@ describe('Session', () => {
   })
 
   it('tracks session status for newly created sessions', () => {
-    let session = createSession()
+    let session = new Session()
     assert.equal(session.status, 'new')
 
     session.get('user')
@@ -65,7 +65,7 @@ describe('Session', () => {
   })
 
   it('tracks session status for existing sessions', () => {
-    let session = createSession({ user: 'brophdawg11' })
+    let session = new Session({ user: 'brophdawg11' })
     assert.equal(session.status, 'clean')
 
     session.get('user')
@@ -79,7 +79,7 @@ describe('Session', () => {
   })
 
   it('throws an error if you try to operate on a destroyed session', () => {
-    let session = createSession({ user: 'brophdawg11' })
+    let session = new Session({ user: 'brophdawg11' })
     assert.equal(session.status, 'clean')
 
     session.destroy()
@@ -89,19 +89,6 @@ describe('Session', () => {
     assert.throws(() => session.set('user', 'mjackson'), {
       message: 'Cannot operate on a destroyed session',
     })
-  })
-})
-
-describe('isSession', () => {
-  it('returns `true` for Session objects', () => {
-    assert.equal(isSession(createSession()), true)
-  })
-
-  it('returns `false` for non-Session objects', () => {
-    assert.equal(isSession({}), false)
-    assert.equal(isSession([]), false)
-    assert.equal(isSession(''), false)
-    assert.equal(isSession(true), false)
   })
 })
 

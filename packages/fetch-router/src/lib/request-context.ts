@@ -1,9 +1,8 @@
 import SuperHeaders from '@remix-run/headers'
-import { type Session } from '@remix-run/session'
+import { Session } from '@remix-run/session'
 
 import { AppStorage } from './app-storage.ts'
 import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
-import { NoOpSession } from './middleware/session.ts'
 
 /**
  * A context object that contains information about the current request. Every request
@@ -37,9 +36,10 @@ export class RequestContext<
    */
   request: Request
   /**
-   * Active session for the request
+   * @private
+   * Privately tracked session, if exists
    */
-  session: Session
+  _session: Session | undefined
   /**
    * Shared application-specific storage.
    */
@@ -62,7 +62,6 @@ export class RequestContext<
     this.params = {} as Params
     this.request = request
     this.storage = new AppStorage()
-    this.session = NoOpSession
     this.headers = new SuperHeaders(request.headers)
     this.url = new URL(request.url)
   }
@@ -86,5 +85,9 @@ export class RequestContext<
     }
 
     return files
+  }
+
+  get session() {
+    return this._session ?? new Session()
   }
 }

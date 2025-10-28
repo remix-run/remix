@@ -1,6 +1,6 @@
 import { createCookie, isCookie } from '@remix-run/cookie'
 import type { SessionStorage, SessionIdStorageStrategy, SessionData } from './session.ts'
-import { warnOnceAboutSigningSessionCookie, createSession } from './session.ts'
+import { warnOnceAboutSigningSessionCookie, Session } from './session.ts'
 
 interface CookieSessionStorageOptions {
   /**
@@ -30,7 +30,8 @@ export function createCookieSessionStorage<Data = SessionData, FlashData = Data>
 
   return {
     async getSession(cookieHeader, options) {
-      return createSession(cookieHeader ? await cookie.parse(cookieHeader, options) : undefined)
+      let data = cookieHeader ? await cookie.parse(cookieHeader, options) : undefined
+      return new Session(data)
     },
     async commitSession(session, options) {
       let serializedCookie = await cookie.serialize(session.data, options)
