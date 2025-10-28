@@ -13,10 +13,10 @@ describe('checkout handlers', () => {
   })
 
   it('POST /checkout creates order when authenticated with items in cart', async () => {
-    let sessionId = await loginAsCustomer(router)
+    let sessionCookie = await loginAsCustomer(router)
 
     // Add item to cart
-    let addRequest = requestWithSession('http://localhost:3000/cart/api/add', sessionId, {
+    let addRequest = requestWithSession('http://localhost:3000/cart/api/add', sessionCookie, {
       method: 'POST',
       body: new URLSearchParams({
         bookId: '001',
@@ -26,7 +26,7 @@ describe('checkout handlers', () => {
     await router.fetch(addRequest)
 
     // Submit checkout
-    let checkoutRequest = requestWithSession('http://localhost:3000/checkout', sessionId, {
+    let checkoutRequest = requestWithSession('http://localhost:3000/checkout', sessionCookie, {
       method: 'POST',
       body: new URLSearchParams({
         street: '123 Test St',

@@ -13,10 +13,10 @@ describe('admin handlers', () => {
   })
 
   it('GET /admin returns 403 for non-admin users', async () => {
-    let sessionId = await loginAsCustomer(router)
+    let sessionCookie = await loginAsCustomer(router)
 
     // Try to access admin
-    let request = requestWithSession('http://localhost:3000/admin', sessionId)
+    let request = requestWithSession('http://localhost:3000/admin', sessionCookie)
     let response = await router.fetch(request)
 
     assert.equal(response.status, 403)

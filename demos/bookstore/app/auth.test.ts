@@ -2,7 +2,11 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { router } from './router.ts'
-import { getSessionCookie, assertContains } from '../test/helpers.ts'
+import {
+  getSessionCookie as sessionCookie,
+  assertContains,
+  getSessionCookie,
+} from '../test/helpers.ts'
 
 describe('auth handlers', () => {
   it('POST /login with valid credentials sets session cookie and redirects', async () => {
@@ -18,8 +22,8 @@ describe('auth handlers', () => {
     assert.equal(response.status, 302)
     assert.equal(response.headers.get('Location'), '/account')
 
-    let sessionId = getSessionCookie(response)
-    assert.ok(sessionId, 'Expected session cookie to be set')
+    let sessionCookie = getSessionCookie(response)
+    assert.ok(sessionCookie, 'Expected session cookie to be set')
   })
 
   it('POST /login with invalid credentials returns 401', async () => {
@@ -52,7 +56,7 @@ describe('auth handlers', () => {
     assert.equal(response.status, 302)
     assert.equal(response.headers.get('Location'), '/account')
 
-    let sessionId = getSessionCookie(response)
-    assert.ok(sessionId, 'Expected session cookie to be set')
+    let sessionCookie = getSessionCookie(response)
+    assert.ok(sessionCookie, 'Expected session cookie to be set')
   })
 })

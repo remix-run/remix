@@ -1,9 +1,10 @@
 import type { User } from '../models/users.ts'
 import type { Session } from '@remix-run/session'
 
-export interface SessionData {
-  userId?: string
-  sessionId: string
+declare module '@remix-run/session' {
+  interface SessionData {
+    userId?: string
+  }
 }
 
 export function login(session: Session, user: User): void {

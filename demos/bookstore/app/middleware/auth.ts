@@ -13,7 +13,7 @@ export const USER_KEY = createStorageKey<User>()
 /**
  * Middleware that optionally loads the current user if authenticated.
  * Does not redirect if not authenticated.
- * Attaches user (if any) and sessionId to context.storage.
+ * Attaches user (if any) to context.storage.
  */
 export let loadAuth: Middleware = async ({ session, storage }) => {
   let userId = getUserIdFromSession(session)
@@ -30,7 +30,7 @@ export let loadAuth: Middleware = async ({ session, storage }) => {
 /**
  * Middleware that requires a user to be authenticated.
  * Redirects to login if not authenticated.
- * Attaches user and sessionId to context.storage.
+ * Attaches user to context.storage.
  */
 export let requireAuth: Middleware = async ({ session, storage }) => {
   let userId = getUserIdFromSession(session)
