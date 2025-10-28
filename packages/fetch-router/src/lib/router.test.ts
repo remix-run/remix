@@ -967,7 +967,6 @@ describe('router.dispatch()', () => {
     })
 
     let request = new Request('https://remix.run/123')
-    let session = await createMemorySessionStorage().getSession()
     let context = new RequestContext(request)
     context.storage.set(storageKey, 'value')
 
@@ -1463,10 +1462,8 @@ describe('abort signal support', () => {
     let controller = new AbortController()
 
     router.get('/', async () => {
-      // Abort in 1ms, while handler is running.  We do this async to ensure
-      // `router.fetch()` rejects asynchronously so that `assert.rejects` doesn't
-      // re-throw the error and cause a false negative
-      setTimeout(() => controller.abort(), 1)
+      // Abort while handler is running
+      controller.abort()
       // Simulate some async work
       await new Promise((resolve) => setTimeout(resolve, 10))
       return new Response('Home')
@@ -1578,10 +1575,7 @@ describe('abort signal support', () => {
     let controller = new AbortController()
 
     router.use(async () => {
-      // Abort in 1ms, while handler is running.  We do this async to ensure
-      // `router.fetch()` rejects asynchronously so that `assert.rejects` doesn't
-      // re-throw the error and cause a false negative
-      setTimeout(() => controller.abort(), 1)
+      controller.abort()
       await new Promise((resolve) => setTimeout(resolve, 10))
     })
 
@@ -1603,10 +1597,7 @@ describe('abort signal support', () => {
     let controller = new AbortController()
 
     adminRouter.get('/', async () => {
-      // Abort in 1ms, while handler is running.  We do this async to ensure
-      // `router.fetch()` rejects asynchronously so that `assert.rejects` doesn't
-      // re-throw the error and cause a false negative
-      setTimeout(() => controller.abort(), 1)
+      controller.abort()
       await new Promise((resolve) => setTimeout(resolve, 10))
       return new Response('Admin')
     })
@@ -1651,10 +1642,7 @@ describe('abort signal support', () => {
 
     // Upstream middleware that aborts
     router.use(async () => {
-      // Abort in 1ms, while handler is running.  We do this async to ensure
-      // `router.fetch()` rejects asynchronously so that `assert.rejects` doesn't
-      // re-throw the error and cause a false negative
-      setTimeout(() => controller.abort(), 1)
+      controller.abort()
       await new Promise((resolve) => setTimeout(resolve, 10))
     })
 
@@ -1740,6 +1728,42 @@ describe('sessions', () => {
     })
     assert.equal(response.headers.has('Set-Cookie'), true)
     assert.equal(await response.text(), 'Home (post): Remix2')
+  })
+
+  it('allows user to opt out of session handling entirely', async () => {
+    let routes = createRoutes({
+      home: '/',
+    })
+
+    let router = createRouter({ sessionStorage: false })
+
+    router.get(routes.home, ({ session }) => {
+      return new Response(`Home: ${session.get('name')}`)
+    })
+
+    router.post(routes.home, ({ session, url }) => {
+      session.set('name', url.searchParams.get('name') ?? 'Remix')
+      return new Response(`Home (post): ${session.get('name')}`)
+    })
+
+    // No cookie created
+    let response = await router.fetch('https://remix.run')
+    assert.equal(await response.text(), 'Home: undefined')
+    assert.equal(response.headers.has('Set-Cookie'), false)
+
+    // Even if the session is mutated
+    response = await router.fetch('https://remix.run/', { method: 'POST' })
+    assert.equal(await response.text(), 'Home (post): Remix')
+    assert.equal(response.headers.has('Set-Cookie'), false)
+
+    // And no session is parsed from the cookie
+    response = await router.fetch('https://remix.run/', {
+      headers: {
+        Cookie: '__session=eyJuYW1lIjoiUmVtaXgifQ%3D%3D', // { name: "Remix" }
+      },
+    })
+    assert.equal(await response.text(), 'Home: undefined')
+    assert.equal(response.headers.has('Set-Cookie'), false)
   })
 
   it('provides session to middleware and handlers', async () => {

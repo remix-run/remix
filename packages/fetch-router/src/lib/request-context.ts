@@ -88,6 +88,7 @@ export class RequestContext<
   }
 
   get session() {
-    return this._session ?? new Session()
+    this._session ??= new Session()
+    return this._session
   }
 }

@@ -85,19 +85,18 @@ export class Router {
     this.#defaultHandler = options?.defaultHandler ?? noMatchHandler
     this.#matcher = options?.matcher ?? new RegExpMatcher()
     this.#parseFormData = options?.parseFormData ?? true
-    if (options?.sessionStorage === false) {
-      this.#sessionStorage = undefined
-    } else if (options?.sessionStorage != null && options.sessionStorage !== true) {
-      this.#sessionStorage = options.sessionStorage
-    } else {
+    this.#uploadHandler = options?.uploadHandler
+    this.#methodOverride = options?.methodOverride ?? true
+
+    if (!options || options.sessionStorage == null || options.sessionStorage === true) {
       this.#sessionStorage = createCookieSessionStorage({
         cookie: {
           httpOnly: true,
         },
       })
+    } else if (options?.sessionStorage) {
+      this.#sessionStorage = options.sessionStorage
     }
-    this.#uploadHandler = options?.uploadHandler
-    this.#methodOverride = options?.methodOverride ?? true
   }
 
   /**
