@@ -2,7 +2,7 @@
   "name": "@remix-run/multipart-parser",
   "version": "0.12.0",
   "description": "A fast, efficient parser for multipart streams in any JavaScript environment",
-  "author": "Remix Software <hello@remix.run>",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",

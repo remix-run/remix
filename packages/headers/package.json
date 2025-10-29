@@ -2,7 +2,7 @@
   "name": "@remix-run/headers",
   "version": "0.14.0",
   "description": "A toolkit for working with HTTP headers in JavaScript",
-  "author": "Remix Software <hello@remix.run>",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",

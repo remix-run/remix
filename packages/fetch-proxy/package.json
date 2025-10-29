@@ -2,7 +2,7 @@
   "name": "@remix-run/fetch-proxy",
   "version": "0.6.0",
   "description": "An HTTP proxy for the web Fetch API",
-  "author": "Remix Software <hello@remix.run>",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",

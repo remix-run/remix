@@ -2,7 +2,7 @@
   "name": "@remix-run/fetch-router",
   "version": "0.7.0",
   "description": "A minimal, composable router for the web Fetch API",
-  "author": "Remix Software <hello@remix.run>",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",

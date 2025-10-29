@@ -2,7 +2,7 @@
   "name": "@remix-run/node-fetch-server",
   "version": "0.11.0",
   "description": "Build servers for Node.js using the web fetch API",
-  "author": "Remix Software <hello@remix.run>",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
