@@ -6,24 +6,24 @@ import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
 
 // prettier-ignore
-export type RouteHandlers<T extends RouteMap> =
-  | RouteHandlersWithMiddleware<T>
+export type RouteHandlers<routeMap extends RouteMap> =
+  | RouteHandlersWithMiddleware<routeMap>
   | {
-      [K in keyof T]: (
-        T[K] extends Route<infer M, infer P> ? RouteHandler<M, P> :
-        T[K] extends RouteMap ? RouteHandlers<T[K]> :
+      [name in keyof routeMap]: (
+        routeMap[name] extends Route<infer method, infer pattern> ? RouteHandler<method, pattern> :
+        routeMap[name] extends RouteMap ? RouteHandlers<routeMap[name]> :
         never
       )
     }
 
-type RouteHandlersWithMiddleware<T extends RouteMap> = {
+type RouteHandlersWithMiddleware<routeMap extends RouteMap> = {
   use: Middleware[]
-  handlers: RouteHandlers<T>
+  handlers: RouteHandlers<routeMap>
 }
 
-export function isRouteHandlersWithMiddleware<T extends RouteMap>(
-  handlers: any,
-): handlers is RouteHandlersWithMiddleware<T> {
+export function isRouteHandlersWithMiddleware<routeMap extends RouteMap>(
+  handlers: unknown,
+): handlers is RouteHandlersWithMiddleware<routeMap> {
   return (
     typeof handlers === 'object' && handlers != null && 'use' in handlers && 'handlers' in handlers
   )
@@ -32,18 +32,19 @@ export function isRouteHandlersWithMiddleware<T extends RouteMap>(
 /**
  * An individual route handler.
  */
-export type RouteHandler<M extends RequestMethod | 'ANY', P extends string> =
-  | RequestHandlerWithMiddleware<M, P>
-  | RequestHandler<M, Params<P>>
+export type RouteHandler<method extends RequestMethod | 'ANY', pattern extends string> =
+  | RequestHandlerWithMiddleware<method, pattern>
+  | RequestHandler<method, Params<pattern>>
 
-type RequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', P extends string> = {
-  use: Middleware<M, Params<P>>[]
-  handler: RequestHandler<M, Params<P>>
+type RequestHandlerWithMiddleware<method extends RequestMethod | 'ANY', pattern extends string> = {
+  use: Middleware<method, Params<pattern>>[]
+  handler: RequestHandler<method, Params<pattern>>
 }
 
-export function isRequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', P extends string>(
-  handler: any,
-): handler is RequestHandlerWithMiddleware<M, P> {
+export function isRequestHandlerWithMiddleware<
+  method extends RequestMethod | 'ANY',
+  pattern extends string,
+>(handler: unknown): handler is RequestHandlerWithMiddleware<method, pattern> {
   return typeof handler === 'object' && handler != null && 'use' in handler && 'handler' in handler
 }
 
@@ -51,8 +52,8 @@ export function isRequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', 
  * Build a `RouteHandler` type from a string, route pattern, or route.
  */
 // prettier-ignore
-export type BuildRouteHandler<M extends RequestMethod | 'ANY', T extends string | RoutePattern | Route> =
-  T extends string ? RouteHandler<M, T> :
-  T extends RoutePattern<infer P> ? RouteHandler<M, P> :
-  T extends Route<infer _, infer P> ? RouteHandler<M, P> :
+export type BuildRouteHandler<method extends RequestMethod | 'ANY', route extends string | RoutePattern | Route> =
+  route extends string ? RouteHandler<method, route> :
+  route extends RoutePattern<infer pattern> ? RouteHandler<method, pattern> :
+  route extends Route<infer _, infer pattern> ? RouteHandler<method, pattern> :
   never
