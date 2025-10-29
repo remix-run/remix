@@ -71,7 +71,7 @@ export class Cookie {
    * Parses a raw `Cookie` header and returns the value of this cookie or
    * `null` if it's not present.
    */
-  async parse(cookieHeader: string | null, parseOptions?: ParseOptions): Promise<any> {
+  async parse(cookieHeader: string | null, parseOptions?: ParseOptions): Promise<unknown> {
     if (!cookieHeader) return null
     let cookies = parse(cookieHeader, { ...this.#options, ...parseOptions })
     if (this.name in cookies) {
@@ -91,7 +91,7 @@ export class Cookie {
    * Serializes the given value to a string and returns the `Set-Cookie`
    * header.
    */
-  async serialize(value: any, serializeOptions?: SerializeOptions): Promise<string> {
+  async serialize(value: unknown, serializeOptions?: SerializeOptions): Promise<string> {
     return serialize(this.name, value === '' ? '' : await encodeCookieValue(value, this.#secrets), {
       ...this.#options,
       ...serializeOptions,
@@ -99,7 +99,7 @@ export class Cookie {
   }
 }
 
-async function encodeCookieValue(value: any, secrets: string[]): Promise<string> {
+async function encodeCookieValue(value: unknown, secrets: string[]): Promise<string> {
   let encoded = encodeData(value)
 
   if (secrets.length > 0) {
@@ -109,7 +109,7 @@ async function encodeCookieValue(value: any, secrets: string[]): Promise<string>
   return encoded
 }
 
-async function decodeCookieValue(value: string, secrets: string[]): Promise<any> {
+async function decodeCookieValue(value: string, secrets: string[]): Promise<unknown> {
   if (secrets.length > 0) {
     for (let secret of secrets) {
       let unsignedValue = await unsign(value, secret)
@@ -124,11 +124,11 @@ async function decodeCookieValue(value: string, secrets: string[]): Promise<any>
   return decodeData(value)
 }
 
-function encodeData(value: any): string {
+function encodeData(value: unknown): string {
   return btoa(myUnescape(encodeURIComponent(JSON.stringify(value))))
 }
 
-function decodeData(value: string): any {
+function decodeData(value: string): unknown {
   try {
     return JSON.parse(decodeURIComponent(myEscape(atob(value))))
   } catch {
@@ -201,6 +201,6 @@ function warnOnceAboutExpiresCookie(name: string, expires?: Date) {
       `This will cause the expires value to not be updated when the session is committed. ` +
       `Instead, you should set the expires value when serializing the cookie. ` +
       `You can use \`commitSession(session, { expires })\` if using a session storage object, ` +
-      `or \`cookie.serialize("value", { expires })\` if you're using the cookie directly.`
+      `or \`cookie.serialize("value", { expires })\` if you're using the cookie directly.`,
   )
 }
