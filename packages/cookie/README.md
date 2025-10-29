@@ -190,29 +190,6 @@ let signedCookie = new Cookie('signed', { secrets: ['secret'] })
 await signedCookie.parse('signed=value.badsignature') // null
 ```
 
-```ts
-// In your Remix loader/action
-import type { LoaderFunctionArgs } from '@remix-run/node'
-import { Cookie } from '@remix-run/cookie'
-
-let sessionCookie = new Cookie('session', {
-  secrets: [process.env.SESSION_SECRET],
-  httpOnly: true,
-  secure: true,
-  sameSite: 'lax',
-  maxAge: 60 * 60 * 24 * 30, // 30 days
-})
-
-export async function loader({ request }: LoaderFunctionArgs) {
-  let cookieHeader = request.headers.get('Cookie')
-  let session = await sessionCookie.parse(cookieHeader)
-
-  return {
-    user: session?.userId ? await getUser(session.userId) : null,
-  }
-}
-```
-
 ## API Reference
 
 ### `Cookie` Class
