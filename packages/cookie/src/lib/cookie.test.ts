@@ -1,28 +1,15 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createCookie, isCookie } from './cookie.ts'
+import { Cookie } from './cookie.ts'
 
 function getCookieFromSetCookie(setCookie: string): string {
   return setCookie.split(/;\s*/)[0]
 }
 
-describe('isCookie', () => {
-  it('returns `true` for Cookie objects', () => {
-    assert.equal(isCookie(createCookie('my-cookie')), true)
-  })
-
-  it('returns `false` for non-Cookie objects', () => {
-    assert.equal(isCookie({}), false)
-    assert.equal(isCookie([]), false)
-    assert.equal(isCookie(''), false)
-    assert.equal(isCookie(true), false)
-  })
-})
-
 describe('cookies', () => {
   it('parses/serializes empty string values', async () => {
-    let cookie = createCookie('my-cookie')
+    let cookie = new Cookie('my-cookie')
     let setCookie = await cookie.serialize('')
     let value = await cookie.parse(getCookieFromSetCookie(setCookie))
 
@@ -30,7 +17,7 @@ describe('cookies', () => {
   })
 
   it('parses/serializes unsigned string values', async () => {
-    let cookie = createCookie('my-cookie')
+    let cookie = new Cookie('my-cookie')
     let setCookie = await cookie.serialize('hello world')
     let value = await cookie.parse(getCookieFromSetCookie(setCookie))
 
@@ -38,7 +25,7 @@ describe('cookies', () => {
   })
 
   it('parses/serializes unsigned boolean values', async () => {
-    let cookie = createCookie('my-cookie')
+    let cookie = new Cookie('my-cookie')
     let setCookie = await cookie.serialize(true)
     let value = await cookie.parse(getCookieFromSetCookie(setCookie))
 
@@ -46,7 +33,7 @@ describe('cookies', () => {
   })
 
   it('parses/serializes signed string values', async () => {
-    let cookie = createCookie('my-cookie', {
+    let cookie = new Cookie('my-cookie', {
       secrets: ['secret1'],
     })
     let setCookie = await cookie.serialize('hello michael')
@@ -56,7 +43,7 @@ describe('cookies', () => {
   })
 
   it('parses/serializes string values containing utf8 characters', async () => {
-    let cookie = createCookie('my-cookie')
+    let cookie = new Cookie('my-cookie')
     let setCookie = await cookie.serialize('日本語')
     let value = await cookie.parse(getCookieFromSetCookie(setCookie))
 
@@ -64,11 +51,11 @@ describe('cookies', () => {
   })
 
   it('fails to parses signed string values with invalid signature', async () => {
-    let cookie = createCookie('my-cookie', {
+    let cookie = new Cookie('my-cookie', {
       secrets: ['secret1'],
     })
     let setCookie = await cookie.serialize('hello michael')
-    let cookie2 = createCookie('my-cookie', {
+    let cookie2 = new Cookie('my-cookie', {
       secrets: ['secret2'],
     })
     let value = await cookie2.parse(getCookieFromSetCookie(setCookie))
@@ -77,11 +64,11 @@ describe('cookies', () => {
   })
 
   it('fails to parse signed string values with invalid signature encoding', async () => {
-    let cookie = createCookie('my-cookie', {
+    let cookie = new Cookie('my-cookie', {
       secrets: ['secret1'],
     })
     let setCookie = await cookie.serialize('hello michael')
-    let cookie2 = createCookie('my-cookie', {
+    let cookie2 = new Cookie('my-cookie', {
       secrets: ['secret2'],
     })
     // use characters that are invalid for base64 encoding
@@ -91,7 +78,7 @@ describe('cookies', () => {
   })
 
   it('parses/serializes signed object values', async () => {
-    let cookie = createCookie('my-cookie', {
+    let cookie = new Cookie('my-cookie', {
       secrets: ['secret1'],
     })
     let setCookie = await cookie.serialize({ hello: 'mjackson' })
@@ -101,11 +88,11 @@ describe('cookies', () => {
   })
 
   it('fails to parse signed object values with invalid signature', async () => {
-    let cookie = createCookie('my-cookie', {
+    let cookie = new Cookie('my-cookie', {
       secrets: ['secret1'],
     })
     let setCookie = await cookie.serialize({ hello: 'mjackson' })
-    let cookie2 = createCookie('my-cookie', {
+    let cookie2 = new Cookie('my-cookie', {
       secrets: ['secret2'],
     })
     let value = await cookie2.parse(getCookieFromSetCookie(setCookie))
@@ -114,7 +101,7 @@ describe('cookies', () => {
   })
 
   it('supports secret rotation', async () => {
-    let cookie = createCookie('my-cookie', {
+    let cookie = new Cookie('my-cookie', {
       secrets: ['secret1'],
     })
     let setCookie = await cookie.serialize({ hello: 'mjackson' })
@@ -123,7 +110,7 @@ describe('cookies', () => {
     assert.deepEqual(value, { hello: 'mjackson' })
 
     // A new secret enters the rotation...
-    cookie = createCookie('my-cookie', {
+    cookie = new Cookie('my-cookie', {
       secrets: ['secret2', 'secret1'],
     })
 
@@ -137,11 +124,11 @@ describe('cookies', () => {
   })
 
   it('makes the default secrets to be an empty array', async () => {
-    let cookie = createCookie('my-cookie')
+    let cookie = new Cookie('my-cookie')
 
     assert.equal(cookie.isSigned, false)
 
-    let cookie2 = createCookie('my-cookie2', {
+    let cookie2 = new Cookie('my-cookie2', {
       secrets: undefined,
     })
 
@@ -149,12 +136,12 @@ describe('cookies', () => {
   })
 
   it('makes the default path of cookies to be /', async () => {
-    let cookie = createCookie('my-cookie')
+    let cookie = new Cookie('my-cookie')
 
     let setCookie = await cookie.serialize('hello world')
     assert.ok(setCookie.includes('Path=/'))
 
-    let cookie2 = createCookie('my-cookie2')
+    let cookie2 = new Cookie('my-cookie2')
 
     let setCookie2 = await cookie2.serialize('hello world', {
       path: '/about',
@@ -163,12 +150,12 @@ describe('cookies', () => {
   })
 
   it('supports the Priority attribute', async () => {
-    let cookie = createCookie('my-cookie')
+    let cookie = new Cookie('my-cookie')
 
     let setCookie = await cookie.serialize('hello world')
     assert.ok(!setCookie.includes('Priority'))
 
-    let cookie2 = createCookie('my-cookie2')
+    let cookie2 = new Cookie('my-cookie2')
 
     let setCookie2 = await cookie2.serialize('hello world', {
       priority: 'high',
@@ -185,7 +172,7 @@ describe('cookies', () => {
       }
 
       try {
-        createCookie('my-cookie', { expires: new Date(Date.now() + 60_000) })
+        new Cookie('my-cookie', { expires: new Date(Date.now() + 60_000) })
         assert.equal(consoleCalls.length, 1)
         assert.ok(consoleCalls[0].includes('The "my-cookie" cookie has an "expires" property set'))
         assert.ok(

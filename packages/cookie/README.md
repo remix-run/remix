@@ -26,10 +26,10 @@ npm install @remix-run/cookie
 The following should give you a sense of what kinds of things you can do with this library:
 
 ```ts
-import { createCookie } from '@remix-run/cookie'
+import { Cookie } from '@remix-run/cookie'
 
 // Create a basic cookie
-let sessionCookie = createCookie('session')
+let sessionCookie = new Cookie('session')
 
 // Serialize a value to a Set-Cookie header
 let setCookieHeader = await sessionCookie.serialize({
@@ -45,7 +45,7 @@ let sessionData = await sessionCookie.parse(cookieHeader)
 console.log(sessionData) // { userId: '12345', theme: 'dark' }
 
 // Create a signed cookie for security
-let secureCookie = createCookie('secure-session', {
+let secureCookie = new Cookie('secure-session', {
   secrets: ['Secr3t'], // Array to support secret rotation
   httpOnly: true,
   secure: true,
@@ -71,7 +71,7 @@ console.log(secureCookie.isSigned) // true
 console.log(secureCookie.expires) // Date object (calculated from maxAge)
 
 // Handle different data types
-let preferencesCookie = createCookie('preferences')
+let preferencesCookie = new Cookie('preferences')
 
 // Strings
 await preferencesCookie.serialize('light-mode')
@@ -95,9 +95,9 @@ await preferencesCookie.serialize(42)
 Cookies can be configured with comprehensive options:
 
 ```ts
-import { createCookie } from '@remix-run/cookie'
+import { Cookie } from '@remix-run/cookie'
 
-let cookie = createCookie('my-cookie', {
+let cookie = new Cookie('my-cookie', {
   // Security options
   secrets: ['secret1', 'secret2'], // For signing (first used for new cookies)
   httpOnly: true, // Prevent JavaScript access
@@ -126,14 +126,14 @@ One of the key features is seamless secret rotation for signed cookies:
 
 ```ts
 // Start with an initial secret
-let cookie = createCookie('session', {
+let cookie = new Cookie('session', {
   secrets: ['secret-v1'],
 })
 
 let setCookie1 = await cookie.serialize({ user: 'alice' })
 
 // Later, rotate to a new secret while keeping the old one
-cookie = createCookie('session', {
+cookie = new Cookie('session', {
   secrets: ['secret-v2', 'secret-v1'], // New secret first, old ones after
 })
 
@@ -155,7 +155,7 @@ console.log(newValue) // { user: 'bob' }
 You can override cookie options when serializing:
 
 ```ts
-let cookie = createCookie('flexible', {
+let cookie = new Cookie('flexible', {
   maxAge: 60 * 60, // Default 1 hour
 })
 
@@ -170,35 +170,12 @@ let sessionCookie = await cookie.serialize('temp-data', {
 })
 ```
 
-### Cookie Type Checking
-
-Check if an object is a cookie container:
-
-```ts
-import { createCookie, isCookie } from '@remix-run/cookie'
-
-let cookie = createCookie('test')
-let notCookie = { name: 'fake' }
-
-console.log(isCookie(cookie)) // true
-console.log(isCookie(notCookie)) // false
-
-// Useful for type guards
-function handleCookie(obj: unknown) {
-  if (isCookie(obj)) {
-    // obj is now typed as Cookie
-    console.log(obj.name)
-    console.log(obj.isSigned)
-  }
-}
-```
-
 ### Error Handling
 
 The library handles various error scenarios gracefully:
 
 ```ts
-let cookie = createCookie('test')
+let cookie = new Cookie('test')
 
 // Missing or malformed cookie headers return null
 await cookie.parse(null) // null
@@ -209,16 +186,16 @@ await cookie.parse('other=value') // null
 await cookie.parse('test=invalid-base64@#$') // {}
 
 // Signed cookies with bad signatures return null
-let signedCookie = createCookie('signed', { secrets: ['secret'] })
+let signedCookie = new Cookie('signed', { secrets: ['secret'] })
 await signedCookie.parse('signed=value.badsignature') // null
 ```
 
 ```ts
 // In your Remix loader/action
 import type { LoaderFunctionArgs } from '@remix-run/node'
-import { createCookie } from '@remix-run/cookie'
+import { Cookie } from '@remix-run/cookie'
 
-let sessionCookie = createCookie('session', {
+let sessionCookie = new Cookie('session', {
   secrets: [process.env.SESSION_SECRET],
   httpOnly: true,
   secure: true,
@@ -238,18 +215,20 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 ## API Reference
 
-### `createCookie(name, options?)`
+### `Cookie` Class
 
-Creates a new cookie container.
+A cookie container class for managing HTTP cookies.
+
+**Constructor:**
+
+```ts
+new Cookie(name: string, options?: CookieOptions)
+```
 
 **Parameters:**
 
 - `name: string` - The cookie name
 - `options?: CookieOptions` - Configuration options
-
-**Returns:** `Cookie` - A cookie container object
-
-### `Cookie` Interface
 
 **Properties:**
 
@@ -261,16 +240,6 @@ Creates a new cookie container.
 
 - `parse(cookieHeader: string | null, options?: ParseOptions): Promise<any>` - Parse cookie value from header
 - `serialize(value: any, options?: SerializeOptions): Promise<string>` - Serialize value to Set-Cookie header
-
-### `isCookie(object)`
-
-Type guard to check if an object is a cookie container.
-
-**Parameters:**
-
-- `object: any` - Object to test
-
-**Returns:** `boolean` - True if object is a Cookie
 
 ### `CookieOptions`
 
