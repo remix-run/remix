@@ -105,7 +105,7 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
     },
     deleteData: async (id) => {
       try {
-        let file = getFile(dir, id);
+        const file = getFile(dir, id);
         if (!file) {
           return;
         }
