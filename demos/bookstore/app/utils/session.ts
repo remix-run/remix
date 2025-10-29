@@ -3,6 +3,7 @@ import type { Session } from '@remix-run/session'
 
 declare module '@remix-run/session' {
   interface SessionData {
+    cartId?: string
     userId?: string
   }
 }

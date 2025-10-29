@@ -21,8 +21,9 @@ export default {
         return render(<div>Book not found</div>, { status: 404 })
       }
 
-      let cart = getCart(session.get('userId'))
-      let inCart = cart.items.some((item) => item.slug === params.slug)
+      let cartId = session.get('cartId')
+      let cart = cartId ? getCart(cartId) : null
+      let inCart = cart?.items.some((item) => item.slug === params.slug) === true
 
       return render(<BookCard book={book} inCart={inCart} />)
     },

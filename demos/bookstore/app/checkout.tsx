@@ -7,16 +7,17 @@ import { getCart, clearCart, getCartTotal } from './models/cart.ts'
 import { createOrder, getOrderById } from './models/orders.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
-import { getCurrentUser, getStorage } from './utils/context.ts'
+import { getCurrentUser } from './utils/context.ts'
 
 export default {
   use: [requireAuth],
   handlers: {
     index({ session }) {
-      let cart = getCart(session.get('userId'))
-      let total = getCartTotal(cart)
+      let cartId = session.get('cartId')
+      let cart = cartId ? getCart(cartId) : null
+      let total = cart ? getCartTotal(cart) : 0
 
-      if (cart.items.length === 0) {
+      if (!cart || cart.items.length === 0) {
         return render(
           <Layout>
             <div class="card">
@@ -109,9 +110,10 @@ export default {
 
     async action({ session, formData }) {
       let user = getCurrentUser()
-      let cart = getCart(session.get('userId'))
+      let cartId = session.get('cartId')
+      let cart = cartId ? getCart(cartId) : null
 
-      if (cart.items.length === 0) {
+      if (!cartId || !cart || cart.items.length === 0) {
         return redirect(routes.cart.index.href())
       }
 
@@ -133,7 +135,7 @@ export default {
         shippingAddress,
       )
 
-      clearCart(session.get('userId'))
+      clearCart(cartId)
 
       return redirect(routes.checkout.confirmation.href({ orderId: order.id }))
     },

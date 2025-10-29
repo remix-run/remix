@@ -88,7 +88,7 @@ export class Router {
     this.#uploadHandler = options?.uploadHandler
     this.#methodOverride = options?.methodOverride ?? true
 
-    if (!options || options.sessionStorage == null || options.sessionStorage === true) {
+    if (options?.sessionStorage == null || options?.sessionStorage === true) {
       // Unless they opt-out, we default to an `HttpOnly` cookie-based session that
       // will only be "activated" in a `Set-Cookie` response if they mutate the
       // session

@@ -20,8 +20,9 @@ export async function resolveFrame(frameSrc: string) {
       throw new Error(`Book not found: ${slug}`)
     }
 
-    let cart = getCart(getSession().get('userId'))
-    let inCart = cart.items.some((item) => item.slug === slug)
+    let cartId = getSession().get('cartId')
+    let cart = cartId ? getCart(cartId) : null
+    let inCart = cart?.items.some((item) => item.slug === slug) === true
 
     return <BookCard book={book} inCart={inCart} />
   }

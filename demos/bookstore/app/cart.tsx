@@ -11,13 +11,15 @@ import type { User } from './models/users.ts'
 import { getCurrentUser } from './utils/context.ts'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
+import { ensureCart } from './middleware/cart.ts'
 
 export default {
   use: [loadAuth],
   handlers: {
     index({ session }) {
-      let cart = getCart(session.get('userId'))
-      let total = getCartTotal(cart)
+      let cartId = session.get('cartId')
+      let cart = cartId ? getCart(cartId) : null
+      let total = cart ? getCartTotal(cart) : 0
 
       let user: User | null = null
       try {
@@ -31,7 +33,7 @@ export default {
           <h1>Shopping Cart</h1>
 
           <div class="card">
-            {cart.items.length > 0 ? (
+            {cart && cart.items.length > 0 ? (
               <>
                 <table>
                   <thead>
@@ -135,52 +137,55 @@ export default {
     },
 
     api: {
-      async add({ session, formData }) {
-        // Simulate network latency
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+      use: [ensureCart],
+      handlers: {
+        async add({ session, formData }) {
+          // Simulate network latency
+          await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        let bookId = formData.get('bookId')?.toString() ?? ''
+          let bookId = formData.get('bookId')?.toString() ?? ''
 
-        let book = getBookById(bookId)
-        if (!book) {
-          return new Response('Book not found', { status: 404 })
-        }
+          let book = getBookById(bookId)
+          if (!book) {
+            return new Response('Book not found', { status: 404 })
+          }
 
-        addToCart(session.get('userId'), book.id, book.slug, book.title, book.price, 1)
+          addToCart(session.get('cartId')!, book.id, book.slug, book.title, book.price, 1)
 
-        if (formData.get('redirect') === 'none') {
-          return new Response(null, { status: 204 })
-        }
+          if (formData.get('redirect') === 'none') {
+            return new Response(null, { status: 204 })
+          }
 
-        return redirect(routes.cart.index.href())
-      },
+          return redirect(routes.cart.index.href())
+        },
 
-      async update({ session, formData }) {
-        let bookId = formData.get('bookId')?.toString() ?? ''
-        let quantity = parseInt(formData.get('quantity')?.toString() ?? '1', 10)
+        async update({ session, formData }) {
+          let bookId = formData.get('bookId')?.toString() ?? ''
+          let quantity = parseInt(formData.get('quantity')?.toString() ?? '1', 10)
 
-        updateCartItem(session.get('userId'), bookId, quantity)
+          updateCartItem(session.get('cartId')!, bookId, quantity)
 
-        if (formData.get('redirect') === 'none') {
-          return new Response(null, { status: 204 })
-        }
+          if (formData.get('redirect') === 'none') {
+            return new Response(null, { status: 204 })
+          }
 
-        return redirect(routes.cart.index.href())
-      },
+          return redirect(routes.cart.index.href())
+        },
 
-      async remove({ session, formData }) {
-        // Simulate network latency
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        async remove({ session, formData }) {
+          // Simulate network latency
+          await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        let bookId = formData.get('bookId')?.toString() ?? ''
+          let bookId = formData.get('bookId')?.toString() ?? ''
 
-        removeFromCart(session.get('userId'), bookId)
+          removeFromCart(session.get('cartId')!, bookId)
 
-        if (formData.get('redirect') === 'none') {
-          return new Response(null, { status: 204 })
-        }
+          if (formData.get('redirect') === 'none') {
+            return new Response(null, { status: 204 })
+          }
 
-        return redirect(routes.cart.index.href())
+          return redirect(routes.cart.index.href())
+        },
       },
     },
   },
