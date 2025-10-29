@@ -4,19 +4,18 @@ import { parse, serialize } from 'cookie'
 import { sign, unsign } from './crypto.ts'
 import { warnOnce } from './warnings.ts'
 
-interface CookieSignatureOptions {
-  /**
-   * An array of secrets that may be used to sign/unsign the value of a cookie.
-   *
-   * The array makes it easy to rotate secrets. New secrets should be added to
-   * the beginning of the array. `cookie.serialize()` will always use the first
-   * value in the array, but `cookie.parse()` may use any of them so that
-   * cookies that were signed with older secrets still work.
-   */
-  secrets?: string[]
-}
-
-export type CookieOptions = ParseOptions & SerializeOptions & CookieSignatureOptions
+export type CookieOptions = ParseOptions &
+  SerializeOptions & {
+    /**
+     * An array of secrets that may be used to sign/unsign the value of a cookie.
+     *
+     * The array makes it easy to rotate secrets. New secrets should be added to
+     * the beginning of the array. `cookie.serialize()` will always use the first
+     * value in the array, but `cookie.parse()` may use any of them so that
+     * cookies that were signed with older secrets still work.
+     */
+    secrets?: string[]
+  }
 
 /**
  * A HTTP cookie.
@@ -26,98 +25,78 @@ export type CookieOptions = ParseOptions & SerializeOptions & CookieSignatureOpt
  * `serialize()` methods that allow a single instance to be reused for
  * parsing/encoding multiple different values.
  */
-export interface Cookie {
-  /**
-   * The name of the cookie, used in the `Cookie` and `Set-Cookie` headers.
-   */
+export class Cookie {
   readonly name: string
+  readonly #secrets: string[]
+  readonly #options: SerializeOptions & ParseOptions
+
+  /**
+   * Creates a logical container for managing a browser cookie from the server.
+   */
+  constructor(name: string, cookieOptions: CookieOptions = {}) {
+    let { secrets = [], ...options } = {
+      path: '/',
+      sameSite: 'lax' as const,
+      ...cookieOptions,
+    }
+
+    warnOnceAboutExpiresCookie(name, options.expires)
+
+    this.name = name
+    this.#secrets = secrets
+    this.#options = options
+  }
 
   /**
    * True if this cookie uses one or more secrets for verification.
    */
-  readonly isSigned: boolean
+  get isSigned(): boolean {
+    return this.#secrets.length > 0
+  }
 
   /**
    * The Date this cookie expires.
    *
    * Note: This is calculated at access time using `maxAge` when no `expires`
-   * option is provided to `createCookie()`.
+   * option is provided to the constructor.
    */
-  readonly expires?: Date
+  get expires(): Date | undefined {
+    // Max-Age takes precedence over Expires
+    return typeof this.#options.maxAge !== 'undefined'
+      ? new Date(Date.now() + this.#options.maxAge * 1000)
+      : this.#options.expires
+  }
 
   /**
    * Parses a raw `Cookie` header and returns the value of this cookie or
    * `null` if it's not present.
    */
-  parse(cookieHeader: string | null, options?: ParseOptions): Promise<any>
+  async parse(cookieHeader: string | null, parseOptions?: ParseOptions): Promise<any> {
+    if (!cookieHeader) return null
+    let cookies = parse(cookieHeader, { ...this.#options, ...parseOptions })
+    if (this.name in cookies) {
+      let value = cookies[this.name]
+      if (typeof value === 'string' && value !== '') {
+        let decoded = await decodeCookieValue(value, this.#secrets)
+        return decoded
+      } else {
+        return ''
+      }
+    } else {
+      return null
+    }
+  }
 
   /**
    * Serializes the given value to a string and returns the `Set-Cookie`
    * header.
    */
-  serialize(value: any, options?: SerializeOptions): Promise<string>
-}
-
-/**
- * Creates a logical container for managing a browser cookie from the server.
- */
-export function createCookie(name: string, cookieOptions: CookieOptions = {}): Cookie {
-  let { secrets = [], ...options } = {
-    path: '/',
-    sameSite: 'lax' as const,
-    ...cookieOptions,
+  async serialize(value: any, serializeOptions?: SerializeOptions): Promise<string> {
+    return serialize(this.name, value === '' ? '' : await encodeCookieValue(value, this.#secrets), {
+      ...this.#options,
+      ...serializeOptions,
+    })
   }
-
-  warnOnceAboutExpiresCookie(name, options.expires)
-
-  return {
-    get name() {
-      return name
-    },
-    get isSigned() {
-      return secrets.length > 0
-    },
-    get expires() {
-      // Max-Age takes precedence over Expires
-      return typeof options.maxAge !== 'undefined'
-        ? new Date(Date.now() + options.maxAge * 1000)
-        : options.expires
-    },
-    async parse(cookieHeader, parseOptions) {
-      if (!cookieHeader) return null
-      let cookies = parse(cookieHeader, { ...options, ...parseOptions })
-      if (name in cookies) {
-        let value = cookies[name]
-        if (typeof value === 'string' && value !== '') {
-          let decoded = await decodeCookieValue(value, secrets)
-          return decoded
-        } else {
-          return ''
-        }
-      } else {
-        return null
-      }
-    },
-    async serialize(value, serializeOptions) {
-      return serialize(name, value === '' ? '' : await encodeCookieValue(value, secrets), {
-        ...options,
-        ...serializeOptions,
-      })
-    },
-  }
-}
-
-/**
- * Returns true if an object is a Remix cookie container.
- */
-export function isCookie(object: any): object is Cookie {
-  return (
-    object != null &&
-    typeof object.name === 'string' &&
-    typeof object.isSigned === 'boolean' &&
-    typeof object.parse === 'function' &&
-    typeof object.serialize === 'function'
-  )
 }
 
 async function encodeCookieValue(value: any, secrets: string[]): Promise<string> {
@@ -152,7 +131,7 @@ function encodeData(value: any): string {
 function decodeData(value: string): any {
   try {
     return JSON.parse(decodeURIComponent(myEscape(atob(value))))
-  } catch (error: unknown) {
+  } catch {
     return {}
   }
 }
@@ -222,6 +201,6 @@ function warnOnceAboutExpiresCookie(name: string, expires?: Date) {
       `This will cause the expires value to not be updated when the session is committed. ` +
       `Instead, you should set the expires value when serializing the cookie. ` +
       `You can use \`commitSession(session, { expires })\` if using a session storage object, ` +
-      `or \`cookie.serialize("value", { expires })\` if you're using the cookie directly.`,
+      `or \`cookie.serialize("value", { expires })\` if you're using the cookie directly.`
   )
 }
