@@ -50,6 +50,9 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
 
         try {
           const file = getFile(dir, id);
+          if (!file) {
+            throw new Error("Error generating session");
+          }
           const exists = await Deno.stat(file)
             .then((s) => s.isFile)
             .catch(() => false);
@@ -69,6 +72,9 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
     readData: async (id) => {
       try {
         const file = getFile(dir, id);
+        if (!file) {
+          return null;
+        }
         const content = JSON.parse(await Deno.readTextFile(file));
         const data = content.data;
         const expires = typeof content.expires === "string"
@@ -91,12 +97,19 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
     updateData: async (id, data, expires) => {
       const content = JSON.stringify({ data, expires });
       const file = getFile(dir, id);
+      if (!file) {
+        return;
+      }
       await Deno.mkdir(path.dirname(file), { recursive: true }).catch(() => {});
       await Deno.writeTextFile(file, content);
     },
     deleteData: async (id) => {
       try {
-        await Deno.remove(getFile(dir, id));
+        const file = getFile(dir, id);
+        if (!file) {
+          return;
+        }
+        await Deno.remove(file);
       } catch (error) {
         if (error.code !== "ENOENT") throw error;
       }
@@ -104,7 +117,11 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
   });
 }
 
-function getFile(dir: string, id: string): string {
+function getFile(dir: string, id: string): string | null {
+  if (!/^[0-9a-f]{16}$/i.test(id)) {
+    return null;
+  }
+
   // Divide the session id up into a directory (first 2 bytes) and filename
   // (remaining 6 bytes) to reduce the chance of having very large directories,
   // which should speed up file access. This is a maximum of 2^16 directories,
