@@ -1,6 +1,6 @@
 import type { ParseOptions, SerializeOptions } from 'cookie'
-import type { Cookie, CookieOptions } from '@remix-run/cookie'
-import { createCookie, isCookie } from '@remix-run/cookie'
+import type { CookieOptions } from '@remix-run/cookie'
+import { Cookie } from '@remix-run/cookie'
 
 import { warnOnce } from './warnings.ts'
 
@@ -22,7 +22,7 @@ export class Session<Data = SessionData, FlashData = Data> {
   #map: Map<keyof Data | FlashDataKey<keyof FlashData & string>, unknown>
   #status: 'new' | 'clean' | 'dirty' | 'destroyed'
 
-  constructor(initialData?: Partial<Data>, id?: string) {
+  constructor(initialData?: Partial<Data> | null, id?: string) {
     // Brand new sessions start in a dirty state to force an initial commit
     this.#status = initialData == null && id == null ? 'new' : 'clean'
     this.#id = id ?? ''
@@ -231,17 +231,19 @@ export function createSessionStorage<Data = SessionData, FlashData = Data>({
   updateData,
   deleteData,
 }: SessionIdStorageStrategy<Data, FlashData>): SessionStorage<Data, FlashData> {
-  let cookie = isCookie(cookieArg)
-    ? cookieArg
-    : createCookie(cookieArg?.name || '__session', cookieArg)
+  let cookie =
+    cookieArg instanceof Cookie ? cookieArg : new Cookie(cookieArg?.name || '__session', cookieArg)
 
   warnOnceAboutSigningSessionCookie(cookie)
 
   return {
     async getSession(cookieHeader, options) {
       let id = cookieHeader && (await cookie.parse(cookieHeader, options))
-      let data = id && (await readData(id))
-      return id ? new Session(data, id) : new Session()
+      if (typeof id === 'string' && id !== '') {
+        let data = await readData(id)
+        return new Session<Data, FlashData>(data, id)
+      }
+      return new Session<Data, FlashData>()
     },
     async commitSession(session, options) {
       let { id, data } = session
