@@ -1,7 +1,7 @@
 import { promises as fsp } from 'node:fs'
 import * as path from 'node:path'
-import type { SessionStorage, SessionIdStorageStrategy, SessionData } from './session.ts'
-import { createSessionStorage } from './session.ts'
+import type { SessionStorage, SessionIdStorageStrategy, SessionData } from '@remix-run/session'
+import { createSessionStorage } from '@remix-run/session'
 
 interface FileSessionStorageOptions {
   /**

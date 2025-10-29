@@ -20,6 +20,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./file-storage": "./src/file-storage.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -27,6 +28,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./file-storage": {
+        "types": "./dist/file-storage.d.ts",
+        "default": "./dist/file-storage.js"
       },
       "./package.json": "./package.json"
     }
@@ -40,8 +45,9 @@
     "esbuild": "^0.25.10"
   },
   "scripts": {
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm",
-    "build:esm": "esbuild src/index.ts --bundle --external:@remix-run/cookie --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:file-storage",
+    "build:index": "esbuild src/index.ts --bundle --external:@remix-run/cookie --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:file-storage": "esbuild src/file-storage.ts --bundle --external:@remix-run/session --outfile=dist/file-storage.js --format=esm --platform=node --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
     "prepublishOnly": "pnpm run build",

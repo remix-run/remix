@@ -3,8 +3,8 @@ import type {
   SessionStorage,
   SessionIdStorageStrategy,
   FlashSessionData,
-} from './session.ts'
-import { createSessionStorage } from './session.ts'
+} from '../session.ts'
+import { createSessionStorage } from '../session.ts'
 
 interface MemorySessionStorageOptions {
   /**

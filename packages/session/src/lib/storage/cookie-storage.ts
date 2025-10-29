@@ -1,6 +1,6 @@
 import { Cookie } from '@remix-run/cookie'
-import type { SessionStorage, SessionIdStorageStrategy, SessionData } from './session.ts'
-import { warnOnceAboutSigningSessionCookie, Session } from './session.ts'
+import type { SessionStorage, SessionIdStorageStrategy, SessionData } from '../session.ts'
+import { warnOnceAboutSigningSessionCookie, Session } from '../session.ts'
 
 interface CookieSessionStorageOptions {
   /**

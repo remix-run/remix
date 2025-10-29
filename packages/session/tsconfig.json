@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "rootDir": ".",
     "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "ES2022",
