@@ -250,6 +250,7 @@ Date: 2025-10-30
 
 ### Patch Changes
 
+- `@remix-run/deno` - Validate format of incoming session ids in `createFileSessionStorage`
 - `@remix-run/node` - Validate format of incoming session ids in `createFileSessionStorage`
 
 **Full Changelog**: [`v2.17.1...v2.17.2`](https://github.com/remix-run/remix/compare/remix@2.17.1...remix@2.17.2)
