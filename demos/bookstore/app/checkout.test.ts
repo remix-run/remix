@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { router } from './router.ts'
-import { loginAsCustomer, requestWithSession } from '../test/helpers.ts'
+import { getSessionCookie, loginAsCustomer, requestWithSession } from '../test/helpers.ts'
 
 describe('checkout handlers', () => {
   it('GET /checkout redirects when not authenticated', async () => {
@@ -23,7 +23,8 @@ describe('checkout handlers', () => {
         slug: 'bbq',
       }),
     })
-    await router.fetch(addRequest)
+    let response = await router.fetch(addRequest)
+    sessionCookie = getSessionCookie(response)!
 
     // Submit checkout
     let checkoutRequest = requestWithSession('http://localhost:3000/checkout', sessionCookie, {

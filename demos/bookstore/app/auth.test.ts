@@ -2,11 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { router } from './router.ts'
-import {
-  getSessionCookie as sessionCookie,
-  assertContains,
-  getSessionCookie,
-} from '../test/helpers.ts'
+import { assertContains, getSessionCookie } from '../test/helpers.ts'
 
 describe('auth handlers', () => {
   it('POST /login with valid credentials sets session cookie and redirects', async () => {

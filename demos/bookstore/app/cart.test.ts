@@ -7,6 +7,7 @@ import {
   assertContains,
   loginAsCustomer,
   assertNotContains,
+  getSessionCookie,
 } from '../test/helpers.ts'
 
 describe('cart handlers', () => {
@@ -36,7 +37,7 @@ describe('cart handlers', () => {
     assertNotContains(html, 'Heavy Metal Guitar Riffs')
 
     // First, add item to cart to get a session
-    await router.fetch('http://localhost:3000/cart/api/add', {
+    response = await router.fetch('http://localhost:3000/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
         bookId: '002',
@@ -47,6 +48,7 @@ describe('cart handlers', () => {
       },
       redirect: 'manual',
     })
+    sessionCookie = getSessionCookie(response)!
 
     // Now view cart with session
     request = requestWithSession('http://localhost:3000/cart', sessionCookie)
@@ -62,7 +64,7 @@ describe('cart handlers', () => {
     let sessionCookie = await loginAsCustomer(router)
 
     // Add first item
-    await router.fetch('http://localhost:3000/cart/api/add', {
+    let response = await router.fetch('http://localhost:3000/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
         bookId: '001',
@@ -73,6 +75,7 @@ describe('cart handlers', () => {
       },
       redirect: 'manual',
     })
+    sessionCookie = getSessionCookie(response)!
 
     // Add second item with same session
     let addRequest2 = requestWithSession('http://localhost:3000/cart/api/add', sessionCookie, {
