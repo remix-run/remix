@@ -1,5 +1,3 @@
-// public types ------------------------------------------------------------------------------------
-
 // prettier-ignore
 /**
  * A dispatched event with the current target set to the target that dispatched the event.
@@ -201,17 +199,6 @@ export function createContainer<target extends EventTarget>(
 
 // on ----------------------------------------------------------------------------------------------
 
-export function on<target extends EventTarget>(
-  target: target,
-  signal: AbortSignal,
-  listeners: EventListeners<target>,
-): () => void
-
-export function on<target extends EventTarget>(
-  target: target,
-  listeners: EventListeners<target>,
-): () => void
-
 /**
  * ### Description
  *
@@ -265,6 +252,15 @@ export function on<target extends EventTarget>(
  * })
  * ```
  */
+export function on<target extends EventTarget>(
+  target: target,
+  signal: AbortSignal,
+  listeners: EventListeners<target>,
+): () => void
+export function on<target extends EventTarget>(
+  target: target,
+  listeners: EventListeners<target>,
+): () => void
 export function on(
   target: EventTarget,
   signalOrListeners: AbortSignal | EventListeners,
