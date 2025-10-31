@@ -1,5 +1,5 @@
-import { on } from '../../src/lib/events.ts'
-import * as Keys from '../../src/lib/interactions/keys.ts'
+import { on } from '@remix-run/interaction'
+import * as Keys from '@remix-run/interaction/keys'
 
 let button = document.getElementById('subject')!
 let log = document.getElementById('log')!

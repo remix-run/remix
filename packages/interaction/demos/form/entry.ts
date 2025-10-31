@@ -1,5 +1,5 @@
-import { on } from '../../src/lib/events'
-import { formReset } from '../../src/lib/interactions/form'
+import { on } from '@remix-run/interaction'
+import { formReset } from '@remix-run/interaction/form'
 
 let myForm = document.querySelector('form') as HTMLFormElement
 let hiddenInput = document.querySelector('input[type="hidden"]') as HTMLInputElement

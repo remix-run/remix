@@ -20,7 +20,7 @@ export type EventsContainer<target extends EventTarget> = {
  * @example
  * ```ts
  * let listeners: EventListeners<HTMLElement> = {
- *   click: (event) => {
+ *   click(event) {
  *     console.log('clicked')
  *   },
  *   keydown: [
@@ -66,7 +66,7 @@ export type InteractionSetup = (target: EventTarget, signal: AbortSignal) => voi
  * // setup the interaction
  * function KeydownEnter(target, signal) {
  *   on(target, signal, {
- *     keydown: (event) => {
+ *     keydown(event) {
  *       if (event.key === 'Enter') {
  *         target.dispatchEvent(new KeyboardEvent(keydownEnter, { key: 'Enter' }))
  *       }
@@ -76,7 +76,7 @@ export type InteractionSetup = (target: EventTarget, signal: AbortSignal) => voi
  *
  * // then consumers use the string to bind the interaction
  * on(button, {
- *   [keydownEnter]: (event) => {
+ *   [keydownEnter](event) {
  *     console.log('Enter key pressed')
  *   },
  * })
@@ -102,7 +102,7 @@ export function defineInteraction<type extends string>(type: type, interaction: 
  * let button = document.createElement('button')
  * let container = createContainer(button)
  * container.set({
- *   click: (event, signal) => {
+ *   click(event, signal) {
  *     console.log('clicked')
  *   },
  * })
@@ -212,10 +212,10 @@ export function createContainer<target extends EventTarget>(
  *
  * let button = document.createElement('button')
  * on(button, {
- *   click: (event, signal) => {
+ *   click(event, signal) {
  *     console.log('clicked')
  *   },
- *   [longPress]: (event) => {
+ *   [longPress](event) {
  *     console.log('long pressed')
  *   },
  * })
@@ -226,7 +226,7 @@ export function createContainer<target extends EventTarget>(
  * ```ts
  * let controller = new AbortController()
  * on(button, controller.signal, {
- *   click: (event, signal) => {
+ *   click(event, signal) {
  *     console.log('clicked')
  *   },
  * })

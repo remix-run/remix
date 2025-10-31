@@ -1,4 +1,4 @@
-import { on } from '../../src/lib/events.ts'
+import { on } from '@remix-run/interaction'
 
 document.addEventListener('DOMContentLoaded', async () => {
   let stateSelect = document.querySelector('select[name="state"]') as HTMLSelectElement

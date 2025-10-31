@@ -51,18 +51,16 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist",
+    "demos": "cd demos && pnpm start",
     "size": "esbuild src/index.ts --bundle --minify --outfile=.temp-bundle.js --format=esm && echo \"📦 Bundle sizes:\" && echo \"   Uncompressed: $(ls -lah .temp-bundle.js | awk '{print $5}')\" && echo \"   Gzipped: $(gzip -c .temp-bundle.js | wc -c | tr -d ' ') bytes\" && rm .temp-bundle.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "install:chromium": "playwright install chromium",
-    "prepublishOnly": "pnpm build",
-    "examples:watch": "esbuild examples/*/entry.ts --bundle --outdir=examples --outbase=examples --out-extension:.js=.bundled.js --format=esm --platform=browser --target=es2020 --sourcemap=inline --watch",
-    "examples": "concurrently \"pnpm examples:watch\" \"npx serve examples\""
+    "prepublishOnly": "pnpm build"
   },
   "devDependencies": {
     "@vitest/browser": "^3.2.4",
-    "concurrently": "^9.2.1",
     "esbuild": "^0.25.5",
     "playwright": "^1.53.1",
     "typescript": "^5.8.3",

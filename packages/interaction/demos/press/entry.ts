@@ -1,11 +1,5 @@
-import { on } from '../../src/lib/events.ts'
-import {
-  longPress,
-  press,
-  pressDown,
-  pressUp,
-  pressCancel,
-} from '../../src/lib/interactions/press.ts'
+import { on } from '@remix-run/interaction'
+import { longPress, press, pressDown, pressUp, pressCancel } from '@remix-run/interaction/press'
 
 let currentCircle: HTMLDivElement | null = null
 

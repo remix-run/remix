@@ -1,10 +1,10 @@
-import { on } from '../../src/lib/events.ts'
+import { on } from '@remix-run/interaction'
 
 let button = document.getElementById('button')!
 let log = document.getElementById('log')!
 
 on(button, {
-  click: () => {
+  click() {
     log.textContent += 'clicked\n'
   },
 })

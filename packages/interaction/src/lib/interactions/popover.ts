@@ -19,7 +19,7 @@ import { defineInteraction, on } from '../events'
  * ```ts
  * import { popoverToggle } from '@remix-run/interaction/popover'
  * on(button, {
- *   [popoverToggle]: (event) => {
+ *   [popoverToggle](event) {
  *     console.log('I am not the popover but the owner')
  *     console.log(event.newState) // 'open' or 'closed'
  *     console.log(event.oldState) // 'open' or 'closed'
@@ -47,7 +47,7 @@ export let popoverToggle = defineInteraction('rmx:popover-toggle', Popover)
  * ```ts
  * import { popoverToggle } from '@remix-run/interaction/popover'
  * on(button, {
- *   [beforePopoverToggle]: (event) => {
+ *   [beforePopoverToggle](event) {
  *     console.log('I am not the popover but the owner')
  *     console.log(event.newState) // 'open' or 'closed'
  *     console.log(event.oldState) // 'open' or 'closed'
