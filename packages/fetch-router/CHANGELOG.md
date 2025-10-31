@@ -8,6 +8,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 - BREAKING CHANGE: Rename `InferRouteHandler` => `BuildRouteHandler` and add a `Method` generic parameter to build a `RouteHandler` type from a string, route pattern, or route.
 - BREAKING CHANGE: Removed support for passing a `Route` object to `redirect()` response helper. Use `redirect(routes.home.href())` instead.
 - BREAKING CHANGE: Move `html()`, `json()`, and `redirect()` response helpers to `@remix-run/fetch-router/response-helpers` export
+- Always run global middleware, even when no route matches
 - More precise type inference for `router.get()`, `router.post()`, etc. route handlers.
 - Add support for nesting route maps via object spread syntax
 

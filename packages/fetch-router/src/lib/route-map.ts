@@ -83,9 +83,9 @@ export type BuildRouteMap<P extends string, R extends RouteDefs> = Simplify<{
 type BuildRoute<P extends string, D extends RouteDef> = 
   D extends string ? Route<'ANY', Join<P, D>> :
   D extends RoutePattern<infer S extends string> ? Route<'ANY', Join<P, S>> :
-  D extends { method: infer M, pattern: infer S } ? (
-    S extends string ? Route<M extends RequestMethod ? M : 'ANY', Join<P, S>> :
-    S extends RoutePattern<infer S extends string> ? Route<M extends RequestMethod ? M : 'ANY', Join<P, S>> :
+  D extends { method: infer M extends RequestMethod | 'ANY', pattern: infer S } ? (
+    S extends string ? Route<M, Join<P, S>> :
+    S extends RoutePattern<infer S extends string> ? Route<M, Join<P, S>> :
     never
   ) :
   never

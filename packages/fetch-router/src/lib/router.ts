@@ -92,9 +92,10 @@ export class Router {
       throw request.signal.reason
     }
 
-    let response = await this.dispatch(request)
+    let context = await this.#createContext(request)
+    let response = await this.dispatch(context)
     if (response == null) {
-      response = await this.#defaultHandler(new RequestContext(request))
+      response = await this.#runHandler(this.#defaultHandler, context, this.#middleware)
     }
 
     return response
@@ -126,34 +127,35 @@ export class Router {
 
         let response = await router.dispatch(
           context,
-          // For mounts, pass upstream + mount middleware
           concatMiddleware(upstreamMiddleware, mountMiddleware),
         )
 
         // Always restore original URL
         context.url = originalUrl
 
-        if (response != null) {
-          return response
+        if (response == null) {
+          // No response from sub-router, continue to next match
+          continue
         }
 
-        // No match in sub-router, continue to next match
-        continue
+        return response
       }
 
       let { method, middleware: routeMiddleware, handler } = match.data
 
       if (method !== context.method && method !== 'ANY') {
+        // Request method does not match, continue to next match
         continue
       }
 
       context.params = match.params
       context.url = match.url
 
-      let middleware = concatMiddleware(upstreamMiddleware, routeMiddleware)
-      return middleware != null
-        ? await runMiddleware(middleware, context, handler)
-        : await raceRequestAbort(Promise.resolve(handler(context)), context.request)
+      return this.#runHandler(
+        handler,
+        context,
+        concatMiddleware(upstreamMiddleware, routeMiddleware),
+      )
     }
 
     return null
@@ -204,6 +206,16 @@ export class Router {
     }
 
     return context
+  }
+
+  async #runHandler(
+    handler: RequestHandler,
+    context: RequestContext,
+    middleware?: Middleware[],
+  ): Promise<Response> {
+    return middleware == null
+      ? await raceRequestAbort(Promise.resolve(handler(context)), context.request)
+      : await runMiddleware(middleware, context, handler)
   }
 
   /**

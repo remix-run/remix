@@ -144,6 +144,22 @@ describe('router.fetch()', () => {
   })
 })
 
+describe('global middleware', () => {
+  it('runs when no route matches', async () => {
+    let router = createRouter()
+    let requestLog: string[] = []
+
+    router.use(() => {
+      requestLog.push('middleware')
+    })
+
+    let response = await router.fetch('https://remix.run/nonexistent')
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Not Found: /nonexistent')
+    assert.deepEqual(requestLog, ['middleware'])
+  })
+})
+
 describe('router.map()', () => {
   it('maps a single route to a handler', async () => {
     let routes = createRoutes({
