@@ -6,10 +6,10 @@ import { loginAsAdmin, requestWithSession } from '../test/helpers.ts'
 
 describe('admin books handlers', () => {
   it('POST /admin/books creates new book when admin', async () => {
-    let sessionId = await loginAsAdmin(router)
+    let sessionCookie = await loginAsAdmin(router)
 
     // Create new book
-    let createRequest = requestWithSession('http://localhost:3000/admin/books', sessionId, {
+    let createRequest = requestWithSession('http://localhost:3000/admin/books', sessionCookie, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',

@@ -2,7 +2,7 @@ import * as path from 'node:path'
 import type { BuildRouteHandler } from '@remix-run/fetch-router'
 import { openFile } from '@remix-run/lazy-file/fs'
 
-import { routes } from '../routes.ts'
+import type { routes } from '../routes.ts'
 
 const publicDir = path.join(import.meta.dirname, '..', 'public')
 const publicAssetsDir = path.join(publicDir, 'assets')

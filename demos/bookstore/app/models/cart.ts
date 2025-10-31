@@ -1,3 +1,5 @@
+import type { Session } from '@remix-run/session'
+
 export interface CartItem {
   bookId: string
   slug: string
@@ -10,27 +12,44 @@ export interface Cart {
   items: CartItem[]
 }
 
-// Store carts by session ID
+// Store carts by cartId, cartId will be stored in the session
+let nextCartId = 1
 const carts = new Map<string, Cart>()
 
-export function getCart(sessionId: string): Cart {
-  let cart = carts.get(sessionId)
+export function createCartIfNotExists(session: Session): Cart {
+  let cartId = session.get('cartId')
+  if (cartId) {
+    let cart = carts.get(cartId)
+    if (cart) {
+      return cart
+    }
+  } else {
+    cartId = String(nextCartId++)
+    session.set('cartId', cartId)
+  }
+
+  let cart = { items: [] }
+  carts.set(cartId, cart)
+  return cart
+}
+
+export function getCart(cartId: string): Cart {
+  let cart = carts.get(cartId)
   if (!cart) {
-    cart = { items: [] }
-    carts.set(sessionId, cart)
+    throw new Error('Cart not found')
   }
   return cart
 }
 
 export function addToCart(
-  sessionId: string,
+  cartId: string,
   bookId: string,
   slug: string,
   title: string,
   price: number,
   quantity: number = 1,
 ): Cart {
-  let cart = getCart(sessionId)
+  let cart = getCart(cartId)
 
   let existingItem = cart.items.find((item) => item.bookId === bookId)
   if (existingItem) {
@@ -42,12 +61,8 @@ export function addToCart(
   return cart
 }
 
-export function updateCartItem(
-  sessionId: string,
-  bookId: string,
-  quantity: number,
-): Cart | undefined {
-  let cart = getCart(sessionId)
+export function updateCartItem(cartId: string, bookId: string, quantity: number): Cart | undefined {
+  let cart = getCart(cartId)
   let item = cart.items.find((item) => item.bookId === bookId)
 
   if (!item) return undefined
@@ -61,14 +76,14 @@ export function updateCartItem(
   return cart
 }
 
-export function removeFromCart(sessionId: string, bookId: string): Cart {
-  let cart = getCart(sessionId)
+export function removeFromCart(cartId: string, bookId: string): Cart {
+  let cart = getCart(cartId)
   cart.items = cart.items.filter((item) => item.bookId !== bookId)
   return cart
 }
 
-export function clearCart(sessionId: string): void {
-  carts.set(sessionId, { items: [] })
+export function clearCart(cartId: string): void {
+  carts.set(cartId, { items: [] })
 }
 
 export function getCartTotal(cart: Cart): number {

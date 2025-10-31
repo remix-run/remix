@@ -14,6 +14,8 @@ import { isRequestHandlerWithMiddleware, isRouteHandlersWithMiddleware } from '.
 import type { RouteHandlers, RouteHandler } from './route-handlers.ts'
 import { Route } from './route-map.ts'
 import type { RouteMap } from './route-map.ts'
+import type { SessionStorage } from '@remix-run/session'
+import { createCookieSessionStorage } from '@remix-run/session'
 
 export interface RouterOptions {
   /**
@@ -36,6 +38,10 @@ export interface RouterOptions {
    * Set `false` to disable form data parsing.
    */
   parseFormData?: (ParseFormDataOptions & { suppressErrors?: boolean }) | boolean
+  /**
+   * Session storage instance to create user sessions.
+   */
+  sessionStorage?: SessionStorage | boolean
   /**
    * A function that handles file uploads. It receives a `FileUpload` object and may return any
    * value that is a valid `FormData` value.
@@ -71,6 +77,7 @@ export class Router {
   #matcher: Matcher<MatchData>
   #middleware: Middleware[] | undefined
   #parseFormData: (ParseFormDataOptions & { suppressErrors?: boolean }) | boolean
+  #sessionStorage: SessionStorage | undefined
   #uploadHandler: FileUploadHandler | undefined
   #methodOverride: string | boolean
 
@@ -80,6 +87,19 @@ export class Router {
     this.#parseFormData = options?.parseFormData ?? true
     this.#uploadHandler = options?.uploadHandler
     this.#methodOverride = options?.methodOverride ?? true
+
+    if (options?.sessionStorage == null || options?.sessionStorage === true) {
+      // Unless they opt-out, we default to an `HttpOnly` cookie-based session that
+      // will only be "activated" in a `Set-Cookie` response if they mutate the
+      // session
+      this.#sessionStorage = createCookieSessionStorage({
+        cookie: {
+          httpOnly: true,
+        },
+      })
+    } else if (options?.sessionStorage) {
+      this.#sessionStorage = options.sessionStorage
+    }
   }
 
   /**
@@ -96,6 +116,7 @@ export class Router {
     let response = await this.dispatch(context)
     if (response == null) {
       response = await this.#runHandler(this.#defaultHandler, context, this.#middleware)
+      await this.#setSessionCookieHeader(response, context)
     }
 
     return response
@@ -112,7 +133,20 @@ export class Router {
     request: Request | RequestContext,
     upstreamMiddleware?: Middleware[],
   ): Promise<Response | null> {
-    let context = request instanceof Request ? await this.#createContext(request) : request
+    let context: RequestContext
+
+    if (request instanceof Request) {
+      context = await this.#createContext(request)
+    } else {
+      context = request
+
+      // Setup sessions for sub-routers if no parent session exists and they didn't opt-out
+      if (!context._session && this.#sessionStorage) {
+        context._session = await this.#sessionStorage.getSession(
+          context.request.headers.get('Cookie'),
+        )
+      }
+    }
 
     for (let match of this.#matcher.matchAll(context.url)) {
       if ('router' in match.data) {
@@ -151,11 +185,14 @@ export class Router {
       context.params = match.params
       context.url = match.url
 
-      return this.#runHandler(
+      let response = await this.#runHandler(
         handler,
         context,
         concatMiddleware(upstreamMiddleware, routeMiddleware),
       )
+
+      await this.#setSessionCookieHeader(response, context)
+      return response
     }
 
     return null
@@ -163,6 +200,13 @@ export class Router {
 
   async #createContext(request: Request): Promise<RequestContext> {
     let context = new RequestContext(request)
+
+    // Only process sessions if they didn't opt-out
+    if (this.#sessionStorage) {
+      context._session = await this.#sessionStorage.getSession(
+        context.request.headers.get('Cookie'),
+      )
+    }
 
     if (!RequestBodyMethods.includes(request.method as RequestBodyMethod)) {
       return context
@@ -216,6 +260,38 @@ export class Router {
     return middleware == null
       ? await raceRequestAbort(Promise.resolve(handler(context)), context.request)
       : await runMiddleware(middleware, context, handler)
+  }
+
+  async #setSessionCookieHeader(response: Response, context: RequestContext): Promise<void> {
+    if (!this.#sessionStorage) {
+      return
+    }
+
+    let { session } = context
+    if (session.status === 'dirty') {
+      // If the session has been mutated, commit to persist to the backing store
+      let cookie = await this.#sessionStorage.commitSession(session)
+
+      // But only add the Set-Cookie header if info *serialized in the cookie* has changed:
+      // - For cookie-backed session, `session.id` is always empty - they store all
+      //   data in the cookie and thus _always_ need to be committed when the session
+      //   is new or dirty
+      // - For non-cookie-backed sessions (file, memory, etc), `session.id` is only
+      //   empty on initial creation, so if they've set any session data to put it
+      //   in a dirty state, we need to commit to store the session id in the cookie
+      //   for subsequent requests.  `session.id` be populated for existing sessions
+      //   read in from a cookie, and when that happens we don't need to send up
+      //   a new cookie because we already have the ID in there
+      if (session.id === '') {
+        response.headers.append('Set-Cookie', cookie)
+      }
+    } else if (session.status === 'destroyed') {
+      let cookie = await this.#sessionStorage.destroySession(session)
+      response.headers.append('Set-Cookie', cookie)
+    }
+
+    // Otherwise, the session is new|clean but hasn't been mutated and we don't
+    // need to send any Set-Cookie header
   }
 
   /**

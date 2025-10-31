@@ -13,10 +13,10 @@ describe('account handlers', () => {
   })
 
   it('GET /account returns account page when authenticated', async () => {
-    let sessionId = await loginAsCustomer(router)
+    let sessionCookie = await loginAsCustomer(router)
 
     // Now access account page with session
-    let request = requestWithSession('http://localhost:3000/account', sessionId)
+    let request = requestWithSession('http://localhost:3000/account', sessionCookie)
     let response = await router.fetch(request)
 
     assert.equal(response.status, 200)
@@ -27,10 +27,10 @@ describe('account handlers', () => {
   })
 
   it('GET /account/orders/:orderId shows order for authenticated user', async () => {
-    let sessionId = await loginAsCustomer(router)
+    let sessionCookie = await loginAsCustomer(router)
 
     // Access existing order
-    let request = requestWithSession('http://localhost:3000/account/orders/1001', sessionId)
+    let request = requestWithSession('http://localhost:3000/account/orders/1001', sessionCookie)
     let response = await router.fetch(request)
 
     assert.equal(response.status, 200)

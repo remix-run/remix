@@ -1,4 +1,4 @@
-import { SetCookie, Cookie } from '@remix-run/headers'
+import { SetCookie } from '@remix-run/headers'
 
 /**
  * Extract session cookie from Set-Cookie header
@@ -8,20 +8,26 @@ export function getSessionCookie(response: Response): string | null {
   if (!setCookieHeader) return null
 
   let setCookie = new SetCookie(setCookieHeader)
-  return setCookie.name === 'sessionId' ? (setCookie.value ?? null) : null
+  if (setCookie.name === '__session') {
+    return `${setCookie.name}=${setCookie.value}`
+  }
+
+  return null
 }
 
 /**
  * Create a request with a session cookie
  */
-export function requestWithSession(url: string, sessionId: string, init?: RequestInit): Request {
-  let cookie = new Cookie({ sessionId })
-
+export function requestWithSession(
+  url: string,
+  sessionCookie: string,
+  init?: RequestInit,
+): Request {
   return new Request(url, {
     ...init,
     headers: {
       ...init?.headers,
-      Cookie: cookie.toString(),
+      Cookie: sessionCookie,
     },
   })
 }
@@ -54,12 +60,12 @@ export async function login(router: any, email: string, password: string): Promi
     redirect: 'manual',
   })
 
-  let sessionId = getSessionCookie(loginResponse)
-  if (!sessionId) {
+  let cookie = getSessionCookie(loginResponse)
+  if (!cookie) {
     throw new Error('Failed to get session cookie from login response')
   }
 
-  return sessionId
+  return cookie
 }
 
 /**

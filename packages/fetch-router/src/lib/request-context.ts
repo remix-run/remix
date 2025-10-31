@@ -1,4 +1,5 @@
 import SuperHeaders from '@remix-run/headers'
+import { Session } from '@remix-run/session'
 
 import { AppStorage } from './app-storage.ts'
 import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
@@ -34,6 +35,11 @@ export class RequestContext<
    * The original request that was dispatched to the router.
    */
   request: Request
+  /**
+   * @private
+   * Privately tracked session, if exists
+   */
+  _session: Session | undefined
   /**
    * Shared application-specific storage.
    */
@@ -79,5 +85,10 @@ export class RequestContext<
     }
 
     return files
+  }
+
+  get session() {
+    this._session ??= new Session()
+    return this._session
   }
 }
