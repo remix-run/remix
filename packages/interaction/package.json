@@ -19,10 +19,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./press": "./src/lib/interactions/press.ts",
-    "./keys": "./src/lib/interactions/keys.ts",
     "./form": "./src/lib/interactions/form.ts",
-    "./popover": "./src/lib/interactions/popover.ts"
+    "./keys": "./src/lib/interactions/keys.ts",
+    "./popover": "./src/lib/interactions/popover.ts",
+    "./press": "./src/lib/interactions/press.ts"
   },
   "publishConfig": {
     "exports": {
@@ -30,21 +30,21 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./press": {
-        "types": "./dist/lib/interactions/press.d.ts",
-        "default": "./dist/lib/interactions/press.js"
+      "./form": {
+        "types": "./dist/lib/interactions/form.d.ts",
+        "default": "./dist/lib/interactions/form.js"
       },
       "./keys": {
         "types": "./dist/lib/interactions/keys.d.ts",
         "default": "./dist/lib/interactions/keys.js"
       },
-      "./form": {
-        "types": "./dist/lib/interactions/form.d.ts",
-        "default": "./dist/lib/interactions/form.js"
-      },
       "./popover": {
         "types": "./dist/lib/interactions/popover.d.ts",
         "default": "./dist/lib/interactions/popover.js"
+      },
+      "./press": {
+        "types": "./dist/lib/interactions/press.d.ts",
+        "default": "./dist/lib/interactions/press.js"
       }
     }
   },
