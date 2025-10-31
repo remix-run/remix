@@ -62,6 +62,7 @@
   },
   "devDependencies": {
     "@vitest/browser": "^3.2.4",
+    "concurrently": "^9.2.1",
     "esbuild": "^0.25.5",
     "playwright": "^1.53.1",
     "typescript": "^5.8.3",
