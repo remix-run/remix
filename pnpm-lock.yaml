@@ -61,24 +61,6 @@ importers:
         specifier: ^4.20.6
         version: 4.20.6
 
-  packages/events:
-    devDependencies:
-      '@vitest/browser':
-        specifier: ^3.2.4
-        version: 3.2.4(playwright@1.56.1)(vite@7.1.12(@types/node@24.6.0)(tsx@4.20.6))(vitest@3.2.4)
-      esbuild:
-        specifier: ^0.25.5
-        version: 0.25.10
-      playwright:
-        specifier: ^1.53.1
-        version: 1.56.1
-      typescript:
-        specifier: ^5.8.3
-        version: 5.9.3
-      vitest:
-        specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.6.0)(@vitest/browser@3.2.4)(tsx@4.20.6)
-
   packages/fetch-proxy:
     dependencies:
       '@remix-run/headers':
@@ -185,6 +167,24 @@ importers:
       esbuild:
         specifier: ^0.25.10
         version: 0.25.10
+
+  packages/interaction:
+    devDependencies:
+      '@vitest/browser':
+        specifier: ^3.2.4
+        version: 3.2.4(playwright@1.56.1)(vite@7.1.12(@types/node@24.6.0)(tsx@4.20.6))(vitest@3.2.4)
+      esbuild:
+        specifier: ^0.25.5
+        version: 0.25.10
+      playwright:
+        specifier: ^1.53.1
+        version: 1.56.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.6.0)(@vitest/browser@3.2.4)(tsx@4.20.6)
 
   packages/lazy-file:
     dependencies:
