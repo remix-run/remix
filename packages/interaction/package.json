@@ -1,5 +1,5 @@
 {
-  "name": "@remix-run/events",
+  "name": "@remix-run/interaction",
   "version": "0.0.0",
   "description": "Like components but for events",
   "author": "Ryan Florence <rpflorence@gmail.com>",

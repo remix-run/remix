@@ -17,7 +17,7 @@ import { defineInteraction, on } from '../events'
  * ```
  *
  * ```ts
- * import { popoverToggle } from '@remix-run/events/popover'
+ * import { popoverToggle } from '@remix-run/interaction/popover'
  * on(button, {
  *   [popoverToggle]: (event) => {
  *     console.log('I am not the popover but the owner')
@@ -45,7 +45,7 @@ export let popoverToggle = defineInteraction('rmx:popover-toggle', Popover)
  * </div>
  * ```
  * ```ts
- * import { popoverToggle } from '@remix-run/events/popover'
+ * import { popoverToggle } from '@remix-run/interaction/popover'
  * on(button, {
  *   [beforePopoverToggle]: (event) => {
  *     console.log('I am not the popover but the owner')

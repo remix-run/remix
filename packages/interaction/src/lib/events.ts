@@ -53,7 +53,7 @@ export type InteractionSetup = (target: EventTarget, signal: AbortSignal) => voi
  * ### Example
  *
  * ```ts
- * import { defineInteraction, on } from '@remix-run/events'
+ * import { defineInteraction, on } from '@remix-run/interaction'
  *
  * // define the interaction
  * export let keydownEnter = defineInteraction('my:keydown-enter', KeydownEnter)
@@ -220,8 +220,8 @@ export function on<target extends EventTarget>(
  * ### Basic usage:
  *
  * ```ts
- * import { on } from "@remix-run/events"
- * import { longPress } from "@remix-run/events/press"
+ * import { on } from "@remix-run/interaction"
+ * import { longPress } from "@remix-run/interaction/press"
  *
  * let button = document.createElement('button')
  * on(button, {

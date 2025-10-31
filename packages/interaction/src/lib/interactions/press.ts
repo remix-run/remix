@@ -6,7 +6,7 @@ import { defineInteraction, on } from '../events.ts'
  * without repeating.
  *
  * ```tsx
- * import { press } from '@remix-run/events/press'
+ * import { press } from '@remix-run/interaction/press'
  * on(button, {
  *   [press]: (event) => {
  *     console.log('pressed')
@@ -21,7 +21,7 @@ export let press = defineInteraction('rmx:press', Press)
  * repeating.
  *
  * ```ts
- * import { pressDown } from '@remix-run/events/press'
+ * import { pressDown } from '@remix-run/interaction/press'
  * on(button, {
  *   [pressDown]: (event) => {
  *     console.log('pressed down')
@@ -36,7 +36,7 @@ export let pressDown = defineInteraction('rmx:press-down', Press)
  * repeating.
  *
  * ```ts
- * import { pressUp } from '@remix-run/events/press'
+ * import { pressUp } from '@remix-run/interaction/press'
  * on(button, {
  *   [pressUp]: (event) => {
  *     console.log('pressed up')
@@ -71,7 +71,7 @@ export let longPress = defineInteraction('rmx:long-press', Press)
  * keyboard escape after a press down.
  *
  * ```ts
- * import { pressCancel } from '@remix-run/events/press'
+ * import { pressCancel } from '@remix-run/interaction/press'
  * on(button, {
  *   [pressCancel]: (event) => {
  *     console.log('press cancelled')
