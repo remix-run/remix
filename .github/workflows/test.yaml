@@ -30,8 +30,29 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install Playwright Browsers
-        run: pnpx playwright install --with-deps
+      # Get installed Playwright version from node_modules
+      - name: Resolve Playwright version
+        id: pwv
+        run: echo "PLAYWRIGHT_VERSION=$(node -p \"require('./node_modules/@playwright/test/package.json').version\")" >> $GITHUB_ENV
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      # If cache missed: install browsers + OS deps
+      - name: Install Playwright Browsers (cold)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: pnpm dlx playwright install --with-deps
+
+      # If cache hit: only ensure OS deps (faster)
+      - name: Install Playwright OS deps (warm)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: pnpm dlx playwright install-deps
 
       - name: Run tests
         run: pnpm test
