@@ -21,7 +21,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./file-handler": "./src/file-handler.ts",
+    "./fs-file-resolver": "./src/fs-file-resolver.ts",
     "./logger-middleware": "./src/logger-middleware.ts",
+    "./static-middleware": "./src/static-middleware.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -30,9 +33,21 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./file-handler": {
+        "types": "./dist/file-handler.d.ts",
+        "default": "./dist/file-handler.js"
+      },
+      "./fs-file-resolver": {
+        "types": "./dist/fs-file-resolver.d.ts",
+        "default": "./dist/fs-file-resolver.js"
+      },
       "./logger-middleware": {
         "types": "./dist/logger-middleware.d.ts",
         "default": "./dist/logger-middleware.js"
+      },
+      "./static-middleware": {
+        "types": "./dist/static-middleware.d.ts",
+        "default": "./dist/static-middleware.js"
       },
       "./package.json": "./package.json"
     }
@@ -44,12 +59,16 @@
   "dependencies": {
     "@remix-run/form-data-parser": "workspace:*",
     "@remix-run/route-pattern": "workspace:*",
-    "@remix-run/headers": "workspace:*"
+    "@remix-run/headers": "workspace:*",
+    "@remix-run/lazy-file": "workspace:*"
   },
   "scripts": {
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:logger-middleware",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:file-handler && pnpm run build:fs-file-resolver && pnpm run build:logger-middleware && pnpm run build:static-middleware",
     "build:index": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:file-handler": "esbuild src/file-handler.ts --bundle --outfile=dist/file-handler.js --format=esm --platform=neutral --sourcemap",
+    "build:fs-file-resolver": "esbuild src/fs-file-resolver.ts --bundle --outfile=dist/fs-file-resolver.js --format=esm --platform=node --sourcemap",
     "build:logger-middleware": "esbuild src/logger-middleware.ts --bundle --outfile=dist/logger-middleware.js --format=esm --platform=neutral --sourcemap",
+    "build:static-middleware": "esbuild src/static-middleware.ts --bundle --outfile=dist/static-middleware.js --format=esm --platform=node --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
     "prepublishOnly": "pnpm run build",

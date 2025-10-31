@@ -1,5 +1,6 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { logger } from '@remix-run/fetch-router/logger-middleware'
+import { staticFiles } from '@remix-run/fetch-router/static-middleware'
 
 import { routes } from '../routes.ts'
 import { storeContext } from './middleware/context.ts'
@@ -12,7 +13,6 @@ import booksHandlers from './books.tsx'
 import cartHandlers from './cart.tsx'
 import checkoutHandlers from './checkout.tsx'
 import fragmentsHandlers from './fragments.tsx'
-import * as publicHandlers from './public.ts'
 import * as marketingHandlers from './marketing.tsx'
 import { uploadsHandler } from './uploads.tsx'
 
@@ -24,8 +24,45 @@ if (process.env.NODE_ENV === 'development') {
   router.use(logger())
 }
 
-router.get(routes.assets, publicHandlers.assets)
-router.get(routes.images, publicHandlers.images)
+router.use(
+  staticFiles('./public/root', {
+    cacheControl: 'no-store, must-revalidate',
+    etag: false,
+    lastModified: false,
+    acceptRanges: false,
+  }),
+)
+
+router.get(routes.assets, {
+  use: [
+    staticFiles('./public/assets', {
+      path: ({ params }) => params.path,
+      cacheControl: 'no-store, must-revalidate',
+      etag: false,
+      lastModified: false,
+      acceptRanges: false,
+    }),
+  ],
+  handler() {
+    return new Response('Not Found', { status: 404 })
+  },
+})
+
+router.get(routes.images, {
+  use: [
+    staticFiles('./public/images', {
+      path: ({ params }) => params.path,
+      cacheControl: 'no-store, must-revalidate',
+      etag: false,
+      lastModified: false,
+      acceptRanges: false,
+    }),
+  ],
+  handler() {
+    return new Response('Not Found', { status: 404 })
+  },
+})
+
 router.get(routes.uploads, uploadsHandler)
 
 router.map(routes.home, marketingHandlers.home)
@@ -41,3 +78,9 @@ router.map(routes.cart, cartHandlers)
 router.map(routes.account, accountHandlers)
 router.map(routes.checkout, checkoutHandlers)
 router.map(routes.admin, adminHandlers)
+
+// NOTE: This is needed for the root static file middleware to work. This won't
+// be needed if middleware is run against fetch-router's default handler.
+router.get('/*', () => {
+  return new Response('Not Found', { status: 404 })
+})

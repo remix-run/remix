@@ -369,6 +369,34 @@ let header = new ContentType({
 })
 ```
 
+### Content-Range
+
+```ts
+import { ContentRange } from '@remix-run/headers'
+
+// Satisfied range
+let header = new ContentRange('bytes 200-1000/67589')
+header.unit // "bytes"
+header.start // 200
+header.end // 1000
+header.size // 67589
+
+// Unsatisfied range
+let header = new ContentRange('bytes */67589')
+header.unit // "bytes"
+header.start // null
+header.end // null
+header.size // 67589
+
+// Alternative init style
+let header = new ContentRange({
+  unit: 'bytes',
+  start: 200,
+  end: 1000,
+  size: 67589,
+})
+```
+
 ### Cookie
 
 ```ts

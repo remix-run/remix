@@ -3,6 +3,7 @@ import { type AcceptEncodingInit, AcceptEncoding } from './accept-encoding.ts'
 import { type AcceptLanguageInit, AcceptLanguage } from './accept-language.ts'
 import { type CacheControlInit, CacheControl } from './cache-control.ts'
 import { type ContentDispositionInit, ContentDisposition } from './content-disposition.ts'
+import { type ContentRangeInit, ContentRange } from './content-range.ts'
 import { type ContentTypeInit, ContentType } from './content-type.ts'
 import { type CookieInit, Cookie } from './cookie.ts'
 import { canonicalHeaderName } from './header-names.ts'
@@ -59,6 +60,10 @@ interface SuperHeadersPropertyInit {
    */
   contentLength?: string | number
   /**
+   * The [`Content-Range`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Range) header value.
+   */
+  contentRange?: string | ContentRangeInit
+  /**
    * The [`Content-Type`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type) header value.
    */
   contentType?: string | ContentTypeInit
@@ -114,7 +119,7 @@ interface SuperHeadersPropertyInit {
 
 export type SuperHeadersInit =
   | Iterable<[string, string]>
-  | (SuperHeadersPropertyInit & Record<string, string | HeaderValue>)
+  | (SuperHeadersPropertyInit & Record<string, string | HeaderValue | undefined>)
 
 const CRLF = '\r\n'
 
@@ -129,6 +134,7 @@ const ContentDispositionKey = 'content-disposition'
 const ContentEncodingKey = 'content-encoding'
 const ContentLanguageKey = 'content-language'
 const ContentLengthKey = 'content-length'
+const ContentRangeKey = 'content-range'
 const ContentTypeKey = 'content-type'
 const CookieKey = 'cookie'
 const DateKey = 'date'
@@ -179,7 +185,7 @@ export class SuperHeaders extends Headers {
           let descriptor = Object.getOwnPropertyDescriptor(SuperHeaders.prototype, name)
           if (descriptor?.set) {
             descriptor.set.call(this, value)
-          } else {
+          } else if (value !== undefined) {
             this.set(name, value.toString())
           }
         }
@@ -512,6 +518,22 @@ export class SuperHeaders extends Headers {
 
   set contentLength(value: string | number | undefined | null) {
     this.#setNumberValue(ContentLengthKey, value)
+  }
+
+  /**
+   * The `Content-Range` header indicates where the content of a response body
+   * belongs in relation to a complete resource.
+   *
+   * [MDN `Content-Range` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Range)
+   *
+   * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.content-range)
+   */
+  get contentRange(): ContentRange {
+    return this.#getHeaderValue(ContentRangeKey, ContentRange)
+  }
+
+  set contentRange(value: string | ContentRangeInit | undefined | null) {
+    this.#setHeaderValue(ContentRangeKey, ContentRange, value)
   }
 
   /**

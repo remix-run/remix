@@ -308,6 +308,58 @@ router.map(routes.admin, [authenticate, requireAdmin], {
 
 Middleware defined in `router.map()` cascades to all nested routes, giving you fine-grained control over which routes get which middleware.
 
+### Serving Static Files with `staticFiles()` Middleware
+
+The `staticFiles()` middleware serves static files from the filesystem. The middleware always falls through to the handler if the file is not found, allowing you to customize the 404 response.
+
+```ts
+router.get('/*', {
+  use: [staticFiles('./public')],
+  handler() {
+    return new Response('Not Found', { status: 404 })
+  },
+})
+```
+
+By default, this middleware uses the full request pathname to resolve files. You can customize this by providing a path resolver function which is passed the request context. For example, to resolve files based on a route param:
+
+```ts
+router.get('/assets/*path', {
+  use: [
+    staticFiles('./public', {
+      path: ({ params }) => params.path,
+    }),
+  ],
+  handler() {
+    return new Response('Not Found', { status: 404 })
+  },
+})
+```
+
+You can further customize the behavior of this middleware by providing additional options:
+
+```ts
+router.get('/*', {
+  use: [
+    staticFiles('./public', {
+      cacheControl: 'public, max-age=3600',
+      // Whether to support HTTP Range requests for partial content.
+      // Defaults to `true`.
+      acceptRanges: false,
+      // Whether to generate a weak ETag header for the response.
+      // Defaults to `true`.
+      etag: false,
+      // Whether to generate a `Last-Modified` header for the response.
+      // Defaults to `true`.
+      lastModified: false,
+    }),
+  ],
+  handler() {
+    return new Response('Not Found', { status: 404 })
+  },
+})
+```
+
 ### Nested Routers
 
 Compose routers to organize large applications:
@@ -439,7 +491,7 @@ No special test harness or mocking required - just use `fetch()` like you would 
 
 Here's a complete example showing many features working together:
 
-```ts
+````ts
 import { createRoutes, createRouter, html } from '@remix-run/fetch-router'
 
 // Define all routes upfront
@@ -574,8 +626,7 @@ export { router }
 // import { router } from "./router"
 // export default async function handler(req: Request) { return router.fetch(req) }
 // ```
-```
-
+````
 
 ## Related Work
 

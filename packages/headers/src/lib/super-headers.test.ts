@@ -6,6 +6,7 @@ import { AcceptEncoding } from './accept-encoding.ts'
 import { AcceptLanguage } from './accept-language.ts'
 import { CacheControl } from './cache-control.ts'
 import { ContentDisposition } from './content-disposition.ts'
+import { ContentRange } from './content-range.ts'
 import { ContentType } from './content-type.ts'
 import { Cookie } from './cookie.ts'
 import { SuperHeaders } from './super-headers.ts'
@@ -220,6 +221,13 @@ describe('SuperHeaders', () => {
       assert.equal(headers.get('Content-Length'), '42')
     })
 
+    it('handles the contentRange property', () => {
+      let headers = new SuperHeaders({
+        contentRange: { unit: 'bytes', start: 200, end: 1000, size: 67589 },
+      })
+      assert.equal(headers.get('Content-Range'), 'bytes 200-1000/67589')
+    })
+
     it('handles the contentType property', () => {
       let headers = new SuperHeaders({
         contentType: { mediaType: 'text/plain', charset: 'utf-8' },
@@ -304,6 +312,19 @@ describe('SuperHeaders', () => {
     it('stringifies unknown properties with non-string values', () => {
       let headers = new SuperHeaders({ unknown: 42 })
       assert.equal(headers.get('Unknown'), '42')
+    })
+
+    it('handles undefined values by not setting headers', () => {
+      let headers = new SuperHeaders({
+        contentType: 'text/plain',
+        contentLength: undefined,
+        etag: undefined,
+        cacheControl: 'public',
+      })
+      assert.equal(headers.get('Content-Type'), 'text/plain')
+      assert.equal(headers.get('Content-Length'), null)
+      assert.equal(headers.get('ETag'), null)
+      assert.equal(headers.get('Cache-Control'), 'public')
     })
   })
 
@@ -492,6 +513,28 @@ describe('SuperHeaders', () => {
 
       headers.contentLength = null
       assert.equal(headers.contentLength, null)
+    })
+
+    it('supports the contentRange property', () => {
+      let headers = new SuperHeaders()
+
+      assert.ok(headers.contentRange instanceof ContentRange)
+
+      headers.contentRange = 'bytes 200-1000/67589'
+      assert.equal(headers.contentRange.unit, 'bytes')
+      assert.equal(headers.contentRange.start, 200)
+      assert.equal(headers.contentRange.end, 1000)
+      assert.equal(headers.contentRange.size, 67589)
+
+      headers.contentRange = { unit: 'bytes', start: 0, end: 999, size: '*' }
+      assert.equal(headers.contentRange.unit, 'bytes')
+      assert.equal(headers.contentRange.start, 0)
+      assert.equal(headers.contentRange.end, 999)
+      assert.equal(headers.contentRange.size, '*')
+
+      headers.contentRange = null
+      assert.ok(headers.contentRange instanceof ContentRange)
+      assert.equal(headers.contentRange.toString(), '')
     })
 
     it('supports the contentType property', () => {
