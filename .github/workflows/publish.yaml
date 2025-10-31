@@ -40,8 +40,24 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      - name: Parse package name from tag
+        id: parse_tag
+        run: |
+          TAG="${{ github.ref_name }}"
+          SHORT_PACKAGE_NAME="${TAG%@*}"
+
+          # The "remix" package is unscoped, all others are under @remix-run/
+          if [ "$SHORT_PACKAGE_NAME" = "remix" ]; then
+            FULL_PACKAGE_NAME="${SHORT_PACKAGE_NAME}"
+          else
+            FULL_PACKAGE_NAME="@remix-run/${SHORT_PACKAGE_NAME}"
+          fi
+
+          echo "package_name=${FULL_PACKAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "Publishing package: ${FULL_PACKAGE_NAME}"
+      
       - name: Publish to npm
-        run: pnpm publish --access public --no-git-checks
+        run: pnpm publish --filter "${{ steps.parse_tag.outputs.package_name }}" --access public --no-git-checks
 
       - name: Create GitHub Release
         run: node ./scripts/create-github-release.js ${{ github.ref_name }}
