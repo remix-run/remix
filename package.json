@@ -17,10 +17,9 @@
   "scripts": {
     "build": "pnpm -r build",
     "clean": "git clean -fdX -e '!/.env' .",
+    "create-github-release": "node --env-file .env ./scripts/create-github-release.js",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
-    "publish-release": "node --env-file .env ./scripts/publish-release.js",
-    "publish-release-ci": "node ./scripts/publish-release.js",
     "tag-release": "node ./scripts/tag-release.js",
     "test": "pnpm -r --workspace-concurrency 1 test",
     "typecheck": "pnpm -r --workspace-concurrency 1 typecheck",
