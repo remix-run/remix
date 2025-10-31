@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import type { Assert, Equal } from './test/utils.ts'
+
 import {
   capture,
   createContainer,
@@ -10,8 +10,9 @@ import {
   type Dispatched,
   type EventListeners,
 } from './events.ts'
+import type { Assert, Equal } from './test/utils.ts'
 
-describe('interactions package', () => {
+describe('interaction', () => {
   describe('createContainer', () => {
     it('adds listeners to the target', () => {
       let target = new EventTarget()
