@@ -4,7 +4,7 @@ This is the changelog for [`html-template`](https://github.com/remix-run/remix/t
 
 ## Unreleased
 
-- No real changes.
+- No real changes, just testing a new release process.
 
 ## 0.1.0 (2025-10-25)
 
