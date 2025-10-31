@@ -36,7 +36,7 @@ Listeners can be arrays. They run in order and preserve normal DOM semantics (in
 ```ts
 import { on, capture, listenWith } from '@remix-run/interaction'
 
-on(input, {
+on(inputElement, {
   input: [
     (event) => {
       console.log('first')
@@ -51,7 +51,7 @@ on(input, {
 })
 ```
 
-### Builtin Interactions
+### Built-in Interactions
 
 Builtin interactions are higher‑level, semantic event types (e.g., `press`, `longPress`, arrow keys) exported as string constants. Consume them just like native events by using computed keys in your listener map. When you bind one, the necessary underlying host events are set up automatically.
 
@@ -80,7 +80,7 @@ You can also [create your own interactions](#interactions).
 The `signal` is aborted when the same listener is re-entered (for example, a user types quickly and triggers `input` repeatedly). Pass it to async APIs or check it manually to avoid stale work.
 
 ```ts
-on(input, {
+on(inputElement, {
   async input(event, signal) {
     showSearchSpinner()
 
@@ -95,8 +95,8 @@ on(input, {
 For APIs that don't accept a signal:
 
 ```ts
-on(input, {
-  input: async (event, signal) => {
+on(inputElement, {
+  async input(event, signal) {
     showSearchSpinner()
     let results = await someSearch(event.currentTarget.value)
     if (signal.aborted) return
@@ -134,21 +134,21 @@ let container = createContainer(form)
 let formData = new FormData()
 
 container.set({
-  change: (event) => {
+  change(event) {
     formData = new FormData(event.currentTarget)
   },
-  submit: async (event, signal) => {
+  async submit(event, signal) {
     event.preventDefault()
     await fetch('/save', { method: 'POST', body: formData, signal })
-  }),
+  },
 })
 
 // later – only the minimal necessary changes are rebound
 container.set({
-  change: (event) => {
+  change(event) {
     console.log('different listener')
   },
-  submit: (event) => {
+  submit(event, signal) {
     console.log('different listener')
   },
 })
@@ -200,9 +200,6 @@ Define semantic interactions that can dispatch custom events and be reused decla
 ```ts
 import { defineInteraction, on } from '@remix-run/interaction'
 
-// define the interaction type and setup function
-export const keydownEnter = defineInteraction('keydown:enter', KeydownEnter)
-
 // Provide type safety for consumers
 declare global {
   interface HTMLElementEventMap {
@@ -214,7 +211,7 @@ function KeydownEnter(target: EventTarget, signal: AbortSignal) {
   if (!(target instanceof HTMLElement)) return
 
   on(target, signal, {
-    keydown: (event) => {
+    keydown(event) {
       if (event.key === 'Enter') {
         target.dispatchEvent(new KeyboardEvent(keydownEnter, { key: 'Enter' }))
       }
@@ -222,10 +219,13 @@ function KeydownEnter(target: EventTarget, signal: AbortSignal) {
   })
 }
 
+// define the interaction type and setup function
+const keydownEnter = defineInteraction('keydown:enter', KeydownEnter)
+
 // usage
 let button = document.createElement('button')
 on(button, {
-  [keydownEnter]: (event) => {
+  [keydownEnter](event) {
     console.log('Enter key pressed')
   },
 })
