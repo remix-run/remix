@@ -16,13 +16,13 @@ import * as publicHandlers from './public.ts'
 import * as marketingHandlers from './marketing.tsx'
 import { uploadsHandler } from './uploads.tsx'
 
-export let router = createRouter({ uploadHandler })
-
-router.use(storeContext)
+let middleware = [storeContext]
 
 if (process.env.NODE_ENV === 'development') {
-  router.use(logger())
+  middleware.push(logger())
 }
+
+export let router = createRouter({ middleware, uploadHandler })
 
 router.get(routes.assets, publicHandlers.assets)
 router.get(routes.images, publicHandlers.images)

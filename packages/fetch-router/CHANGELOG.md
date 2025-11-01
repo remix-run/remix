@@ -4,7 +4,48 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
+- BREAKING CHANGE: Rework how middleware works in the router. This change has far-reaching implications.
+
+  Previously, the router would associate all middleware with a route. If no routes matched, middleware would not run. We partially addressed this in 0.7 by always running global middleware, even when no route matches. However, the router would still run its route matching algorithm before determining that no routes matched, so it could proceed to run global middleware and the default handler.
+
+  In this release, `router.use()` has been replaced with `createRouter({ middleware })`. Middleware that is provided to `createRouter()` is "router middleware" (aka "global" middleware) that runs before the router tries to do any route matching. Router middleware may therefore modify the request context in ways that may affect route matching, including modifying `context.method` and/or `context.url`. Router middleware runs on every request, even when no routes match.
+
+  Middleware is still supported at the route level on individual routes, but it is only invoked when that route matches. This is "route middleware" (or "inline" middleware) and runs downstream from router middleware.
+
+  To migrate, move middleware from `router.use()` to `createRouter({ middleware })`.
+
+  ```tsx
+  // before
+  let router = createRouter()
+  router.use(middleware)
+  router.map(routes.home, () => new Response('Home'))
+
+  // after
+  let router = createRouter({
+    middleware: [middleware],
+  })
+  router.map(routes.home, () => new Response('Home'))
+  ```
+
 - BREAKING CHANGE: Rename `use` => `middleware` in route handler definitions
+
+  ```tsx
+  // before
+  router.map(routes.home, {
+    use: [middleware],
+    handler() {
+      return new Response('Home')
+    },
+  })
+
+  // after
+  router.map(routes.home, {
+    middleware: [middleware],
+    handler() {
+      return new Response('Home')
+    },
+  })
+  ```
 
 ## v0.7.0 (2025-10-31)
 

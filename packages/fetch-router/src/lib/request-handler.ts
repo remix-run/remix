@@ -8,11 +8,11 @@ import type { Route } from './route-map.ts'
  * A request handler function that returns some kind of response.
  */
 export interface RequestHandler<
-  Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
-  Params extends Record<string, any> = {},
+  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+  params extends Record<string, any> = {},
   T = Response,
 > {
-  (context: RequestContext<Method, Params>): T | Promise<T>
+  (context: RequestContext<method, params>): T | Promise<T>
 }
 
 /**
@@ -20,6 +20,6 @@ export interface RequestHandler<
  */
 // prettier-ignore
 export type InferRequestHandler<T extends Route | string> =
-  T extends Route<infer M, infer P> ? RequestHandler<M, Params<P>> :
+  T extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? RequestHandler<method, Params<pattern>> :
   T extends string ? RequestHandler<'ANY', Params<T>> :
   never
