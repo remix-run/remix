@@ -1,9 +1,9 @@
 /**
  * A helper for working with redirect [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)s.
  *
- * @param location The location to redirect to.
- * @param init (optional) The `ResponseInit` object for the response (or a status code).
- * @returns A `Response` object with a redirect header.
+ * @param location The location to redirect to
+ * @param init (optional) The `ResponseInit` object for the response, or a status code
+ * @returns A `Response` object with a redirect header
  */
 export function redirect(location: string | URL, init?: ResponseInit | number): Response {
   let status = 302

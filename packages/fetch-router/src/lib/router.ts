@@ -264,10 +264,10 @@ export class Router {
 
   // Route mapping
 
-  route<M extends RequestMethod | 'ANY', P extends string>(
-    method: M,
-    pattern: P | RoutePattern<P> | Route<M | 'ANY', P>,
-    handler: RouteHandler<M, P>,
+  route<method extends RequestMethod | 'ANY', pattern extends string>(
+    method: method,
+    pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
+    handler: RouteHandler<method, pattern>,
   ): void {
     let routeMiddleware: Middleware<any, any>[] | undefined
     let requestHandler: RequestHandler<any, any>
@@ -285,23 +285,23 @@ export class Router {
     })
   }
 
-  map<M extends RequestMethod | 'ANY', P extends string>(
-    route: P | RoutePattern<P> | Route<M, P>,
-    handler: RouteHandler<M, P>,
+  map<method extends RequestMethod | 'ANY', pattern extends string>(
+    pattern: pattern | RoutePattern<pattern> | Route<method, pattern>,
+    handler: RouteHandler<method, pattern>,
   ): void
-  map<T extends RouteMap>(routes: T, handlers: RouteHandlers<T>): void
-  map(routeOrRoutes: any, handler: any): void {
-    if (typeof routeOrRoutes === 'string' || routeOrRoutes instanceof RoutePattern) {
+  map<routes extends RouteMap>(routes: routes, handlers: RouteHandlers<routes>): void
+  map(patternOrRoutes: any, handler: any): void {
+    if (typeof patternOrRoutes === 'string' || patternOrRoutes instanceof RoutePattern) {
       // map(pattern, handler)
-      this.route('ANY', routeOrRoutes, handler)
-    } else if (routeOrRoutes instanceof Route) {
+      this.route('ANY', patternOrRoutes, handler)
+    } else if (patternOrRoutes instanceof Route) {
       // map(route, handler)
-      this.route(routeOrRoutes.method, routeOrRoutes.pattern, handler)
+      this.route(patternOrRoutes.method, patternOrRoutes.pattern, handler)
     } else if (!isRouteHandlersWithMiddleware(handler)) {
       // map(routes, handlers)
       let handlers = handler
-      for (let key in routeOrRoutes) {
-        let route = routeOrRoutes[key]
+      for (let key in patternOrRoutes) {
+        let route = patternOrRoutes[key]
         let handler = handlers[key]
 
         if (route instanceof Route) {
@@ -314,8 +314,8 @@ export class Router {
       // map(routes, { use, handlers })
       let use = handler.use
       let handlers = handler.handlers
-      for (let key in routeOrRoutes) {
-        let route = routeOrRoutes[key]
+      for (let key in patternOrRoutes) {
+        let route = patternOrRoutes[key]
         let handler = (handlers as any)[key]
 
         if (route instanceof Route) {
@@ -338,51 +338,51 @@ export class Router {
 
   // HTTP-method specific shorthand
 
-  get<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'GET' | 'ANY', P>,
-    handler: RouteHandler<'GET', P>,
+  get<pattern extends string>(
+    pattern: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
+    handler: RouteHandler<'GET', pattern>,
   ): void {
     this.route('GET', pattern, handler)
   }
 
-  head<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'HEAD' | 'ANY', P>,
-    handler: RouteHandler<'HEAD', P>,
+  head<pattern extends string>(
+    pattern: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
+    handler: RouteHandler<'HEAD', pattern>,
   ): void {
     this.route('HEAD', pattern, handler)
   }
 
-  post<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'POST' | 'ANY', P>,
-    handler: RouteHandler<'POST', P>,
+  post<pattern extends string>(
+    pattern: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
+    handler: RouteHandler<'POST', pattern>,
   ): void {
     this.route('POST', pattern, handler)
   }
 
-  put<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'PUT' | 'ANY', P>,
-    handler: RouteHandler<'PUT', P>,
+  put<pattern extends string>(
+    pattern: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
+    handler: RouteHandler<'PUT', pattern>,
   ): void {
     this.route('PUT', pattern, handler)
   }
 
-  patch<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'PATCH' | 'ANY', P>,
-    handler: RouteHandler<'PATCH', P>,
+  patch<pattern extends string>(
+    pattern: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
+    handler: RouteHandler<'PATCH', pattern>,
   ): void {
     this.route('PATCH', pattern, handler)
   }
 
-  delete<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'DELETE' | 'ANY', P>,
-    handler: RouteHandler<'DELETE', P>,
+  delete<pattern extends string>(
+    pattern: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
+    handler: RouteHandler<'DELETE', pattern>,
   ): void {
     this.route('DELETE', pattern, handler)
   }
 
-  options<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'OPTIONS' | 'ANY', P>,
-    handler: RouteHandler<'OPTIONS', P>,
+  options<pattern extends string>(
+    pattern: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
+    handler: RouteHandler<'OPTIONS', pattern>,
   ): void {
     this.route('OPTIONS', pattern, handler)
   }

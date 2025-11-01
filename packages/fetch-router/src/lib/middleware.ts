@@ -8,11 +8,11 @@ import type { RequestMethod } from './request-methods.ts'
  * to the next middleware or request handler in the chain.
  */
 export interface Middleware<
-  Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
-  Params extends Record<string, any> = {},
+  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+  params extends Record<string, any> = {},
 > {
   (
-    context: RequestContext<Method, Params>,
+    context: RequestContext<method, params>,
     next: NextFunction,
   ): Response | undefined | void | Promise<Response | undefined | void>
 }
@@ -20,12 +20,12 @@ export interface Middleware<
 export type NextFunction = () => Promise<Response>
 
 export function runMiddleware<
-  Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
-  Params extends Record<string, any> = {},
+  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+  params extends Record<string, any> = {},
 >(
-  middleware: Middleware<Method, Params>[],
-  context: RequestContext<Method, Params>,
-  handler: RequestHandler<Method, Params, Response>,
+  middleware: Middleware<method, params>[],
+  context: RequestContext<method, params>,
+  handler: RequestHandler<method, params, Response>,
 ): Promise<Response> {
   let index = -1
 

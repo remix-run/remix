@@ -8,8 +8,8 @@ import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
  * handler or middleware in the lifecycle of a request receives the same context object.
  */
 export class RequestContext<
-  Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
-  Params extends Record<string, any> = {},
+  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+  params extends Record<string, any> = {},
 > {
   /**
    * Parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) from the
@@ -19,7 +19,7 @@ export class RequestContext<
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/FormData)
    */
-  formData: Method extends RequestBodyMethod ? FormData : FormData | undefined
+  formData: method extends RequestBodyMethod ? FormData : FormData | undefined
   /**
    * The request method. This may differ from `request.method` if the request body contained a
    * method override field (e.g. `_method=DELETE`), allowing HTML forms to simulate RESTful API
@@ -29,7 +29,7 @@ export class RequestContext<
   /**
    * Params that were parsed from the URL.
    */
-  params: Params
+  params: params
   /**
    * The original request that was dispatched to the router.
    */
@@ -53,7 +53,7 @@ export class RequestContext<
   constructor(request: Request) {
     this.formData = undefined as any
     this.method = request.method.toUpperCase() as RequestMethod
-    this.params = {} as Params
+    this.params = {} as params
     this.request = request
     this.storage = new AppStorage()
     this.headers = new SuperHeaders(request.headers)
