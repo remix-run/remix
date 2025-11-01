@@ -240,7 +240,7 @@ describe('router.map() with middleware', () => {
     }
 
     router.map(routes.profile, {
-      use: [middleware],
+      middleware: [middleware],
       handler() {
         requestLog.push('handler')
         return new Response('OK')
@@ -267,7 +267,7 @@ describe('router.map() with middleware', () => {
     }
 
     router.map(routes, {
-      use: [middleware],
+      middleware: [middleware],
       handlers: {
         home() {
           requestLog.push('handler')
@@ -299,10 +299,10 @@ describe('router.map() with middleware', () => {
     }
 
     router.map(routes, {
-      use: [middleware], // outer middleware
+      middleware: [middleware], // outer middleware
       handlers: {
         blog: {
-          use: [middleware], // inner middleware
+          middleware: [middleware], // inner middleware
           handlers: {
             index() {
               requestLog.push('blog-index')
@@ -339,7 +339,7 @@ describe('router.map() with middleware', () => {
     let requestLog: string[] = []
 
     router.map(routes, {
-      use: [
+      middleware: [
         () => {
           requestLog.push('m1')
         },
@@ -385,7 +385,7 @@ describe('router.map() with middleware', () => {
 
     // Admin routes - with auth middleware
     router.map(routes.admin, {
-      use: [
+      middleware: [
         () => {
           requestLog.push('auth')
         },
@@ -433,7 +433,7 @@ describe('router.map() with middleware', () => {
     })
 
     router.map(routes, {
-      use: [
+      middleware: [
         () => {
           requestLog.push('inline')
         },
@@ -483,7 +483,7 @@ describe('per-route middleware', () => {
     let requestLog: string[] = []
 
     router.get('/', {
-      use: [
+      middleware: [
         () => {
           requestLog.push('middleware')
         },
@@ -505,7 +505,7 @@ describe('per-route middleware', () => {
     let requestLog: string[] = []
 
     router.get('/', {
-      use: [
+      middleware: [
         () => {
           requestLog.push('m1')
         },
@@ -550,7 +550,7 @@ describe('per-route middleware', () => {
     })
 
     router.get('/', {
-      use: [
+      middleware: [
         () => {
           requestLog.push('route-1')
         },
@@ -574,7 +574,7 @@ describe('per-route middleware', () => {
     let requestLog: string[] = []
 
     router.get('/a', {
-      use: [
+      middleware: [
         () => {
           requestLog.push('middleware-a')
         },
@@ -607,7 +607,7 @@ describe('per-route middleware', () => {
     let requestLog: string[] = []
 
     router.get('/', {
-      use: [],
+      middleware: [],
       handler() {
         requestLog.push('handler')
         return new Response('OK')
@@ -624,7 +624,7 @@ describe('per-route middleware', () => {
     let requestLog: string[] = []
 
     router.get('/a', {
-      use: [
+      middleware: [
         () => {
           requestLog.push('auth')
         },
@@ -636,7 +636,7 @@ describe('per-route middleware', () => {
     })
 
     router.post('/b', {
-      use: [
+      middleware: [
         () => {
           requestLog.push('validate')
         },
@@ -671,7 +671,7 @@ describe('per-route middleware', () => {
     })
 
     router.get('/', {
-      use: [
+      middleware: [
         () => {
           requestLog.push('route-1')
         },
@@ -695,7 +695,7 @@ describe('per-route middleware', () => {
     let requestLog: string[] = []
 
     router.get('/', {
-      use: [
+      middleware: [
         () => {
           requestLog.push('m1')
         },
@@ -732,7 +732,7 @@ describe('per-route middleware', () => {
 
     // Map routes with parent middleware and a child route with its own per-route middleware
     router.map(routes.admin, {
-      use: [
+      middleware: [
         () => {
           requestLog.push('auth')
         },
@@ -746,7 +746,7 @@ describe('per-route middleware', () => {
           return new Response('Dashboard')
         },
         users: {
-          use: [
+          middleware: [
             () => {
               requestLog.push('users-middleware')
             },
@@ -870,7 +870,7 @@ describe('error handling', () => {
     let router = createRouter()
 
     router.get('/', {
-      use: [
+      middleware: [
         () => {
           throw new Error('Per-route middleware error')
         },

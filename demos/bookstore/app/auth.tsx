@@ -15,7 +15,7 @@ import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
 
 export default {
-  use: [loadAuth],
+  middleware: [loadAuth],
   handlers: {
     login: {
       index() {

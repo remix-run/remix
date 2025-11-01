@@ -14,7 +14,7 @@ import { setSessionCookie } from './utils/session.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  use: [loadAuth],
+  middleware: [loadAuth],
   handlers: {
     index() {
       let sessionId = getStorage().get(SESSION_ID_KEY)

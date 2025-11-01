@@ -17,7 +17,7 @@ export type RouteHandlers<routes extends RouteMap> =
     }
 
 type RouteHandlersWithMiddleware<routes extends RouteMap> = {
-  use: Middleware[]
+  middleware: Middleware[]
   handlers: RouteHandlers<routes>
 }
 
@@ -25,7 +25,10 @@ export function isRouteHandlersWithMiddleware<routes extends RouteMap>(
   handlers: any,
 ): handlers is RouteHandlersWithMiddleware<routes> {
   return (
-    typeof handlers === 'object' && handlers != null && 'use' in handlers && 'handlers' in handlers
+    typeof handlers === 'object' &&
+    handlers != null &&
+    'middleware' in handlers &&
+    'handlers' in handlers
   )
 }
 
@@ -37,7 +40,7 @@ export type RouteHandler<method extends RequestMethod | 'ANY', pattern extends s
   | RequestHandler<method, Params<pattern>>
 
 type RequestHandlerWithMiddleware<method extends RequestMethod | 'ANY', pattern extends string> = {
-  use: Middleware<method, Params<pattern>>[]
+  middleware: Middleware<method, Params<pattern>>[]
   handler: RequestHandler<method, Params<pattern>>
 }
 
@@ -45,7 +48,12 @@ export function isRequestHandlerWithMiddleware<
   method extends RequestMethod | 'ANY',
   pattern extends string,
 >(handler: any): handler is RequestHandlerWithMiddleware<method, pattern> {
-  return typeof handler === 'object' && handler != null && 'use' in handler && 'handler' in handler
+  return (
+    typeof handler === 'object' &&
+    handler != null &&
+    'middleware' in handler &&
+    'handler' in handler
+  )
 }
 
 /**

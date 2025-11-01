@@ -10,7 +10,7 @@ import { render } from './utils/render.ts'
 import { getCurrentUser, getStorage } from './utils/context.ts'
 
 export default {
-  use: [requireAuth],
+  middleware: [requireAuth],
   handlers: {
     index() {
       let sessionId = getStorage().get(SESSION_ID_KEY)

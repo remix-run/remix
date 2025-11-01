@@ -272,7 +272,7 @@ export class Router {
     let routeMiddleware: Middleware<any, any>[] | undefined
     let requestHandler: RequestHandler<any, any>
     if (isRequestHandlerWithMiddleware(handler)) {
-      routeMiddleware = handler.use
+      routeMiddleware = handler.middleware
       requestHandler = handler.handler
     } else {
       requestHandler = handler
@@ -311,8 +311,8 @@ export class Router {
         }
       }
     } else {
-      // map(routes, { use, handlers })
-      let use = handler.use
+      // map(routes, { middleware, handlers })
+      let middleware = handler.middleware
       let handlers = handler.handlers
       for (let key in patternOrRoutes) {
         let route = patternOrRoutes[key]
@@ -321,16 +321,19 @@ export class Router {
         if (route instanceof Route) {
           if (isRequestHandlerWithMiddleware(handler)) {
             this.route(route.method, route.pattern, {
-              use: use.concat(handler.use),
+              middleware: middleware.concat(handler.middleware),
               handler: handler.handler,
             })
           } else {
-            this.route(route.method, route.pattern, { use, handler })
+            this.route(route.method, route.pattern, { middleware, handler })
           }
         } else if (isRouteHandlersWithMiddleware(handler)) {
-          this.map(route, { use: use.concat(handler.use), handlers: handler.handlers })
+          this.map(route, {
+            middleware: middleware.concat(handler.middleware),
+            handlers: handler.handlers,
+          })
         } else {
-          this.map(route, { use, handlers: handler })
+          this.map(route, { middleware, handlers: handler })
         }
       }
     }
