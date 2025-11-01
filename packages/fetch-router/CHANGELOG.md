@@ -47,6 +47,8 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   })
   ```
 
+- BREAKING CHANGE: Remove `router.mount()` and support for sub-routers. We may add this back in a future release if there is demand for it.
+
 ## v0.7.0 (2025-10-31)
 
 - BREAKING CHANGE: Move `@remix-run/form-data-parser`, `@remix-run/headers`, and `@remix-run/route-pattern` to `peerDependencies`.
