@@ -1,20 +1,10 @@
-import {
-  type ParseFormDataOptions,
-  type FileUploadHandler,
-  FormDataParseError,
-  parseFormData,
-} from '@remix-run/form-data-parser'
 import { type Matcher, RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
 
 import { type Middleware, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
-import {
-  type RequestBodyMethod,
-  type RequestMethod,
-  RequestBodyMethods,
-} from './request-methods.ts'
+import type { RequestMethod } from './request-methods.ts'
 import {
   type RouteHandlers,
   type RouteHandler,
@@ -41,24 +31,9 @@ export interface RouterOptions {
    */
   matcher?: Matcher<MatchData>
   /**
-   * The name of the form field to check for request method override. Default is `_method`.
-   * Set `false` to disable method override support.
-   */
-  methodOverride?: string | boolean
-  /**
-   * Middleware to run for all routes.
+   * Middleware to run for all routes. This middleware runs before the router tries to do any route
    */
   middleware?: Middleware[]
-  /**
-   * Options for parsing form data.
-   * Set `false` to disable form data parsing.
-   */
-  parseFormData?: (ParseFormDataOptions & { suppressErrors?: boolean }) | boolean
-  /**
-   * A function that handles file uploads. It receives a `FileUpload` object and may return any
-   * value that is a valid `FormData` value.
-   */
-  uploadHandler?: FileUploadHandler
 }
 
 function noMatchHandler({ url }: RequestContext): Response {
@@ -76,17 +51,11 @@ export class Router {
   #defaultHandler: RequestHandler
   #matcher: Matcher<MatchData>
   #middleware: Middleware[] | undefined
-  #parseFormData: (ParseFormDataOptions & { suppressErrors?: boolean }) | boolean
-  #uploadHandler: FileUploadHandler | undefined
-  #methodOverride: string | boolean
 
   constructor(options?: RouterOptions) {
     this.#defaultHandler = options?.defaultHandler ?? noMatchHandler
     this.#matcher = options?.matcher ?? new RegExpMatcher()
     this.#middleware = options?.middleware
-    this.#parseFormData = options?.parseFormData ?? true
-    this.#uploadHandler = options?.uploadHandler
-    this.#methodOverride = options?.methodOverride ?? true
   }
 
   /**
@@ -102,59 +71,12 @@ export class Router {
       throw request.signal.reason
     }
 
-    let context = await this.#createContext(request)
+    let context = new RequestContext(request)
     let response = this.#middleware
       ? await runMiddleware(this.#middleware, context, this.#dispatch.bind(this))
       : await this.#dispatch(context)
 
     return response
-  }
-
-  async #createContext(request: Request): Promise<RequestContext> {
-    let context = new RequestContext(request)
-
-    if (!RequestBodyMethods.includes(request.method as RequestBodyMethod)) {
-      return context
-    }
-
-    if (this.#parseFormData === false || !canParseFormData(request)) {
-      // Either form data parsing is disabled or the request body cannot be
-      // parsed as form data, so continue with an empty formData object
-      context.formData = new FormData()
-      return context
-    }
-
-    let suppressParseErrors: boolean
-    let parseOptions: ParseFormDataOptions
-    if (this.#parseFormData === true) {
-      suppressParseErrors = false
-      parseOptions = {}
-    } else {
-      suppressParseErrors = this.#parseFormData.suppressErrors ?? false
-      parseOptions = this.#parseFormData
-    }
-
-    try {
-      context.formData = await parseFormData(request, parseOptions, this.#uploadHandler)
-    } catch (error) {
-      if (!suppressParseErrors || !(error instanceof FormDataParseError)) {
-        throw error
-      }
-
-      // Suppress parse error, continue with empty formData
-      context.formData = new FormData()
-      return context
-    }
-
-    if (this.#methodOverride) {
-      let fieldName = this.#methodOverride === true ? '_method' : this.#methodOverride
-      let methodOverride = context.formData.get(fieldName)
-      if (typeof methodOverride === 'string' && methodOverride !== '') {
-        context.method = methodOverride.toUpperCase() as RequestMethod
-      }
-    }
-
-    return context
   }
 
   async #dispatch(context: RequestContext): Promise<Response> {
@@ -185,8 +107,6 @@ export class Router {
   get size(): number {
     return this.#matcher.size
   }
-
-  // Route mapping
 
   /**
    * Add a route to the router.
@@ -359,14 +279,4 @@ export class Router {
   ): void {
     this.route('OPTIONS', route, handler)
   }
-}
-
-function canParseFormData(request: Request): boolean {
-  let contentType = request.headers.get('Content-Type')
-
-  return (
-    contentType != null &&
-    (contentType.startsWith('multipart/') ||
-      contentType.startsWith('application/x-www-form-urlencoded'))
-  )
 }

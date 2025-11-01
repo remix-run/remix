@@ -1,7 +1,11 @@
 import SuperHeaders from '@remix-run/headers'
 
 import { AppStorage } from './app-storage.ts'
-import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
+import {
+  RequestBodyMethods,
+  type RequestBodyMethod,
+  type RequestMethod,
+} from './request-methods.ts'
 
 /**
  * A context object that contains information about the current request. Every request
@@ -11,15 +15,6 @@ export class RequestContext<
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
 > {
-  /**
-   * Parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) from the
-   * request body.
-   *
-   * Note: This is only available for requests with a body (not `GET` or `HEAD`).
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/FormData)
-   */
-  formData: method extends RequestBodyMethod ? FormData : FormData | undefined
   /**
    * The request method. This may differ from `request.method` if the request body contained a
    * method override field (e.g. `_method=DELETE`), allowing HTML forms to simulate RESTful API
@@ -51,7 +46,6 @@ export class RequestContext<
   headers: SuperHeaders
 
   constructor(request: Request) {
-    this.formData = undefined as any
     this.method = request.method.toUpperCase() as RequestMethod
     this.params = {} as params
     this.request = request
@@ -79,5 +73,27 @@ export class RequestContext<
     }
 
     return files
+  }
+
+  #formData?: FormData
+
+  /**
+   * Parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) from the
+   * request body.
+   *
+   * Note: This is only available for requests with a body (not `GET` or `HEAD`).
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/FormData)
+   */
+  get formData(): method extends RequestBodyMethod ? FormData : FormData | undefined {
+    if (this.#formData == null && RequestBodyMethods.includes(this.method as RequestBodyMethod)) {
+      this.#formData = new FormData()
+    }
+
+    return this.#formData as any
+  }
+
+  set formData(value: FormData | undefined) {
+    this.#formData = value
   }
 }

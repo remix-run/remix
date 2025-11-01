@@ -49,6 +49,23 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 - BREAKING CHANGE: Remove `router.mount()` and support for sub-routers. We may add this back in a future release if there is demand for it.
 
+- BREAKING CHANGE: Move `FormData` parsing and method override handling out of the router and into separate middleware exports. Since `methodOverride()` provides `context.method` (used for route matching), it must be router (or "global") middleware. Also, it requires `context.formData`, so it must be after the `formData()` middleware in the middleware chain. This change also moves the `createRouter({ parseFormData, methodOverride, uploadHandler })` options to the `formData()` and `methodOverride()` middlewares.
+
+  ```tsx
+  // before
+  let router = createRouter({ parseFormData: true, methodOverride: true, uploadHandler })
+
+  // after
+  import { formData } from '@remix-run/fetch-router/form-data-middleware'
+  import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
+
+  let router = createRouter()
+  router.use(formData({ uploadHandler }))
+  router.use(methodOverride())
+  ```
+
+  This change makes things a little more verbose but should ultimately lead to more flexible middleware composition and a smaller core build.
+
 ## v0.7.0 (2025-10-31)
 
 - BREAKING CHANGE: Move `@remix-run/form-data-parser`, `@remix-run/headers`, and `@remix-run/route-pattern` to `peerDependencies`.

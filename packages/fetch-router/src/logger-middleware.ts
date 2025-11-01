@@ -1,1 +1,1 @@
-export { logger } from './lib/middleware/logger.ts'
+export { type LoggerOptions, logger } from './lib/middleware/logger.ts'

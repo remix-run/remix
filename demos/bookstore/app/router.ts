@@ -1,5 +1,7 @@
 import { createRouter } from '@remix-run/fetch-router'
+import { formData } from '@remix-run/fetch-router/form-data-middleware'
 import { logger } from '@remix-run/fetch-router/logger-middleware'
+import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
 
 import { routes } from '../routes.ts'
 import { storeContext } from './middleware/context.ts'
@@ -16,13 +18,17 @@ import * as publicHandlers from './public.ts'
 import * as marketingHandlers from './marketing.tsx'
 import { uploadsHandler } from './uploads.tsx'
 
-let middleware = [storeContext]
+let middleware = []
 
 if (process.env.NODE_ENV === 'development') {
   middleware.push(logger())
 }
 
-export let router = createRouter({ middleware, uploadHandler })
+middleware.push(formData({ uploadHandler }))
+middleware.push(methodOverride())
+middleware.push(storeContext())
+
+export let router = createRouter({ middleware })
 
 router.get(routes.assets, publicHandlers.assets)
 router.get(routes.images, publicHandlers.images)
