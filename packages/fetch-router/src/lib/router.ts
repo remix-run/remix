@@ -31,7 +31,8 @@ export interface RouterOptions {
    */
   matcher?: Matcher<MatchData>
   /**
-   * Middleware to run for all routes. This middleware runs before the router tries to do any route
+   * Global middleware to run for all routes. This middleware runs on every request before any
+   * routes are matched.
    */
   middleware?: Middleware[]
 }

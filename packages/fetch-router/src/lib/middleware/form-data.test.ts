@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import { describe, it, mock } from 'node:test'
+import { FormDataParseError, type FileUploadHandler } from '@remix-run/form-data-parser'
 
 import { createRouter } from '../router.ts'
 import { formData } from './form-data.ts'
@@ -109,5 +110,99 @@ describe('formData middleware', () => {
         type: 'text/plain',
       },
     })
+  })
+
+  it('throws when the request body is malformed multipart/form-data', async () => {
+    let router = createRouter({
+      middleware: [formData()],
+    })
+
+    router.post('/', (context) => {
+      return Response.json(context.formData)
+    })
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        body: 'invalid',
+      })
+    }, FormDataParseError)
+  })
+
+  it('suppresses parse errors when suppressErrors is true', async () => {
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true })],
+    })
+
+    router.post('/', (context) => {
+      let entries = Object.fromEntries(context.formData.entries())
+      return Response.json(entries)
+    })
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      body: 'invalid',
+    })
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {})
+  })
+
+  it('invokes a custom `uploadHandler` for file uploads', async () => {
+    let uploadHandler = mock.fn<FileUploadHandler>()
+
+    let router = createRouter({
+      middleware: [formData({ uploadHandler })],
+    })
+
+    router.post('/', () => {
+      return new Response('home')
+    })
+
+    let boundary = '----WebKitFormBoundary1234567890'
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file1"; filename="test1.txt"',
+        'Content-Type: text/plain',
+        '',
+        'test 1',
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file2"; filename="test2.txt"',
+        'Content-Type: text/plain',
+        '',
+        'test 2',
+        `--${boundary}--`,
+      ].join('\r\n'),
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'home')
+
+    assert.equal(uploadHandler.mock.calls.length, 2)
+
+    let call0 = uploadHandler.mock.calls[0]
+    let upload1 = call0.arguments[0]
+    assert.equal(upload1.fieldName, 'file1')
+    assert.equal(upload1.name, 'test1.txt')
+    assert.equal(upload1.type, 'text/plain')
+    assert.equal(await upload1.text(), 'test 1')
+
+    let call1 = uploadHandler.mock.calls[1]
+    let upload2 = call1.arguments[0]
+    assert.equal(upload2.fieldName, 'file2')
+    assert.equal(upload2.name, 'test2.txt')
+    assert.equal(upload2.type, 'text/plain')
+    assert.equal(await upload2.text(), 'test 2')
   })
 })
