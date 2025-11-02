@@ -1,8 +1,12 @@
 import * as assert from 'node:assert/strict'
 import { describe, it, mock } from 'node:test'
 
-import type { FileUploadHandler } from './form-data.ts'
-import { FormDataParseError, MaxFilesExceededError, parseFormData } from './form-data.ts'
+import {
+  type FileUploadHandler,
+  FormDataParseError,
+  MaxFilesExceededError,
+  parseFormData,
+} from './form-data.ts'
 
 describe('parseFormData', () => {
   it('parses a application/x-www-form-urlencoded request', async () => {
@@ -187,6 +191,21 @@ describe('parseFormData', () => {
         'Content-Type': 'text/plain',
       },
       body: 'Hello, World!',
+    })
+
+    await assert.rejects(async () => {
+      await parseFormData(request)
+    }, FormDataParseError)
+  })
+
+  it('throws when the request contains malformed multipart/form-data', async () => {
+    let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: 'invalid',
     })
 
     await assert.rejects(async () => {

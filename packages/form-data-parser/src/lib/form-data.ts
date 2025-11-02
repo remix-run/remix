@@ -1,5 +1,9 @@
-import type { MultipartParserOptions, MultipartPart } from '@remix-run/multipart-parser'
-import { isMultipartRequest, parseMultipartRequest } from '@remix-run/multipart-parser'
+import {
+  type MultipartParserOptions,
+  type MultipartPart,
+  isMultipartRequest,
+  parseMultipartRequest,
+} from '@remix-run/multipart-parser'
 
 /**
  * The base class for errors thrown by the form data parser.
@@ -104,9 +108,7 @@ export async function parseFormData(
     try {
       return await request.formData()
     } catch (error) {
-      throw new FormDataParseError('Cannot parse form data', {
-        cause: error,
-      })
+      throw new FormDataParseError('Cannot parse form data', { cause: error })
     }
   }
 
@@ -115,22 +117,30 @@ export async function parseFormData(
   let formData = new FormData()
   let fileCount = 0
 
-  for await (let part of parseMultipartRequest(request, parserOptions)) {
-    let fieldName = part.name
-    if (!fieldName) continue
+  try {
+    for await (let part of parseMultipartRequest(request, parserOptions)) {
+      let fieldName = part.name
+      if (!fieldName) continue
 
-    if (part.isFile) {
-      if (++fileCount > maxFiles) {
-        throw new MaxFilesExceededError(maxFiles)
-      }
+      if (part.isFile) {
+        if (++fileCount > maxFiles) {
+          throw new MaxFilesExceededError(maxFiles)
+        }
 
-      let value = await uploadHandler(new FileUpload(part, fieldName))
-      if (value != null) {
-        formData.append(fieldName, value)
+        let value = await uploadHandler(new FileUpload(part, fieldName))
+        if (value != null) {
+          formData.append(fieldName, value)
+        }
+      } else {
+        formData.append(fieldName, part.text)
       }
-    } else {
-      formData.append(fieldName, part.text)
     }
+  } catch (error) {
+    if (error instanceof FormDataParseError) {
+      throw error
+    }
+
+    throw new FormDataParseError('Cannot parse form data', { cause: error })
   }
 
   return formData
