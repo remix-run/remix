@@ -167,7 +167,7 @@ dispose()
 
 // Using an external AbortSignal
 let controller = new AbortController()
-on(button, controller.signal, { click: () => {} })
+on(button, { click: () => {} }, { signal: controller.signal })
 controller.abort() // removes all listeners added via that call
 
 // Containers
