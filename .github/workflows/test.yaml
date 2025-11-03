@@ -44,7 +44,7 @@ jobs:
 
       - name: Install Playwright Browsers
         run: |
-          if [ "${{ steps.cache-browsers.outputs.cache-hit }} = "true" ]; then
+          if [ "${{ steps.cache-browsers.outputs.cache-hit }}" = "true" ]; then
             pnpx playwright install
           else
             pnpx playwright install --with-deps
