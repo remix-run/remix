@@ -38,11 +38,11 @@ let routes = route({
   },
 })
 
-let router = createRouter()
-
-// Middleware may be used to run code before and/or after route handlers run.
-// In this case, the `logger()` middleware will log the request to the console.
-router.use(logger())
+let router = createRouter({
+  // Middleware may be used to run code before and/or after route handlers run.
+  // In this case, the `logger()` middleware logs the request to the console.
+  middleware: [logger()],
+})
 
 // Map the routes to "handlers" for each route. The structure of the route
 // handlers object mirrors the structure of the route map, with full type safety.
@@ -454,10 +454,86 @@ type Routes = typeof routes.users
 // }
 ```
 
-### Route Handlers and Middleware
+### Middleware and Route Handlers
 
-- request context
-- error handling in middleware
+A middleware is a function used to run code before and/or after route handlers run. It is a powerful way to add functionality to your app.
+
+A basic logging middleware might look like this:
+
+```ts
+import type { Middleware } from '@remix-run/fetch-router'
+
+// You can use the `Middleware` type to type middleware functions.
+function logger(): Middleware {
+  return async (context, next) => {
+    let start = new Date()
+
+    // Call the next() function to invoke the next middleware or handler in the chain.
+    let response = await next()
+
+    let end = new Date()
+    let duration = end.getTime() - start.getTime()
+
+    console.log(`${context.request.method} ${context.request.url} ${response.status} ${duration}ms`)
+
+    return response
+  }
+}
+
+// Use it like this:
+let router = createRouter({
+  middleware: [logger()],
+})
+```
+
+Middleware is typically built as a function that returns a middleware function. This allows you to pass options to the middleware function if needed. For example, the `auth()` middleware below allows you to pass a `token` option that is used to authenticate the request.
+
+```tsx
+interface AuthOptions {
+  token: string
+}
+
+function auth(options?: AuthOptions): Middleware {
+  let token = options?.token ?? 'secret'
+
+  return (context, next) => {
+    if (context.headers.get('Authorization') !== `Bearer ${token}`) {
+      return new Response('Unauthorized', { status: 401 })
+    }
+    return next()
+  }
+}
+```
+
+Middleware may be used in two different contexts: globally (at the router level) or locally (inline, at the route level).
+
+Global middleware is added to the router when it is created using the `createRouter({ middleware })` option. This middleware runs before any routes are matched and is useful for doing things like logging, serving static files, profiling, and a variety of other things. Global middleware runs on every request, so it's important to keep them lightweight and fast.
+
+Local middleware is added to the router when handlers are registered using either `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. Local middleware runs after global middleware but before the route handler, and is useful for doing things like authentication, authorization, and data validation.
+
+```tsx
+let routes = route({
+  home: '/',
+  admin: {
+    dashboard: '/admin/dashboard',
+  },
+})
+
+let router = createRouter({
+  // This middleware runs on all requests.
+  middleware: [staticFiles('./public')],
+})
+
+router.map(routes.home, () => new Response('Home'))
+
+router.map(routes.admin.dashboard, {
+  // This middleware runs only on the `/admin/dashboard` route.
+  middleware: [auth({ token: 'secret' })],
+  handler() {
+    return new Response('Dashboard')
+  },
+})
+```
 
 ### Request Context
 
@@ -489,17 +565,11 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
 
 - how to use a TrieMatcher
 - how to spread route handlers across multiple files
-- use `mount` to mount sub-routers at a specific path
 
 #### Error Handling and Aborted Requests
 
 - wrap `router.fetch()` in a try/catch to handle errors
 - `AbortError` is thrown when a request is aborted
-
-#### Request Method Override
-
-- use a `_method` hidden input to override the request method
-- use the router's `methodOverride` option to enable/disable request method override
 
 #### Content Negotiation
 
@@ -513,11 +583,17 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
 - use `session.flash()` to set a flash message
 - use `session.destroy()` to destroy the session
 
-#### Handling File Uploads
+#### Form Data and File Uploads
 
+- use the `formData()` middleware to parse the `FormData` object from the request body
 - use the `formData` property of the context object to access the form data
 - use the `files` property of the context object to access the uploaded files
-- use the router's `uploadHandler` option to handle file uploads
+- use the `uploadHandler` option of the `formData()` middleware to handle file uploads
+
+#### Request Method Override
+
+- use the `methodOverride()` middleware to override the request method
+- use a hidden `<input name="_method" value="...">` to override the request method
 
 ### Response Helpers
 
