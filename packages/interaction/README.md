@@ -73,7 +73,7 @@ on(listItem, {
 
 Import builtins from their modules (for example, `@remix-run/interaction/press`, `@remix-run/interaction/keys`). Some interactions may coordinate with others (for example, calling `event.preventDefault()` in one listener can prevent a related interaction from firing).
 
-You can also [create your own interactions](#interactions).
+You can also [create your own interactions](#custom-interactions).
 
 ### Async listeners and reentry protection
 
@@ -193,7 +193,7 @@ on(button, {
 })
 ```
 
-## Interactions
+## Custom Interactions
 
 Define semantic interactions that can dispatch custom events and be reused declaratively.
 
