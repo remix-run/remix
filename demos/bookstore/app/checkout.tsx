@@ -2,22 +2,22 @@ import type { RouteHandlers } from '@remix-run/fetch-router'
 import { redirect } from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../routes.ts'
-import { requireAuth, SESSION_ID_KEY } from './middleware/auth.ts'
+import { requireAuth } from './middleware/auth.ts'
 import { getCart, clearCart, getCartTotal } from './models/cart.ts'
 import { createOrder, getOrderById } from './models/orders.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
-import { getCurrentUser, getStorage } from './utils/context.ts'
+import { getCurrentUser } from './utils/context.ts'
 
 export default {
   middleware: [requireAuth],
   handlers: {
-    index() {
-      let sessionId = getStorage().get(SESSION_ID_KEY)
-      let cart = getCart(sessionId)
-      let total = getCartTotal(cart)
+    index({ session }) {
+      let cartId = session.get('cartId')
+      let cart = cartId ? getCart(cartId) : null
+      let total = cart ? getCartTotal(cart) : 0
 
-      if (cart.items.length === 0) {
+      if (!cart || cart.items.length === 0) {
         return render(
           <Layout>
             <div class="card">
@@ -108,12 +108,12 @@ export default {
       )
     },
 
-    async action({ formData }) {
+    async action({ session, formData }) {
       let user = getCurrentUser()
-      let sessionId = getStorage().get(SESSION_ID_KEY)
-      let cart = getCart(sessionId)
+      let cartId = session.get('cartId')
+      let cart = cartId ? getCart(cartId) : null
 
-      if (cart.items.length === 0) {
+      if (!cartId || !cart || cart.items.length === 0) {
         return redirect(routes.cart.index.href())
       }
 
@@ -135,7 +135,7 @@ export default {
         shippingAddress,
       )
 
-      clearCart(sessionId)
+      clearCart(cartId)
 
       return redirect(routes.checkout.confirmation.href({ orderId: order.id }))
     },

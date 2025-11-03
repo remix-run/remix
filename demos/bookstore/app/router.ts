@@ -2,6 +2,7 @@ import { createRouter } from '@remix-run/fetch-router'
 import { formData } from '@remix-run/fetch-router/form-data-middleware'
 import { logger } from '@remix-run/fetch-router/logger-middleware'
 import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
+import { session } from '@remix-run/fetch-router/session-middleware'
 
 import { routes } from '../routes.ts'
 import { storeContext } from './middleware/context.ts'
@@ -26,6 +27,7 @@ if (process.env.NODE_ENV === 'development') {
 
 middleware.push(formData({ uploadHandler }))
 middleware.push(methodOverride())
+middleware.push(session())
 middleware.push(storeContext())
 
 export let router = createRouter({ middleware })

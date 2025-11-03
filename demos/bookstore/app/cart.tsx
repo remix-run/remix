@@ -4,22 +4,22 @@ import { redirect } from '@remix-run/fetch-router/response-helpers'
 import { routes } from '../routes.ts'
 
 import { Layout } from './layout.tsx'
-import { loadAuth, SESSION_ID_KEY } from './middleware/auth.ts'
+import { loadAuth } from './middleware/auth.ts'
 import { getBookById } from './models/books.ts'
 import { getCart, addToCart, updateCartItem, removeFromCart, getCartTotal } from './models/cart.ts'
 import type { User } from './models/users.ts'
-import { getCurrentUser, getStorage } from './utils/context.ts'
+import { getCurrentUser } from './utils/context.ts'
 import { render } from './utils/render.ts'
-import { setSessionCookie } from './utils/session.ts'
 import { RestfulForm } from './components/restful-form.tsx'
+import { ensureCart } from './middleware/cart.ts'
 
 export default {
   middleware: [loadAuth],
   handlers: {
-    index() {
-      let sessionId = getStorage().get(SESSION_ID_KEY)
-      let cart = getCart(sessionId)
-      let total = getCartTotal(cart)
+    index({ session }) {
+      let cartId = session.get('cartId')
+      let cart = cartId ? getCart(cartId) : null
+      let total = cart ? getCartTotal(cart) : 0
 
       let user: User | null = null
       try {
@@ -33,7 +33,7 @@ export default {
           <h1>Shopping Cart</h1>
 
           <div class="card">
-            {cart.items.length > 0 ? (
+            {cart && cart.items.length > 0 ? (
               <>
                 <table>
                   <thead>
@@ -137,64 +137,55 @@ export default {
     },
 
     api: {
-      async add({ storage, formData }) {
-        // Simulate network latency
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+      middleware: [ensureCart],
+      handlers: {
+        async add({ session, formData }) {
+          // Simulate network latency
+          await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        let sessionId = storage.get(SESSION_ID_KEY)
-        let bookId = formData.get('bookId')?.toString() ?? ''
+          let bookId = formData.get('bookId')?.toString() ?? ''
 
-        let book = getBookById(bookId)
-        if (!book) {
-          return new Response('Book not found', { status: 404 })
-        }
+          let book = getBookById(bookId)
+          if (!book) {
+            return new Response('Book not found', { status: 404 })
+          }
 
-        addToCart(sessionId, book.id, book.slug, book.title, book.price, 1)
+          addToCart(session.get('cartId')!, book.id, book.slug, book.title, book.price, 1)
 
-        let headers = new Headers()
-        setSessionCookie(headers, sessionId)
+          if (formData.get('redirect') === 'none') {
+            return new Response(null, { status: 204 })
+          }
 
-        if (formData.get('redirect') === 'none') {
-          return new Response(null, { status: 204 })
-        }
+          return redirect(routes.cart.index.href())
+        },
 
-        return redirect(routes.cart.index.href(), { headers })
-      },
+        async update({ session, formData }) {
+          let bookId = formData.get('bookId')?.toString() ?? ''
+          let quantity = parseInt(formData.get('quantity')?.toString() ?? '1', 10)
 
-      async update({ storage, formData }) {
-        let sessionId = storage.get(SESSION_ID_KEY)
-        let bookId = formData.get('bookId')?.toString() ?? ''
-        let quantity = parseInt(formData.get('quantity')?.toString() ?? '1', 10)
+          updateCartItem(session.get('cartId')!, bookId, quantity)
 
-        updateCartItem(sessionId, bookId, quantity)
+          if (formData.get('redirect') === 'none') {
+            return new Response(null, { status: 204 })
+          }
 
-        let headers = new Headers()
-        setSessionCookie(headers, sessionId)
+          return redirect(routes.cart.index.href())
+        },
 
-        if (formData.get('redirect') === 'none') {
-          return new Response(null, { status: 204 })
-        }
+        async remove({ session, formData }) {
+          // Simulate network latency
+          await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        return redirect(routes.cart.index.href(), { headers })
-      },
+          let bookId = formData.get('bookId')?.toString() ?? ''
 
-      async remove({ storage, formData }) {
-        // Simulate network latency
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+          removeFromCart(session.get('cartId')!, bookId)
 
-        let sessionId = storage.get(SESSION_ID_KEY)
-        let bookId = formData.get('bookId')?.toString() ?? ''
+          if (formData.get('redirect') === 'none') {
+            return new Response(null, { status: 204 })
+          }
 
-        removeFromCart(sessionId, bookId)
-
-        let headers = new Headers()
-        setSessionCookie(headers, sessionId)
-
-        if (formData.get('redirect') === 'none') {
-          return new Response(null, { status: 204 })
-        }
-
-        return redirect(routes.cart.index.href(), { headers })
+          return redirect(routes.cart.index.href())
+        },
       },
     },
   },

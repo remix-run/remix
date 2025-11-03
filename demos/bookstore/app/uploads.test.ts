@@ -8,7 +8,7 @@ import { uploadsStorage as uploads } from './utils/uploads.ts'
 
 describe('uploads handler', () => {
   it('serves uploaded files from storage', async () => {
-    let sessionId = await loginAsAdmin(router)
+    let sessionCookie = await loginAsAdmin(router)
 
     // Get initial book count
     let initialBookCount = getAllBooks().length
@@ -62,7 +62,7 @@ describe('uploads handler', () => {
     ].join('\r\n')
 
     // Create book with file upload
-    let createRequest = requestWithSession('http://localhost:3000/admin/books', sessionId, {
+    let createRequest = requestWithSession('http://localhost:3000/admin/books', sessionCookie, {
       method: 'POST',
       headers: {
         'Content-Type': `multipart/form-data; boundary=----${boundary}`,
