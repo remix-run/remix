@@ -25,6 +25,7 @@
     "./logger-middleware": "./src/logger-middleware.ts",
     "./method-override-middleware": "./src/method-override-middleware.ts",
     "./response-helpers": "./src/response-helpers.ts",
+    "./session-middleware": "./src/session-middleware.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -49,6 +50,10 @@
         "types": "./dist/response-helpers.d.ts",
         "default": "./dist/response-helpers.js"
       },
+      "./session-middleware": {
+        "types": "./dist/session-middleware.d.ts",
+        "default": "./dist/session-middleware.js"
+      },
       "./package.json": "./package.json"
     }
   },
@@ -61,15 +66,17 @@
     "@remix-run/form-data-parser": "workspace:*",
     "@remix-run/headers": "workspace:*",
     "@remix-run/html-template": "workspace:*",
-    "@remix-run/route-pattern": "workspace:*"
+    "@remix-run/route-pattern": "workspace:*",
+    "@remix-run/session": "workspace:*"
   },
   "scripts": {
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:form-data-middleware && pnpm run build:logger-middleware && pnpm run build:method-override-middleware && pnpm run build:response-helpers",
-    "build:index": "esbuild src/index.ts --bundle --external:@remix-run/form-data-parser --external:@remix-run/headers --external:@remix-run/route-pattern --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:form-data-middleware && pnpm run build:logger-middleware && pnpm run build:method-override-middleware && pnpm run build:response-helpers && pnpm run build:session-middleware",
+    "build:index": "esbuild src/index.ts --bundle --external:@remix-run/form-data-parser --external:@remix-run/headers --external:@remix-run/route-pattern --external:@remix-run/session --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
     "build:form-data-middleware": "esbuild src/form-data-middleware.ts --bundle --outfile=dist/form-data-middleware.js --format=esm --platform=neutral --sourcemap",
     "build:logger-middleware": "esbuild src/logger-middleware.ts --bundle --outfile=dist/logger-middleware.js --format=esm --platform=neutral --sourcemap",
     "build:method-override-middleware": "esbuild src/method-override-middleware.ts --bundle --outfile=dist/method-override-middleware.js --format=esm --platform=neutral --sourcemap",
     "build:response-helpers": "esbuild src/response-helpers.ts --bundle --outfile=dist/response-helpers.js --format=esm --platform=neutral --sourcemap",
+    "build:session-middleware": "esbuild src/session-middleware.ts --bundle --outfile=dist/session-middleware.js --format=esm --platform=neutral --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
     "prepublishOnly": "pnpm run build",

@@ -1,4 +1,5 @@
 import SuperHeaders from '@remix-run/headers'
+import { Session } from '@remix-run/session'
 
 import { AppStorage } from './app-storage.ts'
 import {
@@ -6,6 +7,7 @@ import {
   type RequestBodyMethod,
   type RequestMethod,
 } from './request-methods.ts'
+import { NoOpSession } from './middleware/session.ts'
 
 /**
  * A context object that contains information about the current request. Every request
@@ -87,6 +89,25 @@ export class RequestContext<
    * The original request that was dispatched to the router.
    */
   request: Request
+
+  #session?: Session
+
+  /**
+   * Active user session.
+   *
+   * You should include a global session middleware to populate and handle automatic
+   * session management.
+   */
+  get session(): Session {
+    return this.#session || NoOpSession
+  }
+
+  set session(value: Session) {
+    if (this.#session) {
+      throw new Error('Session has already been set on the request context.')
+    }
+    this.#session = value
+  }
 
   /**
    * Shared application-specific storage.

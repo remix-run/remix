@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
 
-import { RequestContext } from './request-context.ts'
+import type { RequestContext } from './request-context.ts'
 import { createRoutes } from './route-map.ts'
 import { createRouter } from './router.ts'
 
