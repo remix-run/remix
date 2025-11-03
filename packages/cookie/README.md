@@ -190,58 +190,6 @@ let signedCookie = new Cookie('signed', { secrets: ['secret'] })
 await signedCookie.parse('signed=value.badsignature') // null
 ```
 
-## API Reference
-
-### `Cookie` Class
-
-A cookie container class for managing HTTP cookies.
-
-**Constructor:**
-
-```ts
-new Cookie(name: string, options?: CookieOptions)
-```
-
-**Parameters:**
-
-- `name: string` - The cookie name
-- `options?: CookieOptions` - Configuration options
-
-**Properties:**
-
-- `name: string` - The cookie name (readonly)
-- `isSigned: boolean` - Whether the cookie uses signing (readonly)
-- `expires?: Date` - Calculated expiration date (readonly)
-
-**Methods:**
-
-- `parse(cookieHeader: string | null, options?: ParseOptions): Promise<any>` - Parse cookie value from header
-- `serialize(value: any, options?: SerializeOptions): Promise<string>` - Serialize value to Set-Cookie header
-
-### `CookieOptions`
-
-Configuration options for cookies (extends options from the [`cookie`](https://www.npmjs.com/package/cookie) package):
-
-```ts
-interface CookieOptions {
-  // Signing
-  secrets?: string[]
-
-  // Standard cookie attributes
-  domain?: string
-  expires?: Date
-  httpOnly?: boolean
-  maxAge?: number
-  path?: string
-  secure?: boolean
-  sameSite?: 'strict' | 'lax' | 'none' | boolean
-
-  // Encoding (from cookie package)
-  encode?: (value: string) => string
-  decode?: (value: string) => string
-}
-```
-
 ## Related Packages
 
 - [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers) - Type-safe HTTP header manipulation
