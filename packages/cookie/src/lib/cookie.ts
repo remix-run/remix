@@ -71,7 +71,7 @@ export class Cookie {
    * Parses a raw `Cookie` header and returns the value of this cookie or
    * `null` if it's not present.
    */
-  async parse(cookieHeader: string | null, parseOptions?: ParseOptions): Promise<unknown> {
+  async parse(cookieHeader: string | null, parseOptions?: ParseOptions): Promise<string | null> {
     if (!cookieHeader) return null
     let cookies = parse(cookieHeader, { ...this.#options, ...parseOptions })
     if (this.name in cookies) {
@@ -91,7 +91,7 @@ export class Cookie {
    * Serializes the given value to a string and returns the `Set-Cookie`
    * header.
    */
-  async serialize(value: unknown, serializeOptions?: SerializeOptions): Promise<string> {
+  async serialize(value: string, serializeOptions?: SerializeOptions): Promise<string> {
     return serialize(this.name, value === '' ? '' : await encodeCookieValue(value, this.#secrets), {
       ...this.#options,
       ...serializeOptions,
@@ -99,7 +99,7 @@ export class Cookie {
   }
 }
 
-async function encodeCookieValue(value: unknown, secrets: string[]): Promise<string> {
+async function encodeCookieValue(value: string, secrets: string[]): Promise<string> {
   let encoded = encodeData(value)
 
   if (secrets.length > 0) {
@@ -109,7 +109,7 @@ async function encodeCookieValue(value: unknown, secrets: string[]): Promise<str
   return encoded
 }
 
-async function decodeCookieValue(value: string, secrets: string[]): Promise<unknown> {
+async function decodeCookieValue(value: string, secrets: string[]): Promise<string | null> {
   if (secrets.length > 0) {
     for (let secret of secrets) {
       let unsignedValue = await unsign(value, secret)
@@ -124,15 +124,15 @@ async function decodeCookieValue(value: string, secrets: string[]): Promise<unkn
   return decodeData(value)
 }
 
-function encodeData(value: unknown): string {
-  return btoa(myUnescape(encodeURIComponent(JSON.stringify(value))))
+function encodeData(value: string): string {
+  return btoa(myUnescape(encodeURIComponent(value)))
 }
 
-function decodeData(value: string): unknown {
+function decodeData(value: string): string | null {
   try {
-    return JSON.parse(decodeURIComponent(myEscape(atob(value))))
+    return decodeURIComponent(myEscape(atob(value)))
   } catch {
-    return {}
+    return null
   }
 }
 

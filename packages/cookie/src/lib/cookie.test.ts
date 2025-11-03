@@ -24,14 +24,6 @@ describe('cookies', () => {
     assert.equal(value, 'hello world')
   })
 
-  it('parses/serializes unsigned boolean values', async () => {
-    let cookie = new Cookie('my-cookie')
-    let setCookie = await cookie.serialize(true)
-    let value = await cookie.parse(getCookieFromSetCookie(setCookie))
-
-    assert.equal(value, true)
-  })
-
   it('parses/serializes signed string values', async () => {
     let cookie = new Cookie('my-cookie', {
       secrets: ['secret1'],
@@ -81,33 +73,20 @@ describe('cookies', () => {
     let cookie = new Cookie('my-cookie', {
       secrets: ['secret1'],
     })
-    let setCookie = await cookie.serialize({ hello: 'mjackson' })
-    let value = await cookie.parse(getCookieFromSetCookie(setCookie))
+    let setCookie = await cookie.serialize(JSON.stringify({ hello: 'mjackson' }))
+    let value = JSON.parse((await cookie.parse(getCookieFromSetCookie(setCookie)))!)
 
     assert.deepEqual(value, { hello: 'mjackson' })
-  })
-
-  it('fails to parse signed object values with invalid signature', async () => {
-    let cookie = new Cookie('my-cookie', {
-      secrets: ['secret1'],
-    })
-    let setCookie = await cookie.serialize({ hello: 'mjackson' })
-    let cookie2 = new Cookie('my-cookie', {
-      secrets: ['secret2'],
-    })
-    let value = await cookie2.parse(getCookieFromSetCookie(setCookie))
-
-    assert.equal(value, null)
   })
 
   it('supports secret rotation', async () => {
     let cookie = new Cookie('my-cookie', {
       secrets: ['secret1'],
     })
-    let setCookie = await cookie.serialize({ hello: 'mjackson' })
+    let setCookie = await cookie.serialize('mjackson')
     let value = await cookie.parse(getCookieFromSetCookie(setCookie))
 
-    assert.deepEqual(value, { hello: 'mjackson' })
+    assert.deepEqual(value, 'mjackson')
 
     // A new secret enters the rotation...
     cookie = new Cookie('my-cookie', {
@@ -121,6 +100,9 @@ describe('cookies', () => {
     // New Set-Cookie should be different, it uses a different secret.
     let setCookie2 = await cookie.serialize(value)
     assert.notEqual(setCookie, setCookie2)
+
+    let newValue = await cookie.parse(getCookieFromSetCookie(setCookie2))
+    assert.deepEqual(oldValue, newValue)
   })
 
   it('makes the default secrets to be an empty array', async () => {
