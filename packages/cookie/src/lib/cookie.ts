@@ -1,11 +1,13 @@
-import type { ParseOptions, SerializeOptions } from 'cookie'
-import { parse, serialize } from 'cookie'
+import type { CookieParseOptions, CookieSerializeOptions } from 'cookie-es'
+import { parse, serialize } from 'cookie-es'
 
 import { sign, unsign } from './crypto.ts'
 import { warnOnce } from './warnings.ts'
 
-export type CookieOptions = ParseOptions &
-  SerializeOptions & {
+export type { CookieParseOptions, CookieSerializeOptions }
+
+export type CookieOptions = CookieParseOptions &
+  CookieSerializeOptions & {
     /**
      * An array of secrets that may be used to sign/unsign the value of a cookie.
      *
@@ -28,7 +30,7 @@ export type CookieOptions = ParseOptions &
 export class Cookie {
   readonly name: string
   readonly #secrets: string[]
-  readonly #options: SerializeOptions & ParseOptions
+  readonly #options: CookieSerializeOptions & CookieParseOptions
 
   /**
    * Creates a logical container for managing a browser cookie from the server.
@@ -71,7 +73,10 @@ export class Cookie {
    * Parses a raw `Cookie` header and returns the value of this cookie or
    * `null` if it's not present.
    */
-  async parse(cookieHeader: string | null, parseOptions?: ParseOptions): Promise<string | null> {
+  async parse(
+    cookieHeader: string | null,
+    parseOptions?: CookieParseOptions,
+  ): Promise<string | null> {
     if (!cookieHeader) return null
     let cookies = parse(cookieHeader, { ...this.#options, ...parseOptions })
     if (this.name in cookies) {
@@ -91,7 +96,7 @@ export class Cookie {
    * Serializes the given value to a string and returns the `Set-Cookie`
    * header.
    */
-  async serialize(value: string, serializeOptions?: SerializeOptions): Promise<string> {
+  async serialize(value: string, serializeOptions?: CookieSerializeOptions): Promise<string> {
     return serialize(this.name, value === '' ? '' : await encodeCookieValue(value, this.#secrets), {
       ...this.#options,
       ...serializeOptions,

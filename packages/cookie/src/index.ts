@@ -1,1 +1,6 @@
-export { Cookie, type CookieOptions } from './lib/cookie.ts'
+export {
+  Cookie,
+  type CookieOptions,
+  type CookieParseOptions,
+  type CookieSerializeOptions,
+} from './lib/cookie.ts'
