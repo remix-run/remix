@@ -22,6 +22,7 @@
     ".": "./src/index.ts",
     "./local": "./src/local.ts",
     "./memory": "./src/memory.ts",
+    "./r2": "./src/r2.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -38,6 +39,10 @@
         "types": "./dist/memory.d.ts",
         "default": "./dist/memory.js"
       },
+      "./r2": {
+        "types": "./dist/r2.d.ts",
+        "default": "./dist/r2.js"
+      },
       "./package.json": "./package.json"
     }
   },
@@ -47,13 +52,15 @@
   "devDependencies": {
     "@remix-run/form-data-parser": "workspace:^",
     "@types/node": "^24.6.0",
-    "esbuild": "^0.25.10"
+    "esbuild": "^0.25.10",
+    "@cloudflare/workers-types": "4.20251014.0"
   },
   "scripts": {
     "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:esm:local && pnpm run build:esm:memory",
     "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
     "build:esm:local": "esbuild src/local.ts --bundle --outfile=dist/local.js --format=esm --platform=node --sourcemap",
     "build:esm:memory": "esbuild src/memory.ts --bundle --outfile=dist/memory.js --format=esm --platform=neutral --sourcemap",
+    "build:esm:r2": "esbuild src/r2.ts --bundle --outfile=dist/r2.js --format=esm --platform=neutral --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
     "prepublishOnly": "pnpm run build",

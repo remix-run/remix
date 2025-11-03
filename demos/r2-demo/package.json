@@ -1,0 +1,21 @@
+{
+    "name": "cloudflare-vite-get-started",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite dev",
+        "build": "vite build",
+        "preview": "npm run build && vite preview",
+        "deploy": "npm run build && wrangler deploy"
+    },
+    "dependencies": {
+        "@remix-run/file-storage": "workspace:*",
+        "@remix-run/form-data-parser": "workspace:*"
+    },
+    "devDependencies": {
+        "@cloudflare/vite-plugin": "^1.13.18",
+        "vite": "^7.1.12",
+        "wrangler": "^4.45.3"
+    }
+}

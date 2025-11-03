@@ -1,0 +1,18 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "cloudflare-vite-get-started",
+	"compatibility_date": "2025-04-03",
+	"main": "./src/index.ts",
+	"r2_buckets": [
+		{
+			"bucket_name": "r2-demo",
+			"binding": "r2_demo",
+			"remote": true
+		},
+		{
+			"bucket_name": "r2-demo-local",
+			"binding": "r2_demo_local",
+			"remote": true
+		}
+	],
+}
