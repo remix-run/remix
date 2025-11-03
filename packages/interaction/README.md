@@ -42,7 +42,7 @@ on(inputElement, {
       console.log('first')
     },
     capture((event) => {
-      // captured phase
+      // capture phase
     }),
     listenWith({ once: true }, (event) => {
       console.log('only once')
