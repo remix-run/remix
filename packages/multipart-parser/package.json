@@ -41,18 +41,15 @@
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
-    "esbuild": "^0.25.10"
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",
     "bench:bun": "bun run ./bench/runner.ts",
     "bench:deno": "deno run --allow-sys ./bench/runner.ts",
     "bench:node": "node --disable-warning=ExperimentalWarning ./bench/runner.ts",
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:esm:node",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
-    "build:esm:node": "esbuild src/node.ts --bundle --outfile=dist/node.js --format=esm --platform=node --sourcemap",
-    "build:types": "tsc --project tsconfig.build.json",
-    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
     "typecheck": "tsc --noEmit"

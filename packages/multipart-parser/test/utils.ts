@@ -12,8 +12,8 @@ export type PartValue =
 export function createMultipartMessage(
   boundary: string,
   parts?: { [name: string]: PartValue },
-): Uint8Array {
-  let chunks: Uint8Array[] = []
+): Uint8Array<ArrayBuffer> {
+  let chunks: Uint8Array<ArrayBuffer>[] = []
 
   function pushString(string: string) {
     chunks.push(new TextEncoder().encode(string))
@@ -57,7 +57,7 @@ export function createMultipartMessage(
         if (typeof value.content === 'string') {
           pushLine(value.content)
         } else {
-          chunks.push(value.content)
+          chunks.push(value.content as Uint8Array<ArrayBuffer>)
           pushLine()
         }
       }
@@ -70,7 +70,7 @@ export function createMultipartMessage(
 }
 
 export function getRandomBytes(size: number): Uint8Array {
-  let chunks: Uint8Array[] = []
+  let chunks: Uint8Array<ArrayBuffer>[] = []
 
   for (let i = 0; i < size; i += 65536) {
     chunks.push(crypto.getRandomValues(new Uint8Array(Math.min(size - i, 65536))))
@@ -79,7 +79,7 @@ export function getRandomBytes(size: number): Uint8Array {
   return concat(chunks)
 }
 
-export function concat(chunks: Uint8Array[]): Uint8Array {
+export function concat(chunks: Uint8Array<ArrayBuffer>[]): Uint8Array<ArrayBuffer> {
   if (chunks.length === 1) return chunks[0]
 
   let length = 0

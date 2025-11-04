@@ -3,14 +3,14 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@remix-run/file-storage": "workspace:*",
-    "@remix-run/form-data-parser": "workspace:*",
-    "@remix-run/multipart-parser": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*"
+    "@remix-run/file-storage": "workspace:^",
+    "@remix-run/form-data-parser": "workspace:^",
+    "@remix-run/multipart-parser": "workspace:^",
+    "@remix-run/node-fetch-server": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "start": "node server.js"

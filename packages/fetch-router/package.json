@@ -54,24 +54,17 @@
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
-    "esbuild": "^0.25.10",
-    "tsx": "^4.20.6"
+    "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "@remix-run/form-data-parser": "workspace:*",
-    "@remix-run/headers": "workspace:*",
-    "@remix-run/html-template": "workspace:*",
-    "@remix-run/route-pattern": "workspace:*"
+    "@remix-run/form-data-parser": "workspace:^",
+    "@remix-run/headers": "workspace:^",
+    "@remix-run/html-template": "workspace:^",
+    "@remix-run/route-pattern": "workspace:^"
   },
   "scripts": {
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:form-data-middleware && pnpm run build:logger-middleware && pnpm run build:method-override-middleware && pnpm run build:response-helpers",
-    "build:index": "esbuild src/index.ts --bundle --external:@remix-run/form-data-parser --external:@remix-run/headers --external:@remix-run/route-pattern --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
-    "build:form-data-middleware": "esbuild src/form-data-middleware.ts --bundle --outfile=dist/form-data-middleware.js --format=esm --platform=neutral --sourcemap",
-    "build:logger-middleware": "esbuild src/logger-middleware.ts --bundle --outfile=dist/logger-middleware.js --format=esm --platform=neutral --sourcemap",
-    "build:method-override-middleware": "esbuild src/method-override-middleware.ts --bundle --outfile=dist/method-override-middleware.js --format=esm --platform=neutral --sourcemap",
-    "build:response-helpers": "esbuild src/response-helpers.ts --bundle --outfile=dist/response-helpers.js --format=esm --platform=neutral --sourcemap",
-    "build:types": "tsc --project tsconfig.build.json",
-    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
     "typecheck": "tsc --noEmit"

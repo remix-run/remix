@@ -48,7 +48,11 @@ export function openFile(filename: string, options?: OpenFileOptions): File {
   }) as File
 }
 
-function streamFile(filename: string, start = 0, end = Infinity): ReadableStream<Uint8Array> {
+function streamFile(
+  filename: string,
+  start = 0,
+  end = Infinity,
+): ReadableStream<Uint8Array<ArrayBuffer>> {
   let read = fs.createReadStream(filename, { start, end: end - 1 }).iterator()
 
   return new ReadableStream({

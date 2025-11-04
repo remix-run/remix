@@ -2,6 +2,10 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
+
 ## v0.14.0 (2025-10-04)
 
 - Add `Matcher` and `MatchResult` interfaces. These are new public APIs for matching sets of patterns.
