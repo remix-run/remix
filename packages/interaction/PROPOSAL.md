@@ -65,6 +65,8 @@ If the `...` spread syntax feels jarring to you, note that you can nest it in an
 Repurpose the `on()` function to be a type-safe event descriptor factory.
 
 ```ts
+import { on } from '@remix-run/interaction'
+
 const result = on(button, {
   click(event) {
     event.type satisfies 'click'
@@ -109,7 +111,8 @@ result satisfies {
 In many cases, the event target can be inferred, so passing an event target as the first argument is optional. This is most beneficial for the new JSX `events` prop (renamed from `on`).
 
 ```tsx
-import { events } from '@remix-run/interaction'
+import { on } from '@remix-run/interaction'
+import { longPress } from '@remix-run/interaction/press'
 
 function MyButton(this: Remix.Handle) {
   return (
@@ -172,6 +175,8 @@ The current `on()` function should be renamed to `events()`.
 It should support the same values as the new JSX `events` prop.
 
 ```ts
+import { events, on } from '@remix-run/interaction'
+
 // Basic API
 events(target, signal, {
   foo(event) {…},
