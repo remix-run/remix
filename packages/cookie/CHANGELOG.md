@@ -2,7 +2,7 @@
 
 This is the changelog for [`@remix-run/cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.2.0 (2025-11-04)
 
 - Update `@remix-run/headers` peer dep to v0.15.0
 
