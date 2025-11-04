@@ -2,7 +2,7 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.13.0 (2025-11-04)
 
 - Throw `FormDataParseError` when the request body is malformed multipart/form-data. The underlying `MultipartParseError` is its `cause`.
 
