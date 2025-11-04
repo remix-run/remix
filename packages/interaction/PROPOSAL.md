@@ -34,7 +34,7 @@ An example of using an interaction with a JSX element:
 ```tsx
 return (
   <button
-    events={{
+    on={{
       click(event) {…},
       ...longPress(event => {…}),
     }}
@@ -54,7 +54,7 @@ If the `...` spread syntax feels jarring to you, note that you can nest it in an
 
 ```tsx
 <button
-  events={[
+  on={[
     {
       click(event) {…},
     },
@@ -63,70 +63,13 @@ If the `...` spread syntax feels jarring to you, note that you can nest it in an
 >Click me</button>
 ```
 
-**Alternatively**, people might appreciate a special `on` property for such scenarios:
+## 2. Make `on()` multi-purpose
 
-```tsx
-<button
-  events={{
-    click(event) {…},
-    on: [
-      longPress(event => {…}),
-    ],
-  }}
->Click me</button>
-```
+The `on()` function can be used 1 of 2 ways:
+- Add one or more listeners to an event target
+- Declare an event descriptor (when no event target is provided)
 
-I don't have an opinion on which is “better”, but the `events={[ … ]}` array syntax is **ideal** for prop forwarding (as described in the “Inferring the event target” section).
-
-## 2. Advanced `on()` function
-
-Repurpose the `on()` function to be a type-safe event descriptor factory.
-
-```ts
-import { on, capture } from '@remix-run/interaction'
-
-const result = on(button, {
-  click(event) {
-    event.type satisfies 'click'
-    event.currentTarget satisfies HTMLButtonElement
-  },
-  focusin: capture(event => {…}),
-})
-
-result satisfies {
-  target: HTMLButtonElement,
-  events: {
-    click: (event: MouseEvent) => void
-    focusin: {
-      capture: true,
-      listener: (event: FocusEvent) => void,
-    }
-  }
-}
-```
-
-It's also wrapped with `new Proxy()` for convenient declaration syntax:
-
-```ts
-const result = on.click(button, { once: true }, (event) => {
-  event.type satisfies 'click'
-  event.currentTarget satisfies HTMLButtonElement
-})
-
-result satisfies {
-  target: HTMLButtonElement
-  events: {
-    click: {
-      once: true
-      listener: (event: MouseEvent) => void
-    }
-  }
-}
-```
-
-### Inferring the event target
-
-In many cases, the event target can be inferred, so passing an event target as the first argument is optional. This is most beneficial for the new JSX `events` prop (renamed from `on`).
+When declaring event listeners with JSX, you don't provide an event target:
 
 ```tsx
 import { on } from '@remix-run/interaction'
@@ -135,7 +78,7 @@ import { longPress } from '@remix-run/interaction/press'
 function MyButton(this: Remix.Handle) {
   return (
     <button
-      events={[
+      on={[
         on.click((event) => {
           event satisfies MouseEvent
           event.type satisfies 'click'
@@ -157,11 +100,11 @@ function MyButton(this: Remix.Handle) {
 }
 ```
 
-**Importantly**, you can still pass a listeners object to the `events` prop. This API will feel more natural to beginners.
+**Importantly**, you can still pass a listeners object to the `on` prop. This API will feel more natural to beginners.
 
 ```tsx
 <button
-  events={{
+  on={{
     click(event) {…},
     focusin: capture(event => {…}),
   }}>
@@ -169,15 +112,17 @@ function MyButton(this: Remix.Handle) {
 </button>
 ```
 
-Now, this complicates the type definition of the `events` prop. But **forwarding** a component's `events` prop to a child JSX element is easy if we add nesting support.
+### Forwarding the `on` prop
+
+Your components may want to accept an `on` prop and forward it to a child JSX element. This is easy if we add nesting support. Essentially, the reconciler will flatten the array of listeners into a single object.
 
 ```tsx
 function Foo(props: {
-  events?: Remix.EventsProp<HTMLButtonElement>
+  on?: Remix.EventListeners<HTMLButtonElement>
 }) {
   return (
-    <button events={[
-      props.events,
+    <button on={[
+      props.on,
       on.click(event => {…}),
     ]}>
       Click me
@@ -186,37 +131,33 @@ function Foo(props: {
 }
 ```
 
-## 3. Renamed functions
+### Targeted `on()` calls
 
-The current `on()` function should be renamed to `events()`.
+The current `on()` API is largely unchanged, but it now supports the same values as the new JSX `on` prop.
 
-It should support the same values as the new JSX `events` prop.
+When `on()` receives an event target as the first argument, the listeners are immediately added to the target.
 
 ```ts
-import { events, on, capture } from '@remix-run/interaction'
+import { longPress } from '@remix-run/interaction/press'
+import { on, capture } from '@remix-run/interaction'
 
-// Basic API
-events(target, signal, {
+// Basic API: Multiple listeners
+const dispose = on(target, signal, {
   foo(event) {…},
   bar: capture(event => {…}),
 })
 
+// Basic API: Single listener
+const dispose = on.foo(target, signal, event => {…})
+
 // Advanced API
-events(target, signal, [
+const dispose = on(target, signal, [
   on.foo(event => {…}),
   on.bar({ capture: true }, event => {…}),
+  longPress(event => {…}),
   {
     foo(event) {…},
     bar: capture(event => {…}),
   }
-])
-```
-
-Also, `events()` can support multiple targets, thanks to the `on()` function.
-
-```ts
-events(signal, [
-  on.click(button1, event => {…}),
-  on.click(button2, event => {…}),
 ])
 ```
