@@ -61,6 +61,16 @@ importers:
         specifier: ^4.20.6
         version: 4.20.6
 
+  packages/cookie:
+    dependencies:
+      '@remix-run/headers':
+        specifier: workspace:*
+        version: link:../headers
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+
   packages/fetch-proxy:
     dependencies:
       '@remix-run/headers':

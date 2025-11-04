@@ -42,6 +42,17 @@ describe('SetCookie', () => {
     assert.equal(header.httpOnly, true)
   })
 
+  it('initializes with httpOnly: false', () => {
+    let header = new SetCookie({
+      name: 'session',
+      value: 'abc123',
+      httpOnly: false,
+    })
+    assert.equal(header.name, 'session')
+    assert.equal(header.value, 'abc123')
+    assert.equal(header.httpOnly, false)
+  })
+
   it('initializes with another SetCookie', () => {
     let header = new SetCookie(
       new SetCookie('session=abc123; Domain=example.com; Path=/; Secure; HttpOnly'),
@@ -108,7 +119,7 @@ describe('SetCookie', () => {
 
     assert.equal(
       header.toString(),
-      'session=abc123; Domain=example.com; Path=/; Secure; HttpOnly; SameSite=Lax',
+      'session=abc123; Domain=example.com; HttpOnly; Path=/; SameSite=Lax; Secure',
     )
   })
 

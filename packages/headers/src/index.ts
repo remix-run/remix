@@ -6,7 +6,7 @@ export { type ContentDispositionInit, ContentDisposition } from './lib/content-d
 export { type ContentTypeInit, ContentType } from './lib/content-type.ts'
 export { type CookieInit, Cookie } from './lib/cookie.ts'
 export { type IfNoneMatchInit, IfNoneMatch } from './lib/if-none-match.ts'
-export { type SetCookieInit, SetCookie } from './lib/set-cookie.ts'
+export { type CookieProperties, type SetCookieInit, SetCookie } from './lib/set-cookie.ts'
 
 export {
   type SuperHeadersInit,
