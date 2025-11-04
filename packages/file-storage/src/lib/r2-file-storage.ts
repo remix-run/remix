@@ -38,7 +38,7 @@ export class R2FileStorage implements FileStorage {
 
     async put(key: string, file: File, options?: R2PutOptions): Promise<File> {
         let fileArray = await file.arrayBuffer()
-        await this.#r2.put(key, fileArray, {
+        let object = await this.#r2.put(key, fileArray, {
             httpMetadata: {
                 contentType: file.type
             },
@@ -48,11 +48,11 @@ export class R2FileStorage implements FileStorage {
                 size: file.size.toString()
             },
             ...options
-        })
+        }) as R2Object
 
-        return new File([fileArray], file.name, {
-            type: file.type,
-            lastModified: file.lastModified
+        return new File([fileArray], object.key, {
+            type: object.httpMetadata?.contentType,
+            lastModified: object.uploaded.getTime()
         }) as File
     }
 

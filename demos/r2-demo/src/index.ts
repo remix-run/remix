@@ -57,9 +57,89 @@ export default {
         <input type="text" id="up-key" placeholder="images/cat.jpg" required />
         <label>File</label>
         <input type="file" id="up-file" required />
+        <label>Storage Class</label>
+        <input type="text" id="storage-class" placeholder="storage class" />
+        <label>SSEC Key</label>
+        <input type="text" id="ssec-key-put" placeholder="32 bytes hex-encoded string" />
+        <div class="options">
+          <div class="options-title">Optional Parameters</div>
+          <ul>
+            <li>
+              <label>Checksums</label>
+              <ul class="range-nested">
+                <li>
+                  <label>MD5</label>
+                  <input type="text" id="checksum-md5" placeholder="md5 checksum" />
+                </li>
+                <li>
+                  <label>SHA-1</label>
+                  <input type="text" id="checksum-sha1" placeholder="sha1 checksum" />
+                </li>
+                <li>
+                  <label>SHA-256</label>
+                  <input type="text" id="checksum-sha256" placeholder="sha256 checksum" />
+                </li>
+                <li>
+                  <label>SHA-384</label>
+                  <input type="text" id="checksum-sha384" placeholder="sha384 checksum" />
+                </li>
+                <li>
+                  <label>SHA-512</label>
+                  <input type="text" id="checksum-sha512" placeholder="sha512 checksum" />
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
         <button>Upload</button>
       </form>
       <small class="mono" id="uploadMsg"></small>
+    </section>
+
+    <section class="card">
+      <h2>Set</h2>
+      <form id="setForm">
+        <label>Key</label>
+        <input type="text" id="set-key" placeholder="images/dog.jpg" required />
+        <label>File</label>
+        <input type="file" id="set-file" required />
+        <label>Storage Class</label>
+        <input type="text" id="set-storage-class" placeholder="storage class" />
+        <label>SSEC Key</label>
+        <input type="text" id="set-ssec-key" placeholder="32 bytes hex-encoded string" />
+        <div class="options">
+          <div class="options-title">Optional Parameters</div>
+          <ul>
+            <li>
+              <label>Checksums</label>
+              <ul class="range-nested">
+                <li>
+                  <label>MD5</label>
+                  <input type="text" id="set-checksum-md5" placeholder="md5 checksum" />
+                </li>
+                <li>
+                  <label>SHA-1</label>
+                  <input type="text" id="set-checksum-sha1" placeholder="sha1 checksum" />
+                </li>
+                <li>
+                  <label>SHA-256</label>
+                  <input type="text" id="set-checksum-sha256" placeholder="sha256 checksum" />
+                </li>
+                <li>
+                  <label>SHA-384</label>
+                  <input type="text" id="set-checksum-sha384" placeholder="sha384 checksum" />
+                </li>
+                <li>
+                  <label>SHA-512</label>
+                  <input type="text" id="set-checksum-sha512" placeholder="sha512 checksum" />
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <button>Set</button>
+      </form>
+      <small class="mono" id="setMsg"></small>
     </section>
 
     <section class="card">
@@ -161,9 +241,59 @@ export default {
       const fd = new FormData()
       fd.append('key', $('up-key').value)
       fd.append('file', $('up-file').files[0])
+      const storageClass = $('storage-class').value.trim()
+      const ssecKey = $('ssec-key-put').value.trim()
+      const md5 = $('checksum-md5').value.trim()
+      const sha1 = $('checksum-sha1').value.trim()
+      const sha256 = $('checksum-sha256').value.trim()
+      const sha384 = $('checksum-sha384').value.trim()
+      const sha512 = $('checksum-sha512').value.trim()
+      if (storageClass) fd.append('storage-class', storageClass)
+      if (ssecKey) fd.append('ssec-key-put', ssecKey)
+      if (md5) fd.append('checksum-md5', md5)
+      if (sha1) fd.append('checksum-sha1', sha1)
+      if (sha256) fd.append('checksum-sha256', sha256)
+      if (sha384) fd.append('checksum-sha384', sha384)
+      if (sha512) fd.append('checksum-sha512', sha512)
       const res = await fetch('/put', { method: 'PUT', body: fd })
-      $('uploadMsg').textContent = res.ok ? 'Uploaded ✔︎' : await res.text()
-      if (res.ok) e.target.reset()
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        window.open(url, '_blank')
+        $('uploadMsg').textContent = 'Uploaded ✔︎'
+        e.target.reset()
+      } else {
+        $('uploadMsg').textContent = await res.text()
+      }
+    })
+
+    // Set -> PUT /set
+    $('setForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const fd = new FormData()
+      fd.append('key', $('set-key').value)
+      fd.append('file', $('set-file').files[0])
+      const storageClass = $('set-storage-class').value.trim()
+      const ssecKey = $('set-ssec-key').value.trim()
+      const md5 = $('set-checksum-md5').value.trim()
+      const sha1 = $('set-checksum-sha1').value.trim()
+      const sha256 = $('set-checksum-sha256').value.trim()
+      const sha384 = $('set-checksum-sha384').value.trim()
+      const sha512 = $('set-checksum-sha512').value.trim()
+      if (storageClass) fd.append('storage-class', storageClass)
+      if (ssecKey) fd.append('ssec-key-put', ssecKey)
+      if (md5) fd.append('checksum-md5', md5)
+      if (sha1) fd.append('checksum-sha1', sha1)
+      if (sha256) fd.append('checksum-sha256', sha256)
+      if (sha384) fd.append('checksum-sha384', sha384)
+      if (sha512) fd.append('checksum-sha512', sha512)
+      const res = await fetch('/set', { method: 'PUT', body: fd })
+      if (res.ok) {
+        $('setMsg').textContent = await res.text()
+        e.target.reset()
+      } else {
+        $('setMsg').textContent = await res.text()
+      }
     })
 
     // Get / View -> open /{key} with options
@@ -235,8 +365,54 @@ export default {
       const key = form.get('key')?.toString()
       const file = form.get('file') as File | null
       if (!key || !file) return new Response('Missing key or file', { status: 400 })
-      await storage.put(key, file)
-      return new Response('ok')
+      const options: any = {}
+      const storageClass = form.get('storage-class')?.toString()
+      const ssecKey = form.get('ssec-key-put')?.toString()
+      const md5 = form.get('checksum-md5')?.toString()
+      const sha1 = form.get('checksum-sha1')?.toString()
+      const sha256 = form.get('checksum-sha256')?.toString()
+      const sha384 = form.get('checksum-sha384')?.toString()
+      const sha512 = form.get('checksum-sha512')?.toString()
+      if (storageClass) options.storageClass = storageClass
+      if (ssecKey) options.ssecKey = ssecKey
+      if (md5) options.md5 = md5
+      if (sha1) options.sha1 = sha1
+      if (sha256) options.sha256 = sha256
+      if (sha384) options.sha384 = sha384
+      if (sha512) options.sha512 = sha512
+      const uploadedFile = await storage.put(key, file, options)
+      return new Response(uploadedFile, {
+        headers: {
+          'Content-Type': uploadedFile.type,
+          'Content-Length': String(uploadedFile.size),
+        }
+      })
+    }
+
+    // Set
+    if (url.pathname === '/set' && request.method === 'PUT') {
+      const form = await request.formData()
+      const key = form.get('key')?.toString()
+      const file = form.get('file') as File | null
+      if (!key || !file) return new Response('Missing key or file', { status: 400 })
+      const options: any = {}
+      const storageClass = form.get('storage-class')?.toString()
+      const ssecKey = form.get('ssec-key-put')?.toString()
+      const md5 = form.get('checksum-md5')?.toString()
+      const sha1 = form.get('checksum-sha1')?.toString()
+      const sha256 = form.get('checksum-sha256')?.toString()
+      const sha384 = form.get('checksum-sha384')?.toString()
+      const sha512 = form.get('checksum-sha512')?.toString()
+      if (storageClass) options.storageClass = storageClass
+      if (ssecKey) options.ssecKey = ssecKey
+      if (md5) options.md5 = md5
+      if (sha1) options.sha1 = sha1
+      if (sha256) options.sha256 = sha256
+      if (sha384) options.sha384 = sha384
+      if (sha512) options.sha512 = sha512
+      const hasOptions = storageClass || ssecKey || md5 || sha1 || sha256 || sha384 || sha512
+      await storage.set(key, file, hasOptions ? options : undefined)
+      return new Response('uploaded')
     }
 
     // Delete 
