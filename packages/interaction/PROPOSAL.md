@@ -11,7 +11,7 @@ I believe these goals reflect the main concerns people have about the latest Eve
 Change `defineInteraction` to return a type-safe function, instead of a string.
 
 ```ts
-import { defineInteraction, on, type Interaction } from '@remix-run/interaction'
+import { defineInteraction, type Interaction } from '@remix-run/interaction'
 
 // Assume `Press` and `PressEvent` are identical to what you see in ./src/lib/interactions/press.ts
 const longPress = defineInteraction<PressEvent>('rmx:long-press', Press)
