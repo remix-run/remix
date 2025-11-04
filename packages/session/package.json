@@ -47,7 +47,7 @@
     }
   },
   "dependencies": {
-    "@remix-run/cookie": "workspace:^"
+    "@remix-run/cookie": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",

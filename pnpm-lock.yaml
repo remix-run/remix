@@ -393,7 +393,7 @@ importers:
   packages/session:
     dependencies:
       '@remix-run/cookie':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../cookie
     devDependencies:
       '@types/node':
