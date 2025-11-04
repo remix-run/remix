@@ -4,7 +4,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { describe, it } from 'node:test'
 
-import { createFileSessionStorage, getFile } from './file-storage.ts'
+import { createFileSessionStorage, getFile } from './file.ts'
 
 function getCookieFromSetCookie(setCookie: string): string {
   return setCookie.split(/;\s*/)[0]

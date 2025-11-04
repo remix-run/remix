@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { createCookieSessionStorage, createMemorySessionStorage } from '@remix-run/session'
+import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
+import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 
 import { createRoutes } from '../route-map.ts'
 import { createRouter } from '../router.ts'

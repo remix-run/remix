@@ -1,4 +1,5 @@
-import { createCookieSessionStorage, Session, type SessionStorage } from '@remix-run/session'
+import { Session, type SessionStorage } from '@remix-run/session'
+import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import type { Middleware } from '../middleware.ts'
 
 export interface SessionOptions {

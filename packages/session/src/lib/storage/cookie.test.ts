@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createCookieSessionStorage } from './cookie-storage.ts'
+import { createCookieSessionStorage } from './cookie.ts'
 
 function getCookieFromSetCookie(setCookie: string): string {
   return setCookie.split(/;\s*/)[0]

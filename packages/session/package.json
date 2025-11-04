@@ -20,7 +20,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./cookie-storage": "./src/cookie-storage.ts",
     "./file-storage": "./src/file-storage.ts",
+    "./memory-storage": "./src/memory-storage.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -29,9 +31,17 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./cookie-storage": {
+        "types": "./dist/cookie-storage.d.ts",
+        "default": "./dist/cookie-storage.js"
+      },
       "./file-storage": {
         "types": "./dist/file-storage.d.ts",
         "default": "./dist/file-storage.js"
+      },
+      "./memory-storage": {
+        "types": "./dist/memory-storage.d.ts",
+        "default": "./dist/memory-storage.js"
       },
       "./package.json": "./package.json"
     }
@@ -44,9 +54,11 @@
     "esbuild": "^0.25.10"
   },
   "scripts": {
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:file-storage",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:cookie-storage && pnpm run build:file-storage && pnpm run build:memory-storage",
     "build:index": "esbuild src/index.ts --bundle --external:@remix-run/cookie --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:cookie-storage": "esbuild src/cookie-storage.ts --bundle --external:@remix-run/session --outfile=dist/cookie-storage.js --format=esm --platform=neutral --sourcemap",
     "build:file-storage": "esbuild src/file-storage.ts --bundle --external:@remix-run/session --outfile=dist/file-storage.js --format=esm --platform=node --sourcemap",
+    "build:memory-storage": "esbuild src/memory-storage.ts --bundle --external:@remix-run/session --outfile=dist/memory-storage.js --format=esm --platform=neutral --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",
     "prepublishOnly": "pnpm run build",
