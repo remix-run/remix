@@ -335,6 +335,9 @@ importers:
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/node-fetch-server/bench:
     dependencies:

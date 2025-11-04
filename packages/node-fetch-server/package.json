@@ -32,7 +32,8 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^24.6.0"
+    "@types/node": "^24.6.0",
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "bench": "bash ./bench/runner.sh",
