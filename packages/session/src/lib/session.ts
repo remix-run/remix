@@ -14,11 +14,10 @@ export type SessionData = Record<string, unknown>
 export class Session {
   #id: string
   #map: Map<keyof SessionData, SessionData[keyof SessionData]>
-  #status: 'new' | 'clean' | 'dirty' | 'destroyed'
+  #status: 'clean' | 'dirty' | 'destroyed'
 
   constructor(initialData?: SessionData | null, id?: string) {
-    // Brand new sessions start in a dirty state to force an initial commit
-    this.#status = initialData == null && id == null ? 'new' : 'clean'
+    this.#status = 'clean'
     this.#id = id ?? ''
     this.#map = new Map(initialData ? Object.entries(initialData) : undefined)
   }

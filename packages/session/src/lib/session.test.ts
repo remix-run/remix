@@ -46,10 +46,10 @@ describe('Session', () => {
 
   it('tracks session status for newly created sessions', () => {
     let session = new Session()
-    assert.equal(session.status, 'new')
+    assert.equal(session.status, 'clean')
 
     session.get('user')
-    assert.equal(session.status, 'new')
+    assert.equal(session.status, 'clean')
 
     session.set('user', 'mjackson')
     assert.equal(session.status, 'dirty')
