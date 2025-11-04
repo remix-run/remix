@@ -62,16 +62,14 @@ importers:
         version: 4.20.6
 
   packages/cookie:
+    dependencies:
+      '@remix-run/headers':
+        specifier: workspace:*
+        version: link:../headers
     devDependencies:
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
-      cookie-es:
-        specifier: ^2.0.0
-        version: 2.0.0
-      esbuild:
-        specifier: ^0.25.10
-        version: 0.25.10
 
   packages/fetch-proxy:
     dependencies:
@@ -1759,9 +1757,6 @@ packages:
   content-type@1.0.5:
     resolution: {integrity: sha512-nTjqfcBFEipKdXCv4YDQWCfmcLZKm81ldF0pAopTvyrFGVbcR6P/VAAd5G7N+0tTr8QqiU0tFadD6FK4NtJwOA==}
     engines: {node: '>= 0.6'}
-
-  cookie-es@2.0.0:
-    resolution: {integrity: sha512-RAj4E421UYRgqokKUmotqAwuplYw15qtdXfY+hGzgCJ/MBjCVZcSoHK/kH9kocfjRjcDME7IiDWR/1WX1TM2Pg==}
 
   cookie-signature@1.0.6:
     resolution: {integrity: sha512-QADzlaHc8icV8I7vbaJXJwod9HWYp8uCqf1xa4OfNu1T7JVxQIrUgOWtHdNDtPiywmFbiS12VjotIXLrKM3orQ==}
@@ -4219,8 +4214,6 @@ snapshots:
       safe-buffer: 5.2.1
 
   content-type@1.0.5: {}
-
-  cookie-es@2.0.0: {}
 
   cookie-signature@1.0.6: {}
 

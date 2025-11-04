@@ -1,13 +1,16 @@
+import { SetCookie } from '@remix-run/headers'
+
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { Cookie } from './cookie.ts'
 
 function getCookieFromSetCookie(setCookie: string): string {
-  return setCookie.split(/;\s*/)[0]
+  let header = new SetCookie(setCookie)
+  return header.name + '=' + header.value
 }
 
-describe('cookies', () => {
+describe('cookie', () => {
   it('parses/serializes empty string values', async () => {
     let cookie = new Cookie('my-cookie')
     let setCookie = await cookie.serialize('')
@@ -105,19 +108,17 @@ describe('cookies', () => {
     assert.deepEqual(oldValue, newValue)
   })
 
-  it('makes the default secrets to be an empty array', async () => {
+  it('is not signed by default', async () => {
     let cookie = new Cookie('my-cookie')
 
     assert.equal(cookie.isSigned, false)
 
-    let cookie2 = new Cookie('my-cookie2', {
-      secrets: undefined,
-    })
+    let cookie2 = new Cookie('my-cookie2', { secrets: undefined })
 
     assert.equal(cookie2.isSigned, false)
   })
 
-  it('makes the default path of cookies to be /', async () => {
+  it('uses Path=/ by default', async () => {
     let cookie = new Cookie('my-cookie')
 
     let setCookie = await cookie.serialize('hello world')
@@ -129,42 +130,5 @@ describe('cookies', () => {
       path: '/about',
     })
     assert.ok(setCookie2.includes('Path=/about'))
-  })
-
-  it('supports the Priority attribute', async () => {
-    let cookie = new Cookie('my-cookie')
-
-    let setCookie = await cookie.serialize('hello world')
-    assert.ok(!setCookie.includes('Priority'))
-
-    let cookie2 = new Cookie('my-cookie2')
-
-    let setCookie2 = await cookie2.serialize('hello world', {
-      priority: 'high',
-    })
-    assert.ok(setCookie2.includes('Priority=High'))
-  })
-
-  describe('warnings when providing options you may not want to', () => {
-    it('warns against using `expires` when creating the cookie instance', async () => {
-      let consoleCalls: string[] = []
-      let originalWarn = console.warn
-      console.warn = (...args: any[]) => {
-        consoleCalls.push(args.join(' '))
-      }
-
-      try {
-        new Cookie('my-cookie', { expires: new Date(Date.now() + 60_000) })
-        assert.equal(consoleCalls.length, 1)
-        assert.ok(consoleCalls[0].includes('The "my-cookie" cookie has an "expires" property set'))
-        assert.ok(
-          consoleCalls[0].includes(
-            'Instead, you should set the expires value when serializing the cookie',
-          ),
-        )
-      } finally {
-        console.warn = originalWarn
-      }
-    })
   })
 })
