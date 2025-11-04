@@ -60,7 +60,8 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
     let proxyHeaders = new Headers(request.headers)
     if (xForwardedHeaders) {
       proxyHeaders.append('X-Forwarded-Proto', url.protocol.replace(/:$/, ''))
-      proxyHeaders.append('X-Forwarded-Host', url.host)
+      proxyHeaders.append('X-Forwarded-Host', url.hostname)
+      proxyHeaders.append('X-Forwarded-Port', url.port)
     }
 
     let proxyInit: RequestInit = {
