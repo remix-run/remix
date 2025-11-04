@@ -60,6 +60,21 @@ If the `...` spread syntax feels jarring to you, note that you can nest it in an
 >Click me</button>
 ```
 
+**Alternatively**, people might appreciate a special `on` property for such scenarios:
+
+```tsx
+<button
+  events={{
+    click(event) {…},
+    on: [
+      longPress(event => {…}),
+    ],
+  }}
+>Click me</button>
+```
+
+I don't have an opinion on which is better.
+
 ## 2. Advanced `on()` function
 
 Repurpose the `on()` function to be a type-safe event descriptor factory.
