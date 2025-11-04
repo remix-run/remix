@@ -2,6 +2,10 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
+
 ## v0.15.0 (2025-11-04)
 
 - Add support for `httpOnly: false` in `SetCookie` constructor
