@@ -2,6 +2,9 @@ This proposal has the following goals:
 
 - Avoid global registry for custom “interactions”
 - Avoid `[interaction](event) {…}` syntax for interaction listening
+- Restore support for “event descriptor factories” (e.g. `on.click(fn)`) while keeping the new string-keyed API (e.g. `{ click: fn }`)
+
+I believe these goals reflect the main concerns people have about the latest Events API (`@remix-run/interaction@0.1.0`).
 
 ## 1. Introduce `Interaction` type
 
