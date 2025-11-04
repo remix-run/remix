@@ -2,6 +2,12 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Add support for `httpOnly: false` in `SetCookie` constructor
+- Export `CookieProperties` type with all cookie properties
+- Add `Partitioned` support to `SetCookie`
+
 ## v0.14.0 (2025-10-22)
 
 - BREAKING CHANGE: Removed CommonJS build. This package is now ESM-only. If you need to use this package in a CommonJS project, you will need to use dynamic `import()`.
@@ -12,7 +18,7 @@ This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/ma
 
 ## v0.12.0 (2025-07-18)
 
-- Renamed package from `@mjackson/headers` to `@remix-run/headers`
+- Rename package from `@mjackson/headers` to `@remix-run/headers`
 
 ## v0.11.1 (2025-06-06)
 
