@@ -65,7 +65,7 @@ If the `...` spread syntax feels jarring to you, note that you can nest it in an
 Repurpose the `on()` function to be a type-safe event descriptor factory.
 
 ```ts
-import { on } from '@remix-run/interaction'
+import { on, capture } from '@remix-run/interaction'
 
 const result = on(button, {
   click(event) {
@@ -175,7 +175,7 @@ The current `on()` function should be renamed to `events()`.
 It should support the same values as the new JSX `events` prop.
 
 ```ts
-import { events, on } from '@remix-run/interaction'
+import { events, on, capture } from '@remix-run/interaction'
 
 // Basic API
 events(target, signal, {
