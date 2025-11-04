@@ -3,12 +3,7 @@ import { Cookie } from '@remix-run/cookie'
 
 import { warnOnce } from './warnings.ts'
 
-/**
- * An object of name/value pairs to be used in the session.
- */
-export interface SessionData {
-  [name: string]: unknown
-}
+export type SessionData = Record<string, unknown>
 
 /**
  * Session persists data across HTTP requests.
@@ -16,19 +11,16 @@ export interface SessionData {
  * Note: This class is typically not invoked directly by application code.
  * Instead, use a `SessionStorage` object's `getSession` method.
  */
-export class Session<Data = SessionData, FlashData = Data> {
+export class Session {
   #id: string
-  #map: Map<keyof Data | FlashDataKey<keyof FlashData & string>, unknown>
+  #map: Map<keyof SessionData, SessionData[keyof SessionData]>
   #status: 'new' | 'clean' | 'dirty' | 'destroyed'
 
-  constructor(initialData?: Partial<Data> | null, id?: string) {
+  constructor(initialData?: SessionData | null, id?: string) {
     // Brand new sessions start in a dirty state to force an initial commit
     this.#status = initialData == null && id == null ? 'new' : 'clean'
     this.#id = id ?? ''
-    this.#map = new Map(initialData ? Object.entries(initialData) : undefined) as Map<
-      keyof Data | FlashDataKey<keyof FlashData & string>,
-      unknown
-    >
+    this.#map = new Map(initialData ? Object.entries(initialData) : undefined)
   }
 
   /**
@@ -57,37 +49,28 @@ export class Session<Data = SessionData, FlashData = Data> {
    * session data to persist.
    */
   get data() {
-    return Object.fromEntries(this.#map) as FlashSessionData<Data, FlashData>
+    return Object.fromEntries(this.#map)
   }
 
   /**
    * Returns `true` if the session has a value for the given `name`, `false`
    * otherwise.
    */
-  has(name: (keyof Data | keyof FlashData) & string) {
-    return (
-      this.#map.has(name as keyof Data) || this.#map.has(flash(name as keyof FlashData & string))
-    )
+  has(name: string) {
+    return this.#map.has(name) || this.#map.has(flash(name))
   }
 
   /**
    * Returns the value for the given `name` in this session.
    */
-  get<Key extends (keyof Data | keyof FlashData) & string>(
-    name: Key,
-  ):
-    | (Key extends keyof Data ? Data[Key] : undefined)
-    | (Key extends keyof FlashData ? FlashData[Key] : undefined)
-    | undefined {
-    if (this.#map.has(name as keyof Data)) {
-      return this.#map.get(name as keyof Data) as Key extends keyof Data ? Data[Key] : undefined
+  get(name: string) {
+    if (this.#map.has(name)) {
+      return this.#map.get(name)
     }
 
-    let flashName = flash(name as keyof FlashData & string)
+    let flashName = flash(name)
     if (this.#map.has(flashName)) {
-      let value = this.#map.get(flashName) as Key extends keyof FlashData
-        ? FlashData[Key]
-        : undefined
+      let value = this.#map.get(flashName)
       this.#map.delete(flashName)
       this.#status = 'dirty'
       return value
@@ -99,7 +82,7 @@ export class Session<Data = SessionData, FlashData = Data> {
   /**
    * Sets a value in the session for the given `name`.
    */
-  set<Key extends keyof Data & string>(name: Key, value: Data[Key]) {
+  set(name: string, value: unknown) {
     this.#throwIfDestroyed()
     this.#map.set(name, value)
     this.#status = 'dirty'
@@ -109,7 +92,7 @@ export class Session<Data = SessionData, FlashData = Data> {
    * Sets a value in the session that is only valid until the next `get()`.
    * This can be useful for temporary values, like error messages.
    */
-  flash<Key extends keyof FlashData & string>(name: Key, value: FlashData[Key]) {
+  flash(name: string, value: unknown) {
     this.#throwIfDestroyed()
     this.#map.set(flash(name), value)
     this.#status = 'dirty'
@@ -118,7 +101,7 @@ export class Session<Data = SessionData, FlashData = Data> {
   /**
    * Removes a value from the session.
    */
-  unset(name: keyof Data & string) {
+  unset(name: string) {
     this.#throwIfDestroyed()
     this.#map.delete(name)
     this.#status = 'dirty'
@@ -139,13 +122,7 @@ export class Session<Data = SessionData, FlashData = Data> {
   }
 }
 
-export type FlashSessionData<Data, FlashData> = Partial<
-  Data & {
-    [Key in keyof FlashData as FlashDataKey<Key & string>]: FlashData[Key]
-  }
->
-type FlashDataKey<Key extends string> = `__flash_${Key}__`
-function flash<Key extends string>(name: Key): FlashDataKey<Key> {
+function flash(name: string): string {
   return `__flash_${name}__`
 }
 
@@ -156,34 +133,25 @@ function flash<Key extends string>(name: Key): FlashDataKey<Key> {
  * A SessionStorage creates Session objects using a `Cookie` header as input.
  * Then, later it generates the `Set-Cookie` header to be used in the response.
  */
-export interface SessionStorage<Data = SessionData, FlashData = Data> {
+export interface SessionStorage {
   /**
    * Parses a Cookie header from a HTTP request and returns the associated
    * Session. If there is no session associated with the cookie, this will
    * return a new Session with no data.
    */
-  getSession: (
-    cookieHeader?: string | null,
-    options?: CookieParseOptions,
-  ) => Promise<Session<Data, FlashData>>
+  getSession: (cookieHeader?: string | null, options?: CookieParseOptions) => Promise<Session>
 
   /**
    * Stores all data in the Session and returns the Set-Cookie header to be
    * used in the HTTP response.
    */
-  commitSession: (
-    session: Session<Data, FlashData>,
-    options?: CookieSerializeOptions,
-  ) => Promise<string>
+  commitSession: (session: Session, options?: CookieSerializeOptions) => Promise<string>
 
   /**
    * Deletes all data associated with the Session and returns the Set-Cookie
    * header to be used in the HTTP response.
    */
-  destroySession: (
-    session: Session<Data, FlashData>,
-    options?: CookieSerializeOptions,
-  ) => Promise<string>
+  destroySession: (session: Session, options?: CookieSerializeOptions) => Promise<string>
 }
 
 /**
@@ -195,7 +163,7 @@ export interface SessionStorage<Data = SessionData, FlashData = Data> {
  * database or on disk. A set of create, read, update, and delete operations
  * are provided for managing the session data.
  */
-export interface SessionIdStorageStrategy<Data = SessionData, FlashData = Data> {
+export interface SessionIdStorageStrategy {
   /**
    * The Cookie used to store the session id, or options used to automatically
    * create one.
@@ -205,17 +173,17 @@ export interface SessionIdStorageStrategy<Data = SessionData, FlashData = Data> 
   /**
    * Creates a new record with the given data and returns the session id.
    */
-  createData: (data: FlashSessionData<Data, FlashData>, expires?: Date) => Promise<string>
+  createData: (data: SessionData, expires?: Date) => Promise<string>
 
   /**
    * Returns data for a given session id, or `null` if there isn't any.
    */
-  readData: (id: string) => Promise<FlashSessionData<Data, FlashData> | null>
+  readData: (id: string) => Promise<SessionData | null>
 
   /**
    * Updates data for the given session id.
    */
-  updateData: (id: string, data: FlashSessionData<Data, FlashData>, expires?: Date) => Promise<void>
+  updateData: (id: string, data: SessionData, expires?: Date) => Promise<void>
 
   /**
    * Deletes data for a given session id from the data store.
@@ -229,13 +197,13 @@ export interface SessionIdStorageStrategy<Data = SessionData, FlashData = Data> 
  * Note: This is a low-level API that should only be used if none of the
  * existing session storage options meet your requirements.
  */
-export function createSessionStorage<Data = SessionData, FlashData = Data>({
+export function createSessionStorage({
   cookie: cookieArg,
   createData,
   readData,
   updateData,
   deleteData,
-}: SessionIdStorageStrategy<Data, FlashData>): SessionStorage<Data, FlashData> {
+}: SessionIdStorageStrategy): SessionStorage {
   let cookie =
     cookieArg instanceof Cookie ? cookieArg : new Cookie(cookieArg?.name || '__session', cookieArg)
 
@@ -246,9 +214,9 @@ export function createSessionStorage<Data = SessionData, FlashData = Data>({
       let id = cookieHeader && (await cookie.parse(cookieHeader, options))
       if (typeof id === 'string' && id !== '') {
         let data = await readData(id)
-        return new Session<Data, FlashData>(data, id)
+        return new Session(data, id)
       }
-      return new Session<Data, FlashData>()
+      return new Session()
     },
     async commitSession(session, options) {
       let { id, data } = session

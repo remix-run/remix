@@ -1,9 +1,4 @@
-import type {
-  SessionData,
-  SessionStorage,
-  SessionIdStorageStrategy,
-  FlashSessionData,
-} from '../session.ts'
+import type { SessionStorage, SessionIdStorageStrategy, SessionData } from '../session.ts'
 import { createSessionStorage } from '../session.ts'
 
 interface MemorySessionStorageOptions {
@@ -21,10 +16,10 @@ interface MemorySessionStorageOptions {
  * Note: This storage does not scale beyond a single process, so it is not
  * suitable for most production scenarios.
  */
-export function createMemorySessionStorage<Data = SessionData, FlashData = Data>({
+export function createMemorySessionStorage({
   cookie,
-}: MemorySessionStorageOptions = {}): SessionStorage<Data, FlashData> {
-  let map = new Map<string, { data: FlashSessionData<Data, FlashData>; expires?: Date }>()
+}: MemorySessionStorageOptions = {}): SessionStorage {
+  let map = new Map<string, { data: SessionData; expires?: Date }>()
 
   return createSessionStorage({
     cookie,

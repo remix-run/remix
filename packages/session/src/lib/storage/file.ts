@@ -1,6 +1,6 @@
 import { promises as fsp } from 'node:fs'
 import * as path from 'node:path'
-import type { SessionStorage, SessionIdStorageStrategy, SessionData } from '@remix-run/session'
+import type { SessionStorage, SessionIdStorageStrategy } from '@remix-run/session'
 import { createSessionStorage } from '@remix-run/session'
 
 interface FileSessionStorageOptions {
@@ -22,10 +22,10 @@ interface FileSessionStorageOptions {
  * The advantage of using this instead of cookie session storage is that
  * files may contain much more data than cookies.
  */
-export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
+export function createFileSessionStorage({
   cookie,
   dir,
-}: FileSessionStorageOptions): SessionStorage<Data, FlashData> {
+}: FileSessionStorageOptions): SessionStorage {
   return createSessionStorage({
     cookie,
     async createData(data, expires) {

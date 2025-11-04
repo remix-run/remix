@@ -1,5 +1,5 @@
 import { Cookie } from '@remix-run/cookie'
-import type { SessionStorage, SessionIdStorageStrategy, SessionData } from '../session.ts'
+import type { SessionStorage, SessionIdStorageStrategy } from '../session.ts'
 import { warnOnceAboutSigningSessionCookie, Session } from '../session.ts'
 
 interface CookieSessionStorageOptions {
@@ -19,9 +19,9 @@ interface CookieSessionStorageOptions {
  * also has the limitation that serialized session data may not exceed the
  * browser's maximum cookie size. Trade-offs!
  */
-export function createCookieSessionStorage<Data = SessionData, FlashData = Data>({
+export function createCookieSessionStorage({
   cookie: cookieArg,
-}: CookieSessionStorageOptions = {}): SessionStorage<Data, FlashData> {
+}: CookieSessionStorageOptions = {}): SessionStorage {
   let cookie =
     cookieArg instanceof Cookie ? cookieArg : new Cookie(cookieArg?.name || '__session', cookieArg)
 
