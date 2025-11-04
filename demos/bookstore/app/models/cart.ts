@@ -16,12 +16,14 @@ export interface Cart {
 let nextCartId = 1
 const carts = new Map<string, Cart>()
 
-export function createCartIfNotExists(session: Session): Cart {
-  let cartId = session.get('cartId')
-  if (cartId) {
-    let cart = carts.get(cartId)
+export function createCartIfNotExists(session: Session): { cartId: string; cart: Cart } {
+  let sessionCartId = session.get('cartId')
+  let cartId: string
+  if (typeof sessionCartId === 'string') {
+    let cart = carts.get(sessionCartId)
+    cartId = sessionCartId
     if (cart) {
-      return cart
+      return { cartId, cart }
     }
   } else {
     cartId = String(nextCartId++)
@@ -30,7 +32,7 @@ export function createCartIfNotExists(session: Session): Cart {
 
   let cart = { items: [] }
   carts.set(cartId, cart)
-  return cart
+  return { cartId, cart }
 }
 
 export function getCart(cartId: string): Cart {

@@ -22,7 +22,7 @@ export default {
       }
 
       let cartId = session.get('cartId')
-      let cart = cartId ? getCart(cartId) : null
+      let cart = typeof cartId === 'string' ? getCart(cartId) : null
       let inCart = cart?.items.some((item) => item.slug === params.slug) === true
 
       return render(<BookCard book={book} inCart={inCart} />)

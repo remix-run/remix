@@ -11,14 +11,14 @@ import type { User } from './models/users.ts'
 import { getCurrentUser } from './utils/context.ts'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
-import { ensureCart } from './middleware/cart.ts'
+import { CART_ID_KEY, ensureCart } from './middleware/cart.ts'
 
 export default {
   middleware: [loadAuth],
   handlers: {
     index({ session }) {
       let cartId = session.get('cartId')
-      let cart = cartId ? getCart(cartId) : null
+      let cart = typeof cartId === 'string' ? getCart(cartId) : null
       let total = cart ? getCartTotal(cart) : 0
 
       let user: User | null = null
@@ -139,7 +139,7 @@ export default {
     api: {
       middleware: [ensureCart],
       handlers: {
-        async add({ session, formData }) {
+        async add({ storage, formData }) {
           // Simulate network latency
           await new Promise((resolve) => setTimeout(resolve, 1000))
 
@@ -150,7 +150,7 @@ export default {
             return new Response('Book not found', { status: 404 })
           }
 
-          addToCart(session.get('cartId')!, book.id, book.slug, book.title, book.price, 1)
+          addToCart(storage.get(CART_ID_KEY), book.id, book.slug, book.title, book.price, 1)
 
           if (formData.get('redirect') === 'none') {
             return new Response(null, { status: 204 })
@@ -159,11 +159,11 @@ export default {
           return redirect(routes.cart.index.href())
         },
 
-        async update({ session, formData }) {
+        async update({ storage, formData }) {
           let bookId = formData.get('bookId')?.toString() ?? ''
           let quantity = parseInt(formData.get('quantity')?.toString() ?? '1', 10)
 
-          updateCartItem(session.get('cartId')!, bookId, quantity)
+          updateCartItem(storage.get(CART_ID_KEY), bookId, quantity)
 
           if (formData.get('redirect') === 'none') {
             return new Response(null, { status: 204 })
@@ -172,13 +172,13 @@ export default {
           return redirect(routes.cart.index.href())
         },
 
-        async remove({ session, formData }) {
+        async remove({ storage, formData }) {
           // Simulate network latency
           await new Promise((resolve) => setTimeout(resolve, 1000))
 
           let bookId = formData.get('bookId')?.toString() ?? ''
 
-          removeFromCart(session.get('cartId')!, bookId)
+          removeFromCart(storage.get(CART_ID_KEY), bookId)
 
           if (formData.get('redirect') === 'none') {
             return new Response(null, { status: 204 })

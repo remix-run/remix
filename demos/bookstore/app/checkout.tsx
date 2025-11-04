@@ -14,7 +14,7 @@ export default {
   handlers: {
     index({ session }) {
       let cartId = session.get('cartId')
-      let cart = cartId ? getCart(cartId) : null
+      let cart = typeof cartId === 'string' ? getCart(cartId) : null
       let total = cart ? getCartTotal(cart) : 0
 
       if (!cart || cart.items.length === 0) {
@@ -110,7 +110,8 @@ export default {
 
     async action({ session, formData }) {
       let user = getCurrentUser()
-      let cartId = session.get('cartId')
+      let sessionCartId = session.get('cartId')
+      let cartId = typeof sessionCartId === 'string' ? sessionCartId : null
       let cart = cartId ? getCart(cartId) : null
 
       if (!cartId || !cart || cart.items.length === 0) {

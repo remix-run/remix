@@ -10,5 +10,6 @@ export function logout(session: Session): void {
 }
 
 export function getUserIdFromSession(session: Session): string | undefined {
-  return session.get('userId')
+  let userId = session.get('userId')
+  return typeof userId === 'string' ? userId : undefined
 }
