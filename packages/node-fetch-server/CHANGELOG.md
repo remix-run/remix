@@ -2,6 +2,10 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Use `tsc` directly instead of `esbuild` to build the package. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
+
 ## v0.11.0 (2025-10-22)
 
 - BREAKING CHANGE: Removed CommonJS build. This package is now ESM-only. If you need to use this package in a CommonJS project, you will need to use dynamic `import()`.
