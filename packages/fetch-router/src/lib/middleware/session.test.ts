@@ -28,9 +28,10 @@ describe('sessions', () => {
       },
     })
 
-    // No session cookie created if session is unused
     let response = await router.fetch('https://remix.run')
+    // The context.session instance is "usable"
     assert.equal(await response.text(), 'Home: Remix')
+    // But without a middleware nothing will ever set the cookie
     assert.equal(response.headers.has('Set-Cookie'), false)
   })
 
