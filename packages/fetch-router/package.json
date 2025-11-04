@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/fetch-router",
-  "version": "0.6.0",
+  "version": "0.8.0",
   "description": "A minimal, composable router for the web Fetch API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -22,8 +22,11 @@
   "exports": {
     ".": "./src/index.ts",
     "./file-handler": "./src/file-handler.ts",
+    "./form-data-middleware": "./src/form-data-middleware.ts",
     "./fs-file-resolver": "./src/fs-file-resolver.ts",
     "./logger-middleware": "./src/logger-middleware.ts",
+    "./method-override-middleware": "./src/method-override-middleware.ts",
+    "./response-helpers": "./src/response-helpers.ts",
     "./static-middleware": "./src/static-middleware.ts",
     "./package.json": "./package.json"
   },
@@ -37,6 +40,10 @@
         "types": "./dist/file-handler.d.ts",
         "default": "./dist/file-handler.js"
       },
+      "./form-data-middleware": {
+        "types": "./dist/form-data-middleware.d.ts",
+        "default": "./dist/form-data-middleware.js"
+      },
       "./fs-file-resolver": {
         "types": "./dist/fs-file-resolver.d.ts",
         "default": "./dist/fs-file-resolver.js"
@@ -44,6 +51,14 @@
       "./logger-middleware": {
         "types": "./dist/logger-middleware.d.ts",
         "default": "./dist/logger-middleware.js"
+      },
+      "./method-override-middleware": {
+        "types": "./dist/method-override-middleware.d.ts",
+        "default": "./dist/method-override-middleware.js"
+      },
+      "./response-helpers": {
+        "types": "./dist/response-helpers.d.ts",
+        "default": "./dist/response-helpers.js"
       },
       "./static-middleware": {
         "types": "./dist/static-middleware.d.ts",
@@ -54,20 +69,25 @@
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
-    "esbuild": "^0.25.10"
+    "esbuild": "^0.25.10",
+    "tsx": "^4.20.6"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@remix-run/form-data-parser": "workspace:*",
-    "@remix-run/route-pattern": "workspace:*",
     "@remix-run/headers": "workspace:*",
-    "@remix-run/lazy-file": "workspace:*"
+    "@remix-run/html-template": "workspace:*",
+    "@remix-run/lazy-file": "workspace:*",
+    "@remix-run/route-pattern": "workspace:*"
   },
   "scripts": {
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:file-handler && pnpm run build:fs-file-resolver && pnpm run build:logger-middleware && pnpm run build:static-middleware",
-    "build:index": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:index && pnpm run build:file-handler && pnpm run build:form-data-middleware && pnpm run build:fs-file-resolver && pnpm run build:logger-middleware && pnpm run build:method-override-middleware && pnpm run build:response-helpers && pnpm run build:static-middleware",
+    "build:index": "esbuild src/index.ts --bundle --external:@remix-run/form-data-parser --external:@remix-run/headers --external:@remix-run/route-pattern --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
     "build:file-handler": "esbuild src/file-handler.ts --bundle --outfile=dist/file-handler.js --format=esm --platform=neutral --sourcemap",
+    "build:form-data-middleware": "esbuild src/form-data-middleware.ts --bundle --outfile=dist/form-data-middleware.js --format=esm --platform=neutral --sourcemap",
     "build:fs-file-resolver": "esbuild src/fs-file-resolver.ts --bundle --outfile=dist/fs-file-resolver.js --format=esm --platform=node --sourcemap",
     "build:logger-middleware": "esbuild src/logger-middleware.ts --bundle --outfile=dist/logger-middleware.js --format=esm --platform=neutral --sourcemap",
+    "build:method-override-middleware": "esbuild src/method-override-middleware.ts --bundle --outfile=dist/method-override-middleware.js --format=esm --platform=neutral --sourcemap",
+    "build:response-helpers": "esbuild src/response-helpers.ts --bundle --outfile=dist/response-helpers.js --format=esm --platform=neutral --sourcemap",
     "build:static-middleware": "esbuild src/static-middleware.ts --bundle --outfile=dist/static-middleware.js --format=esm --platform=node --sourcemap",
     "build:types": "tsc --project tsconfig.build.json",
     "clean": "rm -rf dist",

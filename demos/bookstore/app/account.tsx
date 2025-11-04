@@ -1,5 +1,5 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
-import { redirect } from '@remix-run/fetch-router'
+import { redirect } from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../routes.ts'
 import { Layout } from './layout.tsx'
@@ -11,7 +11,7 @@ import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  use: [requireAuth],
+  middleware: [requireAuth],
   handlers: {
     index() {
       let user = getCurrentUser()
@@ -121,7 +121,7 @@ export default {
 
         updateUser(user.id, updateData)
 
-        return redirect(routes.account.index)
+        return redirect(routes.account.index.href())
       },
     },
 

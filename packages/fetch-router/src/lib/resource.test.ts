@@ -1,13 +1,18 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { ResourceMethods, createResource, ResourcesMethods, createResources } from './resource.ts'
-import { Route } from './route-map.ts'
+import {
+  ResourceMethods,
+  createResource as resource,
+  ResourcesMethods,
+  createResources as resources,
+} from './resource.ts'
+import { createRoutes as route, Route } from './route-map.ts'
 import type { Assert, IsEqual } from './type-utils.ts'
 
 describe('createResource', () => {
   it('creates a resource', () => {
-    let book = createResource('book')
+    let book = resource('book')
 
     type T = [
       Assert<
@@ -37,7 +42,7 @@ describe('createResource', () => {
   })
 
   it('creates a resource with only option', () => {
-    let book = createResource('book', { only: ['show', 'update'] })
+    let book = resource('book', { only: ['show', 'update'] })
 
     type T = [
       Assert<
@@ -59,7 +64,7 @@ describe('createResource', () => {
   })
 
   it('creates a resource with custom route names', () => {
-    let book = createResource('book', {
+    let book = resource('book', {
       names: {
         show: 'view',
         new: 'newForm',
@@ -99,7 +104,7 @@ describe('createResource', () => {
   })
 
   it('creates a resource with partial custom route names', () => {
-    let book = createResource('book', {
+    let book = resource('book', {
       names: {
         show: 'view',
         create: 'store',
@@ -131,7 +136,7 @@ describe('createResource', () => {
   })
 
   it('creates a resource with custom route names and only option', () => {
-    let book = createResource('book', {
+    let book = resource('book', {
       only: ['show', 'create'],
       names: {
         show: 'view',
@@ -164,7 +169,7 @@ describe('createResource', () => {
 
 describe('createResources', () => {
   it('creates resources with index route', () => {
-    let books = createResources('books')
+    let books = resources('books')
 
     type T = [
       Assert<
@@ -196,7 +201,7 @@ describe('createResources', () => {
   })
 
   it('creates resources with custom param', () => {
-    let posts = createResources('posts', { param: 'slug' })
+    let posts = resources('posts', { param: 'slug' })
 
     type T = [
       Assert<
@@ -225,7 +230,7 @@ describe('createResources', () => {
   })
 
   it('creates resources with only option', () => {
-    let books = createResources('books', { only: ['index', 'show', 'create'] })
+    let books = resources('books', { only: ['index', 'show', 'create'] })
 
     type T = [
       Assert<
@@ -251,7 +256,7 @@ describe('createResources', () => {
   })
 
   it('creates resources with custom param and only option', () => {
-    let articles = createResources('articles', {
+    let articles = resources('articles', {
       only: ['index', 'show'],
       param: 'slug',
     })
@@ -276,7 +281,7 @@ describe('createResources', () => {
   })
 
   it('creates resources with custom route names', () => {
-    let books = createResources('books', {
+    let books = resources('books', {
       names: {
         index: 'list',
         new: 'newForm',
@@ -319,7 +324,7 @@ describe('createResources', () => {
   })
 
   it('creates resources with partial custom route names', () => {
-    let books = createResources('books', {
+    let books = resources('books', {
       names: {
         index: 'list',
         show: 'view',
@@ -354,7 +359,7 @@ describe('createResources', () => {
   })
 
   it('creates resources with custom route names and only option', () => {
-    let books = createResources('books', {
+    let books = resources('books', {
       only: ['index', 'show'],
       names: {
         index: 'list',
@@ -386,7 +391,7 @@ describe('createResources', () => {
   })
 
   it('creates resources with custom route names and custom param', () => {
-    let posts = createResources('posts', {
+    let posts = resources('posts', {
       param: 'slug',
       names: {
         index: 'list',
@@ -421,5 +426,65 @@ describe('createResources', () => {
     assert.deepEqual(posts.editForm, new Route('GET', '/posts/:slug/edit'))
     assert.deepEqual(posts.save, new Route('PUT', '/posts/:slug'))
     assert.deepEqual(posts.delete, new Route('DELETE', '/posts/:slug'))
+  })
+
+  it('creates nested resources', () => {
+    let routes = route({
+      brands: {
+        ...resources('brands'),
+        products: resources('brands/:brandId/products'),
+      },
+    })
+
+    type T = [
+      Assert<
+        IsEqual<
+          typeof routes.brands,
+          {
+            index: Route<'GET', '/brands'>
+            new: Route<'GET', '/brands/new'>
+            show: Route<'GET', '/brands/:id'>
+            create: Route<'POST', '/brands'>
+            edit: Route<'GET', '/brands/:id/edit'>
+            update: Route<'PUT', '/brands/:id'>
+            destroy: Route<'DELETE', '/brands/:id'>
+            products: {
+              index: Route<'GET', '/brands/:brandId/products'>
+              new: Route<'GET', '/brands/:brandId/products/new'>
+              show: Route<'GET', '/brands/:brandId/products/:id'>
+              create: Route<'POST', '/brands/:brandId/products'>
+              edit: Route<'GET', '/brands/:brandId/products/:id/edit'>
+              update: Route<'PUT', '/brands/:brandId/products/:id'>
+              destroy: Route<'DELETE', '/brands/:brandId/products/:id'>
+            }
+          }
+        >
+      >,
+    ]
+
+    assert.deepEqual(routes.brands.index, new Route('GET', '/brands'))
+    assert.deepEqual(routes.brands.new, new Route('GET', '/brands/new'))
+    assert.deepEqual(routes.brands.show, new Route('GET', '/brands/:id'))
+    assert.deepEqual(routes.brands.create, new Route('POST', '/brands'))
+    assert.deepEqual(routes.brands.edit, new Route('GET', '/brands/:id/edit'))
+    assert.deepEqual(routes.brands.update, new Route('PUT', '/brands/:id'))
+    assert.deepEqual(routes.brands.destroy, new Route('DELETE', '/brands/:id'))
+
+    assert.deepEqual(routes.brands.products.index, new Route('GET', '/brands/:brandId/products'))
+    assert.deepEqual(routes.brands.products.new, new Route('GET', '/brands/:brandId/products/new'))
+    assert.deepEqual(routes.brands.products.show, new Route('GET', '/brands/:brandId/products/:id'))
+    assert.deepEqual(routes.brands.products.create, new Route('POST', '/brands/:brandId/products'))
+    assert.deepEqual(
+      routes.brands.products.edit,
+      new Route('GET', '/brands/:brandId/products/:id/edit'),
+    )
+    assert.deepEqual(
+      routes.brands.products.update,
+      new Route('PUT', '/brands/:brandId/products/:id'),
+    )
+    assert.deepEqual(
+      routes.brands.products.destroy,
+      new Route('DELETE', '/brands/:brandId/products/:id'),
+    )
   })
 })

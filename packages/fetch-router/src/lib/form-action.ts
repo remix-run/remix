@@ -26,10 +26,10 @@ export interface FormActionOptions {
  *
  * @param pattern The route pattern to use for the form and its submit action
  */
-export function createFormAction<P extends string, const O extends FormActionOptions>(
-  pattern: P | RoutePattern<P>,
-  options?: O,
-): BuildFormActionMap<P, O> {
+export function createFormAction<pattern extends string, const options extends FormActionOptions>(
+  pattern: pattern | RoutePattern<pattern>,
+  options?: options,
+): BuildFormActionMap<pattern, options> {
   let formMethod = options?.formMethod ?? 'POST'
   let indexName = options?.names?.index ?? 'index'
   let actionName = options?.names?.action ?? 'action'
@@ -37,24 +37,24 @@ export function createFormAction<P extends string, const O extends FormActionOpt
   return createRoutes(pattern, {
     [indexName]: { method: 'GET', pattern: '/' },
     [actionName]: { method: formMethod, pattern: '/' },
-  }) as BuildFormActionMap<P, O>
+  }) as BuildFormActionMap<pattern, options>
 }
 
 // prettier-ignore
-type BuildFormActionMap<P extends string, O extends FormActionOptions> = BuildRouteMap<
-  P,
+type BuildFormActionMap<pattern extends string, options extends FormActionOptions> = BuildRouteMap<
+  pattern,
   {
     [
-      K in O extends { names: { index: infer N extends string } } ? N : 'index'
+      key in options extends { names: { index: infer indexName extends string } } ? indexName : 'index'
     ]: {
       method: 'GET'
       pattern: '/'
     }
   } & {
     [
-      K in O extends { names: { action: infer N extends string } } ? N : 'action'
+      key in options extends { names: { action: infer actionName extends string } } ? actionName : 'action'
     ]: {
-      method: O extends { formMethod: infer M extends RequestMethod } ? M : 'POST'
+      method: options extends { formMethod: infer formMethod extends RequestMethod } ? formMethod : 'POST'
       pattern: '/'
     }
   }

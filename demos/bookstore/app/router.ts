@@ -1,5 +1,7 @@
 import { createRouter } from '@remix-run/fetch-router'
+import { formData } from '@remix-run/fetch-router/form-data-middleware'
 import { logger } from '@remix-run/fetch-router/logger-middleware'
+import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
 import { staticFiles } from '@remix-run/fetch-router/static-middleware'
 
 import { routes } from '../routes.ts'
@@ -16,15 +18,17 @@ import fragmentsHandlers from './fragments.tsx'
 import * as marketingHandlers from './marketing.tsx'
 import { uploadsHandler } from './uploads.tsx'
 
-export let router = createRouter({ uploadHandler })
-
-router.use(storeContext)
+let middleware = []
 
 if (process.env.NODE_ENV === 'development') {
-  router.use(logger())
+  middleware.push(logger())
 }
 
-router.use(
+middleware.push(formData({ uploadHandler }))
+middleware.push(methodOverride())
+middleware.push(storeContext())
+
+middleware.push(
   staticFiles('./public/root', {
     cacheControl: 'no-store, must-revalidate',
     etag: false,
@@ -33,8 +37,10 @@ router.use(
   }),
 )
 
+export let router = createRouter({ middleware })
+
 router.get(routes.assets, {
-  use: [
+  middleware: [
     staticFiles('./public/assets', {
       path: ({ params }) => params.path,
       cacheControl: 'no-store, must-revalidate',
@@ -49,7 +55,7 @@ router.get(routes.assets, {
 })
 
 router.get(routes.images, {
-  use: [
+  middleware: [
     staticFiles('./public/images', {
       path: ({ params }) => params.path,
       cacheControl: 'no-store, must-revalidate',
@@ -78,9 +84,3 @@ router.map(routes.cart, cartHandlers)
 router.map(routes.account, accountHandlers)
 router.map(routes.checkout, checkoutHandlers)
 router.map(routes.admin, adminHandlers)
-
-// NOTE: This is needed for the root static file middleware to work. This won't
-// be needed if middleware is run against fetch-router's default handler.
-router.get('/*', () => {
-  return new Response('Not Found', { status: 404 })
-})

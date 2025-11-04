@@ -41,7 +41,7 @@ describe('staticFiles middleware', () => {
 
       let router = createRouter()
       router.get('/*', {
-        use: [staticFiles(tmpDir)],
+        middleware: [staticFiles(tmpDir)],
         handler() {
           return new Response('Fallback Handler', { status: 404 })
         },
@@ -59,7 +59,7 @@ describe('staticFiles middleware', () => {
 
       let router = createRouter()
       router.head('/*', {
-        use: [staticFiles(tmpDir)],
+        middleware: [staticFiles(tmpDir)],
         handler() {
           return new Response('Fallback Handler', { status: 404 })
         },
@@ -77,7 +77,7 @@ describe('staticFiles middleware', () => {
 
       let router = createRouter()
       router.get('/*', {
-        use: [staticFiles(tmpDir)],
+        middleware: [staticFiles(tmpDir)],
         handler() {
           return new Response('Fallback Handler', { status: 404 })
         },
@@ -92,7 +92,7 @@ describe('staticFiles middleware', () => {
     it('falls through to handler for non-existent file', async () => {
       let router = createRouter()
       router.get('/*', {
-        use: [staticFiles(tmpDir)],
+        middleware: [staticFiles(tmpDir)],
         handler() {
           return new Response('Custom Fallback Handler', { status: 404 })
         },
@@ -109,7 +109,7 @@ describe('staticFiles middleware', () => {
 
       let router = createRouter()
       router.get('/assets/*path', {
-        use: [
+        middleware: [
           staticFiles(tmpDir, {
             path: ({ params }) => `custom/${params.path}`,
           }),
@@ -130,7 +130,7 @@ describe('staticFiles middleware', () => {
 
       let router = createRouter()
       router.get('/*', {
-        use: [
+        middleware: [
           staticFiles(tmpDir, {
             path: ({ request }) => {
               return new URL(request.url).pathname.replace(/^\/prefix\//, '')
@@ -151,7 +151,7 @@ describe('staticFiles middleware', () => {
     it('enforces type safety for params in path resolver', async () => {
       let router = createRouter()
       router.get('/assets/*path', {
-        use: [
+        middleware: [
           staticFiles(tmpDir, {
             // @ts-expect-error - 'nonexistent' does not exist on params
             path: ({ params }) => params.nonexistent,
@@ -172,7 +172,7 @@ describe('staticFiles middleware', () => {
 
       let router = createRouter()
       router.get('/*', {
-        use: [staticFiles(tmpDir)],
+        middleware: [staticFiles(tmpDir)],
         handler() {
           return new Response('Fallback Handler', { status: 404 })
         },
@@ -190,7 +190,7 @@ describe('staticFiles middleware', () => {
     createTestFile('test.txt', 'Hello, World!', lastModified)
     let router = createRouter()
     router.get('/*', {
-      use: [staticFiles(tmpDir)],
+      middleware: [staticFiles(tmpDir)],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },
@@ -215,7 +215,7 @@ describe('staticFiles middleware', () => {
     createTestFile('test.txt', 'Hello, World!', lastModified)
     let router = createRouter()
     router.get('/*', {
-      use: [staticFiles(tmpDir, { etag: false })],
+      middleware: [staticFiles(tmpDir, { etag: false })],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },
@@ -232,7 +232,7 @@ describe('staticFiles middleware', () => {
     createTestFile('test.txt', 'Hello, World!', lastModified)
     let router = createRouter()
     router.get('/*', {
-      use: [staticFiles(tmpDir)],
+      middleware: [staticFiles(tmpDir)],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },
@@ -249,7 +249,7 @@ describe('staticFiles middleware', () => {
     createTestFile('test.txt', 'Hello, World!', lastModified)
     let router = createRouter()
     router.get('/*', {
-      use: [staticFiles(tmpDir, { lastModified: false })],
+      middleware: [staticFiles(tmpDir, { lastModified: false })],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },
@@ -266,7 +266,7 @@ describe('staticFiles middleware', () => {
     createTestFile('test.txt', 'Hello, World!', lastModified)
     let router = createRouter()
     router.get('/*', {
-      use: [staticFiles(tmpDir)],
+      middleware: [staticFiles(tmpDir)],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },
@@ -292,7 +292,7 @@ describe('staticFiles middleware', () => {
     createTestFile('test.txt', 'Hello, World!', lastModified)
     let router = createRouter()
     router.get('/*', {
-      use: [staticFiles(tmpDir, { acceptRanges: false })],
+      middleware: [staticFiles(tmpDir, { acceptRanges: false })],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },
@@ -314,7 +314,7 @@ describe('staticFiles middleware', () => {
     createTestFile('test.txt', 'Hello, World!')
     let router = createRouter()
     router.get('/*', {
-      use: [staticFiles(tmpDir, { cacheControl: 'public, max-age=3600' })],
+      middleware: [staticFiles(tmpDir, { cacheControl: 'public, max-age=3600' })],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },
@@ -336,7 +336,7 @@ describe('staticFiles middleware', () => {
 
     let router = createRouter()
     router.get('/assets/*path', {
-      use: [
+      middleware: [
         staticFiles(assetsDir, {
           path: ({ params }) => params.path,
         }),
@@ -346,7 +346,7 @@ describe('staticFiles middleware', () => {
       },
     })
     router.get('/images/*path', {
-      use: [
+      middleware: [
         staticFiles(imagesDir, {
           path: ({ params }) => params.path,
         }),
@@ -373,7 +373,7 @@ describe('staticFiles middleware', () => {
       return new Response('Users API')
     })
     router.get('*path', {
-      use: [staticFiles(tmpDir)],
+      middleware: [staticFiles(tmpDir)],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },
@@ -392,7 +392,7 @@ describe('staticFiles middleware', () => {
 
       let router = createRouter()
       router.route(method, '/*path', {
-        use: [staticFiles(tmpDir)],
+        middleware: [staticFiles(tmpDir)],
         handler() {
           return new Response('Fallback Handler', { status: 404 })
         },
@@ -413,7 +413,7 @@ describe('staticFiles middleware', () => {
 
     let router = createRouter()
     router.get('/*', {
-      use: [staticFiles(path.join(tmpDir, publicDirName))],
+      middleware: [staticFiles(path.join(tmpDir, publicDirName))],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },
@@ -435,7 +435,7 @@ describe('staticFiles middleware', () => {
 
     let router = createRouter()
     router.get('*path', {
-      use: [staticFiles(tmpDir)],
+      middleware: [staticFiles(tmpDir)],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },

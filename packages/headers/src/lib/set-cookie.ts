@@ -4,7 +4,7 @@ import { capitalize, isValidDate } from './utils.ts'
 
 type SameSiteValue = 'Strict' | 'Lax' | 'None'
 
-export interface SetCookieInit {
+export interface CookieProperties {
   /**
    * The domain of the cookie. For example, `example.com`.
    *
@@ -12,7 +12,8 @@ export interface SetCookieInit {
    */
   domain?: string
   /**
-   * The expiration date of the cookie. If not specified, the cookie is a session cookie.
+   * The expiration date of the cookie. If not specified, the cookie is a session cookie that is
+   * removed when the browser is closed.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#expiresdate)
    */
@@ -22,7 +23,7 @@ export interface SetCookieInit {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#httponly)
    */
-  httpOnly?: true
+  httpOnly?: boolean
   /**
    * The maximum age of the cookie in seconds.
    *
@@ -30,11 +31,11 @@ export interface SetCookieInit {
    */
   maxAge?: number
   /**
-   * The name of the cookie.
+   * Indicates this cookie is a partitioned cookie.
    *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie-namecookie-value)
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#partitioned)
    */
-  name?: string
+  partitioned?: boolean
   /**
    * The path of the cookie. For example, `/` or `/admin`.
    *
@@ -54,6 +55,15 @@ export interface SetCookieInit {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure)
    */
   secure?: true
+}
+
+export interface SetCookieInit extends CookieProperties {
+  /**
+   * The name of the cookie.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie-namecookie-value)
+   */
+  name?: string
   /**
    * The value of the cookie.
    *
@@ -72,9 +82,10 @@ export interface SetCookieInit {
 export class SetCookie implements HeaderValue, SetCookieInit {
   domain?: string
   expires?: Date
-  httpOnly?: true
+  httpOnly?: boolean
   maxAge?: number
   name?: string
+  partitioned?: boolean
   path?: string
   sameSite?: SameSiteValue
   secure?: true
@@ -112,6 +123,9 @@ export class SetCookie implements HeaderValue, SetCookieInit {
                 }
                 break
               }
+              case 'partitioned':
+                this.partitioned = true
+                break
               case 'path':
                 this.path = value
                 break
@@ -132,6 +146,7 @@ export class SetCookie implements HeaderValue, SetCookieInit {
         this.httpOnly = init.httpOnly
         this.maxAge = init.maxAge
         this.name = init.name
+        this.partitioned = init.partitioned
         this.path = init.path
         this.sameSite = init.sameSite
         this.secure = init.secure
@@ -150,23 +165,26 @@ export class SetCookie implements HeaderValue, SetCookieInit {
     if (this.domain) {
       parts.push(`Domain=${this.domain}`)
     }
-    if (this.path) {
-      parts.push(`Path=${this.path}`)
-    }
     if (this.expires) {
       parts.push(`Expires=${this.expires.toUTCString()}`)
-    }
-    if (this.maxAge) {
-      parts.push(`Max-Age=${this.maxAge}`)
-    }
-    if (this.secure) {
-      parts.push('Secure')
     }
     if (this.httpOnly) {
       parts.push('HttpOnly')
     }
+    if (this.maxAge) {
+      parts.push(`Max-Age=${this.maxAge}`)
+    }
+    if (this.partitioned) {
+      parts.push('Partitioned')
+    }
+    if (this.path) {
+      parts.push(`Path=${this.path}`)
+    }
     if (this.sameSite) {
       parts.push(`SameSite=${this.sameSite}`)
+    }
+    if (this.secure) {
+      parts.push('Secure')
     }
 
     return parts.join('; ')

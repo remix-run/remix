@@ -1,5 +1,5 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
-import { redirect } from '@remix-run/fetch-router'
+import { redirect } from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../routes.ts'
 import { getAllBooks, getBookById, createBook, updateBook, deleteBook } from './models/books.ts'
@@ -246,7 +246,7 @@ export default {
       inStock: formData.get('inStock')?.toString() === 'true',
     })
 
-    return redirect(routes.admin.books.index)
+    return redirect(routes.admin.books.index.href())
   },
 
   edit({ params }) {
@@ -397,12 +397,12 @@ export default {
       inStock: formData.get('inStock')?.toString() === 'true',
     })
 
-    return redirect(routes.admin.books.index)
+    return redirect(routes.admin.books.index.href())
   },
 
   destroy({ params }) {
     deleteBook(params.bookId)
 
-    return redirect(routes.admin.books.index)
+    return redirect(routes.admin.books.index.href())
   },
 } satisfies RouteHandlers<typeof routes.admin.books>

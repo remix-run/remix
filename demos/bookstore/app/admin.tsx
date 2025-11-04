@@ -10,7 +10,7 @@ import { requireAdmin } from './middleware/admin.ts'
 import { render } from './utils/render.ts'
 
 export default {
-  use: [requireAuth, requireAdmin],
+  middleware: [requireAuth, requireAdmin],
   handlers: {
     index() {
       return render(

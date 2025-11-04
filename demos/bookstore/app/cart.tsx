@@ -1,5 +1,5 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
-import { redirect } from '@remix-run/fetch-router'
+import { redirect } from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../routes.ts'
 
@@ -14,7 +14,7 @@ import { setSessionCookie } from './utils/session.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  use: [loadAuth],
+  middleware: [loadAuth],
   handlers: {
     index() {
       let sessionId = getStorage().get(SESSION_ID_KEY)
@@ -158,7 +158,7 @@ export default {
           return new Response(null, { status: 204 })
         }
 
-        return redirect(routes.cart.index, { headers })
+        return redirect(routes.cart.index.href(), { headers })
       },
 
       async update({ storage, formData }) {
@@ -175,7 +175,7 @@ export default {
           return new Response(null, { status: 204 })
         }
 
-        return redirect(routes.cart.index, { headers })
+        return redirect(routes.cart.index.href(), { headers })
       },
 
       async remove({ storage, formData }) {
@@ -194,7 +194,7 @@ export default {
           return new Response(null, { status: 204 })
         }
 
-        return redirect(routes.cart.index, { headers })
+        return redirect(routes.cart.index.href(), { headers })
       },
     },
   },

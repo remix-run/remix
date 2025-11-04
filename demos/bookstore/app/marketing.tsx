@@ -1,4 +1,4 @@
-import type { InferRouteHandler, RouteHandlers } from '@remix-run/fetch-router'
+import type { BuildRouteHandler, RouteHandlers } from '@remix-run/fetch-router'
 import { Frame } from '@remix-run/dom'
 
 import { routes } from '../routes.ts'
@@ -8,8 +8,8 @@ import { loadAuth } from './middleware/auth.ts'
 import { searchBooks } from './models/books.ts'
 import { render } from './utils/render.ts'
 
-export let home: InferRouteHandler<typeof routes.home> = {
-  use: [loadAuth],
+export let home: BuildRouteHandler<'GET', typeof routes.home> = {
+  middleware: [loadAuth],
   handler() {
     return render(
       <Layout>
@@ -37,8 +37,8 @@ export let home: InferRouteHandler<typeof routes.home> = {
   },
 }
 
-export let about: InferRouteHandler<typeof routes.about> = {
-  use: [loadAuth],
+export let about: BuildRouteHandler<'GET', typeof routes.about> = {
+  middleware: [loadAuth],
   handler() {
     return render(
       <Layout>
@@ -99,7 +99,7 @@ export let about: InferRouteHandler<typeof routes.about> = {
 }
 
 export let contact: RouteHandlers<typeof routes.contact> = {
-  use: [loadAuth],
+  middleware: [loadAuth],
   handlers: {
     index() {
       return render(
@@ -153,8 +153,8 @@ export let contact: RouteHandlers<typeof routes.contact> = {
   },
 }
 
-export let search: InferRouteHandler<typeof routes.search> = {
-  use: [loadAuth],
+export let search: BuildRouteHandler<'GET', typeof routes.search> = {
+  middleware: [loadAuth],
   handler({ url }) {
     let query = url.searchParams.get('q') ?? ''
     let books = query ? searchBooks(query) : []

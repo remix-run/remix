@@ -1,4 +1,4 @@
-import type { Params } from '@remix-run/route-pattern'
+import type { Params, RoutePattern } from '@remix-run/route-pattern'
 
 import type { Middleware } from './middleware.ts'
 import type { RequestHandler } from './request-handler.ts'
@@ -6,52 +6,62 @@ import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
 
 // prettier-ignore
-export type RouteHandlers<T extends RouteMap> =
-  | RouteHandlersWithMiddleware<T>
+export type RouteHandlers<routes extends RouteMap> =
+  | RouteHandlersWithMiddleware<routes>
   | {
-      [K in keyof T]: (
-        T[K] extends Route<infer M, infer P> ? RouteHandler<M, P> :
-        T[K] extends RouteMap ? RouteHandlers<T[K]> :
+      [name in keyof routes]: (
+        routes[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? RouteHandler<method, pattern> :
+        routes[name] extends RouteMap ? RouteHandlers<routes[name]> :
         never
       )
     }
 
-type RouteHandlersWithMiddleware<T extends RouteMap> = {
-  use: Middleware[]
-  handlers: RouteHandlers<T>
+type RouteHandlersWithMiddleware<routes extends RouteMap> = {
+  middleware: Middleware[]
+  handlers: RouteHandlers<routes>
 }
 
-export function isRouteHandlersWithMiddleware<T extends RouteMap>(
+export function isRouteHandlersWithMiddleware<routes extends RouteMap>(
   handlers: any,
-): handlers is RouteHandlersWithMiddleware<T> {
+): handlers is RouteHandlersWithMiddleware<routes> {
   return (
-    typeof handlers === 'object' && handlers != null && 'use' in handlers && 'handlers' in handlers
+    typeof handlers === 'object' &&
+    handlers != null &&
+    'middleware' in handlers &&
+    'handlers' in handlers
   )
 }
 
 /**
- * Infer the route handler type from a route or string.
- */
-// prettier-ignore
-export type InferRouteHandler<T extends Route | string> =
-  T extends Route<infer M, infer P> ? RouteHandler<M, P> :
-  T extends string ? RouteHandler<'ANY', T> :
-  never
-
-/**
  * An individual route handler.
  */
-export type RouteHandler<M extends RequestMethod | 'ANY', T extends string> =
-  | RequestHandlerWithMiddleware<M, T>
-  | RequestHandler<M, Params<T>>
+export type RouteHandler<method extends RequestMethod | 'ANY', pattern extends string> =
+  | RequestHandlerWithMiddleware<method, pattern>
+  | RequestHandler<method, Params<pattern>>
 
-type RequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', T extends string> = {
-  use: Middleware<M, Params<T>>[]
-  handler: RequestHandler<M, Params<T>>
+type RequestHandlerWithMiddleware<method extends RequestMethod | 'ANY', pattern extends string> = {
+  middleware: Middleware<method, Params<pattern>>[]
+  handler: RequestHandler<method, Params<pattern>>
 }
 
-export function isRequestHandlerWithMiddleware<M extends RequestMethod | 'ANY', T extends string>(
-  handler: any,
-): handler is RequestHandlerWithMiddleware<M, T> {
-  return typeof handler === 'object' && handler != null && 'use' in handler && 'handler' in handler
+export function isRequestHandlerWithMiddleware<
+  method extends RequestMethod | 'ANY',
+  pattern extends string,
+>(handler: any): handler is RequestHandlerWithMiddleware<method, pattern> {
+  return (
+    typeof handler === 'object' &&
+    handler != null &&
+    'middleware' in handler &&
+    'handler' in handler
+  )
 }
+
+/**
+ * Build a `RouteHandler` type from a string, route pattern, or route.
+ */
+// prettier-ignore
+export type BuildRouteHandler<method extends RequestMethod | 'ANY', route extends string | RoutePattern | Route> =
+  route extends string ? RouteHandler<method, route> :
+  route extends RoutePattern<infer pattern> ? RouteHandler<method, pattern> :
+  route extends Route<infer _, infer pattern> ? RouteHandler<method, pattern> :
+  never

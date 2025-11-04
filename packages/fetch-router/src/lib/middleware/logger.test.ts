@@ -13,9 +13,9 @@ describe('logger', () => {
 
     let messages: string[] = []
 
-    let router = createRouter()
-
-    router.use(logger({ log: (message) => messages.push(message) }))
+    let router = createRouter({
+      middleware: [logger({ log: (message) => messages.push(message) })],
+    })
 
     router.map(routes.home, () => {
       return new Response('Home', {

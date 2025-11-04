@@ -1,6 +1,3 @@
-export { FormDataParseError } from '@remix-run/form-data-parser'
-export type { FileUpload, FileUploadHandler } from '@remix-run/form-data-parser'
-
 export { createStorageKey } from './lib/app-storage.ts'
 export { AppStorage } from './lib/app-storage.ts'
 
@@ -11,12 +8,7 @@ export {
 
 export type { Middleware, NextFunction } from './lib/middleware.ts'
 
-export { html, json, redirect } from './lib/response-helpers.ts'
-
-// Only export the type here, not the class. The `RequestContext` instance is
-// internal and managed by the router. Users should not need to make their own
-// instances of this class.
-export type { RequestContext } from './lib/request-context.ts'
+export { RequestContext } from './lib/request-context.ts'
 
 export { RequestMethods } from './lib/request-methods.ts'
 export type { RequestMethod } from './lib/request-methods.ts'
@@ -36,7 +28,7 @@ export type {
   ResourcesOptions,
 } from './lib/resource.ts'
 
-export type { RouteHandlers, InferRouteHandler, RouteHandler } from './lib/route-handlers.ts'
+export type { RouteHandlers, RouteHandler, BuildRouteHandler } from './lib/route-handlers.ts'
 
 export {
   Route,

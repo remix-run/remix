@@ -1,4 +1,4 @@
-import { raceRequestAbort, requestAbortError } from './request-abort.ts'
+import { raceRequestAbort } from './request-abort.ts'
 import type { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 import type { RequestMethod } from './request-methods.ts'
@@ -8,24 +8,24 @@ import type { RequestMethod } from './request-methods.ts'
  * to the next middleware or request handler in the chain.
  */
 export interface Middleware<
-  Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
-  Params extends Record<string, any> = {},
+  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+  params extends Record<string, any> = {},
 > {
   (
-    context: RequestContext<Method, Params>,
+    context: RequestContext<method, params>,
     next: NextFunction,
   ): Response | undefined | void | Promise<Response | undefined | void>
 }
 
-export type NextFunction = (moreContext?: Partial<RequestContext>) => Promise<Response>
+export type NextFunction = () => Promise<Response>
 
 export function runMiddleware<
-  Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
-  Params extends Record<string, any> = {},
+  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+  params extends Record<string, any> = {},
 >(
-  middleware: Middleware<Method, Params>[],
-  context: RequestContext<Method, Params>,
-  handler: RequestHandler<Method, Params, Response>,
+  middleware: Middleware<method, params>[],
+  context: RequestContext<method, params>,
+  handler: RequestHandler<method, params, Response>,
 ): Promise<Response> {
   let index = -1
 
@@ -34,7 +34,7 @@ export function runMiddleware<
     index = i
 
     if (context.request.signal.aborted) {
-      throw requestAbortError()
+      throw context.request.signal.reason
     }
 
     let fn = middleware[i]
@@ -43,11 +43,7 @@ export function runMiddleware<
     }
 
     let nextPromise: Promise<Response> | undefined
-    let next: NextFunction = (moreContext?: Partial<RequestContext>) => {
-      if (moreContext != null) {
-        Object.assign(context, moreContext)
-      }
-
+    let next: NextFunction = () => {
       nextPromise = dispatch(i + 1)
       return nextPromise
     }

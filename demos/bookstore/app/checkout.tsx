@@ -1,5 +1,5 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
-import { redirect } from '@remix-run/fetch-router'
+import { redirect } from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../routes.ts'
 import { requireAuth, SESSION_ID_KEY } from './middleware/auth.ts'
@@ -10,7 +10,7 @@ import { render } from './utils/render.ts'
 import { getCurrentUser, getStorage } from './utils/context.ts'
 
 export default {
-  use: [requireAuth],
+  middleware: [requireAuth],
   handlers: {
     index() {
       let sessionId = getStorage().get(SESSION_ID_KEY)
@@ -114,7 +114,7 @@ export default {
       let cart = getCart(sessionId)
 
       if (cart.items.length === 0) {
-        return redirect(routes.cart.index)
+        return redirect(routes.cart.index.href())
       }
 
       let shippingAddress = {

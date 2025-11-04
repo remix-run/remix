@@ -2,11 +2,11 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import type { Assert, IsEqual } from './type-utils.ts'
-import { Route, createRoutes } from './route-map.ts'
+import { Route, createRoutes as route } from './route-map.ts'
 
 describe('createRoutes', () => {
   it('creates a route map', () => {
-    let routes = createRoutes({
+    let routes = route({
       home: '/',
       about: {
         index: 'about',
@@ -20,7 +20,7 @@ describe('createRoutes', () => {
   })
 
   it('creates a route map with a base', () => {
-    let routes = createRoutes('categories', {
+    let routes = route('categories', {
       index: '/',
       new: '/new',
       show: '/:slug',
@@ -34,14 +34,14 @@ describe('createRoutes', () => {
   })
 
   it('creates a route map with a nested route map', () => {
-    let categoriesRoutes = createRoutes('categories', {
+    let categoriesRoutes = route('categories', {
       index: '/',
       new: '/new',
       show: '/:slug',
       edit: '/:slug/edit',
     })
 
-    let routes = createRoutes({
+    let routes = route({
       home: '/',
       about: '/about',
       // nested route map
@@ -55,9 +55,23 @@ describe('createRoutes', () => {
     assert.deepEqual(routes.categories.show, new Route('ANY', '/categories/:slug'))
     assert.deepEqual(routes.categories.edit, new Route('ANY', '/categories/:slug/edit'))
   })
+
+  it('creates nested routes using object spread syntax', () => {
+    let routes = route({
+      home: '/',
+      ...route('posts', {
+        posts: '/',
+        editPost: '/:slug/edit',
+      }),
+    })
+
+    assert.deepEqual(routes.home, new Route('ANY', '/'))
+    assert.deepEqual(routes.posts, new Route('ANY', '/posts'))
+    assert.deepEqual(routes.editPost, new Route('ANY', '/posts/:slug/edit'))
+  })
 })
 
-let categoriesRoutes = createRoutes('categories', {
+let categoriesRoutes = route('categories', {
   index: '/',
   create: { method: 'POST', pattern: '/:slug/edit' },
   products: {
@@ -65,7 +79,7 @@ let categoriesRoutes = createRoutes('categories', {
   },
 })
 
-let routes = createRoutes({
+let routes = route({
   home: '/',
   promo: '(/:lang)/promo',
   about: {

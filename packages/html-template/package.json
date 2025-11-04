@@ -1,0 +1,58 @@
+{
+  "name": "@remix-run/html-template",
+  "version": "0.2.0",
+  "description": "HTML template tag with auto-escaping for JavaScript",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/html-template"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/html-template#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "esbuild": "^0.25.10"
+  },
+  "scripts": {
+    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
+    "build:types": "tsc --project tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "html",
+    "template",
+    "tagged-template",
+    "template-literal",
+    "safe-html",
+    "xss",
+    "escaping",
+    "sanitize",
+    "security"
+  ]
+}

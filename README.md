@@ -37,9 +37,11 @@ The benefit is code that's not just reusable, but **future-proof**.
 We currently publish the following packages:
 
 - [fetch-proxy](packages/fetch-proxy): Seamlessly construct HTTP proxies with the familiar `fetch()` API
+- [fetch-router](packages/fetch-router): A minimal, composable router built on the web Fetch API and `route-pattern`.
 - [file-storage](packages/file-storage): Robust key/value storage tailored for JavaScript `File` objects, simplifying file management
 - [form-data-parser](packages/form-data-parser): An enhanced `request.formData()` wrapper enabling efficient, streaming file uploads
 - [headers](packages/headers): A comprehensive toolkit for effortlessly managing HTTP headers
+- [interaction](packages/interaction): Semantic, declarative events and Interactions
 - [lazy-file](packages/lazy-file): Optimize performance with lazy-loaded, streaming `Blob`s and `File`s for JavaScript
 - [multipart-parser](packages/multipart-parser): High-performance, streaming parser for multipart messages, perfect for handling complex form data
 - [node-fetch-server](packages/node-fetch-server): Build Node.js HTTP servers using the web-standard `fetch()` API, promoting code consistency

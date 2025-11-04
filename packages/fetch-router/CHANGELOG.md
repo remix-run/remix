@@ -2,8 +2,97 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.8.0 (2025-11-03)
 
+- BREAKING CHANGE: Rework how middleware works in the router. This change has far-reaching implications.
+
+  Previously, the router would associate all middleware with a route. If no routes matched, middleware would not run. We partially addressed this in 0.7 by always running global middleware, even when no route matches. However, the router would still run its route matching algorithm before determining that no routes matched, so it could proceed to run global middleware and the default handler.
+
+  In this release, `router.use()` has been replaced with `createRouter({ middleware })`. Middleware that is provided to `createRouter()` is "router middleware" (aka "global" middleware) that runs before the router tries to do any route matching. Router middleware may therefore modify the request context in ways that may affect route matching, including modifying `context.method` and/or `context.url`. Router middleware runs on every request, even when no routes match.
+
+  Middleware is still supported at the route level on individual routes, but it is only invoked when that route matches. This is "route middleware" (or "inline" middleware) and runs downstream from router middleware.
+
+  To migrate, move middleware from `router.use()` to `createRouter({ middleware })`.
+
+  ```tsx
+  // before
+  let router = createRouter()
+  router.use(middleware)
+  router.map(routes.home, () => new Response('Home'))
+
+  // after
+  let router = createRouter({
+    middleware: [middleware],
+  })
+  router.map(routes.home, () => new Response('Home'))
+  ```
+
+- BREAKING CHANGE: Rename `use` => `middleware` in route handler definitions
+
+  ```tsx
+  // before
+  router.map(routes.home, {
+    use: [middleware],
+    handler() {
+      return new Response('Home')
+    },
+  })
+
+  // after
+  router.map(routes.home, {
+    middleware: [middleware],
+    handler() {
+      return new Response('Home')
+    },
+  })
+  ```
+
+- BREAKING CHANGE: Remove `router.mount()` and support for sub-routers. We may add this back in a future release if there is demand for it.
+
+- BREAKING CHANGE: Move `FormData` parsing and method override handling out of the router and into separate middleware exports. Since `methodOverride()` provides `context.method` (used for route matching), it must be router (or "global") middleware. Also, it requires `context.formData`, so it must be after the `formData()` middleware in the middleware chain. This change also moves the `createRouter({ parseFormData, methodOverride, uploadHandler })` options to the `formData()` and `methodOverride()` middlewares.
+
+  ```tsx
+  // before
+  let router = createRouter({ parseFormData: true, methodOverride: true, uploadHandler })
+
+  // after
+  import { formData } from '@remix-run/fetch-router/form-data-middleware'
+  import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
+
+  let router = createRouter()
+  router.use(formData({ uploadHandler }))
+  router.use(methodOverride())
+  ```
+
+  This change makes things a little more verbose but should ultimately lead to more flexible middleware composition and a smaller core build.
+
+## v0.7.0 (2025-10-31)
+
+- BREAKING CHANGE: Move `@remix-run/form-data-parser`, `@remix-run/headers`, and `@remix-run/route-pattern` to `peerDependencies`.
+- BREAKING CHANGE: Rename `InferRouteHandler` => `BuildRouteHandler` and add a `Method` generic parameter to build a `RouteHandler` type from a string, route pattern, or route.
+- BREAKING CHANGE: Removed support for passing a `Route` object to `redirect()` response helper. Use `redirect(routes.home.href())` instead.
+- BREAKING CHANGE: Move `html()`, `json()`, and `redirect()` response helpers to `@remix-run/fetch-router/response-helpers` export
+- Always run global middleware, even when no route matches
+- More precise type inference for `router.get()`, `router.post()`, etc. route handlers.
+- Add support for nesting route maps via object spread syntax
+
+  ```tsx
+  import { route, resources } from '@remix-run/fetch-router'
+
+  let routes = route({
+    brands: {
+      ...resources('brands', { only: ['index', 'show'] }),
+      products: resources('brands/:brandId/products', { only: ['index', 'show'] }),
+    },
+  })
+
+  routes.brands.index // Route<'GET', '/brands'>
+  routes.brands.show // Route<'GET', '/brands/:id'>
+  routes.brands.products.index // Route<'GET', '/brands/:brandId/products'>
+  routes.brands.products.show // Route<'GET', '/brands/:brandId/products/:id'>
+  ```
+
+- Add support for `URL` objects in `redirect()` response helper
 - Add support for `request.signal` abort, which now short-circuits the middleware chain. `router.fetch()` will now throw `DOMException` with `error.name === 'AbortError'` when a request is aborted
 - Fix an issue where `Router`'s `fetch` wasn't spec-compliant
 - Provide empty `context.formData` to `POST`/`PUT`/etc handlers when `parseFormData: false`

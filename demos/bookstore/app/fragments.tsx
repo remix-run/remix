@@ -10,7 +10,7 @@ import { getStorage } from './utils/context.ts'
 import { render } from './utils/render.ts'
 
 export default {
-  use: [loadAuth],
+  middleware: [loadAuth],
   handlers: {
     async bookCard({ params }) {
       // Simulate network latency

@@ -32,10 +32,10 @@ export interface ResourceOptions {
  * @param base The base route pattern to use for the resource
  * @param options Options to configure the resource routes
  */
-export function createResource<P extends string, const O extends ResourceOptions>(
-  base: P | RoutePattern<P>,
-  options?: O,
-): BuildResourceMap<P, O> {
+export function createResource<base extends string, const options extends ResourceOptions>(
+  base: base | RoutePattern<base>,
+  options?: options,
+): BuildResourceMap<base, options> {
   let only = options?.only ?? (ResourceMethods as readonly ResourceMethod[])
   let newName = options?.names?.new ?? 'new'
   let showName = options?.names?.show ?? 'show'
@@ -65,25 +65,28 @@ export function createResource<P extends string, const O extends ResourceOptions
     routes[destroyName] = { method: 'DELETE', pattern: `/` }
   }
 
-  return createRoutes(base, routes) as BuildResourceMap<P, O>
+  return createRoutes(base, routes) as BuildResourceMap<base, options>
 }
 
-type BuildResourceMap<B extends string, O extends ResourceOptions> = BuildRouteMap<
-  B,
+type BuildResourceMap<base extends string, options extends ResourceOptions> = BuildRouteMap<
+  base,
   BuildResourceRoutes<
-    O,
-    O extends { only: readonly ResourceMethod[] } ? O['only'][number] : ResourceMethod
+    options,
+    options extends { only: readonly ResourceMethod[] } ? options['only'][number] : ResourceMethod
   >
 >
 
-type BuildResourceRoutes<O extends ResourceOptions, M extends ResourceMethod> = {
-  [K in M as GetRouteName<O, K>]: ResourceRoutes[K]
+type BuildResourceRoutes<options extends ResourceOptions, method extends ResourceMethod> = {
+  [methodName in method as GetRouteName<options, methodName>]: ResourceRoutes[methodName]
 }
 
-type GetRouteName<O extends ResourceOptions, M extends ResourceMethod> = M extends ResourceMethod
-  ? O extends { names: { [K in M]: infer N extends string } }
-    ? N
-    : M
+type GetRouteName<
+  options extends ResourceOptions,
+  method extends ResourceMethod,
+> = method extends ResourceMethod
+  ? options extends { names: { [methodName in method]: infer customName extends string } }
+    ? customName
+    : method
   : never
 
 type ResourceRoutes = {
@@ -130,10 +133,10 @@ export type ResourcesOptions = {
  * @param base The base route pattern to use for the resources
  * @param options Options to configure the resource routes
  */
-export function createResources<P extends string, const O extends ResourcesOptions>(
-  base: P | RoutePattern<P>,
-  options?: O,
-): BuildResourcesMap<P, O> {
+export function createResources<base extends string, const options extends ResourcesOptions>(
+  base: base | RoutePattern<base>,
+  options?: options,
+): BuildResourcesMap<base, options> {
   let only = options?.only ?? (ResourcesMethods as readonly ResourcesMethod[])
   let param = options?.param ?? 'id'
   let indexName = options?.names?.index ?? 'index'
@@ -168,43 +171,48 @@ export function createResources<P extends string, const O extends ResourcesOptio
     routes[destroyName] = { method: 'DELETE', pattern: `/:${param}` }
   }
 
-  return createRoutes(base, routes) as BuildResourcesMap<P, O>
+  return createRoutes(base, routes) as BuildResourcesMap<base, options>
 }
 
-type BuildResourcesMap<B extends string, O extends ResourcesOptions> = BuildRouteMap<
-  B,
+type BuildResourcesMap<base extends string, options extends ResourcesOptions> = BuildRouteMap<
+  base,
   BuildResourcesRoutes<
-    O,
-    O extends { only: readonly ResourcesMethod[] } ? O['only'][number] : ResourcesMethod,
-    GetParam<O>
+    options,
+    options extends { only: readonly ResourcesMethod[] }
+      ? options['only'][number]
+      : ResourcesMethod,
+    GetParam<options>
   >
 >
 
+// prettier-ignore
 type BuildResourcesRoutes<
-  O extends ResourcesOptions,
-  M extends ResourcesMethod,
-  Param extends string,
+  options extends ResourcesOptions,
+  method extends ResourcesMethod,
+  param extends string,
 > = {
-  [K in M as GetResourcesRouteName<O, K>]: ResourcesRoutes<Param>[K]
+  [methodName in method as GetResourcesRouteName<options, methodName>]: ResourcesRoutes<param>[methodName]
 }
 
 type GetResourcesRouteName<
-  O extends ResourcesOptions,
-  M extends ResourcesMethod,
-> = M extends ResourcesMethod
-  ? O extends { names: { [K in M]: infer N extends string } }
-    ? N
-    : M
+  options extends ResourcesOptions,
+  method extends ResourcesMethod,
+> = method extends ResourcesMethod
+  ? options extends { names: { [methodName in method]: infer customName extends string } }
+    ? customName
+    : method
   : never
 
-type ResourcesRoutes<Param extends string> = {
+type ResourcesRoutes<param extends string> = {
   index: { method: 'GET'; pattern: `/` }
   new: { method: 'GET'; pattern: `/new` }
-  show: { method: 'GET'; pattern: `/:${Param}` }
+  show: { method: 'GET'; pattern: `/:${param}` }
   create: { method: 'POST'; pattern: `/` }
-  edit: { method: 'GET'; pattern: `/:${Param}/edit` }
-  update: { method: 'PUT'; pattern: `/:${Param}` }
-  destroy: { method: 'DELETE'; pattern: `/:${Param}` }
+  edit: { method: 'GET'; pattern: `/:${param}/edit` }
+  update: { method: 'PUT'; pattern: `/:${param}` }
+  destroy: { method: 'DELETE'; pattern: `/:${param}` }
 }
 
-type GetParam<O extends ResourcesOptions> = O extends { param: infer P extends string } ? P : 'id'
+// prettier-ignore
+type GetParam<options extends ResourcesOptions> =
+  options extends { param: infer param extends string } ? param : 'id'

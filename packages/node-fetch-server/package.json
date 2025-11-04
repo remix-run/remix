@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/node-fetch-server",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Build servers for Node.js using the web fetch API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
@@ -33,14 +33,12 @@
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
-    "esbuild": "^0.25.10"
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "bench": "bash ./bench/runner.sh",
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=node --sourcemap",
-    "build:types": "tsc --project tsconfig.build.json",
-    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
     "typecheck": "tsc --noEmit"

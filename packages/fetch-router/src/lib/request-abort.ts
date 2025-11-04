@@ -4,23 +4,26 @@
  * If the promise settles first, the returned promise will settle with the same value/error.
  */
 export async function raceRequestAbort<T>(promise: Promise<T>, request: Request): Promise<T> {
-  if (request.signal.aborted) {
-    throw requestAbortError()
+  let signal = request.signal
+
+  if (signal.aborted) {
+    throw signal.reason
   }
 
   return new Promise<T>((resolve, reject) => {
-    request.signal.addEventListener(
-      'abort',
-      () => {
-        reject(requestAbortError())
+    let onAbort = () => reject(signal.reason)
+
+    signal.addEventListener('abort', onAbort, { once: true })
+
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort)
+        resolve(value)
       },
-      { once: true },
+      (error) => {
+        signal.removeEventListener('abort', onAbort)
+        reject(error)
+      },
     )
-
-    promise.then(resolve, reject)
   })
-}
-
-export function requestAbortError() {
-  return new DOMException('The request was aborted', 'AbortError')
 }

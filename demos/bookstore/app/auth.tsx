@@ -1,5 +1,5 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
-import { redirect } from '@remix-run/fetch-router'
+import { redirect } from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../routes.ts'
 import { getSession, setSessionCookie, login, logout } from './utils/session.ts'
@@ -15,7 +15,7 @@ import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
 
 export default {
-  use: [loadAuth],
+  middleware: [loadAuth],
   handlers: {
     login: {
       index() {
@@ -91,7 +91,7 @@ export default {
         let headers = new Headers()
         setSessionCookie(headers, session.sessionId)
 
-        return redirect(routes.account.index, { headers })
+        return redirect(routes.account.index.href(), { headers })
       },
     },
 
@@ -173,7 +173,7 @@ export default {
         let headers = new Headers()
         setSessionCookie(headers, session.sessionId)
 
-        return redirect(routes.account.index, { headers })
+        return redirect(routes.account.index.href(), { headers })
       },
     },
 
@@ -181,7 +181,7 @@ export default {
       let session = getSession(request)
       logout(session.sessionId)
 
-      return redirect(routes.home)
+      return redirect(routes.home.href())
     },
 
     forgotPassword: {

@@ -4,6 +4,7 @@ packages:
   - demos/*
   - packages/*
   - packages/form-data-parser/demos/*
+  - packages/interaction/demos
   - packages/multipart-parser/bench
   - packages/multipart-parser/demos/*
   - packages/node-fetch-server/bench

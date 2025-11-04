@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/headers",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "A toolkit for working with HTTP headers in JavaScript",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -33,13 +33,11 @@
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
-    "esbuild": "^0.25.10"
+    "typescript": "^5.9.3"
   },
   "scripts": {
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
-    "build:types": "tsc --project tsconfig.build.json",
-    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
     "typecheck": "tsc --noEmit"
