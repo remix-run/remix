@@ -9,10 +9,10 @@
     "@remix-run/file-storage": "workspace:*",
     "@remix-run/headers": "workspace:*",
     "@remix-run/lazy-file": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*"
+    "@remix-run/node-fetch-server": "workspace:*",
+    "@remix-run/session": "workspace:*"
   },
   "devDependencies": {
-    "@remix-run/session": "workspace:*",
     "@types/node": "^24.6.0",
     "esbuild": "^0.25.10",
     "tsx": "^4.20.6"
