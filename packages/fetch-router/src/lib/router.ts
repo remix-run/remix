@@ -195,6 +195,8 @@ export class Router {
     }
   }
 
+  // HTTP-method specific shorthand
+
   /**
    * Map a GET route/pattern to a request handler.
    * @param route The route/pattern to match
