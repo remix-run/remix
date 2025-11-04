@@ -6,31 +6,18 @@ export class R2FileStorage implements FileStorage {
 
     constructor(r2: R2Bucket) {
         this.#r2 = r2
-        console.log('package r2', this.#r2)
     }
 
     async get(key: string, options?: R2GetOptions): Promise<File | null> {
-        console.log('options', options);
-       
         let object = await this.#r2.get(key, options) as R2ObjectBody;
-        console.log('object', object)
 
         if (object == null ) {
             return null
         }
 
-        //this is not correct lol
-        if (!('body' in object) || !object.body) {
-            throw new Error('Etag Matches')
-        }
-
         let fileArray = await object.arrayBuffer()
-        // console.log('fileArray', fileArray)
-        console.log('object.key', object.key)
-        console.log('object.httpMetadata?.contentType', object.httpMetadata?.contentType)
-        console.log('object.uploaded.getTime()', object.uploaded.getTime())
 
-        return new File([fileArray], object.key, {
+        return new File([fileArray], object.customMetadata?.name ?? object.key, {
             type: object.httpMetadata?.contentType,
             lastModified: object.uploaded.getTime()
         }) as File
@@ -56,37 +43,41 @@ export class R2FileStorage implements FileStorage {
         }) as File
     }
 
-    //struggling with this only returning undefined but says it would return void
     async remove(key: string): Promise<void> {
-        let object = await this.#r2.delete(key)
-        console.log('object', object)
-
-        if (object === undefined) {
-           return;
-        } else {
-            throw new Error('File not found')
-        }
+        await this.#r2.delete(key)
     }
 
+    //The cloudflare R2ListOptions type is missing the include to check for presence of metadata or not. So did not include type
     async list<T extends ListOptions>(options?: T): Promise<ListResult<T>> {
-        let cursor: string | undefined;
-        let objects = await this.#r2.list(options) as R2Objects;
-      if (objects.truncated) {
-            cursor = objects.cursor;
-        } else {
-            cursor = undefined
+        let r2Options: any = {
+          limit: options?.limit,
+          prefix: options?.prefix,
+          cursor: options?.cursor,
         }
-        
-
+      
+        if (options?.includeMetadata) {
+          r2Options.include = ['httpMetadata', 'customMetadata']
+        }
+      
+        let objects = await this.#r2.list(r2Options) as R2Objects
+      
         return {
-            cursor: cursor,
-            files: objects.objects.map(objects => {
-                return { key: objects.key } as T extends { includeMetadata: true } ? FileMetadata : FileKey
-            })
-        };
+          cursor: objects.truncated ? objects.cursor : undefined,
+          files: objects.objects.map(obj => {
+            if (options?.includeMetadata) {
+              return {
+                key: obj.key,
+                lastModified: obj.uploaded.getTime(),
+                name: obj.customMetadata?.name ?? obj.key,
+                size: obj.size,
+                type: obj.httpMetadata?.contentType ?? '',
+              } as FileMetadata
+            }
+            return { key: obj.key } as FileKey
+          }) as any,
+        }
     }
 
-    /* This is what i assume is the correct way to handle the has method, returns metadata only or null if not found*/
     async has(key: string): Promise<boolean> {
         let object = await this.#r2.head(key) as R2Object | null
         if (object == null) {
@@ -95,6 +86,7 @@ export class R2FileStorage implements FileStorage {
         return true
     }
 
+   
    async set(key: string, file: File, options?: R2PutOptions): Promise<void>  {
         let fileArray = await file.arrayBuffer()
         await this.#r2.put(key, fileArray, {
