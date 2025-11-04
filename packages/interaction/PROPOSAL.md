@@ -73,7 +73,7 @@ If the `...` spread syntax feels jarring to you, note that you can nest it in an
 >Click me</button>
 ```
 
-I don't have an opinion on which is better.
+I don't have an opinion on which is “better”, but the `events={[ … ]}` array syntax is **ideal** for prop forwarding (as described in the “Inferring the event target” section).
 
 ## 2. Advanced `on()` function
 
