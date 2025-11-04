@@ -24,6 +24,9 @@ This change…
 - removes the need for `interface HTMLElementEventMap {…}` extensions
 - removes the need for a global runtime registry for custom interactions
 
+> [!NOTE]
+> Use of `satisfies` in this proposal is purely illustrative. You won't need it when using these APIs in your code. Read it as "this variable ABC is inferred to be of type XYZ".
+
 #### Usage
 
 An example of using an interaction with a JSX element:
