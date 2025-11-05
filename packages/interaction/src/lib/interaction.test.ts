@@ -96,6 +96,13 @@ describe('interaction', () => {
       expect(secondListenerCalled).toBe(false)
     })
 
+    it('throws when calling set after dispose', () => {
+      let target = new EventTarget()
+      let container = createContainer(target)
+      container.dispose()
+      expect(() => container.set({ test: () => {} })).toThrow('Container has been disposed')
+    })
+
     describe('listenWith', () => {
       it('provides options with listenWith', () => {
         let target = new EventTarget()
