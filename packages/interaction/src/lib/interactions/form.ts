@@ -1,4 +1,4 @@
-import { defineInteraction } from '../events.ts'
+import { defineInteraction } from '../interaction.ts'
 
 /**
  * Called when the target's form is reset. Useful for resetting custom component

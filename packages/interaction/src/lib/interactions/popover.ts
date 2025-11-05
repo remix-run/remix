@@ -1,4 +1,4 @@
-import { defineInteraction, on } from '../events'
+import { defineInteraction, on } from '../interaction'
 
 /**
  * ### Description

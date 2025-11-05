@@ -1,4 +1,4 @@
-import { defineInteraction, on } from '../events.ts'
+import { defineInteraction, on } from '../interaction.ts'
 
 /**
  * Normalized press events for pointer and keyboard input. A press is dispatched

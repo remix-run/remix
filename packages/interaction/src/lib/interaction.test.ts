@@ -9,7 +9,7 @@ import {
   TypedEventTarget,
   type Dispatched,
   type EventListeners,
-} from './events.ts'
+} from './interaction.ts'
 import type { Assert, Equal } from './test/utils.ts'
 
 describe('interaction', () => {

@@ -9,4 +9,4 @@ export {
   defineInteraction,
   listenWith,
   on,
-} from './lib/events.ts'
+} from './lib/interaction.ts'
