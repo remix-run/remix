@@ -139,6 +139,9 @@ export function createContainer<target extends EventTarget>(
   return {
     dispose: () => controller.abort(),
     set: (listeners) => {
+      if (controller.signal.aborted) {
+        throw new Error('Container has been disposed')
+      }
       // TODO: figure out if we can remove this cast
       for (let type of Object.keys(listeners) as Array<EventType<target>>) {
         let raw = listeners[type]
