@@ -8,7 +8,9 @@ import { type ContentTypeInit, ContentType } from './content-type.ts'
 import { type CookieInit, Cookie } from './cookie.ts'
 import { canonicalHeaderName } from './header-names.ts'
 import { type HeaderValue } from './header-value.ts'
+import { type IfMatchInit, IfMatch } from './if-match.ts'
 import { type IfNoneMatchInit, IfNoneMatch } from './if-none-match.ts'
+import { type RangeInit, Range } from './range.ts'
 import { type SetCookieInit, SetCookie } from './set-cookie.ts'
 import { isIterable, quoteEtag } from './utils.ts'
 
@@ -35,6 +37,10 @@ interface SuperHeadersPropertyInit {
    * The [`Age`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Age) header value.
    */
   age?: string | number
+  /**
+   * The [`Allow`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Allow) header value.
+   */
+  allow?: string | string[]
   /**
    * The [`Cache-Control`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) header value.
    */
@@ -92,6 +98,10 @@ interface SuperHeadersPropertyInit {
    */
   ifModifiedSince?: string | DateInit
   /**
+   * The [`If-Match`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match) header value.
+   */
+  ifMatch?: string | string[] | IfMatchInit
+  /**
    * The [`If-None-Match`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match) header value.
    */
   ifNoneMatch?: string | string[] | IfNoneMatchInit
@@ -107,6 +117,10 @@ interface SuperHeadersPropertyInit {
    * The [`Location`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Location) header value.
    */
   location?: string
+  /**
+   * The [`Range`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range) header value.
+   */
+  range?: string | RangeInit
   /**
    * The [`Referer`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer) header value.
    */
@@ -128,6 +142,7 @@ const AcceptEncodingKey = 'accept-encoding'
 const AcceptLanguageKey = 'accept-language'
 const AcceptRangesKey = 'accept-ranges'
 const AgeKey = 'age'
+const AllowKey = 'allow'
 const CacheControlKey = 'cache-control'
 const ConnectionKey = 'connection'
 const ContentDispositionKey = 'content-disposition'
@@ -141,11 +156,13 @@ const DateKey = 'date'
 const ETagKey = 'etag'
 const ExpiresKey = 'expires'
 const HostKey = 'host'
+const IfMatchKey = 'if-match'
 const IfModifiedSinceKey = 'if-modified-since'
 const IfNoneMatchKey = 'if-none-match'
 const IfUnmodifiedSinceKey = 'if-unmodified-since'
 const LastModifiedKey = 'last-modified'
 const LocationKey = 'location'
+const RangeKey = 'range'
 const RefererKey = 'referer'
 const SetCookieKey = 'set-cookie'
 
@@ -424,6 +441,21 @@ export class SuperHeaders extends Headers {
   }
 
   /**
+   * The `Allow` header lists the HTTP methods that are supported by the resource.
+   *
+   * [MDN `Allow` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Allow)
+   *
+   * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.allow)
+   */
+  get allow(): string | null {
+    return this.#getStringValue(AllowKey)
+  }
+
+  set allow(value: string | string[] | undefined | null) {
+    this.#setStringValue(AllowKey, Array.isArray(value) ? value.join(', ') : value)
+  }
+
+  /**
    * The `Cache-Control` header contains directives for caching mechanisms in both requests and responses.
    *
    * [MDN `Cache-Control` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
@@ -644,6 +676,21 @@ export class SuperHeaders extends Headers {
   }
 
   /**
+   * The `If-Match` header makes a request conditional on the presence of a matching ETag.
+   *
+   * [MDN `If-Match` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match)
+   *
+   * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.1)
+   */
+  get ifMatch(): IfMatch {
+    return this.#getHeaderValue(IfMatchKey, IfMatch)
+  }
+
+  set ifMatch(value: string | string[] | IfMatchInit | undefined | null) {
+    this.#setHeaderValue(IfMatchKey, IfMatch, value)
+  }
+
+  /**
    * The `If-None-Match` header makes a request conditional on the absence of a matching ETag.
    *
    * [MDN `If-None-Match` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match)
@@ -702,6 +749,21 @@ export class SuperHeaders extends Headers {
 
   set location(value: string | undefined | null) {
     this.#setStringValue(LocationKey, value)
+  }
+
+  /**
+   * The `Range` header indicates the part of a resource that the client wants to receive.
+   *
+   * [MDN `Range` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range)
+   *
+   * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.range)
+   */
+  get range(): Range {
+    return this.#getHeaderValue(RangeKey, Range)
+  }
+
+  set range(value: string | RangeInit | undefined | null) {
+    this.#setHeaderValue(RangeKey, Range, value)
   }
 
   /**

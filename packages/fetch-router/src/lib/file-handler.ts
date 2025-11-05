@@ -107,9 +107,9 @@ export function createFileHandler<
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return new Response('Method Not Allowed', {
         status: 405,
-        headers: {
-          Allow: 'GET, HEAD',
-        },
+        headers: new SuperHeaders({
+          allow: ['GET', 'HEAD'],
+        }),
       })
     }
 
@@ -138,9 +138,10 @@ export function createFileHandler<
       acceptRanges = 'bytes'
     }
 
+    let hasIfMatch = context.headers.has('If-Match')
+
     // If-Match support: https://httpwg.org/specs/rfc9110.html#field.if-match
-    let ifMatch = request.headers.get('If-Match')
-    if (etag && ifMatch != null && !matchesETag(ifMatch, etag)) {
+    if (etag && hasIfMatch && !context.headers.ifMatch.matches(etag)) {
       return new Response('Precondition Failed', {
         status: 412,
         headers: new SuperHeaders({
@@ -152,7 +153,7 @@ export function createFileHandler<
     }
 
     // If-Unmodified-Since support: https://httpwg.org/specs/rfc9110.html#field.if-unmodified-since
-    if (lastModified && ifMatch == null) {
+    if (lastModified && !hasIfMatch) {
       let ifUnmodifiedSinceDate = context.headers.ifUnmodifiedSince
       if (ifUnmodifiedSinceDate != null) {
         let ifUnmodifiedSinceTime = ifUnmodifiedSinceDate.getTime()
@@ -174,17 +175,15 @@ export function createFileHandler<
     if (etag || lastModified) {
       let shouldReturnNotModified = false
 
-      let ifNoneMatch = context.headers.ifNoneMatch
-      let ifModifiedSinceDate = context.headers.ifModifiedSince
-
-      if (ifNoneMatch.tags.length > 0) {
-        if (etag && ifNoneMatch.matches(etag)) {
-          shouldReturnNotModified = true
-        }
-      } else if (ifModifiedSinceDate != null && lastModified) {
-        let ifModifiedSinceTime = ifModifiedSinceDate.getTime()
-        if (roundToSecond(lastModified) <= roundToSecond(ifModifiedSinceTime)) {
-          shouldReturnNotModified = true
+      if (etag && context.headers.ifNoneMatch.matches(etag)) {
+        shouldReturnNotModified = true
+      } else if (lastModified && context.headers.ifNoneMatch.tags.length === 0) {
+        let ifModifiedSinceDate = context.headers.ifModifiedSince
+        if (ifModifiedSinceDate != null) {
+          let ifModifiedSinceTime = ifModifiedSinceDate.getTime()
+          if (roundToSecond(lastModified) <= roundToSecond(ifModifiedSinceTime)) {
+            shouldReturnNotModified = true
+          }
         }
       }
 
@@ -202,56 +201,64 @@ export function createFileHandler<
 
     // Range support: https://httpwg.org/specs/rfc9110.html#field.range
     // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
-    if (acceptRanges && request.method === 'GET') {
-      let range = request.headers.get('Range')
-      if (range) {
-        let shouldProcessRange = true
+    if (acceptRanges && request.method === 'GET' && context.headers.has('Range')) {
+      let range = context.headers.range
 
-        let ifRange = request.headers.get('If-Range')
-        if (ifRange != null) {
-          // Since we only use weak ETags, we can only compare Last-Modified timestamps
-          let ifRangeTime = parseHttpDate(ifRange)
-          shouldProcessRange = Boolean(
-            lastModified &&
-              ifRangeTime &&
-              roundToSecond(lastModified) === roundToSecond(ifRangeTime),
-          )
-        }
+      // Check if the Range header was sent but parsing resulted in no valid ranges (malformed)
+      if (range.ranges.length === 0) {
+        return new Response('Bad Request', {
+          status: 400,
+        })
+      }
 
-        if (shouldProcessRange) {
-          let rangeResult = parseRangeHeader(range, file.size)
+      let shouldProcessRange = true
 
-          if (rangeResult.type === 'malformed') {
-            return new Response('Bad Request', {
-              status: 400,
-            })
-          }
+      let ifRange = request.headers.get('If-Range')
+      if (ifRange != null) {
+        // Since we only use weak ETags, we can only compare Last-Modified timestamps
+        let ifRangeTime = parseHttpDate(ifRange)
+        shouldProcessRange = Boolean(
+          lastModified && ifRangeTime && roundToSecond(lastModified) === roundToSecond(ifRangeTime),
+        )
+      }
 
-          if (rangeResult.type === 'unsatisfiable') {
-            return new Response('Range Not Satisfiable', {
-              status: 416,
-              headers: {
-                'Content-Range': `bytes */${file.size}`,
-              },
-            })
-          }
-
-          let { start, end } = rangeResult
-          let { size } = file
-
-          return new Response(file.slice(start, end + 1), {
-            status: 206,
+      if (shouldProcessRange) {
+        if (!range.canSatisfy(file.size)) {
+          return new Response('Range Not Satisfiable', {
+            status: 416,
             headers: new SuperHeaders({
-              contentType,
-              contentLength: end - start + 1,
-              contentRange: { unit: 'bytes', start, end, size },
-              etag,
-              lastModified,
-              cacheControl,
-              acceptRanges,
+              contentRange: { unit: 'bytes', size: file.size },
             }),
           })
         }
+
+        let normalized = range.normalize(file.size)
+
+        // We only support single ranges (not multipart)
+        if (normalized.length > 1) {
+          return new Response('Range Not Satisfiable', {
+            status: 416,
+            headers: new SuperHeaders({
+              contentRange: { unit: 'bytes', size: file.size },
+            }),
+          })
+        }
+
+        let { start, end } = normalized[0]
+        let { size } = file
+
+        return new Response(file.slice(start, end + 1), {
+          status: 206,
+          headers: new SuperHeaders({
+            contentType,
+            contentLength: end - start + 1,
+            contentRange: { unit: 'bytes', start, end, size },
+            etag,
+            lastModified,
+            cacheControl,
+            acceptRanges,
+          }),
+        })
       }
     }
 
@@ -271,11 +278,6 @@ export function createFileHandler<
 
 function generateWeakETag(file: File): string {
   return `W/"${file.size}-${file.lastModified}"`
-}
-
-function matchesETag(ifNoneMatch: string, etag: string): boolean {
-  let tags = ifNoneMatch.split(',').map((tag) => tag.trim())
-  return tags.includes(etag) || tags.includes('*')
 }
 
 /**
@@ -307,100 +309,4 @@ function parseHttpDate(dateString: string): number | null {
   }
 
   return timestamp
-}
-
-const rangeHeaderPattern = /^bytes=(.+)$/
-const rangeHeaderPartPattern = /^(\d*)-(\d*)$/
-
-type ParseRangeResult =
-  | { type: 'success'; start: number; end: number }
-  | { type: 'malformed' }
-  | { type: 'unsatisfiable' }
-
-/**
- * Parses a single range header part (e.g., "0-99", "100-", "-500"). Returns a
- * result indicating success with normalized bounds, or malformed/unsatisfiable.
- */
-function parseRangeHeaderPart(rangeHeaderPart: string, fileSize: number): ParseRangeResult {
-  let match = rangeHeaderPart.trim().match(rangeHeaderPartPattern)
-  if (!match) {
-    return { type: 'malformed' }
-  }
-
-  let [, startStr, endStr] = match
-
-  // At least one bound must be specified
-  if (!startStr && !endStr) {
-    return { type: 'malformed' }
-  }
-
-  let start = startStr ? parseInt(startStr, 10) : null
-  let end = endStr ? parseInt(endStr, 10) : null
-
-  // Normalize the range based on what's specified
-  if (start != null && end != null) {
-    // Both bounds specified (e.g., "0-99")
-    if (start > end) {
-      return { type: 'malformed' }
-    }
-
-    // Clamp end to file size
-    if (end >= fileSize) {
-      end = fileSize - 1
-    }
-  } else if (start != null) {
-    // Only start specified (e.g., "100-")
-    end = fileSize - 1
-  } else {
-    // Only end specified (e.g., "-500" means last 500 bytes)
-    let suffix = end!
-    start = Math.max(0, fileSize - suffix)
-    end = fileSize - 1
-  }
-
-  if (start >= fileSize) {
-    return { type: 'unsatisfiable' }
-  }
-
-  return { type: 'success', start, end }
-}
-
-/**
- * Parses a Range header value. Returns a result object with a type of
- * 'success', 'malformed', or 'unsatisfiable'. The `start` and `end` values are
- * only present if the type is 'success'. Multipart ranges are not supported.
- */
-function parseRangeHeader(range: string, fileSize: number): ParseRangeResult {
-  // Extract the bytes= portion
-  let bytesMatch = range.trim().match(rangeHeaderPattern)
-
-  if (!bytesMatch) {
-    return { type: 'malformed' }
-  }
-
-  let rangeParts = bytesMatch[1].split(',')
-
-  let firstRangeResult: ParseRangeResult | undefined
-  for (let rangePart of rangeParts) {
-    let rangePartResult = parseRangeHeaderPart(rangePart, fileSize)
-    if (!firstRangeResult) {
-      firstRangeResult = rangePartResult
-    }
-    if (rangePartResult.type === 'malformed') {
-      return { type: 'malformed' }
-    }
-  }
-
-  if (!firstRangeResult) {
-    return { type: 'malformed' }
-  }
-
-  if (rangeParts.length > 1) {
-    // If we're here, the client sent valid multipart ranges, so we want to
-    // communicate that their request is syntactically valid but unsatisfiable.
-    // This is to keep it distinct from a malformed range header.
-    return { type: 'unsatisfiable' }
-  }
-
-  return firstRangeResult
 }

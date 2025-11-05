@@ -33,7 +33,7 @@ export class ContentRange implements HeaderValue, ContentRangeInit {
   unit: string = ''
   start: number | null = null
   end: number | null = null
-  size: number | '*' = '*'
+  size?: number | '*'
 
   constructor(init?: string | ContentRangeInit) {
     if (init) {
@@ -56,7 +56,7 @@ export class ContentRange implements HeaderValue, ContentRangeInit {
   }
 
   toString(): string {
-    if (!this.unit) return ''
+    if (!this.unit || this.size === undefined) return ''
 
     let range = this.start !== null && this.end !== null ? `${this.start}-${this.end}` : '*'
 

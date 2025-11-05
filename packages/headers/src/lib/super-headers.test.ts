@@ -9,8 +9,10 @@ import { ContentDisposition } from './content-disposition.ts'
 import { ContentRange } from './content-range.ts'
 import { ContentType } from './content-type.ts'
 import { Cookie } from './cookie.ts'
-import { SuperHeaders } from './super-headers.ts'
+import { IfMatch } from './if-match.ts'
 import { IfNoneMatch } from './if-none-match.ts'
+import { Range } from './range.ts'
+import { SuperHeaders } from './super-headers.ts'
 
 describe('SuperHeaders', () => {
   it('is an instance of Headers', () => {
@@ -271,6 +273,11 @@ describe('SuperHeaders', () => {
       assert.equal(headers.get('If-Modified-Since'), 'Fri, 01 Jan 2021 00:00:00 GMT')
     })
 
+    it('handles the ifMatch property', () => {
+      let headers = new SuperHeaders({ ifMatch: ['67ab43', '54ed21'] })
+      assert.equal(headers.get('If-Match'), '"67ab43", "54ed21"')
+    })
+
     it('handles the ifNoneMatch property', () => {
       let headers = new SuperHeaders({ ifNoneMatch: ['67ab43', '54ed21'] })
       assert.equal(headers.get('If-None-Match'), '"67ab43", "54ed21"')
@@ -414,6 +421,21 @@ describe('SuperHeaders', () => {
 
       headers.age = null
       assert.equal(headers.age, null)
+    })
+
+    it('supports the allow property', () => {
+      let headers = new SuperHeaders()
+
+      assert.equal(headers.allow, null)
+
+      headers.allow = 'GET, HEAD'
+      assert.equal(headers.allow, 'GET, HEAD')
+
+      headers.allow = ['GET', 'POST', 'PUT', 'DELETE']
+      assert.equal(headers.allow, 'GET, POST, PUT, DELETE')
+
+      headers.allow = null
+      assert.equal(headers.allow, null)
     })
 
     it('supports the cacheControl property', () => {
@@ -652,6 +674,26 @@ describe('SuperHeaders', () => {
       assert.equal(headers.ifModifiedSince, null)
     })
 
+    it('supports the ifMatch property', () => {
+      let headers = new SuperHeaders()
+
+      assert.ok(headers.ifMatch instanceof IfMatch)
+      assert.equal(headers.ifMatch.tags.length, 0)
+
+      headers.ifMatch = '67ab43'
+      assert.deepEqual(headers.ifMatch.tags, ['"67ab43"'])
+
+      headers.ifMatch = ['67ab43', '54ed21']
+      assert.deepEqual(headers.ifMatch.tags, ['"67ab43"', '"54ed21"'])
+
+      headers.ifMatch = { tags: ['W/"67ab43"'] }
+      assert.deepEqual(headers.ifMatch.tags, ['W/"67ab43"'])
+
+      headers.ifMatch = null
+      assert.ok(headers.ifMatch instanceof IfMatch)
+      assert.equal(headers.ifMatch.tags.length, 0)
+    })
+
     it('supports the ifNoneMatch property', () => {
       let headers = new SuperHeaders()
 
@@ -707,6 +749,29 @@ describe('SuperHeaders', () => {
 
       headers.location = null
       assert.equal(headers.location, null)
+    })
+
+    it('supports the range property', () => {
+      let headers = new SuperHeaders()
+
+      assert.ok(headers.range instanceof Range)
+      assert.equal(headers.range.ranges.length, 0)
+
+      headers.range = 'bytes=0-99'
+      assert.equal(headers.range.unit, 'bytes')
+      assert.equal(headers.range.ranges.length, 1)
+      assert.equal(headers.range.ranges[0].start, 0)
+      assert.equal(headers.range.ranges[0].end, 99)
+
+      headers.range = { unit: 'bytes', ranges: [{ start: 100, end: 199 }] }
+      assert.equal(headers.range.unit, 'bytes')
+      assert.equal(headers.range.ranges.length, 1)
+      assert.equal(headers.range.ranges[0].start, 100)
+      assert.equal(headers.range.ranges[0].end, 199)
+
+      headers.range = null
+      assert.ok(headers.range instanceof Range)
+      assert.equal(headers.range.ranges.length, 0)
     })
 
     it('supports the referer property', () => {

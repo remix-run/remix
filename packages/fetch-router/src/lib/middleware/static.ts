@@ -36,16 +36,17 @@ function requestPathnameResolver(context: RequestContext): string {
  * @param options - Optional configuration
  *
  * @example
- * // Use URL pathname (simple case)
- * router.get('/*', {
- *   use: [staticFiles('./public')],
- *   handler() { return new Response('Not Found', { status: 404 }) }
+ * // Use URL pathname
+ * let router = createRouter({
+ *   middleware: [staticFiles('./public')],
  * })
  *
  * @example
  * // Custom path resolver using route params
  * router.get('/assets/*path', {
- *   use: [staticFiles('./assets', { path: ({ params }) => params.path })],
+ *   middleware: [staticFiles('./assets', {
+ *     path: ({ params }) => params.path,
+ *   })],
  *   handler() { return new Response('Not Found', { status: 404 }) }
  * })
  */

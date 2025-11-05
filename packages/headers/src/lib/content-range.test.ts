@@ -9,7 +9,7 @@ describe('ContentRange', () => {
     assert.equal(contentRange.unit, '')
     assert.equal(contentRange.start, null)
     assert.equal(contentRange.end, null)
-    assert.equal(contentRange.size, '*')
+    assert.equal(contentRange.size, undefined)
   })
 
   it('initializes with a string (satisfied range)', () => {
@@ -120,6 +120,14 @@ describe('ContentRange', () => {
   it('converts to an empty string when unit is not set', () => {
     let contentRange = new ContentRange()
     contentRange.unit = ''
+    assert.equal(contentRange.toString(), '')
+  })
+
+  it('converts to an empty string when size is not set', () => {
+    let contentRange = new ContentRange()
+    contentRange.unit = 'bytes'
+    contentRange.start = 0
+    contentRange.end = 999
     assert.equal(contentRange.toString(), '')
   })
 

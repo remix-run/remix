@@ -202,6 +202,31 @@ describe('createFileHandler', () => {
 
           assert.equal(response2.status, 304)
         })
+
+        it('ignores If-None-Match when etag is disabled', async () => {
+          let file = createMockFile('Hello, World!')
+
+          // First, get the ETag that would be generated
+          let handlerWithEtag = createFileHandler(() => file)
+          let response1 = await handlerWithEtag(
+            createContext('http://localhost/test.txt', { method }),
+          )
+          let etag = response1.headers.get('ETag')
+          assert.ok(etag)
+
+          // Now test with etag disabled but send the matching ETag
+          let handler = createFileHandler(() => file, { etag: false })
+          let response = await handler(
+            createContext('http://localhost/test.txt', {
+              method,
+              headers: { 'If-None-Match': etag },
+            }),
+          )
+
+          // Should return 200, not 304, because etag is disabled
+          assert.equal(response.status, 200)
+          assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
+        })
       })
     }
   })
@@ -209,29 +234,126 @@ describe('createFileHandler', () => {
   describe('If-Match support', () => {
     for (let method of ['GET', 'HEAD'] as const) {
       describe(method, () => {
-        it('returns 200 (OK) when If-Match matches ETag', async () => {
-          let file = createMockFile('Hello, World!', { lastModified: 1000000 })
-          let handler = createFileHandler(() => file)
+        describe('precondition validation', () => {
+          it('returns 200 (OK) when If-Match matches ETag', async () => {
+            let file = createMockFile('Hello, World!', { lastModified: 1000000 })
+            let handler = createFileHandler(() => file)
 
-          let response1 = await handler(createContext('http://localhost/test.txt', { method }))
+            let response1 = await handler(createContext('http://localhost/test.txt', { method }))
+            let etag = response1.headers.get('ETag')
+            assert.ok(etag)
+
+            let response2 = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: { 'If-Match': etag },
+              }),
+            )
+
+            assert.equal(response2.status, 200)
+            assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
+          })
+
+          it('returns 412 (Precondition Failed) when If-Match does not match', async () => {
+            let file = createMockFile('Hello, World!')
+            let handler = createFileHandler(() => file)
+
+            let response = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: { 'If-Match': 'W/"wrong-etag"' },
+              }),
+            )
+
+            assert.equal(response.status, 412)
+          })
+
+          it('returns 200 (OK) when If-Match is *', async () => {
+            let file = createMockFile('Hello, World!')
+            let handler = createFileHandler(() => file)
+
+            let response = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: { 'If-Match': '*' },
+              }),
+            )
+
+            assert.equal(response.status, 200)
+            assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
+          })
+
+          it('returns 200 (OK) when If-Match contains multiple ETags and one matches', async () => {
+            let file = createMockFile('Hello, World!', { lastModified: 1000000 })
+            let handler = createFileHandler(() => file)
+
+            let response1 = await handler(createContext('http://localhost/test.txt', { method }))
+            let etag = response1.headers.get('ETag')
+            assert.ok(etag)
+
+            let response2 = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: { 'If-Match': `W/"wrong-1", ${etag}, W/"wrong-2"` },
+              }),
+            )
+
+            assert.equal(response2.status, 200)
+            assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
+          })
+
+          it('returns 412 (Precondition Failed) when If-Match contains multiple ETags and none match', async () => {
+            let file = createMockFile('Hello, World!')
+            let handler = createFileHandler(() => file)
+
+            let response = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: { 'If-Match': 'W/"wrong-1", W/"wrong-2"' },
+              }),
+            )
+
+            assert.equal(response.status, 412)
+          })
+        })
+
+        describe('prioritization', () => {
+          it('returns 412 (Precondition Failed) when If-Match fails, even if If-None-Match would match', async () => {
+            let file = createMockFile('Hello, World!', { lastModified: 1000000 })
+            let handler = createFileHandler(() => file)
+
+            let response1 = await handler(createContext('http://localhost/test.txt', { method }))
+            let etag = response1.headers.get('ETag')
+            assert.ok(etag)
+
+            let response2 = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: {
+                  'If-Match': 'W/"wrong-etag"',
+                  'If-None-Match': etag,
+                },
+              }),
+            )
+
+            assert.equal(response2.status, 412)
+          })
+        })
+
+        it('ignores If-Match when etag is disabled', async () => {
+          let file = createMockFile('Hello, World!')
+
+          // First, get the ETag that would be generated
+          let handlerWithEtag = createFileHandler(() => file)
+          let response1 = await handlerWithEtag(
+            createContext('http://localhost/test.txt', { method }),
+          )
           let etag = response1.headers.get('ETag')
           assert.ok(etag)
 
-          let response2 = await handler(
-            createContext('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Match': etag },
-            }),
-          )
-
-          assert.equal(response2.status, 200)
-          assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
-        })
-
-        it('returns 412 (Precondition Failed) when If-Match does not match', async () => {
-          let file = createMockFile('Hello, World!')
-          let handler = createFileHandler(() => file)
-
+          // Now test with etag disabled but send a non-matching ETag
+          // (If we weren't ignoring it, this would return 412)
+          let handler = createFileHandler(() => file, { etag: false })
           let response = await handler(
             createContext('http://localhost/test.txt', {
               method,
@@ -239,89 +361,7 @@ describe('createFileHandler', () => {
             }),
           )
 
-          assert.equal(response.status, 412)
-        })
-
-        it('returns 200 (OK) when If-Match is *', async () => {
-          let file = createMockFile('Hello, World!')
-          let handler = createFileHandler(() => file)
-
-          let response = await handler(
-            createContext('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Match': '*' },
-            }),
-          )
-
-          assert.equal(response.status, 200)
-          assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
-        })
-
-        it('returns 200 (OK) when If-Match contains multiple ETags and one matches', async () => {
-          let file = createMockFile('Hello, World!', { lastModified: 1000000 })
-          let handler = createFileHandler(() => file)
-
-          let response1 = await handler(createContext('http://localhost/test.txt', { method }))
-          let etag = response1.headers.get('ETag')
-          assert.ok(etag)
-
-          let response2 = await handler(
-            createContext('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Match': `W/"wrong-1", ${etag}, W/"wrong-2"` },
-            }),
-          )
-
-          assert.equal(response2.status, 200)
-          assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
-        })
-
-        it('returns 412 (Precondition Failed) when If-Match contains multiple ETags and none match', async () => {
-          let file = createMockFile('Hello, World!')
-          let handler = createFileHandler(() => file)
-
-          let response = await handler(
-            createContext('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Match': 'W/"wrong-1", W/"wrong-2"' },
-            }),
-          )
-
-          assert.equal(response.status, 412)
-        })
-
-        it('returns 412 (Precondition Failed) when If-Match fails, even if If-None-Match would match', async () => {
-          let file = createMockFile('Hello, World!', { lastModified: 1000000 })
-          let handler = createFileHandler(() => file)
-
-          let response1 = await handler(createContext('http://localhost/test.txt', { method }))
-          let etag = response1.headers.get('ETag')
-          assert.ok(etag)
-
-          let response2 = await handler(
-            createContext('http://localhost/test.txt', {
-              method,
-              headers: {
-                'If-Match': 'W/"wrong-etag"',
-                'If-None-Match': etag,
-              },
-            }),
-          )
-
-          assert.equal(response2.status, 412)
-        })
-
-        it('ignores If-Match when etag is disabled', async () => {
-          let file = createMockFile('Hello, World!')
-          let handler = createFileHandler(() => file, { etag: false })
-
-          let response = await handler(
-            createContext('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Match': 'W/"any-etag"' },
-            }),
-          )
-
+          // Should return 200, not 412, because etag is disabled
           assert.equal(response.status, 200)
           assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
         })
@@ -332,96 +372,116 @@ describe('createFileHandler', () => {
   describe('If-Unmodified-Since support', () => {
     for (let method of ['GET', 'HEAD'] as const) {
       describe(method, () => {
-        it('returns 200 (OK) when If-Unmodified-Since is after Last-Modified', async () => {
-          let fileDate = new Date('2025-01-01')
-          let futureDate = new Date('2026-01-01')
-          let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
-          let handler = createFileHandler(() => file)
+        describe('precondition validation', () => {
+          it('returns 200 (OK) when If-Unmodified-Since is after Last-Modified', async () => {
+            let fileDate = new Date('2025-01-01')
+            let futureDate = new Date('2026-01-01')
+            let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
+            let handler = createFileHandler(() => file)
 
-          let response = await handler(
-            createContext('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Unmodified-Since': futureDate.toUTCString() },
-            }),
-          )
+            let response = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: { 'If-Unmodified-Since': futureDate.toUTCString() },
+              }),
+            )
 
-          assert.equal(response.status, 200)
-          assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
+            assert.equal(response.status, 200)
+            assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
+          })
+
+          it('returns 200 (OK) when If-Unmodified-Since matches Last-Modified', async () => {
+            let fileDate = new Date('2025-01-01')
+            let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
+            let handler = createFileHandler(() => file)
+
+            let response = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: { 'If-Unmodified-Since': fileDate.toUTCString() },
+              }),
+            )
+
+            assert.equal(response.status, 200)
+            assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
+          })
+
+          it('returns 412 (Precondition Failed) when If-Unmodified-Since is before Last-Modified', async () => {
+            let fileDate = new Date('2025-01-01')
+            let pastDate = new Date('2024-01-01')
+            let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
+            let handler = createFileHandler(() => file)
+
+            let response = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: { 'If-Unmodified-Since': pastDate.toUTCString() },
+              }),
+            )
+
+            assert.equal(response.status, 412)
+          })
+
+          it('ignores malformed If-Unmodified-Since', async () => {
+            let fileDate = new Date('2025-01-01')
+            let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
+            let handler = createFileHandler(() => file)
+
+            let response = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: { 'If-Unmodified-Since': 'invalid-date' },
+              }),
+            )
+
+            assert.equal(response.status, 200)
+            assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
+          })
         })
 
-        it('returns 200 (OK) when If-Unmodified-Since matches Last-Modified', async () => {
-          let fileDate = new Date('2025-01-01')
-          let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
-          let handler = createFileHandler(() => file)
+        describe('prioritization', () => {
+          it('ignores If-Unmodified-Since when If-Match is present', async () => {
+            let fileDate = new Date('2025-01-01')
+            let pastDate = new Date('2024-01-01')
+            let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
+            let handler = createFileHandler(() => file)
 
-          let response = await handler(
-            createContext('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Unmodified-Since': fileDate.toUTCString() },
-            }),
-          )
+            let response1 = await handler(createContext('http://localhost/test.txt', { method }))
+            let etag = response1.headers.get('ETag')
+            assert.ok(etag)
 
-          assert.equal(response.status, 200)
-          assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
-        })
+            let response2 = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: {
+                  'If-Match': etag,
+                  'If-Unmodified-Since': pastDate.toUTCString(),
+                },
+              }),
+            )
 
-        it('returns 412 (Precondition Failed) when If-Unmodified-Since is before Last-Modified', async () => {
-          let fileDate = new Date('2025-01-01')
-          let pastDate = new Date('2024-01-01')
-          let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
-          let handler = createFileHandler(() => file)
+            assert.equal(response2.status, 200)
+            assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
+          })
 
-          let response = await handler(
-            createContext('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Unmodified-Since': pastDate.toUTCString() },
-            }),
-          )
+          it('returns 412 (Precondition Failed) when If-Match fails, even if If-Unmodified-Since would pass', async () => {
+            let fileDate = new Date('2025-01-01')
+            let futureDate = new Date('2026-01-01')
+            let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
+            let handler = createFileHandler(() => file)
 
-          assert.equal(response.status, 412)
-        })
+            let response = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: {
+                  'If-Match': 'W/"wrong-etag"',
+                  'If-Unmodified-Since': futureDate.toUTCString(),
+                },
+              }),
+            )
 
-        it('ignores If-Unmodified-Since when If-Match is present', async () => {
-          let fileDate = new Date('2025-01-01')
-          let pastDate = new Date('2024-01-01')
-          let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
-          let handler = createFileHandler(() => file)
-
-          let response1 = await handler(createContext('http://localhost/test.txt', { method }))
-          let etag = response1.headers.get('ETag')
-          assert.ok(etag)
-
-          let response2 = await handler(
-            createContext('http://localhost/test.txt', {
-              method,
-              headers: {
-                'If-Match': etag,
-                'If-Unmodified-Since': pastDate.toUTCString(),
-              },
-            }),
-          )
-
-          assert.equal(response2.status, 200)
-          assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
-        })
-
-        it('returns 412 (Precondition Failed) when If-Match fails, even if If-Unmodified-Since would pass', async () => {
-          let fileDate = new Date('2025-01-01')
-          let futureDate = new Date('2026-01-01')
-          let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
-          let handler = createFileHandler(() => file)
-
-          let response = await handler(
-            createContext('http://localhost/test.txt', {
-              method,
-              headers: {
-                'If-Match': 'W/"wrong-etag"',
-                'If-Unmodified-Since': futureDate.toUTCString(),
-              },
-            }),
-          )
-
-          assert.equal(response.status, 412)
+            assert.equal(response.status, 412)
+          })
         })
 
         it('ignores If-Unmodified-Since when lastModified is disabled', async () => {
@@ -433,22 +493,6 @@ describe('createFileHandler', () => {
             createContext('http://localhost/test.txt', {
               method,
               headers: { 'If-Unmodified-Since': pastDate.toUTCString() },
-            }),
-          )
-
-          assert.equal(response.status, 200)
-          assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
-        })
-
-        it('ignores malformed If-Unmodified-Since', async () => {
-          let fileDate = new Date('2025-01-01')
-          let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
-          let handler = createFileHandler(() => file)
-
-          let response = await handler(
-            createContext('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Unmodified-Since': 'invalid-date' },
             }),
           )
 
