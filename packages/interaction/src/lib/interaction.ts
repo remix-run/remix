@@ -25,7 +25,7 @@ export type EventsContainer<target extends EventTarget> = {
  *   },
  *   keydown: [
  *     (event) => {},
- *     capture((event) => {}),
+ *     { capture: true, listener(event) {} },
  *   ],
  * }
  * ```
@@ -37,9 +37,32 @@ export type EventListeners<target extends EventTarget = EventTarget> = Partial<{
 }>
 
 /**
+ * Context object provided to interaction setup functions via `this`.
+ */
+export interface Interaction {
+  /**
+   * The target element this interaction is being set up on.
+   */
+  readonly target: EventTarget
+  /**
+   * The abort signal that will dispose this interaction when aborted.
+   */
+  readonly signal: AbortSignal
+  /**
+   * Error handler from the parent container.
+   */
+  readonly raise: (error: unknown) => void
+  /**
+   * Create a container on a target with listeners. Automatically passes
+   * through signal and onError from the parent container.
+   */
+  on<target extends EventTarget>(target: target, listeners: EventListeners<target>): void
+}
+
+/**
  * A function that sets up an interaction on a target.
  */
-export type InteractionSetup = (target: EventTarget, signal: AbortSignal) => void
+export type InteractionSetup = (this: Interaction) => void
 
 // interactions ------------------------------------------------------------------------------------
 
@@ -64,11 +87,11 @@ export type InteractionSetup = (target: EventTarget, signal: AbortSignal) => voi
  * }
  *
  * // setup the interaction
- * function KeydownEnter(target, signal) {
- *   on(target, signal, {
+ * function KeydownEnter(this: Interaction) {
+ *   this.on(this.target, {
  *     keydown(event) {
  *       if (event.key === 'Enter') {
- *         target.dispatchEvent(new KeyboardEvent(keydownEnter, { key: 'Enter' }))
+ *         this.target.dispatchEvent(new KeyboardEvent(keydownEnter, { key: 'Enter' }))
  *       }
  *     },
  *   })
@@ -90,6 +113,20 @@ export function defineInteraction<type extends string>(type: type, interaction: 
 // container ---------------------------------------------------------------------------------------
 
 /**
+ * Options for creating an event container.
+ */
+export type ContainerOptions = {
+  /**
+   * An optional abort signal to dispose the container when the signal is aborted
+   */
+  signal?: AbortSignal
+  /**
+   * An optional error handler called when a listener throws an error
+   */
+  onError?: (error: unknown) => void
+}
+
+/**
  * ### Description
  *
  * Creates an event container on a target with reentry protection and efficient
@@ -107,6 +144,16 @@ export function defineInteraction<type extends string>(type: type, interaction: 
  *   },
  * })
  * ```
+ *
+ * ### With error handling:
+ *
+ * ```ts
+ * let container = createContainer(button, {
+ *   onError(error) {
+ *     console.error('Listener error:', error)
+ *   },
+ * })
+ * ```
  */
 export function createContainer<target extends EventTarget>(
   /**
@@ -116,19 +163,25 @@ export function createContainer<target extends EventTarget>(
   target: target,
 
   /**
-   * An optional abort signal to dispose the container when the signal is aborted
+   * Optional configuration for the container
    *
    * @example
    * ```ts
    * let controller = new AbortController()
-   * let container = createContainer(target, controller.signal)
+   * let container = createContainer(target, {
+   *   signal: controller.signal,
+   *   onError(error) {
+   *     console.error(error)
+   *   },
+   * })
    * // will remove all listeners and dispose the container
    * controller.abort()
    * ```
    */
-  signal?: AbortSignal,
+  options?: ContainerOptions,
 ): EventsContainer<target> {
   let controller = new AbortController()
+  let { signal, onError = defaultOnError } = options ?? {}
 
   if (signal) {
     signal.addEventListener('abort', () => controller.abort(), { once: true })
@@ -159,9 +212,10 @@ export function createContainer<target extends EventTarget>(
 
           let existing = bindings[type]
           if (!existing) {
-            bindings[type] = descriptors.map((d) =>
-              createBinding(target, type, d.listener, d.options, controller.signal),
-            )
+            bindings[type] = descriptors.map((d) => {
+              let { listener, ...options } = d
+              return createBinding(target, type, listener, options, controller.signal, onError)
+            })
             return
           }
 
@@ -170,10 +224,11 @@ export function createContainer<target extends EventTarget>(
           for (let i = 0; i < min; i++) {
             let d = descriptors[i]
             let b = existing[i]
-            if (optionsChanged(d.options, b.options)) {
-              b.rebind(d.listener, d.options)
+            let { listener, ...options } = d
+            if (optionsChanged(options, b.options)) {
+              b.rebind(listener, options)
             } else {
-              b.setListener(d.listener)
+              b.setListener(listener)
             }
           }
 
@@ -181,7 +236,10 @@ export function createContainer<target extends EventTarget>(
           if (descriptors.length > existing.length) {
             for (let i = existing.length; i < descriptors.length; i++) {
               let d = descriptors[i]
-              existing.push(createBinding(target, type, d.listener, d.options, controller.signal))
+              let { listener, ...options } = d
+              existing.push(
+                createBinding(target, type, listener, options, controller.signal, onError),
+              )
             }
           }
 
@@ -205,16 +263,14 @@ export function createContainer<target extends EventTarget>(
 /**
  * ### Description
  *
- * Add event listeners with async reentry protection and semantic Interactions.
- *
- * ### Basic usage:
+ * Add event listeners with async reentry protection and semantic Interactions. Shorthand for `createContainer` without options.
  *
  * ```ts
  * import { on } from "@remix-run/interaction"
  * import { longPress } from "@remix-run/interaction/press"
  *
  * let button = document.createElement('button')
- * on(button, {
+ * let dispose = on(button, {
  *   click(event, signal) {
  *     console.log('clicked')
  *   },
@@ -222,74 +278,21 @@ export function createContainer<target extends EventTarget>(
  *     console.log('long pressed')
  *   },
  * })
- * ```
  *
- * ### With abort signal to dispose the container:
- *
- * ```ts
- * let controller = new AbortController()
- * on(button, controller.signal, {
- *   click(event, signal) {
- *     console.log('clicked')
- *   },
- * })
- * // will remove all listeners and dispose the container
- * controller.abort()
- * ```
- *
- * ### With array of listeners on a type:
- *
- * ```ts
- * on(button, {
- *   click: [
- *     (event, signal) => {
- *       if (someCondition) {
- *         event.stopImmediatePropagation()
- *       }
- *       console.log('called')
- *     },
- *     (event, signal) => {
- *       console.log('not called')
- *     },
- *   ],
- * })
+ * // later
+ * dispose()
  * ```
  */
 export function on<target extends EventTarget>(
   target: target,
-  signal: AbortSignal,
   listeners: EventListeners<target>,
-): () => void
-export function on<target extends EventTarget>(
-  target: target,
-  listeners: EventListeners<target>,
-): () => void
-export function on(
-  target: EventTarget,
-  signalOrListeners: AbortSignal | EventListeners,
-  listeners?: EventListeners,
 ): () => void {
-  if (!(signalOrListeners instanceof AbortSignal)) {
-    let container = createContainer(target)
-    container.set(signalOrListeners)
-    return container.dispose
-  } else if (listeners) {
-    let container = createContainer(target, signalOrListeners)
-    container.set(listeners)
-    return container.dispose
-  }
-  throw new Error('Invalid arguments')
+  let container = createContainer(target)
+  container.set(listeners)
+  return container.dispose
 }
 
 // descriptors -------------------------------------------------------------------------------------
-
-export function listenWith<L>(options: AddEventListenerOptions, listener: L): Descriptor<L> {
-  return { options, listener }
-}
-
-export function capture<L>(listener: L): Descriptor<L> {
-  return listenWith({ capture: true }, listener)
-}
 
 // TypedEventTarget --------------------------------------------------------------------------------
 
@@ -327,10 +330,33 @@ type TypedEventListener<eventMap> = {
 let interactions = new Map<string, InteractionSetup>()
 let initializedTargets = new WeakMap<EventTarget, Map<Function, number>>()
 
+function defaultOnError(error: unknown) {
+  throw error
+}
+
+class InteractionHandle implements Interaction {
+  readonly target: EventTarget
+  readonly signal: AbortSignal
+  readonly raise: (error: unknown) => void
+
+  constructor(target: EventTarget, signal: AbortSignal, onError: (error: unknown) => void) {
+    this.target = target
+    this.signal = signal
+    this.raise = onError
+  }
+
+  on<target extends EventTarget>(target: target, listeners: EventListeners<target>): void {
+    let container = createContainer(target, {
+      signal: this.signal,
+      onError: this.raise,
+    })
+    container.set(listeners)
+  }
+}
+
 type ListenerOrDescriptor<Listener> = Listener | Descriptor<Listener>
 
-interface Descriptor<L> {
-  options: AddEventListenerOptions
+interface Descriptor<L> extends AddEventListenerOptions {
   listener: L
 }
 
@@ -338,15 +364,13 @@ function normalizeDescriptors<Listener>(
   raw: ListenerOrDescriptor<Listener> | ListenerOrDescriptor<Listener>[],
 ): Descriptor<Listener>[] {
   if (Array.isArray(raw)) {
-    return raw.map((item) =>
-      isDescriptor<Listener>(item) ? item : { listener: item, options: {} },
-    )
+    return raw.map((item) => (isDescriptor<Listener>(item) ? item : { listener: item }))
   }
-  return [isDescriptor<Listener>(raw) ? raw : { listener: raw, options: {} }]
+  return [isDescriptor<Listener>(raw) ? raw : { listener: raw }]
 }
 
 function isDescriptor<L>(value: any): value is Descriptor<L> {
-  return typeof value === 'object' && value !== null && 'options' in value && 'listener' in value
+  return typeof value === 'object' && value !== null && 'listener' in value
 }
 
 type Binding<L> = {
@@ -375,6 +399,7 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
   listener: ListenerFor<target, k>,
   options: AddEventListenerOptions,
   containerSignal: AbortSignal,
+  onError: (error: unknown) => void,
 ): Binding<ListenerFor<target, k>> {
   let reentry = new AbortController()
   let disposed = false
@@ -386,8 +411,15 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
 
   let wrappedListener = (event: Event) => {
     abort()
-    // TODO: figure out if we can remove this cast
-    listener(event as any, reentry.signal)
+    try {
+      // TODO: figure out if we can remove this cast
+      let result = listener(event as any, reentry.signal)
+      if (result instanceof Promise) {
+        result.catch(onError)
+      }
+    } catch (error) {
+      onError(error)
+    }
   }
 
   function bind() {
@@ -437,7 +469,8 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
     }
     let count = refCounts.get(interaction) ?? 0
     if (count === 0) {
-      interaction(target, containerSignal)
+      let interactionContext = new InteractionHandle(target, containerSignal, onError)
+      interaction.call(interactionContext)
     }
     refCounts.set(interaction, count + 1)
   }

@@ -1,4 +1,4 @@
-import { defineInteraction, on } from '../interaction.ts'
+import { defineInteraction, type Interaction } from '../interaction.ts'
 
 /**
  * Normalized press events for pointer and keyboard input. A press is dispatched
@@ -105,9 +105,10 @@ export class PressEvent extends Event {
   }
 }
 
-function Press(target: EventTarget, signal: AbortSignal) {
-  if (!(target instanceof HTMLElement)) return
+function Press(this: Interaction) {
+  if (!(this.target instanceof HTMLElement)) return
 
+  let target = this.target
   let isPointerDown = false
   let isKeyboardDown = false
   let longPressTimer: number = 0
@@ -127,7 +128,7 @@ function Press(target: EventTarget, signal: AbortSignal) {
     }, 500)
   }
 
-  on(target, signal, {
+  this.on(this.target, {
     pointerdown(event) {
       if (event.isPrimary === false) return
       if (isPointerDown) return
@@ -205,7 +206,7 @@ function Press(target: EventTarget, signal: AbortSignal) {
     },
   })
 
-  on(target.ownerDocument, signal, {
+  this.on(target.ownerDocument, {
     pointerup() {
       if (isPointerDown) {
         isPointerDown = false

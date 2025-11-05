@@ -1,4 +1,4 @@
-import { defineInteraction, on } from '../interaction.ts'
+import { defineInteraction, type Interaction } from '../interaction.ts'
 
 /**
  * Binds the escape key to an element and automatically prevents the default
@@ -135,11 +135,18 @@ const keys = [
   'Tab',
 ]
 
-function Keys(target: EventTarget, signal: AbortSignal) {
-  if (!(target instanceof HTMLElement || target instanceof Document || target instanceof Window))
+function Keys(this: Interaction) {
+  if (
+    !(
+      this.target instanceof HTMLElement ||
+      this.target instanceof Document ||
+      this.target instanceof Window
+    )
+  )
     return
 
-  on(target, signal, {
+  let target = this.target
+  this.on(this.target, {
     keydown(event) {
       if (!keys.includes(event.key)) return
       event.preventDefault()
