@@ -3,13 +3,13 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@remix-run/multipart-parser": "workspace:*",
+    "@remix-run/multipart-parser": "workspace:^",
     "tmp": "^0.2.3"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
     "@types/tmp": "^0.2.6",
-    "typescript": "^5.7.2"
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "start": "node server.js"

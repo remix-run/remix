@@ -2,6 +2,8 @@
 
 Safe HTML template tag with auto-escaping for JavaScript.
 
+Building HTML strings with user input is dangerous. Without proper escaping, you risk XSS (cross-site scripting) vulnerabilities where malicious code can be injected into your pages. Manual escaping is error-prone and easy to forget, especially when composing HTML from multiple sources.
+
 `html-template` provides a tagged template literal for safely constructing HTML strings with automatic escaping of interpolated values to prevent XSS vulnerabilities.
 
 ## Features

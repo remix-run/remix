@@ -136,7 +136,6 @@ const keys = [
 ]
 
 function Keys(target: EventTarget, signal: AbortSignal) {
-  console.log('setup', target)
   if (!(target instanceof HTMLElement)) return
 
   on(target, signal, {

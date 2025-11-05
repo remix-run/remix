@@ -2,7 +2,7 @@
 
 `multipart-parser` is a fast, streaming multipart parser that works in **any JavaScript environment**, from serverless functions to traditional servers. Whether you're handling file uploads, parsing email attachments, or working with multipart API responses, `multipart-parser` has you covered.
 
-## 🚀 Why multipart-parser?
+## Why multipart-parser?
 
 - **Universal JavaScript** - One library that works everywhere: Node.js, Bun, Deno, Cloudflare Workers, and browsers
 - **Blazing Fast** - Consistently outperforms popular alternatives like busboy in benchmarks
@@ -12,14 +12,14 @@
 - **Standards Based** - Built on the web standard [Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) for maximum compatibility
 - **Production Ready** - Battle-tested error handling with specific error types for common scenarios
 
-## 📦 Features
+## Features
 
-- Parse file uploads (`multipart/form-data`) with automatic field and file detection
-- Support for all `multipart/*` content types (mixed, alternative, related, etc.)
-- Convenient `MultipartPart` API with `arrayBuffer`, `bytes`, `text`, `size`, and metadata access
-- Built-in file size limiting to prevent abuse
-- First-class Node.js support with native `http.IncomingMessage` compatibility
-- [Demos for every major runtime](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos)
+- **File Upload Parsing** - Parse file uploads (`multipart/form-data`) with automatic field and file detection
+- **Full Multipart Support** - Support for all `multipart/*` content types (mixed, alternative, related, etc.)
+- **Convenient API** - `MultipartPart` API with `arrayBuffer`, `bytes`, `text`, `size`, and metadata access
+- **File Size Limiting** - Built-in file size limiting to prevent abuse
+- **Node.js Support** - First-class Node.js support with native `http.IncomingMessage` compatibility
+- **Runtime Demos** - [Demos for every major runtime](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos)
 
 ## Installation
 

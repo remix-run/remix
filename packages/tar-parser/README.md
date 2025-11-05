@@ -1,14 +1,18 @@
 # tar-parser
 
-`tar-parser` is a fast, efficient parser for [tar archives](<https://en.wikipedia.org/wiki/Tar_(computing)>). It can be used in any JavaScript environment (not just Node.js).
+`tar-parser` is a fast, efficient parser for [tar archives](<https://en.wikipedia.org/wiki/Tar_(computing)>).
+
+Tar archives are ubiquitous in software development, used for distributing packages, backing up files, and transferring data. Most existing JavaScript tar parsers are either Node.js-specific or don't handle streaming efficiently, forcing you to buffer entire archives in memory. This makes them unsuitable for serverless environments or processing large archives.
+
+`tar-parser` can be used in any JavaScript environment (not just Node.js) and processes archives as streams, making it ideal for modern web development across all runtimes.
 
 ## Features
 
-- Runs anywhere JavaScript runs
-- Built on the standard [web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API), so it's composable with `fetch()` streams
-- Supports POSIX, GNU, and PAX tar formats
-- Memory efficient and does not buffer anything in normal usage
-- 0 dependencies
+- **Universal Runtime** - Runs anywhere JavaScript runs
+- **Web Streams** - Built on the standard [web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API), so it's composable with `fetch()` streams
+- **Format Support** - Supports POSIX, GNU, and PAX tar formats
+- **Memory Efficient** - Does not buffer anything in normal usage
+- **Zero Dependencies** - No external dependencies
 
 ## Installation
 
@@ -62,6 +66,10 @@ Node.js v22.8.0
 │ node-tar   │ '6.49 ms ± 0.44'   │
 └────────────┴────────────────────┘
 ```
+
+## Related Packages
+
+- [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser) - Fast, streaming multipart parser for JavaScript
 
 ## Credits
 

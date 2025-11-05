@@ -1,11 +1,13 @@
-# Remix Interaction
+# interaction
 
-Enhanced events for any [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget).
+Enhanced events and custom interactions for any [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget).
 
-- Declarative event bindings with plain objects
-- Semantic, reusable "interactions" like `longPress` and `arrowDown`
-- Async listeners with reentry protection via [AbortSignal](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal)
-- Type-safe listeners and custom `EventTarget` subclasses with `TypedEventTarget`
+## Features
+
+- **Declarative Bindings** - Event bindings with plain objects
+- **Semantic Interactions** - Reusable "interactions" like `longPress` and `arrowDown`
+- **Async Support** - Listeners with reentry protection via [AbortSignal](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal)
+- **Type Safety** - Type-safe listeners and custom `EventTarget` subclasses with `TypedEventTarget`
 
 ## Installation
 
@@ -42,7 +44,7 @@ on(inputElement, {
       console.log('first')
     },
     capture((event) => {
-      // captured phase
+      // capture phase
     }),
     listenWith({ once: true }, (event) => {
       console.log('only once')
@@ -73,7 +75,7 @@ on(listItem, {
 
 Import builtins from their modules (for example, `@remix-run/interaction/press`, `@remix-run/interaction/keys`). Some interactions may coordinate with others (for example, calling `event.preventDefault()` in one listener can prevent a related interaction from firing).
 
-You can also [create your own interactions](#interactions).
+You can also [create your own interactions](#custom-interactions).
 
 ### Async listeners and reentry protection
 
@@ -193,7 +195,7 @@ on(button, {
 })
 ```
 
-## Interactions
+## Custom Interactions
 
 Define semantic interactions that can dispatch custom events and be reused declaratively.
 
@@ -237,7 +239,7 @@ Notes:
 
 ## Typed Event Targets
 
-Use `TypedEventTarget<eventMap>` to get type-safe `addEventListener` and integrate with this library’s `on` helpers.
+Use `TypedEventTarget<eventMap>` to get type-safe `addEventListener` and integrate with this library's `on` helpers.
 
 ```ts
 import { TypedEventTarget, on } from '@remix-run/interaction'
@@ -275,6 +277,23 @@ on(drummer, {
   },
 })
 ```
+
+## Demos
+
+To run the demos:
+
+```sh
+pnpm run demos
+```
+
+The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/interaction/demos) contains working demos:
+
+- [`demos/async`](https://github.com/remix-run/remix/tree/main/packages/interaction/demos/async) - Async listeners with abort signal
+- [`demos/basic`](https://github.com/remix-run/remix/tree/main/packages/interaction/demos/basic) - Basic event handling
+- [`demos/form`](https://github.com/remix-run/remix/tree/main/packages/interaction/demos/form) - Form event handling
+- [`demos/keys`](https://github.com/remix-run/remix/tree/main/packages/interaction/demos/keys) - Keyboard interactions
+- [`demos/popover`](https://github.com/remix-run/remix/tree/main/packages/interaction/demos/popover) - Popover interactions
+- [`demos/press`](https://github.com/remix-run/remix/tree/main/packages/interaction/demos/press) - Press and long press interactions
 
 ## License
 

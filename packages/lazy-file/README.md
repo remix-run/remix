@@ -6,10 +6,10 @@ It allows you to easily create [Blob](https://developer.mozilla.org/en-US/docs/W
 
 ## Features
 
-- Deferred loading of blob/file contents to minimize memory usage
-- `LazyBlob extends Blob` and `LazyFile extends File` so instances can be used anywhere you'd normally expect a regular `Blob`/`File`
-- Accepts all the same content types as the original [`Blob()`](https://developer.mozilla.org/en-US/docs/Web/API/Blob/Blob) and [`File()`](https://developer.mozilla.org/en-US/docs/Web/API/File/File) constructors
-- Supports [`Blob.slice()`](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice), even on streaming content
+- **Deferred Loading** - Blob/file contents loaded on demand to minimize memory usage
+- **Drop-in Replacement** - `LazyBlob extends Blob` and `LazyFile extends File` so instances can be used anywhere you'd normally expect a regular `Blob`/`File`
+- **Standard Constructors** - Accepts all the same content types as the original [`Blob()`](https://developer.mozilla.org/en-US/docs/Web/API/Blob/Blob) and [`File()`](https://developer.mozilla.org/en-US/docs/Web/API/File/File) constructors
+- **Slice Support** - Supports [`Blob.slice()`](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice), even on streaming content
 
 ## The Problem
 

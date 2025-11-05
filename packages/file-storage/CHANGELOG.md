@@ -7,6 +7,10 @@ This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tr
 - Add support for Cloudflare R2 buckets through `r2-file-storage.ts`.
 - Added tests for `r2-file-storage.ts` located in `r2-file-storage.test.ts`.
 - Updated `README.MD` inside of `file-storage` with docs and examples pertaining to `R2FileStorage`.
+## v0.11.0 (2025-11-05)
+
+- Move `@remix-run/lazy-file` to `peerDependencies`
+- Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
 
 ## v0.10.0 (2025-10-22)
 

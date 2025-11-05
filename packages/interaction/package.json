@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/interaction",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Like components but for events",
   "author": "Ryan Florence <rpflorence@gmail.com>",
   "license": "MIT",
@@ -56,14 +56,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "install:chromium": "playwright install chromium",
     "prepublishOnly": "pnpm build"
   },
   "devDependencies": {
     "@vitest/browser": "^3.2.4",
     "esbuild": "^0.25.5",
     "playwright": "^1.53.1",
-    "typescript": "^5.8.3",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }
 }
