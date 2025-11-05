@@ -1,4 +1,4 @@
-# @remix-run/cookie
+# cookie
 
 Simplify HTTP cookie management in JavaScript with type-safe, secure cookie handling. `@remix-run/cookie` provides a clean, intuitive API for creating, parsing, and serializing HTTP cookies with built-in support for signing, secret rotation, and comprehensive cookie attribute management.
 

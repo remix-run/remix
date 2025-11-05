@@ -17,6 +17,12 @@ A minimal, composable router built on the [web Fetch API](https://developer.mozi
 - **Composability**: Small routers combine to build large applications. Middleware and nested routers make organization natural.
 - **Standards-Based**: Built on web standards that work across runtimes. No proprietary APIs or Node.js-specific code.
 
+## Installation
+
+```sh
+npm install @remix-run/fetch-router
+```
+
 ## Usage
 
 The main purpose of the router is to map incoming requests to route handler functions. The router uses the `fetch()` API to accept a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and return a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).

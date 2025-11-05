@@ -1,11 +1,13 @@
-# Remix Interaction
+# interaction
 
-Enhanced events for any [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget).
+Enhanced events and custom interactions for any [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget).
 
-- Declarative event bindings with plain objects
-- Semantic, reusable "interactions" like `longPress` and `arrowDown`
-- Async listeners with reentry protection via [AbortSignal](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal)
-- Type-safe listeners and custom `EventTarget` subclasses with `TypedEventTarget`
+## Features
+
+- **Declarative Bindings** - Event bindings with plain objects
+- **Semantic Interactions** - Reusable "interactions" like `longPress` and `arrowDown`
+- **Async Support** - Listeners with reentry protection via [AbortSignal](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal)
+- **Type Safety** - Type-safe listeners and custom `EventTarget` subclasses with `TypedEventTarget`
 
 ## Installation
 
@@ -237,7 +239,7 @@ Notes:
 
 ## Typed Event Targets
 
-Use `TypedEventTarget<eventMap>` to get type-safe `addEventListener` and integrate with this library’s `on` helpers.
+Use `TypedEventTarget<eventMap>` to get type-safe `addEventListener` and integrate with this library's `on` helpers.
 
 ```ts
 import { TypedEventTarget, on } from '@remix-run/interaction'
@@ -275,6 +277,23 @@ on(drummer, {
   },
 })
 ```
+
+## Demos
+
+To run the demos:
+
+```sh
+pnpm run demos
+```
+
+The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/interaction/demos) contains working demos:
+
+- [`demos/async`](https://github.com/remix-run/remix/tree/main/packages/interaction/demos/async) - Async listeners with abort signal
+- [`demos/basic`](https://github.com/remix-run/remix/tree/main/packages/interaction/demos/basic) - Basic event handling
+- [`demos/form`](https://github.com/remix-run/remix/tree/main/packages/interaction/demos/form) - Form event handling
+- [`demos/keys`](https://github.com/remix-run/remix/tree/main/packages/interaction/demos/keys) - Keyboard interactions
+- [`demos/popover`](https://github.com/remix-run/remix/tree/main/packages/interaction/demos/popover) - Popover interactions
+- [`demos/press`](https://github.com/remix-run/remix/tree/main/packages/interaction/demos/press) - Press and long press interactions
 
 ## License
 
