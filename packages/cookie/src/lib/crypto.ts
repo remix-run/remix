@@ -40,7 +40,7 @@ async function createKey(secret: string, usages: CryptoKey['usages']): Promise<C
   )
 }
 
-function byteStringToUint8Array(byteString: string): Uint8Array {
+function byteStringToUint8Array(byteString: string): Uint8Array<ArrayBuffer> {
   let array = new Uint8Array(byteString.length)
 
   for (let i = 0; i < byteString.length; i++) {

@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/tar-parser",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A fast, efficient parser for tar streams in any JavaScript environment",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -34,14 +34,12 @@
   "devDependencies": {
     "@remix-run/lazy-file": "workspace:^",
     "@types/node": "^24.6.0",
-    "esbuild": "^0.25.10"
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "bench": "node --disable-warning=ExperimentalWarning ./bench/runner.ts",
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
-    "build:types": "tsc --project tsconfig.build.json",
-    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
     "typecheck": "tsc --noEmit"

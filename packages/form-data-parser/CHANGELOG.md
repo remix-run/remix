@@ -2,6 +2,10 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
+
 ## v0.13.0 (2025-11-04)
 
 - Throw `FormDataParseError` when the request body is malformed multipart/form-data. The underlying `MultipartParseError` is its `cause`.

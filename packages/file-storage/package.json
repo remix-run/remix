@@ -41,21 +41,17 @@
       "./package.json": "./package.json"
     }
   },
-  "dependencies": {
+  "peerDependencies": {
     "@remix-run/lazy-file": "workspace:^"
   },
   "devDependencies": {
     "@remix-run/form-data-parser": "workspace:^",
     "@types/node": "^24.6.0",
-    "esbuild": "^0.25.10"
+    "typescript": "^5.9.3"
   },
   "scripts": {
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:esm:local && pnpm run build:esm:memory",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
-    "build:esm:local": "esbuild src/local.ts --bundle --outfile=dist/local.js --format=esm --platform=node --sourcemap",
-    "build:esm:memory": "esbuild src/memory.ts --bundle --outfile=dist/memory.js --format=esm --platform=neutral --sourcemap",
-    "build:types": "tsc --project tsconfig.build.json",
-    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
     "typecheck": "tsc --noEmit"
