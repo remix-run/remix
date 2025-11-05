@@ -2,6 +2,12 @@
 
 This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Add support for Cloudflare R2 buckets through `r2-file-storage.ts`.
+- Added tests for `r2-file-storage.ts` located in `r2-file-storage.test.ts`.
+- Updated `README.MD` inside of `file-storage` with docs and examples pertaining to `R2FileStorage`.
+
 ## v0.10.0 (2025-10-22)
 
 - BREAKING CHANGE: Removed CommonJS build. This package is now ESM-only. If you need to use this package in a CommonJS project, you will need to use dynamic `import()`.
