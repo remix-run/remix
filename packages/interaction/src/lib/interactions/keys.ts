@@ -1,4 +1,4 @@
-import { defineInteraction, on } from '../events.ts'
+import { defineInteraction, on } from '../interaction.ts'
 
 /**
  * Binds the escape key to an element and automatically prevents the default
