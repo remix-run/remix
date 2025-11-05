@@ -251,6 +251,39 @@ describe('interaction', () => {
     })
   })
 
+  it('re-initializes interactions after dispose', () => {
+    let hostType = 'host-event'
+    let myType = defineInteraction('my:type', Test)
+
+    function Test(target: EventTarget, signal: AbortSignal) {
+      on(target, signal, {
+        [hostType]: () => {
+          target.dispatchEvent(new Event(myType))
+        },
+      })
+    }
+
+    let target = new EventTarget()
+    let listener1 = vi.fn()
+    let dispose1 = on(target, {
+      [myType]: listener1,
+    })
+
+    target.dispatchEvent(new Event(hostType))
+    expect(listener1).toHaveBeenCalledTimes(1)
+
+    dispose1()
+
+    let listener2 = vi.fn()
+    on(target, {
+      [myType]: listener2,
+    })
+
+    target.dispatchEvent(new Event(hostType))
+    expect(listener2).toHaveBeenCalledTimes(1)
+    expect(listener1).toHaveBeenCalledTimes(1)
+  })
+
   describe('TypedEventTarget', () => {
     interface DrummerEventMap {
       kick: DrummerEvent

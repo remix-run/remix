@@ -322,7 +322,7 @@ type TypedEventListener<eventMap> = {
 
 // internal ----------------------------------------------------------------------------------------
 let interactions = new Map<string, InteractionSetup>()
-let initializedTargets = new WeakMap<EventTarget, Set<Function>>()
+let initializedTargets = new WeakMap<EventTarget, Map<Function, number>>()
 
 type ListenerOrDescriptor<Listener> = Listener | Descriptor<Listener>
 
@@ -374,6 +374,7 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
   containerSignal: AbortSignal,
 ): Binding<ListenerFor<target, k>> {
   let reentry = new AbortController()
+  let disposed = false
 
   function abort() {
     reentry.abort(new DOMException('', 'EventReentry'))
@@ -395,21 +396,47 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
     target.removeEventListener(type, wrappedListener, options)
   }
 
+  function decrementInteractionRef() {
+    let interaction = interactions.get(type)
+    if (interaction) {
+      let refCounts = initializedTargets.get(target)
+      if (refCounts) {
+        let count = refCounts.get(interaction) ?? 0
+        if (count > 0) {
+          count--
+          if (count === 0) {
+            refCounts.delete(interaction)
+          } else {
+            refCounts.set(interaction, count)
+          }
+        }
+      }
+    }
+  }
+
+  function cleanup() {
+    if (disposed) return
+    disposed = true
+    unbind()
+    decrementInteractionRef()
+  }
+
   if (containerSignal) {
-    containerSignal.addEventListener('abort', unbind, { once: true })
+    containerSignal.addEventListener('abort', cleanup, { once: true })
   }
 
   if (interactions.has(type)) {
     let interaction = interactions.get(type)!
-    let initialized = initializedTargets.get(target)
-    if (!initialized) {
-      initialized = new Set()
-      initializedTargets.set(target, initialized)
+    let refCounts = initializedTargets.get(target)
+    if (!refCounts) {
+      refCounts = new Map()
+      initializedTargets.set(target, refCounts)
     }
-    if (!initialized.has(interaction)) {
+    let count = refCounts.get(interaction) ?? 0
+    if (count === 0) {
       interaction(target, containerSignal)
-      initialized.add(interaction)
     }
+    refCounts.set(interaction, count + 1)
   }
 
   bind()
@@ -429,9 +456,9 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
       bind()
     },
     dispose() {
-      unbind()
+      cleanup()
       if (containerSignal) {
-        containerSignal.removeEventListener('abort', unbind)
+        containerSignal.removeEventListener('abort', cleanup)
       }
     },
   }
