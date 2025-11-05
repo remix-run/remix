@@ -96,7 +96,7 @@ importers:
         specifier: workspace:^
         version: link:../html-template
       '@remix-run/lazy-file':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../lazy-file
       '@remix-run/route-pattern':
         specifier: workspace:^
