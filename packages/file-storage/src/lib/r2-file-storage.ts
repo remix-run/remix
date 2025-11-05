@@ -19,7 +19,7 @@ export class R2FileStorage implements FileStorage {
 
         return new File([fileArray], object.customMetadata?.name ?? object.key, {
             type: object.httpMetadata?.contentType,
-            lastModified: object.uploaded.getTime()
+            lastModified: parseInt(object.customMetadata?.lastModified ?? object.uploaded.getTime().toString())
         }) as File
     }
 
