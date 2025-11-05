@@ -1,6 +1,6 @@
-# `@remix-run/cookie` CHANGELOG
+# `cookie` CHANGELOG
 
-This is the changelog for [`@remix-run/cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie). It follows [semantic versioning](https://semver.org/).
+This is the changelog for [`cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie). It follows [semantic versioning](https://semver.org/).
 
 ## v0.2.0 (2025-11-04)
 
