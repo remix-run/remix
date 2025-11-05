@@ -136,7 +136,8 @@ const keys = [
 ]
 
 function Keys(target: EventTarget, signal: AbortSignal) {
-  if (!(target instanceof HTMLElement)) return
+  if (!(target instanceof HTMLElement || target instanceof Document || target instanceof Window))
+    return
 
   on(target, signal, {
     keydown(event) {
