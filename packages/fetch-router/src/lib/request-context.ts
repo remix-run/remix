@@ -6,6 +6,7 @@ import {
   type RequestBodyMethod,
   type RequestMethod,
 } from './request-methods.ts'
+import { Session } from './session.ts'
 
 /**
  * A context object that contains information about the current request. Every request
@@ -62,7 +63,7 @@ export class RequestContext<
     return this.#formData as any
   }
 
-  set formData(value: FormData | undefined) {
+  set formData(value: FormData) {
     this.#formData = value
   }
 
@@ -87,6 +88,19 @@ export class RequestContext<
    * The original request that was dispatched to the router.
    */
   request: Request
+
+  #session?: Session
+
+  /**
+   * The current session.
+   */
+  get session(): Session {
+    return (this.#session ??= new Session())
+  }
+
+  set session(value: Session) {
+    this.#session = value
+  }
 
   /**
    * Shared application-specific storage.

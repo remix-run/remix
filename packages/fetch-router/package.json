@@ -58,10 +58,12 @@
     }
   },
   "devDependencies": {
+    "@remix-run/cookie": "workspace:*",
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
+    "@remix-run/cookie": "workspace:^",
     "@remix-run/form-data-parser": "workspace:^",
     "@remix-run/headers": "workspace:^",
     "@remix-run/html-template": "workspace:^",

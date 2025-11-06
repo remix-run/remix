@@ -111,11 +111,11 @@ describe('cookie', () => {
   it('is not signed by default', async () => {
     let cookie = new Cookie('my-cookie')
 
-    assert.equal(cookie.isSigned, false)
+    assert.equal(cookie.signed, false)
 
     let cookie2 = new Cookie('my-cookie2', { secrets: undefined })
 
-    assert.equal(cookie2.isSigned, false)
+    assert.equal(cookie2.signed, false)
   })
 
   it('uses Path=/ by default', async () => {

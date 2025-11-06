@@ -99,6 +99,9 @@ importers:
         specifier: workspace:^
         version: link:../route-pattern
     devDependencies:
+      '@remix-run/cookie':
+        specifier: workspace:^
+        version: link:../cookie
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
@@ -384,6 +387,16 @@ importers:
       path-to-regexp:
         specifier: ^8.2.0
         version: 8.3.0
+
+  packages/session:
+    dependencies:
+      '@remix-run/cookie':
+        specifier: workspace:^
+        version: link:../cookie
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
 
   packages/tar-parser:
     devDependencies:
