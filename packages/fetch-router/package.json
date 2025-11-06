@@ -21,6 +21,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./async-context-middleware": "./src/async-context-middleware.ts",
     "./file-handler": "./src/file-handler.ts",
     "./form-data-middleware": "./src/form-data-middleware.ts",
     "./fs-file-resolver": "./src/fs-file-resolver.ts",
@@ -35,6 +36,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./async-context-middleware": {
+        "types": "./dist/async-context-middleware.d.ts",
+        "default": "./dist/async-context-middleware.js"
       },
       "./file-handler": {
         "types": "./dist/file-handler.d.ts",

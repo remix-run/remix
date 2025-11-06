@@ -17,12 +17,12 @@ Now you can use the same pattern in Node.js!
 
 ## Features
 
-- ✅ Web-standard [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) APIs
-- ✅ Drop-in integration with `node:http` and `node:https` modules
-- ✅ Streaming response support with `ReadableStream`
-- ✅ Custom hostname configuration for deployment flexibility
-- ✅ Access to client connection info (IP address, port)
-- ✅ Full TypeScript support with type definitions
+- **Web Standards** - Standard [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) APIs
+- **Drop-in Integration** - Works with `node:http` and `node:https` modules
+- **Streaming Support** - Response support with `ReadableStream`
+- **Custom Hostname** - Configuration for deployment flexibility
+- **Client Info** - Access to client connection info (IP address, port)
+- **TypeScript** - Full TypeScript support with type definitions
 
 ## Installation
 
@@ -318,6 +318,14 @@ http.createServer(createRequestListener(handler)).listen(3000)
 The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server/demos) contains working demos:
 
 - [`demos/http2`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server/demos/http2) - HTTP/2 server with TLS certificates
+
+## Benchmark
+
+To run benchmarks comparing `node-fetch-server` performance with comparable libraries:
+
+```sh
+pnpm run bench
+```
 
 ## Related Packages
 

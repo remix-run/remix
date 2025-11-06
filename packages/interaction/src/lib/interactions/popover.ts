@@ -1,4 +1,4 @@
-import { defineInteraction, on } from '../events'
+import { defineInteraction, type Interaction } from '../interaction'
 
 /**
  * ### Description
@@ -64,16 +64,17 @@ declare global {
   }
 }
 
-function Popover(target: EventTarget, signal: AbortSignal) {
-  if (!(target instanceof HTMLElement)) return
+function Popover(this: Interaction) {
+  if (!(this.target instanceof HTMLElement)) return
 
+  let target = this.target
   let popoverId = target.getAttribute('popovertarget')
   if (!popoverId) return
 
   let popover = target.ownerDocument.getElementById(popoverId)
   if (!(popover instanceof HTMLElement)) return
 
-  on(popover, signal, {
+  this.on(popover, {
     toggle(event) {
       target.dispatchEvent(
         new ToggleEvent(popoverToggle, {

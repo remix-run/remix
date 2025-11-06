@@ -42,14 +42,14 @@ export interface CookieOptions {
  */
 export class Cookie {
   readonly name: string
-  readonly #decode?: (value: string) => string
-  readonly #encode?: (value: string) => string
+  readonly #decode: (value: string) => string
+  readonly #encode: (value: string) => string
   readonly #secrets: string[]
 
   constructor(name: string, options?: CookieOptions) {
     this.name = name
-    this.#decode = options?.decode
-    this.#encode = options?.encode
+    this.#decode = options?.decode ?? decodeURIComponent
+    this.#encode = options?.encode ?? encodeURIComponent
     this.#secrets = options?.secrets ?? []
   }
 
@@ -98,28 +98,10 @@ export class Cookie {
   }
 }
 
-async function encodeCookieValue(
-  value: string,
-  secrets: string[],
-  encode: (value: string) => string = encodeURIComponent,
-): Promise<string> {
-  let encoded = encodeValue(value, encode)
-
-  if (secrets.length > 0) {
-    encoded = await sign(encoded, secrets[0])
-  }
-
-  return encoded
-}
-
-function encodeValue(value: string, encode: (value: string) => string): string {
-  return btoa(myUnescape(encode(value)))
-}
-
 async function decodeCookieValue(
   value: string,
   secrets: string[],
-  decode: (value: string) => string = decodeURIComponent,
+  decode: (value: string) => string,
 ): Promise<string | null> {
   if (secrets.length > 0) {
     for (let secret of secrets) {
@@ -169,6 +151,24 @@ function hex(code: number, length: number): string {
   let result = code.toString(16)
   while (result.length < length) result = '0' + result
   return result
+}
+
+async function encodeCookieValue(
+  value: string,
+  secrets: string[],
+  encode: (value: string) => string,
+): Promise<string> {
+  let encoded = encodeValue(value, encode)
+
+  if (secrets.length > 0) {
+    encoded = await sign(encoded, secrets[0])
+  }
+
+  return encoded
+}
+
+function encodeValue(value: string, encode: (value: string) => string): string {
+  return btoa(myUnescape(encode(value)))
 }
 
 // See: https://github.com/zloirock/core-js/blob/master/packages/core-js/modules/es.unescape.js

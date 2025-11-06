@@ -2,6 +2,23 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Add `asyncContext` middleware for storing the request context in `AsyncLocalStorage` so it is available to all functions in the same async execution context
+
+  ```tsx
+  import { asyncContext } from '@remix-run/fetch-router/async-context-middleware'
+
+  let router = createRouter({
+    middleware: [asyncContext()],
+  })
+
+  router.map(routes.home, (context) => {
+    assert.equal(context, getContext())
+    return new Response('Home')
+  })
+  ```
+
 ## v0.8.0 (2025-11-03)
 
 - BREAKING CHANGE: Rework how middleware works in the router. This change has far-reaching implications.

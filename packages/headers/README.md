@@ -4,7 +4,7 @@ Tired of manually parsing and stringifying HTTP header values in JavaScript? `he
 
 HTTP headers are packed with critical information—from content negotiation and caching directives to authentication tokens and file metadata. While the native `Headers` API provides a basic string-based interface, it leaves the complexities of parsing specific header formats (like `Accept`, `Content-Type`, or `Set-Cookie`) entirely up to you.
 
-`headers` solves this by offering:
+## Features
 
 - **Type-Safe Accessors:** Interact with complex header values (e.g., media types, quality factors, cookie attributes) through strongly-typed properties and methods, eliminating guesswork and manual parsing.
 - **Automatic Parsing & Stringification:** The library intelligently handles the parsing of raw header strings into structured objects and stringifies your structured data back into spec-compliant header values.

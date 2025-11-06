@@ -2,6 +2,77 @@
 
 This is the changelog for [`interaction`](https://github.com/remix-run/remix/tree/main/packages/interaction). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- BREAKING CHANGE: Interaction API refactor - interactions now use `this` context with `this.on()`, `this.target`, `this.signal`, and `this.raise`
+
+  Interactions are now functions that receive an `Interaction` context via `this`:
+
+  ```ts
+  // Before
+  function MyInteraction(target: EventTarget, signal: AbortSignal) {
+    createContainer(target, { signal }).set({ ... })
+  }
+
+  // After
+  function MyInteraction(this: Interaction) {
+    this.on(this.target, { ... })
+    // or for different targets
+    this.on(this.target.ownerDocument, { ... })
+  }
+  ```
+
+  The `Interaction` context provides:
+
+  - `this.target` - The target element
+  - `this.signal` - Abort signal for cleanup
+  - `this.raise` - Error handler (renamed from `onError`)
+  - `this.on(target, listeners)` - Create a container with automatic signal/error propagation
+
+- BREAKING CHANGE: Simplify descriptor API - descriptors now extend `AddEventListenerOptions` directly
+
+  Removed `capture()` and `listenWith()` helper functions. Consumers now provide options inline using descriptor objects:
+
+  ```tsx
+  // removed
+  capture((event) => {})
+  listenWith({ once: true }, (event) => {})
+
+  // new API
+  {
+    capture: true,
+    listener(event) {}
+  }
+  {
+    once: true,
+    listener(event) {}
+  }
+  ```
+
+- BREAKING CHANGE: Remove `on` signal overload, just use containers directly
+
+  ```tsx
+  // removed
+  on(target, signal, listeners)
+
+  // on is just a shortcut now
+  let dispose = on(target, listeners)
+  dispose()
+
+  // use containers for signal cleanup
+  let container = createContainer(target, { signal })
+  ```
+
+- Added `onError` handler so containers can handle listener errors in one place (avoids Remix Component needing to wrap EventListener interfaces to raise to `<Catch>`)
+
+  ```tsx
+  createContainer(target, {
+    onError(error) {
+      // handle error
+    },
+  })
+  ```
+
 ## v0.1.0 (2025-11-03)
 
 This is the initial release of the `@remix-run/interaction` package.

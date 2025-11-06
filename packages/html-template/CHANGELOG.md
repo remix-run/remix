@@ -2,7 +2,7 @@
 
 This is the changelog for [`html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.3.0 (2025-11-05)
 
 - Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
 

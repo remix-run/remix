@@ -1,4 +1,4 @@
-import { defineInteraction, on } from '../events.ts'
+import { defineInteraction, type Interaction } from '../interaction.ts'
 
 /**
  * Binds the escape key to an element and automatically prevents the default
@@ -116,6 +116,40 @@ declare global {
     [pageDown]: KeyboardEvent
     [tab]: KeyboardEvent
   }
+
+  interface WindowEventMap {
+    [escape]: KeyboardEvent
+    [enter]: KeyboardEvent
+    [space]: KeyboardEvent
+    [backspace]: KeyboardEvent
+    [del]: KeyboardEvent
+    [arrowLeft]: KeyboardEvent
+    [arrowRight]: KeyboardEvent
+    [arrowUp]: KeyboardEvent
+    [arrowDown]: KeyboardEvent
+    [home]: KeyboardEvent
+    [end]: KeyboardEvent
+    [pageUp]: KeyboardEvent
+    [pageDown]: KeyboardEvent
+    [tab]: KeyboardEvent
+  }
+
+  interface DocumentEventMap {
+    [escape]: KeyboardEvent
+    [enter]: KeyboardEvent
+    [space]: KeyboardEvent
+    [backspace]: KeyboardEvent
+    [del]: KeyboardEvent
+    [arrowLeft]: KeyboardEvent
+    [arrowRight]: KeyboardEvent
+    [arrowUp]: KeyboardEvent
+    [arrowDown]: KeyboardEvent
+    [home]: KeyboardEvent
+    [end]: KeyboardEvent
+    [pageUp]: KeyboardEvent
+    [pageDown]: KeyboardEvent
+    [tab]: KeyboardEvent
+  }
 }
 
 const keys = [
@@ -135,10 +169,18 @@ const keys = [
   'Tab',
 ]
 
-function Keys(target: EventTarget, signal: AbortSignal) {
-  if (!(target instanceof HTMLElement)) return
+function Keys(this: Interaction) {
+  if (
+    !(
+      this.target instanceof HTMLElement ||
+      this.target instanceof Document ||
+      this.target instanceof Window
+    )
+  )
+    return
 
-  on(target, signal, {
+  let target = this.target
+  this.on(this.target, {
     keydown(event) {
       if (!keys.includes(event.key)) return
       event.preventDefault()

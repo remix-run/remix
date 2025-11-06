@@ -1,15 +1,14 @@
 import { describe, it, expect, vi } from 'vitest'
 
 import {
-  capture,
   createContainer,
   defineInteraction,
-  listenWith,
   on,
   TypedEventTarget,
   type Dispatched,
   type EventListeners,
-} from './events.ts'
+  type Interaction,
+} from './interaction.ts'
 import type { Assert, Equal } from './test/utils.ts'
 
 describe('interaction', () => {
@@ -55,7 +54,7 @@ describe('interaction', () => {
       expect(listener1).toHaveBeenCalledTimes(1)
       expect(spy).toHaveBeenCalledTimes(0)
 
-      container.set({ test: listenWith({ capture: true }, listener2) })
+      container.set({ test: { capture: true, listener: listener2 } })
       target.dispatchEvent(new Event('test'))
       expect(listener1).toHaveBeenCalledTimes(1)
       expect(listener2).toHaveBeenCalledTimes(1)
@@ -96,13 +95,20 @@ describe('interaction', () => {
       expect(secondListenerCalled).toBe(false)
     })
 
-    describe('listenWith', () => {
-      it('provides options with listenWith', () => {
+    it('throws when calling set after dispose', () => {
+      let target = new EventTarget()
+      let container = createContainer(target)
+      container.dispose()
+      expect(() => container.set({ test: () => {} })).toThrow('Container has been disposed')
+    })
+
+    describe('descriptors', () => {
+      it('provides options with descriptors', () => {
         let target = new EventTarget()
         let listener = vi.fn()
 
         createContainer(target).set({
-          test: listenWith({ once: true }, listener),
+          test: { once: true, listener },
         })
 
         target.dispatchEvent(new Event('test'))
@@ -110,9 +116,7 @@ describe('interaction', () => {
         target.dispatchEvent(new Event('test'))
         expect(listener).toHaveBeenCalledTimes(1)
       })
-    })
 
-    describe('capture', () => {
       it('captures events', () => {
         let button = document.createElement('button')
         document.body.appendChild(button)
@@ -121,10 +125,13 @@ describe('interaction', () => {
         let bubbled = false
 
         createContainer(document.body).set({
-          click: capture((event) => {
-            event.stopPropagation()
-            captured = true
-          }),
+          click: {
+            capture: true,
+            listener(event) {
+              event.stopPropagation()
+              captured = true
+            },
+          },
         })
 
         // add event to the target to test that it's not captured and prove its
@@ -138,6 +145,41 @@ describe('interaction', () => {
         expect(captured).toBe(true)
         expect(bubbled).toBe(false)
       })
+    })
+
+    describe('error handling', () => {
+      it('calls onError when a listener throws synchronously', () => {
+        let target = new EventTarget()
+        let mock = vi.fn()
+        let error = new Error('test')
+        let container = createContainer(target, { onError: mock })
+        container.set({
+          test: () => {
+            throw error
+          },
+        })
+        target.dispatchEvent(new Event('test'))
+        expect(mock).toHaveBeenCalledWith(error)
+      })
+    })
+
+    it('calls onError when a listener throws asynchronously', async () => {
+      let target = new EventTarget()
+      let mock = vi.fn()
+      let error = new Error('test')
+      createContainer(target, { onError: mock }).set({
+        async test() {
+          // ensure the error is thrown asynchronously (next microtask)
+          await Promise.resolve()
+          throw error
+        },
+      })
+      target.dispatchEvent(new Event('test'))
+      // let the listener's awaited microtask run and reject
+      await Promise.resolve()
+      // run the container's result.catch(onError) handler
+      await Promise.resolve()
+      expect(mock).toHaveBeenCalledWith(error)
     })
 
     describe('types', () => {
@@ -194,18 +236,6 @@ describe('interaction', () => {
           test: () => {},
         })
       })
-
-      it('accepts optional abort signal', () => {
-        let button = document.createElement('button')
-        let controller = new AbortController()
-        on(button, controller.signal, {
-          pointerdown: (event) => {
-            type T = Assert<Equal<typeof event, Dispatched<PointerEvent, HTMLButtonElement>>>
-          },
-          // @ts-expect-error - unknown event type
-          test: () => {},
-        })
-      })
     })
   })
 
@@ -214,10 +244,10 @@ describe('interaction', () => {
       let hostType = 'host-event'
       let myType = defineInteraction('my:type', Test)
 
-      function Test(target: EventTarget, signal: AbortSignal) {
-        on(target, signal, {
+      function Test(this: Interaction) {
+        this.on(this.target, {
           [hostType]: () => {
-            target.dispatchEvent(new Event(myType))
+            this.target.dispatchEvent(new Event(myType))
           },
         })
       }
@@ -249,6 +279,39 @@ describe('interaction', () => {
 
       expect(initialized).toBe(1)
     })
+  })
+
+  it('re-initializes interactions after dispose', () => {
+    let hostType = 'host-event'
+    let myType = defineInteraction('my:type', Test)
+
+    function Test(this: Interaction) {
+      this.on(this.target, {
+        [hostType]: () => {
+          this.target.dispatchEvent(new Event(myType))
+        },
+      })
+    }
+
+    let target = new EventTarget()
+    let listener1 = vi.fn()
+    let dispose1 = on(target, {
+      [myType]: listener1,
+    })
+
+    target.dispatchEvent(new Event(hostType))
+    expect(listener1).toHaveBeenCalledTimes(1)
+
+    dispose1()
+
+    let listener2 = vi.fn()
+    on(target, {
+      [myType]: listener2,
+    })
+
+    target.dispatchEvent(new Event(hostType))
+    expect(listener2).toHaveBeenCalledTimes(1)
+    expect(listener1).toHaveBeenCalledTimes(1)
   })
 
   describe('TypedEventTarget', () => {

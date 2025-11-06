@@ -2,7 +2,7 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.7.0 (2025-11-05)
 
 - Move `@remix-run/headers` to `peerDependencies`
 - Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.

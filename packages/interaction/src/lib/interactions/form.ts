@@ -1,4 +1,4 @@
-import { defineInteraction } from '../events.ts'
+import { defineInteraction, type Interaction } from '../interaction.ts'
 
 /**
  * Called when the target's form is reset. Useful for resetting custom component
@@ -22,15 +22,20 @@ declare global {
   }
 }
 
-function FormReset(target: EventTarget, signal: AbortSignal) {
-  if (!(target instanceof HTMLElement)) return
+function FormReset(this: Interaction) {
+  if (!(this.target instanceof HTMLElement)) return
 
+  let target = this.target
   let form =
     'form' in target && target.form instanceof HTMLFormElement
       ? target.form
       : target.closest('form')
 
   if (form) {
-    form.addEventListener('reset', () => target.dispatchEvent(new Event(formReset)), { signal })
+    this.on(form, {
+      reset() {
+        target.dispatchEvent(new Event(formReset))
+      },
+    })
   }
 }
