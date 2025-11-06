@@ -1,10 +1,10 @@
 import { createRouter } from '@remix-run/fetch-router'
+import { asyncContext } from '@remix-run/fetch-router/async-context-middleware'
 import { formData } from '@remix-run/fetch-router/form-data-middleware'
 import { logger } from '@remix-run/fetch-router/logger-middleware'
 import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
 
 import { routes } from '../routes.ts'
-import { storeContext } from './middleware/context.ts'
 import { uploadHandler } from './utils/uploads.ts'
 
 import adminHandlers from './admin.tsx'
@@ -26,7 +26,7 @@ if (process.env.NODE_ENV === 'development') {
 
 middleware.push(formData({ uploadHandler }))
 middleware.push(methodOverride())
-middleware.push(storeContext())
+middleware.push(asyncContext())
 
 export let router = createRouter({ middleware })
 

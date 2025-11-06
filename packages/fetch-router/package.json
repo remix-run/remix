@@ -21,6 +21,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./async-context-middleware": "./src/async-context-middleware.ts",
     "./form-data-middleware": "./src/form-data-middleware.ts",
     "./logger-middleware": "./src/logger-middleware.ts",
     "./method-override-middleware": "./src/method-override-middleware.ts",
@@ -32,6 +33,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./async-context-middleware": {
+        "types": "./dist/async-context-middleware.d.ts",
+        "default": "./dist/async-context-middleware.js"
       },
       "./form-data-middleware": {
         "types": "./dist/form-data-middleware.d.ts",
