@@ -48,7 +48,8 @@ export function createFsFileResolver<
     let filePath = path.join(root, relativePath)
 
     try {
-      return openFile(filePath)
+      let file = await openFile(filePath)
+      return { file, path: filePath }
     } catch (error) {
       if (isNoEntityError(error) || isNotAFileError(error)) {
         return null

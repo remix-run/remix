@@ -14,11 +14,12 @@ describe('createFileHandler', () => {
       type?: string
       lastModified?: number
     } = {},
-  ): File {
-    return new File([content], 'mock.txt', {
+  ): { file: File; path: string } {
+    let file = new File([content], 'mock.txt', {
       type: options.type || 'text/plain',
       lastModified: options.lastModified || Date.now(),
     })
+    return { file, path: `/path/to/${file.name}` }
   }
 
   function createContext(
@@ -46,8 +47,7 @@ describe('createFileHandler', () => {
 
   describe('basic functionality', () => {
     it('serves a file', async () => {
-      let file = createMockFile('Hello, World!')
-      let handler = createFileHandler(() => file)
+      let handler = createFileHandler(() => createMockFile('Hello, World!'))
 
       let response = await handler(createContext('http://localhost/test.txt'))
 
@@ -58,8 +58,7 @@ describe('createFileHandler', () => {
     })
 
     it('serves a file with HEAD request', async () => {
-      let file = createMockFile('Hello, World!')
-      let handler = createFileHandler(() => file)
+      let handler = createFileHandler(() => createMockFile('Hello, World!'))
 
       let response = await handler(createContext('http://localhost/test.txt', { method: 'HEAD' }))
 
@@ -79,8 +78,7 @@ describe('createFileHandler', () => {
     })
 
     it('returns 405 for unsupported methods', async () => {
-      let file = createMockFile('Hello, World!')
-      let handler = createFileHandler(() => file)
+      let handler = createFileHandler(() => createMockFile('Hello, World!'))
 
       let response = await handler(createContext('http://localhost/test.txt', { method: 'POST' }))
 
@@ -109,7 +107,7 @@ describe('createFileHandler', () => {
   describe('ETag support', () => {
     for (let method of ['GET', 'HEAD'] as const) {
       describe(method, () => {
-        it('includes ETag header', async () => {
+        it('includes weak ETag header by default', async () => {
           let file = createMockFile('Hello, World!', { lastModified: 1000000 })
           let handler = createFileHandler(() => file)
 
@@ -129,6 +127,108 @@ describe('createFileHandler', () => {
 
           assert.equal(response.status, 200)
           assert.equal(response.headers.get('ETag'), null)
+        })
+
+        it('generates strong ETag when etag=strong', async () => {
+          let file = createMockFile('Hello, World!')
+          let handler = createFileHandler(() => file, { etag: 'strong' })
+
+          let response = await handler(createContext('http://localhost/test.txt', { method }))
+
+          let etag = response.headers.get('ETag')
+          assert.equal(response.status, 200)
+          assert.ok(etag)
+          assert.ok(!etag.startsWith('W/'), 'Should not be a weak ETag')
+          assert.match(etag, /^"[a-f0-9]+"$/, 'Should be a hex digest wrapped in quotes')
+        })
+
+        it('uses SHA-256 by default for strong ETags', async () => {
+          let file = createMockFile('Hello, World!')
+          let handler = createFileHandler(() => file, { etag: 'strong' })
+
+          let response = await handler(createContext('http://localhost/test.txt', { method }))
+
+          let etag = response.headers.get('ETag')
+          assert.ok(etag)
+          // SHA-256 produces 64 hex characters (32 bytes * 2)
+          assert.match(etag, /^"[a-f0-9]{64}"$/)
+        })
+
+        it('supports custom digest algorithm', async () => {
+          let file = createMockFile('Hello, World!')
+          let handler = createFileHandler(() => file, {
+            etag: 'strong',
+            digest: 'SHA-512',
+          })
+
+          let response = await handler(createContext('http://localhost/test.txt', { method }))
+
+          let etag = response.headers.get('ETag')
+          assert.ok(etag)
+          // SHA-512 produces 128 hex characters (64 bytes * 2)
+          assert.match(etag, /^"[a-f0-9]{128}"$/)
+        })
+
+        it('supports custom digest function', async () => {
+          let file = createMockFile('Hello, World!')
+          let handler = createFileHandler(() => file, {
+            etag: 'strong',
+            digest: async () => 'custom-hash-12345',
+          })
+
+          let response = await handler(createContext('http://localhost/test.txt', { method }))
+
+          let etag = response.headers.get('ETag')
+          assert.equal(etag, '"custom-hash-12345"')
+        })
+
+        it('caches digests when digestCache is provided', async () => {
+          let file = createMockFile('Hello, World!')
+          let cache = new Map<string, string>()
+          let computeCount = 0
+
+          let handler = createFileHandler(() => file, {
+            etag: 'strong',
+            digest: async () => {
+              computeCount++
+              return `digest-${computeCount}`
+            },
+            digestCache: cache,
+          })
+
+          // First request - should compute
+          let response1 = await handler(createContext('http://localhost/test.txt', { method }))
+          assert.equal(response1.headers.get('ETag'), '"digest-1"')
+
+          // Second request - should use cache
+          let response2 = await handler(createContext('http://localhost/test.txt', { method }))
+          assert.equal(response2.headers.get('ETag'), '"digest-1"')
+
+          // Clear cache - should recompute with new digest
+          cache.clear()
+          // Third request - should recompute with new digest
+          let response3 = await handler(createContext('http://localhost/test.txt', { method }))
+          assert.equal(response3.headers.get('ETag'), '"digest-2"')
+
+          // Fourth request - should use cache
+          let response4 = await handler(createContext('http://localhost/test.txt', { method }))
+          assert.equal(response4.headers.get('ETag'), '"digest-2"')
+        })
+
+        it('uses custom cache key function', async () => {
+          let file = createMockFile('Hello, World!', { lastModified: 1000000 })
+          let cache = new Map<string, string>()
+
+          let handler = createFileHandler(() => file, {
+            etag: 'strong',
+            digestCache: cache,
+            digestCacheKey: ({ path }) => `custom:${path}`, // Stable key without mtime
+          })
+
+          await handler(createContext('http://localhost/test.txt', { method }))
+
+          // Cache key should be custom format (path defaults to file.name which is 'mock.txt')
+          assert.ok(cache.has('custom:/path/to/mock.txt'))
         })
       })
     }
@@ -235,14 +335,37 @@ describe('createFileHandler', () => {
     for (let method of ['GET', 'HEAD'] as const) {
       describe(method, () => {
         describe('precondition validation', () => {
-          it('returns 200 (OK) when If-Match matches ETag', async () => {
+          it('returns 412 (Precondition Failed) when resource has weak ETag', async () => {
             let file = createMockFile('Hello, World!', { lastModified: 1000000 })
             let handler = createFileHandler(() => file)
 
             let response1 = await handler(createContext('http://localhost/test.txt', { method }))
             let etag = response1.headers.get('ETag')
             assert.ok(etag)
+            assert.ok(etag.startsWith('W/')) // Verify it's a weak ETag
 
+            // If-Match uses strong comparison, so weak ETags never match
+            let response2 = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: { 'If-Match': etag },
+              }),
+            )
+
+            assert.equal(response2.status, 412)
+          })
+
+          it('returns 200 (OK) when resource has strong ETag and If-Match matches', async () => {
+            let file = createMockFile('Hello, World!')
+            let handler = createFileHandler(() => file, { etag: 'strong' })
+
+            // Get the strong ETag
+            let response1 = await handler(createContext('http://localhost/test.txt', { method }))
+            let etag = response1.headers.get('ETag')
+            assert.ok(etag)
+            assert.ok(!etag.startsWith('W/')) // Verify it's a strong ETag
+
+            // If-Match should work with strong ETags
             let response2 = await handler(
               createContext('http://localhost/test.txt', {
                 method,
@@ -254,14 +377,28 @@ describe('createFileHandler', () => {
             assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
           })
 
-          it('returns 412 (Precondition Failed) when If-Match does not match', async () => {
+          it('returns 412 (Precondition Failed) when If-Match does not match (weak ETag)', async () => {
             let file = createMockFile('Hello, World!')
             let handler = createFileHandler(() => file)
 
             let response = await handler(
               createContext('http://localhost/test.txt', {
                 method,
-                headers: { 'If-Match': 'W/"wrong-etag"' },
+                headers: { 'If-Match': '"wrong-etag"' },
+              }),
+            )
+
+            assert.equal(response.status, 412)
+          })
+
+          it('returns 412 (Precondition Failed) when If-Match does not match (strong ETag)', async () => {
+            let file = createMockFile('Hello, World!')
+            let handler = createFileHandler(() => file, { etag: 'strong' })
+
+            let response = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: { 'If-Match': '"wrong-etag"' },
               }),
             )
 
@@ -283,25 +420,6 @@ describe('createFileHandler', () => {
             assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
           })
 
-          it('returns 200 (OK) when If-Match contains multiple ETags and one matches', async () => {
-            let file = createMockFile('Hello, World!', { lastModified: 1000000 })
-            let handler = createFileHandler(() => file)
-
-            let response1 = await handler(createContext('http://localhost/test.txt', { method }))
-            let etag = response1.headers.get('ETag')
-            assert.ok(etag)
-
-            let response2 = await handler(
-              createContext('http://localhost/test.txt', {
-                method,
-                headers: { 'If-Match': `W/"wrong-1", ${etag}, W/"wrong-2"` },
-              }),
-            )
-
-            assert.equal(response2.status, 200)
-            assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
-          })
-
           it('returns 412 (Precondition Failed) when If-Match contains multiple ETags and none match', async () => {
             let file = createMockFile('Hello, World!')
             let handler = createFileHandler(() => file)
@@ -309,7 +427,7 @@ describe('createFileHandler', () => {
             let response = await handler(
               createContext('http://localhost/test.txt', {
                 method,
-                headers: { 'If-Match': 'W/"wrong-1", W/"wrong-2"' },
+                headers: { 'If-Match': '"wrong-1", "wrong-2"' },
               }),
             )
 
@@ -440,30 +558,6 @@ describe('createFileHandler', () => {
         })
 
         describe('prioritization', () => {
-          it('ignores If-Unmodified-Since when If-Match is present', async () => {
-            let fileDate = new Date('2025-01-01')
-            let pastDate = new Date('2024-01-01')
-            let file = createMockFile('Hello, World!', { lastModified: fileDate.getTime() })
-            let handler = createFileHandler(() => file)
-
-            let response1 = await handler(createContext('http://localhost/test.txt', { method }))
-            let etag = response1.headers.get('ETag')
-            assert.ok(etag)
-
-            let response2 = await handler(
-              createContext('http://localhost/test.txt', {
-                method,
-                headers: {
-                  'If-Match': etag,
-                  'If-Unmodified-Since': pastDate.toUTCString(),
-                },
-              }),
-            )
-
-            assert.equal(response2.status, 200)
-            assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
-          })
-
           it('returns 412 (Precondition Failed) when If-Match fails, even if If-Unmodified-Since would pass', async () => {
             let fileDate = new Date('2025-01-01')
             let futureDate = new Date('2026-01-01')
@@ -481,6 +575,33 @@ describe('createFileHandler', () => {
             )
 
             assert.equal(response.status, 412)
+          })
+
+          it('ignores If-Unmodified-Since when If-Match is present (strong ETag)', async () => {
+            let pastDate = new Date('2024-01-01')
+            let file = createMockFile('Hello, World!', { lastModified: pastDate.getTime() })
+            let handler = createFileHandler(() => file, { etag: 'strong' })
+
+            // Get the strong ETag
+            let response1 = await handler(createContext('http://localhost/test.txt', { method }))
+            let etag = response1.headers.get('ETag')
+            assert.ok(etag)
+            assert.ok(!etag.startsWith('W/')) // Verify it's a strong ETag
+
+            // If-Match passes, so If-Unmodified-Since should be ignored
+            // (even though it would fail if evaluated - pastDate is before file's lastModified)
+            let response2 = await handler(
+              createContext('http://localhost/test.txt', {
+                method,
+                headers: {
+                  'If-Match': etag,
+                  'If-Unmodified-Since': pastDate.toUTCString(),
+                },
+              }),
+            )
+
+            assert.equal(response2.status, 200)
+            assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
           })
         })
 
@@ -780,28 +901,6 @@ describe('createFileHandler', () => {
       assert.equal(response.headers.get('Content-Range'), null)
     })
 
-    it('returns 206 (Partial Content) when If-Match succeeds with Range request', async () => {
-      let file = createMockFile('0123456789', { lastModified: 1000000 })
-      let handler = createFileHandler(() => file)
-
-      let response1 = await handler(createContext('http://localhost/test.txt'))
-      let etag = response1.headers.get('ETag')
-      assert.ok(etag)
-
-      let response2 = await handler(
-        createContext('http://localhost/test.txt', {
-          headers: {
-            'If-Match': etag,
-            Range: 'bytes=0-4',
-          },
-        }),
-      )
-
-      assert.equal(response2.status, 206)
-      assert.equal(await response2.text(), '01234')
-      assert.equal(response2.headers.get('Content-Range'), 'bytes 0-4/10')
-    })
-
     it('returns 412 (Precondition Failed) when If-Match fails before processing Range', async () => {
       let file = createMockFile('0123456789')
       let handler = createFileHandler(() => file)
@@ -817,6 +916,31 @@ describe('createFileHandler', () => {
 
       assert.equal(response.status, 412)
       assert.equal(response.headers.get('Content-Range'), null)
+    })
+
+    it('returns 206 (Partial Content) when If-Match succeeds with Range request (strong ETag)', async () => {
+      let file = createMockFile('0123456789')
+      let handler = createFileHandler(() => file, { etag: 'strong' })
+
+      // Get the strong ETag
+      let response1 = await handler(createContext('http://localhost/test.txt'))
+      let etag = response1.headers.get('ETag')
+      assert.ok(etag)
+      assert.ok(!etag.startsWith('W/')) // Verify it's a strong ETag
+
+      // If-Match passes, Range should be processed
+      let response2 = await handler(
+        createContext('http://localhost/test.txt', {
+          headers: {
+            'If-Match': etag,
+            Range: 'bytes=0-4',
+          },
+        }),
+      )
+
+      assert.equal(response2.status, 206)
+      assert.equal(await response2.text(), '01234')
+      assert.equal(response2.headers.get('Content-Range'), 'bytes 0-4/10')
     })
 
     it('returns 206 (Partial Content) when If-Unmodified-Since passes with Range request', async () => {

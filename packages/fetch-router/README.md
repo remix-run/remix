@@ -535,11 +535,14 @@ router.map(routes.admin.dashboard, {
 })
 ```
 
-### Serving Static Files with `staticFiles()` Middleware
+### Serving Static Files
 
-The `staticFiles()` middleware serves static files from the filesystem. The middleware always falls through to the handler if the file is not found, allowing you to customize the 404 response.
+The `staticFiles()` middleware serves static files from the filesystem.
 
 ```ts
+import { createRouter } from '@remix-run/fetch-router'
+import { staticFiles } from '@remix-run/fetch-router/static-middleware'
+
 let router = createRouter({
   middleware: [staticFiles('./public')],
 })
@@ -548,23 +551,36 @@ let router = createRouter({
 You can further customize the behavior of this middleware by providing additional options:
 
 ```ts
+import { createRouter } from '@remix-run/fetch-router'
+import { staticFiles } from '@remix-run/fetch-router/static-middleware'
+
 let router = createRouter({
   middleware: [
     staticFiles('./public', {
+      // Cache-Control header value
+      // Defaults to `undefined`
       cacheControl: 'public, max-age=3600',
+
       // Whether to support HTTP Range requests for partial content.
       // Defaults to `true`.
-      acceptRanges: false,
-      // Whether to generate a weak ETag header for the response.
-      // Defaults to `true`.
-      etag: false,
+      acceptRanges: true,
+
+      // ETag generation strategy:
+      // - 'weak': Generates weak ETags based on file size and mtime
+      // - 'strong': Generates strong ETags by hashing file content
+      // - false: Disables ETag generation
+      // Defaults to `'weak'`.
+      etag: 'weak',
+
       // Whether to generate a `Last-Modified` header for the response.
       // Defaults to `true`.
-      lastModified: false,
+      lastModified: true,
     }),
   ],
 })
 ```
+
+#### Custom Path Resolution
 
 By default, this middleware uses the full request pathname to resolve files. You can customize this by providing a path resolver function which is passed the request context. For example, to resolve files based on a route param:
 
@@ -578,6 +594,54 @@ router.get('/assets/*path', {
   handler() {
     return new Response('Not Found', { status: 404 })
   },
+})
+```
+
+Note that paths returned by this function should be relative to the root directory passed to `staticFiles()`. This is to ensure that files outside of the root directory are not served.
+
+#### Strong ETags and Content Hashing
+
+For assets that require strong validation (e.g., to support [`If-Match` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match) for [`Range` requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range)), you can configure strong ETag generation.
+
+```ts
+import { createRouter } from '@remix-run/fetch-router'
+import { staticFiles } from '@remix-run/fetch-router/static-middleware'
+
+let router = createRouter({
+  middleware: [
+    staticFiles('./public', {
+      etag: 'strong',
+    }),
+  ],
+})
+```
+
+When using strong ETags, the default behavior is that they are generated on every request with [`SubtleCrypto.digest()`](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest) using the `'SHA-256'` algorithm, but this can be customized if needed.
+
+```ts
+import { createRouter } from '@remix-run/fetch-router'
+import { staticFiles } from '@remix-run/fetch-router/static-middleware'
+
+let router = createRouter({
+  middleware: [
+    staticFiles('./public', {
+      etag: 'strong',
+
+      // Specify the SubtleCrypto.digest() hashing algorithm,
+      // or a custom digest function (`async (file: File) => string`).
+      // Defaults to `'SHA-256'`.
+      digest: 'SHA-256',
+
+      // Provide a cache to avoid re-hashing files on every request.
+      // You may want to use an LRU cache to prevent memory leaks.
+      // Defaults to `undefined`, meaning that there is no cache.
+      digestCache: new Map(),
+
+      // Customize the logic for generating the cache key.
+      // Defaults to `({ path, file }) => `${path}:${file.lastModified}``.
+      digestCacheKey: ({ path }) => path,
+    }),
+  ],
 })
 ```
 

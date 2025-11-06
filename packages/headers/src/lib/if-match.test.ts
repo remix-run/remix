@@ -100,5 +100,37 @@ describe('IfMatch', () => {
       assert.ok(wildcardHeader.matches('"67ab43"'))
       assert.ok(wildcardHeader.matches('"anything"'))
     })
+
+    describe('ETag handling', () => {
+      it('returns false when resource has weak tag', () => {
+        let header = new IfMatch('67ab43')
+        assert.ok(!header.matches('W/"67ab43"'))
+      })
+
+      it('returns false when If-Match header has weak tag', () => {
+        let header = new IfMatch('W/"67ab43"')
+        assert.ok(!header.matches('"67ab43"'))
+      })
+
+      it('returns false when both resource and If-Match header have weak tags', () => {
+        let header = new IfMatch('W/"67ab43"')
+        assert.ok(!header.matches('W/"67ab43"'))
+      })
+
+      it('returns true when both resource and If-Match header have strong tags', () => {
+        let header = new IfMatch('"67ab43"')
+        assert.ok(header.matches('"67ab43"'))
+      })
+
+      it('returns false when If-Match has mix of weak and strong tags and resource is weak', () => {
+        let header = new IfMatch('W/"67ab43", "54ed21"')
+        assert.ok(!header.matches('W/"67ab43"'))
+      })
+
+      it('returns true when If-Match has mix of weak and strong tags and resource matches strong tag', () => {
+        let header = new IfMatch('W/"67ab43", "54ed21"')
+        assert.ok(header.matches('"54ed21"'))
+      })
+    })
   })
 })

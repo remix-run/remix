@@ -45,8 +45,11 @@ export class IfMatch implements HeaderValue, IfMatchInit {
   /**
    * Checks if the precondition passes for the given entity tag.
    *
-   * Note: This method returns `true` if the `If-Match` header is not present,
-   * regardless of the entity tag being checked since the precondition passes.
+   * This method always returns `true` if the `If-Match` header is not present
+   * since the precondition passes regardless of the entity tag being checked.
+   *
+   * Uses strong comparison as per RFC 9110, meaning weak entity tags (prefixed with `W/`)
+   * will never match.
    *
    * @param tag The entity tag to check against.
    * @returns `true` if the precondition passes, `false` if it fails (should return 412).
@@ -55,7 +58,27 @@ export class IfMatch implements HeaderValue, IfMatchInit {
     if (this.tags.length === 0) {
       return true
     }
-    return this.has(tag) || this.tags.includes('*') // Present and matches or wildcard = pass
+
+    // Wildcard always matches (regardless of weak/strong)
+    if (this.tags.includes('*')) {
+      return true
+    }
+
+    let normalizedTag = quoteEtag(tag)
+
+    // Weak tags never match in If-Match (strong comparison only)
+    if (normalizedTag.startsWith('W/')) {
+      return false
+    }
+
+    // Only match against strong tags in the header
+    for (let headerTag of this.tags) {
+      if (!headerTag.startsWith('W/') && headerTag === normalizedTag) {
+        return true
+      }
+    }
+
+    return false
   }
 
   toString() {

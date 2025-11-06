@@ -7,7 +7,49 @@ import type { RequestMethod } from './request-methods.ts'
 export type FileResolver<
   Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   Params extends Record<string, any> = {},
-> = (context: RequestContext<Method, Params>) => File | null | Promise<File | null>
+> = (
+  context: RequestContext<Method, Params>,
+) => { file: File; path: string } | null | Promise<{ file: File; path: string } | null>
+
+/**
+ * Custom function for computing file digests.
+ *
+ * @param file - The file to hash
+ * @returns The computed digest as a string
+ *
+ * @example
+ * async (file) => {
+ *   let buffer = await file.arrayBuffer()
+ *   return customHash(buffer)
+ * }
+ */
+export type FileDigestFunction = (file: File) => Promise<string>
+
+/**
+ * Function to generate cache keys for digest storage.
+ *
+ * @param params - Object containing the file path and File object
+ * @returns The cache key as a string
+ *
+ * @example
+ * ({ path, file }) => `${path}:${file.lastModified}`
+ * @example
+ * ({ path, file }) => `v2:${path}:${file.lastModified}`
+ */
+export type FileDigestCacheKeyFunction = (params: { path: string; file: File }) => string
+
+/**
+ * Hash algorithm name for SubtleCrypto.digest() or custom digest function.
+ */
+type DigestAlgorithm = 'SHA-256' | 'SHA-512' | 'SHA-384' | 'SHA-1' | (string & {}) // Allows any string while providing autocomplete for common algorithms
+
+/**
+ * Cache interface for storing computed file digests.
+ */
+interface DigestCache {
+  get(key: string): Promise<string | undefined> | string | undefined
+  set(key: string, digest: string): void
+}
 
 export interface FileHandlerOptions {
   /**
@@ -20,14 +62,58 @@ export interface FileHandlerOptions {
   cacheControl?: string
 
   /**
-   * Whether to generate ETags for files.
+   * ETag generation strategy.
    *
-   * ETags are generated using a weak tag format based on file size and last modified time:
-   * `W/"<size>-<lastModified>"`
+   * - `'weak'`: Generates weak ETags based on file size and last modified time (`W/"<size>-<mtime>"`)
+   * - `'strong'`: Generates strong ETags by hashing file content (requires digest computation)
+   * - `false`: Disables ETag generation
    *
-   * @default true
+   * @default 'weak'
    */
-  etag?: boolean
+  etag?: false | 'weak' | 'strong'
+
+  /**
+   * Hash algorithm or custom digest function for strong ETags.
+   *
+   * When `etag` is `'strong'`, this determines how the file content is hashed.
+   * - String: Algorithm name for SubtleCrypto.digest() (e.g., 'SHA-256', 'SHA-512')
+   * - Function: Custom digest computation that receives a File and returns the digest string
+   *
+   * Only used when `etag: 'strong'`. Ignored for weak ETags.
+   *
+   * @default 'SHA-256'
+   * @example 'SHA-512'
+   * @example async (file) => customHash(await file.arrayBuffer())
+   */
+  digest?: DigestAlgorithm | FileDigestFunction
+
+  /**
+   * Cache for storing computed file digests to avoid re-hashing files.
+   *
+   * Only used when `etag: 'strong'`. Since hashing file content is expensive,
+   * providing a cache is strongly recommended for production use.
+   *
+   * Any object with `get(key)` and `set(key, digest)` methods can be used.
+   * If not provided, digests will be computed on every request.
+   *
+   * @example new Map()
+   */
+  digestCache?: DigestCache
+
+  /**
+   * Function to generate cache keys for digest storage.
+   *
+   * The default includes file path and last modified time to ensure cache invalidation
+   * when files change: `${path}:${file.lastModified}`
+   *
+   * The `path` is provided by the file resolver.
+   *
+   * Only used when `etag: 'strong'` and `digestCache` is provided.
+   *
+   * @default ({ path, file }) => `${path}:${file.lastModified}`
+   * @example ({ path, file }) => `prefix:${path}:${file.lastModified}`
+   */
+  digestCacheKey?: FileDigestCacheKeyFunction
 
   /**
    * Whether to include Last-Modified headers.
@@ -51,14 +137,14 @@ export interface FileHandlerOptions {
  * Creates a file handler that implements HTTP semantics for serving files.
  *
  * The handler can be used directly as a route handler, or wrapped in middleware
- * that intercepts 404 responses to fall through to other handlers.
+ * that intercepts 404/405 responses to fall through to other handlers.
  *
  * @param resolveFile - Function that resolves the file for a given request
  * @param options - Optional configuration for HTTP headers and features
  * @returns A route handler function
  *
  * @example
- * // Use directly as a route handler
+ * // Use directly as a route handler with weak ETags (default)
  * let fileHandler = createFileHandler(
  *   async (context) => {
  *     let filePath = path.join('/files', context.params.path)
@@ -67,14 +153,19 @@ export interface FileHandlerOptions {
  *     } catch {
  *       return null  // -> 404
  *     }
- *   },
- *   {
- *     etag: true,
- *     acceptRanges: true
  *   }
  * )
  *
  * router.get('/files/*path', fileHandler)
+ *
+ * @example
+ * // Use strong ETags with caching
+ *
+ * let fileHandler = createFileHandler(resolver, {
+ *   etag: 'strong',
+ *   digestCache: new Map()
+ *   cacheControl: 'public, max-age=31536000, immutable'
+ * })
  *
  * @example
  * // Wrap in custom middleware
@@ -95,7 +186,11 @@ export function createFileHandler<
 ): RequestHandler<Method, Params> {
   let {
     cacheControl,
-    etag: etagEnabled = true,
+    etag: etagStrategy = 'weak',
+    digest: digestOption = 'SHA-256',
+    digestCache,
+    digestCacheKey = ({ path, file }: { path: string; file: File }) =>
+      `${path}:${file.lastModified}`,
     lastModified: lastModifiedEnabled = true,
     acceptRanges: acceptRangesEnabled = true,
   } = options
@@ -114,18 +209,23 @@ export function createFileHandler<
     }
 
     // Resolve the file
-    let file = await resolveFile(context)
+    let resolved = await resolveFile(context)
 
-    if (!file) {
+    if (!resolved) {
       return new Response('Not Found', { status: 404 })
     }
+
+    let { file, path } = resolved
 
     let contentType = file.type
     let contentLength = file.size
 
     let etag: string | undefined
-    if (etagEnabled) {
+    if (etagStrategy === 'weak') {
       etag = generateWeakETag(file)
+    } else if (etagStrategy === 'strong') {
+      let digest = await computeDigest(path, file, digestOption, digestCache, digestCacheKey)
+      etag = `"${digest}"`
     }
 
     let lastModified: number | undefined
@@ -278,6 +378,52 @@ export function createFileHandler<
 
 function generateWeakETag(file: File): string {
   return `W/"${file.size}-${file.lastModified}"`
+}
+
+/**
+ * Computes a digest (hash) for a file, with optional caching.
+ */
+async function computeDigest(
+  path: string,
+  file: File,
+  digestOption: DigestAlgorithm | FileDigestFunction,
+  cache: DigestCache | undefined,
+  getCacheKey: FileDigestCacheKeyFunction,
+): Promise<string> {
+  if (cache) {
+    let key = getCacheKey({ path, file })
+    let cached = await cache.get(key)
+    if (cached) {
+      return cached
+    }
+  }
+
+  let digest: string
+  if (typeof digestOption === 'function') {
+    // Custom digest function
+    digest = await digestOption(file)
+  } else {
+    // Use SubtleCrypto with algorithm name
+    digest = await hashFile(file, digestOption)
+  }
+
+  if (cache) {
+    let key = getCacheKey({ path, file })
+    await cache.set(key, digest)
+  }
+
+  return digest
+}
+
+/**
+ * Hashes a file using SubtleCrypto.
+ */
+async function hashFile(file: File, algorithm: string): Promise<string> {
+  let buffer = await file.arrayBuffer()
+  let hashBuffer = await crypto.subtle.digest(algorithm, buffer)
+  let hashArray = Array.from(new Uint8Array(hashBuffer))
+  let hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+  return hashHex
 }
 
 /**

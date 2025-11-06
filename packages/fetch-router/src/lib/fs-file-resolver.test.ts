@@ -67,28 +67,32 @@ describe('createFsFileResolver', () => {
       createTestFile('test.txt', 'Hello, World!')
 
       let resolver = createFsFileResolver(tmpDir, requestPathnameResolver)
-      let file = await resolver(createContext('test.txt'))
+      let result = await resolver(createContext('test.txt'))
 
-      assert.ok(file instanceof File)
-      assert.equal(await file.text(), 'Hello, World!')
-      assert.equal(file.type, 'text/plain')
+      assert.ok(result)
+      assert.ok(result.file instanceof File)
+      assert.equal(result.path, path.join(path.resolve(tmpDir), 'test.txt'))
+      assert.equal(await result.file.text(), 'Hello, World!')
+      assert.equal(result.file.type, 'text/plain')
     })
 
     it('resolves files from nested directories', async () => {
       createTestFile('dir/subdir/file.txt', 'Nested file')
 
       let resolver = createFsFileResolver(tmpDir, requestPathnameResolver)
-      let file = await resolver(createContext('dir/subdir/file.txt'))
+      let result = await resolver(createContext('dir/subdir/file.txt'))
 
-      assert.ok(file instanceof File)
-      assert.equal(await file.text(), 'Nested file')
+      assert.ok(result)
+      assert.ok(result.file instanceof File)
+      assert.equal(result.path, path.join(path.resolve(tmpDir), 'dir/subdir/file.txt'))
+      assert.equal(await result.file.text(), 'Nested file')
     })
 
     it('returns null for non-existent file', async () => {
       let resolver = createFsFileResolver(tmpDir, requestPathnameResolver)
-      let file = await resolver(createContext('nonexistent.txt'))
+      let result = await resolver(createContext('nonexistent.txt'))
 
-      assert.equal(file, null)
+      assert.equal(result, null)
     })
 
     it('returns null when directory is requested', async () => {
@@ -96,18 +100,18 @@ describe('createFsFileResolver', () => {
       fs.mkdirSync(dirPath)
 
       let resolver = createFsFileResolver(tmpDir, requestPathnameResolver)
-      let file = await resolver(createContext('subdir'))
+      let result = await resolver(createContext('subdir'))
 
-      assert.equal(file, null)
+      assert.equal(result, null)
     })
 
     it('returns null when path resolver returns null', async () => {
       createTestFile('test.txt', 'Hello, World!')
 
       let resolver = createFsFileResolver(tmpDir, () => null)
-      let file = await resolver(createContext('test.txt'))
+      let result = await resolver(createContext('test.txt'))
 
-      assert.equal(file, null)
+      assert.equal(result, null)
     })
   })
 
@@ -117,10 +121,12 @@ describe('createFsFileResolver', () => {
       createTestFile('test.txt', 'Hello')
 
       let resolver = createFsFileResolver(relativeTmpDir, requestPathnameResolver)
-      let file = await resolver(createContext('test.txt'))
+      let result = await resolver(createContext('test.txt'))
 
-      assert.ok(file instanceof File)
-      assert.equal(await file.text(), 'Hello')
+      assert.ok(result)
+      assert.ok(result.file instanceof File)
+      assert.equal(result.path, path.join(path.resolve(relativeTmpDir), 'test.txt'))
+      assert.equal(await result.file.text(), 'Hello')
     })
 
     it('resolves absolute root paths', async () => {
@@ -128,10 +134,12 @@ describe('createFsFileResolver', () => {
       createTestFile('test.txt', 'Hello')
 
       let resolver = createFsFileResolver(absoluteTmpDir, requestPathnameResolver)
-      let file = await resolver(createContext('test.txt'))
+      let result = await resolver(createContext('test.txt'))
 
-      assert.ok(file instanceof File)
-      assert.equal(await file.text(), 'Hello')
+      assert.ok(result)
+      assert.ok(result.file instanceof File)
+      assert.equal(result.path, path.join(absoluteTmpDir, 'test.txt'))
+      assert.equal(await result.file.text(), 'Hello')
     })
   })
 
@@ -145,12 +153,14 @@ describe('createFsFileResolver', () => {
       let publicDir = path.join(tmpDir, publicDirName)
       let resolver = createFsFileResolver(publicDir, requestPathnameResolver)
 
-      let allowedFile = await resolver(createContext('allowed.txt'))
-      assert.ok(allowedFile instanceof File)
-      assert.equal(await allowedFile.text(), 'Allowed content')
+      let result = await resolver(createContext('allowed.txt'))
+      assert.ok(result)
+      assert.ok(result.file instanceof File)
+      assert.equal(result.path, path.join(path.resolve(publicDir), 'allowed.txt'))
+      assert.equal(await result.file.text(), 'Allowed content')
 
-      let traversalFile = await resolver(createContext('../secret.txt'))
-      assert.equal(traversalFile, null)
+      let traversalResult = await resolver(createContext('../secret.txt'))
+      assert.equal(traversalResult, null)
     })
 
     it('does not support absolute paths in the resolved path', async () => {
@@ -162,8 +172,8 @@ describe('createFsFileResolver', () => {
       let resolver = createFsFileResolver(tmpDir, () => secretPath)
 
       try {
-        let file = await resolver(createContext('anything'))
-        assert.equal(file, null)
+        let result = await resolver(createContext('anything'))
+        assert.equal(result, null)
       } finally {
         fs.unlinkSync(secretPath)
       }
