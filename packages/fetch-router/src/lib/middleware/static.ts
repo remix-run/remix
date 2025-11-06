@@ -22,7 +22,7 @@ export type StaticFilesOptions<
  * // Returns: "assets/style.css"
  */
 function requestPathnameResolver(context: RequestContext): string {
-  return new URL(context.request.url).pathname.replace(/^\/+/, '')
+  return context.url.pathname.replace(/^\/+/, '')
 }
 
 /**
