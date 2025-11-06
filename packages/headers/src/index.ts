@@ -3,6 +3,7 @@ export { type AcceptEncodingInit, AcceptEncoding } from './lib/accept-encoding.t
 export { type AcceptLanguageInit, AcceptLanguage } from './lib/accept-language.ts'
 export { type CacheControlInit, CacheControl } from './lib/cache-control.ts'
 export { type ContentDispositionInit, ContentDisposition } from './lib/content-disposition.ts'
+export { type ContentRangeInit, ContentRange } from './lib/content-range.ts'
 export { type ContentTypeInit, ContentType } from './lib/content-type.ts'
 export { type CookieInit, Cookie } from './lib/cookie.ts'
 export { type IfMatchInit, IfMatch } from './lib/if-match.ts'
