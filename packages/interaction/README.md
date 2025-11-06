@@ -36,19 +36,25 @@ on(inputElement, {
 Listeners can be arrays. They run in order and preserve normal DOM semantics (including `stopImmediatePropagation`).
 
 ```ts
-import { on, capture, listenWith } from '@remix-run/interaction'
+import { on } from '@remix-run/interaction'
 
 on(inputElement, {
   input: [
     (event) => {
       console.log('first')
     },
-    capture((event) => {
-      // capture phase
-    }),
-    listenWith({ once: true }, (event) => {
-      console.log('only once')
-    }),
+    {
+      capture: true,
+      listener(event) {
+        // capture phase
+      },
+    },
+    {
+      once: true,
+      listener(event) {
+        console.log('only once')
+      },
+    },
   ],
 })
 ```
@@ -112,21 +118,27 @@ on(inputElement, {
 All DOM [`AddEventListenerOptions`](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#options) are supported via descriptors:
 
 ```ts
-import { on, listenWith, capture } from '@remix-run/interaction'
+import { on } from '@remix-run/interaction'
 
 on(button, {
-  click: capture((event) => {
-    console.log('capture phase')
-  }),
-  focus: listenWith({ once: true }, (event) => {
-    console.log('focused once')
-  }),
+  click: {
+    capture: true,
+    listener(event) {
+      console.log('capture phase')
+    },
+  },
+  focus: {
+    once: true,
+    listener(event) {
+      console.log('focused once')
+    },
+  },
 })
 ```
 
 ### Updating listeners efficiently
 
-Use `createContainer(target, signal?)` when you need to update listeners in place (e.g., in a component system). The container diffs and updates existing bindings without unnecessary `removeEventListener`/`addEventListener` churn.
+Use `createContainer` when you need to update listeners in place (e.g., in a component system). The container diffs and updates existing bindings without unnecessary `removeEventListener`/`addEventListener` churn.
 
 ```ts
 import { createContainer } from '@remix-run/interaction'
@@ -167,15 +179,18 @@ import { on, createContainer } from '@remix-run/interaction'
 let dispose = on(button, { click: () => {} })
 dispose()
 
-// Using an external AbortSignal
-let controller = new AbortController()
-on(button, controller.signal, { click: () => {} })
-controller.abort() // removes all listeners added via that call
-
 // Containers
 let container = createContainer(window)
 container.set({ resize: () => {} })
 container.dispose()
+
+// Use a signal
+let eventsController = new AbortController()
+let container = createContainer(window, {
+  signal: eventsController.signal,
+})
+container.set({ resize: () => {} })
+eventsController.abort()
 ```
 
 ### Stop propagation semantics
@@ -200,7 +215,7 @@ on(button, {
 Define semantic interactions that can dispatch custom events and be reused declaratively.
 
 ```ts
-import { defineInteraction, on } from '@remix-run/interaction'
+import { defineInteraction, on, type Interaction } from '@remix-run/interaction'
 
 // Provide type safety for consumers
 declare global {
@@ -209,13 +224,13 @@ declare global {
   }
 }
 
-function KeydownEnter(target: EventTarget, signal: AbortSignal) {
-  if (!(target instanceof HTMLElement)) return
+function KeydownEnter(this: Interaction) {
+  if (!(this.target instanceof HTMLElement)) return
 
-  on(target, signal, {
+  this.on(this.target, {
     keydown(event) {
       if (event.key === 'Enter') {
-        target.dispatchEvent(new KeyboardEvent(keydownEnter, { key: 'Enter' }))
+        this.target.dispatchEvent(new KeyboardEvent(keydownEnter, { key: 'Enter' }))
       }
     },
   })

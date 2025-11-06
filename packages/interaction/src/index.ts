@@ -1,12 +1,12 @@
 export {
+  type ContainerOptions,
   type Dispatched,
   type EventListeners,
   type EventsContainer,
+  type Interaction,
   type InteractionSetup,
   type TypedEventTarget,
-  capture,
   createContainer,
   defineInteraction,
-  listenWith,
   on,
 } from './lib/interaction.ts'
