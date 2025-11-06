@@ -6,7 +6,7 @@ import { createRouter } from '../router.ts'
 import { asyncContext, getContext } from './async-context.ts'
 
 describe('asyncContext', () => {
-  it('should store the request context in AsyncLocalStorage', async () => {
+  it('stores the request context in AsyncLocalStorage', async () => {
     let routes = route({
       home: '/',
     })
