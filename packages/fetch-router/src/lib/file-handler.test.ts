@@ -1,11 +1,11 @@
 import * as assert from 'node:assert/strict'
 import { describe, it, mock } from 'node:test'
-import SuperHeaders, { type SuperHeadersInit } from '@remix-run/headers'
+import type { SuperHeadersInit } from '@remix-run/headers'
+import { SuperHeaders } from '@remix-run/headers'
 
 import { createFileHandler } from './file-handler.ts'
-import type { RequestContext } from './request-context.ts'
+import { RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
-import { AppStorage } from './app-storage.ts'
 
 describe('createFileHandler', () => {
   function createMockFile(
@@ -29,20 +29,12 @@ describe('createFileHandler', () => {
       headers?: SuperHeadersInit
     } = {},
   ): RequestContext<'GET', {}> {
-    let headers = new SuperHeaders(options.headers ?? {})
-    return {
-      formData: undefined,
-      storage: new AppStorage(),
-      url: new URL(url),
-      files: null,
-      method: 'GET',
-      request: new Request(url, {
-        method: options.method || 'GET',
-        headers,
+    return new RequestContext(
+      new Request(url, {
+        method: options.method ?? 'GET',
+        headers: new SuperHeaders(options.headers ?? {}),
       }),
-      params: {},
-      headers,
-    }
+    )
   }
 
   describe('basic functionality', () => {
