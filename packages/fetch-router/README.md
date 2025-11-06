@@ -601,7 +601,7 @@ Note that paths returned by this function should be relative to the root directo
 
 #### Strong ETags and Content Hashing
 
-For assets that require strong validation (e.g., to support [`If-Match` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match) for [`Range` requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range)), you can configure strong ETag generation.
+For assets that require strong validation (e.g., to support [`If-Match`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match) and [`If-Range`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Range) headers for [`Range` requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range)), you can configure strong ETag generation.
 
 ```ts
 import { createRouter } from '@remix-run/fetch-router'
@@ -633,7 +633,6 @@ let router = createRouter({
       digest: 'SHA-256',
 
       // Provide a cache to avoid re-hashing files on every request.
-      // You may want to use an LRU cache to prevent memory leaks.
       // Defaults to `undefined`, meaning that there is no cache.
       digestCache: new Map(),
 
