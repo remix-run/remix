@@ -45,8 +45,6 @@ export class RequestContext<
     return files
   }
 
-  #formData?: FormData
-
   /**
    * Parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) from the
    * request body.
@@ -66,6 +64,8 @@ export class RequestContext<
   set formData(value: FormData) {
     this.#formData = value
   }
+
+  #formData?: FormData
 
   /**
    * The headers of the request.
@@ -89,8 +89,6 @@ export class RequestContext<
    */
   request: Request
 
-  #session?: Session
-
   /**
    * The current session.
    */
@@ -101,6 +99,8 @@ export class RequestContext<
   set session(value: Session) {
     this.#session = value
   }
+
+  #session?: Session
 
   /**
    * Shared application-specific storage.
