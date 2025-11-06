@@ -116,6 +116,40 @@ declare global {
     [pageDown]: KeyboardEvent
     [tab]: KeyboardEvent
   }
+
+  interface WindowEventMap {
+    [escape]: KeyboardEvent
+    [enter]: KeyboardEvent
+    [space]: KeyboardEvent
+    [backspace]: KeyboardEvent
+    [del]: KeyboardEvent
+    [arrowLeft]: KeyboardEvent
+    [arrowRight]: KeyboardEvent
+    [arrowUp]: KeyboardEvent
+    [arrowDown]: KeyboardEvent
+    [home]: KeyboardEvent
+    [end]: KeyboardEvent
+    [pageUp]: KeyboardEvent
+    [pageDown]: KeyboardEvent
+    [tab]: KeyboardEvent
+  }
+
+  interface DocumentEventMap {
+    [escape]: KeyboardEvent
+    [enter]: KeyboardEvent
+    [space]: KeyboardEvent
+    [backspace]: KeyboardEvent
+    [del]: KeyboardEvent
+    [arrowLeft]: KeyboardEvent
+    [arrowRight]: KeyboardEvent
+    [arrowUp]: KeyboardEvent
+    [arrowDown]: KeyboardEvent
+    [home]: KeyboardEvent
+    [end]: KeyboardEvent
+    [pageUp]: KeyboardEvent
+    [pageDown]: KeyboardEvent
+    [tab]: KeyboardEvent
+  }
 }
 
 const keys = [
