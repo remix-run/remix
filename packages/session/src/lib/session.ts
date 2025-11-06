@@ -1,34 +1,3 @@
-export interface SessionStorage {
-  /**
-   * Retrieve a new session from storage.
-   * @param cookieValue The value of the session cookie
-   * @returns The session
-   */
-  read(cookieValue: string | null): Promise<Session>
-  /**
-   * Update a session in storage.
-   * @param id The ID of the session to save
-   * @param data The data to save for the session
-   * @returns The value to put in the session cookie
-   */
-  update(id: string, data: SessionData): Promise<string>
-  /**
-   * Delete a session from storage.
-   * @param id The ID of the session to delete
-   * @returns The value to put in the session cookie
-   */
-  delete(id: string): Promise<string>
-}
-
-export interface SessionStorageOptions {
-  /**
-   * Set `true` to accept and use unknown session IDs from the client. By default, unknown
-   * session IDs are rejected and a new session is created instead, which helps prevent session
-   * fixation attacks.
-   */
-  useUnknownIds?: boolean
-}
-
 export type SessionData = [Record<string, unknown>, Record<string, unknown>]
 
 export class Session {
@@ -165,4 +134,35 @@ export class Session {
     this.#valueMap.delete(key)
     this.#dirty = true
   }
+}
+
+export interface SessionStorage {
+  /**
+   * Retrieve a new session from storage.
+   * @param cookieValue The value of the session cookie
+   * @returns The session
+   */
+  read(cookieValue: string | null): Promise<Session>
+  /**
+   * Update a session in storage.
+   * @param id The ID of the session to save
+   * @param data The data to save for the session
+   * @returns The value to put in the session cookie
+   */
+  update(id: string, data: SessionData): Promise<string>
+  /**
+   * Delete a session from storage.
+   * @param id The ID of the session to delete
+   * @returns The value to put in the session cookie
+   */
+  delete(id: string): Promise<string>
+}
+
+export interface SessionStorageOptions {
+  /**
+   * Set `true` to accept and use unknown session IDs from the client. By default, unknown
+   * session IDs are rejected and a new session is created instead, which helps prevent session
+   * fixation attacks.
+   */
+  useUnknownIds?: boolean
 }
