@@ -7,7 +7,7 @@ import {
   type SessionStorage,
   type SessionStorageOptions,
   Session,
-} from '../session.ts'
+} from './session.ts'
 
 /**
  * Stores session data in files on the filesystem.

@@ -1,10 +1,10 @@
 import { type CookieProperties } from '@remix-run/headers'
 import { type CookieOptions, Cookie } from '@remix-run/cookie'
+import { type SessionStorage } from '@remix-run/session'
+import { CookieSessionStorage } from '@remix-run/session/cookie-storage'
 
 import type { Middleware } from '../middleware.ts'
 import type { RequestContext } from '../request-context.ts'
-import type { SessionStorage } from '../session.ts'
-import { CookieSessionStorage } from '../session/cookie-storage.ts'
 
 export interface SessionOptions {
   /**

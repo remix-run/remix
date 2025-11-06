@@ -3,11 +3,11 @@ import { describe, it, beforeEach, afterEach } from 'node:test'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
-import { Session } from '../session.ts'
 import { FileSessionStorage } from './file-storage.ts'
+import { Session } from './session.ts'
 
 const __dirname = new URL('.', import.meta.url).pathname
-const packageRoot = path.resolve(__dirname, '..', '..', '..')
+const packageRoot = path.resolve(__dirname, '..', '..')
 const tmpRoot = path.join(packageRoot, '.tmp')
 
 describe('FileSessionStorage', () => {
@@ -19,7 +19,7 @@ describe('FileSessionStorage', () => {
   })
 
   afterEach(async () => {
-    await fsp.rm(tmpDir, { recursive: true, force: true })
+    await fsp.rm(tmpRoot, { recursive: true, force: true })
   })
 
   it('reads, updates, and deletes sessions', async () => {

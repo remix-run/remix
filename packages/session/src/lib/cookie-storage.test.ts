@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { Session } from '../session.ts'
 import { CookieSessionStorage } from './cookie-storage.ts'
+import { Session } from './session.ts'
 
 describe('CookieSessionStorage', () => {
   it('reads, updates, and deletes sessions', async () => {

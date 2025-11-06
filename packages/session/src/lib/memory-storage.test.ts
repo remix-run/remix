@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { Session } from '../session.ts'
 import { MemorySessionStorage } from './memory-storage.ts'
+import { Session } from './session.ts'
 
 describe('MemorySessionStorage', () => {
   it('reads, updates, and deletes sessions', async () => {

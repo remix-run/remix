@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { Session } from './session.ts'
-import { MemorySessionStorage } from './session/memory-storage.ts'
+import { MemorySessionStorage } from './memory-storage.ts'
 
 describe('Session', () => {
   it('creates a new session', () => {

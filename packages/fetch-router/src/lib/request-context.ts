@@ -1,4 +1,5 @@
 import SuperHeaders from '@remix-run/headers'
+import { Session } from '@remix-run/session'
 
 import { AppStorage } from './app-storage.ts'
 import {
@@ -6,7 +7,6 @@ import {
   type RequestBodyMethod,
   type RequestMethod,
 } from './request-methods.ts'
-import { Session } from './session.ts'
 
 /**
  * A context object that contains information about the current request. Every request

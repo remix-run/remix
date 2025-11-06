@@ -3,7 +3,7 @@ import {
   type SessionStorageOptions,
   type SessionData,
   Session,
-} from '../session.ts'
+} from './session.ts'
 
 /**
  * Stores all session data in memory.

@@ -1,4 +1,4 @@
-import { type SessionStorage, type SessionData, Session } from '../session.ts'
+import { type SessionStorage, type SessionData, Session } from './session.ts'
 
 /**
  * Stores session data in the session cookie itself.

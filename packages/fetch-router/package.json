@@ -59,6 +59,7 @@
   },
   "devDependencies": {
     "@remix-run/cookie": "workspace:*",
+    "@remix-run/session": "workspace:*",
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3"
   },
@@ -67,7 +68,8 @@
     "@remix-run/form-data-parser": "workspace:^",
     "@remix-run/headers": "workspace:^",
     "@remix-run/html-template": "workspace:^",
-    "@remix-run/route-pattern": "workspace:^"
+    "@remix-run/route-pattern": "workspace:^",
+    "@remix-run/session": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

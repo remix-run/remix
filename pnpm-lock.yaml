@@ -100,8 +100,11 @@ importers:
         version: link:../route-pattern
     devDependencies:
       '@remix-run/cookie':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../cookie
+      '@remix-run/session':
+        specifier: workspace:*
+        version: link:../session
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
@@ -389,14 +392,13 @@ importers:
         version: 8.3.0
 
   packages/session:
-    dependencies:
-      '@remix-run/cookie':
-        specifier: workspace:^
-        version: link:../cookie
     devDependencies:
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/tar-parser:
     devDependencies:
