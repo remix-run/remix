@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import { describe, it, mock } from 'node:test'
 import { createCookie } from '@remix-run/cookie'
 import { Cookie as CookieHeader, SetCookie as SetCookieHeader } from '@remix-run/headers'
 
@@ -104,5 +104,20 @@ describe('session middleware', () => {
     assert.equal(setCookie.path, '/admin')
     assert.equal(setCookie.secure, true)
     assert.equal(setCookie.httpOnly, true)
+  })
+
+  it('warns if the session cookie is not signed', () => {
+    let consoleWarn = mock.method(console, 'warn', () => {})
+
+    let unsignedCookie = createCookie('__sess')
+    session(unsignedCookie)
+
+    assert.equal(consoleWarn.mock.calls.length, 1)
+    assert.match(
+      consoleWarn.mock.calls[0].arguments[0] as string,
+      /Session cookie "__sess" should be signed to prevent tampering/,
+    )
+
+    consoleWarn.mock.restore()
   })
 })

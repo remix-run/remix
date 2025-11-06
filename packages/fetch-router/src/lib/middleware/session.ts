@@ -29,21 +29,13 @@ export function session(
   cookie: Cookie | (CookieOptions & { name: string }),
   options?: SessionOptions,
 ): Middleware {
-  let sessionCookie: Cookie
-  if (!(cookie instanceof Cookie)) {
-    sessionCookie = new Cookie(cookie.name, cookie)
-  } else {
-    sessionCookie = cookie
-  }
-
-  if (!sessionCookie.signed) {
-    warnOnce(
-      sessionCookie.name,
-      `Session cookie "${sessionCookie.name}" should be signed to prevent tampering`,
-    )
-  }
-
+  let sessionCookie = cookie instanceof Cookie ? cookie : new Cookie(cookie.name, cookie)
   let sessionStorage = options?.storage ?? new CookieSessionStorage()
+
+  warnOnce(
+    sessionCookie.signed,
+    `Session cookie "${sessionCookie.name}" should be signed to prevent tampering`,
+  )
 
   return async (context, next) => {
     let cookieValue = await sessionCookie.parse(context.request.headers.get('Cookie'))
@@ -78,9 +70,9 @@ export function session(
 
 const warnings = new Set<string>()
 
-function warnOnce(key: string, message: string) {
-  if (!warnings.has(key)) {
-    warnings.add(key)
+function warnOnce(condition: boolean, message: string) {
+  if (!condition && !warnings.has(message)) {
+    warnings.add(message)
     console.warn(message)
   }
 }
