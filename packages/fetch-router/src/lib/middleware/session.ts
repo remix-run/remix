@@ -73,10 +73,10 @@ export function session(
       return
     }
 
-    let cookieProps = Object.assign(
-      { httpOnly: true }, // default for session cookies
-      typeof options?.cookie === 'function' ? options.cookie(context) : options?.cookie,
-    )
+    let cookieProps = {
+      httpOnly: true, // good default for session cookies
+      ...(typeof options?.cookie === 'function' ? options.cookie(context) : options?.cookie),
+    }
 
     response.headers.append(
       'Set-Cookie',
