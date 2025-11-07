@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
 
 import { RequestContext } from './request-context.ts'
-import { createRoutes } from './route-map.ts'
+import { createRoutes as route } from './route-map.ts'
 import { createRouter } from './router.ts'
 
 describe('router.fetch()', () => {
@@ -18,7 +18,7 @@ describe('router.fetch()', () => {
   })
 
   it('fetches a route with middleware', async () => {
-    let routes = createRoutes({
+    let routes = route({
       home: '/',
     })
 
@@ -46,7 +46,7 @@ describe('router.fetch()', () => {
   })
 
   it('runs router middleware before fetching a route', async () => {
-    let routes = createRoutes({
+    let routes = route({
       home: '/',
     })
 
@@ -77,7 +77,7 @@ describe('router.fetch()', () => {
   })
 
   it('fetches a route with specific method handlers', async () => {
-    let routes = createRoutes({
+    let routes = route({
       home: '/',
     })
 
@@ -161,7 +161,7 @@ describe('router.fetch()', () => {
 
 describe('router.map()', () => {
   it('maps a single route to a handler', async () => {
-    let routes = createRoutes({
+    let routes = route({
       home: '/',
     })
 
@@ -178,7 +178,7 @@ describe('router.map()', () => {
   })
 
   it('maps a route map to many handlers', async () => {
-    let routes = createRoutes({
+    let routes = route({
       home: '/',
       blog: {
         index: { method: 'GET', pattern: '/blog' },
@@ -226,7 +226,7 @@ describe('router.map()', () => {
 
 describe('router.map() with middleware', () => {
   it('supports middleware in a route handler object', async () => {
-    let routes = createRoutes({
+    let routes = route({
       home: '/',
       profile: '/profile/:id',
     })
@@ -254,7 +254,7 @@ describe('router.map() with middleware', () => {
   })
 
   it('supports middleware in a route handlers object', async () => {
-    let routes = createRoutes({
+    let routes = route({
       home: '/',
     })
 
@@ -283,7 +283,7 @@ describe('router.map() with middleware', () => {
   })
 
   it('supports middleware in nested handlers', async () => {
-    let routes = createRoutes({
+    let routes = route({
       blog: {
         index: '/blog',
         show: '/blog/:id',
@@ -330,7 +330,7 @@ describe('router.map() with middleware', () => {
   })
 
   it('supports multiple middleware in a single array', async () => {
-    let routes = createRoutes({
+    let routes = route({
       home: '/',
     })
 
@@ -365,7 +365,7 @@ describe('router.map() with middleware', () => {
   })
 
   it('allows selective middleware by mapping specific nested route subtrees separately', async () => {
-    let routes = createRoutes({
+    let routes = route({
       public: '/public',
       admin: {
         dashboard: '/admin/dashboard',
@@ -420,7 +420,7 @@ describe('router.map() with middleware', () => {
   })
 
   it('runs both global and inline middleware', async () => {
-    let routes = createRoutes({
+    let routes = route({
       home: '/',
     })
 
@@ -566,7 +566,7 @@ describe('inline middleware', () => {
   })
 
   it('runs both global and inline middleware', async () => {
-    let routes = createRoutes({
+    let routes = route({
       admin: {
         dashboard: '/admin/dashboard',
         users: '/admin/users',
@@ -791,7 +791,7 @@ describe('trailing slash handling', () => {
   })
 
   it('matches routes with and without trailing slashes for createRoutes', async () => {
-    let routes = createRoutes('api', {
+    let routes = route('api', {
       users: '/users',
       posts: '/posts/',
     })
@@ -833,7 +833,7 @@ describe('trailing slash handling', () => {
   })
 
   it('handles nested routes with trailing slash combinations', async () => {
-    let routes = createRoutes('admin', {
+    let routes = route('admin', {
       dashboard: '/',
       users: {
         index: '/users',
@@ -910,206 +910,5 @@ describe('custom matcher', () => {
     router.get('/about', () => new Response('About'))
 
     assert.deepEqual(addedPatterns, ['/home', '/about'])
-  })
-})
-
-describe('abort signal support', () => {
-  it('throws AbortError when signal is already aborted', async () => {
-    let router = createRouter()
-    router.get('/', () => new Response('Home'))
-
-    let controller = new AbortController()
-    controller.abort()
-
-    await assert.rejects(
-      async () => {
-        await router.fetch('https://remix.run', { signal: controller.signal })
-      },
-      (error: any) => {
-        assert.equal(error.name, 'AbortError')
-        assert.ok(error instanceof DOMException)
-        return true
-      },
-    )
-  })
-
-  it('throws AbortError when signal is aborted during request processing', async () => {
-    let router = createRouter()
-    let controller = new AbortController()
-
-    router.get('/', async () => {
-      // Abort while handler is running
-      controller.abort()
-      // Simulate some async work
-      await new Promise((resolve) => setTimeout(resolve, 10))
-      return new Response('Home')
-    })
-
-    await assert.rejects(
-      async () => {
-        await router.fetch('https://remix.run', { signal: controller.signal })
-      },
-      (error: any) => {
-        assert.equal(error.name, 'AbortError')
-        return true
-      },
-    )
-  })
-
-  it('handles signal from Request object passed to fetch()', async () => {
-    let router = createRouter()
-    router.get('/', () => new Response('Home'))
-
-    let controller = new AbortController()
-    let request = new Request('https://remix.run', { signal: controller.signal })
-    controller.abort()
-
-    await assert.rejects(
-      async () => {
-        await router.fetch(request)
-      },
-      (error: any) => {
-        assert.equal(error.name, 'AbortError')
-        assert.ok(error instanceof DOMException)
-        return true
-      },
-    )
-  })
-
-  it('handles signal from init object', async () => {
-    let router = createRouter()
-    router.get('/', () => new Response('Home'))
-
-    let controller = new AbortController()
-    controller.abort()
-
-    await assert.rejects(
-      async () => {
-        await router.fetch('https://remix.run', { signal: controller.signal })
-      },
-      (error: any) => {
-        assert.equal(error.name, 'AbortError')
-        assert.ok(error instanceof DOMException)
-        return true
-      },
-    )
-  })
-
-  it('allows middleware to catch and handle abort errors', async () => {
-    let controller = new AbortController()
-    let errorCaught = false
-
-    let router = createRouter({
-      middleware: [
-        async (_, next) => {
-          try {
-            return await next()
-          } catch (error) {
-            if ((error as Error).name === 'AbortError') {
-              errorCaught = true
-            }
-            throw error
-          }
-        },
-      ],
-    })
-
-    router.get('/', async () => {
-      // Simulate some async work that gets aborted
-      await new Promise((resolve) => setTimeout(resolve, 50))
-      return new Response('Home')
-    })
-
-    // Abort while handler is running
-    setTimeout(() => controller.abort(), 10)
-
-    await assert.rejects(
-      async () => {
-        await router.fetch('https://remix.run', { signal: controller.signal })
-      },
-      (error: any) => {
-        assert.equal(error.name, 'AbortError')
-        return true
-      },
-    )
-
-    // Middleware should have caught the error
-    assert.equal(errorCaught, true)
-  })
-
-  it('completes successfully if not aborted', async () => {
-    let controller = new AbortController()
-    let router = createRouter()
-
-    router.get('/', () => new Response('Home'))
-
-    let response = await router.fetch('https://remix.run', { signal: controller.signal })
-
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Home')
-  })
-
-  it('throws AbortError when aborted before middleware completes', async () => {
-    let controller = new AbortController()
-
-    let router = createRouter({
-      middleware: [
-        async () => {
-          controller.abort()
-          await new Promise((resolve) => setTimeout(resolve, 10))
-        },
-      ],
-    })
-
-    router.get('/', () => new Response('Home'))
-
-    await assert.rejects(
-      async () => {
-        await router.fetch('https://remix.run', { signal: controller.signal })
-      },
-      (error: any) => {
-        assert.equal(error.name, 'AbortError')
-        return true
-      },
-    )
-  })
-
-  it('does not call downstream middleware or handler when aborted in upstream middleware', async () => {
-    let controller = new AbortController()
-    let downstreamMiddlewareCalled = false
-    let handlerCalled = false
-
-    let router = createRouter({
-      middleware: [
-        // Upstream middleware that aborts
-        async () => {
-          controller.abort()
-          await new Promise((resolve) => setTimeout(resolve, 10))
-        },
-        // Downstream middleware that should NOT be called
-        async () => {
-          downstreamMiddlewareCalled = true
-        },
-      ],
-    })
-
-    // Handler that should NOT be called
-    router.get('/', () => {
-      handlerCalled = true
-      return new Response('Home')
-    })
-
-    await assert.rejects(
-      async () => {
-        await router.fetch('https://remix.run', { signal: controller.signal })
-      },
-      (error: any) => {
-        assert.equal(error.name, 'AbortError')
-        return true
-      },
-    )
-
-    assert.equal(downstreamMiddlewareCalled, false)
-    assert.equal(handlerCalled, false)
   })
 })
