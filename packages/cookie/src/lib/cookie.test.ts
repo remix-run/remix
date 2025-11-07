@@ -10,7 +10,7 @@ function getCookieFromSetCookie(setCookie: string): string {
   return header.name + '=' + header.value
 }
 
-describe('cookie', () => {
+describe('Cookie', () => {
   it('parses/serializes empty string values', async () => {
     let cookie = new Cookie('my-cookie')
     let setCookie = await cookie.serialize('')
@@ -130,5 +130,47 @@ describe('cookie', () => {
       path: '/about',
     })
     assert.ok(setCookie2.includes('Path=/about'))
+  })
+
+  it('uses SameSite=Lax by default', async () => {
+    let cookie = new Cookie('my-cookie')
+    let setCookie = await cookie.serialize('hello world')
+    assert.ok(setCookie.includes('SameSite=Lax'))
+  })
+
+  it('supports overriding cookie properties in the constructor', async () => {
+    let cookie = new Cookie('my-cookie', {
+      domain: 'remix.run',
+      path: '/about',
+      maxAge: 3600,
+      sameSite: 'None',
+      secure: true,
+      httpOnly: true,
+    })
+    let setCookie = await cookie.serialize('hello world')
+    assert.ok(setCookie.includes('Domain=remix.run'))
+    assert.ok(setCookie.includes('Path=/about'))
+    assert.ok(setCookie.includes('Max-Age=3600'))
+    assert.ok(setCookie.includes('SameSite=None'))
+    assert.ok(setCookie.includes('Secure'))
+    assert.ok(setCookie.includes('HttpOnly'))
+  })
+
+  it('supports overriding cookie properties in the serialize method', async () => {
+    let cookie = new Cookie('my-cookie')
+    let setCookie = await cookie.serialize('hello world', {
+      domain: 'remix.run',
+      path: '/about',
+      maxAge: 3600,
+      sameSite: 'None',
+      secure: true,
+      httpOnly: true,
+    })
+    assert.ok(setCookie.includes('Domain=remix.run'))
+    assert.ok(setCookie.includes('Path=/about'))
+    assert.ok(setCookie.includes('Max-Age=3600'))
+    assert.ok(setCookie.includes('SameSite=None'))
+    assert.ok(setCookie.includes('Secure'))
+    assert.ok(setCookie.includes('HttpOnly'))
   })
 })

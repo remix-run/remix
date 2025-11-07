@@ -16,7 +16,7 @@ export function createCookie(name: string, options?: CookieOptions): Cookie {
   return new Cookie(name, options)
 }
 
-export interface CookieOptions {
+export interface CookieOptions extends CookieProperties {
   /**
    * A function that decodes the cookie value.
    *
@@ -52,10 +52,18 @@ export interface CookieOptions {
  */
 export class Cookie {
   constructor(name: string, options?: CookieOptions) {
+    let {
+      decode = decodeURIComponent,
+      encode = encodeURIComponent,
+      secrets = [],
+      ...props
+    } = options ?? {}
+
     this.name = name
-    this.#decode = options?.decode ?? decodeURIComponent
-    this.#encode = options?.encode ?? encodeURIComponent
-    this.#secrets = options?.secrets ?? []
+    this.#decode = decode
+    this.#encode = encode
+    this.#secrets = secrets
+    this.#props = props
   }
 
   /**
@@ -66,6 +74,7 @@ export class Cookie {
   readonly #decode: (value: string) => string
   readonly #encode: (value: string) => string
   readonly #secrets: string[]
+  readonly #props: CookieProperties
 
   /**
    * True if this cookie uses one or more secrets for verification.
@@ -105,6 +114,7 @@ export class Cookie {
       // sane defaults
       path: '/',
       sameSite: 'Lax',
+      ...this.#props,
       ...props,
     })
 

@@ -10,6 +10,9 @@ export interface SessionOptions {
   /**
    * The properties to use for the session cookie, or a function that returns the cookie
    * properties based on the request context.
+   *
+   * Note: Session cookies default to `HttpOnly` to prevent client-side JavaScript from accessing
+   * the cookie. You can override this default using `{ httpOnly: false }`.
    */
   cookie?: CookieProperties | ((context: RequestContext) => CookieProperties)
   /**
@@ -21,15 +24,16 @@ export interface SessionOptions {
 
 /**
  * Middleware that manages `context.session` based on the session cookie.
- * @param cookie The cookie to use for the session (should be signed)
- * @param options The options for the session middleware
+ * @param cookie (optional) The cookie to use for the session (should be signed)
+ * @param options (optional) The options for the session middleware
  * @returns The session middleware
  */
 export function session(
-  cookie: Cookie | (CookieOptions & { name: string }),
+  cookie?: Cookie | (CookieOptions & { name?: string }),
   options?: SessionOptions,
 ): Middleware {
-  let sessionCookie = cookie instanceof Cookie ? cookie : new Cookie(cookie.name, cookie)
+  let sessionCookie =
+    cookie instanceof Cookie ? cookie : new Cookie(cookie?.name ?? 'remix_session', cookie)
   let sessionStorage = options?.storage ?? new CookieSessionStorage()
 
   warnOnce(
@@ -38,33 +42,46 @@ export function session(
   )
 
   return async (context, next) => {
-    let cookieValue = await sessionCookie.parse(context.request.headers.get('Cookie'))
-    context.session = await sessionStorage.read(cookieValue)
-    let originalId = context.session.id
+    if (context.sessionStarted) {
+      throw new Error('Existing session found, refusing to overwrite')
+    }
+
+    let cookieValue = await sessionCookie.parse(context.headers.get('Cookie'))
+    let session = await sessionStorage.read(cookieValue)
+    let originalId = session.id
+
+    context.session = session
 
     let response = await next()
 
-    let newCookieValue: string | undefined
-    if (context.session.destroyed) {
-      newCookieValue = await sessionStorage.delete(context.session.id)
-    } else if (context.session.dirty) {
-      if (originalId !== context.session.id) {
-        // Session id changed, delete the previous session data
+    if (session !== context.session) {
+      throw new Error('Cannot save session that was initialized by another middleware/handler')
+    }
+
+    let newCookieValue: string
+    if (session.destroyed) {
+      newCookieValue = await sessionStorage.delete(session.id)
+    } else if (session.dirty) {
+      if (originalId !== session.id) {
+        // Session id was regenerated, delete the previous session data
         await sessionStorage.delete(originalId)
       }
 
-      newCookieValue = await sessionStorage.update(context.session.id, context.session.data)
+      newCookieValue = await sessionStorage.update(session.id, session.data)
+    } else {
+      // No changes to the session, no Set-Cookie needed in the response
+      return
     }
 
-    if (newCookieValue != null) {
-      let cookieProps =
-        typeof options?.cookie === 'function' ? options.cookie(context) : options?.cookie
+    let cookieProps = Object.assign(
+      { httpOnly: true }, // default for session cookies
+      typeof options?.cookie === 'function' ? options.cookie(context) : options?.cookie,
+    )
 
-      response.headers.append(
-        'Set-Cookie',
-        await sessionCookie.serialize(newCookieValue, cookieProps),
-      )
-    }
+    response.headers.append(
+      'Set-Cookie',
+      await sessionCookie.serialize(newCookieValue, cookieProps),
+    )
   }
 }
 

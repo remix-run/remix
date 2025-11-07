@@ -11,6 +11,7 @@ describe('Session', () => {
     assert.ok(session.id)
     assert.equal(session.destroyed, false)
     assert.equal(session.dirty, false)
+    assert.equal(session.size, 0)
   })
 
   it('creates a new session with a custom ID', () => {
@@ -20,6 +21,7 @@ describe('Session', () => {
 
   it('creates a new session with initial data', () => {
     let session = new Session(undefined, [{ hello: 'world' }, {}])
+    assert.equal(session.size, 1)
     assert.equal(session.get('hello'), 'world')
   })
 

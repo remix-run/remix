@@ -111,6 +111,13 @@ export class Session {
   }
 
   /**
+   * The number of key/value pairs in the session.
+   */
+  get size(): number {
+    return this.#valueMap.size + this.#flashMap.size
+  }
+
+  /**
    * Set a value in the session.
    * @param key The key of the value to set
    * @param value The value to set

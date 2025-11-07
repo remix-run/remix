@@ -93,7 +93,15 @@ export class RequestContext<
    * The current session.
    */
   get session(): Session {
-    return (this.#session ??= new Session())
+    if (this.#session == null) {
+      console.warn(
+        "Session isn't started yet, so session data won't be saved. Use the session() middleware to start the session.",
+      )
+
+      this.#session = new Session()
+    }
+
+    return this.#session
   }
 
   set session(value: Session) {
@@ -101,6 +109,13 @@ export class RequestContext<
   }
 
   #session?: Session
+
+  /**
+   * Whether the session has been started.
+   */
+  get sessionStarted(): boolean {
+    return this.#session != null
+  }
 
   /**
    * Shared application-specific storage.
