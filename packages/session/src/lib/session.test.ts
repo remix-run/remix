@@ -50,10 +50,10 @@ describe('Session', () => {
   it('sets and gets values with complex types', () => {
     let session = new Session(undefined, [{ user: { id: 123, name: 'alice' } }, {}])
 
-    assert.equal(session.get('user'), { id: 123, name: 'alice' })
+    assert.deepEqual(session.get('user'), { id: 123, name: 'alice' })
 
     session.set('user', { id: 456, name: 'bob' })
-    assert.equal(session.get('user'), { id: 456, name: 'bob' })
+    assert.deepEqual(session.get('user'), { id: 456, name: 'bob' })
 
     // @ts-expect-error - should not allow different type for user
     session.set('user', { id: 456, name: 'bob', roles: ['admin'] })
