@@ -2,7 +2,7 @@
 
 This is the changelog for [`cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.3.0 (2025-11-08)
 
 - BREAKING CHANGE: Rename `cookie.isSigned` to `cookie.signed`
 - Add `createCookie` function to create a new `Cookie` object
