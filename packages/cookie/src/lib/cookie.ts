@@ -6,7 +6,17 @@ import {
 
 import { sign, unsign } from './crypto.ts'
 
-export interface CookieOptions {
+/**
+ * Creates a new `Cookie` object.
+ * @param name The name of the cookie
+ * @param options The options for the cookie
+ * @returns A new cookie instance
+ */
+export function createCookie(name: string, options?: CookieOptions): Cookie {
+  return new Cookie(name, options)
+}
+
+export interface CookieOptions extends CookieProperties {
   /**
    * A function that decodes the cookie value.
    *
@@ -41,22 +51,35 @@ export interface CookieOptions {
  * to sign/unsign the value of the cookie to ensure it's not tampered with.
  */
 export class Cookie {
+  constructor(name: string, options?: CookieOptions) {
+    let {
+      decode = decodeURIComponent,
+      encode = encodeURIComponent,
+      secrets = [],
+      ...props
+    } = options ?? {}
+
+    this.name = name
+    this.#decode = decode
+    this.#encode = encode
+    this.#secrets = secrets
+    this.#props = props
+  }
+
+  /**
+   * The name of the cookie.
+   */
   readonly name: string
+
   readonly #decode: (value: string) => string
   readonly #encode: (value: string) => string
   readonly #secrets: string[]
-
-  constructor(name: string, options?: CookieOptions) {
-    this.name = name
-    this.#decode = options?.decode ?? decodeURIComponent
-    this.#encode = options?.encode ?? encodeURIComponent
-    this.#secrets = options?.secrets ?? []
-  }
+  readonly #props: CookieProperties
 
   /**
    * True if this cookie uses one or more secrets for verification.
    */
-  get isSigned(): boolean {
+  get signed(): boolean {
     return this.#secrets.length > 0
   }
 
@@ -91,6 +114,7 @@ export class Cookie {
       // sane defaults
       path: '/',
       sameSite: 'Lax',
+      ...this.#props,
       ...props,
     })
 

@@ -1,4 +1,5 @@
 import SuperHeaders from '@remix-run/headers'
+import { Session } from '@remix-run/session'
 
 import { AppStorage } from './app-storage.ts'
 import {
@@ -44,8 +45,6 @@ export class RequestContext<
     return files
   }
 
-  #formData?: FormData
-
   /**
    * Parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) from the
    * request body.
@@ -62,9 +61,11 @@ export class RequestContext<
     return this.#formData as any
   }
 
-  set formData(value: FormData | undefined) {
+  set formData(value: FormData) {
     this.#formData = value
   }
+
+  #formData?: FormData
 
   /**
    * The headers of the request.
@@ -87,6 +88,34 @@ export class RequestContext<
    * The original request that was dispatched to the router.
    */
   request: Request
+
+  /**
+   * The current session.
+   */
+  get session(): Session {
+    if (this.#session == null) {
+      console.warn(
+        "Session isn't started yet, so session data won't be saved. Use the session() middleware to start the session.",
+      )
+
+      this.#session = new Session()
+    }
+
+    return this.#session
+  }
+
+  set session(value: Session) {
+    this.#session = value
+  }
+
+  #session?: Session
+
+  /**
+   * Whether the session has been started.
+   */
+  get sessionStarted(): boolean {
+    return this.#session != null
+  }
 
   /**
    * Shared application-specific storage.
