@@ -1,4 +1,5 @@
-import { findFile } from '../find-file.ts'
+import { findFile } from '@remix-run/lazy-file/fs'
+
 import { file, type FileResponseInit } from '../response-helpers/file.ts'
 import type { Middleware } from '../middleware.ts'
 import type { RequestContext } from '../request-context.ts'

@@ -667,11 +667,10 @@ See the [`@remix-run/html-template` documentation](https://github.com/remix-run/
 
 ### Working with Files
 
-The router provides several tools for serving files, built as layers that compose together:
+The router provides a couple of tools for serving files:
 
 - **`file()` response helper** - The primitive for returning file responses with full HTTP semantics
-- **`findFile()` function** - Helps map route patterns to files on disk
-- **`staticFiles()` middleware** - Convenience middleware that combines both
+- **`staticFiles()` middleware** - Convenience middleware for serving files from a directory
 
 #### The `file()` Response Helper
 
@@ -686,13 +685,13 @@ The `file()` response helper returns a `Response` for a file with full HTTP sema
 - **HEAD** request support
 
 ```ts
+import * as res from '@remix-run/fetch-router/response-helpers'
 import { openFile } from '@remix-run/lazy-file/fs'
-import { file } from '@remix-run/fetch-router/response-helpers'
 
-router.get('/downloads/:filename', async (context) => {
-  let downloadFile = await openFile(`./downloads/${context.params.filename}`)
+router.get('/assets/:filename', async (context) => {
+  let file = await openFile(`./assets/${context.params.filename}`)
 
-  return file(downloadFile, context)
+  return res.file(file, context)
 })
 ```
 
@@ -701,7 +700,7 @@ router.get('/downloads/:filename', async (context) => {
 The `file()` helper accepts an optional third argument with configuration options:
 
 ```ts
-return file(downloadFile, context, {
+return res.file(file, context, {
   // Cache-Control header value.
   // Defaults to `undefined` (no Cache-Control header).
   cacheControl: 'public, max-age=3600',
@@ -728,7 +727,7 @@ return file(downloadFile, context, {
 For assets that require strong validation (e.g., to support [`If-Match`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match) preconditions or [`If-Range`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Range) with [`Range` requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range)), configure strong ETag generation:
 
 ```ts
-return file(assetFile, context, {
+return res.file(file, context, {
   etag: 'strong',
 })
 ```
@@ -736,7 +735,7 @@ return file(assetFile, context, {
 By default, strong ETags are generated using [`SubtleCrypto.digest()`](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest) with the `'SHA-256'` algorithm. You can customize this:
 
 ```ts
-return file(assetFile, context, {
+return res.file(file, context, {
   etag: 'strong',
 
   // Specify a different SubtleCrypto.digest() algorithm
@@ -747,7 +746,7 @@ return file(assetFile, context, {
 Or provide a custom digest function:
 
 ```ts
-return file(assetFile, context, {
+return res.file(file, context, {
   etag: 'strong',
 
   // Custom digest function
@@ -761,7 +760,7 @@ return file(assetFile, context, {
 When using strong ETags, you can provide a cache to avoid re-hashing files on every request:
 
 ```ts
-return file(assetFile, context, {
+return res.file(file, context, {
   etag: 'strong',
 
   // Provide a cache to avoid re-hashing files on every request.
@@ -769,33 +768,31 @@ return file(assetFile, context, {
   digestCache: new Map(),
 
   // Customize the logic for generating the cache key.
-  // Defaults to `({ path, file }) => `${path}:${file.lastModified}``.
-  digestCacheKey: (context) => context.params.path,
+  // Defaults to `(file) => `${file.path ?? file.name}:${file.size}:${file.lastModified}``.
+  digestCacheKey: (file) => `${file.path ?? file.name}:${file.size}:${file.lastModified}`,
 })
 ```
 
 #### Using `findFile()` with `file()`
 
-When you need to map a route pattern to a directory of files on disk, use `findFile()` to resolve files before sending them with the `file()` response helper:
+When you need to map a route pattern to a directory of files on disk, you can use the `findFile()` function from `@remix-run/lazy-file/fs` to resolve files before sending them with the `file()` response helper:
 
 ```ts
-import { findFile } from '@remix-run/fetch-router/find-file'
-import { file } from '@remix-run/fetch-router/response-helpers'
+import * as res from '@remix-run/fetch-router/response-helpers'
+import { findFile } from '@remix-run/lazy-file/fs'
 
 router.get('/assets/*path', async (context) => {
-  let assetFile = await findFile('./public/assets', context.params.path)
+  let file = await findFile('./public/assets', context.params.path)
 
-  if (!assetFile) {
+  if (!file) {
     return new Response('Not Found', { status: 404 })
   }
 
-  return file(assetFile, context, {
+  return res.file(file, context, {
     cacheControl: 'public, max-age=3600',
   })
 })
 ```
-
-The `findFile()` function returns a `File` object with its `name` property set to the full absolute path on the server, or `null` if the file doesn't exist or is outside the specified root directory.
 
 #### The `staticFiles()` Middleware
 

@@ -22,7 +22,6 @@
   "exports": {
     ".": "./src/index.ts",
     "./async-context-middleware": "./src/async-context-middleware.ts",
-    "./find-file": "./src/find-file.ts",
     "./form-data-middleware": "./src/form-data-middleware.ts",
     "./logger-middleware": "./src/logger-middleware.ts",
     "./method-override-middleware": "./src/method-override-middleware.ts",
@@ -39,10 +38,6 @@
       "./async-context-middleware": {
         "types": "./dist/async-context-middleware.d.ts",
         "default": "./dist/async-context-middleware.js"
-      },
-      "./find-file": {
-        "types": "./dist/find-file.d.ts",
-        "default": "./dist/find-file.js"
       },
       "./form-data-middleware": {
         "types": "./dist/form-data-middleware.d.ts",

@@ -1,11 +1,11 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { asyncContext } from '@remix-run/fetch-router/async-context-middleware'
-import { findFile } from '@remix-run/fetch-router/find-file'
 import { formData } from '@remix-run/fetch-router/form-data-middleware'
 import { logger } from '@remix-run/fetch-router/logger-middleware'
 import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
 import { file } from '@remix-run/fetch-router/response-helpers'
 import { staticFiles } from '@remix-run/fetch-router/static-middleware'
+import { findFile } from '@remix-run/lazy-file/fs'
 
 import { routes } from '../routes.ts'
 import { uploadHandler } from './utils/uploads.ts'

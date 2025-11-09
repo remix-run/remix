@@ -15,20 +15,18 @@ import type { RequestMethod } from '../request-methods.ts'
  *   return customHash(buffer)
  * }
  */
-export type FileDigestFunction = (file: File) => Promise<string>
+export type FileDigestFunction<F extends File = File> = (file: F) => Promise<string>
 
 /**
  * Function to generate cache keys for digest storage.
  *
- * @param params - Object containing the file path and File object
+ * @param file - The File object
  * @returns The cache key as a string
  *
  * @example
- * ({ path, file }) => `${path}:${file.lastModified}`
- * @example
- * ({ path, file }) => `v2:${path}:${file.lastModified}`
+ * (file) => `${file.path ?? file.name}:${file.size}:${file.lastModified}`
  */
-export type FileDigestCacheKeyFunction = (params: { path: string; file: File }) => string
+export type FileDigestCacheKeyFunction<F extends File = File> = (file: F) => string
 
 /**
  * Hash algorithm name for SubtleCrypto.digest() or custom digest function.
@@ -43,7 +41,7 @@ interface DigestCache {
   set(key: string, digest: string): void
 }
 
-export interface FileResponseInit {
+export interface FileResponseInit<F extends File = File> {
   /**
    * Cache-Control header value. If not provided, no Cache-Control header will be set.
    *
@@ -77,7 +75,7 @@ export interface FileResponseInit {
    * @example 'SHA-512'
    * @example async (file) => customHash(await file.arrayBuffer())
    */
-  digest?: DigestAlgorithm | FileDigestFunction
+  digest?: DigestAlgorithm | FileDigestFunction<F>
 
   /**
    * Cache for storing computed file digests to avoid re-hashing files.
@@ -95,17 +93,15 @@ export interface FileResponseInit {
   /**
    * Function to generate cache keys for digest storage.
    *
-   * The default includes file path and last modified time to ensure cache invalidation
-   * when files change: `${path}:${file.lastModified}`
-   *
-   * The `path` is provided by the file resolver.
+   * The default includes file path (using `file.path` if available, otherwise
+   * `file.name`), size, and last modified time to ensure cache invalidation
+   * when files change.
    *
    * Only used when `etag: 'strong'` and `digestCache` is provided.
    *
-   * @default ({ path, file }) => `${path}:${file.lastModified}`
-   * @example ({ path, file }) => `prefix:${path}:${file.lastModified}`
+   * @default (file) => `${file.path ?? file.name}:${file.size}:${file.lastModified}`
    */
-  digestCacheKey?: FileDigestCacheKeyFunction
+  digestCacheKey?: FileDigestCacheKeyFunction<F>
 
   /**
    * Whether to include Last-Modified headers.
@@ -131,7 +127,9 @@ export interface FileResponseInit {
  * Returns a Response with full HTTP semantics including ETags, Last-Modified,
  * conditional requests, and Range support.
  *
- * The file's `name` property should contain the full absolute path on the server.
+ * The file can optionally include an additional `path` property containing the
+ * full absolute path on disk. If provided, it will be used for generating cache
+ * keys; otherwise `file.name` is used.
  *
  * @param file - The file to send
  * @param context - The request context
@@ -147,23 +145,23 @@ export interface FileResponseInit {
  * }
  */
 export async function file<
+  F extends File = File,
   Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   Params extends Record<string, any> = {},
 >(
-  fileToSend: File,
+  fileToSend: F,
   context: RequestContext<Method, Params>,
-  init: FileResponseInit = {},
+  init: FileResponseInit<F> = {},
 ): Promise<Response> {
   let { request } = context
-  let path = fileToSend.name
 
   let {
     cacheControl,
     etag: etagStrategy = 'weak',
     digest: digestOption = 'SHA-256',
     digestCache,
-    digestCacheKey = ({ path, file }: { path: string; file: File }) =>
-      `${path}:${file.lastModified}`,
+    digestCacheKey = (file: F & { path?: string }) =>
+      `${file.path ?? file.name}:${file.size}:${file.lastModified}`,
     lastModified: lastModifiedEnabled = true,
     acceptRanges: acceptRangesEnabled = true,
   } = init
@@ -185,7 +183,7 @@ export async function file<
   if (etagStrategy === 'weak') {
     etag = generateWeakETag(fileToSend)
   } else if (etagStrategy === 'strong') {
-    let digest = await computeDigest(path, fileToSend, digestOption, digestCache, digestCacheKey)
+    let digest = await computeDigest(fileToSend, digestOption, digestCache, digestCacheKey)
     etag = `"${digest}"`
   }
 
@@ -343,23 +341,21 @@ function generateWeakETag(file: File): string {
 /**
  * Computes a digest (hash) for a file, with optional caching.
  *
- * @param path - The file path (for cache key generation)
- * @param file - The file to hash
+ * @param file - The file to hash (may include an additional `path` property)
  * @param digestOption - Algorithm name or custom digest function
  * @param cache - Optional cache for storing computed digests
- * @param getCacheKey - Function to generate cache key from path and file
+ * @param getCacheKey - Function to generate cache key from file
  * @returns The computed digest as a hex string
  */
-async function computeDigest(
-  path: string,
-  file: File,
-  digestOption: DigestAlgorithm | FileDigestFunction,
+async function computeDigest<F extends File>(
+  file: F,
+  digestOption: DigestAlgorithm | FileDigestFunction<F>,
   cache: DigestCache | undefined,
-  getCacheKey: FileDigestCacheKeyFunction,
+  getCacheKey: FileDigestCacheKeyFunction<F>,
 ): Promise<string> {
   // Check cache first if provided
   if (cache) {
-    let key = getCacheKey({ path, file })
+    let key = getCacheKey(file)
     let cached = await cache.get(key)
     if (cached) {
       return cached
@@ -378,7 +374,7 @@ async function computeDigest(
 
   // Store in cache if provided
   if (cache) {
-    let key = getCacheKey({ path, file })
+    let key = getCacheKey(file)
     await cache.set(key, digest)
   }
 
