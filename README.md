@@ -13,7 +13,7 @@ We published [a blog post](https://remix.run/blog/wake-up-remix) earlier this ye
 
 ## Goals
 
-Although we recommend the `remix` package for ease of use, all packages that make up Remix should be usable standalone as well. This forces us to consider package boundaries and helps us define public interfaces that are portable and interopable.
+Although we recommend the `remix` package for ease of use, all packages that make up Remix should be usable standalone as well. This forces us to consider package boundaries and helps us define public interfaces that are portable and interoperable.
 
 Each package in Remix:
 
