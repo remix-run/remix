@@ -541,115 +541,6 @@ router.map(routes.admin.dashboard, {
 })
 ```
 
-### Serving Static Files
-
-The `staticFiles()` middleware serves static files from the filesystem.
-
-```ts
-import { createRouter } from '@remix-run/fetch-router'
-import { staticFiles } from '@remix-run/fetch-router/static-middleware'
-
-let router = createRouter({
-  middleware: [staticFiles('./public')],
-})
-```
-
-You can further customize the behavior of this middleware by providing additional options:
-
-```ts
-import { createRouter } from '@remix-run/fetch-router'
-import { staticFiles } from '@remix-run/fetch-router/static-middleware'
-
-let router = createRouter({
-  middleware: [
-    staticFiles('./public', {
-      // Cache-Control header value
-      // Defaults to `undefined`
-      cacheControl: 'public, max-age=3600',
-
-      // Whether to support HTTP Range requests for partial content.
-      // Defaults to `true`.
-      acceptRanges: true,
-
-      // ETag generation strategy:
-      // - 'weak': Generates weak ETags based on file size and mtime
-      // - 'strong': Generates strong ETags by hashing file content
-      // - false: Disables ETag generation
-      // Defaults to `'weak'`.
-      etag: 'weak',
-
-      // Whether to generate a `Last-Modified` header for the response.
-      // Defaults to `true`.
-      lastModified: true,
-    }),
-  ],
-})
-```
-
-#### Custom Path Resolution
-
-By default, this middleware uses the full request pathname to resolve files. You can customize this by providing a path resolver function which is passed the request context. For example, to resolve files based on a route param:
-
-```ts
-router.get('/assets/*path', {
-  middleware: [
-    staticFiles('./public', {
-      path: ({ params }) => params.path,
-    }),
-  ],
-  handler() {
-    return new Response('Not Found', { status: 404 })
-  },
-})
-```
-
-Note that paths returned by this function should be relative to the root directory passed to `staticFiles()`. This is to ensure that files outside of the root directory are not served.
-
-#### Strong ETags and Content Hashing
-
-For assets that require strong validation (e.g., to support [`If-Match`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match) and [`If-Range`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Range) headers for [`Range` requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range)), you can configure strong ETag generation.
-
-```ts
-import { createRouter } from '@remix-run/fetch-router'
-import { staticFiles } from '@remix-run/fetch-router/static-middleware'
-
-let router = createRouter({
-  middleware: [
-    staticFiles('./public', {
-      etag: 'strong',
-    }),
-  ],
-})
-```
-
-When using strong ETags, the default behavior is that they are generated on every request with [`SubtleCrypto.digest()`](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest) using the `'SHA-256'` algorithm, but this can be customized if needed.
-
-```ts
-import { createRouter } from '@remix-run/fetch-router'
-import { staticFiles } from '@remix-run/fetch-router/static-middleware'
-
-let router = createRouter({
-  middleware: [
-    staticFiles('./public', {
-      etag: 'strong',
-
-      // Specify the SubtleCrypto.digest() hashing algorithm,
-      // or a custom digest function (`async (file: File) => string`).
-      // Defaults to `'SHA-256'`.
-      digest: 'SHA-256',
-
-      // Provide a cache to avoid re-hashing files on every request.
-      // Defaults to `undefined`, meaning that there is no cache.
-      digestCache: new Map(),
-
-      // Customize the logic for generating the cache key.
-      // Defaults to `({ path, file }) => `${path}:${file.lastModified}``.
-      digestCacheKey: ({ path }) => path,
-    }),
-  ],
-})
-```
-
 ### Request Context
 
 Every middleware and request handler receives a `context` object with useful properties:
@@ -714,6 +605,7 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
 
 The router provides a few response helpers that make it easy to return responses with common formats. They are available in the `@remix-run/fetch-router/response-helpers` export.
 
+- `file(file, context, init?)` - returns a `Response` for a file with full HTTP semantics (ETags, Range requests, etc.) — see [Working with Files](#working-with-files)
 - `html(body, init?)` - returns a `Response` with `Content-Type: text/html`
 - `json(data, init?)` - returns a `Response` with `Content-Type: application/json`
 - `redirect(location, init?)` - returns a `Response` with `Location` header
@@ -772,6 +664,180 @@ let button = html`<button>${icon} Click me</button>` // icon is not escaped
 **Warning**: Only use `html.raw` with trusted content. Unlike the regular `html` template tag, `html.raw` does not escape its interpolations, which can lead to XSS vulnerabilities if used with untrusted user input.
 
 See the [`@remix-run/html-template` documentation](https://github.com/remix-run/remix/tree/main/packages/html-template#readme) for more details.
+
+### Working with Files
+
+The router provides several tools for serving files, built as layers that compose together:
+
+- **`file()` response helper** - The primitive for returning file responses with full HTTP semantics
+- **`findFile()` function** - Helps map route patterns to files on disk
+- **`staticFiles()` middleware** - Convenience middleware that combines both
+
+#### The `file()` Response Helper
+
+The `file()` response helper returns a `Response` for a file with full HTTP semantics, including:
+
+- **Content-Type** and **Content-Length** headers
+- **ETag** generation (weak or strong)
+- **Last-Modified** headers
+- **Cache-Control** headers
+- **Conditional requests** (`If-None-Match`, `If-Modified-Since`, `If-Match`, `If-Unmodified-Since`)
+- **Range requests** for partial content (`206 Partial Content`)
+- **HEAD** request support
+
+```ts
+import { openFile } from '@remix-run/lazy-file/fs'
+import { file } from '@remix-run/fetch-router/response-helpers'
+
+router.get('/downloads/:filename', async (context) => {
+  let downloadFile = await openFile(`./downloads/${context.params.filename}`)
+
+  return file(downloadFile, context)
+})
+```
+
+##### Options
+
+The `file()` helper accepts an optional third argument with configuration options:
+
+```ts
+return file(downloadFile, context, {
+  // Cache-Control header value.
+  // Defaults to `undefined` (no Cache-Control header).
+  cacheControl: 'public, max-age=3600',
+
+  // ETag generation strategy:
+  // - 'weak': Generates weak ETags based on file size and mtime
+  // - 'strong': Generates strong ETags by hashing file content
+  // - false: Disables ETag generation
+  // Defaults to 'weak'.
+  etag: 'weak',
+
+  // Whether to generate Last-Modified headers.
+  // Defaults to `true`.
+  lastModified: true,
+
+  // Whether to support HTTP Range requests for partial content.
+  // Defaults to `true`.
+  acceptRanges: true,
+})
+```
+
+##### Strong ETags and Content Hashing
+
+For assets that require strong validation (e.g., to support [`If-Match`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match) preconditions or [`If-Range`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Range) with [`Range` requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range)), configure strong ETag generation:
+
+```ts
+return file(assetFile, context, {
+  etag: 'strong',
+})
+```
+
+By default, strong ETags are generated using [`SubtleCrypto.digest()`](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest) with the `'SHA-256'` algorithm. You can customize this:
+
+```ts
+return file(assetFile, context, {
+  etag: 'strong',
+
+  // Specify a different SubtleCrypto.digest() algorithm
+  digest: 'SHA-512',
+})
+```
+
+Or provide a custom digest function:
+
+```ts
+return file(assetFile, context, {
+  etag: 'strong',
+
+  // Custom digest function
+  digest: async (file) => {
+    let buffer = await file.arrayBuffer()
+    return customHash(buffer)
+  },
+})
+```
+
+When using strong ETags, you can provide a cache to avoid re-hashing files on every request:
+
+```ts
+return file(assetFile, context, {
+  etag: 'strong',
+
+  // Provide a cache to avoid re-hashing files on every request.
+  // Defaults to `undefined`, meaning that there is no cache.
+  digestCache: new Map(),
+
+  // Customize the logic for generating the cache key.
+  // Defaults to `({ path, file }) => `${path}:${file.lastModified}``.
+  digestCacheKey: (context) => context.params.path,
+})
+```
+
+#### Using `findFile()` with `file()`
+
+When you need to map a route pattern to a directory of files on disk, use `findFile()` to resolve files before sending them with the `file()` response helper:
+
+```ts
+import { findFile } from '@remix-run/fetch-router/find-file'
+import { file } from '@remix-run/fetch-router/response-helpers'
+
+router.get('/assets/*path', async (context) => {
+  let assetFile = await findFile('./public/assets', context.params.path)
+
+  if (!assetFile) {
+    return new Response('Not Found', { status: 404 })
+  }
+
+  return file(assetFile, context, {
+    cacheControl: 'public, max-age=3600',
+  })
+})
+```
+
+The `findFile()` function returns a `File` object with its `name` property set to the full absolute path on the server, or `null` if the file doesn't exist or is outside the specified root directory.
+
+#### The `staticFiles()` Middleware
+
+For convenience, the `staticFiles()` middleware combines `findFile()` and `file()` into a single middleware:
+
+```ts
+import { createRouter } from '@remix-run/fetch-router'
+import { staticFiles } from '@remix-run/fetch-router/static-middleware'
+
+let router = createRouter({
+  middleware: [staticFiles('./public')],
+})
+```
+
+The middleware accepts the same options as the `file()` response helper:
+
+```ts
+let router = createRouter({
+  middleware: [
+    staticFiles('./public', {
+      cacheControl: 'public, max-age=3600',
+      etag: 'strong',
+      digestCache: new Map(),
+    }),
+  ],
+})
+```
+
+By default, the middleware uses the full request pathname to resolve files. You can customize this with a `path` resolver function:
+
+```ts
+router.get('/assets/*path', {
+  middleware: [
+    staticFiles('./public', {
+      path: (context) => context.params.path,
+    }),
+  ],
+  handler() {
+    return new Response('Not Found', { status: 404 })
+  },
+})
+```
 
 ### Testing
 

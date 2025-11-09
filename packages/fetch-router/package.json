@@ -22,9 +22,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./async-context-middleware": "./src/async-context-middleware.ts",
-    "./file-handler": "./src/file-handler.ts",
+    "./find-file": "./src/find-file.ts",
     "./form-data-middleware": "./src/form-data-middleware.ts",
-    "./fs-file-resolver": "./src/fs-file-resolver.ts",
     "./logger-middleware": "./src/logger-middleware.ts",
     "./method-override-middleware": "./src/method-override-middleware.ts",
     "./response-helpers": "./src/response-helpers.ts",
@@ -41,17 +40,13 @@
         "types": "./dist/async-context-middleware.d.ts",
         "default": "./dist/async-context-middleware.js"
       },
-      "./file-handler": {
-        "types": "./dist/file-handler.d.ts",
-        "default": "./dist/file-handler.js"
+      "./find-file": {
+        "types": "./dist/find-file.d.ts",
+        "default": "./dist/find-file.js"
       },
       "./form-data-middleware": {
         "types": "./dist/form-data-middleware.d.ts",
         "default": "./dist/form-data-middleware.js"
-      },
-      "./fs-file-resolver": {
-        "types": "./dist/fs-file-resolver.d.ts",
-        "default": "./dist/fs-file-resolver.js"
       },
       "./logger-middleware": {
         "types": "./dist/logger-middleware.d.ts",

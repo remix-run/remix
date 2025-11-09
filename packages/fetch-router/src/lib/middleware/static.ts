@@ -1,7 +1,5 @@
-import type { FileHandlerOptions } from '../file-handler.ts'
-import { createFileHandler } from '../file-handler.ts'
-import type { PathResolver } from '../fs-file-resolver.ts'
-import { createFsFileResolver } from '../fs-file-resolver.ts'
+import { findFile } from '../find-file.ts'
+import { file, type FileResponseInit } from '../response-helpers/file.ts'
 import type { Middleware } from '../middleware.ts'
 import type { RequestContext } from '../request-context.ts'
 import type { RequestMethod } from '../request-methods.ts'
@@ -9,8 +7,8 @@ import type { RequestMethod } from '../request-methods.ts'
 export type StaticFilesOptions<
   Method extends RequestMethod | 'ANY',
   Params extends Record<string, any>,
-> = FileHandlerOptions & {
-  path?: PathResolver<Method, Params>
+> = FileResponseInit & {
+  path?: (context: RequestContext<Method, Params>) => string | null | Promise<string | null>
 }
 
 /**
@@ -54,20 +52,26 @@ export function staticFiles<
   Method extends RequestMethod | 'ANY',
   Params extends Record<string, any>,
 >(root: string, options: StaticFilesOptions<Method, Params> = {}): Middleware<Method, Params> {
-  let { path: pathResolver = requestPathnameResolver, ...fileHandlerOptions } = options
-
-  let handler = createFileHandler<Method, Params>(
-    createFsFileResolver(root, pathResolver),
-    fileHandlerOptions,
-  )
+  let { path: pathResolver = requestPathnameResolver, ...fileResponseInit } = options
 
   return async (context, next) => {
-    let response = await handler(context)
-
-    if (response.status === 404 || response.status === 405) {
+    // Only handle GET and HEAD requests
+    if (context.request.method !== 'GET' && context.request.method !== 'HEAD') {
       return next()
     }
 
-    return response
+    let relativePath = await pathResolver(context)
+
+    if (relativePath === null) {
+      return next()
+    }
+
+    let fileToServe = await findFile(root, relativePath)
+
+    if (!fileToServe) {
+      return next()
+    }
+
+    return file(fileToServe, context, fileResponseInit)
   }
 }

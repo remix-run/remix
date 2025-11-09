@@ -1,8 +1,10 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { asyncContext } from '@remix-run/fetch-router/async-context-middleware'
+import { findFile } from '@remix-run/fetch-router/find-file'
 import { formData } from '@remix-run/fetch-router/form-data-middleware'
 import { logger } from '@remix-run/fetch-router/logger-middleware'
 import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
+import { file } from '@remix-run/fetch-router/response-helpers'
 import { staticFiles } from '@remix-run/fetch-router/static-middleware'
 
 import { routes } from '../routes.ts'
@@ -39,34 +41,30 @@ middleware.push(
 
 export let router = createRouter({ middleware })
 
-router.get(routes.assets, {
-  middleware: [
-    staticFiles('./public/assets', {
-      path: ({ params }) => params.path,
-      cacheControl: 'no-store, must-revalidate',
-      etag: false,
-      lastModified: false,
-      acceptRanges: false,
-    }),
-  ],
-  handler() {
+router.get(routes.assets, async (context) => {
+  let assetFile = await findFile('./public/assets', context.params.path)
+  if (!assetFile) {
     return new Response('Not Found', { status: 404 })
-  },
+  }
+  return file(assetFile, context, {
+    cacheControl: 'no-store, must-revalidate',
+    etag: false,
+    lastModified: false,
+    acceptRanges: false,
+  })
 })
 
-router.get(routes.images, {
-  middleware: [
-    staticFiles('./public/images', {
-      path: ({ params }) => params.path,
-      cacheControl: 'no-store, must-revalidate',
-      etag: false,
-      lastModified: false,
-      acceptRanges: false,
-    }),
-  ],
-  handler() {
+router.get(routes.images, async (context) => {
+  let imageFile = await findFile('./public/images', context.params.path)
+  if (!imageFile) {
     return new Response('Not Found', { status: 404 })
-  },
+  }
+  return file(imageFile, context, {
+    cacheControl: 'no-store, must-revalidate',
+    etag: false,
+    lastModified: false,
+    acceptRanges: false,
+  })
 })
 
 router.get(routes.uploads, uploadsHandler)
