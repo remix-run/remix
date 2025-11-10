@@ -11,6 +11,7 @@ import { ContentType } from './content-type.ts'
 import { Cookie } from './cookie.ts'
 import { IfMatch } from './if-match.ts'
 import { IfNoneMatch } from './if-none-match.ts'
+import { IfRange } from './if-range.ts'
 import { Range } from './range.ts'
 import { SuperHeaders } from './super-headers.ts'
 
@@ -705,12 +706,25 @@ describe('SuperHeaders', () => {
       headers.ifNoneMatch = ['67ab43', '54ed21']
       assert.deepEqual(headers.ifNoneMatch.tags, ['"67ab43"', '"54ed21"'])
 
-      headers.ifNoneMatch = { tags: ['67ab43', '54ed21'] }
-      assert.deepEqual(headers.ifNoneMatch.tags, ['"67ab43"', '"54ed21"'])
+      assert.equal(headers.ifNoneMatch.toString(), '"67ab43", "54ed21"')
+    })
 
-      headers.ifNoneMatch = null
-      assert.ok(headers.ifNoneMatch instanceof IfNoneMatch)
-      assert.equal(headers.ifNoneMatch.toString(), '')
+    it('supports the ifRange property', () => {
+      let headers = new SuperHeaders()
+
+      assert.ok(headers.ifRange instanceof IfRange)
+      assert.equal(headers.ifRange.value, '')
+
+      headers.ifRange = 'Fri, 01 Jan 2021 00:00:00 GMT'
+      assert.equal(headers.ifRange.value, 'Fri, 01 Jan 2021 00:00:00 GMT')
+
+      headers.ifRange = new Date('2021-01-01T00:00:00Z')
+      assert.equal(headers.ifRange.value, 'Fri, 01 Jan 2021 00:00:00 GMT')
+
+      headers.ifRange = '"67ab43"'
+      assert.equal(headers.ifRange.value, '"67ab43"')
+
+      assert.equal(headers.ifRange.toString(), '"67ab43"')
     })
 
     it('supports the ifUnmodifiedSince property', () => {

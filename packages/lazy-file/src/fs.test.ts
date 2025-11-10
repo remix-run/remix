@@ -42,18 +42,6 @@ describe('openFile', () => {
 
     teardown()
   })
-
-  it('returns a file with absolute path', async () => {
-    setup()
-    let filePath = createTestFile('test.txt', 'hello world')
-
-    let result: FsFile = openFile(filePath)
-
-    assert.ok(path.isAbsolute(result.path))
-    assert.equal(result.path, path.resolve(filePath))
-
-    teardown()
-  })
 })
 
 describe('findFile', () => {

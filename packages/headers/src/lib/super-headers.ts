@@ -10,6 +10,7 @@ import { canonicalHeaderName } from './header-names.ts'
 import { type HeaderValue } from './header-value.ts'
 import { type IfMatchInit, IfMatch } from './if-match.ts'
 import { type IfNoneMatchInit, IfNoneMatch } from './if-none-match.ts'
+import { IfRange } from './if-range.ts'
 import { type RangeInit, Range } from './range.ts'
 import { type SetCookieInit, SetCookie } from './set-cookie.ts'
 import { isIterable, quoteEtag } from './utils.ts'
@@ -106,6 +107,10 @@ interface SuperHeadersPropertyInit {
    */
   ifNoneMatch?: string | string[] | IfNoneMatchInit
   /**
+   * The [`If-Range`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Range) header value.
+   */
+  ifRange?: string | Date
+  /**
    * The [`If-Unmodified-Since`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Unmodified-Since) header value.
    */
   ifUnmodifiedSince?: string | DateInit
@@ -159,6 +164,7 @@ const HostKey = 'host'
 const IfMatchKey = 'if-match'
 const IfModifiedSinceKey = 'if-modified-since'
 const IfNoneMatchKey = 'if-none-match'
+const IfRangeKey = 'if-range'
 const IfUnmodifiedSinceKey = 'if-unmodified-since'
 const LastModifiedKey = 'last-modified'
 const LocationKey = 'location'
@@ -703,6 +709,22 @@ export class SuperHeaders extends Headers {
 
   set ifNoneMatch(value: string | string[] | IfNoneMatchInit | undefined | null) {
     this.#setHeaderValue(IfNoneMatchKey, IfNoneMatch, value)
+  }
+
+  /**
+   * The `If-Range` header makes a range request conditional on the resource state.
+   * Can contain either an entity tag (ETag) or an HTTP date.
+   *
+   * [MDN `If-Range` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Range)
+   *
+   * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7233#section-3.2)
+   */
+  get ifRange(): IfRange {
+    return this.#getHeaderValue(IfRangeKey, IfRange)
+  }
+
+  set ifRange(value: string | Date | undefined | null) {
+    this.#setHeaderValue(IfRangeKey, IfRange, value)
   }
 
   /**

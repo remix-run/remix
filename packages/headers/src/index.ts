@@ -8,6 +8,7 @@ export { type ContentTypeInit, ContentType } from './lib/content-type.ts'
 export { type CookieInit, Cookie } from './lib/cookie.ts'
 export { type IfMatchInit, IfMatch } from './lib/if-match.ts'
 export { type IfNoneMatchInit, IfNoneMatch } from './lib/if-none-match.ts'
+export { IfRange } from './lib/if-range.ts'
 export { type RangeInit, Range } from './lib/range.ts'
 export { type CookieProperties, type SetCookieInit, SetCookie } from './lib/set-cookie.ts'
 

@@ -213,10 +213,9 @@ export async function file<
 
   // If-Unmodified-Since support: https://httpwg.org/specs/rfc9110.html#field.if-unmodified-since
   if (lastModified && !hasIfMatch) {
-    let ifUnmodifiedSinceDate = context.headers.ifUnmodifiedSince
-    if (ifUnmodifiedSinceDate != null) {
-      let ifUnmodifiedSinceTime = ifUnmodifiedSinceDate.getTime()
-      if (roundToSecond(lastModified) > roundToSecond(ifUnmodifiedSinceTime)) {
+    let ifUnmodifiedSince = context.headers.ifUnmodifiedSince
+    if (ifUnmodifiedSince != null) {
+      if (roundToSecond(lastModified) > roundToSecond(ifUnmodifiedSince)) {
         return new Response('Precondition Failed', {
           status: 412,
           headers: new SuperHeaders({
@@ -237,10 +236,9 @@ export async function file<
     if (etag && context.headers.ifNoneMatch.matches(etag)) {
       shouldReturnNotModified = true
     } else if (lastModified && context.headers.ifNoneMatch.tags.length === 0) {
-      let ifModifiedSinceDate = context.headers.ifModifiedSince
-      if (ifModifiedSinceDate != null) {
-        let ifModifiedSinceTime = ifModifiedSinceDate.getTime()
-        if (roundToSecond(lastModified) <= roundToSecond(ifModifiedSinceTime)) {
+      let ifModifiedSince = context.headers.ifModifiedSince
+      if (ifModifiedSince != null) {
+        if (roundToSecond(lastModified) <= roundToSecond(ifModifiedSince)) {
           shouldReturnNotModified = true
         }
       }
@@ -270,18 +268,13 @@ export async function file<
       })
     }
 
-    let shouldProcessRange = true
-
-    let ifRange = request.headers.get('If-Range')
-    if (ifRange != null) {
-      // Since we only use weak ETags, we can only compare Last-Modified timestamps
-      let ifRangeTime = parseHttpDate(ifRange)
-      shouldProcessRange = Boolean(
-        lastModified && ifRangeTime && roundToSecond(lastModified) === roundToSecond(ifRangeTime),
-      )
-    }
-
-    if (shouldProcessRange) {
+    // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
+    if (
+      context.headers.ifRange.matches({
+        etag,
+        lastModified,
+      })
+    ) {
       if (!range.canSatisfy(fileToSend.size)) {
         return new Response('Range Not Satisfiable', {
           status: 416,
@@ -291,10 +284,10 @@ export async function file<
         })
       }
 
-      let normalized = range.normalize(fileToSend.size)
+      let normalizedRanges = range.normalize(fileToSend.size)
 
       // We only support single ranges (not multipart)
-      if (normalized.length > 1) {
+      if (normalizedRanges.length > 1) {
         return new Response('Range Not Satisfiable', {
           status: 416,
           headers: new SuperHeaders({
@@ -303,7 +296,7 @@ export async function file<
         })
       }
 
-      let { start, end } = normalized[0]
+      let { start, end } = normalizedRanges[0]
       let { size } = fileToSend
 
       return new Response(fileToSend.slice(start, end + 1), {
@@ -396,30 +389,10 @@ async function hashFile(file: File, algorithm: string): Promise<string> {
 }
 
 /**
- * Rounds a timestamp to the nearest second for comparison.
+ * Rounds a timestamp to the nearest second.
+ * HTTP dates only have second precision, so this is useful for date comparisons.
  */
-function roundToSecond(time: number): number {
-  return Math.floor(time / 1000)
-}
-
-const imfFixdatePattern =
-  /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), (\d{2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4}) (\d{2}):(\d{2}):(\d{2}) GMT$/
-
-/**
- * Parses an HTTP date header value.
- * HTTP dates must follow RFC 7231 IMF-fixdate format:
- * "Day, DD Mon YYYY HH:MM:SS GMT" (e.g., "Wed, 21 Oct 2015 07:28:00 GMT")
- * Returns the timestamp in milliseconds, or null if invalid.
- */
-function parseHttpDate(dateString: string): number | null {
-  if (!imfFixdatePattern.test(dateString)) {
-    return null
-  }
-
-  let timestamp = Date.parse(dateString)
-  if (isNaN(timestamp)) {
-    return null
-  }
-
-  return timestamp
+function roundToSecond(time: number | Date): number {
+  let timestamp = time instanceof Date ? time.getTime() : time
+  return Math.floor(timestamp / 1000)
 }

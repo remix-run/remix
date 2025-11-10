@@ -96,10 +96,9 @@ function streamFile(
  * @returns A `File` with an additional `path` property, or null if not found
  *
  * @example
- * let file = await findFile('./public', 'styles.css')
+ * let file = await findFile('./public', 'favicon.ico')
  * if (file) {
- *   // file.path contains the full absolute path
- *   console.log(file.path) // e.g., /Users/you/project/public/styles.css
+ *   console.log(file.path) // "/path/to/public/favicon.ico"
  * }
  */
 export async function findFile(root: string, relativePath: string): Promise<FsFile | null> {
