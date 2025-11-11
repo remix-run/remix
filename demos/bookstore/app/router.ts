@@ -3,9 +3,7 @@ import { asyncContext } from '@remix-run/fetch-router/async-context-middleware'
 import { formData } from '@remix-run/fetch-router/form-data-middleware'
 import { logger } from '@remix-run/fetch-router/logger-middleware'
 import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
-import * as res from '@remix-run/fetch-router/response-helpers'
 import { staticFiles } from '@remix-run/fetch-router/static-middleware'
-import { findFile } from '@remix-run/lazy-file/fs'
 
 import { routes } from '../routes.ts'
 import { uploadHandler } from './utils/uploads.ts'
@@ -31,7 +29,7 @@ middleware.push(methodOverride())
 middleware.push(asyncContext())
 
 middleware.push(
-  staticFiles('./public/root', {
+  staticFiles('./public', {
     cacheControl: 'no-store, must-revalidate',
     etag: false,
     lastModified: false,
@@ -40,32 +38,6 @@ middleware.push(
 )
 
 export let router = createRouter({ middleware })
-
-router.get(routes.assets, async (context) => {
-  let file = await findFile('./public/assets', context.params.path)
-  if (!file) {
-    return new Response('Not Found', { status: 404 })
-  }
-  return res.file(file, context, {
-    cacheControl: 'no-store, must-revalidate',
-    etag: false,
-    lastModified: false,
-    acceptRanges: false,
-  })
-})
-
-router.get(routes.images, async (context) => {
-  let imageFile = await findFile('./public/images', context.params.path)
-  if (!imageFile) {
-    return new Response('Not Found', { status: 404 })
-  }
-  return res.file(imageFile, context, {
-    cacheControl: 'no-store, must-revalidate',
-    etag: false,
-    lastModified: false,
-    acceptRanges: false,
-  })
-})
 
 router.get(routes.uploads, uploadsHandler)
 

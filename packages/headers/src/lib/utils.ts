@@ -15,14 +15,12 @@ export function quoteEtag(tag: string): string {
 }
 
 /**
- * Rounds a timestamp to the nearest second (removes milliseconds).
+ * Removes milliseconds from a timestamp, returning seconds.
  * HTTP dates only have second precision, so this is useful for date comparisons.
- *
- * @param time The timestamp in milliseconds
- * @returns The timestamp rounded to seconds (in seconds, not milliseconds)
  */
-export function roundToSecond(time: number): number {
-  return Math.floor(time / 1000)
+export function removeMilliseconds(time: number | Date): number {
+  let timestamp = time instanceof Date ? time.getTime() : time
+  return Math.floor(timestamp / 1000)
 }
 
 const imfFixdatePattern =

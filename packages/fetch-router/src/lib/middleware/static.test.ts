@@ -104,68 +104,6 @@ describe('staticFiles middleware', () => {
       assert.equal(await response.text(), 'Custom Fallback Handler')
     })
 
-    it('supports custom path resolver using params', async () => {
-      createTestFile('custom/file.txt', 'Custom path content')
-
-      let router = createRouter()
-      router.get('/assets/*path', {
-        middleware: [
-          staticFiles(tmpDir, {
-            path: ({ params }) => `custom/${params.path}`,
-          }),
-        ],
-        handler() {
-          return new Response('Not Found', { status: 404 })
-        },
-      })
-
-      let response = await router.fetch('http://localhost/assets/file.txt')
-
-      assert.equal(response.status, 200)
-      assert.equal(await response.text(), 'Custom path content')
-    })
-
-    it('supports custom path resolver using request URL', async () => {
-      createTestFile('file.txt', 'File content')
-
-      let router = createRouter()
-      router.get('/*', {
-        middleware: [
-          staticFiles(tmpDir, {
-            path: ({ request }) => {
-              return new URL(request.url).pathname.replace(/^\/prefix\//, '')
-            },
-          }),
-        ],
-        handler() {
-          return new Response('Not Found', { status: 404 })
-        },
-      })
-
-      let response = await router.fetch('http://localhost/prefix/file.txt')
-
-      assert.equal(response.status, 200)
-      assert.equal(await response.text(), 'File content')
-    })
-
-    it('enforces type safety for params in path resolver', async () => {
-      let router = createRouter()
-      router.get('/assets/*path', {
-        middleware: [
-          staticFiles(tmpDir, {
-            // @ts-expect-error - 'nonexistent' does not exist on params
-            path: ({ params }) => params.nonexistent,
-          }),
-        ],
-        handler() {
-          return new Response('Not Found', { status: 404 })
-        },
-      })
-
-      // This is just a compile-time test, no runtime assertion needed
-      assert.ok(router)
-    })
-
     it('falls through to handler when requesting a directory', async () => {
       let dirPath = path.join(tmpDir, 'subdir')
       fs.mkdirSync(dirPath)
@@ -325,32 +263,12 @@ describe('staticFiles middleware', () => {
   })
 
   it('works with multiple static middleware instances', async () => {
-    let assetsDirName = 'assets'
-    let imagesDirName = 'images'
-
-    createTestFile(`${assetsDirName}/style.css`, 'body {}')
-    createTestFile(`${imagesDirName}/logo.png`, 'PNG data')
-
-    let assetsDir = path.join(tmpDir, assetsDirName)
-    let imagesDir = path.join(tmpDir, imagesDirName)
+    createTestFile('assets/style.css', 'body {}')
+    createTestFile('images/logo.png', 'PNG data')
 
     let router = createRouter()
-    router.get('/assets/*path', {
-      middleware: [
-        staticFiles(assetsDir, {
-          path: ({ params }) => params.path,
-        }),
-      ],
-      handler() {
-        return new Response('Fallback Handler', { status: 404 })
-      },
-    })
-    router.get('/images/*path', {
-      middleware: [
-        staticFiles(imagesDir, {
-          path: ({ params }) => params.path,
-        }),
-      ],
+    router.get('/*', {
+      middleware: [staticFiles(tmpDir)],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },
@@ -447,5 +365,33 @@ describe('staticFiles middleware', () => {
     } finally {
       fs.unlinkSync(secretPath)
     }
+  })
+
+  describe('filter option', () => {
+    it('filters files based on custom filter function', async () => {
+      createTestFile('index.html', '<h1>Home</h1>')
+      createTestFile('secret.txt', 'Secret')
+      createTestFile('public.txt', 'Public')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [
+          staticFiles(tmpDir, {
+            filter: (path) => !path.includes('secret'),
+          }),
+        ],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let secretResponse = await router.fetch('http://localhost/secret.txt')
+      assert.equal(secretResponse.status, 404)
+      assert.equal(await secretResponse.text(), 'Fallback Handler')
+
+      let publicResponse = await router.fetch('http://localhost/public.txt')
+      assert.equal(publicResponse.status, 200)
+      assert.equal(await publicResponse.text(), 'Public')
+    })
   })
 })

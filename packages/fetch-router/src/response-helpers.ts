@@ -1,6 +1,5 @@
 export {
   file,
-  type FileDigestCacheKeyFunction,
   type FileDigestFunction,
   type FileResponseInit,
 } from './lib/response-helpers/file.ts'

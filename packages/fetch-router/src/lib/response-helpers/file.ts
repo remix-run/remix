@@ -1,8 +1,5 @@
 import SuperHeaders from '@remix-run/headers'
 
-import type { RequestContext } from '../request-context.ts'
-import type { RequestMethod } from '../request-methods.ts'
-
 /**
  * Custom function for computing file digests.
  *
@@ -15,33 +12,14 @@ import type { RequestMethod } from '../request-methods.ts'
  *   return customHash(buffer)
  * }
  */
-export type FileDigestFunction<F extends File = File> = (file: F) => Promise<string>
-
-/**
- * Function to generate cache keys for digest storage.
- *
- * @param file - The File object
- * @returns The cache key as a string
- *
- * @example
- * (file) => `${file.path ?? file.name}:${file.size}:${file.lastModified}`
- */
-export type FileDigestCacheKeyFunction<F extends File = File> = (file: F) => string
+export type FileDigestFunction = (file: File) => Promise<string>
 
 /**
  * Hash algorithm name for SubtleCrypto.digest() or custom digest function.
  */
 type DigestAlgorithm = 'SHA-256' | 'SHA-512' | 'SHA-384' | 'SHA-1' | (string & {}) // Allows any string while providing autocomplete for common algorithms
 
-/**
- * Cache interface for storing computed file digests.
- */
-interface DigestCache {
-  get(key: string): Promise<string | undefined> | string | undefined
-  set(key: string, digest: string): void
-}
-
-export interface FileResponseInit<F extends File = File> {
+export interface FileResponseInit {
   /**
    * Cache-Control header value. If not provided, no Cache-Control header will be set.
    *
@@ -75,33 +53,7 @@ export interface FileResponseInit<F extends File = File> {
    * @example 'SHA-512'
    * @example async (file) => customHash(await file.arrayBuffer())
    */
-  digest?: DigestAlgorithm | FileDigestFunction<F>
-
-  /**
-   * Cache for storing computed file digests to avoid re-hashing files.
-   *
-   * Only used when `etag: 'strong'`. Since hashing file content is expensive,
-   * providing a cache is strongly recommended for production use.
-   *
-   * Any object with `get(key)` and `set(key, digest)` methods can be used.
-   * If not provided, digests will be computed on every request.
-   *
-   * @example new Map()
-   */
-  digestCache?: DigestCache
-
-  /**
-   * Function to generate cache keys for digest storage.
-   *
-   * The default includes file path (using `file.path` if available, otherwise
-   * `file.name`), size, and last modified time to ensure cache invalidation
-   * when files change.
-   *
-   * Only used when `etag: 'strong'` and `digestCache` is provided.
-   *
-   * @default (file) => `${file.path ?? file.name}:${file.size}:${file.lastModified}`
-   */
-  digestCacheKey?: FileDigestCacheKeyFunction<F>
+  digest?: DigestAlgorithm | FileDigestFunction
 
   /**
    * Whether to include Last-Modified headers.
@@ -127,41 +79,28 @@ export interface FileResponseInit<F extends File = File> {
  * Returns a Response with full HTTP semantics including ETags, Last-Modified,
  * conditional requests, and Range support.
  *
- * The file can optionally include an additional `path` property containing the
- * full absolute path on disk. If provided, it will be used for generating cache
- * keys; otherwise `file.name` is used.
- *
  * @param file - The file to send
- * @param context - The request context
+ * @param request - The request object
  * @param init - Optional configuration for HTTP headers and features
  * @returns A Response with appropriate headers and body
  *
  * @example
  * let result = await findFile('./public', 'image.jpg')
  * if (result) {
- *   return file(result, context, {
+ *   return file(result, request, {
  *     cacheControl: 'public, max-age=3600'
  *   })
  * }
  */
-export async function file<
-  F extends File = File,
-  Method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
-  Params extends Record<string, any> = {},
->(
-  fileToSend: F,
-  context: RequestContext<Method, Params>,
-  init: FileResponseInit<F> = {},
+export async function file(
+  fileToSend: File,
+  request: Request,
+  init: FileResponseInit = {},
 ): Promise<Response> {
-  let { request } = context
-
   let {
     cacheControl,
     etag: etagStrategy = 'weak',
     digest: digestOption = 'SHA-256',
-    digestCache,
-    digestCacheKey = (file: F & { path?: string }) =>
-      `${file.path ?? file.name}:${file.size}:${file.lastModified}`,
     lastModified: lastModifiedEnabled = true,
     acceptRanges: acceptRangesEnabled = true,
   } = init
@@ -176,6 +115,8 @@ export async function file<
     })
   }
 
+  let headers = new SuperHeaders(request.headers)
+
   let contentType = fileToSend.type
   let contentLength = fileToSend.size
 
@@ -183,7 +124,7 @@ export async function file<
   if (etagStrategy === 'weak') {
     etag = generateWeakETag(fileToSend)
   } else if (etagStrategy === 'strong') {
-    let digest = await computeDigest(fileToSend, digestOption, digestCache, digestCacheKey)
+    let digest = await computeDigest(fileToSend, digestOption)
     etag = `"${digest}"`
   }
 
@@ -197,32 +138,36 @@ export async function file<
     acceptRanges = 'bytes'
   }
 
-  let hasIfMatch = context.headers.has('If-Match')
+  let hasIfMatch = headers.has('If-Match')
 
   // If-Match support: https://httpwg.org/specs/rfc9110.html#field.if-match
-  if (etag && hasIfMatch && !context.headers.ifMatch.matches(etag)) {
+  if (etag && hasIfMatch && !headers.ifMatch.matches(etag)) {
     return new Response('Precondition Failed', {
       status: 412,
-      headers: new SuperHeaders({
-        etag,
-        lastModified,
-        acceptRanges,
-      }),
+      headers: new SuperHeaders(
+        omitNullableValues({
+          etag,
+          lastModified,
+          acceptRanges,
+        }),
+      ),
     })
   }
 
   // If-Unmodified-Since support: https://httpwg.org/specs/rfc9110.html#field.if-unmodified-since
   if (lastModified && !hasIfMatch) {
-    let ifUnmodifiedSince = context.headers.ifUnmodifiedSince
+    let ifUnmodifiedSince = headers.ifUnmodifiedSince
     if (ifUnmodifiedSince != null) {
-      if (roundToSecond(lastModified) > roundToSecond(ifUnmodifiedSince)) {
+      if (removeMilliseconds(lastModified) > removeMilliseconds(ifUnmodifiedSince)) {
         return new Response('Precondition Failed', {
           status: 412,
-          headers: new SuperHeaders({
-            etag,
-            lastModified,
-            acceptRanges,
-          }),
+          headers: new SuperHeaders(
+            omitNullableValues({
+              etag,
+              lastModified,
+              acceptRanges,
+            }),
+          ),
         })
       }
     }
@@ -233,12 +178,12 @@ export async function file<
   if (etag || lastModified) {
     let shouldReturnNotModified = false
 
-    if (etag && context.headers.ifNoneMatch.matches(etag)) {
+    if (etag && headers.ifNoneMatch.matches(etag)) {
       shouldReturnNotModified = true
-    } else if (lastModified && context.headers.ifNoneMatch.tags.length === 0) {
-      let ifModifiedSince = context.headers.ifModifiedSince
+    } else if (lastModified && headers.ifNoneMatch.tags.length === 0) {
+      let ifModifiedSince = headers.ifModifiedSince
       if (ifModifiedSince != null) {
-        if (roundToSecond(lastModified) <= roundToSecond(ifModifiedSince)) {
+        if (removeMilliseconds(lastModified) <= removeMilliseconds(ifModifiedSince)) {
           shouldReturnNotModified = true
         }
       }
@@ -247,19 +192,21 @@ export async function file<
     if (shouldReturnNotModified) {
       return new Response(null, {
         status: 304,
-        headers: new SuperHeaders({
-          etag,
-          lastModified,
-          acceptRanges,
-        }),
+        headers: new SuperHeaders(
+          omitNullableValues({
+            etag,
+            lastModified,
+            acceptRanges,
+          }),
+        ),
       })
     }
   }
 
   // Range support: https://httpwg.org/specs/rfc9110.html#field.range
   // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
-  if (acceptRanges && request.method === 'GET' && context.headers.has('Range')) {
-    let range = context.headers.range
+  if (acceptRanges && request.method === 'GET' && headers.has('Range')) {
+    let range = headers.range
 
     // Check if the Range header was sent but parsing resulted in no valid ranges (malformed)
     if (range.ranges.length === 0) {
@@ -270,7 +217,7 @@ export async function file<
 
     // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
     if (
-      context.headers.ifRange.matches({
+      headers.ifRange.matches({
         etag,
         lastModified,
       })
@@ -301,29 +248,33 @@ export async function file<
 
       return new Response(fileToSend.slice(start, end + 1), {
         status: 206,
-        headers: new SuperHeaders({
-          contentType,
-          contentLength: end - start + 1,
-          contentRange: { unit: 'bytes', start, end, size },
-          etag,
-          lastModified,
-          cacheControl,
-          acceptRanges,
-        }),
+        headers: new SuperHeaders(
+          omitNullableValues({
+            contentType,
+            contentLength: end - start + 1,
+            contentRange: { unit: 'bytes', start, end, size },
+            etag,
+            lastModified,
+            cacheControl,
+            acceptRanges,
+          }),
+        ),
       })
     }
   }
 
   return new Response(request.method === 'HEAD' ? null : fileToSend, {
     status: 200,
-    headers: new SuperHeaders({
-      contentType,
-      contentLength,
-      etag,
-      lastModified,
-      cacheControl,
-      acceptRanges,
-    }),
+    headers: new SuperHeaders(
+      omitNullableValues({
+        contentType,
+        contentLength,
+        etag,
+        lastModified,
+        cacheControl,
+        acceptRanges,
+      }),
+    ),
   })
 }
 
@@ -331,47 +282,36 @@ function generateWeakETag(file: File): string {
   return `W/"${file.size}-${file.lastModified}"`
 }
 
-/**
- * Computes a digest (hash) for a file, with optional caching.
- *
- * @param file - The file to hash (may include an additional `path` property)
- * @param digestOption - Algorithm name or custom digest function
- * @param cache - Optional cache for storing computed digests
- * @param getCacheKey - Function to generate cache key from file
- * @returns The computed digest as a hex string
- */
-async function computeDigest<F extends File>(
-  file: F,
-  digestOption: DigestAlgorithm | FileDigestFunction<F>,
-  cache: DigestCache | undefined,
-  getCacheKey: FileDigestCacheKeyFunction<F>,
-): Promise<string> {
-  // Check cache first if provided
-  if (cache) {
-    let key = getCacheKey(file)
-    let cached = await cache.get(key)
-    if (cached) {
-      return cached
+type OmitNullableValues<T> = {
+  [K in keyof T as T[K] extends null | undefined ? never : K]: NonNullable<T[K]>
+}
+
+function omitNullableValues<T extends Record<string, any>>(headers: T): OmitNullableValues<T> {
+  let result: any = {}
+  for (let key in headers) {
+    if (headers[key] != null) {
+      result[key] = headers[key]
     }
   }
+  return result
+}
 
-  // Compute digest
-  let digest: string
-  if (typeof digestOption === 'function') {
-    // Custom digest function
-    digest = await digestOption(file)
-  } else {
-    // Use SubtleCrypto with algorithm name
-    digest = await hashFile(file, digestOption)
-  }
-
-  // Store in cache if provided
-  if (cache) {
-    let key = getCacheKey(file)
-    await cache.set(key, digest)
-  }
-
-  return digest
+/**
+ * Computes a digest (hash) for a file.
+ *
+ * @param file - The file to hash
+ * @param digestOption - Algorithm name or custom digest function
+ * @returns The computed digest as a hex string
+ */
+async function computeDigest(
+  file: File,
+  digestOption: DigestAlgorithm | FileDigestFunction,
+): Promise<string> {
+  return typeof digestOption === 'function'
+    ? // Custom digest function
+      await digestOption(file)
+    : // Use SubtleCrypto with algorithm name
+      await hashFile(file, digestOption)
 }
 
 /**
@@ -389,10 +329,10 @@ async function hashFile(file: File, algorithm: string): Promise<string> {
 }
 
 /**
- * Rounds a timestamp to the nearest second.
+ * Removes milliseconds from a timestamp, returning seconds.
  * HTTP dates only have second precision, so this is useful for date comparisons.
  */
-function roundToSecond(time: number | Date): number {
+function removeMilliseconds(time: number | Date): number {
   let timestamp = time instanceof Date ? time.getTime() : time
   return Math.floor(timestamp / 1000)
 }

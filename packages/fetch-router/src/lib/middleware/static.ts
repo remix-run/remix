@@ -2,58 +2,42 @@ import { findFile } from '@remix-run/lazy-file/fs'
 
 import { file, type FileResponseInit } from '../response-helpers/file.ts'
 import type { Middleware } from '../middleware.ts'
-import type { RequestContext } from '../request-context.ts'
-import type { RequestMethod } from '../request-methods.ts'
 
-export type StaticFilesOptions<
-  Method extends RequestMethod | 'ANY',
-  Params extends Record<string, any>,
-> = FileResponseInit & {
-  path?: (context: RequestContext<Method, Params>) => string | null | Promise<string | null>
-}
-
-/**
- * Resolver that extracts the pathname from the request context, without a
- * leading slash so it's suitable for use as a relative file path.
- *
- * @example
- * // Request to http://example.com/assets/style.css
- * // Returns: "assets/style.css"
- */
-function requestPathnameResolver(context: RequestContext): string {
-  return context.url.pathname.replace(/^\/+/, '')
+export type StaticFilesOptions = FileResponseInit & {
+  /**
+   * Filter function to determine which files should be served.
+   *
+   * @param path - The relative path being requested
+   * @returns Whether to serve the file
+   */
+  filter?: (path: string) => boolean
 }
 
 /**
  * Creates a middleware that serves static files from the filesystem.
  *
- * By default, uses the URL pathname to resolve files. Optionally accepts a
- * custom `path` resolver to customize file resolution (e.g., to use route params).
- * The middleware always falls through to the handler if the file is not found or an error occurs.
+ * Uses the URL pathname to resolve files, removing the leading slash to make it
+ * a relative path. The middleware always falls through to the handler if the file
+ * is not found or an error occurs.
  *
  * @param root - The root directory to serve files from (absolute or relative to cwd)
- * @param options - Optional configuration
+ * @param options - Optional configuration for file responses
  *
  * @example
- * // Use URL pathname
  * let router = createRouter({
  *   middleware: [staticFiles('./public')],
  * })
  *
  * @example
- * // Custom path resolver using route params
- * router.get('/assets/*path', {
- *   middleware: [staticFiles('./assets', {
- *     path: ({ params }) => params.path,
+ * // With cache control
+ * let router = createRouter({
+ *   middleware: [staticFiles('./public', {
+ *     cacheControl: 'public, max-age=3600',
  *   })],
- *   handler() { return new Response('Not Found', { status: 404 }) }
  * })
  */
-export function staticFiles<
-  Method extends RequestMethod | 'ANY',
-  Params extends Record<string, any>,
->(root: string, options: StaticFilesOptions<Method, Params> = {}): Middleware<Method, Params> {
-  let { path: pathResolver = requestPathnameResolver, ...fileResponseInit } = options
+export function staticFiles(root: string, options: StaticFilesOptions = {}): Middleware {
+  let { filter, ...fileOptions } = options
 
   return async (context, next) => {
     // Only handle GET and HEAD requests
@@ -61,9 +45,9 @@ export function staticFiles<
       return next()
     }
 
-    let relativePath = await pathResolver(context)
+    let relativePath = context.url.pathname.replace(/^\/+/, '')
 
-    if (relativePath === null) {
+    if (filter && !filter(relativePath)) {
       return next()
     }
 
@@ -73,6 +57,6 @@ export function staticFiles<
       return next()
     }
 
-    return file(fileToServe, context, fileResponseInit)
+    return file(fileToServe, context.request, fileOptions)
   }
 }

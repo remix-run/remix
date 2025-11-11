@@ -321,19 +321,6 @@ describe('SuperHeaders', () => {
       let headers = new SuperHeaders({ unknown: 42 })
       assert.equal(headers.get('Unknown'), '42')
     })
-
-    it('handles undefined values by not setting headers', () => {
-      let headers = new SuperHeaders({
-        contentType: 'text/plain',
-        contentLength: undefined,
-        etag: undefined,
-        cacheControl: 'public',
-      })
-      assert.equal(headers.get('Content-Type'), 'text/plain')
-      assert.equal(headers.get('Content-Length'), null)
-      assert.equal(headers.get('ETag'), null)
-      assert.equal(headers.get('Cache-Control'), 'public')
-    })
   })
 
   describe('property getters and setters', () => {

@@ -138,7 +138,7 @@ interface SuperHeadersPropertyInit {
 
 export type SuperHeadersInit =
   | Iterable<[string, string]>
-  | (SuperHeadersPropertyInit & Record<string, string | HeaderValue | undefined>)
+  | (SuperHeadersPropertyInit & Record<string, string | HeaderValue>)
 
 const CRLF = '\r\n'
 
@@ -208,7 +208,7 @@ export class SuperHeaders extends Headers {
           let descriptor = Object.getOwnPropertyDescriptor(SuperHeaders.prototype, name)
           if (descriptor?.set) {
             descriptor.set.call(this, value)
-          } else if (value !== undefined) {
+          } else {
             this.set(name, value.toString())
           }
         }

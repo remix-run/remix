@@ -1,5 +1,5 @@
 import { type HeaderValue } from './header-value.ts'
-import { parseHttpDate, roundToSecond } from './utils.ts'
+import { parseHttpDate, removeMilliseconds } from './utils.ts'
 import { quoteEtag } from './utils.ts'
 
 /**
@@ -59,11 +59,7 @@ export class IfRange implements HeaderValue {
     // Try parsing as HTTP date first
     let dateTimestamp = parseHttpDate(this.value)
     if (dateTimestamp !== null && resource.lastModified != null) {
-      let resourceTimestamp =
-        resource.lastModified instanceof Date
-          ? resource.lastModified.getTime()
-          : resource.lastModified
-      return roundToSecond(dateTimestamp) === roundToSecond(resourceTimestamp)
+      return removeMilliseconds(dateTimestamp) === removeMilliseconds(resource.lastModified)
     }
 
     // Otherwise treat as ETag
