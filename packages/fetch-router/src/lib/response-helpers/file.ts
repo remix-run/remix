@@ -19,7 +19,7 @@ export type FileDigestFunction = (file: File) => Promise<string>
  */
 type DigestAlgorithm = 'SHA-256' | 'SHA-512' | 'SHA-384' | 'SHA-1' | (string & {}) // Allows any string while providing autocomplete for common algorithms
 
-export interface FileResponseInit {
+export interface FileResponseOptions {
   /**
    * Cache-Control header value. If not provided, no Cache-Control header will be set.
    *
@@ -81,8 +81,8 @@ export interface FileResponseInit {
  *
  * @param file - The file to send
  * @param request - The request object
- * @param init - Optional configuration for HTTP headers and features
- * @returns A Response with appropriate headers and body
+ * @param options - Optional configuration
+ * @returns A `Response` object containing the file
  *
  * @example
  * let result = await findFile('./public', 'image.jpg')
@@ -95,7 +95,7 @@ export interface FileResponseInit {
 export async function file(
   fileToSend: File,
   request: Request,
-  init: FileResponseInit = {},
+  options: FileResponseOptions = {},
 ): Promise<Response> {
   let {
     cacheControl,
@@ -103,9 +103,8 @@ export async function file(
     digest: digestOption = 'SHA-256',
     lastModified: lastModifiedEnabled = true,
     acceptRanges: acceptRangesEnabled = true,
-  } = init
+  } = options
 
-  // Only support GET and HEAD methods
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return new Response('Method Not Allowed', {
       status: 405,

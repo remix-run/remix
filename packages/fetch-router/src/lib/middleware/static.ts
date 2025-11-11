@@ -1,9 +1,9 @@
 import { findFile } from '@remix-run/lazy-file/fs'
 
-import { file, type FileResponseInit } from '../response-helpers/file.ts'
+import { file, type FileResponseOptions } from '../response-helpers/file.ts'
 import type { Middleware } from '../middleware.ts'
 
-export type StaticFilesOptions = FileResponseInit & {
+export type StaticFilesOptions = FileResponseOptions & {
   /**
    * Filter function to determine which files should be served.
    *
@@ -40,7 +40,6 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
   let { filter, ...fileOptions } = options
 
   return async (context, next) => {
-    // Only handle GET and HEAD requests
     if (context.request.method !== 'GET' && context.request.method !== 'HEAD') {
       return next()
     }

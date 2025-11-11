@@ -1,7 +1,7 @@
 export {
   file,
   type FileDigestFunction,
-  type FileResponseInit,
+  type FileResponseOptions,
 } from './lib/response-helpers/file.ts'
 export { html } from './lib/response-helpers/html.ts'
 export { json } from './lib/response-helpers/json.ts'
