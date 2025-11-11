@@ -693,7 +693,14 @@ describe('SuperHeaders', () => {
       headers.ifNoneMatch = ['67ab43', '54ed21']
       assert.deepEqual(headers.ifNoneMatch.tags, ['"67ab43"', '"54ed21"'])
 
+      headers.ifNoneMatch = { tags: ['67ab43', '54ed21'] }
+      assert.deepEqual(headers.ifNoneMatch.tags, ['"67ab43"', '"54ed21"'])
+
       assert.equal(headers.ifNoneMatch.toString(), '"67ab43", "54ed21"')
+
+      headers.ifNoneMatch = null
+      assert.ok(headers.ifNoneMatch instanceof IfNoneMatch)
+      assert.equal(headers.ifNoneMatch.toString(), '')
     })
 
     it('supports the ifRange property', () => {
