@@ -538,6 +538,11 @@ header.canSatisfy(500) // false (end is beyond file size)
 let header = new Range('bytes=0-499, 1000-1499')
 header.ranges.length // 2
 
+// Normalize to concrete start/end values for a given file size
+let header = new Range('bytes=1000-')
+header.normalize(2000)
+// [{ start: 1000, end: 1999 }]
+
 // Alternative init style
 let header = new Range({
   unit: 'bytes',
