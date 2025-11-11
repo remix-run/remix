@@ -2,7 +2,8 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
 
-import { RequestContext } from './request-context.ts'
+import type { RequestContext } from './request-context.ts'
+import type { RouteHandler, RouteHandlers } from './route-handlers.ts'
 import { createRoutes as route } from './route-map.ts'
 import { createRouter } from './router.ts'
 
@@ -253,6 +254,28 @@ describe('router.map() with middleware', () => {
     assert.deepEqual(requestLog, ['middleware 1', 'handler'])
   })
 
+  it('supports handler object without middleware', async () => {
+    let routes = route({
+      home: '/',
+    })
+
+    let requestLog: string[] = []
+    let router = createRouter()
+
+    router.map(routes.home, {
+      handler() {
+        requestLog.push('handler')
+        return new Response('OK')
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'OK')
+
+    assert.deepEqual(requestLog, ['handler'])
+  })
+
   it('supports middleware in a route handlers object', async () => {
     let routes = route({
       home: '/',
@@ -452,6 +475,121 @@ describe('router.map() with middleware', () => {
     assert.equal(await response.text(), 'OK')
 
     assert.deepEqual(requestLog, ['global', 'inline', 'handler'])
+  })
+})
+
+describe('router.map() type safety', () => {
+  it('allows handlers without middleware', () => {
+    let routes = route({
+      home: '/',
+    })
+
+    // This should compile without errors
+    let handlers: RouteHandlers<typeof routes> = {
+      handlers: {
+        home() {
+          return new Response('OK')
+        },
+      },
+    }
+
+    assert.ok(handlers)
+  })
+
+  it('allows handlers with middleware', () => {
+    let routes = route({
+      home: '/',
+    })
+
+    // This should compile without errors
+    let handlers: RouteHandlers<typeof routes> = {
+      middleware: [() => {}],
+      handlers: {
+        home() {
+          return new Response('OK')
+        },
+      },
+    }
+
+    assert.ok(handlers)
+  })
+
+  it('prevents mixing handlers with direct route handlers', () => {
+    let routes = route({
+      home: '/',
+    })
+
+    // This should cause a type error - mixing handlers with direct route handlers
+    let invalidHandlers: RouteHandlers<typeof routes> = {
+      handlers: {
+        home() {
+          return new Response('OK')
+        },
+      },
+      // @ts-expect-error - Cannot mix handlers property with direct route handlers
+      home() {
+        return new Response('OK')
+      },
+    }
+
+    // This test verifies the type error exists
+    assert.ok(invalidHandlers)
+  })
+
+  it('prevents mixing middleware with direct route handlers', () => {
+    let routes = route({
+      home: '/',
+    })
+
+    // This should cause a type error - mixing middleware with direct route handlers
+    let invalidHandlers: RouteHandlers<typeof routes> = {
+      middleware: [() => {}],
+      // @ts-expect-error - Cannot mix middleware property with direct route handlers
+      home() {
+        return new Response('OK')
+      },
+    }
+
+    // This test verifies the type error exists
+    assert.ok(invalidHandlers)
+  })
+
+  it('allows direct route handlers without middleware or handlers', () => {
+    let routes = route({
+      home: '/',
+    })
+
+    // This should compile without errors
+    let handlers: RouteHandlers<typeof routes> = {
+      home() {
+        return new Response('OK')
+      },
+    }
+
+    assert.ok(handlers)
+  })
+
+  it('allows handler object without middleware for single route', () => {
+    // This should compile without errors - handler object without middleware
+    let handler: RouteHandler<'ANY', '/'> = {
+      handler() {
+        return new Response('OK')
+      },
+    }
+
+    assert.ok(handler)
+  })
+
+  it('allows handler object with middleware for single route', () => {
+    // This should compile without errors - handler object with middleware
+    let handler: RouteHandler<'ANY', '/'> = {
+      middleware: [() => {}],
+      handler() {
+        return new Response('OK')
+      },
+    }
+
+    assert.ok(handler)
   })
 })
 
