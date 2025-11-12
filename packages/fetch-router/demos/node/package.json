@@ -1,0 +1,17 @@
+{
+  "name": "bookstore-demo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0"
+  },
+  "scripts": {
+    "dev": "node --watch server.ts",
+    "start": "node server.ts",
+    "typecheck": "tsc --noEmit"
+  }
+}

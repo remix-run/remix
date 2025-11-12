@@ -115,6 +115,19 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/fetch-router/demos/node:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../..
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../../../node-fetch-server
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+
   packages/file-storage:
     dependencies:
       '@remix-run/lazy-file':
