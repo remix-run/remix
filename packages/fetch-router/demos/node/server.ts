@@ -5,6 +5,13 @@ import { router } from './router.ts'
 
 const PORT = 3000
 
+// TODO:
+// - Review code
+// - Colocate code more
+// - Use YYYY-MM-DD for dates in the url with RoutePattern
+// - Add slightly better styling with stylesheet
+// - Identify where we can use events (for later demo)
+
 let server = http.createServer(
   createRequestListener(async (request) => {
     try {

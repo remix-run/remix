@@ -7,8 +7,8 @@ export let routes = route({
   // TODO: convert to RoutePattern :year-:month-:day/:slug
   posts: {
     ...resources('posts'),
-    comments: resources('posts/:id/comments', {
-      only: ['create', 'show', 'destroy'],
+    comment: resources('posts/:id/comment', {
+      only: ['create', 'destroy'],
       param: 'commentId',
     }),
   },
