@@ -4,15 +4,9 @@ import { lookup } from 'mrmime'
 
 import { type LazyContent, LazyFile } from './lib/lazy-file.ts'
 
-/**
- * A `File` from the filesystem with an additional `path` property containing
- * the full absolute path to the file on disk.
- */
-export type FsFile = File & { path: string }
-
 export interface OpenFileOptions {
   /**
-   * Overrides the name of the file. Default is the name of the file on disk.
+   * Overrides the name of the file. Default is the filename argument as provided.
    */
   name?: string
   /**
@@ -28,17 +22,16 @@ export interface OpenFileOptions {
 /**
  * Returns a `File` from the local filesytem.
  *
- * The returned file includes an additional `path` property containing the full
- * absolute path to the file on disk. This is useful for file handling where the
- * full path is often needed (e.g., for caching or logging).
+ * The returned file's `name` property will be set to the `filename` argument as provided,
+ * unless overridden via `options.name`.
  *
  * [MDN `File` Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
  *
  * @param filename The path to the file
  * @param options Options to override the file's metadata
- * @returns A `File` object with an additional `path` property
+ * @returns A `File` object
  */
-export function openFile(filename: string, options?: OpenFileOptions): FsFile {
+export function openFile(filename: string, options?: OpenFileOptions): File {
   let stats = fs.statSync(filename)
 
   if (!stats.isFile()) {
@@ -52,13 +45,10 @@ export function openFile(filename: string, options?: OpenFileOptions): FsFile {
     },
   }
 
-  let absolutePath = path.resolve(filename)
-
-  return new LazyFile(content, options?.name ?? path.basename(filename), {
+  return new LazyFile(content, options?.name ?? filename, {
     type: options?.type ?? lookup(filename),
     lastModified: options?.lastModified ?? stats.mtimeMs,
-    path: absolutePath,
-  }) as FsFile
+  }) as File
 }
 
 function streamFile(
@@ -87,21 +77,20 @@ function streamFile(
  * Returns `null` if the file doesn't exist, is not a file, or is outside the
  * specified root directory.
  *
- * The returned file includes an additional `path` property containing the full
- * absolute path to the file on disk. This is useful for file handling where the
- * full path is often needed (e.g., for caching or logging).
+ * The returned file's `name` property will be set to the `relativePath` argument,
+ * preserving the path structure relative to the root.
  *
  * @param root - The root directory to serve files from (absolute or relative to cwd)
  * @param relativePath - The relative path from the root to the file
- * @returns A `File` with an additional `path` property, or null if not found
+ * @returns A `File` object, or null if not found
  *
  * @example
- * let file = await findFile('./public', 'favicon.ico')
+ * let file = await findFile('./public', 'assets/favicon.ico')
  * if (file) {
- *   console.log(file.path) // "/path/to/public/favicon.ico"
+ *   console.log(file.name) // "assets/favicon.ico"
  * }
  */
-export async function findFile(root: string, relativePath: string): Promise<FsFile | null> {
+export async function findFile(root: string, relativePath: string): Promise<File | null> {
   // Ensure root is an absolute path
   root = path.resolve(root)
 
@@ -113,8 +102,7 @@ export async function findFile(root: string, relativePath: string): Promise<FsFi
   }
 
   try {
-    let file = await openFile(filePath)
-    return file
+    return openFile(filePath, { name: relativePath })
   } catch (error) {
     if (isNoEntityError(error) || isNotAFileError(error)) {
       return null

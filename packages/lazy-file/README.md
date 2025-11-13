@@ -77,9 +77,10 @@ import { openFile, findFile, writeFile } from '@remix-run/lazy-file/fs'
 let file = openFile('./path/to/file.json')
 
 // Alternatively, find a file within a root directory, returning
-// null if the file is not found
-let foundFile = await findFile('./public', 'favicon.ico')
-console.log(foundFile ? `Found file at ${foundFile.path}` : 'File not found')
+// null if the file is not found. The file.name will be set to the
+// relative path argument (e.g., 'assets/favicon.ico')
+let foundFile = await findFile('./public', 'assets/favicon.ico')
+console.log(foundFile ? `Found ${foundFile.name}` : 'File not found')
 
 // Data is read when you call file.text() (or any of the
 // other Blob methods, like file.bytes(), file.stream(), etc.)
@@ -102,18 +103,6 @@ let blob = imageFile.slice(100)
 ```
 
 All file contents are read on-demand and nothing is ever buffered.
-
-Files loaded via `lazy-file/fs` include an additional `path` property containing the full absolute path.
-
-```ts
-import { openFile, findFile, type FsFile } from '@remix-run/lazy-file/fs'
-
-let file: FsFile = openFile('./config.json')
-console.log(file.path)
-
-let foundFile: FsFile = await findFile('./public', 'favicon.ico')
-console.log(foundFile ? `Found file at ${foundFile.path}` : 'File not found')
-```
 
 ## Related Packages
 

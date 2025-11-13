@@ -2,6 +2,86 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Add `Range` support
+
+```ts
+import { Range } from '@remix-run/headers'
+
+let header = new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] })
+header.toString() // "bytes=0-999"
+
+// Parse from string
+let header = new Range('bytes=0-999,2000-2999')
+header.ranges // [{ start: 0, end: 999 }, { start: 2000, end: 2999 }]
+
+// Check if range is satisfiable for a given file size
+header.isSatisfiable(5000) // true
+
+// Normalize ranges to concrete start/end values for a given file size
+let header = new Range('bytes=0-')
+header.normalize(5000) // [{ start: 0, end: 4999 }]
+```
+
+- Add `Content-Range` support
+
+```ts
+import { ContentRange } from '@remix-run/headers'
+
+let header = new ContentRange({
+  unit: 'bytes',
+  start: 0,
+  end: 999,
+  size: 5000,
+})
+header.toString() // "bytes 0-999/5000"
+
+// Parse from string
+let header = new ContentRange('bytes 200-1000/67589')
+header.start // 200
+header.end // 1000
+header.size // 67589
+```
+
+- Add `If-Match` support
+
+```ts
+import { IfMatch } from '@remix-run/headers'
+
+let header = new IfMatch(['"abc123"', '"def456"'])
+header.has('"abc123"') // true
+
+// Check if precondition passes
+header.matches('"abc123"') // true
+header.matches('"xyz789"') // false
+header.matches('W/"abc123"') // false (weak ETags never match)
+```
+
+- Add `If-Range` support
+
+```ts
+import { IfRange } from '@remix-run/headers'
+
+// With ETag
+let header = new IfRange('"abc123"')
+header.matches({ etag: '"abc123"' }) // true
+header.matches({ etag: 'W/"abc123"' }) // false (weak ETags never match)
+
+// With Last-Modified date
+let header = new IfRange(new Date('2025-10-21T07:28:00Z'))
+header.matches({ lastModified: new Date('2025-10-21T07:28:00Z') }) // true
+```
+
+- Add `Allow` support
+
+```ts
+import { SuperHeaders } from '@remix-run/headers'
+
+let headers = new SuperHeaders({ allow: ['GET', 'POST', 'OPTIONS'] })
+headers.get('Allow') // "GET, POST, OPTIONS"
+```
+
 ## v0.16.0 (2025-11-05)
 
 - Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.

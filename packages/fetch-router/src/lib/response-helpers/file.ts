@@ -14,11 +14,6 @@ import SuperHeaders from '@remix-run/headers'
  */
 export type FileDigestFunction = (file: File) => Promise<string>
 
-/**
- * Hash algorithm name for SubtleCrypto.digest() or custom digest function.
- */
-type DigestAlgorithm = 'SHA-256' | 'SHA-512' | 'SHA-384' | 'SHA-1' | (string & {}) // Allows any string while providing autocomplete for common algorithms
-
 export interface FileResponseOptions {
   /**
    * Cache-Control header value. If not provided, no Cache-Control header will be set.
@@ -43,17 +38,17 @@ export interface FileResponseOptions {
   /**
    * Hash algorithm or custom digest function for strong ETags.
    *
-   * When `etag` is `'strong'`, this determines how the file content is hashed.
-   * - String: Algorithm name for SubtleCrypto.digest() (e.g., 'SHA-256', 'SHA-512')
+   * - String: Algorithm name for Node.js crypto.createHash() (e.g., 'sha256', 'sha512').
+   *   Available algorithms depend on the platform.
    * - Function: Custom digest computation that receives a File and returns the digest string
    *
    * Only used when `etag: 'strong'`. Ignored for weak ETags.
    *
-   * @default 'SHA-256'
-   * @example 'SHA-512'
-   * @example async (file) => customHash(await file.arrayBuffer())
+   * @default 'sha256'
+   * @example 'sha512'
+   * @example async (file) => await customHash(file)
    */
-  digest?: DigestAlgorithm | FileDigestFunction
+  digest?: string | FileDigestFunction
 
   /**
    * Whether to include Last-Modified headers.
@@ -100,19 +95,10 @@ export async function file(
   let {
     cacheControl,
     etag: etagStrategy = 'weak',
-    digest: digestOption = 'SHA-256',
+    digest: digestOption = 'sha256',
     lastModified: lastModifiedEnabled = true,
     acceptRanges: acceptRangesEnabled = true,
   } = options
-
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
-    return new Response('Method Not Allowed', {
-      status: 405,
-      headers: new SuperHeaders({
-        allow: ['GET', 'HEAD'],
-      }),
-    })
-  }
 
   let headers = new SuperHeaders(request.headers)
 
@@ -304,27 +290,33 @@ function omitNullableValues<T extends Record<string, any>>(headers: T): OmitNull
  */
 async function computeDigest(
   file: File,
-  digestOption: DigestAlgorithm | FileDigestFunction,
+  digestOption: string | FileDigestFunction,
 ): Promise<string> {
   return typeof digestOption === 'function'
     ? // Custom digest function
       await digestOption(file)
-    : // Use SubtleCrypto with algorithm name
+    : // Use Node.js crypto with algorithm name
       await hashFile(file, digestOption)
 }
 
 /**
- * Hashes a file using SubtleCrypto.
+ * Hashes a file using Node.js crypto streaming API.
+ *
+ * This streams the file in chunks to avoid loading the entire file into memory,
+ * which is important for large files.
  *
  * @param file - The file to hash
- * @param algorithm - Hash algorithm name (e.g., 'SHA-256')
+ * @param algorithm - Hash algorithm name (e.g., 'sha256', 'sha512')
  * @returns The hash as a hex string
  */
 async function hashFile(file: File, algorithm: string): Promise<string> {
-  let buffer = await file.arrayBuffer()
-  let hashBuffer = await crypto.subtle.digest(algorithm, buffer)
-  let hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((byte) => byte.toString(16).padStart(2, '0')).join('')
+  // Avoid making node:crypto a static import in case it's not available
+  let { createHash } = await import('node:crypto')
+  let hash = createHash(algorithm)
+  for await (let chunk of file.stream()) {
+    hash.update(chunk)
+  }
+  return hash.digest('hex')
 }
 
 /**

@@ -4,7 +4,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { describe, it } from 'node:test'
 
-import { findFile, openFile, type FsFile } from './fs.ts'
+import { findFile, openFile } from './fs.ts'
 
 describe('openFile', () => {
   let tmpDir: string
@@ -29,15 +29,14 @@ describe('openFile', () => {
     return filePath
   }
 
-  it('returns a file with path property', async () => {
+  it('returns a file', async () => {
     setup()
     let filePath = createTestFile('test.txt', 'hello world')
 
-    let result: FsFile = openFile(filePath)
+    let result = openFile(filePath)
 
-    assert.equal(result.name, 'test.txt')
+    assert.equal(result.name, filePath)
     assert.equal(result.size, 11)
-    assert.equal(result.path, path.resolve(filePath))
     assert.equal(await result.text(), 'hello world')
 
     teardown()
@@ -75,7 +74,6 @@ describe('findFile', () => {
     assert.ok(result)
     assert.equal(result.name, 'test.txt')
     assert.equal(result.size, 11)
-    assert.equal(result.path, path.join(path.resolve(tmpDir), 'test.txt'))
     assert.equal(await result.text(), 'hello world')
 
     teardown()
@@ -88,8 +86,7 @@ describe('findFile', () => {
     let result = await findFile(tmpDir, 'assets/styles.css')
 
     assert.ok(result)
-    assert.equal(result.name, 'styles.css')
-    assert.equal(result.path, path.join(path.resolve(tmpDir), 'assets', 'styles.css'))
+    assert.equal(result.name, 'assets/styles.css')
 
     teardown()
   })
@@ -175,21 +172,19 @@ describe('findFile', () => {
 
     assert.ok(result)
     assert.equal(result.name, 'test.txt')
-    assert.equal(result.path, path.join(absoluteTmpDir, 'test.txt'))
     assert.equal(await result.text(), 'hello')
 
     teardown()
   })
 
-  it('returns file with correct path property', async () => {
+  it('sets file.name to the relative path argument', async () => {
     setup()
-    createTestFile('test.txt', 'content')
+    createTestFile('nested/deep/file.txt', 'content')
 
-    let result = await findFile(tmpDir, 'test.txt')
+    let result = await findFile(tmpDir, 'nested/deep/file.txt')
 
     assert.ok(result)
-    assert.ok(path.isAbsolute(result.path))
-    assert.equal(result.path, path.join(path.resolve(tmpDir), 'test.txt'))
+    assert.equal(result.name, 'nested/deep/file.txt')
 
     teardown()
   })

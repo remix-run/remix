@@ -114,11 +114,6 @@ export interface LazyFileOptions extends LazyBlobOptions {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/File/File#lastmodified)
    */
   lastModified?: number
-  /**
-   * The full path to the file on disk. This property is automatically set when
-   * loading files from disk via `lazy-file/fs`.
-   */
-  path?: string
 }
 
 /**
@@ -130,7 +125,6 @@ export interface LazyFileOptions extends LazyBlobOptions {
  *
  * - The constructor may accept a `LazyContent` object instead of a `BlobPart[]` array
  * - The constructor may accept a `range` in the options to specify a subset of the content
- * - The constructor may accent a `path` in the options to specify the full path to the file on disk
  *
  * In normal usage you shouldn't have to specify the `range` yourself. The `slice()` method
  * automatically takes care of creating new `LazyBlob` instances with the correct range.
@@ -139,12 +133,10 @@ export interface LazyFileOptions extends LazyBlobOptions {
  */
 export class LazyFile extends File {
   readonly #content: BlobContent
-  readonly path: string | undefined
 
   constructor(parts: BlobPart[] | LazyContent, name: string, options?: LazyFileOptions) {
     super([], name, options)
     this.#content = new BlobContent(parts, options)
-    this.path = options?.path
   }
 
   /**

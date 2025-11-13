@@ -732,14 +732,14 @@ return res.file(file, request, {
 })
 ```
 
-By default, strong ETags are generated using [`SubtleCrypto.digest()`](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest) with the `'SHA-256'` algorithm. You can customize this:
+By default, strong ETags are generated using Node's [`crypto.createHash()`](https://nodejs.org/api/crypto.html#cryptocreatehashalgorithm-options) with the `'sha256'` algorithm. You can customize this:
 
 ```ts
 return res.file(file, request, {
   etag: 'strong',
 
-  // Specify a different SubtleCrypto.digest() algorithm
-  digest: 'SHA-512',
+  // Specify a different hash algorithm (availability depends on platform)
+  digest: 'sha512',
 })
 ```
 
@@ -750,9 +750,8 @@ return res.file(file, request, {
   etag: 'strong',
 
   // Custom digest function
-  digest: async (file) => {
-    let buffer = await file.arrayBuffer()
-    return customHash(buffer)
+  async digest(file) {
+    return await customHash(file)
   },
 })
 ```
