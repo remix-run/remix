@@ -189,6 +189,19 @@ describe('findFile', () => {
     teardown()
   })
 
+  it('allows overriding file.name with options.name', async () => {
+    setup()
+    createTestFile('assets/favicon.ico', 'icon content')
+
+    let result = await findFile(tmpDir, 'assets/favicon.ico', { name: 'custom.ico' })
+
+    assert.ok(result)
+    assert.equal(result.name, 'custom.ico')
+    assert.equal(await result.text(), 'icon content')
+
+    teardown()
+  })
+
   it('throws non-ENOENT errors', async () => {
     setup()
 

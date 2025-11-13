@@ -71,6 +71,13 @@ function streamFile(
   })
 }
 
+export interface FindFileOptions {
+  /**
+   * Overrides the name of the file. Default is the relativePath argument.
+   */
+  name?: string
+}
+
 /**
  * Finds a file on the filesystem within the given root directory.
  *
@@ -78,19 +85,31 @@ function streamFile(
  * specified root directory.
  *
  * The returned file's `name` property will be set to the `relativePath` argument,
- * preserving the path structure relative to the root.
+ * unless overridden via `options.name`.
  *
  * @param root - The root directory to serve files from (absolute or relative to cwd)
  * @param relativePath - The relative path from the root to the file
+ * @param options - Options to override the file's metadata
  * @returns A `File` object, or null if not found
  *
  * @example
- * let file = await findFile('./public', 'assets/favicon.ico')
+ * let file = await findFile('./public', 'assets/logo.png')
  * if (file) {
- *   console.log(file.name) // "assets/favicon.ico"
+ *   console.log(file.name) // "assets/logo.png"
+ * }
+ *
+ * @example
+ * // Override the file name
+ * let file = await findFile('./public', 'assets/logo.png', { name: 'custom.png' })
+ * if (file) {
+ *   console.log(file.name) // "custom.png"
  * }
  */
-export async function findFile(root: string, relativePath: string): Promise<File | null> {
+export async function findFile(
+  root: string,
+  relativePath: string,
+  options?: FindFileOptions,
+): Promise<File | null> {
   // Ensure root is an absolute path
   root = path.resolve(root)
 
@@ -102,7 +121,7 @@ export async function findFile(root: string, relativePath: string): Promise<File
   }
 
   try {
-    return openFile(filePath, { name: relativePath })
+    return openFile(filePath, { name: options?.name ?? relativePath })
   } catch (error) {
     if (isNoEntityError(error) || isNotAFileError(error)) {
       return null
