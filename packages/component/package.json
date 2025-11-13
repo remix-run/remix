@@ -1,0 +1,62 @@
+{
+  "name": "@remix-run/component",
+  "version": "0.1.0",
+  "description": "Web components for Remix",
+  "author": "Ryan Florence <rpflorence@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/component"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/component#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./jsx-runtime": "./src/jsx-runtime.ts",
+    "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./jsx-runtime": {
+        "types": "./dist/jsx-runtime.d.ts",
+        "default": "./dist/jsx-runtime.js"
+      },
+      "./jsx-dev-runtime": {
+        "types": "./dist/jsx-dev-runtime.d.ts",
+        "default": "./dist/jsx-dev-runtime.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "size": "esbuild src/index.ts --bundle --minify --outfile=.temp-bundle.js --format=esm && echo \"📦 Bundle sizes:\" && echo \"   Uncompressed: $(ls -lah .temp-bundle.js | awk '{print $5}')\" && echo \"   Gzipped: $(gzip -c .temp-bundle.js | wc -c | tr -d ' ') bytes\" && rm .temp-bundle.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "devDependencies": {
+    "@vitest/browser": "^3.2.4",
+    "esbuild": "^0.25.5",
+    "playwright": "^1.53.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@remix-run/interaction": "workspace:^"
+  }
+}
