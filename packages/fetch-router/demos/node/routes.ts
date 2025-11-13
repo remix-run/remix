@@ -1,17 +1,15 @@
-import { route } from '@remix-run/fetch-router'
-
-// The demo should have a few routes and use some basic middleware.
-
-// TODO: show off the response helpers
-// import { html, json, redirect } from '@remix-run/fetch-router/response-helpers'
-
-// TODO: show off the middleware:
-// async-context-middleware
-// form-data-middleware
-// logger-middleware
-// method-override-middleware
-// session-middleware
+import { formAction, resources, route } from '@remix-run/fetch-router'
 
 export let routes = route({
   home: '/',
+  login: formAction('/login'),
+  logout: { method: 'POST', pattern: '/logout' },
+  // TODO: convert to RoutePattern :year-:month-:day/:slug
+  posts: {
+    ...resources('posts'),
+    comments: resources('posts/:id/comments', {
+      only: ['create', 'show', 'destroy'],
+      param: 'commentId',
+    }),
+  },
 })

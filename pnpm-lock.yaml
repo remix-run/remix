@@ -117,9 +117,15 @@ importers:
 
   packages/fetch-router/demos/node:
     dependencies:
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../../../cookie
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../..
+      '@remix-run/html-template':
+        specifier: workspace:*
+        version: link:../../../html-template
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../../node-fetch-server
