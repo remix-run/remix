@@ -1,9 +1,11 @@
 import type { RouteHandlers, Middleware } from '@remix-run/fetch-router'
 import * as res from '@remix-run/fetch-router/response-helpers'
+import type { Params } from '@remix-run/route-pattern'
 
 import { routes } from '../routes.ts'
 
 import * as data from '../data.ts'
+import { getPostHrefParams } from './utils.ts'
 
 function requireAuth(): Middleware {
   return async ({ session }, next) => {
@@ -15,7 +17,10 @@ function requireAuth(): Middleware {
   }
 }
 
-function requireCommentAuthor(): Middleware<any, { id: string; commentId: string }> {
+function requireCommentAuthor(): Middleware<
+  any,
+  Params<typeof routes.posts.comment.destroy.pattern.source>
+> {
   return async ({ session, params }, next) => {
     let username = session.get('username')
     let commentId = params.commentId
@@ -37,7 +42,7 @@ export let comment = {
   middleware: [requireAuth()],
   handlers: {
     async create({ params, formData, session }) {
-      let post = data.getPost(params.id)
+      let post = data.getPost(params.slug)
       if (!post) {
         return new Response('Post not found', { status: 404 })
       }
@@ -48,12 +53,12 @@ export let comment = {
 
       let content = formData.get('content') as string
       if (!content) {
-        return res.redirect(routes.posts.show.href({ id: params.id }))
+        return res.redirect(routes.posts.show.href(getPostHrefParams(post)))
       }
 
       let username = session.get('username') as string
-      data.addComment(params.id, username, content)
-      return res.redirect(routes.posts.show.href({ id: params.id }))
+      data.addComment(post.id, username, content)
+      return res.redirect(routes.posts.show.href(getPostHrefParams(post)))
     },
     destroy: {
       middleware: [requireCommentAuthor()],
@@ -63,8 +68,13 @@ export let comment = {
           return new Response('Comment not found', { status: 404 })
         }
 
+        let post = data.getPost(comment.postId)
+        if (!post) {
+          return new Response('Post not found', { status: 404 })
+        }
+
         data.deleteComment(params.commentId)
-        return res.redirect(routes.posts.show.href({ id: params.id }))
+        return res.redirect(routes.posts.show.href(getPostHrefParams(post)))
       },
     },
   },

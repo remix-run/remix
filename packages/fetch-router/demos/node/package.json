@@ -6,7 +6,8 @@
     "@remix-run/cookie": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/html-template": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*"
+    "@remix-run/node-fetch-server": "workspace:*",
+    "@remix-run/route-pattern": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.6.0"

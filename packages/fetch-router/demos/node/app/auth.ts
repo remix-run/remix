@@ -19,9 +19,10 @@ function requireGuest(): Middleware {
 export let login = {
   middleware: [requireGuest()],
   handlers: {
-    index({ session }) {
+    index({ session, url }) {
       let error = session.get('error') as string | undefined
       let currentUser = session.get('username') as string | undefined
+      let redirectTo = url.searchParams.get('redirectTo') || ''
 
       // TODO: check if this should be cleared on subsequent requests, given that we used flash to set the error
       session.destroy()
@@ -32,6 +33,9 @@ export let login = {
             <h1>Login</h1>
             ${error ? html`<p style="color: red;">${error}</p>` : null}
             <form method="POST" action="${routes.login.action.href()}">
+              ${redirectTo
+                ? html`<input type="hidden" name="redirectTo" value="${redirectTo}" />`
+                : null}
               <div>
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required />
@@ -53,6 +57,7 @@ export let login = {
     action({ formData, session }) {
       let username = formData.get('username')
       let password = formData.get('password') as string
+      let redirectTo = formData.get('redirectTo') as string | null
 
       try {
         // Simple auth - in real app, check against database
@@ -61,14 +66,19 @@ export let login = {
         assert.ok(typeof password === 'string', 'Invalid password')
 
         session.set('username', username)
-        return res.redirect(routes.posts.index.href())
+        let redirectUrl =
+          redirectTo && redirectTo.startsWith('/') ? redirectTo : routes.posts.index.href()
+        return res.redirect(redirectUrl)
       } catch (error) {
         session.flash(
           'error',
           error instanceof Error ? error.message : 'Oops, something went wrong',
         )
 
-        return res.redirect(routes.login.index.href())
+        let redirectUrl = redirectTo
+          ? `${routes.login.index.href()}?redirectTo=${encodeURIComponent(redirectTo)}`
+          : routes.login.index.href()
+        return res.redirect(redirectUrl)
       }
     },
   },

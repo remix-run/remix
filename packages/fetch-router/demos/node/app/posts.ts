@@ -6,15 +6,16 @@ import * as templates from './layout.ts'
 import * as data from '../data.ts'
 import type { Post } from '../data.ts'
 import { html } from '@remix-run/html-template'
+import { getPostHrefParams } from './utils.ts'
 
 function postForm(post?: Post) {
-  let action = post ? routes.posts.update.href({ id: post.id }) : routes.posts.create.href()
+  let action = post ? routes.posts.update.href(getPostHrefParams(post)) : routes.posts.create.href()
   let heading = post ? 'Edit Post' : 'New Post'
 
   return html`
     <h1>${heading}</h1>
     <form method="POST" action="${action}">
-      ${post ? '<input type="hidden" name="_method" value="PUT">' : null}
+      ${post ? html`<input type="hidden" name="_method" value="PUT" />` : null}
       <div>
         <label for="title">Title</label>
         <input type="text" id="title" name="title" value="${post?.title}" required />
@@ -44,7 +45,9 @@ export let posts = {
           ${posts.map(
             (post) => html`
               <article>
-                <h2><a href="${routes.posts.show.href({ id: post.id })}">${post.title}</a></h2>
+                <h2>
+                  <a href="${routes.posts.show.href(getPostHrefParams(post))}">${post.title}</a>
+                </h2>
                 <p>${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : null}</p>
                 <small>Posted on ${post.createdAt.toLocaleDateString()}</small>
               </article>
@@ -68,18 +71,19 @@ export let posts = {
     }
 
     let post = data.createPost(title, content)
-    return res.redirect(routes.posts.show.href({ id: post.id }))
+    return res.redirect(routes.posts.show.href(getPostHrefParams(post)))
   },
   show({ params, session }) {
-    let post = data.getPost(params.id)
+    let post = data.getPost(params.slug)
+    console.log('HERE', post)
     if (!post) {
       return new Response('Post not found', { status: 404 })
     }
 
-    let comments = data.getComments(params.id)
+    let comments = data.getComments(post.id)
     let currentUser = session.get('username') as string | undefined
 
-    // TODO: add a "?redirectTo=..." to the form action to redirect to the post after logging in
+    let postUrl = routes.posts.show.href(getPostHrefParams(post))
 
     return res.html(
       templates.layout(
@@ -87,10 +91,10 @@ export let posts = {
           <article>
             <h1>${post.title}</h1>
             <p><a href="${routes.posts.index.href()}">← Back to Posts</a></p>
-            <p><a href="${routes.posts.edit.href({ id: post.id })}">Edit Post</a></p>
+            <p><a href="${routes.posts.edit.href(getPostHrefParams(post))}">Edit Post</a></p>
             <form
               method="POST"
-              action="${routes.posts.destroy.href({ id: post.id })}"
+              action="${routes.posts.destroy.href(getPostHrefParams(post))}"
               style="display: inline;"
             >
               <input type="hidden" name="_method" value="DELETE" />
@@ -117,7 +121,7 @@ export let posts = {
                             <form
                               method="POST"
                               action="${routes.posts.comment.destroy.href({
-                                id: post.id,
+                                ...getPostHrefParams(post),
                                 commentId: comment.id,
                               })}"
                               style="display: inline;"
@@ -133,7 +137,10 @@ export let posts = {
               : html`<p>No comments yet.</p>`}
             ${currentUser
               ? html`
-                  <form method="POST" action="${routes.posts.comment.create.href({ id: post.id })}">
+                  <form
+                    method="POST"
+                    action="${routes.posts.comment.create.href(getPostHrefParams(post))}"
+                  >
                     <h3>Add a Comment</h3>
                     <div>
                       <textarea name="content" rows="4" required></textarea>
@@ -141,7 +148,12 @@ export let posts = {
                     <button type="submit">Post Comment</button>
                   </form>
                 `
-              : html`<p><a href="${routes.login.index.href()}">Login</a> to add a comment.</p>`}
+              : html`<p>
+                  <a href="${routes.login.index.href()}?redirectTo=${encodeURIComponent(postUrl)}"
+                    >Login</a
+                  >
+                  to add a comment.
+                </p>`}
           </section>
         `,
         currentUser,
@@ -149,7 +161,7 @@ export let posts = {
     )
   },
   edit({ params, session }) {
-    let post = data.getPost(params.id)
+    let post = data.getPost(params.slug)
     if (!post) {
       return new Response('Post not found', { status: 404 })
     }
@@ -158,7 +170,7 @@ export let posts = {
     return res.html(templates.layout(postForm(post), currentUser))
   },
   update({ params, formData }) {
-    let post = data.getPost(params.id)
+    let post = data.getPost(params.slug)
     if (!post) {
       return new Response('Post not found', { status: 404 })
     }
@@ -170,16 +182,18 @@ export let posts = {
       return res.html(templates.layout(postForm(post)), { status: 400 })
     }
 
-    data.updatePost(params.id, title, content)
-    return res.redirect(routes.posts.show.href({ id: params.id }))
+    data.updatePost(post.id, title, content)
+    // Regenerate slug if title changed
+    let updatedPost = data.getPost(post.id)!
+    return res.redirect(routes.posts.show.href(getPostHrefParams(updatedPost)))
   },
   destroy({ params }) {
-    let post = data.getPost(params.id)
+    let post = data.getPost(params.slug)
     if (!post) {
       return new Response('Post not found', { status: 404 })
     }
 
-    data.deletePost(params.id)
+    data.deletePost(post.id)
     return res.redirect(routes.posts.index.href())
   },
 } satisfies RouteHandlers<Omit<typeof routes.posts, 'comment'>>

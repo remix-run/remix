@@ -129,6 +129,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../../node-fetch-server
+      '@remix-run/route-pattern':
+        specifier: workspace:*
+        version: link:../../../route-pattern
     devDependencies:
       '@types/node':
         specifier: ^24.6.0

@@ -1,3 +1,5 @@
+import { generateSlug } from './app/utils.ts'
+
 export interface Post {
   id: string
   title: string
@@ -44,9 +46,9 @@ let post3: Post = {
   updatedAt: new Date('2025-01-03'),
 }
 
-posts.set(post1.id, post1)
-posts.set(post2.id, post2)
-posts.set(post3.id, post3)
+posts.set(generateSlug(post1.title), post1)
+posts.set(generateSlug(post2.title), post2)
+posts.set(generateSlug(post3.title), post3)
 
 let comment1: Comment = {
   id: '1',
@@ -63,8 +65,8 @@ export function getPosts() {
   return Array.from(posts.values()).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 }
 
-export function getPost(id: string) {
-  return posts.get(id)
+export function getPost(slug: string) {
+  return posts.get(slug)
 }
 
 export function createPost(title: string, content: string) {

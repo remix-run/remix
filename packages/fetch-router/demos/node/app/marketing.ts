@@ -5,6 +5,7 @@ import { routes } from '../routes.ts'
 import * as templates from './layout.ts'
 import * as data from '../data.ts'
 import { html } from '@remix-run/html-template'
+import { getPostHrefParams } from './utils.ts'
 
 export let home: BuildRouteHandler<'GET', typeof routes.home> = ({ session }) => {
   let posts = data.getPosts()
@@ -18,7 +19,7 @@ export let home: BuildRouteHandler<'GET', typeof routes.home> = ({ session }) =>
           (post) => html`
             <article>
               <h2>
-                <a href="${routes.posts.show.href({ id: post.id })}">${post.title}</a>
+                <a href="${routes.posts.show.href(getPostHrefParams(post))}">${post.title}</a>
               </h2>
               <p>${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : null}</p>
               <small>Posted on ${post.createdAt.toLocaleDateString()}</small>
