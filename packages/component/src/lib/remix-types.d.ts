@@ -40,7 +40,7 @@ export type Renderable = RemixElement | string | number | bigint | boolean | nul
  */
 export type RemixNode = Renderable | Renderable[]
 
-export interface RemixAttributes<eventTarget extends EventTarget> {
+export interface RemixProps<eventTarget extends EventTarget> {
   children?: RemixNode
   on?: EventListeners<eventTarget> | undefined
   css?: 'TODO: support css properties' | undefined

@@ -4,7 +4,7 @@
  * - License: MIT https://github.com/preactjs/preact/blob/eee0c6ef834534498e433f0f7a3ef679efd24380/LICENSE
  * - Copyright (c) 2015-present Jason Miller
  */
-import type { RemixAttributes } from './remix-types.d.ts'
+import type { RemixProps } from './remix-types.d.ts'
 
 type Booleanish = boolean | 'true' | 'false'
 
@@ -23,8 +23,7 @@ export interface CSSProperties extends AllCSSProperties, DOMCSSProperties {
   cssText?: string | null
 }
 
-export interface SVGAttributes<Target extends EventTarget = SVGElement>
-  extends HTMLAttributes<Target> {
+export interface SVGProps<Target extends EventTarget = SVGElement> extends HTMLProps<Target> {
   accentHeight?: Trackable<number | string | undefined>
   accumulate?: Trackable<'none' | 'sum' | undefined>
   additive?: Trackable<'replace' | 'sum' | undefined>
@@ -361,7 +360,7 @@ export interface SVGAttributes<Target extends EventTarget = SVGElement>
   xHeight?: Trackable<number | string | undefined>
   'x-height'?: Trackable<number | string | undefined>
   xlinkActuate?: Trackable<string | undefined>
-  'xlink:actuate'?: Trackable<SVGAttributes['xlinkActuate']>
+  'xlink:actuate'?: Trackable<SVGProps['xlinkActuate']>
   xlinkArcrole?: Trackable<string | undefined>
   'xlink:arcrole'?: Trackable<string | undefined>
   xlinkHref?: Trackable<string | undefined>
@@ -390,12 +389,12 @@ export interface SVGAttributes<Target extends EventTarget = SVGElement>
   zoomAndPan?: Trackable<string | undefined>
 }
 
-export interface PathAttributes {
+export interface PathProps {
   d: string
 }
 
 // All the WAI-ARIA 1.1 attributes from https://www.w3.org/TR/wai-aria-1.1/
-export interface AriaAttributes {
+export interface AriaProps {
   /** Identifies the currently active element when DOM focus is on a composite widget, textbox, group, or application. */
   'aria-activedescendant'?: Trackable<string | undefined>
   /** Indicates whether assistive technologies will present all, or only parts of, the changed region based on the change notifications defined by the aria-relevant attribute. */
@@ -773,15 +772,15 @@ export type DPubAriaRole =
 
 export type AriaRole = WAIAriaRole | DPubAriaRole
 
-export interface AllHTMLAttributes<eventTarget extends EventTarget = EventTarget>
-  extends RemixAttributes<eventTarget>,
-    AriaAttributes {
+export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
+  extends RemixProps<eventTarget>,
+    AriaProps {
   // Standard HTML Attributes
   accept?: Trackable<string | undefined>
   acceptCharset?: Trackable<string | undefined>
-  'accept-charset'?: Trackable<AllHTMLAttributes['acceptCharset']>
+  'accept-charset'?: Trackable<AllHTMLProps['acceptCharset']>
   accessKey?: Trackable<string | undefined>
-  accesskey?: Trackable<AllHTMLAttributes['accessKey']>
+  accesskey?: Trackable<AllHTMLProps['accessKey']>
   action?: Trackable<string | undefined>
   allow?: Trackable<string | undefined>
   allowFullScreen?: Trackable<boolean | undefined>
@@ -812,7 +811,7 @@ export interface AllHTMLAttributes<eventTarget extends EventTarget = EventTarget
   colspan?: Trackable<number | undefined>
   content?: Trackable<string | undefined>
   contentEditable?: Trackable<Booleanish | '' | 'plaintext-only' | 'inherit' | undefined>
-  contenteditable?: Trackable<AllHTMLAttributes['contentEditable']>
+  contenteditable?: Trackable<AllHTMLProps['contentEditable']>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/contextmenu */
   contextMenu?: Trackable<string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/contextmenu */
@@ -846,7 +845,7 @@ export interface AllHTMLAttributes<eventTarget extends EventTarget = EventTarget
     'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send' | undefined
   >
   elementTiming?: Trackable<string | undefined>
-  elementtiming?: Trackable<AllHTMLAttributes['elementTiming']>
+  elementtiming?: Trackable<AllHTMLProps['elementTiming']>
   exportparts?: Trackable<string | undefined>
   for?: Trackable<string | undefined>
   form?: Trackable<string | undefined>
@@ -1017,9 +1016,9 @@ export interface AllHTMLAttributes<eventTarget extends EventTarget = EventTarget
   itemref?: Trackable<string | undefined>
 }
 
-export interface HTMLAttributes<eventTarget extends EventTarget = EventTarget>
-  extends RemixAttributes<eventTarget>,
-    AriaAttributes {
+export interface HTMLProps<eventTarget extends EventTarget = EventTarget>
+  extends RemixProps<eventTarget>,
+    AriaProps {
   // Standard HTML Attributes
   accesskey?: Trackable<string | undefined>
   accessKey?: Trackable<string | undefined>
@@ -1108,7 +1107,8 @@ export type HTMLAttributeReferrerPolicy =
 
 export type HTMLAttributeAnchorTarget = '_self' | '_blank' | '_parent' | '_top' | (string & {})
 
-export interface PartialAnchorHTMLAttributes<T extends EventTarget> extends HTMLAttributes<T> {
+export interface PartialAnchorHTMLProps<eventTarget extends EventTarget>
+  extends HTMLProps<eventTarget> {
   download?: Trackable<any>
   hreflang?: Trackable<string | undefined>
   hrefLang?: Trackable<string | undefined>
@@ -1148,19 +1148,20 @@ export type AnchorAriaRoles =
       role?: Trackable<AriaRole | undefined>
     }
 
-export type AccessibleAnchorHTMLAttributes<T extends EventTarget = HTMLAnchorElement> = Omit<
-  PartialAnchorHTMLAttributes<T>,
+export type AccessibleAnchorHTMLProps<eventTarget extends EventTarget = HTMLAnchorElement> = Omit<
+  PartialAnchorHTMLProps<eventTarget>,
   'role'
 > &
   AnchorAriaRoles
 
-export interface AnchorHTMLAttributes<T extends EventTarget = HTMLAnchorElement>
-  extends PartialAnchorHTMLAttributes<T> {
+export interface AnchorHTMLProps<eventTarget extends EventTarget = HTMLAnchorElement>
+  extends PartialAnchorHTMLProps<eventTarget> {
   href?: Trackable<string | undefined>
   role?: Trackable<AriaRole | undefined>
 }
 
-export interface PartialAreaHTMLAttributes<T extends EventTarget> extends HTMLAttributes<T> {
+export interface PartialAreaHTMLProps<eventTarget extends EventTarget>
+  extends HTMLProps<eventTarget> {
   alt?: Trackable<string | undefined>
   coords?: Trackable<string | undefined>
   download?: Trackable<any>
@@ -1184,20 +1185,20 @@ export type AreaAriaRoles =
       role?: Trackable<'button' | 'link' | undefined>
     }
 
-export type AccessibleAreaHTMLAttributes<T extends EventTarget = HTMLAreaElement> = Omit<
-  PartialAreaHTMLAttributes<T>,
+export type AccessibleAreaHTMLProps<eventTarget extends EventTarget = HTMLAreaElement> = Omit<
+  PartialAreaHTMLProps<eventTarget>,
   'role'
 > &
   AreaAriaRoles
 
-export interface AreaHTMLAttributes<T extends EventTarget = HTMLAreaElement>
-  extends PartialAreaHTMLAttributes<T> {
+export interface AreaHTMLProps<eventTarget extends EventTarget = HTMLAreaElement>
+  extends PartialAreaHTMLProps<eventTarget> {
   href?: Trackable<string | undefined>
   role?: Trackable<'button' | 'link' | undefined>
 }
 
-export interface ArticleHTMLAttributes<T extends EventTarget = HTMLElement>
-  extends HTMLAttributes<T> {
+export interface ArticleHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<
     | 'article'
     | 'application'
@@ -1211,8 +1212,8 @@ export interface ArticleHTMLAttributes<T extends EventTarget = HTMLElement>
   >
 }
 
-export interface AsideHTMLAttributes<T extends EventTarget = HTMLElement>
-  extends HTMLAttributes<T> {
+export interface AsideHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<
     | 'complementary'
     | 'feed'
@@ -1231,29 +1232,30 @@ export interface AsideHTMLAttributes<T extends EventTarget = HTMLElement>
   >
 }
 
-export interface AudioHTMLAttributes<T extends EventTarget = HTMLAudioElement>
-  extends MediaHTMLAttributes<T> {
+export interface AudioHTMLProps<eventTarget extends EventTarget = HTMLAudioElement>
+  extends MediaHTMLProps<eventTarget> {
   role?: Trackable<'application' | undefined>
 }
 
-export interface BaseHTMLAttributes<T extends EventTarget = HTMLBaseElement>
-  extends HTMLAttributes<T> {
+export interface BaseHTMLProps<eventTarget extends EventTarget = HTMLBaseElement>
+  extends HTMLProps<eventTarget> {
   href?: Trackable<string | undefined>
   role?: never
   target?: Trackable<HTMLAttributeAnchorTarget | undefined>
 }
 
-export interface BlockquoteHTMLAttributes<T extends EventTarget = HTMLQuoteElement>
-  extends HTMLAttributes<T> {
+export interface BlockquoteHTMLProps<eventTarget extends EventTarget = HTMLQuoteElement>
+  extends HTMLProps<eventTarget> {
   cite?: Trackable<string | undefined>
 }
 
-export interface BrHTMLAttributes<T extends EventTarget = HTMLBRElement> extends HTMLAttributes<T> {
+export interface BrHTMLProps<eventTarget extends EventTarget = HTMLBRElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'none' | 'presentation' | undefined>
 }
 
-export interface ButtonHTMLAttributes<T extends EventTarget = HTMLButtonElement>
-  extends HTMLAttributes<T> {
+export interface ButtonHTMLProps<eventTarget extends EventTarget = HTMLButtonElement>
+  extends HTMLProps<eventTarget> {
   command?: Trackable<string | undefined>
   commandfor?: Trackable<string | undefined>
   commandFor?: Trackable<string | undefined>
@@ -1296,79 +1298,81 @@ export interface ButtonHTMLAttributes<T extends EventTarget = HTMLButtonElement>
   value?: Trackable<string | number | undefined>
 }
 
-export interface CanvasHTMLAttributes<T extends EventTarget = HTMLCanvasElement>
-  extends HTMLAttributes<T> {
+export interface CanvasHTMLProps<eventTarget extends EventTarget = HTMLCanvasElement>
+  extends HTMLProps<eventTarget> {
   height?: Trackable<number | string | undefined>
   width?: Trackable<number | string | undefined>
 }
 
-export interface CaptionHTMLAttributes<T extends EventTarget = HTMLElement>
-  extends HTMLAttributes<T> {
+export interface CaptionHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: 'caption'
 }
 
-export interface ColHTMLAttributes<T extends EventTarget = HTMLTableColElement>
-  extends HTMLAttributes<T> {
+export interface ColHTMLProps<eventTarget extends EventTarget = HTMLTableColElement>
+  extends HTMLProps<eventTarget> {
   role?: never
   span?: Trackable<number | undefined>
   width?: Trackable<number | string | undefined>
 }
 
-export interface ColgroupHTMLAttributes<T extends EventTarget = HTMLTableColElement>
-  extends HTMLAttributes<T> {
+export interface ColgroupHTMLProps<eventTarget extends EventTarget = HTMLTableColElement>
+  extends HTMLProps<eventTarget> {
   role?: never
   span?: Trackable<number | undefined>
 }
 
-export interface DataHTMLAttributes<T extends EventTarget = HTMLDataElement>
-  extends HTMLAttributes<T> {
+export interface DataHTMLProps<eventTarget extends EventTarget = HTMLDataElement>
+  extends HTMLProps<eventTarget> {
   value?: Trackable<string | number | undefined>
 }
 
-export interface DataListHTMLAttributes<T extends EventTarget = HTMLDataListElement>
-  extends HTMLAttributes<T> {
+export interface DataListHTMLProps<eventTarget extends EventTarget = HTMLDataListElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'listbox' | undefined>
 }
 
-export interface DdHTMLAttributes<T extends EventTarget = HTMLElement> extends HTMLAttributes<T> {
+export interface DdHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: never
 }
 
-export interface DelHTMLAttributes<T extends EventTarget = HTMLModElement>
-  extends HTMLAttributes<T> {
+export interface DelHTMLProps<eventTarget extends EventTarget = HTMLModElement>
+  extends HTMLProps<eventTarget> {
   cite?: Trackable<string | undefined>
   datetime?: Trackable<string | undefined>
   dateTime?: Trackable<string | undefined>
 }
 
-export interface DetailsHTMLAttributes<T extends EventTarget = HTMLDetailsElement>
-  extends HTMLAttributes<T> {
+export interface DetailsHTMLProps<eventTarget extends EventTarget = HTMLDetailsElement>
+  extends HTMLProps<eventTarget> {
   name?: Trackable<string | undefined>
   open?: Trackable<boolean | undefined>
   role?: Trackable<'group' | undefined>
 }
 
-export interface DialogHTMLAttributes<T extends EventTarget = HTMLDialogElement>
-  extends HTMLAttributes<T> {
-  onCancel?: GenericEventHandler<T> | undefined
-  onClose?: GenericEventHandler<T> | undefined
+export interface DialogHTMLProps<eventTarget extends EventTarget = HTMLDialogElement>
+  extends HTMLProps<eventTarget> {
+  onCancel?: GenericEventHandler<eventTarget> | undefined
+  onClose?: GenericEventHandler<eventTarget> | undefined
   open?: Trackable<boolean | undefined>
   closedby?: Trackable<'none' | 'closerequest' | 'any' | undefined>
   closedBy?: Trackable<'none' | 'closerequest' | 'any' | undefined>
   role?: Trackable<'dialog' | 'alertdialog' | undefined>
 }
 
-export interface DlHTMLAttributes<T extends EventTarget = HTMLDListElement>
-  extends HTMLAttributes<T> {
+export interface DlHTMLProps<eventTarget extends EventTarget = HTMLDListElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'group' | 'list' | 'none' | 'presentation' | undefined>
 }
 
-export interface DtHTMLAttributes<T extends EventTarget = HTMLElement> extends HTMLAttributes<T> {
+export interface DtHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'listitem' | undefined>
 }
 
-export interface EmbedHTMLAttributes<T extends EventTarget = HTMLEmbedElement>
-  extends HTMLAttributes<T> {
+export interface EmbedHTMLProps<eventTarget extends EventTarget = HTMLEmbedElement>
+  extends HTMLProps<eventTarget> {
   height?: Trackable<number | string | undefined>
   role?: Trackable<'application' | 'document' | 'img' | 'none' | 'presentation' | undefined>
   src?: Trackable<string | undefined>
@@ -1376,26 +1380,26 @@ export interface EmbedHTMLAttributes<T extends EventTarget = HTMLEmbedElement>
   width?: Trackable<number | string | undefined>
 }
 
-export interface FieldsetHTMLAttributes<T extends EventTarget = HTMLFieldSetElement>
-  extends HTMLAttributes<T> {
+export interface FieldsetHTMLProps<eventTarget extends EventTarget = HTMLFieldSetElement>
+  extends HTMLProps<eventTarget> {
   disabled?: Trackable<boolean | undefined>
   form?: Trackable<string | undefined>
   name?: Trackable<string | undefined>
   role?: Trackable<'group' | 'none' | 'presentation' | 'radiogroup' | undefined>
 }
 
-export interface FigcaptionHTMLAttributes<T extends EventTarget = HTMLElement>
-  extends HTMLAttributes<T> {
+export interface FigcaptionHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'group' | 'none' | 'presentation' | undefined>
 }
 
-export interface FooterHTMLAttributes<T extends EventTarget = HTMLElement>
-  extends HTMLAttributes<T> {
+export interface FooterHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'contentinfo' | 'group' | 'none' | 'presentation' | 'doc-footnote' | undefined>
 }
 
-export interface FormHTMLAttributes<T extends EventTarget = HTMLFormElement>
-  extends HTMLAttributes<T> {
+export interface FormHTMLProps<eventTarget extends EventTarget = HTMLFormElement>
+  extends HTMLProps<eventTarget> {
   'accept-charset'?: Trackable<string | undefined>
   acceptCharset?: Trackable<string | undefined>
   action?: Trackable<string | undefined>
@@ -1412,32 +1416,33 @@ export interface FormHTMLAttributes<T extends EventTarget = HTMLFormElement>
   target?: Trackable<string | undefined>
 }
 
-export interface HeadingHTMLAttributes<T extends EventTarget = HTMLHeadingElement>
-  extends HTMLAttributes<T> {
+export interface HeadingHTMLProps<eventTarget extends EventTarget = HTMLHeadingElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'heading' | 'none' | 'presentation' | 'tab' | 'doc-subtitle' | undefined>
 }
 
-export interface HeadHTMLAttributes<T extends EventTarget = HTMLHeadElement>
-  extends HTMLAttributes<T> {
+export interface HeadHTMLProps<eventTarget extends EventTarget = HTMLHeadElement>
+  extends HTMLProps<eventTarget> {
   role?: never
 }
 
-export interface HeaderHTMLAttributes<T extends EventTarget = HTMLElement>
-  extends HTMLAttributes<T> {
+export interface HeaderHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'banner' | 'group' | 'none' | 'presentation' | undefined>
 }
 
-export interface HrHTMLAttributes<T extends EventTarget = HTMLHRElement> extends HTMLAttributes<T> {
+export interface HrHTMLProps<eventTarget extends EventTarget = HTMLHRElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'separator' | 'none' | 'presentation' | 'doc-pagebreak' | undefined>
 }
 
-export interface HtmlHTMLAttributes<T extends EventTarget = HTMLHtmlElement>
-  extends HTMLAttributes<T> {
+export interface HtmlHTMLProps<eventTarget extends EventTarget = HTMLHtmlElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'document' | undefined>
 }
 
-export interface IframeHTMLAttributes<T extends EventTarget = HTMLIFrameElement>
-  extends HTMLAttributes<T> {
+export interface IframeHTMLProps<eventTarget extends EventTarget = HTMLIFrameElement>
+  extends HTMLProps<eventTarget> {
   allow?: Trackable<string | undefined>
   allowFullScreen?: Trackable<boolean | undefined>
   allowTransparency?: Trackable<boolean | undefined>
@@ -1467,7 +1472,8 @@ export interface IframeHTMLAttributes<T extends EventTarget = HTMLIFrameElement>
 
 export type HTMLAttributeCrossOrigin = 'anonymous' | 'use-credentials'
 
-export interface PartialImgHTMLAttributes<T extends EventTarget> extends HTMLAttributes<T> {
+export interface PartialImgHTMLProps<eventTarget extends EventTarget>
+  extends HTMLProps<eventTarget> {
   crossorigin?: Trackable<HTMLAttributeCrossOrigin>
   crossOrigin?: Trackable<HTMLAttributeCrossOrigin>
   decoding?: Trackable<'async' | 'auto' | 'sync' | undefined>
@@ -1533,14 +1539,14 @@ export type ImgAriaRoles =
       role?: Trackable<'img' | 'none' | 'presentation' | undefined>
     }
 
-export type AccessibleImgHTMLAttributes<T extends EventTarget = HTMLImageElement> = Omit<
-  PartialImgHTMLAttributes<T>,
+export type AccessibleImgHTMLProps<eventTarget extends EventTarget = HTMLImageElement> = Omit<
+  PartialImgHTMLProps<eventTarget>,
   'role' | 'aria-label' | 'aria-labelledby' | 'title'
 > &
   ImgAriaRoles
 
-export interface ImgHTMLAttributes<T extends EventTarget = HTMLImageElement>
-  extends PartialImgHTMLAttributes<T> {
+export interface ImgHTMLProps<eventTarget extends EventTarget = HTMLImageElement>
+  extends PartialImgHTMLProps<eventTarget> {
   alt?: Trackable<string | undefined>
   'aria-label'?: Trackable<string | undefined>
   'aria-labelledby'?: Trackable<string | undefined>
@@ -1573,7 +1579,8 @@ export type HTMLInputTypeAttribute =
   | 'url'
   | 'week'
 
-export interface PartialInputHTMLAttributes<T extends EventTarget> extends HTMLAttributes<T> {
+export interface PartialInputHTMLProps<eventTarget extends EventTarget>
+  extends HTMLProps<eventTarget> {
   accept?: Trackable<string | undefined>
   alt?: Trackable<string | undefined>
   autocomplete?: Trackable<string | undefined>
@@ -1617,7 +1624,7 @@ export interface PartialInputHTMLAttributes<T extends EventTarget> extends HTMLA
   step?: Trackable<number | string | undefined>
   value?: Trackable<string | number | undefined>
   width?: Trackable<number | string | undefined>
-  onChange?: GenericEventHandler<T> | undefined
+  onChange?: GenericEventHandler<eventTarget> | undefined
 }
 
 export type InputAriaRoles =
@@ -1764,14 +1771,14 @@ export type InputAriaRoles =
       role?: never
     }
 
-export type AccessibleInputHTMLAttributes<T extends EventTarget = HTMLInputElement> = Omit<
-  PartialInputHTMLAttributes<T>,
+export type AccessibleInputHTMLProps<eventTarget extends EventTarget = HTMLInputElement> = Omit<
+  PartialInputHTMLProps<eventTarget>,
   'role'
 > &
   InputAriaRoles
 
-export interface InputHTMLAttributes<T extends EventTarget = HTMLInputElement>
-  extends PartialInputHTMLAttributes<T> {
+export interface InputHTMLProps<eventTarget extends EventTarget = HTMLInputElement>
+  extends PartialInputHTMLProps<eventTarget> {
   type?: Trackable<HTMLInputTypeAttribute | undefined>
   role?: Trackable<
     | 'button'
@@ -1796,15 +1803,15 @@ export interface InputHTMLAttributes<T extends EventTarget = HTMLInputElement>
   >
 }
 
-export interface InsHTMLAttributes<T extends EventTarget = HTMLModElement>
-  extends HTMLAttributes<T> {
+export interface InsHTMLProps<eventTarget extends EventTarget = HTMLModElement>
+  extends HTMLProps<eventTarget> {
   cite?: Trackable<string | undefined>
   datetime?: Trackable<string | undefined>
   dateTime?: Trackable<string | undefined>
 }
 
-export interface KeygenHTMLAttributes<T extends EventTarget = HTMLUnknownElement>
-  extends HTMLAttributes<T> {
+export interface KeygenHTMLProps<eventTarget extends EventTarget = HTMLUnknownElement>
+  extends HTMLProps<eventTarget> {
   challenge?: Trackable<string | undefined>
   disabled?: Trackable<boolean | undefined>
   form?: Trackable<string | undefined>
@@ -1813,25 +1820,26 @@ export interface KeygenHTMLAttributes<T extends EventTarget = HTMLUnknownElement
   name?: Trackable<string | undefined>
 }
 
-export interface LabelHTMLAttributes<T extends EventTarget = HTMLLabelElement>
-  extends HTMLAttributes<T> {
+export interface LabelHTMLProps<eventTarget extends EventTarget = HTMLLabelElement>
+  extends HTMLProps<eventTarget> {
   for?: Trackable<string | undefined>
   form?: Trackable<string | undefined>
   htmlFor?: Trackable<string | undefined>
   role?: never
 }
 
-export interface LegendHTMLAttributes<T extends EventTarget = HTMLLegendElement>
-  extends HTMLAttributes<T> {
+export interface LegendHTMLProps<eventTarget extends EventTarget = HTMLLegendElement>
+  extends HTMLProps<eventTarget> {
   role?: never
 }
 
-export interface LiHTMLAttributes<T extends EventTarget = HTMLLIElement> extends HTMLAttributes<T> {
+export interface LiHTMLProps<eventTarget extends EventTarget = HTMLLIElement>
+  extends HTMLProps<eventTarget> {
   value?: Trackable<string | number | undefined>
 }
 
-export interface LinkHTMLAttributes<T extends EventTarget = HTMLLinkElement>
-  extends HTMLAttributes<T> {
+export interface LinkHTMLProps<eventTarget extends EventTarget = HTMLLinkElement>
+  extends HTMLProps<eventTarget> {
   as?: Trackable<string | undefined>
   crossorigin?: Trackable<HTMLAttributeCrossOrigin>
   crossOrigin?: Trackable<HTMLAttributeCrossOrigin>
@@ -1853,18 +1861,19 @@ export interface LinkHTMLAttributes<T extends EventTarget = HTMLLinkElement>
   charSet?: Trackable<string | undefined>
 }
 
-export interface MainHTMLAttributes<T extends EventTarget = HTMLElement> extends HTMLAttributes<T> {
+export interface MainHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'main' | undefined>
 }
 
-export interface MapHTMLAttributes<T extends EventTarget = HTMLMapElement>
-  extends HTMLAttributes<T> {
+export interface MapHTMLProps<eventTarget extends EventTarget = HTMLMapElement>
+  extends HTMLProps<eventTarget> {
   name?: Trackable<string | undefined>
   role?: never
 }
 
-export interface MarqueeHTMLAttributes<T extends EventTarget = HTMLMarqueeElement>
-  extends HTMLAttributes<T> {
+export interface MarqueeHTMLProps<eventTarget extends EventTarget = HTMLMarqueeElement>
+  extends HTMLProps<eventTarget> {
   behavior?: Trackable<'scroll' | 'slide' | 'alternate' | undefined>
   bgColor?: Trackable<string | undefined>
   direction?: Trackable<'left' | 'right' | 'up' | 'down' | undefined>
@@ -1878,8 +1887,8 @@ export interface MarqueeHTMLAttributes<T extends EventTarget = HTMLMarqueeElemen
   width?: Trackable<number | string | undefined>
 }
 
-export interface MediaHTMLAttributes<T extends EventTarget = HTMLMediaElement>
-  extends HTMLAttributes<T> {
+export interface MediaHTMLProps<eventTarget extends EventTarget = HTMLMediaElement>
+  extends HTMLProps<eventTarget> {
   autoplay?: Trackable<boolean | undefined>
   autoPlay?: Trackable<boolean | undefined>
   controls?: Trackable<boolean | undefined>
@@ -1903,8 +1912,8 @@ export interface MediaHTMLAttributes<T extends EventTarget = HTMLMediaElement>
   volume?: Trackable<string | number | undefined>
 }
 
-export interface MenuHTMLAttributes<T extends EventTarget = HTMLMenuElement>
-  extends HTMLAttributes<T> {
+export interface MenuHTMLProps<eventTarget extends EventTarget = HTMLMenuElement>
+  extends HTMLProps<eventTarget> {
   role:
     | 'list'
     | 'group'
@@ -1920,8 +1929,8 @@ export interface MenuHTMLAttributes<T extends EventTarget = HTMLMenuElement>
   type?: Trackable<string | undefined>
 }
 
-export interface MetaHTMLAttributes<T extends EventTarget = HTMLMetaElement>
-  extends HTMLAttributes<T> {
+export interface MetaHTMLProps<eventTarget extends EventTarget = HTMLMetaElement>
+  extends HTMLProps<eventTarget> {
   charset?: Trackable<string | undefined>
   charSet?: Trackable<string | undefined>
   content?: Trackable<string | undefined>
@@ -1932,8 +1941,8 @@ export interface MetaHTMLAttributes<T extends EventTarget = HTMLMetaElement>
   role?: never
 }
 
-export interface MeterHTMLAttributes<T extends EventTarget = HTMLMeterElement>
-  extends HTMLAttributes<T> {
+export interface MeterHTMLProps<eventTarget extends EventTarget = HTMLMeterElement>
+  extends HTMLProps<eventTarget> {
   form?: Trackable<string | undefined>
   high?: Trackable<number | undefined>
   low?: Trackable<number | undefined>
@@ -1944,19 +1953,20 @@ export interface MeterHTMLAttributes<T extends EventTarget = HTMLMeterElement>
   value?: Trackable<string | number | undefined>
 }
 
-export interface NavHTMLAttributes<T extends EventTarget = HTMLElement> extends HTMLAttributes<T> {
+export interface NavHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<
     'navigation' | 'menu' | 'menubar' | 'none' | 'presentation' | 'tablist' | undefined
   >
 }
 
-export interface NoScriptHTMLAttributes<T extends EventTarget = HTMLElement>
-  extends HTMLAttributes<T> {
+export interface NoScriptHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: never
 }
 
-export interface ObjectHTMLAttributes<T extends EventTarget = HTMLObjectElement>
-  extends HTMLAttributes<T> {
+export interface ObjectHTMLProps<eventTarget extends EventTarget = HTMLObjectElement>
+  extends HTMLProps<eventTarget> {
   classID?: Trackable<string | undefined>
   data?: Trackable<string | undefined>
   form?: Trackable<string | undefined>
@@ -1970,8 +1980,8 @@ export interface ObjectHTMLAttributes<T extends EventTarget = HTMLObjectElement>
   wmode?: Trackable<string | undefined>
 }
 
-export interface OlHTMLAttributes<T extends EventTarget = HTMLOListElement>
-  extends HTMLAttributes<T> {
+export interface OlHTMLProps<eventTarget extends EventTarget = HTMLOListElement>
+  extends HTMLProps<eventTarget> {
   reversed?: Trackable<boolean | undefined>
   role?: Trackable<
     | 'list'
@@ -1991,15 +2001,15 @@ export interface OlHTMLAttributes<T extends EventTarget = HTMLOListElement>
   type?: Trackable<'1' | 'a' | 'A' | 'i' | 'I' | undefined>
 }
 
-export interface OptgroupHTMLAttributes<T extends EventTarget = HTMLOptGroupElement>
-  extends HTMLAttributes<T> {
+export interface OptgroupHTMLProps<eventTarget extends EventTarget = HTMLOptGroupElement>
+  extends HTMLProps<eventTarget> {
   disabled?: Trackable<boolean | undefined>
   label?: Trackable<string | undefined>
   role?: Trackable<'group' | undefined>
 }
 
-export interface OptionHTMLAttributes<T extends EventTarget = HTMLOptionElement>
-  extends HTMLAttributes<T> {
+export interface OptionHTMLProps<eventTarget extends EventTarget = HTMLOptionElement>
+  extends HTMLProps<eventTarget> {
   disabled?: Trackable<boolean | undefined>
   label?: Trackable<string | undefined>
   role?: Trackable<'option' | undefined>
@@ -2007,40 +2017,40 @@ export interface OptionHTMLAttributes<T extends EventTarget = HTMLOptionElement>
   value?: Trackable<string | number | undefined>
 }
 
-export interface OutputHTMLAttributes<T extends EventTarget = HTMLOutputElement>
-  extends HTMLAttributes<T> {
+export interface OutputHTMLProps<eventTarget extends EventTarget = HTMLOutputElement>
+  extends HTMLProps<eventTarget> {
   for?: Trackable<string | undefined>
   form?: Trackable<string | undefined>
   htmlFor?: Trackable<string | undefined>
   name?: Trackable<string | undefined>
 }
 
-export interface ParamHTMLAttributes<T extends EventTarget = HTMLParamElement>
-  extends HTMLAttributes<T> {
+export interface ParamHTMLProps<eventTarget extends EventTarget = HTMLParamElement>
+  extends HTMLProps<eventTarget> {
   name?: Trackable<string | undefined>
   role?: never
   value?: Trackable<string | number | undefined>
 }
 
-export interface PictureHTMLAttributes<T extends EventTarget = HTMLPictureElement>
-  extends HTMLAttributes<T> {
+export interface PictureHTMLProps<eventTarget extends EventTarget = HTMLPictureElement>
+  extends HTMLProps<eventTarget> {
   role?: never
 }
 
-export interface ProgressHTMLAttributes<T extends EventTarget = HTMLProgressElement>
-  extends HTMLAttributes<T> {
+export interface ProgressHTMLProps<eventTarget extends EventTarget = HTMLProgressElement>
+  extends HTMLProps<eventTarget> {
   max?: Trackable<number | string | undefined>
   role?: Trackable<'progressbar' | undefined>
   value?: Trackable<string | number | undefined>
 }
 
-export interface QuoteHTMLAttributes<T extends EventTarget = HTMLQuoteElement>
-  extends HTMLAttributes<T> {
+export interface QuoteHTMLProps<eventTarget extends EventTarget = HTMLQuoteElement>
+  extends HTMLProps<eventTarget> {
   cite?: Trackable<string | undefined>
 }
 
-export interface ScriptHTMLAttributes<T extends EventTarget = HTMLScriptElement>
-  extends HTMLAttributes<T> {
+export interface ScriptHTMLProps<eventTarget extends EventTarget = HTMLScriptElement>
+  extends HTMLProps<eventTarget> {
   async?: Trackable<boolean | undefined>
   /** @deprecated */
   charset?: Trackable<string | undefined>
@@ -2059,12 +2069,13 @@ export interface ScriptHTMLAttributes<T extends EventTarget = HTMLScriptElement>
   type?: Trackable<string | undefined>
 }
 
-export interface SearchHTMLAttributes<T extends EventTarget = HTMLElement>
-  extends HTMLAttributes<T> {
+export interface SearchHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'search' | 'form' | 'group' | 'none' | 'presentation' | 'region' | undefined>
 }
 
-export interface PartialSelectHTMLAttributes<T extends EventTarget> extends HTMLAttributes<T> {
+export interface PartialSelectHTMLProps<eventTarget extends EventTarget>
+  extends HTMLProps<eventTarget> {
   autocomplete?: Trackable<string | undefined>
   autoComplete?: Trackable<string | undefined>
   defaultValue?: Trackable<string | number | undefined>
@@ -2074,7 +2085,7 @@ export interface PartialSelectHTMLAttributes<T extends EventTarget> extends HTML
   required?: Trackable<boolean | undefined>
   size?: Trackable<number | undefined>
   value?: Trackable<string | number | undefined>
-  onChange?: GenericEventHandler<T> | undefined
+  onChange?: GenericEventHandler<eventTarget> | undefined
 }
 
 export type SelectAriaRoles =
@@ -2091,28 +2102,28 @@ export type SelectAriaRoles =
       role?: Trackable<'listbox' | undefined>
     }
 
-export type AccessibleSelectHTMLAttributes<T extends EventTarget = HTMLSelectElement> = Omit<
-  PartialSelectHTMLAttributes<T>,
+export type AccessibleSelectHTMLProps<eventTarget extends EventTarget = HTMLSelectElement> = Omit<
+  PartialSelectHTMLProps<eventTarget>,
   'role'
 > &
   SelectAriaRoles
 
-export interface SelectHTMLAttributes<T extends EventTarget = HTMLSelectElement>
-  extends PartialSelectHTMLAttributes<T> {
+export interface SelectHTMLProps<eventTarget extends EventTarget = HTMLSelectElement>
+  extends PartialSelectHTMLProps<eventTarget> {
   multiple?: Trackable<boolean | undefined>
   size?: Trackable<number | undefined>
   type?: Trackable<HTMLInputTypeAttribute | undefined>
   role?: Trackable<'combobox' | 'listbox' | 'menu' | undefined>
 }
 
-export interface SlotHTMLAttributes<T extends EventTarget = HTMLSlotElement>
-  extends HTMLAttributes<T> {
+export interface SlotHTMLProps<eventTarget extends EventTarget = HTMLSlotElement>
+  extends HTMLProps<eventTarget> {
   name?: Trackable<string | undefined>
   role?: never
 }
 
-export interface SourceHTMLAttributes<T extends EventTarget = HTMLSourceElement>
-  extends HTMLAttributes<T> {
+export interface SourceHTMLProps<eventTarget extends EventTarget = HTMLSourceElement>
+  extends HTMLProps<eventTarget> {
   height?: Trackable<number | string | undefined>
   media?: Trackable<string | undefined>
   role?: never
@@ -2124,24 +2135,24 @@ export interface SourceHTMLAttributes<T extends EventTarget = HTMLSourceElement>
   width?: Trackable<number | string | undefined>
 }
 
-export interface StyleHTMLAttributes<T extends EventTarget = HTMLStyleElement>
-  extends HTMLAttributes<T> {
+export interface StyleHTMLProps<eventTarget extends EventTarget = HTMLStyleElement>
+  extends HTMLProps<eventTarget> {
   media?: Trackable<string | undefined>
   role?: never
   scoped?: Trackable<boolean | undefined>
   type?: Trackable<string | undefined>
 }
 
-export interface TableHTMLAttributes<T extends EventTarget = HTMLTableElement>
-  extends HTMLAttributes<T> {
+export interface TableHTMLProps<eventTarget extends EventTarget = HTMLTableElement>
+  extends HTMLProps<eventTarget> {
   cellPadding?: Trackable<string | undefined>
   cellSpacing?: Trackable<string | undefined>
   summary?: Trackable<string | undefined>
   width?: Trackable<number | string | undefined>
 }
 
-export interface TdHTMLAttributes<T extends EventTarget = HTMLTableCellElement>
-  extends HTMLAttributes<T> {
+export interface TdHTMLProps<eventTarget extends EventTarget = HTMLTableCellElement>
+  extends HTMLProps<eventTarget> {
   align?: Trackable<'left' | 'center' | 'right' | 'justify' | 'char' | undefined>
   colspan?: Trackable<number | undefined>
   colSpan?: Trackable<number | undefined>
@@ -2155,13 +2166,13 @@ export interface TdHTMLAttributes<T extends EventTarget = HTMLTableCellElement>
   valign?: Trackable<'top' | 'middle' | 'bottom' | 'baseline' | undefined>
 }
 
-export interface TemplateHTMLAttributes<T extends EventTarget = HTMLTemplateElement>
-  extends HTMLAttributes<T> {
+export interface TemplateHTMLProps<eventTarget extends EventTarget = HTMLTemplateElement>
+  extends HTMLProps<eventTarget> {
   role?: never
 }
 
-export interface TextareaHTMLAttributes<T extends EventTarget = HTMLTextAreaElement>
-  extends HTMLAttributes<T> {
+export interface TextareaHTMLProps<eventTarget extends EventTarget = HTMLTextAreaElement>
+  extends HTMLProps<eventTarget> {
   autocomplete?: Trackable<string | undefined>
   autoComplete?: Trackable<string | undefined>
   cols?: Trackable<number | undefined>
@@ -2181,11 +2192,11 @@ export interface TextareaHTMLAttributes<T extends EventTarget = HTMLTextAreaElem
   rows?: Trackable<number | undefined>
   value?: Trackable<string | number | undefined>
   wrap?: Trackable<string | undefined>
-  onChange?: GenericEventHandler<T> | undefined
+  onChange?: GenericEventHandler<eventTarget> | undefined
 }
 
-export interface ThHTMLAttributes<T extends EventTarget = HTMLTableCellElement>
-  extends HTMLAttributes<T> {
+export interface ThHTMLProps<eventTarget extends EventTarget = HTMLTableCellElement>
+  extends HTMLProps<eventTarget> {
   align?: Trackable<'left' | 'center' | 'right' | 'justify' | 'char' | undefined>
   colspan?: Trackable<number | undefined>
   colSpan?: Trackable<number | undefined>
@@ -2196,19 +2207,19 @@ export interface ThHTMLAttributes<T extends EventTarget = HTMLTableCellElement>
   abbr?: Trackable<string | undefined>
 }
 
-export interface TimeHTMLAttributes<T extends EventTarget = HTMLTimeElement>
-  extends HTMLAttributes<T> {
+export interface TimeHTMLProps<eventTarget extends EventTarget = HTMLTimeElement>
+  extends HTMLProps<eventTarget> {
   datetime?: Trackable<string | undefined>
   dateTime?: Trackable<string | undefined>
 }
 
-export interface TitleHTMLAttributes<T extends EventTarget = HTMLTitleElement>
-  extends HTMLAttributes<T> {
+export interface TitleHTMLProps<eventTarget extends EventTarget = HTMLTitleElement>
+  extends HTMLProps<eventTarget> {
   role?: never
 }
 
-export interface TrackHTMLAttributes<T extends EventTarget = HTMLTrackElement>
-  extends MediaHTMLAttributes<T> {
+export interface TrackHTMLProps<eventTarget extends EventTarget = HTMLTrackElement>
+  extends MediaHTMLProps<eventTarget> {
   default?: Trackable<boolean | undefined>
   kind?: Trackable<string | undefined>
   label?: Trackable<string | undefined>
@@ -2217,8 +2228,8 @@ export interface TrackHTMLAttributes<T extends EventTarget = HTMLTrackElement>
   srcLang?: Trackable<string | undefined>
 }
 
-export interface UlHTMLAttributes<T extends EventTarget = HTMLUListElement>
-  extends HTMLAttributes<T> {
+export interface UlHTMLProps<eventTarget extends EventTarget = HTMLUListElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<
     | 'list'
     | 'group'
@@ -2235,8 +2246,8 @@ export interface UlHTMLAttributes<T extends EventTarget = HTMLUListElement>
   >
 }
 
-export interface VideoHTMLAttributes<T extends EventTarget = HTMLVideoElement>
-  extends MediaHTMLAttributes<T> {
+export interface VideoHTMLProps<eventTarget extends EventTarget = HTMLVideoElement>
+  extends MediaHTMLProps<eventTarget> {
   disablePictureInPicture?: Trackable<boolean | undefined>
   height?: Trackable<number | string | undefined>
   playsinline?: Trackable<boolean | undefined>
@@ -2246,17 +2257,17 @@ export interface VideoHTMLAttributes<T extends EventTarget = HTMLVideoElement>
   role?: Trackable<'application' | undefined>
 }
 
-export interface WbrHTMLAttributes<T extends EventTarget = HTMLElement> extends HTMLAttributes<T> {
+export interface WbrHTMLProps<eventTarget extends EventTarget = HTMLElement>
+  extends HTMLProps<eventTarget> {
   role?: Trackable<'none' | 'presentation' | undefined>
 }
 
 export type DetailedHTMLProps<
-  HA extends HTMLAttributes<RefType>,
+  HA extends HTMLProps<RefType>,
   RefType extends EventTarget = EventTarget,
 > = HA
 
-export interface MathMLAttributes<Target extends EventTarget = MathMLElement>
-  extends HTMLAttributes<Target> {
+export interface MathMLProps<Target extends EventTarget = MathMLElement> extends HTMLProps<Target> {
   dir?: Trackable<'ltr' | 'rtl' | undefined>
   displaystyle?: Trackable<boolean | undefined>
   /** @deprecated This feature is non-standard. See https://developer.mozilla.org/en-US/docs/Web/MathML/Global_attributes/href  */
@@ -2271,42 +2282,49 @@ export interface MathMLAttributes<Target extends EventTarget = MathMLElement>
   scriptlevel?: Trackable<string | undefined>
 }
 
-export interface AnnotationMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface AnnotationMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   encoding?: Trackable<string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/semantics#src */
   src?: Trackable<string | undefined>
 }
 
-export interface AnnotationXmlMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface AnnotationXmlMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   encoding?: Trackable<string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/semantics#src */
   src?: Trackable<string | undefined>
 }
 
-export interface MActionMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MActionMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/maction#actiontype */
   actiontype?: Trackable<'statusline' | 'toggle' | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/maction#selection */
   selection?: Trackable<string | undefined>
 }
 
-export interface MathMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MathMathMLProps<eventTarget extends EventTarget> extends MathMLProps<eventTarget> {
   display?: Trackable<'block' | 'inline' | undefined>
 }
 
-export interface MEncloseMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MEncloseMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   notation?: Trackable<string | undefined>
 }
 
-export interface MErrorMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {}
+export interface MErrorMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {}
 
-export interface MFencedMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MFencedMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   close?: Trackable<string | undefined>
   open?: Trackable<string | undefined>
   separators?: Trackable<string | undefined>
 }
 
-export interface MFracMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MFracMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mfrac#denomalign */
   denomalign?: Trackable<'center' | 'left' | 'right' | undefined>
   linethickness?: Trackable<string | undefined>
@@ -2314,7 +2332,7 @@ export interface MFracMathMLAttributes<T extends EventTarget> extends MathMLAttr
   numalign?: Trackable<'center' | 'left' | 'right' | undefined>
 }
 
-export interface MiMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MiMathMLProps<eventTarget extends EventTarget> extends MathMLProps<eventTarget> {
   /** The only value allowed in the current specification is normal (case insensitive)
    * See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mi#mathvariant */
   mathvariant?: Trackable<
@@ -2340,16 +2358,17 @@ export interface MiMathMLAttributes<T extends EventTarget> extends MathMLAttribu
   >
 }
 
-export interface MmultiScriptsMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MmultiScriptsMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mmultiscripts#subscriptshift */
   subscriptshift?: Trackable<string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mmultiscripts#superscriptshift */
   superscriptshift?: Trackable<string | undefined>
 }
 
-export interface MNMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {}
+export interface MNMathMLProps<eventTarget extends EventTarget> extends MathMLProps<eventTarget> {}
 
-export interface MOMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MOMathMLProps<eventTarget extends EventTarget> extends MathMLProps<eventTarget> {
   /** Non-standard attribute See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mo#accent */
   accent?: Trackable<boolean | undefined>
   fence?: Trackable<boolean | undefined>
@@ -2364,11 +2383,13 @@ export interface MOMathMLAttributes<T extends EventTarget> extends MathMLAttribu
   symmetric?: Trackable<boolean | undefined>
 }
 
-export interface MOverMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MOverMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   accent?: Trackable<boolean | undefined>
 }
 
-export interface MPaddedMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MPaddedMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   depth?: Trackable<string | undefined>
   height?: Trackable<string | undefined>
   lspace?: Trackable<string | undefined>
@@ -2376,30 +2397,37 @@ export interface MPaddedMathMLAttributes<T extends EventTarget> extends MathMLAt
   width?: Trackable<string | undefined>
 }
 
-export interface MPhantomMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {}
+export interface MPhantomMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {}
 
-export interface MPrescriptsMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {}
+export interface MPrescriptsMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {}
 
-export interface MRootMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {}
+export interface MRootMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {}
 
-export interface MRowMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {}
+export interface MRowMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {}
 
-export interface MSMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MSMathMLProps<eventTarget extends EventTarget> extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/ms#browser_compatibility */
   lquote?: Trackable<string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/ms#browser_compatibility */
   rquote?: Trackable<string | undefined>
 }
 
-export interface MSpaceMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MSpaceMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   depth?: Trackable<string | undefined>
   height?: Trackable<string | undefined>
   width?: Trackable<string | undefined>
 }
 
-export interface MSqrtMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {}
+export interface MSqrtMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {}
 
-export interface MStyleMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MStyleMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mstyle#background */
   background?: Trackable<string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mstyle#color */
@@ -2416,24 +2444,26 @@ export interface MStyleMathMLAttributes<T extends EventTarget> extends MathMLAtt
   scriptsizemultiplier?: Trackable<string | undefined>
 }
 
-export interface MSubMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MSubMathMLProps<eventTarget extends EventTarget> extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/msub#subscriptshift */
   subscriptshift?: Trackable<string | undefined>
 }
 
-export interface MSubsupMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MSubsupMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/msubsup#subscriptshift */
   subscriptshift?: Trackable<string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/msubsup#superscriptshift */
   superscriptshift?: Trackable<string | undefined>
 }
 
-export interface MSupMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MSupMathMLProps<eventTarget extends EventTarget> extends MathMLProps<eventTarget> {
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/msup#superscriptshift */
   superscriptshift?: Trackable<string | undefined>
 }
 
-export interface MTableMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MTableMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   /** Non-standard attribute See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mtable#align */
   align?: Trackable<'axis' | 'baseline' | 'bottom' | 'center' | 'top' | undefined>
   /** Non-standard attribute See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mtable#columnalign */
@@ -2456,7 +2486,7 @@ export interface MTableMathMLAttributes<T extends EventTarget> extends MathMLAtt
   width?: Trackable<string | undefined>
 }
 
-export interface MTdMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MTdMathMLProps<eventTarget extends EventTarget> extends MathMLProps<eventTarget> {
   columnspan?: Trackable<number | undefined>
   rowspan?: Trackable<number | undefined>
   /** Non-standard attribute See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mtd#columnalign */
@@ -2465,22 +2495,26 @@ export interface MTdMathMLAttributes<T extends EventTarget> extends MathMLAttrib
   rowalign?: Trackable<'axis' | 'baseline' | 'bottom' | 'center' | 'top' | undefined>
 }
 
-export interface MTextMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {}
+export interface MTextMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {}
 
-export interface MTrMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MTrMathMLProps<eventTarget extends EventTarget> extends MathMLProps<eventTarget> {
   /** Non-standard attribute See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mtr#columnalign */
   columnalign?: Trackable<'center' | 'left' | 'right' | undefined>
   /** Non-standard attribute See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mtr#rowalign */
   rowalign?: Trackable<'axis' | 'baseline' | 'bottom' | 'center' | 'top' | undefined>
 }
 
-export interface MUnderMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MUnderMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   accentunder?: Trackable<boolean | undefined>
 }
 
-export interface MUnderoverMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {
+export interface MUnderoverMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {
   accent?: Trackable<boolean | undefined>
   accentunder?: Trackable<boolean | undefined>
 }
 
-export interface SemanticsMathMLAttributes<T extends EventTarget> extends MathMLAttributes<T> {}
+export interface SemanticsMathMLProps<eventTarget extends EventTarget>
+  extends MathMLProps<eventTarget> {}
