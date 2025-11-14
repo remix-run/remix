@@ -19,6 +19,31 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   })
   ```
 
+- Add `file` response helper for serving files
+
+  ```tsx
+  import * as res from '@remix-run/fetch-router/response-helpers'
+  import { findFile } from '@remix-run/lazy-file/fs'
+
+  router.get('/assets/:filename', async ({ request, params }) => {
+    let file = await findFile('./public/assets', params.filename)
+    if (!file) {
+      return new Response('Not Found', { status: 404 })
+    }
+    return res.file(file, request)
+  })
+  ```
+
+- Add `staticFiles` middleware for serving static files
+
+  ```tsx
+  import { staticFiles } from '@remix-run/fetch-router/static-middleware'
+
+  let router = createRouter({
+    middleware: [staticFiles('./public')],
+  })
+  ```
+
 ## v0.8.0 (2025-11-03)
 
 - BREAKING CHANGE: Rework how middleware works in the router. This change has far-reaching implications.

@@ -72,6 +72,10 @@ headers.acceptLanguage.getPreferred(['en', 'fr']) // 'en'
 // Accept-Ranges
 headers.acceptRanges = 'bytes'
 
+// Allow
+headers.allow = ['GET', 'POST', 'PUT']
+headers.get('Allow') // 'GET, POST, PUT'
+
 // Connection
 headers.connection = 'close'
 
@@ -106,17 +110,41 @@ headers.get('Cookie') // 'session_id=abc123; user_id=12345; theme=dark'
 // Host
 headers.host = 'example.com'
 
+// If-Match
+headers.ifMatch = ['67ab43', '54ed21']
+headers.get('If-Match') // '"67ab43", "54ed21"'
+
+headers.ifMatch.matches('67ab43') // true
+headers.ifMatch.matches('abc123') // false
+
 // If-None-Match
 headers.ifNoneMatch = ['67ab43', '54ed21']
 headers.get('If-None-Match') // '"67ab43", "54ed21"'
 
+headers.ifNoneMatch.matches('67ab43') // true
+headers.ifNoneMatch.matches('abc123') // false
+
+// If-Range
+headers.ifRange = new Date('2021-01-01T00:00:00Z')
+headers.get('If-Range') // 'Fri, 01 Jan 2021 00:00:00 GMT'
+
+headers.ifRange.matches({ lastModified: 1609459200000 }) // true (timestamp)
+headers.ifRange.matches({ lastModified: new Date('2021-01-01T00:00:00Z') }) // true (Date)
+
 // Last-Modified
-headers.lastModified = new Date()
-// or headers.lastModified = new Date().getTime();
-headers.get('Last-Modified') // 'Fri, 20 Dec 2024 08:08:05 GMT'
+headers.lastModified = new Date('2021-01-01T00:00:00Z')
+// or headers.lastModified = new Date('2021-01-01T00:00:00Z').getTime();
+headers.get('Last-Modified') // 'Fri, 01 Jan 2021 00:00:00 GMT'
 
 // Location
 headers.location = 'https://example.com'
+
+// Range
+headers.range = 'bytes=200-1000'
+
+headers.range.unit // "bytes"
+headers.range.ranges // [{ start: 200, end: 1000 }]
+headers.range.canSatisfy(2000) // true
 
 // Referer
 headers.referer = 'https://example.com/'
@@ -369,6 +397,34 @@ let header = new ContentType({
 })
 ```
 
+### Content-Range
+
+```ts
+import { ContentRange } from '@remix-run/headers'
+
+// Satisfied range
+let header = new ContentRange('bytes 200-1000/67589')
+header.unit // "bytes"
+header.start // 200
+header.end // 1000
+header.size // 67589
+
+// Unsatisfied range
+let header = new ContentRange('bytes */67589')
+header.unit // "bytes"
+header.start // null
+header.end // null
+header.size // 67589
+
+// Alternative init style
+let header = new ContentRange({
+  unit: 'bytes',
+  start: 200,
+  end: 1000,
+  size: 67589,
+})
+```
+
 ### Cookie
 
 ```ts
@@ -393,6 +449,31 @@ let header = new Cookie([
 ])
 ```
 
+### If-Match
+
+```ts
+import { IfMatch } from '@remix-run/headers'
+
+let header = new IfMatch('"67ab43", "54ed21"')
+
+header.has('67ab43') // true
+header.has('21ba69') // false
+
+// Check if precondition passes
+header.matches('"67ab43"') // true
+header.matches('"abc123"') // false
+
+// Note: Uses strong comparison only (weak ETags never match)
+let weakHeader = new IfMatch('W/"67ab43"')
+weakHeader.matches('W/"67ab43"') // false
+
+// Alternative init styles
+let header = new IfMatch(['67ab43', '54ed21'])
+let header = new IfMatch({
+  tags: ['67ab43', '54ed21'],
+})
+```
+
 ### If-None-Match
 
 ```ts
@@ -405,10 +486,70 @@ header.has('21ba69') // false
 
 header.matches('"67ab43"') // true
 
-// Alternative init style
+// Alternative init styles
 let header = new IfNoneMatch(['67ab43', '54ed21'])
 let header = new IfNoneMatch({
   tags: ['67ab43', '54ed21'],
+})
+```
+
+### If-Range
+
+```ts
+import { IfRange } from '@remix-run/headers'
+
+// Initialize with HTTP date
+let header = new IfRange('Fri, 01 Jan 2021 00:00:00 GMT')
+header.matches({ lastModified: 1609459200000 }) // true
+header.matches({ lastModified: new Date('2021-01-01T00:00:00Z') }) // true (Date also supported)
+
+// Initialize with Date object
+let header = new IfRange(new Date('2021-01-01T00:00:00Z'))
+header.matches({ lastModified: 1609459200000 }) // true
+
+// Initialize with strong ETag
+let header = new IfRange('"67ab43"')
+header.matches({ etag: '"67ab43"' }) // true
+
+// Never matches weak ETags
+let weakHeader = new IfRange('W/"67ab43"')
+header.matches({ etag: 'W/"67ab43"' }) // false
+
+// Returns true if header is not present (range should proceed unconditionally)
+let emptyHeader = new IfRange('')
+emptyHeader.matches({ etag: '"67ab43"' }) // true
+```
+
+### Range
+
+```ts
+import { Range } from '@remix-run/headers'
+
+let header = new Range('bytes=200-1000')
+
+header.unit // "bytes"
+header.ranges // [{ start: 200, end: 1000 }]
+
+// Check if ranges can be satisfied for a given file size
+header.canSatisfy(2000) // true
+header.canSatisfy(500) // false (end is beyond file size)
+
+// Multiple ranges
+let header = new Range('bytes=0-499, 1000-1499')
+header.ranges.length // 2
+
+// Normalize to concrete start/end values for a given file size
+let header = new Range('bytes=1000-')
+header.normalize(2000)
+// [{ start: 1000, end: 1999 }]
+
+// Alternative init style
+let header = new Range({
+  unit: 'bytes',
+  ranges: [
+    { start: 200, end: 1000 },
+    { start: 2000, end: 2999 },
+  ],
 })
 ```
 

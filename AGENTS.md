@@ -11,6 +11,7 @@
 ## Architecture
 - **Monorepo**: pnpm workspace with packages in `packages/` directory
 - **Key packages**: headers, fetch-proxy, fetch-router, file-storage, form-data-parser, lazy-file, multipart-parser, node-fetch-server, route-pattern, tar-parser
+- **Package exports**: All `exports` in `package.json` have a dedicated file in `src` that defines the public API by re-exporting from within `src/lib`
 - **Philosophy**: Web standards-first, runtime-agnostic (Node.js, Bun, Deno, Cloudflare Workers). Use Web Streams API, Uint8Array, Web Crypto API, Blob/File instead of Node.js APIs
 - **Tests run from source** (no build required), using Node.js test runner
 
@@ -20,6 +21,7 @@
 - **Classes**: Use native fields (omit `public`), `#private` for private members (no TypeScript accessibility modifiers)
 - **Formatting**: Prettier (printWidth: 100, no semicolons, single quotes, spaces not tabs)
 - **TypeScript**: Strict mode, ESNext target, ES2022 modules, bundler resolution, verbatimModuleSyntax
+- **Comments**: Only add non-JSDoc comments when the code is doing something surprising or non-obvious
 
 ## Changelog Formatting
 - Use `## Unreleased` as the heading for unreleased changes (not `## HEAD`)

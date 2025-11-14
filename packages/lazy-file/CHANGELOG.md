@@ -2,6 +2,35 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Add `findFile` function for finding files within a root directory
+
+```ts
+import { findFile } from '@remix-run/lazy-file/fs'
+
+let file = await findFile('./public', 'assets/favicon.ico')
+if (file) {
+  console.log(file.name) // "assets/favicon.ico"
+}
+```
+
+- BREAKING CHANGE: `openFile()` now sets `file.name` to the `filename` argument as provided, instead of using `path.basename(filename)`. You can still override this with `options.name`.
+
+```ts
+// before
+let file = openFile('./public/assets/favicon.ico')
+file.name // "favicon.ico"
+
+// after
+let file = openFile('./public/assets/favicon.ico')
+file.name // "./public/assets/favicon.ico"
+
+// You can still override the name
+let file = openFile('./public/assets/favicon.ico', { name: 'favicon.ico' })
+file.name // "favicon.ico"
+```
+
 ## v3.7.0 (2025-11-04)
 
 - Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
