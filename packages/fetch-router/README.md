@@ -835,6 +835,9 @@ router.get('/api/data', async (context) => {
 
 The `compress()` helper accepts several options to customize the compression behavior.
 
+- For `zlib` options, see the [node:zlib Options documentation.](https://nodejs.org/api/zlib.html#class-options)
+- For `brotli` options, see the [node:zlib BrotliOptions documentation.](https://nodejs.org/api/zlib.html#class-brotlioptions)
+
 ```ts
 res.compress(response, context.request, {
   // Minimum size in bytes to compress if Content-Length response header is present.
