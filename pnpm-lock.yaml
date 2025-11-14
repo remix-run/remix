@@ -108,6 +108,9 @@ importers:
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
+      mime-db:
+        specifier: ^1.53.0
+        version: 1.54.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -2484,6 +2487,10 @@ packages:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
     engines: {node: '>= 0.6'}
 
+  mime-db@1.54.0:
+    resolution: {integrity: sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==}
+    engines: {node: '>= 0.6'}
+
   mime-types@2.1.18:
     resolution: {integrity: sha512-lc/aahn+t4/SWV/qcmumYjymLsWfN3ELhpmVuUFjgsORruuZPVSwAQryq+HHGvO/SI2KVX26bx+En+zhM8g8hQ==}
     engines: {node: '>= 0.6'}
@@ -4434,7 +4441,7 @@ snapshots:
 
   compressible@2.0.18:
     dependencies:
-      mime-db: 1.52.0
+      mime-db: 1.54.0
 
   compression@1.8.1:
     dependencies:
@@ -5095,6 +5102,8 @@ snapshots:
   mime-db@1.33.0: {}
 
   mime-db@1.52.0: {}
+
+  mime-db@1.54.0: {}
 
   mime-types@2.1.18:
     dependencies:

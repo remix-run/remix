@@ -301,6 +301,11 @@ describe('SuperHeaders', () => {
       ])
     })
 
+    it('handles the vary property', () => {
+      let headers = new SuperHeaders({ vary: ['Accept-Encoding', 'Accept-Language'] })
+      assert.equal(headers.get('Vary'), 'accept-encoding, accept-language')
+    })
+
     it('stringifies unknown properties with non-string values', () => {
       let headers = new SuperHeaders({ unknown: 42 })
       assert.equal(headers.get('Unknown'), '42')
@@ -724,6 +729,17 @@ describe('SuperHeaders', () => {
 
       headers.setCookie = null
       assert.deepEqual(headers.setCookie, [])
+    })
+
+    it('supports the vary property', () => {
+      let headers = new SuperHeaders()
+
+      headers.vary = 'Accept-Encoding, Accept-Language'
+      assert.equal(headers.vary.has('accept-encoding'), true)
+      assert.equal(headers.vary.has('accept-language'), true)
+
+      headers.vary = null
+      assert.equal(headers.vary.size, 0)
     })
   })
 })

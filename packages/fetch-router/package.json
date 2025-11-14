@@ -22,6 +22,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./async-context-middleware": "./src/async-context-middleware.ts",
+    "./compression-middleware": "./src/compression-middleware.ts",
     "./form-data-middleware": "./src/form-data-middleware.ts",
     "./logger-middleware": "./src/logger-middleware.ts",
     "./method-override-middleware": "./src/method-override-middleware.ts",
@@ -38,6 +39,10 @@
       "./async-context-middleware": {
         "types": "./dist/async-context-middleware.d.ts",
         "default": "./dist/async-context-middleware.js"
+      },
+      "./compression-middleware": {
+        "types": "./dist/compression-middleware.d.ts",
+        "default": "./dist/compression-middleware.js"
       },
       "./form-data-middleware": {
         "types": "./dist/form-data-middleware.d.ts",
@@ -66,6 +71,7 @@
     "@remix-run/cookie": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@types/node": "^24.6.0",
+    "mime-db": "^1.53.0",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
@@ -79,6 +85,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
+    "generate:compressible": "node --disable-warning=ExperimentalWarning ./scripts/generate-compressible.js",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
     "typecheck": "tsc --noEmit"

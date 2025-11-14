@@ -9,6 +9,7 @@ import { canonicalHeaderName } from './header-names.ts'
 import { type HeaderValue } from './header-value.ts'
 import { type IfNoneMatchInit, IfNoneMatch } from './if-none-match.ts'
 import { type SetCookieInit, SetCookie } from './set-cookie.ts'
+import { type VaryInit, Vary } from './vary.ts'
 import { isIterable, quoteEtag } from './utils.ts'
 
 type DateInit = number | Date
@@ -110,6 +111,10 @@ interface SuperHeadersPropertyInit {
    * The [`Set-Cookie`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie) header value(s).
    */
   setCookie?: string | (string | SetCookieInit)[]
+  /**
+   * The [`Vary`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Vary) header value.
+   */
+  vary?: string | string[] | VaryInit
 }
 
 export type SuperHeadersInit =
@@ -142,6 +147,7 @@ const LastModifiedKey = 'last-modified'
 const LocationKey = 'location'
 const RefererKey = 'referer'
 const SetCookieKey = 'set-cookie'
+const VaryKey = 'vary'
 
 /**
  * An enhanced JavaScript `Headers` interface with type-safe access.
@@ -725,6 +731,24 @@ export class SuperHeaders extends Headers {
     } else {
       this.#setCookies = []
     }
+  }
+
+  /**
+   * The `Vary` header indicates the set of request headers that determine whether
+   * a cached response can be used rather than requesting a fresh response from the origin server.
+   *
+   * Common values include `Accept-Encoding`, `Accept-Language`, `Accept`, `User-Agent`, etc.
+   *
+   * [MDN `Vary` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Vary)
+   *
+   * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.vary)
+   */
+  get vary(): Vary {
+    return this.#getHeaderValue(VaryKey, Vary)
+  }
+
+  set vary(value: string | string[] | VaryInit | undefined | null) {
+    this.#setHeaderValue(VaryKey, Vary, value)
   }
 
   // Helpers

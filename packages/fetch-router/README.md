@@ -605,6 +605,7 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
 
 The router provides a few response helpers that make it easy to return responses with common formats. They are available in the `@remix-run/fetch-router/response-helpers` export.
 
+- `compress(response, request, options?)` - compresses a `Response` based on `Accept-Encoding` header
 - `html(body, init?)` - returns a `Response` with `Content-Type: text/html`
 - `json(data, init?)` - returns a `Response` with `Content-Type: application/json`
 - `redirect(location, init?)` - returns a `Response` with `Location` header
@@ -663,6 +664,94 @@ let button = html`<button>${icon} Click me</button>` // icon is not escaped
 **Warning**: Only use `html.raw` with trusted content. Unlike the regular `html` template tag, `html.raw` does not escape its interpolations, which can lead to XSS vulnerabilities if used with untrusted user input.
 
 See the [`@remix-run/html-template` documentation](https://github.com/remix-run/remix/tree/main/packages/html-template#readme) for more details.
+
+### Compressing Responses
+
+The router provides a couple of tools for serving files:
+
+- **`compress()` response helper** - The primitive for compressing `Response` objects based on the client's `Accept-Encoding` header
+- **`compression()` middleware** - Convenience middleware for automatically compressing responses across multiple routes
+
+#### The `compress()` Response Helper
+
+The `compress()` helper compresses a `Response` based on the client's `Accept-Encoding` header:
+
+```ts
+import * as res from '@remix-run/fetch-router/response-helpers'
+
+router.get('/api/data', async (context) => {
+  let data = await getLargeDataset()
+  let response = res.json(data)
+  return res.compress(response, context.request)
+})
+```
+
+The `compress()` helper accepts several options to customize the compression behavior.
+
+```ts
+res.compress(response, context.request, {
+  // Minimum size in bytes to compress if Content-Length response header is present.
+  // Default: 1024
+  threshold: 2048,
+
+  // Which encodings the server supports.
+  // Default: ['br', 'gzip', 'deflate']
+  encodings: ['br', 'gzip', 'deflate'],
+
+  zlib: {
+    // node:zlib options for gzip/deflate compression
+    // See: https://nodejs.org/api/zlib.html#class-options
+  },
+
+  brotli: {
+    // node:zlib options for Brotli compression
+    // See: https://nodejs.org/api/zlib.html#class-brotlioptions
+  },
+})
+```
+
+#### The `compression()` Middleware
+
+For automatic compression across multiple routes, use the `compression()` middleware:
+
+```ts
+import { compression } from '@remix-run/fetch-router/compression-middleware'
+
+let router = createRouter({
+  middleware: [compression()],
+})
+```
+
+The middleware is a thin wrapper around the `compress()` response helper that accepts the same options.
+
+The middleware applies an additional **Content-Type filter** to only apply compression to appropriate media types (MIME types). By default, this uses the `isCompressibleMediaType(mediaType)` helper to check if the media type is compressible. You can customize this behavior with the `filterMediaType` option, re-using the built-in filter if needed.
+
+#### `isCompressibleMediaType(mediaType)`
+
+The `isCompressibleMediaType` helper determines whether a media type should be compressed. It returns `true` for:
+
+- **Known compressible types** from the [mime-db](https://www.npmjs.com/package/mime-db) database (e.g., `application/json`, `text/html`, `text/css`), except those starting with `x-` (experimental) or `vnd.` (vendor-specific).
+- **All `text/*` types** (e.g., `text/plain`, `text/markdown`)
+- **Types with structured data suffixes**: `+json`, `+text`, or `+xml` (e.g., `application/vnd.api+json`, `image/svg+xml`)
+
+This helper is primarily intended for use in custom `filterMediaType` functions for the `compression()` middleware:
+
+```ts
+import {
+  compression,
+  isCompressibleMediaType,
+} from '@remix-run/fetch-router/compression-middleware'
+
+let router = createRouter({
+  middleware: [
+    compression({
+      filterMediaType(mediaType) {
+        return isCompressibleMediaType(mediaType) || mediaType === 'application/vnd.example+data'
+      },
+    }),
+  ],
+})
+```
 
 ### Testing
 

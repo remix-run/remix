@@ -7,6 +7,7 @@ export { type ContentTypeInit, ContentType } from './lib/content-type.ts'
 export { type CookieInit, Cookie } from './lib/cookie.ts'
 export { type IfNoneMatchInit, IfNoneMatch } from './lib/if-none-match.ts'
 export { type CookieProperties, type SetCookieInit, SetCookie } from './lib/set-cookie.ts'
+export { type VaryInit, Vary } from './lib/vary.ts'
 
 export {
   type SuperHeadersInit,
