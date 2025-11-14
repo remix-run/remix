@@ -1353,8 +1353,6 @@ export interface DetailsHTMLProps<eventTarget extends EventTarget = HTMLDetailsE
 
 export interface DialogHTMLProps<eventTarget extends EventTarget = HTMLDialogElement>
   extends HTMLProps<eventTarget> {
-  onCancel?: GenericEventHandler<eventTarget> | undefined
-  onClose?: GenericEventHandler<eventTarget> | undefined
   open?: Trackable<boolean | undefined>
   closedby?: Trackable<'none' | 'closerequest' | 'any' | undefined>
   closedBy?: Trackable<'none' | 'closerequest' | 'any' | undefined>
@@ -1624,7 +1622,6 @@ export interface PartialInputHTMLProps<eventTarget extends EventTarget>
   step?: Trackable<number | string | undefined>
   value?: Trackable<string | number | undefined>
   width?: Trackable<number | string | undefined>
-  onChange?: GenericEventHandler<eventTarget> | undefined
 }
 
 export type InputAriaRoles =
@@ -2085,7 +2082,6 @@ export interface PartialSelectHTMLProps<eventTarget extends EventTarget>
   required?: Trackable<boolean | undefined>
   size?: Trackable<number | undefined>
   value?: Trackable<string | number | undefined>
-  onChange?: GenericEventHandler<eventTarget> | undefined
 }
 
 export type SelectAriaRoles =
@@ -2192,7 +2188,6 @@ export interface TextareaHTMLProps<eventTarget extends EventTarget = HTMLTextAre
   rows?: Trackable<number | undefined>
   value?: Trackable<string | number | undefined>
   wrap?: Trackable<string | undefined>
-  onChange?: GenericEventHandler<eventTarget> | undefined
 }
 
 export interface ThHTMLProps<eventTarget extends EventTarget = HTMLTableCellElement>
