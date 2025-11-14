@@ -1,3 +1,5 @@
+import type { EventListeners } from '@remix-run/interaction'
+
 /**
  * Any valid element type accepted by JSX or `createElement`.
  * - `string` for host elements (e.g., 'div')
@@ -37,3 +39,10 @@ export type Renderable = RemixElement | string | number | bigint | boolean | nul
  * ```
  */
 export type RemixNode = Renderable | Renderable[]
+
+export interface RemixAttributes<eventTarget extends EventTarget> {
+  children?: RemixNode
+  on?: EventListeners<eventTarget> | undefined
+  css?: 'TODO: support css properties' | undefined
+  style?: 'TODO: support style properties' | undefined
+}
