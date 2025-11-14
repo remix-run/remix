@@ -4,6 +4,7 @@ import { compression } from '@remix-run/fetch-router/compression-middleware'
 import { formData } from '@remix-run/fetch-router/form-data-middleware'
 import { logger } from '@remix-run/fetch-router/logger-middleware'
 import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
+import { staticFiles } from '@remix-run/fetch-router/static-middleware'
 
 import { routes } from '../routes.ts'
 import { uploadHandler } from './utils/uploads.ts'
@@ -15,7 +16,6 @@ import booksHandlers from './books.tsx'
 import cartHandlers from './cart.tsx'
 import checkoutHandlers from './checkout.tsx'
 import fragmentsHandlers from './fragments.tsx'
-import * as publicHandlers from './public.ts'
 import * as marketingHandlers from './marketing.tsx'
 import { uploadsHandler } from './uploads.tsx'
 
@@ -30,10 +30,17 @@ middleware.push(formData({ uploadHandler }))
 middleware.push(methodOverride())
 middleware.push(asyncContext())
 
+middleware.push(
+  staticFiles('./public', {
+    cacheControl: 'no-store, must-revalidate',
+    etag: false,
+    lastModified: false,
+    acceptRanges: false,
+  }),
+)
+
 export let router = createRouter({ middleware })
 
-router.get(routes.assets, publicHandlers.assets)
-router.get(routes.images, publicHandlers.images)
 router.get(routes.uploads, uploadsHandler)
 
 router.map(routes.home, marketingHandlers.home)

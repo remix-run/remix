@@ -70,11 +70,17 @@ file.type // "text/plain"
 The `lazy-file/fs` export provides functions for reading from and writing to the local filesystem using the `File` API.
 
 ```ts
-import { openFile, writeFile } from '@remix-run/lazy-file/fs'
+import { openFile, findFile, writeFile } from '@remix-run/lazy-file/fs'
 
 // No data is read at this point, it's just a reference to a
 // file on the local filesystem
 let file = openFile('./path/to/file.json')
+
+// Alternatively, find a file within a root directory, returning
+// null if the file is not found. The file.name will be set to the
+// relative path argument (e.g., 'assets/favicon.ico')
+let foundFile = await findFile('./public', 'assets/favicon.ico')
+console.log(foundFile ? `Found ${foundFile.name}` : 'File not found')
 
 // Data is read when you call file.text() (or any of the
 // other Blob methods, like file.bytes(), file.stream(), etc.)

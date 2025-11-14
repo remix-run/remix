@@ -606,6 +606,7 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
 The router provides a few response helpers that make it easy to return responses with common formats. They are available in the `@remix-run/fetch-router/response-helpers` export.
 
 - `compress(response, request, options?)` - compresses a `Response` based on `Accept-Encoding` header
+- `file(file, request, init?)` - returns a `Response` for a file with full HTTP semantics (ETags, Range requests, etc.) — see [Working with Files](#working-with-files)
 - `html(body, init?)` - returns a `Response` with `Content-Type: text/html`
 - `json(data, init?)` - returns a `Response` with `Content-Type: application/json`
 - `redirect(location, init?)` - returns a `Response` with `Location` header
@@ -664,6 +665,152 @@ let button = html`<button>${icon} Click me</button>` // icon is not escaped
 **Warning**: Only use `html.raw` with trusted content. Unlike the regular `html` template tag, `html.raw` does not escape its interpolations, which can lead to XSS vulnerabilities if used with untrusted user input.
 
 See the [`@remix-run/html-template` documentation](https://github.com/remix-run/remix/tree/main/packages/html-template#readme) for more details.
+
+### Working with Files
+
+The router provides a couple of tools for serving files:
+
+- **`file()` response helper** - The primitive for returning file responses with full HTTP semantics
+- **`staticFiles()` middleware** - Convenience middleware for serving files from a directory
+
+#### The `file()` Response Helper
+
+The `file()` response helper returns a `Response` for a file with full HTTP semantics, including:
+
+- **Content-Type** and **Content-Length** headers
+- **ETag** generation (weak or strong)
+- **Last-Modified** headers
+- **Cache-Control** headers
+- **Conditional requests** (`If-None-Match`, `If-Modified-Since`, `If-Match`, `If-Unmodified-Since`)
+- **Range requests** for partial content (`206 Partial Content`)
+- **HEAD** request support
+
+```ts
+import * as res from '@remix-run/fetch-router/response-helpers'
+import { openFile } from '@remix-run/lazy-file/fs'
+
+router.get('/assets/:filename', async (context) => {
+  let file = await openFile(`./assets/${context.params.filename}`)
+
+  return res.file(file, context.request)
+})
+```
+
+##### Options
+
+The `file()` helper accepts an optional third argument with configuration options:
+
+```ts
+return res.file(file, request, {
+  // Cache-Control header value.
+  // Defaults to `undefined` (no Cache-Control header).
+  cacheControl: 'public, max-age=3600',
+
+  // ETag generation strategy:
+  // - 'weak': Generates weak ETags based on file size and mtime
+  // - 'strong': Generates strong ETags by hashing file content
+  // - false: Disables ETag generation
+  // Defaults to 'weak'.
+  etag: 'weak',
+
+  // Whether to generate Last-Modified headers.
+  // Defaults to `true`.
+  lastModified: true,
+
+  // Whether to support HTTP Range requests for partial content.
+  // Defaults to `true`.
+  acceptRanges: true,
+})
+```
+
+##### Strong ETags and Content Hashing
+
+For assets that require strong validation (e.g., to support [`If-Match`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match) preconditions or [`If-Range`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Range) with [`Range` requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range)), configure strong ETag generation:
+
+```ts
+return res.file(file, request, {
+  etag: 'strong',
+})
+```
+
+By default, strong ETags are generated using Node's [`crypto.createHash()`](https://nodejs.org/api/crypto.html#cryptocreatehashalgorithm-options) with the `'sha256'` algorithm. You can customize this:
+
+```ts
+return res.file(file, request, {
+  etag: 'strong',
+
+  // Specify a different hash algorithm (availability depends on platform)
+  digest: 'sha512',
+})
+```
+
+Or provide a custom digest function:
+
+```ts
+return res.file(file, request, {
+  etag: 'strong',
+
+  // Custom digest function
+  async digest(file) {
+    return await customHash(file)
+  },
+})
+```
+
+#### Using `findFile()` with `file()`
+
+When you need to map a route pattern to a directory of files on disk, you can use the `findFile()` function from `@remix-run/lazy-file/fs` to resolve files before sending them with the `file()` response helper:
+
+```ts
+import * as res from '@remix-run/fetch-router/response-helpers'
+import { findFile } from '@remix-run/lazy-file/fs'
+
+router.get('/assets/*path', async ({ request, params }) => {
+  let file = await findFile('./public/assets', params.path)
+
+  if (!file) {
+    return new Response('Not Found', { status: 404 })
+  }
+
+  return res.file(file, request, {
+    cacheControl: 'public, max-age=3600',
+  })
+})
+```
+
+#### The `staticFiles()` Middleware
+
+For convenience, the `staticFiles()` middleware combines `findFile()` and `file()` into a single middleware, resolving files based on the request pathname:
+
+```ts
+import { createRouter } from '@remix-run/fetch-router'
+import { staticFiles } from '@remix-run/fetch-router/static-middleware'
+
+let router = createRouter({
+  middleware: [staticFiles('./public')],
+})
+```
+
+The middleware accepts the same options as the `file()` response helper:
+
+```ts
+let router = createRouter({
+  middleware: [
+    staticFiles('./public', {
+      cacheControl: 'public, max-age=3600',
+      etag: 'strong',
+    }),
+  ],
+})
+```
+
+You can provide a `filter` function to determine which files to serve:
+
+```ts
+staticFiles('./images', {
+  filter: (path) => /\.(png|jpg|gif|svg)$/i.test(path),
+})
+```
 
 ### Compressing Responses
 

@@ -6,10 +6,14 @@ import { AcceptEncoding } from './accept-encoding.ts'
 import { AcceptLanguage } from './accept-language.ts'
 import { CacheControl } from './cache-control.ts'
 import { ContentDisposition } from './content-disposition.ts'
+import { ContentRange } from './content-range.ts'
 import { ContentType } from './content-type.ts'
 import { Cookie } from './cookie.ts'
-import { SuperHeaders } from './super-headers.ts'
+import { IfMatch } from './if-match.ts'
 import { IfNoneMatch } from './if-none-match.ts'
+import { IfRange } from './if-range.ts'
+import { Range } from './range.ts'
+import { SuperHeaders } from './super-headers.ts'
 
 describe('SuperHeaders', () => {
   it('is an instance of Headers', () => {
@@ -220,6 +224,13 @@ describe('SuperHeaders', () => {
       assert.equal(headers.get('Content-Length'), '42')
     })
 
+    it('handles the contentRange property', () => {
+      let headers = new SuperHeaders({
+        contentRange: { unit: 'bytes', start: 200, end: 1000, size: 67589 },
+      })
+      assert.equal(headers.get('Content-Range'), 'bytes 200-1000/67589')
+    })
+
     it('handles the contentType property', () => {
       let headers = new SuperHeaders({
         contentType: { mediaType: 'text/plain', charset: 'utf-8' },
@@ -261,6 +272,11 @@ describe('SuperHeaders', () => {
     it('handles the ifModifiedSince property', () => {
       let headers = new SuperHeaders({ ifModifiedSince: new Date('2021-01-01T00:00:00Z') })
       assert.equal(headers.get('If-Modified-Since'), 'Fri, 01 Jan 2021 00:00:00 GMT')
+    })
+
+    it('handles the ifMatch property', () => {
+      let headers = new SuperHeaders({ ifMatch: ['67ab43', '54ed21'] })
+      assert.equal(headers.get('If-Match'), '"67ab43", "54ed21"')
     })
 
     it('handles the ifNoneMatch property', () => {
@@ -400,6 +416,21 @@ describe('SuperHeaders', () => {
       assert.equal(headers.age, null)
     })
 
+    it('supports the allow property', () => {
+      let headers = new SuperHeaders()
+
+      assert.equal(headers.allow, null)
+
+      headers.allow = 'GET, HEAD'
+      assert.equal(headers.allow, 'GET, HEAD')
+
+      headers.allow = ['GET', 'POST', 'PUT', 'DELETE']
+      assert.equal(headers.allow, 'GET, POST, PUT, DELETE')
+
+      headers.allow = null
+      assert.equal(headers.allow, null)
+    })
+
     it('supports the cacheControl property', () => {
       let headers = new SuperHeaders()
 
@@ -497,6 +528,28 @@ describe('SuperHeaders', () => {
 
       headers.contentLength = null
       assert.equal(headers.contentLength, null)
+    })
+
+    it('supports the contentRange property', () => {
+      let headers = new SuperHeaders()
+
+      assert.ok(headers.contentRange instanceof ContentRange)
+
+      headers.contentRange = 'bytes 200-1000/67589'
+      assert.equal(headers.contentRange.unit, 'bytes')
+      assert.equal(headers.contentRange.start, 200)
+      assert.equal(headers.contentRange.end, 1000)
+      assert.equal(headers.contentRange.size, 67589)
+
+      headers.contentRange = { unit: 'bytes', start: 0, end: 999, size: '*' }
+      assert.equal(headers.contentRange.unit, 'bytes')
+      assert.equal(headers.contentRange.start, 0)
+      assert.equal(headers.contentRange.end, 999)
+      assert.equal(headers.contentRange.size, '*')
+
+      headers.contentRange = null
+      assert.ok(headers.contentRange instanceof ContentRange)
+      assert.equal(headers.contentRange.toString(), '')
     })
 
     it('supports the contentType property', () => {
@@ -614,6 +667,26 @@ describe('SuperHeaders', () => {
       assert.equal(headers.ifModifiedSince, null)
     })
 
+    it('supports the ifMatch property', () => {
+      let headers = new SuperHeaders()
+
+      assert.ok(headers.ifMatch instanceof IfMatch)
+      assert.equal(headers.ifMatch.tags.length, 0)
+
+      headers.ifMatch = '67ab43'
+      assert.deepEqual(headers.ifMatch.tags, ['"67ab43"'])
+
+      headers.ifMatch = ['67ab43', '54ed21']
+      assert.deepEqual(headers.ifMatch.tags, ['"67ab43"', '"54ed21"'])
+
+      headers.ifMatch = { tags: ['W/"67ab43"'] }
+      assert.deepEqual(headers.ifMatch.tags, ['W/"67ab43"'])
+
+      headers.ifMatch = null
+      assert.ok(headers.ifMatch instanceof IfMatch)
+      assert.equal(headers.ifMatch.tags.length, 0)
+    })
+
     it('supports the ifNoneMatch property', () => {
       let headers = new SuperHeaders()
 
@@ -628,9 +701,29 @@ describe('SuperHeaders', () => {
       headers.ifNoneMatch = { tags: ['67ab43', '54ed21'] }
       assert.deepEqual(headers.ifNoneMatch.tags, ['"67ab43"', '"54ed21"'])
 
+      assert.equal(headers.ifNoneMatch.toString(), '"67ab43", "54ed21"')
+
       headers.ifNoneMatch = null
       assert.ok(headers.ifNoneMatch instanceof IfNoneMatch)
       assert.equal(headers.ifNoneMatch.toString(), '')
+    })
+
+    it('supports the ifRange property', () => {
+      let headers = new SuperHeaders()
+
+      assert.ok(headers.ifRange instanceof IfRange)
+      assert.equal(headers.ifRange.value, '')
+
+      headers.ifRange = 'Fri, 01 Jan 2021 00:00:00 GMT'
+      assert.equal(headers.ifRange.value, 'Fri, 01 Jan 2021 00:00:00 GMT')
+
+      headers.ifRange = new Date('2021-01-01T00:00:00Z')
+      assert.equal(headers.ifRange.value, 'Fri, 01 Jan 2021 00:00:00 GMT')
+
+      headers.ifRange = '"67ab43"'
+      assert.equal(headers.ifRange.value, '"67ab43"')
+
+      assert.equal(headers.ifRange.toString(), '"67ab43"')
     })
 
     it('supports the ifUnmodifiedSince property', () => {
@@ -669,6 +762,29 @@ describe('SuperHeaders', () => {
 
       headers.location = null
       assert.equal(headers.location, null)
+    })
+
+    it('supports the range property', () => {
+      let headers = new SuperHeaders()
+
+      assert.ok(headers.range instanceof Range)
+      assert.equal(headers.range.ranges.length, 0)
+
+      headers.range = 'bytes=0-99'
+      assert.equal(headers.range.unit, 'bytes')
+      assert.equal(headers.range.ranges.length, 1)
+      assert.equal(headers.range.ranges[0].start, 0)
+      assert.equal(headers.range.ranges[0].end, 99)
+
+      headers.range = { unit: 'bytes', ranges: [{ start: 100, end: 199 }] }
+      assert.equal(headers.range.unit, 'bytes')
+      assert.equal(headers.range.ranges.length, 1)
+      assert.equal(headers.range.ranges[0].start, 100)
+      assert.equal(headers.range.ranges[0].end, 199)
+
+      headers.range = null
+      assert.ok(headers.range instanceof Range)
+      assert.equal(headers.range.ranges.length, 0)
     })
 
     it('supports the referer property', () => {
