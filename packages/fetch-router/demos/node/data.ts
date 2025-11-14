@@ -19,7 +19,6 @@ export interface Comment {
 let posts = new Map<string, Post>()
 let comments = new Map<string, Comment>()
 
-// Initialize with some sample data
 let post1: Post = {
   title: 'Welcome to the Blog',
   content: 'This is the first post on our blog demo.',
@@ -60,7 +59,6 @@ let comment1: Comment = {
 
 comments.set(comment1.id, comment1)
 
-// Helper functions
 export function getPosts() {
   return Array.from(posts.values()).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 }
@@ -109,7 +107,10 @@ export function getComments(postSlug: string) {
 }
 
 export function addComment(postSlug: string, author: string, content: string) {
-  let id = String(comments.size + 1)
+  let id = '1'
+  while (comments.has(id)) {
+    id = String(Number(id) + 1)
+  }
   let comment: Comment = {
     id,
     postSlug,

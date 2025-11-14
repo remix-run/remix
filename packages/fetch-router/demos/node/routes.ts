@@ -4,7 +4,6 @@ export let routes = route({
   home: '/',
   login: formAction('/login'),
   logout: { method: 'POST', pattern: '/logout' },
-  // TODO: convert to RoutePattern :year-:month-:day/:slug
   posts: {
     ...resources('posts', { only: ['index', 'new', 'create'] }),
     ...resource('/posts/:year-:month-:day/:slug', {

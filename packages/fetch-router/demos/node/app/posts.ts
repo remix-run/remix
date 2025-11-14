@@ -1,12 +1,12 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
+import { html } from '@remix-run/html-template'
 import * as res from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../routes.ts'
-import * as templates from './layout.ts'
-import * as data from '../data.ts'
 import type { Post } from '../data.ts'
-import { html } from '@remix-run/html-template'
-import { getPostHrefParams, generateSlug } from './utils.ts'
+import * as data from '../data.ts'
+import * as templates from './templates.ts'
+import { generateSlug, getPostHrefParams, loginUrl } from './utils.ts'
 
 function postForm(post?: Post) {
   let action = post ? routes.posts.update.href(getPostHrefParams(post)) : routes.posts.create.href()
@@ -42,19 +42,7 @@ export let posts = {
         html`
           <h1>All Posts</h1>
           <p><a href="${routes.posts.new.href()}">Create New Post</a></p>
-          ${posts.map(
-            (post) => html`
-              <article class="last-child-no-border">
-                <h2>
-                  <a href="${routes.posts.show.href(getPostHrefParams(post))}">${post.title}</a>
-                </h2>
-                <p>${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : null}</p>
-                <div class="post-meta flex">
-                  <small>Posted on ${post.createdAt.toLocaleDateString()}</small>
-                </div>
-              </article>
-            `,
-          )}
+          ${posts.map(templates.postListItem)}
         `,
         currentUser,
       ),
@@ -152,12 +140,7 @@ export let posts = {
                     <button type="submit">Post Comment</button>
                   </form>
                 `
-              : html`<p>
-                  <a href="${routes.login.index.href()}?redirectTo=${encodeURIComponent(postUrl)}"
-                    >Login</a
-                  >
-                  to add a comment.
-                </p>`}
+              : html`<p><a href="${loginUrl(postUrl)}">Login</a> to add a comment.</p>`}
           </section>
         `,
         currentUser,
@@ -190,9 +173,8 @@ export let posts = {
     if (!updatedPost) {
       return new Response('Post not found', { status: 404 })
     }
-    // Get the new slug if title changed
     let newSlug = generateSlug(title)
-    let finalPost = data.getPost(newSlug)!
+    let finalPost = data.getPost(newSlug) ?? updatedPost
     return res.redirect(routes.posts.show.href(getPostHrefParams(finalPost)))
   },
   destroy({ params }) {

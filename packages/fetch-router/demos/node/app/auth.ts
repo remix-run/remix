@@ -1,10 +1,10 @@
 import type { BuildRouteHandler, Middleware, RouteHandlers } from '@remix-run/fetch-router'
-import assert from 'node:assert'
+import { html } from '@remix-run/html-template'
 import * as res from '@remix-run/fetch-router/response-helpers'
-import * as templates from './layout.ts'
 
 import { routes } from '../routes.ts'
-import { html } from '@remix-run/html-template'
+import * as templates from './templates.ts'
+import { loginUrl } from './utils.ts'
 
 function requireGuest(): Middleware {
   return async (context, next) => {
@@ -22,10 +22,12 @@ export let login = {
     index({ session, url }) {
       let error = session.get('error') as string | undefined
       let currentUser = session.get('username') as string | undefined
-      let redirectTo = url.searchParams.get('redirectTo') || ''
+      let redirectTo = url.searchParams.get('redirectTo')
 
       // TODO: check if this should be cleared on subsequent requests, given that we used flash to set the error
-      session.destroy()
+      if (error) {
+        session.unset('error')
+      }
 
       return res.html(
         templates.layout(
@@ -33,9 +35,7 @@ export let login = {
             <h1>Login</h1>
             ${error ? html`<p class="error-message">${error}</p>` : null}
             <form class="form-spaced" method="POST" action="${routes.login.action.href()}">
-              ${redirectTo
-                ? html`<input type="hidden" name="redirectTo" value="${redirectTo}" />`
-                : null}
+              ${templates.redirectToInput(redirectTo)}
               <div class="form-field">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required />
@@ -57,29 +57,30 @@ export let login = {
     action({ formData, session }) {
       let username = formData.get('username')
       let password = formData.get('password') as string
-      let redirectTo = formData.get('redirectTo') as string | null
+      let redirectTo = formData.get('redirectTo')
 
-      try {
-        // Simple auth - in real app, check against database
-        assert.ok(username !== 'ryan', 'Invalid user, ryan is not allowed')
-        assert.ok(typeof username === 'string', 'Invalid username')
-        assert.ok(typeof password === 'string', 'Invalid password')
+      let error = null
 
-        session.set('username', username)
-        let redirectUrl =
-          redirectTo && redirectTo.startsWith('/') ? redirectTo : routes.posts.index.href()
-        return res.redirect(redirectUrl)
-      } catch (error) {
-        session.flash(
-          'error',
-          error instanceof Error ? error.message : 'Oops, something went wrong',
-        )
-
-        let redirectUrl = redirectTo
-          ? `${routes.login.index.href()}?redirectTo=${encodeURIComponent(redirectTo)}`
-          : routes.login.index.href()
-        return res.redirect(redirectUrl)
+      if (!username || !password) {
+        error = 'Username and password are required'
       }
+
+      if (username === 'ryan') {
+        error = 'Invalid user, ryan is not allowed'
+      }
+
+      if (error) {
+        session.flash('error', error)
+        return res.redirect(loginUrl(redirectTo))
+      }
+
+      session.set('username', username)
+
+      let redirectUrl =
+        typeof redirectTo === 'string' && redirectTo.startsWith('/')
+          ? redirectTo
+          : routes.posts.index.href()
+      return res.redirect(redirectUrl)
     },
   },
 } satisfies RouteHandlers<typeof routes.login>

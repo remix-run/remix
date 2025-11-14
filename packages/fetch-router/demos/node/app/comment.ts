@@ -1,9 +1,8 @@
-import type { RouteHandlers, Middleware } from '@remix-run/fetch-router'
-import * as res from '@remix-run/fetch-router/response-helpers'
+import type { Middleware, RouteHandlers } from '@remix-run/fetch-router'
 import type { Params } from '@remix-run/route-pattern'
+import * as res from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../routes.ts'
-
 import * as data from '../data.ts'
 import { getPostHrefParams } from './utils.ts'
 
