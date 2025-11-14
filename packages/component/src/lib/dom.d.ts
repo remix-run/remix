@@ -23,7 +23,8 @@ export interface CSSProperties extends AllCSSProperties, DOMCSSProperties {
   cssText?: string | null
 }
 
-export interface SVGProps<Target extends EventTarget = SVGElement> extends HTMLProps<Target> {
+export interface SVGProps<eventTarget extends EventTarget = SVGElement>
+  extends HTMLProps<eventTarget> {
   accentHeight?: Trackable<number | string | undefined>
   accumulate?: Trackable<'none' | 'sum' | undefined>
   additive?: Trackable<'replace' | 'sum' | undefined>
@@ -2262,7 +2263,8 @@ export type DetailedHTMLProps<
   RefType extends EventTarget = EventTarget,
 > = HA
 
-export interface MathMLProps<Target extends EventTarget = MathMLElement> extends HTMLProps<Target> {
+export interface MathMLProps<eventTarget extends EventTarget = MathMLElement>
+  extends HTMLProps<eventTarget> {
   dir?: Trackable<'ltr' | 'rtl' | undefined>
   displaystyle?: Trackable<boolean | undefined>
   /** @deprecated This feature is non-standard. See https://developer.mozilla.org/en-US/docs/Web/MathML/Global_attributes/href  */
