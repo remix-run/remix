@@ -57,7 +57,7 @@ export let comment = {
       }
 
       let username = session.get('username') as string
-      data.addComment(post.id, username, content)
+      data.addComment(params.slug, username, content)
       return res.redirect(routes.posts.show.href(getPostHrefParams(post)))
     },
     destroy: {
@@ -68,7 +68,7 @@ export let comment = {
           return new Response('Comment not found', { status: 404 })
         }
 
-        let post = data.getPost(comment.postId)
+        let post = data.getPost(comment.postSlug)
         if (!post) {
           return new Response('Post not found', { status: 404 })
         }

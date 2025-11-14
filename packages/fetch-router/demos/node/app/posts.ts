@@ -6,7 +6,7 @@ import * as templates from './layout.ts'
 import * as data from '../data.ts'
 import type { Post } from '../data.ts'
 import { html } from '@remix-run/html-template'
-import { getPostHrefParams } from './utils.ts'
+import { getPostHrefParams, generateSlug } from './utils.ts'
 
 function postForm(post?: Post) {
   let action = post ? routes.posts.update.href(getPostHrefParams(post)) : routes.posts.create.href()
@@ -77,12 +77,11 @@ export let posts = {
   },
   show({ params, session }) {
     let post = data.getPost(params.slug)
-    console.log('HERE', post)
     if (!post) {
       return new Response('Post not found', { status: 404 })
     }
 
-    let comments = data.getComments(post.id)
+    let comments = data.getComments(params.slug)
     let currentUser = session.get('username') as string | undefined
 
     let postUrl = routes.posts.show.href(getPostHrefParams(post))
@@ -187,10 +186,14 @@ export let posts = {
       return res.html(templates.layout(postForm(post)), { status: 400 })
     }
 
-    data.updatePost(post.id, title, content)
-    // Regenerate slug if title changed
-    let updatedPost = data.getPost(post.id)!
-    return res.redirect(routes.posts.show.href(getPostHrefParams(updatedPost)))
+    let updatedPost = data.updatePost(params.slug, title, content)
+    if (!updatedPost) {
+      return new Response('Post not found', { status: 404 })
+    }
+    // Get the new slug if title changed
+    let newSlug = generateSlug(title)
+    let finalPost = data.getPost(newSlug)!
+    return res.redirect(routes.posts.show.href(getPostHrefParams(finalPost)))
   },
   destroy({ params }) {
     let post = data.getPost(params.slug)
@@ -198,7 +201,7 @@ export let posts = {
       return new Response('Post not found', { status: 404 })
     }
 
-    data.deletePost(post.id)
+    data.deletePost(params.slug)
     return res.redirect(routes.posts.index.href())
   },
 } satisfies RouteHandlers<Omit<typeof routes.posts, 'comment'>>
