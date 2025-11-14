@@ -1,5 +1,5 @@
 {
-  "name": "bookstore-demo",
+  "name": "fetch-router-node-demo",
   "private": true,
   "type": "module",
   "dependencies": {

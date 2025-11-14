@@ -1,4 +1,5 @@
 {
+  "include": ["server.ts", "../../global.d.ts"],
   "compilerOptions": {
     "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable"],

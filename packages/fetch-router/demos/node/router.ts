@@ -3,6 +3,7 @@ import { formData } from '@remix-run/fetch-router/form-data-middleware'
 import { logger } from '@remix-run/fetch-router/logger-middleware'
 import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
 import { session } from '@remix-run/fetch-router/session-middleware'
+import { staticFiles } from '@remix-run/fetch-router/static-middleware'
 import { createCookie } from '@remix-run/cookie'
 
 import { routes } from './routes.ts'
@@ -18,7 +19,16 @@ let sessionCookie = createCookie('blog_session', {
 })
 
 export let router = createRouter({
-  middleware: [logger(), formData(), methodOverride(), session(sessionCookie)],
+  middleware: [
+    logger(),
+    formData(),
+    methodOverride(),
+    session(sessionCookie),
+    staticFiles('./public', {
+      cacheControl: 'public, max-age=3600',
+      etag: 'strong',
+    }),
+  ],
 })
 
 router.map(routes.home, marketingHandlers.home)
