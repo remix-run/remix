@@ -1,0 +1,3 @@
+[submodule "reference/preact"]
+	path = reference/preact
+	url = https://github.com/preactjs/preact
