@@ -105,7 +105,7 @@ export async function createFileResponse(
 
   let headers = new SuperHeaders(request.headers)
 
-  let contentType = file.type
+  let contentType = appendCharsetIfNeeded(file.type)
   let contentLength = file.size
 
   let etag: string | undefined
@@ -330,4 +330,28 @@ async function hashFile(file: File, algorithm: AlgorithmIdentifier = 'SHA-256'):
 function removeMilliseconds(time: number | Date): number {
   let timestamp = time instanceof Date ? time.getTime() : time
   return Math.floor(timestamp / 1000)
+}
+
+/**
+ * Appends `charset=utf-8` to the given MIME type to text files.
+ */
+function appendCharsetIfNeeded(mimeType: string): string {
+  if (!mimeType) return mimeType
+
+  // JSON and JavaScript application types
+  if (mimeType === 'application/json' || mimeType === 'application/javascript') {
+    return `${mimeType}; charset=utf-8`
+  }
+
+  // text/* types (text/html, text/css, text/plain, text/javascript, etc.)
+  if (mimeType.startsWith('text/')) {
+    return `${mimeType}; charset=utf-8`
+  }
+
+  // XML types (application/xml, image/svg+xml, etc.)
+  if (mimeType === 'application/xml' || mimeType.endsWith('+xml')) {
+    return `${mimeType}; charset=utf-8`
+  }
+
+  return mimeType
 }

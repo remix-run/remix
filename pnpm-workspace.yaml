@@ -11,6 +11,10 @@ packages:
   - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*
   - packages/interaction/demos
+  - packages/component/demos
+  - packages/component/bench
+  - packages/component/bench/frameworks/*
+  - packages/lazy-file/scripts
   - packages/multipart-parser/bench
   - packages/multipart-parser/demos/*
   - packages/node-fetch-server/bench

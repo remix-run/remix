@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import type { Assert, Equal } from './test/utils'
+import type { Dispatched } from '@remix-run/interaction'
 
 describe('jsx', () => {
   it('creates an element', () => {
@@ -12,5 +14,24 @@ describe('jsx', () => {
 
     // @ts-expect-error - wrong type
     let badElement = <a target={123}>Hello, world!</a>
+  })
+
+  describe('remix attributes', () => {
+    it('infers the event target type from the element type', () => {
+      let element = (
+        <button
+          on={{
+            pointerdown: (event) => {
+              type dispatchedEvent = Assert<
+                Equal<typeof event, Dispatched<PointerEvent, HTMLButtonElement>>
+              >
+              type eventTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
+            },
+          }}
+        >
+          Click me
+        </button>
+      )
+    })
   })
 })

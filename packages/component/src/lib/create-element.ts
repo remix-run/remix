@@ -1,5 +1,5 @@
 import { jsx } from './jsx.ts'
-import type { RemixElement } from './remix-types.ts'
+import type { RemixElement } from './jsx.ts'
 
 export function createElement(
   type: string,

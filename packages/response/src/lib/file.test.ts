@@ -12,7 +12,7 @@ describe('createFileResponse()', () => {
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, World!')
-    assert.equal(response.headers.get('Content-Type'), 'text/plain')
+    assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
     assert.equal(response.headers.get('Content-Length'), '13')
   })
 
@@ -24,7 +24,7 @@ describe('createFileResponse()', () => {
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), '')
-    assert.equal(response.headers.get('Content-Type'), 'text/plain')
+    assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
     assert.equal(response.headers.get('Content-Length'), '13')
   })
 
@@ -1254,24 +1254,24 @@ describe('createFileResponse()', () => {
   })
 
   describe('Content-Type', () => {
-    it('sets Content-Type from file', async () => {
+    it('sets Content-Type from file with charset for text types', async () => {
       let testCases = [
-        { type: 'text/html', name: 'test.html' },
-        { type: 'text/css', name: 'test.css' },
-        { type: 'text/javascript', name: 'test.js' },
-        { type: 'application/json', name: 'test.json' },
-        { type: 'image/png', name: 'test.png' },
-        { type: 'image/jpeg', name: 'test.jpg' },
-        { type: 'image/svg+xml', name: 'test.svg' },
+        { type: 'text/html', name: 'test.html', expected: 'text/html; charset=utf-8' },
+        { type: 'text/css', name: 'test.css', expected: 'text/css; charset=utf-8' },
+        { type: 'text/javascript', name: 'test.js', expected: 'text/javascript; charset=utf-8' },
+        { type: 'application/json', name: 'test.json', expected: 'application/json; charset=utf-8' },
+        { type: 'image/png', name: 'test.png', expected: 'image/png' },
+        { type: 'image/jpeg', name: 'test.jpg', expected: 'image/jpeg' },
+        { type: 'image/svg+xml', name: 'test.svg', expected: 'image/svg+xml; charset=utf-8' },
       ]
 
-      for (let { type, name } of testCases) {
+      for (let { type, name, expected } of testCases) {
         let mockFile = new File(['test content'], name, { type })
         let request = new Request(`http://localhost/${name}`)
 
         let response = await createFileResponse(mockFile, request)
         assert.equal(response.status, 200)
-        assert.equal(response.headers.get('Content-Type'), type)
+        assert.equal(response.headers.get('Content-Type'), expected, `Expected ${expected} for ${name}`)
       }
     })
 

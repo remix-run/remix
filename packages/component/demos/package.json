@@ -1,0 +1,21 @@
+{
+  "name": "component-demos",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@remix-run/component": "workspace:^",
+    "@remix-run/fetch-router": "workspace:^",
+    "@remix-run/interaction": "workspace:^",
+    "@remix-run/node-fetch-server": "workspace:^",
+    "@remix-run/static-middleware": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.25.11"
+  },
+  "scripts": {
+    "start": "concurrently \"pnpm build\" \"node --experimental-strip-types server.ts\"",
+    "build": "esbuild ./*/entry.tsx --bundle --outdir=. --out-extension:.js=.bundled.js --format=esm --platform=browser --target=es2020 --sourcemap=inline --watch"
+  }
+}
