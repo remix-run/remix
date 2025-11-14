@@ -128,4 +128,13 @@ describe('FileSessionStorage', () => {
     let cookieValue = await storage.delete('non-existent-session-id')
     assert.equal(cookieValue, '')
   })
+
+  it('throws error if session directory is a file', async () => {
+    let filePath = path.join(tmpDir, 'not-a-directory')
+    await fsp.writeFile(filePath, 'I am a file, not a directory.')
+
+    assert.throws(() => {
+      new FileSessionStorage(filePath)
+    }, { message: `Path "${filePath}" is not a directory` })
+  })
 })
