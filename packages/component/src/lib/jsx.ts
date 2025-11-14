@@ -1,7 +1,11 @@
+// import './remix-types.ts'
 import type * as dom from './dom.d.ts'
-import type { RemixElement } from './remix-types.ts'
 
-export function jsx(type: string, props: Record<string, any>, key?: string): RemixElement {
+export function jsx(
+  type: Remix.ElementType,
+  props: Remix.ElementProps,
+  key?: string,
+): Remix.Element {
   return { type, props, key, $rmx: true }
 }
 

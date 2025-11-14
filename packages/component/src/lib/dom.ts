@@ -4,8 +4,6 @@
  * - License: MIT https://github.com/preactjs/preact/blob/eee0c6ef834534498e433f0f7a3ef679efd24380/LICENSE
  * - Copyright (c) 2015-present Jason Miller
  */
-import type { RemixProps } from './remix-types.d.ts'
-
 type Booleanish = boolean | 'true' | 'false'
 
 export type Trackable<T> = T
@@ -774,7 +772,7 @@ export type DPubAriaRole =
 export type AriaRole = WAIAriaRole | DPubAriaRole
 
 export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
-  extends RemixProps<eventTarget>,
+  extends Remix.HostProps<eventTarget>,
     AriaProps {
   // Standard HTML Attributes
   accept?: Trackable<string | undefined>
@@ -1018,7 +1016,7 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
 }
 
 export interface HTMLProps<eventTarget extends EventTarget = EventTarget>
-  extends RemixProps<eventTarget>,
+  extends Remix.HostProps<eventTarget>,
     AriaProps {
   // Standard HTML Attributes
   accesskey?: Trackable<string | undefined>
