@@ -17,12 +17,14 @@ export let home: BuildRouteHandler<'GET', typeof routes.home> = ({ session }) =>
         <h1>Blog Posts</h1>
         ${posts.map(
           (post) => html`
-            <article>
+            <article class="last-child-no-border">
               <h2>
                 <a href="${routes.posts.show.href(getPostHrefParams(post))}">${post.title}</a>
               </h2>
               <p>${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : null}</p>
-              <small>Posted on ${post.createdAt.toLocaleDateString()}</small>
+              <div class="post-meta flex">
+                <small>Posted on ${post.createdAt.toLocaleDateString()}</small>
+              </div>
             </article>
           `,
         )}

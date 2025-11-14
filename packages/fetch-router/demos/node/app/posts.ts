@@ -14,19 +14,19 @@ function postForm(post?: Post) {
 
   return html`
     <h1>${heading}</h1>
-    <form method="POST" action="${action}">
+    <form class="form-spaced" method="POST" action="${action}">
       ${post ? html`<input type="hidden" name="_method" value="PUT" />` : null}
-      <div>
+      <div class="form-field">
         <label for="title">Title</label>
         <input type="text" id="title" name="title" value="${post?.title}" required />
       </div>
-      <div>
+      <div class="form-field">
         <label for="content">Content</label>
         <textarea id="content" name="content" rows="10" required>${post?.content}</textarea>
       </div>
       <button type="submit">${post ? 'Update' : 'Create'} Post</button>
     </form>
-    <p>
+    <p class="form-actions">
       <a href="${routes.posts.index.href()}">← Back to Posts</a>
     </p>
   `
@@ -44,12 +44,14 @@ export let posts = {
           <p><a href="${routes.posts.new.href()}">Create New Post</a></p>
           ${posts.map(
             (post) => html`
-              <article>
+              <article class="last-child-no-border">
                 <h2>
                   <a href="${routes.posts.show.href(getPostHrefParams(post))}">${post.title}</a>
                 </h2>
                 <p>${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : null}</p>
-                <small>Posted on ${post.createdAt.toLocaleDateString()}</small>
+                <div class="post-meta flex">
+                  <small>Posted on ${post.createdAt.toLocaleDateString()}</small>
+                </div>
               </article>
             `,
           )}
@@ -90,21 +92,21 @@ export let posts = {
         html`
           <article>
             <h1>${post.title}</h1>
-            <p><a href="${routes.posts.index.href()}">← Back to Posts</a></p>
-            <p><a href="${routes.posts.edit.href(getPostHrefParams(post))}">Edit Post</a></p>
-            <form
-              method="POST"
-              action="${routes.posts.destroy.href(getPostHrefParams(post))}"
-              style="display: inline;"
-            >
-              <input type="hidden" name="_method" value="DELETE" />
-              <button type="submit">Delete Post</button>
-            </form>
-            <div>${post.content}</div>
-            <small>Posted on ${post.createdAt.toLocaleDateString()}</small>
-            ${post.updatedAt.getTime() !== post.createdAt.getTime()
-              ? `<small>Updated on ${post.updatedAt.toLocaleDateString()}</small>`
-              : null}
+            <div class="post-actions flex">
+              <a href="${routes.posts.index.href()}">← Back to Posts</a>
+              <a href="${routes.posts.edit.href(getPostHrefParams(post))}">Edit Post</a>
+              <form method="POST" action="${routes.posts.destroy.href(getPostHrefParams(post))}">
+                <input type="hidden" name="_method" value="DELETE" />
+                <button type="submit" class="btn-link btn-delete">Delete Post</button>
+              </form>
+            </div>
+            <div class="post-content">${post.content}</div>
+            <div class="post-meta flex">
+              <small>Posted on ${post.createdAt.toLocaleDateString()}</small>
+              ${post.updatedAt.getTime() !== post.createdAt.getTime()
+                ? html`<small>Updated on ${post.updatedAt.toLocaleDateString()}</small>`
+                : null}
+            </div>
           </article>
           <section>
             <h2>Comments</h2>
@@ -112,22 +114,24 @@ export let posts = {
               ? comments.map((comment) => {
                   let isCommentAuthor = currentUser && currentUser === comment.author
                   return html`
-                    <div>
-                      <strong>${comment.author}</strong>
+                    <div class="comment last-child-no-border">
+                      <div class="comment-header flex">
+                        <strong>${comment.author}</strong>
+                        <small>${comment.createdAt.toLocaleDateString()}</small>
+                      </div>
                       <p>${comment.content}</p>
-                      <small>${comment.createdAt.toLocaleDateString()}</small>
                       ${isCommentAuthor
                         ? html`
                             <form
+                              class="comment-delete-form"
                               method="POST"
                               action="${routes.posts.comment.destroy.href({
                                 ...getPostHrefParams(post),
                                 commentId: comment.id,
                               })}"
-                              style="display: inline;"
                             >
                               <input type="hidden" name="_method" value="DELETE" />
-                              <button type="submit">Delete</button>
+                              <button type="submit" class="btn-link btn-delete">Delete</button>
                             </form>
                           `
                         : null}
@@ -138,11 +142,12 @@ export let posts = {
             ${currentUser
               ? html`
                   <form
+                    class="form-spaced"
                     method="POST"
                     action="${routes.posts.comment.create.href(getPostHrefParams(post))}"
                   >
                     <h3>Add a Comment</h3>
-                    <div>
+                    <div class="form-field">
                       <textarea name="content" rows="4" required></textarea>
                     </div>
                     <button type="submit">Post Comment</button>

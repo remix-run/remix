@@ -9,19 +9,22 @@ export function layout(body: SafeHtml | string, currentUser?: string) {
       <head>
         <title>Blog Demo</title>
         <meta charset="utf-8" />
+        <link rel="stylesheet" href="/styles.css" />
       </head>
       <body>
         <nav>
-          <a href="${routes.home.href()}">Home</a>
-          <a href="${routes.posts.index.href()}">Posts</a>
-          <a href="${routes.posts.new.href()}">New Post</a>
+          <div class="nav-links flex flex-center">
+            <a href="${routes.home.href()}">Home</a>
+            <a href="${routes.posts.index.href()}">Posts</a>
+            <a href="${routes.posts.new.href()}">New Post</a>
+          </div>
           ${currentUser
-            ? html`<span>
-                Logged in as ${currentUser} |
-                <form method="POST" action="${routes.logout.href()}" style="display: inline;">
+            ? html`<div class="nav-user flex flex-center">
+                <span>${currentUser}</span>
+                <form method="POST" action="${routes.logout.href()}">
                   <button type="submit">Logout</button>
                 </form>
-              </span>`
+              </div>`
             : html`<a href="${routes.login.index.href()}">Login</a>`}
         </nav>
         <main>${body}</main>

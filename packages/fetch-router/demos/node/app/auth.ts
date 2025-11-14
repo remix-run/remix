@@ -31,22 +31,22 @@ export let login = {
         templates.layout(
           html`
             <h1>Login</h1>
-            ${error ? html`<p style="color: red;">${error}</p>` : null}
-            <form method="POST" action="${routes.login.action.href()}">
+            ${error ? html`<p class="error-message">${error}</p>` : null}
+            <form class="form-spaced" method="POST" action="${routes.login.action.href()}">
               ${redirectTo
                 ? html`<input type="hidden" name="redirectTo" value="${redirectTo}" />`
                 : null}
-              <div>
+              <div class="form-field">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required />
               </div>
-              <div>
+              <div class="form-field">
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" required autocomplete="off" />
               </div>
               <button type="submit">Login</button>
             </form>
-            <p><a href="${routes.home.href()}">← Back to Home</a></p>
+            <p class="form-actions"><a href="${routes.home.href()}">← Back to Home</a></p>
           `,
           currentUser,
         ),
