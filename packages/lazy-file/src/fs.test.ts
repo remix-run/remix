@@ -4,7 +4,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { describe, it } from 'node:test'
 
-import { findFile, openFile } from './fs.ts'
+import { findFile, openFile, writeFile } from './fs.ts'
 
 describe('openFile', () => {
   let tmpDir: string
@@ -214,6 +214,50 @@ describe('findFile', () => {
         return error.code !== 'ENOENT'
       },
     )
+
+    teardown()
+  })
+})
+
+describe('writeFile', () => {
+  let tmpDir: string
+
+  function setup() {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lazy-file-test-'))
+  }
+
+  function teardown() {
+    if (tmpDir) {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  }
+
+  it('writes a file', async () => {
+    setup()
+    let filePath = path.join(tmpDir, 'output.txt')
+    let fileContent = 'This is some test content.'
+    let file = new File([fileContent], 'output.txt', { type: 'text/plain' })
+
+    await writeFile(filePath, file)
+
+    let writtenContent = fs.readFileSync(filePath, 'utf-8')
+    assert.equal(writtenContent, fileContent)
+
+    teardown()
+  })
+
+  it('writes a file to an open file descriptor', async () => {
+    setup()
+    let filePath = path.join(tmpDir, 'output.txt')
+    let fileContent = 'This is some test content.'
+    let file = new File([fileContent], 'output.txt', { type: 'text/plain' })
+
+    let fd = fs.openSync(filePath, 'w')
+
+    await writeFile(fd, file)
+
+    let writtenContent = fs.readFileSync(filePath, 'utf-8')
+    assert.equal(writtenContent, fileContent)
 
     teardown()
   })

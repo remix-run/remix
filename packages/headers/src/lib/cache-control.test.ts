@@ -3,6 +3,26 @@ import { describe, it } from 'node:test'
 
 import { CacheControl } from './cache-control.ts'
 
+const paramTestCases: Array<[string, keyof CacheControl, string, unknown]> = [
+  ['max-age', 'maxAge', '3600', 3600],
+  ['max-stale', 'maxStale', '7200', 7200],
+  ['min-fresh', 'minFresh', '1800', 1800],
+  ['s-maxage', 'sMaxage', '3600', 3600],
+  ['no-cache', 'noCache', '', true],
+  ['no-store', 'noStore', '', true],
+  ['no-transform', 'noTransform', '', true],
+  ['only-if-cached', 'onlyIfCached', '', true],
+  ['must-revalidate', 'mustRevalidate', '', true],
+  ['proxy-revalidate', 'proxyRevalidate', '', true],
+  ['must-understand', 'mustUnderstand', '', true],
+  ['private', 'private', '', true],
+  ['public', 'public', '', true],
+  ['immutable', 'immutable', '', true],
+  ['stale-while-revalidate', 'staleWhileRevalidate', '60', 60],
+  ['stale-if-error', 'staleIfError', '120', 120]
+];
+
+
 describe('CacheControl', () => {
   it('initializes with an empty string', () => {
     let header = new CacheControl('')
@@ -17,6 +37,20 @@ describe('CacheControl', () => {
     assert.equal(header.sMaxage, 3600)
     assert.equal(header.public, true)
   })
+
+  for (let [param, prop, value, expected] of paramTestCases) {
+    it(`initializes parameter: ${param}=${value}`, () => {
+      let header = new CacheControl(`${param}=${value}`)
+      assert.equal(header[prop], expected)
+    })
+
+    it(`coverts parameter to string: ${param}=${value}`, () => {
+      let header = new CacheControl('')
+      header[prop] = expected as never
+      let expectedString = value ? `${param}=${value}` : param
+      assert.equal(header.toString(), expectedString)
+    })
+  }
 
   it('initializes with an object', () => {
     let header = new CacheControl({ public: true, maxAge: 3600, sMaxage: 3600 })

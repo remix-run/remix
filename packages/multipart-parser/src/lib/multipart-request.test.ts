@@ -362,4 +362,20 @@ describe('parseMultipartRequest', async () => {
       }
     }, MultipartParseError)
   })
+
+  it('throws error when request body is empty', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: null,
+    })
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request)) {
+        // ...
+      }
+    }, MultipartParseError)
+  })
 })

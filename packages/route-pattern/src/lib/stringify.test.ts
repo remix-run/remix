@@ -27,6 +27,8 @@ describe('stringify', () => {
       stringify(parse('https://example.com/path?q=1&a=2')),
       'https://example.com/path?q=1&a=2',
     )
+    assert.equal(stringify(parse('/users/:id')), '/users/:id')
+    assert.equal(stringify(parse('/files/*filepath')), '/files/*filepath')
   })
 })
 
