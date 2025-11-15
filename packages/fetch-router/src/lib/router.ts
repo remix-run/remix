@@ -8,8 +8,9 @@ import type { RequestMethod } from './request-methods.ts'
 import {
   type RouteHandlers,
   type RouteHandler,
+  createRouteHandlersWithMiddleware,
+  hasHandlers,
   isRequestHandlerWithMiddleware,
-  isRouteHandlersWithMiddleware,
 } from './route-handlers.ts'
 import { type RouteMap, Route } from './route-map.ts'
 
@@ -153,7 +154,7 @@ export class Router {
     } else if (routeOrRoutes instanceof Route) {
       // map(route, handler)
       this.route(routeOrRoutes.method, routeOrRoutes.pattern, handler)
-    } else if (!isRouteHandlersWithMiddleware(handler)) {
+    } else if (!hasHandlers(handler)) {
       // map(routes, handlers)
       let handlers = handler
       for (let key in routeOrRoutes) {
@@ -167,7 +168,7 @@ export class Router {
         }
       }
     } else {
-      // map(routes, { middleware, handlers })
+      // map(routes, { middleware?, handlers })
       let middleware = handler.middleware
       let handlers = handler.handlers
       for (let key in routeOrRoutes) {
@@ -176,20 +177,27 @@ export class Router {
 
         if (route instanceof Route) {
           if (isRequestHandlerWithMiddleware(handler)) {
+            let combinedMiddleware =
+              middleware && handler.middleware
+                ? middleware.concat(handler.middleware)
+                : middleware || handler.middleware
             this.route(route.method, route.pattern, {
-              middleware: middleware.concat(handler.middleware),
+              middleware: combinedMiddleware,
               handler: handler.handler,
             })
-          } else {
+          } else if (middleware) {
             this.route(route.method, route.pattern, { middleware, handler })
+          } else {
+            this.route(route.method, route.pattern, handler)
           }
-        } else if (isRouteHandlersWithMiddleware(handler)) {
-          this.map(route, {
-            middleware: middleware.concat(handler.middleware),
-            handlers: handler.handlers,
-          })
+        } else if (hasHandlers(handler)) {
+          let combinedMiddleware =
+            middleware && handler.middleware
+              ? middleware.concat(handler.middleware)
+              : middleware || handler.middleware
+          this.map(route, createRouteHandlersWithMiddleware(combinedMiddleware, handler.handlers))
         } else {
-          this.map(route, { middleware, handlers: handler })
+          this.map(route, createRouteHandlersWithMiddleware(middleware, handler))
         }
       }
     }

@@ -8,28 +8,52 @@ import type { Route, RouteMap } from './route-map.ts'
 // prettier-ignore
 export type RouteHandlers<routes extends RouteMap> =
   | RouteHandlersWithMiddleware<routes>
-  | {
+  | RouteHandlersWithoutMiddleware<routes>
+
+type RouteHandlersWithMiddleware<routes extends RouteMap> = {
+  middleware?: Middleware[]
+  handlers: RouteHandlers<routes>
+} & (routes extends Record<string, any>
+  ? {
+      // Explicitly exclude route handler properties when handlers is present
+      // Only apply exclusion when routes is a concrete type (not any)
+      [name in keyof routes as routes extends any ? never : name]?: never
+    }
+  : {})
+
+// prettier-ignore
+type RouteHandlersWithoutMiddleware<routes extends RouteMap> = routes extends any
+  ? {
       [name in keyof routes]: (
         routes[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? RouteHandler<method, pattern> :
         routes[name] extends RouteMap ? RouteHandlers<routes[name]> :
         never
       )
+    } & {
+      // Explicitly exclude middleware/handlers when route handlers are present
+      middleware?: never
+      handlers?: never
     }
+  : never
 
-type RouteHandlersWithMiddleware<routes extends RouteMap> = {
-  middleware: Middleware[]
-  handlers: RouteHandlers<routes>
-}
-
-export function isRouteHandlersWithMiddleware<routes extends RouteMap>(
+export function hasHandlers<routes extends RouteMap>(
   handlers: any,
 ): handlers is RouteHandlersWithMiddleware<routes> {
-  return (
-    typeof handlers === 'object' &&
-    handlers != null &&
-    'middleware' in handlers &&
-    'handlers' in handlers
-  )
+  return typeof handlers === 'object' && handlers != null && 'handlers' in handlers
+}
+
+/**
+ * Create a RouteHandlersWithMiddleware object with proper typing.
+ */
+export function createRouteHandlersWithMiddleware<routes extends RouteMap>(
+  middleware: Middleware[] | undefined,
+  handlers: RouteHandlers<routes>,
+): RouteHandlersWithMiddleware<routes>
+export function createRouteHandlersWithMiddleware(
+  middleware: Middleware[] | undefined,
+  handlers: RouteHandlers<any>,
+): RouteHandlersWithMiddleware<any> {
+  return middleware ? { middleware, handlers } : { handlers }
 }
 
 /**
@@ -40,7 +64,7 @@ export type RouteHandler<method extends RequestMethod | 'ANY', pattern extends s
   | RequestHandler<method, Params<pattern>>
 
 type RequestHandlerWithMiddleware<method extends RequestMethod | 'ANY', pattern extends string> = {
-  middleware: Middleware<method, Params<pattern>>[]
+  middleware?: Middleware<method, Params<pattern>>[]
   handler: RequestHandler<method, Params<pattern>>
 }
 
@@ -48,12 +72,7 @@ export function isRequestHandlerWithMiddleware<
   method extends RequestMethod | 'ANY',
   pattern extends string,
 >(handler: any): handler is RequestHandlerWithMiddleware<method, pattern> {
-  return (
-    typeof handler === 'object' &&
-    handler != null &&
-    'middleware' in handler &&
-    'handler' in handler
-  )
+  return typeof handler === 'object' && handler != null && 'handler' in handler
 }
 
 /**
