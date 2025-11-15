@@ -4,16 +4,34 @@ import {
   type CookieProperties,
 } from '@remix-run/headers'
 
-import { sign, unsign } from './crypto.ts'
+import { sign, unsign } from './cookie-signing.ts'
 
 /**
- * Creates a new `Cookie` object.
- * @param name The name of the cookie
- * @param options The options for the cookie
- * @returns A new cookie instance
+ * A container for metadata about a HTTP cookie; its name and secrets that may be used
+ * to sign/unsign the value of the cookie to ensure it's not tampered with.
  */
-export function createCookie(name: string, options?: CookieOptions): Cookie {
-  return new Cookie(name, options)
+export interface Cookie {
+  /**
+   * The name of the cookie.
+   */
+  readonly name: string
+  /**
+   * True if this cookie uses one or more secrets for verification.
+   */
+  readonly signed: boolean
+  /**
+   * Extracts the value of this cookie from a `Cookie` header value.
+   * @param headerValue The value of the `Cookie` header to parse
+   * @returns The value of this cookie, or `null` if it's not present
+   */
+  parse(headerValue: string | null): Promise<string | null>
+  /**
+   * Returns the value to use in a `Set-Cookie` header for this cookie.
+   * @param value The value to serialize
+   * @param props (optional) Additional properties to use when serializing the cookie
+   * @returns The `Set-Cookie` header value for this cookie
+   */
+  serialize(value: string, props?: CookieProperties): Promise<string>
 }
 
 export interface CookieOptions extends CookieProperties {
@@ -47,85 +65,60 @@ export interface CookieOptions extends CookieProperties {
 }
 
 /**
- * A container for metadata about a HTTP cookie; its name and secrets that may be used
- * to sign/unsign the value of the cookie to ensure it's not tampered with.
+ * Creates a new cookie object.
+ * @param name The name of the cookie
+ * @param options (optional) Additional options for the cookie
+ * @returns A cookie object
  */
-export class Cookie {
-  constructor(name: string, options?: CookieOptions) {
-    let {
-      decode = decodeURIComponent,
-      encode = encodeURIComponent,
-      secrets = [],
-      ...props
-    } = options ?? {}
+export function createCookie(name: string, options?: CookieOptions): Cookie {
+  let {
+    decode = decodeURIComponent,
+    encode = encodeURIComponent,
+    secrets = [],
+    ...propsFromOptions
+  } = options ?? {}
 
-    this.name = name
-    this.#decode = decode
-    this.#encode = encode
-    this.#secrets = secrets
-    this.#props = props
-  }
+  return {
+    get name() {
+      return name
+    },
+    get signed() {
+      return secrets.length > 0
+    },
+    async parse(headerValue: string | null): Promise<string | null> {
+      if (!headerValue) return null
 
-  /**
-   * The name of the cookie.
-   */
-  readonly name: string
+      let header = new CookieHeader(headerValue)
+      if (!header.has(name)) return null
 
-  readonly #decode: (value: string) => string
-  readonly #encode: (value: string) => string
-  readonly #secrets: string[]
-  readonly #props: CookieProperties
+      let value = header.get(name)!
+      if (value === '') return ''
 
-  /**
-   * True if this cookie uses one or more secrets for verification.
-   */
-  get signed(): boolean {
-    return this.#secrets.length > 0
-  }
+      let decoded = await decodeCookieValue(value, secrets, decode)
+      return decoded
+    },
+    async serialize(value: string, props?: CookieProperties): Promise<string> {
+      let header = new SetCookieHeader({
+        name: name,
+        value: value === '' ? '' : await encodeCookieValue(value, secrets, encode),
+        // sane defaults
+        path: '/',
+        sameSite: 'Lax',
+        ...propsFromOptions,
+        ...props,
+      })
 
-  /**
-   * Extracts the value of this cookie from a `Cookie` header value.
-   * @param headerValue The value of the `Cookie` header to parse
-   * @returns The value of this cookie, or `null` if it's not present
-   */
-  async parse(headerValue: string | null): Promise<string | null> {
-    if (!headerValue) return null
-
-    let header = new CookieHeader(headerValue)
-    if (!header.has(this.name)) return null
-
-    let value = header.get(this.name)!
-    if (value === '') return ''
-
-    let decoded = await decodeCookieValue(value, this.#secrets, this.#decode)
-    return decoded
-  }
-
-  /**
-   * Returns the value to use in a `Set-Cookie` header for this cookie.
-   * @param value The value to serialize
-   * @param props (optional) Additional properties to use when serializing the cookie
-   * @returns The value to use in a `Set-Cookie` header for this cookie
-   */
-  async serialize(value: string, props?: CookieProperties): Promise<string> {
-    let header = new SetCookieHeader({
-      name: this.name,
-      value: value === '' ? '' : await encodeCookieValue(value, this.#secrets, this.#encode),
-      // sane defaults
-      path: '/',
-      sameSite: 'Lax',
-      ...this.#props,
-      ...props,
-    })
-
-    return header.toString()
+      return header.toString()
+    },
   }
 }
+
+type Coder = (value: string) => string
 
 async function decodeCookieValue(
   value: string,
   secrets: string[],
-  decode: (value: string) => string,
+  decode: Coder,
 ): Promise<string | null> {
   if (secrets.length > 0) {
     for (let secret of secrets) {
@@ -141,7 +134,7 @@ async function decodeCookieValue(
   return decodeValue(value, decode)
 }
 
-function decodeValue(value: string, decode: (value: string) => string): string | null {
+function decodeValue(value: string, decode: Coder): string | null {
   try {
     return decode(myEscape(atob(value)))
   } catch {
@@ -177,11 +170,7 @@ function hex(code: number, length: number): string {
   return result
 }
 
-async function encodeCookieValue(
-  value: string,
-  secrets: string[],
-  encode: (value: string) => string,
-): Promise<string> {
+async function encodeCookieValue(value: string, secrets: string[], encode: Coder): Promise<string> {
   let encoded = encodeValue(value, encode)
 
   if (secrets.length > 0) {
@@ -191,7 +180,7 @@ async function encodeCookieValue(
   return encoded
 }
 
-function encodeValue(value: string, encode: (value: string) => string): string {
+function encodeValue(value: string, encode: Coder): string {
   return btoa(myUnescape(encode(value)))
 }
 
