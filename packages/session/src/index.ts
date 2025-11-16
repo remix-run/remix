@@ -1,2 +1,2 @@
-export type { SessionStorage, SessionStorageOptions, SessionData } from './lib/session.ts'
-export { Session } from './lib/session.ts'
+export { type Session, createSessionId, createSession } from './lib/session.ts'
+export type { SessionStorage } from './lib/session-storage.ts'

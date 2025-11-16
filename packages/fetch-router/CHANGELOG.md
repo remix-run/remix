@@ -4,9 +4,21 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
-- Add `compress()` response helper for compressing responses based on client's `Accept-Encoding` header
-- Add `compression()` middleware for automatic response compression
-- Add `isCompressibleMediaType()` helper to check if a media type is compressible (exported from `@remix-run/fetch-router/compression-middleware`)
+- Add `session` middleware for managing sessions across requests
+
+  ```tsx
+  import { createCookie } from '@remix-run/cookie'
+  import { createFileStorage } from '@remix-run/session/file-storage'
+  import { session } from '@remix-run/fetch-router/session-middleware'
+
+  let cookie = createCookie('session', { secrets: ['s3cr3t'] })
+  let storage = createFileStorage(cookie, '/tmp/sessions')
+
+  let router = createRouter({
+    middleware: [session(storage)],
+  })
+  ```
+
 - Add `asyncContext` middleware for storing the request context in `AsyncLocalStorage` so it is available to all functions in the same async execution context
 
   ```tsx
@@ -46,6 +58,10 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
     middleware: [staticFiles('./public')],
   })
   ```
+
+- Add `compress()` response helper for compressing responses based on client's `Accept-Encoding` header
+- Add `compression()` middleware for automatic response compression
+- Add `isCompressibleMediaType()` helper to check if a media type is compressible (exported from `@remix-run/fetch-router/compression-middleware`)
 
 ## v0.8.0 (2025-11-03)
 

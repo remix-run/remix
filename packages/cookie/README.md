@@ -21,9 +21,9 @@ npm install @remix-run/cookie
 ## Usage
 
 ```tsx
-import { Cookie } from '@remix-run/cookie'
+import { createCookie } from '@remix-run/cookie'
 
-let sessionCookie = new Cookie('session')
+let sessionCookie = createCookie('session', { secrets: ['s3cret1'] })
 
 // Get the value of the "session" cookie from the request's `Cookie` header
 let value = await sessionCookie.parse(request.headers.get('Cookie'))
@@ -46,7 +46,7 @@ Secret rotation is also supported, so you can easily rotate in new secrets witho
 import { Cookie } from '@remix-run/cookie'
 
 // Start with a single secret
-let sessionCookie = new Cookie('session', {
+let sessionCookie = createCookie('session', {
   secrets: ['secret1'],
 })
 
@@ -62,12 +62,19 @@ let response = new Response('Hello, world!', {
 All cookies sent in this scenario will be signed with the secret `secret1`. Later, when it's time to rotate secrets, add a new secret to the beginning of the array and all existing cookies will still be able to be parsed.
 
 ```tsx
-let sessionCookie = new Cookie('session', {
+let sessionCookie = createCookie('session', {
   secrets: ['secret2', 'secret1'],
 })
 
-// This will still work for cookies signed with the old secret
+// This works for cookies signed with either secret
 let value = await sessionCookie.parse(request.headers.get('Cookie'))
+
+// Newly serialized cookies will be signed with the new secret
+let response = new Response('Hello, world!', {
+  headers: {
+    'Set-Cookie': await sessionCookie.serialize(value),
+  },
+})
 ```
 
 ### Custom Encoding
@@ -75,7 +82,7 @@ let value = await sessionCookie.parse(request.headers.get('Cookie'))
 By default, the library will use `encodeURIComponent` and `decodeURIComponent` to encode and decode the cookie value. This is suitable for most use cases, but you can provide your own functions to customize the encoding and decoding of the cookie value.
 
 ```tsx
-let sessionCookie = new Cookie('session', {
+let sessionCookie = createCookie('session', {
   encode: (value) => value,
   decode: (value) => value,
 })

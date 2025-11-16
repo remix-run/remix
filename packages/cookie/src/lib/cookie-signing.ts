@@ -11,14 +11,18 @@ export async function sign(value: string, secret: string): Promise<string> {
 
 export async function unsign(cookie: string, secret: string): Promise<string | false> {
   let index = cookie.lastIndexOf('.')
+
+  if (index === -1) {
+    return false
+  }
+
   let value = cookie.slice(0, index)
   let hash = cookie.slice(index + 1)
-
   let data = encoder.encode(value)
-
   let key = await createKey(secret, ['verify'])
+
   try {
-    let signature = byteStringToUint8Array(atob(hash))
+    let signature = byteStringToArray(atob(hash))
     let valid = await crypto.subtle.verify('HMAC', key, signature, data)
 
     return valid ? value : false
@@ -40,7 +44,7 @@ async function createKey(secret: string, usages: CryptoKey['usages']): Promise<C
   )
 }
 
-function byteStringToUint8Array(byteString: string): Uint8Array<ArrayBuffer> {
+function byteStringToArray(byteString: string): Uint8Array<ArrayBuffer> {
   let array = new Uint8Array(byteString.length)
 
   for (let i = 0; i < byteString.length; i++) {

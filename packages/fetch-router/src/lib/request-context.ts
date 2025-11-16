@@ -1,5 +1,5 @@
 import SuperHeaders from '@remix-run/headers'
-import { Session } from '@remix-run/session'
+import { createSession, type Session } from '@remix-run/session'
 
 import { AppStorage } from './app-storage.ts'
 import {
@@ -98,7 +98,7 @@ export class RequestContext<
         "Session isn't started yet, so session data won't be saved. Use the session() middleware to start the session.",
       )
 
-      this.#session = new Session()
+      this.#session = createSession()
     }
 
     return this.#session

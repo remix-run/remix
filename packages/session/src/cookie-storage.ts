@@ -1,1 +1,1 @@
-export { CookieSessionStorage } from './lib/cookie-storage.ts'
+export { createCookieStorage } from './lib/session-storage/cookie.ts'

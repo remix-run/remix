@@ -1,1 +1,1 @@
-export { FileSessionStorage } from './lib/file-storage.ts'
+export { createFileStorage } from './lib/session-storage/file.ts'

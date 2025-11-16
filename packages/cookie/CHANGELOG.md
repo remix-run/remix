@@ -2,6 +2,20 @@
 
 This is the changelog for [`cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- BREAKING CHANGE: Remove `Cookie` class, use `createCookie` instead
+
+  ```tsx
+  // before
+  import { Cookie } from '@remix-run/cookie'
+  let cookie = new Cookie('session')
+
+  // after
+  import { createCookie } from '@remix-run/cookie'
+  let cookie = createCookie('session')
+  ```
+
 ## v0.3.0 (2025-11-08)
 
 - BREAKING CHANGE: Rename `cookie.isSigned` to `cookie.signed`
