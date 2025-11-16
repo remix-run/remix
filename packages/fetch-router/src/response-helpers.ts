@@ -1,3 +1,4 @@
+export { compress, type CompressOptions } from './lib/response-helpers/compress.ts'
 export {
   file,
   type FileDigestFunction,

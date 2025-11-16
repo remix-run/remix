@@ -1,5 +1,6 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { asyncContext } from '@remix-run/fetch-router/async-context-middleware'
+import { compression } from '@remix-run/fetch-router/compression-middleware'
 import { formData } from '@remix-run/fetch-router/form-data-middleware'
 import { logger } from '@remix-run/fetch-router/logger-middleware'
 import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
@@ -24,6 +25,7 @@ if (process.env.NODE_ENV === 'development') {
   middleware.push(logger())
 }
 
+middleware.push(compression())
 middleware.push(formData({ uploadHandler }))
 middleware.push(methodOverride())
 middleware.push(asyncContext())

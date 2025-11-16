@@ -4,6 +4,9 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
+- Add `compress()` response helper for compressing responses based on client's `Accept-Encoding` header
+- Add `compression()` middleware for automatic response compression
+- Add `isCompressibleMediaType()` helper to check if a media type is compressible (exported from `@remix-run/fetch-router/compression-middleware`)
 - Add `asyncContext` middleware for storing the request context in `AsyncLocalStorage` so it is available to all functions in the same async execution context
 
   ```tsx

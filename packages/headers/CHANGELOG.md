@@ -82,6 +82,19 @@ let headers = new SuperHeaders({ allow: ['GET', 'POST', 'OPTIONS'] })
 headers.get('Allow') // "GET, POST, OPTIONS"
 ```
 
+- Add `Vary` support
+
+```ts
+import { Vary } from '@remix-run/headers'
+
+let header = new Vary('Accept-Encoding')
+header.add('Accept-Language')
+header.headerNames // ['accept-encoding', 'accept-language']
+header.toString() // 'accept-encoding, accept-language'
+```
+
+- `Accept.getPreferred()`, `AcceptEncoding.getPreferred()`, and `AcceptLanguage.getPreferred()` are now generic, preserving the union type of the input array in the return type
+
 ## v0.16.0 (2025-11-05)
 
 - Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
