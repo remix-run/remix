@@ -31,6 +31,23 @@ export type {
 export type { RouteHandlers, RouteHandler, BuildRouteHandler } from './lib/route-handlers.ts'
 
 export {
+  createDestroy,
+  createDestroy as destroy, // shorthand
+  createGet,
+  createGet as get, // shorthand
+  createHead,
+  createHead as head, // shorthand
+  createOptions,
+  createOptions as options, // shorthand
+  createPatch,
+  createPatch as patch, // shorthand
+  createPost,
+  createPost as post, // shorthand
+  createPut,
+  createPut as put, // shorthand
+} from './lib/route-helpers.ts'
+
+export {
   Route,
   createRoutes,
   createRoutes as route, // shorthand
