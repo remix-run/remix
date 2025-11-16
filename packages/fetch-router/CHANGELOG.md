@@ -4,6 +4,21 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
+- Add `session` middleware for managing sessions across requests
+
+  ```tsx
+  import { createCookie } from '@remix-run/cookie'
+  import { createFileStorage } from '@remix-run/session/file-storage'
+  import { session } from '@remix-run/fetch-router/session-middleware'
+
+  let cookie = createCookie('session', { secrets: ['s3cr3t'] })
+  let storage = createFileStorage(cookie, '/tmp/sessions')
+
+  let router = createRouter({
+    middleware: [session(storage)],
+  })
+  ```
+
 - Add `asyncContext` middleware for storing the request context in `AsyncLocalStorage` so it is available to all functions in the same async execution context
 
   ```tsx

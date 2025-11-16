@@ -80,6 +80,60 @@ describe('memory session storage', () => {
     assert.match(await response3.text(), /Count: 3/)
   })
 
+  it('clears session data when the session is destroyed', async () => {
+    let storage = createMemoryStorage(cookie)
+
+    async function handleIndex(request: Request) {
+      let session = await storage.read(request)
+      session.set('count', ((session.get('count') as number | undefined) ?? 0) + 1)
+      let response = new Response(`Count: ${session.get('count')}`)
+      await storage.save(session, response)
+      return response
+    }
+
+    async function handleDestroy(request: Request) {
+      let session = await storage.read(request)
+      session.destroy()
+      let response = new Response(`Session ID: ${session.id}`)
+      await storage.save(session, response)
+      return response
+    }
+
+    let response1 = await handleIndex(createRequest())
+    assert.match(await response1.text(), /Count: 1/)
+
+    let response2 = await handleIndex(createRequest(response1))
+    assert.match(await response2.text(), /Count: 2/)
+
+    let response3 = await handleDestroy(createRequest(response2))
+    assert.match(await response3.text(), /Session ID: \w+/)
+
+    assert.notEqual(
+      await storage.read(createRequest(response2)).then((session) => session.id),
+      await storage.read(createRequest(response3)).then((session) => session.id),
+      'session id should have changed',
+    )
+
+    let response4 = await handleIndex(createRequest(response3))
+    assert.match(await response4.text(), /Count: 1/)
+  })
+
+  it('does not set a cookie when session data is not changed', async () => {
+    let storage = createMemoryStorage(cookie)
+
+    async function handleIndex(request: Request) {
+      let session = await storage.read(request)
+      let response = new Response(`Session ID: ${session.id}`)
+      await storage.save(session, response)
+      return response
+    }
+
+    let response = await handleIndex(createRequest())
+    assert.match(await response.text(), /Session ID: \w+/)
+
+    assert.deepEqual(response.headers.getSetCookie(), [])
+  })
+
   it('makes flash data available only on the next request', async () => {
     let storage = createMemoryStorage(cookie)
 

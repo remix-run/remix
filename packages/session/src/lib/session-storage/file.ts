@@ -57,9 +57,9 @@ export function createFileStorage(
     return path.join(root, subdir, filename)
   }
 
-  async function deleteFile(file: string): Promise<void> {
+  async function deleteFile(id: string): Promise<void> {
     try {
-      await fsp.unlink(file)
+      await fsp.unlink(await getFilePath(id))
     } catch (error) {
       if (!isNoEntityError(error)) {
         throw error
@@ -88,22 +88,24 @@ export function createFileStorage(
       return createSession(useUnknownIds && id ? id : undefined)
     },
     async save(session, response) {
-      let file = await getFilePath(session.id)
+      if (session.deleteId) {
+        await deleteFile(session.deleteId)
+      }
+
+      let cookieValue: string | undefined = undefined
       if (session.destroyed) {
-        await deleteFile(file)
-      } else {
+        await deleteFile(session.id)
+        cookieValue = ''
+      } else if (session.dirty) {
+        let file = await getFilePath(session.id)
         await fsp.mkdir(path.dirname(file), { recursive: true })
         await fsp.writeFile(file, JSON.stringify(session.data), 'utf-8')
+        cookieValue = session.id
       }
 
-      if (session.deleteId) {
-        await deleteFile(await getFilePath(session.deleteId))
+      if (cookieValue != null) {
+        response.headers.append('Set-Cookie', await cookie.serialize(cookieValue))
       }
-
-      response.headers.append(
-        'Set-Cookie',
-        await cookie.serialize(session.destroyed ? '' : session.id),
-      )
     },
   }
 }

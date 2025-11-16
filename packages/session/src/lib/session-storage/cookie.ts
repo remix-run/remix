@@ -41,12 +41,16 @@ export function createCookieStorage(cookie: Cookie): SessionStorage {
         )
       }
 
-      response.headers.append(
-        'Set-Cookie',
-        await cookie.serialize(
-          session.destroyed ? '' : JSON.stringify({ i: session.id, d: session.data }),
-        ),
-      )
+      let cookieValue: string | undefined = undefined
+      if (session.destroyed) {
+        cookieValue = ''
+      } else if (session.dirty) {
+        cookieValue = JSON.stringify({ i: session.id, d: session.data })
+      }
+
+      if (cookieValue != null) {
+        response.headers.append('Set-Cookie', await cookie.serialize(cookieValue))
+      }
     },
   }
 }

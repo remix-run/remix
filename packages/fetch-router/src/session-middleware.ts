@@ -1,1 +1,1 @@
-export { type SessionOptions, session } from './lib/middleware/session.ts'
+export { session } from './lib/middleware/session.ts'

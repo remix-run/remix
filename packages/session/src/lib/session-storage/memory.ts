@@ -46,20 +46,22 @@ export function createMemoryStorage(
       return createSession(useUnknownIds && id !== '' ? id : undefined)
     },
     async save(session, response) {
-      if (session.destroyed) {
-        map.delete(session.id)
-      } else {
-        map.set(session.id, session.data)
-      }
-
       if (session.deleteId) {
         map.delete(session.deleteId)
       }
 
-      response.headers.append(
-        'Set-Cookie',
-        await cookie.serialize(session.destroyed ? '' : session.id),
-      )
+      let cookieValue: string | undefined = undefined
+      if (session.destroyed) {
+        map.delete(session.id)
+        cookieValue = ''
+      } else if (session.dirty) {
+        map.set(session.id, session.data)
+        cookieValue = session.id
+      }
+
+      if (cookieValue != null) {
+        response.headers.append('Set-Cookie', await cookie.serialize(cookieValue))
+      }
     },
   }
 }
