@@ -60,8 +60,37 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   ```
 
 - Add `compress()` response helper for compressing responses based on client's `Accept-Encoding` header
+
+  ```tsx
+  import * as res from '@remix-run/fetch-router/response-helpers'
+
+  router.get('/data', async ({ request }) => {
+    let data = await getHugeDataset()
+    let response = new Response(JSON.stringify(data), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+    return res.compress(response, request)
+  })
+  ```
+
 - Add `compression()` middleware for automatic response compression
-- Add `isCompressibleMediaType()` helper to check if a media type is compressible (exported from `@remix-run/fetch-router/compression-middleware`)
+
+  ```tsx
+  import { compression } from '@remix-run/fetch-router/compression-middleware'
+
+  let router = createRouter({
+    middleware: [compression()],
+  })
+  ```
+
+- Add `isCompressibleMediaType()` helper
+
+  ```tsx
+  import { isCompressibleMediaType } from '@remix-run/fetch-router/compression-middleware'
+
+  isCompressibleMediaType('text/html') // true
+  isCompressibleMediaType('image/jpeg') // false
+  ```
 
 ## v0.8.0 (2025-11-03)
 
