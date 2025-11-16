@@ -5,7 +5,7 @@ export {
   type EventsContainer,
   type Interaction,
   type InteractionSetup,
-  type TypedEventTarget,
+  TypedEventTarget,
   createContainer,
   defineInteraction,
   on,
