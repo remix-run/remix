@@ -47,6 +47,8 @@
     }
   },
   "devDependencies": {
+    "@remix-run/cookie": "workspace:*",
+    "@remix-run/headers": "workspace:*",
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3"
   },
@@ -60,9 +62,12 @@
   "keywords": [
     "session",
     "session-management",
-    "web-standards",
+    "session-storage",
     "fetch",
     "cookie",
     "storage"
-  ]
+  ],
+  "peerDependencies": {
+    "@remix-run/cookie": "workspace:^"
+  }
 }

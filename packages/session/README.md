@@ -1,15 +1,12 @@
 # session
 
-A web-standards-based session management library for JavaScript. This package provides a flexible and secure way to manage user sessions in server-side applications using various storage backends.
+A web-standards-based session management library for JavaScript. This package provides a flexible and secure way to manage user sessions in server-side applications with a flexible API for different session storage strategies.
 
 ## Features
 
-- **Web Standards First:** Built on web standards including the Fetch API, making it portable across runtimes (Node.js, Deno, Bun, Cloudflare Workers)
-- **Multiple Storage Options:** Includes memory, cookie, and file-based session storage implementations
-- **Flash Messages:** Support for flash data that persists only for the next request
-- **Session Security:** Built-in protection against session fixation attacks
-- **TypeScript Support:** Fully typed API for better developer experience
-- **Flexible API:** Easy to extend with custom storage backends
+- **Multiple Storage Strategies:** Includes memory, cookie, and file-based [session storage strategies](#storage-strategies)
+- **Flash Messages:** Support for [flash data](#flash-messages) that persists only for the next request
+- **Session Security:** Built-in protection against [session fixation attacks](#regenerating-session-ids)
 
 ## Installation
 
@@ -21,23 +18,39 @@ npm install @remix-run/session
 
 ### Basic Example
 
+The following example shows how to use a session to persist data across requests.
+
+The standard pattern when working with sessions is to read the session from the request, modify it, and save it back to storage and write the session cookie to the response.
+
 ```ts
-import { Session, MemorySessionStorage } from '@remix-run/session'
+import { createCookie } from '@remix-run/cookie'
+import { createCookieStorage } from '@remix-run/session/cookie-storage'
 
-let storage = new MemorySessionStorage()
+// Create a session cookie and session storage
+// Note: The session cookie must be signed for security
+let cookie = createCookie('session', { secrets: ['s3cr3t'] })
+let storage = createCookieStorage(cookie)
 
-// Create a new session
-let session = new Session()
-session.set('userId', '123')
-session.set('theme', 'dark')
+async function handleRequest(request: Request) {
+  let session = await storage.read(request)
+  session.set('count', (session.get('count') ?? 0) + 1)
 
-// Save the session
-let cookieValue = await storage.update(session.id, session.data)
+  let response = new Response(`Count: ${session.get('count')}`)
+  await storage.save(session, response)
 
-// Later, retrieve the session
-let retrievedSession = await storage.read(cookieValue)
-console.log(retrievedSession.get('userId')) // '123'
-console.log(retrievedSession.get('theme')) // 'dark'
+  return response
+}
+
+let response1 = await handleRequest(new Request('https://remix.run'))
+assert.match(await response1.text(), /Count: 1/)
+
+// Note: createRequest(response) here is pseudo-code for creating a new request
+// object with cookie from the previous response.
+let response2 = await handleRequest(createRequest(response1))
+assert.match(await response2.text(), /Count: 2/)
+
+let response3 = await handleRequest(createRequest(response2))
+assert.match(await response3.text(), /Count: 3/)
 ```
 
 ### Flash Messages
@@ -45,82 +58,121 @@ console.log(retrievedSession.get('theme')) // 'dark'
 Flash messages are values that persist only for the next request, perfect for displaying one-time notifications:
 
 ```ts
-let session = new Session()
-session.flash('message', 'Successfully logged in!')
+async function handleIndex(request: Request) {
+  let session = await storage.read(request)
+  let response = new Response(`Message: ${session.get('message') ?? 'undefined'}`)
+  await storage.save(session, response)
+  return response
+}
 
-// Save and reload
-let cookieValue = await storage.update(session.id, session.data)
-let nextSession = await storage.read(cookieValue)
+async function handleSubmit(request: Request) {
+  let session = await storage.read(request)
+  session.flash('message', 'success!')
+  await storage.save(session, response)
+  return response
+}
 
-console.log(nextSession.get('message')) // 'Successfully logged in!'
+// Flash data is undefined on the first request.
+let response1 = await handleIndex(new Request('https://remix.run'))
+assert.match(await response1.text(), /Message: undefined/)
 
-// On the following request, the flash message is gone
-let cookieValue2 = await storage.update(nextSession.id, nextSession.data)
-let laterSession = await storage.read(cookieValue2)
-console.log(laterSession.get('message')) // undefined
+// The next request sets the flash message. This is typically a POST handler that
+// redirects back to a GET handler.
+let response2 = await handleSubmit(createRequest(response1))
+
+// The next request shows the flash message.
+let response3 = await handleIndex(createRequest(response2))
+assert.match(await response3.text(), /Message: success!/)
+
+// The following request doesn't have access to flash data.
+let response4 = await handleIndex(createRequest(response3))
+assert.match(await response4.text(), /Message: undefined/)
 ```
 
-### Session ID Regeneration
+### Regenerating Session IDs
 
-For security, regenerate the session ID after privilege changes like login:
+For security, regenerate the session ID after privilege changes like a login. This helps prevent session fixation attacks by issuing a new session ID in the response to the client.
 
 ```ts
-let session = await storage.read(cookieValue)
+import { createFileStorage } from '@remix-run/session/file-storage'
+import { createCookie } from '@remix-run/cookie'
 
-// User just logged in
-session.regenerateId()
-session.set('userId', authenticatedUserId)
+let cookie = createCookie('session', { secrets: ['s3cr3t'] })
+let storage = createFileStorage(cookie, './sessions')
 
-let newCookieValue = await storage.update(session.id, session.data)
+async function handleLogin(request: Request) {
+  let session = await storage.read(request)
+  let authenticatedUserId = 'mj'
+  session.regenerateId()
+  session.set('userId', authenticatedUserId)
+  let response = new Response(`Logged in as ${authenticatedUserId}`)
+  await storage.save(session, response)
+  return response
+}
+
+let response = await handleLogin(new Request('https://remix.run'))
+assert.match(await response.text(), /Logged in as \w+/)
 ```
 
-### Storage Implementations
+To delete the old session data when the session is saved, use `session.regenerateId(true)`. This can help to prevent session fixation attacks by deleting the old session data when the session is saved. However, it may not be desirable in a situation with mobile clients on flaky connections that may need to resume the session using an old session ID.
 
-#### Memory Storage
+### Destroying Sessions
 
-Fast in-memory storage, suitable for development or single-instance deployments:
+When a user logs out, you should destroy the session.
 
 ```ts
-import { MemorySessionStorage } from '@remix-run/session'
+async function handleLogout(request: Request) {
+  let session = await storage.read(request)
+  // This will clear the session the next time it is saved
+  session.destroy()
+  let response = new Response('Logged out')
+  await storage.save(session, response)
+  return response
+}
+```
 
-let storage = new MemorySessionStorage()
+### Storage Strategies
+
+Several strategies are provided out of the box for storing session data across requests, depending on your needs.
+
+A session storage object must always be initialized with a _signed_ session cookie. This is used to identify the session and to store the session data in the response.
+
+#### File Storage
+
+File storage is a good choice for production environments. It requires access to a persistent filesystem, which is readily available on most servers. And it can scale to handle sessions with a lot of data easily.
+
+```ts
+import { createCookie } from '@remix-run/cookie'
+import { createFileStorage } from '@remix-run/session/file-storage'
+
+let cookie = createCookie('session', { secrets: ['s3cr3t'] })
+let storage = createFileStorage(cookie, '/tmp/sessions')
 ```
 
 #### Cookie Storage
 
-Stores all session data in the session cookie itself:
+Cookie storage is suitable for production environments. In this strategy, all session data is stored directly in the session cookie itself, which means it doesn't require any additional storage.
+
+The main limitation of cookie storage is that the total size of the session cookie is limited to the browser's maximum cookie size, typically 4096 bytes.
 
 ```ts
-import { Cookie } from '@remix-run/cookie'
-import { CookieSessionStorage } from '@remix-run/session'
+import { createCookie } from '@remix-run/cookie'
+import { createCookieStorage } from '@remix-run/session/cookie-storage'
 
-let cookie = new Cookie('session', {
-  secrets: ['your-secret-key'],
-})
-
-let storage = new CookieSessionStorage(cookie)
+let cookie = createCookie('session', { secrets: ['s3cr3t'] })
+let storage = createCookieStorage(cookie)
 ```
 
-#### File Storage
+#### Memory Storage
 
-Persists sessions to disk:
-
-```ts
-import { FileSessionStorage } from '@remix-run/session'
-
-let storage = new FileSessionStorage('./sessions')
-```
-
-### Destroying Sessions
-
-To log out or delete a session:
+Memory storage is a good choice for testing and development. In this strategy, all session data is stored in memory, which means it doesn't require any additional storage. However, all session data is lost when the server restarts.
 
 ```ts
-let session = await storage.read(cookieValue)
-session.destroy()
+import { createCookie } from '@remix-run/cookie'
+import { createMemoryStorage } from '@remix-run/session/memory-storage'
 
-// This will clear the session
-let emptyValue = await storage.delete(session.id)
+let cookie = createCookie('session', { secrets: ['s3cr3t'] })
+let storage = createMemoryStorage(cookie)
 ```
 
 ## Related Packages

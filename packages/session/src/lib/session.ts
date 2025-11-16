@@ -1,193 +1,178 @@
-type Data<T = unknown> = Record<string, T>
+type Data = Record<string, unknown>
 
 export type SessionData<valueData extends Data = Data, flashData extends Data = Data> = [
   valueData,
   flashData,
 ]
 
-export class Session<valueData extends Data = Data, flashData extends Data = Data> {
-  /**
-   * Create a new cryptographically secure session ID.
-   * @returns A new session ID
-   */
-  static createId(): string {
-    return crypto.randomUUID()
-  }
-
-  constructor(id = Session.createId(), initialData?: SessionData<valueData, flashData>) {
-    this.#id = id
-    this.#valueMap = toMap(initialData?.[0])
-    this.#flashMap = toMap(initialData?.[1])
-    this.#nextMap = new Map()
-  }
-
-  #id: string
-  readonly #valueMap: Map<keyof valueData, valueData[keyof valueData]>
-  readonly #flashMap: Map<keyof flashData, flashData[keyof flashData]>
-  readonly #nextMap: Map<keyof flashData, flashData[keyof flashData]>
-  #destroyed = false
-  #dirty = false
-
+/**
+ * A session represents data that persists for a specific user across multiple requests to a server.
+ */
+export interface Session<valueData extends Data = Data, flashData extends Data = Data> {
   /**
    * The raw session data in a format suitable for storage.
-   * @returns The session data
+   *
+   * Note: Do not use this for normal reading of session data. Use the `get` method instead.
    */
-  get data(): SessionData<valueData, flashData> {
-    if (this.destroyed) return [{} as valueData, {} as flashData]
-    return [
-      Object.fromEntries(this.#valueMap) as valueData,
-      Object.fromEntries(this.#nextMap) as flashData,
-    ]
-  }
-
+  readonly data: SessionData<valueData, flashData>
+  /**
+   * The session ID that will be deleted when the session is saved. This is set to the original
+   * session ID when the session ID is regenerated with the `deleteOldSession` option.
+   */
+  readonly deleteId: string | undefined
   /**
    * Mark this session as destroyed.
    *
    * This prevents all further modifications to the session.
    */
-  destroy(): void {
-    this.#destroyed = true
-  }
-
+  destroy(): void
   /**
    * Whether this session has been destroyed.
    */
-  get destroyed(): boolean {
-    return this.#destroyed
-  }
-
-  #checkDestroyed(): void {
-    if (this.destroyed) {
-      throw new Error('Session has been destroyed')
-    }
-  }
-
+  readonly destroyed: boolean
   /**
-   * Whether this session has been modified since it was last saved.
+   * Whether this session has been modified since it was created.
    */
-  get dirty(): boolean {
-    return this.#dirty
-  }
-
+  readonly dirty: boolean
   /**
-   * Set a value in the session that will be available only for the next request.
+   * Set a value in the session that will be available only during the next request.
    * @param key The key of the value to flash
    * @param value The value to flash
    */
-  flash<key extends keyof flashData>(key: key, value: flashData[key]): void {
-    this.#checkDestroyed()
-    this.#nextMap.set(key, value)
-    this.#dirty = true
-  }
-
+  flash<key extends keyof flashData>(key: key, value: flashData[key]): void
   /**
    * Get a value from the session.
    * @param key The key of the value to get
    * @returns The value for the given key
    */
-  get<key extends keyof valueData | keyof flashData>(
-    key: key,
-  ): key extends keyof valueData
-    ? valueData[key]
-    : key extends keyof flashData
-      ? flashData[key]
-      : never {
-    if (this.destroyed) return undefined as any
-    return (this.#valueMap.get(key as any) ?? this.#flashMap.get(key as any)) as any
-  }
-
+  get<key extends keyof valueData>(key: key): valueData[key] | undefined
+  get<key extends keyof flashData>(key: key): flashData[key] | undefined
+  get(key: string): undefined
   /**
    * Check if a value is stored for the given key.
    * @param key The key to check
    * @returns `true` if a value is stored for the given key, `false` otherwise
    */
-  has(key: keyof valueData | keyof flashData): boolean {
-    if (this.destroyed) return false
-    return this.#valueMap.has(key as any) || this.#flashMap.has(key as any)
-  }
-
+  has(key: keyof valueData | keyof flashData): boolean
   /**
    * The unique identifier for this session.
    */
-  get id(): string {
-    return this.#id
-  }
-
+  readonly id: string
   /**
    * Regenerate the session ID while preserving the session data.
    * This should be called after login or other privilege changes.
+   * @param deleteOldSession Whether to delete the old session data when the session is saved. Defaults to `false`.
    */
-  regenerateId(): void {
-    this.#checkDestroyed()
-    this.#id = Session.createId()
-    this.#dirty = true
-  }
-
-  /**
-   * The number of key/value pairs in the session.
-   */
-  get size(): number {
-    return this.#valueMap.size + this.#flashMap.size
-  }
-
+  regenerateId(deleteOldSession?: boolean): void
   /**
    * Set a value in the session.
    * @param key The key of the value to set
    * @param value The value to set
    */
-  set<key extends keyof valueData>(key: key, value: valueData[key]): void {
-    if (value == null) {
-      this.unset(key)
-    } else {
-      this.#checkDestroyed()
-      this.#valueMap.set(key, value)
-      this.#dirty = true
-    }
-  }
-
+  set<key extends keyof valueData>(key: key, value: valueData[key]): void
+  /**
+   * The number of key/value pairs in the session.
+   */
+  readonly size: number
   /**
    * Remove a value from the session.
    * @param key The key of the value to remove
    */
-  unset(key: keyof valueData): void {
-    this.#checkDestroyed()
-    this.#valueMap.delete(key as any)
-    this.#dirty = true
+  unset(key: keyof valueData): void
+}
+
+/**
+ * Create a new cryptographically secure session ID.
+ * @returns A new session ID
+ */
+export function createSessionId(): string {
+  return crypto.randomUUID()
+}
+
+/**
+ * Create a new session.
+ * @param id The ID of the session
+ * @param initialData The initial data for the session
+ * @returns The session
+ */
+export function createSession<valueData extends Data = Data, flashData extends Data = Data>(
+  id = createSessionId(),
+  initialData?: SessionData<valueData, flashData>,
+): Session<valueData, flashData> {
+  let currentId = id
+  let deleteId: string | undefined = undefined
+  let valueMap = toMap(initialData?.[0])
+  let flashMap = toMap(initialData?.[1])
+  let nextMap = new Map<keyof flashData, flashData[keyof flashData]>()
+  let destroyed = false
+  let dirty = false
+
+  function checkDestroyed() {
+    if (destroyed) throw new Error('Session has been destroyed')
+  }
+
+  return {
+    get data() {
+      return (
+        destroyed ? [{}, {}] : [Object.fromEntries(valueMap), Object.fromEntries(nextMap)]
+      ) as SessionData<valueData, flashData>
+    },
+    get deleteId() {
+      return deleteId
+    },
+    destroy() {
+      destroyed = true
+    },
+    get destroyed() {
+      return destroyed
+    },
+    get dirty() {
+      return dirty
+    },
+    flash(key, value) {
+      checkDestroyed()
+      nextMap.set(key, value)
+      dirty = true
+    },
+    get(key: string) {
+      if (destroyed) return undefined as any
+      return valueMap.get(key as any) ?? flashMap.get(key as any)
+    },
+    has(key) {
+      if (destroyed) return false
+      return valueMap.has(key as any) || flashMap.has(key as any)
+    },
+    get id() {
+      return currentId
+    },
+    regenerateId(deleteOldSession = false) {
+      checkDestroyed()
+      if (deleteOldSession) deleteId = id
+      currentId = createSessionId()
+      dirty = true
+    },
+    set(key, value) {
+      checkDestroyed()
+      if (value == null) {
+        valueMap.delete(key as any)
+      } else {
+        valueMap.set(key as any, value)
+      }
+      dirty = true
+    },
+    get size() {
+      if (destroyed) return 0
+      return valueMap.size + flashMap.size
+    },
+    unset(key) {
+      checkDestroyed()
+      valueMap.delete(key as any)
+      dirty = true
+    },
   }
 }
 
 function toMap<data extends Data>(data?: data): Map<keyof data, data[keyof data]> {
   if (!data) return new Map()
   return new Map(Object.entries(data) as [keyof data, data[keyof data]][])
-}
-
-export interface SessionStorage {
-  /**
-   * Retrieve a new session from storage.
-   * @param cookieValue The value of the session cookie
-   * @returns The session
-   */
-  read(cookieValue: string | null): Promise<Session>
-  /**
-   * Update a session in storage.
-   * @param id The ID of the session to save
-   * @param data The data to save for the session
-   * @returns The value to put in the session cookie
-   */
-  update(id: string, data: SessionData): Promise<string>
-  /**
-   * Delete a session from storage.
-   * @param id The ID of the session to delete
-   * @returns The value to put in the session cookie
-   */
-  delete(id: string): Promise<string>
-}
-
-export interface SessionStorageOptions {
-  /**
-   * Set `true` to accept and use unknown session IDs from the client. By default, unknown
-   * session IDs are rejected and a new session is created instead, which helps prevent session
-   * fixation attacks.
-   */
-  useUnknownIds?: boolean
 }

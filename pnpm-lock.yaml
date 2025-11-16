@@ -396,6 +396,12 @@ importers:
 
   packages/session:
     devDependencies:
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../cookie
+      '@remix-run/headers':
+        specifier: workspace:*
+        version: link:../headers
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0

@@ -1,1 +1,1 @@
-export { MemorySessionStorage } from './lib/memory-storage.ts'
+export { createMemoryStorage } from './lib/session-storage/memory.ts'
