@@ -115,34 +115,16 @@ describe('compress()', () => {
     assert.equal(await compressed.text(), 'Hello, World!')
   })
 
-  it('respects threshold option', async () => {
+
+  it('compresses responses when Content-Length is not set', async () => {
     let request = new Request('http://localhost', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
-    let response = new Response('Small', {
-      headers: { 'Content-Length': '5' },
-    })
-
-    let compressed = await compress(response, request, {
-      threshold: 10,
-    })
-
-    assert.equal(compressed.headers.get('Content-Encoding'), null)
-    assert.equal(await compressed.text(), 'Small')
-  })
-
-  it('compresses small responses when Content-Length is not set', async () => {
-    let request = new Request('http://localhost', {
-      headers: { 'Accept-Encoding': 'gzip' },
-    })
-    // Small response without Content-Length header
+    // Response without Content-Length header
     let response = new Response('Small')
 
-    let compressed = await compress(response, request, {
-      threshold: 1024,
-    })
+    let compressed = await compress(response, request)
 
-    // Should compress because threshold check requires Content-Length
     assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
   })
 
@@ -165,32 +147,6 @@ describe('compress()', () => {
     })
     let response = new Response('Do not transform', {
       headers: { 'Cache-Control': 'public, no-transform, max-age=3600' },
-    })
-
-    let compressed = await compress(response, request)
-
-    assert.equal(compressed, response)
-  })
-
-  it('skips compression for server-sent events', async () => {
-    let request = new Request('http://localhost', {
-      headers: { 'Accept-Encoding': 'gzip' },
-    })
-    let response = new Response('data: hello\n\n', {
-      headers: { 'Content-Type': 'text/event-stream' },
-    })
-
-    let compressed = await compress(response, request)
-
-    assert.equal(compressed, response)
-  })
-
-  it('skips compression for server-sent events with charset parameter', async () => {
-    let request = new Request('http://localhost', {
-      headers: { 'Accept-Encoding': 'gzip' },
-    })
-    let response = new Response('data: hello\n\n', {
-      headers: { 'Content-Type': 'text/event-stream; charset=utf-8' },
     })
 
     let compressed = await compress(response, request)
@@ -654,20 +610,6 @@ describe('compress()', () => {
     assert.equal(compressed.headers.get('Content-Encoding'), null)
   })
 
-  it('respects threshold for HEAD requests', async () => {
-    let request = new Request('http://localhost', {
-      method: 'HEAD',
-      headers: { 'Accept-Encoding': 'gzip' },
-    })
-    let response = new Response('small', {
-      headers: { 'Content-Type': 'text/plain', 'Content-Length': '5' },
-    })
-
-    let compressed = await compress(response, request, { threshold: 1024 })
-
-    assert.equal(compressed, response)
-    assert.equal(compressed.headers.get('Content-Encoding'), null)
-  })
 
   it('sets compression headers for HEAD requests even when body is already null', async () => {
     let request = new Request('http://localhost', {

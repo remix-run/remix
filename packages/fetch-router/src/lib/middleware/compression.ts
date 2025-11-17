@@ -1,13 +1,53 @@
+import { constants } from 'node:zlib'
+import type { BrotliOptions, ZlibOptions } from 'node:zlib'
 import type { Middleware } from '../middleware.ts'
 import { compress, type CompressOptions } from '../response-helpers/compress.ts'
 import { compressibleMediaTypes } from '../compressible-media-types.ts'
 
-export interface CompressionOptions extends CompressOptions {
+type Encoding = 'br' | 'gzip' | 'deflate'
+
+export interface CompressionOptions {
+  /**
+   * Minimum size in bytes to compress (only enforced if Content-Length present).
+   * Default: 1024
+   */
+  threshold?: number
+
   /**
    * Optional filter to control which responses get compressed based on media type.
    * If not provided, uses compressible media types from mime-db.
    */
   filterMediaType?: (mediaType: string) => boolean
+
+  /**
+   * Which encodings the server supports for negotiation in order of preference.
+   * Can be static or a function that returns encodings based on the response.
+   *
+   * Default: ['br', 'gzip', 'deflate']
+   */
+  encodings?: Encoding[] | ((response: Response) => Encoding[])
+
+  /**
+   * node:zlib options for gzip/deflate compression.
+   * Can be static or a function that returns options based on the response.
+   *
+   * For SSE responses, `flush: Z_SYNC_FLUSH` is automatically applied unless you
+   * explicitly set a flush value.
+   *
+   * See: https://nodejs.org/api/zlib.html#class-options
+   */
+  zlib?: ZlibOptions | ((response: Response) => ZlibOptions)
+
+  /**
+   * node:zlib options for Brotli compression.
+   * Can be static or a function that returns options based on the response.
+   *
+   * For SSE responses, `flush: Z_SYNC_FLUSH` is automatically applied unless you
+   * explicitly set a flush value.
+   *
+   * See: https://nodejs.org/api/zlib.html#class-brotlioptions
+   */
+  brotli?: BrotliOptions | ((response: Response) => BrotliOptions)
 }
 
 /**
@@ -25,8 +65,6 @@ export interface CompressionOptions extends CompressOptions {
  * ```
  */
 export function compression(options?: CompressionOptions): Middleware {
-  let { filterMediaType = isCompressibleMediaType, ...compressOptions } = options ?? {}
-
   return async (context, next) => {
     let response = await next()
 
@@ -40,8 +78,56 @@ export function compression(options?: CompressionOptions): Middleware {
       return response
     }
 
+    let filterMediaType = options?.filterMediaType ?? isCompressibleMediaType
     if (!filterMediaType(mediaType)) {
       return response
+    }
+
+    let isSSE = contentTypeHeader === 'text/event-stream'
+
+    let encodings: CompressOptions['encodings'] = options?.encodings
+      ? typeof options.encodings === 'function'
+        ? options.encodings(response)
+        : options.encodings
+      : ['br', 'gzip', 'deflate']
+
+    let userZlib = options?.zlib
+      ? typeof options.zlib === 'function'
+        ? options.zlib(response)
+        : options.zlib
+      : undefined
+
+    // For SSE, set default flush mode if not explicitly set
+    let zlibOptions: CompressOptions['zlib'] =
+      isSSE && (!userZlib || userZlib.flush === undefined)
+        ? { flush: constants.Z_SYNC_FLUSH, ...userZlib }
+        : userZlib
+
+    let userBrotli = options?.brotli
+      ? typeof options.brotli === 'function'
+        ? options.brotli(response)
+        : options.brotli
+      : undefined
+
+    // For SSE, set default flush mode if not explicitly set
+    let brotliOptions: CompressOptions['brotli'] =
+      isSSE && (!userBrotli || userBrotli.flush === undefined)
+        ? { flush: constants.Z_SYNC_FLUSH, ...userBrotli }
+        : userBrotli
+
+    // If Content-Length is present, check threshold before compressing
+    let contentLengthHeader = response.headers.get('Content-Length')
+    if (contentLengthHeader !== null) {
+      let contentLength = parseInt(contentLengthHeader, 10)
+      if (!isNaN(contentLength) && contentLength < (options?.threshold ?? 1024)) {
+        return response
+      }
+    }
+
+    let compressOptions: CompressOptions = {
+      encodings,
+      zlib: zlibOptions,
+      brotli: brotliOptions,
     }
 
     return compress(response, context.request, compressOptions)

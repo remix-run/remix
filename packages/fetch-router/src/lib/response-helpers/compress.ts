@@ -10,12 +10,6 @@ const defaultEncodings: readonly Encoding[] = Object.freeze(['br', 'gzip', 'defl
 
 export interface CompressOptions {
   /**
-   * Minimum size in bytes to compress (only enforced if Content-Length present).
-   * Default: 1024
-   */
-  threshold?: number
-
-  /**
    * Which encodings the server supports for negotiation in order of preference.
    * Supported encodings: 'br', 'gzip', 'deflate'.
    * Default: ['br', 'gzip', 'deflate']
@@ -41,12 +35,10 @@ export interface CompressOptions {
  * Compression is skipped for:
  * - Responses with no Accept-Encoding header (RFC 7231)
  * - Empty responses
- * - Responses smaller than threshold (default 1024 bytes)
  * - Already compressed responses
  * - Responses with Cache-Control: no-transform
  * - Responses advertising range support (Accept-Ranges: bytes)
  * - Partial content responses (206 status)
- * - Server-Sent Events (text/event-stream media type)
  *
  * When compressing, this function:
  * - Sets Content-Encoding header
@@ -73,9 +65,6 @@ export async function compress(
     !acceptEncodingHeader ||
     // Empty response
     (request.method !== 'HEAD' && !response.body) ||
-    // Response smaller than threshold
-    (responseHeaders.contentLength !== null &&
-      responseHeaders.contentLength < (compressOptions.threshold ?? 1024)) ||
     // Already compressed
     responseHeaders.contentEncoding != null ||
     // Cache-Control: no-transform
@@ -83,9 +72,7 @@ export async function compress(
     // Response advertising range support
     responseHeaders.acceptRanges === 'bytes' ||
     // Partial content responses
-    response.status === 206 ||
-    // Server-Sent Events
-    responseHeaders.contentType?.mediaType === 'text/event-stream'
+    response.status === 206
   ) {
     return response
   }
