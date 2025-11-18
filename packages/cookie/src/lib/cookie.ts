@@ -6,32 +6,88 @@ import {
 
 import { sign, unsign } from './cookie-signing.ts'
 
+type SameSiteValue = 'Strict' | 'Lax' | 'None'
+
 /**
- * A container for metadata about a HTTP cookie; its name and secrets that may be used
- * to sign/unsign the value of the cookie to ensure it's not tampered with.
+ * Represents a HTTP cookie.
+ *
+ * Supports parsing and serializing the cookie to/from `Cookie` and `Set-Cookie` headers.
+ *
+ * Also supports cryptographic signing of the cookie value to ensure it's not tampered with, and
+ * secret rotation to easily rotate secrets without breaking existing cookies.
  */
 export interface Cookie {
   /**
+   * The domain of the cookie.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#domaindomain-value)
+   */
+  readonly domain: string | undefined
+  /**
+   * The expiration date of the cookie.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#expiresdate)
+   */
+  readonly expires: Date | undefined
+  /**
+   * True if the cookie is HTTP-only.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#httponly)
+   */
+  readonly httpOnly: boolean
+  /**
+   * The maximum age of the cookie in seconds.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#max-agenumber)
+   */
+  readonly maxAge: number | undefined
+  /**
    * The name of the cookie.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#cookie-namecookie-value)
    */
   readonly name: string
   /**
-   * True if this cookie uses one or more secrets for verification.
-   */
-  readonly signed: boolean
-  /**
    * Extracts the value of this cookie from a `Cookie` header value.
-   * @param headerValue The value of the `Cookie` header to parse
+   * @param headerValue The `Cookie` header to parse
    * @returns The value of this cookie, or `null` if it's not present
    */
   parse(headerValue: string | null): Promise<string | null>
   /**
+   * True if the cookie is partitioned.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#partitioned)
+   */
+  readonly partitioned: boolean
+  /**
+   * The path of the cookie. Defaults to `/`.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value)
+   */
+  readonly path: string
+  /**
+   * The `SameSite` attribute of the cookie. Defaults to `Lax`.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value)
+   */
+  readonly sameSite: SameSiteValue
+  /**
+   * True if the cookie is secure (only sent over HTTPS).
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure)
+   */
+  readonly secure: boolean
+  /**
    * Returns the value to use in a `Set-Cookie` header for this cookie.
    * @param value The value to serialize
    * @param props (optional) Additional properties to use when serializing the cookie
-   * @returns The `Set-Cookie` header value for this cookie
+   * @returns The `Set-Cookie` header for this cookie
    */
   serialize(value: string, props?: CookieProperties): Promise<string>
+  /**
+   * True if this cookie uses one or more secrets for verification.
+   */
+  readonly signed: boolean
 }
 
 export interface CookieOptions extends CookieProperties {
@@ -75,15 +131,31 @@ export function createCookie(name: string, options?: CookieOptions): Cookie {
     decode = decodeURIComponent,
     encode = encodeURIComponent,
     secrets = [],
-    ...propsFromOptions
+    domain,
+    expires,
+    httpOnly,
+    maxAge,
+    path = '/',
+    partitioned,
+    secure,
+    sameSite = 'Lax',
   } = options ?? {}
 
   return {
+    get domain() {
+      return domain
+    },
+    get expires() {
+      return expires
+    },
+    get httpOnly() {
+      return httpOnly ?? false
+    },
+    get maxAge() {
+      return maxAge
+    },
     get name() {
       return name
-    },
-    get signed() {
-      return secrets.length > 0
     },
     async parse(headerValue: string | null): Promise<string | null> {
       if (!headerValue) return null
@@ -97,18 +169,37 @@ export function createCookie(name: string, options?: CookieOptions): Cookie {
       let decoded = await decodeCookieValue(value, secrets, decode)
       return decoded
     },
+    get partitioned() {
+      return partitioned ?? false
+    },
+    get path() {
+      return path
+    },
+    get sameSite() {
+      return sameSite
+    },
+    get secure() {
+      return secure ?? false
+    },
     async serialize(value: string, props?: CookieProperties): Promise<string> {
       let header = new SetCookieHeader({
         name: name,
         value: value === '' ? '' : await encodeCookieValue(value, secrets, encode),
-        // sane defaults
-        path: '/',
-        sameSite: 'Lax',
-        ...propsFromOptions,
+        domain,
+        expires,
+        httpOnly,
+        maxAge,
+        partitioned,
+        path,
+        sameSite,
+        secure,
         ...props,
       })
 
       return header.toString()
+    },
+    get signed() {
+      return secrets.length > 0
     },
   }
 }
@@ -172,11 +263,7 @@ function hex(code: number, length: number): string {
 
 async function encodeCookieValue(value: string, secrets: string[], encode: Coder): Promise<string> {
   let encoded = encodeValue(value, encode)
-
-  if (secrets.length > 0) {
-    encoded = await sign(encoded, secrets[0])
-  }
-
+  if (secrets.length > 0) encoded = await sign(encoded, secrets[0])
   return encoded
 }
 

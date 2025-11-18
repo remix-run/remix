@@ -16,6 +16,8 @@ This is the changelog for [`cookie`](https://github.com/remix-run/remix/tree/mai
   let cookie = createCookie('session')
   ```
 
+- Add `domain`, `expires`, `httpOnly`, `maxAge`, `partitioned`, `path`, `sameSite`, and `secure` properties to `Cookie` objects
+
 ## v0.3.0 (2025-11-08)
 
 - BREAKING CHANGE: Rename `cookie.isSigned` to `cookie.signed`

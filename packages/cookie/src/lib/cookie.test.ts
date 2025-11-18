@@ -11,11 +11,24 @@ function getCookieFromSetCookie(setCookie: string): string {
 }
 
 describe('Cookie', () => {
+  it('defaults path to /', async () => {
+    let cookie = createCookie('my-cookie')
+    assert.equal(cookie.path, '/')
+    let setCookie = await cookie.serialize('hello world')
+    assert.ok(setCookie.includes('Path=/'))
+  })
+
+  it('defaults sameSite to Lax', async () => {
+    let cookie = createCookie('my-cookie')
+    assert.equal(cookie.sameSite, 'Lax')
+    let setCookie = await cookie.serialize('hello world')
+    assert.ok(setCookie.includes('SameSite=Lax'))
+  })
+
   it('parses/serializes empty string values', async () => {
     let cookie = createCookie('my-cookie')
     let setCookie = await cookie.serialize('')
     let value = await cookie.parse(getCookieFromSetCookie(setCookie))
-
     assert.equal(value, '')
   })
 
@@ -23,7 +36,6 @@ describe('Cookie', () => {
     let cookie = createCookie('my-cookie')
     let setCookie = await cookie.serialize('hello world')
     let value = await cookie.parse(getCookieFromSetCookie(setCookie))
-
     assert.equal(value, 'hello world')
   })
 
@@ -110,32 +122,10 @@ describe('Cookie', () => {
 
   it('is not signed by default', async () => {
     let cookie = createCookie('my-cookie')
-
     assert.equal(cookie.signed, false)
 
     let cookie2 = createCookie('my-cookie2', { secrets: undefined })
-
     assert.equal(cookie2.signed, false)
-  })
-
-  it('uses Path=/ by default', async () => {
-    let cookie = createCookie('my-cookie')
-
-    let setCookie = await cookie.serialize('hello world')
-    assert.ok(setCookie.includes('Path=/'))
-
-    let cookie2 = createCookie('my-cookie2')
-
-    let setCookie2 = await cookie2.serialize('hello world', {
-      path: '/about',
-    })
-    assert.ok(setCookie2.includes('Path=/about'))
-  })
-
-  it('uses SameSite=Lax by default', async () => {
-    let cookie = createCookie('my-cookie')
-    let setCookie = await cookie.serialize('hello world')
-    assert.ok(setCookie.includes('SameSite=Lax'))
   })
 
   it('supports overriding cookie properties in the constructor', async () => {
