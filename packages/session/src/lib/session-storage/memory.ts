@@ -1,5 +1,3 @@
-import type { Cookie } from '@remix-run/cookie'
-
 import { createSession, type SessionData } from '../session.ts'
 import type { SessionStorage } from '../session-storage.ts'
 
@@ -21,20 +19,13 @@ export interface MemoryStorageOptions {
  * @param options (optional) The options for the session storage
  * @returns The session storage
  */
-export function createMemoryStorage(
-  cookie: Cookie,
-  options?: MemoryStorageOptions,
-): SessionStorage {
-  if (!cookie.signed) {
-    throw new Error('Session cookie must be signed')
-  }
-
+export function createMemoryStorage(options?: MemoryStorageOptions): SessionStorage {
   let useUnknownIds = options?.useUnknownIds ?? false
   let map = new Map<string, SessionData>()
 
   return {
-    async read(request) {
-      let id = await cookie.parse(request.headers.get('Cookie'))
+    async read(cookie) {
+      let id = cookie
 
       if (id == null) {
         return createSession()
@@ -45,23 +36,21 @@ export function createMemoryStorage(
 
       return createSession(useUnknownIds && id !== '' ? id : undefined)
     },
-    async save(session, response) {
+    async save(session) {
       if (session.deleteId) {
         map.delete(session.deleteId)
       }
 
-      let cookieValue: string | undefined = undefined
       if (session.destroyed) {
         map.delete(session.id)
-        cookieValue = ''
-      } else if (session.dirty) {
+        return ''
+      }
+      if (session.dirty) {
         map.set(session.id, session.data)
-        cookieValue = session.id
+        return session.id
       }
 
-      if (cookieValue != null) {
-        response.headers.append('Set-Cookie', await cookie.serialize(cookieValue))
-      }
+      return null
     },
   }
 }

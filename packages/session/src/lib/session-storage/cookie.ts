@@ -1,5 +1,3 @@
-import type { Cookie } from '@remix-run/cookie'
-
 import { createSession, type SessionData } from '../session.ts'
 import type { SessionStorage } from '../session-storage.ts'
 
@@ -12,28 +10,21 @@ import type { SessionStorage } from '../session-storage.ts'
  * @param cookie The cookie to use for the session
  * @returns The session storage
  */
-export function createCookieStorage(cookie: Cookie): SessionStorage {
-  if (!cookie.signed) {
-    throw new Error('Session cookie must be signed')
-  }
-
+export function createCookieStorage(): SessionStorage {
   return {
-    async read(request) {
-      let cookieValue = await cookie.parse(request.headers.get('Cookie'))
-      if (!cookieValue) {
-        return createSession()
-      }
-
-      try {
-        let parsed = JSON.parse(cookieValue) as { i: string; d: SessionData }
-        return createSession(parsed.i, parsed.d)
-      } catch {
-        // Invalid JSON, fall through to create new session
+    async read(cookie) {
+      if (cookie) {
+        try {
+          let parsed = JSON.parse(cookie) as { i: string; d: SessionData }
+          return createSession(parsed.i, parsed.d)
+        } catch {
+          // Invalid JSON, fall through to create new session
+        }
       }
 
       return createSession()
     },
-    async save(session, response) {
+    async save(session) {
       if (session.deleteId) {
         console.warn(
           `Session ID ${session.deleteId} was regenerated, but the old session cannot ` +
@@ -41,16 +32,14 @@ export function createCookieStorage(cookie: Cookie): SessionStorage {
         )
       }
 
-      let cookieValue: string | undefined = undefined
       if (session.destroyed) {
-        cookieValue = ''
-      } else if (session.dirty) {
-        cookieValue = JSON.stringify({ i: session.id, d: session.data })
+        return ''
+      }
+      if (session.dirty) {
+        return JSON.stringify({ i: session.id, d: session.data })
       }
 
-      if (cookieValue != null) {
-        response.headers.append('Set-Cookie', await cookie.serialize(cookieValue))
-      }
+      return null
     },
   }
 }

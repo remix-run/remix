@@ -2,14 +2,19 @@ import type { Session } from './session.ts'
 
 export interface SessionStorage {
   /**
-   * Retrieve a new session from storage based on the session cookie in the request.
-   * @param request The request that contains the session cookie
+   * Retrieve a new session from storage based on the session cookie.
+   *
+   * @param cookie The session cookie value, or `null` if no session cookie is available
+   * @returns The session
    */
-  read(request: Request): Promise<Session>
+  read(cookie: string | null): Promise<Session>
   /**
-   * Save session data in storage and write the session cookie to the response.
+   * Save session data in storage and return the session cookie.
+   *
+   * Note: If no session cookie should be set, this method returns `null`.
+   *
    * @param session The session to save
-   * @param response The response to write the session cookie to
+   * @returns The session cookie value, or `null` if no session cookie should be set
    */
-  save(session: Session, response: Response): Promise<void>
+  save(session: Session): Promise<string | null>
 }

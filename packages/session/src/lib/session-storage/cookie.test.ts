@@ -1,223 +1,179 @@
 import * as assert from 'node:assert/strict'
-import { beforeEach, describe, it, mock } from 'node:test'
-import { createCookie, type Cookie } from '@remix-run/cookie'
-
-import { createRequest } from '../../../test/helpers.ts'
+import { describe, it, mock } from 'node:test'
 
 import { createCookieStorage } from './cookie.ts'
 
 describe('cookie session storage', () => {
-  let cookie: Cookie
-  beforeEach(() => {
-    cookie = createCookie('session', { secrets: ['s3cr3t'] })
-  })
-
-  it('throws an error if the session cookie is not signed', () => {
-    assert.throws(
-      () => createCookieStorage(createCookie('session')),
-      new Error('Session cookie must be signed'),
-    )
-  })
-
   it('persists session data across requests', async () => {
-    let storage = createCookieStorage(cookie)
+    let storage = createCookieStorage()
 
-    async function handleRequest(request: Request) {
-      let session = await storage.read(request)
+    async function requestIndex(cookie: string | null = null) {
+      let session = await storage.read(cookie)
       session.set('count', ((session.get('count') as number | undefined) ?? 0) + 1)
-      let response = new Response(`Count: ${session.get('count')}`)
-      await storage.save(session, response)
-      return response
+      return {
+        cookie: await storage.save(session),
+        session,
+      }
     }
 
-    let response1 = await handleRequest(createRequest())
-    assert.match(await response1.text(), /Count: 1/)
+    let response1 = await requestIndex()
+    assert.equal(response1.session.get('count'), 1)
 
-    let response2 = await handleRequest(createRequest(response1))
-    assert.match(await response2.text(), /Count: 2/)
+    let response2 = await requestIndex(response1.cookie)
+    assert.equal(response2.session.get('count'), 2)
 
-    let response3 = await handleRequest(createRequest(response2))
-    assert.match(await response3.text(), /Count: 3/)
+    let response3 = await requestIndex(response2.cookie)
+    assert.equal(response3.session.get('count'), 3)
   })
 
   it('clears session data when the session is destroyed', async () => {
-    let storage = createCookieStorage(cookie)
+    let storage = createCookieStorage()
 
-    async function handleIndex(request: Request) {
-      let session = await storage.read(request)
+    async function requestIndex(cookie: string | null = null) {
+      let session = await storage.read(cookie)
       session.set('count', ((session.get('count') as number | undefined) ?? 0) + 1)
-      let response = new Response(`Count: ${session.get('count')}`)
-      await storage.save(session, response)
-      return response
+      return {
+        cookie: await storage.save(session),
+        session,
+      }
     }
 
-    async function handleDestroy(request: Request) {
-      let session = await storage.read(request)
+    async function requestDestroy(cookie: string | null = null) {
+      let session = await storage.read(cookie)
       session.destroy()
-      let response = new Response(`Session ID: ${session.id}`)
-      await storage.save(session, response)
-      return response
+      return {
+        cookie: await storage.save(session),
+        session,
+      }
     }
 
-    let response1 = await handleIndex(createRequest())
-    assert.match(await response1.text(), /Count: 1/)
+    let response1 = await requestIndex()
+    assert.equal(response1.session.get('count'), 1)
 
-    let response2 = await handleIndex(createRequest(response1))
-    assert.match(await response2.text(), /Count: 2/)
+    let response2 = await requestIndex(response1.cookie)
+    assert.equal(response2.session.get('count'), 2)
 
-    let response3 = await handleDestroy(createRequest(response2))
-    assert.match(await response3.text(), /Session ID: \w+/)
+    let response3 = await requestDestroy(response2.cookie)
+    assert.ok(response3.session.destroyed)
 
-    assert.notEqual(
-      await storage.read(createRequest(response2)).then((session) => session.id),
-      await storage.read(createRequest(response3)).then((session) => session.id),
-      'session id should have changed',
-    )
-
-    let response4 = await handleIndex(createRequest(response3))
-    assert.match(await response4.text(), /Count: 1/)
+    let response4 = await requestIndex(response3.cookie)
+    assert.equal(response4.session.get('count'), 1)
   })
 
   it('does not set a cookie when session data is not changed', async () => {
-    let storage = createCookieStorage(cookie)
+    let storage = createCookieStorage()
 
-    async function handleIndex(request: Request) {
-      let session = await storage.read(request)
-      let response = new Response(`Session ID: ${session.id}`)
-      await storage.save(session, response)
-      return response
+    async function requestIndex(cookie: string | null = null) {
+      let session = await storage.read(cookie)
+      return {
+        cookie: await storage.save(session),
+        session,
+      }
     }
 
-    let response = await handleIndex(createRequest())
-    assert.match(await response.text(), /Session ID: \w+/)
-
-    assert.deepEqual(response.headers.getSetCookie(), [])
+    let response = await requestIndex()
+    assert.equal(response.session.dirty, false)
+    assert.equal(response.cookie, null)
   })
 
   it('makes flash data available only on the next request', async () => {
-    let storage = createCookieStorage(cookie)
+    let storage = createCookieStorage()
 
-    async function handleIndex(request: Request) {
-      let session = await storage.read(request)
-      let response = new Response(`Message: ${session.get('message')}`)
-      await storage.save(session, response)
-      return response
+    async function requestIndex(cookie: string | null = null) {
+      let session = await storage.read(cookie)
+      return {
+        cookie: await storage.save(session),
+        session,
+      }
     }
 
-    async function handleFlash(request: Request) {
-      let session = await storage.read(request)
+    async function requestFlash(cookie: string | null = null) {
+      let session = await storage.read(cookie)
       session.flash('message', 'success!')
-      let response = new Response(`Message: ${session.get('message')}`)
-      await storage.save(session, response)
-      return response
+      return {
+        cookie: await storage.save(session),
+        session,
+      }
     }
 
-    let response1 = await handleIndex(createRequest())
-    assert.match(await response1.text(), /Message: undefined/)
+    let response1 = await requestIndex()
+    assert.equal(response1.session.get('message'), undefined)
 
-    let response2 = await handleFlash(createRequest(response1))
-    assert.match(
-      await response2.text(),
-      /Message: undefined/,
-      'flash data should not be available immediately',
-    )
+    let response2 = await requestFlash(response1.cookie)
+    assert.equal(response2.session.get('message'), undefined)
 
-    let response3 = await handleIndex(createRequest(response2))
-    assert.match(
-      await response3.text(),
-      /Message: success!/,
-      'flash data should be available on the next request',
-    )
+    let response3 = await requestIndex(response2.cookie)
+    assert.equal(response3.session.get('message'), 'success!')
 
-    let response4 = await handleIndex(createRequest(response3))
-    assert.match(
-      await response4.text(),
-      /Message: undefined/,
-      'flash data should be cleared after the next request',
-    )
+    let response4 = await requestIndex(response3.cookie)
+    assert.equal(response4.session.get('message'), undefined)
   })
 
   it('leaves old session data in storage by default when the id is regenerated', async () => {
-    let storage = createCookieStorage(cookie)
+    let storage = createCookieStorage()
 
-    async function handleIndex(request: Request) {
-      let session = await storage.read(request)
+    async function requestIndex(cookie: string | null = null) {
+      let session = await storage.read(cookie)
       session.set('count', ((session.get('count') as number | undefined) ?? 0) + 1)
-      let response = new Response(`Count: ${session.get('count')}`)
-      await storage.save(session, response)
-      return response
+      return {
+        cookie: await storage.save(session),
+        session,
+      }
     }
 
-    async function handleLogin(request: Request) {
-      let session = await storage.read(request)
+    async function requestLogin(cookie: string | null = null) {
+      let session = await storage.read(cookie)
       session.regenerateId()
-      let response = new Response(`Session ID: ${session.id}`)
-      await storage.save(session, response)
-      return response
+      return {
+        cookie: await storage.save(session),
+        session,
+      }
     }
 
-    let response1 = await handleIndex(createRequest())
-    assert.match(await response1.text(), /Count: 1/)
+    let response1 = await requestIndex()
+    assert.equal(response1.session.get('count'), 1)
 
-    let response2 = await handleLogin(createRequest(response1))
-    assert.match(await response2.text(), /Session ID: \w+/)
+    let response2 = await requestLogin(response1.cookie)
+    assert.notEqual(response2.session.id, response1.session.id)
 
-    assert.notEqual(
-      await storage.read(createRequest(response1)).then((session) => session.id),
-      await storage.read(createRequest(response2)).then((session) => session.id),
-      'session id should have changed',
-    )
+    let response3 = await requestIndex(response2.cookie)
+    assert.equal(response3.session.get('count'), 2)
 
-    let response3 = await handleIndex(createRequest(response2))
-    assert.match(
-      await response3.text(),
-      /Count: 2/,
-      'new session should continue where old one left off',
-    )
-
-    let response4 = await handleIndex(createRequest(response1))
-    assert.match(await response4.text(), /Count: 2/, 'old session should still be in storage')
+    let response4 = await requestIndex(response1.cookie)
+    assert.equal(response4.session.get('count'), 2, 'old session data should still be in storage')
   })
 
   it('logs a warning when the id is regenerated and the deleteOldSession option is true', async () => {
     let consoleWarn = mock.method(console, 'warn', () => {})
 
-    let storage = createCookieStorage(cookie)
+    let storage = createCookieStorage()
 
-    async function handleIndex(request: Request) {
-      let session = await storage.read(request)
+    async function requestIndex(cookie: string | null = null) {
+      let session = await storage.read(cookie)
       session.set('count', ((session.get('count') as number | undefined) ?? 0) + 1)
-      let response = new Response(`Count: ${session.get('count')}`)
-      await storage.save(session, response)
-      return response
+      return {
+        cookie: await storage.save(session),
+        session,
+      }
     }
 
-    async function handleLogin(request: Request) {
-      let session = await storage.read(request)
-      session.regenerateId(true) // deleteOldSession is true
-      let response = new Response(`Session ID: ${session.id}`)
-      await storage.save(session, response)
-      return response
+    async function requestLoginAndDeleteOldSession(cookie: string | null = null) {
+      let session = await storage.read(cookie)
+      session.regenerateId(true)
+      return {
+        cookie: await storage.save(session),
+        session,
+      }
     }
 
-    let response1 = await handleIndex(createRequest())
-    assert.match(await response1.text(), /Count: 1/)
+    let response1 = await requestIndex()
+    assert.equal(response1.session.get('count'), 1)
 
-    let response2 = await handleLogin(createRequest(response1))
-    assert.match(await response2.text(), /Session ID: \w+/)
+    let response2 = await requestLoginAndDeleteOldSession(response1.cookie)
+    assert.notEqual(response2.session.id, response1.session.id)
 
-    assert.notEqual(
-      await storage.read(createRequest(response1)).then((session) => session.id),
-      await storage.read(createRequest(response2)).then((session) => session.id),
-      'session id should have changed',
-    )
-
-    let response3 = await handleIndex(createRequest(response2))
-    assert.match(
-      await response3.text(),
-      /Count: 2/,
-      'new session should continue where old one left off',
-    )
+    let response3 = await requestIndex(response2.cookie)
+    assert.equal(response3.session.get('count'), 2)
 
     assert.equal(consoleWarn.mock.calls.length, 1)
     let warning = consoleWarn.mock.calls[0].arguments[0] as string
