@@ -97,4 +97,30 @@ describe('href', () => {
       'https://remix.run/search?some=thing',
     )
   })
+
+  it('filters out undefined and null search params', () => {
+    let href = createHrefBuilder()
+    assert.equal(
+      href('products/:id', { id: '1' }, { sort: 'asc', filter: undefined }),
+      '/products/1?sort=asc',
+    )
+    assert.equal(
+      href('products/:id', { id: '1' }, { sort: 'asc', filter: null }),
+      '/products/1?sort=asc',
+    )
+    assert.equal(href('products/:id', { id: '1' }, { filter: undefined }), '/products/1')
+    assert.equal(href('products/:id', { id: '1' }, { filter: null }), '/products/1')
+    assert.equal(
+      href('products/:id', { id: '1' }, { sort: 'asc', filter: undefined, limit: '10' }),
+      '/products/1?sort=asc&limit=10',
+    )
+  })
+
+  it('does not add trailing ? for empty search params', () => {
+    let href = createHrefBuilder()
+    assert.equal(href('products/:id', { id: '1' }, {}), '/products/1')
+    assert.equal(href('products/:id', { id: '1' }, new URLSearchParams()), '/products/1')
+    assert.equal(href('products/:id', { id: '1' }, ''), '/products/1')
+    assert.equal(href('products/:id', { id: '1' }, []), '/products/1')
+  })
 })

@@ -46,7 +46,28 @@ export function formatHref(
   }
 
   if (searchParams) {
-    href += `?${new URLSearchParams(searchParams)}`
+    let urlSearchParams: URLSearchParams
+    if (
+      typeof searchParams === 'object' &&
+      !Array.isArray(searchParams) &&
+      !(searchParams instanceof URLSearchParams)
+    ) {
+      let filteredParams: Record<string, string> = {}
+      for (let key in searchParams) {
+        let value = searchParams[key]
+        if (value != null) {
+          filteredParams[key] = String(value)
+        }
+      }
+      urlSearchParams = new URLSearchParams(filteredParams)
+    } else {
+      urlSearchParams = new URLSearchParams(searchParams)
+    }
+
+    let search = urlSearchParams.toString()
+    if (search !== '') {
+      href += `?${search}`
+    }
   } else if (parsed.search) {
     href += `?${parsed.search}`
   }
@@ -108,6 +129,6 @@ type HrefParams<T extends string> =
 
 type HrefSearchParams =
   | NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
-  | Record<string, ParamValue>
+  | Record<string, ParamValue | undefined | null>
 
 type ParamValue = string | number | bigint | boolean

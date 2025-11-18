@@ -2,6 +2,11 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- `href()` now filters out `undefined` and `null` values from search parameters, preventing them from appearing in the generated URL's query string
+- `href()` no longer adds a trailing `?` when search parameters are empty
+
 ## v0.15.0 (2025-11-05)
 
 - Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
