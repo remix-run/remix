@@ -22,10 +22,9 @@ export default {
         let returnTo = url.searchParams.get('returnTo') || routes.account.index.href()
 
         // Build the form action URL with returnTo parameter
-        let formAction =
-          returnTo !== routes.account.index.href()
-            ? routes.auth.login.action.href(undefined, { returnTo })
-            : routes.auth.login.action.href()
+        let formAction = routes.auth.login.action.href(undefined, {
+          returnTo: returnTo !== routes.account.index.href() ? returnTo : undefined,
+        })
 
         return render(
           <Document>
@@ -83,23 +82,16 @@ export default {
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
         let user = authenticateUser(email, password)
+        let returnTo = url.searchParams.get('returnTo')
 
         if (!user) {
           session.flash('error', 'Invalid email or password. Please try again.')
-          // Preserve the returnTo parameter in the redirect
-          let returnTo = url.searchParams.get('returnTo')
-          let redirectUrl = returnTo
-            ? routes.auth.login.index.href(undefined, { returnTo })
-            : routes.auth.login.index.href()
-          return redirect(redirectUrl)
+          return redirect(routes.auth.login.index.href(undefined, { returnTo }))
         }
 
         session.set('userId', user.id)
 
-        // Redirect to the returnTo URL if provided, otherwise go to account page
-        let returnTo = url.searchParams.get('returnTo')
-        let redirectUrl = returnTo ? decodeURIComponent(returnTo) : routes.account.index.href()
-        return redirect(redirectUrl)
+        return redirect(returnTo ?? routes.account.index.href())
       },
     },
 

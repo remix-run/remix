@@ -1,4 +1,4 @@
-import type { Middleware } from '@remix-run/fetch-router'
+import type { Middleware, Route } from '@remix-run/fetch-router'
 import { redirect } from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../../routes.ts'
@@ -29,7 +29,7 @@ export interface RequireAuthOptions {
    * Where to redirect if the user is not authenticated.
    * Defaults to the login page.
    */
-  redirectTo?: string
+  redirectTo?: Route
 }
 
 /**
@@ -38,23 +38,23 @@ export interface RequireAuthOptions {
  * Attaches user to context.storage.
  */
 export function requireAuth(options?: RequireAuthOptions): Middleware {
-  let redirectTo = options?.redirectTo ?? routes.auth.login.index.href()
+  let redirectRoute = options?.redirectTo ?? routes.auth.login.index
 
   return async ({ session, url }) => {
     let userId = session.get('userId')
 
     if (typeof userId !== 'string') {
       // Capture the current URL to redirect back after login
-      let returnTo = encodeURIComponent(url.pathname + url.search)
-      let loginUrl = `${redirectTo}?returnTo=${returnTo}`
+      let returnTo = url.pathname + url.search
+      let loginUrl = redirectRoute.href(undefined, { returnTo })
       return redirect(loginUrl, 302)
     }
 
     let user = getUserById(userId)
     if (!user) {
       // Capture the current URL to redirect back after login
-      let returnTo = encodeURIComponent(url.pathname + url.search)
-      let loginUrl = `${redirectTo}?returnTo=${returnTo}`
+      let returnTo = url.pathname + url.search
+      let loginUrl = redirectRoute.href(undefined, { returnTo })
       return redirect(loginUrl, 302)
     }
 
