@@ -10,7 +10,7 @@ import { render } from './utils/render.ts'
 import { ImageCarousel } from './assets/image-carousel.tsx'
 
 export default {
-  middleware: [loadAuth],
+  middleware: [loadAuth()],
   handlers: {
     index() {
       let books = getAllBooks()

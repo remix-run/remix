@@ -3,13 +3,15 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@remix-run/cookie": "workspace:*",
     "@remix-run/dom": "jam",
     "@remix-run/events": "jam",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/file-storage": "workspace:*",
     "@remix-run/headers": "workspace:*",
     "@remix-run/lazy-file": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*"
+    "@remix-run/node-fetch-server": "workspace:*",
+    "@remix-run/session": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",

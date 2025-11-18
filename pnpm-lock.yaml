@@ -29,6 +29,9 @@ importers:
 
   demos/bookstore:
     dependencies:
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../../packages/cookie
       '@remix-run/dom':
         specifier: jam
         version: 0.0.0-experimental-remix-jam.6
@@ -50,6 +53,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../packages/node-fetch-server
+      '@remix-run/session':
+        specifier: workspace:*
+        version: link:../../packages/session
     devDependencies:
       '@types/node':
         specifier: ^24.6.0

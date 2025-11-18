@@ -9,7 +9,7 @@ import { searchBooks } from './models/books.ts'
 import { render } from './utils/render.ts'
 
 export let home: BuildRouteHandler<'GET', typeof routes.home> = {
-  middleware: [loadAuth],
+  middleware: [loadAuth()],
   handler() {
     return render(
       <Layout>
@@ -38,7 +38,7 @@ export let home: BuildRouteHandler<'GET', typeof routes.home> = {
 }
 
 export let about: BuildRouteHandler<'GET', typeof routes.about> = {
-  middleware: [loadAuth],
+  middleware: [loadAuth()],
   handler() {
     return render(
       <Layout>
@@ -99,7 +99,7 @@ export let about: BuildRouteHandler<'GET', typeof routes.about> = {
 }
 
 export let contact: RouteHandlers<typeof routes.contact> = {
-  middleware: [loadAuth],
+  middleware: [loadAuth()],
   handlers: {
     index() {
       return render(
@@ -154,7 +154,7 @@ export let contact: RouteHandlers<typeof routes.contact> = {
 }
 
 export let search: BuildRouteHandler<'GET', typeof routes.search> = {
-  middleware: [loadAuth],
+  middleware: [loadAuth()],
   handler({ url }) {
     let query = url.searchParams.get('q') ?? ''
     let books = query ? searchBooks(query) : []

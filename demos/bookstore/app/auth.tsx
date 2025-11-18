@@ -2,7 +2,6 @@ import type { RouteHandlers } from '@remix-run/fetch-router'
 import { redirect } from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../routes.ts'
-import { getSession, setSessionCookie, login, logout } from './utils/session.ts'
 import {
   authenticateUser,
   createUser,
@@ -15,7 +14,7 @@ import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
 
 export default {
-  middleware: [loadAuth],
+  middleware: [loadAuth()],
   handlers: {
     login: {
       index() {
@@ -64,7 +63,7 @@ export default {
         )
       },
 
-      async action({ request, formData }) {
+      async action({ session, formData }) {
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
         let user = authenticateUser(email, password)
@@ -85,13 +84,9 @@ export default {
           )
         }
 
-        let session = getSession(request)
-        login(session.sessionId, user)
+        session.set('userId', user.id)
 
-        let headers = new Headers()
-        setSessionCookie(headers, session.sessionId)
-
-        return redirect(routes.account.index.href(), { headers })
+        return redirect(routes.account.index.href())
       },
     },
 
@@ -136,7 +131,7 @@ export default {
         )
       },
 
-      async action({ request, formData }) {
+      async action({ session, formData }) {
         let name = formData.get('name')?.toString() ?? ''
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
@@ -167,20 +162,14 @@ export default {
 
         let user = createUser(email, password, name)
 
-        let session = getSession(request)
-        login(session.sessionId, user)
+        session.set('userId', user.id)
 
-        let headers = new Headers()
-        setSessionCookie(headers, session.sessionId)
-
-        return redirect(routes.account.index.href(), { headers })
+        return redirect(routes.account.index.href())
       },
     },
 
-    logout({ request }) {
-      let session = getSession(request)
-      logout(session.sessionId)
-
+    logout({ session }) {
+      session.destroy()
       return redirect(routes.home.href())
     },
 

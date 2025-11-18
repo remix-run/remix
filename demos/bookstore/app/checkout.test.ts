@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { router } from './router.ts'
-import { loginAsCustomer, requestWithSession } from '../test/helpers.ts'
+import { getSessionCookie, loginAsCustomer, requestWithSession } from '../test/helpers.ts'
 
 describe('checkout handlers', () => {
   it('GET /checkout redirects when not authenticated', async () => {
@@ -13,20 +13,23 @@ describe('checkout handlers', () => {
   })
 
   it('POST /checkout creates order when authenticated with items in cart', async () => {
-    let sessionId = await loginAsCustomer(router)
+    let sessionCookie = await loginAsCustomer(router)
 
     // Add item to cart
-    let addRequest = requestWithSession('http://localhost:3000/cart/api/add', sessionId, {
+    let addRequest = requestWithSession('http://localhost:3000/cart/api/add', sessionCookie, {
       method: 'POST',
       body: new URLSearchParams({
         bookId: '001',
         slug: 'bbq',
       }),
     })
-    await router.fetch(addRequest)
+    let addResponse = await router.fetch(addRequest)
+
+    // Get updated session cookie after cart modification
+    sessionCookie = getSessionCookie(addResponse) ?? sessionCookie
 
     // Submit checkout
-    let checkoutRequest = requestWithSession('http://localhost:3000/checkout', sessionId, {
+    let checkoutRequest = requestWithSession('http://localhost:3000/checkout', sessionCookie, {
       method: 'POST',
       body: new URLSearchParams({
         street: '123 Test St',

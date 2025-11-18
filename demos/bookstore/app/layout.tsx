@@ -1,8 +1,7 @@
 import type { Remix } from '@remix-run/dom'
 
 import { routes } from '../routes.ts'
-import { getCurrentUser } from './utils/context.ts'
-import type { User } from './models/users.ts'
+import { getCurrentUserSafely } from './utils/context.ts'
 
 export function Document({
   title = 'Bookstore',
@@ -78,12 +77,7 @@ export function Document({
 }
 
 export function Layout({ children }: { children?: Remix.RemixNode }) {
-  let user: User | null = null
-  try {
-    user = getCurrentUser()
-  } catch {
-    // user not authenticated
-  }
+  let user = getCurrentUserSafely()
 
   return (
     <Document>
