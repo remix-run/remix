@@ -1,3 +1,5 @@
+import type { StyleProps } from './style/lib/style'
+
 /**
  * Adapted from Preact:
  * - Source: https://github.com/preactjs/preact/blob/eee0c6ef834534498e433f0f7a3ef679efd24380/src/dom.d.ts
@@ -7,19 +9,6 @@
 type Booleanish = boolean | 'true' | 'false'
 
 export type Trackable<T> = T
-
-export type DOMCSSProperties = {
-  [key in keyof Omit<
-    CSSStyleDeclaration,
-    'item' | 'setProperty' | 'removeProperty' | 'getPropertyValue' | 'getPropertyPriority'
-  >]?: string | number | null | undefined
-}
-export type AllCSSProperties = {
-  [key: string]: string | number | null | undefined
-}
-export interface CSSProperties extends AllCSSProperties, DOMCSSProperties {
-  cssText?: string | null
-}
 
 export interface SVGProps<eventTarget extends EventTarget = SVGElement>
   extends HTMLProps<eventTarget> {
@@ -966,7 +955,7 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
   srcObject?: Trackable<MediaStream | MediaSource | Blob | File | null>
   start?: Trackable<number | undefined>
   step?: Trackable<number | string | undefined>
-  style?: Trackable<string | CSSProperties | undefined>
+  style?: Trackable<string | StyleProps | undefined>
   summary?: Trackable<string | undefined>
   tabIndex?: Trackable<number | undefined>
   tabindex?: Trackable<number | undefined>
@@ -1053,7 +1042,7 @@ export interface HTMLProps<eventTarget extends EventTarget = EventTarget>
   popover?: Trackable<'auto' | 'hint' | 'manual' | boolean | undefined>
   slot?: Trackable<string | undefined>
   spellcheck?: Trackable<boolean | undefined>
-  style?: Trackable<string | CSSProperties | undefined>
+  style?: Trackable<string | StyleProps | undefined>
   tabindex?: Trackable<number | undefined>
   tabIndex?: Trackable<number | undefined>
   title?: Trackable<string | undefined>

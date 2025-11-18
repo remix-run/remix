@@ -1,4 +1,9 @@
 import type { EventListeners } from '@remix-run/interaction'
+import type { CSSProps } from './style/lib/style'
+import type {
+  VirtualRoot as VirtualRoot_,
+  VirtualRootOptions as VirtualRootOptions_,
+} from './vdom.ts'
 
 declare global {
   namespace Remix {
@@ -45,7 +50,7 @@ declare global {
     export interface HostProps<eventTarget extends EventTarget> {
       children?: Node
       on?: EventListeners<eventTarget> | undefined
-      css?: 'TODO: support css properties' | undefined
+      css?: CSSProps
       connect?: 'TODO: support connect' | undefined
     }
 
@@ -58,11 +63,14 @@ declare global {
      * }
      *
      * @example
-     * function Button({ on = [], ...rest }: Props<"button">) {
-     *   // on is always EventDescriptor[] here
-     *   return <button {...rest} on={[...on, dom.click(handler)]} />
+     * function Button({ on, ...rest }: Props<"button">) {
+     *   return <button {...rest} on={{ ...on, click: handler }} />
      * }
      */
     export type Props<T extends keyof JSX.IntrinsicElements> = JSX.IntrinsicElements[T]
+
+    export type VirtualRoot = VirtualRoot_
+
+    export type VirtualRootOptions = VirtualRootOptions_
   }
 }

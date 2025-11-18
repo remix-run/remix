@@ -195,8 +195,24 @@ export function createContainer<target extends EventTarget>(
       if (controller.signal.aborted) {
         throw new Error('Container has been disposed')
       }
+      let listenerKeys = new Set(Object.keys(listeners) as Array<EventType<target>>)
+
+      // Dispose bindings for types not in the new listeners
+      for (let type in bindings) {
+        let eventType = type as EventType<target>
+        if (!listenerKeys.has(eventType)) {
+          let existing = bindings[eventType]
+          if (existing) {
+            for (let binding of existing) {
+              binding.dispose()
+            }
+            delete bindings[eventType]
+          }
+        }
+      }
+
       // TODO: figure out if we can remove this cast
-      for (let type of Object.keys(listeners) as Array<EventType<target>>) {
+      for (let type of listenerKeys) {
         let raw = listeners[type]
         if (raw == null) continue
 

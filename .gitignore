@@ -4,3 +4,5 @@ reference/
 .tmp/
 
 .env
+
+/reference

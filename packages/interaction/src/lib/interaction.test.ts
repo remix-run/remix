@@ -95,6 +95,25 @@ describe('interaction', () => {
       expect(secondListenerCalled).toBe(false)
     })
 
+    it('removes all handlers when set({}) is called', () => {
+      let target = new EventTarget()
+      let container = createContainer(target)
+      let listener1 = vi.fn()
+      let listener2 = vi.fn()
+
+      container.set({ test1: listener1, test2: listener2 })
+      target.dispatchEvent(new Event('test1'))
+      target.dispatchEvent(new Event('test2'))
+      expect(listener1).toHaveBeenCalledTimes(1)
+      expect(listener2).toHaveBeenCalledTimes(1)
+
+      container.set({})
+      target.dispatchEvent(new Event('test1'))
+      target.dispatchEvent(new Event('test2'))
+      expect(listener1).toHaveBeenCalledTimes(1)
+      expect(listener2).toHaveBeenCalledTimes(1)
+    })
+
     it('throws when calling set after dispose', () => {
       let target = new EventTarget()
       let container = createContainer(target)
