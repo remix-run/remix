@@ -9,7 +9,7 @@ describe('admin books handlers', () => {
     let sessionId = await loginAsAdmin(router)
 
     // Create new book
-    let createRequest = requestWithSession('http://localhost:3000/admin/books', sessionId, {
+    let createRequest = requestWithSession('https://remix.run/admin/books', sessionId, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',

@@ -40,16 +40,22 @@ export interface RequireAuthOptions {
 export function requireAuth(options?: RequireAuthOptions): Middleware {
   let redirectTo = options?.redirectTo ?? routes.auth.login.index.href()
 
-  return async ({ session }) => {
+  return async ({ session, url }) => {
     let userId = session.get('userId')
 
     if (typeof userId !== 'string') {
-      return redirect(redirectTo, 302)
+      // Capture the current URL to redirect back after login
+      let returnTo = encodeURIComponent(url.pathname + url.search)
+      let loginUrl = `${redirectTo}?returnTo=${returnTo}`
+      return redirect(loginUrl, 302)
     }
 
     let user = getUserById(userId)
     if (!user) {
-      return redirect(redirectTo, 302)
+      // Capture the current URL to redirect back after login
+      let returnTo = encodeURIComponent(url.pathname + url.search)
+      let loginUrl = `${redirectTo}?returnTo=${returnTo}`
+      return redirect(loginUrl, 302)
     }
 
     setCurrentUser(user)

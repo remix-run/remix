@@ -64,7 +64,7 @@ export function assertNotContains(html: string, text: string): void {
  * Login and return the session cookie
  */
 export async function login(router: any, email: string, password: string): Promise<string> {
-  let loginResponse = await router.fetch('http://localhost:3000/login', {
+  let loginResponse = await router.fetch('https://remix.run/login', {
     method: 'POST',
     body: new URLSearchParams({ email, password }),
     redirect: 'manual',

@@ -140,7 +140,6 @@ export let contact: RouteHandlers<typeof routes.contact> = {
             Thank you for your message! We'll get back to you soon.
           </div>
           <div class="card">
-            r
             <p>
               <a href={routes.home.href()} class="btn">
                 Return Home

@@ -6,7 +6,7 @@ import { assertContains } from '../test/helpers.ts'
 
 describe('marketing handlers', () => {
   it('GET / returns home page', async () => {
-    let response = await router.fetch('http://localhost:3000/')
+    let response = await router.fetch('https://remix.run/')
 
     assert.equal(response.status, 200)
     let html = await response.text()
@@ -15,7 +15,7 @@ describe('marketing handlers', () => {
   })
 
   it('POST /contact returns success message', async () => {
-    let response = await router.fetch('http://localhost:3000/contact', {
+    let response = await router.fetch('https://remix.run/contact', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',

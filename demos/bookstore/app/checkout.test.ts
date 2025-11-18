@@ -6,17 +6,17 @@ import { getSessionCookie, loginAsCustomer, requestWithSession } from '../test/h
 
 describe('checkout handlers', () => {
   it('GET /checkout redirects when not authenticated', async () => {
-    let response = await router.fetch('http://localhost:3000/checkout')
+    let response = await router.fetch('https://remix.run/checkout')
 
     assert.equal(response.status, 302)
-    assert.equal(response.headers.get('Location'), '/login')
+    assert.equal(response.headers.get('Location'), '/login?returnTo=%2Fcheckout')
   })
 
   it('POST /checkout creates order when authenticated with items in cart', async () => {
     let sessionCookie = await loginAsCustomer(router)
 
     // Add item to cart
-    let addRequest = requestWithSession('http://localhost:3000/cart/api/add', sessionCookie, {
+    let addRequest = requestWithSession('https://remix.run/cart/api/add', sessionCookie, {
       method: 'POST',
       body: new URLSearchParams({
         bookId: '001',
@@ -29,7 +29,7 @@ describe('checkout handlers', () => {
     sessionCookie = getSessionCookie(addResponse) ?? sessionCookie
 
     // Submit checkout
-    let checkoutRequest = requestWithSession('http://localhost:3000/checkout', sessionCookie, {
+    let checkoutRequest = requestWithSession('https://remix.run/checkout', sessionCookie, {
       method: 'POST',
       body: new URLSearchParams({
         street: '123 Test St',

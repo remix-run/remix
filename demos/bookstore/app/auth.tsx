@@ -17,12 +17,28 @@ export default {
   middleware: [loadAuth()],
   handlers: {
     login: {
-      index() {
+      index({ session, url }) {
+        let error = session.get('error')
+        let returnTo = url.searchParams.get('returnTo') || routes.account.index.href()
+
+        // Build the form action URL with returnTo parameter
+        let formAction =
+          returnTo !== routes.account.index.href()
+            ? routes.auth.login.action.href(undefined, { returnTo })
+            : routes.auth.login.action.href()
+
         return render(
           <Document>
             <div class="card" style="max-width: 500px; margin: 2rem auto;">
               <h1>Login</h1>
-              <form method="POST" action={routes.auth.login.action.href()}>
+
+              {typeof error === 'string' ? (
+                <div class="alert alert-error" style="margin-bottom: 1.5rem;">
+                  {error}
+                </div>
+              ) : null}
+
+              <form method="POST" action={formAction}>
                 <div class="form-group">
                   <label for="email">Email</label>
                   <input type="email" id="email" name="email" required autoComplete="email" />
@@ -63,30 +79,27 @@ export default {
         )
       },
 
-      async action({ session, formData }) {
+      async action({ session, formData, url }) {
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
         let user = authenticateUser(email, password)
 
         if (!user) {
-          return render(
-            <Document>
-              <div class="card" style="max-width: 500px; margin: 2rem auto;">
-                <div class="alert alert-error">Invalid email or password. Please try again.</div>
-                <p>
-                  <a href={routes.auth.login.index.href()} class="btn">
-                    Back to Login
-                  </a>
-                </p>
-              </div>
-            </Document>,
-            { status: 401 },
-          )
+          session.flash('error', 'Invalid email or password. Please try again.')
+          // Preserve the returnTo parameter in the redirect
+          let returnTo = url.searchParams.get('returnTo')
+          let redirectUrl = returnTo
+            ? routes.auth.login.index.href(undefined, { returnTo })
+            : routes.auth.login.index.href()
+          return redirect(redirectUrl)
         }
 
         session.set('userId', user.id)
 
-        return redirect(routes.account.index.href())
+        // Redirect to the returnTo URL if provided, otherwise go to account page
+        let returnTo = url.searchParams.get('returnTo')
+        let redirectUrl = returnTo ? decodeURIComponent(returnTo) : routes.account.index.href()
+        return redirect(redirectUrl)
       },
     },
 
