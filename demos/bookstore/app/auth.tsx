@@ -19,11 +19,8 @@ export default {
     login: {
       index({ session, url }) {
         let error = session.get('error')
-        let returnTo = url.searchParams.get('returnTo') || routes.account.index.href()
-
-        // Build the form action URL with returnTo parameter
         let formAction = routes.auth.login.action.href(undefined, {
-          returnTo: returnTo !== routes.account.index.href() ? returnTo : undefined,
+          returnTo: url.searchParams.get('returnTo'),
         })
 
         return render(
