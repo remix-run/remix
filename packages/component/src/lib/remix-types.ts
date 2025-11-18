@@ -52,7 +52,7 @@ declare global {
       children?: Node
       on?: EventListeners<eventTarget> | undefined
       css?: CSSProps
-      connect?: 'TODO: support connect' | undefined
+      connect?: (node: eventTarget, signal: AbortSignal) => void
     }
 
     /**

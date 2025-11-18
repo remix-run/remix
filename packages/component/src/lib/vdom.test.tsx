@@ -1642,4 +1642,64 @@ describe('vnode rendering', () => {
       expect(signals[0].aborted).toBe(true)
     })
   })
+
+  describe('connect', () => {
+    it('connects host node lifecycle to component scope', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      let capturedNode: Element | null = null
+
+      function App(this: Remix.Handle) {
+        return () => (
+          <div
+            connect={(node, signal) => {
+              capturedNode = node
+              signal.addEventListener('abort', () => {
+                capturedNode = null
+              })
+            }}
+          >
+            Hello, world!
+          </div>
+        )
+      }
+
+      root.render(<App />)
+      root.flush()
+      expect(capturedNode).toBeInstanceOf(HTMLDivElement)
+
+      root.render(null)
+      root.flush()
+      expect(capturedNode).toBe(null)
+    })
+  })
+
+  it('calls connect only once', () => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    let capturedUpdate = () => {}
+    let connectCalls = 0
+
+    function App(this: Remix.Handle) {
+      capturedUpdate = () => this.update()
+      return () => (
+        <div
+          connect={() => {
+            connectCalls++
+          }}
+        >
+          Hello, world!
+        </div>
+      )
+    }
+    root.render(<App />)
+    root.flush()
+    expect(connectCalls).toBe(1)
+
+    capturedUpdate()
+    root.flush()
+    expect(connectCalls).toBe(1)
+  })
 })
