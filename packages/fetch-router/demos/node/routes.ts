@@ -4,5 +4,5 @@ export let routes = route({
   home: '/',
   login: formAction('/login'),
   logout: { method: 'POST', pattern: '/logout' },
-  posts: resources('posts', { only: ['index', 'new', 'create', 'show'] }),
+  posts: resources('posts', { only: ['new', 'create', 'show'] }),
 })
