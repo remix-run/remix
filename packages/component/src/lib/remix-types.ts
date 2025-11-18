@@ -4,6 +4,7 @@ import type {
   VirtualRoot as VirtualRoot_,
   VirtualRootOptions as VirtualRootOptions_,
 } from './vdom.ts'
+import type { Handle as Handle_, NoContext } from './component.ts'
 
 declare global {
   namespace Remix {
@@ -42,7 +43,7 @@ declare global {
      * Particularly useful for `props.children`.
      *
      * ```tsx
-     * function MyComponent({ children }: { children: RemixNode }) {}
+     * function MyComponent({ children }: { children: Remix.Node }) {}
      * ```
      */
     export type Node = Renderable | Renderable[]
@@ -72,5 +73,15 @@ declare global {
     export type VirtualRoot = VirtualRoot_
 
     export type VirtualRootOptions = VirtualRootOptions_
+
+    export type Handle<context = NoContext> = Handle_<context>
+
+    export type ComponentProps<T = Function> = T extends {
+      (props: infer setupProps): infer renderFn
+    }
+      ? renderFn extends (props: infer updateProps) => any
+        ? setupProps & updateProps
+        : setupProps
+      : never
   }
 }

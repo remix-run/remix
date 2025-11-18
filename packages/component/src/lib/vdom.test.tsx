@@ -1391,7 +1391,7 @@ describe('vnode rendering', () => {
 
       function App(this: Remix.Handle<{ value: string }>) {
         this.context.set({ value: 'test' })
-        return ({ children }: { children: Remix.RemixNode }) => <div>{children}</div>
+        return ({ children }: { children: Remix.Node }) => <div>{children}</div>
       }
 
       function Child(this: Remix.Handle) {
@@ -1418,7 +1418,7 @@ describe('vnode rendering', () => {
           this.context.set({ value: 'test2' })
           this.update()
         }
-        return ({ children }: { children: Remix.RemixNode }) => <div>{children}</div>
+        return ({ children }: { children: Remix.Node }) => <div>{children}</div>
       }
 
       function Child(this: Remix.Handle) {
@@ -1454,7 +1454,7 @@ describe('vnode rendering', () => {
 
         renderListbox = this.update
 
-        return ({ children }: { children: Remix.RemixNode }) => {
+        return ({ children }: { children: Remix.Node }) => {
           options = []
           return <div>{children}</div>
         }
@@ -1500,7 +1500,7 @@ describe('vnode rendering', () => {
         capturedParentUpdate = () => {
           this.update()
         }
-        return ({ children }: { children: Remix.RemixNode }) => {
+        return ({ children }: { children: Remix.Node }) => {
           appRenderCount++
           return children
         }

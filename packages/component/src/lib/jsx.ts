@@ -1,15 +1,12 @@
-// import './remix-types.ts'
 import type * as dom from './dom.d.ts'
 
-export function jsx(
-  type: Remix.ElementType,
-  props: Remix.ElementProps,
-  key?: string,
-): Remix.Element {
+export function jsx(type: string, props: Remix.ElementProps, key?: string): Remix.Element
+export function jsx(type: Function, props: Remix.ComponentProps, key?: string): Remix.Element
+export function jsx(type: any, props: any, key?: any): Remix.Element {
   return { type, props, key, $rmx: true }
 }
 
-export { jsx as jsxs, jsx as jsxDEV }
+export { jsx as jsxDEV, jsx as jsxs }
 
 declare global {
   namespace JSX {
@@ -24,6 +21,10 @@ declare global {
     export interface ElementChildrenAttribute {
       children: any
     }
+
+    type Element = Remix.Element | any
+
+    type LibraryManagedAttributes<C, P> = C extends Function ? Remix.ComponentProps<C> : P
 
     export interface IntrinsicSVGElements {
       svg: dom.SVGProps<SVGSVGElement>
