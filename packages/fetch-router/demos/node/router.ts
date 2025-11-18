@@ -1,0 +1,254 @@
+import { createRouter } from '@remix-run/fetch-router'
+import { createCookie } from '@remix-run/cookie'
+import { createCookieStorage } from '@remix-run/session/cookie-storage'
+import { formData } from '@remix-run/fetch-router/form-data-middleware'
+import { logger } from '@remix-run/fetch-router/logger-middleware'
+import { session } from '@remix-run/fetch-router/session-middleware'
+import { html } from '@remix-run/html-template'
+import * as res from '@remix-run/fetch-router/response-helpers'
+import type { Middleware } from '@remix-run/fetch-router'
+
+import { routes } from './routes.ts'
+import * as data from './data.ts'
+
+let sessionCookie = createCookie('blog_session', {
+  secrets: ['s3cr3t'],
+})
+let storage = createCookieStorage()
+
+function requireAuth(): Middleware {
+  return async ({ session }, next) => {
+    let username = session.get('username')
+    if (!username) {
+      return res.redirect(routes.login.index.href())
+    }
+    return next()
+  }
+}
+
+export let router = createRouter({
+  middleware: [
+    logger(), // Log all requests
+    formData(), // Parse form data automatically
+    session(sessionCookie, storage), // Enable session support
+  ],
+})
+
+router.map(routes.home, ({ session }) => {
+  let posts = data.getPosts()
+  let username = session.get('username') as string | undefined
+
+  return res.html(html`
+    <!doctype html>
+    <html>
+      <head>
+        <title>Simple Blog - fetch-router Demo</title>
+        <meta charset="utf-8" />
+      </head>
+      <body>
+        <nav>
+          <h1>Simple Blog</h1>
+          <div>
+            ${username
+              ? html`
+                  <span>Hello, ${username}!</span>
+                  <form
+                    method="POST"
+                    action="${routes.logout.href()}"
+                    style="display: inline; margin-left: 10px;"
+                  >
+                    <button type="submit">Logout</button>
+                  </form>
+                `
+              : html`<a href="${routes.login.index.href()}" class="btn">Login</a>`}
+            ${username
+              ? html`<a href="${routes.posts.new.href()}" class="btn" style="margin-left: 10px;"
+                  >New Post</a
+                >`
+              : null}
+          </div>
+        </nav>
+        <main>
+          ${posts.length === 0 ? html`<p>No posts yet.</p>` : null}
+          ${posts.map(
+            (post) => html`
+              <article class="post">
+                <h2><a href="${routes.posts.show.href({ id: post.id })}">${post.title}</a></h2>
+                <p>${post.content.substring(0, 150)}${post.content.length > 150 ? '...' : ''}</p>
+                <div class="post-meta">
+                  By ${post.author} on ${post.createdAt.toLocaleDateString()}
+                </div>
+              </article>
+            `,
+          )}
+        </main>
+      </body>
+    </html>
+  `)
+})
+
+router.map(routes.login, {
+  index({ session }) {
+    let username = session.get('username') as string | undefined
+    if (username) {
+      return res.redirect(routes.home.href())
+    }
+
+    return res.html(html`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Login - Simple Blog</title>
+          <meta charset="utf-8" />
+        </head>
+        <body>
+          <h1>Login</h1>
+          <p>Enter any username to login (no password required for demo)</p>
+          <form method="POST" action="${routes.login.action.href()}">
+            <div>
+              <label for="username">Username:</label>
+              <input type="text" id="username" name="username" required />
+            </div>
+            <button type="submit">Login</button>
+          </form>
+          <p><a href="${routes.home.href()}">← Back to Home</a></p>
+        </body>
+      </html>
+    `)
+  },
+  async action({ formData, session }) {
+    let username = formData.get('username') as string
+    if (!username) {
+      return res.redirect(routes.login.index.href())
+    }
+    session.set('username', username)
+    return res.redirect(routes.home.href())
+  },
+})
+
+router.post(routes.logout, ({ session }) => {
+  session.destroy()
+  return res.redirect(routes.home.href())
+})
+
+router.map(routes.posts, {
+  index({ session }) {
+    let posts = data.getPosts()
+    let username = session.get('username') as string | undefined
+
+    return res.html(html`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Simple Blog - fetch-router Demo</title>
+          <meta charset="utf-8" />
+        </head>
+        <body>
+          <nav>
+            <h1>Simple Blog</h1>
+            <div>
+              ${username
+                ? html`
+                    <span>Hello, ${username}!</span>
+                    <form
+                      method="POST"
+                      action="${routes.logout.href()}"
+                      style="display: inline; margin-left: 10px;"
+                    >
+                      <button type="submit">Logout</button>
+                    </form>
+                  `
+                : html`<a href="${routes.login.index.href()}" class="btn">Login</a>`}
+              ${username
+                ? html`<a href="${routes.posts.new.href()}" class="btn" style="margin-left: 10px;"
+                    >New Post</a
+                  >`
+                : null}
+            </div>
+          </nav>
+          <main>
+            ${posts.length === 0 ? html`<p>No posts yet.</p>` : null}
+            ${posts.map(
+              (post) => html`
+                <article class="post">
+                  <h2><a href="${routes.posts.show.href({ id: post.id })}">${post.title}</a></h2>
+                  <p>${post.content.substring(0, 150)}${post.content.length > 150 ? '...' : ''}</p>
+                  <div class="post-meta">
+                    By ${post.author} on ${post.createdAt.toLocaleDateString()}
+                  </div>
+                </article>
+              `,
+            )}
+          </main>
+        </body>
+      </html>
+    `)
+  },
+  new: {
+    middleware: [requireAuth()],
+    handler({ session: _session }) {
+      return res.html(html`
+        <!doctype html>
+        <html>
+          <head>
+            <title>New Post - Simple Blog</title>
+            <meta charset="utf-8" />
+          </head>
+          <body>
+            <h1>New Post</h1>
+            <form method="POST" action="${routes.posts.create.href()}">
+              <div>
+                <label for="title">Title:</label>
+                <input type="text" id="title" name="title" required />
+              </div>
+              <div>
+                <label for="content">Content:</label>
+                <textarea id="content" name="content" required></textarea>
+              </div>
+              <button type="submit">Create Post</button>
+            </form>
+            <p><a href="${routes.home.href()}">← Back to Home</a></p>
+          </body>
+        </html>
+      `)
+    },
+  },
+  async create({ formData, session }) {
+    let username = session.get('username') as string
+    if (!username) {
+      return res.redirect(routes.login.index.href())
+    }
+
+    let title = formData.get('title') as string
+    let content = formData.get('content') as string
+
+    if (!title || !content) {
+      return res.redirect(routes.posts.new.href())
+    }
+
+    let post = data.createPost(title, content, username)
+    return res.redirect(routes.posts.show.href({ id: post.id }))
+  },
+  show({ params }) {
+    let post = data.getPost(params.id)
+    if (!post) {
+      return new Response('Post not found', { status: 404 })
+    }
+
+    return res.html(html`
+      <!doctype html>
+      <html>
+        <head>
+          <title>${post.title} - Simple Blog</title>
+          <meta charset="utf-8" />
+        </head>
+        <body>
+          <h1>${post.title}</h1>
+          <div class="post-meta">By ${post.author} on ${post.createdAt.toLocaleDateString()}</div>
+          <div class="post-content">${post.content.replace(/\n/g, '<br>')}</div>
+          <p><a href="${routes.home.href()}">← Back to Home</a></p>
+        </body>
+      </html>
+    `)
+  },
+})
