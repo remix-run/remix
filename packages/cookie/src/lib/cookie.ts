@@ -141,6 +141,12 @@ export function createCookie(name: string, options?: CookieOptions): Cookie {
     sameSite = 'Lax',
   } = options ?? {}
 
+  if (partitioned === true) {
+    // Partitioned cookies must be set with Secure
+    // See https://developer.mozilla.org/en-US/docs/Web/Privacy/Guides/Privacy_sandbox/Partitioned_cookies
+    secure = true
+  }
+
   return {
     get domain() {
       return domain

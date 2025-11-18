@@ -21,7 +21,16 @@ npm install @remix-run/cookie
 ```tsx
 import { createCookie } from '@remix-run/cookie'
 
-let sessionCookie = createCookie('session', { secrets: ['s3cret1'] })
+let sessionCookie = createCookie('session', {
+  httpOnly: true,
+  secrets: ['s3cret1'],
+  secure: true,
+})
+
+cookie.name // "session"
+cookie.httpOnly // true
+cookie.secure // true
+cookie.signed // true
 
 // Get the value of the "session" cookie from the request's `Cookie` header
 let value = await sessionCookie.parse(request.headers.get('Cookie'))

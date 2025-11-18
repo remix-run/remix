@@ -25,6 +25,11 @@ describe('Cookie', () => {
     assert.ok(setCookie.includes('SameSite=Lax'))
   })
 
+  it('defaults secure to true when partitioned is true', async () => {
+    let cookie = createCookie('my-cookie', { partitioned: true })
+    assert.equal(cookie.secure, true)
+  })
+
   it('parses/serializes empty string values', async () => {
     let cookie = createCookie('my-cookie')
     let setCookie = await cookie.serialize('')

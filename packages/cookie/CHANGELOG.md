@@ -2,6 +2,10 @@
 
 This is the changelog for [`cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Force `secure` to be `true` when `partitioned` is `true`
+
 ## v0.4.0 (2025-11-18)
 
 - BREAKING CHANGE: Remove `Cookie` class, use `createCookie` instead
