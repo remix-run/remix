@@ -2,7 +2,7 @@
 
 This is the changelog for [`session`](https://github.com/remix-run/remix/tree/main/packages/session). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.2.0 (2025-11-18)
 
 - BREAKING CHANGE: Remove `Session` class, use `createSession` instead
 - BREAKING CHANGE: Remove class versions of session storage, use the factory functions instead
