@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { createRoot } from './vdom.ts'
 import { invariant } from './invariant.ts'
 import { Catch } from './component.ts'
+import type { Dispatched } from '@remix-run/interaction'
+import type { Assert, Equal } from './test/utils.ts'
 
 describe('vnode rendering', () => {
   describe('special attributes', () => {
@@ -1640,6 +1642,72 @@ describe('vnode rendering', () => {
       expect(signals.length).toBe(1)
       invariant(signals[0])
       expect(signals[0].aborted).toBe(true)
+    })
+  })
+
+  describe('on', () => {
+    it('adds event listeners to an event target', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let clickCount = 0
+
+      function App(this: Remix.Handle) {
+        this.on(document, {
+          click: () => {
+            clickCount++
+          },
+        })
+        return () => <div>App</div>
+      }
+
+      root.render(<App />)
+      root.flush()
+
+      document.dispatchEvent(new MouseEvent('click'))
+      expect(clickCount).toBe(1)
+
+      document.dispatchEvent(new MouseEvent('click'))
+      expect(clickCount).toBe(2)
+    })
+
+    it('removes event listeners when component is disconnected', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let clickCount = 0
+
+      function App(this: Remix.Handle) {
+        this.on(document, {
+          click: (event) => {
+            clickCount++
+          },
+        })
+        return () => <div>App</div>
+      }
+
+      root.render(<App />)
+      root.flush()
+
+      document.dispatchEvent(new MouseEvent('click'))
+      expect(clickCount).toBe(1)
+
+      root.render(null)
+      root.flush()
+
+      document.dispatchEvent(new MouseEvent('click'))
+      expect(clickCount).toBe(1)
+    })
+
+    describe('types', () => {
+      it('provides literal event and target types to listeners', () => {
+        function App(this: Remix.Handle) {
+          this.on(document, {
+            keydown: (event) => {
+              type test = Assert<Equal<typeof event, Dispatched<KeyboardEvent, Document>>>
+            },
+          })
+          return () => <div>App</div>
+        }
+      })
     })
   })
 

@@ -1,4 +1,5 @@
 import type { EventListeners } from '@remix-run/interaction'
+import { createContainer } from '@remix-run/interaction'
 
 export type Task = (signal: AbortSignal) => void
 
@@ -80,6 +81,28 @@ export interface Handle<C = Record<string, never>> {
    * render/event signals are aborted when the component disconnects
    */
   signal: AbortSignal
+
+  /**
+   * Listen to an event target with automatic cleanup when the component is
+   * disconnected. Ideal for listening to events on global event targets like
+   * document and window (or any other event target that is reachable outside of
+   * the component scope).
+   *
+   * @example
+   * ```ts
+   * function SomeComp() {
+   *   let keys = []
+   *   this.on(document, {
+   *     keydown: (event) => {
+   *       keys.push(event.key)
+   *       this.update()
+   *     },
+   *   })
+   *   return () => <span>{keys.join(', ')}</span>
+   * }
+   * ```
+   */
+  on: <target extends EventTarget>(target: target, listeners: EventListeners<target>) => void
 }
 
 /**
@@ -189,6 +212,10 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
     frame: config.frame,
     context: context,
     signal: connectedCtrl.signal,
+    on: <target extends EventTarget>(target: target, listeners: EventListeners<target>) => {
+      let container = createContainer(target, { signal: connectedCtrl.signal })
+      container.set(listeners)
+    },
   }
 
   function dequeueTasks() {
