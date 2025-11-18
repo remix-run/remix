@@ -1,6 +1,15 @@
 import * as assert from 'node:assert/strict'
-import { gunzip, brotliDecompress, inflate, constants } from 'node:zlib'
+import {
+  gunzip,
+  brotliDecompress,
+  inflate,
+  constants,
+  createGunzip,
+  createBrotliDecompress,
+  createInflate,
+} from 'node:zlib'
 import { promisify } from 'node:util'
+import { Readable } from 'node:stream'
 import { describe, it } from 'node:test'
 
 import { SuperHeaders } from '@remix-run/headers'
@@ -114,7 +123,6 @@ describe('compress()', () => {
     assert.equal(compressed.headers.get('Content-Encoding'), null)
     assert.equal(await compressed.text(), 'Hello, World!')
   })
-
 
   it('compresses responses when Content-Length is not set', async () => {
     let request = new Request('http://localhost', {
@@ -253,6 +261,18 @@ describe('compress()', () => {
     })
 
     assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
+  })
+
+  it('returns uncompressed when encodings is empty array', async () => {
+    let request = new Request('http://localhost', {
+      headers: { 'Accept-Encoding': 'gzip, br' },
+    })
+    let response = new Response('Hello, World!')
+
+    let compressed = await compress(response, request, { encodings: [] })
+
+    assert.equal(compressed, response)
+    assert.equal(compressed.headers.get('Content-Encoding'), null)
   })
 
   it('handles quality factors in Accept-Encoding', async () => {
@@ -610,7 +630,6 @@ describe('compress()', () => {
     assert.equal(compressed.headers.get('Content-Encoding'), null)
   })
 
-
   it('sets compression headers for HEAD requests even when body is already null', async () => {
     let request = new Request('http://localhost', {
       method: 'HEAD',
@@ -629,5 +648,128 @@ describe('compress()', () => {
     let headers = new SuperHeaders(compressed.headers)
     assert.ok(headers.vary.has('Accept-Encoding'))
     assert.equal(compressed.body, null)
+  })
+
+  describe('Server-Sent Events', () => {
+    let encodings = [
+      ['br', createBrotliDecompress],
+      ['gzip', createGunzip],
+      ['deflate', createInflate],
+    ] as const
+
+    for (let [encodingName, createDecompressor] of encodings) {
+      it(`automatically applies flush for SSE with ${encodingName}`, async () => {
+        let sendEvent: ((data: string) => void) | undefined
+        let controller: ReadableStreamDefaultController<Uint8Array> | undefined
+
+        let stream = new ReadableStream({
+          start(c) {
+            controller = c
+            sendEvent = (data: string) => {
+              controller!.enqueue(new TextEncoder().encode(data))
+            }
+          },
+        })
+
+        let response = new Response(stream, {
+          headers: { 'Content-Type': 'text/event-stream' },
+        })
+
+        let request = new Request('http://localhost', {
+          headers: { 'Accept-Encoding': encodingName },
+        })
+
+        let compressed = await compress(response, request, {
+          encodings: [encodingName],
+          // Provide custom options WITHOUT flush
+          // compress() should automatically apply flush for SSE
+          zlib: {
+            level: 9,
+          },
+          brotli: {
+            params: {
+              [constants.BROTLI_PARAM_QUALITY]: 11,
+            },
+          },
+        })
+
+        assert.equal(compressed.headers.get('Content-Encoding'), encodingName)
+        assert.ok(compressed.body)
+
+        let decompressor = createDecompressor()
+        let nodeReadable = Readable.fromWeb(compressed.body as any)
+        let decompressed = nodeReadable.pipe(decompressor)
+
+        // Test that data arrives before stream closes AND is valid SSE format
+        let receivedData = await new Promise<string>((resolve, reject) => {
+          let timeout = setTimeout(() => {
+            reject(new Error(`Timeout: data not flushed - flush may not be working`))
+          }, 500)
+
+          decompressed.once('data', (chunk) => {
+            clearTimeout(timeout)
+            resolve(chunk.toString())
+          })
+
+          decompressed.resume()
+
+          // Send SSE event - with flush, it should arrive immediately
+          // Without flush, stream stays open and data buffers, causing timeout
+          setImmediate(() => {
+            sendEvent!('event: message\ndata: test-payload\n\n')
+          })
+        })
+
+        // Verify the decompressed data is valid SSE format
+        assert.ok(receivedData.includes('event: message'), 'Missing event type')
+        assert.ok(receivedData.includes('data: test-payload'), 'Missing data payload')
+        assert.ok(receivedData.includes('\n\n'), 'Missing SSE message terminator')
+
+        controller!.close()
+        decompressed.destroy()
+      })
+    }
+
+    it('respects explicit flush value even for SSE', async () => {
+      let response = new Response('event: message\ndata: test\n\n', {
+        headers: { 'Content-Type': 'text/event-stream' },
+      })
+
+      let request = new Request('http://localhost', {
+        headers: { 'Accept-Encoding': 'gzip' },
+      })
+
+      // Explicitly set flush to Z_NO_FLUSH (not recommended for SSE, but should be respected)
+      let compressed = await compress(response, request, {
+        zlib: {
+          flush: constants.Z_NO_FLUSH,
+        },
+      })
+
+      assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
+      assert.ok(compressed.body)
+
+      // Just verify it compressed, we can't easily test that Z_NO_FLUSH was used
+      // but the important thing is it didn't override our explicit setting
+      let buffer = await compressed.arrayBuffer()
+      let decompressed = await gunzipAsync(Buffer.from(buffer))
+      assert.equal(decompressed.toString(), 'event: message\ndata: test\n\n')
+    })
+
+    it('only applies flush defaults for text/event-stream', async () => {
+      let response = new Response('regular content', {
+        headers: { 'Content-Type': 'text/plain' },
+      })
+
+      let request = new Request('http://localhost', {
+        headers: { 'Accept-Encoding': 'gzip' },
+      })
+
+      let compressed = await compress(response, request)
+
+      assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
+      // Should compress successfully without any flush defaults
+      assert.ok(compressed.body)
+    })
   })
 })

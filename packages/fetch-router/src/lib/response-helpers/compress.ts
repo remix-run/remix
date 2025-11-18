@@ -1,4 +1,4 @@
-import { createBrotliCompress, createDeflate, createGzip } from 'node:zlib'
+import { constants, createBrotliCompress, createDeflate, createGzip } from 'node:zlib'
 import type { BrotliOptions, ZlibOptions } from 'node:zlib'
 import { Readable } from 'node:stream'
 import type { Transform } from 'node:stream'
@@ -18,12 +18,20 @@ export interface CompressOptions {
 
   /**
    * node:zlib options for gzip/deflate compression.
+   *
+   * For SSE responses (text/event-stream), `flush: Z_SYNC_FLUSH` is automatically
+   * applied unless you explicitly set a flush value.
+   *
    * See: https://nodejs.org/api/zlib.html#class-options
    */
   zlib?: ZlibOptions
 
   /**
    * node:zlib options for Brotli compression.
+   *
+   * For SSE responses (text/event-stream), `flush: BROTLI_OPERATION_FLUSH` is
+   * automatically applied unless you explicitly set a flush value.
+   *
    * See: https://nodejs.org/api/zlib.html#class-brotlioptions
    */
   brotli?: BrotliOptions
@@ -58,11 +66,13 @@ export async function compress(
   options?: CompressOptions,
 ): Promise<Response> {
   let compressOptions = options ?? {}
+  let supportedEncodings = compressOptions.encodings ?? defaultEncodings
   let acceptEncodingHeader = request.headers.get('Accept-Encoding')
   let responseHeaders = new SuperHeaders(response.headers)
 
   if (
     !acceptEncodingHeader ||
+    supportedEncodings.length === 0 ||
     // Empty response
     (request.method !== 'HEAD' && !response.body) ||
     // Already compressed
@@ -78,7 +88,6 @@ export async function compress(
   }
 
   let acceptEncoding = new AcceptEncoding(acceptEncodingHeader)
-  let supportedEncodings = compressOptions.encodings ?? defaultEncodings
   let selectedEncoding = negotiateEncoding(acceptEncoding, supportedEncodings)
   if (selectedEncoding === null) {
     // Client has explicitly rejected all supported encodings, including 'identity'
@@ -140,13 +149,37 @@ function setCompressionHeaders(headers: SuperHeaders, encoding: string): void {
   }
 }
 
+const zlibFlushOptions = {
+  flush: constants.Z_SYNC_FLUSH,
+}
+
+const brotliFlushOptions = {
+  flush: constants.BROTLI_OPERATION_FLUSH,
+}
+
 function compressStream(
   response: Response,
   responseHeaders: SuperHeaders,
   encoding: Encoding,
   options: CompressOptions,
 ): Response {
-  let compressionTransform = createCompressionTransform(encoding, options)
+  // Detect SSE for automatic flush configuration
+  let contentType = response.headers.get('Content-Type')
+  let mediaType = contentType?.split(';')[0].trim()
+  let isSSE = mediaType === 'text/event-stream'
+
+  let compressionTransform = createCompressionTransform(encoding, {
+    ...options,
+    // Apply SSE flush defaults if not explicitly set
+    brotli: {
+      ...options.brotli,
+      ...(isSSE && options.brotli?.flush === undefined ? brotliFlushOptions : null),
+    },
+    zlib: {
+      ...options.zlib,
+      ...(isSSE && options.zlib?.flush === undefined ? zlibFlushOptions : null),
+    },
+  })
 
   let compressedStream = Readable.toWeb(
     Readable.fromWeb(response.body as any).pipe(compressionTransform),

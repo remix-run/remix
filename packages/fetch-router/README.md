@@ -835,8 +835,8 @@ router.get('/api/data', async (context) => {
 
 The `compress()` helper accepts several options to customize the compression behavior.
 
-- For `zlib` options, see the [node:zlib Options documentation.](https://nodejs.org/api/zlib.html#class-options)
-- For `brotli` options, see the [node:zlib BrotliOptions documentation.](https://nodejs.org/api/zlib.html#class-brotlioptions)
+- For `zlib` options, see the [node:zlib Options documentation.](https://nodejs.org/api/zlib.html#class-options). For server-sent events (`text/event-stream` media type), the `flush` option is defaulted to `zlib.constants.Z_SYNC_FLUSH`.
+- For `brotli` options, see the [node:zlib BrotliOptions documentation.](https://nodejs.org/api/zlib.html#class-brotlioptions). For server-sent events (`text/event-stream` media type), the `flush` option is defaulted to `zlib.constants.BROTLI_OPERATION_FLUSH`.
 
 ```ts
 res.compress(response, context.request, {
@@ -880,9 +880,9 @@ The middleware applies an additional **Content-Type filter** to only apply compr
 
 The `isCompressibleMediaType` helper determines whether a media type should be compressed. It returns `true` for:
 
-- **Known compressible types** from the [mime-db](https://www.npmjs.com/package/mime-db) database (e.g., `application/json`, `text/html`, `text/css`), except those starting with `x-` (experimental) or `vnd.` (vendor-specific).
-- **All `text/*` types** (e.g., `text/plain`, `text/markdown`)
-- **Types with structured data suffixes**: `+json`, `+text`, or `+xml` (e.g., `application/vnd.api+json`, `image/svg+xml`)
+- Known compressible types from the [mime-db](https://www.npmjs.com/package/mime-db) database (e.g., `application/json`, `text/html`, `text/css`), except those starting with `x-` (experimental) or `vnd.` (vendor-specific).
+- All `text/*` types (e.g., `text/plain`, `text/markdown`)
+- Types with structured data suffixes: `+json`, `+text`, or `+xml` (e.g., `application/vnd.api+json`, `image/svg+xml`)
 
 This helper is primarily intended for use in custom `filterMediaType` functions for the `compression()` middleware:
 

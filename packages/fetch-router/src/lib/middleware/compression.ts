@@ -1,4 +1,3 @@
-import { constants } from 'node:zlib'
 import type { BrotliOptions, ZlibOptions } from 'node:zlib'
 import type { Middleware } from '../middleware.ts'
 import { compress, type CompressOptions } from '../response-helpers/compress.ts'
@@ -31,9 +30,6 @@ export interface CompressionOptions {
    * node:zlib options for gzip/deflate compression.
    * Can be static or a function that returns options based on the response.
    *
-   * For SSE responses, `flush: Z_SYNC_FLUSH` is automatically applied unless you
-   * explicitly set a flush value.
-   *
    * See: https://nodejs.org/api/zlib.html#class-options
    */
   zlib?: ZlibOptions | ((response: Response) => ZlibOptions)
@@ -41,9 +37,6 @@ export interface CompressionOptions {
   /**
    * node:zlib options for Brotli compression.
    * Can be static or a function that returns options based on the response.
-   *
-   * For SSE responses, `flush: Z_SYNC_FLUSH` is automatically applied unless you
-   * explicitly set a flush value.
    *
    * See: https://nodejs.org/api/zlib.html#class-brotlioptions
    */
@@ -83,38 +76,6 @@ export function compression(options?: CompressionOptions): Middleware {
       return response
     }
 
-    let isSSE = contentTypeHeader === 'text/event-stream'
-
-    let encodings: CompressOptions['encodings'] = options?.encodings
-      ? typeof options.encodings === 'function'
-        ? options.encodings(response)
-        : options.encodings
-      : ['br', 'gzip', 'deflate']
-
-    let userZlib = options?.zlib
-      ? typeof options.zlib === 'function'
-        ? options.zlib(response)
-        : options.zlib
-      : undefined
-
-    // For SSE, set default flush mode if not explicitly set
-    let zlibOptions: CompressOptions['zlib'] =
-      isSSE && (!userZlib || userZlib.flush === undefined)
-        ? { flush: constants.Z_SYNC_FLUSH, ...userZlib }
-        : userZlib
-
-    let userBrotli = options?.brotli
-      ? typeof options.brotli === 'function'
-        ? options.brotli(response)
-        : options.brotli
-      : undefined
-
-    // For SSE, set default flush mode if not explicitly set
-    let brotliOptions: CompressOptions['brotli'] =
-      isSSE && (!userBrotli || userBrotli.flush === undefined)
-        ? { flush: constants.Z_SYNC_FLUSH, ...userBrotli }
-        : userBrotli
-
     // If Content-Length is present, check threshold before compressing
     let contentLengthHeader = response.headers.get('Content-Length')
     if (contentLengthHeader !== null) {
@@ -125,9 +86,21 @@ export function compression(options?: CompressionOptions): Middleware {
     }
 
     let compressOptions: CompressOptions = {
-      encodings,
-      zlib: zlibOptions,
-      brotli: brotliOptions,
+      encodings: options?.encodings
+        ? typeof options.encodings === 'function'
+          ? options.encodings(response)
+          : options.encodings
+        : undefined,
+      zlib: options?.zlib
+        ? typeof options.zlib === 'function'
+          ? options.zlib(response)
+          : options.zlib
+        : undefined,
+      brotli: options?.brotli
+        ? typeof options.brotli === 'function'
+          ? options.brotli(response)
+          : options.brotli
+        : undefined,
     }
 
     return compress(response, context.request, compressOptions)

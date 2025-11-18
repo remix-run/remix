@@ -61,6 +61,31 @@ importers:
         specifier: ^4.20.6
         version: 4.20.6
 
+  demos/sse:
+    dependencies:
+      '@remix-run/dom':
+        specifier: jam
+        version: 0.0.0-experimental-remix-jam.6
+      '@remix-run/events':
+        specifier: jam
+        version: 0.0.0-experimental-remix-jam.5
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../../packages/fetch-router
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../../packages/node-fetch-server
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.12
+      tsx:
+        specifier: ^4.20.6
+        version: 4.20.6
+
   packages/cookie:
     dependencies:
       '@remix-run/headers':

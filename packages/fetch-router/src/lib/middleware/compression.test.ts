@@ -1,8 +1,7 @@
 import * as assert from 'node:assert/strict'
-import { gunzip, createGunzip, createBrotliDecompress, createInflate, constants } from 'node:zlib'
+import { gunzip } from 'node:zlib'
 import { promisify } from 'node:util'
 import { describe, it } from 'node:test'
-import { Readable } from 'node:stream'
 
 import { createRoutes } from '../route-map.ts'
 import { createRouter } from '../router.ts'
@@ -228,97 +227,6 @@ describe('compression()', () => {
     assert.equal(await htmlResponse.text(), '<html>test</html>')
   })
 
-  describe('Server-Sent Events', () => {
-    let encodings = [
-      ['br', createBrotliDecompress],
-      ['gzip', createGunzip],
-      ['deflate', createInflate],
-    ] as const
-
-    for (let [encodingName, createDecompressor] of encodings) {
-      it(`flushes SSE events immediately with Z_SYNC_FLUSH for ${encodingName}`, async () => {
-        let routes = createRoutes({
-          events: '/events',
-        })
-
-        let router = createRouter({
-          middleware: [
-            compression({
-              encodings: [encodingName],
-              // Provide custom options WITHOUT flush - middleware should default flush: Z_SYNC_FLUSH for SSE
-              // If flush isn't defaulted, this test will timeout waiting for data to arrive
-              zlib: {
-                level: 9,
-              },
-              brotli: {
-                params: {
-                  [constants.BROTLI_PARAM_QUALITY]: 11,
-                },
-              },
-            }),
-          ],
-        })
-
-        let sendEvent: ((data: string) => void) | undefined
-
-        let controller: ReadableStreamDefaultController<Uint8Array> | undefined
-
-        router.map(routes.events, async () => {
-          let stream = new ReadableStream({
-            start(c) {
-              controller = c
-              sendEvent = (data: string) => {
-                controller!.enqueue(new TextEncoder().encode(data))
-              }
-            },
-          })
-
-          return new Response(stream, {
-            headers: { 'Content-Type': 'text/event-stream' },
-          })
-        })
-
-        let response = await router.fetch('https://remix.run/events', {
-          headers: { 'Accept-Encoding': encodingName },
-        })
-
-        assert.equal(response.headers.get('Content-Encoding'), encodingName)
-        assert.ok(response.body)
-
-        let decompressor = createDecompressor()
-        let nodeReadable = Readable.fromWeb(response.body as any)
-        let decompressed = nodeReadable.pipe(decompressor)
-
-        // Test that data arrives before stream closes (flush is working)
-        let receivedData = await new Promise<string>((resolve, reject) => {
-          let timeout = setTimeout(() => {
-            reject(new Error(`Timeout: data not flushed - Z_SYNC_FLUSH may not be working`))
-          }, 500)
-
-          decompressed.once('data', (chunk) => {
-            clearTimeout(timeout)
-            resolve(chunk.toString())
-          })
-
-          // Start the stream flowing
-          decompressed.resume()
-
-          // Send data immediately - with Z_SYNC_FLUSH, it should flush and arrive
-          // Without Z_SYNC_FLUSH, stream stays open and data buffers, causing timeout
-          setImmediate(() => {
-            let event = 'event: message\ndata: ' + 'x'.repeat(500) + '\n\n'
-            sendEvent!(event)
-          })
-        })
-
-        assert.equal(receivedData, 'event: message\ndata: ' + 'x'.repeat(500) + '\n\n')
-
-        controller!.close()
-        decompressed.destroy()
-      })
-    }
-  })
-
   it('supports dynamic encodings based on response', async () => {
     let routes = createRoutes({
       events: '/events',
@@ -359,5 +267,46 @@ describe('compression()', () => {
       headers: { 'Accept-Encoding': 'br, gzip' },
     })
     assert.equal(jsonResponse.headers.get('Content-Encoding'), 'br')
+  })
+
+  it('allows disabling compression per response via empty encodings array', async () => {
+    let routes = createRoutes({
+      nocompress: '/nocompress',
+      compress: '/compress',
+    })
+
+    let router = createRouter({
+      middleware: [
+        compression({
+          encodings: (response) => {
+            // Don't compress responses with X-No-Compress header
+            return response.headers.has('X-No-Compress') ? [] : ['gzip']
+          },
+        }),
+      ],
+    })
+
+    router.map(routes.nocompress, () => {
+      return new Response('not compressed', {
+        headers: { 'Content-Type': 'text/plain', 'X-No-Compress': 'true' },
+      })
+    })
+
+    router.map(routes.compress, () => {
+      return new Response('compressed', {
+        headers: { 'Content-Type': 'text/plain' },
+      })
+    })
+
+    let noCompressResponse = await router.fetch('https://remix.run/nocompress', {
+      headers: { 'Accept-Encoding': 'gzip' },
+    })
+    assert.equal(noCompressResponse.headers.get('Content-Encoding'), null)
+    assert.equal(await noCompressResponse.text(), 'not compressed')
+
+    let compressResponse = await router.fetch('https://remix.run/compress', {
+      headers: { 'Accept-Encoding': 'gzip' },
+    })
+    assert.equal(compressResponse.headers.get('Content-Encoding'), 'gzip')
   })
 })
