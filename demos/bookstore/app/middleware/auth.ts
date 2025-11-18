@@ -42,20 +42,11 @@ export function requireAuth(options?: RequireAuthOptions): Middleware {
 
   return async ({ session, url }) => {
     let userId = session.get('userId')
+    let user = typeof userId === 'string' && getUserById(userId)
 
-    if (typeof userId !== 'string') {
-      // Capture the current URL to redirect back after login
-      let returnTo = url.pathname + url.search
-      let loginUrl = redirectRoute.href(undefined, { returnTo })
-      return redirect(loginUrl, 302)
-    }
-
-    let user = getUserById(userId)
     if (!user) {
-      // Capture the current URL to redirect back after login
-      let returnTo = url.pathname + url.search
-      let loginUrl = redirectRoute.href(undefined, { returnTo })
-      return redirect(loginUrl, 302)
+      // Capture the current URL to redirect back to after login
+      return redirect(redirectRoute.href(undefined, { returnTo: url.pathname + url.search }), 302)
     }
 
     setCurrentUser(user)
