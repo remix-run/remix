@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/async-context-middleware",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Middleware for storing request context in AsyncLocalStorage",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
