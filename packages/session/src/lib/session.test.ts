@@ -22,11 +22,13 @@ describe('Session', () => {
     let session = createSession(undefined, [{ hello: 'world' }, {}])
     assert.equal(session.size, 1)
     assert.equal(session.get('hello'), 'world')
+    assert.equal(session.dirty, false)
   })
 
   it('creates a new session with initial flash data', () => {
     let session = createSession(undefined, [{}, { hello: 'world' }])
     assert.equal(session.get('hello'), 'world')
+    assert.equal(session.dirty, true)
   })
 
   it('sets and gets values', () => {
