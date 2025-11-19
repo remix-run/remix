@@ -24,7 +24,7 @@ let posts: Post[] = [
 ]
 
 export function getPosts() {
-  return [...posts].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  return posts.toSorted((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 }
 
 export function getPost(id: string) {
