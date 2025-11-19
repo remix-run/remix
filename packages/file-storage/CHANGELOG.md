@@ -2,6 +2,11 @@
 
 This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Add support for Cloudflare R2 buckets through `r2-file-storage.ts`.
+- Added tests for `r2-file-storage.ts` located in `r2-file-storage.test.ts`.
+- Updated `README.MD` inside of `file-storage` with docs and examples pertaining to `R2FileStorage`.
 ## v0.11.0 (2025-11-05)
 
 - Move `@remix-run/lazy-file` to `peerDependencies`

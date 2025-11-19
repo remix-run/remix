@@ -22,6 +22,7 @@
     ".": "./src/index.ts",
     "./local": "./src/local.ts",
     "./memory": "./src/memory.ts",
+    "./r2": "./src/r2.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -38,6 +39,10 @@
         "types": "./dist/memory.d.ts",
         "default": "./dist/memory.js"
       },
+      "./r2": {
+        "types": "./dist/r2.d.ts",
+        "default": "./dist/r2.js"
+      },
       "./package.json": "./package.json"
     }
   },
@@ -47,6 +52,8 @@
   "devDependencies": {
     "@remix-run/form-data-parser": "workspace:^",
     "@types/node": "^24.6.0",
+    "esbuild": "^0.25.10",
+    "@cloudflare/workers-types": "4.20251014.0",
     "typescript": "^5.9.3"
   },
   "scripts": {

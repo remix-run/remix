@@ -127,12 +127,18 @@ importers:
         specifier: workspace:^
         version: link:../lazy-file
     devDependencies:
+      '@cloudflare/workers-types':
+        specifier: 4.20251014.0
+        version: 4.20251014.0
       '@remix-run/form-data-parser':
         specifier: workspace:^
         version: link:../form-data-parser
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.12
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
