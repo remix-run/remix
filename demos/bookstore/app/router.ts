@@ -28,10 +28,6 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 middleware.push(compression())
-middleware.push(formData({ uploadHandler }))
-middleware.push(methodOverride())
-middleware.push(asyncContext())
-
 middleware.push(
   staticFiles('./public', {
     cacheControl: 'no-store, must-revalidate',
@@ -40,7 +36,6 @@ middleware.push(
     acceptRanges: false,
   }),
 )
-
 middleware.push(formData({ uploadHandler }))
 middleware.push(methodOverride())
 middleware.push(session(sessionCookie, sessionStorage))
