@@ -11,7 +11,7 @@ import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   handlers: {
     index() {
       let user = getCurrentUser()

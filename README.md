@@ -13,7 +13,7 @@ We published [a blog post](https://remix.run/blog/wake-up-remix) earlier this ye
 
 ## Goals
 
-Although we recommend the `remix` package for ease of use, all packages that make up Remix should be usable standalone as well. This forces us to consider package boundaries and helps us define public interfaces that are portable and interopable.
+Although we recommend the `remix` package for ease of use, all packages that make up Remix should be usable standalone as well. This forces us to consider package boundaries and helps us define public interfaces that are portable and interoperable.
 
 Each package in Remix:
 
@@ -36,16 +36,19 @@ The benefit is code that's not just reusable, but **future-proof**.
 
 We currently publish the following packages:
 
+- [cookie](packages/cookie): A comprehensive toolkit for effortlessly managing HTTP cookies
 - [fetch-proxy](packages/fetch-proxy): Seamlessly construct HTTP proxies with the familiar `fetch()` API
 - [fetch-router](packages/fetch-router): A minimal, composable router built on the web Fetch API and `route-pattern`.
 - [file-storage](packages/file-storage): Robust key/value storage tailored for JavaScript `File` objects, simplifying file management
 - [form-data-parser](packages/form-data-parser): An enhanced `request.formData()` wrapper enabling efficient, streaming file uploads
 - [headers](packages/headers): A comprehensive toolkit for effortlessly managing HTTP headers
+- [html-template](packages/html-template): A safe HTML template tag with auto-escaping for JavaScript
 - [interaction](packages/interaction): Semantic, declarative events and Interactions
 - [lazy-file](packages/lazy-file): Optimize performance with lazy-loaded, streaming `Blob`s and `File`s for JavaScript
 - [multipart-parser](packages/multipart-parser): High-performance, streaming parser for multipart messages, perfect for handling complex form data
 - [node-fetch-server](packages/node-fetch-server): Build Node.js HTTP servers using the web-standard `fetch()` API, promoting code consistency
 - [route-pattern](packages/route-pattern): A powerful and flexible URL pattern matching library
+- [session](packages/session): A full-featured session management library for JavaScript
 - [tar-parser](packages/tar-parser): A fast, streaming parser for tar archives, designed for efficient data extraction
 
 ## Contributing

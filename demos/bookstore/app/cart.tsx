@@ -4,29 +4,20 @@ import { redirect } from '@remix-run/fetch-router/response-helpers'
 import { routes } from '../routes.ts'
 
 import { Layout } from './layout.tsx'
-import { loadAuth, SESSION_ID_KEY } from './middleware/auth.ts'
+import { loadAuth } from './middleware/auth.ts'
 import { getBookById } from './models/books.ts'
-import { getCart, addToCart, updateCartItem, removeFromCart, getCartTotal } from './models/cart.ts'
-import type { User } from './models/users.ts'
-import { getCurrentUser, getStorage } from './utils/context.ts'
+import { addToCart, updateCartItem, removeFromCart, getCartTotal } from './models/cart.ts'
+import { getCurrentUserSafely, getCurrentCart } from './utils/context.ts'
 import { render } from './utils/render.ts'
-import { setSessionCookie } from './utils/session.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  middleware: [loadAuth],
+  middleware: [loadAuth()],
   handlers: {
     index() {
-      let sessionId = getStorage().get(SESSION_ID_KEY)
-      let cart = getCart(sessionId)
+      let cart = getCurrentCart()
       let total = getCartTotal(cart)
-
-      let user: User | null = null
-      try {
-        user = getCurrentUser()
-      } catch {
-        // user not authenticated
-      }
+      let user = getCurrentUserSafely()
 
       return render(
         <Layout>
@@ -137,11 +128,12 @@ export default {
     },
 
     api: {
-      async add({ storage, formData }) {
-        // Simulate network latency
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+      async add({ session, formData }) {
+        if (process.env.NODE_ENV !== 'test') {
+          // Simulate network latency
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+        }
 
-        let sessionId = storage.get(SESSION_ID_KEY)
         let bookId = formData.get('bookId')?.toString() ?? ''
 
         let book = getBookById(bookId)
@@ -149,52 +141,46 @@ export default {
           return new Response('Book not found', { status: 404 })
         }
 
-        addToCart(sessionId, book.id, book.slug, book.title, book.price, 1)
-
-        let headers = new Headers()
-        setSessionCookie(headers, sessionId)
+        session.set(
+          'cart',
+          addToCart(getCurrentCart(), book.id, book.slug, book.title, book.price, 1),
+        )
 
         if (formData.get('redirect') === 'none') {
           return new Response(null, { status: 204 })
         }
 
-        return redirect(routes.cart.index.href(), { headers })
+        return redirect(routes.cart.index.href())
       },
 
-      async update({ storage, formData }) {
-        let sessionId = storage.get(SESSION_ID_KEY)
+      async update({ session, formData }) {
         let bookId = formData.get('bookId')?.toString() ?? ''
         let quantity = parseInt(formData.get('quantity')?.toString() ?? '1', 10)
 
-        updateCartItem(sessionId, bookId, quantity)
-
-        let headers = new Headers()
-        setSessionCookie(headers, sessionId)
+        session.set('cart', updateCartItem(getCurrentCart(), bookId, quantity))
 
         if (formData.get('redirect') === 'none') {
           return new Response(null, { status: 204 })
         }
 
-        return redirect(routes.cart.index.href(), { headers })
+        return redirect(routes.cart.index.href())
       },
 
-      async remove({ storage, formData }) {
-        // Simulate network latency
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+      async remove({ session, formData }) {
+        if (process.env.NODE_ENV !== 'test') {
+          // Simulate network latency
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+        }
 
-        let sessionId = storage.get(SESSION_ID_KEY)
         let bookId = formData.get('bookId')?.toString() ?? ''
 
-        removeFromCart(sessionId, bookId)
-
-        let headers = new Headers()
-        setSessionCookie(headers, sessionId)
+        session.set('cart', removeFromCart(getCurrentCart(), bookId))
 
         if (formData.get('redirect') === 'none') {
           return new Response(null, { status: 204 })
         }
 
-        return redirect(routes.cart.index.href(), { headers })
+        return redirect(routes.cart.index.href())
       },
     },
   },

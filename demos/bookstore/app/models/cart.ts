@@ -10,28 +10,24 @@ export interface Cart {
   items: CartItem[]
 }
 
-// Store carts by session ID
-const carts = new Map<string, Cart>()
+export function isCart(value: unknown): value is Cart {
+  return (
+    typeof value === 'object' && value !== null && 'items' in value && Array.isArray(value.items)
+  )
+}
 
-export function getCart(sessionId: string): Cart {
-  let cart = carts.get(sessionId)
-  if (!cart) {
-    cart = { items: [] }
-    carts.set(sessionId, cart)
-  }
-  return cart
+export function getCart(value: unknown): Cart {
+  return isCart(value) ? value : { items: [] }
 }
 
 export function addToCart(
-  sessionId: string,
+  cart: Cart,
   bookId: string,
   slug: string,
   title: string,
   price: number,
   quantity: number = 1,
 ): Cart {
-  let cart = getCart(sessionId)
-
   let existingItem = cart.items.find((item) => item.bookId === bookId)
   if (existingItem) {
     existingItem.quantity += quantity
@@ -42,12 +38,7 @@ export function addToCart(
   return cart
 }
 
-export function updateCartItem(
-  sessionId: string,
-  bookId: string,
-  quantity: number,
-): Cart | undefined {
-  let cart = getCart(sessionId)
+export function updateCartItem(cart: Cart, bookId: string, quantity: number): Cart | undefined {
   let item = cart.items.find((item) => item.bookId === bookId)
 
   if (!item) return undefined
@@ -61,14 +52,13 @@ export function updateCartItem(
   return cart
 }
 
-export function removeFromCart(sessionId: string, bookId: string): Cart {
-  let cart = getCart(sessionId)
+export function removeFromCart(cart: Cart, bookId: string): Cart {
   cart.items = cart.items.filter((item) => item.bookId !== bookId)
   return cart
 }
 
-export function clearCart(sessionId: string): void {
-  carts.set(sessionId, { items: [] })
+export function clearCart(cart: Cart): Cart {
+  return { items: [] }
 }
 
 export function getCartTotal(cart: Cart): number {

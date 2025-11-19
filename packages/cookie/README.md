@@ -8,8 +8,6 @@ HTTP cookies are essential for web applications, from session management and use
 
 - **Secure Cookie Signing:** Built-in cryptographic signing using HMAC-SHA256 to prevent cookie tampering, with support for secret rotation without breaking existing cookies.
 - **Secret Rotation Support:** Seamlessly rotate signing secrets while maintaining backward compatibility with existing cookies.
-- **Comprehensive Cookie Attributes:** Full support for all standard cookie attributes including `Path`, `Domain`, `Secure`, `HttpOnly`, `SameSite`, `Max-Age`, and `Expires`.
-- **Reusable Cookie Containers:** Create logical cookie containers that can be used to parse and serialize multiple values over time.
 - **Web Standards Compliant:** Built on Web Crypto API and standard cookie parsing, making it runtime-agnostic (Node.js, Bun, Deno, Cloudflare Workers).
 
 ## Installation
@@ -23,7 +21,16 @@ npm install @remix-run/cookie
 ```tsx
 import { createCookie } from '@remix-run/cookie'
 
-let sessionCookie = createCookie('session', { secrets: ['s3cret1'] })
+let sessionCookie = createCookie('session', {
+  httpOnly: true,
+  secrets: ['s3cret1'],
+  secure: true,
+})
+
+cookie.name // "session"
+cookie.httpOnly // true
+cookie.secure // true
+cookie.signed // true
 
 // Get the value of the "session" cookie from the request's `Cookie` header
 let value = await sessionCookie.parse(request.headers.get('Cookie'))

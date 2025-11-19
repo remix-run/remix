@@ -6,7 +6,7 @@ import { assertContains } from '../test/helpers.ts'
 
 describe('books handlers', () => {
   it('GET /books returns list of books', async () => {
-    let response = await router.fetch('http://localhost:3000/books')
+    let response = await router.fetch('https://remix.run/books')
 
     assert.equal(response.status, 200)
     let html = await response.text()
@@ -17,7 +17,7 @@ describe('books handlers', () => {
   })
 
   it('GET /books/:slug returns book details', async () => {
-    let response = await router.fetch('http://localhost:3000/books/bbq')
+    let response = await router.fetch('https://remix.run/books/bbq')
 
     assert.equal(response.status, 200)
     let html = await response.text()
@@ -27,7 +27,7 @@ describe('books handlers', () => {
   })
 
   it('GET /books/:slug returns 404 for non-existent book', async () => {
-    let response = await router.fetch('http://localhost:3000/books/does-not-exist')
+    let response = await router.fetch('https://remix.run/books/does-not-exist')
 
     assert.equal(response.status, 404)
     let html = await response.text()

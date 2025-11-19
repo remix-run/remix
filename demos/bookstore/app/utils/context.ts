@@ -1,18 +1,42 @@
+import { createStorageKey } from '@remix-run/fetch-router'
 import { getContext } from '@remix-run/fetch-router/async-context-middleware'
 
-import { USER_KEY } from '../middleware/auth.ts'
 import type { User } from '../models/users.ts'
+import type { Cart } from '../models/cart.ts'
+import { getCart } from '../models/cart.ts'
 
-/**
- * Get the app storage from the current request context.
- */
-export function getStorage() {
-  return getContext().storage
-}
+// Storage key for attaching user data to request context
+let USER_KEY = createStorageKey<User>()
 
 /**
  * Get the current authenticated user from app storage.
  */
 export function getCurrentUser(): User {
-  return getStorage().get(USER_KEY)
+  return getContext().storage.get(USER_KEY)
+}
+
+/**
+ * Get the current authenticated user from app storage, or null if not authenticated.
+ * Safe to use when running behind loadAuth middleware (not requireAuth).
+ */
+export function getCurrentUserSafely(): User | null {
+  try {
+    return getCurrentUser()
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Set the current authenticated user in app storage.
+ */
+export function setCurrentUser(user: User): void {
+  getContext().storage.set(USER_KEY, user)
+}
+
+/**
+ * Get the current cart from the session.
+ */
+export function getCurrentCart(): Cart {
+  return getCart(getContext().session.get('cart'))
 }

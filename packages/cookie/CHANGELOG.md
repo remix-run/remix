@@ -4,6 +4,10 @@ This is the changelog for [`cookie`](https://github.com/remix-run/remix/tree/mai
 
 ## Unreleased
 
+- Force `secure` to be `true` when `partitioned` is `true`
+
+## v0.4.0 (2025-11-18)
+
 - BREAKING CHANGE: Remove `Cookie` class, use `createCookie` instead
 
   ```tsx
@@ -15,6 +19,8 @@ This is the changelog for [`cookie`](https://github.com/remix-run/remix/tree/mai
   import { createCookie } from '@remix-run/cookie'
   let cookie = createCookie('session')
   ```
+
+- Add `domain`, `expires`, `httpOnly`, `maxAge`, `partitioned`, `path`, `sameSite`, and `secure` properties to `Cookie` objects
 
 ## v0.3.0 (2025-11-08)
 

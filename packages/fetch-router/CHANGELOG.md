@@ -2,9 +2,9 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.9.0 (2025-11-18)
 
-- Add `session` middleware for managing sessions across requests
+- Add `session` middleware for automatic management of `context.session` across requests
 
   ```tsx
   import { createCookie } from '@remix-run/cookie'
@@ -12,23 +12,29 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   import { session } from '@remix-run/fetch-router/session-middleware'
 
   let cookie = createCookie('session', { secrets: ['s3cr3t'] })
-  let storage = createFileStorage(cookie, '/tmp/sessions')
+  let storage = createFileStorage('/tmp/sessions')
 
   let router = createRouter({
-    middleware: [session(storage)],
+    middleware: [session(cookie, storage)],
+  })
+
+  router.map('/', ({ session }) => {
+    session.set('count', Number(session.get('count') ?? 0) + 1)
+    return new Response(`Count: ${session.get('count')}`)
   })
   ```
 
 - Add `asyncContext` middleware for storing the request context in `AsyncLocalStorage` so it is available to all functions in the same async execution context
 
   ```tsx
+  import * as assert from 'node:assert/strict'
   import { asyncContext } from '@remix-run/fetch-router/async-context-middleware'
 
   let router = createRouter({
     middleware: [asyncContext()],
   })
 
-  router.map(routes.home, (context) => {
+  router.map('/', (context) => {
     assert.equal(context, getContext())
     return new Response('Home')
   })

@@ -4,9 +4,11 @@ import { compression } from '@remix-run/fetch-router/compression-middleware'
 import { formData } from '@remix-run/fetch-router/form-data-middleware'
 import { logger } from '@remix-run/fetch-router/logger-middleware'
 import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
+import { session } from '@remix-run/fetch-router/session-middleware'
 import { staticFiles } from '@remix-run/fetch-router/static-middleware'
 
 import { routes } from '../routes.ts'
+import { sessionCookie, sessionStorage } from './utils/session.ts'
 import { uploadHandler } from './utils/uploads.ts'
 
 import adminHandlers from './admin.tsx'
@@ -38,6 +40,11 @@ middleware.push(
     acceptRanges: false,
   }),
 )
+
+middleware.push(formData({ uploadHandler }))
+middleware.push(methodOverride())
+middleware.push(session(sessionCookie, sessionStorage))
+middleware.push(asyncContext())
 
 export let router = createRouter({ middleware })
 

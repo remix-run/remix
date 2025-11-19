@@ -2,7 +2,6 @@ import type { RouteHandlers } from '@remix-run/fetch-router'
 import { redirect } from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../routes.ts'
-import { getSession, setSessionCookie, login, logout } from './utils/session.ts'
 import {
   authenticateUser,
   createUser,
@@ -15,15 +14,27 @@ import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
 
 export default {
-  middleware: [loadAuth],
+  middleware: [loadAuth()],
   handlers: {
     login: {
-      index() {
+      index({ session, url }) {
+        let error = session.get('error')
+        let formAction = routes.auth.login.action.href(undefined, {
+          returnTo: url.searchParams.get('returnTo'),
+        })
+
         return render(
           <Document>
             <div class="card" style="max-width: 500px; margin: 2rem auto;">
               <h1>Login</h1>
-              <form method="POST" action={routes.auth.login.action.href()}>
+
+              {typeof error === 'string' ? (
+                <div class="alert alert-error" style="margin-bottom: 1.5rem;">
+                  {error}
+                </div>
+              ) : null}
+
+              <form method="POST" action={formAction}>
                 <div class="form-group">
                   <label for="email">Email</label>
                   <input type="email" id="email" name="email" required autoComplete="email" />
@@ -64,34 +75,20 @@ export default {
         )
       },
 
-      async action({ request, formData }) {
+      async action({ session, formData, url }) {
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
         let user = authenticateUser(email, password)
+        let returnTo = url.searchParams.get('returnTo')
 
         if (!user) {
-          return render(
-            <Document>
-              <div class="card" style="max-width: 500px; margin: 2rem auto;">
-                <div class="alert alert-error">Invalid email or password. Please try again.</div>
-                <p>
-                  <a href={routes.auth.login.index.href()} class="btn">
-                    Back to Login
-                  </a>
-                </p>
-              </div>
-            </Document>,
-            { status: 401 },
-          )
+          session.flash('error', 'Invalid email or password. Please try again.')
+          return redirect(routes.auth.login.index.href(undefined, { returnTo }))
         }
 
-        let session = getSession(request)
-        login(session.sessionId, user)
+        session.set('userId', user.id)
 
-        let headers = new Headers()
-        setSessionCookie(headers, session.sessionId)
-
-        return redirect(routes.account.index.href(), { headers })
+        return redirect(returnTo ?? routes.account.index.href())
       },
     },
 
@@ -136,7 +133,7 @@ export default {
         )
       },
 
-      async action({ request, formData }) {
+      async action({ session, formData }) {
         let name = formData.get('name')?.toString() ?? ''
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
@@ -167,20 +164,14 @@ export default {
 
         let user = createUser(email, password, name)
 
-        let session = getSession(request)
-        login(session.sessionId, user)
+        session.set('userId', user.id)
 
-        let headers = new Headers()
-        setSessionCookie(headers, session.sessionId)
-
-        return redirect(routes.account.index.href(), { headers })
+        return redirect(routes.account.index.href())
       },
     },
 
-    logout({ request }) {
-      let session = getSession(request)
-      logout(session.sessionId)
-
+    logout({ session }) {
+      session.destroy()
       return redirect(routes.home.href())
     },
 

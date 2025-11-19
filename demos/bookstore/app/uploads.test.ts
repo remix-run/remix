@@ -62,7 +62,7 @@ describe('uploads handler', () => {
     ].join('\r\n')
 
     // Create book with file upload
-    let createRequest = requestWithSession('http://localhost:3000/admin/books', sessionId, {
+    let createRequest = requestWithSession('https://remix.run/admin/books', sessionId, {
       method: 'POST',
       headers: {
         'Content-Type': `multipart/form-data; boundary=----${boundary}`,
@@ -83,7 +83,7 @@ describe('uploads handler', () => {
     assert.ok(newBook.coverUrl.startsWith('/uploads/'))
 
     // Now fetch the uploaded file from the /uploads route using the book's coverUrl
-    let fileResponse = await router.fetch(`http://localhost:3000${newBook.coverUrl}`)
+    let fileResponse = await router.fetch(`https://remix.run${newBook.coverUrl}`)
 
     assert.equal(fileResponse.status, 200)
     assert.equal(fileResponse.headers.get('Content-Type'), 'image/jpeg')
@@ -92,7 +92,7 @@ describe('uploads handler', () => {
   })
 
   it('returns 404 for non-existent files', async () => {
-    let response = await router.fetch('http://localhost:3000/uploads/nonexistent/file.jpg')
+    let response = await router.fetch('https://remix.run/uploads/nonexistent/file.jpg')
 
     assert.equal(response.status, 404)
     assert.equal(await response.text(), 'File not found')
@@ -107,12 +107,12 @@ describe('uploads handler', () => {
     await uploads.set('docs/test.pdf', pdfFile)
 
     // Verify PNG
-    let pngResponse = await router.fetch('http://localhost:3000/uploads/images/test.png')
+    let pngResponse = await router.fetch('https://remix.run/uploads/images/test.png')
     assert.equal(pngResponse.status, 200)
     assert.equal(pngResponse.headers.get('Content-Type'), 'image/png')
 
     // Verify PDF
-    let pdfResponse = await router.fetch('http://localhost:3000/uploads/docs/test.pdf')
+    let pdfResponse = await router.fetch('https://remix.run/uploads/docs/test.pdf')
     assert.equal(pdfResponse.status, 200)
     assert.equal(pdfResponse.headers.get('Content-Type'), 'application/pdf')
   })

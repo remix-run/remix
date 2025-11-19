@@ -6,7 +6,6 @@ import { createSession } from '@remix-run/session'
 import { createCookieStorage } from '@remix-run/session/cookie-storage'
 
 import { createRouter } from '../router.ts'
-import { createRoutes as route } from '../route-map.ts'
 import { session as sessionMiddleware } from './session.ts'
 
 // Create a new request using the cookie in the given response
@@ -24,47 +23,50 @@ function createRequest(fromResponse?: Response): Request {
 
 describe('session middleware', () => {
   it('persists session data across requests', async () => {
-    let storage = createCookieStorage(createCookie('__sess', { secrets: ['secret1'] }))
-
-    let routes = route({
-      home: '/',
-    })
+    let cookie = createCookie('__sess', { secrets: ['secret1'] })
+    let storage = createCookieStorage()
 
     let router = createRouter({
-      middleware: [sessionMiddleware(storage)],
+      middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.get(routes.home, ({ session }) => {
-      session.set('count', ((session.get('count') as number | undefined) ?? 0) + 1)
+    router.map('/', ({ session }) => {
+      session.set('count', Number(session.get('count') ?? 0) + 1)
       return new Response(`Count: ${session.get('count')}`)
     })
 
-    let response = await router.fetch('https://remix.run')
-    assert.equal(await response.text(), 'Count: 1')
+    let response1 = await router.fetch('https://remix.run')
+    assert.equal(await response1.text(), 'Count: 1')
 
-    response = await router.fetch(createRequest(response))
-    assert.equal(await response.text(), 'Count: 2')
+    let response2 = await router.fetch(createRequest(response1))
+    assert.equal(await response2.text(), 'Count: 2')
 
-    response = await router.fetch(createRequest(response))
-    assert.equal(await response.text(), 'Count: 3')
+    let response3 = await router.fetch(createRequest(response2))
+    assert.equal(await response3.text(), 'Count: 3')
   })
 
-  it('throws an error if the session is already started', async () => {
-    let storage = createCookieStorage(createCookie('__sess', { secrets: ['secret1'] }))
+  it('throws if the session cookie is not signed', async () => {
+    let cookie = createCookie('__sess', { secrets: [] })
+    let storage = createCookieStorage()
 
-    let routes = route({
-      home: '/',
-    })
+    assert.throws(() => {
+      sessionMiddleware(cookie, storage)
+    }, new Error('Session cookie must be signed'))
+  })
+
+  it('throws at request time if the session is already started', async () => {
+    let cookie = createCookie('__sess', { secrets: ['secret1'] })
+    let storage = createCookieStorage()
 
     let router = createRouter({
       middleware: [
-        sessionMiddleware(storage),
+        sessionMiddleware(cookie, storage),
         // The second session middleware should throw an error
-        sessionMiddleware(storage),
+        sessionMiddleware(cookie, storage),
       ],
     })
 
-    router.get(routes.home, () => {
+    router.map('/', () => {
       return new Response('Home')
     })
 
@@ -73,20 +75,15 @@ describe('session middleware', () => {
     }, new Error('Existing session found, refusing to overwrite'))
   })
 
-  it('refuses to save a session modified by another middleware/handler', async () => {
-    let storage = createCookieStorage(createCookie('__sess', { secrets: ['secret1'] }))
-
-    let routes = route({
-      home: '/',
-    })
+  it('throws at request time if the session is modified by another middleware/handler', async () => {
+    let cookie = createCookie('__sess', { secrets: ['secret1'] })
+    let storage = createCookieStorage()
 
     let router = createRouter({
-      middleware: [sessionMiddleware(storage)],
+      middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.get(routes.home, (context) => {
-      context.session.set('userId', 'mj')
-      // Overwrite the session with a new one
+    router.map('/', (context) => {
       context.session = createSession()
       return new Response('Home')
     })

@@ -1,21 +1,37 @@
 import { SetCookie, Cookie } from '@remix-run/headers'
 
 /**
- * Extract session cookie from Set-Cookie header
+ * Extract a specific cookie value from Set-Cookie headers
+ */
+export function getCookie(response: Response, name: string): string | null {
+  let setCookieHeaders = response.headers.getSetCookie()
+
+  for (let header of setCookieHeaders) {
+    let setCookie = new SetCookie(header)
+    if (setCookie.name === name) {
+      return setCookie.value ?? null
+    }
+  }
+
+  return null
+}
+
+/**
+ * Extract session cookie from Set-Cookie headers
  */
 export function getSessionCookie(response: Response): string | null {
-  let setCookieHeader = response.headers.get('Set-Cookie')
-  if (!setCookieHeader) return null
-
-  let setCookie = new SetCookie(setCookieHeader)
-  return setCookie.name === 'sessionId' ? (setCookie.value ?? null) : null
+  return getCookie(response, 'session')
 }
 
 /**
  * Create a request with a session cookie
  */
-export function requestWithSession(url: string, sessionId: string, init?: RequestInit): Request {
-  let cookie = new Cookie({ sessionId })
+export function requestWithSession(
+  url: string,
+  sessionCookie: string,
+  init?: RequestInit,
+): Request {
+  let cookie = new Cookie({ session: sessionCookie })
 
   return new Request(url, {
     ...init,
@@ -48,7 +64,7 @@ export function assertNotContains(html: string, text: string): void {
  * Login and return the session cookie
  */
 export async function login(router: any, email: string, password: string): Promise<string> {
-  let loginResponse = await router.fetch('http://localhost:3000/login', {
+  let loginResponse = await router.fetch('https://remix.run/login', {
     method: 'POST',
     body: new URLSearchParams({ email, password }),
     redirect: 'manual',

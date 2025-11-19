@@ -1,7 +1,6 @@
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import type { Cookie } from '@remix-run/cookie'
 
 import { createSession, type SessionData } from '../session.ts'
 import type { SessionStorage } from '../session-storage.ts'
@@ -25,15 +24,7 @@ export interface FileStorageOptions {
  * @param options (optional) The options for the session storage
  * @returns The session storage
  */
-export function createFileStorage(
-  cookie: Cookie,
-  directory: string,
-  options?: FileStorageOptions,
-): SessionStorage {
-  if (!cookie.signed) {
-    throw new Error('Session cookie must be signed')
-  }
-
+export function createFileStorage(directory: string, options?: FileStorageOptions): SessionStorage {
   let root = path.resolve(directory)
   let useUnknownIds = options?.useUnknownIds ?? false
 
@@ -68,8 +59,8 @@ export function createFileStorage(
   }
 
   return {
-    async read(request) {
-      let id = await cookie.parse(request.headers.get('Cookie'))
+    async read(cookie) {
+      let id = cookie
 
       if (id) {
         try {
@@ -87,25 +78,23 @@ export function createFileStorage(
 
       return createSession(useUnknownIds && id ? id : undefined)
     },
-    async save(session, response) {
+    async save(session) {
       if (session.deleteId) {
         await deleteFile(session.deleteId)
       }
 
-      let cookieValue: string | undefined = undefined
       if (session.destroyed) {
         await deleteFile(session.id)
-        cookieValue = ''
-      } else if (session.dirty) {
+        return ''
+      }
+      if (session.dirty) {
         let file = await getFilePath(session.id)
         await fsp.mkdir(path.dirname(file), { recursive: true })
         await fsp.writeFile(file, JSON.stringify(session.data), 'utf-8')
-        cookieValue = session.id
+        return session.id
       }
 
-      if (cookieValue != null) {
-        response.headers.append('Set-Cookie', await cookie.serialize(cookieValue))
-      }
+      return null
     },
   }
 }

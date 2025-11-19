@@ -1,55 +1,54 @@
-import { createStorageKey } from '@remix-run/fetch-router'
-import type { Middleware } from '@remix-run/fetch-router'
+import type { Middleware, Route } from '@remix-run/fetch-router'
 import { redirect } from '@remix-run/fetch-router/response-helpers'
 
 import { routes } from '../../routes.ts'
 import { getUserById } from '../models/users.ts'
-import type { User } from '../models/users.ts'
-import { getSession, getUserIdFromSession } from '../utils/session.ts'
-
-// Storage keys for attaching data to request context
-export const USER_KEY = createStorageKey<User>()
-export const SESSION_ID_KEY = createStorageKey<string>()
+import { setCurrentUser } from '../utils/context.ts'
 
 /**
  * Middleware that optionally loads the current user if authenticated.
  * Does not redirect if not authenticated.
- * Attaches user (if any) and sessionId to context.storage.
+ * Attaches user (if any) to context.storage.
  */
-export let loadAuth: Middleware = async ({ request, storage }) => {
-  let session = getSession(request)
-  let userId = getUserIdFromSession(session.sessionId)
+export function loadAuth(): Middleware {
+  return async ({ session }) => {
+    let userId = session.get('userId')
 
-  // Always set session ID for cart/guest functionality
-  storage.set(SESSION_ID_KEY, session.sessionId)
-
-  // Only set USER_KEY if user is authenticated
-  if (userId) {
-    let user = getUserById(userId)
-    if (user) {
-      storage.set(USER_KEY, user)
+    // Only set current user if authenticated
+    if (typeof userId === 'string') {
+      let user = getUserById(userId)
+      if (user) {
+        setCurrentUser(user)
+      }
     }
   }
+}
+
+export interface RequireAuthOptions {
+  /**
+   * Where to redirect if the user is not authenticated.
+   * Defaults to the login page.
+   */
+  redirectTo?: Route
 }
 
 /**
  * Middleware that requires a user to be authenticated.
  * Redirects to login if not authenticated.
- * Attaches user and sessionId to context.storage.
+ * Attaches user to context.storage.
  */
-export let requireAuth: Middleware = async ({ request, storage }) => {
-  let session = getSession(request)
-  let userId = getUserIdFromSession(session.sessionId)
+export function requireAuth(options?: RequireAuthOptions): Middleware {
+  let redirectRoute = options?.redirectTo ?? routes.auth.login.index
 
-  if (!userId) {
-    return redirect(routes.auth.login.index.href(), 302)
+  return async ({ session, url }) => {
+    let userId = session.get('userId')
+    let user = typeof userId === 'string' && getUserById(userId)
+
+    if (!user) {
+      // Capture the current URL to redirect back to after login
+      return redirect(redirectRoute.href(undefined, { returnTo: url.pathname + url.search }), 302)
+    }
+
+    setCurrentUser(user)
   }
-
-  let user = getUserById(userId)
-  if (!user) {
-    return redirect(routes.auth.login.index.href(), 302)
-  }
-
-  storage.set(USER_KEY, user)
-  storage.set(SESSION_ID_KEY, session.sessionId)
 }

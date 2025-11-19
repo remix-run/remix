@@ -1,29 +1,26 @@
+import type { Cookie } from '@remix-run/cookie'
 import type { SessionStorage } from '@remix-run/session'
 
 import type { Middleware } from '../middleware.ts'
-import type { RequestContext } from '../request-context.ts'
 
 /**
  * Middleware that manages `context.session` based on the session cookie.
- *
- * The `sessionStorage` argument may either be a pre-configured `SessionStorage` object, or a
- * function that returns one based on the current request context. The function is useful when
- * anything about the session cookie and/or storage must be configured at request time.
- *
- * @param sessionStorage The storage for sessions, or a function that returns the session storage for the current request
+ * @param cookie The session cookie to use
+ * @param storage The storage backend for session data
  * @returns The session middleware
  */
-export function session(
-  sessionStorage: SessionStorage | ((context: RequestContext) => SessionStorage),
-): Middleware {
-  return async (context, next) => {
-    let storage = typeof sessionStorage === 'function' ? sessionStorage(context) : sessionStorage
+export function session(cookie: Cookie, storage: SessionStorage): Middleware {
+  if (!cookie.signed) {
+    throw new Error('Session cookie must be signed')
+  }
 
+  return async (context, next) => {
     if (context.sessionStarted) {
       throw new Error('Existing session found, refusing to overwrite')
     }
 
-    let session = await storage.read(context.request)
+    let cookieValue = await cookie.parse(context.headers.get('Cookie'))
+    let session = await storage.read(cookieValue)
 
     context.session = session
 
@@ -33,6 +30,9 @@ export function session(
       throw new Error('Cannot save session that was initialized by another middleware/handler')
     }
 
-    await storage.save(session, response)
+    let setCookieValue = await storage.save(session)
+    if (setCookieValue != null) {
+      response.headers.set('Set-Cookie', await cookie.serialize(setCookieValue))
+    }
   }
 }

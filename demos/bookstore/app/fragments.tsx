@@ -3,14 +3,13 @@ import type { RouteHandlers } from '@remix-run/fetch-router'
 import { routes } from '../routes.ts'
 
 import { BookCard } from './components/book-card.tsx'
-import { loadAuth, SESSION_ID_KEY } from './middleware/auth.ts'
-import { getCart } from './models/cart.ts'
+import { loadAuth } from './middleware/auth.ts'
 import { getBookBySlug } from './models/books.ts'
-import { getStorage } from './utils/context.ts'
 import { render } from './utils/render.ts'
+import { getCurrentCart } from './utils/context.ts'
 
 export default {
-  middleware: [loadAuth],
+  middleware: [loadAuth()],
   handlers: {
     async bookCard({ params }) {
       // Simulate network latency
@@ -22,7 +21,7 @@ export default {
         return render(<div>Book not found</div>, { status: 404 })
       }
 
-      let cart = getCart(getStorage().get(SESSION_ID_KEY))
+      let cart = getCurrentCart()
       let inCart = cart.items.some((item) => item.slug === params.slug)
 
       return render(<BookCard book={book} inCart={inCart} />)
