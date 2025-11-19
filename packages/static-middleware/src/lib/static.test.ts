@@ -5,6 +5,8 @@ import * as path from 'node:path'
 import { describe, it, beforeEach, afterEach } from 'node:test'
 
 import { createRouter } from '@remix-run/fetch-router'
+import { formData } from '@remix-run/form-data-middleware'
+import { methodOverride } from '@remix-run/method-override-middleware'
 
 import { staticFiles } from './static.ts'
 
@@ -48,7 +50,7 @@ describe('staticFiles middleware', () => {
         },
       })
 
-      let response = await router.fetch('http://localhost/test.txt')
+      let response = await router.fetch('https://remix.run/test.txt')
 
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'Hello, World!')
@@ -66,7 +68,7 @@ describe('staticFiles middleware', () => {
         },
       })
 
-      let response = await router.fetch('http://localhost/test.txt', { method: 'HEAD' })
+      let response = await router.fetch('https://remix.run/test.txt', { method: 'HEAD' })
 
       assert.equal(response.status, 200)
       assert.equal(await response.text(), '')
@@ -84,7 +86,7 @@ describe('staticFiles middleware', () => {
         },
       })
 
-      let response = await router.fetch('http://localhost/dir/subdir/file.txt')
+      let response = await router.fetch('https://remix.run/dir/subdir/file.txt')
 
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'Nested file')
@@ -99,7 +101,7 @@ describe('staticFiles middleware', () => {
         },
       })
 
-      let response = await router.fetch('http://localhost/nonexistent.txt')
+      let response = await router.fetch('https://remix.run/nonexistent.txt')
 
       assert.equal(response.status, 404)
       assert.equal(await response.text(), 'Custom Fallback Handler')
@@ -117,7 +119,7 @@ describe('staticFiles middleware', () => {
         },
       })
 
-      let response = await router.fetch('http://localhost/subdir')
+      let response = await router.fetch('https://remix.run/subdir')
 
       assert.equal(response.status, 404)
       assert.equal(await response.text(), 'Fallback Handler')
@@ -135,14 +137,14 @@ describe('staticFiles middleware', () => {
       },
     })
 
-    let response = await router.fetch('http://localhost/test.txt')
+    let response = await router.fetch('https://remix.run/test.txt')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, World!')
     let etag = response.headers.get('ETag')
     assert.ok(etag)
     assert.equal(etag, 'W/"13-1735689600000"')
 
-    let response2 = await router.fetch('http://localhost/test.txt', {
+    let response2 = await router.fetch('https://remix.run/test.txt', {
       headers: { 'If-None-Match': etag },
     })
     assert.equal(response2.status, 304)
@@ -160,7 +162,7 @@ describe('staticFiles middleware', () => {
       },
     })
 
-    let response = await router.fetch('http://localhost/test.txt')
+    let response = await router.fetch('https://remix.run/test.txt')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, World!')
     assert.equal(response.headers.get('ETag'), null)
@@ -177,7 +179,7 @@ describe('staticFiles middleware', () => {
       },
     })
 
-    let response = await router.fetch('http://localhost/test.txt')
+    let response = await router.fetch('https://remix.run/test.txt')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, World!')
     assert.equal(response.headers.get('Last-Modified'), lastModified.toUTCString())
@@ -194,7 +196,7 @@ describe('staticFiles middleware', () => {
       },
     })
 
-    let response = await router.fetch('http://localhost/test.txt')
+    let response = await router.fetch('https://remix.run/test.txt')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, World!')
     assert.equal(response.headers.get('Last-Modified'), null)
@@ -211,12 +213,12 @@ describe('staticFiles middleware', () => {
       },
     })
 
-    let response = await router.fetch('http://localhost/test.txt')
+    let response = await router.fetch('https://remix.run/test.txt')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, World!')
     assert.equal(response.headers.get('Accept-Ranges'), 'bytes')
 
-    let response2 = await router.fetch('http://localhost/test.txt', {
+    let response2 = await router.fetch('https://remix.run/test.txt', {
       headers: { Range: 'bytes=0-4' },
     })
     assert.equal(response2.status, 206)
@@ -237,12 +239,12 @@ describe('staticFiles middleware', () => {
       },
     })
 
-    let response = await router.fetch('http://localhost/test.txt')
+    let response = await router.fetch('https://remix.run/test.txt')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, World!')
     assert.equal(response.headers.get('Accept-Ranges'), null)
 
-    let response2 = await router.fetch('http://localhost/test.txt', {
+    let response2 = await router.fetch('https://remix.run/test.txt', {
       headers: { Range: 'bytes=0-4' },
     })
     assert.equal(response2.status, 200)
@@ -259,7 +261,7 @@ describe('staticFiles middleware', () => {
       },
     })
 
-    let response = await router.fetch('http://localhost/test.txt')
+    let response = await router.fetch('https://remix.run/test.txt')
     assert.equal(response.headers.get('Cache-Control'), 'public, max-age=3600')
   })
 
@@ -275,11 +277,11 @@ describe('staticFiles middleware', () => {
       },
     })
 
-    let response1 = await router.fetch('http://localhost/assets/style.css')
+    let response1 = await router.fetch('https://remix.run/assets/style.css')
     assert.equal(response1.status, 200)
     assert.equal(await response1.text(), 'body {}')
 
-    let response2 = await router.fetch('http://localhost/images/logo.png')
+    let response2 = await router.fetch('https://remix.run/images/logo.png')
     assert.equal(response2.status, 200)
     assert.equal(await response2.text(), 'PNG data')
   })
@@ -298,10 +300,10 @@ describe('staticFiles middleware', () => {
       },
     })
 
-    let response1 = await router.fetch('http://localhost/api/users')
+    let response1 = await router.fetch('https://remix.run/api/users')
     assert.equal(await response1.text(), 'Users API')
 
-    let response2 = await router.fetch('http://localhost/index.html')
+    let response2 = await router.fetch('https://remix.run/index.html')
     assert.equal(await response2.text(), '<h1>Fallback Handler</h1>')
   })
 
@@ -317,7 +319,7 @@ describe('staticFiles middleware', () => {
         },
       })
 
-      let response = await router.fetch('http://localhost/test.txt', { method })
+      let response = await router.fetch('https://remix.run/test.txt', { method })
 
       assert.equal(response.status, 404)
       assert.equal(await response.text(), 'Fallback Handler')
@@ -338,11 +340,11 @@ describe('staticFiles middleware', () => {
       },
     })
 
-    let allowedResponse = await router.fetch('http://localhost/allowed.txt')
+    let allowedResponse = await router.fetch('https://remix.run/allowed.txt')
     assert.equal(allowedResponse.status, 200)
     assert.equal(await allowedResponse.text(), 'Allowed content')
 
-    let traversalResponse = await router.fetch('http://localhost/../secret.txt')
+    let traversalResponse = await router.fetch('https://remix.run/../secret.txt')
     assert.equal(traversalResponse.status, 404)
   })
 
@@ -361,7 +363,7 @@ describe('staticFiles middleware', () => {
     })
 
     try {
-      let response = await router.fetch(`http://localhost/${secretPath}`)
+      let response = await router.fetch(`https://remix.run/${secretPath}`)
       assert.equal(response.status, 404)
     } finally {
       fs.unlinkSync(secretPath)
@@ -386,14 +388,67 @@ describe('staticFiles middleware', () => {
         },
       })
 
-      let secretResponse = await router.fetch('http://localhost/secret.txt')
+      let secretResponse = await router.fetch('https://remix.run/secret.txt')
       assert.equal(secretResponse.status, 404)
       assert.equal(await secretResponse.text(), 'Fallback Handler')
 
-      let publicResponse = await router.fetch('http://localhost/public.txt')
+      let publicResponse = await router.fetch('https://remix.run/public.txt')
       assert.equal(publicResponse.status, 200)
       assert.equal(await publicResponse.text(), 'Public')
     })
   })
-})
 
+  describe('works with method-override middleware', () => {
+    it('ignores overridden POST requests', async () => {
+      createTestFile('test.txt', 'Hello, World!')
+
+      let router = createRouter({
+        middleware: [formData(), methodOverride()],
+      })
+      router.post('/*path', {
+        middleware: [staticFiles(tmpDir)],
+        handler() {
+          return new Response('POST handler called', { status: 200 })
+        },
+      })
+
+      let formDataPayload = new FormData()
+      formDataPayload.append('_method', 'POST')
+      formDataPayload.append('name', 'test')
+
+      let response = await router.fetch('https://remix.run/test.txt', {
+        method: 'POST',
+        body: formDataPayload,
+      })
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'POST handler called')
+    })
+
+    it('serves files with overridden GET requests', async () => {
+      createTestFile('test.txt', 'Hello, World!')
+
+      let router = createRouter({
+        middleware: [formData(), methodOverride()],
+      })
+      router.get('/*path', {
+        middleware: [staticFiles(tmpDir)],
+        handler() {
+          return new Response('GET handler fallback', { status: 404 })
+        },
+      })
+
+      let formDataPayload = new FormData()
+      formDataPayload.append('_method', 'GET')
+
+      let response = await router.fetch('https://remix.run/test.txt', {
+        method: 'POST',
+        body: formDataPayload,
+      })
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'Hello, World!')
+      assert.equal(response.headers.get('Content-Type'), 'text/plain')
+    })
+  })
+})

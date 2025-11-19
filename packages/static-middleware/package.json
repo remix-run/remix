@@ -33,7 +33,9 @@
   },
   "devDependencies": {
     "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/form-data-middleware": "workspace:*",
     "@remix-run/lazy-file": "workspace:*",
+    "@remix-run/method-override-middleware": "workspace:*",
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3"
   },

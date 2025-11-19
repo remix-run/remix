@@ -42,7 +42,7 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
   let { filter, ...fileOptions } = options
 
   return async (context, next) => {
-    if (context.request.method !== 'GET' && context.request.method !== 'HEAD') {
+    if (context.method !== 'GET' && context.method !== 'HEAD') {
       return next()
     }
 
