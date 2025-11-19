@@ -2,6 +2,10 @@
 
 This is the changelog for [`interaction`](https://github.com/remix-run/remix/tree/main/packages/interaction). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Exclude test files from published npm package
+
 ## v0.2.0 (2025-11-18)
 
 - BREAKING CHANGE: Interaction API refactor - interactions now use `this` context with `this.on()`, `this.target`, `this.signal`, and `this.raise`
