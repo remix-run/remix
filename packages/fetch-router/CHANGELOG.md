@@ -2,6 +2,10 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- `html()` response helper now automatically prepends `<!DOCTYPE html>` to the body if it is not already present
+
 ## v0.9.0 (2025-11-18)
 
 - Add `session` middleware for automatic management of `context.session` across requests
