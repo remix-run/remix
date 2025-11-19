@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/form-data-middleware",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Middleware for parsing FormData from request bodies",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
