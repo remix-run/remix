@@ -13,6 +13,7 @@ if (process.env.NODE_ENV === 'development') {
   middleware.push(logger())
 }
 
+middleware.push(compression())
 middleware.push(
   staticFiles('./public', {
     cacheControl: 'no-store, must-revalidate',
@@ -21,10 +22,6 @@ middleware.push(
     acceptRanges: false,
   }),
 )
-
-// Add compression middleware with default encodings
-// The browser's Accept-Encoding header determines which encoding is used
-middleware.push(compression())
 
 export let router = createRouter({ middleware })
 
