@@ -1,4 +1,5 @@
 import { hydrated } from '@remix-run/dom'
+import { on } from '@remix-run/interaction'
 
 import { routes } from '../../routes.ts'
 
@@ -11,25 +12,26 @@ export const MessageStream = hydrated(
     this.queueTask(() => {
       let eventSource = new EventSource(routes.messages.href(null, limit ? { limit } : {}))
 
-      eventSource.addEventListener('open', () => {
-        connected = true
-        this.update()
-      })
-
-      eventSource.addEventListener('message', (event) => {
-        let data = JSON.parse(event.data)
-        messages.push(data)
-        this.update()
-      })
-
-      eventSource.addEventListener('error', () => {
-        connected = false
-        this.update()
-        eventSource.close()
+      let dispose = on(eventSource, {
+        open: () => {
+          connected = true
+          this.update()
+        },
+        message: (event) => {
+          let data = JSON.parse(event.data)
+          messages.push(data)
+          this.update()
+        },
+        error: () => {
+          connected = false
+          this.update()
+          eventSource.close()
+        },
       })
 
       this.signal.addEventListener('abort', () => {
         eventSource.close()
+        dispose()
       })
     })
 

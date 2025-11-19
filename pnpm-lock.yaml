@@ -78,6 +78,9 @@ importers:
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../../packages/fetch-router
+      '@remix-run/interaction':
+        specifier: workspace:*
+        version: link:../../packages/interaction
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../packages/node-fetch-server
