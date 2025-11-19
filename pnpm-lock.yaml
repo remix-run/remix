@@ -153,15 +153,24 @@ importers:
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../..
+      '@remix-run/form-data-middleware':
+        specifier: workspace:*
+        version: link:../../../form-data-middleware
       '@remix-run/html-template':
         specifier: workspace:*
         version: link:../../../html-template
+      '@remix-run/logger-middleware':
+        specifier: workspace:*
+        version: link:../../../logger-middleware
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../../node-fetch-server
       '@remix-run/session':
         specifier: workspace:*
         version: link:../../../session
+      '@remix-run/session-middleware':
+        specifier: workspace:*
+        version: link:../../../session-middleware
     devDependencies:
       '@types/node':
         specifier: ^24.6.0

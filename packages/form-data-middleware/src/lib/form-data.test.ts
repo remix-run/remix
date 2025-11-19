@@ -207,4 +207,3 @@ describe('formData middleware', () => {
     assert.equal(await upload2.text(), 'test 2')
   })
 })
-

@@ -26,4 +26,3 @@ export function getContext(): RequestContext {
 
   return context
 }
-

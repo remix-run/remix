@@ -23,4 +23,3 @@ describe('asyncContext', () => {
     await router.fetch('https://remix.run')
   })
 })
-
