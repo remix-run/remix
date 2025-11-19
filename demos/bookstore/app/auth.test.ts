@@ -135,4 +135,71 @@ describe('auth handlers', () => {
     assertContains(html, 'Invalid email or password')
     assertContains(html, 'returnTo=' + encodeURIComponent('/checkout'))
   })
+
+  it('POST /reset-password with mismatched passwords redirects back with error', async () => {
+    // First, request a password reset to get a token
+    let forgotPasswordResponse = await router.fetch('https://remix.run/forgot-password', {
+      method: 'POST',
+      body: new URLSearchParams({
+        email: 'customer@example.com',
+      }),
+    })
+
+    let html = await forgotPasswordResponse.text()
+    // Extract token from the reset link in the demo response
+    let tokenMatch = html.match(/\/reset-password\/([^"]+)/)
+    assert.ok(tokenMatch, 'Expected to find reset token in response')
+    let token = tokenMatch[1]
+
+    // Try to reset password with mismatched passwords
+    let response = await router.fetch(`https://remix.run/reset-password/${token}`, {
+      method: 'POST',
+      body: new URLSearchParams({
+        password: 'newpassword123',
+        confirmPassword: 'differentpassword',
+      }),
+      redirect: 'manual',
+    })
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), `/reset-password/${token}`)
+
+    // Follow redirect to see the error message
+    let sessionCookie = getSessionCookie(response)
+    let followUpResponse = await router.fetch(`https://remix.run/reset-password/${token}`, {
+      headers: {
+        Cookie: `session=${sessionCookie}`,
+      },
+    })
+
+    let errorHtml = await followUpResponse.text()
+    assertContains(errorHtml, 'Passwords do not match')
+  })
+
+  it('POST /reset-password with invalid token redirects back with error', async () => {
+    let invalidToken = 'invalid-token-12345'
+
+    let response = await router.fetch(`https://remix.run/reset-password/${invalidToken}`, {
+      method: 'POST',
+      body: new URLSearchParams({
+        password: 'newpassword123',
+        confirmPassword: 'newpassword123',
+      }),
+      redirect: 'manual',
+    })
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), `/reset-password/${invalidToken}`)
+
+    // Follow redirect to see the error message
+    let sessionCookie = getSessionCookie(response)
+    let followUpResponse = await router.fetch(`https://remix.run/reset-password/${invalidToken}`, {
+      headers: {
+        Cookie: `session=${sessionCookie}`,
+      },
+    })
+
+    let errorHtml = await followUpResponse.text()
+    assertContains(errorHtml, 'Invalid or expired reset token')
+  })
 })
