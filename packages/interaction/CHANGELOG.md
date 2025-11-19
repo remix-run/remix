@@ -2,7 +2,7 @@
 
 This is the changelog for [`interaction`](https://github.com/remix-run/remix/tree/main/packages/interaction). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.2.1 (2025-11-19)
 
 - Exclude test files from published npm package
 

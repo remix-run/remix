@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/interaction",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Like components but for events",
   "author": "Ryan Florence <rpflorence@gmail.com>",
   "license": "MIT",
