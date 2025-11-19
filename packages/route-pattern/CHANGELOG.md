@@ -2,7 +2,7 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.15.3 (2025-11-19)
 
 - Exclude benchmark files from published npm package
 
