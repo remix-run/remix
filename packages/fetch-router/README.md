@@ -874,17 +874,25 @@ let router = createRouter({
 
 The middleware is a thin wrapper around the `compress()` response helper that accepts the same options.
 
-The middleware applies an additional **Content-Type filter** to only apply compression to appropriate media types (MIME types). By default, this uses the `isCompressibleMediaType(mediaType)` helper to check if the media type is compressible. You can customize this behavior with the `filterMediaType` option, re-using the built-in filter if needed.
+Since this middleware is designed to handle multiple response types at once, the `encodings`, `zlib` and `brotli` options can also be functions that have access to the response before providing a value. For example, to use different encodings for different media types:
 
-#### `isCompressibleMediaType(mediaType)`
+```ts
+import { compression } from '@remix-run/fetch-router/compression-middleware'
 
-The `isCompressibleMediaType` helper determines whether a media type should be compressed. It returns `true` for:
+let router = createRouter({
+  middleware: [
+    compression({
+      encodings: (response) => {
+        return response.headers.get('Content-Type')?.split(';')[0].trim() === 'text/event-stream'
+          ? ['gzip', 'deflate']
+          : ['br', 'gzip', 'deflate']
+      },
+    }),
+  ],
+})
+```
 
-- Known compressible types from the [mime-db](https://www.npmjs.com/package/mime-db) database (e.g., `application/json`, `text/html`, `text/css`), except those starting with `x-` (experimental) or `vnd.` (vendor-specific).
-- All `text/*` types (e.g., `text/plain`, `text/markdown`)
-- Types with structured data suffixes: `+json`, `+text`, or `+xml` (e.g., `application/vnd.api+json`, `image/svg+xml`)
-
-This helper is primarily intended for use in custom `filterMediaType` functions for the `compression()` middleware:
+The middleware also applies an additional **Content-Type filter** to only apply compression to appropriate media types (MIME types). By default, this uses the `isCompressibleMediaType(mediaType)` helper to check if the media type is compressible. You can customize this behavior with the `filterMediaType` option, re-using the built-in filter if needed.
 
 ```ts
 import {
@@ -902,6 +910,14 @@ let router = createRouter({
   ],
 })
 ```
+
+The `isCompressibleMediaType` helper determines whether a media type should be compressed. It returns `true` for:
+
+- Known compressible types from the [mime-db](https://www.npmjs.com/package/mime-db) database (e.g., `application/json`, `text/html`, `text/css`), except those starting with `x-` (experimental) or `vnd.` (vendor-specific).
+- All `text/*` types (e.g., `text/plain`, `text/markdown`)
+- Types with structured data suffixes: `+json`, `+text`, or `+xml` (e.g., `application/vnd.api+json`, `image/svg+xml`)
+
+This helper is primarily intended for use in custom `filterMediaType` functions for the `compression()` middleware.
 
 ### Testing
 
