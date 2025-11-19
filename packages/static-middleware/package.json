@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/static-middleware",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Middleware for serving static files from the filesystem",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
