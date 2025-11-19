@@ -21,6 +21,40 @@ function camelToKebab(str: string): string {
   return str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
 }
 
+// Properties that should remain unitless (numeric values without px)
+const NUMERIC_CSS_PROPS = new Set([
+  'z-index',
+  'opacity',
+  'flex-grow',
+  'flex-shrink',
+  'flex-order',
+  'grid-area',
+  'grid-row',
+  'grid-column',
+  'font-weight',
+  'line-height',
+  'order',
+  'orphans',
+  'widows',
+  'zoom',
+  'columns',
+  'column-count',
+])
+
+// Normalize numeric CSS values: append 'px' for properties that need units
+// In Standards Mode, browsers drop numeric values without units when multiple properties
+// are present in insertRule(). We must normalize them ourselves.
+export function normalizeCssValue(key: string, value: unknown): string {
+  if (value == null) return String(value)
+  if (typeof value === 'number' && value !== 0) {
+    let cssKey = camelToKebab(key)
+    if (!NUMERIC_CSS_PROPS.has(cssKey) && !cssKey.startsWith('--')) {
+      return `${value}px`
+    }
+  }
+  return String(value)
+}
+
 // Check if a style property is a nested selector or media query
 function isComplexSelector(key: string): boolean {
   return (
@@ -103,7 +137,8 @@ function styleToCss(styles: CSSProps, selector: string = ''): string {
       let nestedContent = ''
       for (let [prop, propValue] of Object.entries(value as Record<string, any>)) {
         if (propValue != null) {
-          nestedContent += `    ${camelToKebab(prop)}: ${propValue};\n`
+          let normalizedValue = normalizeCssValue(prop, propValue)
+          nestedContent += `    ${camelToKebab(prop)}: ${normalizedValue};\n`
         }
       }
       if (nestedContent) {
@@ -113,7 +148,8 @@ function styleToCss(styles: CSSProps, selector: string = ''): string {
     } else {
       // Base declaration
       if (value != null) {
-        baseDeclarations.push(`  ${camelToKebab(key)}: ${value};`)
+        let normalizedValue = normalizeCssValue(key, value)
+        baseDeclarations.push(`  ${camelToKebab(key)}: ${normalizedValue};`)
       }
     }
   }
@@ -170,7 +206,8 @@ function keyframesBodyToCss(frames: unknown): string {
       if (propValue == null) continue
       // Ignore nested selectors/at-rules inside keyframe steps
       if (isComplexSelector(prop)) continue
-      declarations.push(`  ${camelToKebab(prop)}: ${propValue};`)
+      let normalizedValue = normalizeCssValue(prop, propValue)
+      declarations.push(`  ${camelToKebab(prop)}: ${normalizedValue};`)
     }
 
     if (declarations.length > 0) {
@@ -205,7 +242,8 @@ function atRuleBodyToCss(styles: CSSProps): string {
       }
     } else {
       if (value != null) {
-        declarations.push(`  ${camelToKebab(key)}: ${value};`)
+        let normalizedValue = normalizeCssValue(key, value)
+        declarations.push(`  ${camelToKebab(key)}: ${normalizedValue};`)
       }
     }
   }

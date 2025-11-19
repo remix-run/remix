@@ -317,4 +317,114 @@ describe('processStyle', () => {
     expect(result.className).toBe('')
     expect(result.css).toBe('')
   })
+
+  it('normalizes numeric values to include px units for properties that need them', () => {
+    let result = processStyle(
+      {
+        backgroundColor: 'red',
+        width: 100,
+        height: 200,
+        margin: 10,
+        padding: 20,
+        top: 5,
+        left: 15,
+      },
+      styleCache,
+    )
+
+    expect(result.className).toMatch(/^rmx-/)
+    // Numeric values should be normalized to include 'px'
+    expect(result.css).toContain('width: 100px')
+    expect(result.css).toContain('height: 200px')
+    expect(result.css).toContain('margin: 10px')
+    expect(result.css).toContain('padding: 20px')
+    expect(result.css).toContain('top: 5px')
+    expect(result.css).toContain('left: 15px')
+    // String values should remain unchanged
+    expect(result.css).toContain('background-color: red')
+  })
+
+  it('preserves unitless numeric values for properties that should be unitless', () => {
+    let result = processStyle(
+      {
+        zIndex: 10,
+        opacity: 0.5,
+        flexGrow: 2,
+        fontWeight: 700,
+        order: 1,
+      },
+      styleCache,
+    )
+
+    expect(result.className).toMatch(/^rmx-/)
+    // Unitless properties should remain unitless
+    expect(result.css).toContain('z-index: 10')
+    expect(result.css).toContain('opacity: 0.5')
+    expect(result.css).toContain('flex-grow: 2')
+    expect(result.css).toContain('font-weight: 700')
+    expect(result.css).toContain('order: 1')
+    // Should not contain 'px' for these properties
+    expect(result.css).not.toContain('z-index: 10px')
+    expect(result.css).not.toContain('opacity: 0.5px')
+  })
+
+  it('preserves zero values as 0 (not 0px)', () => {
+    let result = processStyle(
+      {
+        width: 0,
+        height: 0,
+        margin: 0,
+        zIndex: 0,
+      },
+      styleCache,
+    )
+
+    expect(result.className).toMatch(/^rmx-/)
+    // Zero values should remain as 0
+    expect(result.css).toContain('width: 0')
+    expect(result.css).toContain('height: 0')
+    expect(result.css).toContain('margin: 0')
+    expect(result.css).toContain('z-index: 0')
+    // Should not contain '0px'
+    expect(result.css).not.toContain('width: 0px')
+    expect(result.css).not.toContain('height: 0px')
+  })
+
+  it('preserves CSS custom properties (variables) without normalization', () => {
+    let result = processStyle(
+      {
+        '--custom-width': 100,
+        '--custom-color': 'blue',
+        width: 200,
+      },
+      styleCache,
+    )
+
+    expect(result.className).toMatch(/^rmx-/)
+    // CSS variables should remain as numbers (not normalized)
+    expect(result.css).toContain('--custom-width: 100')
+    expect(result.css).not.toContain('--custom-width: 100px')
+    // Regular properties should be normalized
+    expect(result.css).toContain('width: 200px')
+  })
+
+  it('normalizes numeric values in nested selectors', () => {
+    let result = processStyle(
+      {
+        width: 100,
+        '&:hover': {
+          width: 150,
+          height: 200,
+        },
+      },
+      styleCache,
+    )
+
+    expect(result.className).toMatch(/^rmx-/)
+    // Base declaration
+    expect(result.css).toContain('width: 100px')
+    // Nested selector
+    expect(result.css).toContain('width: 150px')
+    expect(result.css).toContain('height: 200px')
+  })
 })
