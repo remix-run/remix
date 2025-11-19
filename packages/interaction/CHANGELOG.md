@@ -2,6 +2,11 @@
 
 This is the changelog for [`interaction`](https://github.com/remix-run/remix/tree/main/packages/interaction). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Fix: export `TypedEventTarget` instead of just the type interface
+- Fix: SVG element event type inference
+
 ## v0.2.1 (2025-11-19)
 
 - Exclude test files from published npm package
