@@ -1,9 +1,9 @@
-version: '0.2'
+version: "0.2"
 language: en
 words:
   - accentunder
-  - activedescendant
   - actiontype
+  - activedescendant
   - aftertoggle
   - arcrole
   - Arcrole
@@ -87,12 +87,12 @@ words:
   - mfrac
   - Microdata
   - minsize
-  - mmultiscripts
   - Mmulti
+  - mmultiscripts
   - movablelimits
   - mpadded
-  - mphantom
   - mpath
+  - mphantom
   - mprescripts
   - mroot
   - mrow
@@ -101,7 +101,6 @@ words:
   - mstyle
   - msub
   - msubsup
-  - Subsup
   - msup
   - mtable
   - mtext
@@ -149,10 +148,12 @@ words:
   - stemh
   - stemv
   - subscriptshift
+  - Subsup
   - superscriptshift
   - SVGM
   - treegrid
   - treeitems
+  - unitless
   - unkeyed
   - valuenow
   - valuetext

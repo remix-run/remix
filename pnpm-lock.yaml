@@ -97,6 +97,25 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/component/demos:
+    dependencies:
+      '@remix-run/component':
+        specifier: workspace:^
+        version: link:..
+      '@remix-run/interaction':
+        specifier: workspace:^
+        version: link:../../interaction
+    devDependencies:
+      concurrently:
+        specifier: ^9.2.1
+        version: 9.2.1
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.12
+      serve:
+        specifier: ^14.2.5
+        version: 14.2.5
+
   packages/cookie:
     dependencies:
       '@remix-run/headers':
