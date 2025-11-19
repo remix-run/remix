@@ -1,103 +1,87 @@
 import { defineInteraction, type Interaction } from '../interaction.ts'
 
 /**
- * Binds the escape key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices to close a modal or menu.
+ * Binds the escape key to an element and prevents the default browser behavior. Useful for adding keyboard navigation
+ * to a component, particularly for WAI ARIA practices to close a modal or menu.
  */
-export let escape = defineInteraction('keydown:Escape', Keys)
+export let escape = defineInteraction('keydown:Escape', makeKeyInteraction('Escape'))
 
 /**
- * Binds the enter key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices to select an item in a list, submit a
- * form or generally trigger an action.
+ * Binds the enter key to an element and prevents the default browser behavior. Useful for adding keyboard navigation
+ * to a component, particularly for WAI ARIA practices to select an item in a
+ * list, submit a form or generally trigger an action.
  */
-export let enter = defineInteraction('keydown:Enter', Keys)
+export let enter = defineInteraction('keydown:Enter', makeKeyInteraction('Enter'))
 
 /**
- * Binds the space key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices to select an item in a list, submit a
- * form or generally trigger an action.
+ * Binds the space key to an element and prevents the default browser behavior. Useful for adding keyboard navigation
+ * to a component, particularly for WAI ARIA practices to select an item in a
+ * list, submit a form or generally trigger an action.
  */
-export let space = defineInteraction('keydown: ', Keys)
+export let space = defineInteraction('keydown: ', makeKeyInteraction(' '))
 
 /**
- * Binds the backspace key to an element and automatically prevents the default
- * browser behavior.
+ * Binds the backspace key to an element and prevents the default browser behavior.
  */
-export let backspace = defineInteraction('keydown:Backspace', Keys)
+export let backspace = defineInteraction('keydown:Backspace', makeKeyInteraction('Backspace'))
 
 /**
- * Binds the delete key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices
+ * Binds the delete key to an element and prevents the default browser behavior. Useful for adding keyboard navigation
+ * to a component, particularly for WAI ARIA practices.
  */
-export let del = defineInteraction('keydown:Delete', Keys)
+export let del = defineInteraction('keydown:Delete', makeKeyInteraction('Delete'))
 
 /**
- * Binds the arrow left key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices
+ * Binds the arrow left key to an element and prevents the default browser behavior. Useful for adding keyboard navigation
+ * to a component, particularly for WAI ARIA practices.
  */
-export let arrowLeft = defineInteraction('keydown:ArrowLeft', Keys)
+export let arrowLeft = defineInteraction('keydown:ArrowLeft', makeKeyInteraction('ArrowLeft'))
 
 /**
- * Binds the arrow right key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices
+ * Binds the arrow right key to an element and prevents the default browser behavior. Useful for adding keyboard navigation
+ * to a component, particularly for WAI ARIA practices.
  */
-export let arrowRight = defineInteraction('keydown:ArrowRight', Keys)
+export let arrowRight = defineInteraction('keydown:ArrowRight', makeKeyInteraction('ArrowRight'))
 
 /**
- * Binds the arrow up key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices
+ * Binds the arrow up key to an element and prevents the default browser behavior. Useful for adding keyboard navigation
+ * to a component, particularly for WAI ARIA practices.
  */
-export let arrowUp = defineInteraction('keydown:ArrowUp', Keys)
+export let arrowUp = defineInteraction('keydown:ArrowUp', makeKeyInteraction('ArrowUp'))
 
 /**
- * Binds the arrow down key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices
+ * Binds the arrow down key to an element and prevents the default browser behavior. Useful for adding keyboard navigation
+ * to a component, particularly for WAI ARIA practices.
  */
-export let arrowDown = defineInteraction('keydown:ArrowDown', Keys)
+export let arrowDown = defineInteraction('keydown:ArrowDown', makeKeyInteraction('ArrowDown'))
 
 /**
- * Binds the home key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices to move to the first item in a list.
+ * Binds the home key to an element and prevents the default browser behavior. Useful for adding keyboard navigation
+ * to a component, particularly for WAI ARIA practices to move to the first
+ * item in a list.
  */
-export let home = defineInteraction('keydown:Home', Keys)
+export let home = defineInteraction('keydown:Home', makeKeyInteraction('Home'))
 
 /**
- * Binds the end key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices to move to the last item in a list.
+ * Binds the end key to an element and prevents the default browser behavior. Useful for adding keyboard navigation
+ * to a component, particularly for WAI ARIA practices to move to the last
+ * item in a list.
  */
-export let end = defineInteraction('keydown:End', Keys)
+export let end = defineInteraction('keydown:End', makeKeyInteraction('End'))
 
 /**
- * Binds the page up key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices to move to the previous page in a list.
+ * Binds the page up key to an element and prevents the default browser behavior. Useful for adding keyboard navigation
+ * to a component, particularly for WAI ARIA practices to move to the previous
+ * page in a list.
  */
-export let pageUp = defineInteraction('keydown:PageUp', Keys)
+export let pageUp = defineInteraction('keydown:PageUp', makeKeyInteraction('PageUp'))
 
 /**
- * Binds the page down key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices to move to the next page in a list.
+ * Binds the page down key to an element and prevents the default browser behavior. Useful for adding keyboard navigation
+ * to a component, particularly for WAI ARIA practices to move to the next
+ * page in a list.
  */
-export let pageDown = defineInteraction('keydown:PageDown', Keys)
-
-/**
- * Binds the tab key to an element and automatically prevents the default
- * browser behavior. Useful for adding keyboard navigation to a component,
- * particularly for WAI ARIA practices to move to the next item in a list.
- */
-export let tab = defineInteraction('keydown:Tab', Keys)
+export let pageDown = defineInteraction('keydown:PageDown', makeKeyInteraction('PageDown'))
 
 declare global {
   interface HTMLElementEventMap {
@@ -114,7 +98,6 @@ declare global {
     [end]: KeyboardEvent
     [pageUp]: KeyboardEvent
     [pageDown]: KeyboardEvent
-    [tab]: KeyboardEvent
   }
 
   interface WindowEventMap {
@@ -131,7 +114,6 @@ declare global {
     [end]: KeyboardEvent
     [pageUp]: KeyboardEvent
     [pageDown]: KeyboardEvent
-    [tab]: KeyboardEvent
   }
 
   interface DocumentEventMap {
@@ -148,43 +130,31 @@ declare global {
     [end]: KeyboardEvent
     [pageUp]: KeyboardEvent
     [pageDown]: KeyboardEvent
-    [tab]: KeyboardEvent
   }
 }
 
-const keys = [
-  'Escape',
-  'Enter',
-  ' ',
-  'Backspace',
-  'Delete',
-  'ArrowLeft',
-  'ArrowRight',
-  'ArrowUp',
-  'ArrowDown',
-  'Home',
-  'End',
-  'PageUp',
-  'PageDown',
-  'Tab',
-]
-
-function Keys(this: Interaction) {
-  if (
-    !(
-      this.target instanceof HTMLElement ||
-      this.target instanceof Document ||
-      this.target instanceof Window
+function makeKeyInteraction(key: string) {
+  return function (this: Interaction) {
+    if (
+      !(
+        this.target instanceof HTMLElement ||
+        this.target instanceof Document ||
+        this.target instanceof Window
+      )
     )
-  )
-    return
+      return
 
-  let target = this.target
-  this.on(this.target, {
-    keydown(event) {
-      if (!keys.includes(event.key)) return
-      event.preventDefault()
-      target.dispatchEvent(new KeyboardEvent(`keydown:${event.key}`, { key: event.key }))
-    },
-  })
+    this.on(this.target, {
+      keydown: (event) => {
+        if (event.key === key) {
+          event.preventDefault()
+          this.target.dispatchEvent(
+            new KeyboardEvent(`keydown:${event.key}`, {
+              key: event.key,
+            }),
+          )
+        }
+      },
+    })
+  }
 }

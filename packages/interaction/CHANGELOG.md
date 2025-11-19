@@ -4,6 +4,8 @@ This is the changelog for [`interaction`](https://github.com/remix-run/remix/tre
 
 ## Unreleased
 
+- BREAKING CHANGE: removed `Tab` key interaction
+- Fix: key interactions only apply to their own key
 - Fix: export `TypedEventTarget` instead of just the type interface
 - Fix: SVG element event type inference
 
