@@ -21,13 +21,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./async-context-middleware": "./src/async-context-middleware.ts",
-    "./form-data-middleware": "./src/form-data-middleware.ts",
-    "./logger-middleware": "./src/logger-middleware.ts",
-    "./method-override-middleware": "./src/method-override-middleware.ts",
     "./response-helpers": "./src/response-helpers.ts",
-    "./session-middleware": "./src/session-middleware.ts",
-    "./static-middleware": "./src/static-middleware.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -36,46 +30,19 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./async-context-middleware": {
-        "types": "./dist/async-context-middleware.d.ts",
-        "default": "./dist/async-context-middleware.js"
-      },
-      "./form-data-middleware": {
-        "types": "./dist/form-data-middleware.d.ts",
-        "default": "./dist/form-data-middleware.js"
-      },
-      "./logger-middleware": {
-        "types": "./dist/logger-middleware.d.ts",
-        "default": "./dist/logger-middleware.js"
-      },
-      "./method-override-middleware": {
-        "types": "./dist/method-override-middleware.d.ts",
-        "default": "./dist/method-override-middleware.js"
-      },
       "./response-helpers": {
         "types": "./dist/response-helpers.d.ts",
         "default": "./dist/response-helpers.js"
-      },
-      "./session-middleware": {
-        "types": "./dist/session-middleware.d.ts",
-        "default": "./dist/session-middleware.js"
-      },
-      "./static-middleware": {
-        "types": "./dist/static-middleware.d.ts",
-        "default": "./dist/static-middleware.js"
       },
       "./package.json": "./package.json"
     }
   },
   "devDependencies": {
-    "@remix-run/cookie": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "@remix-run/cookie": "workspace:^",
-    "@remix-run/form-data-parser": "workspace:^",
     "@remix-run/headers": "workspace:^",
     "@remix-run/html-template": "workspace:^",
     "@remix-run/lazy-file": "workspace:^",

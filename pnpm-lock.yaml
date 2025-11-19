@@ -29,6 +29,9 @@ importers:
 
   demos/bookstore:
     dependencies:
+      '@remix-run/async-context-middleware':
+        specifier: workspace:*
+        version: link:../../packages/async-context-middleware
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../../packages/cookie
@@ -44,18 +47,33 @@ importers:
       '@remix-run/file-storage':
         specifier: workspace:*
         version: link:../../packages/file-storage
+      '@remix-run/form-data-middleware':
+        specifier: workspace:*
+        version: link:../../packages/form-data-middleware
       '@remix-run/headers':
         specifier: workspace:*
         version: link:../../packages/headers
       '@remix-run/lazy-file':
         specifier: workspace:*
         version: link:../../packages/lazy-file
+      '@remix-run/logger-middleware':
+        specifier: workspace:*
+        version: link:../../packages/logger-middleware
+      '@remix-run/method-override-middleware':
+        specifier: workspace:*
+        version: link:../../packages/method-override-middleware
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../packages/node-fetch-server
       '@remix-run/session':
         specifier: workspace:*
         version: link:../../packages/session
+      '@remix-run/session-middleware':
+        specifier: workspace:*
+        version: link:../../packages/session-middleware
+      '@remix-run/static-middleware':
+        specifier: workspace:*
+        version: link:../../packages/static-middleware
     devDependencies:
       '@types/node':
         specifier: ^24.6.0
@@ -66,6 +84,18 @@ importers:
       tsx:
         specifier: ^4.20.6
         version: 4.20.6
+
+  packages/async-context-middleware:
+    devDependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../fetch-router
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/cookie:
     dependencies:
@@ -92,9 +122,6 @@ importers:
 
   packages/fetch-router:
     dependencies:
-      '@remix-run/form-data-parser':
-        specifier: workspace:^
-        version: link:../form-data-parser
       '@remix-run/headers':
         specifier: workspace:^
         version: link:../headers
@@ -108,9 +135,6 @@ importers:
         specifier: workspace:^
         version: link:../route-pattern
     devDependencies:
-      '@remix-run/cookie':
-        specifier: workspace:*
-        version: link:../cookie
       '@remix-run/session':
         specifier: workspace:*
         version: link:../session
@@ -151,6 +175,21 @@ importers:
     devDependencies:
       '@remix-run/form-data-parser':
         specifier: workspace:^
+        version: link:../form-data-parser
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/form-data-middleware:
+    devDependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../fetch-router
+      '@remix-run/form-data-parser':
+        specifier: workspace:*
         version: link:../form-data-parser
       '@types/node':
         specifier: ^24.6.0
@@ -264,6 +303,33 @@ importers:
       esbuild:
         specifier: ^0.25.12
         version: 0.25.12
+
+  packages/logger-middleware:
+    devDependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../fetch-router
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/method-override-middleware:
+    devDependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../fetch-router
+      '@remix-run/form-data-middleware':
+        specifier: workspace:*
+        version: link:../form-data-middleware
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/multipart-parser:
     dependencies:
@@ -424,6 +490,42 @@ importers:
 
   packages/session:
     devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/session-middleware:
+    devDependencies:
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../cookie
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../fetch-router
+      '@remix-run/headers':
+        specifier: workspace:*
+        version: link:../headers
+      '@remix-run/session':
+        specifier: workspace:*
+        version: link:../session
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/static-middleware:
+    devDependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../fetch-router
+      '@remix-run/lazy-file':
+        specifier: workspace:*
+        version: link:../lazy-file
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0

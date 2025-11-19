@@ -4,6 +4,28 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
+- BREAKING CHANGE: All middleware has been extracted into separate npm packages for independent versioning and deployment. Update your imports:
+
+  ```tsx
+  // Before
+  import { asyncContext } from '@remix-run/fetch-router/async-context-middleware'
+  import { formData } from '@remix-run/fetch-router/form-data-middleware'
+  import { logger } from '@remix-run/fetch-router/logger-middleware'
+  import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
+  import { session } from '@remix-run/fetch-router/session-middleware'
+  import { staticFiles } from '@remix-run/fetch-router/static-middleware'
+
+  // After
+  import { asyncContext } from '@remix-run/async-context-middleware'
+  import { formData } from '@remix-run/form-data-middleware'
+  import { logger } from '@remix-run/logger-middleware'
+  import { methodOverride } from '@remix-run/method-override-middleware'
+  import { session } from '@remix-run/session-middleware'
+  import { staticFiles } from '@remix-run/static-middleware'
+  ```
+
+  Each middleware now has its own package with independent dependencies, changelog, and versioning.
+
 - `html()` response helper now automatically prepends `<!DOCTYPE html>` to the body if it is not already present
 
 ## v0.9.0 (2025-11-18)

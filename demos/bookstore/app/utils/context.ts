@@ -1,5 +1,5 @@
 import { createStorageKey } from '@remix-run/fetch-router'
-import { getContext } from '@remix-run/fetch-router/async-context-middleware'
+import { getContext } from '@remix-run/async-context-middleware'
 
 import { type Cart, getCart } from '../models/cart.ts'
 import type { User } from '../models/users.ts'
