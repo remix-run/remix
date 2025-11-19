@@ -50,6 +50,7 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _dom?: unknown
   _events?: EventsContainer<EventTarget>
   _controller?: AbortController
+  _svg?: boolean
 
   // TEXT_NODE
   _text?: string
@@ -193,7 +194,7 @@ export function createRangeRoot(
   return {
     render(element: Remix.Node) {
       let vnode = toVNode(element)
-      let vParent: VNode = { type: ROOT_VNODE }
+      let vParent: VNode = { type: ROOT_VNODE, _svg: false }
       diffVNodes(root, vnode, container, frameStub, scheduler, vParent, end, hydrationCursor)
       root = vnode
       hydrationCursor = null
@@ -221,7 +222,7 @@ export function createRoot(
   return {
     render(element: Remix.Node) {
       let vnode = toVNode(element)
-      let vParent: VNode = { type: ROOT_VNODE }
+      let vParent: VNode = { type: ROOT_VNODE, _svg: false }
       diffVNodes(root, vnode, container, frameStub, scheduler, vParent, undefined, hydrationCursor)
       root = vnode
       hydrationCursor = undefined
@@ -289,6 +290,7 @@ export function diffVNodes(
   rootCursor?: Node | null,
 ) {
   next._parent = vParent // set parent for initial render context lookups
+  next._svg = getSvgContext(vParent, next.type)
 
   // new
   if (curr === null) {
@@ -562,18 +564,18 @@ function serializeStyleObject(style: Record<string, unknown>): string {
   return parts.join(' ')
 }
 
-function isSvgContext(vParent: VNode): boolean {
-  // Walk up the vnode tree to determine if we're within an SVG subtree.
-  // The nearest 'foreignObject' switches back to HTML context.
-  let current: VNode | undefined = vParent
-  while (current) {
-    if (typeof current.type === 'string') {
-      if (current.type === 'foreignObject') return false
-      if (current.type === 'svg') return true
-    }
-    current = current._parent
+// Compute SVG context for a node based on its parent and type.
+// Returns true if the node is within an SVG subtree, false otherwise.
+function getSvgContext(vParent: VNode, nodeType: VNodeType): boolean {
+  // Only host elements (strings) can affect SVG context
+  if (typeof nodeType === 'string') {
+    // svg element creates SVG context
+    if (nodeType === 'svg') return true
+    // foreignObject switches back to HTML context
+    if (nodeType === 'foreignObject') return false
   }
-  return false
+  // Otherwise inherit from parent
+  return vParent._svg ?? false
 }
 
 function normalizePropName(name: string, isSvg: boolean): { ns?: string; attr: string } {
@@ -642,6 +644,9 @@ function insert(
   cursor?: Node | null,
 ): Node | null | undefined {
   node._parent = vParent // set parent for initial render context lookups
+  if (isHostNode(node)) {
+    node._svg = getSvgContext(vParent, node.type)
+  }
   cursor = skipComments(cursor ?? null)
 
   let doInsert = anchor
@@ -688,8 +693,7 @@ function insert(
         cursor = undefined // stop hydration for this tree
       }
     }
-    let inSvg = isSvgContext(vParent) || node.type === 'svg'
-    let dom = inSvg
+    let dom = node._svg
       ? document.createElementNS(SVG_NS, node.type)
       : document.createElement(node.type)
     diffHostProps({}, node.props, dom)
