@@ -2,7 +2,7 @@
 
 This is the changelog for [`session`](https://github.com/remix-run/remix/tree/main/packages/session). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.2.1 (2025-11-19)
 
 - Fix flash messages persisting across multiple requests. Flash data is now automatically cleared after being available for one request, even if the session is not otherwise modified
 
