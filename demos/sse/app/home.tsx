@@ -7,7 +7,7 @@ import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 
 export let home: BuildRouteHandler<'GET', typeof routes.home> = (context) => {
-  let limitParam = new URL(context.request.url).searchParams.get('limit')
+  let limitParam = context.url.searchParams.get('limit')
   let limit = limitParam ? parseInt(limitParam, 10) : null
   if (!limit || !isFinite(limit)) limit = null
 

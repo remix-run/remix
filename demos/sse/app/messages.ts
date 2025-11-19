@@ -3,7 +3,7 @@ import type { BuildRouteHandler } from '@remix-run/fetch-router'
 import type { routes } from '../routes'
 
 export let messages: BuildRouteHandler<'GET', typeof routes.messages> = (context) => {
-  let limitParam = new URL(context.request.url).searchParams.get('limit')
+  let limitParam = context.url.searchParams.get('limit')
   let limit = limitParam ? parseInt(limitParam, 10) : null
   if (!limit || !isFinite(limit)) limit = null
 
