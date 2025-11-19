@@ -2,7 +2,7 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.15.1 (2025-11-19)
 
 - `href()` now filters out `undefined` and `null` values from search parameters, preventing them from appearing in the generated URL's query string
 - `href()` no longer adds a trailing `?` when search parameters are empty

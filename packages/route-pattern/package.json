@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/route-pattern",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "Match and generate URLs with strong typing",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
