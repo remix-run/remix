@@ -4,12 +4,12 @@ import { routes } from '../../routes.ts'
 
 export const MessageStream = hydrated(
   routes.assets.href({ path: 'message-stream.js#MessageStream' }),
-  function (this) {
+  function (this, { limit }: { limit: number | null }) {
     let messages: Array<{ count: number; message: string }> = []
     let connected = false
 
     this.queueTask(() => {
-      let eventSource = new EventSource(routes.messages.href())
+      let eventSource = new EventSource(routes.messages.href(null, limit ? { limit } : {}))
 
       eventSource.addEventListener('open', () => {
         connected = true

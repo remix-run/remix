@@ -3,6 +3,10 @@ import type { BuildRouteHandler } from '@remix-run/fetch-router'
 import type { routes } from '../routes'
 
 export let messages: BuildRouteHandler<'GET', typeof routes.messages> = (context) => {
+  let limitParam = new URL(context.request.url).searchParams.get('limit')
+  let limit = limitParam ? parseInt(limitParam, 10) : null
+  if (!limit || !isFinite(limit)) limit = null
+
   let stream = new ReadableStream({
     start(controller) {
       let messageCount = 0
@@ -21,13 +25,17 @@ export let messages: BuildRouteHandler<'GET', typeof routes.messages> = (context
               `data: ${JSON.stringify({ count: messageCount, message: text })}\n\n`,
             ),
           )
+
+          if (limit && messageCount >= limit) {
+            clearInterval(interval)
+            controller.close()
+          }
         } catch (error) {
           console.error('Error enqueuing message:', error)
           clearInterval(interval)
         }
-      }, 1000) // Send a message every second
+      }, 1000)
 
-      // Clean up on abort
       context.request.signal.addEventListener('abort', () => {
         clearInterval(interval)
         try {

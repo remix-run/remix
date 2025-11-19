@@ -13,7 +13,14 @@ if (process.env.NODE_ENV === 'development') {
   middleware.push(logger())
 }
 
-middleware.push(staticFiles('./public'))
+middleware.push(
+  staticFiles('./public', {
+    cacheControl: 'no-store, must-revalidate',
+    etag: false,
+    lastModified: false,
+    acceptRanges: false,
+  }),
+)
 
 // Add compression middleware with default encodings
 // The browser's Accept-Encoding header determines which encoding is used
