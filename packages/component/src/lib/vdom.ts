@@ -2,7 +2,7 @@ import { createContainer, type EventsContainer } from '@remix-run/interaction'
 import type { Component, ComponentHandle, FrameHandle } from './component.ts'
 import { createComponent, Catch, Fragment, Frame, createFrameHandle } from './component.ts'
 import { invariant } from './invariant.ts'
-import { processStyle, createStyleManager } from './style/index.ts'
+import { processStyle, createStyleManager, normalizeCssValue } from './style/index.ts'
 
 let fixmeIdCounter = 0
 
@@ -542,25 +542,6 @@ function isFrameworkProp(name: string): boolean {
   return name === 'children' || name === 'key' || name === 'on' || name === 'css'
 }
 
-const NUMERIC_CSS_PROPS = new Set([
-  'z-index',
-  'opacity',
-  'flex-grow',
-  'flex-shrink',
-  'flex-order',
-  'grid-area',
-  'grid-row',
-  'grid-column',
-  'font-weight',
-  'line-height',
-  'order',
-  'orphans',
-  'widows',
-  'zoom',
-  'columns',
-  'column-count',
-])
-
 // TODO: would rather actually diff el.style object directly instead of writing
 // to the style attribute
 function serializeStyleObject(style: Record<string, unknown>): string {
@@ -572,17 +553,9 @@ function serializeStyleObject(style: Record<string, unknown>): string {
 
     let cssKey = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)
 
-    let shouldAppendPx =
-      typeof value === 'number' &&
-      value !== 0 &&
-      !NUMERIC_CSS_PROPS.has(cssKey) &&
-      !cssKey.startsWith('--')
-
-    let cssValue = shouldAppendPx
-      ? `${value}px`
-      : Array.isArray(value)
-        ? (value as unknown[]).join(', ')
-        : String(value)
+    let cssValue = Array.isArray(value)
+      ? (value as unknown[]).join(', ')
+      : normalizeCssValue(key, value)
 
     parts.push(`${cssKey}: ${cssValue};`)
   }
@@ -783,13 +756,7 @@ function renderComponent(
   anchor?: Node,
   cursor?: Node | null,
 ) {
-  let normalizedOn = next.props.on
-    ? Array.isArray(next.props.on)
-      ? next.props.on
-      : [next.props.on]
-    : undefined
-  let props = normalizedOn ? { ...next.props, on: normalizedOn } : next.props
-  let [element, tasks] = handle.render(props)
+  let [element, tasks] = handle.render(next.props)
   let content = toVNode(element)
 
   diffVNodes(currContent, content, domParent, frame, scheduler, next, anchor, cursor)
