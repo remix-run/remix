@@ -21,7 +21,7 @@ describe('compression()', () => {
       })
     })
 
-    let response = await router.fetch('http://localhost/', {
+    let response = await router.fetch('https://remix.run/', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
 
@@ -44,7 +44,7 @@ describe('compression()', () => {
       })
     })
 
-    let response = await router.fetch('http://localhost/image.png', {
+    let response = await router.fetch('https://remix.run/image.png', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
 
@@ -64,7 +64,7 @@ describe('compression()', () => {
       })
     })
 
-    let response = await router.fetch('http://localhost/', {
+    let response = await router.fetch('https://remix.run/', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
 
@@ -84,7 +84,7 @@ describe('compression()', () => {
       })
     })
 
-    let response = await router.fetch('http://localhost/', {
+    let response = await router.fetch('https://remix.run/', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
 
@@ -116,13 +116,13 @@ describe('compression()', () => {
       })
     })
 
-    let jsonResponse = await router.fetch('http://localhost/data.json', {
+    let jsonResponse = await router.fetch('https://remix.run/data.json', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
 
     assert.equal(jsonResponse.headers.get('Content-Encoding'), 'gzip')
 
-    let htmlResponse = await router.fetch('http://localhost/page.html', {
+    let htmlResponse = await router.fetch('https://remix.run/page.html', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
 
@@ -154,13 +154,13 @@ describe('compression()', () => {
       })
     })
 
-    let jsonResponse = await router.fetch('http://localhost/data.json', {
+    let jsonResponse = await router.fetch('https://remix.run/data.json', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
 
     assert.equal(jsonResponse.headers.get('Content-Encoding'), 'gzip')
 
-    let htmlResponse = await router.fetch('http://localhost/page.html', {
+    let htmlResponse = await router.fetch('https://remix.run/page.html', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
 
@@ -194,13 +194,13 @@ describe('compression()', () => {
     })
 
     // SSE should use gzip (brotli excluded)
-    let sseResponse = await router.fetch('http://localhost/events', {
+    let sseResponse = await router.fetch('https://remix.run/events', {
       headers: { 'Accept-Encoding': 'br, gzip' },
     })
     assert.equal(sseResponse.headers.get('Content-Encoding'), 'gzip')
 
     // JSON should use brotli (brotli included)
-    let jsonResponse = await router.fetch('http://localhost/data.json', {
+    let jsonResponse = await router.fetch('https://remix.run/data.json', {
       headers: { 'Accept-Encoding': 'br, gzip' },
     })
     assert.equal(jsonResponse.headers.get('Content-Encoding'), 'br')
@@ -230,13 +230,13 @@ describe('compression()', () => {
       })
     })
 
-    let noCompressResponse = await router.fetch('http://localhost/nocompress', {
+    let noCompressResponse = await router.fetch('https://remix.run/nocompress', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     assert.equal(noCompressResponse.headers.get('Content-Encoding'), null)
     assert.equal(await noCompressResponse.text(), 'not compressed')
 
-    let compressResponse = await router.fetch('http://localhost/compress', {
+    let compressResponse = await router.fetch('https://remix.run/compress', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     assert.equal(compressResponse.headers.get('Content-Encoding'), 'gzip')

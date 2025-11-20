@@ -605,7 +605,7 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
 
 The router provides a few response helpers that make it easy to return responses with common formats. They are available in the `@remix-run/fetch-router/response-helpers` export.
 
-- `compress(response, request, options?)` - compresses a `Response` based on `Accept-Encoding` header
+- `compress(response, request, options?)` - compresses a `Response` based on `Accept-Encoding` header - see [Compressing Responses](#compressing-responses)
 - `file(file, request, init?)` - returns a `Response` for a file with full HTTP semantics (ETags, Range requests, etc.) — see [Working with Files](#working-with-files)
 - `html(body, init?)` - returns a `Response` with `Content-Type: text/html`
 - `json(data, init?)` - returns a `Response` with `Content-Type: application/json`
@@ -753,7 +753,7 @@ return res.file(file, request, {
 
 ##### Range Requests and Compression
 
-By default, the `file()` helper enables Range requests only for non-compressible MIME types (like video, audio, and images). This allows text-based assets (HTML, CSS, JavaScript, etc.) to be compressed by the compression middleware while still supporting resumable downloads for media files.
+By default, the `file()` helper enables Range requests only for non-compressible MIME types like video, audio, and images. This allows text-based assets to be compressed while still supporting resumable downloads for media files.
 
 You can override this behavior by explicitly enabling or disabling ranges with the `acceptRanges` option:
 

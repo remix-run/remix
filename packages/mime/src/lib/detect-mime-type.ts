@@ -15,6 +15,8 @@ import { mimeTypes } from '../generated/mime-types.ts'
 export function detectMimeType(extension: string): string | undefined {
   let ext = extension.trim().toLowerCase()
   let idx = ext.lastIndexOf('.')
+  // If no dot found (~idx === -1, so !~idx === true), use ext as-is.
+  // Otherwise, skip past the dot (++idx) and extract the extension.
+  // Credit to mrmime for this technique.
   return mimeTypes[!~idx ? ext : ext.substring(++idx)]
 }
-

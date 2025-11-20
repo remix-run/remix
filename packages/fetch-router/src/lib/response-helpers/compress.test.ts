@@ -21,7 +21,7 @@ const inflateAsync = promisify(inflate)
 
 describe('compress()', () => {
   it('compresses response with gzip when client accepts it', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Hello, World!')
@@ -39,7 +39,7 @@ describe('compress()', () => {
   })
 
   it('compresses response with brotli when client prefers it', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'br, gzip' },
     })
     let response = new Response('Hello, World!')
@@ -54,7 +54,7 @@ describe('compress()', () => {
   })
 
   it('compresses response with deflate', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'deflate' },
     })
     let response = new Response('Hello, World!')
@@ -74,7 +74,7 @@ describe('compress()', () => {
   })
 
   it('preserves existing Vary header values when adding Accept-Encoding', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Hello, World!', {
@@ -96,7 +96,7 @@ describe('compress()', () => {
   })
 
   it('does not duplicate Accept-Encoding in Vary header', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Hello, World!', {
@@ -113,7 +113,7 @@ describe('compress()', () => {
   })
 
   it('does not compress when client does not send Accept-Encoding', async () => {
-    let request = new Request('http://localhost')
+    let request = new Request('https://remix.run')
     let response = new Response('Hello, World!')
 
     let compressed = await compress(response, request)
@@ -125,7 +125,7 @@ describe('compress()', () => {
   })
 
   it('compresses responses when Content-Length is not set', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     // Response without Content-Length header
@@ -137,7 +137,7 @@ describe('compress()', () => {
   })
 
   it('skips compression for already compressed responses', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Already compressed', {
@@ -150,7 +150,7 @@ describe('compress()', () => {
   })
 
   it('skips compression when Cache-Control: no-transform is present', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Do not transform', {
@@ -163,7 +163,7 @@ describe('compress()', () => {
   })
 
   it('skips compression when response has no body', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response(null, { status: 204 })
@@ -174,7 +174,7 @@ describe('compress()', () => {
   })
 
   it('compresses with custom compression level', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     // Use a large, repetitive string where compression level makes a difference
@@ -207,7 +207,7 @@ describe('compress()', () => {
   })
 
   it('compresses with custom brotli options', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'br' },
     })
     // Use repetitive content where window size affects compression ratio
@@ -251,7 +251,7 @@ describe('compress()', () => {
   })
 
   it('limits to specified encodings', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'br, gzip, deflate' },
     })
     let response = new Response('Hello, World!')
@@ -264,7 +264,7 @@ describe('compress()', () => {
   })
 
   it('returns uncompressed when encodings is empty array', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip, br' },
     })
     let response = new Response('Hello, World!')
@@ -276,7 +276,7 @@ describe('compress()', () => {
   })
 
   it('handles quality factors in Accept-Encoding', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip;q=0.8, deflate;q=1.0' },
     })
     let response = new Response('Hello, World!')
@@ -287,7 +287,7 @@ describe('compress()', () => {
   })
 
   it('client quality factors override server preference order', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       // Client strongly prefers gzip over br
       headers: { 'Accept-Encoding': 'br;q=0.5, gzip;q=1.0, deflate;q=0.8' },
     })
@@ -302,7 +302,7 @@ describe('compress()', () => {
   })
 
   it('server preference order breaks ties when client has equal quality factors', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       // Client has no preference (all default to q=1.0)
       headers: { 'Accept-Encoding': 'gzip, deflate, br' },
     })
@@ -317,7 +317,7 @@ describe('compress()', () => {
   })
 
   it('respects explicit rejection with q=0', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       // Client explicitly rejects gzip and deflate with q=0
       headers: { 'Accept-Encoding': 'gzip;q=0, deflate;q=0, br;q=1.0' },
     })
@@ -332,7 +332,7 @@ describe('compress()', () => {
   })
 
   it('returns uncompressed when all encodings are rejected but identity is acceptable', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       // Client explicitly rejects all compression but accepts identity (default q=1.0)
       headers: { 'Accept-Encoding': 'gzip;q=0, deflate;q=0, br;q=0, identity' },
     })
@@ -348,7 +348,7 @@ describe('compress()', () => {
   })
 
   it('requires compression when identity is explicitly rejected', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       // Client rejects uncompressed but accepts gzip
       headers: { 'Accept-Encoding': 'identity;q=0, gzip' },
     })
@@ -361,7 +361,7 @@ describe('compress()', () => {
   })
 
   it('returns 406 when all encodings including identity are rejected', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       // Client rejects everything including identity
       headers: { 'Accept-Encoding': 'gzip;q=0, deflate;q=0, br;q=0, identity;q=0' },
     })
@@ -377,7 +377,7 @@ describe('compress()', () => {
   })
 
   it('handles wildcard with quality factor', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       // Client accepts gzip preferentially, but any other encoding at q=0.5
       headers: { 'Accept-Encoding': 'gzip, *;q=0.5' },
     })
@@ -393,7 +393,7 @@ describe('compress()', () => {
   })
 
   it('prefers explicit encoding over wildcard', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       // Explicit gzip (q=1.0) vs wildcard (q=0.8)
       headers: { 'Accept-Encoding': 'gzip, *;q=0.8' },
     })
@@ -408,7 +408,7 @@ describe('compress()', () => {
   })
 
   it('respects wildcard rejection with q=0', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       // Only accepts gzip explicitly, rejects all others including identity with *;q=0
       headers: { 'Accept-Encoding': 'gzip, *;q=0' },
     })
@@ -425,7 +425,7 @@ describe('compress()', () => {
   })
 
   it('allows identity when wildcard rejects compression but identity is explicit', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       // Reject compression but explicitly allow identity
       headers: { 'Accept-Encoding': 'identity, *;q=0' },
     })
@@ -441,7 +441,7 @@ describe('compress()', () => {
   })
 
   it('handles wildcard with identity rejection', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       // Accepts any compression but rejects identity
       headers: { 'Accept-Encoding': '*;q=1.0, identity;q=0' },
     })
@@ -456,7 +456,7 @@ describe('compress()', () => {
   })
 
   it('preserves response status and statusText', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Created', {
@@ -471,7 +471,7 @@ describe('compress()', () => {
   })
 
   it('removes Content-Length header', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let largeContent = 'Hello, World!'.repeat(100) // Make it larger than threshold
@@ -485,7 +485,7 @@ describe('compress()', () => {
   })
 
   it('sets Accept-Ranges to none', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Hello, World!')
@@ -496,7 +496,7 @@ describe('compress()', () => {
   })
 
   it('converts strong ETags to weak', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Hello, World!', {
@@ -509,7 +509,7 @@ describe('compress()', () => {
   })
 
   it('preserves weak ETags', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Hello, World!', {
@@ -522,7 +522,7 @@ describe('compress()', () => {
   })
 
   it('does not add ETag when not present', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Hello, World!')
@@ -533,7 +533,7 @@ describe('compress()', () => {
   })
 
   it('converts strong ETags to weak for HEAD requests', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       method: 'HEAD',
       headers: { 'Accept-Encoding': 'gzip' },
     })
@@ -551,7 +551,7 @@ describe('compress()', () => {
   })
 
   it('skips responses with Accept-Ranges: bytes', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Hello, World!', {
@@ -565,7 +565,7 @@ describe('compress()', () => {
   })
 
   it('skips 206 partial content responses', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Partial content', {
@@ -580,7 +580,7 @@ describe('compress()', () => {
   })
 
   it('sets compression headers for HEAD requests without compressing', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       method: 'HEAD',
       headers: { 'Accept-Encoding': 'gzip' },
     })
@@ -601,7 +601,7 @@ describe('compress()', () => {
   })
 
   it('negotiates encoding for HEAD requests', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       method: 'HEAD',
       headers: { 'Accept-Encoding': 'br' },
     })
@@ -616,7 +616,7 @@ describe('compress()', () => {
   })
 
   it('returns identity for HEAD when client does not accept compression', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       method: 'HEAD',
     })
     let content = 'x'.repeat(2000)
@@ -631,7 +631,7 @@ describe('compress()', () => {
   })
 
   it('sets compression headers for HEAD requests even when body is already null', async () => {
-    let request = new Request('http://localhost', {
+    let request = new Request('https://remix.run', {
       method: 'HEAD',
       headers: { 'Accept-Encoding': 'gzip' },
     })
@@ -675,7 +675,7 @@ describe('compress()', () => {
           headers: { 'Content-Type': 'text/event-stream' },
         })
 
-        let request = new Request('http://localhost', {
+        let request = new Request('https://remix.run', {
           headers: { 'Accept-Encoding': encodingName },
         })
 
@@ -735,7 +735,7 @@ describe('compress()', () => {
         headers: { 'Content-Type': 'text/event-stream' },
       })
 
-      let request = new Request('http://localhost', {
+      let request = new Request('https://remix.run', {
         headers: { 'Accept-Encoding': 'gzip' },
       })
 
@@ -761,7 +761,7 @@ describe('compress()', () => {
         headers: { 'Content-Type': 'text/plain' },
       })
 
-      let request = new Request('http://localhost', {
+      let request = new Request('https://remix.run', {
         headers: { 'Accept-Encoding': 'gzip' },
       })
 
