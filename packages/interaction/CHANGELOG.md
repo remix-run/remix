@@ -2,7 +2,7 @@
 
 This is the changelog for [`interaction`](https://github.com/remix-run/remix/tree/main/packages/interaction). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.3.0 (2025-11-20)
 
 - BREAKING CHANGE: removed `Tab` key interaction
 - Fix: key interactions only apply to their own key
