@@ -3,6 +3,7 @@ shellEmulator: true
 packages:
   - demos/*
   - packages/*
+  - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*
   - packages/interaction/demos
   - packages/lazy-file/scripts

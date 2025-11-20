@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/route-pattern",
-  "version": "0.15.0",
+  "version": "0.15.3",
   "description": "Match and generate URLs with strong typing",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -14,7 +14,9 @@
     "LICENSE",
     "README.md",
     "dist",
-    "src"
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.types.bench.ts"
   ],
   "type": "module",
   "exports": {

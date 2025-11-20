@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/session",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Session management for JavaScript",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

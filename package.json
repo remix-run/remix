@@ -23,7 +23,7 @@
     "lint:fix": "eslint . --fix",
     "tag-release": "node ./scripts/tag-release.js",
     "test": "pnpm -r --workspace-concurrency 1 test",
-    "typecheck": "pnpm -r --workspace-concurrency 1 typecheck",
+    "typecheck": "pnpm -r typecheck",
     "view-changes": "node ./scripts/view-changes.js"
   },
   "workspaces": [

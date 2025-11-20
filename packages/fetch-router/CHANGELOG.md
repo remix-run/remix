@@ -28,9 +28,31 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   })
   ```
 
-- Modify the default behavior of the `acceptRanges` option for `staticFiles()` middleware and the `file()` response helper to enable ranges only for non-compressible MIME types, as defined by `isCompressibleMimeType()` from `@remix-run/mime`. This is to allow compression for text-based assets while still supporting resumable downloads for media files.
+## v0.10.0 (2025-11-19)
 
-- Add callback support for `acceptRanges` option in `staticFiles()` middleware so it can be customized to enable range requests only for specific MIME types, file sizes, etc.
+- BREAKING CHANGE: All middleware has been extracted into separate npm packages for independent versioning and deployment. Update your imports:
+
+  ```tsx
+  // Before
+  import { asyncContext } from '@remix-run/fetch-router/async-context-middleware'
+  import { formData } from '@remix-run/fetch-router/form-data-middleware'
+  import { logger } from '@remix-run/fetch-router/logger-middleware'
+  import { methodOverride } from '@remix-run/fetch-router/method-override-middleware'
+  import { session } from '@remix-run/fetch-router/session-middleware'
+  import { staticFiles } from '@remix-run/fetch-router/static-middleware'
+
+  // After
+  import { asyncContext } from '@remix-run/async-context-middleware'
+  import { formData } from '@remix-run/form-data-middleware'
+  import { logger } from '@remix-run/logger-middleware'
+  import { methodOverride } from '@remix-run/method-override-middleware'
+  import { session } from '@remix-run/session-middleware'
+  import { staticFiles } from '@remix-run/static-middleware'
+  ```
+
+  Each middleware now has its own package with independent dependencies, changelog, and versioning.
+
+- `html()` response helper now automatically prepends `<!DOCTYPE html>` to the body if it is not already present
 
 ## v0.9.0 (2025-11-18)
 

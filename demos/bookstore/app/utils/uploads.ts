@@ -1,6 +1,6 @@
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { FileUpload } from '@remix-run/fetch-router/form-data-middleware'
+import type { FileUpload } from '@remix-run/form-data-middleware'
 import { LocalFileStorage } from '@remix-run/file-storage/local'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))

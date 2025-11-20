@@ -1,9 +1,8 @@
 import { createStorageKey } from '@remix-run/fetch-router'
-import { getContext } from '@remix-run/fetch-router/async-context-middleware'
+import { getContext } from '@remix-run/async-context-middleware'
 
+import { type Cart, getCart } from '../models/cart.ts'
 import type { User } from '../models/users.ts'
-import type { Cart } from '../models/cart.ts'
-import { getCart } from '../models/cart.ts'
 
 // Storage key for attaching user data to request context
 let USER_KEY = createStorageKey<User>()

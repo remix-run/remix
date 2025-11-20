@@ -36,19 +36,25 @@ The benefit is code that's not just reusable, but **future-proof**.
 
 We currently publish the following packages:
 
+- [async-context-middleware](packages/async-context-middleware): Middleware for storing request context in AsyncLocalStorage
 - [cookie](packages/cookie): A comprehensive toolkit for effortlessly managing HTTP cookies
 - [fetch-proxy](packages/fetch-proxy): Seamlessly construct HTTP proxies with the familiar `fetch()` API
 - [fetch-router](packages/fetch-router): A minimal, composable router built on the web Fetch API and `route-pattern`.
 - [file-storage](packages/file-storage): Robust key/value storage tailored for JavaScript `File` objects, simplifying file management
+- [form-data-middleware](packages/form-data-middleware): Middleware for parsing FormData from request bodies
 - [form-data-parser](packages/form-data-parser): An enhanced `request.formData()` wrapper enabling efficient, streaming file uploads
 - [headers](packages/headers): A comprehensive toolkit for effortlessly managing HTTP headers
 - [html-template](packages/html-template): A safe HTML template tag with auto-escaping for JavaScript
 - [interaction](packages/interaction): Semantic, declarative events and Interactions
 - [lazy-file](packages/lazy-file): Optimize performance with lazy-loaded, streaming `Blob`s and `File`s for JavaScript
+- [logger-middleware](packages/logger-middleware): Middleware for logging HTTP requests and responses
+- [method-override-middleware](packages/method-override-middleware): Middleware for overriding HTTP request methods from form data
 - [multipart-parser](packages/multipart-parser): High-performance, streaming parser for multipart messages, perfect for handling complex form data
 - [node-fetch-server](packages/node-fetch-server): Build Node.js HTTP servers using the web-standard `fetch()` API, promoting code consistency
 - [route-pattern](packages/route-pattern): A powerful and flexible URL pattern matching library
 - [session](packages/session): A full-featured session management library for JavaScript
+- [session-middleware](packages/session-middleware): Middleware for managing sessions with cookie-based storage
+- [static-middleware](packages/static-middleware): Middleware for serving static files from the filesystem
 - [tar-parser](packages/tar-parser): A fast, streaming parser for tar archives, designed for efficient data extraction
 
 ## Contributing

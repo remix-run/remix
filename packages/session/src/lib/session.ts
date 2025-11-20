@@ -105,7 +105,8 @@ export function createSession<valueData extends Data = Data, flashData extends D
   let flashMap = toMap(initialData?.[1])
   let nextMap = new Map<keyof flashData, flashData[keyof flashData]>()
   let destroyed = false
-  let dirty = false
+  // Mark as dirty if flash data exists so it gets cleared on save
+  let dirty = flashMap.size > 0
 
   function checkDestroyed() {
     if (destroyed) throw new Error('Session has been destroyed')

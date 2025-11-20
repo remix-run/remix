@@ -1,7 +1,7 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { compression } from '@remix-run/fetch-router/compression-middleware'
-import { logger } from '@remix-run/fetch-router/logger-middleware'
-import { staticFiles } from '@remix-run/fetch-router/static-middleware'
+import { logger } from '@remix-run/logger-middleware'
+import { staticFiles } from '@remix-run/static-middleware'
 
 import { routes } from '../routes.ts'
 import { home } from './home.tsx'
@@ -16,7 +16,7 @@ if (process.env.NODE_ENV === 'development') {
 middleware.push(compression())
 middleware.push(
   staticFiles('./public', {
-    cacheControl: 'no-store, must-revalidate',
+    cacheControl: 'no-store',
     etag: false,
     lastModified: false,
   }),

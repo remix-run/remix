@@ -78,9 +78,9 @@ export default {
       async action({ session, formData, url }) {
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
-        let user = authenticateUser(email, password)
         let returnTo = url.searchParams.get('returnTo')
 
+        let user = authenticateUser(email, password)
         if (!user) {
           session.flash('error', 'Invalid email or password. Please try again.')
           return redirect(routes.auth.login.index.href(undefined, { returnTo }))
@@ -239,14 +239,21 @@ export default {
     },
 
     resetPassword: {
-      index({ params }) {
+      index({ params, session }) {
         let token = params.token
+        let error = session.get('error')
 
         return render(
           <Document>
             <div class="card" style="max-width: 500px; margin: 2rem auto;">
               <h1>Reset Password</h1>
               <p>Enter your new password below.</p>
+
+              {typeof error === 'string' ? (
+                <div class="alert alert-error" style="margin-bottom: 1.5rem;">
+                  {error}
+                </div>
+              ) : null}
 
               <form method="POST" action={routes.auth.resetPassword.action.href({ token })}>
                 <div class="form-group">
@@ -280,45 +287,20 @@ export default {
         )
       },
 
-      async action({ formData, params }) {
+      async action({ session, formData, params }) {
         let password = formData.get('password')?.toString() ?? ''
         let confirmPassword = formData.get('confirmPassword')?.toString() ?? ''
 
         if (password !== confirmPassword) {
-          return render(
-            <Document>
-              <div class="card" style="max-width: 500px; margin: 2rem auto;">
-                <div class="alert alert-error">Passwords do not match.</div>
-                <p>
-                  <a
-                    href={routes.auth.resetPassword.index.href({ token: params.token })}
-                    class="btn"
-                  >
-                    Try Again
-                  </a>
-                </p>
-              </div>
-            </Document>,
-            { status: 400 },
-          )
+          session.flash('error', 'Passwords do not match.')
+          return redirect(routes.auth.resetPassword.index.href({ token: params.token }))
         }
 
         let success = resetPassword(params.token, password)
 
         if (!success) {
-          return render(
-            <Document>
-              <div class="card" style="max-width: 500px; margin: 2rem auto;">
-                <div class="alert alert-error">Invalid or expired reset token.</div>
-                <p>
-                  <a href={routes.auth.forgotPassword.index.href()} class="btn">
-                    Request New Link
-                  </a>
-                </p>
-              </div>
-            </Document>,
-            { status: 400 },
-          )
+          session.flash('error', 'Invalid or expired reset token.')
+          return redirect(routes.auth.resetPassword.index.href({ token: params.token }))
         }
 
         return render(

@@ -525,6 +525,8 @@ type EventMap<target extends EventTarget> = (
 
   // elements
   target extends HTMLElement ? HTMLElementEventMap :
+  target extends SVGSVGElement ? SVGSVGElementEventMap :
+  target extends SVGElement ? SVGElementEventMap :
   target extends Element ? ElementEventMap :
   target extends Window ? WindowEventMap :
   target extends Document ? DocumentEventMap :

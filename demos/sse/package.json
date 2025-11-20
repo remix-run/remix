@@ -7,7 +7,9 @@
     "@remix-run/events": "jam",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/interaction": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*"
+    "@remix-run/logger-middleware": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*",
+    "@remix-run/static-middleware": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
