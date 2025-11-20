@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
+    "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
-    "jsx": "react-jsx",
     "module": "ES2022",
+    "target": "ESNext",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "allowJs": true,
@@ -12,12 +12,11 @@
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
-    "types": ["./worker-configuration.d.ts"]
+    "skipLibCheck": true,
+    "types": ["./worker-configuration.d.ts", "node"]
   },
-  "include": ["worker-configuration.d.ts", "src/**/*.ts", "worker.ts", "../../global.d.ts"]
+  "include": ["worker-configuration.d.ts", "worker.ts", "../../global.d.ts"]
 }
