@@ -1,7 +1,8 @@
 import type { BrotliOptions, ZlibOptions } from 'node:zlib'
+import { isCompressibleMimeType } from '@remix-run/mime'
+
 import type { Middleware } from '../middleware.ts'
 import { compress, type CompressOptions } from '../response-helpers/compress.ts'
-import { compressibleMediaTypes } from '../compressible-media-types.ts'
 
 type Encoding = 'br' | 'gzip' | 'deflate'
 
@@ -71,12 +72,13 @@ export function compression(options?: CompressionOptions): Middleware {
       return response
     }
 
-    let filterMediaType = options?.filterMediaType ?? isCompressibleMediaType
+    let filterMediaType = options?.filterMediaType ?? isCompressibleMimeType
     if (!filterMediaType(mediaType)) {
       return response
     }
 
-    // If Content-Length is present, check threshold before compressing
+    // If Content-Length is present and below threshold, skip compression.
+    // Otherwise, compress (including when Content-Length is absent - we assume it's large enough)
     let contentLengthHeader = response.headers.get('Content-Length')
     if (contentLengthHeader !== null) {
       let contentLength = parseInt(contentLengthHeader, 10)
@@ -106,27 +108,3 @@ export function compression(options?: CompressionOptions): Middleware {
     return compress(response, context.request, compressOptions)
   }
 }
-
-/**
- * Checks if a media type (MIME type) is known to be compressible.
- *
- * Returns true for:
- * - Compressible media types from mime-db, except for types starting with `x-` (experimental) or `vnd.` (vendor-specific).
- * - Any text/* type
- * - Types with +json, +text, or +xml suffix
- *
- * @param mediaType The media type to check (e.g. "application/json")
- * @returns true if the media type is known to be compressible
- */
-export function isCompressibleMediaType(mediaType: string): boolean {
-  if (!mediaType) return false
-
-  if (compressibleMediaTypes.has(mediaType)) {
-    return true
-  }
-
-  return genericCompressibleRegex.test(mediaType)
-}
-
-// Check for text/*, or anything with +json, +text, or +xml suffix
-const genericCompressibleRegex = /^text\/|\+(?:json|text|xml)$/i

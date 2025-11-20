@@ -1,5 +1,1 @@
-export {
-  compression,
-  type CompressionOptions,
-  isCompressibleMediaType,
-} from './lib/middleware/compression.ts'
+export { compression, type CompressionOptions } from './lib/middleware/compression.ts'

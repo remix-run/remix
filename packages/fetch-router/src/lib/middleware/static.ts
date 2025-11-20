@@ -3,7 +3,15 @@ import { findFile } from '@remix-run/lazy-file/fs'
 import { file, type FileResponseOptions } from '../response-helpers/file.ts'
 import type { Middleware } from '../middleware.ts'
 
-export type StaticFilesOptions = FileResponseOptions & {
+/**
+ * Function that determines if HTTP Range requests should be supported for a given file.
+ *
+ * @param file - The File object being served
+ * @returns true if range requests should be supported
+ */
+export type AcceptRangesFunction = (file: File) => boolean
+
+export type StaticFilesOptions = Omit<FileResponseOptions, 'acceptRanges'> & {
   /**
    * Filter function to determine which files should be served.
    *
@@ -11,6 +19,31 @@ export type StaticFilesOptions = FileResponseOptions & {
    * @returns Whether to serve the file
    */
   filter?: (path: string) => boolean
+
+  /**
+   * Whether to support HTTP Range requests for partial content.
+   *
+   * Can be a boolean or a function that receives the file.
+   * When enabled, includes Accept-Ranges header and handles Range requests
+   * with 206 Partial Content responses.
+   *
+   * Defaults to enabling ranges only for non-compressible MIME types,
+   * as defined by `isCompressibleMimeType()` from `@remix-run/mime`.
+   *
+   * Note: Range requests and compression are mutually exclusive. When
+   * `Accept-Ranges: bytes` is present in the response headers, the compression
+   * middleware will not compress the response. This is why the default behavior
+   * enables ranges only for non-compressible types.
+   *
+   * @example
+   * // Force range request support for all files
+   * acceptRanges: true
+   *
+   * @example
+   * // Enable ranges for videos only
+   * acceptRanges: (file) => file.type.startsWith('video/')
+   */
+  acceptRanges?: boolean | AcceptRangesFunction
 }
 
 /**
@@ -37,7 +70,7 @@ export type StaticFilesOptions = FileResponseOptions & {
  * })
  */
 export function staticFiles(root: string, options: StaticFilesOptions = {}): Middleware {
-  let { filter, ...fileOptions } = options
+  let { filter, acceptRanges, ...fileOptions } = options
 
   return async (context, next) => {
     if (context.request.method !== 'GET' && context.request.method !== 'HEAD') {
@@ -56,6 +89,9 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
       return next()
     }
 
-    return file(fileToServe, context.request, fileOptions)
+    return file(fileToServe, context.request, {
+      ...fileOptions,
+      acceptRanges: typeof acceptRanges === 'function' ? acceptRanges(fileToServe) : acceptRanges,
+    })
   }
 }

@@ -132,6 +132,9 @@ importers:
       '@remix-run/lazy-file':
         specifier: workspace:^
         version: link:../lazy-file
+      '@remix-run/mime':
+        specifier: workspace:^
+        version: link:../mime
       '@remix-run/route-pattern':
         specifier: workspace:^
         version: link:../route-pattern
@@ -145,9 +148,6 @@ importers:
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
-      mime-db:
-        specifier: ^1.53.0
-        version: 1.54.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -257,9 +257,9 @@ importers:
 
   packages/lazy-file:
     dependencies:
-      mrmime:
-        specifier: ^2.0.0
-        version: 2.0.0
+      '@remix-run/mime':
+        specifier: workspace:^
+        version: link:../mime
     devDependencies:
       '@types/node':
         specifier: ^24.6.0
@@ -273,6 +273,18 @@ importers:
       esbuild:
         specifier: ^0.25.12
         version: 0.25.12
+
+  packages/mime:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      mime-db:
+        specifier: ^1.53.0
+        version: 1.54.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/multipart-parser:
     dependencies:

@@ -2,44 +2,13 @@ import * as assert from 'node:assert/strict'
 import { gunzip } from 'node:zlib'
 import { promisify } from 'node:util'
 import { describe, it } from 'node:test'
+import { isCompressibleMimeType } from '@remix-run/mime'
 
 import { createRoutes } from '../route-map.ts'
 import { createRouter } from '../router.ts'
-import { compression, isCompressibleMediaType } from './compression.ts'
+import { compression } from './compression.ts'
 
 const gunzipAsync = promisify(gunzip)
-
-describe('isCompressibleMediaType()', () => {
-  it('returns true for common compressible media types', () => {
-    assert.equal(isCompressibleMediaType('text/html'), true)
-    assert.equal(isCompressibleMediaType('text/plain'), true)
-    assert.equal(isCompressibleMediaType('application/json'), true)
-    assert.equal(isCompressibleMediaType('application/javascript'), true)
-    assert.equal(isCompressibleMediaType('text/css'), true)
-  })
-
-  it('returns true for text/* types', () => {
-    assert.equal(isCompressibleMediaType('text/custom'), true)
-    assert.equal(isCompressibleMediaType('text/markdown'), true)
-  })
-
-  it('returns true for types with +json, +text, or +xml suffix', () => {
-    assert.equal(isCompressibleMediaType('application/vnd.api+json'), true)
-    assert.equal(isCompressibleMediaType('application/custom+xml'), true)
-    assert.equal(isCompressibleMediaType('application/something+text'), true)
-  })
-
-  it('returns false for non-compressible media types', () => {
-    assert.equal(isCompressibleMediaType('image/png'), false)
-    assert.equal(isCompressibleMediaType('image/jpeg'), false)
-    assert.equal(isCompressibleMediaType('video/mp4'), false)
-    assert.equal(isCompressibleMediaType('audio/mpeg'), false)
-  })
-
-  it('returns false for empty string', () => {
-    assert.equal(isCompressibleMediaType(''), false)
-  })
-})
 
 describe('compression()', () => {
   it('compresses compressible content types', async () => {
@@ -183,7 +152,7 @@ describe('compression()', () => {
     assert.equal(await htmlResponse.text(), '<html>test</html>')
   })
 
-  it('allows custom filterMediaType to use isCompressibleMediaType', async () => {
+  it('allows custom filterMediaType to use isCompressibleMimeType', async () => {
     let routes = createRoutes({
       json: '/data.json',
       html: '/page.html',
@@ -194,7 +163,7 @@ describe('compression()', () => {
         compression({
           filterMediaType: (mediaType) => {
             // Only compress if it's compressible AND not HTML
-            return isCompressibleMediaType(mediaType) && !mediaType.includes('html')
+            return isCompressibleMimeType(mediaType) && !mediaType.includes('html')
           },
         }),
       ],

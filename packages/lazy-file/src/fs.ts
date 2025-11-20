@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { lookup } from 'mrmime'
+import { detectMimeType } from '@remix-run/mime'
 
 import { type LazyContent, LazyFile } from './lib/lazy-file.ts'
 
@@ -46,7 +46,7 @@ export function openFile(filename: string, options?: OpenFileOptions): File {
   }
 
   return new LazyFile(content, options?.name ?? filename, {
-    type: options?.type ?? lookup(filename),
+    type: options?.type ?? detectMimeType(filename) ?? '',
     lastModified: options?.lastModified ?? stats.mtimeMs,
   }) as File
 }

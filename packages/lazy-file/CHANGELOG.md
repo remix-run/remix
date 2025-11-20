@@ -2,6 +2,12 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+### Patch Changes
+
+- Replace `mrmime` dependency with `@remix-run/mime` for MIME type detection
+
 ## v3.8.0 (2025-11-18)
 
 - Add `findFile` function for finding files within a root directory

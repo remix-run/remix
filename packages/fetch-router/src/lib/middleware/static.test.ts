@@ -199,12 +199,35 @@ describe('staticFiles middleware', () => {
     assert.equal(response.headers.get('Last-Modified'), null)
   })
 
-  it('supports accept-ranges by default', async () => {
+  it('does not support accept-ranges by default for compressible files', async () => {
     let lastModified = new Date('2025-01-01')
     createTestFile('test.txt', 'Hello, World!', lastModified)
     let router = createRouter()
     router.get('/*', {
       middleware: [staticFiles(tmpDir)],
+      handler() {
+        return new Response('Fallback Handler', { status: 404 })
+      },
+    })
+
+    let response = await router.fetch('http://localhost/test.txt')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Hello, World!')
+    assert.equal(response.headers.get('Accept-Ranges'), null)
+
+    let response2 = await router.fetch('http://localhost/test.txt', {
+      headers: { Range: 'bytes=0-4' },
+    })
+    assert.equal(response2.status, 200)
+    assert.equal(await response2.text(), 'Hello, World!')
+  })
+
+  it('supports range requests when acceptRanges is explicitly enabled', async () => {
+    let lastModified = new Date('2025-01-01')
+    createTestFile('test.txt', 'Hello, World!', lastModified)
+    let router = createRouter()
+    router.get('/*', {
+      middleware: [staticFiles(tmpDir, { acceptRanges: true })],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },
@@ -225,27 +248,24 @@ describe('staticFiles middleware', () => {
     assert.equal(response2.headers.get('Accept-Ranges'), 'bytes')
   })
 
-  it('does not support range requests if acceptRanges is disabled', async () => {
-    let lastModified = new Date('2025-01-01')
-    createTestFile('test.txt', 'Hello, World!', lastModified)
+  it('supports range requests with acceptRanges function', async () => {
+    createTestFile('test.txt', 'Hello, World!')
+    createTestFile('video.dat', 'fake video data')
     let router = createRouter()
     router.get('/*', {
-      middleware: [staticFiles(tmpDir, { acceptRanges: false })],
+      middleware: [
+        staticFiles(tmpDir, {
+          acceptRanges: (file) => file.type.startsWith('video/'),
+        }),
+      ],
       handler() {
         return new Response('Fallback Handler', { status: 404 })
       },
     })
 
-    let response = await router.fetch('http://localhost/test.txt')
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Hello, World!')
-    assert.equal(response.headers.get('Accept-Ranges'), null)
-
-    let response2 = await router.fetch('http://localhost/test.txt', {
-      headers: { Range: 'bytes=0-4' },
-    })
-    assert.equal(response2.status, 200)
-    assert.equal(await response2.text(), 'Hello, World!')
+    // test.txt should not have ranges (text/plain)
+    let textResponse = await router.fetch('http://localhost/test.txt')
+    assert.equal(textResponse.headers.get('Accept-Ranges'), null)
   })
 
   it('supports cache-control', async () => {

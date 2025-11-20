@@ -660,11 +660,29 @@ describe('file()', () => {
   })
 
   describe('Range requests', () => {
-    it('includes Accept-Ranges header', async () => {
+    it('includes Accept-Ranges header for non-compressible media types by default', async () => {
+      let mockFile = new File(['fake video data'], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4')
+
+      let response = await file(mockFile, request)
+
+      assert.equal(response.headers.get('Accept-Ranges'), 'bytes')
+    })
+
+    it('does not include Accept-Ranges header for compressible media types by default', async () => {
       let mockFile = new File(['Hello'], 'test.txt', { type: 'text/plain' })
       let request = new Request('http://localhost/test.txt')
 
       let response = await file(mockFile, request)
+
+      assert.equal(response.headers.get('Accept-Ranges'), null)
+    })
+
+    it('includes Accept-Ranges header when explicitly enabled', async () => {
+      let mockFile = new File(['Hello'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt')
+
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.headers.get('Accept-Ranges'), 'bytes')
     })
@@ -684,7 +702,7 @@ describe('file()', () => {
         headers: { Range: 'bytes=0-4' },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 206)
       assert.equal(await response.text(), '01234')
@@ -698,7 +716,7 @@ describe('file()', () => {
         headers: { Range: 'bytes=5-' },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 206)
       assert.equal(await response.text(), '56789')
@@ -711,7 +729,7 @@ describe('file()', () => {
         headers: { Range: 'bytes=-3' },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 206)
       assert.equal(await response.text(), '789')
@@ -724,7 +742,7 @@ describe('file()', () => {
         headers: { Range: 'bytes=0-999' },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 206)
       assert.equal(await response.text(), '0123456789')
@@ -769,7 +787,7 @@ describe('file()', () => {
         headers: { Range: 'bytes=20-30' },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 416)
       assert.equal(response.headers.get('Content-Range'), 'bytes */10')
@@ -781,7 +799,7 @@ describe('file()', () => {
         headers: { Range: 'bytes=0-2,5-7' },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 416)
       assert.equal(response.headers.get('Content-Range'), 'bytes */10')
@@ -793,7 +811,7 @@ describe('file()', () => {
         headers: { Range: 'bytes=0-2,garbage' },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 400)
       assert.equal(await response.text(), 'Bad Request')
@@ -805,7 +823,7 @@ describe('file()', () => {
         headers: { Range: 'bytes=5-2' },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 400)
       assert.equal(await response.text(), 'Bad Request')
@@ -817,7 +835,7 @@ describe('file()', () => {
         headers: { Range: 'invalid' },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 400)
       assert.equal(await response.text(), 'Bad Request')
@@ -829,7 +847,7 @@ describe('file()', () => {
         headers: { Range: 'bytes=' },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 400)
       assert.equal(await response.text(), 'Bad Request')
@@ -868,7 +886,7 @@ describe('file()', () => {
       let request1 = new Request('http://localhost/test.txt')
 
       // Get the strong ETag
-      let response1 = await file(mockFile, request1, { etag: 'strong' })
+      let response1 = await file(mockFile, request1, { etag: 'strong', acceptRanges: true })
       let etag = response1.headers.get('ETag')
       assert.ok(etag)
       assert.ok(!etag.startsWith('W/')) // Verify it's a strong ETag
@@ -880,7 +898,7 @@ describe('file()', () => {
           Range: 'bytes=0-4',
         },
       })
-      let response2 = await file(mockFile, request2, { etag: 'strong' })
+      let response2 = await file(mockFile, request2, { etag: 'strong', acceptRanges: true })
 
       assert.equal(response2.status, 206)
       assert.equal(await response2.text(), '01234')
@@ -901,7 +919,7 @@ describe('file()', () => {
         },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 206)
       assert.equal(await response.text(), '01234')
@@ -960,7 +978,7 @@ describe('file()', () => {
         },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 206)
       assert.equal(await response.text(), '01234')
@@ -1005,7 +1023,7 @@ describe('file()', () => {
         },
       })
 
-      let response = await file(mockFile, request)
+      let response = await file(mockFile, request, { acceptRanges: true })
 
       assert.equal(response.status, 206)
       assert.equal(await response.text(), '01234')
@@ -1016,7 +1034,7 @@ describe('file()', () => {
       let mockFile = new File(['0123456789'], 'test.txt', { type: 'text/plain' })
       let request1 = new Request('http://localhost/test.txt')
 
-      let response1 = await file(mockFile, request1)
+      let response1 = await file(mockFile, request1, { acceptRanges: true })
       let lastModified = response1.headers.get('Last-Modified')
       assert.ok(lastModified)
 
@@ -1026,7 +1044,7 @@ describe('file()', () => {
           'If-Range': lastModified,
         },
       })
-      let response2 = await file(mockFile, request2)
+      let response2 = await file(mockFile, request2, { acceptRanges: true })
 
       assert.equal(response2.status, 206)
       assert.equal(await response2.text(), '01234')
@@ -1170,7 +1188,7 @@ describe('file()', () => {
       })
       let request1 = new Request('http://localhost/test.txt')
 
-      let response1 = await file(mockFile, request1)
+      let response1 = await file(mockFile, request1, { acceptRanges: true })
       let lastModified = response1.headers.get('Last-Modified')
       assert.ok(lastModified)
 
@@ -1181,7 +1199,7 @@ describe('file()', () => {
           Range: 'bytes=0-4',
         },
       })
-      let response2 = await file(mockFile, request2)
+      let response2 = await file(mockFile, request2, { acceptRanges: true })
 
       assert.equal(response2.status, 206)
       assert.equal(await response2.text(), '01234')

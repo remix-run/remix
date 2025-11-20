@@ -2,6 +2,36 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Add `compress()` response helper for compressing responses based on client's `Accept-Encoding` header
+
+  ```tsx
+  import * as res from '@remix-run/fetch-router/response-helpers'
+
+  router.get('/data', async ({ request }) => {
+    let data = await getHugeDataset()
+    let response = new Response(JSON.stringify(data), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+    return res.compress(response, request)
+  })
+  ```
+
+- Add `compression()` middleware for automatic response compression
+
+  ```tsx
+  import { compression } from '@remix-run/fetch-router/compression-middleware'
+
+  let router = createRouter({
+    middleware: [compression()],
+  })
+  ```
+
+- Modify the default behavior of the `acceptRanges` option for `staticFiles()` middleware and the `file()` response helper to enable ranges only for non-compressible MIME types, as defined by `isCompressibleMimeType()` from `@remix-run/mime`. This is to allow compression for text-based assets while still supporting resumable downloads for media files.
+
+- Add callback support for `acceptRanges` option in `staticFiles()` middleware so it can be customized to enable range requests only for specific MIME types, file sizes, etc.
+
 ## v0.9.0 (2025-11-18)
 
 - Add `session` middleware for automatic management of `context.session` across requests
@@ -63,39 +93,6 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   let router = createRouter({
     middleware: [staticFiles('./public')],
   })
-  ```
-
-- Add `compress()` response helper for compressing responses based on client's `Accept-Encoding` header
-
-  ```tsx
-  import * as res from '@remix-run/fetch-router/response-helpers'
-
-  router.get('/data', async ({ request }) => {
-    let data = await getHugeDataset()
-    let response = new Response(JSON.stringify(data), {
-      headers: { 'Content-Type': 'application/json' },
-    })
-    return res.compress(response, request)
-  })
-  ```
-
-- Add `compression()` middleware for automatic response compression
-
-  ```tsx
-  import { compression } from '@remix-run/fetch-router/compression-middleware'
-
-  let router = createRouter({
-    middleware: [compression()],
-  })
-  ```
-
-- Add `isCompressibleMediaType()` helper
-
-  ```tsx
-  import { isCompressibleMediaType } from '@remix-run/fetch-router/compression-middleware'
-
-  isCompressibleMediaType('text/html') // true
-  isCompressibleMediaType('image/jpeg') // false
   ```
 
 ## v0.8.0 (2025-11-03)

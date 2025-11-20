@@ -718,7 +718,8 @@ return res.file(file, request, {
   lastModified: true,
 
   // Whether to support HTTP Range requests for partial content.
-  // Defaults to `true`.
+  // Defaults to enabling ranges only for non-compressible MIME types,
+  // as defined by `isCompressibleMimeType()` from `@remix-run/mime`.
   acceptRanges: true,
 })
 ```
@@ -756,6 +757,21 @@ return res.file(file, request, {
   },
 })
 ```
+
+##### Range Requests and Compression
+
+By default, the `file()` helper enables Range requests only for non-compressible MIME types (like video, audio, and images). This allows text-based assets (HTML, CSS, JavaScript, etc.) to be compressed by the compression middleware while still supporting resumable downloads for media files.
+
+You can override this behavior by explicitly enabling or disabling ranges with the `acceptRanges` option:
+
+```ts
+// Force range request support
+return res.file(file, request, {
+  acceptRanges: true,
+})
+```
+
+**Note:** Range requests and compression are mutually exclusive. When `Accept-Ranges: bytes` is present in the response headers, the compression middleware will not compress the response. This is why the default behavior enables ranges only for non-compressible types.
 
 #### Using `findFile()` with `file()`
 
@@ -809,6 +825,43 @@ You can provide a `filter` function to determine which files to serve:
 ```ts
 staticFiles('./images', {
   filter: (path) => /\.(png|jpg|gif|svg)$/i.test(path),
+})
+```
+
+Since the `staticFiles()` middleware handles multiple files generically, the `acceptRanges` option can also accept a function that receives the file:
+
+```ts
+import { staticFiles } from '@remix-run/fetch-router/static-middleware'
+import { isCompressibleMimeType } from '@remix-run/mime'
+
+// Enable ranges only for large files
+let router = createRouter({
+  middleware: [
+    staticFiles('./public', {
+      acceptRanges: (file) => file.size > 10 * 1024 * 1024,
+    }),
+  ],
+})
+
+// Or enable ranges only for videos
+let router = createRouter({
+  middleware: [
+    staticFiles('./public', {
+      acceptRanges: (file) => file.type.startsWith('video/'),
+    }),
+  ],
+})
+
+// Or use custom logic combining file size and MIME type
+let router = createRouter({
+  middleware: [
+    staticFiles('./public', {
+      acceptRanges: (file) => {
+        let mediaType = file.type.split(';')[0].trim()
+        return !isCompressibleMimeType(mediaType) || file.size > 10 * 1024 * 1024
+      },
+    }),
+  ],
 })
 ```
 
@@ -892,26 +945,24 @@ let router = createRouter({
 })
 ```
 
-The middleware also applies an additional **Content-Type filter** to only apply compression to appropriate media types (MIME types). By default, this uses the `isCompressibleMediaType(mediaType)` helper to check if the media type is compressible. You can customize this behavior with the `filterMediaType` option, re-using the built-in filter if needed.
+The middleware also applies an additional **Content-Type filter** to only apply compression to appropriate media types (MIME types). By default, this uses the `isCompressibleMimeType(mimeType)` helper to check if the MIME type is compressible. You can customize this behavior with the `filterMediaType` option, re-using the built-in filter if needed.
 
 ```ts
-import {
-  compression,
-  isCompressibleMediaType,
-} from '@remix-run/fetch-router/compression-middleware'
+import { compression } from '@remix-run/fetch-router/compression-middleware'
+import { isCompressibleMimeType } from '@remix-run/mime'
 
 let router = createRouter({
   middleware: [
     compression({
       filterMediaType(mediaType) {
-        return isCompressibleMediaType(mediaType) || mediaType === 'application/vnd.example+data'
+        return isCompressibleMimeType(mediaType) || mediaType === 'application/vnd.example+data'
       },
     }),
   ],
 })
 ```
 
-The `isCompressibleMediaType` helper determines whether a media type should be compressed. It returns `true` for:
+The `isCompressibleMimeType` helper determines whether a MIME type should be compressed. It returns `true` for:
 
 - Known compressible types from the [mime-db](https://www.npmjs.com/package/mime-db) database (e.g., `application/json`, `text/html`, `text/css`), except those starting with `x-` (experimental) or `vnd.` (vendor-specific).
 - All `text/*` types (e.g., `text/plain`, `text/markdown`)

@@ -19,7 +19,6 @@ middleware.push(
     cacheControl: 'no-store, must-revalidate',
     etag: false,
     lastModified: false,
-    acceptRanges: false,
   }),
 )
 

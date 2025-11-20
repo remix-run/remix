@@ -1,7 +1,7 @@
 // DO NOT EDIT. THIS IS GENERATED CODE.
-// Run `pnpm --filter @remix-run/fetch-router run generate:compressible` to update.
+// Run `pnpm codegen` to update.
 
-export let compressibleMediaTypes = new Set([
+export let compressibleMimeTypes = new Set([
   'application/3gpdash-qoe-report+xml',
   'application/3gpp-ims+xml',
   'application/3gpphal+json',

@@ -76,7 +76,6 @@
     "@remix-run/cookie": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@types/node": "^24.6.0",
-    "mime-db": "^1.53.0",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
@@ -85,13 +84,13 @@
     "@remix-run/headers": "workspace:^",
     "@remix-run/html-template": "workspace:^",
     "@remix-run/lazy-file": "workspace:^",
+    "@remix-run/mime": "workspace:^",
     "@remix-run/route-pattern": "workspace:^",
     "@remix-run/session": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
-    "generate:compressible": "node --disable-warning=ExperimentalWarning ./scripts/generate-compressible.js",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
     "typecheck": "tsc --noEmit"
