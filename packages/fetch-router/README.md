@@ -753,7 +753,7 @@ return res.file(file, request, {
 
 ##### Range Requests and Compression
 
-By default, the `file()` helper enables Range requests only for non-compressible MIME types like video, audio, and images. This allows text-based assets to be compressed while still supporting resumable downloads for media files.
+By default, the `file()` helper enables Range requests only for non-compressible MIME types. This allows text-based assets to be compressed while still supporting resumable downloads for media files.
 
 You can override this behavior by explicitly enabling or disabling ranges with the `acceptRanges` option:
 

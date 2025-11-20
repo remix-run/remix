@@ -7,7 +7,6 @@
     "target": "ESNext",
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
-    "verbatimModuleSyntax": true,
-    "skipLibCheck": true
+    "verbatimModuleSyntax": true
   }
 }

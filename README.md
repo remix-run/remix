@@ -37,6 +37,7 @@ The benefit is code that's not just reusable, but **future-proof**.
 We currently publish the following packages:
 
 - [async-context-middleware](packages/async-context-middleware): Middleware for storing request context in AsyncLocalStorage
+- [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
 - [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
 - [fetch-proxy](packages/fetch-proxy): An HTTP proxy for the web Fetch API
 - [fetch-router](packages/fetch-router): A minimal, composable router for the web Fetch API
@@ -50,6 +51,7 @@ We currently publish the following packages:
 - [lazy-file](packages/lazy-file): Lazy, streaming files for JavaScript
 - [logger-middleware](packages/logger-middleware): Middleware for logging HTTP requests and responses
 - [method-override-middleware](packages/method-override-middleware): Middleware for overriding HTTP request methods from form data
+- [mime](packages/mime): Utilities for dealing with MIME types
 - [multipart-parser](packages/multipart-parser): A fast, efficient parser for multipart streams in any JavaScript environment
 - [node-fetch-server](packages/node-fetch-server): Build servers for Node.js using the web fetch API
 - [route-pattern](packages/route-pattern): Match and generate URLs with strong typing
