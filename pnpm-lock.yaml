@@ -550,9 +550,9 @@ importers:
 
   packages/tar-parser:
     devDependencies:
-      '@remix-run/lazy-file':
+      '@remix-run/fs':
         specifier: workspace:^
-        version: link:../lazy-file
+        version: link:../fs
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
@@ -562,9 +562,9 @@ importers:
 
   packages/tar-parser/bench:
     dependencies:
-      '@remix-run/lazy-file':
+      '@remix-run/fs':
         specifier: workspace:^
-        version: link:../../lazy-file
+        version: link:../../fs
       '@remix-run/tar-parser':
         specifier: workspace:^
         version: link:..

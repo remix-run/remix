@@ -32,7 +32,7 @@
     }
   },
   "devDependencies": {
-    "@remix-run/lazy-file": "workspace:^",
+    "@remix-run/fs": "workspace:^",
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3"
   },
