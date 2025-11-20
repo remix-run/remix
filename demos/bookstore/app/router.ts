@@ -1,6 +1,6 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { asyncContext } from '@remix-run/async-context-middleware'
-import { compression } from '@remix-run/fetch-router/compression-middleware'
+import { compression } from '@remix-run/compression-middleware'
 import { formData } from '@remix-run/form-data-middleware'
 import { logger } from '@remix-run/logger-middleware'
 import { methodOverride } from '@remix-run/method-override-middleware'

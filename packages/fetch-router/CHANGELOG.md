@@ -2,32 +2,6 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
-
-- Add `compress()` response helper for compressing responses based on client's `Accept-Encoding` header
-
-  ```tsx
-  import * as res from '@remix-run/fetch-router/response-helpers'
-
-  router.get('/data', async ({ request }) => {
-    let data = await getHugeDataset()
-    let response = new Response(JSON.stringify(data), {
-      headers: { 'Content-Type': 'application/json' },
-    })
-    return res.compress(response, request)
-  })
-  ```
-
-- Add `compression()` middleware for automatic response compression
-
-  ```tsx
-  import { compression } from '@remix-run/fetch-router/compression-middleware'
-
-  let router = createRouter({
-    middleware: [compression()],
-  })
-  ```
-
 ## v0.10.0 (2025-11-19)
 
 - BREAKING CHANGE: All middleware has been extracted into separate npm packages for independent versioning and deployment. Update your imports:

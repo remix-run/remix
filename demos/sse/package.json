@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@remix-run/compression-middleware": "workspace:*",
     "@remix-run/dom": "jam",
     "@remix-run/events": "jam",
     "@remix-run/fetch-router": "workspace:*",

@@ -1,19 +1,18 @@
 {
-  "name": "@remix-run/fetch-router",
-  "version": "0.10.0",
-  "description": "A minimal, composable router for the web Fetch API",
+  "name": "@remix-run/compression-middleware",
+  "version": "0.0.0",
+  "description": "Middleware for compressing HTTP responses",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/fetch-router"
+    "directory": "packages/compression-middleware"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/fetch-router#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/compression-middleware#readme",
   "files": [
     "LICENSE",
     "README.md",
-    "SPEC.md",
     "dist",
     "src",
     "!src/**/*.test.ts"
@@ -21,7 +20,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./response-helpers": "./src/response-helpers.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -30,25 +28,18 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./response-helpers": {
-        "types": "./dist/response-helpers.d.ts",
-        "default": "./dist/response-helpers.js"
-      },
       "./package.json": "./package.json"
     }
   },
   "devDependencies": {
-    "@remix-run/session": "workspace:*",
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/mime": "workspace:*",
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "@remix-run/headers": "workspace:^",
-    "@remix-run/html-template": "workspace:^",
-    "@remix-run/lazy-file": "workspace:^",
-    "@remix-run/mime": "workspace:^",
-    "@remix-run/route-pattern": "workspace:^",
-    "@remix-run/session": "workspace:^"
+    "@remix-run/fetch-router": "workspace:^",
+    "@remix-run/mime": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -60,11 +51,11 @@
   "keywords": [
     "fetch",
     "router",
-    "routing",
     "middleware",
-    "koa",
-    "url",
-    "pattern",
-    "match"
+    "compression",
+    "gzip",
+    "brotli",
+    "deflate"
   ]
 }
+

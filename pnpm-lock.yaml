@@ -32,6 +32,9 @@ importers:
       '@remix-run/async-context-middleware':
         specifier: workspace:*
         version: link:../../packages/async-context-middleware
+      '@remix-run/compression-middleware':
+        specifier: workspace:*
+        version: link:../../packages/compression-middleware
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../../packages/cookie
@@ -87,6 +90,9 @@ importers:
 
   demos/sse:
     dependencies:
+      '@remix-run/compression-middleware':
+        specifier: workspace:*
+        version: link:../../packages/compression-middleware
       '@remix-run/dom':
         specifier: jam
         version: 0.0.0-experimental-remix-jam.6
@@ -124,6 +130,21 @@ importers:
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../fetch-router
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/compression-middleware:
+    devDependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../fetch-router
+      '@remix-run/mime':
+        specifier: workspace:*
+        version: link:../mime
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0

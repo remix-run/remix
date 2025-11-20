@@ -1,5 +1,5 @@
 import { createRouter } from '@remix-run/fetch-router'
-import { compression } from '@remix-run/fetch-router/compression-middleware'
+import { compression } from '@remix-run/compression-middleware'
 import { logger } from '@remix-run/logger-middleware'
 import { staticFiles } from '@remix-run/static-middleware'
 

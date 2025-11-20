@@ -1,8 +1,7 @@
 import type { BrotliOptions, ZlibOptions } from 'node:zlib'
+import type { Middleware } from '@remix-run/fetch-router'
+import { compress, type CompressOptions } from '@remix-run/fetch-router/response-helpers'
 import { isCompressibleMimeType } from '@remix-run/mime'
-
-import type { Middleware } from '../middleware.ts'
-import { compress, type CompressOptions } from '../response-helpers/compress.ts'
 
 type Encoding = 'br' | 'gzip' | 'deflate'
 
