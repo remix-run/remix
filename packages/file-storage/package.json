@@ -42,6 +42,7 @@
     }
   },
   "peerDependencies": {
+    "@remix-run/fs": "workspace:^",
     "@remix-run/lazy-file": "workspace:^"
   },
   "devDependencies": {

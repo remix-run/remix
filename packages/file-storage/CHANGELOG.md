@@ -2,6 +2,10 @@
 
 This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Add `@remix-run/fs` as a peer dependency. This package now imports from `@remix-run/fs` instead of `@remix-run/lazy-file/fs`.
+
 ## v0.11.0 (2025-11-05)
 
 - Move `@remix-run/lazy-file` to `peerDependencies`
