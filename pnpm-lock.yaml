@@ -145,6 +145,34 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/fetch-router/demos/bun:
+    dependencies:
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../../../cookie
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../..
+      '@remix-run/form-data-middleware':
+        specifier: workspace:*
+        version: link:../../../form-data-middleware
+      '@remix-run/html-template':
+        specifier: workspace:*
+        version: link:../../../html-template
+      '@remix-run/logger-middleware':
+        specifier: workspace:*
+        version: link:../../../logger-middleware
+      '@remix-run/session':
+        specifier: workspace:*
+        version: link:../../../session
+      '@remix-run/session-middleware':
+        specifier: workspace:*
+        version: link:../../../session-middleware
+    devDependencies:
+      '@types/bun':
+        specifier: ^1.1.8
+        version: 1.1.8
+
   packages/fetch-router/demos/node:
     dependencies:
       '@remix-run/cookie':
