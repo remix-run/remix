@@ -2,6 +2,28 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- BREAKING CHANGE: `Router` is no longer exported as a class, use `createRouter()` instead.
+
+  ```tsx
+  // Before
+  import { Router } from '@remix-run/fetch-router'
+  let router = new Router()
+
+  // After
+  import { createRouter } from '@remix-run/fetch-router'
+  let router = createRouter()
+
+  // For type annotations, use the Router interface
+  import type { Router } from '@remix-run/fetch-router'
+  function setupRoutes(router: Router) {
+    // ...
+  }
+  ```
+
+  This change improves the ergonomics of the router by eliminating the need to bind methods when passing `router.fetch` as a callback, for example in `node-fetch-server`'s `createRequestListener(router.fetch)`.
+
 ## v0.10.0 (2025-11-19)
 
 - BREAKING CHANGE: All middleware has been extracted into separate npm packages for independent versioning and deployment. Update your imports:

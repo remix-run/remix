@@ -37,5 +37,5 @@ export {
 } from './lib/route-map.ts'
 export type { RouteMap, RouteDefs, RouteDef } from './lib/route-map.ts'
 
-export { createRouter, Router } from './lib/router.ts'
-export type { RouterOptions } from './lib/router.ts'
+export { createRouter } from './lib/router.ts'
+export type { Router, RouterOptions } from './lib/router.ts'
