@@ -2,7 +2,7 @@
 
 This is the changelog for [`static-middleware`](https://github.com/remix-run/remix/tree/main/packages/static-middleware). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.2.0 (2025-11-20)
 
 - Read the request method from `context.method` instead of `context.request.method`, so it's compatible with the [`method-override` middleware](https://github.com/remix-run/remix/tree/main/packages/method-override-middleware)
 - Add `@remix-run/fs` as a peer dependency. This package now imports from `@remix-run/fs` instead of `@remix-run/lazy-file/fs`.
