@@ -10,6 +10,26 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   pnpm add @remix-run/mime
   ```
 
+- BREAKING CHANGE: `Router` is no longer exported as a class, use `createRouter()` instead.
+
+  ```tsx
+  // Before
+  import { Router } from '@remix-run/fetch-router'
+  let router = new Router()
+
+  // After
+  import { createRouter } from '@remix-run/fetch-router'
+  let router = createRouter()
+
+  // For type annotations, use the Router interface
+  import type { Router } from '@remix-run/fetch-router'
+  function setupRoutes(router: Router) {
+    // ...
+  }
+  ```
+
+  This change improves the ergonomics of the router by eliminating the need to bind methods when passing `router.fetch` as a callback, for example in `node-fetch-server`'s `createRequestListener(router.fetch)`.
+
 - BREAKING CHANGE: The `file()` response helper now only enables HTTP Range requests by default for non-compressible MIME types. This allows text-based assets to be compressed while still supporting resumable downloads for media files.
 
   To restore the previous behavior where all files support range requests:

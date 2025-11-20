@@ -37,6 +37,107 @@ export interface RouterOptions {
   middleware?: Middleware[]
 }
 
+/**
+ * A router maps incoming requests to route handler functions and middleware.
+ */
+export interface Router {
+  /**
+   * Fetch a response from the router.
+   * @param input The request input to fetch
+   * @param init The request init options
+   * @returns The response from the route that matched the request
+   */
+  fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>
+  /**
+   * The number of routes in the router.
+   */
+  readonly size: number
+  /**
+   * Add a route to the router.
+   * @param method The request method to match
+   * @param pattern The pattern to match
+   * @param handler The request handler to invoke when the route matches
+   */
+  route<method extends RequestMethod | 'ANY', pattern extends string>(
+    method: method,
+    pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
+    handler: RouteHandler<method, pattern>,
+  ): void
+  /**
+   * Map a route map (or route/pattern) to request handler(s).
+   * @param route The routes or pattern to match
+   * @param handler The request handler(s) to invoke when the routes match
+   */
+  map<method extends RequestMethod | 'ANY', route extends string>(
+    route: route | RoutePattern<route> | Route<method, route>,
+    handler: RouteHandler<method, route>,
+  ): void
+  map<routeMap extends RouteMap>(routes: routeMap, handlers: RouteHandlers<routeMap>): void
+  /**
+   * Map a GET route/pattern to a request handler.
+   * @param route The route/pattern to match
+   * @param handler The request handler to invoke when the route matches
+   */
+  get<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
+    handler: RouteHandler<'GET', pattern>,
+  ): void
+  /**
+   * Map a HEAD route/pattern to a request handler.
+   * @param route The route/pattern to match
+   * @param handler The request handler to invoke when the route matches
+   */
+  head<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
+    handler: RouteHandler<'HEAD', pattern>,
+  ): void
+  /**
+   * Map a POST route/pattern to a request handler.
+   * @param route The route/pattern to match
+   * @param handler The request handler to invoke when the route matches
+   */
+  post<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
+    handler: RouteHandler<'POST', pattern>,
+  ): void
+  /**
+   * Map a PUT route/pattern to a request handler.
+   * @param route The route/pattern to match
+   * @param handler The request handler to invoke when the route matches
+   */
+  put<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
+    handler: RouteHandler<'PUT', pattern>,
+  ): void
+  /**
+   * Map a PATCH route/pattern to a request handler.
+   * @param route The route/pattern to match
+   * @param handler The request handler to invoke when the route matches
+   */
+  patch<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
+    handler: RouteHandler<'PATCH', pattern>,
+  ): void
+  /**
+   * Map a DELETE route/pattern to a request handler.
+   * @param route The route/pattern to match
+   * @param handler The request handler to invoke when the route matches
+   */
+  delete<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
+    handler: RouteHandler<'DELETE', pattern>,
+  ): void
+  /**
+   * Map a OPTIONS route/pattern to a request handler.
+   * @param route The route/pattern to match
+   * @param handler The request handler to invoke when the route matches
+   */
+  options<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
+    handler: RouteHandler<'OPTIONS', pattern>,
+  ): void
+}
+
 function noMatchHandler({ url }: RequestContext): Response {
   return new Response(`Not Found: ${url.pathname}`, { status: 404 })
 }
@@ -45,43 +146,12 @@ function noMatchHandler({ url }: RequestContext): Response {
  * Create a new router.
  */
 export function createRouter(options?: RouterOptions): Router {
-  return new Router(options)
-}
+  let defaultHandler = options?.defaultHandler ?? noMatchHandler
+  let matcher = options?.matcher ?? new RegExpMatcher<MatchData>()
+  let middleware = options?.middleware
 
-export class Router {
-  #defaultHandler: RequestHandler
-  #matcher: Matcher<MatchData>
-  #middleware: Middleware[] | undefined
-
-  constructor(options?: RouterOptions) {
-    this.#defaultHandler = options?.defaultHandler ?? noMatchHandler
-    this.#matcher = options?.matcher ?? new RegExpMatcher()
-    this.#middleware = options?.middleware
-  }
-
-  /**
-   * Fetch a response from the router.
-   * @param input The request input to fetch
-   * @param init The request init options
-   * @returns The response from the route that matched the request
-   */
-  async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-    let request = new Request(input, init)
-
-    if (request.signal.aborted) {
-      throw request.signal.reason
-    }
-
-    let context = new RequestContext(request)
-    let response = this.#middleware
-      ? await runMiddleware(this.#middleware, context, this.#dispatch.bind(this))
-      : await this.#dispatch(context)
-
-    return response
-  }
-
-  async #dispatch(context: RequestContext): Promise<Response> {
-    for (let match of this.#matcher.matchAll(context.url)) {
+  async function dispatch(context: RequestContext): Promise<Response> {
+    for (let match of matcher.matchAll(context.url)) {
       let { handler, method, middleware } = match.data
 
       if (method !== context.method && method !== 'ANY') {
@@ -99,60 +169,37 @@ export class Router {
       return raceRequestAbort(Promise.resolve(handler(context)), context.request)
     }
 
-    return raceRequestAbort(Promise.resolve(this.#defaultHandler(context)), context.request)
+    return raceRequestAbort(Promise.resolve(defaultHandler(context)), context.request)
   }
 
-  /**
-   * The number of routes in the router.
-   */
-  get size(): number {
-    return this.#matcher.size
-  }
-
-  /**
-   * Add a route to the router.
-   * @param method The request method to match
-   * @param pattern The pattern to match
-   * @param handler The request handler to invoke when the route matches
-   */
-  route<method extends RequestMethod | 'ANY', pattern extends string>(
+  function addRoute<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
     handler: RouteHandler<method, pattern>,
   ): void {
-    let middleware: Middleware<any, any>[] | undefined
+    let routeMiddleware: Middleware<any, any>[] | undefined
     let requestHandler: RequestHandler<any, any>
     if (isRequestHandlerWithMiddleware(handler)) {
-      middleware = handler.middleware
+      routeMiddleware = handler.middleware
       requestHandler = handler.handler
     } else {
       requestHandler = handler
     }
 
-    this.#matcher.add(pattern instanceof Route ? pattern.pattern : pattern, {
+    matcher.add(pattern instanceof Route ? pattern.pattern : pattern, {
       handler: requestHandler,
       method,
-      middleware,
+      middleware: routeMiddleware,
     })
   }
 
-  /**
-   * Map a route map (or route/pattern) to request handlers.
-   * @param route The routes or pattern to match
-   * @param handler The request handler(s) to invoke when the routes match
-   */
-  map<method extends RequestMethod | 'ANY', route extends string>(
-    route: route | RoutePattern<route> | Route<method, route>,
-    handler: RouteHandler<method, route>,
-  ): void
-  map<routeMap extends RouteMap>(routes: routeMap, handlers: RouteHandlers<routeMap>): void
-  map(routeOrRoutes: any, handler: any): void {
+  function mapRoute(routeOrRoutes: any, handler: any): void {
     if (typeof routeOrRoutes === 'string' || routeOrRoutes instanceof RoutePattern) {
       // map(pattern, handler)
-      this.route('ANY', routeOrRoutes, handler)
+      addRoute('ANY', routeOrRoutes, handler)
     } else if (routeOrRoutes instanceof Route) {
       // map(route, handler)
-      this.route(routeOrRoutes.method, routeOrRoutes.pattern, handler)
+      addRoute(routeOrRoutes.method, routeOrRoutes.pattern, handler)
     } else if (!isRouteHandlersWithMiddleware(handler)) {
       // map(routes, handlers)
       let handlers = handler
@@ -161,14 +208,14 @@ export class Router {
         let handler = handlers[key]
 
         if (route instanceof Route) {
-          this.route(route.method, route.pattern, handler)
+          addRoute(route.method, route.pattern, handler)
         } else {
-          this.map(route, handler)
+          mapRoute(route, handler)
         }
       }
     } else {
       // map(routes, { middleware, handlers })
-      let middleware = handler.middleware
+      let mapMiddleware = handler.middleware
       let handlers = handler.handlers
       for (let key in routeOrRoutes) {
         let route = routeOrRoutes[key]
@@ -176,108 +223,86 @@ export class Router {
 
         if (route instanceof Route) {
           if (isRequestHandlerWithMiddleware(handler)) {
-            this.route(route.method, route.pattern, {
-              middleware: middleware.concat(handler.middleware),
+            addRoute(route.method, route.pattern, {
+              middleware: mapMiddleware.concat(handler.middleware),
               handler: handler.handler,
             })
           } else {
-            this.route(route.method, route.pattern, { middleware, handler })
+            addRoute(route.method, route.pattern, { middleware: mapMiddleware, handler })
           }
         } else if (isRouteHandlersWithMiddleware(handler)) {
-          this.map(route, {
-            middleware: middleware.concat(handler.middleware),
+          mapRoute(route, {
+            middleware: mapMiddleware.concat(handler.middleware),
             handlers: handler.handlers,
           })
         } else {
-          this.map(route, { middleware, handlers: handler })
+          mapRoute(route, { middleware: mapMiddleware, handlers: handler })
         }
       }
     }
   }
 
-  // HTTP-method specific shorthand
+  return {
+    async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+      let request = new Request(input, init)
 
-  /**
-   * Map a GET route/pattern to a request handler.
-   * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
-   */
-  get<pattern extends string>(
-    route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
-    handler: RouteHandler<'GET', pattern>,
-  ): void {
-    this.route('GET', route, handler)
-  }
+      if (request.signal.aborted) {
+        throw request.signal.reason
+      }
 
-  /**
-   * Map a HEAD route/pattern to a request handler.
-   * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
-   */
-  head<pattern extends string>(
-    route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
-    handler: RouteHandler<'HEAD', pattern>,
-  ): void {
-    this.route('HEAD', route, handler)
-  }
+      let context = new RequestContext(request)
+      let response = middleware
+        ? await runMiddleware(middleware, context, dispatch)
+        : await dispatch(context)
 
-  /**
-   * Map a POST route/pattern to a request handler.
-   * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
-   */
-  post<pattern extends string>(
-    route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
-    handler: RouteHandler<'POST', pattern>,
-  ): void {
-    this.route('POST', route, handler)
-  }
-
-  /**
-   * Map a PUT route/pattern to a request handler.
-   * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
-   */
-  put<pattern extends string>(
-    route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
-    handler: RouteHandler<'PUT', pattern>,
-  ): void {
-    this.route('PUT', route, handler)
-  }
-
-  /**
-   * Map a PATCH route/pattern to a request handler.
-   * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
-   */
-  patch<pattern extends string>(
-    route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
-    handler: RouteHandler<'PATCH', pattern>,
-  ): void {
-    this.route('PATCH', route, handler)
-  }
-
-  /**
-   * Map a DELETE route/pattern to a request handler.
-   * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
-   */
-  delete<pattern extends string>(
-    route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
-    handler: RouteHandler<'DELETE', pattern>,
-  ): void {
-    this.route('DELETE', route, handler)
-  }
-
-  /**
-   * Map a OPTIONS route/pattern to a request handler.
-   * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
-   */
-  options<pattern extends string>(
-    route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
-    handler: RouteHandler<'OPTIONS', pattern>,
-  ): void {
-    this.route('OPTIONS', route, handler)
+      return response
+    },
+    get size(): number {
+      return matcher.size
+    },
+    route: addRoute,
+    map: mapRoute,
+    get<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
+      handler: RouteHandler<'GET', pattern>,
+    ): void {
+      addRoute('GET', route, handler)
+    },
+    head<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
+      handler: RouteHandler<'HEAD', pattern>,
+    ): void {
+      addRoute('HEAD', route, handler)
+    },
+    post<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
+      handler: RouteHandler<'POST', pattern>,
+    ): void {
+      addRoute('POST', route, handler)
+    },
+    put<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
+      handler: RouteHandler<'PUT', pattern>,
+    ): void {
+      addRoute('PUT', route, handler)
+    },
+    patch<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
+      handler: RouteHandler<'PATCH', pattern>,
+    ): void {
+      addRoute('PATCH', route, handler)
+    },
+    delete<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
+      handler: RouteHandler<'DELETE', pattern>,
+    ): void {
+      addRoute('DELETE', route, handler)
+    },
+    options<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
+      handler: RouteHandler<'OPTIONS', pattern>,
+    ): void {
+      addRoute('OPTIONS', route, handler)
+    },
   }
 }
