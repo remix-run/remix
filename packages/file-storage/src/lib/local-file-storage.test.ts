@@ -1,22 +1,25 @@
 import * as assert from 'node:assert/strict'
-import { afterEach, describe, it } from 'node:test'
+import { afterEach, beforeEach, describe, it } from 'node:test'
 import * as fs from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import { parseFormData } from '@remix-run/form-data-parser'
 
 import { LocalFileStorage } from './local-file-storage.ts'
 
-const __dirname = new URL('.', import.meta.url).pathname
-
 describe('LocalFileStorage', () => {
-  let directory = path.resolve(__dirname, '../../test-local-file-storage')
+  let tmpDir: string
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'local-file-storage-test-'))
+  })
 
   afterEach(() => {
-    fs.rmSync(directory, { recursive: true })
+    fs.rmSync(tmpDir, { recursive: true, force: true })
   })
 
   it('stores and retrieves files', async () => {
-    let storage = new LocalFileStorage(directory)
+    let storage = new LocalFileStorage(tmpDir)
     let lastModified = Date.now()
     let file = new File(['Hello, world!'], 'hello.txt', {
       type: 'text/plain',
@@ -46,15 +49,15 @@ describe('LocalFileStorage', () => {
   })
 
   it('removes empty hash directories after removing files', async () => {
-    let storage = new LocalFileStorage(directory)
+    let storage = new LocalFileStorage(tmpDir)
     let file = new File(['Test content'], 'test.txt', { type: 'text/plain' })
 
     // Set a file
     await storage.set('test-key', file)
 
     // Verify subdirectories exist
-    let subdirs = fs.readdirSync(directory).filter((name) => {
-      return fs.statSync(path.join(directory, name)).isDirectory()
+    let subdirs = fs.readdirSync(tmpDir).filter((name) => {
+      return fs.statSync(path.join(tmpDir, name)).isDirectory()
     })
     assert.ok(subdirs.length > 0)
 
@@ -62,14 +65,14 @@ describe('LocalFileStorage', () => {
     await storage.remove('test-key')
 
     // Verify no subdirectories remain
-    let subdirsAfter = fs.readdirSync(directory).filter((name) => {
-      return fs.statSync(path.join(directory, name)).isDirectory()
+    let subdirsAfter = fs.readdirSync(tmpDir).filter((name) => {
+      return fs.statSync(path.join(tmpDir, name)).isDirectory()
     })
     assert.equal(subdirsAfter.length, 0)
   })
 
   it('lists files with pagination', async () => {
-    let storage = new LocalFileStorage(directory)
+    let storage = new LocalFileStorage(tmpDir)
     let allKeys = ['a', 'b', 'c', 'd', 'e']
 
     await Promise.all(
@@ -99,7 +102,7 @@ describe('LocalFileStorage', () => {
   })
 
   it('lists files by key prefix', async () => {
-    let storage = new LocalFileStorage(directory)
+    let storage = new LocalFileStorage(tmpDir)
     let allKeys = ['a', 'b', 'b/c', 'c', 'd']
 
     await Promise.all(
@@ -115,7 +118,7 @@ describe('LocalFileStorage', () => {
   })
 
   it('lists files with metadata', async () => {
-    let storage = new LocalFileStorage(directory)
+    let storage = new LocalFileStorage(tmpDir)
     let allKeys = ['a', 'b', 'c', 'd', 'e']
 
     await Promise.all(
@@ -135,7 +138,7 @@ describe('LocalFileStorage', () => {
   })
 
   it('handles race conditions', async () => {
-    let storage = new LocalFileStorage(directory)
+    let storage = new LocalFileStorage(tmpDir)
     let lastModified = Date.now()
 
     let file1 = new File(['Hello, world!'], 'hello1.txt', {
@@ -163,7 +166,7 @@ describe('LocalFileStorage', () => {
 
   describe('integration with form-data-parser', () => {
     it('stores and lists file uploads', async () => {
-      let storage = new LocalFileStorage(directory)
+      let storage = new LocalFileStorage(tmpDir)
 
       let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
       let request = new Request('http://example.com', {
