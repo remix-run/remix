@@ -4,11 +4,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
-- BREAKING CHANGE: Add `@remix-run/mime` as a peer dependency. This package provides utilities for detecting MIME types and checking if they're compressible, which are used by the `file()` response helper.
-
-  ```bash
-  pnpm add @remix-run/mime
-  ```
+- BREAKING CHANGE: Add `@remix-run/mime` as a peer dependency. This package is used by the `file()` response helper to determine if HTTP Range requests should be supported by default for a given MIME type.
 
 - BREAKING CHANGE: `Router` is no longer exported as a class, use `createRouter()` instead.
 
@@ -30,7 +26,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
   This change improves the ergonomics of the router by eliminating the need to bind methods when passing `router.fetch` as a callback, for example in `node-fetch-server`'s `createRequestListener(router.fetch)`.
 
-- BREAKING CHANGE: The `file()` response helper now only enables HTTP Range requests by default for non-compressible MIME types. This allows text-based assets to be compressed while still supporting resumable downloads for media files.
+- The `file()` response helper now only enables HTTP Range requests by default for non-compressible MIME types. This allows text-based assets to be compressed while still supporting resumable downloads for media files.
 
   To restore the previous behavior where all files support range requests:
 
