@@ -1,14 +1,14 @@
 {
-  "name": "@remix-run/file-storage",
-  "version": "0.11.0",
-  "description": "Key/value storage for JavaScript File objects",
+  "name": "@remix-run/fs",
+  "version": "0.1.0",
+  "description": "Filesystem utilities using the Web File API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/file-storage"
+    "directory": "packages/fs"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/file-storage#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/fs#readme",
   "license": "MIT",
   "files": [
     "LICENSE",
@@ -20,8 +20,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./local": "./src/local.ts",
-    "./memory": "./src/memory.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -30,23 +28,14 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./local": {
-        "types": "./dist/local.d.ts",
-        "default": "./dist/local.js"
-      },
-      "./memory": {
-        "types": "./dist/memory.d.ts",
-        "default": "./dist/memory.js"
-      },
       "./package.json": "./package.json"
     }
   },
-  "peerDependencies": {
-    "@remix-run/fs": "workspace:^",
-    "@remix-run/lazy-file": "workspace:^"
+  "dependencies": {
+    "@remix-run/lazy-file": "workspace:^",
+    "@remix-run/mime": "workspace:^"
   },
   "devDependencies": {
-    "@remix-run/form-data-parser": "workspace:^",
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3"
   },
@@ -59,8 +48,7 @@
   },
   "keywords": [
     "file",
-    "storage",
-    "stream",
+    "filesystem",
     "fs"
   ]
 }

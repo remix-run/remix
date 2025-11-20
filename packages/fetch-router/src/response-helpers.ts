@@ -1,6 +1,6 @@
 export { compress, type CompressOptions } from './lib/response-helpers/compress.ts'
 export {
-  file,
+  sendFile as file,
   type FileDigestFunction,
   type FileResponseOptions,
 } from './lib/response-helpers/file.ts'

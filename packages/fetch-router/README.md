@@ -668,13 +668,6 @@ See the [`@remix-run/html-template` documentation](https://github.com/remix-run/
 
 ### Working with Files
 
-The router provides a couple of tools for serving files:
-
-- **`file()` response helper** - The primitive for returning file responses with full HTTP semantics
-- **`staticFiles()` middleware** - Convenience middleware for serving files from a directory
-
-#### The `file()` Response Helper
-
 The `file()` response helper returns a `Response` for a file with full HTTP semantics, including:
 
 - **Content-Type** and **Content-Length** headers
@@ -687,7 +680,7 @@ The `file()` response helper returns a `Response` for a file with full HTTP sema
 
 ```ts
 import * as res from '@remix-run/fetch-router/response-helpers'
-import { openFile } from '@remix-run/lazy-file/fs'
+import { openFile } from '@remix-run/fs'
 
 router.get('/assets/:filename', async (context) => {
   let file = await openFile(`./assets/${context.params.filename}`)
@@ -773,106 +766,7 @@ return res.file(file, request, {
 
 **Note:** Range requests and compression are mutually exclusive. When `Accept-Ranges: bytes` is present in the response headers, the compression middleware will not compress the response. This is why the default behavior enables ranges only for non-compressible types.
 
-#### Using `findFile()` with `file()`
-
-When you need to map a route pattern to a directory of files on disk, you can use the `findFile()` function from `@remix-run/lazy-file/fs` to resolve files before sending them with the `file()` response helper:
-
-```ts
-import * as res from '@remix-run/fetch-router/response-helpers'
-import { findFile } from '@remix-run/lazy-file/fs'
-
-router.get('/assets/*path', async ({ request, params }) => {
-  let file = await findFile('./public/assets', params.path)
-
-  if (!file) {
-    return new Response('Not Found', { status: 404 })
-  }
-
-  return res.file(file, request, {
-    cacheControl: 'public, max-age=3600',
-  })
-})
-```
-
-#### The `staticFiles()` Middleware
-
-For convenience, the `staticFiles()` middleware combines `findFile()` and `file()` into a single middleware, resolving files based on the request pathname:
-
-```ts
-import { createRouter } from '@remix-run/fetch-router'
-import { staticFiles } from '@remix-run/fetch-router/static-middleware'
-
-let router = createRouter({
-  middleware: [staticFiles('./public')],
-})
-```
-
-The middleware accepts the same options as the `file()` response helper:
-
-```ts
-let router = createRouter({
-  middleware: [
-    staticFiles('./public', {
-      cacheControl: 'public, max-age=3600',
-      etag: 'strong',
-    }),
-  ],
-})
-```
-
-You can provide a `filter` function to determine which files to serve:
-
-```ts
-staticFiles('./images', {
-  filter: (path) => /\.(png|jpg|gif|svg)$/i.test(path),
-})
-```
-
-Since the `staticFiles()` middleware handles multiple files generically, the `acceptRanges` option can also accept a function that receives the file:
-
-```ts
-import { staticFiles } from '@remix-run/fetch-router/static-middleware'
-import { isCompressibleMimeType } from '@remix-run/mime'
-
-// Enable ranges only for large files
-let router = createRouter({
-  middleware: [
-    staticFiles('./public', {
-      acceptRanges: (file) => file.size > 10 * 1024 * 1024,
-    }),
-  ],
-})
-
-// Or enable ranges only for videos
-let router = createRouter({
-  middleware: [
-    staticFiles('./public', {
-      acceptRanges: (file) => file.type.startsWith('video/'),
-    }),
-  ],
-})
-
-// Or use custom logic combining file size and MIME type
-let router = createRouter({
-  middleware: [
-    staticFiles('./public', {
-      acceptRanges: (file) => {
-        let mediaType = file.type.split(';')[0].trim()
-        return !isCompressibleMimeType(mediaType) || file.size > 10 * 1024 * 1024
-      },
-    }),
-  ],
-})
-```
-
 ### Compressing Responses
-
-The router provides a couple of tools for serving files:
-
-- **`compress()` response helper** - The primitive for compressing `Response` objects based on the client's `Accept-Encoding` header
-- **`compression()` middleware** - Convenience middleware for automatically compressing responses across multiple routes
-
-#### The `compress()` Response Helper
 
 The `compress()` helper compresses a `Response` based on the client's `Accept-Encoding` header:
 
@@ -912,63 +806,6 @@ res.compress(response, context.request, {
   },
 })
 ```
-
-#### The `compression()` Middleware
-
-For automatic compression across multiple routes, use the `compression()` middleware:
-
-```ts
-import { compression } from '@remix-run/fetch-router/compression-middleware'
-
-let router = createRouter({
-  middleware: [compression()],
-})
-```
-
-The middleware is a thin wrapper around the `compress()` response helper that accepts the same options.
-
-Since this middleware is designed to handle multiple response types at once, the `encodings`, `zlib` and `brotli` options can also be functions that have access to the response before providing a value. For example, to use different encodings for different media types:
-
-```ts
-import { compression } from '@remix-run/fetch-router/compression-middleware'
-
-let router = createRouter({
-  middleware: [
-    compression({
-      encodings: (response) => {
-        return response.headers.get('Content-Type')?.split(';')[0].trim() === 'text/event-stream'
-          ? ['gzip', 'deflate']
-          : ['br', 'gzip', 'deflate']
-      },
-    }),
-  ],
-})
-```
-
-The middleware also applies an additional **Content-Type filter** to only apply compression to appropriate media types (MIME types). By default, this uses the `isCompressibleMimeType(mimeType)` helper to check if the MIME type is compressible. You can customize this behavior with the `filterMediaType` option, re-using the built-in filter if needed.
-
-```ts
-import { compression } from '@remix-run/fetch-router/compression-middleware'
-import { isCompressibleMimeType } from '@remix-run/mime'
-
-let router = createRouter({
-  middleware: [
-    compression({
-      filterMediaType(mediaType) {
-        return isCompressibleMimeType(mediaType) || mediaType === 'application/vnd.example+data'
-      },
-    }),
-  ],
-})
-```
-
-The `isCompressibleMimeType` helper determines whether a MIME type should be compressed. It returns `true` for:
-
-- Known compressible types from the [mime-db](https://www.npmjs.com/package/mime-db) database (e.g., `application/json`, `text/html`, `text/css`), except those starting with `x-` (experimental) or `vnd.` (vendor-specific).
-- All `text/*` types (e.g., `text/plain`, `text/markdown`)
-- Types with structured data suffixes: `+json`, `+text`, or `+xml` (e.g., `application/vnd.api+json`, `image/svg+xml`)
-
-This helper is primarily intended for use in custom `filterMediaType` functions for the `compression()` middleware.
 
 ### Testing
 

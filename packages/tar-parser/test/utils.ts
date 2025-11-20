@@ -1,5 +1,5 @@
 import * as path from 'node:path'
-import { openFile } from '@remix-run/lazy-file/fs'
+import { openFile } from '@remix-run/fs'
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname)
 const fixturesDir = path.resolve(__dirname, 'fixtures')

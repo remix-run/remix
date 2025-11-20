@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { openFile, writeFile } from '@remix-run/lazy-file/fs'
+import { openFile, writeFile } from '@remix-run/fs'
 
 import type { FileStorage, FileMetadata, ListOptions, ListResult } from './file-storage.ts'
 

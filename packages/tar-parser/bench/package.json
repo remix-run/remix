@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@remix-run/lazy-file": "workspace:^",
+    "@remix-run/fs": "workspace:^",
     "@remix-run/tar-parser": "workspace:^",
     "gunzip-maybe": "^1.4.2",
     "tar": "^7.4.3",

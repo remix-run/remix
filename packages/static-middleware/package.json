@@ -34,6 +34,7 @@
   "devDependencies": {
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/form-data-middleware": "workspace:*",
+    "@remix-run/fs": "workspace:*",
     "@remix-run/lazy-file": "workspace:*",
     "@remix-run/method-override-middleware": "workspace:*",
     "@types/node": "^24.6.0",
@@ -41,6 +42,7 @@
   },
   "peerDependencies": {
     "@remix-run/fetch-router": "workspace:^",
+    "@remix-run/fs": "workspace:^",
     "@remix-run/lazy-file": "workspace:^"
   },
   "scripts": {

@@ -1,8 +1,7 @@
 import * as fs from 'node:fs'
-import * as path from 'node:path'
 import { detectMimeType } from '@remix-run/mime'
 
-import { type LazyContent, LazyFile } from './lib/lazy-file.ts'
+import { type LazyContent, LazyFile } from '@remix-run/lazy-file'
 
 export interface OpenFileOptions {
   /**
@@ -56,11 +55,11 @@ function streamFile(
   start = 0,
   end = Infinity,
 ): ReadableStream<Uint8Array<ArrayBuffer>> {
-  let read = fs.createReadStream(filename, { start, end: end - 1 }).iterator()
+  let readStream = fs.createReadStream(filename, { start, end: end - 1 }).iterator()
 
   return new ReadableStream({
     async pull(controller) {
-      let { done, value } = await read.next()
+      let { done, value } = await readStream.next()
 
       if (done) {
         controller.close()
@@ -69,73 +68,6 @@ function streamFile(
       }
     },
   })
-}
-
-export interface FindFileOptions {
-  /**
-   * Overrides the name of the file. Default is the relativePath argument.
-   */
-  name?: string
-}
-
-/**
- * Finds a file on the filesystem within the given root directory.
- *
- * Returns `null` if the file doesn't exist, is not a file, or is outside the
- * specified root directory.
- *
- * The returned file's `name` property will be set to the `relativePath` argument,
- * unless overridden via `options.name`.
- *
- * @param root - The root directory to serve files from (absolute or relative to cwd)
- * @param relativePath - The relative path from the root to the file
- * @param options - Options to override the file's metadata
- * @returns A `File` object, or null if not found
- *
- * @example
- * let file = await findFile('./public', 'assets/logo.png')
- * if (file) {
- *   console.log(file.name) // "assets/logo.png"
- * }
- *
- * @example
- * // Override the file name
- * let file = await findFile('./public', 'assets/logo.png', { name: 'custom.png' })
- * if (file) {
- *   console.log(file.name) // "custom.png"
- * }
- */
-export async function findFile(
-  root: string,
-  relativePath: string,
-  options?: FindFileOptions,
-): Promise<File | null> {
-  // Ensure root is an absolute path
-  root = path.resolve(root)
-
-  let filePath = path.join(root, relativePath)
-
-  // Security check: ensure the resolved path is within the root directory
-  if (!filePath.startsWith(root + path.sep) && filePath !== root) {
-    return null
-  }
-
-  try {
-    return openFile(filePath, { name: options?.name ?? relativePath })
-  } catch (error) {
-    if (isNoEntityError(error) || isNotAFileError(error)) {
-      return null
-    }
-    throw error
-  }
-}
-
-function isNoEntityError(error: unknown): error is NodeJS.ErrnoException & { code: 'ENOENT' } {
-  return error instanceof Error && 'code' in error && error.code === 'ENOENT'
-}
-
-function isNotAFileError(error: unknown): boolean {
-  return error instanceof Error && error.message.includes('is not a file')
 }
 
 // Preserve backwards compat with v3.0

@@ -236,6 +236,9 @@ importers:
 
   packages/file-storage:
     dependencies:
+      '@remix-run/fs':
+        specifier: workspace:^
+        version: link:../fs
       '@remix-run/lazy-file':
         specifier: workspace:^
         version: link:../lazy-file
@@ -292,6 +295,22 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:../../../node-fetch-server
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/fs:
+    dependencies:
+      '@remix-run/lazy-file':
+        specifier: workspace:^
+        version: link:../lazy-file
+      '@remix-run/mime':
+        specifier: workspace:^
+        version: link:../mime
     devDependencies:
       '@types/node':
         specifier: ^24.6.0
@@ -364,12 +383,6 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
-
-  packages/lazy-file/scripts:
-    dependencies:
-      esbuild:
-        specifier: ^0.25.12
-        version: 0.25.12
 
   packages/logger-middleware:
     devDependencies:
@@ -605,6 +618,9 @@ importers:
       '@remix-run/form-data-middleware':
         specifier: workspace:*
         version: link:../form-data-middleware
+      '@remix-run/fs':
+        specifier: workspace:*
+        version: link:../fs
       '@remix-run/lazy-file':
         specifier: workspace:*
         version: link:../lazy-file
@@ -620,9 +636,9 @@ importers:
 
   packages/tar-parser:
     devDependencies:
-      '@remix-run/lazy-file':
+      '@remix-run/fs':
         specifier: workspace:^
-        version: link:../lazy-file
+        version: link:../fs
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
@@ -632,9 +648,9 @@ importers:
 
   packages/tar-parser/bench:
     dependencies:
-      '@remix-run/lazy-file':
+      '@remix-run/fs':
         specifier: workspace:^
-        version: link:../../lazy-file
+        version: link:../../fs
       '@remix-run/tar-parser':
         specifier: workspace:^
         version: link:..
