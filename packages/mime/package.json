@@ -47,8 +47,8 @@
   "keywords": [
     "mime",
     "mime-type",
+    "media-type",
     "content-type",
-    "compressible",
-    "compression"
+    "compressible"
   ]
 }

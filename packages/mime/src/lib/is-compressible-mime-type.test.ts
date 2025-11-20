@@ -33,5 +33,21 @@ describe('isCompressibleMimeType()', () => {
   it('returns false for empty string', () => {
     assert.equal(isCompressibleMimeType(''), false)
   })
-})
 
+  it('handles Content-Type header values', () => {
+    assert.equal(isCompressibleMimeType('text/html; charset=utf-8'), true)
+    assert.equal(isCompressibleMimeType('application/json; charset=utf-8'), true)
+    assert.equal(isCompressibleMimeType('text/plain; charset=iso-8859-1'), true)
+    assert.equal(
+      isCompressibleMimeType('multipart/form-data; boundary=----WebKitFormBoundary'),
+      false,
+    )
+    assert.equal(isCompressibleMimeType('image/png; name="photo.png"'), false)
+  })
+
+  it('handles Content-Type with whitespace around semicolon', () => {
+    assert.equal(isCompressibleMimeType('text/html ; charset=utf-8'), true)
+    assert.equal(isCompressibleMimeType(' text/html;charset=utf-8'), true)
+    assert.equal(isCompressibleMimeType('  application/json  ;  charset=utf-8'), true)
+  })
+})

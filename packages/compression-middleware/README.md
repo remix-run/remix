@@ -77,8 +77,10 @@ let router = createRouter({
     compression({
       encodings: (response) => {
         // Use different encodings for server-sent events
-        let mediaType = response.headers.get('Content-Type')?.split(';')[0].trim()
-        return mediaType === 'text/event-stream' ? ['gzip', 'deflate'] : ['br', 'gzip', 'deflate']
+        let contentType = response.headers.get('Content-Type')
+        return contentType?.startsWith('text/event-stream;')
+          ? ['gzip', 'deflate']
+          : ['br', 'gzip', 'deflate']
       },
     }),
   ],
@@ -146,10 +148,10 @@ let router = createRouter({
   middleware: [
     compression({
       brotli: (response) => {
-        let mediaType = response.headers.get('Content-Type')?.split(';')[0].trim()
+        let contentType = response.headers.get('Content-Type')
         return {
           params: {
-            [zlib.constants.BROTLI_PARAM_QUALITY]: mediaType === 'text/html' ? 4 : 11,
+            [zlib.constants.BROTLI_PARAM_QUALITY]: contentType?.startsWith('text/html;') ? 4 : 11,
           },
         }
       },

@@ -39,6 +39,17 @@ isCompressibleMimeType('image/png') // false
 isCompressibleMimeType('video/mp4') // false
 ```
 
+Fpr convenience, the function also accepts a full Content-Type header value:
+
+```ts
+import { isCompressibleMimeType } from '@remix-run/mime'
+
+isCompressibleMimeType('text/html; charset=utf-8') // true
+isCompressibleMimeType('application/json; charset=utf-8') // true
+isCompressibleMimeType('image/png; charset=utf-8') // false
+isCompressibleMimeType('video/mp4; charset=utf-8') // false
+```
+
 ## License
 
 MIT

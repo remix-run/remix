@@ -106,7 +106,6 @@ export async function sendFile(
 
   let contentType = file.type
   let contentLength = file.size
-  let mediaType = contentType.split(';')[0].trim()
 
   let etag: string | undefined
   if (etagStrategy === 'weak') {
@@ -124,7 +123,7 @@ export async function sendFile(
   // Determine if we should accept ranges
   // Default: enable ranges only for non-compressible MIME types
   let acceptRangesEnabled =
-    acceptRangesOption !== undefined ? acceptRangesOption : !isCompressibleMimeType(mediaType)
+    acceptRangesOption !== undefined ? acceptRangesOption : !isCompressibleMimeType(contentType)
 
   let acceptRanges: 'bytes' | undefined
   if (acceptRangesEnabled) {
