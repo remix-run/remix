@@ -1,12 +1,13 @@
-import { findFile } from '@remix-run/lazy-file/fs'
-
+import * as path from 'node:path'
+import * as fsp from 'node:fs/promises'
+import { openFile } from '@remix-run/fs'
+import type { Middleware } from '@remix-run/fetch-router'
 import {
   file as sendFile,
   type FileResponseOptions,
 } from '@remix-run/fetch-router/response-helpers'
-import type { Middleware } from '@remix-run/fetch-router'
 
-export type StaticFilesOptions = FileResponseOptions & {
+export interface StaticFilesOptions extends FileResponseOptions {
   /**
    * Filter function to determine which files should be served.
    *
@@ -14,6 +15,14 @@ export type StaticFilesOptions = FileResponseOptions & {
    * @returns Whether to serve the file
    */
   filter?: (path: string) => boolean
+  /**
+   * Files to try and serve as the index file when the request path targets a directory.
+   *
+   * - `true` (default): Use default index files `['index.html', 'index.htm']`
+   * - `false`: Disable index file serving
+   * - `string[]`: Custom list of index files to try in order
+   */
+  index?: boolean | string[]
 }
 
 /**
@@ -42,7 +51,20 @@ export type StaticFilesOptions = FileResponseOptions & {
  * })
  */
 export function staticFiles(root: string, options: StaticFilesOptions = {}): Middleware {
-  let { filter, ...fileOptions } = options
+  // Ensure root is an absolute path
+  root = path.resolve(root)
+
+  let { filter, index: indexOption, ...fileOptions } = options
+
+  // Normalize index option
+  let index: string[]
+  if (indexOption === false) {
+    index = []
+  } else if (indexOption === true || indexOption === undefined) {
+    index = ['index.html', 'index.htm']
+  } else {
+    index = indexOption
+  }
 
   return async (context, next) => {
     if (context.method !== 'GET' && context.method !== 'HEAD') {
@@ -55,9 +77,36 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
       return next()
     }
 
-    let file = await findFile(root, relativePath)
+    let targetPath = path.join(root, relativePath)
+    let filePath: string | undefined
 
-    if (file) {
+    try {
+      let stats = await fsp.stat(targetPath)
+
+      if (stats.isFile()) {
+        filePath = targetPath
+      } else if (stats.isDirectory()) {
+        // Try each index file in turn
+        for (let indexFile of index) {
+          let indexPath = path.join(targetPath, indexFile)
+          try {
+            let indexStats = await fsp.stat(indexPath)
+            if (indexStats.isFile()) {
+              filePath = indexPath
+              break
+            }
+          } catch {
+            // Index file doesn't exist, continue to next
+          }
+        }
+      }
+    } catch {
+      // Path doesn't exist or isn't accessible, fall through
+    }
+
+    if (filePath) {
+      let fileName = path.relative(root, filePath)
+      let file = openFile(filePath, { name: fileName })
       return sendFile(file, context.request, fileOptions)
     }
   }

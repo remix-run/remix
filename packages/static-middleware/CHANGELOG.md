@@ -5,6 +5,22 @@ This is the changelog for [`static-middleware`](https://github.com/remix-run/rem
 ## Unreleased
 
 - Read the request method from `context.method` instead of `context.request.method`, so it's compatible with the [`method-override` middleware](https://github.com/remix-run/remix/tree/main/packages/method-override-middleware)
+- Add `@remix-run/fs` as a peer dependency. This package now imports from `@remix-run/fs` instead of `@remix-run/lazy-file/fs`.
+- Add `index` option to configure which files to serve when a directory is requested. When a request targets a directory, the middleware will try each index file in order until one is found. Defaults to `['index.html', 'index.htm']`. Supports boolean shortcuts: `true` for defaults, `false` to disable.
+
+  ```ts
+  // Serve index.html from directories by default
+  staticFiles('./public')
+
+  // Custom index files
+  staticFiles('./public', {
+    index: ['default.html', 'home.html'],
+  })
+
+  // Disable index file serving
+  staticFiles('./public', { index: false })
+  staticFiles('./public', { index: [] })
+  ```
 
 ## v0.1.0 (2025-11-19)
 

@@ -398,6 +398,191 @@ describe('staticFiles middleware', () => {
     })
   })
 
+  describe('index option', () => {
+    it('serves default index.html when requesting a directory', async () => {
+      createTestFile('subdir/index.html', '<h1>Index Page</h1>')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir)],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/subdir/')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '<h1>Index Page</h1>')
+      assert.equal(response.headers.get('Content-Type'), 'text/html')
+    })
+
+    it('serves default index.html when requesting a directory without trailing slash', async () => {
+      createTestFile('subdir/index.html', '<h1>Index Page</h1>')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir)],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/subdir')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '<h1>Index Page</h1>')
+      assert.equal(response.headers.get('Content-Type'), 'text/html')
+    })
+
+    it('serves default index.htm when index.html does not exist', async () => {
+      createTestFile('subdir/index.htm', '<h1>HTM Index Page</h1>')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir)],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/subdir/')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '<h1>HTM Index Page</h1>')
+      assert.equal(response.headers.get('Content-Type'), 'text/html')
+    })
+
+    it('prefers index.html over index.htm when both exist', async () => {
+      createTestFile('subdir/index.html', '<h1>HTML Index</h1>')
+      createTestFile('subdir/index.htm', '<h1>HTM Index</h1>')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir)],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/subdir/')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '<h1>HTML Index</h1>')
+    })
+
+    it('falls through when directory has no index file', async () => {
+      let dirPath = path.join(tmpDir, 'subdir')
+      fs.mkdirSync(dirPath)
+      createTestFile('subdir/other.txt', 'Not an index file')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir)],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/subdir/')
+      assert.equal(response.status, 404)
+      assert.equal(await response.text(), 'Fallback Handler')
+    })
+
+    it('serves custom index file when specified', async () => {
+      createTestFile('subdir/default.html', '<h1>Custom Default Page</h1>')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { index: ['default.html'] })],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/subdir/')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '<h1>Custom Default Page</h1>')
+    })
+
+    it('tries custom index files in order', async () => {
+      createTestFile('subdir/home.html', '<h1>Home Page</h1>')
+      createTestFile('subdir/default.html', '<h1>Default Page</h1>')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { index: ['index.html', 'home.html', 'default.html'] })],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/subdir/')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '<h1>Home Page</h1>')
+    })
+
+    it('serves root directory index file', async () => {
+      createTestFile('index.html', '<h1>Root Index</h1>')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir)],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '<h1>Root Index</h1>')
+    })
+
+    it('supports empty index array to disable index file serving', async () => {
+      createTestFile('subdir/index.html', '<h1>Index Page</h1>')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { index: [] })],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/subdir/')
+      assert.equal(response.status, 404)
+      assert.equal(await response.text(), 'Fallback Handler')
+    })
+
+    it('supports index: false to disable index file serving', async () => {
+      createTestFile('subdir/index.html', '<h1>Index Page</h1>')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { index: false })],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/subdir/')
+      assert.equal(response.status, 404)
+      assert.equal(await response.text(), 'Fallback Handler')
+    })
+
+    it('supports index: true to use default index files', async () => {
+      createTestFile('subdir/index.html', '<h1>Index Page</h1>')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { index: true })],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/subdir/')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '<h1>Index Page</h1>')
+    })
+  })
+
   describe('works with method-override middleware', () => {
     it('ignores overridden POST requests', async () => {
       createTestFile('test.txt', 'Hello, World!')
