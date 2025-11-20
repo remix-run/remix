@@ -1,6 +1,9 @@
 import { findFile } from '@remix-run/lazy-file/fs'
 
-import { file, type FileResponseOptions } from '@remix-run/fetch-router/response-helpers'
+import {
+  file as sendFile,
+  type FileResponseOptions,
+} from '@remix-run/fetch-router/response-helpers'
 import type { Middleware } from '@remix-run/fetch-router'
 
 export type StaticFilesOptions = FileResponseOptions & {
@@ -52,12 +55,10 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
       return next()
     }
 
-    let fileToServe = await findFile(root, relativePath)
+    let file = await findFile(root, relativePath)
 
-    if (!fileToServe) {
-      return next()
+    if (file) {
+      return sendFile(file, context.request, fileOptions)
     }
-
-    return file(fileToServe, context.request, fileOptions)
   }
 }
