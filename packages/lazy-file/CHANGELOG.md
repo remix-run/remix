@@ -2,18 +2,19 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- BREAKING CHANGE: Removed `lazy-file/fs` export. Use `@remix-run/fs` package instead.
+
+  ```ts
+  // before
+  import { openFile, writeFile } from '@remix-run/lazy-file/fs'
+
+  // after
+  import { openFile, writeFile } from '@remix-run/fs'
+  ```
+
 ## v3.8.0 (2025-11-18)
-
-- Add `findFile` function for finding files within a root directory
-
-```ts
-import { findFile } from '@remix-run/lazy-file/fs'
-
-let file = await findFile('./public', 'assets/favicon.ico')
-if (file) {
-  console.log(file.name) // "assets/favicon.ico"
-}
-```
 
 - BREAKING CHANGE: `openFile()` now sets `file.name` to the `filename` argument as provided, instead of using `path.basename(filename)`. You can still override this with `options.name`.
 

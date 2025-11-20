@@ -67,46 +67,12 @@ file.name // "example.txt"
 file.type // "text/plain"
 ```
 
-The `lazy-file/fs` export provides functions for reading from and writing to the local filesystem using the `File` API.
-
-```ts
-import { openFile, findFile, writeFile } from '@remix-run/lazy-file/fs'
-
-// No data is read at this point, it's just a reference to a
-// file on the local filesystem
-let file = openFile('./path/to/file.json')
-
-// Alternatively, find a file within a root directory, returning
-// null if the file is not found. The file.name will be set to the
-// relative path argument (e.g., 'assets/favicon.ico')
-let foundFile = await findFile('./public', 'assets/favicon.ico')
-console.log(foundFile ? `Found ${foundFile.name}` : 'File not found')
-
-// Data is read when you call file.text() (or any of the
-// other Blob methods, like file.bytes(), file.stream(), etc.)
-let json = JSON.parse(await file.text())
-
-// Write the file's contents back to the filesystem at a
-// different path
-await writeFile('./path/to/other-file.json', file)
-
-// Or write to an open file handle/descriptor
-import * as fsp from 'node:fs/promises'
-let handle = await fsp.open('./path/to/other-file.json')
-await writeFile(handle, file)
-
-let imageFile = openFile('./path/to/image.jpg')
-
-// Get a LazyBlob that omits the first 100 bytes of the file.
-// This could be useful e.g. when serving HTTP Range requests
-let blob = imageFile.slice(100)
-```
-
 All file contents are read on-demand and nothing is ever buffered.
 
 ## Related Packages
 
-- [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - Uses `lazy-file/fs` internally to create streaming `File` objects from storage on disk
+- [`fs`](https://github.com/remix-run/remix/tree/main/packages/fs) - Filesystem utilities for reading and writing files using the Web `File` API
+- [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - Storage abstraction for files on disk or in memory
 
 ## License
 

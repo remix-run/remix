@@ -326,12 +326,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/lazy-file/scripts:
-    dependencies:
-      esbuild:
-        specifier: ^0.25.12
-        version: 0.25.12
-
   packages/logger-middleware:
     devDependencies:
       '@remix-run/fetch-router':
@@ -554,6 +548,9 @@ importers:
       '@remix-run/form-data-middleware':
         specifier: workspace:*
         version: link:../form-data-middleware
+      '@remix-run/fs':
+        specifier: workspace:*
+        version: link:../fs
       '@remix-run/lazy-file':
         specifier: workspace:*
         version: link:../lazy-file

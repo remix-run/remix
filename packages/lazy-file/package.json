@@ -20,7 +20,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./fs": "./src/fs.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -28,10 +27,6 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      },
-      "./fs": {
-        "types": "./dist/fs.d.ts",
-        "default": "./dist/fs.js"
       },
       "./package.json": "./package.json"
     }
@@ -44,9 +39,7 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
-    "build": "pnpm run build:all && pnpm run build:fs",
-    "build:all": "tsc -p tsconfig.build.json",
-    "build:fs": "node ./scripts/build-fs.js",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
