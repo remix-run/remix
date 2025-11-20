@@ -6,4 +6,3 @@ export let routes = route({
   logout: { method: 'POST', pattern: '/logout' },
   posts: resources('posts', { only: ['new', 'create', 'show'] }),
 })
-

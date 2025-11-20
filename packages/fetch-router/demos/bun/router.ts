@@ -40,6 +40,7 @@ router.map(routes.home, ({ session }) => {
       <head>
         <title>Simple Blog - fetch-router Demo</title>
         <meta charset="utf-8" />
+        <link rel="icon" href="/favicon.ico" />
       </head>
       <body>
         <nav>
@@ -90,6 +91,7 @@ router.map(routes.login, {
         <head>
           <title>Login - Simple Blog</title>
           <meta charset="utf-8" />
+          <link rel="icon" href="/favicon.ico" />
         </head>
         <body>
           <h1>Login</h1>
@@ -134,6 +136,7 @@ router.map(routes.posts, {
           <head>
             <title>New Post - Simple Blog</title>
             <meta charset="utf-8" />
+            <link rel="icon" href="/favicon.ico" />
           </head>
           <body>
             <h1>New Post</h1>
@@ -182,6 +185,7 @@ router.map(routes.posts, {
         <head>
           <title>${post.title} - Simple Blog</title>
           <meta charset="utf-8" />
+          <link rel="icon" href="/favicon.ico" />
         </head>
         <body>
           <h1>${post.title}</h1>
@@ -194,3 +198,12 @@ router.map(routes.posts, {
   },
 })
 
+// Serve static files from the public directory
+router.get('/*', async ({ request }) => {
+  let urlPath = new URL(request.url).pathname
+  let file = Bun.file(`public${urlPath}`)
+  if (await file.exists()) {
+    return new Response(file)
+  }
+  return new Response('Not Found', { status: 404 })
+})
