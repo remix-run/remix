@@ -178,6 +178,9 @@ importers:
 
   packages/file-storage:
     dependencies:
+      '@remix-run/fs':
+        specifier: workspace:^
+        version: link:../fs
       '@remix-run/lazy-file':
         specifier: workspace:^
         version: link:../lazy-file
@@ -234,6 +237,22 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:../../../node-fetch-server
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/fs:
+    dependencies:
+      '@remix-run/lazy-file':
+        specifier: workspace:^
+        version: link:../lazy-file
+      mrmime:
+        specifier: ^2.0.0
+        version: 2.0.0
     devDependencies:
       '@types/node':
         specifier: ^24.6.0

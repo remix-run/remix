@@ -3,7 +3,7 @@ import SuperHeaders from '@remix-run/headers'
 /**
  * Custom function for computing file digests.
  *
- * @param file - The file to hash
+ * @param file The file to hash
  * @returns The computed digest as a string
  *
  * @example
@@ -23,7 +23,6 @@ export interface FileResponseOptions {
    * @example 'no-cache' // always revalidate
    */
   cacheControl?: string
-
   /**
    * ETag generation strategy.
    *
@@ -34,7 +33,6 @@ export interface FileResponseOptions {
    * @default 'weak'
    */
   etag?: false | 'weak' | 'strong'
-
   /**
    * Hash algorithm or custom digest function for strong ETags.
    *
@@ -49,14 +47,12 @@ export interface FileResponseOptions {
    * @example async (file) => await customHash(file)
    */
   digest?: string | FileDigestFunction
-
   /**
    * Whether to include Last-Modified headers.
    *
    * @default true
    */
   lastModified?: boolean
-
   /**
    * Whether to support HTTP Range requests for partial content.
    *
@@ -74,21 +70,20 @@ export interface FileResponseOptions {
  * Returns a Response with full HTTP semantics including ETags, Last-Modified,
  * conditional requests, and Range support.
  *
- * @param file - The file to send
- * @param request - The request object
- * @param options - Optional configuration
+ * @param file The file to send
+ * @param request The request object
+ * @param options (optional) configuration options
  * @returns A `Response` object containing the file
  *
  * @example
- * let result = await findFile('./public', 'image.jpg')
- * if (result) {
- *   return file(result, request, {
- *     cacheControl: 'public, max-age=3600'
- *   })
- * }
+ * import * as res from '@remix-run/fetch-router/response-helpers'
+ * let file = openFile('./public/image.jpg')
+ * return res.file(file, request, {
+ *   cacheControl: 'public, max-age=3600'
+ * })
  */
-export async function file(
-  fileToSend: File,
+export async function sendFile(
+  file: File,
   request: Request,
   options: FileResponseOptions = {},
 ): Promise<Response> {
@@ -102,20 +97,20 @@ export async function file(
 
   let headers = new SuperHeaders(request.headers)
 
-  let contentType = fileToSend.type
-  let contentLength = fileToSend.size
+  let contentType = file.type
+  let contentLength = file.size
 
   let etag: string | undefined
   if (etagStrategy === 'weak') {
-    etag = generateWeakETag(fileToSend)
+    etag = generateWeakETag(file)
   } else if (etagStrategy === 'strong') {
-    let digest = await computeDigest(fileToSend, digestOption)
+    let digest = await computeDigest(file, digestOption)
     etag = `"${digest}"`
   }
 
   let lastModified: number | undefined
   if (lastModifiedEnabled) {
-    lastModified = fileToSend.lastModified
+    lastModified = file.lastModified
   }
 
   let acceptRanges: 'bytes' | undefined
@@ -207,31 +202,31 @@ export async function file(
         lastModified,
       })
     ) {
-      if (!range.canSatisfy(fileToSend.size)) {
+      if (!range.canSatisfy(file.size)) {
         return new Response('Range Not Satisfiable', {
           status: 416,
           headers: new SuperHeaders({
-            contentRange: { unit: 'bytes', size: fileToSend.size },
+            contentRange: { unit: 'bytes', size: file.size },
           }),
         })
       }
 
-      let normalizedRanges = range.normalize(fileToSend.size)
+      let normalizedRanges = range.normalize(file.size)
 
       // We only support single ranges (not multipart)
       if (normalizedRanges.length > 1) {
         return new Response('Range Not Satisfiable', {
           status: 416,
           headers: new SuperHeaders({
-            contentRange: { unit: 'bytes', size: fileToSend.size },
+            contentRange: { unit: 'bytes', size: file.size },
           }),
         })
       }
 
       let { start, end } = normalizedRanges[0]
-      let { size } = fileToSend
+      let { size } = file
 
-      return new Response(fileToSend.slice(start, end + 1), {
+      return new Response(file.slice(start, end + 1), {
         status: 206,
         headers: new SuperHeaders(
           omitNullableValues({
@@ -248,7 +243,7 @@ export async function file(
     }
   }
 
-  return new Response(request.method === 'HEAD' ? null : fileToSend, {
+  return new Response(request.method === 'HEAD' ? null : file, {
     status: 200,
     headers: new SuperHeaders(
       omitNullableValues({

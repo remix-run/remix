@@ -686,7 +686,7 @@ The `file()` response helper returns a `Response` for a file with full HTTP sema
 
 ```ts
 import * as res from '@remix-run/fetch-router/response-helpers'
-import { openFile } from '@remix-run/lazy-file/fs'
+import { openFile } from '@remix-run/fs'
 
 router.get('/assets/:filename', async (context) => {
   let file = await openFile(`./assets/${context.params.filename}`)
@@ -756,30 +756,9 @@ return res.file(file, request, {
 })
 ```
 
-#### Using `findFile()` with `file()`
-
-When you need to map a route pattern to a directory of files on disk, you can use the `findFile()` function from `@remix-run/lazy-file/fs` to resolve files before sending them with the `file()` response helper:
-
-```ts
-import * as res from '@remix-run/fetch-router/response-helpers'
-import { findFile } from '@remix-run/lazy-file/fs'
-
-router.get('/assets/*path', async ({ request, params }) => {
-  let file = await findFile('./public/assets', params.path)
-
-  if (!file) {
-    return new Response('Not Found', { status: 404 })
-  }
-
-  return res.file(file, request, {
-    cacheControl: 'public, max-age=3600',
-  })
-})
-```
-
 #### The `staticFiles()` Middleware
 
-For convenience, the `staticFiles()` middleware combines `findFile()` and `file()` into a single middleware, resolving files based on the request pathname:
+For convenience, the `staticFiles()` middleware resolves files based on the request pathname and sends them with full HTTP semantics:
 
 ```ts
 import { createRouter } from '@remix-run/fetch-router'

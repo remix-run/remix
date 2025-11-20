@@ -70,13 +70,10 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
   ```tsx
   import * as res from '@remix-run/fetch-router/response-helpers'
-  import { findFile } from '@remix-run/lazy-file/fs'
+  import { openFile } from '@remix-run/fs'
 
   router.get('/assets/:filename', async ({ request, params }) => {
-    let file = await findFile('./public/assets', params.filename)
-    if (!file) {
-      return new Response('Not Found', { status: 404 })
-    }
+    let file = openFile(`./public/assets/${params.filename}`)
     return res.file(file, request)
   })
   ```

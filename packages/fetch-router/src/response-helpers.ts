@@ -1,5 +1,5 @@
 export {
-  file,
+  sendFile as file,
   type FileDigestFunction,
   type FileResponseOptions,
 } from './lib/response-helpers/file.ts'
