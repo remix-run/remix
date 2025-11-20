@@ -19,6 +19,5 @@
     "verbatimModuleSyntax": true,
     "types": ["./worker-configuration.d.ts"]
   },
-  "exclude": ["test"],
-  "include": ["worker-configuration.d.ts", "src/**/*.ts", "worker.ts"]
+  "include": ["worker-configuration.d.ts", "src/**/*.ts", "worker.ts", "../../global.d.ts"]
 }
