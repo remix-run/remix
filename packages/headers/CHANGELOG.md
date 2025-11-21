@@ -2,6 +2,10 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Fix bug where `Max-Age=0` did not show up in `SetCookie` header
+
 ## v0.17.0 (2025-11-18)
 
 - Add `Range` support

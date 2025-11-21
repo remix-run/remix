@@ -171,7 +171,7 @@ export class SetCookie implements HeaderValue, SetCookieInit {
     if (this.httpOnly) {
       parts.push('HttpOnly')
     }
-    if (this.maxAge) {
+    if (this.maxAge != null) {
       parts.push(`Max-Age=${this.maxAge}`)
     }
     if (this.partitioned) {

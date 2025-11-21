@@ -116,10 +116,11 @@ describe('SetCookie', () => {
     header.secure = true
     header.httpOnly = true
     header.sameSite = 'Lax'
+    header.maxAge = 0
 
     assert.equal(
       header.toString(),
-      'session=abc123; Domain=example.com; HttpOnly; Path=/; SameSite=Lax; Secure',
+      'session=abc123; Domain=example.com; HttpOnly; Max-Age=0; Path=/; SameSite=Lax; Secure',
     )
   })
 
