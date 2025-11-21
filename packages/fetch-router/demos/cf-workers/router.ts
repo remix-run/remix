@@ -7,6 +7,7 @@ import { session } from '@remix-run/session-middleware'
 import { html } from '@remix-run/html-template'
 import * as res from '@remix-run/fetch-router/response-helpers'
 import type { Middleware } from '@remix-run/fetch-router'
+import { env } from 'cloudflare:workers'
 
 import { routes } from './routes.ts'
 import * as data from './data.ts'
@@ -30,8 +31,8 @@ export let router = createRouter({
   middleware: [logger(), formData(), session(sessionCookie, storage)],
 })
 
-router.map(routes.home, ({ session }) => {
-  let posts = data.getPosts()
+router.map(routes.home, async ({ session }) => {
+  let posts = await data.getPosts(env.DB)
   let username = session.get('username') as string | undefined
 
   return res.html(html`
@@ -164,11 +165,11 @@ router.map(routes.posts, {
       return res.redirect(routes.posts.new.href())
     }
 
-    let post = data.createPost(title, content, username)
+    let post = await data.createPost(env.DB, title, content, username)
     return res.redirect(routes.posts.show.href({ id: post.id }))
   },
-  show({ params }) {
-    let post = data.getPost(params.id)
+  async show({ params }) {
+    let post = await data.getPost(env.DB, params.id)
     if (!post) {
       return new Response('Post not found', { status: 404 })
     }

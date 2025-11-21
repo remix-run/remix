@@ -20,6 +20,7 @@
     "dev": "wrangler dev --port 44100",
     "start": "wrangler dev --port 4410",
     "typecheck": "pnpm run cf-typegen && tsc --noEmit",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "db:migrate": "wrangler d1 migrations apply fetch-router-blog"
   }
 }

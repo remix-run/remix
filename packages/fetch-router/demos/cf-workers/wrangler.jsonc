@@ -11,4 +11,12 @@
   "observability": {
     "enabled": true,
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fetch-router-blog",
+      "database_id": "local",
+      "migrations_dir": "migrations",
+    },
+  ],
 }
