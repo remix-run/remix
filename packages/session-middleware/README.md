@@ -13,7 +13,7 @@ npm install @remix-run/session-middleware
 ```ts
 import { createRouter } from '@remix-run/fetch-router'
 import { createCookie } from '@remix-run/cookie'
-import { createCookieStorage } from '@remix-run/session/cookie-storage'
+import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { session } from '@remix-run/session-middleware'
 
 let sessionCookie = createCookie('__session', {
@@ -23,7 +23,7 @@ let sessionCookie = createCookie('__session', {
   sameSite: 'lax',
 })
 
-let sessionStorage = createCookieStorage()
+let sessionStorage = createCookieSessionStorage()
 
 let router = createRouter({
   middleware: [session(sessionCookie, sessionStorage)],
@@ -49,21 +49,22 @@ A basic login/logout flow could look like this:
 
 ```ts
 import * as res from '@remix-run/fetch-router/response-helpers'
-import { html } from '@remix-run/html-template'
 
 router.get('/login', ({ session }) => {
   let error = session.get('error')
-  return res.html(
-    html` <div>
-      <h1>Login</h1>
-      ${typeof error === 'string' ? <div class="error">${error}</div> : null}
-      <form method="POST" action="/login">
-        <input type="text" name="username" placeholder="Username" />
-        <input type="password" name="password" placeholder="Password" />
-        <button type="submit">Login</button>
-      </form>
-    </div>`,
-  )
+  return res.html(`
+    <html>
+      <body>
+        <h1>Login</h1>
+        ${typeof error === 'string' ? <div class="error">${error}</div> : null}
+        <form method="POST" action="/login">
+          <input type="text" name="username" placeholder="Username" />
+          <input type="password" name="password" placeholder="Password" />
+          <button type="submit">Login</button>
+        </form>
+      </body>
+    </html>
+  `)
 })
 
 router.post('/login', ({ session, formData }) => {
@@ -76,8 +77,8 @@ router.post('/login', ({ session, formData }) => {
     return res.redirect('/login')
   }
 
-  session.set('userId', user.id)
   session.regenerateId()
+  session.set('userId', user.id)
 
   return res.redirect('/dashboard')
 })

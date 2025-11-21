@@ -2,6 +2,12 @@
 
 This is the changelog for [`session`](https://github.com/remix-run/remix/tree/main/packages/session). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- BREAKING CHANGE: Rename `createFileStorage` to `createFileSessionStorage`
+- BREAKING CHANGE: Rename `createMemoryStorage` to `createMemorySessionStorage`
+- BREAKING CHANGE: Rename `createCookieStorage` to `createCookieSessionStorage`
+
 ## v0.2.1 (2025-11-19)
 
 - Fix flash messages persisting across multiple requests. Flash data is now automatically cleared after being available for one request, even if the session is not otherwise modified

@@ -4,7 +4,7 @@ import { describe, it } from 'node:test'
 import { createCookie } from '@remix-run/cookie'
 import { SetCookie } from '@remix-run/headers'
 import { createSession } from '@remix-run/session'
-import { createCookieStorage } from '@remix-run/session/cookie-storage'
+import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { createRouter } from '@remix-run/fetch-router'
 
 import { session as sessionMiddleware } from './session.ts'
@@ -25,7 +25,7 @@ function createRequest(fromResponse?: Response): Request {
 describe('session middleware', () => {
   it('persists session data across requests', async () => {
     let cookie = createCookie('__sess', { secrets: ['secret1'] })
-    let storage = createCookieStorage()
+    let storage = createCookieSessionStorage()
 
     let router = createRouter({
       middleware: [sessionMiddleware(cookie, storage)],
@@ -48,7 +48,7 @@ describe('session middleware', () => {
 
   it('throws if the session cookie is not signed', async () => {
     let cookie = createCookie('__sess', { secrets: [] })
-    let storage = createCookieStorage()
+    let storage = createCookieSessionStorage()
 
     assert.throws(() => {
       sessionMiddleware(cookie, storage)
@@ -57,7 +57,7 @@ describe('session middleware', () => {
 
   it('throws at request time if the session is already started', async () => {
     let cookie = createCookie('__sess', { secrets: ['secret1'] })
-    let storage = createCookieStorage()
+    let storage = createCookieSessionStorage()
 
     let router = createRouter({
       middleware: [
@@ -78,7 +78,7 @@ describe('session middleware', () => {
 
   it('throws at request time if the session is modified by another middleware/handler', async () => {
     let cookie = createCookie('__sess', { secrets: ['secret1'] })
-    let storage = createCookieStorage()
+    let storage = createCookieSessionStorage()
 
     let router = createRouter({
       middleware: [sessionMiddleware(cookie, storage)],

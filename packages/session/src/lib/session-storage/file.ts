@@ -5,7 +5,7 @@ import * as path from 'node:path'
 import { createSession, type SessionData } from '../session.ts'
 import type { SessionStorage } from '../session-storage.ts'
 
-export interface FileStorageOptions {
+export interface FileSessionStorageOptions {
   /**
    * Whether to reuse session IDs sent from the client that are not found in storage.
    * Default is `false`.
@@ -24,7 +24,10 @@ export interface FileStorageOptions {
  * @param options (optional) The options for the session storage
  * @returns The session storage
  */
-export function createFileStorage(directory: string, options?: FileStorageOptions): SessionStorage {
+export function createFileSessionStorage(
+  directory: string,
+  options?: FileSessionStorageOptions,
+): SessionStorage {
   let root = path.resolve(directory)
   let useUnknownIds = options?.useUnknownIds ?? false
 

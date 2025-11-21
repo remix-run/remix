@@ -1,11 +1,11 @@
 import * as assert from 'node:assert/strict'
 import { describe, it, mock } from 'node:test'
 
-import { createCookieStorage } from './cookie.ts'
+import { createCookieSessionStorage } from './cookie.ts'
 
 describe('cookie session storage', () => {
   it('persists session data across requests', async () => {
-    let storage = createCookieStorage()
+    let storage = createCookieSessionStorage()
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -27,7 +27,7 @@ describe('cookie session storage', () => {
   })
 
   it('clears session data when the session is destroyed', async () => {
-    let storage = createCookieStorage()
+    let storage = createCookieSessionStorage()
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -61,7 +61,7 @@ describe('cookie session storage', () => {
   })
 
   it('does not set a cookie when session data is not changed', async () => {
-    let storage = createCookieStorage()
+    let storage = createCookieSessionStorage()
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -77,7 +77,7 @@ describe('cookie session storage', () => {
   })
 
   it('makes flash data available only on the next request', async () => {
-    let storage = createCookieStorage()
+    let storage = createCookieSessionStorage()
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -110,7 +110,7 @@ describe('cookie session storage', () => {
   })
 
   it('leaves old session data in storage by default when the id is regenerated', async () => {
-    let storage = createCookieStorage()
+    let storage = createCookieSessionStorage()
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -146,7 +146,7 @@ describe('cookie session storage', () => {
   it('logs a warning when the id is regenerated and the deleteOldSession option is true', async () => {
     let consoleWarn = mock.method(console, 'warn', () => {})
 
-    let storage = createCookieStorage()
+    let storage = createCookieSessionStorage()
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)

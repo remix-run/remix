@@ -4,7 +4,7 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import * as os from 'node:os'
 
-import { createFileStorage } from './file.ts'
+import { createFileSessionStorage } from './file.ts'
 
 describe('file session storage', () => {
   let tmpDir: string
@@ -17,19 +17,19 @@ describe('file session storage', () => {
   })
 
   it('does not use unknown session IDs by default', async () => {
-    let storage = createFileStorage(tmpDir)
+    let storage = createFileSessionStorage(tmpDir)
     let session = await storage.read('unknown')
     assert.notEqual(session.id, 'unknown')
   })
 
   it('uses unknown session IDs if enabled', async () => {
-    let storage = createFileStorage(tmpDir, { useUnknownIds: true })
+    let storage = createFileSessionStorage(tmpDir, { useUnknownIds: true })
     let session = await storage.read('unknown')
     assert.equal(session.id, 'unknown')
   })
 
   it('persists session data across requests', async () => {
-    let storage = createFileStorage(tmpDir)
+    let storage = createFileSessionStorage(tmpDir)
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -51,7 +51,7 @@ describe('file session storage', () => {
   })
 
   it('clears session data when the session is destroyed', async () => {
-    let storage = createFileStorage(tmpDir)
+    let storage = createFileSessionStorage(tmpDir)
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -85,7 +85,7 @@ describe('file session storage', () => {
   })
 
   it('does not set a cookie when session data is not changed', async () => {
-    let storage = createFileStorage(tmpDir)
+    let storage = createFileSessionStorage(tmpDir)
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -101,7 +101,7 @@ describe('file session storage', () => {
   })
 
   it('makes flash data available only on the next request', async () => {
-    let storage = createFileStorage(tmpDir)
+    let storage = createFileSessionStorage(tmpDir)
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -134,7 +134,7 @@ describe('file session storage', () => {
   })
 
   it('leaves old session data in storage by default when the id is regenerated', async () => {
-    let storage = createFileStorage(tmpDir)
+    let storage = createFileSessionStorage(tmpDir)
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -168,7 +168,7 @@ describe('file session storage', () => {
   })
 
   it('deletes old session data when the id is regenerated and the deleteOldSession option is true', async () => {
-    let storage = createFileStorage(tmpDir)
+    let storage = createFileSessionStorage(tmpDir)
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -206,7 +206,7 @@ describe('file session storage', () => {
     await fsp.writeFile(filePath, 'I am a file, not a directory.')
 
     assert.throws(
-      () => createFileStorage(filePath),
+      () => createFileSessionStorage(filePath),
       new Error(`Path "${filePath}" is not a directory`),
     )
   })
