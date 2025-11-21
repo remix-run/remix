@@ -1,6 +1,6 @@
 import { router } from './router.ts'
 
-const PORT = 3000
+const PORT = 44100
 
 Bun.serve({
   port: PORT,
