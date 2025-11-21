@@ -11,8 +11,8 @@
   },
   "scripts": {
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev",
+    "dev": "wrangler dev --port 44100",
+    "start": "wrangler dev --port 44100",
     "cf-typegen": "wrangler types"
   }
 }
