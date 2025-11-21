@@ -2,7 +2,7 @@ import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart
 import tmp from 'tmp'
 
 const server = Bun.serve({
-  port: 3000,
+  port: 44100,
   async fetch(request) {
     if (request.method === 'GET') {
       return new Response(
