@@ -2,7 +2,7 @@
 
 This is the changelog for [`session`](https://github.com/remix-run/remix/tree/main/packages/session). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.3.0 (2025-11-21)
 
 - BREAKING CHANGE: Rename `createFileStorage` to `createFileSessionStorage`
 - BREAKING CHANGE: Rename `createMemoryStorage` to `createMemorySessionStorage`
