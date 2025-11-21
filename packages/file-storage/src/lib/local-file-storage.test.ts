@@ -165,17 +165,20 @@ describe('LocalFileStorage', () => {
   })
 
   it('throws if directory is a file', () => {
-    fs.mkdirSync(directory, { recursive: true })
-    let filePath = path.join(directory, 'not-a-directory')
+    fs.mkdirSync(tmpDir, { recursive: true })
+    let filePath = path.join(tmpDir, 'not-a-directory')
     fs.writeFileSync(filePath, 'I am a file')
 
-    assert.throws(() => {
-      new LocalFileStorage(filePath)
-    }, { message: `Path "${filePath}" is not a directory` })
+    assert.throws(
+      () => {
+        new LocalFileStorage(filePath)
+      },
+      { message: `Path "${filePath}" is not a directory` },
+    )
   })
 
   it('puts files', async () => {
-    let storage = new LocalFileStorage(directory)
+    let storage = new LocalFileStorage(tmpDir)
     let lastModified = Date.now()
     let file = new File(['Hello, world!'], 'hello.txt', {
       type: 'text/plain',

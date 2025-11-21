@@ -202,11 +202,11 @@ describe('file session storage', () => {
   })
 
   it('throws error if session directory is a file', async () => {
-    let filePath = path.join(rootDir, 'not-a-directory')
+    let filePath = path.join(tmpDir, 'not-a-directory')
     await fsp.writeFile(filePath, 'I am a file, not a directory.')
 
     assert.throws(
-      () => createFileStorage(cookie, filePath),
+      () => createFileStorage(filePath),
       new Error(`Path "${filePath}" is not a directory`),
     )
   })
