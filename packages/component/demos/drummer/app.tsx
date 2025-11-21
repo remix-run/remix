@@ -125,7 +125,6 @@ function DrumControls(this: Remix.Handle) {
         connect={(node) => (play = node)}
         on={{
           click: () => {
-            console.log('play')
             drummer.play()
             this.queueTask(() => {
               stop.focus()
