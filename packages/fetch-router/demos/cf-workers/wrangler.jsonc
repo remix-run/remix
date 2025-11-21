@@ -7,7 +7,7 @@
   "name": "fetch-router-cf-workers-demo",
   "main": "worker.ts",
   "compatibility_flags": ["nodejs_compat"],
-  "compatibility_date": "2025-11-20",
+  "compatibility_date": "2025-11-18",
   "observability": {
     "enabled": true,
   },

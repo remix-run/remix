@@ -13,12 +13,12 @@
   "devDependencies": {
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3",
-    "wrangler": "^4.49.1"
+    "wrangler": "^4.50.0"
   },
   "scripts": {
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev",
+    "dev": "wrangler dev --port 44100",
+    "start": "wrangler dev --port 4410",
     "typecheck": "pnpm run cf-typegen && tsc --noEmit",
     "cf-typegen": "wrangler types"
   }
