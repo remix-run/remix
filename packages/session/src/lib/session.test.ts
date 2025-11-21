@@ -93,6 +93,18 @@ describe('Session', () => {
 
     session.regenerateId()
     assert.notEqual(session.id, originalId)
+    assert.equal(session.deleteId, undefined)
+    assert.equal(session.dirty, true)
+  })
+
+  it('deletes the old session ID', () => {
+    let session = createSession()
+    let originalId = session.id
+    assert.equal(session.dirty, false)
+
+    session.regenerateId(true)
+    assert.notEqual(session.id, originalId)
+    assert.equal(session.deleteId, originalId)
     assert.equal(session.dirty, true)
   })
 
