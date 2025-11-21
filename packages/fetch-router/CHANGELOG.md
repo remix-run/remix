@@ -2,7 +2,7 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.11.0 (2025-11-21)
 
 - BREAKING CHANGE: `Router` is no longer exported as a class, use `createRouter()` instead.
 
