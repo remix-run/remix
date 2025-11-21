@@ -3,7 +3,7 @@ import { createRequestListener } from '@remix-run/node-fetch-server'
 
 import { router } from './router.ts'
 
-const PORT = 3000
+const PORT = 44100
 
 let server = http.createServer(
   createRequestListener(async (request) => {

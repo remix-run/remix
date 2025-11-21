@@ -4,7 +4,7 @@ import * as path from 'node:path'
 import { createRequestListener } from '@remix-run/node-fetch-server'
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname)
-const PORT = 3000
+const PORT = 44100
 
 let options = {
   key: fs.readFileSync(path.join(__dirname, 'server.key')),

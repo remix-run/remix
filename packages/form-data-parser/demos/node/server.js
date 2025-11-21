@@ -11,7 +11,7 @@ import {
 } from '@remix-run/form-data-parser'
 import { createRequestListener } from '@remix-run/node-fetch-server'
 
-const PORT = 3000
+const PORT = 44100
 
 const oneMb = 1024 * 1024
 const maxFileSize = 10 * oneMb
