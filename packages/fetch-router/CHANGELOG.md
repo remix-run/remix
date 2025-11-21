@@ -24,6 +24,26 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
   This change improves the ergonomics of the router by eliminating the need to bind methods when passing `router.fetch` as a callback, for example in `node-fetch-server`'s `createRequestListener(router.fetch)`.
 
+- Make `middleware` optional in route handler(s) objects passed to `router.map()`
+
+  ```tsx
+  // Before
+  router.map('/', {
+    middleware: [], // required
+    handler() {
+      return new Response('Home')
+    },
+  })
+
+  // After
+  router.map('/', {
+    // middleware is optional!
+    handler() {
+      return new Response('Home')
+    },
+  })
+  ```
+
 ## v0.10.0 (2025-11-19)
 
 - BREAKING CHANGE: All middleware has been extracted into separate npm packages for independent versioning and deployment. Update your imports:

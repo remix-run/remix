@@ -5,12 +5,7 @@ import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 import type { RequestMethod } from './request-methods.ts'
-import {
-  type RouteHandlers,
-  type RouteHandler,
-  isRequestHandlerWithMiddleware,
-  isRouteHandlersWithMiddleware,
-} from './route-handlers.ts'
+import { type RouteHandlers, type RouteHandler, hasHandlers, hasHandler } from './route-handlers.ts'
 import { type RouteMap, Route } from './route-map.ts'
 
 type MatchData = {
@@ -179,7 +174,7 @@ export function createRouter(options?: RouterOptions): Router {
   ): void {
     let routeMiddleware: Middleware<any, any>[] | undefined
     let requestHandler: RequestHandler<any, any>
-    if (isRequestHandlerWithMiddleware(handler)) {
+    if (hasHandler(handler)) {
       routeMiddleware = handler.middleware
       requestHandler = handler.handler
     } else {
@@ -200,7 +195,7 @@ export function createRouter(options?: RouterOptions): Router {
     } else if (routeOrRoutes instanceof Route) {
       // map(route, handler)
       addRoute(routeOrRoutes.method, routeOrRoutes.pattern, handler)
-    } else if (!isRouteHandlersWithMiddleware(handler)) {
+    } else if (!hasHandlers(handler)) {
       // map(routes, handlers)
       let handlers = handler
       for (let key in routeOrRoutes) {
@@ -214,7 +209,7 @@ export function createRouter(options?: RouterOptions): Router {
         }
       }
     } else {
-      // map(routes, { middleware, handlers })
+      // map(routes, { middleware?, handlers })
       let mapMiddleware = handler.middleware
       let handlers = handler.handlers
       for (let key in routeOrRoutes) {
@@ -222,20 +217,29 @@ export function createRouter(options?: RouterOptions): Router {
         let handler = (handlers as any)[key]
 
         if (route instanceof Route) {
-          if (isRequestHandlerWithMiddleware(handler)) {
+          let routeMiddleware =
+            mapMiddleware && handler.middleware
+              ? mapMiddleware.concat(handler.middleware)
+              : mapMiddleware || handler.middleware
+
+          if (hasHandler(handler)) {
             addRoute(route.method, route.pattern, {
-              middleware: mapMiddleware.concat(handler.middleware),
+              middleware: routeMiddleware,
               handler: handler.handler,
             })
           } else {
-            addRoute(route.method, route.pattern, { middleware: mapMiddleware, handler })
+            addRoute(route.method, route.pattern, { middleware: routeMiddleware, handler })
           }
-        } else if (isRouteHandlersWithMiddleware(handler)) {
-          mapRoute(route, {
-            middleware: mapMiddleware.concat(handler.middleware),
-            handlers: handler.handlers,
-          })
+        } else if (hasHandlers(handler)) {
+          // map(routes, { middleware?, handlers: { home: { middleware?, handlers } } })
+          let routeMiddleware =
+            mapMiddleware && handler.middleware
+              ? mapMiddleware.concat(handler.middleware)
+              : mapMiddleware || handler.middleware
+
+          mapRoute(route, { middleware: routeMiddleware, handlers: handler.handlers })
         } else {
+          // map(routes, { middleware?, handlers })
           mapRoute(route, { middleware: mapMiddleware, handlers: handler })
         }
       }
