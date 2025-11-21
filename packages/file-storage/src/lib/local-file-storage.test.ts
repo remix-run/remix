@@ -164,6 +164,34 @@ describe('LocalFileStorage', () => {
     assert.equal(await retrieved2.text(), 'Hello, universe!')
   })
 
+  it('throws if directory is a file', () => {
+    fs.mkdirSync(directory, { recursive: true })
+    let filePath = path.join(directory, 'not-a-directory')
+    fs.writeFileSync(filePath, 'I am a file')
+
+    assert.throws(() => {
+      new LocalFileStorage(filePath)
+    }, { message: `Path "${filePath}" is not a directory` })
+  })
+
+  it('puts files', async () => {
+    let storage = new LocalFileStorage(directory)
+    let lastModified = Date.now()
+    let file = new File(['Hello, world!'], 'hello.txt', {
+      type: 'text/plain',
+      lastModified,
+    })
+
+    let retrieved = await storage.put('hello', file)
+
+    assert.ok(await storage.has('hello'))
+    assert.ok(retrieved)
+    assert.equal(retrieved.name, 'hello.txt')
+    assert.equal(retrieved.type, 'text/plain')
+    assert.equal(retrieved.lastModified, lastModified)
+    assert.equal(retrieved.size, 13)
+  })
+
   describe('integration with form-data-parser', () => {
     it('stores and lists file uploads', async () => {
       let storage = new LocalFileStorage(tmpDir)

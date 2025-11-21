@@ -123,4 +123,17 @@ describe('href', () => {
     assert.equal(href('products/:id', { id: '1' }, ''), '/products/1')
     assert.equal(href('products/:id', { id: '1' }, []), '/products/1')
   })
+
+  it('retains port if one is set', () => {
+    let href = createHrefBuilder()
+    assert.equal(
+      href('https://example.com:8080/products/:id', { id: '1' }),
+      'https://example.com:8080/products/1',
+    )
+  })
+
+  it('handles URLs without a pathname', () => {
+    let href = createHrefBuilder()
+    assert.equal(href('https://example.com', {}), 'https://example.com/')
+  })
 })
