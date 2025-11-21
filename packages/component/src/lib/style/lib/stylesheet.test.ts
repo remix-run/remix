@@ -1,21 +1,109 @@
 import { describe, it, expect } from 'vitest'
 import { createStyleManager } from './stylesheet.ts'
 
-describe.skip('createStyleManager', () => {
+describe('createStyleManager', () => {
   it('inserts a rule once and increments count on repeat', () => {
     let before = document.adoptedStyleSheets.length
     let mgr = createStyleManager('rmx-test')
     let sheet = document.adoptedStyleSheets[before]
     mgr.insert('rmx-a', '.rmx-a { color: red; }')
-    mgr.insert('rmx-a', '.rmx-a { color: red; }')
-    // No exception means double insert increases count and does not duplicate
     expect(mgr.has('rmx-a')).toBe(true)
-    // Sheet has exactly one rule block with our class once
+    expect(sheet.cssRules.length).toBe(1)
+
+    // Second insert should increment count, not duplicate rule
+    mgr.insert('rmx-a', '.rmx-a { color: red; }')
+    expect(mgr.has('rmx-a')).toBe(true)
+    expect(sheet.cssRules.length).toBe(1) // Still only one rule
+
+    // Verify layer and content
     let cssText = sheet.cssRules[0]?.cssText || ''
-    expect(cssText.includes('rmx-test')).toBe(true)
-    expect(cssText.split('.rmx-a').length - 1).toBe(1)
+    expect(cssText.includes('@layer rmx-test')).toBe(true)
+    expect(cssText.includes('.rmx-a')).toBe(true)
+    expect(cssText.split('.rmx-a').length - 1).toBe(1) // Class appears once
+
     // cleanup
-    document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets).filter((s) => s !== sheet)
+    mgr.dispose()
+  })
+
+  it('uses default layer name when not provided', () => {
+    let before = document.adoptedStyleSheets.length
+    let mgr = createStyleManager()
+    let sheet = document.adoptedStyleSheets[before]
+    mgr.insert('rmx-a', '.rmx-a { color: red; }')
+    let cssText = sheet.cssRules[0]?.cssText || ''
+    expect(cssText.includes('@layer rmx')).toBe(true)
+    // cleanup
+    mgr.dispose()
+  })
+
+  it('returns false for has() when class was never inserted', () => {
+    let mgr = createStyleManager('rmx-test')
+    expect(mgr.has('rmx-never-inserted')).toBe(false)
+    mgr.dispose()
+  })
+
+  it('safely handles removing a class that was never inserted', () => {
+    let before = document.adoptedStyleSheets.length
+    let mgr = createStyleManager('rmx-test')
+    let sheet = document.adoptedStyleSheets[before]
+    let initialLength = sheet.cssRules.length
+
+    mgr.remove('rmx-never-inserted')
+    expect(sheet.cssRules.length).toBe(initialLength)
+    expect(mgr.has('rmx-never-inserted')).toBe(false)
+
+    // cleanup
+    mgr.dispose()
+  })
+
+  it('handles multiple managers with different layers independently', () => {
+    let before = document.adoptedStyleSheets.length
+    let mgr1 = createStyleManager('layer-1')
+    let mgr2 = createStyleManager('layer-2')
+    let sheet1 = document.adoptedStyleSheets[before]
+    let sheet2 = document.adoptedStyleSheets[before + 1]
+
+    mgr1.insert('rmx-a', '.rmx-a { color: red; }')
+    mgr2.insert('rmx-a', '.rmx-a { color: blue; }')
+
+    expect(sheet1.cssRules.length).toBe(1)
+    expect(sheet2.cssRules.length).toBe(1)
+    expect(sheet1.cssRules[0]?.cssText).toContain('@layer layer-1')
+    expect(sheet2.cssRules[0]?.cssText).toContain('@layer layer-2')
+
+    // cleanup
+    mgr1.dispose()
+    mgr2.dispose()
+  })
+
+  it('handles complex CSS rules with nested selectors and at-rules', () => {
+    let before = document.adoptedStyleSheets.length
+    let mgr = createStyleManager('rmx-test')
+    let sheet = document.adoptedStyleSheets[before]
+
+    let complexRule = `
+      .rmx-complex {
+        color: red;
+      }
+      .rmx-complex:hover {
+        color: blue;
+      }
+      @media (min-width: 768px) {
+        .rmx-complex {
+          font-size: 16px;
+        }
+      }
+    `
+    mgr.insert('rmx-complex', complexRule)
+
+    expect(sheet.cssRules.length).toBe(1)
+    let cssText = sheet.cssRules[0]?.cssText || ''
+    expect(cssText).toContain('.rmx-complex')
+    expect(cssText).toContain(':hover')
+    expect(cssText).toContain('@media')
+
+    // cleanup
+    mgr.dispose()
   })
 
   it('removes only when count reaches zero and reindexes', () => {
@@ -44,7 +132,7 @@ describe.skip('createStyleManager', () => {
     expect(mgr.has('rmx-a')).toBe(false)
     expect(sheet.cssRules.length).toBe(0)
     // cleanup
-    document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets).filter((s) => s !== sheet)
+    mgr.dispose()
   })
 
   it('keeps other rules stable when removing from the middle (reindex correctness)', () => {
@@ -72,7 +160,7 @@ describe.skip('createStyleManager', () => {
     expect((sheet.cssRules[0] as any).cssText || '').toContain('.rmx-a')
 
     // cleanup
-    document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets).filter((s) => s !== sheet)
+    mgr.dispose()
   })
 
   it('styles apply to the DOM while present and stop applying after full removal', () => {
@@ -98,6 +186,6 @@ describe.skip('createStyleManager', () => {
 
     // cleanup
     document.body.removeChild(el)
-    document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets).filter((s) => s !== sheet)
+    mgr.dispose()
   })
 })

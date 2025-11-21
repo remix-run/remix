@@ -822,6 +822,16 @@ function remove(node: VNode, domParent: ParentNode, scheduler: Scheduler) {
   }
 
   if (isCommittedHostNode(node)) {
+    // Clean up CSS before removing DOM element
+    if (node.props.css) {
+      // TODO: can probably avoid calling processStyle by storing className
+      // somewhere or maybe don't use className and a special data-attribute on
+      // the element
+      let { className } = processStyle(node.props.css, styleCache)
+      if (className) {
+        styleManager.remove(className)
+      }
+    }
     domParent.removeChild(node._dom)
     node._controller.abort()
     let _events = node._events

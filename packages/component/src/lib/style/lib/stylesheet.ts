@@ -2,51 +2,81 @@ export function createStyleManager(layer: string = 'rmx') {
   let stylesheet = new CSSStyleSheet()
   document.adoptedStyleSheets.push(stylesheet)
 
-  // Track usage count per className
-  let counts = new Map<string, number>()
-  let inserted = new Set<string>()
+  // Track usage count and rule index per className
+  // Using an object to track both count and index together
+  let ruleMap = new Map<string, { count: number; index: number }>()
 
   function has(className: string) {
-    return counts.has(className)
+    let entry = ruleMap.get(className)
+    return entry !== undefined && entry.count > 0
   }
 
   function insert(className: string, rule: string) {
-    if (inserted.has(className)) return
-    inserted.add(className)
-    // let current = counts.get(className) || 0
-    // if (current > 0) {
-    //   counts.set(className, current + 1)
-    //   return
-    // }
-    stylesheet.insertRule(`@layer ${layer} { ${rule} }`)
-    // counts.set(className, 1)
+    let entry = ruleMap.get(className)
+
+    if (entry) {
+      // Already exists, just increment count
+      entry.count++
+      return
+    }
+
+    // New rule - insert and track
+    let index = stylesheet.cssRules.length
+    try {
+      stylesheet.insertRule(`@layer ${layer} { ${rule} }`, index)
+      ruleMap.set(className, { count: 1, index })
+    } catch (error) {
+      // If insertion fails (e.g., invalid CSS), don't track it
+      // The browser will have thrown, so we can't proceed
+      throw error
+    }
   }
 
-  // DEBUGGING - so no removals right now
   function remove(className: string) {
-    // let current = counts.get(className)
-    // if (!current) return
-    // if (current > 1) {
-    //   counts.set(className, current - 1)
-    //   return
-    // }
-    // // fully remove
-    // counts.delete(className)
-    // // find the rule index containing this class and delete it
-    // for (let i = 0; i < stylesheet.cssRules.length; i++) {
-    //   let text = (stylesheet.cssRules[i] as any).cssText || ''
-    //   if (text.includes(`.${className}`)) {
-    //     stylesheet.deleteRule(i)
-    //     break
-    //   }
-    // }
+    let entry = ruleMap.get(className)
+    if (!entry) return
+
+    // Decrement count
+    entry.count--
+
+    if (entry.count > 0) {
+      // Still in use, keep the rule
+      return
+    }
+
+    // Count reached zero, remove the rule
+    let indexToDelete = entry.index
+
+    // Delete the rule
+    try {
+      stylesheet.deleteRule(indexToDelete)
+    } catch (error) {
+      // Rule might have been deleted externally or index invalid
+      // Clean up our tracking anyway
+      ruleMap.delete(className)
+      return
+    }
+
+    // Remove from tracking
+    ruleMap.delete(className)
+
+    // Update indices for all rules that came after the deleted one
+    // They all shift down by 1
+    for (let [name, data] of ruleMap.entries()) {
+      if (data.index > indexToDelete) {
+        data.index--
+      }
+    }
   }
 
-  return { insert, remove, has }
-}
+  function dispose() {
+    // Remove stylesheet from document
+    document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets).filter(
+      (s) => s !== stylesheet,
+    )
+    // Clear internal state
+    ruleMap.clear()
+  }
 
-/*
-let manager = createStyleManager()
-manager.insert("rmx-123", ".rmx-123 { color: red; }")
-manager.remove("rmx-123")
-*/
+  return { insert, remove, has, dispose }
+}
