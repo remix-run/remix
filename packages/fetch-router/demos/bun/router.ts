@@ -35,7 +35,6 @@ router.map(routes.home, ({ session }) => {
   let username = session.get('username') as string | undefined
 
   return res.html(html`
-    <!doctype html>
     <html>
       <head>
         <title>Simple Blog - fetch-router Demo</title>
@@ -86,7 +85,6 @@ router.map(routes.login, {
     }
 
     return res.html(html`
-      <!doctype html>
       <html>
         <head>
           <title>Login - Simple Blog</title>
@@ -131,7 +129,6 @@ router.map(routes.posts, {
     middleware: [requireAuth()],
     handler({ session: _session }) {
       return res.html(html`
-        <!doctype html>
         <html>
           <head>
             <title>New Post - Simple Blog</title>
@@ -180,7 +177,6 @@ router.map(routes.posts, {
     }
 
     return res.html(html`
-      <!doctype html>
       <html>
         <head>
           <title>${post.title} - Simple Blog</title>
