@@ -20,9 +20,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./local": "./src/local.ts",
+    "./fs": "./src/fs.ts",
     "./memory": "./src/memory.ts",
-    "./s3": "./src/s3.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -31,17 +30,13 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./local": {
-        "types": "./dist/local.d.ts",
-        "default": "./dist/local.js"
+      "./fs": {
+        "types": "./dist/fs.d.ts",
+        "default": "./dist/fs.js"
       },
       "./memory": {
         "types": "./dist/memory.d.ts",
         "default": "./dist/memory.js"
-      },
-      "./s3": {
-        "types": "./dist/s3.d.ts",
-        "default": "./dist/s3.js"
       },
       "./package.json": "./package.json"
     }

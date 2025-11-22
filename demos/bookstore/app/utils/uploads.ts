@@ -1,13 +1,11 @@
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { FileUpload } from '@remix-run/form-data-middleware'
-import { createLocalFileStorage } from '@remix-run/file-storage/local'
+import { createFsFileStorage } from '@remix-run/file-storage/fs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-export const uploadsStorage = createLocalFileStorage(
-  resolve(__dirname, '..', '..', 'tmp', 'uploads'),
-)
+export const uploadsStorage = createFsFileStorage(resolve(__dirname, '..', '..', 'tmp', 'uploads'))
 
 /**
  * Upload handler for file uploads. Stores files in local storage and returns

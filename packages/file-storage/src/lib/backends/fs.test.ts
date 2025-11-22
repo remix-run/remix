@@ -5,12 +5,12 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { parseFormData } from '@remix-run/form-data-parser'
 
-import { createLocalFileStorage } from './local.ts'
+import { createFsFileStorage } from './fs.ts'
 
-describe('createLocalFileStorage', () => {
+describe('fs file storage', () => {
   let tmpDir: string
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'local-file-storage-test-'))
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fs-file-storage-test-'))
   })
 
   afterEach(() => {
@@ -18,7 +18,7 @@ describe('createLocalFileStorage', () => {
   })
 
   it('stores and retrieves files', async () => {
-    let storage = createLocalFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir)
     let lastModified = Date.now()
     let file = new File(['Hello, world!'], 'hello.txt', {
       type: 'text/plain',
@@ -48,7 +48,7 @@ describe('createLocalFileStorage', () => {
   })
 
   it('removes empty hash directories after removing files', async () => {
-    let storage = createLocalFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir)
     let file = new File(['Test content'], 'test.txt', { type: 'text/plain' })
 
     // Set a file
@@ -71,7 +71,7 @@ describe('createLocalFileStorage', () => {
   })
 
   it('lists files with pagination', async () => {
-    let storage = createLocalFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir)
     let allKeys = ['a', 'b', 'c', 'd', 'e']
 
     await Promise.all(
@@ -101,7 +101,7 @@ describe('createLocalFileStorage', () => {
   })
 
   it('lists files by key prefix', async () => {
-    let storage = createLocalFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir)
     let allKeys = ['a', 'b', 'b/c', 'c', 'd']
 
     await Promise.all(
@@ -117,7 +117,7 @@ describe('createLocalFileStorage', () => {
   })
 
   it('lists files with metadata', async () => {
-    let storage = createLocalFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir)
     let allKeys = ['a', 'b', 'c', 'd', 'e']
 
     await Promise.all(
@@ -137,7 +137,7 @@ describe('createLocalFileStorage', () => {
   })
 
   it('handles race conditions', async () => {
-    let storage = createLocalFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir)
     let lastModified = Date.now()
 
     let file1 = new File(['Hello, world!'], 'hello1.txt', {
@@ -170,14 +170,14 @@ describe('createLocalFileStorage', () => {
 
     assert.throws(
       () => {
-        createLocalFileStorage(filePath)
+        createFsFileStorage(filePath)
       },
       new Error(`Path "${filePath}" is not a directory`),
     )
   })
 
   it('puts files', async () => {
-    let storage = createLocalFileStorage(tmpDir)
+    let storage = createFsFileStorage(tmpDir)
     let lastModified = Date.now()
     let file = new File(['Hello, world!'], 'hello.txt', {
       type: 'text/plain',
@@ -196,7 +196,7 @@ describe('createLocalFileStorage', () => {
 
   describe('integration with form-data-parser', () => {
     it('stores and lists file uploads', async () => {
-      let storage = createLocalFileStorage(tmpDir)
+      let storage = createFsFileStorage(tmpDir)
 
       let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
       let request = new Request('http://example.com', {

@@ -23,12 +23,12 @@ npm install @remix-run/file-storage
 
 ## Usage
 
-### Local File System
+### File System
 
 ```ts
-import { createLocalFileStorage } from '@remix-run/file-storage/local'
+import { createFsFileStorage } from '@remix-run/file-storage/fs'
 
-let storage = createLocalFileStorage('./user/files')
+let storage = createFsFileStorage('./user/files')
 
 let file = new File(['hello world'], 'hello.txt', { type: 'text/plain' })
 let key = 'hello-key'

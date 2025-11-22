@@ -4,8 +4,22 @@ This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
-- BREAKING CHANGE: `MemoryFileStorage` class has been replaced with a `createMemoryFileStorage()` factory function. Update your code from `new MemoryFileStorage()` to `createMemoryFileStorage()`.
-- BREAKING CHANGE: `LocalFileStorage` class has been replaced with a `createLocalFileStorage(directory)` factory function. Update your code from `new LocalFileStorage(directory)` to `createLocalFileStorage(directory)`.
+- BREAKING CHANGE: `LocalFileStorage` class has been replaced with `createFsFileStorage(directory)`
+- BREAKING CHANGE: `MemoryFileStorage` class has been replaced with `createMemoryFileStorage()`
+
+  ```ts
+  // before
+  import { LocalFileStorage } from '@remix-run/file-storage/local'
+  import { MemoryFileStorage } from '@remix-run/file-storage/memory'
+  let fsStorage = new LocalFileStorage('./files')
+  let memoryStorage = new MemoryFileStorage()
+
+  // after
+  import { createFsFileStorage } from '@remix-run/file-storage/fs'
+  import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
+  let fsStorage = createFsFileStorage('./files')
+  let memoryStorage = createMemoryFileStorage()
+  ```
 
 ## v0.12.0 (2025-11-20)
 
