@@ -38,4 +38,3 @@ export function session(cookie: Cookie, storage: SessionStorage): Middleware {
     return response
   }
 }
-
