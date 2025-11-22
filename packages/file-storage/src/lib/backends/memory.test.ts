@@ -2,23 +2,23 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { parseFormData } from '@remix-run/form-data-parser'
 
-import { MemoryFileStorage } from './memory-file-storage.ts'
+import { createMemoryFileStorage } from './memory.ts'
 
-describe('MemoryFileStorage', () => {
+describe('createMemoryFileStorage', () => {
   it('stores and retrieves files', async () => {
-    let storage = new MemoryFileStorage()
+    let storage = createMemoryFileStorage()
     let file = new File(['Hello, world!'], 'hello.txt', { type: 'text/plain' })
 
     await storage.set('hello', file)
 
     assert.ok(storage.has('hello'))
 
-    let retrieved = storage.get('hello')
+    let retrieved = await storage.get('hello')
 
     assert.ok(retrieved)
-    assert.equal(retrieved.name, 'hello.txt')
-    assert.equal(retrieved.type, 'text/plain')
-    assert.equal(retrieved.size, 13)
+    assert.equal(retrieved!.name, 'hello.txt')
+    assert.equal(retrieved!.type, 'text/plain')
+    assert.equal(retrieved!.size, 13)
 
     let text = await retrieved.text()
 
@@ -31,7 +31,7 @@ describe('MemoryFileStorage', () => {
   })
 
   it('lists files with pagination', async () => {
-    let storage = new MemoryFileStorage()
+    let storage = createMemoryFileStorage()
     let allKeys = ['a', 'b', 'c', 'd', 'e']
 
     await Promise.all(
@@ -40,20 +40,20 @@ describe('MemoryFileStorage', () => {
       ),
     )
 
-    let { cursor, files } = storage.list()
+    let { cursor, files } = await storage.list()
     assert.equal(cursor, undefined)
     assert.equal(files.length, 5)
     assert.deepEqual(files.map((f) => f.key).sort(), allKeys)
 
-    let { cursor: cursor1, files: files1 } = storage.list({ limit: 0 })
+    let { cursor: cursor1, files: files1 } = await storage.list({ limit: 0 })
     assert.equal(cursor1, undefined)
     assert.equal(files1.length, 0)
 
-    let { cursor: cursor2, files: files2 } = storage.list({ limit: 2 })
+    let { cursor: cursor2, files: files2 } = await storage.list({ limit: 2 })
     assert.notEqual(cursor2, undefined)
     assert.equal(files2.length, 2)
 
-    let { cursor: cursor3, files: files3 } = storage.list({ cursor: cursor2 })
+    let { cursor: cursor3, files: files3 } = await storage.list({ cursor: cursor2 })
     assert.equal(cursor3, undefined)
     assert.equal(files3.length, 3)
 
@@ -61,7 +61,7 @@ describe('MemoryFileStorage', () => {
   })
 
   it('lists files by key prefix', async () => {
-    let storage = new MemoryFileStorage()
+    let storage = createMemoryFileStorage()
     let allKeys = ['a', 'b', 'b/c', 'c', 'd']
 
     await Promise.all(
@@ -70,7 +70,7 @@ describe('MemoryFileStorage', () => {
       ),
     )
 
-    let { cursor, files } = storage.list({ prefix: 'b' })
+    let { cursor, files } = await storage.list({ prefix: 'b' })
 
     assert.equal(cursor, undefined)
     assert.equal(files.length, 2)
@@ -79,7 +79,7 @@ describe('MemoryFileStorage', () => {
   })
 
   it('lists files with metadata', async () => {
-    let storage = new MemoryFileStorage()
+    let storage = createMemoryFileStorage()
     let allKeys = ['a', 'b', 'c', 'd', 'e']
 
     await Promise.all(
@@ -88,7 +88,7 @@ describe('MemoryFileStorage', () => {
       ),
     )
 
-    let { cursor, files } = storage.list({ includeMetadata: true })
+    let { cursor, files } = await storage.list({ includeMetadata: true })
 
     assert.equal(cursor, undefined)
     assert.equal(files.length, 5)
@@ -101,7 +101,7 @@ describe('MemoryFileStorage', () => {
 
   describe('integration with form-data-parser', () => {
     it('stores and lists file uploads', async () => {
-      let storage = new MemoryFileStorage()
+      let storage = createMemoryFileStorage()
 
       let boundary = '----WebKitFormBoundaryzv5f5B8XUeVl7e0A'
       let request = new Request('http://example.com', {
@@ -125,7 +125,7 @@ describe('MemoryFileStorage', () => {
 
       assert.ok(storage.has('hello'))
 
-      let { files } = storage.list({ includeMetadata: true })
+      let { files } = await storage.list({ includeMetadata: true })
 
       assert.equal(files.length, 1)
       assert.equal(files[0].key, 'hello')
