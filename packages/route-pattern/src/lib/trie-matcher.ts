@@ -1,9 +1,7 @@
 import type { Matcher, MatchResult } from './matcher.ts'
-import { parse } from './parse.ts'
-import type { Token, ParseResult } from './parse.ts'
+import { parse, type Token, type ParseResult } from './parse.ts'
 import { RoutePattern } from './route-pattern.ts'
-import { parseSearch } from './search-constraints.ts'
-import type { SearchConstraints } from './search-constraints.ts'
+import { parseSearch, type SearchConstraints } from './search-constraints.ts'
 import { stringifyTokens } from './stringify.ts'
 
 interface TrieNode {

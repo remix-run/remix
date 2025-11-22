@@ -1,7 +1,5 @@
-import { split } from './split.ts'
-import type { SplitPattern, Split } from './split.ts'
-import { parseSearchConstraints } from './search-constraints.ts'
-import type { SearchConstraints } from './search-constraints.ts'
+import { split, type SplitPattern, type Split } from './split.ts'
+import { parseSearchConstraints, type SearchConstraints } from './search-constraints.ts'
 
 export class ParseError extends Error {
   source: string

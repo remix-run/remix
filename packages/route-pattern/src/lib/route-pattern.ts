@@ -1,12 +1,8 @@
-import { formatHref } from './href.ts'
-import type { HrefBuilderArgs } from './href.ts'
-import { join } from './join.ts'
-import type { Join } from './join.ts'
+import { formatHref, type HrefBuilderArgs } from './href.ts'
+import { join, type Join } from './join.ts'
 import type { Params } from './params.ts'
-import { parse } from './parse.ts'
-import type { Token, ParseResult } from './parse.ts'
-import { parseSearch } from './search-constraints.ts'
-import type { SearchConstraints } from './search-constraints.ts'
+import { parse, type Token, type ParseResult } from './parse.ts'
+import { parseSearch, type SearchConstraints } from './search-constraints.ts'
 
 export interface RoutePatternOptions {
   /**

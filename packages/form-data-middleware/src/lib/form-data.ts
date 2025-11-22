@@ -4,7 +4,6 @@ import {
   type FileUploadHandler,
   type ParseFormDataOptions,
 } from '@remix-run/form-data-parser'
-
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 
 export interface FormDataOptions extends ParseFormDataOptions {
