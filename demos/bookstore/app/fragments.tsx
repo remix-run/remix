@@ -1,6 +1,6 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
 
-import { routes } from '../routes.ts'
+import type { routes } from '../routes.ts'
 
 import { BookCard } from './components/book-card.tsx'
 import { loadAuth } from './middleware/auth.ts'
