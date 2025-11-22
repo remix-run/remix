@@ -27,6 +27,10 @@
 - **TypeScript**: Strict mode, ESNext target, ES2022 modules, bundler resolution, verbatimModuleSyntax
 - **Comments**: Only add non-JSDoc comments when the code is doing something surprising or non-obvious
 
+## Demos
+
+- All demo servers should use port **44100** for consistency across the monorepo
+
 ## Changelog Formatting
 
 - Use `## Unreleased` as the heading for unreleased changes (not `## HEAD`)

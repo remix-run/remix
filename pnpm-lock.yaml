@@ -541,6 +541,16 @@ importers:
         version: 5.9.3
 
   packages/static-middleware:
+    dependencies:
+      '@remix-run/fs':
+        specifier: workspace:^
+        version: link:../fs
+      '@remix-run/html-template':
+        specifier: workspace:^
+        version: link:../html-template
+      mrmime:
+        specifier: ^2.0.0
+        version: 2.0.0
     devDependencies:
       '@remix-run/fetch-router':
         specifier: workspace:*
@@ -548,12 +558,6 @@ importers:
       '@remix-run/form-data-middleware':
         specifier: workspace:*
         version: link:../form-data-middleware
-      '@remix-run/fs':
-        specifier: workspace:*
-        version: link:../fs
-      '@remix-run/lazy-file':
-        specifier: workspace:*
-        version: link:../lazy-file
       '@remix-run/method-override-middleware':
         specifier: workspace:*
         version: link:../method-override-middleware
@@ -563,6 +567,18 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  packages/static-middleware/demos/list-files:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../../../fetch-router
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../../../node-fetch-server
+      '@remix-run/static-middleware':
+        specifier: workspace:^
+        version: link:../..
 
   packages/tar-parser:
     devDependencies:

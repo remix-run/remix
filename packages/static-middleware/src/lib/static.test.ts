@@ -12,7 +12,6 @@ import { staticFiles } from './static.ts'
 
 describe('staticFiles middleware', () => {
   let tmpDir: string
-
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'static-middleware-test-'))
   })
