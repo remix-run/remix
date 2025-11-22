@@ -88,20 +88,20 @@ assert.equal(response4.session.get('message'), undefined)
 For security, regenerate the session ID after privilege changes like a login. This helps prevent session fixation attacks by issuing a new session ID in the response.
 
 ```ts
-import { createFileSessionStorage } from '@remix-run/session/file-storage'
+import { createFsSessionStorage } from '@remix-run/session/fs-storage'
 
-let storage = createFileSessionStorage('/tmp/sessions')
+let sessionStorage = createFsSessionStorage('/tmp/sessions')
 
 async function requestIndex(cookie: string | null) {
-  let session = await storage.read(cookie)
-  return { session, cookie: await storage.save(session) }
+  let session = await sessionStorage.read(cookie)
+  return { session, cookie: await sessionStorage.save(session) }
 }
 
 async function requestLogin(cookie: string | null) {
-  let session = await storage.read(cookie)
+  let session = await sessionStorage.read(cookie)
   session.set('userId', 'mj')
   session.regenerateId()
-  return { session, cookie: await storage.save(session) }
+  return { session, cookie: await sessionStorage.save(session) }
 }
 
 let response1 = await requestIndex(null)
@@ -128,14 +128,14 @@ Several strategies are provided out of the box for storing session data across r
 
 A session storage object must always be initialized with a _signed_ session cookie. This is used to identify the session and to store the session data in the response.
 
-#### File Storage
+#### Filesystem Storage
 
-File storage is a good choice for production environments. It requires access to a persistent filesystem, which is readily available on most servers. And it can scale to handle sessions with a lot of data easily.
+Filesystem storage is a good choice for production environments. It requires access to a persistent filesystem, which is readily available on most servers. And it can scale to handle sessions with a lot of data easily.
 
 ```ts
-import { createFileSessionStorage } from '@remix-run/session/file-storage'
+import { createFsSessionStorage } from '@remix-run/session/fs-storage'
 
-let storage = createFileSessionStorage('/tmp/sessions')
+let sessionStorage = createFsSessionStorage('/tmp/sessions')
 ```
 
 #### Cookie Storage
@@ -147,7 +147,7 @@ The main limitation of cookie storage is that the total size of the session cook
 ```ts
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 
-let storage = createCookieSessionStorage()
+let sessionStorage = createCookieSessionStorage()
 ```
 
 #### Memory Storage
@@ -157,7 +157,7 @@ Memory storage is useful in testing and development environments. In this strate
 ```ts
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 
-let storage = createMemorySessionStorage()
+let sessionStorage = createMemorySessionStorage()
 ```
 
 ## Related Packages

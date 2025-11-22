@@ -15,7 +15,7 @@ export interface FsSessionStorageOptions {
 
 /**
  * Creates a session storage that stores all session data in a filesystem directory using
- * node:fs.
+ * Node's fs module.
  *
  * Note: No attempt is made to avoid overwriting existing files, so the directory used should
  * be a new directory solely dedicated to this storage object.

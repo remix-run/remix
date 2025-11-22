@@ -21,7 +21,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./cookie-storage": "./src/cookie-storage.ts",
-    "./file-storage": "./src/file-storage.ts",
+    "./fs-storage": "./src/fs-storage.ts",
     "./memory-storage": "./src/memory-storage.ts",
     "./package.json": "./package.json"
   },
@@ -35,9 +35,9 @@
         "types": "./dist/cookie-storage.d.ts",
         "default": "./dist/cookie-storage.js"
       },
-      "./file-storage": {
-        "types": "./dist/file-storage.d.ts",
-        "default": "./dist/file-storage.js"
+      "./fs-storage": {
+        "types": "./dist/fs-storage.d.ts",
+        "default": "./dist/fs-storage.js"
       },
       "./memory-storage": {
         "types": "./dist/memory-storage.d.ts",
