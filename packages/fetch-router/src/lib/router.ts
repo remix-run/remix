@@ -79,13 +79,14 @@ export interface Router {
     routeMapOrRoute extends Route<
       infer method extends RequestMethod | 'ANY',
       infer route extends string
-    > ? RouteHandler<method, route> : 
+    > ?
+      method extends 'ANY' ? RouteHandler<RequestMethod | 'ANY', route> : RouteHandler<method, route> 
+    : 
     // route case (RoutePattern | string), expects route handler (infers route)
     routeMapOrRoute extends RoutePattern<infer route extends string> | string ? RouteHandler<'ANY', route> :
 
     never,
   ): void
-  // return never
   /**
    * Map a GET route/pattern to a request handler.
    * @param route The route/pattern to match
