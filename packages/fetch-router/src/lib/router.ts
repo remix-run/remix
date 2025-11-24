@@ -70,20 +70,24 @@ export interface Router {
       | RoutePattern<string>
       | string,
   >(
-    routeOrRoutes: routeMapOrRoute,
-    handlerOrHandlers: // prettier-ignore
-    // route map case, expects route handlers
-    [routeMapOrRoute] extends [RouteMap] ?  RouteHandlers<routeMapOrRoute> :
+    route: routeMapOrRoute,
+    handler: // prettier-ignore
+    // map(routeMap, routeHandlers)
+    [routeMapOrRoute] extends [RouteMap] ? RouteHandlers<routeMapOrRoute> :
 
-    // route case (Route), expects route handler (infers route and method)
+    // map(route, routeHandler)
     routeMapOrRoute extends Route<
       infer method extends RequestMethod | 'ANY',
       infer route extends string
     > ?
       method extends 'ANY' ? RouteHandler<RequestMethod | 'ANY', route> : RouteHandler<method, route> 
-    : 
-    // route case (RoutePattern | string), expects route handler (infers route)
-    routeMapOrRoute extends RoutePattern<infer route extends string> | string ? RouteHandler<'ANY', route> :
+    :
+
+    // map(pattern, routeHandler)
+    routeMapOrRoute extends RoutePattern<infer pattern extends string> ? RouteHandler<'ANY', pattern> :
+
+    // map(stringPattern, routeHandler)
+    routeMapOrRoute extends string ? RouteHandler<'ANY', routeMapOrRoute>:
 
     never,
   ): void
