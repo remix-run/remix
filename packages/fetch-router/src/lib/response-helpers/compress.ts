@@ -1,12 +1,18 @@
-import { constants, createBrotliCompress, createDeflate, createGzip } from 'node:zlib'
+import {
+  constants,
+  createBrotliCompress,
+  createDeflate,
+  createGzip,
+  type BrotliCompress,
+  type Gzip,
+  type Deflate,
+} from 'node:zlib'
 import type { BrotliOptions, ZlibOptions } from 'node:zlib'
-import { Readable } from 'node:stream'
-import type { Transform } from 'node:stream'
 
 import { AcceptEncoding, SuperHeaders } from '@remix-run/headers'
 
-type Encoding = 'br' | 'gzip' | 'deflate'
-const defaultEncodings: readonly Encoding[] = Object.freeze(['br', 'gzip', 'deflate'])
+export type Encoding = 'br' | 'gzip' | 'deflate'
+const defaultEncodings: Encoding[] = ['br', 'gzip', 'deflate']
 
 export interface CompressOptions {
   /**
@@ -115,7 +121,7 @@ export async function compress(
     })
   }
 
-  return compressStream(response, responseHeaders, selectedEncoding, compressOptions)
+  return compressResponse(response, responseHeaders, selectedEncoding, compressOptions)
 }
 
 function negotiateEncoding(
@@ -157,18 +163,22 @@ const brotliFlushOptions = {
   flush: constants.BROTLI_OPERATION_FLUSH,
 }
 
-function compressStream(
+function compressResponse(
   response: Response,
   responseHeaders: SuperHeaders,
   encoding: Encoding,
   options: CompressOptions,
 ): Response {
+  if (!response.body) {
+    return response
+  }
+
   // Detect SSE for automatic flush configuration
   let contentType = response.headers.get('Content-Type')
   let mediaType = contentType?.split(';')[0].trim()
   let isSSE = mediaType === 'text/event-stream'
 
-  let compressionTransform = createCompressionTransform(encoding, {
+  let compressor = createCompressor(encoding, {
     ...options,
     // Apply SSE flush defaults if not explicitly set
     brotli: {
@@ -181,20 +191,120 @@ function compressStream(
     },
   })
 
-  let compressedStream = Readable.toWeb(
-    Readable.fromWeb(response.body as any).pipe(compressionTransform),
-  ) as ReadableStream<Uint8Array>
-
   setCompressionHeaders(responseHeaders, encoding)
 
-  return new Response(compressedStream, {
+  return new Response(compressStream(response.body, compressor), {
     status: response.status,
     statusText: response.statusText,
     headers: responseHeaders,
   })
 }
 
-function createCompressionTransform(encoding: Encoding, options: CompressOptions): Transform {
+/**
+ * Compresses a response stream that bridges node:zlib to Web Streams.
+ * Reads from the input stream, compresses chunks through the compressor,
+ * and returns a new ReadableStream with the compressed data.
+ */
+export function compressStream(
+  input: ReadableStream<Uint8Array>,
+  compressor: Gzip | Deflate | BrotliCompress,
+): ReadableStream<Uint8Array> {
+  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
+  let cancelled = false
+  let errored = false
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      reader = input.getReader()
+
+      compressor.on('data', (chunk: Buffer) => {
+        if (!cancelled && !errored) {
+          controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+        }
+      })
+
+      compressor.on('end', () => {
+        if (!cancelled && !errored) {
+          controller.close()
+        }
+      })
+
+      compressor.on('error', (error) => {
+        // Ignore duplicate error events
+        if (errored) {
+          return
+        }
+        errored = true
+        if (!cancelled) {
+          controller.error(error)
+        }
+      })
+
+      try {
+        while (true) {
+          if (cancelled || errored) {
+            break
+          }
+
+          let { done, value } = await reader.read()
+
+          if (cancelled || errored) {
+            break
+          }
+
+          if (done) {
+            compressor.end()
+            break
+          }
+
+          if (!value) {
+            continue
+          }
+
+          await new Promise<void>((resolve, reject) => {
+            let resolvedImmediately = false
+
+            let canContinue = compressor.write(Buffer.from(value), (error) => {
+              if (resolvedImmediately) {
+                return
+              }
+              if (error) {
+                reject(error)
+              } else {
+                resolve()
+              }
+            })
+
+            if (canContinue) {
+              resolvedImmediately = true
+              resolve()
+            }
+          })
+        }
+      } catch (error) {
+        errored = true
+        compressor.destroy(error as Error)
+        if (!cancelled) {
+          controller.error(error)
+        }
+      } finally {
+        reader.releaseLock()
+      }
+    },
+
+    async cancel(reason) {
+      cancelled = true
+      // Destroy compressor first to unblock any pending write operations
+      compressor.destroy()
+      await reader?.cancel(reason)
+    },
+  })
+}
+
+function createCompressor(
+  encoding: Encoding,
+  options: CompressOptions,
+): Gzip | Deflate | BrotliCompress {
   switch (encoding) {
     case 'br':
       return createBrotliCompress(options.brotli)

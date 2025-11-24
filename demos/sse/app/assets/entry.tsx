@@ -14,13 +14,4 @@ createFrame(document, {
 
     return Component
   },
-
-  async resolveFrame(frameUrl) {
-    let res = await fetch(frameUrl)
-    if (res.ok) {
-      return res.text()
-    }
-
-    throw new Error(`Failed to fetch ${frameUrl}`)
-  },
 })

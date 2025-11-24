@@ -114,7 +114,7 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
    * @param mediaTypes The list of media types to choose from.
    * @returns The most preferred media type or `null` if none match.
    */
-  getPreferred<MediaType extends string>(mediaTypes: readonly MediaType[]): MediaType | null {
+  getPreferred<mediaType extends string>(mediaTypes: readonly mediaType[]): mediaType | null {
     let sorted = mediaTypes
       .map((mediaType) => [mediaType, this.getWeight(mediaType)] as const)
       .sort((a, b) => b[1] - a[1])

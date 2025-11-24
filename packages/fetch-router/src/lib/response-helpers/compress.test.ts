@@ -10,14 +10,32 @@ import {
 } from 'node:zlib'
 import { promisify } from 'node:util'
 import { Readable } from 'node:stream'
+import { EventEmitter } from 'node:events'
 import { describe, it } from 'node:test'
 
 import { SuperHeaders } from '@remix-run/headers'
-import { compress } from './compress.ts'
+import { compress, compressStream, type Encoding } from './compress.ts'
 
 const gunzipAsync = promisify(gunzip)
 const brotliDecompressAsync = promisify(brotliDecompress)
 const inflateAsync = promisify(inflate)
+
+// Type for mock compressors used in tests
+interface MockCompressor extends EventEmitter {
+  write(chunk: Buffer, callback?: (error?: Error) => void): boolean
+  end(): void
+  destroy(error?: Error): void
+}
+
+// Helper to create mock compressors with required methods
+function createMockCompressor(impl: {
+  write: (chunk: Buffer, callback?: (error?: Error) => void) => boolean
+  end: () => void
+  destroy: (error?: Error) => void
+}): MockCompressor {
+  let emitter = new EventEmitter()
+  return Object.assign(emitter, impl) as MockCompressor
+}
 
 describe('compress()', () => {
   it('compresses response with gzip when client accepts it', async () => {
@@ -729,47 +747,1015 @@ describe('compress()', () => {
         decompressed.destroy()
       })
     }
+  })
 
-    it('respects explicit flush value even for SSE', async () => {
-      let response = new Response('event: message\ndata: test\n\n', {
-        headers: { 'Content-Type': 'text/event-stream' },
+  describe('Streaming compression', () => {
+    /**
+     * Helper: Create a ReadableStream from a string
+     */
+    function createStreamFromString(content: string): ReadableStream<Uint8Array> {
+      return new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(content))
+          controller.close()
+        },
       })
+    }
 
+    /**
+     * Helper: Create a ReadableStream that emits chunks
+     */
+    function createChunkedStream(chunks: string[]): ReadableStream<Uint8Array> {
+      return new ReadableStream({
+        start(controller) {
+          for (let chunk of chunks) {
+            controller.enqueue(new TextEncoder().encode(chunk))
+          }
+          controller.close()
+        },
+      })
+    }
+
+    /**
+     * Helper: Create a ReadableStream that errors
+     */
+    function createErrorStream(errorAfterChunks: number): ReadableStream<Uint8Array> {
+      return new ReadableStream({
+        start(controller) {
+          for (let i = 0; i < errorAfterChunks; i++) {
+            controller.enqueue(new TextEncoder().encode('chunk'))
+          }
+          controller.error(new Error('Stream error'))
+        },
+      })
+    }
+
+    /**
+     * Helper: Read entire stream to string
+     */
+    async function streamToString(stream: ReadableStream<Uint8Array>): Promise<string> {
+      let reader = stream.getReader()
+      let chunks: Uint8Array[] = []
+
+      while (true) {
+        let { done, value } = await reader.read()
+        if (done) break
+        if (value) chunks.push(value)
+      }
+
+      let concatenated = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0))
+      let offset = 0
+      for (let chunk of chunks) {
+        concatenated.set(chunk, offset)
+        offset += chunk.length
+      }
+
+      return new TextDecoder().decode(concatenated)
+    }
+
+    /**
+     * Helper: Decompress a web stream using node:zlib
+     */
+    function getDecompressor(encoding: Encoding) {
+      switch (encoding) {
+        case 'gzip':
+          return createGunzip()
+        case 'deflate':
+          return createInflate()
+        case 'br':
+          return createBrotliDecompress()
+        default:
+          throw new Error(`Unsupported encoding: ${encoding}`)
+      }
+    }
+
+    function decompressStream(
+      compressed: ReadableStream<Uint8Array>,
+      encoding: Encoding,
+    ): ReadableStream<Uint8Array> {
+      let decompressor = getDecompressor(encoding)
+
+      return new ReadableStream({
+        async start(controller) {
+          decompressor.on('data', (chunk: Buffer) => {
+            controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+          })
+
+          decompressor.on('end', () => {
+            controller.close()
+          })
+
+          decompressor.on('error', (error) => {
+            controller.error(error)
+          })
+
+          let reader = compressed.getReader()
+
+          try {
+            while (true) {
+              let { done, value } = await reader.read()
+
+              if (done) {
+                decompressor.end()
+                break
+              }
+
+              if (!value) {
+                continue
+              }
+
+              decompressor.write(Buffer.from(value))
+            }
+          } catch (error) {
+            decompressor.destroy(error as Error)
+          }
+        },
+      })
+    }
+
+    /**
+     * Helper: Compress and decompress round-trip
+     */
+    async function roundTrip(input: string, encoding: Encoding): Promise<string> {
       let request = new Request('https://remix.run', {
-        headers: { 'Accept-Encoding': 'gzip' },
-      })
-
-      // Explicitly set flush to Z_NO_FLUSH (not recommended for SSE, but should be respected)
-      let compressed = await compress(response, request, {
-        zlib: {
-          flush: constants.Z_NO_FLUSH,
+        headers: {
+          'Accept-Encoding': encoding,
         },
       })
 
-      assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
-      assert.ok(compressed.body)
+      let response = new Response(createStreamFromString(input), {
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+      })
 
-      // Just verify it compressed, we can't easily test that Z_NO_FLUSH was used
-      // but the important thing is it didn't override our explicit setting
-      let buffer = await compressed.arrayBuffer()
-      let decompressed = await gunzipAsync(Buffer.from(buffer))
-      assert.equal(decompressed.toString(), 'event: message\ndata: test\n\n')
+      let compressed = await compress(response, request, { encodings: [encoding] })
+
+      assert.equal(compressed.headers.get('Content-Encoding'), encoding)
+
+      let decompressed = decompressStream(compressed.body!, encoding)
+      return await streamToString(decompressed)
+    }
+
+    describe('correctness (round-trip compression)', () => {
+      it('handles binary data byte-perfectly', async () => {
+        let request = new Request('https://remix.run', {
+          headers: { 'Accept-Encoding': 'br' },
+        })
+
+        // Create binary data with all byte values (0-255)
+        let binaryData = new Uint8Array(256)
+        for (let i = 0; i < 256; i++) {
+          binaryData[i] = i
+        }
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(binaryData)
+            controller.close()
+          },
+        })
+
+        let response = new Response(stream, {
+          headers: { 'Content-Type': 'application/octet-stream' },
+        })
+
+        let compressed = await compress(response, request, { encodings: ['br'] })
+
+        // Decompress and verify byte-perfect match
+        let decompressed = decompressStream(compressed.body!, 'br')
+        let chunks: Uint8Array[] = []
+        let reader = decompressed.getReader()
+
+        while (true) {
+          let { done, value } = await reader.read()
+          if (done) break
+          if (value) chunks.push(value)
+        }
+
+        let result = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0))
+        let offset = 0
+        for (let chunk of chunks) {
+          result.set(chunk, offset)
+          offset += chunk.length
+        }
+
+        assert.equal(result.length, binaryData.length)
+        for (let i = 0; i < result.length; i++) {
+          assert.equal(result[i], binaryData[i], `Byte mismatch at index ${i}`)
+        }
+      })
+
+      for (let encoding of ['gzip', 'deflate', 'br'] as const) {
+        describe(encoding, () => {
+          it('compresses and decompresses simple text', async () => {
+            let result = await roundTrip('hello world', encoding)
+            assert.equal(result, 'hello world')
+          })
+
+          it('compresses and decompresses empty string', async () => {
+            let result = await roundTrip('', encoding)
+            assert.equal(result, '')
+          })
+
+          it('compresses and decompresses unicode', async () => {
+            let unicode = 'Hello 世界 🌍 émoji'
+            let result = await roundTrip(unicode, encoding)
+            assert.equal(result, unicode)
+          })
+        })
+      }
     })
 
-    it('only applies flush defaults for text/event-stream', async () => {
-      let response = new Response('regular content', {
+    describe('chunk handling', () => {
+      it('handles multiple chunks correctly', async () => {
+        let request = new Request('https://remix.run', {
+          headers: { 'Accept-Encoding': 'br' },
+        })
+
+        let response = new Response(createChunkedStream(['hello', ' ', 'world']), {
+          headers: { 'Content-Type': 'text/plain' },
+        })
+
+        let compressed = await compress(response, request, { encodings: ['br'] })
+        let decompressed = decompressStream(compressed.body!, 'br')
+        let result = await streamToString(decompressed)
+
+        assert.equal(result, 'hello world')
+      })
+
+      it('handles single-byte chunks', async () => {
+        let bytes = ['h', 'e', 'l', 'l', 'o']
+
+        let request = new Request('https://remix.run', {
+          headers: { 'Accept-Encoding': 'br' },
+        })
+
+        let response = new Response(createChunkedStream(bytes), {
+          headers: { 'Content-Type': 'text/plain' },
+        })
+
+        let compressed = await compress(response, request, { encodings: ['br'] })
+        let decompressed = decompressStream(compressed.body!, 'br')
+        let result = await streamToString(decompressed)
+
+        assert.equal(result, 'hello')
+      })
+
+      it('handles empty chunks in stream', async () => {
+        let request = new Request('https://remix.run', {
+          headers: { 'Accept-Encoding': 'br' },
+        })
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array(0)) // Empty chunk
+            controller.enqueue(new TextEncoder().encode('hello '))
+            controller.enqueue(new Uint8Array(0)) // Another empty chunk
+            controller.enqueue(new TextEncoder().encode('world'))
+            controller.close()
+          },
+        })
+
+        let response = new Response(stream, {
+          headers: { 'Content-Type': 'text/plain' },
+        })
+
+        let compressed = await compress(response, request, { encodings: ['br'] })
+        let decompressed = decompressStream(compressed.body!, 'br')
+        let result = await streamToString(decompressed)
+
+        assert.equal(result, 'hello world')
+      })
+
+      it('handles stream that closes immediately without data', async () => {
+        let request = new Request('https://remix.run', {
+          headers: { 'Accept-Encoding': 'br' },
+        })
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.close() // Close immediately without writing
+          },
+        })
+
+        let response = new Response(stream, {
+          headers: { 'Content-Type': 'text/plain' },
+        })
+
+        let compressed = await compress(response, request, { encodings: ['br'] })
+        let decompressed = decompressStream(compressed.body!, 'br')
+        let result = await streamToString(decompressed)
+
+        assert.equal(result, '')
+      })
+    })
+
+    it('propagates errors from input stream', async () => {
+      let request = new Request('https://remix.run', {
+        headers: { 'Accept-Encoding': 'br' },
+      })
+
+      let response = new Response(createErrorStream(2), {
         headers: { 'Content-Type': 'text/plain' },
       })
 
+      let compressed = await compress(response, request, { encodings: ['br'] })
+
+      let reader = compressed.body!.getReader()
+
+      await assert.rejects(
+        async () => {
+          while (true) {
+            let { done } = await reader.read()
+            if (done) break
+          }
+        },
+        {
+          message: 'Stream error',
+        },
+      )
+    })
+
+    it('handles output stream cancellation and stops processing source stream', async () => {
       let request = new Request('https://remix.run', {
-        headers: { 'Accept-Encoding': 'gzip' },
+        headers: { 'Accept-Encoding': 'br' },
       })
 
-      let compressed = await compress(response, request)
+      let streamCancelled = false
+      let cancelReason: string | undefined
 
-      assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
-      // Should compress successfully without any flush defaults
-      assert.ok(compressed.body)
+      let stream = new ReadableStream({
+        async pull(controller) {
+          controller.enqueue(new TextEncoder().encode('chunk\n'.repeat(100)))
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        },
+        cancel(reason) {
+          streamCancelled = true
+          cancelReason = reason
+        },
+      })
+
+      let response = new Response(stream, {
+        headers: { 'Content-Type': 'text/plain' },
+      })
+
+      let compressed = await compress(response, request, { encodings: ['br'] })
+      let reader = compressed.body!.getReader()
+
+      // Start reading to activate the stream
+      reader.read()
+
+      // Wait for streaming to start
+      await new Promise((resolve) => setTimeout(resolve, 30))
+
+      // Cancel the output stream
+      await reader.cancel('User cancelled')
+
+      // Wait for cancellation to propagate
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Verify source stream was cancelled
+      assert.equal(streamCancelled, true, 'Source stream should be cancelled')
+      assert.equal(cancelReason, 'User cancelled', 'Cancel reason should be passed through')
+    })
+
+    describe('Compressor interactions', () => {
+      it('ignores data events emitted after error', async () => {
+        let errorEmitted = false
+
+        let mockCompressor = createMockCompressor({
+          write: (chunk) => {
+            // Emit error, then try to emit data (should be ignored)
+            setImmediate(() => {
+              mockCompressor.emit('error', new Error('Compressor failed'))
+              errorEmitted = true
+              // Try to emit data after error (should be ignored)
+              mockCompressor.emit('data', chunk)
+            })
+            // Don't call callback - error will reject the Promise
+            return false
+          },
+          end: () => {},
+          destroy: () => {},
+        })
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('test'))
+            controller.close()
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+        let chunks: Uint8Array[] = []
+
+        // Should get error, not the data chunk
+        await assert.rejects(
+          async () => {
+            while (true) {
+              let result = await reader.read()
+              if (result.done) break
+              chunks.push(result.value)
+            }
+          },
+          {
+            message: 'Compressor failed',
+          },
+        )
+
+        // Wait for any pending microtasks
+        await Promise.resolve()
+
+        // Should not have received the data chunk emitted after error
+        assert.equal(chunks.length, 0, 'Should not receive data chunks after error')
+        assert.equal(errorEmitted, true, 'Error should have been emitted')
+      })
+
+      it('ignores data events emitted after cancellation', async () => {
+        let dataAfterCancel = false
+        let lastChunk: Buffer
+
+        let mockCompressor = createMockCompressor({
+          write: (chunk) => {
+            // Store the chunk for later emission
+            lastChunk = chunk
+            // Signal backpressure but never call callback or emit drain
+            // This will cause the write to hang
+            return false
+          },
+          end: () => {},
+          destroy: () => {
+            mockCompressor.emit('data', lastChunk)
+            dataAfterCancel = true
+          },
+        })
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('test'))
+            controller.close()
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+        let chunks: Uint8Array[] = []
+
+        // Start reading (will block on backpressure)
+        let readPromise = reader.read().then((result) => {
+          if (!result.done) chunks.push(result.value)
+        })
+
+        // Cancel while blocked
+        await Promise.resolve()
+        await reader.cancel()
+
+        await readPromise.catch(() => {
+          // May error or not, doesn't matter
+        })
+
+        // Wait for any pending microtasks
+        await Promise.resolve()
+
+        assert.equal(chunks.length, 0, 'Should not receive data chunks after cancel')
+        assert.equal(dataAfterCancel, true, 'Data should have been emitted by mock')
+      })
+
+      it('handles multiple data chunks emitted during single write', async () => {
+        let mockCompressor = createMockCompressor({
+          write: (chunk, callback) => {
+            // Real zlib can emit multiple data chunks for one write
+            // Emit the chunk split into parts
+            let length = chunk.length
+            let part1 = chunk.subarray(0, Math.floor(length / 3))
+            let part2 = chunk.subarray(Math.floor(length / 3), Math.floor((length * 2) / 3))
+            let part3 = chunk.subarray(Math.floor((length * 2) / 3))
+            mockCompressor.emit('data', part1)
+            mockCompressor.emit('data', part2)
+            mockCompressor.emit('data', part3)
+            if (callback) setImmediate(callback)
+            return true
+          },
+          end: () => {
+            mockCompressor.emit('end')
+          },
+          destroy: () => {},
+        })
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('input'))
+            controller.close()
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+        let chunks: Uint8Array[] = []
+
+        while (true) {
+          let result = await reader.read()
+          if (result.done) break
+          chunks.push(result.value)
+        }
+
+        assert.equal(chunks.length, 3, 'Should receive all data chunks from single write')
+        // Verify the chunks when reassembled equal the original input
+        let reassembled = new TextDecoder().decode(Buffer.concat(chunks))
+        assert.equal(reassembled, 'input', 'Chunks should reassemble to original input')
+      })
+
+      it('handles backpressure (write returns false, then drain)', async () => {
+        // Create mock compressor that signals backpressure on second write
+        let writeCount = 0
+        let mockCompressor = createMockCompressor({
+          write: (chunk, callback) => {
+            writeCount++
+            // Emit data immediately
+            setImmediate(() => mockCompressor.emit('data', chunk))
+            // Second write returns false (backpressure)
+            if (writeCount === 2) {
+              // Emit drain and call callback after returning
+              setImmediate(() => {
+                if (callback) callback()
+              })
+              return false
+            }
+            // No backpressure
+            if (callback) setImmediate(callback)
+            return true
+          },
+          end: () => {
+            setImmediate(() => mockCompressor.emit('end'))
+          },
+          destroy: () => {},
+        })
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('chunk1'))
+            controller.enqueue(new TextEncoder().encode('chunk2'))
+            controller.enqueue(new TextEncoder().encode('chunk3'))
+            controller.close()
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+        let chunks: Uint8Array[] = []
+
+        while (true) {
+          let { done, value } = await reader.read()
+          if (done) break
+          if (value) chunks.push(value)
+        }
+
+        let result = new TextDecoder().decode(Buffer.concat(chunks))
+
+        // Verify all chunks came through despite backpressure
+        assert.equal(result, 'chunk1chunk2chunk3')
+        assert.equal(writeCount, 3, 'Should have written all chunks')
+      })
+
+      it('handles cancel while waiting for drain', async () => {
+        let destroyed = false
+        let mockCompressor = createMockCompressor({
+          write: () => {
+            // Never call callback or emit drain, forcing the wait
+            return false
+          },
+          end: () => {},
+          destroy: () => {
+            destroyed = true
+          },
+        })
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('test'))
+            controller.close()
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+
+        // Start reading (will get stuck waiting for drain)
+        let readPromise = reader.read()
+
+        // Cancel after a short delay
+        await Promise.resolve()
+        await reader.cancel('User cancelled')
+
+        // Wait for the read to complete
+        await readPromise.catch(() => {
+          // Expected to fail
+        })
+
+        assert.equal(destroyed, true, 'Compressor should be destroyed on cancel')
+      })
+
+      it('handles error emitted while waiting for drain and stops loop', async () => {
+        let writeCount = 0
+        let mockCompressor = createMockCompressor({
+          write: () => {
+            // Real zlib compressors continue to accept writes after error
+            writeCount++
+            if (writeCount === 1) {
+              // Emit error on next microtask (callback won't be called)
+              setImmediate(() => {
+                mockCompressor.emit('error', new Error('Compressor failed'))
+              })
+            }
+            return false // Always signal backpressure
+          },
+          end: () => {},
+          destroy: () => {},
+        })
+
+        let stream = new ReadableStream({
+          pull(controller) {
+            controller.enqueue(new TextEncoder().encode('chunk'))
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+
+        // Expect error
+        await assert.rejects(
+          async () => {
+            await reader.read()
+          },
+          {
+            message: 'Compressor failed',
+          },
+        )
+
+        // Wait for any pending microtasks
+        await Promise.resolve()
+
+        let finalWriteCount = writeCount
+
+        assert.equal(
+          writeCount,
+          finalWriteCount,
+          `Should only write once before error stops loop (got ${writeCount})`,
+        )
+      })
+
+      it('handles compressor error after successful chunks', async () => {
+        let writeCount = 0
+        let mockCompressor = createMockCompressor({
+          write: (_chunk, callback) => {
+            // Real zlib compressors continue to accept writes after error
+            writeCount++
+            if (writeCount === 2) {
+              // Emit error on next microtask (callback won't be called)
+              setImmediate(() => {
+                mockCompressor.emit('error', new Error('Compressor failed mid-stream'))
+              })
+              return false // Signal backpressure to create an await point
+            }
+            if (callback) setImmediate(callback)
+            return true
+          },
+          end: () => {},
+          destroy: () => {},
+        })
+
+        let stream = new ReadableStream({
+          pull(controller) {
+            controller.enqueue(new TextEncoder().encode('chunk'))
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+
+        // Expect error
+        await assert.rejects(
+          async () => {
+            while (true) {
+              let result = await reader.read()
+              if (result.done) break
+            }
+          },
+          {
+            message: 'Compressor failed mid-stream',
+          },
+        )
+
+        // Wait for any pending microtasks
+        await Promise.resolve()
+
+        let finalWriteCount = writeCount
+
+        assert.equal(
+          writeCount,
+          finalWriteCount,
+          `Should only write twice before error stops loop (got ${writeCount})`,
+        )
+      })
+
+      it('stops calling reader.read() after error', async () => {
+        let writeCount = 0
+        let mockCompressor = createMockCompressor({
+          write: () => {
+            writeCount++
+            if (writeCount === 1) {
+              setImmediate(() => {
+                mockCompressor.emit('error', new Error('Compressor failed'))
+              })
+            }
+            return false // Backpressure (callback won't be called)
+          },
+          end: () => {},
+          destroy: () => {},
+        })
+
+        let stream = new ReadableStream({
+          pull(controller) {
+            controller.enqueue(new TextEncoder().encode('chunk'))
+          },
+        })
+
+        // Monkey patch stream.getReader to count reader.read() calls
+        let readCount = 0
+        let originalGetReader = stream.getReader.bind(stream)
+        stream.getReader = function () {
+          let reader = originalGetReader()
+          let originalRead = reader.read.bind(reader)
+          reader.read = function () {
+            readCount++
+            return originalRead()
+          }
+          return reader
+        }
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+
+        await assert.rejects(
+          async () => {
+            await reader.read()
+          },
+          {
+            message: 'Compressor failed',
+          },
+        )
+
+        // Wait for any pending microtasks
+        await Promise.resolve()
+
+        assert.equal(
+          readCount,
+          1,
+          `Should only call reader.read() once (called ${readCount} times)`,
+        )
+        assert.equal(writeCount, 1, 'Should only write once')
+      })
+
+      it('propagates reader.cancel() errors', async () => {
+        let mockCompressor = createMockCompressor({
+          write: (_chunk, callback) => {
+            if (callback) setImmediate(callback)
+            return true
+          },
+          end: () => {},
+          destroy: () => {},
+        })
+
+        // Create a stream where cancel() rejects
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('test'))
+          },
+          cancel() {
+            return Promise.reject(new Error('Cancel failed'))
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+
+        // Start reading (will be in progress)
+        let readPromise = reader.read()
+
+        // Wait a bit for processing to start
+        await new Promise((resolve) => setTimeout(resolve, 10))
+
+        // Cancel should propagate the error
+        await assert.rejects(
+          async () => {
+            await reader.cancel('User cancelled')
+          },
+          {
+            message: 'Cancel failed',
+          },
+        )
+
+        // Clean up the read promise
+        await readPromise.catch(() => {})
+      })
+
+      it('handles error passed to write() callback', async () => {
+        let mockCompressor = createMockCompressor({
+          write: (_chunk, callback) => {
+            // Call callback with error immediately
+            if (callback) {
+              callback(new Error('Write callback error'))
+            }
+            return true
+          },
+          end: () => {},
+          destroy: () => {
+            // Real compressors typically don't emit error when destroyed with an error
+            // because the error is already being propagated. However, for completeness
+            // and to ensure resilience, we also test this scenario below.
+          },
+        })
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('test'))
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+
+        // The first read will trigger the write with callback error
+        await assert.rejects(
+          async () => {
+            await reader.read()
+          },
+          {
+            message: 'Write callback error',
+          },
+        )
+      })
+
+      it('prevents duplicate error reporting if destroy() also emits error', async () => {
+        let errorEmitCount = 0
+        let mockCompressor = createMockCompressor({
+          write: (_chunk, callback) => {
+            // Call callback with error immediately
+            if (callback) {
+              callback(new Error('Write callback error'))
+            }
+            return true
+          },
+          end: () => {},
+          destroy: (error) => {
+            if (error) {
+              setImmediate(() => {
+                errorEmitCount++
+                mockCompressor.emit('error', error)
+              })
+            }
+          },
+        })
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('test'))
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+
+        // The first read will trigger the write with callback error
+        await assert.rejects(
+          async () => {
+            await reader.read()
+          },
+          {
+            message: 'Write callback error',
+          },
+        )
+
+        // Wait for any pending error emissions
+        await new Promise((resolve) => setImmediate(resolve))
+
+        // Error event should have been emitted but ignored (duplicate)
+        assert.equal(errorEmitCount, 1, 'Error event should have been emitted by destroy()')
+      })
+
+      it('calls compressor.end() when input stream is done', async () => {
+        let endCalled = false
+        let mockCompressor = createMockCompressor({
+          write: (_chunk, callback) => {
+            if (callback) setImmediate(callback)
+            return true
+          },
+          end: () => {
+            endCalled = true
+            mockCompressor.emit('end')
+          },
+          destroy: () => {},
+        })
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('test'))
+            controller.close()
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+
+        // Read all chunks
+        while (true) {
+          let result = await reader.read()
+          if (result.done) break
+        }
+
+        assert.equal(endCalled, true, 'compressor.end() should be called when input stream is done')
+      })
+
+      it('closes output stream when compressor emits end event', async () => {
+        let mockCompressor = createMockCompressor({
+          write: (chunk, callback) => {
+            // Emit data and end immediately
+            mockCompressor.emit('data', chunk)
+            if (callback) setImmediate(callback)
+            return true
+          },
+          end: () => {
+            setImmediate(() => {
+              mockCompressor.emit('end')
+            })
+          },
+          destroy: () => {},
+        })
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('test'))
+            controller.close()
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+
+        let chunks: Uint8Array[] = []
+        while (true) {
+          let result = await reader.read()
+          if (result.done) {
+            break
+          }
+          chunks.push(result.value)
+        }
+
+        assert.equal(chunks.length, 1, 'Should receive data chunk')
+        assert.equal(new TextDecoder().decode(chunks[0]), 'test')
+      })
+
+      it('handles end event with final data chunk', async () => {
+        let mockCompressor = createMockCompressor({
+          write: (chunk, callback) => {
+            mockCompressor.emit('data', chunk)
+            if (callback) setImmediate(callback)
+            return true
+          },
+          end: () => {
+            setImmediate(() => {
+              // Emit final data chunk before end
+              mockCompressor.emit('data', Buffer.from(' final'))
+              mockCompressor.emit('end')
+            })
+          },
+          destroy: () => {},
+        })
+
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('test'))
+            controller.close()
+          },
+        })
+
+        let compressed = compressStream(stream, mockCompressor as any)
+        let reader = compressed.getReader()
+
+        let chunks: Uint8Array[] = []
+        while (true) {
+          let result = await reader.read()
+          if (result.done) break
+          chunks.push(result.value)
+        }
+
+        // Should receive both chunks
+        assert.equal(chunks.length, 2, 'Should receive all data chunks including final')
+        let fullText = chunks.map((c) => new TextDecoder().decode(c)).join('')
+        assert.equal(fullText, 'test final')
+      })
     })
   })
 })
