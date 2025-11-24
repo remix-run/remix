@@ -2,6 +2,10 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Replaced `mrmime` dependency with `@remix-run/mime` for MIME type detection
+
 ## v4.0.0 (2025-11-20)
 
 - BREAKING CHANGE: Removed `lazy-file/fs` export. Use `@remix-run/fs` package instead.
@@ -13,8 +17,6 @@ This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/
   // after
   import { openFile, writeFile } from '@remix-run/fs'
   ```
-
-- Replaced `mrmime` dependency with `@remix-run/mime` for MIME type detection
 
 ## v3.8.0 (2025-11-18)
 
