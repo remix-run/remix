@@ -63,6 +63,30 @@ describe('createResource', () => {
     assert.equal((book as any).create, undefined)
   })
 
+  it('creates a resource with exclude option', () => {
+    let book = resource('book', { exclude: ['new', 'create', 'edit', 'destroy'] })
+
+    type T = [
+      Assert<
+        IsEqual<
+          typeof book,
+          {
+            show: Route<'GET', '/book'>
+            update: Route<'PUT', '/book'>
+          }
+        >
+      >,
+    ]
+
+    assert.deepEqual(book.show, new Route('GET', '/book'))
+    assert.deepEqual(book.update, new Route('PUT', '/book'))
+    // Other routes are excluded from the type
+    assert.equal((book as any).new, undefined)
+    assert.equal((book as any).create, undefined)
+    assert.equal((book as any).edit, undefined)
+    assert.equal((book as any).destroy, undefined)
+  })
+
   it('creates a resource with custom route names', () => {
     let book = resource('book', {
       names: {
@@ -165,6 +189,45 @@ describe('createResource', () => {
     assert.equal((book as any).edit, undefined)
     assert.equal((book as any).destroy, undefined)
   })
+
+  it('creates a resource with custom route names and exclude option', () => {
+    let book = resource('book', {
+      exclude: ['new', 'edit', 'destroy'],
+      names: {
+        show: 'view',
+        create: 'store',
+        update: 'save',
+      },
+    })
+
+    type T = [
+      Assert<
+        IsEqual<
+          typeof book,
+          {
+            view: Route<'GET', '/book'>
+            store: Route<'POST', '/book'>
+            save: Route<'PUT', '/book'>
+          }
+        >
+      >,
+    ]
+
+    assert.deepEqual(book.view, new Route('GET', '/book'))
+    assert.deepEqual(book.store, new Route('POST', '/book'))
+    assert.deepEqual(book.save, new Route('PUT', '/book'))
+    // Other routes are excluded from the type
+    assert.equal((book as any).new, undefined)
+    assert.equal((book as any).edit, undefined)
+    assert.equal((book as any).destroy, undefined)
+  })
+
+  it('throws an error if both only and exclude are specified', () => {
+    assert.throws(
+      () => resource('book', { only: ['show'], exclude: ['destroy'] } as any),
+      /Cannot specify both "only" and "exclude" options/,
+    )
+  })
 })
 
 describe('createResources', () => {
@@ -231,6 +294,32 @@ describe('createResources', () => {
 
   it('creates resources with only option', () => {
     let books = resources('books', { only: ['index', 'show', 'create'] })
+
+    type T = [
+      Assert<
+        IsEqual<
+          typeof books,
+          {
+            index: Route<'GET', '/books'>
+            show: Route<'GET', '/books/:id'>
+            create: Route<'POST', '/books'>
+          }
+        >
+      >,
+    ]
+
+    assert.deepEqual(books.index, new Route('GET', '/books'))
+    assert.deepEqual(books.show, new Route('GET', '/books/:id'))
+    assert.deepEqual(books.create, new Route('POST', '/books'))
+    // Other routes are excluded from the type
+    assert.equal((books as any).new, undefined)
+    assert.equal((books as any).edit, undefined)
+    assert.equal((books as any).update, undefined)
+    assert.equal((books as any).destroy, undefined)
+  })
+
+  it('creates resources with exclude option', () => {
+    let books = resources('books', { exclude: ['new', 'edit', 'update', 'destroy'] })
 
     type T = [
       Assert<
@@ -390,6 +479,39 @@ describe('createResources', () => {
     assert.equal((books as any).destroy, undefined)
   })
 
+  it('creates resources with custom route names and exclude option', () => {
+    let books = resources('books', {
+      exclude: ['new', 'edit', 'update', 'destroy'],
+      names: {
+        index: 'list',
+        show: 'view',
+        create: 'store',
+      },
+    })
+
+    type T = [
+      Assert<
+        IsEqual<
+          typeof books,
+          {
+            list: Route<'GET', '/books'>
+            view: Route<'GET', '/books/:id'>
+            store: Route<'POST', '/books'>
+          }
+        >
+      >,
+    ]
+
+    assert.deepEqual(books.list, new Route('GET', '/books'))
+    assert.deepEqual(books.view, new Route('GET', '/books/:id'))
+    assert.deepEqual(books.store, new Route('POST', '/books'))
+    // Other routes are excluded from the type
+    assert.equal((books as any).new, undefined)
+    assert.equal((books as any).edit, undefined)
+    assert.equal((books as any).update, undefined)
+    assert.equal((books as any).destroy, undefined)
+  })
+
   it('creates resources with custom route names and custom param', () => {
     let posts = resources('posts', {
       param: 'slug',
@@ -485,6 +607,13 @@ describe('createResources', () => {
     assert.deepEqual(
       routes.brands.products.destroy,
       new Route('DELETE', '/brands/:brandId/products/:id'),
+    )
+  })
+
+  it('throws an error if both only and exclude are specified', () => {
+    assert.throws(
+      () => resources('books', { only: ['index'], exclude: ['destroy'] } as any),
+      /Cannot specify both "only" and "exclude" options/,
     )
   })
 })
