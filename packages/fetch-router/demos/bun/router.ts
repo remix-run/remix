@@ -1,6 +1,6 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { createCookie } from '@remix-run/cookie'
-import { createCookieStorage } from '@remix-run/session/cookie-storage'
+import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { formData } from '@remix-run/form-data-middleware'
 import { logger } from '@remix-run/logger-middleware'
 import { session } from '@remix-run/session-middleware'
@@ -14,7 +14,7 @@ import * as data from './data.ts'
 let sessionCookie = createCookie('__sess', {
   secrets: ['s3cr3t'],
 })
-let storage = createCookieStorage()
+let storage = createCookieSessionStorage()
 
 function requireAuth(): Middleware {
   return async ({ session }, next) => {
