@@ -5,7 +5,7 @@ import * as path from 'node:path'
 import { createSession, type SessionData } from '../session.ts'
 import type { SessionStorage } from '../session-storage.ts'
 
-export interface FileStorageOptions {
+export interface FsSessionStorageOptions {
   /**
    * Whether to reuse session IDs sent from the client that are not found in storage.
    * Default is `false`.
@@ -14,17 +14,20 @@ export interface FileStorageOptions {
 }
 
 /**
- * Creates a session storage that stores all session data in files on the filesystem.
+ * Creates a session storage that stores all session data in a filesystem directory using
+ * Node's fs module.
  *
  * Note: No attempt is made to avoid overwriting existing files, so the directory used should
  * be a new directory solely dedicated to this storage object.
  *
- * @param cookie The cookie to use for the session
  * @param directory The directory to store the session files in
  * @param options (optional) The options for the session storage
  * @returns The session storage
  */
-export function createFileStorage(directory: string, options?: FileStorageOptions): SessionStorage {
+export function createFsSessionStorage(
+  directory: string,
+  options?: FsSessionStorageOptions,
+): SessionStorage {
   let root = path.resolve(directory)
   let useUnknownIds = options?.useUnknownIds ?? false
 

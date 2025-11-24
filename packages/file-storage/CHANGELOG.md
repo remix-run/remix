@@ -2,6 +2,25 @@
 
 This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- BREAKING CHANGE: `LocalFileStorage` class has been replaced with `createFsFileStorage(directory)`
+- BREAKING CHANGE: `MemoryFileStorage` class has been replaced with `createMemoryFileStorage()`
+
+  ```ts
+  // before
+  import { LocalFileStorage } from '@remix-run/file-storage/local'
+  import { MemoryFileStorage } from '@remix-run/file-storage/memory'
+  let fsStorage = new LocalFileStorage('./files')
+  let memoryStorage = new MemoryFileStorage()
+
+  // after
+  import { createFsFileStorage } from '@remix-run/file-storage/fs'
+  import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
+  let fsStorage = createFsFileStorage('./files')
+  let memoryStorage = createMemoryFileStorage()
+  ```
+
 ## v0.12.0 (2025-11-20)
 
 - Add `@remix-run/fs` as a peer dependency. This package now imports from `@remix-run/fs` instead of `@remix-run/lazy-file/fs`.

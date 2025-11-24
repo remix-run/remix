@@ -7,6 +7,8 @@ import {
   type FileResponseOptions,
 } from '@remix-run/fetch-router/response-helpers'
 
+import { generateDirectoryListing } from './directory-listing.ts'
+
 /**
  * Function that determines if HTTP Range requests should be supported for a given file.
  *
@@ -15,7 +17,7 @@ import {
  */
 export type AcceptRangesFunction = (file: File) => boolean
 
-export type StaticFilesOptions = Omit<FileResponseOptions, 'acceptRanges'> & {
+export interface StaticFilesOptions extends Omit<FileResponseOptions, 'acceptRanges'> {
   /**
    * Filter function to determine which files should be served.
    *
@@ -57,6 +59,11 @@ export type StaticFilesOptions = Omit<FileResponseOptions, 'acceptRanges'> & {
    * - `string[]`: Custom list of index files to try in order
    */
   index?: boolean | string[]
+  /**
+   * Whether to return an HTML page listing the files in a directory when the request path
+   * targets a directory. If both this and `index` are set, `index` takes precedence.
+   */
+  listFiles?: boolean
 }
 
 /**
@@ -88,7 +95,7 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
   // Ensure root is an absolute path
   root = path.resolve(root)
 
-  let { filter, acceptRanges, index: indexOption, ...fileOptions } = options
+  let { acceptRanges, filter, index: indexOption, listFiles, ...fileOptions } = options
 
   // Normalize index option
   let index: string[]
@@ -132,6 +139,11 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
           } catch {
             // Index file doesn't exist, continue to next
           }
+        }
+
+        // If no index file found and listFiles is enabled, show directory listing
+        if (!filePath && listFiles) {
+          return generateDirectoryListing(targetPath, context.url.pathname)
         }
       }
     } catch {

@@ -1,7 +1,7 @@
 import { createSession, type SessionData } from '../session.ts'
 import type { SessionStorage } from '../session-storage.ts'
 
-export interface MemoryStorageOptions {
+export interface MemorySessionStorageOptions {
   /**
    * Whether to reuse session IDs sent from the client that are not found in storage.
    * Default is `false`.
@@ -19,7 +19,7 @@ export interface MemoryStorageOptions {
  * @param options (optional) The options for the session storage
  * @returns The session storage
  */
-export function createMemoryStorage(options?: MemoryStorageOptions): SessionStorage {
+export function createMemorySessionStorage(options?: MemorySessionStorageOptions): SessionStorage {
   let useUnknownIds = options?.useUnknownIds ?? false
   let map = new Map<string, SessionData>()
 

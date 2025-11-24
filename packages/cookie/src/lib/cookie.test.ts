@@ -168,4 +168,18 @@ describe('Cookie', () => {
     assert.ok(setCookie.includes('Secure'))
     assert.ok(setCookie.includes('HttpOnly'))
   })
+
+  it('parses empty values as null', async () => {
+    let cookie = createCookie('my-cookie')
+    let value = await cookie.parse(null)
+
+    assert.equal(value, null)
+  })
+
+  it('parses missing cookies as null', async () => {
+    let cookie = createCookie('my-cookie')
+    let value = await cookie.parse('other-cookie=hello')
+
+    assert.equal(value, null)
+  })
 })

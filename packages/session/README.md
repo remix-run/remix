@@ -21,10 +21,10 @@ The following example shows how to use a session to persist data across requests
 The standard pattern when working with sessions is to read the session from the request, modify it, and save it back to storage and write the session cookie to the response.
 
 ```ts
-import { createCookieStorage } from '@remix-run/session/cookie-storage'
+import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 
 // Create a session storage. This is used to store session data across requests.
-let storage = createCookieStorage()
+let storage = createCookieSessionStorage()
 
 // This function simulates a typical request flow where the session is read from
 // the request cookie, modified, and the new cookie is returned in the response.
@@ -88,20 +88,20 @@ assert.equal(response4.session.get('message'), undefined)
 For security, regenerate the session ID after privilege changes like a login. This helps prevent session fixation attacks by issuing a new session ID in the response.
 
 ```ts
-import { createFileStorage } from '@remix-run/session/file-storage'
+import { createFsSessionStorage } from '@remix-run/session/fs-storage'
 
-let storage = createFileStorage('/tmp/sessions')
+let sessionStorage = createFsSessionStorage('/tmp/sessions')
 
 async function requestIndex(cookie: string | null) {
-  let session = await storage.read(cookie)
-  return { session, cookie: await storage.save(session) }
+  let session = await sessionStorage.read(cookie)
+  return { session, cookie: await sessionStorage.save(session) }
 }
 
 async function requestLogin(cookie: string | null) {
-  let session = await storage.read(cookie)
+  let session = await sessionStorage.read(cookie)
   session.set('userId', 'mj')
   session.regenerateId()
-  return { session, cookie: await storage.save(session) }
+  return { session, cookie: await sessionStorage.save(session) }
 }
 
 let response1 = await requestIndex(null)
@@ -128,14 +128,14 @@ Several strategies are provided out of the box for storing session data across r
 
 A session storage object must always be initialized with a _signed_ session cookie. This is used to identify the session and to store the session data in the response.
 
-#### File Storage
+#### Filesystem Storage
 
-File storage is a good choice for production environments. It requires access to a persistent filesystem, which is readily available on most servers. And it can scale to handle sessions with a lot of data easily.
+Filesystem storage is a good choice for production environments. It requires access to a persistent filesystem, which is readily available on most servers. And it can scale to handle sessions with a lot of data easily.
 
 ```ts
-import { createFileStorage } from '@remix-run/session/file-storage'
+import { createFsSessionStorage } from '@remix-run/session/fs-storage'
 
-let storage = createFileStorage('/tmp/sessions')
+let sessionStorage = createFsSessionStorage('/tmp/sessions')
 ```
 
 #### Cookie Storage
@@ -145,9 +145,9 @@ Cookie storage is suitable for production environments. In this strategy, all se
 The main limitation of cookie storage is that the total size of the session cookie is limited to the browser's maximum cookie size, typically 4096 bytes.
 
 ```ts
-import { createCookieStorage } from '@remix-run/session/cookie-storage'
+import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 
-let storage = createCookieStorage()
+let sessionStorage = createCookieSessionStorage()
 ```
 
 #### Memory Storage
@@ -155,9 +155,9 @@ let storage = createCookieStorage()
 Memory storage is useful in testing and development environments. In this strategy, all session data is stored in memory, which means no additional storage is required. However, all session data is lost when the server restarts.
 
 ```ts
-import { createMemoryStorage } from '@remix-run/session/memory-storage'
+import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 
-let storage = createMemoryStorage()
+let sessionStorage = createMemorySessionStorage()
 ```
 
 ## Related Packages

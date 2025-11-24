@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createCookie } from '@remix-run/cookie'
-import { createFileStorage } from '@remix-run/session/file-storage'
+import { createFsSessionStorage } from '@remix-run/session/fs-storage'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -18,9 +18,9 @@ export let sessionCookie = createCookie('session', {
 })
 
 /**
- * File-based session storage.
+ * Filesystem-based session storage.
  * Sessions are stored in the app's tmp/sessions directory.
  */
-export let sessionStorage = createFileStorage(
+export let sessionStorage = createFsSessionStorage(
   path.resolve(__dirname, '..', '..', 'tmp', 'sessions'),
 )

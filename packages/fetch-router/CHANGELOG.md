@@ -6,6 +6,20 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 - BREAKING CHANGE: Add `@remix-run/mime` as a peer dependency. This package is used by the `file()` response helper to determine if HTTP Range requests should be supported by default for a given MIME type.
 
+- The `file()` response helper now only enables HTTP Range requests by default for non-compressible MIME types. This allows text-based assets to be compressed while still supporting resumable downloads for media files.
+
+  To restore the previous behavior where all files support range requests:
+
+  ```ts
+  return res.file(file, request, {
+    acceptRanges: true,
+  })
+  ```
+
+  Note: Range requests and compression are mutually exclusive. When `Accept-Ranges: bytes` is present in response headers, the `compress()` response helper and `compression()` middleware will not compress the response.
+
+## v0.11.0 (2025-11-21)
+
 - BREAKING CHANGE: `Router` is no longer exported as a class, use `createRouter()` instead.
 
   ```tsx
@@ -26,17 +40,25 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
   This change improves the ergonomics of the router by eliminating the need to bind methods when passing `router.fetch` as a callback, for example in `node-fetch-server`'s `createRequestListener(router.fetch)`.
 
-- The `file()` response helper now only enables HTTP Range requests by default for non-compressible MIME types. This allows text-based assets to be compressed while still supporting resumable downloads for media files.
+- Make `middleware` optional in route handler(s) objects passed to `router.map()`
 
-  To restore the previous behavior where all files support range requests:
+  ```tsx
+  // Before
+  router.map('/', {
+    middleware: [], // required
+    handler() {
+      return new Response('Home')
+    },
+  })
 
-  ```ts
-  return res.file(file, request, {
-    acceptRanges: true,
+  // After
+  router.map('/', {
+    // middleware is optional!
+    handler() {
+      return new Response('Home')
+    },
   })
   ```
-
-  Note: Range requests and compression are mutually exclusive. When `Accept-Ranges: bytes` is present in response headers, the `compress()` response helper and `compression()` middleware will not compress the response.
 
 ## v0.10.0 (2025-11-19)
 

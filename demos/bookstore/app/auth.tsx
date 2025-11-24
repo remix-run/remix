@@ -86,6 +86,7 @@ export default {
           return redirect(routes.auth.login.index.href(undefined, { returnTo }))
         }
 
+        session.regenerateId(true)
         session.set('userId', user.id)
 
         return redirect(returnTo ?? routes.account.index.href())

@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/file-storage",
-  "version": "0.12.0",
+  "version": "0.11.0",
   "description": "Key/value storage for JavaScript File objects",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
@@ -20,7 +20,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./local": "./src/local.ts",
+    "./fs": "./src/fs.ts",
     "./memory": "./src/memory.ts",
     "./package.json": "./package.json"
   },
@@ -30,9 +30,9 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./local": {
-        "types": "./dist/local.d.ts",
-        "default": "./dist/local.js"
+      "./fs": {
+        "types": "./dist/fs.d.ts",
+        "default": "./dist/fs.js"
       },
       "./memory": {
         "types": "./dist/memory.d.ts",
@@ -40,6 +40,9 @@
       },
       "./package.json": "./package.json"
     }
+  },
+  "dependencies": {
+    "aws4fetch": "^1.0.20"
   },
   "peerDependencies": {
     "@remix-run/fs": "workspace:^",

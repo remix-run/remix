@@ -10,7 +10,7 @@ import type { SessionStorage } from '../session-storage.ts'
  * @param cookie The cookie to use for the session
  * @returns The session storage
  */
-export function createCookieStorage(): SessionStorage {
+export function createCookieSessionStorage(): SessionStorage {
   return {
     async read(cookie) {
       if (cookie) {

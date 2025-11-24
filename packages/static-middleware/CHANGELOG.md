@@ -18,6 +18,12 @@ This is the changelog for [`static-middleware`](https://github.com/remix-run/rem
   })
   ```
 
+- Add `listFiles` option to generate a directory listing when a directory is requested.
+
+  ```ts
+  staticFiles('./public', { listFiles: true })
+  ```
+
 ## v0.2.0 (2025-11-20)
 
 - Read the request method from `context.method` instead of `context.request.method`, so it's compatible with the [`method-override` middleware](https://github.com/remix-run/remix/tree/main/packages/method-override-middleware)

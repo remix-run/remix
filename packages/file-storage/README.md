@@ -23,10 +23,12 @@ npm install @remix-run/file-storage
 
 ## Usage
 
-```ts
-import { LocalFileStorage } from '@remix-run/file-storage/local'
+### File System
 
-let storage = new LocalFileStorage('./user/files')
+```ts
+import { createFsFileStorage } from '@remix-run/file-storage/fs'
+
+let storage = createFsFileStorage('./user/files')
 
 let file = new File(['hello world'], 'hello.txt', { type: 'text/plain' })
 let key = 'hello-key'
@@ -44,38 +46,28 @@ fileFromStorage.type // 'text/plain'
 await storage.remove(key)
 ```
 
-The `FileStorage` interface allows you to implement your own file storage for custom storage backends:
+### Amazon S3
 
 ```ts
-import { type FileStorage } from '@remix-run/file-storage'
+import { createS3FileStorage } from '@remix-run/file-storage/s3'
 
-class CustomFileStorage implements FileStorage {
-  /**
-   * Returns `true` if a file with the given key exists, `false` otherwise.
-   */
-  has(key: string): boolean | Promise<boolean> {
-    // ...
-  }
-  /**
-   * Puts a file in storage at the given key.
-   */
-  set(key: string, file: File): void | Promise<void> {
-    // ...
-  }
-  /**
-   * Returns the file with the given key, or `null` if no such key exists.
-   */
-  get(key: string): File | null | Promise<File | null> {
-    // ...
-  }
-  /**
-   * Removes the file with the given key from storage.
-   */
-  remove(key: string): void | Promise<void> {
-    // ...
-  }
-}
+let storage = createS3FileStorage({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  bucket: 'my-bucket',
+  region: 'us-east-1',
+})
+
+// Use the same API as other storage implementations
+await storage.set('my-key', file)
+let retrieved = await storage.get('my-key')
 ```
+
+The S3 implementation also supports:
+
+- S3-compatible services (like MinIO, Cloudflare R2) via the `endpoint` option
+- Temporary credentials via the `sessionToken` option
+- All standard `FileStorage` operations including listing, pagination, and prefix filtering
 
 ## Related Packages
 

@@ -8,14 +8,12 @@ export interface FileStorage {
    * @returns The file with the given key, or `null` if no such key exists
    */
   get(key: string): File | null | Promise<File | null>
-
   /**
    * Check if a file with the given key exists.
    * @param key The key to look up
    * @returns `true` if a file with the given key exists, `false` otherwise
    */
   has(key: string): boolean | Promise<boolean>
-
   /**
    * List the files in storage.
    *
@@ -76,7 +74,6 @@ export interface FileStorage {
    * @returns An object with an array of `files` and an optional `cursor` property
    */
   list<T extends ListOptions>(options?: T): ListResult<T> | Promise<ListResult<T>>
-
   /**
    * Put a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) in storage and return
    * a new file backed by this storage.
@@ -85,14 +82,12 @@ export interface FileStorage {
    * @returns A new File object backed by this storage
    */
   put(key: string, file: File): File | Promise<File>
-
   /**
    * Remove the file with the given key from storage.
    * @param key The key to remove
    * @returns A promise that resolves when the file has been removed
    */
   remove(key: string): void | Promise<void>
-
   /**
    * Put a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) in storage at the given
    * key.

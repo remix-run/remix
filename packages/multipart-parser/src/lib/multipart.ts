@@ -1,8 +1,12 @@
 import Headers from '@remix-run/headers'
 
+import {
+  createSearch,
+  createPartialTailSearch,
+  type SearchFunction,
+  type PartialTailSearchFunction,
+} from './buffer-search.ts'
 import { readStream } from './read-stream.ts'
-import type { SearchFunction, PartialTailSearchFunction } from './buffer-search.ts'
-import { createSearch, createPartialTailSearch } from './buffer-search.ts'
 
 /**
  * The base class for errors thrown by the multipart parser.

@@ -1,23 +1,23 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createMemoryStorage } from './memory.ts'
+import { createMemorySessionStorage } from './memory.ts'
 
 describe('memory session storage', () => {
   it('does not use unknown session IDs by default', async () => {
-    let storage = createMemoryStorage()
+    let storage = createMemorySessionStorage()
     let session = await storage.read('unknown')
     assert.notEqual(session.id, 'unknown')
   })
 
   it('uses unknown session IDs if enabled', async () => {
-    let storage = createMemoryStorage({ useUnknownIds: true })
+    let storage = createMemorySessionStorage({ useUnknownIds: true })
     let session = await storage.read('unknown')
     assert.equal(session.id, 'unknown')
   })
 
   it('persists session data across requests', async () => {
-    let storage = createMemoryStorage()
+    let storage = createMemorySessionStorage()
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -39,7 +39,7 @@ describe('memory session storage', () => {
   })
 
   it('clears session data when the session is destroyed', async () => {
-    let storage = createMemoryStorage()
+    let storage = createMemorySessionStorage()
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -74,7 +74,7 @@ describe('memory session storage', () => {
   })
 
   it('does not set a cookie when session data is not changed', async () => {
-    let storage = createMemoryStorage()
+    let storage = createMemorySessionStorage()
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -90,7 +90,7 @@ describe('memory session storage', () => {
   })
 
   it('makes flash data available only on the next request', async () => {
-    let storage = createMemoryStorage()
+    let storage = createMemorySessionStorage()
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -123,7 +123,7 @@ describe('memory session storage', () => {
   })
 
   it('leaves old session data in storage by default when the id is regenerated', async () => {
-    let storage = createMemoryStorage()
+    let storage = createMemorySessionStorage()
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
@@ -157,7 +157,7 @@ describe('memory session storage', () => {
   })
 
   it('deletes old session data when the id is regenerated and the deleteOldSession option is true', async () => {
-    let storage = createMemoryStorage()
+    let storage = createMemorySessionStorage()
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)

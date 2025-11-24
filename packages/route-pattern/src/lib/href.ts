@@ -1,7 +1,5 @@
 import type { RequiredParams, OptionalParams } from './params.ts'
-import { parse } from './parse.ts'
-import type { ParseResult } from './parse.ts'
-import type { Token } from './parse.ts'
+import { parse, type ParseResult, type Token } from './parse.ts'
 import type { RoutePattern } from './route-pattern.ts'
 import type { Variant } from './variant.ts'
 

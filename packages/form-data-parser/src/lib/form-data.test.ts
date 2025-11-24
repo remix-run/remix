@@ -212,4 +212,27 @@ describe('parseFormData', () => {
       await parseFormData(request)
     }, FormDataParseError)
   })
+
+  it('parses a multipart file without a media type', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=----BOUNDARY',
+      },
+      body: [
+        '------BOUNDARY',
+        'Content-Disposition: form-data; name="file"; filename="example.txt"',
+        '',
+        'This is an example file.',
+        '------BOUNDARY--',
+      ].join('\r\n'),
+    })
+
+    let formData = await parseFormData(request)
+    let file = formData.get('file')
+    assert.ok(file instanceof File)
+    assert.equal(file.name, 'example.txt')
+    assert.equal(file.type, 'application/octet-stream')
+    assert.equal(await file.text(), 'This is an example file.')
+  })
 })
