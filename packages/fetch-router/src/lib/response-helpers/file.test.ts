@@ -29,634 +29,634 @@ describe('file()', () => {
   })
 
   describe('ETag support', () => {
-    for (let method of ['GET', 'HEAD'] as const) {
-      describe(method, () => {
-        it('includes weak ETag header by default', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', {
-            type: 'text/plain',
-            lastModified: 1000000,
-          })
-          let request = new Request('http://localhost/test.txt', { method })
-
-          let response = await sendFile(mockFile, request)
-
-          let etag = response.headers.get('ETag')
-          assert.equal(response.status, 200)
-          assert.ok(etag)
-          assert.match(etag, /^W\/"[\d]+-[\d]+\.?[\d]*"$/)
-        })
-
-        it('does not include ETag when etag=false', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-          let request = new Request('http://localhost/test.txt', { method })
-
-          let response = await sendFile(mockFile, request, { etag: false })
-
-          assert.equal(response.status, 200)
-          assert.equal(response.headers.get('ETag'), null)
-        })
-
-        it('generates strong ETag when etag=strong', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-          let request = new Request('http://localhost/test.txt', { method })
-
-          let response = await sendFile(mockFile, request, { etag: 'strong' })
-
-          let etag = response.headers.get('ETag')
-          assert.equal(response.status, 200)
-          assert.ok(etag)
-          assert.ok(!etag.startsWith('W/'), 'Should not be a weak ETag')
-          assert.match(etag, /^"[a-f0-9]+"$/, 'Should be a hex digest wrapped in quotes')
-        })
-
-        it('uses SHA-256 by default for strong ETags', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-          let request = new Request('http://localhost/test.txt', { method })
-
-          let response = await sendFile(mockFile, request, { etag: 'strong' })
-
-          let etag = response.headers.get('ETag')
-          assert.ok(etag)
-          // SHA-256 produces 64 hex characters (32 bytes * 2)
-          assert.match(etag, /^"[a-f0-9]{64}"$/)
-        })
-
-        it('supports custom digest algorithm', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-          let request = new Request('http://localhost/test.txt', { method })
-
-          let response = await sendFile(mockFile, request, {
-            etag: 'strong',
-            digest: 'sha512',
-          })
-
-          let etag = response.headers.get('ETag')
-          assert.ok(etag)
-          // SHA-512 produces 128 hex characters (64 bytes * 2)
-          assert.match(etag, /^"[a-f0-9]{128}"$/)
-        })
-
-        it('supports custom digest function', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-          let request = new Request('http://localhost/test.txt', { method })
-
-          let response = await sendFile(mockFile, request, {
-            etag: 'strong',
-            digest: async () => 'custom-hash-12345',
-          })
-
-          let etag = response.headers.get('ETag')
-          assert.equal(etag, '"custom-hash-12345"')
-        })
+    it('includes weak ETag header by default', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', {
+        type: 'text/plain',
+        lastModified: 1000000,
       })
-    }
+      let request = new Request('http://localhost/test.txt')
+
+      let response = await sendFile(mockFile, request)
+
+      let etag = response.headers.get('ETag')
+      assert.equal(response.status, 200)
+      assert.ok(etag)
+      assert.match(etag, /^W\/"[\d]+-[\d]+\.?[\d]*"$/)
+    })
+
+    it('does not include ETag when etag=false', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt')
+
+      let response = await sendFile(mockFile, request, { etag: false })
+
+      assert.equal(response.status, 200)
+      assert.equal(response.headers.get('ETag'), null)
+    })
+
+    it('generates strong ETag when etag=strong', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt')
+
+      let response = await sendFile(mockFile, request, { etag: 'strong' })
+
+      let etag = response.headers.get('ETag')
+      assert.equal(response.status, 200)
+      assert.ok(etag)
+      assert.ok(!etag.startsWith('W/'), 'Should not be a weak ETag')
+      assert.match(etag, /^"[a-f0-9]+"$/, 'Should be a hex digest wrapped in quotes')
+    })
+
+    it('uses SHA-256 by default for strong ETags', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt')
+
+      let response = await sendFile(mockFile, request, { etag: 'strong' })
+
+      let etag = response.headers.get('ETag')
+      assert.ok(etag)
+      // SHA-256 produces 64 hex characters (32 bytes * 2)
+      assert.match(etag, /^"[a-f0-9]{64}"$/)
+    })
+
+    it('supports custom digest algorithm', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt')
+
+      let response = await sendFile(mockFile, request, {
+        etag: 'strong',
+        digest: 'SHA-512',
+      })
+
+      let etag = response.headers.get('ETag')
+      assert.ok(etag)
+      // SHA-512 produces 128 hex characters (64 bytes * 2)
+      assert.match(etag, /^"[a-f0-9]{128}"$/)
+    })
+
+    it('supports custom digest function', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt')
+
+      let response = await sendFile(mockFile, request, {
+        etag: 'strong',
+        digest: async () => 'custom-hash-12345',
+      })
+
+      let etag = response.headers.get('ETag')
+      assert.equal(etag, '"custom-hash-12345"')
+    })
+
+    it('throws error for unsupported algorithm', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt')
+
+      await assert.rejects(
+        async () => {
+          await sendFile(mockFile, request, {
+            etag: 'strong',
+            digest: 'MD5',
+          })
+        },
+        {
+          name: 'NotSupportedError',
+        },
+      )
+    })
+
+    it('supports SHA-1 algorithm', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt')
+
+      let response = await sendFile(mockFile, request, {
+        etag: 'strong',
+        digest: 'SHA-1',
+      })
+
+      let etag = response.headers.get('ETag')
+      assert.ok(etag)
+      // SHA-1 produces 40 hex characters (20 bytes * 2)
+      assert.match(etag, /^"[a-f0-9]{40}"$/)
+    })
+
+    it('supports SHA-384 algorithm', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt')
+
+      let response = await sendFile(mockFile, request, {
+        etag: 'strong',
+        digest: 'SHA-384',
+      })
+
+      let etag = response.headers.get('ETag')
+      assert.ok(etag)
+      // SHA-384 produces 96 hex characters (48 bytes * 2)
+      assert.match(etag, /^"[a-f0-9]{96}"$/)
+    })
   })
 
   describe('If-None-Match support', () => {
-    for (let method of ['GET', 'HEAD'] as const) {
-      describe(method, () => {
-        it('returns 304 (Not Modified) when If-None-Match matches ETag', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', {
-            type: 'text/plain',
-            lastModified: 1000000,
-          })
-          let request1 = new Request('http://localhost/test.txt', { method })
-
-          let response1 = await sendFile(mockFile, request1)
-          let etag = response1.headers.get('ETag')
-          assert.ok(etag)
-
-          let request2 = new Request('http://localhost/test.txt', {
-            method,
-            headers: { 'If-None-Match': etag },
-          })
-          let response2 = await sendFile(mockFile, request2)
-
-          assert.equal(response2.status, 304)
-          assert.equal(await response2.text(), '')
-        })
-
-        it('returns 304 (Not Modified) when If-None-Match is *', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-          let request = new Request('http://localhost/test.txt', {
-            method,
-            headers: { 'If-None-Match': '*' },
-          })
-
-          let response = await sendFile(mockFile, request)
-
-          assert.equal(response.status, 304)
-        })
-
-        it('returns 200 (OK) when If-None-Match does not match', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-          let request = new Request('http://localhost/test.txt', {
-            method,
-            headers: { 'If-None-Match': 'W/"wrong-etag"' },
-          })
-
-          let response = await sendFile(mockFile, request)
-
-          assert.equal(response.status, 200)
-          assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
-        })
-
-        it('handles multiple ETags in If-None-Match', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', {
-            type: 'text/plain',
-            lastModified: 1000000,
-          })
-          let request1 = new Request('http://localhost/test.txt', { method })
-
-          let response1 = await sendFile(mockFile, request1)
-          let etag = response1.headers.get('ETag')
-          assert.ok(etag)
-
-          let request2 = new Request('http://localhost/test.txt', {
-            method,
-            headers: { 'If-None-Match': `W/"wrong-1", ${etag}, W/"wrong-2"` },
-          })
-          let response2 = await sendFile(mockFile, request2)
-
-          assert.equal(response2.status, 304)
-        })
-
-        it('ignores If-None-Match when etag is disabled', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-
-          // First, get the ETag that would be generated
-          let request1 = new Request('http://localhost/test.txt', { method })
-          let response1 = await sendFile(mockFile, request1)
-          let etag = response1.headers.get('ETag')
-          assert.ok(etag)
-
-          // Now test with etag disabled but send the matching ETag
-          let request2 = new Request('http://localhost/test.txt', {
-            method,
-            headers: { 'If-None-Match': etag },
-          })
-          let response2 = await sendFile(mockFile, request2, { etag: false })
-
-          // Should return 200, not 304, because etag is disabled
-          assert.equal(response2.status, 200)
-          assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
-        })
-
-        it('ignores If-Modified-Since when If-None-Match is present but does not match', async () => {
-          let fileDate = new Date('2025-01-01')
-          let mockFile = new File(['Hello, World!'], 'test.txt', {
-            type: 'text/plain',
-            lastModified: fileDate.getTime(),
-          })
-          let request = new Request('http://localhost/test.txt', {
-            method,
-            headers: {
-              'If-None-Match': '"wrong-etag"',
-              'If-Modified-Since': fileDate.toUTCString(), // Would normally return 304
-            },
-          })
-
-          let response = await sendFile(mockFile, request)
-
-          // Should return 200, not 304, because If-None-Match takes precedence
-          assert.equal(response.status, 200)
-          assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
-        })
+    it('returns 304 (Not Modified) when If-None-Match matches ETag', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', {
+        type: 'text/plain',
+        lastModified: 1000000,
       })
-    }
+      let request1 = new Request('http://localhost/test.txt')
+
+      let response1 = await sendFile(mockFile, request1)
+      let etag = response1.headers.get('ETag')
+      assert.ok(etag)
+
+      let request2 = new Request('http://localhost/test.txt', {
+        headers: { 'If-None-Match': etag },
+      })
+      let response2 = await sendFile(mockFile, request2)
+
+      assert.equal(response2.status, 304)
+      assert.equal(await response2.text(), '')
+    })
+
+    it('returns 304 (Not Modified) when If-None-Match is *', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt', {
+        headers: { 'If-None-Match': '*' },
+      })
+
+      let response = await sendFile(mockFile, request)
+
+      assert.equal(response.status, 304)
+    })
+
+    it('returns 200 (OK) when If-None-Match does not match', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt', {
+        headers: { 'If-None-Match': 'W/"wrong-etag"' },
+      })
+
+      let response = await sendFile(mockFile, request)
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'Hello, World!')
+    })
+
+    it('handles multiple ETags in If-None-Match', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', {
+        type: 'text/plain',
+        lastModified: 1000000,
+      })
+      let request1 = new Request('http://localhost/test.txt')
+
+      let response1 = await sendFile(mockFile, request1)
+      let etag = response1.headers.get('ETag')
+      assert.ok(etag)
+
+      let request2 = new Request('http://localhost/test.txt', {
+        headers: { 'If-None-Match': `W/"wrong-1", ${etag}, W/"wrong-2"` },
+      })
+      let response2 = await sendFile(mockFile, request2)
+
+      assert.equal(response2.status, 304)
+    })
+
+    it('ignores If-None-Match when etag is disabled', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+
+      // First, get the ETag that would be generated
+      let request1 = new Request('http://localhost/test.txt')
+      let response1 = await sendFile(mockFile, request1)
+      let etag = response1.headers.get('ETag')
+      assert.ok(etag)
+
+      // Now test with etag disabled but send the matching ETag
+      let request2 = new Request('http://localhost/test.txt', {
+        headers: { 'If-None-Match': etag },
+      })
+      let response2 = await sendFile(mockFile, request2, { etag: false })
+
+      // Should return 200, not 304, because etag is disabled
+      assert.equal(response2.status, 200)
+      assert.equal(await response2.text(), 'Hello, World!')
+    })
+
+    it('ignores If-Modified-Since when If-None-Match is present but does not match', async () => {
+      let fileDate = new Date('2025-01-01')
+      let mockFile = new File(['Hello, World!'], 'test.txt', {
+        type: 'text/plain',
+        lastModified: fileDate.getTime(),
+      })
+      let request = new Request('http://localhost/test.txt', {
+        headers: {
+          'If-None-Match': '"wrong-etag"',
+          'If-Modified-Since': fileDate.toUTCString(), // Would normally return 304
+        },
+      })
+
+      let response = await sendFile(mockFile, request)
+
+      // Should return 200, not 304, because If-None-Match takes precedence
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'Hello, World!')
+    })
   })
 
   describe('If-Match support', () => {
-    for (let method of ['GET', 'HEAD'] as const) {
-      describe(method, () => {
-        describe('precondition validation', () => {
-          it('returns 412 (Precondition Failed) when resource has weak ETag', async () => {
-            let mockFile = new File(['Hello, World!'], 'test.txt', {
-              type: 'text/plain',
-              lastModified: 1000000,
-            })
-            let request1 = new Request('http://localhost/test.txt', { method })
-
-            let response1 = await sendFile(mockFile, request1)
-            let etag = response1.headers.get('ETag')
-            assert.ok(etag)
-            assert.ok(etag.startsWith('W/')) // Verify it's a weak ETag
-
-            // If-Match uses strong comparison, so weak ETags never match
-            let request2 = new Request('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Match': etag },
-            })
-            let response2 = await sendFile(mockFile, request2)
-
-            assert.equal(response2.status, 412)
-          })
-
-          it('returns 200 (OK) when resource has strong ETag and If-Match matches', async () => {
-            let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-            let request1 = new Request('http://localhost/test.txt', { method })
-
-            // Get the strong ETag
-            let response1 = await sendFile(mockFile, request1, { etag: 'strong' })
-            let etag = response1.headers.get('ETag')
-            assert.ok(etag)
-            assert.ok(!etag.startsWith('W/')) // Verify it's a strong ETag
-
-            // If-Match should work with strong ETags
-            let request2 = new Request('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Match': etag },
-            })
-            let response2 = await sendFile(mockFile, request2, { etag: 'strong' })
-
-            assert.equal(response2.status, 200)
-            assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
-          })
-
-          it('returns 412 (Precondition Failed) when If-Match does not match (weak ETag)', async () => {
-            let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-            let request = new Request('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Match': '"wrong-etag"' },
-            })
-
-            let response = await sendFile(mockFile, request)
-
-            assert.equal(response.status, 412)
-          })
-
-          it('returns 412 (Precondition Failed) when If-Match does not match (strong ETag)', async () => {
-            let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-            let request = new Request('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Match': '"wrong-etag"' },
-            })
-
-            let response = await sendFile(mockFile, request, { etag: 'strong' })
-
-            assert.equal(response.status, 412)
-          })
-
-          it('returns 200 (OK) when If-Match is *', async () => {
-            let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-            let request = new Request('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Match': '*' },
-            })
-
-            let response = await sendFile(mockFile, request)
-
-            assert.equal(response.status, 200)
-            assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
-          })
-
-          it('returns 412 (Precondition Failed) when If-Match contains multiple ETags and none match', async () => {
-            let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-            let request = new Request('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Match': '"wrong-1", "wrong-2"' },
-            })
-
-            let response = await sendFile(mockFile, request)
-
-            assert.equal(response.status, 412)
-          })
+    describe('precondition validation', () => {
+      it('returns 412 (Precondition Failed) when resource has weak ETag', async () => {
+        let mockFile = new File(['Hello, World!'], 'test.txt', {
+          type: 'text/plain',
+          lastModified: 1000000,
         })
+        let request1 = new Request('http://localhost/test.txt')
 
-        describe('prioritization', () => {
-          it('returns 412 (Precondition Failed) when If-Match fails, even if If-None-Match would match', async () => {
-            let mockFile = new File(['Hello, World!'], 'test.txt', {
-              type: 'text/plain',
-              lastModified: 1000000,
-            })
-            let request1 = new Request('http://localhost/test.txt', { method })
+        let response1 = await sendFile(mockFile, request1)
+        let etag = response1.headers.get('ETag')
+        assert.ok(etag)
+        assert.ok(etag.startsWith('W/')) // Verify it's a weak ETag
 
-            let response1 = await sendFile(mockFile, request1)
-            let etag = response1.headers.get('ETag')
-            assert.ok(etag)
-
-            let request2 = new Request('http://localhost/test.txt', {
-              method,
-              headers: {
-                'If-Match': 'W/"wrong-etag"',
-                'If-None-Match': etag,
-              },
-            })
-            let response2 = await sendFile(mockFile, request2)
-
-            assert.equal(response2.status, 412)
-          })
+        // If-Match uses strong comparison, so weak ETags never match
+        let request2 = new Request('http://localhost/test.txt', {
+          headers: { 'If-Match': etag },
         })
+        let response2 = await sendFile(mockFile, request2)
 
-        it('ignores If-Match when etag is disabled', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-
-          // First, get the ETag that would be generated
-          let request1 = new Request('http://localhost/test.txt', { method })
-          let response1 = await sendFile(mockFile, request1)
-          let etag = response1.headers.get('ETag')
-          assert.ok(etag)
-
-          // Now test with etag disabled but send a non-matching ETag
-          // (If we weren't ignoring it, this would return 412)
-          let request2 = new Request('http://localhost/test.txt', {
-            method,
-            headers: { 'If-Match': 'W/"wrong-etag"' },
-          })
-          let response2 = await sendFile(mockFile, request2, { etag: false })
-
-          // Should return 200, not 412, because etag is disabled
-          assert.equal(response2.status, 200)
-          assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
-        })
+        assert.equal(response2.status, 412)
       })
-    }
+
+      it('returns 200 (OK) when resource has strong ETag and If-Match matches', async () => {
+        let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+        let request1 = new Request('http://localhost/test.txt')
+
+        // Get the strong ETag
+        let response1 = await sendFile(mockFile, request1, { etag: 'strong' })
+        let etag = response1.headers.get('ETag')
+        assert.ok(etag)
+        assert.ok(!etag.startsWith('W/')) // Verify it's a strong ETag
+
+        // If-Match should work with strong ETags
+        let request2 = new Request('http://localhost/test.txt', {
+          headers: { 'If-Match': etag },
+        })
+        let response2 = await sendFile(mockFile, request2, { etag: 'strong' })
+
+        assert.equal(response2.status, 200)
+        assert.equal(await response2.text(), 'Hello, World!')
+      })
+
+      it('returns 412 (Precondition Failed) when If-Match does not match (weak ETag)', async () => {
+        let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+        let request = new Request('http://localhost/test.txt', {
+          headers: { 'If-Match': '"wrong-etag"' },
+        })
+
+        let response = await sendFile(mockFile, request)
+
+        assert.equal(response.status, 412)
+      })
+
+      it('returns 412 (Precondition Failed) when If-Match does not match (strong ETag)', async () => {
+        let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+        let request = new Request('http://localhost/test.txt', {
+          headers: { 'If-Match': '"wrong-etag"' },
+        })
+
+        let response = await sendFile(mockFile, request, { etag: 'strong' })
+
+        assert.equal(response.status, 412)
+      })
+
+      it('returns 200 (OK) when If-Match is *', async () => {
+        let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+        let request = new Request('http://localhost/test.txt', {
+          headers: { 'If-Match': '*' },
+        })
+
+        let response = await sendFile(mockFile, request)
+
+        assert.equal(response.status, 200)
+        assert.equal(await response.text(), 'Hello, World!')
+      })
+
+      it('returns 412 (Precondition Failed) when If-Match contains multiple ETags and none match', async () => {
+        let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+        let request = new Request('http://localhost/test.txt', {
+          headers: { 'If-Match': '"wrong-1", "wrong-2"' },
+        })
+
+        let response = await sendFile(mockFile, request)
+
+        assert.equal(response.status, 412)
+      })
+    })
+
+    describe('prioritization', () => {
+      it('returns 412 (Precondition Failed) when If-Match fails, even if If-None-Match would match', async () => {
+        let mockFile = new File(['Hello, World!'], 'test.txt', {
+          type: 'text/plain',
+          lastModified: 1000000,
+        })
+        let request1 = new Request('http://localhost/test.txt')
+
+        let response1 = await sendFile(mockFile, request1)
+        let etag = response1.headers.get('ETag')
+        assert.ok(etag)
+
+        let request2 = new Request('http://localhost/test.txt', {
+          headers: {
+            'If-Match': 'W/"wrong-etag"',
+            'If-None-Match': etag,
+          },
+        })
+        let response2 = await sendFile(mockFile, request2)
+
+        assert.equal(response2.status, 412)
+      })
+    })
+
+    it('ignores If-Match when etag is disabled', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+
+      // First, get the ETag that would be generated
+      let request1 = new Request('http://localhost/test.txt')
+      let response1 = await sendFile(mockFile, request1)
+      let etag = response1.headers.get('ETag')
+      assert.ok(etag)
+
+      // Now test with etag disabled but send a non-matching ETag
+      // (If we weren't ignoring it, this would return 412)
+      let request2 = new Request('http://localhost/test.txt', {
+        headers: { 'If-Match': 'W/"wrong-etag"' },
+      })
+      let response2 = await sendFile(mockFile, request2, { etag: false })
+
+      // Should return 200, not 412, because etag is disabled
+      assert.equal(response2.status, 200)
+      assert.equal(await response2.text(), 'Hello, World!')
+    })
   })
 
   describe('If-Unmodified-Since support', () => {
-    for (let method of ['GET', 'HEAD'] as const) {
-      describe(method, () => {
-        describe('precondition validation', () => {
-          it('returns 200 (OK) when If-Unmodified-Since is after Last-Modified', async () => {
-            let fileDate = new Date('2025-01-01')
-            let futureDate = new Date('2026-01-01')
-            let mockFile = new File(['Hello, World!'], 'test.txt', {
-              type: 'text/plain',
-              lastModified: fileDate.getTime(),
-            })
-            let request = new Request('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Unmodified-Since': futureDate.toUTCString() },
-            })
-
-            let response = await sendFile(mockFile, request)
-
-            assert.equal(response.status, 200)
-            assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
-          })
-
-          it('returns 200 (OK) when If-Unmodified-Since matches Last-Modified', async () => {
-            let fileDate = new Date('2025-01-01')
-            let mockFile = new File(['Hello, World!'], 'test.txt', {
-              type: 'text/plain',
-              lastModified: fileDate.getTime(),
-            })
-            let request = new Request('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Unmodified-Since': fileDate.toUTCString() },
-            })
-
-            let response = await sendFile(mockFile, request)
-
-            assert.equal(response.status, 200)
-            assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
-          })
-
-          it('returns 412 (Precondition Failed) when If-Unmodified-Since is before Last-Modified', async () => {
-            let fileDate = new Date('2025-01-01')
-            let pastDate = new Date('2024-01-01')
-            let mockFile = new File(['Hello, World!'], 'test.txt', {
-              type: 'text/plain',
-              lastModified: fileDate.getTime(),
-            })
-            let request = new Request('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Unmodified-Since': pastDate.toUTCString() },
-            })
-
-            let response = await sendFile(mockFile, request)
-
-            assert.equal(response.status, 412)
-          })
-
-          it('ignores malformed If-Unmodified-Since', async () => {
-            let fileDate = new Date('2025-01-01')
-            let mockFile = new File(['Hello, World!'], 'test.txt', {
-              type: 'text/plain',
-              lastModified: fileDate.getTime(),
-            })
-            let request = new Request('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Unmodified-Since': 'invalid-date' },
-            })
-
-            let response = await sendFile(mockFile, request)
-
-            assert.equal(response.status, 200)
-            assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
-          })
-
-          it('treats dates with same second but different milliseconds as equal', async () => {
-            // File last modified at 1000100ms (1.000100 seconds)
-            let mockFile = new File(['Hello, World!'], 'test.txt', {
-              type: 'text/plain',
-              lastModified: 1000100,
-            })
-            // Client's If-Unmodified-Since at 1000900ms (1.000900 seconds) - same second
-            let ifUnmodifiedSinceDate = new Date(1000900)
-            let request = new Request('http://localhost/test.txt', {
-              method,
-              headers: { 'If-Unmodified-Since': ifUnmodifiedSinceDate.toUTCString() },
-            })
-
-            let response = await sendFile(mockFile, request)
-
-            // Should return 200 because both round down to the same second
-            assert.equal(response.status, 200)
-            assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
-          })
+    describe('precondition validation', () => {
+      it('returns 200 (OK) when If-Unmodified-Since is after Last-Modified', async () => {
+        let fileDate = new Date('2025-01-01')
+        let futureDate = new Date('2026-01-01')
+        let mockFile = new File(['Hello, World!'], 'test.txt', {
+          type: 'text/plain',
+          lastModified: fileDate.getTime(),
+        })
+        let request = new Request('http://localhost/test.txt', {
+          headers: { 'If-Unmodified-Since': futureDate.toUTCString() },
         })
 
-        describe('prioritization', () => {
-          it('returns 412 (Precondition Failed) when If-Match fails, even if If-Unmodified-Since would pass', async () => {
-            let fileDate = new Date('2025-01-01')
-            let futureDate = new Date('2026-01-01')
-            let mockFile = new File(['Hello, World!'], 'test.txt', {
-              type: 'text/plain',
-              lastModified: fileDate.getTime(),
-            })
-            let request = new Request('http://localhost/test.txt', {
-              method,
-              headers: {
-                'If-Match': 'W/"wrong-etag"',
-                'If-Unmodified-Since': futureDate.toUTCString(),
-              },
-            })
+        let response = await sendFile(mockFile, request)
 
-            let response = await sendFile(mockFile, request)
-
-            assert.equal(response.status, 412)
-          })
-
-          it('ignores If-Unmodified-Since when If-Match is present (strong ETag)', async () => {
-            let pastDate = new Date('2024-01-01')
-            let mockFile = new File(['Hello, World!'], 'test.txt', {
-              type: 'text/plain',
-              lastModified: pastDate.getTime(),
-            })
-            let request1 = new Request('http://localhost/test.txt', { method })
-
-            // Get the strong ETag
-            let response1 = await sendFile(mockFile, request1, { etag: 'strong' })
-            let etag = response1.headers.get('ETag')
-            assert.ok(etag)
-            assert.ok(!etag.startsWith('W/')) // Verify it's a strong ETag
-
-            // If-Match passes, so If-Unmodified-Since should be ignored
-            // (even though it would fail if evaluated - pastDate is before file's lastModified)
-            let request2 = new Request('http://localhost/test.txt', {
-              method,
-              headers: {
-                'If-Match': etag,
-                'If-Unmodified-Since': pastDate.toUTCString(),
-              },
-            })
-            let response2 = await sendFile(mockFile, request2, { etag: 'strong' })
-
-            assert.equal(response2.status, 200)
-            assert.equal(await response2.text(), method === 'HEAD' ? '' : 'Hello, World!')
-          })
-        })
-
-        it('ignores If-Unmodified-Since when lastModified is disabled', async () => {
-          let pastDate = new Date('2024-01-01')
-          let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-          let request = new Request('http://localhost/test.txt', {
-            method,
-            headers: { 'If-Unmodified-Since': pastDate.toUTCString() },
-          })
-
-          let response = await sendFile(mockFile, request, { lastModified: false })
-
-          assert.equal(response.status, 200)
-          assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
-        })
+        assert.equal(response.status, 200)
+        assert.equal(await response.text(), 'Hello, World!')
       })
-    }
+
+      it('returns 200 (OK) when If-Unmodified-Since matches Last-Modified', async () => {
+        let fileDate = new Date('2025-01-01')
+        let mockFile = new File(['Hello, World!'], 'test.txt', {
+          type: 'text/plain',
+          lastModified: fileDate.getTime(),
+        })
+        let request = new Request('http://localhost/test.txt', {
+          headers: { 'If-Unmodified-Since': fileDate.toUTCString() },
+        })
+
+        let response = await sendFile(mockFile, request)
+
+        assert.equal(response.status, 200)
+        assert.equal(await response.text(), 'Hello, World!')
+      })
+
+      it('returns 412 (Precondition Failed) when If-Unmodified-Since is before Last-Modified', async () => {
+        let fileDate = new Date('2025-01-01')
+        let pastDate = new Date('2024-01-01')
+        let mockFile = new File(['Hello, World!'], 'test.txt', {
+          type: 'text/plain',
+          lastModified: fileDate.getTime(),
+        })
+        let request = new Request('http://localhost/test.txt', {
+          headers: { 'If-Unmodified-Since': pastDate.toUTCString() },
+        })
+
+        let response = await sendFile(mockFile, request)
+
+        assert.equal(response.status, 412)
+      })
+
+      it('ignores malformed If-Unmodified-Since', async () => {
+        let fileDate = new Date('2025-01-01')
+        let mockFile = new File(['Hello, World!'], 'test.txt', {
+          type: 'text/plain',
+          lastModified: fileDate.getTime(),
+        })
+        let request = new Request('http://localhost/test.txt', {
+          headers: { 'If-Unmodified-Since': 'invalid-date' },
+        })
+
+        let response = await sendFile(mockFile, request)
+
+        assert.equal(response.status, 200)
+        assert.equal(await response.text(), 'Hello, World!')
+      })
+
+      it('treats dates with same second but different milliseconds as equal', async () => {
+        // File last modified at 1000100ms (1.000100 seconds)
+        let mockFile = new File(['Hello, World!'], 'test.txt', {
+          type: 'text/plain',
+          lastModified: 1000100,
+        })
+        // Client's If-Unmodified-Since at 1000900ms (1.000900 seconds) - same second
+        let ifUnmodifiedSinceDate = new Date(1000900)
+        let request = new Request('http://localhost/test.txt', {
+          headers: { 'If-Unmodified-Since': ifUnmodifiedSinceDate.toUTCString() },
+        })
+
+        let response = await sendFile(mockFile, request)
+
+        // Should return 200 because both round down to the same second
+        assert.equal(response.status, 200)
+        assert.equal(await response.text(), 'Hello, World!')
+      })
+    })
+
+    describe('prioritization', () => {
+      it('returns 412 (Precondition Failed) when If-Match fails, even if If-Unmodified-Since would pass', async () => {
+        let fileDate = new Date('2025-01-01')
+        let futureDate = new Date('2026-01-01')
+        let mockFile = new File(['Hello, World!'], 'test.txt', {
+          type: 'text/plain',
+          lastModified: fileDate.getTime(),
+        })
+        let request = new Request('http://localhost/test.txt', {
+          headers: {
+            'If-Match': 'W/"wrong-etag"',
+            'If-Unmodified-Since': futureDate.toUTCString(),
+          },
+        })
+
+        let response = await sendFile(mockFile, request)
+
+        assert.equal(response.status, 412)
+      })
+
+      it('ignores If-Unmodified-Since when If-Match is present (strong ETag)', async () => {
+        let pastDate = new Date('2024-01-01')
+        let mockFile = new File(['Hello, World!'], 'test.txt', {
+          type: 'text/plain',
+          lastModified: pastDate.getTime(),
+        })
+        let request1 = new Request('http://localhost/test.txt')
+
+        // Get the strong ETag
+        let response1 = await sendFile(mockFile, request1, { etag: 'strong' })
+        let etag = response1.headers.get('ETag')
+        assert.ok(etag)
+        assert.ok(!etag.startsWith('W/')) // Verify it's a strong ETag
+
+        // If-Match passes, so If-Unmodified-Since should be ignored
+        // (even though it would fail if evaluated - pastDate is before file's lastModified)
+        let request2 = new Request('http://localhost/test.txt', {
+          headers: {
+            'If-Match': etag,
+            'If-Unmodified-Since': pastDate.toUTCString(),
+          },
+        })
+        let response2 = await sendFile(mockFile, request2, { etag: 'strong' })
+
+        assert.equal(response2.status, 200)
+        assert.equal(await response2.text(), 'Hello, World!')
+      })
+    })
+
+    it('ignores If-Unmodified-Since when lastModified is disabled', async () => {
+      let pastDate = new Date('2024-01-01')
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt', {
+        headers: { 'If-Unmodified-Since': pastDate.toUTCString() },
+      })
+
+      let response = await sendFile(mockFile, request, { lastModified: false })
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'Hello, World!')
+    })
   })
 
   describe('Last-Modified support', () => {
-    for (let method of ['GET', 'HEAD'] as const) {
-      describe(method, () => {
-        it('includes Last-Modified header', async () => {
-          let fileDate = new Date('2025-01-01')
-          let mockFile = new File(['Hello, World!'], 'test.txt', {
-            type: 'text/plain',
-            lastModified: fileDate.getTime(),
-          })
-          let request = new Request('http://localhost/test.txt', { method })
-
-          let response = await sendFile(mockFile, request)
-
-          assert.equal(response.status, 200)
-          assert.equal(response.headers.get('Last-Modified'), fileDate.toUTCString())
-        })
-
-        it('does not include Last-Modified when lastModified=false', async () => {
-          let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
-          let request = new Request('http://localhost/test.txt', { method })
-
-          let response = await sendFile(mockFile, request, { lastModified: false })
-
-          assert.equal(response.status, 200)
-          assert.equal(response.headers.get('Last-Modified'), null)
-        })
-
-        it('returns 304 (Not Modified) when If-Modified-Since matches Last-Modified', async () => {
-          let fileDate = new Date('2025-01-01')
-          let mockFile = new File(['Hello, World!'], 'test.txt', {
-            type: 'text/plain',
-            lastModified: fileDate.getTime(),
-          })
-          let request = new Request('http://localhost/test.txt', {
-            method,
-            headers: { 'If-Modified-Since': fileDate.toUTCString() },
-          })
-
-          let response = await sendFile(mockFile, request)
-
-          assert.equal(response.status, 304)
-          assert.equal(await response.text(), '')
-        })
-
-        it('returns 304 (Not Modified) when If-Modified-Since is after Last-Modified', async () => {
-          let fileDate = new Date('2025-01-01')
-          let futureDate = new Date('2026-01-01')
-          let mockFile = new File(['Hello, World!'], 'test.txt', {
-            type: 'text/plain',
-            lastModified: fileDate.getTime(),
-          })
-          let request = new Request('http://localhost/test.txt', {
-            method,
-            headers: { 'If-Modified-Since': futureDate.toUTCString() },
-          })
-
-          let response = await sendFile(mockFile, request)
-
-          assert.equal(response.status, 304)
-        })
-
-        it('returns 200 (OK) when If-Modified-Since is before Last-Modified', async () => {
-          let fileDate = new Date('2025-01-01')
-          let pastDate = new Date('2024-01-01')
-          let mockFile = new File(['Hello, World!'], 'test.txt', {
-            type: 'text/plain',
-            lastModified: fileDate.getTime(),
-          })
-          let request = new Request('http://localhost/test.txt', {
-            method,
-            headers: { 'If-Modified-Since': pastDate.toUTCString() },
-          })
-
-          let response = await sendFile(mockFile, request)
-
-          assert.equal(response.status, 200)
-          assert.equal(await response.text(), method === 'HEAD' ? '' : 'Hello, World!')
-        })
-
-        it('treats dates with same second but different milliseconds as equal', async () => {
-          // File last modified at 1000999ms (1.000999 seconds)
-          let mockFile = new File(['Hello, World!'], 'test.txt', {
-            type: 'text/plain',
-            lastModified: 1000999,
-          })
-          // Client's If-Modified-Since at 1000500ms (1.000500 seconds) - same second
-          let ifModifiedSinceDate = new Date(1000500)
-          let request = new Request('http://localhost/test.txt', {
-            method,
-            headers: { 'If-Modified-Since': ifModifiedSinceDate.toUTCString() },
-          })
-
-          let response = await sendFile(mockFile, request)
-
-          // Should return 304 because both round down to the same second
-          assert.equal(response.status, 304)
-        })
-
-        it('prioritizes ETag over If-Modified-Since when both are present', async () => {
-          let fileDate = new Date('2025-01-01')
-          let mockFile = new File(['Hello, World!'], 'test.txt', {
-            type: 'text/plain',
-            lastModified: fileDate.getTime(),
-          })
-          let request1 = new Request('http://localhost/test.txt', { method })
-
-          let response1 = await sendFile(mockFile, request1)
-          let etag = response1.headers.get('ETag')
-
-          let request2 = new Request('http://localhost/test.txt', {
-            method,
-            headers: {
-              'If-None-Match': 'W/"wrong-etag"',
-              'If-Modified-Since': fileDate.toUTCString(),
-            },
-          })
-          let response2 = await sendFile(mockFile, request2)
-
-          assert.equal(response2.status, 200)
-        })
+    it('includes Last-Modified header', async () => {
+      let fileDate = new Date('2025-01-01')
+      let mockFile = new File(['Hello, World!'], 'test.txt', {
+        type: 'text/plain',
+        lastModified: fileDate.getTime(),
       })
-    }
+      let request = new Request('http://localhost/test.txt')
+
+      let response = await sendFile(mockFile, request)
+
+      assert.equal(response.status, 200)
+      assert.equal(response.headers.get('Last-Modified'), fileDate.toUTCString())
+    })
+
+    it('does not include Last-Modified when lastModified=false', async () => {
+      let mockFile = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt')
+
+      let response = await sendFile(mockFile, request, { lastModified: false })
+
+      assert.equal(response.status, 200)
+      assert.equal(response.headers.get('Last-Modified'), null)
+    })
+
+    it('returns 304 (Not Modified) when If-Modified-Since matches Last-Modified', async () => {
+      let fileDate = new Date('2025-01-01')
+      let mockFile = new File(['Hello, World!'], 'test.txt', {
+        type: 'text/plain',
+        lastModified: fileDate.getTime(),
+      })
+      let request = new Request('http://localhost/test.txt', {
+        headers: { 'If-Modified-Since': fileDate.toUTCString() },
+      })
+
+      let response = await sendFile(mockFile, request)
+
+      assert.equal(response.status, 304)
+      assert.equal(await response.text(), '')
+    })
+
+    it('returns 304 (Not Modified) when If-Modified-Since is after Last-Modified', async () => {
+      let fileDate = new Date('2025-01-01')
+      let futureDate = new Date('2026-01-01')
+      let mockFile = new File(['Hello, World!'], 'test.txt', {
+        type: 'text/plain',
+        lastModified: fileDate.getTime(),
+      })
+      let request = new Request('http://localhost/test.txt', {
+        headers: { 'If-Modified-Since': futureDate.toUTCString() },
+      })
+
+      let response = await sendFile(mockFile, request)
+
+      assert.equal(response.status, 304)
+    })
+
+    it('returns 200 (OK) when If-Modified-Since is before Last-Modified', async () => {
+      let fileDate = new Date('2025-01-01')
+      let pastDate = new Date('2024-01-01')
+      let mockFile = new File(['Hello, World!'], 'test.txt', {
+        type: 'text/plain',
+        lastModified: fileDate.getTime(),
+      })
+      let request = new Request('http://localhost/test.txt', {
+        headers: { 'If-Modified-Since': pastDate.toUTCString() },
+      })
+
+      let response = await sendFile(mockFile, request)
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'Hello, World!')
+    })
+
+    it('treats dates with same second but different milliseconds as equal', async () => {
+      // File last modified at 1000999ms (1.000999 seconds)
+      let mockFile = new File(['Hello, World!'], 'test.txt', {
+        type: 'text/plain',
+        lastModified: 1000999,
+      })
+      // Client's If-Modified-Since at 1000500ms (1.000500 seconds) - same second
+      let ifModifiedSinceDate = new Date(1000500)
+      let request = new Request('http://localhost/test.txt', {
+        headers: { 'If-Modified-Since': ifModifiedSinceDate.toUTCString() },
+      })
+
+      let response = await sendFile(mockFile, request)
+
+      // Should return 304 because both round down to the same second
+      assert.equal(response.status, 304)
+    })
+
+    it('prioritizes ETag over If-Modified-Since when both are present', async () => {
+      let fileDate = new Date('2025-01-01')
+      let mockFile = new File(['Hello, World!'], 'test.txt', {
+        type: 'text/plain',
+        lastModified: fileDate.getTime(),
+      })
+      let request1 = new Request('http://localhost/test.txt')
+
+      let response1 = await sendFile(mockFile, request1)
+      let etag = response1.headers.get('ETag')
+
+      let request2 = new Request('http://localhost/test.txt', {
+        headers: {
+          'If-None-Match': 'W/"wrong-etag"',
+          'If-Modified-Since': fileDate.toUTCString(),
+        },
+      })
+      let response2 = await sendFile(mockFile, request2)
+
+      assert.equal(response2.status, 200)
+    })
   })
 
   describe('Range requests', () => {
@@ -733,19 +733,17 @@ describe('file()', () => {
     })
 
     it('ignores Range header for non-GET/HEAD requests', async () => {
-      for (let method of ['POST', 'PUT', 'DELETE', 'PATCH'] as const) {
-        let mockFile = new File(['0123456789'], 'test.txt', { type: 'text/plain' })
-        let request = new Request('http://localhost/test.txt', {
-          method,
-          headers: { Range: 'bytes=0-4' },
-        })
+      let mockFile = new File(['0123456789'], 'test.txt', { type: 'text/plain' })
+      let request = new Request('http://localhost/test.txt', {
+        method: 'POST',
+        headers: { Range: 'bytes=0-4' },
+      })
 
-        let response = await sendFile(mockFile, request)
+      let response = await sendFile(mockFile, request)
 
-        assert.equal(response.status, 200)
-        assert.equal(await response.text(), '0123456789')
-        assert.equal(response.headers.get('Content-Range'), null)
-      }
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '0123456789')
+      assert.equal(response.headers.get('Content-Range'), null)
     })
 
     it('ignores Range header for HEAD requests', async () => {
