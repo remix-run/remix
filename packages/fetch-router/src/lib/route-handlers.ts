@@ -12,7 +12,7 @@ export type RouteHandlers<routes extends RouteMap> =
 
 type RouteHandlersWithMiddleware<routes extends RouteMap> = {
   middleware?: Middleware[]
-  handlers: RouteHandlers<routes>
+  handlers: RouteHandlersWithoutMiddleware<routes>
 } & (routes extends Record<string, any>
   ? {
       // Explicitly exclude route names as properties from objects with `handlers`
