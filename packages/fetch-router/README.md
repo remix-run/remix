@@ -460,6 +460,19 @@ type Routes = typeof routes.users
 // }
 ```
 
+You can use the `exclude` option to exclude routes from being generated.
+
+```tsx
+let routes = resources('users', { exclude: ['edit', 'update', 'destroy'] })
+type Routes = typeof routes
+// {
+//   index: Route<'GET', '/users'> - Lists all users
+//   new: Route<'GET', '/users/new'> - Shows a form to create a new user
+//   show: Route<'GET', '/users/:userId'> - Shows a single user
+//   create: Route<'POST', '/users'> - Creates a new user
+// }
+```
+
 ### Middleware and Route Handlers
 
 A middleware is a function used to run code before and/or after route handlers run. It is a powerful way to add functionality to your app.
