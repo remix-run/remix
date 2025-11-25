@@ -6,23 +6,26 @@ import {
 
 import { sign, unsign } from './cookie-signing.ts'
 
+/**
+ * Options for creating a cookie.
+ */
 export interface CookieOptions extends CookieProperties {
   /**
-   * A function that decodes the cookie value.
-   *
-   * Defaults to `decodeURIComponent`, which decodes any URL-encoded sequences into their original
-   * characters.
+   * A function that decodes the cookie value. Decodes any URL-encoded sequences into their
+   * original characters.
    *
    * See [RFC 6265](https://tools.ietf.org/html/rfc6265#section-4.1.1) for more details.
+   *
+   * @default decodeURIComponent
    */
   decode?: (value: string) => string
   /**
-   * A function that encodes the cookie value.
-   *
-   * Defaults to `encodeURIComponent`, which percent-encodes all characters that are not allowed
+   * A function that encodes the cookie value. Percent-encodes all characters that are not allowed
    * in a cookie value.
    *
    * See [RFC 6265](https://tools.ietf.org/html/rfc6265#section-4.1.1) for more details.
+   *
+   * @default encodeURIComponent
    */
   encode?: (value: string) => string
   /**
@@ -61,6 +64,10 @@ export class Cookie {
   #sameSite: SameSiteValue
   #secure: boolean | undefined
 
+  /**
+   * @param name The name of the cookie
+   * @param options Options for the cookie
+   */
   constructor(name: string, options?: CookieOptions) {
     let {
       decode = decodeURIComponent,
@@ -118,6 +125,8 @@ export class Cookie {
    * True if the cookie is HTTP-only.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#httponly)
+   *
+   * @default false
    */
   get httpOnly(): boolean {
     return this.#httpOnly ?? false
@@ -143,8 +152,9 @@ export class Cookie {
 
   /**
    * Extracts the value of this cookie from a `Cookie` header value.
+   *
    * @param headerValue The `Cookie` header to parse
-   * @returns The value of this cookie, or `null` if it's not present
+   * @return The value of this cookie, or `null` if it's not present
    */
   async parse(headerValue: string | null): Promise<string | null> {
     if (!headerValue) return null
@@ -163,24 +173,30 @@ export class Cookie {
    * True if the cookie is partitioned.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#partitioned)
+   *
+   * @default false
    */
   get partitioned(): boolean {
     return this.#partitioned ?? false
   }
 
   /**
-   * The path of the cookie. Defaults to `/`.
+   * The path of the cookie.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value)
+   *
+   * @default '/'
    */
   get path(): string {
     return this.#path
   }
 
   /**
-   * The `SameSite` attribute of the cookie. Defaults to `Lax`.
+   * The `SameSite` attribute of the cookie.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value)
+   *
+   * @default 'Lax'
    */
   get sameSite(): SameSiteValue {
     return this.#sameSite
@@ -190,6 +206,8 @@ export class Cookie {
    * True if the cookie is secure (only sent over HTTPS).
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure)
+   *
+   * @default false
    */
   get secure(): boolean {
     return this.#secure ?? false
@@ -197,9 +215,10 @@ export class Cookie {
 
   /**
    * Returns the value to use in a `Set-Cookie` header for this cookie.
+   *
    * @param value The value to serialize
-   * @param props (optional) Additional properties to use when serializing the cookie
-   * @returns The `Set-Cookie` header for this cookie
+   * @param props Additional properties to use when serializing the cookie
+   * @return The `Set-Cookie` header value for this cookie
    */
   async serialize(value: string, props?: CookieProperties): Promise<string> {
     let header = new SetCookieHeader({
@@ -229,9 +248,10 @@ export class Cookie {
 
 /**
  * Creates a new cookie object.
+ *
  * @param name The name of the cookie
- * @param options (optional) Additional options for the cookie
- * @returns A cookie object
+ * @param options Options for the cookie
+ * @return A new `Cookie` object
  */
 export function createCookie(name: string, options?: CookieOptions): Cookie {
   return new Cookie(name, options)

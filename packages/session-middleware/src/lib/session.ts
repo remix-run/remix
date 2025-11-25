@@ -4,9 +4,10 @@ import type { SessionStorage } from '@remix-run/session'
 
 /**
  * Middleware that manages `context.session` based on the session cookie.
+ *
  * @param cookie The session cookie to use
  * @param storage The storage backend for session data
- * @returns The session middleware
+ * @return The session middleware
  */
 export function session(cookie: Cookie, storage: SessionStorage): Middleware {
   if (!cookie.signed) {

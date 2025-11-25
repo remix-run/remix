@@ -4,6 +4,9 @@ import type * as http2 from 'node:http2'
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
 import { readStream } from './read-stream.ts'
 
+/**
+ * Options for creating a Node.js request listener.
+ */
 export interface RequestListenerOptions {
   /**
    * Overrides the host portion of the incoming request URL. By default the request URL host is
@@ -55,9 +58,9 @@ export interface RequestListenerOptions {
  * server.listen(3000);
  * ```
  *
- * @param handler The fetch handler to use for processing incoming requests.
- * @param options Request listener options.
- * @returns A Node.js request listener function.
+ * @param handler The fetch handler to use for processing incoming requests
+ * @param options Request listener options
+ * @return A Node.js request listener function
  */
 export function createRequestListener(
   handler: FetchHandler,
@@ -110,6 +113,9 @@ function internalServerError(): Response {
   )
 }
 
+/**
+ * Options for creating a `Request` from a Node.js incoming message.
+ */
 export type RequestOptions = Omit<RequestListenerOptions, 'onError'>
 
 /**
@@ -118,10 +124,10 @@ export type RequestOptions = Omit<RequestListenerOptions, 'onError'>
  * - a [`http.IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage)/[`http.ServerResponse`](https://nodejs.org/api/http.html#class-httpserverresponse) pair
  * - a [`http2.Http2ServerRequest`](https://nodejs.org/api/http2.html#class-http2http2serverrequest)/[`http2.Http2ServerResponse`](https://nodejs.org/api/http2.html#class-http2http2serverresponse) pair
  *
- * @param req The incoming request object.
- * @param res The server response object.
- * @param options
- * @returns A request object.
+ * @param req The incoming request object
+ * @param res The server response object
+ * @param options Options for creating the request
+ * @return A `Request` object
  */
 export function createRequest(
   req: http.IncomingMessage | http2.Http2ServerRequest,
@@ -173,8 +179,8 @@ export function createRequest(
  * Creates a [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) object from the headers in a Node.js
  * [`http.IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage)/[`http2.Http2ServerRequest`](https://nodejs.org/api/http2.html#class-http2http2serverrequest).
  *
- * @param req The incoming request object.
- * @returns A headers object.
+ * @param req The incoming request object
+ * @return A `Headers` object
  */
 export function createHeaders(req: http.IncomingMessage | http2.Http2ServerRequest): Headers {
   let headers = new Headers()
@@ -193,8 +199,8 @@ export function createHeaders(req: http.IncomingMessage | http2.Http2ServerReque
  * [`http.ServerResponse`](https://nodejs.org/api/http.html#class-httpserverresponse)/[`http2.Http2ServerResponse`](https://nodejs.org/api/http2.html#class-http2http2serverresponse)
  * object.
  *
- * @param res The server response object.
- * @param response The response to send.
+ * @param res The server response object
+ * @param response The response to send
  */
 export async function sendResponse(
   res: http.ServerResponse | http2.Http2ServerResponse,

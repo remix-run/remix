@@ -9,7 +9,9 @@ export const ResourcesMethods = ['index', 'new', 'show', 'create', 'edit', 'upda
 
 export type ResourcesOptions = {
   /**
-   * The parameter name to use for the resource. Defaults to `id`.
+   * The parameter name to use for the resource.
+   *
+   * @default 'id'
    */
   param?: string
   /**
@@ -50,6 +52,7 @@ export type ResourcesOptions = {
  *
  * @param base The base route pattern to use for the resources
  * @param options Options to configure the resource routes
+ * @return The route map with CRUD routes
  */
 export function createResources<base extends string, const options extends ResourcesOptions>(
   base: base | RoutePattern<base>,

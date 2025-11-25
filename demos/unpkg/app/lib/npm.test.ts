@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import {
   parsePackagePath,
   resolveVersion,
+  isFullyResolvedVersion,
   getFilesAtPath,
   PackageNotFoundError,
   VersionNotFoundError,
@@ -75,6 +76,21 @@ describe('parsePackagePath', () => {
     assert.throws(() => parsePackagePath('@remix-run'), {
       name: 'InvalidPathError',
     })
+  })
+
+  it('parses URL-encoded caret semver range', () => {
+    let result = parsePackagePath('react@%5E18.2')
+    assert.deepEqual(result, { name: 'react', version: '^18.2', filePath: '' })
+  })
+
+  it('parses URL-encoded tilde semver range', () => {
+    let result = parsePackagePath('lodash@%7E4.17')
+    assert.deepEqual(result, { name: 'lodash', version: '~4.17', filePath: '' })
+  })
+
+  it('parses unencoded semver range', () => {
+    let result = parsePackagePath('react@^18.2')
+    assert.deepEqual(result, { name: 'react', version: '^18.2', filePath: '' })
   })
 })
 
@@ -149,6 +165,73 @@ describe('resolveVersion', () => {
     assert.throws(() => resolveVersion(mockMetadata, '4'), {
       name: 'VersionNotFoundError',
     })
+  })
+
+  it('resolves caret range to highest matching version', () => {
+    assert.equal(resolveVersion(mockMetadata, '^1.0.0'), '1.1.0')
+  })
+
+  it('resolves tilde range to highest matching version', () => {
+    assert.equal(resolveVersion(mockMetadata, '~1.0.0'), '1.0.1')
+  })
+
+  it('resolves greater-than-or-equal range', () => {
+    assert.equal(resolveVersion(mockMetadata, '>=1.0.0'), '2.0.0')
+  })
+
+  it('resolves complex semver range', () => {
+    assert.equal(resolveVersion(mockMetadata, '>=1.0.0 <2.0.0'), '1.1.0')
+  })
+
+  it('throws for semver range with no matching version', () => {
+    assert.throws(() => resolveVersion(mockMetadata, '^5.0.0'), {
+      name: 'VersionNotFoundError',
+    })
+  })
+})
+
+describe('isFullyResolvedVersion', () => {
+  let mockMetadata: PackageMetadata = {
+    name: 'test-package',
+    'dist-tags': {
+      latest: '2.0.0',
+    },
+    versions: {
+      '1.0.0': {
+        name: 'test-package',
+        version: '1.0.0',
+        dist: { tarball: 'http://example.com/1.0.0.tgz', shasum: 'abc' },
+      },
+      '2.0.0': {
+        name: 'test-package',
+        version: '2.0.0',
+        dist: { tarball: 'http://example.com/2.0.0.tgz', shasum: 'def' },
+      },
+    },
+  }
+
+  it('returns true for exact version in versions', () => {
+    assert.equal(isFullyResolvedVersion(mockMetadata, '1.0.0'), true)
+    assert.equal(isFullyResolvedVersion(mockMetadata, '2.0.0'), true)
+  })
+
+  it('returns false for dist-tag', () => {
+    assert.equal(isFullyResolvedVersion(mockMetadata, 'latest'), false)
+  })
+
+  it('returns false for partial version', () => {
+    assert.equal(isFullyResolvedVersion(mockMetadata, '1'), false)
+    assert.equal(isFullyResolvedVersion(mockMetadata, '1.0'), false)
+  })
+
+  it('returns false for semver range', () => {
+    assert.equal(isFullyResolvedVersion(mockMetadata, '^1.0.0'), false)
+    assert.equal(isFullyResolvedVersion(mockMetadata, '~1.0.0'), false)
+    assert.equal(isFullyResolvedVersion(mockMetadata, '>=1.0.0'), false)
+  })
+
+  it('returns false for non-existent version', () => {
+    assert.equal(isFullyResolvedVersion(mockMetadata, '3.0.0'), false)
   })
 })
 

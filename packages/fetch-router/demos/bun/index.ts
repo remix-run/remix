@@ -1,4 +1,4 @@
-import { router } from './router.ts'
+import { router } from './app/router.ts'
 
 const PORT = 44100
 

@@ -1,11 +1,29 @@
 import { split, type SplitPattern, type Split } from './split.ts'
 import { parseSearchConstraints, type SearchConstraints } from './search-constraints.ts'
 
+/**
+ * An error thrown when a pattern fails to parse.
+ */
 export class ParseError extends Error {
+  /**
+   * The source pattern that failed to parse.
+   */
   source: string
+  /**
+   * The position in the source where the error occurred.
+   */
   position: number
+  /**
+   * The name of the part being parsed (e.g., "pathname", "hostname").
+   */
   partName: string
 
+  /**
+   * @param description A description of the error
+   * @param partName The name of the part being parsed
+   * @param source The source pattern
+   * @param position The position in the source where the error occurred
+   */
   constructor(description: string, partName: string, source: string, position: number) {
     super(`${description} in ${partName}`)
     this.name = 'ParseError'

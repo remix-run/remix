@@ -14,12 +14,20 @@ export class RegExpMatcher<T = any> implements Matcher<T> {
   #pairs: { pattern: RoutePattern; data: T }[] = []
   #count = 0
 
+  /**
+   * @param pattern The pattern to add
+   * @param data The data to associate with the pattern
+   */
   add<P extends string>(pattern: P | RoutePattern<P>, data: T): void {
     let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
     this.#pairs.push({ pattern: routePattern, data })
     this.#count++
   }
 
+  /**
+   * @param url The URL to match
+   * @return The match result, or `null` if no match was found
+   */
   match(url: string | URL): MatchResult<T> | null {
     if (typeof url === 'string') url = new URL(url)
 
@@ -33,6 +41,10 @@ export class RegExpMatcher<T = any> implements Matcher<T> {
     return null
   }
 
+  /**
+   * @param url The URL to match
+   * @return A generator that yields all matches
+   */
   *matchAll(url: string | URL): Generator<MatchResult<T>> {
     if (typeof url === 'string') url = new URL(url)
 

@@ -5,8 +5,11 @@ import { detectMimeType } from '@remix-run/mime'
 import { html, render, formatBytes, icons } from '../lib/render.ts'
 import {
   parsePackagePath,
+  fetchPackageMetadata,
   fetchPackageContents,
   getFilesAtPath,
+  isFullyResolvedVersion,
+  resolveVersion,
   PackageNotFoundError,
   VersionNotFoundError,
   InvalidPathError,
@@ -27,6 +30,17 @@ export async function browseHandler(
 
   try {
     let { name, version, filePath } = parsePackagePath(path)
+
+    // Fetch metadata first to check if version needs resolution
+    let metadata = await fetchPackageMetadata(name)
+
+    // If the version is not fully resolved, redirect to the resolved version URL
+    if (!isFullyResolvedVersion(metadata, version)) {
+      let resolvedVersion = resolveVersion(metadata, version)
+      let redirectUrl = `/${name}@${resolvedVersion}${filePath ? '/' + filePath : ''}`
+      return redirect(redirectUrl)
+    }
+
     let contents = await fetchPackageContents(name, version)
     let resolvedVersion = contents.metadata.version
 

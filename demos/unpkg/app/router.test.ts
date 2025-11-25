@@ -108,4 +108,87 @@ describe('router', () => {
       assert.equal(response.status, 404)
     })
   })
+
+  describe('version redirects', () => {
+    it('redirects package without version to latest', async () => {
+      let response = await router.fetch(new Request('http://localhost/is-number'))
+
+      assert.equal(response.status, 302)
+      assert.equal(response.headers.get('Location'), '/is-number@7.0.0')
+    })
+
+    it('redirects dist-tag "latest" to resolved version', async () => {
+      let response = await router.fetch(new Request('http://localhost/is-number@latest'))
+
+      assert.equal(response.status, 302)
+      assert.equal(response.headers.get('Location'), '/is-number@7.0.0')
+    })
+
+    it('redirects partial major version to highest match', async () => {
+      let response = await router.fetch(new Request('http://localhost/is-number@1'))
+
+      assert.equal(response.status, 302)
+      assert.equal(response.headers.get('Location'), '/is-number@1.1.2')
+    })
+
+    it('redirects partial major.minor version to highest match', async () => {
+      let response = await router.fetch(new Request('http://localhost/is-number@2.0'))
+
+      assert.equal(response.status, 302)
+      assert.equal(response.headers.get('Location'), '/is-number@2.0.2')
+    })
+
+    it('redirects caret semver range to highest compatible version', async () => {
+      let response = await router.fetch(new Request('http://localhost/is-number@^1.0.0'))
+
+      assert.equal(response.status, 302)
+      assert.equal(response.headers.get('Location'), '/is-number@1.1.2')
+    })
+
+    it('redirects tilde semver range to highest patch version', async () => {
+      let response = await router.fetch(new Request('http://localhost/is-number@~1.1.0'))
+
+      assert.equal(response.status, 302)
+      assert.equal(response.headers.get('Location'), '/is-number@1.1.2')
+    })
+
+    it('redirects URL-encoded caret range', async () => {
+      // %5E is URL-encoded ^
+      let response = await router.fetch(new Request('http://localhost/is-number@%5E2.0.0'))
+
+      assert.equal(response.status, 302)
+      assert.equal(response.headers.get('Location'), '/is-number@2.1.0')
+    })
+
+    it('redirects URL-encoded tilde range', async () => {
+      // %7E is URL-encoded ~
+      let response = await router.fetch(new Request('http://localhost/is-number@%7E2.0.0'))
+
+      assert.equal(response.status, 302)
+      assert.equal(response.headers.get('Location'), '/is-number@2.0.2')
+    })
+
+    it('redirects complex semver range', async () => {
+      let response = await router.fetch(new Request('http://localhost/is-number@>=1.0.0 <2.0.0'))
+
+      assert.equal(response.status, 302)
+      assert.equal(response.headers.get('Location'), '/is-number@1.1.2')
+    })
+
+    it('preserves file path in redirect', async () => {
+      let response = await router.fetch(new Request('http://localhost/is-number@^7/package.json'))
+
+      assert.equal(response.status, 302)
+      assert.equal(response.headers.get('Location'), '/is-number@7.0.0/package.json')
+    })
+
+    it('does not redirect fully resolved version', async () => {
+      let response = await router.fetch(new Request('http://localhost/is-number@7.0.0'))
+
+      // Should return 200 (directory listing), not a redirect
+      assert.equal(response.status, 200)
+      let text = await response.text()
+      assert.ok(text.includes('is-number'))
+    })
+  })
 })

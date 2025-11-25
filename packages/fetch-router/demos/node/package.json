@@ -14,7 +14,8 @@
     "@remix-run/session-middleware": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^24.6.0"
+    "@types/node": "^24.6.0",
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "dev": "node --watch server.ts",

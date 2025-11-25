@@ -7,7 +7,8 @@ import type { BuildRouteMap } from './route-map.ts'
 export interface FormActionOptions {
   /**
    * The method the `<form>` uses to submit the action.
-   * Default is `POST`.
+   *
+   * @default 'POST'
    */
   formMethod?: RequestMethod
   /**
@@ -25,6 +26,8 @@ export interface FormActionOptions {
  * URL.
  *
  * @param pattern The route pattern to use for the form and its submit action
+ * @param options Options to configure the form action routes
+ * @return The route map with `index` and `action` routes
  */
 export function createFormAction<pattern extends string, const options extends FormActionOptions>(
   pattern: pattern | RoutePattern<pattern>,

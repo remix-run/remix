@@ -6,9 +6,14 @@ import {
 } from '@remix-run/form-data-parser'
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 
+/**
+ * Options for the `formData` middleware.
+ */
 export interface FormDataOptions extends ParseFormDataOptions {
   /**
-   * Set `true` to suppress parse errors. Default is `false`.
+   * Set `true` to suppress parse errors.
+   *
+   * @default false
    */
   suppressErrors?: boolean
   /**
@@ -21,8 +26,9 @@ export interface FormDataOptions extends ParseFormDataOptions {
 
 /**
  * Middleware that parses `FormData` from the request body and populates `context.formData`.
+ *
  * @param options Options for parsing form data
- * @returns A middleware function that parses form data
+ * @return A middleware function that parses form data
  */
 export function formData(options?: FormDataOptions): Middleware {
   let suppressErrors = options?.suppressErrors ?? false

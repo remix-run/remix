@@ -104,6 +104,10 @@ export type InteractionSetup = (this: Interaction) => void
  *   },
  * })
  * ```
+ *
+ * @param type The unique string identifier for this interaction type
+ * @param interaction The setup function that configures the interaction
+ * @return The type string, for use as an event name
  */
 export function defineInteraction<type extends string>(type: type, interaction: InteractionSetup) {
   interactions.set(type, interaction)
@@ -154,30 +158,13 @@ export type ContainerOptions = {
  *   },
  * })
  * ```
+ *
+ * @param target The event target to wrap (DOM element, window, document, or any EventTarget)
+ * @param options Optional configuration for the container
+ * @return An `EventsContainer` with `dispose()` and `set()` methods
  */
 export function createContainer<target extends EventTarget>(
-  /**
-   * The event target to wrap, usually a DOM element, window, or document, but
-   * any EventTarget is supported.
-   */
   target: target,
-
-  /**
-   * Optional configuration for the container
-   *
-   * @example
-   * ```ts
-   * let controller = new AbortController()
-   * let container = createContainer(target, {
-   *   signal: controller.signal,
-   *   onError(error) {
-   *     console.error(error)
-   *   },
-   * })
-   * // will remove all listeners and dispose the container
-   * controller.abort()
-   * ```
-   */
   options?: ContainerOptions,
 ): EventsContainer<target> {
   let controller = new AbortController()
@@ -282,6 +269,10 @@ export function createContainer<target extends EventTarget>(
  * // later
  * dispose()
  * ```
+ *
+ * @param target The event target to add listeners to
+ * @param listeners The event listeners to add
+ * @return A function to dispose all listeners
  */
 export function on<target extends EventTarget>(
   target: target,
@@ -296,6 +287,9 @@ export function on<target extends EventTarget>(
 
 // TypedEventTarget --------------------------------------------------------------------------------
 
+/**
+ * An `EventTarget` subclass with typed event maps.
+ */
 export class TypedEventTarget<eventMap> extends EventTarget {
   declare readonly __eventMap?: eventMap
 }

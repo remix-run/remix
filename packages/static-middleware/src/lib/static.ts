@@ -14,12 +14,15 @@ import { generateDirectoryListing } from './directory-listing.ts'
  */
 export type AcceptRangesFunction = (file: File) => boolean
 
+/**
+ * Options for the `staticFiles` middleware.
+ */
 export interface StaticFilesOptions extends Omit<FileResponseOptions, 'acceptRanges'> {
   /**
    * Filter function to determine which files should be served.
    *
    * @param path The relative path being requested
-   * @returns Whether to serve the file
+   * @return Whether to serve the file
    */
   filter?: (path: string) => boolean
 
@@ -51,14 +54,18 @@ export interface StaticFilesOptions extends Omit<FileResponseOptions, 'acceptRan
   /**
    * Files to try and serve as the index file when the request path targets a directory.
    *
-   * - `true` (default): Use default index files `['index.html', 'index.htm']`
+   * - `true`: Use default index files `['index.html', 'index.htm']`
    * - `false`: Disable index file serving
    * - `string[]`: Custom list of index files to try in order
+   *
+   * @default true
    */
   index?: boolean | string[]
   /**
    * Whether to return an HTML page listing the files in a directory when the request path
    * targets a directory. If both this and `index` are set, `index` takes precedence.
+   *
+   * @default false
    */
   listFiles?: boolean
 }
@@ -66,27 +73,12 @@ export interface StaticFilesOptions extends Omit<FileResponseOptions, 'acceptRan
 /**
  * Creates a middleware that serves static files from the filesystem.
  *
- * Uses the URL pathname to resolve files, removing the leading slash to make it
- * a relative path. The middleware always falls through to the handler if the file
- * is not found or an error occurs.
+ * Uses the URL pathname to resolve files, removing the leading slash to make it a relative path.
+ * The middleware always falls through to the handler if the file is not found or an error occurs.
  *
  * @param root The root directory to serve files from (absolute or relative to cwd)
- * @param options (optional) configuration for file responses
- *
- * @example
- * let router = createRouter({
- *   middleware: [staticFiles('./public')],
- * })
- *
- * @example
- * // With cache control
- * let router = createRouter({
- *   middleware: [
- *     staticFiles('./public', {
- *       cacheControl: 'public, max-age=3600',
- *     }),
- *   ],
- * })
+ * @param options Configuration for file responses
+ * @return The static files middleware
  */
 export function staticFiles(root: string, options: StaticFilesOptions = {}): Middleware {
   // Ensure root is an absolute path

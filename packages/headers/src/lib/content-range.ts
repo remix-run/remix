@@ -1,5 +1,8 @@
 import { type HeaderValue } from './header-value.ts'
 
+/**
+ * Initializer for a `Content-Range` header value.
+ */
 export interface ContentRangeInit {
   /**
    * The unit of the range, typically "bytes"
@@ -35,6 +38,9 @@ export class ContentRange implements HeaderValue, ContentRangeInit {
   end: number | null = null
   size?: number | '*'
 
+  /**
+   * @param init A string or object to initialize the header
+   */
   constructor(init?: string | ContentRangeInit) {
     if (init) {
       if (typeof init === 'string') {
@@ -55,6 +61,11 @@ export class ContentRange implements HeaderValue, ContentRangeInit {
     }
   }
 
+  /**
+   * Returns the string representation of the header value.
+   *
+   * @return The header value as a string
+   */
   toString(): string {
     if (!this.unit || this.size === undefined) return ''
 
@@ -63,4 +74,3 @@ export class ContentRange implements HeaderValue, ContentRangeInit {
     return `${this.unit} ${range}/${this.size}`
   }
 }
-

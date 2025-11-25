@@ -4,6 +4,9 @@ import { capitalize, isValidDate } from './utils.ts'
 
 type SameSiteValue = 'Strict' | 'Lax' | 'None'
 
+/**
+ * Properties for a `Set-Cookie` header value.
+ */
 export interface CookieProperties {
   /**
    * The domain of the cookie. For example, `example.com`.
@@ -57,6 +60,9 @@ export interface CookieProperties {
   secure?: boolean
 }
 
+/**
+ * Initializer for a `Set-Cookie` header value.
+ */
 export interface SetCookieInit extends CookieProperties {
   /**
    * The name of the cookie.
@@ -91,6 +97,9 @@ export class SetCookie implements HeaderValue, SetCookieInit {
   secure?: boolean
   value?: string
 
+  /**
+   * @param init A string or object to initialize the header
+   */
   constructor(init?: string | SetCookieInit) {
     if (init) {
       if (typeof init === 'string') {
@@ -155,6 +164,11 @@ export class SetCookie implements HeaderValue, SetCookieInit {
     }
   }
 
+  /**
+   * Returns the string representation of the header value.
+   *
+   * @return The header value as a string
+   */
   toString(): string {
     if (!this.name) {
       return ''

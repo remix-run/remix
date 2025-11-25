@@ -1,3 +1,5 @@
+import './globals.ts'
+
 export {
   TarParseError,
   type TarHeader,

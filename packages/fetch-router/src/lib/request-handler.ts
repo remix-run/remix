@@ -6,6 +6,9 @@ import type { Route } from './route-map.ts'
 
 /**
  * A request handler function that returns some kind of response.
+ *
+ * @param context The request context
+ * @return The response
  */
 export interface RequestHandler<
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
@@ -16,7 +19,7 @@ export interface RequestHandler<
 }
 
 /**
- * Build a `RequestHandler` type from a route or string.
+ * Build a `RequestHandler` type from a `Route` or string pattern.
  */
 // prettier-ignore
 export type BuildRequestHandler<T extends Route | string> =

@@ -85,7 +85,7 @@ router.map(routes.login, {
       return redirect(routes.home.href())
     }
 
-    return createHtmlResponse(html`
+    return createHtmlResponse(`
       <html>
         <head>
           <title>Login - Simple Blog</title>
@@ -128,7 +128,7 @@ router.map(routes.posts, {
   new: {
     middleware: [requireAuth()],
     handler({ session: _session }) {
-      return createHtmlResponse(html`
+      return createHtmlResponse(`
         <html>
           <head>
             <title>New Post - Simple Blog</title>

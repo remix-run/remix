@@ -17,6 +17,10 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
   #destroyed = false
   #dirty: boolean
 
+  /**
+   * @param id The session ID
+   * @param initialData The initial session data
+   */
   constructor(id = createSessionId(), initialData?: SessionData<valueData, flashData>) {
     this.#currentId = id
     this.#valueMap = toMap(initialData?.[0])
@@ -87,8 +91,9 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
 
   /**
    * Get a value from the session.
+   *
    * @param key The key of the value to get
-   * @returns The value for the given key
+   * @return The value for the given key
    */
   get<key extends keyof valueData>(key: key): valueData[key] | undefined
   get<key extends keyof flashData>(key: key): flashData[key] | undefined
@@ -100,8 +105,9 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
 
   /**
    * Check if a value is stored for the given key.
+   *
    * @param key The key to check
-   * @returns `true` if a value is stored for the given key, `false` otherwise
+   * @return `true` if a value is stored for the given key, `false` otherwise
    */
   has(key: keyof valueData | keyof flashData): boolean {
     if (this.#destroyed) return false
@@ -116,9 +122,10 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
   }
 
   /**
-   * Regenerate the session ID while preserving the session data.
-   * This should be called after login or other privilege changes.
-   * @param deleteOldSession Whether to delete the old session data when the session is saved. Defaults to `false`.
+   * Regenerate the session ID while preserving the session data. This should be called after login
+   * or other privilege changes.
+   *
+   * @param deleteOldSession Whether to delete the old session data when the session is saved (default: `false`)
    */
   regenerateId(deleteOldSession = false): void {
     this.#checkDestroyed()
@@ -168,9 +175,10 @@ function toMap<data extends Data>(data?: data): Map<keyof data, data[keyof data]
 
 /**
  * Create a new session.
+ *
  * @param id The ID of the session
  * @param initialData The initial data for the session
- * @returns The session
+ * @return The new session
  */
 export function createSession<valueData extends Data = Data, flashData extends Data = Data>(
   id = createSessionId(),
@@ -181,7 +189,8 @@ export function createSession<valueData extends Data = Data, flashData extends D
 
 /**
  * Create a new cryptographically secure session ID.
- * @returns A new session ID
+ *
+ * @return A new session ID
  */
 export function createSessionId(): string {
   return crypto.randomUUID()

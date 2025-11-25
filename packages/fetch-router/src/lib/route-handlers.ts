@@ -60,7 +60,7 @@ export function hasHandler<method extends RequestMethod | 'ANY', pattern extends
 }
 
 /**
- * Build a `RouteHandler` type from a string, route pattern, or route.
+ * Build a `RouteHandler` type from a string, `RoutePattern`, or `Route`.
  */
 // prettier-ignore
 export type BuildRouteHandler<method extends RequestMethod | 'ANY', route extends string | RoutePattern | Route> =

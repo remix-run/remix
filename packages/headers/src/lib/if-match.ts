@@ -1,6 +1,9 @@
 import { type HeaderValue } from './header-value.ts'
 import { quoteEtag } from './utils.ts'
 
+/**
+ * Initializer for an `If-Match` header value.
+ */
 export interface IfMatchInit {
   /**
    * The entity tags to compare against the current entity.
@@ -18,6 +21,9 @@ export interface IfMatchInit {
 export class IfMatch implements HeaderValue, IfMatchInit {
   tags: string[] = []
 
+  /**
+   * @param init A string, array of strings, or object to initialize the header
+   */
   constructor(init?: string | string[] | IfMatchInit) {
     if (init) {
       if (typeof init === 'string') {
@@ -35,8 +41,8 @@ export class IfMatch implements HeaderValue, IfMatchInit {
    *
    * Note: This method checks only for exact matches and does not consider wildcards.
    *
-   * @param tag The entity tag to check for.
-   * @returns `true` if the tag is present in the header, `false` otherwise.
+   * @param tag The entity tag to check for
+   * @return `true` if the tag is present in the header, `false` otherwise
    */
   has(tag: string): boolean {
     return this.tags.includes(quoteEtag(tag))
@@ -51,8 +57,8 @@ export class IfMatch implements HeaderValue, IfMatchInit {
    * Uses strong comparison as per RFC 9110, meaning weak entity tags (prefixed with `W/`)
    * will never match.
    *
-   * @param tag The entity tag to check against.
-   * @returns `true` if the precondition passes, `false` if it fails (should return 412).
+   * @param tag The entity tag to check against
+   * @return `true` if the precondition passes, `false` if it fails (should return 412)
    */
   matches(tag: string): boolean {
     if (this.tags.length === 0) {
@@ -81,6 +87,11 @@ export class IfMatch implements HeaderValue, IfMatchInit {
     return false
   }
 
+  /**
+   * Returns the string representation of the header value.
+   *
+   * @return The header value as a string
+   */
   toString() {
     return this.tags.join(', ')
   }
