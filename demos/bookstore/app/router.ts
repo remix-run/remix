@@ -7,7 +7,7 @@ import { methodOverride } from '@remix-run/method-override-middleware'
 import { session } from '@remix-run/session-middleware'
 import { staticFiles } from '@remix-run/static-middleware'
 
-import { routes } from '../routes.ts'
+import { routes } from './routes.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
 import { uploadHandler } from './utils/uploads.ts'
 

@@ -4,14 +4,6 @@ This is the changelog for [`static-middleware`](https://github.com/remix-run/rem
 
 ## Unreleased
 
-- BREAKING CHANGE: Now uses `@remix-run/response` for file and HTML responses instead of `@remix-run/fetch-router/response-helpers`. The `@remix-run/response` package is now a peer dependency.
-
-- Add `listFiles` option to generate a directory listing when a directory is requested.
-
-  ```ts
-  staticFiles('./public', { listFiles: true })
-  ```
-
 - Add support for `acceptRanges` function to conditionally enable HTTP Range requests based on the file being served:
 
   ```ts
@@ -24,6 +16,16 @@ This is the changelog for [`static-middleware`](https://github.com/remix-run/rem
   staticFiles('./public', {
     acceptRanges: (file) => file.type.startsWith('video/'),
   })
+  ```
+
+## v0.3.0 (2025-11-25)
+
+- BREAKING CHANGE: Now uses `@remix-run/response` for file and HTML responses instead of `@remix-run/fetch-router/response-helpers`. The `@remix-run/response` package is now a peer dependency.
+
+- Add `listFiles` option to generate a directory listing when a directory is requested.
+
+  ```ts
+  staticFiles('./public', { listFiles: true })
   ```
 
 ## v0.2.0 (2025-11-20)

@@ -1,7 +1,7 @@
 import type { BuildRouteHandler, RouteHandlers } from '@remix-run/fetch-router'
 import { Frame } from '@remix-run/dom'
 
-import { routes } from '../routes.ts'
+import { routes } from './routes.ts'
 
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'

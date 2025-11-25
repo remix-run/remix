@@ -24,3 +24,16 @@ server.listen(port, () => {
   console.log('  Customer: customer@example.com / password123')
   console.log('')
 })
+
+let shuttingDown = false
+
+function shutdown() {
+  if (shuttingDown) return
+  shuttingDown = true
+  server.close(() => {
+    process.exit(0)
+  })
+}
+
+process.on('SIGINT', shutdown)
+process.on('SIGTERM', shutdown)

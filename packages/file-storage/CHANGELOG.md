@@ -2,7 +2,7 @@
 
 This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.13.0 (2025-11-25)
 
 - BREAKING CHANGE: `LocalFileStorage` class has been replaced with `createFsFileStorage(directory)`
 - BREAKING CHANGE: `MemoryFileStorage` class has been replaced with `createMemoryFileStorage()`

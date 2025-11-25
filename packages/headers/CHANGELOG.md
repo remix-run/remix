@@ -17,6 +17,8 @@ header.toString() // 'accept-encoding, accept-language'
 
 - `Accept.getPreferred()`, `AcceptEncoding.getPreferred()`, and `AcceptLanguage.getPreferred()` are now generic, preserving the union type of the input array in the return type
 
+## v0.17.2 (2025-11-25)
+
 - Fix `secure` property type in `SetCookie` to accept `boolean` instead of only `true`, making it consistent with `httpOnly` and `partitioned`
 
 ## v0.17.1 (2025-11-21)

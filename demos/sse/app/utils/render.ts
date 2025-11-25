@@ -1,7 +1,7 @@
 import type { Remix } from '@remix-run/dom'
 import { renderToStream } from '@remix-run/dom/server'
-import { html } from '@remix-run/fetch-router/response-helpers'
+import { createHtmlResponse } from '@remix-run/response/html'
 
 export function render(element: Remix.RemixElement, init?: ResponseInit) {
-  return html(renderToStream(element), init)
+  return createHtmlResponse(renderToStream(element), init)
 }

@@ -1,5 +1,4 @@
-import { routes } from '../../routes.ts'
-
+import { routes } from '../routes.ts'
 import { getBookBySlug } from '../models/books.ts'
 import { BookCard } from '../components/book-card.tsx'
 import { getCurrentCart } from './context.ts'

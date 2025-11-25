@@ -2,7 +2,7 @@
 
 This is the changelog for [`cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.5.0 (2025-11-25)
 
 - Add `Cookie` class. The `createCookie` function now returns an instance of the `Cookie` class.
 

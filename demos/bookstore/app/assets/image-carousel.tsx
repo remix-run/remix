@@ -1,7 +1,7 @@
 import { type Remix, hydrated } from '@remix-run/dom'
 import { press } from '@remix-run/events/press'
 
-import { routes } from '../../routes.ts'
+import { routes } from '../routes.ts'
 
 export const ImageCarousel = hydrated(
   routes.assets.href({ path: 'image-carousel.js#ImageCarousel' }),

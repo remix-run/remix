@@ -2,7 +2,7 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.12.0 (2025-11-25)
 
 - BREAKING CHANGE: Moved all response helpers to `@remix-run/response`. Update your imports:
 
