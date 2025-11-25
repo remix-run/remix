@@ -183,6 +183,7 @@ Compression is automatically skipped for:
 - Responses with no `Accept-Encoding` header
 - Responses that are already compressed (existing `Content-Encoding`)
 - Responses with `Cache-Control: no-transform`
+- Responses with `Content-Length` below threshold (default: 1024 bytes)
 - Responses with range support (`Accept-Ranges: bytes`)
 - 206 Partial Content responses
 - HEAD requests (only headers are modified)
@@ -193,6 +194,10 @@ The `compressResponse` helper accepts options to customize compression behavior:
 
 ```ts
 await compressResponse(response, request, {
+  // Minimum size in bytes to compress (only enforced if Content-Length is present).
+  // Default: 1024
+  threshold: 1024,
+
   // Which encodings the server supports for negotiation.
   // Defaults to ['br', 'gzip', 'deflate']
   encodings: ['br', 'gzip', 'deflate'],

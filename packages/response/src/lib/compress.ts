@@ -16,6 +16,14 @@ const defaultEncodings: Encoding[] = ['br', 'gzip', 'deflate']
 
 export interface CompressResponseOptions {
   /**
+   * Minimum size in bytes to compress (only enforced if Content-Length is present).
+   * If Content-Length is absent, compression is applied regardless of this threshold.
+   *
+   * Default: 1024
+   */
+  threshold?: number
+
+  /**
    * Which encodings the server supports for negotiation in order of preference.
    * Supported encodings: 'br', 'gzip', 'deflate'.
    * Default: ['br', 'gzip', 'deflate']
@@ -53,6 +61,7 @@ export interface CompressResponseOptions {
  * - Responses with Cache-Control: no-transform
  * - Responses advertising range support (Accept-Ranges: bytes)
  * - Partial content responses (206 status)
+ * - Responses with Content-Length below threshold (default: 1024 bytes)
  *
  * When compressing, this function:
  * - Sets Content-Encoding header
@@ -73,6 +82,7 @@ export async function compressResponse(
 ): Promise<Response> {
   let compressOptions = options ?? {}
   let supportedEncodings = compressOptions.encodings ?? defaultEncodings
+  let threshold = compressOptions.threshold ?? 1024
   let acceptEncodingHeader = request.headers.get('Accept-Encoding')
   let responseHeaders = new SuperHeaders(response.headers)
 
@@ -90,6 +100,12 @@ export async function compressResponse(
     // Partial content responses
     response.status === 206
   ) {
+    return response
+  }
+
+  // If Content-Length is present and below threshold, skip compression
+  let contentLength = responseHeaders.contentLength
+  if (contentLength !== null && contentLength < threshold) {
     return response
   }
 

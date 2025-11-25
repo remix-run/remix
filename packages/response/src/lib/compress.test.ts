@@ -154,6 +154,33 @@ describe('compressResponse()', () => {
     assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
   })
 
+  it('skips compression when Content-Length is below threshold', async () => {
+    let request = new Request('https://remix.run', {
+      headers: { 'Accept-Encoding': 'gzip' },
+    })
+    let response = new Response('Small', {
+      headers: { 'Content-Length': '5' },
+    })
+
+    let compressed = await compressResponse(response, request)
+
+    assert.equal(compressed.headers.get('Content-Encoding'), null)
+    assert.equal(await compressed.text(), 'Small')
+  })
+
+  it('respects custom threshold option', async () => {
+    let request = new Request('https://remix.run', {
+      headers: { 'Accept-Encoding': 'gzip' },
+    })
+    let response = new Response('Small', {
+      headers: { 'Content-Length': '5' },
+    })
+
+    let compressed = await compressResponse(response, request, { threshold: 3 })
+
+    assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
+  })
+
   it('skips compression for already compressed responses', async () => {
     let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },

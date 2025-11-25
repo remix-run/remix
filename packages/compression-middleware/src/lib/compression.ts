@@ -76,17 +76,8 @@ export function compression(options?: CompressionOptions): Middleware {
       return response
     }
 
-    // If Content-Length is present and below threshold, skip compression.
-    // Otherwise, compress (including when Content-Length is absent - we assume it's large enough)
-    let contentLengthHeader = response.headers.get('Content-Length')
-    if (contentLengthHeader !== null) {
-      let contentLength = parseInt(contentLengthHeader, 10)
-      if (!isNaN(contentLength) && contentLength < (options?.threshold ?? 1024)) {
-        return response
-      }
-    }
-
     let compressOptions: CompressResponseOptions = {
+      threshold: options?.threshold,
       encodings: options?.encodings
         ? typeof options.encodings === 'function'
           ? options.encodings(response)
