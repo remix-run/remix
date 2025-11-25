@@ -37,27 +37,27 @@ export interface FileResponseOptions {
   /**
    * Hash algorithm or custom digest function for strong ETags.
    *
-   * - String: Algorithm name for Node.js crypto.createHash() (e.g., 'sha256', 'sha512').
-   *   Available algorithms depend on the platform.
+   * - String: Web Crypto API algorithm name ('SHA-256', 'SHA-384', 'SHA-512', 'SHA-1').
+   *   Note: Using strong ETags will buffer the entire file into memory before hashing.
+   *   Consider using weak ETags (default) or a custom digest function for large files.
    * - Function: Custom digest computation that receives a File and returns the digest string
    *
    * Only used when `etag: 'strong'`. Ignored for weak ETags.
    *
-   * @default 'sha256'
-   * @example 'sha512'
+   * @default 'SHA-256'
    * @example async (file) => await customHash(file)
    */
-  digest?: string | FileDigestFunction
+  digest?: AlgorithmIdentifier | FileDigestFunction
   /**
-   * Whether to include Last-Modified headers.
+   * Whether to include `Last-Modified` headers.
    *
    * @default true
    */
   lastModified?: boolean
   /**
-   * Whether to support HTTP Range requests for partial content.
+   * Whether to support HTTP `Range` requests for partial content.
    *
-   * When enabled, includes Accept-Ranges header and handles Range requests
+   * When enabled, includes `Accept-Ranges` header and handles `Range` requests
    * with 206 Partial Content responses.
    *
    * Defaults to enabling ranges only for non-compressible MIME types,
@@ -72,10 +72,8 @@ export interface FileResponseOptions {
 }
 
 /**
- * A helper for working with file [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)s.
- *
- * Returns a Response with full HTTP semantics including ETags, Last-Modified,
- * conditional requests, and Range support.
+ * Creates a file [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+ * with full HTTP semantics including ETags, Last-Modified, conditional requests, and Range support.
  *
  * @param file The file to send
  * @param request The request object
@@ -83,13 +81,13 @@ export interface FileResponseOptions {
  * @returns A `Response` object containing the file
  *
  * @example
- * import * as res from '@remix-run/fetch-router/response-helpers'
+ * import { createFileResponse } from '@remix-run/response/file'
  * let file = openFile('./public/image.jpg')
- * return res.file(file, request, {
+ * return createFileResponse(file, request, {
  *   cacheControl: 'public, max-age=3600'
  * })
  */
-export async function sendFile(
+export async function createFileResponse(
   file: File,
   request: Request,
   options: FileResponseOptions = {},
@@ -97,7 +95,7 @@ export async function sendFile(
   let {
     cacheControl,
     etag: etagStrategy = 'weak',
-    digest: digestOption = 'sha256',
+    digest: digestOption = 'SHA-256',
     lastModified: lastModifiedEnabled = true,
     acceptRanges: acceptRangesOption,
   } = options
@@ -291,39 +289,35 @@ function omitNullableValues<T extends Record<string, any>>(headers: T): OmitNull
 /**
  * Computes a digest (hash) for a file.
  *
- * @param file - The file to hash
- * @param digestOption - Algorithm name or custom digest function
+ * @param file The file to hash
+ * @param digestOption Web Crypto algorithm name or custom digest function
  * @returns The computed digest as a hex string
  */
 async function computeDigest(
   file: File,
-  digestOption: string | FileDigestFunction,
+  digestOption: AlgorithmIdentifier | FileDigestFunction,
 ): Promise<string> {
   return typeof digestOption === 'function'
-    ? // Custom digest function
-      await digestOption(file)
-    : // Use Node.js crypto with algorithm name
-      await hashFile(file, digestOption)
+    ? await digestOption(file)
+    : await hashFile(file, digestOption)
 }
 
 /**
- * Hashes a file using Node.js crypto streaming API.
+ * Hashes a file using Web Crypto API.
  *
- * This streams the file in chunks to avoid loading the entire file into memory,
- * which is important for large files.
+ * Note: This loads the entire file into memory before hashing. For large files,
+ * consider using weak ETags (default) or providing a custom digest function.
  *
- * @param file - The file to hash
- * @param algorithm - Hash algorithm name (e.g., 'sha256', 'sha512')
+ * @param file The file to hash
+ * @param algorithm Web Crypto API algorithm name (default: 'SHA-256')
  * @returns The hash as a hex string
  */
-async function hashFile(file: File, algorithm: string): Promise<string> {
-  // Avoid making node:crypto a static import in case it's not available
-  let { createHash } = await import('node:crypto')
-  let hash = createHash(algorithm)
-  for await (let chunk of file.stream()) {
-    hash.update(chunk)
-  }
-  return hash.digest('hex')
+async function hashFile(file: File, algorithm: AlgorithmIdentifier = 'SHA-256'): Promise<string> {
+  let buffer = await file.arrayBuffer()
+  let hashBuffer = await crypto.subtle.digest(algorithm, buffer)
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 /**

@@ -46,29 +46,6 @@ fileFromStorage.type // 'text/plain'
 await storage.remove(key)
 ```
 
-### Amazon S3
-
-```ts
-import { createS3FileStorage } from '@remix-run/file-storage/s3'
-
-let storage = createS3FileStorage({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  bucket: 'my-bucket',
-  region: 'us-east-1',
-})
-
-// Use the same API as other storage implementations
-await storage.set('my-key', file)
-let retrieved = await storage.get('my-key')
-```
-
-The S3 implementation also supports:
-
-- S3-compatible services (like MinIO, Cloudflare R2) via the `endpoint` option
-- Temporary credentials via the `sessionToken` option
-- All standard `FileStorage` operations including listing, pagination, and prefix filtering
-
 ## Related Packages
 
 - [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser) - Pairs well with this library for storing `FileUpload` objects received in `multipart/form-data` requests

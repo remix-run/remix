@@ -54,7 +54,7 @@ export interface CookieProperties {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure)
    */
-  secure?: true
+  secure?: boolean
 }
 
 export interface SetCookieInit extends CookieProperties {
@@ -88,7 +88,7 @@ export class SetCookie implements HeaderValue, SetCookieInit {
   partitioned?: boolean
   path?: string
   sameSite?: SameSiteValue
-  secure?: true
+  secure?: boolean
   value?: string
 
   constructor(init?: string | SetCookieInit) {

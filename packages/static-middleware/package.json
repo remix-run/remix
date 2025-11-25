@@ -41,7 +41,8 @@
   "peerDependencies": {
     "@remix-run/fetch-router": "workspace:^",
     "@remix-run/fs": "workspace:^",
-    "@remix-run/html-template": "workspace:^"
+    "@remix-run/html-template": "workspace:^",
+    "@remix-run/response": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

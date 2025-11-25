@@ -4,6 +4,19 @@ This is the changelog for [`session`](https://github.com/remix-run/remix/tree/ma
 
 ## Unreleased
 
+- Add `Session` class. The `createSession` function now returns an instance of the `Session` class.
+
+  ```ts
+  // You can now create sessions using either approach:
+  import { createSession, Session } from '@remix-run/session'
+
+  // Factory function
+  let session = createSession()
+
+  // Or use the class directly
+  let session = new Session()
+  ```
+
 - BREAKING CHANGE: Rename `createFileSessionStorage` to `createFsSessionStorage` and export from `@remix-run/session/fs-storage`
 
   ```ts

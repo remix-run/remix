@@ -1,0 +1,74 @@
+{
+  "name": "@remix-run/response",
+  "version": "0.1.0",
+  "description": "Response helpers for the web Fetch API",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/response"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/response#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    "./compress": "./src/compress.ts",
+    "./file": "./src/file.ts",
+    "./html": "./src/html.ts",
+    "./redirect": "./src/redirect.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      "./compress": {
+        "types": "./dist/compress.d.ts",
+        "default": "./dist/compress.js"
+      },
+      "./file": {
+        "types": "./dist/file.d.ts",
+        "default": "./dist/file.js"
+      },
+      "./html": {
+        "types": "./dist/html.d.ts",
+        "default": "./dist/html.js"
+      },
+      "./redirect": {
+        "types": "./dist/redirect.d.ts",
+        "default": "./dist/redirect.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "devDependencies": {
+    "@remix-run/mime": "workspace:*",
+    "@types/node": "^24.6.0",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "@remix-run/headers": "workspace:^",
+    "@remix-run/html-template": "workspace:^",
+    "@remix-run/mime": "workspace:^"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "fetch",
+    "response",
+    "http",
+    "html",
+    "file",
+    "redirect"
+  ]
+}

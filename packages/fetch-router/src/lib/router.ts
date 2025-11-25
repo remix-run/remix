@@ -60,14 +60,31 @@ export interface Router {
   ): void
   /**
    * Map a route map (or route/pattern) to request handler(s).
-   * @param route The routes or pattern to match
+   * @param route The route(s)/pattern to match
    * @param handler The request handler(s) to invoke when the routes match
    */
-  map<method extends RequestMethod | 'ANY', route extends string>(
-    route: route | RoutePattern<route> | Route<method, route>,
-    handler: RouteHandler<method, route>,
+  map<
+    route extends RouteMap | Route<RequestMethod | 'ANY', string> | RoutePattern<string> | string,
+  >(
+    route: route,
+    handler: // prettier-ignore
+    // map(routeMap, routeHandlers)
+    [route] extends [RouteMap] ? RouteHandlers<route> :
+
+    // map(route, routeHandler)
+    route extends Route<
+      infer method extends RequestMethod | 'ANY',
+      infer source extends string
+    > ? method extends 'ANY' ? RouteHandler<RequestMethod | 'ANY', source> : RouteHandler<method, source> :
+
+    // map(pattern, routeHandler)
+    route extends RoutePattern<infer source extends string> ? RouteHandler<RequestMethod | 'ANY', source> :
+
+    // map(stringPattern, routeHandler)
+    route extends string ? RouteHandler<RequestMethod | 'ANY', route>:
+
+    never,
   ): void
-  map<routeMap extends RouteMap>(routes: routeMap, handlers: RouteHandlers<routeMap>): void
   /**
    * Map a GET route/pattern to a request handler.
    * @param route The route/pattern to match
@@ -188,18 +205,18 @@ export function createRouter(options?: RouterOptions): Router {
     })
   }
 
-  function mapRoute(routeOrRoutes: any, handler: any): void {
-    if (typeof routeOrRoutes === 'string' || routeOrRoutes instanceof RoutePattern) {
+  function mapRoute(routeArg: any, handlerArg: any): void {
+    if (typeof routeArg === 'string' || routeArg instanceof RoutePattern) {
       // map(pattern, handler)
-      addRoute('ANY', routeOrRoutes, handler)
-    } else if (routeOrRoutes instanceof Route) {
+      addRoute('ANY', routeArg, handlerArg)
+    } else if (routeArg instanceof Route) {
       // map(route, handler)
-      addRoute(routeOrRoutes.method, routeOrRoutes.pattern, handler)
-    } else if (!hasHandlers(handler)) {
+      addRoute(routeArg.method, routeArg.pattern, handlerArg)
+    } else if (!hasHandlers(handlerArg)) {
       // map(routes, handlers)
-      let handlers = handler
-      for (let key in routeOrRoutes) {
-        let route = routeOrRoutes[key]
+      let handlers = handlerArg
+      for (let key in routeArg) {
+        let route = routeArg[key]
         let handler = handlers[key]
 
         if (route instanceof Route) {
@@ -210,10 +227,10 @@ export function createRouter(options?: RouterOptions): Router {
       }
     } else {
       // map(routes, { middleware?, handlers })
-      let mapMiddleware = handler.middleware
-      let handlers = handler.handlers
-      for (let key in routeOrRoutes) {
-        let route = routeOrRoutes[key]
+      let mapMiddleware = handlerArg.middleware
+      let handlers = handlerArg.handlers
+      for (let key in routeArg) {
+        let route = routeArg[key]
         let handler = (handlers as any)[key]
 
         if (route instanceof Route) {

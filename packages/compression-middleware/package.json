@@ -34,12 +34,14 @@
   "devDependencies": {
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/mime": "workspace:*",
+    "@remix-run/response": "workspace:*",
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/mime": "workspace:^"
+    "@remix-run/mime": "workspace:^",
+    "@remix-run/response": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

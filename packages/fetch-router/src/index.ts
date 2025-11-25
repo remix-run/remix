@@ -13,20 +13,19 @@ export { RequestContext } from './lib/request-context.ts'
 export { RequestMethods } from './lib/request-methods.ts'
 export type { RequestMethod } from './lib/request-methods.ts'
 
-export type { RequestHandler, InferRequestHandler } from './lib/request-handler.ts'
+export type { RequestHandler, BuildRequestHandler } from './lib/request-handler.ts'
 
 export {
   createResource,
   createResource as resource, // shorthand
+} from './lib/resource.ts'
+export type { ResourceMethod, ResourceOptions } from './lib/resource.ts'
+
+export {
   createResources,
   createResources as resources, // shorthand
-} from './lib/resource.ts'
-export type {
-  ResourceMethod,
-  ResourceOptions,
-  ResourcesMethod,
-  ResourcesOptions,
-} from './lib/resource.ts'
+} from './lib/resources.ts'
+export type { ResourcesMethod, ResourcesOptions } from './lib/resources.ts'
 
 export type { RouteHandlers, RouteHandler, BuildRouteHandler } from './lib/route-handlers.ts'
 

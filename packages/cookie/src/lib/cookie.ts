@@ -6,90 +6,6 @@ import {
 
 import { sign, unsign } from './cookie-signing.ts'
 
-type SameSiteValue = 'Strict' | 'Lax' | 'None'
-
-/**
- * Represents a HTTP cookie.
- *
- * Supports parsing and serializing the cookie to/from `Cookie` and `Set-Cookie` headers.
- *
- * Also supports cryptographic signing of the cookie value to ensure it's not tampered with, and
- * secret rotation to easily rotate secrets without breaking existing cookies.
- */
-export interface Cookie {
-  /**
-   * The domain of the cookie.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#domaindomain-value)
-   */
-  readonly domain: string | undefined
-  /**
-   * The expiration date of the cookie.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#expiresdate)
-   */
-  readonly expires: Date | undefined
-  /**
-   * True if the cookie is HTTP-only.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#httponly)
-   */
-  readonly httpOnly: boolean
-  /**
-   * The maximum age of the cookie in seconds.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#max-agenumber)
-   */
-  readonly maxAge: number | undefined
-  /**
-   * The name of the cookie.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#cookie-namecookie-value)
-   */
-  readonly name: string
-  /**
-   * Extracts the value of this cookie from a `Cookie` header value.
-   * @param headerValue The `Cookie` header to parse
-   * @returns The value of this cookie, or `null` if it's not present
-   */
-  parse(headerValue: string | null): Promise<string | null>
-  /**
-   * True if the cookie is partitioned.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#partitioned)
-   */
-  readonly partitioned: boolean
-  /**
-   * The path of the cookie. Defaults to `/`.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value)
-   */
-  readonly path: string
-  /**
-   * The `SameSite` attribute of the cookie. Defaults to `Lax`.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value)
-   */
-  readonly sameSite: SameSiteValue
-  /**
-   * True if the cookie is secure (only sent over HTTPS).
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure)
-   */
-  readonly secure: boolean
-  /**
-   * Returns the value to use in a `Set-Cookie` header for this cookie.
-   * @param value The value to serialize
-   * @param props (optional) Additional properties to use when serializing the cookie
-   * @returns The `Set-Cookie` header for this cookie
-   */
-  serialize(value: string, props?: CookieProperties): Promise<string>
-  /**
-   * True if this cookie uses one or more secrets for verification.
-   */
-  readonly signed: boolean
-}
-
 export interface CookieOptions extends CookieProperties {
   /**
    * A function that decodes the cookie value.
@@ -120,6 +36,197 @@ export interface CookieOptions extends CookieProperties {
   secrets?: string[]
 }
 
+type SameSiteValue = 'Strict' | 'Lax' | 'None'
+type Coder = (value: string) => string
+
+/**
+ * Represents a HTTP cookie.
+ *
+ * Supports parsing and serializing the cookie to/from `Cookie` and `Set-Cookie` headers.
+ *
+ * Also supports cryptographic signing of the cookie value to ensure it's not tampered with, and
+ * secret rotation to easily rotate secrets without breaking existing cookies.
+ */
+export class Cookie {
+  #name: string
+  #decode: Coder
+  #encode: Coder
+  #secrets: string[]
+  #domain: string | undefined
+  #expires: Date | undefined
+  #httpOnly: boolean | undefined
+  #maxAge: number | undefined
+  #partitioned: boolean | undefined
+  #path: string
+  #sameSite: SameSiteValue
+  #secure: boolean | undefined
+
+  constructor(name: string, options?: CookieOptions) {
+    let {
+      decode = decodeURIComponent,
+      encode = encodeURIComponent,
+      secrets = [],
+      domain,
+      expires,
+      httpOnly,
+      maxAge,
+      path = '/',
+      partitioned,
+      secure,
+      sameSite = 'Lax',
+    } = options ?? {}
+
+    if (partitioned === true) {
+      // Partitioned cookies must be set with Secure
+      // See https://developer.mozilla.org/en-US/docs/Web/Privacy/Guides/Privacy_sandbox/Partitioned_cookies
+      secure = true
+    }
+
+    this.#name = name
+    this.#decode = decode
+    this.#encode = encode
+    this.#secrets = secrets
+    this.#domain = domain
+    this.#expires = expires
+    this.#httpOnly = httpOnly
+    this.#maxAge = maxAge
+    this.#partitioned = partitioned
+    this.#path = path
+    this.#sameSite = sameSite
+    this.#secure = secure
+  }
+
+  /**
+   * The domain of the cookie.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#domaindomain-value)
+   */
+  get domain(): string | undefined {
+    return this.#domain
+  }
+
+  /**
+   * The expiration date of the cookie.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#expiresdate)
+   */
+  get expires(): Date | undefined {
+    return this.#expires
+  }
+
+  /**
+   * True if the cookie is HTTP-only.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#httponly)
+   */
+  get httpOnly(): boolean {
+    return this.#httpOnly ?? false
+  }
+
+  /**
+   * The maximum age of the cookie in seconds.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#max-agenumber)
+   */
+  get maxAge(): number | undefined {
+    return this.#maxAge
+  }
+
+  /**
+   * The name of the cookie.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#cookie-namecookie-value)
+   */
+  get name(): string {
+    return this.#name
+  }
+
+  /**
+   * Extracts the value of this cookie from a `Cookie` header value.
+   * @param headerValue The `Cookie` header to parse
+   * @returns The value of this cookie, or `null` if it's not present
+   */
+  async parse(headerValue: string | null): Promise<string | null> {
+    if (!headerValue) return null
+
+    let header = new CookieHeader(headerValue)
+    if (!header.has(this.#name)) return null
+
+    let value = header.get(this.#name)!
+    if (value === '') return ''
+
+    let decoded = await decodeCookieValue(value, this.#secrets, this.#decode)
+    return decoded
+  }
+
+  /**
+   * True if the cookie is partitioned.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#partitioned)
+   */
+  get partitioned(): boolean {
+    return this.#partitioned ?? false
+  }
+
+  /**
+   * The path of the cookie. Defaults to `/`.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value)
+   */
+  get path(): string {
+    return this.#path
+  }
+
+  /**
+   * The `SameSite` attribute of the cookie. Defaults to `Lax`.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value)
+   */
+  get sameSite(): SameSiteValue {
+    return this.#sameSite
+  }
+
+  /**
+   * True if the cookie is secure (only sent over HTTPS).
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure)
+   */
+  get secure(): boolean {
+    return this.#secure ?? false
+  }
+
+  /**
+   * Returns the value to use in a `Set-Cookie` header for this cookie.
+   * @param value The value to serialize
+   * @param props (optional) Additional properties to use when serializing the cookie
+   * @returns The `Set-Cookie` header for this cookie
+   */
+  async serialize(value: string, props?: CookieProperties): Promise<string> {
+    let header = new SetCookieHeader({
+      name: this.#name,
+      value: value === '' ? '' : await encodeCookieValue(value, this.#secrets, this.#encode),
+      domain: this.#domain,
+      expires: this.#expires,
+      httpOnly: this.#httpOnly,
+      maxAge: this.#maxAge,
+      partitioned: this.#partitioned,
+      path: this.#path,
+      sameSite: this.#sameSite,
+      secure: this.#secure,
+      ...props,
+    })
+
+    return header.toString()
+  }
+
+  /**
+   * True if this cookie uses one or more secrets for verification.
+   */
+  get signed(): boolean {
+    return this.#secrets.length > 0
+  }
+}
+
 /**
  * Creates a new cookie object.
  * @param name The name of the cookie
@@ -127,90 +234,8 @@ export interface CookieOptions extends CookieProperties {
  * @returns A cookie object
  */
 export function createCookie(name: string, options?: CookieOptions): Cookie {
-  let {
-    decode = decodeURIComponent,
-    encode = encodeURIComponent,
-    secrets = [],
-    domain,
-    expires,
-    httpOnly,
-    maxAge,
-    path = '/',
-    partitioned,
-    secure,
-    sameSite = 'Lax',
-  } = options ?? {}
-
-  if (partitioned === true) {
-    // Partitioned cookies must be set with Secure
-    // See https://developer.mozilla.org/en-US/docs/Web/Privacy/Guides/Privacy_sandbox/Partitioned_cookies
-    secure = true
-  }
-
-  return {
-    get domain() {
-      return domain
-    },
-    get expires() {
-      return expires
-    },
-    get httpOnly() {
-      return httpOnly ?? false
-    },
-    get maxAge() {
-      return maxAge
-    },
-    get name() {
-      return name
-    },
-    async parse(headerValue: string | null): Promise<string | null> {
-      if (!headerValue) return null
-
-      let header = new CookieHeader(headerValue)
-      if (!header.has(name)) return null
-
-      let value = header.get(name)!
-      if (value === '') return ''
-
-      let decoded = await decodeCookieValue(value, secrets, decode)
-      return decoded
-    },
-    get partitioned() {
-      return partitioned ?? false
-    },
-    get path() {
-      return path
-    },
-    get sameSite() {
-      return sameSite
-    },
-    get secure() {
-      return secure ?? false
-    },
-    async serialize(value: string, props?: CookieProperties): Promise<string> {
-      let header = new SetCookieHeader({
-        name: name,
-        value: value === '' ? '' : await encodeCookieValue(value, secrets, encode),
-        domain,
-        expires,
-        httpOnly,
-        maxAge,
-        partitioned,
-        path,
-        sameSite,
-        secure,
-        ...props,
-      })
-
-      return header.toString()
-    },
-    get signed() {
-      return secrets.length > 0
-    },
-  }
+  return new Cookie(name, options)
 }
-
-type Coder = (value: string) => string
 
 async function decodeCookieValue(
   value: string,

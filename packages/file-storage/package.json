@@ -41,9 +41,6 @@
       "./package.json": "./package.json"
     }
   },
-  "dependencies": {
-    "aws4fetch": "^1.0.20"
-  },
   "peerDependencies": {
     "@remix-run/fs": "workspace:^",
     "@remix-run/lazy-file": "workspace:^"

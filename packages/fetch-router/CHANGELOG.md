@@ -4,19 +4,24 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
-- BREAKING CHANGE: Add `@remix-run/mime` as a peer dependency. This package is used by the `file()` response helper to determine if HTTP Range requests should be supported by default for a given MIME type.
+- BREAKING CHANGE: Moved all response helpers to `@remix-run/response`. Update your imports:
 
-- The `file()` response helper now only enables HTTP Range requests by default for non-compressible MIME types. This allows text-based assets to be compressed while still supporting resumable downloads for media files.
+  ```tsx
+  // Before
+  import * as res from '@remix-run/fetch-router/response-helpers'
 
-  To restore the previous behavior where all files support range requests:
+  res.file(file, request)
+  res.html(body)
+  res.redirect(location, status, headers)
 
-  ```ts
-  return res.file(file, request, {
-    acceptRanges: true,
-  })
+  // After
+  import { createFileResponse } from '@remix-run/response/file'
+  import { createHtmlResponse } from '@remix-run/response/html'
+  import { createRedirectResponse } from '@remix-run/response/redirect'
   ```
 
-  Note: Range requests and compression are mutually exclusive. When `Accept-Ranges: bytes` is present in response headers, the `compress()` response helper and `compression()` middleware will not compress the response.
+- BREAKING CHANGE: Rename `InferRequestHandler` => `BuildRequestHandler`
+- Add `exclude` option to `resource()` and `resources()` route map helpers (#10858)
 
 ## v0.11.0 (2025-11-21)
 

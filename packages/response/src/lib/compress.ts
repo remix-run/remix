@@ -14,7 +14,7 @@ import { AcceptEncoding, SuperHeaders } from '@remix-run/headers'
 export type Encoding = 'br' | 'gzip' | 'deflate'
 const defaultEncodings: Encoding[] = ['br', 'gzip', 'deflate']
 
-export interface CompressOptions {
+export interface CompressResponseOptions {
   /**
    * Which encodings the server supports for negotiation in order of preference.
    * Supported encodings: 'br', 'gzip', 'deflate'.
@@ -66,10 +66,10 @@ export interface CompressOptions {
  * @param options Optional compression settings
  * @returns A compressed Response or the original if no compression is suitable
  */
-export async function compress(
+export async function compressResponse(
   response: Response,
   request: Request,
-  options?: CompressOptions,
+  options?: CompressResponseOptions,
 ): Promise<Response> {
   let compressOptions = options ?? {}
   let supportedEncodings = compressOptions.encodings ?? defaultEncodings
@@ -121,7 +121,7 @@ export async function compress(
     })
   }
 
-  return compressResponse(response, responseHeaders, selectedEncoding, compressOptions)
+  return applyCompression(response, responseHeaders, selectedEncoding, compressOptions)
 }
 
 function negotiateEncoding(
@@ -163,11 +163,11 @@ const brotliFlushOptions = {
   flush: constants.BROTLI_OPERATION_FLUSH,
 }
 
-function compressResponse(
+function applyCompression(
   response: Response,
   responseHeaders: SuperHeaders,
   encoding: Encoding,
-  options: CompressOptions,
+  options: CompressResponseOptions,
 ): Response {
   if (!response.body) {
     return response
@@ -303,7 +303,7 @@ export function compressStream(
 
 function createCompressor(
   encoding: Encoding,
-  options: CompressOptions,
+  options: CompressResponseOptions,
 ): Gzip | Deflate | BrotliCompress {
   switch (encoding) {
     case 'br':

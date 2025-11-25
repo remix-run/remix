@@ -27,6 +27,10 @@
 - **TypeScript**: Strict mode, ESNext target, ES2022 modules, bundler resolution, verbatimModuleSyntax
 - **Comments**: Only add non-JSDoc comments when the code is doing something surprising or non-obvious
 
+## Test Structure
+
+- **No loops or conditionals in test suites**: Do not use `for` loops or conditional statements (`if`, `switch`, etc.) to generate test cases within `describe()` blocks. This breaks the Node.js test runner's ability to run individual tests via IDE features (like clicking test icons in the sidebar).
+
 ## Demos
 
 - All demo servers should use port **44100** for consistency across the monorepo

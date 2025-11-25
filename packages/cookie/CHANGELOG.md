@@ -2,6 +2,21 @@
 
 This is the changelog for [`cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Add `Cookie` class. The `createCookie` function now returns an instance of the `Cookie` class.
+
+  ```ts
+  // You can now create cookies using either approach:
+  import { createCookie, Cookie } from '@remix-run/cookie'
+
+  // Factory function
+  let cookie = createCookie('session')
+
+  // Or use the class directly
+  let cookie = new Cookie('session')
+  ```
+
 ## v0.4.1 (2025-11-19)
 
 - Force `secure` to be `true` when `partitioned` is `true`

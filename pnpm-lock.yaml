@@ -68,6 +68,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../packages/node-fetch-server
+      '@remix-run/response':
+        specifier: workspace:*
+        version: link:../../packages/response
       '@remix-run/session':
         specifier: workspace:*
         version: link:../../packages/session
@@ -145,6 +148,9 @@ importers:
       '@remix-run/mime':
         specifier: workspace:*
         version: link:../mime
+      '@remix-run/response':
+        specifier: workspace:*
+        version: link:../response
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
@@ -180,15 +186,6 @@ importers:
       '@remix-run/headers':
         specifier: workspace:^
         version: link:../headers
-      '@remix-run/html-template':
-        specifier: workspace:^
-        version: link:../html-template
-      '@remix-run/lazy-file':
-        specifier: workspace:^
-        version: link:../lazy-file
-      '@remix-run/mime':
-        specifier: workspace:^
-        version: link:../mime
       '@remix-run/route-pattern':
         specifier: workspace:^
         version: link:../route-pattern
@@ -202,6 +199,37 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  packages/fetch-router/demos/bun:
+    dependencies:
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../../../cookie
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../..
+      '@remix-run/form-data-middleware':
+        specifier: workspace:*
+        version: link:../../../form-data-middleware
+      '@remix-run/html-template':
+        specifier: workspace:*
+        version: link:../../../html-template
+      '@remix-run/logger-middleware':
+        specifier: workspace:*
+        version: link:../../../logger-middleware
+      '@remix-run/response':
+        specifier: workspace:*
+        version: link:../../../response
+      '@remix-run/session':
+        specifier: workspace:*
+        version: link:../../../session
+      '@remix-run/session-middleware':
+        specifier: workspace:*
+        version: link:../../../session-middleware
+    devDependencies:
+      '@types/bun':
+        specifier: ^1.1.8
+        version: 1.1.8
 
   packages/fetch-router/demos/node:
     dependencies:
@@ -223,6 +251,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../../node-fetch-server
+      '@remix-run/response':
+        specifier: workspace:*
+        version: link:../../../response
       '@remix-run/session':
         specifier: workspace:*
         version: link:../../../session
@@ -242,9 +273,6 @@ importers:
       '@remix-run/lazy-file':
         specifier: workspace:^
         version: link:../lazy-file
-      aws4fetch:
-        specifier: ^1.0.20
-        version: 1.0.20
     devDependencies:
       '@remix-run/form-data-parser':
         specifier: workspace:^
@@ -559,6 +587,25 @@ importers:
         specifier: workspace:^
         version: link:../..
 
+  packages/response:
+    dependencies:
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
+      '@remix-run/html-template':
+        specifier: workspace:^
+        version: link:../html-template
+    devDependencies:
+      '@remix-run/mime':
+        specifier: workspace:*
+        version: link:../mime
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/route-pattern:
     devDependencies:
       '@ark/attest':
@@ -621,6 +668,9 @@ importers:
       '@remix-run/html-template':
         specifier: workspace:^
         version: link:../html-template
+      '@remix-run/response':
+        specifier: workspace:^
+        version: link:../response
       mrmime:
         specifier: ^2.0.0
         version: 2.0.0
@@ -2036,9 +2086,6 @@ packages:
   assertion-error@2.0.1:
     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
     engines: {node: '>=12'}
-
-  aws4fetch@1.0.20:
-    resolution: {integrity: sha512-/djoAN709iY65ETD6LKCtyyEI04XIBP5xVvfmNxsEP0uJB5tyaGBztSryRr4HqMStr9R06PisQE7m9zDTXKu6g==}
 
   b4a@1.6.7:
     resolution: {integrity: sha512-OnAYlL5b7LEkALw87fUVafQw5rVR9RjwGd4KUwNQ6DrrNmaVaUCgLipfVlzrPQ4tWOR9P0IXGNOx50jYCCdSJg==}
@@ -4549,8 +4596,6 @@ snapshots:
       printable-characters: 1.0.42
 
   assertion-error@2.0.1: {}
-
-  aws4fetch@1.0.20: {}
 
   b4a@1.6.7: {}
 

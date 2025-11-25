@@ -333,9 +333,9 @@ describe('router.map()', () => {
 
     let router = createRouter()
 
-    // @ts-expect-error - should not allow middleware alongside request handlers
     router.map(routes, {
       middleware: [],
+      // @ts-expect-error - should not allow middleware alongside request handlers
       home() {
         return new Response('OK')
       },

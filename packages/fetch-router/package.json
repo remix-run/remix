@@ -21,7 +21,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./response-helpers": "./src/response-helpers.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -29,10 +28,6 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      },
-      "./response-helpers": {
-        "types": "./dist/response-helpers.d.ts",
-        "default": "./dist/response-helpers.js"
       },
       "./package.json": "./package.json"
     }
@@ -44,9 +39,6 @@
   },
   "peerDependencies": {
     "@remix-run/headers": "workspace:^",
-    "@remix-run/html-template": "workspace:^",
-    "@remix-run/lazy-file": "workspace:^",
-    "@remix-run/mime": "workspace:^",
     "@remix-run/route-pattern": "workspace:^",
     "@remix-run/session": "workspace:^"
   },

@@ -16,6 +16,7 @@
     "@remix-run/logger-middleware": "workspace:*",
     "@remix-run/method-override-middleware": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",
+    "@remix-run/response": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@remix-run/session-middleware": "workspace:*",
     "@remix-run/static-middleware": "workspace:*"

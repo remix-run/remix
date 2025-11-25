@@ -1,25 +1,25 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { redirect } from './redirect.ts'
+import { createRedirectResponse } from './redirect.ts'
 
-describe('redirect()', () => {
+describe('createRedirectResponse()', () => {
   it('creates a redirect with default 302 status', () => {
-    let response = redirect('/home')
+    let response = createRedirectResponse('/home')
 
     assert.equal(response.status, 302)
     assert.equal(response.headers.get('Location'), '/home')
   })
 
   it('creates a redirect with custom status code', () => {
-    let response = redirect('/login', 301)
+    let response = createRedirectResponse('/login', 301)
 
     assert.equal(response.status, 301)
     assert.equal(response.headers.get('Location'), '/login')
   })
 
   it('accepts ResponseInit object as second parameter', () => {
-    let response = redirect('/dashboard', {
+    let response = createRedirectResponse('/dashboard', {
       status: 307,
       headers: { 'X-Redirect-Reason': 'authentication' },
     })
@@ -30,14 +30,14 @@ describe('redirect()', () => {
   })
 
   it('handles relative URLs', () => {
-    let response = redirect('../parent', 303)
+    let response = createRedirectResponse('../parent', 303)
 
     assert.equal(response.status, 303)
     assert.equal(response.headers.get('Location'), '../parent')
   })
 
   it('allows overriding Location header', () => {
-    let response = redirect('/default', {
+    let response = createRedirectResponse('/default', {
       headers: { Location: '/override' },
     })
 
@@ -50,7 +50,7 @@ describe('redirect()', () => {
     headers.set('Location', '/custom-location')
     headers.set('X-Custom', 'value')
 
-    let response = redirect('/default', { headers })
+    let response = createRedirectResponse('/default', { headers })
 
     assert.equal(response.status, 302)
     assert.equal(response.headers.get('Location'), '/custom-location')
@@ -58,7 +58,7 @@ describe('redirect()', () => {
   })
 
   it('accepts a URL object', () => {
-    let response = redirect(new URL('https://example.com/login'), 301)
+    let response = createRedirectResponse(new URL('https://example.com/login'), 301)
     assert.equal(response.status, 301)
     assert.equal(response.headers.get('Location'), 'https://example.com/login')
   })

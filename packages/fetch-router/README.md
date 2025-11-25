@@ -94,12 +94,12 @@ The `routes.home` route is a `Route<'ANY', '/'>`, which means it serves any requ
 
 In addition to describing the structure of your routes, route maps also make it easy to generate type-safe links and form actions using the `href()` function on a route. The example below is a small site with a home page and a "Contact Us" page.
 
-Note: We're using the [`html` response helper](#response-helpers) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
+Note: We're using the [`createHtmlResponse` helper from `@remix-run/response`](https://github.com/remix-run/remix/tree/main/packages/response/README.md#html-responses) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
 
 ```ts
 import { createRouter, route } from '@remix-run/fetch-router'
 import { html } from '@remix-run/html-template'
-import * as res from '@remix-run/fetch-router/response-helpers'
+import { createHtmlResponse } from '@remix-run/response/html'
 
 let routes = route({
   home: '/',
@@ -110,7 +110,7 @@ let router = createRouter()
 
 // Register a handler for `GET /`
 router.get(routes.home, () => {
-  return res.html(`
+  return createHtmlResponse(`
     <html>
       <body>
         <h1>Home</h1>
@@ -124,7 +124,7 @@ router.get(routes.home, () => {
 
 // Register a handler for `GET /contact`
 router.get(routes.contact, () => {
-  return res.html(`
+  return createHtmlResponse(`
     <html>
       <body>
         <h1>Contact Us</h1>
@@ -167,7 +167,7 @@ router.post(routes.contact, ({ formData }) => {
     </html>
   `
 
-  return res.html(body)
+  return createHtmlResponse(body)
 })
 ```
 
@@ -242,7 +242,7 @@ A `formAction()` route map contains two routes: `index` and `action`. The `index
 ```tsx
 import { createRouter, route, formAction } from '@remix-run/fetch-router'
 import { html } from '@remix-run/html-template'
-import * as res from '@remix-run/fetch-router/response-helpers'
+import { createHtmlResponse } from '@remix-run/response/html'
 
 let routes = route({
   home: '/',
@@ -262,7 +262,7 @@ let router = createRouter()
 
 router.map(routes, {
   home() {
-    return res.html(`
+    return createHtmlResponse(`
       <html>
         <body>
           <h1>Home</h1>
@@ -278,7 +278,7 @@ router.map(routes, {
   contact: {
     // GET /contact - shows the form
     index() {
-      return res.html(`
+      return createHtmlResponse(`
         <html>
           <body>
             <h1>Contact Us</h1>
@@ -307,7 +307,7 @@ router.map(routes, {
         </html>
       `
 
-      return res.html(body)
+      return createHtmlResponse(body)
     },
   },
 })
@@ -603,23 +603,21 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
 
 ### Response Helpers
 
-The router provides a few response helpers that make it easy to return responses with common formats. They are available in the `@remix-run/fetch-router/response-helpers` export.
-
-- `compress(response, request, options?)` - compresses a `Response` based on `Accept-Encoding` header - see [Compressing Responses](#compressing-responses)
-- `file(file, request, init?)` - returns a `Response` for a file with full HTTP semantics (ETags, Range requests, etc.) — see [Working with Files](#working-with-files)
-- `html(body, init?)` - returns a `Response` with `Content-Type: text/html`
-- `json(data, init?)` - returns a `Response` with `Content-Type: application/json`
-- `redirect(location, init?)` - returns a `Response` with `Location` header
-
-These helpers are provided for consistency between different JavaScript runtime environments and also help fill in the gaps when working with standard web APIs like `Response.redirect()`.
+Response helpers for creating common HTTP responses are available in the [`@remix-run/response`](https://github.com/remix-run/remix/tree/main/packages/response) package:
 
 ```tsx
-import * as res from '@remix-run/fetch-router/response-helpers'
+import { createFileResponse } from '@remix-run/response/file'
+import { createHtmlResponse } from '@remix-run/response/html'
+import { createRedirectResponse } from '@remix-run/response/redirect'
+import { compressResponse } from '@remix-run/response/compress'
 
-let response = res.html('<h1>Hello</h1>')
-let response = res.json({ message: 'Hello' })
-let response = res.redirect('/')
+let response = createHtmlResponse('<h1>Hello</h1>')
+let response = Response.json({ message: 'Hello' })
+let response = createRedirectResponse('/')
+let response = compressResponse(uncompressedResponse, request)
 ```
+
+See the [`@remix-run/response` documentation](https://github.com/remix-run/remix/tree/main/packages/response#readme) for more details.
 
 ### Working with HTML
 
@@ -627,11 +625,11 @@ For working with HTML strings and safe HTML interpolation, see the [`@remix-run/
 
 ```ts
 import { html } from '@remix-run/html-template'
-import * as res from '@remix-run/fetch-router/response-helpers'
+import { createHtmlResponse } from '@remix-run/response/html'
 
 // Use the template tag to escape unsafe variables in HTML.
 let unsafe = '<script>alert(1)</script>'
-let response = res.html(html`<h1>${unsafe}</h1>`, { status: 400 })
+let response = createHtmlResponse(html`<h1>${unsafe}</h1>`, { status: 400 })
 ```
 
 The `html.raw` template tag can be used to interpolate values without escaping them. This has the same semantics as `String.raw` but for HTML snippets that have already been escaped or are from trusted sources:
@@ -640,7 +638,7 @@ The `html.raw` template tag can be used to interpolate values without escaping t
 // Use html.raw as a template tag to skip escaping interpolations
 let safeHtml = '<b>Bold</b>'
 let content = html.raw`<div class="content">${safeHtml}</div>`
-let response = res.html(content)
+let response = createHtmlResponse(content)
 
 // This is particularly useful when building HTML from multiple safe fragments
 let header = '<header>Title</header>'
@@ -665,147 +663,6 @@ let button = html`<button>${icon} Click me</button>` // icon is not escaped
 **Warning**: Only use `html.raw` with trusted content. Unlike the regular `html` template tag, `html.raw` does not escape its interpolations, which can lead to XSS vulnerabilities if used with untrusted user input.
 
 See the [`@remix-run/html-template` documentation](https://github.com/remix-run/remix/tree/main/packages/html-template#readme) for more details.
-
-### Working with Files
-
-The `file()` response helper returns a `Response` for a file with full HTTP semantics, including:
-
-- **Content-Type** and **Content-Length** headers
-- **ETag** generation (weak or strong)
-- **Last-Modified** headers
-- **Cache-Control** headers
-- **Conditional requests** (`If-None-Match`, `If-Modified-Since`, `If-Match`, `If-Unmodified-Since`)
-- **Range requests** for partial content (`206 Partial Content`)
-- **HEAD** request support
-
-```ts
-import * as res from '@remix-run/fetch-router/response-helpers'
-import { openFile } from '@remix-run/fs'
-
-router.get('/assets/:filename', async (context) => {
-  let file = await openFile(`./assets/${context.params.filename}`)
-
-  return res.file(file, context.request)
-})
-```
-
-##### Options
-
-The `file()` helper accepts an optional third argument with configuration options:
-
-```ts
-return res.file(file, request, {
-  // Cache-Control header value.
-  // Defaults to `undefined` (no Cache-Control header).
-  cacheControl: 'public, max-age=3600',
-
-  // ETag generation strategy:
-  // - 'weak': Generates weak ETags based on file size and mtime
-  // - 'strong': Generates strong ETags by hashing file content
-  // - false: Disables ETag generation
-  // Defaults to 'weak'.
-  etag: 'weak',
-
-  // Whether to generate Last-Modified headers.
-  // Defaults to `true`.
-  lastModified: true,
-
-  // Whether to support HTTP Range requests for partial content.
-  // Defaults to enabling ranges only for non-compressible MIME types,
-  // as defined by `isCompressibleMimeType()` from `@remix-run/mime`.
-  acceptRanges: true,
-})
-```
-
-##### Strong ETags and Content Hashing
-
-For assets that require strong validation (e.g., to support [`If-Match`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match) preconditions or [`If-Range`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Range) with [`Range` requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range)), configure strong ETag generation:
-
-```ts
-return res.file(file, request, {
-  etag: 'strong',
-})
-```
-
-By default, strong ETags are generated using Node's [`crypto.createHash()`](https://nodejs.org/api/crypto.html#cryptocreatehashalgorithm-options) with the `'sha256'` algorithm. You can customize this:
-
-```ts
-return res.file(file, request, {
-  etag: 'strong',
-
-  // Specify a different hash algorithm (availability depends on platform)
-  digest: 'sha512',
-})
-```
-
-Or provide a custom digest function:
-
-```ts
-return res.file(file, request, {
-  etag: 'strong',
-
-  // Custom digest function
-  async digest(file) {
-    return await customHash(file)
-  },
-})
-```
-
-##### Range Requests and Compression
-
-By default, the `file()` helper enables Range requests only for non-compressible MIME types. This allows text-based assets to be compressed while still supporting resumable downloads for media files.
-
-You can override this behavior by explicitly enabling or disabling ranges with the `acceptRanges` option:
-
-```ts
-// Force range request support
-return res.file(file, request, {
-  acceptRanges: true,
-})
-```
-
-**Note:** Range requests and compression are mutually exclusive. When `Accept-Ranges: bytes` is present in the response headers, the compression middleware will not compress the response. This is why the default behavior enables ranges only for non-compressible types.
-
-### Compressing Responses
-
-The `compress()` helper compresses a `Response` based on the client's `Accept-Encoding` header:
-
-```ts
-import * as res from '@remix-run/fetch-router/response-helpers'
-
-router.get('/api/data', async (context) => {
-  let data = await getLargeDataset()
-  let response = res.json(data)
-  return res.compress(response, context.request)
-})
-```
-
-The `compress()` helper accepts several options to customize the compression behavior.
-
-- For `zlib` options, see the [node:zlib Options documentation.](https://nodejs.org/api/zlib.html#class-options). For server-sent events (`text/event-stream` media type), the `flush` option is defaulted to `zlib.constants.Z_SYNC_FLUSH`.
-- For `brotli` options, see the [node:zlib BrotliOptions documentation.](https://nodejs.org/api/zlib.html#class-brotlioptions). For server-sent events (`text/event-stream` media type), the `flush` option is defaulted to `zlib.constants.BROTLI_OPERATION_FLUSH`.
-
-```ts
-res.compress(response, context.request, {
-  // Minimum size in bytes to compress if Content-Length response header is present.
-  // Default: 1024
-  threshold: 2048,
-
-  // Which encodings the server supports.
-  // Default: ['br', 'gzip', 'deflate']
-  encodings: ['br', 'gzip', 'deflate'],
-
-  zlib: {
-    // node:zlib options for gzip/deflate compression
-    // See: https://nodejs.org/api/zlib.html#class-options
-  },
-
-  brotli: {
-    // node:zlib options for Brotli compression
-    // See: https://nodejs.org/api/zlib.html#class-brotlioptions
-  },
-})
-```
 
 ### Testing
 
@@ -839,6 +696,7 @@ No special test harness or mocking required! Just use `fetch()` like you would i
 
 ## Related Work
 
+- [@remix-run/response](../response) - Response helpers for HTML, JSON, files, and redirects
 - [@remix-run/headers](../headers) - A library for working with HTTP headers
 - [@remix-run/form-data-parser](../form-data-parser) - A library for parsing multipart/form-data requests
 - [@remix-run/route-pattern](../route-pattern) - The pattern matching library that powers `fetch-router`

@@ -14,7 +14,7 @@ import { EventEmitter } from 'node:events'
 import { describe, it } from 'node:test'
 
 import { SuperHeaders } from '@remix-run/headers'
-import { compress, compressStream, type Encoding } from './compress.ts'
+import { compressResponse, compressStream, type Encoding } from './compress.ts'
 
 const gunzipAsync = promisify(gunzip)
 const brotliDecompressAsync = promisify(brotliDecompress)
@@ -37,14 +37,14 @@ function createMockCompressor(impl: {
   return Object.assign(emitter, impl) as MockCompressor
 }
 
-describe('compress()', () => {
+describe('compressResponse()', () => {
   it('compresses response with gzip when client accepts it', async () => {
     let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'gzip' },
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
     assert.equal(compressed.headers.get('Accept-Ranges'), 'none')
@@ -62,7 +62,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('Content-Encoding'), 'br')
 
@@ -77,7 +77,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request, {
+    let compressed = await compressResponse(response, request, {
       encodings: ['deflate'],
     })
 
@@ -101,7 +101,7 @@ describe('compress()', () => {
       },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     let varyHeader = compressed.headers.get('Vary') || ''
     let varyValues = varyHeader
@@ -123,7 +123,7 @@ describe('compress()', () => {
       },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     let varyHeader = compressed.headers.get('Vary') || ''
     let encodingMatches = varyHeader.match(/accept-encoding/gi) || []
@@ -134,7 +134,7 @@ describe('compress()', () => {
     let request = new Request('https://remix.run')
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     // Per RFC 7231, when no Accept-Encoding header is present,
     // server should use identity (uncompressed) for compatibility
@@ -149,7 +149,7 @@ describe('compress()', () => {
     // Response without Content-Length header
     let response = new Response('Small')
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
   })
@@ -162,7 +162,7 @@ describe('compress()', () => {
       headers: { 'Content-Encoding': 'gzip' },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed, response)
   })
@@ -175,7 +175,7 @@ describe('compress()', () => {
       headers: { 'Cache-Control': 'public, no-transform, max-age=3600' },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed, response)
   })
@@ -186,7 +186,7 @@ describe('compress()', () => {
     })
     let response = new Response(null, { status: 204 })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed, response)
   })
@@ -199,13 +199,13 @@ describe('compress()', () => {
     let content = 'Hello, World!'.repeat(1000)
 
     // Compress with level 1 (fast, less compression)
-    let level1 = await compress(new Response(content), request, {
+    let level1 = await compressResponse(new Response(content), request, {
       zlib: { level: 1 },
     })
     let level1Buffer = Buffer.from(await level1.arrayBuffer())
 
     // Compress with level 9 (slow, max compression)
-    let level9 = await compress(new Response(content), request, {
+    let level9 = await compressResponse(new Response(content), request, {
       zlib: { level: 9 },
     })
     let level9Buffer = Buffer.from(await level9.arrayBuffer())
@@ -232,7 +232,7 @@ describe('compress()', () => {
     let content = 'Hello, World! '.repeat(10000)
 
     // Compress with window size 10 (small window)
-    let windowSmall = await compress(new Response(content), request, {
+    let windowSmall = await compressResponse(new Response(content), request, {
       encodings: ['br'],
       brotli: {
         params: {
@@ -243,7 +243,7 @@ describe('compress()', () => {
     let windowSmallBuffer = Buffer.from(await windowSmall.arrayBuffer())
 
     // Compress with window size 22 (large window, better for repetitive data)
-    let windowLarge = await compress(new Response(content), request, {
+    let windowLarge = await compressResponse(new Response(content), request, {
       encodings: ['br'],
       brotli: {
         params: {
@@ -274,7 +274,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request, {
+    let compressed = await compressResponse(response, request, {
       encodings: ['gzip', 'deflate'],
     })
 
@@ -287,7 +287,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request, { encodings: [] })
+    let compressed = await compressResponse(response, request, { encodings: [] })
 
     assert.equal(compressed, response)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
@@ -299,7 +299,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('Content-Encoding'), 'deflate')
   })
@@ -312,7 +312,7 @@ describe('compress()', () => {
     let response = new Response('Hello, World!')
 
     // Server prefers br > gzip > deflate, but client q-values should win
-    let compressed = await compress(response, request, {
+    let compressed = await compressResponse(response, request, {
       encodings: ['br', 'gzip', 'deflate'],
     })
 
@@ -327,7 +327,7 @@ describe('compress()', () => {
     let response = new Response('Hello, World!')
 
     // Server prefers deflate first, so it should win the tie
-    let compressed = await compress(response, request, {
+    let compressed = await compressResponse(response, request, {
       encodings: ['deflate', 'br', 'gzip'],
     })
 
@@ -341,7 +341,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request, {
+    let compressed = await compressResponse(response, request, {
       encodings: ['gzip', 'deflate', 'br'],
     })
 
@@ -356,7 +356,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request, {
+    let compressed = await compressResponse(response, request, {
       encodings: ['gzip', 'deflate', 'br'],
     })
 
@@ -372,7 +372,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     // Must compress since identity is rejected
     assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
@@ -385,7 +385,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let result = await compress(response, request, {
+    let result = await compressResponse(response, request, {
       encodings: ['gzip', 'deflate', 'br'],
     })
 
@@ -402,7 +402,7 @@ describe('compress()', () => {
     let response = new Response('Hello, World!')
 
     // Server offers br, which should match the wildcard
-    let compressed = await compress(response, request, {
+    let compressed = await compressResponse(response, request, {
       encodings: ['br', 'deflate'], // No gzip offered
     })
 
@@ -417,7 +417,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request, {
+    let compressed = await compressResponse(response, request, {
       encodings: ['br', 'gzip', 'deflate'],
     })
 
@@ -433,7 +433,7 @@ describe('compress()', () => {
     let response = new Response('Hello, World!')
 
     // Server tries to offer br which matches the rejected wildcard
-    let result = await compress(response, request, {
+    let result = await compressResponse(response, request, {
       encodings: ['br', 'deflate'], // No gzip offered
     })
 
@@ -449,7 +449,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request, {
+    let compressed = await compressResponse(response, request, {
       encodings: ['gzip', 'deflate', 'br'],
     })
 
@@ -465,7 +465,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request, {
+    let compressed = await compressResponse(response, request, {
       encodings: ['gzip', 'deflate', 'br'],
     })
 
@@ -482,7 +482,7 @@ describe('compress()', () => {
       statusText: 'Created',
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.status, 201)
     assert.equal(compressed.statusText, 'Created')
@@ -497,7 +497,7 @@ describe('compress()', () => {
       headers: { 'Content-Length': String(largeContent.length) },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('Content-Length'), null)
   })
@@ -508,7 +508,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('Accept-Ranges'), 'none')
   })
@@ -521,7 +521,7 @@ describe('compress()', () => {
       headers: { ETag: '"abc123"' },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('ETag'), 'W/"abc123"')
   })
@@ -534,7 +534,7 @@ describe('compress()', () => {
       headers: { ETag: 'W/"abc123"' },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('ETag'), 'W/"abc123"')
   })
@@ -545,7 +545,7 @@ describe('compress()', () => {
     })
     let response = new Response('Hello, World!')
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('ETag'), null)
   })
@@ -563,7 +563,7 @@ describe('compress()', () => {
       },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('ETag'), 'W/"xyz789"')
   })
@@ -576,7 +576,7 @@ describe('compress()', () => {
       headers: { 'Accept-Ranges': 'bytes' },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed, response)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
@@ -591,7 +591,7 @@ describe('compress()', () => {
       headers: { 'Content-Range': 'bytes 0-9/100' },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed, response)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
@@ -608,7 +608,7 @@ describe('compress()', () => {
       headers: { 'Content-Type': 'text/plain' },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
     assert.equal(compressed.headers.get('Accept-Ranges'), 'none')
@@ -628,7 +628,7 @@ describe('compress()', () => {
       headers: { 'Content-Type': 'text/plain' },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('Content-Encoding'), 'br')
   })
@@ -642,7 +642,7 @@ describe('compress()', () => {
       headers: { 'Content-Type': 'text/plain' },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed, response)
     assert.equal(compressed.headers.get('Content-Encoding'), null)
@@ -658,7 +658,7 @@ describe('compress()', () => {
       headers: { 'Content-Type': 'text/plain', 'Content-Length': '2000' },
     })
 
-    let compressed = await compress(response, request)
+    let compressed = await compressResponse(response, request)
 
     assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
     assert.equal(compressed.headers.get('Accept-Ranges'), 'none')
@@ -697,10 +697,10 @@ describe('compress()', () => {
           headers: { 'Accept-Encoding': encodingName },
         })
 
-        let compressed = await compress(response, request, {
+        let compressed = await compressResponse(response, request, {
           encodings: [encodingName],
           // Provide custom options WITHOUT flush
-          // compress() should automatically apply flush for SSE
+          // compressResponse() should automatically apply flush for SSE
           zlib: {
             level: 9,
           },
@@ -845,7 +845,7 @@ describe('compress()', () => {
             controller.close()
           })
 
-          decompressor.on('error', (error) => {
+          decompressor.on('error', (error: Error) => {
             controller.error(error)
           })
 
@@ -889,7 +889,7 @@ describe('compress()', () => {
         },
       })
 
-      let compressed = await compress(response, request, { encodings: [encoding] })
+      let compressed = await compressResponse(response, request, { encodings: [encoding] })
 
       assert.equal(compressed.headers.get('Content-Encoding'), encoding)
 
@@ -920,7 +920,7 @@ describe('compress()', () => {
           headers: { 'Content-Type': 'application/octet-stream' },
         })
 
-        let compressed = await compress(response, request, { encodings: ['br'] })
+        let compressed = await compressResponse(response, request, { encodings: ['br'] })
 
         // Decompress and verify byte-perfect match
         let decompressed = decompressStream(compressed.body!, 'br')
@@ -977,7 +977,7 @@ describe('compress()', () => {
           headers: { 'Content-Type': 'text/plain' },
         })
 
-        let compressed = await compress(response, request, { encodings: ['br'] })
+        let compressed = await compressResponse(response, request, { encodings: ['br'] })
         let decompressed = decompressStream(compressed.body!, 'br')
         let result = await streamToString(decompressed)
 
@@ -995,7 +995,7 @@ describe('compress()', () => {
           headers: { 'Content-Type': 'text/plain' },
         })
 
-        let compressed = await compress(response, request, { encodings: ['br'] })
+        let compressed = await compressResponse(response, request, { encodings: ['br'] })
         let decompressed = decompressStream(compressed.body!, 'br')
         let result = await streamToString(decompressed)
 
@@ -1021,7 +1021,7 @@ describe('compress()', () => {
           headers: { 'Content-Type': 'text/plain' },
         })
 
-        let compressed = await compress(response, request, { encodings: ['br'] })
+        let compressed = await compressResponse(response, request, { encodings: ['br'] })
         let decompressed = decompressStream(compressed.body!, 'br')
         let result = await streamToString(decompressed)
 
@@ -1043,7 +1043,7 @@ describe('compress()', () => {
           headers: { 'Content-Type': 'text/plain' },
         })
 
-        let compressed = await compress(response, request, { encodings: ['br'] })
+        let compressed = await compressResponse(response, request, { encodings: ['br'] })
         let decompressed = decompressStream(compressed.body!, 'br')
         let result = await streamToString(decompressed)
 
@@ -1060,7 +1060,7 @@ describe('compress()', () => {
         headers: { 'Content-Type': 'text/plain' },
       })
 
-      let compressed = await compress(response, request, { encodings: ['br'] })
+      let compressed = await compressResponse(response, request, { encodings: ['br'] })
 
       let reader = compressed.body!.getReader()
 
@@ -1100,7 +1100,7 @@ describe('compress()', () => {
         headers: { 'Content-Type': 'text/plain' },
       })
 
-      let compressed = await compress(response, request, { encodings: ['br'] })
+      let compressed = await compressResponse(response, request, { encodings: ['br'] })
       let reader = compressed.body!.getReader()
 
       // Start reading to activate the stream

@@ -1,6 +1,6 @@
 import type { BrotliOptions, ZlibOptions } from 'node:zlib'
 import type { Middleware } from '@remix-run/fetch-router'
-import { compress, type CompressOptions } from '@remix-run/fetch-router/response-helpers'
+import { compressResponse, type CompressResponseOptions } from '@remix-run/response/compress'
 import { isCompressibleMimeType } from '@remix-run/mime'
 
 type Encoding = 'br' | 'gzip' | 'deflate'
@@ -86,7 +86,7 @@ export function compression(options?: CompressionOptions): Middleware {
       }
     }
 
-    let compressOptions: CompressOptions = {
+    let compressOptions: CompressResponseOptions = {
       encodings: options?.encodings
         ? typeof options.encodings === 'function'
           ? options.encodings(response)
@@ -104,6 +104,6 @@ export function compression(options?: CompressionOptions): Middleware {
         : undefined,
     }
 
-    return compress(response, context.request, compressOptions)
+    return compressResponse(response, context.request, compressOptions)
   }
 }
