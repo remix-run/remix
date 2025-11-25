@@ -2,7 +2,7 @@
 
 This is the changelog for [`method-override-middleware`](https://github.com/remix-run/remix/tree/main/packages/method-override-middleware). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.1.1 (2025-11-25)
 
 - Re-use request methods from `fetch-router`
 
