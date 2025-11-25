@@ -69,9 +69,7 @@ export function generateMimeTypesContent() {
 
   // Sort by extension for consistent output
   let sortedExtensions = Object.keys(extensionMap).sort()
-  let entries = sortedExtensions.map(
-    (ext) => `  ${JSON.stringify(ext)}: ${JSON.stringify(extensionMap[ext])},`,
-  )
+  let entries = sortedExtensions.map((ext) => `  ${formatKey(ext)}: '${extensionMap[ext]}',`)
 
   return `// DO NOT EDIT. THIS IS GENERATED CODE.
 // Run \`pnpm codegen\` to update.
@@ -80,6 +78,15 @@ export let mimeTypes: Record<string, string> = {
 ${entries.join('\n')}
 }
 `
+}
+
+/**
+ * Formats a key for use as a property name in a JavaScript object.
+ * @param {string} key - The key to format.
+ * @returns {string} The formatted key.
+ */
+function formatKey(key) {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : `'${key}'`
 }
 
 // Only run when executed directly (not imported)
@@ -96,7 +103,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // Generate mime-types.ts
   let mimeTypesOutputPath = join(__dirname, '../src/generated/mime-types.ts')
   let mimeTypesContent = generateMimeTypesContent()
-  let extensionCount = (mimeTypesContent.match(/  "/g) || []).length
+  let extensionCount = (mimeTypesContent.match(/  '/g) || []).length
   writeFileSync(mimeTypesOutputPath, mimeTypesContent)
   console.log(`Generated ${extensionCount} extension mappings to ${mimeTypesOutputPath}`)
 }
