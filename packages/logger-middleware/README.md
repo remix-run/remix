@@ -30,7 +30,9 @@ You can use the `format` option to customize the log format. The following token
 - `%date` - Date and time in Apache/nginx format (dd/Mon/yyyy:HH:mm:ss ±zzzz)
 - `%dateISO` - Date and time in ISO format
 - `%duration` - Request duration in milliseconds
+- `%durationPretty` - Request duration in a human-readable format (e.g., `1.20s`, `120ms`)
 - `%contentLength` - Response Content-Length header
+- `%contentLengthPretty` - Response Content-Length in a human-readable format (e.g., `1.2 kB`, `120 B`)
 - `%contentType` - Response Content-Type header
 - `%host` - Request URL host
 - `%hostname` - Request URL hostname
@@ -50,11 +52,11 @@ You can use the `format` option to customize the log format. The following token
 let router = createRouter({
   middleware: [
     logger({
-      format: '%method %path - %status (%duration ms)',
+      format: '%method %path - %status (%durationPretty) %contentLengthPretty',
     }),
   ],
 })
-// Logs: GET /users/123 - 200 (42 ms)
+// Logs: GET /users/123 - 200 (42ms) 1.2 kB
 ```
 
 For Apache-style combined log format, you can use the following format:
@@ -68,6 +70,26 @@ let router = createRouter({
   ],
 })
 ```
+
+### Colorized Output
+
+You can enable colorized output by setting the `colors` option to `true`. This is useful for development environments to improve readability.
+
+```ts
+let router = createRouter({
+  middleware: [
+    logger({
+      colors: true,
+    }),
+  ],
+})
+```
+
+When `colors` is enabled, the following tokens will be color-coded:
+- `%method`
+- `%status`
+- `%durationPretty`
+- `%contentLengthPretty`
 
 ### Custom Logger
 
