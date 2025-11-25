@@ -24,6 +24,8 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   createRedirectResponse(location, status)
   ```
 
+- Add `exclude` option to `resource()` and `resources()` route map helpers (#10858)
+
 ## v0.11.0 (2025-11-21)
 
 - BREAKING CHANGE: `Router` is no longer exported as a class, use `createRouter()` instead.
