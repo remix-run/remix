@@ -11,6 +11,7 @@ import type { Middleware } from '@remix-run/fetch-router'
 
 import { routes } from './routes.ts'
 import * as data from './data.ts'
+import path from 'node:path'
 
 let sessionCookie = createCookie('__sess', {
   secrets: ['s3cr3t'],
@@ -195,12 +196,16 @@ router.map(routes.posts, {
   },
 })
 
+const __dirname = new URL('.', import.meta.url).pathname
+const publicDir = path.resolve(__dirname, '../public')
+
 // Serve static files from the public directory
 router.get('/*', async ({ request }) => {
-  let urlPath = new URL(request.url).pathname
-  let file = Bun.file(`public${urlPath}`)
+  let file = Bun.file(path.join(publicDir, new URL(request.url).pathname))
+
   if (await file.exists()) {
     return new Response(file)
   }
+
   return new Response('Not Found', { status: 404 })
 })
