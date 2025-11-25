@@ -4,4 +4,6 @@ This is the changelog for [`compression-middleware`](https://github.com/remix-ru
 
 ## Unreleased
 
-- Initial release
+Initial release of this package.
+
+See the [README](https://github.com/remix-run/remix/blob/main/packages/compression-middleware/README.md) for more details.
