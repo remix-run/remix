@@ -1,25 +1,26 @@
 {
-  "name": "fetch-router-node-demo",
+  "name": "fetch-router-cf-workers-demo",
   "private": true,
-  "type": "module",
   "dependencies": {
     "@remix-run/cookie": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/form-data-middleware": "workspace:*",
     "@remix-run/html-template": "workspace:*",
     "@remix-run/logger-middleware": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*",
     "@remix-run/response": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@remix-run/session-middleware": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.50.0"
   },
   "scripts": {
-    "dev": "node --watch server.ts",
-    "start": "node server.ts",
-    "typecheck": "tsc --noEmit"
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev --port 44100",
+    "typecheck": "tsc --noEmit",
+    "typegen": "wrangler types",
+    "db:migrate": "wrangler d1 migrations apply fetch-router-blog"
   }
 }

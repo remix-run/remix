@@ -62,7 +62,7 @@
   "devDependencies": {
     "@vitest/browser": "^3.2.4",
     "esbuild": "^0.25.5",
-    "playwright": "^1.53.1",
+    "playwright": "catalog:",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }

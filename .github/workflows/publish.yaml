@@ -34,25 +34,18 @@ jobs:
 
       - name: Get Playwright Version
         id: playwright-version
-        run: echo "version=$(pnpx playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: echo "version=$(pnpm --filter @remix-run/interaction exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
         uses: actions/cache@v4
         id: cache-browsers
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}-
-            playwright-${{ runner.os }}-
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
-        run: |
-          if [ "${{ steps.cache-browsers.outputs.cache-hit }}" = "true" ]; then
-            pnpx playwright install
-          else
-            pnpx playwright install --with-deps
-          fi
+        if: steps.cache-browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter "@remix-run/*" exec playwright install --with-deps 2>/dev/null || true
 
       - name: Run tests
         run: pnpm test
