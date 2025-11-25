@@ -63,11 +63,34 @@ export interface Router {
    * @param route The routes or pattern to match
    * @param handler The request handler(s) to invoke when the routes match
    */
-  map<method extends RequestMethod | 'ANY', route extends string>(
-    route: route | RoutePattern<route> | Route<method, route>,
-    handler: RouteHandler<method, route>,
+  map<
+    routeMapOrRoute extends
+      | RouteMap
+      | Route<RequestMethod | 'ANY', string>
+      | RoutePattern<string>
+      | string,
+  >(
+    route: routeMapOrRoute,
+    handler: // prettier-ignore
+    // map(routeMap, routeHandlers)
+    [routeMapOrRoute] extends [RouteMap] ? RouteHandlers<routeMapOrRoute> :
+
+    // map(route, routeHandler)
+    routeMapOrRoute extends Route<
+      infer method extends RequestMethod | 'ANY',
+      infer route extends string
+    > ?
+      method extends 'ANY' ? RouteHandler<RequestMethod | 'ANY', route> : RouteHandler<method, route> 
+    :
+
+    // map(pattern, routeHandler)
+    routeMapOrRoute extends RoutePattern<infer pattern extends string> ? RouteHandler<'ANY', pattern> :
+
+    // map(stringPattern, routeHandler)
+    routeMapOrRoute extends string ? RouteHandler<'ANY', routeMapOrRoute>:
+
+    never,
   ): void
-  map<routeMap extends RouteMap>(routes: routeMap, handlers: RouteHandlers<routeMap>): void
   /**
    * Map a GET route/pattern to a request handler.
    * @param route The route/pattern to match
