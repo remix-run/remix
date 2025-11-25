@@ -6,13 +6,7 @@ import type { BuildRouteMap } from './route-map.ts'
 export const ResourceMethods = ['new', 'show', 'create', 'edit', 'update', 'destroy'] as const
 export type ResourceMethod = (typeof ResourceMethods)[number]
 
-export interface ResourceOptions {
-  /**
-   * The resource methods to include in the route map. If not provided, all
-   * methods (`show`, `new`, `create`, `edit`, `update`, and `destroy`) will be
-   * included.
-   */
-  only?: ResourceMethod[]
+export type ResourceOptions = {
   /**
    * Custom names to use for the resource routes.
    */
@@ -24,7 +18,28 @@ export interface ResourceOptions {
     update?: string
     destroy?: string
   }
+} & (
+  | {
+  /**
+   * The resource methods to include in the route map. If not provided, all
+   * methods (`show`, `new`, `create`, `edit`, `update`, and `destroy`) will be
+   * included.
+   * Cannot be used together with `exclude`.
+   */
+  only?: ResourceMethod[]
+
+  exclude?: never
 }
+  | {
+  only?: never
+
+  /**
+   * The resource methods to exclude from the route map.
+   * Cannot be used together with `only`.
+   */
+  exclude?: ResourceMethod[]
+}
+  )
 
 /**
  * Create a route map with standard CRUD routes for a singleton resource.
@@ -36,7 +51,21 @@ export function createResource<base extends string, const options extends Resour
   base: base | RoutePattern<base>,
   options?: options,
 ): BuildResourceMap<base, options> {
-  let only = options?.only ?? (ResourceMethods as readonly ResourceMethod[])
+  // Runtime validation
+  if (options?.only && options?.exclude) {
+    throw new Error('Cannot specify both "only" and "exclude" options')
+  }
+
+  // Resolve which methods to include
+  let only: readonly ResourceMethod[]
+  if (options?.only) {
+    only = options.only
+  } else if (options?.exclude) {
+    only = ResourceMethods.filter(m => !options.exclude!.includes(m))
+  } else {
+    only = ResourceMethods as readonly ResourceMethod[]
+  }
+
   let newName = options?.names?.new ?? 'new'
   let showName = options?.names?.show ?? 'show'
   let createName = options?.names?.create ?? 'create'
@@ -72,7 +101,11 @@ type BuildResourceMap<base extends string, options extends ResourceOptions> = Bu
   base,
   BuildResourceRoutes<
     options,
-    options extends { only: readonly ResourceMethod[] } ? options['only'][number] : ResourceMethod
+    options extends { only: readonly ResourceMethod[] }
+      ? options['only'][number]
+      : options extends { exclude: readonly ResourceMethod[] }
+        ? Exclude<ResourceMethod, options['exclude'][number]>
+        : ResourceMethod
   >
 >
 
@@ -104,12 +137,6 @@ export type ResourcesMethod = (typeof ResourcesMethods)[number]
 
 export type ResourcesOptions = {
   /**
-   * The resource methods to include in the route map. If not provided, all
-   * methods (`index`, `show`, `new`, `create`, `edit`, `update`, and `destroy`)
-   * will be included.
-   */
-  only?: ResourcesMethod[]
-  /**
    * The parameter name to use for the resource. Defaults to `id`.
    */
   param?: string
@@ -125,7 +152,28 @@ export type ResourcesOptions = {
     update?: string
     destroy?: string
   }
+} & (
+  | {
+  /**
+   * The resource methods to include in the route map. If not provided, all
+   * methods (`index`, `show`, `new`, `create`, `edit`, `update`, and `destroy`)
+   * will be included.
+   * Cannot be used together with `exclude`.
+   */
+  only?: ResourcesMethod[]
+
+  exclude?: never
 }
+  | {
+  only?: never
+
+  /**
+   * The resource methods to exclude from the route map.
+   * Cannot be used together with `only`.
+   */
+  exclude?: ResourcesMethod[]
+}
+  )
 
 /**
  * Create a route map with standard CRUD routes for a resource collection.
@@ -137,7 +185,21 @@ export function createResources<base extends string, const options extends Resou
   base: base | RoutePattern<base>,
   options?: options,
 ): BuildResourcesMap<base, options> {
-  let only = options?.only ?? (ResourcesMethods as readonly ResourcesMethod[])
+  // Runtime validation
+  if (options?.only && options?.exclude) {
+    throw new Error('Cannot specify both "only" and "exclude" options')
+  }
+
+  // Resolve which methods to include
+  let only: readonly ResourcesMethod[]
+  if (options?.only) {
+    only = options.only
+  } else if (options?.exclude) {
+    only = ResourcesMethods.filter(m => !options.exclude!.includes(m))
+  } else {
+    only = ResourcesMethods as readonly ResourcesMethod[]
+  }
+
   let param = options?.param ?? 'id'
   let indexName = options?.names?.index ?? 'index'
   let newName = options?.names?.new ?? 'new'
@@ -180,7 +242,9 @@ type BuildResourcesMap<base extends string, options extends ResourcesOptions> = 
     options,
     options extends { only: readonly ResourcesMethod[] }
       ? options['only'][number]
-      : ResourcesMethod,
+      : options extends { exclude: readonly ResourcesMethod[] }
+        ? Exclude<ResourcesMethod, options['exclude'][number]>
+        : ResourcesMethod,
     GetParam<options>
   >
 >
