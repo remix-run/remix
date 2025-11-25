@@ -696,84 +696,93 @@ describe('compressResponse()', () => {
   })
 
   describe('Server-Sent Events', () => {
-    let encodings = [
-      ['br', createBrotliDecompress],
-      ['gzip', createGunzip],
-      ['deflate', createInflate],
-    ] as const
+    async function testSSEFlush(
+      encodingName: Encoding,
+      createDecompressor: () => ReturnType<
+        typeof createBrotliDecompress | typeof createGunzip | typeof createInflate
+      >,
+    ) {
+      let sendEvent: ((data: string) => void) | undefined
+      let controller: ReadableStreamDefaultController<Uint8Array> | undefined
 
-    for (let [encodingName, createDecompressor] of encodings) {
-      it(`automatically applies flush for SSE with ${encodingName}`, async () => {
-        let sendEvent: ((data: string) => void) | undefined
-        let controller: ReadableStreamDefaultController<Uint8Array> | undefined
-
-        let stream = new ReadableStream({
-          start(c) {
-            controller = c
-            sendEvent = (data: string) => {
-              controller!.enqueue(new TextEncoder().encode(data))
-            }
-          },
-        })
-
-        let response = new Response(stream, {
-          headers: { 'Content-Type': 'text/event-stream' },
-        })
-
-        let request = new Request('https://remix.run', {
-          headers: { 'Accept-Encoding': encodingName },
-        })
-
-        let compressed = await compressResponse(response, request, {
-          encodings: [encodingName],
-          // Provide custom options WITHOUT flush
-          // compressResponse() should automatically apply flush for SSE
-          zlib: {
-            level: 9,
-          },
-          brotli: {
-            params: {
-              [constants.BROTLI_PARAM_QUALITY]: 11,
-            },
-          },
-        })
-
-        assert.equal(compressed.headers.get('Content-Encoding'), encodingName)
-        assert.ok(compressed.body)
-
-        let decompressor = createDecompressor()
-        let nodeReadable = Readable.fromWeb(compressed.body as any)
-        let decompressed = nodeReadable.pipe(decompressor)
-
-        // Test that data arrives before stream closes AND is valid SSE format
-        let receivedData = await new Promise<string>((resolve, reject) => {
-          let timeout = setTimeout(() => {
-            reject(new Error(`Timeout: data not flushed - flush may not be working`))
-          }, 500)
-
-          decompressed.once('data', (chunk) => {
-            clearTimeout(timeout)
-            resolve(chunk.toString())
-          })
-
-          decompressed.resume()
-
-          // Send SSE event - with flush, it should arrive immediately
-          // Without flush, stream stays open and data buffers, causing timeout
-          setImmediate(() => {
-            sendEvent!('event: message\ndata: test-payload\n\n')
-          })
-        })
-
-        // Verify the decompressed data is valid SSE format
-        assert.ok(receivedData.includes('event: message'), 'Missing event type')
-        assert.ok(receivedData.includes('data: test-payload'), 'Missing data payload')
-        assert.ok(receivedData.includes('\n\n'), 'Missing SSE message terminator')
-
-        controller!.close()
-        decompressed.destroy()
+      let stream = new ReadableStream({
+        start(c) {
+          controller = c
+          sendEvent = (data: string) => {
+            controller!.enqueue(new TextEncoder().encode(data))
+          }
+        },
       })
+
+      let response = new Response(stream, {
+        headers: { 'Content-Type': 'text/event-stream' },
+      })
+
+      let request = new Request('https://remix.run', {
+        headers: { 'Accept-Encoding': encodingName },
+      })
+
+      let compressed = await compressResponse(response, request, {
+        encodings: [encodingName],
+        // Provide custom options WITHOUT flush
+        // compressResponse() should automatically apply flush for SSE
+        zlib: {
+          level: 9,
+        },
+        brotli: {
+          params: {
+            [constants.BROTLI_PARAM_QUALITY]: 11,
+          },
+        },
+      })
+
+      assert.equal(compressed.headers.get('Content-Encoding'), encodingName)
+      assert.ok(compressed.body)
+
+      let decompressor = createDecompressor()
+      let nodeReadable = Readable.fromWeb(compressed.body as any)
+      let decompressed = nodeReadable.pipe(decompressor)
+
+      // Test that data arrives before stream closes AND is valid SSE format
+      let receivedData = await new Promise<string>((resolve, reject) => {
+        let timeout = setTimeout(() => {
+          reject(new Error(`Timeout: data not flushed - flush may not be working`))
+        }, 500)
+
+        decompressed.once('data', (chunk) => {
+          clearTimeout(timeout)
+          resolve(chunk.toString())
+        })
+
+        decompressed.resume()
+
+        // Send SSE event - with flush, it should arrive immediately
+        // Without flush, stream stays open and data buffers, causing timeout
+        setImmediate(() => {
+          sendEvent!('event: message\ndata: test-payload\n\n')
+        })
+      })
+
+      // Verify the decompressed data is valid SSE format
+      assert.ok(receivedData.includes('event: message'), 'Missing event type')
+      assert.ok(receivedData.includes('data: test-payload'), 'Missing data payload')
+      assert.ok(receivedData.includes('\n\n'), 'Missing SSE message terminator')
+
+      controller!.close()
+      decompressed.destroy()
     }
+
+    it('automatically applies flush for SSE with br', async () => {
+      await testSSEFlush('br', createBrotliDecompress)
+    })
+
+    it('automatically applies flush for SSE with gzip', async () => {
+      await testSSEFlush('gzip', createGunzip)
+    })
+
+    it('automatically applies flush for SSE with deflate', async () => {
+      await testSSEFlush('deflate', createInflate)
+    })
   })
 
   describe('Streaming compression', () => {
@@ -973,25 +982,59 @@ describe('compressResponse()', () => {
         }
       })
 
-      for (let encoding of ['gzip', 'deflate', 'br'] as const) {
-        describe(encoding, () => {
-          it('compresses and decompresses simple text', async () => {
-            let result = await roundTrip('hello world', encoding)
-            assert.equal(result, 'hello world')
-          })
-
-          it('compresses and decompresses empty string', async () => {
-            let result = await roundTrip('', encoding)
-            assert.equal(result, '')
-          })
-
-          it('compresses and decompresses unicode', async () => {
-            let unicode = 'Hello 世界 🌍 émoji'
-            let result = await roundTrip(unicode, encoding)
-            assert.equal(result, unicode)
-          })
+      describe('gzip', () => {
+        it('compresses and decompresses simple text', async () => {
+          let result = await roundTrip('hello world', 'gzip')
+          assert.equal(result, 'hello world')
         })
-      }
+
+        it('compresses and decompresses empty string', async () => {
+          let result = await roundTrip('', 'gzip')
+          assert.equal(result, '')
+        })
+
+        it('compresses and decompresses unicode', async () => {
+          let unicode = 'Hello 世界 🌍 émoji'
+          let result = await roundTrip(unicode, 'gzip')
+          assert.equal(result, unicode)
+        })
+      })
+
+      describe('deflate', () => {
+        it('compresses and decompresses simple text', async () => {
+          let result = await roundTrip('hello world', 'deflate')
+          assert.equal(result, 'hello world')
+        })
+
+        it('compresses and decompresses empty string', async () => {
+          let result = await roundTrip('', 'deflate')
+          assert.equal(result, '')
+        })
+
+        it('compresses and decompresses unicode', async () => {
+          let unicode = 'Hello 世界 🌍 émoji'
+          let result = await roundTrip(unicode, 'deflate')
+          assert.equal(result, unicode)
+        })
+      })
+
+      describe('br', () => {
+        it('compresses and decompresses simple text', async () => {
+          let result = await roundTrip('hello world', 'br')
+          assert.equal(result, 'hello world')
+        })
+
+        it('compresses and decompresses empty string', async () => {
+          let result = await roundTrip('', 'br')
+          assert.equal(result, '')
+        })
+
+        it('compresses and decompresses unicode', async () => {
+          let unicode = 'Hello 世界 🌍 émoji'
+          let result = await roundTrip(unicode, 'br')
+          assert.equal(result, unicode)
+        })
+      })
     })
 
     describe('chunk handling', () => {
