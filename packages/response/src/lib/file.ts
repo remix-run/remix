@@ -65,10 +65,8 @@ export interface FileResponseOptions {
 }
 
 /**
- * A helper for working with file [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)s.
- *
- * Returns a Response with full HTTP semantics including ETags, Last-Modified,
- * conditional requests, and Range support.
+ * Creates a file [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+ * with full HTTP semantics including ETags, Last-Modified, conditional requests, and Range support.
  *
  * @param file The file to send
  * @param request The request object
@@ -76,13 +74,13 @@ export interface FileResponseOptions {
  * @returns A `Response` object containing the file
  *
  * @example
- * import * as res from '@remix-run/fetch-router/response-helpers'
+ * import { createFileResponse } from '@remix-run/response/file'
  * let file = openFile('./public/image.jpg')
- * return res.file(file, request, {
+ * return createFileResponse(file, request, {
  *   cacheControl: 'public, max-age=3600'
  * })
  */
-export async function sendFile(
+export async function createFileResponse(
   file: File,
   request: Request,
   options: FileResponseOptions = {},

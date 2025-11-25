@@ -4,39 +4,24 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
-- BREAKING CHANGE: The `file()` response helper now uses the Web Crypto API for strong ETag generation instead of `node:crypto`. This makes it platform-agnostic and compatible with all JavaScript runtimes (Node.js, Deno, Bun, Cloudflare Workers, browsers).
-
-  **Algorithm Support**: Only Web Crypto API algorithms are now supported: `'SHA-256'` (default), `'SHA-384'`, `'SHA-512'`, and `'SHA-1'`. Other algorithms like `'MD5'` are no longer supported.
-
-  **Memory Usage**: Strong ETags now buffer the entire file into memory before hashing. For large files, consider using:
-
-  - Weak ETags (default, based on file size and modification time)
-  - Custom digest functions via the `digest` option
+- BREAKING CHANGE: Moved all response helpers to `@remix-run/response`. Update your imports:
 
   ```tsx
+  // Before
   import * as res from '@remix-run/fetch-router/response-helpers'
 
-  // Default: weak ETags (no memory buffering)
-  return res.file(file, request)
+  res.file(file, request)
+  res.html(body)
+  res.redirect(location, status, headers)
 
-  // Strong ETag with SHA-256 (buffers entire file)
-  return res.file(file, request, { etag: 'strong' })
+  // After
+  import { createFileResponse } from '@remix-run/response/file'
+  import { createHtmlResponse } from '@remix-run/response/html'
+  import { createRedirectResponse } from '@remix-run/response/redirect'
 
-  // Strong ETag with SHA-512 (buffers entire file)
-  return res.file(file, request, { etag: 'strong', digest: 'SHA-512' })
-
-  // Custom digest for large files (e.g., streaming hash in Node.js)
-  return res.file(file, request, {
-    etag: 'strong',
-    async digest(file) {
-      let { createHash } = await import('node:crypto')
-      let hash = createHash('sha256')
-      for await (let chunk of file.stream()) {
-        hash.update(chunk)
-      }
-      return hash.digest('hex')
-    },
-  })
+  createFileResponse(file, request)
+  createHtmlResponse(body)
+  createRedirectResponse(location, status)
   ```
 
 ## v0.11.0 (2025-11-21)

@@ -2,10 +2,7 @@ import * as path from 'node:path'
 import * as fsp from 'node:fs/promises'
 import { openFile } from '@remix-run/fs'
 import type { Middleware } from '@remix-run/fetch-router'
-import {
-  file as sendFile,
-  type FileResponseOptions,
-} from '@remix-run/fetch-router/response-helpers'
+import { createFileResponse as sendFile, type FileResponseOptions } from '@remix-run/response/file'
 
 import { generateDirectoryListing } from './directory-listing.ts'
 

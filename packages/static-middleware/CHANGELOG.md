@@ -4,6 +4,7 @@ This is the changelog for [`static-middleware`](https://github.com/remix-run/rem
 
 ## Unreleased
 
+- BREAKING CHANGE: Now uses `@remix-run/response` for file and HTML responses instead of `@remix-run/fetch-router/response-helpers`. The `@remix-run/response` package is now a peer dependency.
 - Add `listFiles` option to generate a directory listing when a directory is requested.
 
   ```ts

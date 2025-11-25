@@ -2,17 +2,20 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { html as safeHtml } from '@remix-run/html-template'
 
-import { html } from './html.ts'
+import { createHtmlResponse } from './html.ts'
 
-describe('html()', () => {
+describe('createHtmlResponse()', () => {
   it('creates a Response with HTML content-type header', async () => {
-    let response = html('<h1>Hello</h1>')
+    let response = createHtmlResponse('<h1>Hello</h1>')
     assert.equal(response.headers.get('Content-Type'), 'text/html; charset=UTF-8')
     assert.equal(await response.text(), '<!DOCTYPE html><h1>Hello</h1>')
   })
 
   it('preserves custom headers and status from init', async () => {
-    let response = html('<h1>Hello</h1>', { headers: { 'X-Custom': 'a' }, status: 201 })
+    let response = createHtmlResponse('<h1>Hello</h1>', {
+      headers: { 'X-Custom': 'a' },
+      status: 201,
+    })
     assert.equal(response.headers.get('Content-Type'), 'text/html; charset=UTF-8')
     assert.equal(response.headers.get('X-Custom'), 'a')
     assert.equal(response.status, 201)
@@ -20,35 +23,37 @@ describe('html()', () => {
   })
 
   it('allows overriding Content-Type header', async () => {
-    let response = html('<h1>Hello</h1>', { headers: { 'Content-Type': 'text/plain' } })
+    let response = createHtmlResponse('<h1>Hello</h1>', {
+      headers: { 'Content-Type': 'text/plain' },
+    })
     assert.equal(response.headers.get('Content-Type'), 'text/plain')
   })
 
   it('accepts SafeHtml from escape tag without re-escaping', async () => {
     let snippet = safeHtml`<strong>${'Hi'}</strong>`
-    let response = html(snippet)
+    let response = createHtmlResponse(snippet)
     assert.equal(await response.text(), '<!DOCTYPE html><strong>Hi</strong>')
   })
 
   describe('DOCTYPE prepending', () => {
     describe('string body', () => {
       it('prepends DOCTYPE to string body', async () => {
-        let response = html('<html><body>Hello</body></html>')
+        let response = createHtmlResponse('<html><body>Hello</body></html>')
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
 
       it('does not prepend DOCTYPE if already present', async () => {
-        let response = html('<!DOCTYPE html><html><body>Hello</body></html>')
+        let response = createHtmlResponse('<!DOCTYPE html><html><body>Hello</body></html>')
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
 
       it('handles DOCTYPE with leading whitespace', async () => {
-        let response = html('  <!DOCTYPE html><html><body>Hello</body></html>')
+        let response = createHtmlResponse('  <!DOCTYPE html><html><body>Hello</body></html>')
         assert.equal(await response.text(), '  <!DOCTYPE html><html><body>Hello</body></html>')
       })
 
       it('handles DOCTYPE case-insensitively', async () => {
-        let response = html('<!doctype html><html><body>Hello</body></html>')
+        let response = createHtmlResponse('<!doctype html><html><body>Hello</body></html>')
         assert.equal(await response.text(), '<!doctype html><html><body>Hello</body></html>')
       })
     })
@@ -56,13 +61,13 @@ describe('html()', () => {
     describe('SafeHtml body', () => {
       it('prepends DOCTYPE to SafeHtml body', async () => {
         let snippet = safeHtml`<html><body>Hello</body></html>`
-        let response = html(snippet)
+        let response = createHtmlResponse(snippet)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
 
       it('does not prepend DOCTYPE if already present in SafeHtml', async () => {
         let snippet = safeHtml`<!DOCTYPE html><html><body>Hello</body></html>`
-        let response = html(snippet)
+        let response = createHtmlResponse(snippet)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
     })
@@ -70,7 +75,7 @@ describe('html()', () => {
     describe('Blob body', () => {
       it('prepends DOCTYPE to Blob body', async () => {
         let blob = new Blob(['<html><body>Hello</body></html>'], { type: 'text/html' })
-        let response = html(blob)
+        let response = createHtmlResponse(blob)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
 
@@ -78,7 +83,7 @@ describe('html()', () => {
         let blob = new Blob(['<!DOCTYPE html><html><body>Hello</body></html>'], {
           type: 'text/html',
         })
-        let response = html(blob)
+        let response = createHtmlResponse(blob)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
     })
@@ -86,13 +91,13 @@ describe('html()', () => {
     describe('ArrayBuffer body', () => {
       it('prepends DOCTYPE to ArrayBuffer body', async () => {
         let buffer = new TextEncoder().encode('<html><body>Hello</body></html>')
-        let response = html(buffer.buffer)
+        let response = createHtmlResponse(buffer.buffer)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
 
       it('does not prepend DOCTYPE if already present in ArrayBuffer', async () => {
         let buffer = new TextEncoder().encode('<!DOCTYPE html><html><body>Hello</body></html>')
-        let response = html(buffer.buffer)
+        let response = createHtmlResponse(buffer.buffer)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
     })
@@ -100,13 +105,13 @@ describe('html()', () => {
     describe('Uint8Array body', () => {
       it('prepends DOCTYPE to Uint8Array body', async () => {
         let buffer = new TextEncoder().encode('<html><body>Hello</body></html>')
-        let response = html(buffer)
+        let response = createHtmlResponse(buffer)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
 
       it('does not prepend DOCTYPE if already present in Uint8Array', async () => {
         let buffer = new TextEncoder().encode('<!DOCTYPE html><html><body>Hello</body></html>')
-        let response = html(buffer)
+        let response = createHtmlResponse(buffer)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
     })
@@ -115,14 +120,14 @@ describe('html()', () => {
       it('prepends DOCTYPE to DataView body', async () => {
         let buffer = new TextEncoder().encode('<html><body>Hello</body></html>')
         let dataView = new DataView(buffer.buffer)
-        let response = html(dataView)
+        let response = createHtmlResponse(dataView)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
 
       it('does not prepend DOCTYPE if already present in DataView', async () => {
         let buffer = new TextEncoder().encode('<!DOCTYPE html><html><body>Hello</body></html>')
         let dataView = new DataView(buffer.buffer)
-        let response = html(dataView)
+        let response = createHtmlResponse(dataView)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
     })
@@ -135,7 +140,7 @@ describe('html()', () => {
             controller.close()
           },
         })
-        let response = html(stream)
+        let response = createHtmlResponse(stream)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
 
@@ -148,7 +153,7 @@ describe('html()', () => {
             controller.close()
           },
         })
-        let response = html(stream)
+        let response = createHtmlResponse(stream)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
 
@@ -158,7 +163,7 @@ describe('html()', () => {
             controller.close()
           },
         })
-        let response = html(stream)
+        let response = createHtmlResponse(stream)
         assert.equal(await response.text(), '<!DOCTYPE html>')
       })
 
@@ -171,7 +176,7 @@ describe('html()', () => {
             controller.close()
           },
         })
-        let response = html(stream)
+        let response = createHtmlResponse(stream)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
     })

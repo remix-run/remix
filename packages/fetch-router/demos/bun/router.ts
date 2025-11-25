@@ -5,7 +5,8 @@ import { formData } from '@remix-run/form-data-middleware'
 import { logger } from '@remix-run/logger-middleware'
 import { session } from '@remix-run/session-middleware'
 import { html } from '@remix-run/html-template'
-import * as res from '@remix-run/fetch-router/response-helpers'
+import { createHtmlResponse } from '@remix-run/response/html'
+import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
 import type { Middleware } from '@remix-run/fetch-router'
 
 import { routes } from './routes.ts'
@@ -20,7 +21,7 @@ function requireAuth(): Middleware {
   return async ({ session }, next) => {
     let username = session.get('username')
     if (!username) {
-      return res.redirect(routes.login.index.href())
+      return redirect(routes.login.index.href())
     }
     return next()
   }
@@ -34,7 +35,7 @@ router.map(routes.home, ({ session }) => {
   let posts = data.getPosts()
   let username = session.get('username') as string | undefined
 
-  return res.html(html`
+  return createHtmlResponse(html`
     <html>
       <head>
         <title>Simple Blog - fetch-router Demo</title>
@@ -81,10 +82,10 @@ router.map(routes.login, {
   index({ session }) {
     let username = session.get('username') as string | undefined
     if (username) {
-      return res.redirect(routes.home.href())
+      return redirect(routes.home.href())
     }
 
-    return res.html(html`
+    return createHtmlResponse(html`
       <html>
         <head>
           <title>Login - Simple Blog</title>
@@ -112,23 +113,23 @@ router.map(routes.login, {
   async action({ formData, session }) {
     let username = formData.get('username') as string
     if (!username) {
-      return res.redirect(routes.login.index.href())
+      return redirect(routes.login.index.href())
     }
     session.set('username', username)
-    return res.redirect(routes.home.href())
+    return redirect(routes.home.href())
   },
 })
 
 router.post(routes.logout, ({ session }) => {
   session.destroy()
-  return res.redirect(routes.home.href())
+  return redirect(routes.home.href())
 })
 
 router.map(routes.posts, {
   new: {
     middleware: [requireAuth()],
     handler({ session: _session }) {
-      return res.html(html`
+      return createHtmlResponse(html`
         <html>
           <head>
             <title>New Post - Simple Blog</title>
@@ -157,18 +158,18 @@ router.map(routes.posts, {
   async create({ formData, session }) {
     let username = session.get('username') as string
     if (!username) {
-      return res.redirect(routes.login.index.href())
+      return redirect(routes.login.index.href())
     }
 
     let title = formData.get('title') as string
     let content = formData.get('content') as string
 
     if (!title || !content) {
-      return res.redirect(routes.posts.new.href())
+      return redirect(routes.posts.new.href())
     }
 
     let post = data.createPost(title, content, username)
-    return res.redirect(routes.posts.show.href({ id: post.id }))
+    return redirect(routes.posts.show.href({ id: post.id }))
   },
   show({ params }) {
     let post = data.getPost(params.id)
@@ -176,7 +177,7 @@ router.map(routes.posts, {
       return new Response('Post not found', { status: 404 })
     }
 
-    return res.html(html`
+    return createHtmlResponse(html`
       <html>
         <head>
           <title>${post.title} - Simple Blog</title>

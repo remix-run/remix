@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 import * as fsp from 'node:fs/promises'
 import { html } from '@remix-run/html-template'
-import * as res from '@remix-run/fetch-router/response-helpers'
+import { createHtmlResponse } from '@remix-run/response/html'
 import { lookup } from 'mrmime'
 
 interface DirectoryEntry {
@@ -94,7 +94,7 @@ export async function generateDirectoryListing(
     `)
   }
 
-  let pageHtml = html`
+  return createHtmlResponse(html`
     <html lang="en">
       <head>
         <meta charset="utf-8" />
@@ -258,9 +258,7 @@ export async function generateDirectoryListing(
         </div>
       </body>
     </html>
-  `
-
-  return res.html(pageHtml)
+  `)
 }
 
 async function calculateDirectorySize(dirPath: string): Promise<number> {

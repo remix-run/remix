@@ -5,14 +5,14 @@ const DOCTYPE = '<!DOCTYPE html>'
 type HtmlBody = string | SafeHtml | Blob | BufferSource | ReadableStream<Uint8Array>
 
 /**
- * A helper for working with HTML [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)s
+ * Creates an HTML [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
  * that ensures the response has a valid DOCTYPE and appropriate `Content-Type` header.
  *
  * @param body The body of the response.
  * @param init (optional) The `ResponseInit` object for the response.
  * @returns A `Response` object with a HTML body and the appropriate `Content-Type` header.
  */
-export function html(body: HtmlBody, init?: ResponseInit): Response {
+export function createHtmlResponse(body: HtmlBody, init?: ResponseInit): Response {
   let payload: BodyInit = ensureDoctype(body)
 
   let headers = new Headers(init?.headers)

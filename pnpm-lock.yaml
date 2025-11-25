@@ -65,6 +65,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../packages/node-fetch-server
+      '@remix-run/response':
+        specifier: workspace:*
+        version: link:../../packages/response
       '@remix-run/session':
         specifier: workspace:*
         version: link:../../packages/session
@@ -125,12 +128,6 @@ importers:
       '@remix-run/headers':
         specifier: workspace:^
         version: link:../headers
-      '@remix-run/html-template':
-        specifier: workspace:^
-        version: link:../html-template
-      '@remix-run/lazy-file':
-        specifier: workspace:^
-        version: link:../lazy-file
       '@remix-run/route-pattern':
         specifier: workspace:^
         version: link:../route-pattern
@@ -162,6 +159,9 @@ importers:
       '@remix-run/logger-middleware':
         specifier: workspace:*
         version: link:../../../logger-middleware
+      '@remix-run/response':
+        specifier: workspace:*
+        version: link:../../../response
       '@remix-run/session':
         specifier: workspace:*
         version: link:../../../session
@@ -193,6 +193,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../../node-fetch-server
+      '@remix-run/response':
+        specifier: workspace:*
+        version: link:../../../response
       '@remix-run/session':
         specifier: workspace:*
         version: link:../../../session
@@ -514,6 +517,22 @@ importers:
         specifier: workspace:^
         version: link:../..
 
+  packages/response:
+    dependencies:
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
+      '@remix-run/html-template':
+        specifier: workspace:^
+        version: link:../html-template
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/route-pattern:
     devDependencies:
       '@ark/attest':
@@ -576,6 +595,9 @@ importers:
       '@remix-run/html-template':
         specifier: workspace:^
         version: link:../html-template
+      '@remix-run/response':
+        specifier: workspace:^
+        version: link:../response
       mrmime:
         specifier: ^2.0.0
         version: 2.0.0

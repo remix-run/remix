@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/static-middleware",
+  "name": "@remix-run/response",
   "version": "0.1.0",
-  "description": "Middleware for serving static files from the filesystem",
+  "description": "Response helpers for the web Fetch API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/static-middleware"
+    "directory": "packages/response"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/static-middleware#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/response#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -19,30 +19,35 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
+    "./file": "./src/file.ts",
+    "./html": "./src/html.ts",
+    "./redirect": "./src/redirect.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
+      "./file": {
+        "types": "./dist/file.d.ts",
+        "default": "./dist/file.js"
+      },
+      "./html": {
+        "types": "./dist/html.d.ts",
+        "default": "./dist/html.js"
+      },
+      "./redirect": {
+        "types": "./dist/redirect.d.ts",
+        "default": "./dist/redirect.js"
       },
       "./package.json": "./package.json"
     }
   },
   "devDependencies": {
-    "@remix-run/fetch-router": "workspace:*",
-    "@remix-run/form-data-middleware": "workspace:*",
-    "@remix-run/method-override-middleware": "workspace:*",
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/fs": "workspace:^",
-    "@remix-run/html-template": "workspace:^",
-    "@remix-run/response": "workspace:^"
+    "@remix-run/headers": "workspace:^",
+    "@remix-run/html-template": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -53,12 +58,10 @@
   },
   "keywords": [
     "fetch",
-    "router",
-    "middleware",
-    "static-files",
-    "file-server"
-  ],
-  "dependencies": {
-    "mrmime": "^2.0.0"
-  }
+    "response",
+    "http",
+    "html",
+    "file",
+    "redirect"
+  ]
 }
