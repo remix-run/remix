@@ -58,10 +58,10 @@ export interface CompressResponseOptions {
  * - Responses with no Accept-Encoding header (RFC 7231)
  * - Empty responses
  * - Already compressed responses
+ * - Responses with Content-Length below threshold (default: 1024 bytes)
  * - Responses with Cache-Control: no-transform
  * - Responses advertising range support (Accept-Ranges: bytes)
  * - Partial content responses (206 status)
- * - Responses with Content-Length below threshold (default: 1024 bytes)
  *
  * When compressing, this function:
  * - Sets Content-Encoding header
@@ -93,6 +93,8 @@ export async function compressResponse(
     (request.method !== 'HEAD' && !response.body) ||
     // Already compressed
     responseHeaders.contentEncoding != null ||
+    // Content-Length below threshold
+    (responseHeaders.contentLength != null && responseHeaders.contentLength < threshold) ||
     // Cache-Control: no-transform
     responseHeaders.cacheControl.noTransform ||
     // Response advertising range support
@@ -100,12 +102,6 @@ export async function compressResponse(
     // Partial content responses
     response.status === 206
   ) {
-    return response
-  }
-
-  // If Content-Length is present and below threshold, skip compression
-  let contentLength = responseHeaders.contentLength
-  if (contentLength !== null && contentLength < threshold) {
     return response
   }
 
