@@ -2,7 +2,7 @@
 
 This is the changelog for [`static-middleware`](https://github.com/remix-run/remix/tree/main/packages/static-middleware). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.4.0 (2025-11-25)
 
 - BREAKING CHANGE: Replace `mrmime` dependency with `@remix-run/mime` for MIME type detection which is now a peer dependency.
 
