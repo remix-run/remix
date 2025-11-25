@@ -7,10 +7,10 @@
     "@remix-run/file-storage": "workspace:*",
     "@remix-run/headers": "workspace:*",
     "@remix-run/html-template": "workspace:*",
+    "@remix-run/mime": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",
     "@remix-run/response": "workspace:*",
     "@remix-run/tar-parser": "workspace:*",
-    "mrmime": "^2.0.0",
     "semver": "^7.6.3"
   },
   "devDependencies": {

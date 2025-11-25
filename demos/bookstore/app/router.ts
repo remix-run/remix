@@ -1,5 +1,6 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { asyncContext } from '@remix-run/async-context-middleware'
+import { compression } from '@remix-run/compression-middleware'
 import { formData } from '@remix-run/form-data-middleware'
 import { logger } from '@remix-run/logger-middleware'
 import { methodOverride } from '@remix-run/method-override-middleware'
@@ -26,15 +27,14 @@ if (process.env.NODE_ENV === 'development') {
   middleware.push(logger())
 }
 
+middleware.push(compression())
 middleware.push(
   staticFiles('./public', {
     cacheControl: 'no-store, must-revalidate',
     etag: false,
     lastModified: false,
-    acceptRanges: false,
   }),
 )
-
 middleware.push(formData({ uploadHandler }))
 middleware.push(methodOverride())
 middleware.push(session(sessionCookie, sessionStorage))

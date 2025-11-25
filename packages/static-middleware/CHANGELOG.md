@@ -2,6 +2,24 @@
 
 This is the changelog for [`static-middleware`](https://github.com/remix-run/remix/tree/main/packages/static-middleware). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- BREAKING CHANGE: Replace `mrmime` dependency with `@remix-run/mime` for MIME type detection which is now a peer dependency.
+
+- Add support for `acceptRanges` function to conditionally enable HTTP Range requests based on the file being served:
+
+  ```ts
+  // Enable ranges only for large files
+  staticFiles('./public', {
+    acceptRanges: (file) => file.size > 10 * 1024 * 1024,
+  })
+
+  // Enable ranges only for videos
+  staticFiles('./public', {
+    acceptRanges: (file) => file.type.startsWith('video/'),
+  })
+  ```
+
 ## v0.3.0 (2025-11-25)
 
 - BREAKING CHANGE: Now uses `@remix-run/response` for file and HTML responses instead of `@remix-run/fetch-router/response-helpers`. The `@remix-run/response` package is now a peer dependency.

@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "@remix-run/async-context-middleware": "workspace:*",
+    "@remix-run/compression-middleware": "workspace:*",
     "@remix-run/cookie": "workspace:*",
     "@remix-run/dom": "jam",
     "@remix-run/events": "jam",

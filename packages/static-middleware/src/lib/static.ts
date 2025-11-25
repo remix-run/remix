@@ -7,9 +7,17 @@ import { createFileResponse as sendFile, type FileResponseOptions } from '@remix
 import { generateDirectoryListing } from './directory-listing.ts'
 
 /**
+ * Function that determines if HTTP Range requests should be supported for a given file.
+ *
+ * @param file - The File object being served
+ * @returns true if range requests should be supported
+ */
+export type AcceptRangesFunction = (file: File) => boolean
+
+/**
  * Options for the `staticFiles` middleware.
  */
-export interface StaticFilesOptions extends FileResponseOptions {
+export interface StaticFilesOptions extends Omit<FileResponseOptions, 'acceptRanges'> {
   /**
    * Filter function to determine which files should be served.
    *
@@ -17,6 +25,32 @@ export interface StaticFilesOptions extends FileResponseOptions {
    * @return Whether to serve the file
    */
   filter?: (path: string) => boolean
+
+  /**
+   * Whether to support HTTP Range requests for partial content.
+   *
+   * Can be a boolean or a function that receives the file.
+   * When enabled, includes Accept-Ranges header and handles Range requests
+   * with 206 Partial Content responses.
+   *
+   * Defaults to enabling ranges only for non-compressible MIME types,
+   * as defined by `isCompressibleMimeType()` from `@remix-run/mime`.
+   *
+   * Note: Range requests and compression are mutually exclusive. When
+   * `Accept-Ranges: bytes` is present in the response headers, the compression
+   * middleware will not compress the response. This is why the default behavior
+   * enables ranges only for non-compressible types.
+   *
+   * @example
+   * // Force range request support for all files
+   * acceptRanges: true
+   *
+   * @example
+   * // Enable ranges for videos only
+   * acceptRanges: (file) => file.type.startsWith('video/')
+   */
+  acceptRanges?: boolean | AcceptRangesFunction
+
   /**
    * Files to try and serve as the index file when the request path targets a directory.
    *
@@ -50,7 +84,7 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
   // Ensure root is an absolute path
   root = path.resolve(root)
 
-  let { filter, index: indexOption, listFiles, ...fileOptions } = options
+  let { acceptRanges, filter, index: indexOption, listFiles, ...fileOptions } = options
 
   // Normalize index option
   let index: string[]
@@ -108,7 +142,20 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
     if (filePath) {
       let fileName = path.relative(root, filePath)
       let file = openFile(filePath, { name: fileName })
-      return sendFile(file, context.request, fileOptions)
+
+      let finalFileOptions: FileResponseOptions = { ...fileOptions }
+
+      // If acceptRanges is a function, evaluate it with the file
+      // Otherwise, pass it directly to sendFile
+      if (typeof acceptRanges === 'function') {
+        finalFileOptions.acceptRanges = acceptRanges(file)
+      } else if (acceptRanges !== undefined) {
+        finalFileOptions.acceptRanges = acceptRanges
+      }
+
+      return sendFile(file, context.request, finalFileOptions)
     }
+
+    return next()
   }
 }

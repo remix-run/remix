@@ -119,7 +119,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
    * @param encodings The encodings to choose from
    * @return The most preferred encoding or `null` if none match
    */
-  getPreferred(encodings: string[]): string | null {
+  getPreferred<encoding extends string>(encodings: readonly encoding[]): encoding | null {
     let sorted = encodings
       .map((encoding) => [encoding, this.getWeight(encoding)] as const)
       .sort((a, b) => b[1] - a[1])

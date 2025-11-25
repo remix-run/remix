@@ -2,6 +2,21 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Add `Vary` support
+
+```ts
+import { Vary } from '@remix-run/headers'
+
+let header = new Vary('Accept-Encoding')
+header.add('Accept-Language')
+header.headerNames // ['accept-encoding', 'accept-language']
+header.toString() // 'accept-encoding, accept-language'
+```
+
+- `Accept.getPreferred()`, `AcceptEncoding.getPreferred()`, and `AcceptLanguage.getPreferred()` are now generic, preserving the union type of the input array in the return type
+
 ## v0.17.2 (2025-11-25)
 
 - Fix `secure` property type in `SetCookie` to accept `boolean` instead of only `true`, making it consistent with `httpOnly` and `partitioned`

@@ -19,6 +19,7 @@
   ],
   "type": "module",
   "exports": {
+    "./compress": "./src/compress.ts",
     "./file": "./src/file.ts",
     "./html": "./src/html.ts",
     "./redirect": "./src/redirect.ts",
@@ -26,6 +27,10 @@
   },
   "publishConfig": {
     "exports": {
+      "./compress": {
+        "types": "./dist/compress.d.ts",
+        "default": "./dist/compress.js"
+      },
       "./file": {
         "types": "./dist/file.d.ts",
         "default": "./dist/file.js"
@@ -42,12 +47,14 @@
     }
   },
   "devDependencies": {
+    "@remix-run/mime": "workspace:*",
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "@remix-run/headers": "workspace:^",
-    "@remix-run/html-template": "workspace:^"
+    "@remix-run/html-template": "workspace:^",
+    "@remix-run/mime": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

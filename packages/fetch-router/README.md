@@ -622,10 +622,12 @@ Response helpers for creating common HTTP responses are available in the [`@remi
 import { createFileResponse } from '@remix-run/response/file'
 import { createHtmlResponse } from '@remix-run/response/html'
 import { createRedirectResponse } from '@remix-run/response/redirect'
+import { compressResponse } from '@remix-run/response/compress'
 
 let response = createHtmlResponse('<h1>Hello</h1>')
 let response = Response.json({ message: 'Hello' })
 let response = createRedirectResponse('/')
+let response = compressResponse(uncompressedResponse, request)
 ```
 
 See the [`@remix-run/response` documentation](https://github.com/remix-run/remix/tree/main/packages/response#readme) for more details.

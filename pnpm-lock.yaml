@@ -38,6 +38,9 @@ importers:
       '@remix-run/async-context-middleware':
         specifier: workspace:*
         version: link:../../packages/async-context-middleware
+      '@remix-run/compression-middleware':
+        specifier: workspace:*
+        version: link:../../packages/compression-middleware
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../../packages/cookie
@@ -94,6 +97,46 @@ importers:
         specifier: ^4.20.6
         version: 4.20.6
 
+  demos/sse:
+    dependencies:
+      '@remix-run/compression-middleware':
+        specifier: workspace:*
+        version: link:../../packages/compression-middleware
+      '@remix-run/dom':
+        specifier: jam
+        version: 0.0.0-experimental-remix-jam.6
+      '@remix-run/events':
+        specifier: jam
+        version: 0.0.0-experimental-remix-jam.5
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../../packages/fetch-router
+      '@remix-run/interaction':
+        specifier: workspace:*
+        version: link:../../packages/interaction
+      '@remix-run/logger-middleware':
+        specifier: workspace:*
+        version: link:../../packages/logger-middleware
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../../packages/node-fetch-server
+      '@remix-run/response':
+        specifier: workspace:*
+        version: link:../../packages/response
+      '@remix-run/static-middleware':
+        specifier: workspace:*
+        version: link:../../packages/static-middleware
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.12
+      tsx:
+        specifier: ^4.20.6
+        version: 4.20.6
+
   demos/unpkg:
     dependencies:
       '@remix-run/fetch-router':
@@ -108,6 +151,9 @@ importers:
       '@remix-run/html-template':
         specifier: workspace:*
         version: link:../../packages/html-template
+      '@remix-run/mime':
+        specifier: workspace:*
+        version: link:../../packages/mime
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../packages/node-fetch-server
@@ -117,9 +163,6 @@ importers:
       '@remix-run/tar-parser':
         specifier: workspace:*
         version: link:../../packages/tar-parser
-      mrmime:
-        specifier: ^2.0.0
-        version: 2.0.0
       semver:
         specifier: ^7.6.3
         version: 7.6.3
@@ -139,6 +182,24 @@ importers:
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../fetch-router
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/compression-middleware:
+    devDependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../fetch-router
+      '@remix-run/mime':
+        specifier: workspace:*
+        version: link:../mime
+      '@remix-run/response':
+        specifier: workspace:*
+        version: link:../response
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
@@ -367,9 +428,9 @@ importers:
       '@remix-run/lazy-file':
         specifier: workspace:^
         version: link:../lazy-file
-      mrmime:
-        specifier: ^2.0.0
-        version: 2.0.0
+      '@remix-run/mime':
+        specifier: workspace:^
+        version: link:../mime
     devDependencies:
       '@types/node':
         specifier: ^24.6.0
@@ -432,9 +493,9 @@ importers:
 
   packages/lazy-file:
     dependencies:
-      mrmime:
-        specifier: ^2.0.0
-        version: 2.0.0
+      '@remix-run/mime':
+        specifier: workspace:^
+        version: link:../mime
     devDependencies:
       '@types/node':
         specifier: ^24.6.0
@@ -466,6 +527,18 @@ importers:
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/mime:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.6.0
+        version: 24.6.0
+      mime-db:
+        specifier: ^1.53.0
+        version: 1.54.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -612,6 +685,9 @@ importers:
         specifier: workspace:^
         version: link:../html-template
     devDependencies:
+      '@remix-run/mime':
+        specifier: workspace:*
+        version: link:../mime
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
@@ -681,12 +757,6 @@ importers:
       '@remix-run/html-template':
         specifier: workspace:^
         version: link:../html-template
-      '@remix-run/response':
-        specifier: workspace:^
-        version: link:../response
-      mrmime:
-        specifier: ^2.0.0
-        version: 2.0.0
     devDependencies:
       '@remix-run/fetch-router':
         specifier: workspace:*
@@ -697,6 +767,12 @@ importers:
       '@remix-run/method-override-middleware':
         specifier: workspace:*
         version: link:../method-override-middleware
+      '@remix-run/mime':
+        specifier: workspace:^
+        version: link:../mime
+      '@remix-run/response':
+        specifier: workspace:^
+        version: link:../response
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
@@ -2866,6 +2942,10 @@ packages:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
     engines: {node: '>= 0.6'}
 
+  mime-db@1.54.0:
+    resolution: {integrity: sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==}
+    engines: {node: '>= 0.6'}
+
   mime-types@2.1.18:
     resolution: {integrity: sha512-lc/aahn+t4/SWV/qcmumYjymLsWfN3ELhpmVuUFjgsORruuZPVSwAQryq+HHGvO/SI2KVX26bx+En+zhM8g8hQ==}
     engines: {node: '>= 0.6'}
@@ -4890,7 +4970,7 @@ snapshots:
 
   compressible@2.0.18:
     dependencies:
-      mime-db: 1.52.0
+      mime-db: 1.54.0
 
   compression@1.8.1:
     dependencies:
@@ -5557,6 +5637,8 @@ snapshots:
   mime-db@1.33.0: {}
 
   mime-db@1.52.0: {}
+
+  mime-db@1.54.0: {}
 
   mime-types@2.1.18:
     dependencies:

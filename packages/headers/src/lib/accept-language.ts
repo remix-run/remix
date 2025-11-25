@@ -124,7 +124,7 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
    * @param languages The locale identifiers of the languages to choose from
    * @return The most preferred language or `null` if none match
    */
-  getPreferred(languages: string[]): string | null {
+  getPreferred<language extends string>(languages: readonly language[]): language | null {
     let sorted = languages
       .map((language) => [language, this.getWeight(language)] as const)
       .sort((a, b) => b[1] - a[1])

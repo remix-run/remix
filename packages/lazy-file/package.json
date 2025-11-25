@@ -32,7 +32,7 @@
     }
   },
   "dependencies": {
-    "mrmime": "^2.0.0"
+    "@remix-run/mime": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
