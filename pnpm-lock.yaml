@@ -145,6 +145,9 @@ importers:
       '@remix-run/html-template':
         specifier: workspace:*
         version: link:../../packages/html-template
+      '@remix-run/mime':
+        specifier: workspace:*
+        version: link:../../packages/mime
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../packages/node-fetch-server
@@ -154,9 +157,6 @@ importers:
       '@remix-run/tar-parser':
         specifier: workspace:*
         version: link:../../packages/tar-parser
-      mrmime:
-        specifier: ^2.0.0
-        version: 2.0.0
     devDependencies:
       '@types/node':
         specifier: ^24.6.0
@@ -705,12 +705,6 @@ importers:
       '@remix-run/html-template':
         specifier: workspace:^
         version: link:../html-template
-      '@remix-run/response':
-        specifier: workspace:^
-        version: link:../response
-      mrmime:
-        specifier: ^2.0.0
-        version: 2.0.0
     devDependencies:
       '@remix-run/fetch-router':
         specifier: workspace:*
@@ -721,6 +715,12 @@ importers:
       '@remix-run/method-override-middleware':
         specifier: workspace:*
         version: link:../method-override-middleware
+      '@remix-run/mime':
+        specifier: workspace:^
+        version: link:../mime
+      '@remix-run/response':
+        specifier: workspace:^
+        version: link:../response
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0

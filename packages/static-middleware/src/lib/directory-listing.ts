@@ -2,7 +2,7 @@ import * as path from 'node:path'
 import * as fsp from 'node:fs/promises'
 import { html } from '@remix-run/html-template'
 import { createHtmlResponse } from '@remix-run/response/html'
-import { lookup } from 'mrmime'
+import { detectMimeType } from '@remix-run/mime'
 
 interface DirectoryEntry {
   name: string
@@ -32,7 +32,7 @@ export async function generateDirectoryListing(
         try {
           let stats = await fsp.stat(fullPath)
           size = stats.size
-          let mimeType = lookup(dirent.name)
+          let mimeType = detectMimeType(dirent.name)
           type = mimeType || 'application/octet-stream'
         } catch {
           // Unable to stat file, use defaults

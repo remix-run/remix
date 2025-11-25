@@ -1,6 +1,6 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
-import { lookup } from 'mrmime'
+import { detectMimeType } from '@remix-run/mime'
 
 import { html, render, formatBytes, icons } from '../lib/render.ts'
 import {
@@ -96,7 +96,9 @@ function renderDirectoryListing(
     let icon = file.type === 'directory' ? icons.directory : icons.file
     let displayName = file.type === 'directory' ? file.name + '/' : file.name
     let mimeType =
-      file.type === 'directory' ? 'directory' : (lookup(file.name) ?? 'application/octet-stream')
+      file.type === 'directory'
+        ? 'directory'
+        : (detectMimeType(file.name) ?? 'application/octet-stream')
 
     return html`
       <tr>

@@ -4,6 +4,8 @@ This is the changelog for [`static-middleware`](https://github.com/remix-run/rem
 
 ## Unreleased
 
+- BREAKING CHANGE: Replace `mrmime` dependency with `@remix-run/mime` for MIME type detection which is now a peer dependency.
+
 - Add support for `acceptRanges` function to conditionally enable HTTP Range requests based on the file being served:
 
   ```ts

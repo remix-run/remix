@@ -35,6 +35,8 @@
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/form-data-middleware": "workspace:*",
     "@remix-run/method-override-middleware": "workspace:*",
+    "@remix-run/mime": "workspace:^",
+    "@remix-run/response": "workspace:^",
     "@types/node": "^24.6.0",
     "typescript": "^5.9.3"
   },
@@ -42,6 +44,7 @@
     "@remix-run/fetch-router": "workspace:^",
     "@remix-run/fs": "workspace:^",
     "@remix-run/html-template": "workspace:^",
+    "@remix-run/mime": "workspace:^",
     "@remix-run/response": "workspace:^"
   },
   "scripts": {
@@ -57,8 +60,5 @@
     "middleware",
     "static-files",
     "file-server"
-  ],
-  "dependencies": {
-    "mrmime": "^2.0.0"
-  }
+  ]
 }
