@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/fs",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Filesystem utilities using the Web File API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
