@@ -31,7 +31,7 @@
       "./package.json": "./package.json"
     }
   },
-  "dependencies": {
+  "peerDependencies": {
     "@remix-run/mime": "workspace:^"
   },
   "devDependencies": {

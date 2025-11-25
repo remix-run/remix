@@ -31,7 +31,7 @@
       "./package.json": "./package.json"
     }
   },
-  "dependencies": {
+  "peerDependencies": {
     "@remix-run/lazy-file": "workspace:^",
     "@remix-run/mime": "workspace:^"
   },

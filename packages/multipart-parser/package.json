@@ -36,7 +36,7 @@
       "./package.json": "./package.json"
     }
   },
-  "dependencies": {
+  "peerDependencies": {
     "@remix-run/headers": "workspace:^"
   },
   "devDependencies": {
