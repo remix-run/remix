@@ -4,4 +4,6 @@ This is the changelog for [`mime`](https://github.com/remix-run/remix/tree/main/
 
 ## Unreleased
 
-- Initial release
+Initial release of this package.
+
+See the [README](https://github.com/remix-run/remix/blob/main/packages/mime/README.md) for more details.
