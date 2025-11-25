@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/response",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Response helpers for the web Fetch API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
