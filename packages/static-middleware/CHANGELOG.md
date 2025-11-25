@@ -2,7 +2,7 @@
 
 This is the changelog for [`static-middleware`](https://github.com/remix-run/remix/tree/main/packages/static-middleware). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.3.0 (2025-11-25)
 
 - BREAKING CHANGE: Now uses `@remix-run/response` for file and HTML responses instead of `@remix-run/fetch-router/response-helpers`. The `@remix-run/response` package is now a peer dependency.
 - Add `listFiles` option to generate a directory listing when a directory is requested.
