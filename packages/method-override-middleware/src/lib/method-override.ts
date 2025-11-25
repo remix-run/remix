@@ -1,4 +1,5 @@
-import type { Middleware, RequestContext } from '@remix-run/fetch-router'
+import { RequestMethods } from '@remix-run/fetch-router'
+import type { Middleware, RequestContext, RequestMethod } from '@remix-run/fetch-router'
 
 export interface MethodOverrideOptions {
   /**
@@ -7,10 +8,6 @@ export interface MethodOverrideOptions {
    */
   fieldName?: string
 }
-
-const RequestMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const
-
-type RequestMethod = (typeof RequestMethods)[number]
 
 /**
  * Middleware that overrides `context.method` with the value of the method override field.
@@ -25,12 +22,7 @@ export function methodOverride(options?: MethodOverrideOptions): Middleware {
   let fieldName = options?.fieldName ?? '_method'
 
   return async (context: RequestContext) => {
-    let formData = context.formData
-    if (formData == null) {
-      return
-    }
-
-    let method = formData.get(fieldName)
+    let method = context.formData?.get(fieldName)
     if (typeof method !== 'string') {
       return
     }
