@@ -164,6 +164,7 @@ let router = createRouter({
 
 - [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
 - [`@remix-run/mime`](https://github.com/remix-run/remix/tree/main/packages/mime) - MIME type utilities
+- [`@remix-run/response`](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers
 
 ## License
 

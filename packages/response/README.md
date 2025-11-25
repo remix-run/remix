@@ -232,6 +232,7 @@ Range requests and compression are mutually exclusive. When `Accept-Ranges: byte
 - [`@remix-run/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template) - Safe HTML templating with automatic escaping
 - [`@remix-run/fs`](https://github.com/remix-run/remix/tree/main/packages/fs) - File system utilities including `openFile`
 - [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Build HTTP routers using the web fetch API
+- [`@remix-run/mime`](https://github.com/remix-run/remix/tree/main/packages/mime) - MIME type utilities
 
 ## License
 
