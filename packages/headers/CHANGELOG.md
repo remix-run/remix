@@ -2,6 +2,10 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Fix `secure` property type in `SetCookie` to accept `boolean` instead of only `true`, making it consistent with `httpOnly` and `partitioned`
+
 ## v0.17.1 (2025-11-21)
 
 - Fix bug where `Max-Age=0` did not show up in `SetCookie` header
