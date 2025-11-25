@@ -230,6 +230,9 @@ importers:
       '@remix-run/logger-middleware':
         specifier: workspace:*
         version: link:../../../logger-middleware
+      '@remix-run/response':
+        specifier: workspace:*
+        version: link:../../../response
       '@remix-run/session':
         specifier: workspace:*
         version: link:../../../session

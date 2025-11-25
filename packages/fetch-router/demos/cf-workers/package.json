@@ -7,6 +7,7 @@
     "@remix-run/form-data-middleware": "workspace:*",
     "@remix-run/html-template": "workspace:*",
     "@remix-run/logger-middleware": "workspace:*",
+    "@remix-run/response": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@remix-run/session-middleware": "workspace:*"
   },
