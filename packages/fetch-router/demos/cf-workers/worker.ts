@@ -1,7 +1,7 @@
 import { router } from './router.ts'
 
 export default {
-  async fetch(request, _env, _ctx): Promise<Response> {
+  async fetch(request): Promise<Response> {
     try {
       return await router.fetch(request)
     } catch (error) {

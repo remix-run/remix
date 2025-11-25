@@ -17,6 +17,5 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "types": ["./worker-configuration.d.ts", "node"]
-  },
-  "include": ["worker.ts", "../../global.d.ts"]
+  }
 }
