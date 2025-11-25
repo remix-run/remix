@@ -2,7 +2,7 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v4.1.0 (2025-11-25)
 
 - Replaced `mrmime` dependency with `@remix-run/mime` for MIME type detection
 
