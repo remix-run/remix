@@ -13,7 +13,7 @@ export { RequestContext } from './lib/request-context.ts'
 export { RequestMethods } from './lib/request-methods.ts'
 export type { RequestMethod } from './lib/request-methods.ts'
 
-export type { RequestHandler, InferRequestHandler } from './lib/request-handler.ts'
+export type { RequestHandler, BuildRequestHandler } from './lib/request-handler.ts'
 
 export {
   createResource,

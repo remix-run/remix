@@ -16,10 +16,10 @@ export interface RequestHandler<
 }
 
 /**
- * Infer the request handler type from a route or string.
+ * Build a `RequestHandler` type from a route or string.
  */
 // prettier-ignore
-export type InferRequestHandler<T extends Route | string> =
+export type BuildRequestHandler<T extends Route | string> =
   T extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? RequestHandler<method, Params<pattern>> :
   T extends string ? RequestHandler<'ANY', Params<T>> :
   never
