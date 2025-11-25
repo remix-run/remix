@@ -48,11 +48,11 @@ function colorizeDuration(value: string, duration?: number): string {
   return `${GREEN}${value}${RESET}`
 }
 
-function colorizeContentLength(value: string, length?: number): string {
-  const ONE_MB = 1024 * 1024
-  const ONE_HUNDRED_KB = 100 * 1024
-  const ONE_KB = 1024
+const ONE_MB = 1024 * 1024
+const ONE_HUNDRED_KB = 100 * 1024
+const ONE_KB = 1024
 
+function colorizeContentLength(value: string, length?: number): string {
   if (length === undefined) return value
   if (length >= ONE_MB) return `${RED}${value}${RESET}`
   if (length >= ONE_HUNDRED_KB) return `${YELLOW}${value}${RESET}`
@@ -67,11 +67,13 @@ function colorizeMethod(value: string): string {
     case 'POST':
       return `${CYAN}${value}${RESET}`
     case 'PUT':
-      return `${YELLOW}${value}${RESET}`
     case 'PATCH':
-      return `${MAGENTA}${value}${RESET}`
+      return `${YELLOW}${value}${RESET}`
     case 'DELETE':
       return `${RED}${value}${RESET}`
+    case 'HEAD':
+    case 'OPTIONS':
+      return `${MAGENTA}${value}${RESET}`
     default:
       return value
   }
