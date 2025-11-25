@@ -17,6 +17,9 @@ import { isIterable, quoteEtag } from './utils.ts'
 
 type DateInit = number | Date
 
+/**
+ * Property-based initializer for `SuperHeaders`.
+ */
 interface SuperHeadersPropertyInit {
   /**
    * The [`Accept`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept) header value.
@@ -136,6 +139,9 @@ interface SuperHeadersPropertyInit {
   setCookie?: string | (string | SetCookieInit)[]
 }
 
+/**
+ * Initializer for `SuperHeaders`.
+ */
 export type SuperHeadersInit =
   | Iterable<[string, string]>
   | (SuperHeadersPropertyInit & Record<string, string | HeaderValue>)
@@ -183,6 +189,9 @@ export class SuperHeaders extends Headers {
   #map: Map<string, string | HeaderValue>
   #setCookies: (string | SetCookie)[] = []
 
+  /**
+   * @param init A string, iterable, object, or `Headers` instance to initialize with
+   */
   constructor(init?: string | SuperHeadersInit | Headers) {
     super()
 
@@ -221,6 +230,9 @@ export class SuperHeaders extends Headers {
    * or adds the header if it does not already exist.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/append)
+   *
+   * @param name The name of the header to append to
+   * @param value The value to append
    */
   append(name: string, value: string): void {
     let key = name.toLowerCase()
@@ -236,6 +248,8 @@ export class SuperHeaders extends Headers {
    * Removes a header.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/delete)
+   *
+   * @param name The name of the header to delete
    */
   delete(name: string): void {
     let key = name.toLowerCase()
@@ -250,6 +264,9 @@ export class SuperHeaders extends Headers {
    * Returns a string of all the values for a header, or `null` if the header does not exist.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/get)
+   *
+   * @param name The name of the header to get
+   * @return The header value, or `null` if not found
    */
   get(name: string): string | null {
     let key = name.toLowerCase()
@@ -274,6 +291,8 @@ export class SuperHeaders extends Headers {
    * must be sent on separate lines.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/getSetCookie)
+   *
+   * @return An array of `Set-Cookie` header values
    */
   getSetCookie(): string[] {
     return this.#setCookies.map((v) => (typeof v === 'string' ? v : v.toString()))
@@ -283,6 +302,9 @@ export class SuperHeaders extends Headers {
    * Returns `true` if the header is present in the list of headers.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/has)
+   *
+   * @param name The name of the header to check
+   * @return `true` if the header is present, `false` otherwise
    */
   has(name: string): boolean {
     let key = name.toLowerCase()
@@ -294,6 +316,9 @@ export class SuperHeaders extends Headers {
    * will replace the existing value.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/set)
+   *
+   * @param name The name of the header to set
+   * @param value The value to set
    */
   set(name: string, value: string): void {
     let key = name.toLowerCase()
@@ -308,6 +333,8 @@ export class SuperHeaders extends Headers {
    * Returns an iterator of all header keys (lowercase).
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/keys)
+   *
+   * @return An iterator of header keys
    */
   *keys(): HeadersIterator<string> {
     for (let [key] of this) yield key
@@ -317,6 +344,8 @@ export class SuperHeaders extends Headers {
    * Returns an iterator of all header values.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/values)
+   *
+   * @return An iterator of header values
    */
   *values(): HeadersIterator<string> {
     for (let [, value] of this) yield value
@@ -326,6 +355,8 @@ export class SuperHeaders extends Headers {
    * Returns an iterator of all header key/value pairs.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/entries)
+   *
+   * @return An iterator of `[key, value]` tuples
    */
   *entries(): HeadersIterator<[string, string]> {
     for (let [key] of this.#map) {
@@ -346,6 +377,9 @@ export class SuperHeaders extends Headers {
    * Invokes the `callback` for each header key/value pair.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/forEach)
+   *
+   * @param callback The function to call for each pair
+   * @param thisArg The value to use as `this` when calling the callback
    */
   forEach(callback: (value: string, key: string, parent: Headers) => void, thisArg?: any): void {
     for (let [key, value] of this) {
@@ -355,6 +389,8 @@ export class SuperHeaders extends Headers {
 
   /**
    * Returns a string representation of the headers suitable for use in a HTTP message.
+   *
+   * @return The headers formatted for HTTP
    */
   toString(): string {
     let lines: string[] = []

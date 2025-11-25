@@ -27,6 +27,10 @@ export class RoutePattern<T extends string = string> {
   #parsed: ParseResult
   #compiled: CompileResult | undefined
 
+  /**
+   * @param source The source pattern string or another `RoutePattern` to copy
+   * @param options Options for the pattern
+   */
   constructor(source: T | RoutePattern<T>, options?: RoutePatternOptions) {
     this.source = typeof source === 'string' ? source : source.source
     this.ignoreCase = options?.ignoreCase === true
@@ -36,22 +40,21 @@ export class RoutePattern<T extends string = string> {
   /**
    * Generate a href (URL) for this pattern.
    *
-   * @param params The parameters to use in the href.
-   * @param searchParams The search parameters to use in the href.
-   * @returns The href
+   * @param args The parameters and optional search params
+   * @return The href
    */
   href(...args: HrefBuilderArgs<T>): string {
     return formatHref(this.#parsed, ...(args as any))
   }
 
   /**
-   * Join this pattern with another pattern. This is useful when building a pattern
-   * relative to a base pattern.
+   * Join this pattern with another pattern. This is useful when building a pattern relative to a
+   * base pattern.
    *
    * Note: The returned pattern will use the same options as this pattern.
    *
    * @param input The pattern to join with
-   * @returns The joined pattern
+   * @return The joined pattern
    */
   join<P extends string>(input: P | RoutePattern<P>): RoutePattern<Join<T, P>> {
     let parsedInput = parse(typeof input === 'string' ? input : input.source)
@@ -64,7 +67,7 @@ export class RoutePattern<T extends string = string> {
    * Match a URL against this pattern.
    *
    * @param url The URL to match
-   * @returns The parameters if the URL matches this pattern, `null` otherwise
+   * @return The match result, or `null` if the URL doesn't match
    */
   match(url: URL | string): RouteMatch<T> | null {
     if (typeof url === 'string') url = new URL(url)
@@ -102,7 +105,7 @@ export class RoutePattern<T extends string = string> {
    * Test if a URL matches this pattern.
    *
    * @param url The URL to test
-   * @returns `true` if the URL matches this pattern, `false` otherwise
+   * @return `true` if the URL matches this pattern, `false` otherwise
    */
   test(url: URL | string): boolean {
     return this.match(url) !== null

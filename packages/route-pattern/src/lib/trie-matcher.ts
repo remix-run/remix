@@ -125,23 +125,26 @@ interface ParsedURL {
   searchParsed: ReturnType<typeof parseSearch>
 }
 
+/**
+ * Options for the `TrieMatcher`.
+ */
 export interface TrieMatcherOptions {
   /**
    * The maximum number of traversal states to explore during matching.
    *
-   * This prevents excessive computation in cases with high branching (e.g., many optionals or wildcards).
-   * Increase for more complex routes if you encounter truncated results.
+   * This prevents excessive computation in cases with high branching (e.g., many optionals or
+   * wildcards). Increase for more complex routes if you encounter truncated results.
    *
-   * Default is 10_000.
+   * @default 10_000
    */
   maxTraversalStates?: number
   /**
    * The maximum depth of nested optionals to explore in traversal.
    *
-   * Limits branching in patterns like /api(/v1(/v2(/v3))) to prevent exponential state growth.
-   * Adjust higher for apps with deeply nested optionals; default 5 covers most cases without performance hit.
+   * Limits branching in patterns like `/api(/v1(/v2(/v3)))` to prevent exponential state growth.
+   * Adjust higher for apps with deeply nested optionals.
    *
-   * Default is 5.
+   * @default 5
    */
   maxOptionalDepth?: number
 }
@@ -164,6 +167,9 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   #maxOptionalDepth = 5
   #prefixMatcherCache = new Map<string, (segment: string) => boolean>()
 
+  /**
+   * @param options Options for the matcher
+   */
   constructor(options?: TrieMatcherOptions) {
     this.#pathnameOnlyRoot = this.#createNode()
     this.#originRoot = this.#createOriginNode()
@@ -172,7 +178,10 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   }
 
   /**
-   * Add a pattern to the trie
+   * Add a pattern to the trie.
+   *
+   * @param pattern The pattern to add
+   * @param node The data to associate with the pattern
    */
   add(pattern: string | RoutePattern, node: T): void {
     let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
@@ -285,7 +294,10 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   }
 
   /**
-   * Find the best match for a URL
+   * Find the best match for a URL.
+   *
+   * @param url The URL to match
+   * @return The match result, or `null` if no match was found
    */
   match(url: string | URL): MatchResult<T> | null {
     let urlObj = typeof url === 'string' ? new URL(url) : url
@@ -326,7 +338,10 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   }
 
   /**
-   * Find all matches for a URL
+   * Find all matches for a URL.
+   *
+   * @param url The URL to match
+   * @return A generator that yields all matches
    */
   *matchAll(url: string | URL): Generator<MatchResult<T>> {
     let urlObj = typeof url === 'string' ? new URL(url) : url
@@ -369,7 +384,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   }
 
   /**
-   * Number of patterns in the trie
+   * The number of patterns in the trie.
    */
   get size(): number {
     return this.#patternCount

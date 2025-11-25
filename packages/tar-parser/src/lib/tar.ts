@@ -12,13 +12,22 @@ import {
 
 const TarBlockSize = 512
 
+/**
+ * An error thrown when parsing a tar archive fails.
+ */
 export class TarParseError extends Error {
+  /**
+   * @param message The error message
+   */
   constructor(message: string) {
     super(message)
     this.name = 'TarParseError'
   }
 }
 
+/**
+ * The parsed header of a tar entry.
+ */
 export interface TarHeader {
   name: string
   mode: number | null
@@ -57,15 +66,22 @@ const UstarVersion = new Uint8Array([ZeroOffset, ZeroOffset]) // "00"
 const GnuMagic = new Uint8Array([0x75, 0x73, 0x74, 0x61, 0x72, 0x20]) // "ustar "
 const GnuVersion = new Uint8Array([0x20, 0x00]) // " \0"
 
+/**
+ * Options for parsing tar headers.
+ */
 export interface ParseTarHeaderOptions {
   /**
-   * Set false to disallow unknown header formats. Defaults to true.
+   * Set `false` to disallow unknown header formats.
+   *
+   * @default true
    */
   allowUnknownFormat?: boolean
   /**
-   * The label (encoding) for filenames. Defaults to 'utf-8'.
+   * The label (encoding) for filenames.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Encoding_API/Encodings)
+   *
+   * @default 'utf-8'
    */
   filenameEncoding?: string
 }
@@ -75,7 +91,7 @@ export interface ParseTarHeaderOptions {
  *
  * @param block The tar header block
  * @param options Options that control how the header is parsed
- * @returns The parsed tar header
+ * @return The parsed tar header
  */
 export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOptions): TarHeader {
   if (block.length !== TarBlockSize) {
@@ -153,6 +169,9 @@ type TarArchiveSource =
 
 type TarEntryHandler = (entry: TarEntry) => void | Promise<void>
 
+/**
+ * Options for parsing a tar archive.
+ */
 export type ParseTarOptions = ParseTarHeaderOptions
 
 /**
@@ -168,7 +187,7 @@ export type ParseTarOptions = ParseTarHeaderOptions
  *
  * @param archive The tar archive source data
  * @param handler A function to call for each entry in the archive
- * @returns A promise that resolves when the parse is finished
+ * @return A promise that resolves when the parse is finished
  */
 export async function parseTar(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void>
 export async function parseTar(
@@ -192,6 +211,9 @@ export async function parseTar(
   await parser.parse(archive, handler!)
 }
 
+/**
+ * Options for configuring a `TarParser`.
+ */
 export type TarParserOptions = ParseTarHeaderOptions
 
 /**
@@ -223,7 +245,7 @@ export class TarParser {
    *
    * @param archive The tar archive source data
    * @param handler A function to call for each entry in the archive
-   * @returns A promise that resolves when the parse is finished
+   * @return A promise that resolves when the parse is finished
    */
   async parse(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void> {
     this.#reset()
@@ -436,7 +458,7 @@ export class TarEntry {
 
   /**
    * @param header The header info for this entry
-   * @param body The entry's content as a stream of `Uint8Array` chunks
+   * @param body The entry's content as a stream
    */
   constructor(header: TarHeader, body: ReadableStream<Uint8Array>) {
     this.#header = header
@@ -445,6 +467,8 @@ export class TarEntry {
 
   /**
    * The content of this entry as an [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer).
+   *
+   * @return A promise that resolves to an `ArrayBuffer`
    */
   async arrayBuffer(): Promise<ArrayBuffer> {
     return (await this.bytes()).buffer as ArrayBuffer
@@ -466,6 +490,8 @@ export class TarEntry {
 
   /**
    * The content of this entry buffered into a single typed array.
+   *
+   * @return A promise that resolves to a `Uint8Array`
    */
   async bytes(): Promise<Uint8Array> {
     if (this.#bodyUsed) {
@@ -509,6 +535,8 @@ export class TarEntry {
    * The content of this entry as a string.
    *
    * Note: Do not use this for binary data, use `await entry.bytes()` or stream `entry.body` directly instead.
+   *
+   * @return A promise that resolves to the entry's content as a string
    */
   async text(): Promise<string> {
     return new TextDecoder().decode(await this.bytes())

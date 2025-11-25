@@ -12,6 +12,9 @@ import { readStream } from './read-stream.ts'
  * The base class for errors thrown by the multipart parser.
  */
 export class MultipartParseError extends Error {
+  /**
+   * @param message The error message
+   */
   constructor(message: string) {
     super(message)
     this.name = 'MultipartParseError'
@@ -22,6 +25,9 @@ export class MultipartParseError extends Error {
  * An error thrown when the maximum allowed size of a header is exceeded.
  */
 export class MaxHeaderSizeExceededError extends MultipartParseError {
+  /**
+   * @param maxHeaderSize The maximum header size that was exceeded
+   */
   constructor(maxHeaderSize: number) {
     super(`Multipart header size exceeds maximum allowed size of ${maxHeaderSize} bytes`)
     this.name = 'MaxHeaderSizeExceededError'
@@ -32,12 +38,18 @@ export class MaxHeaderSizeExceededError extends MultipartParseError {
  * An error thrown when the maximum allowed size of a file is exceeded.
  */
 export class MaxFileSizeExceededError extends MultipartParseError {
+  /**
+   * @param maxFileSize The maximum file size that was exceeded
+   */
   constructor(maxFileSize: number) {
     super(`File size exceeds maximum allowed size of ${maxFileSize} bytes`)
     this.name = 'MaxFileSizeExceededError'
   }
 }
 
+/**
+ * Options for parsing a multipart message.
+ */
 export interface ParseMultipartOptions {
   /**
    * The boundary string used to separate parts in the multipart message,
@@ -48,14 +60,14 @@ export interface ParseMultipartOptions {
    * The maximum allowed size of a header in bytes. If an individual part's header
    * exceeds this size, a `MaxHeaderSizeExceededError` will be thrown.
    *
-   * Default: 8 KiB
+   * @default 8192 (8 KiB)
    */
   maxHeaderSize?: number
   /**
    * The maximum allowed size of a file in bytes. If an individual part's content
    * exceeds this size, a `MaxFileSizeExceededError` will be thrown.
    *
-   * Default: 2 MiB
+   * @default 2097152 (2 MiB)
    */
   maxFileSize?: number
 }
@@ -124,6 +136,9 @@ export async function* parseMultipartStream(
   parser.finish()
 }
 
+/**
+ * Options for configuring a `MultipartParser`.
+ */
 export type MultipartParserOptions = Omit<ParseMultipartOptions, 'boundary'>
 
 const MultipartParserStateStart = 0
@@ -156,6 +171,10 @@ export class MultipartParser {
   #currentPart: MultipartPart | null = null
   #contentLength = 0
 
+  /**
+   * @param boundary The boundary string used to separate parts
+   * @param options Options for the parser
+   */
   constructor(boundary: string, options?: MultipartParserOptions) {
     this.boundary = boundary
     this.maxHeaderSize = options?.maxHeaderSize ?? 8 * oneKb
@@ -325,6 +344,10 @@ export class MultipartPart {
   #header: Uint8Array
   #headers?: Headers
 
+  /**
+   * @param header The raw header bytes
+   * @param content The content chunks
+   */
   constructor(header: Uint8Array, content: Uint8Array[]) {
     this.#header = header
     this.content = content

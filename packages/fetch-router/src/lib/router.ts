@@ -14,15 +14,20 @@ type MatchData = {
   middleware: Middleware<any>[] | undefined
 }
 
+/**
+ * Options for creating a router.
+ */
 export interface RouterOptions {
   /**
    * The default request handler that runs when no route matches.
-   * Default is a 404 "Not Found" response.
+   *
+   * @default A 404 "Not Found" response
    */
   defaultHandler?: RequestHandler
   /**
    * The matcher to use for matching routes.
-   * Default is a `new RegExpMatcher()`.
+   *
+   * @default `new RegExpMatcher()`
    */
   matcher?: Matcher<MatchData>
   /**
@@ -38,9 +43,10 @@ export interface RouterOptions {
 export interface Router {
   /**
    * Fetch a response from the router.
+   *
    * @param input The request input to fetch
    * @param init The request init options
-   * @returns The response from the route that matched the request
+   * @return The response from the route that matched the request
    */
   fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>
   /**
@@ -49,6 +55,7 @@ export interface Router {
   readonly size: number
   /**
    * Add a route to the router.
+   *
    * @param method The request method to match
    * @param pattern The pattern to match
    * @param handler The request handler to invoke when the route matches
@@ -60,6 +67,7 @@ export interface Router {
   ): void
   /**
    * Map a route map (or route/pattern) to request handler(s).
+   *
    * @param route The route(s)/pattern to match
    * @param handler The request handler(s) to invoke when the routes match
    */
@@ -86,7 +94,8 @@ export interface Router {
     never,
   ): void
   /**
-   * Map a GET route/pattern to a request handler.
+   * Map a `GET` route/pattern to a request handler.
+   *
    * @param route The route/pattern to match
    * @param handler The request handler to invoke when the route matches
    */
@@ -95,7 +104,8 @@ export interface Router {
     handler: RouteHandler<'GET', pattern>,
   ): void
   /**
-   * Map a HEAD route/pattern to a request handler.
+   * Map a `HEAD` route/pattern to a request handler.
+   *
    * @param route The route/pattern to match
    * @param handler The request handler to invoke when the route matches
    */
@@ -104,7 +114,8 @@ export interface Router {
     handler: RouteHandler<'HEAD', pattern>,
   ): void
   /**
-   * Map a POST route/pattern to a request handler.
+   * Map a `POST` route/pattern to a request handler.
+   *
    * @param route The route/pattern to match
    * @param handler The request handler to invoke when the route matches
    */
@@ -113,7 +124,8 @@ export interface Router {
     handler: RouteHandler<'POST', pattern>,
   ): void
   /**
-   * Map a PUT route/pattern to a request handler.
+   * Map a `PUT` route/pattern to a request handler.
+   *
    * @param route The route/pattern to match
    * @param handler The request handler to invoke when the route matches
    */
@@ -122,7 +134,8 @@ export interface Router {
     handler: RouteHandler<'PUT', pattern>,
   ): void
   /**
-   * Map a PATCH route/pattern to a request handler.
+   * Map a `PATCH` route/pattern to a request handler.
+   *
    * @param route The route/pattern to match
    * @param handler The request handler to invoke when the route matches
    */
@@ -131,7 +144,8 @@ export interface Router {
     handler: RouteHandler<'PATCH', pattern>,
   ): void
   /**
-   * Map a DELETE route/pattern to a request handler.
+   * Map a `DELETE` route/pattern to a request handler.
+   *
    * @param route The route/pattern to match
    * @param handler The request handler to invoke when the route matches
    */
@@ -140,7 +154,8 @@ export interface Router {
     handler: RouteHandler<'DELETE', pattern>,
   ): void
   /**
-   * Map a OPTIONS route/pattern to a request handler.
+   * Map an `OPTIONS` route/pattern to a request handler.
+   *
    * @param route The route/pattern to match
    * @param handler The request handler to invoke when the route matches
    */
@@ -156,6 +171,9 @@ function noMatchHandler({ url }: RequestContext): Response {
 
 /**
  * Create a new router.
+ *
+ * @param options Options to configure the router
+ * @return The new router
  */
 export function createRouter(options?: RouterOptions): Router {
   let defaultHandler = options?.defaultHandler ?? noMatchHandler

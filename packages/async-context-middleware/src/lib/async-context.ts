@@ -7,7 +7,8 @@ const storage = new AsyncLocalStorage<RequestContext>()
 /**
  * Middleware that stores the request context in `AsyncLocalStorage` so it is available
  * to all functions in the same async execution context.
- * @returns A middleware function that stores the request context in AsyncLocalStorage
+ *
+ * @return A middleware function that stores the request context in `AsyncLocalStorage`
  */
 export function asyncContext(): Middleware {
   return (context, next) => storage.run(context, next)
@@ -15,7 +16,8 @@ export function asyncContext(): Middleware {
 
 /**
  * Get the request context from `AsyncLocalStorage`.
- * @returns The request context
+ *
+ * @return The request context
  */
 export function getContext(): RequestContext {
   let context = storage.getStore()

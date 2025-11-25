@@ -3,9 +3,18 @@ import { parse, type ParseResult, type Token } from './parse.ts'
 import type { RoutePattern } from './route-pattern.ts'
 import type { Variant } from './variant.ts'
 
+/**
+ * An error thrown when a required parameter is missing when building an href.
+ */
 export class MissingParamError extends Error {
+  /**
+   * The name of the missing parameter.
+   */
   readonly paramName: string
 
+  /**
+   * @param paramName The name of the missing parameter
+   */
   constructor(paramName: string) {
     super(`Missing required parameter: ${paramName}`)
     this.name = 'MissingParamError'
@@ -13,6 +22,11 @@ export class MissingParamError extends Error {
   }
 }
 
+/**
+ * Create a reusable href builder function.
+ *
+ * @return A function that builds hrefs from patterns and parameters
+ */
 export function createHrefBuilder<T extends string | RoutePattern = string>(): HrefBuilder<T> {
   return (pattern: string | RoutePattern, ...args: any) =>
     formatHref(parse(typeof pattern === 'string' ? pattern : pattern.source), ...args)
@@ -101,7 +115,15 @@ function resolveTokens(tokens: Token[], sep: string, params: Record<string, any>
   return str
 }
 
+/**
+ * A function that builds hrefs from patterns and parameters.
+ */
 export interface HrefBuilder<T extends string | RoutePattern = string> {
+  /**
+   * @param pattern The pattern to build an href for
+   * @param args The parameters and optional search params
+   * @return The built href
+   */
   <P extends string extends T ? string : SourceOf<T> | Variant<SourceOf<T>>>(
     pattern: P | RoutePattern<P>,
     ...args: HrefBuilderArgs<P>
@@ -114,6 +136,9 @@ type SourceOf<T> =
   T extends RoutePattern<infer S extends string> ? S :
   never
 
+/**
+ * The arguments for a `href()` function.
+ */
 // prettier-ignore
 export type HrefBuilderArgs<T extends string> =
   [RequiredParams<T>] extends [never] ?

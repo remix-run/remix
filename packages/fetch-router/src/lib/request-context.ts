@@ -16,6 +16,9 @@ export class RequestContext<
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
 > {
+  /**
+   * @param request The incoming request
+   */
   constructor(request: Request) {
     this.headers = new SuperHeaders(request.headers)
     this.method = request.method.toUpperCase() as RequestMethod
@@ -27,18 +30,17 @@ export class RequestContext<
 
   /**
    * A map of files that were uploaded in the request.
+   *
+   * Note: For requests without a body (e.g. `GET` or `HEAD`), this map will be empty.
    */
-  get files(): Map<string, File> | null {
-    let formData = this.formData
-    if (formData == null) {
-      return null
-    }
-
+  get files(): Map<string, File> {
     let files: Map<string, File> = new Map()
 
-    for (let [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        files.set(key, value)
+    if (this.#formData != null) {
+      for (let [key, value] of this.#formData.entries()) {
+        if (value instanceof File) {
+          files.set(key, value)
+        }
       }
     }
 
@@ -73,9 +75,9 @@ export class RequestContext<
   headers: SuperHeaders
 
   /**
-   * The request method. This may differ from `request.method` if the request body contained a
-   * method override field (e.g. `_method=DELETE`), allowing HTML forms to simulate RESTful API
-   * request methods like `PUT` and `DELETE`.
+   * The request method. This may differ from `request.method` when using the `methodOverride`
+   * middleware, which allows HTML forms to simulate RESTful API request methods like `PUT` and
+   * `DELETE` using a hidden input field.
    */
   method: RequestMethod
 
@@ -86,6 +88,13 @@ export class RequestContext<
 
   /**
    * The original request that was dispatched to the router.
+   *
+   * Note: Various properties of the original request may not be available or may have been
+   * modified by middleware. For example, the request's body may already have been consumed by
+   * the `formData` middleware (available as `context.formData`), or its method may have been
+   * overridden by the `methodOverride` middleware (available as `context.method`). You should
+   * always default to using properties of the `context` object instead of the original request.
+   * However, the original request is made available in case you need it for some edge case.
    */
   request: Request
 
@@ -124,9 +133,6 @@ export class RequestContext<
 
   /**
    * The URL that was matched by the route.
-   *
-   * Note: This may be different from `request.url` if the request was routed to a sub-router,
-   * in which case the sub-router's mount path is stripped from the beginning of the pathname.
    */
   url: URL
 }

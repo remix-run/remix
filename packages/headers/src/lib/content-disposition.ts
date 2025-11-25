@@ -1,6 +1,9 @@
 import { type HeaderValue } from './header-value.ts'
 import { parseParams, quote } from './param-values.ts'
 
+/**
+ * Initializer for a `Content-Disposition` header value.
+ */
 export interface ContentDispositionInit {
   /**
    * For file uploads, the name of the file that the user selected.
@@ -34,6 +37,9 @@ export class ContentDisposition implements HeaderValue, ContentDispositionInit {
   name?: string
   type?: string
 
+  /**
+   * @param init A string or object to initialize the header
+   */
   constructor(init?: string | ContentDispositionInit) {
     if (init) {
       if (typeof init === 'string') {
@@ -79,6 +85,11 @@ export class ContentDisposition implements HeaderValue, ContentDispositionInit {
     return this.filename
   }
 
+  /**
+   * Returns the string representation of the header value.
+   *
+   * @return The header value as a string
+   */
   toString(): string {
     if (!this.type) {
       return ''

@@ -85,6 +85,9 @@ function joinSearchConstraints(
   return merged
 }
 
+/**
+ * Join two pattern strings together.
+ */
 export type Join<A extends string, B extends string> = _Join<Parse<A>, Parse<B>>
 
 type _Join<A extends ParsedPattern, B extends ParsedPattern> = Stringify<{

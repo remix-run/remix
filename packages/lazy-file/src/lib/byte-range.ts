@@ -1,3 +1,6 @@
+/**
+ * A range of bytes in a buffer.
+ */
 export interface ByteRange {
   /**
    * The start index of the range (inclusive). If this number is negative, it represents an offset
@@ -13,6 +16,10 @@ export interface ByteRange {
 
 /**
  * Returns the length of the byte range in a buffer of the given `size`.
+ *
+ * @param range The byte range
+ * @param size The total size of the buffer
+ * @return The length of the byte range
  */
 export function getByteLength(range: ByteRange, size: number): number {
   let [start, end] = getIndexes(range, size)
@@ -21,6 +28,10 @@ export function getByteLength(range: ByteRange, size: number): number {
 
 /**
  * Resolves a byte range to absolute indexes in a buffer of the given `size`.
+ *
+ * @param range The byte range
+ * @param size The total size of the buffer
+ * @return A tuple of `[start, end]` indexes
  */
 export function getIndexes(range: ByteRange, size: number): [number, number] {
   let start = Math.min(Math.max(0, range.start < 0 ? size + range.start : range.start), size)

@@ -1,5 +1,9 @@
 // Safe HTML branding
 const kSafeHtml: unique symbol = Symbol('safeHtml')
+
+/**
+ * A string that is safe to render as HTML without escaping.
+ */
 export type SafeHtml = String & { readonly [kSafeHtml]: true }
 
 function createSafeHtml(value: string): SafeHtml {
@@ -8,6 +12,12 @@ function createSafeHtml(value: string): SafeHtml {
   return s
 }
 
+/**
+ * Checks if a value is a `SafeHtml` string.
+ *
+ * @param value The value to check
+ * @return `true` if the value is a `SafeHtml` string
+ */
 export function isSafeHtml(value: unknown): value is SafeHtml {
   return typeof value === 'object' && value != null && (value as any)[kSafeHtml] === true
 }
@@ -75,7 +85,7 @@ type SafeHtmlHelper = {
    *
    * @param strings The template strings
    * @param values The values to interpolate
-   * @returns A SafeHtml value
+   * @return A `SafeHtml` value
    */
   (strings: TemplateStringsArray, ...values: Interpolation[]): SafeHtml
   /**
@@ -86,7 +96,7 @@ type SafeHtmlHelper = {
    *
    * @param strings The template strings
    * @param values The values to interpolate
-   * @returns A SafeHtml value
+   * @return A `SafeHtml` value
    */
   raw(strings: TemplateStringsArray, ...values: Interpolation[]): SafeHtml
 }

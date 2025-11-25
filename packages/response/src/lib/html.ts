@@ -8,9 +8,9 @@ type HtmlBody = string | SafeHtml | Blob | BufferSource | ReadableStream<Uint8Ar
  * Creates an HTML [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
  * that ensures the response has a valid DOCTYPE and appropriate `Content-Type` header.
  *
- * @param body The body of the response.
- * @param init (optional) The `ResponseInit` object for the response.
- * @returns A `Response` object with a HTML body and the appropriate `Content-Type` header.
+ * @param body The body of the response
+ * @param init The `ResponseInit` object for the response
+ * @return A `Response` object with a HTML body and the appropriate `Content-Type` header
  */
 export function createHtmlResponse(body: HtmlBody, init?: ResponseInit): Response {
   let payload: BodyInit = ensureDoctype(body)

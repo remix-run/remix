@@ -14,6 +14,9 @@ import { quoteEtag } from './utils.ts'
 export class IfRange implements HeaderValue {
   value: string = ''
 
+  /**
+   * @param init A string or Date to initialize the header
+   */
   constructor(init?: string | Date) {
     if (init) {
       if (typeof init === 'string') {
@@ -38,7 +41,7 @@ export class IfRange implements HeaderValue {
    * Weak entity tags (prefixed with `W/`) are never considered a match.
    *
    * @param resource The current resource state to compare against
-   * @returns `true` if the condition is satisfied, `false` otherwise
+   * @return `true` if the condition is satisfied, `false` otherwise
    *
    * @example
    * ```ts
@@ -78,6 +81,11 @@ export class IfRange implements HeaderValue {
     return false
   }
 
+  /**
+   * Returns the string representation of the header value.
+   *
+   * @return The header value as a string
+   */
   toString() {
     return this.value
   }

@@ -45,6 +45,9 @@ export class FileUpload extends File {
 
 /**
  * A function used for handling file uploads.
+ *
+ * @param file The uploaded file
+ * @return A value to store in `FormData`, or `void`/`null` to skip
  */
 export interface FileUploadHandler {
   (file: FileUpload): void | null | string | Blob | Promise<void | null | string | Blob>
@@ -55,12 +58,15 @@ async function defaultFileUploadHandler(file: FileUpload): Promise<File> {
   return file
 }
 
+/**
+ * Options for parsing form data.
+ */
 export interface ParseFormDataOptions extends MultipartParserOptions {
   /**
-   * The maximum number of files that can be uploaded in a single request.
-   * If this limit is exceeded, a `MaxFilesExceededError` will be thrown.
+   * The maximum number of files that can be uploaded in a single request. If this limit is
+   * exceeded, a `MaxFilesExceededError` will be thrown.
    *
-   * Default: 20
+   * @default 20
    */
   maxFiles?: number
 }
