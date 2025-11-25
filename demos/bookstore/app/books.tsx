@@ -1,8 +1,7 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
 import { Frame } from '@remix-run/dom'
 
-import { routes } from '../routes.ts'
-
+import { routes } from './routes.ts'
 import { getAllBooks, getBookBySlug, getBooksByGenre, getAvailableGenres } from './models/books.ts'
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'

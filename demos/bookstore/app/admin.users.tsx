@@ -1,7 +1,7 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
 import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
 
-import { routes } from '../routes.ts'
+import { routes } from './routes.ts'
 import { getAllUsers, getUserById, updateUser, deleteUser } from './models/users.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'

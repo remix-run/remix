@@ -1,6 +1,6 @@
 import type { Remix } from '@remix-run/dom'
 
-import { routes } from '../routes.ts'
+import { routes } from './routes.ts'
 import { getCurrentUserSafely } from './utils/context.ts'
 
 export function Document({

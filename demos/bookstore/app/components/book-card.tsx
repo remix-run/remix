@@ -1,5 +1,4 @@
-import { routes } from '../../routes.ts'
-
+import { routes } from '../routes.ts'
 import { CartButton } from '../assets/cart-button.tsx'
 import type { Book } from '../models/books.ts'
 

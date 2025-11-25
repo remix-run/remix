@@ -1,7 +1,7 @@
 import type { Middleware, Route } from '@remix-run/fetch-router'
 import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
 
-import { routes } from '../../routes.ts'
+import { routes } from '../routes.ts'
 import { getUserById } from '../models/users.ts'
 import { setCurrentUser } from '../utils/context.ts'
 

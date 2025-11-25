@@ -1,6 +1,6 @@
 import type { RouteHandlers } from '@remix-run/fetch-router'
 
-import { routes } from '../routes.ts'
+import { routes } from './routes.ts'
 import adminBooksHandlers from './admin.books.tsx'
 import adminOrdersHandlers from './admin.orders.tsx'
 import adminUsersHandlers from './admin.users.tsx'
