@@ -18,6 +18,10 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   import { createFileResponse } from '@remix-run/response/file'
   import { createHtmlResponse } from '@remix-run/response/html'
   import { createRedirectResponse } from '@remix-run/response/redirect'
+
+  createFileResponse(file, request)
+  createHtmlResponse(body)
+  createRedirectResponse(location, status)
   ```
 
 - BREAKING CHANGE: Rename `InferRequestHandler` => `BuildRequestHandler`
