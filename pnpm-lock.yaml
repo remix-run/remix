@@ -114,10 +114,16 @@ importers:
       mrmime:
         specifier: ^2.0.0
         version: 2.0.0
+      semver:
+        specifier: ^7.6.3
+        version: 7.6.3
     devDependencies:
       '@types/node':
         specifier: ^24.6.0
         version: 24.6.0
+      '@types/semver':
+        specifier: ^7.5.8
+        version: 7.5.8
       tsx:
         specifier: ^4.20.6
         version: 4.20.6

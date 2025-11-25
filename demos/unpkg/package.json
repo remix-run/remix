@@ -10,10 +10,12 @@
     "@remix-run/node-fetch-server": "workspace:*",
     "@remix-run/response": "workspace:*",
     "@remix-run/tar-parser": "workspace:*",
-    "mrmime": "^2.0.0"
+    "mrmime": "^2.0.0",
+    "semver": "^7.6.3"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
+    "@types/semver": "^7.5.8",
     "tsx": "^4.20.6"
   },
   "scripts": {

@@ -1,5 +1,6 @@
 import * as zlib from 'node:zlib'
 import { parseTar, type TarEntry } from '@remix-run/tar-parser'
+import * as semver from 'semver'
 
 import { tarballCache, getTarballCacheKey } from './cache.ts'
 
@@ -53,10 +54,18 @@ export async function fetchPackageMetadata(packageName: string): Promise<Package
 }
 
 /**
+ * Check if a version specifier is fully resolved (an exact version that exists).
+ */
+export function isFullyResolvedVersion(metadata: PackageMetadata, specifier: string): boolean {
+  return specifier in metadata.versions
+}
+
+/**
  * Resolve a version specifier to a concrete version.
  * Supports:
  * - Exact versions: "1.2.3"
  * - Partial versions: "1", "1.2" -> matches highest in range
+ * - Semver ranges: "^1.2.0", "~1.2.0", ">=1.0.0 <2.0.0"
  * - Dist tags: "latest", "beta"
  */
 export function resolveVersion(metadata: PackageMetadata, specifier: string): string {
@@ -70,33 +79,27 @@ export function resolveVersion(metadata: PackageMetadata, specifier: string): st
     return specifier
   }
 
-  // Try to match as a partial version (e.g., "18" matches "18.3.1")
   let versions = Object.keys(metadata.versions)
-  let matching = versions.filter((v) => v.startsWith(specifier + '.') || v === specifier)
 
-  if (matching.length > 0) {
-    // Sort by semver and return highest
-    matching.sort(compareSemver)
-    return matching[matching.length - 1]
+  // Try to match as a semver range (^1.2.0, ~1.0.0, >=1.0.0, etc.)
+  if (semver.validRange(specifier)) {
+    let match = semver.maxSatisfying(versions, specifier)
+    if (match) {
+      return match
+    }
+  }
+
+  // Try to match as a partial version (e.g., "18" matches "18.3.1")
+  // Convert partial version to a range: "18" -> "18.x", "18.2" -> "18.2.x"
+  let partialRange = specifier + '.x'
+  if (semver.validRange(partialRange)) {
+    let match = semver.maxSatisfying(versions, partialRange)
+    if (match) {
+      return match
+    }
   }
 
   throw new VersionNotFoundError(metadata.name, specifier)
-}
-
-/**
- * Compare two semver strings for sorting.
- */
-function compareSemver(a: string, b: string): number {
-  let partsA = a.split('.').map((p) => parseInt(p, 10) || 0)
-  let partsB = b.split('.').map((p) => parseInt(p, 10) || 0)
-
-  for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-    let numA = partsA[i] || 0
-    let numB = partsB[i] || 0
-    if (numA !== numB) return numA - numB
-  }
-
-  return 0
 }
 
 /**
@@ -282,13 +285,16 @@ export function getFilesAtPath(files: Map<string, PackageFile>, dirPath: string)
  *   "lodash@4/package.json" -> { name: "lodash", version: "4", filePath: "package.json" }
  *   "@remix-run/cookie" -> { name: "@remix-run/cookie", version: "latest", filePath: "" }
  *   "@remix-run/cookie@1.0.0/src/index.ts" -> { name: "@remix-run/cookie", version: "1.0.0", filePath: "src/index.ts" }
+ *   "react@^18.2" -> { name: "react", version: "^18.2", filePath: "" } (semver range)
  */
 export function parsePackagePath(path: string): {
   name: string
   version: string
   filePath: string
 } {
-  let parts = path.split('/')
+  // Decode URL-encoded characters (e.g., %5E -> ^, %7E -> ~)
+  let decodedPath = decodeURIComponent(path)
+  let parts = decodedPath.split('/')
   let name: string
   let rest: string[]
 
