@@ -155,6 +155,36 @@ describe('formData middleware', () => {
     assert.deepEqual(await response.json(), {})
   })
 
+  it('sets context.formData to an empty FormData when parse errors are suppressed', async () => {
+    let router = createRouter({
+      middleware: [formData({ suppressErrors: true })],
+    })
+
+    router.post('/', (context) => {
+      // Explicitly check that formData is defined and is a FormData instance
+      return Response.json({
+        isDefined: context.formData !== undefined,
+        isFormData: context.formData instanceof FormData,
+        isEmpty: context.formData.entries().next().done,
+      })
+    })
+
+    let response = await router.fetch('https://remix.run/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      body: 'invalid',
+    })
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {
+      isDefined: true,
+      isFormData: true,
+      isEmpty: true,
+    })
+  })
+
   it('invokes a custom `uploadHandler` for file uploads', async () => {
     let uploadHandler = mock.fn<FileUploadHandler>()
 

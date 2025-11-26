@@ -4,7 +4,7 @@ import {
   type FileUploadHandler,
   type ParseFormDataOptions,
 } from '@remix-run/form-data-parser'
-import type { Middleware, RequestContext } from '@remix-run/fetch-router'
+import type { Middleware } from '@remix-run/fetch-router'
 
 /**
  * Options for the `formData` middleware.
@@ -34,21 +34,18 @@ export function formData(options?: FormDataOptions): Middleware {
   let suppressErrors = options?.suppressErrors ?? false
   let uploadHandler = options?.uploadHandler
 
-  return async (context: RequestContext) => {
-    // Get the method from context to respect any method override middleware
-    let method = context.method
-
-    if (method === 'GET' || method === 'HEAD') {
+  return async (context) => {
+    if (context.method === 'GET' || context.method === 'HEAD') {
       return
     }
 
     let contentType = context.headers.get('Content-Type')
-
     if (
       contentType == null ||
       (!contentType.startsWith('multipart/') &&
         !contentType.startsWith('application/x-www-form-urlencoded'))
     ) {
+      context.formData = new FormData()
       return
     }
 
@@ -58,6 +55,8 @@ export function formData(options?: FormDataOptions): Middleware {
       if (!suppressErrors || !(error instanceof FormDataParseError)) {
         throw error
       }
+
+      context.formData = new FormData()
     }
   }
 }
