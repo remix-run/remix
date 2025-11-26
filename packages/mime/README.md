@@ -39,7 +39,7 @@ isCompressibleMimeType('image/png') // false
 isCompressibleMimeType('video/mp4') // false
 ```
 
-Fpr convenience, the function also accepts a full Content-Type header value:
+For convenience, the function also accepts a full Content-Type header value:
 
 ```ts
 import { isCompressibleMimeType } from '@remix-run/mime'
