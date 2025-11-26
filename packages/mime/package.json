@@ -43,7 +43,7 @@
     "codegen": "node --disable-warning=ExperimentalWarning ./scripts/codegen.js",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts' './scripts/**/*.test.ts'",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "keywords": [
     "mime",

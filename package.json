@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "pnpm@10.22.0",
   "dependencies": {
+    "@typescript/native-preview": "7.0.0-dev.20251125.1",
     "eslint": "^9.33.0",
     "eslint-plugin-prefer-let": "^4.0.0",
     "prettier": "^3.3.3",
