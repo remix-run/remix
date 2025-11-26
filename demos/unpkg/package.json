@@ -16,12 +16,13 @@
   "devDependencies": {
     "@types/node": "^24.6.0",
     "@types/semver": "^7.5.8",
+    "@typescript/native-preview": "7.0.0-dev.20251125.1",
     "tsx": "^4.20.6"
   },
   "scripts": {
     "dev": "tsx watch server.ts",
     "start": "tsx server.ts",
     "test": "tsx --test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   }
 }

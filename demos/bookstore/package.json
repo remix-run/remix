@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
+    "@typescript/native-preview": "7.0.0-dev.20251125.1",
     "esbuild": "^0.25.10",
     "tsx": "^4.20.6"
   },
@@ -31,6 +32,6 @@
     "dev:browser": "esbuild app/assets/*.tsx --outbase=app/assets --outdir=public/assets --bundle --minify --splitting --format=esm --entry-names='[dir]/[name]' --chunk-names='chunks/[name]-[hash]' --sourcemap --watch",
     "start": "tsx server.ts",
     "test": "NODE_ENV=test tsx --test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   }
 }

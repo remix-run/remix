@@ -19,7 +19,7 @@
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev --port 44100",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "typegen": "wrangler types",
     "db:migrate": "wrangler d1 migrations apply fetch-router-blog"
   }

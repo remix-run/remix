@@ -20,6 +20,6 @@
   "scripts": {
     "dev": "node --watch server.ts",
     "start": "node server.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   }
 }

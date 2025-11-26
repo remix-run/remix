@@ -33,16 +33,17 @@
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
+    "@typescript/native-preview": "7.0.0-dev.20251125.1",
     "mime-db": "^1.53.0",
     "typescript": "^5.9.3"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "codegen": "node --disable-warning=ExperimentalWarning ./scripts/codegen.js",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts' './scripts/**/*.test.ts'",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "keywords": [
     "mime",
