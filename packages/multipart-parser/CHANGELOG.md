@@ -2,7 +2,7 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.14.0 (2025-11-26)
 
 - Move `@remix-run/headers` to `peerDependencies`
 
