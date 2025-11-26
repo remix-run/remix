@@ -30,7 +30,7 @@ let storage = createCookieSessionStorage()
 // the request cookie, modified, and the new cookie is returned in the response.
 async function handleRequest(cookie: string | null) {
   let session = await storage.read(cookie)
-  session.set('count', (session.get('count') ?? 0) + 1)
+  session.set('count', Number(session.get('count') ?? 0) + 1)
   return {
     session, // The session data from this "request"
     cookie: await storage.save(session), // The cookie to use on the next request
