@@ -2,7 +2,7 @@
 
 This is the changelog for [`fs`](https://github.com/remix-run/remix/tree/main/packages/fs). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.3.0 (2025-11-26)
 
 - Move `@remix-run/lazy-file` and `@remix-run/mime` to `peerDependencies`
 
