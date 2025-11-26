@@ -17,15 +17,16 @@
   },
   "scripts": {
     "build": "pnpm -r build",
+    "changes:preview": "node ./scripts/changes-preview.js",
+    "changes:validate": "node ./scripts/changes-validate.js",
+    "changes:version": "node ./scripts/changes-version.js",
     "clean": "git clean -fdX -e '!/.env' .",
     "codegen": "pnpm -r run codegen",
     "create-github-release": "node --env-file .env ./scripts/create-github-release.js",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
-    "tag-release": "node ./scripts/tag-release.js",
     "test": "pnpm --parallel run test",
-    "typecheck": "pnpm -r typecheck",
-    "view-changes": "node ./scripts/view-changes.js"
+    "typecheck": "pnpm -r typecheck"
   },
   "workspaces": [
     "packages/*"
