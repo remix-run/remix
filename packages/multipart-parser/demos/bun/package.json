@@ -8,7 +8,7 @@
   "devDependencies": {
     "@types/bun": "^1.1.6",
     "@types/tmp": "^0.2.6",
-    "typescript": "^5.9.3"
+    "typescript": "catalog:"
   },
   "scripts": {
     "start": "bun run server.ts"

@@ -14,10 +14,10 @@
     "@remix-run/static-middleware": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^24.6.0",
-    "@typescript/native-preview": "7.0.0-dev.20251125.1",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
     "esbuild": "^0.25.10",
-    "tsx": "^4.20.6"
+    "tsx": "catalog:"
   },
   "scripts": {
     "dev": "pnpm run --filter \".\" --parallel \"/^dev:/\"",

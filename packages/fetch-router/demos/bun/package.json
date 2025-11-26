@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "@types/bun": "^1.1.8",
-    "@typescript/native-preview": "7.0.0-dev.20251125.1"
+    "@typescript/native-preview": "catalog:"
   },
   "scripts": {
     "dev": "bun --watch index.ts",

@@ -6,16 +6,28 @@ settings:
 
 catalogs:
   default:
+    '@types/node':
+      specifier: ^24.6.0
+      version: 24.6.0
+    '@typescript/native-preview':
+      specifier: 7.0.0-dev.20251125.1
+      version: 7.0.0-dev.20251125.1
     playwright:
       specifier: ^1.53.1
       version: 1.56.1
+    tsx:
+      specifier: ^4.20.6
+      version: 4.20.6
+    typescript:
+      specifier: ^5.9.3
+      version: 5.9.3
 
 importers:
 
   .:
     dependencies:
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       eslint:
         specifier: ^9.33.0
@@ -27,10 +39,10 @@ importers:
         specifier: ^3.3.3
         version: 3.3.3
       tsx:
-        specifier: ^4.20.6
+        specifier: 'catalog:'
         version: 4.20.6
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       typescript-eslint:
         specifier: ^8.40.0
@@ -91,16 +103,16 @@ importers:
         version: link:../../packages/static-middleware
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       esbuild:
         specifier: ^0.25.10
         version: 0.25.10
       tsx:
-        specifier: ^4.20.6
+        specifier: 'catalog:'
         version: 4.20.6
 
   demos/sse:
@@ -134,16 +146,16 @@ importers:
         version: link:../../packages/static-middleware
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       esbuild:
         specifier: ^0.25.10
         version: 0.25.12
       tsx:
-        specifier: ^4.20.6
+        specifier: 'catalog:'
         version: 4.20.6
 
   demos/unpkg:
@@ -177,16 +189,16 @@ importers:
         version: 7.6.3
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       tsx:
-        specifier: ^4.20.6
+        specifier: 'catalog:'
         version: 4.20.6
 
   packages/async-context-middleware:
@@ -195,13 +207,13 @@ importers:
         specifier: workspace:*
         version: link:../fetch-router
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/compression-middleware:
@@ -216,13 +228,13 @@ importers:
         specifier: workspace:*
         version: link:../response
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/cookie:
@@ -232,13 +244,13 @@ importers:
         version: link:../headers
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/fetch-proxy:
@@ -248,13 +260,13 @@ importers:
         version: link:../headers
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/fetch-router:
@@ -270,13 +282,13 @@ importers:
         specifier: workspace:*
         version: link:../session
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/fetch-router/demos/bun:
@@ -310,7 +322,7 @@ importers:
         specifier: ^1.1.8
         version: 1.1.8
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
   packages/fetch-router/demos/cf-workers:
@@ -341,10 +353,13 @@ importers:
         version: link:../../../session-middleware
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       wrangler:
         specifier: ^4.50.0
@@ -381,10 +396,13 @@ importers:
         version: link:../../../session-middleware
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/file-storage:
@@ -397,16 +415,16 @@ importers:
         version: link:../lazy-file
     devDependencies:
       '@remix-run/form-data-parser':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../form-data-parser
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/form-data-middleware:
@@ -418,13 +436,13 @@ importers:
         specifier: workspace:*
         version: link:../form-data-parser
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/form-data-parser:
@@ -434,13 +452,13 @@ importers:
         version: link:../multipart-parser
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/form-data-parser/demos/node:
@@ -459,10 +477,10 @@ importers:
         version: link:../../../node-fetch-server
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/fs:
@@ -475,43 +493,43 @@ importers:
         version: link:../mime
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/headers:
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/html-template:
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/interaction:
     devDependencies:
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       '@vitest/browser':
         specifier: ^3.2.4
@@ -523,7 +541,7 @@ importers:
         specifier: 'catalog:'
         version: 1.56.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vitest:
         specifier: ^3.2.4
@@ -552,13 +570,13 @@ importers:
         version: link:../mime
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/logger-middleware:
@@ -567,13 +585,13 @@ importers:
         specifier: workspace:*
         version: link:../fetch-router
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/method-override-middleware:
@@ -585,28 +603,28 @@ importers:
         specifier: workspace:*
         version: link:../form-data-middleware
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/mime:
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       mime-db:
         specifier: ^1.53.0
         version: 1.54.0
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/multipart-parser:
@@ -616,13 +634,13 @@ importers:
         version: link:../headers
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/multipart-parser/bench:
@@ -663,7 +681,7 @@ importers:
         specifier: ^0.2.6
         version: 0.2.6
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/multipart-parser/demos/cf-workers:
@@ -676,7 +694,7 @@ importers:
         specifier: ^4.20251014.0
         version: 4.20251014.0
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       wrangler:
         specifier: ^4.20.0
@@ -695,7 +713,7 @@ importers:
         specifier: ^0.2.6
         version: 0.2.6
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/multipart-parser/demos/node:
@@ -708,25 +726,25 @@ importers:
         version: 0.2.3
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@types/tmp':
         specifier: ^0.2.6
         version: 0.2.6
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/node-fetch-server:
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/node-fetch-server/bench:
@@ -761,13 +779,13 @@ importers:
         specifier: workspace:*
         version: link:../mime
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/route-pattern:
@@ -776,13 +794,13 @@ importers:
         specifier: ^0.49.0
         version: 0.49.0(typescript@5.9.3)
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/route-pattern/bench:
@@ -800,13 +818,13 @@ importers:
   packages/session:
     devDependencies:
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/session-middleware:
@@ -824,13 +842,13 @@ importers:
         specifier: workspace:*
         version: link:../session
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/static-middleware:
@@ -852,19 +870,19 @@ importers:
         specifier: workspace:*
         version: link:../method-override-middleware
       '@remix-run/mime':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../mime
       '@remix-run/response':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../response
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/static-middleware/demos/list-files:
@@ -882,16 +900,16 @@ importers:
   packages/tar-parser:
     devDependencies:
       '@remix-run/fs':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../fs
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20251125.1
+        specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/tar-parser/bench:
@@ -928,7 +946,7 @@ importers:
         specifier: ^9.1.3
         version: 9.1.3
       '@types/node':
-        specifier: ^24.6.0
+        specifier: 'catalog:'
         version: 24.6.0
       '@types/semver':
         specifier: ^7.5.8

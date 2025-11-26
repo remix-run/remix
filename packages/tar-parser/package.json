@@ -32,10 +32,10 @@
     }
   },
   "devDependencies": {
-    "@remix-run/fs": "workspace:^",
-    "@types/node": "^24.6.0",
-    "@typescript/native-preview": "7.0.0-dev.20251125.1",
-    "typescript": "^5.9.3"
+    "@remix-run/fs": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "bench": "node --disable-warning=ExperimentalWarning ./bench/runner.ts",

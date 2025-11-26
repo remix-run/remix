@@ -7,9 +7,9 @@
     "tmp": "^0.2.3"
   },
   "devDependencies": {
-    "@types/node": "^24.6.0",
+    "@types/node": "catalog:",
     "@types/tmp": "^0.2.6",
-    "typescript": "^5.9.3"
+    "typescript": "catalog:"
   },
   "scripts": {
     "start": "node server.js"

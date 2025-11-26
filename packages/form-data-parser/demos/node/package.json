@@ -9,8 +9,8 @@
     "@remix-run/node-fetch-server": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^24.6.0",
-    "typescript": "^5.9.3"
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "start": "node server.js"

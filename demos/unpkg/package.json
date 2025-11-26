@@ -14,10 +14,10 @@
     "semver": "^7.6.3"
   },
   "devDependencies": {
-    "@types/node": "^24.6.0",
+    "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
-    "@typescript/native-preview": "7.0.0-dev.20251125.1",
-    "tsx": "^4.20.6"
+    "@typescript/native-preview": "catalog:",
+    "tsx": "catalog:"
   },
   "scripts": {
     "dev": "tsx watch server.ts",

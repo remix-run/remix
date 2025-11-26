@@ -12,8 +12,9 @@
     "@remix-run/session-middleware": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^24.6.0",
-    "typescript": "^5.9.3",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:",
     "wrangler": "^4.50.0"
   },
   "scripts": {

@@ -40,9 +40,9 @@
     "@remix-run/headers": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^24.6.0",
-    "@typescript/native-preview": "7.0.0-dev.20251125.1",
-    "typescript": "^5.9.3"
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",

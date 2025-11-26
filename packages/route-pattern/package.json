@@ -34,9 +34,9 @@
   },
   "devDependencies": {
     "@ark/attest": "^0.49.0",
-    "@types/node": "^24.6.0",
-    "@typescript/native-preview": "7.0.0-dev.20251125.1",
-    "typescript": "^5.9.3"
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "bench": "node bench/runner.ts",
