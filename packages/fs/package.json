@@ -37,10 +37,11 @@
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
+    "@typescript/native-preview": "7.0.0-dev.20251125.1",
     "typescript": "^5.9.3"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
