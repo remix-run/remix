@@ -90,6 +90,16 @@ export function validatePackageChanges(packageName) {
     return errors
   }
 
+  // README.md should exist in .changes directory so it persists between releases
+  let readmePath = path.join(changesDir, 'README.md')
+  if (!fs.existsSync(readmePath)) {
+    errors.push({
+      package: packageName,
+      file: '.changes/README.md',
+      error: 'README.md is missing from .changes directory',
+    })
+  }
+
   // Read all files in .changes directory
   let files = fs.readdirSync(changesDir)
 
