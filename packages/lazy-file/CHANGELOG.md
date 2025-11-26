@@ -2,7 +2,7 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v4.2.0 (2025-11-26)
 
 - Move `@remix-run/mime` to `peerDependencies`
 
