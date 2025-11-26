@@ -16,7 +16,6 @@ function main() {
     console.error('❌ Validation failed\n')
     console.error(formatValidationErrors(validationResult))
     console.error()
-
     process.exit(1)
   }
 
@@ -56,7 +55,7 @@ function main() {
   console.log(generateCommitMessage(releases))
   console.log()
 
-  console.log('🏷️  GIT TAGS')
+  console.log('🏷️ GIT TAGS')
   console.log()
   for (let release of releases) {
     console.log(`${release.packageName}@${release.nextVersion}`)

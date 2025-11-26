@@ -17,7 +17,6 @@ function main() {
   console.error('❌ Validation failed\n')
   console.error(formatValidationErrors(validationResult))
   console.error()
-
   process.exit(1)
 }
 

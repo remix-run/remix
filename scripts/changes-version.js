@@ -72,7 +72,6 @@ function deleteChangeFiles(packageName) {
  * Main version function
  */
 function main() {
-  // Parse command line arguments
   let skipCommit = process.argv.includes('--no-commit')
 
   console.log('🔍 Validating change files...\n')
