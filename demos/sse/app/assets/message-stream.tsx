@@ -1,7 +1,7 @@
 import { hydrated } from '@remix-run/dom'
 import { on } from '@remix-run/interaction'
 
-import { routes } from '../../routes.ts'
+import { routes } from '../routes.ts'
 
 export const MessageStream = hydrated(
   routes.assets.href({ path: 'message-stream.js#MessageStream' }),

@@ -1,6 +1,6 @@
 import type { BuildRouteHandler } from '@remix-run/fetch-router'
 
-import type { routes } from '../routes.ts'
+import type { routes } from './routes.ts'
 
 import { MessageStream } from './assets/message-stream.tsx'
 import { Layout } from './layout.tsx'
@@ -108,19 +108,23 @@ export let home: BuildRouteHandler<'GET', typeof routes.home> = (context) => {
             </>
           ) : (
             <>
-              No limit set. Add{' '}
-              <code
-                css={{
-                  background: '#f5f5f5',
-                  padding: '0.2rem 0.4rem',
-                  borderRadius: '3px',
-                  fontFamily: "'Courier New', monospace",
-                  fontSize: '0.9em',
-                }}
-              >
-                ?limit=10
-              </code>{' '}
-              to the URL to limit messages.
+              No limit set.{' '}
+              <a href="?limit=10" css={{ color: '#007bff', textDecoration: 'underline' }}>
+                Add{' '}
+                <code
+                  css={{
+                    background: '#f5f5f5',
+                    padding: '0.2rem 0.4rem',
+                    borderRadius: '3px',
+                    fontFamily: "'Courier New', monospace",
+                    fontSize: '0.9em',
+                  }}
+                >
+                  ?limit=10
+                </code>{' '}
+                to the URL
+              </a>{' '}
+              to limit messages.
             </>
           )}
         </div>

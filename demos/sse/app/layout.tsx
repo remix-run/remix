@@ -1,6 +1,6 @@
 import type { Remix } from '@remix-run/dom'
 
-import { routes } from '../routes.ts'
+import { routes } from './routes.ts'
 
 const css = String.raw
 

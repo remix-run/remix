@@ -3,7 +3,7 @@ import { compression } from '@remix-run/compression-middleware'
 import { logger } from '@remix-run/logger-middleware'
 import { staticFiles } from '@remix-run/static-middleware'
 
-import { routes } from '../routes.ts'
+import { routes } from './routes.ts'
 import { home } from './home.tsx'
 import { messages } from './messages.ts'
 

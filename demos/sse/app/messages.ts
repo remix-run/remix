@@ -1,6 +1,6 @@
 import type { BuildRouteHandler } from '@remix-run/fetch-router'
 
-import type { routes } from '../routes'
+import type { routes } from './routes'
 
 export let messages: BuildRouteHandler<'GET', typeof routes.messages> = (context) => {
   let limitParam = context.url.searchParams.get('limit')
