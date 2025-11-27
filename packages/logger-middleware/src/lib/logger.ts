@@ -1,5 +1,5 @@
 import type { Middleware } from '@remix-run/fetch-router'
-import { colorizeToken } from './colors.ts'
+import { Colorizer } from './colorizer.ts'
 
 /**
  * Options for the `logger` middleware.
@@ -31,7 +31,7 @@ export interface LoggerOptions {
    * - `%url` - The full URL of the request
    * - `%userAgent` - The `User-Agent` header of the request
    *
-   * @default '[%date] %method %path %status $durationPretty %contentLengthPretty'
+   * @default '[%date] %method %path %status %durationPretty %contentLengthPretty'
    */
   format?: string
   /**
@@ -42,8 +42,13 @@ export interface LoggerOptions {
   log?: (message: string) => void
   /**
    * Enables or disables colorized output for the log messages.
-   * When `true`, tokens like `%status`, `%method`, `%durationPretty`, and `%contentLengthPretty`
-   * will be color-coded in the output.
+   * When set to `true`, colorized output is enabled if the environment supports it
+   * (i.e., running in a TTY and the `NO_COLOR` environment variable is not set).
+   *
+   * When `false` or not provided, colorized output is disabled.
+   *
+   * When enabled, the following tokens will be color-coded in the output:
+   * `%status`, `%method`, `%duration`, `%durationPretty`, `%contentLength`, and `%contentLengthPretty`.
    *
    * @default false
    */
@@ -60,8 +65,11 @@ export function logger(options: LoggerOptions = {}): Middleware {
   let {
     format = '[%date] %method %path %status %durationPretty %contentLengthPretty',
     log = console.log,
-    colors = false,
+    colors,
   } = options
+  let useColor =
+    typeof process !== 'undefined' && process.stdout?.isTTY && process.env.NO_COLOR == null
+  let colorizer = new Colorizer(useColor && colors)
 
   return async ({ request, url }, next) => {
     let start = new Date()
@@ -74,23 +82,18 @@ export function logger(options: LoggerOptions = {}): Middleware {
     let tokens: Record<string, () => string> = {
       date: () => formatApacheDate(start),
       dateISO: () => start.toISOString(),
-      duration: () => String(duration),
-      durationPretty: () => {
-        let value = formatDuration(duration)
-        return colors ? colorizeToken('durationPretty', value, duration) : value
-      },
-      contentLength: () => contentLength ?? '-',
-      contentLengthPretty: () => {
-        let value = contentLength ? formatFileSize(contentLengthNum!) : '-'
-        return colors ? colorizeToken('contentLengthPretty', value, contentLengthNum) : value
-      },
+      duration: () => colorizer.duration(duration, String(duration)),
+      durationPretty: () => colorizer.duration(duration, formatDuration(duration)),
+      contentLength: () => colorizer.contentLength(contentLengthNum, contentLength ?? '-'),
+      contentLengthPretty: () =>
+        colorizer.contentLength(
+          contentLengthNum,
+          contentLength ? formatFileSize(contentLengthNum!) : '-',
+        ),
       contentType: () => response.headers.get('Content-Type') ?? '-',
       host: () => url.host,
       hostname: () => url.hostname,
-      method: () => {
-        let value = request.method
-        return colors ? colorizeToken('method', value) : value
-      },
+      method: () => colorizer.method(request.method),
       path: () => url.pathname + url.search,
       pathname: () => url.pathname,
       port: () => url.port,
@@ -98,17 +101,13 @@ export function logger(options: LoggerOptions = {}): Middleware {
       query: () => url.search,
       referer: () => request.headers.get('Referer') ?? '-',
       search: () => url.search,
-      status: () => {
-        let value = String(response.status)
-        return colors ? colorizeToken('status', value, response.status) : value
-      },
+      status: () => colorizer.status(response.status),
       statusText: () => response.statusText,
       url: () => url.href,
       userAgent: () => request.headers.get('User-Agent') ?? '-',
     }
 
     let message = format.replace(/%(\w+)/g, (_, key) => tokens[key]?.() ?? '-')
-
     log(message)
 
     return response
@@ -129,7 +128,6 @@ function formatApacheDate(date: Date): string {
   let minutes = String(date.getMinutes()).padStart(2, '0')
   let seconds = String(date.getSeconds()).padStart(2, '0')
 
-  // Get timezone offset in minutes and convert to ±HHMM format
   let timezoneOffset = date.getTimezoneOffset()
   let sign = timezoneOffset <= 0 ? '+' : '-'
   let offsetHours = String(Math.floor(Math.abs(timezoneOffset) / 60)).padStart(2, '0')

@@ -73,7 +73,7 @@ let router = createRouter({
 
 ### Colorized Output
 
-You can enable colorized output by setting the `colors` option to `true`. This is useful for development environments to improve readability.
+You can enable colorized output by setting the `colors` option to `true`. This is useful for development environments to improve readability. Colorization is automatically disabled in environments that don't support it (e.g., non-TTY terminals or when the `NO_COLOR` environment variable is set).
 
 ```ts
 let router = createRouter({
@@ -88,7 +88,9 @@ let router = createRouter({
 When `colors` is enabled, the following tokens will be color-coded:
 - `%method`
 - `%status`
+- `%duration`
 - `%durationPretty`
+- `%contentLength`
 - `%contentLengthPretty`
 
 ### Custom Logger
