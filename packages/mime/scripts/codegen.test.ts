@@ -7,6 +7,9 @@ import { describe, it } from 'node:test'
 import { generateCompressibleMimeTypesContent, generateMimeTypesContent } from './codegen.js'
 
 describe('generated files', () => {
+  // Normalize line endings for cross-platform compatibility
+  let normalizeLineEndings = (str: string) => str.replace(/\r\n/g, '\n')
+
   it('compressible-mime-types.ts is up to date with mime-db and has not been modified manually', () => {
     let __dirname = dirname(fileURLToPath(import.meta.url))
     let generatedPath = join(__dirname, '../src/generated/compressible-mime-types.ts')
@@ -15,8 +18,8 @@ describe('generated files', () => {
     let actualContent = readFileSync(generatedPath, 'utf-8')
 
     assert.equal(
-      actualContent,
-      expectedContent,
+      normalizeLineEndings(actualContent),
+      normalizeLineEndings(expectedContent),
       'compressible-mime-types.ts does not match expected output. Run `pnpm codegen` to update it.',
     )
   })
@@ -29,8 +32,8 @@ describe('generated files', () => {
     let actualContent = readFileSync(generatedPath, 'utf-8')
 
     assert.equal(
-      actualContent,
-      expectedContent,
+      normalizeLineEndings(actualContent),
+      normalizeLineEndings(expectedContent),
       'mime-types.ts does not match expected output. Run `pnpm codegen` to update it.',
     )
   })
