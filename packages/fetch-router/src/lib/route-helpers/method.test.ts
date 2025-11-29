@@ -1,10 +1,18 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-
-import type { Assert, IsEqual } from './type-utils.ts'
-import { Route, createRoutes as route } from './route-map.ts'
-import { destroy, get, head, options, patch, post, put } from '../index.ts'
 import { RoutePattern } from '@remix-run/route-pattern'
+
+import type { Assert, IsEqual } from '../type-utils.ts'
+import { Route, createRoutes as route } from '../route-map.ts'
+import {
+  createDeleteRoute as del,
+  createGetRoute as get,
+  createHeadRoute as head,
+  createOptionsRoute as options,
+  createPatchRoute as patch,
+  createPostRoute as post,
+  createPutRoute as put,
+} from './method.ts'
 
 describe('route helpers composition', () => {
   it('composes route helpers in a route map', () => {
@@ -16,7 +24,7 @@ describe('route helpers composition', () => {
         show: get('/posts/:id'),
         update: put('/posts/:id'),
         patch: patch('/posts/:id'),
-        destroy: destroy('/posts/:id'),
+        destroy: del('/posts/:id'),
       },
       api: {
         health: head('/api/health'),
@@ -42,7 +50,7 @@ describe('route helpers composition', () => {
         create: post('/'),
         show: get('/:id'),
         update: put('/:id'),
-        destroy: destroy('/:id'),
+        destroy: del('/:id'),
       },
     })
 
@@ -64,7 +72,7 @@ describe('route helpers composition', () => {
       about: '/about',
       contact: get('/contact'),
       login: post('/auth/login'),
-      logout: destroy('/auth/logout'),
+      logout: del('/auth/logout'),
       profile: {
         show: '/profile',
         edit: get('/profile/edit'),
@@ -88,7 +96,7 @@ describe('route helpers composition', () => {
         posts: get('/api/posts(/:lang)'),
         createPost: post('/api/posts'),
         updatePost: put('/api/posts/:id'),
-        deletePost: destroy('/api/posts/:id'),
+        deletePost: del('/api/posts/:id'),
       },
       healthCheck: head('/health'),
     })
@@ -108,7 +116,7 @@ let composedRoutes = route({
     createPost: post('/'),
     showPost: get(':id'),
     updatePost: put(':id'),
-    deletePost: destroy(':id'),
+    deletePost: del(':id'),
   }),
   api: {
     health: head('/api/health'),
