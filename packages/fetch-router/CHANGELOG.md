@@ -319,6 +319,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 - Add support for `request.signal` abort, which now short-circuits the middleware chain. `router.fetch()` will now throw `DOMException` with `error.name === 'AbortError'` when a request is aborted
 - Fix an issue where `Router`'s `fetch` wasn't spec-compliant
 - Provide empty `context.formData` to `POST`/`PUT`/etc handlers when `parseFormData: false`
+- Add functional aliases for routes that respond to a single HTTP verb
 
 ## v0.6.0 (2025-10-10)
 
