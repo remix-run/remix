@@ -2,6 +2,10 @@
 
 This is the changelog for [`tar-parser`](https://github.com/remix-run/remix/tree/main/packages/tar-parser). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Fix Windows path handling in tests by using `fileURLToPath` instead of `new URL(import.meta.url).pathname`
+
 ## v0.7.0 (2025-11-20)
 
 - Update dev dependencies to use `@remix-run/fs` instead of `@remix-run/lazy-file/fs`.
