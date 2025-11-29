@@ -2,6 +2,10 @@
 
 This is the changelog for [`mime`](https://github.com/remix-run/remix/tree/main/packages/mime). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Fix Windows test failures by normalizing line endings in codegen tests
+
 ## v0.1.0 (2025-11-25)
 
 Initial release of this package.
