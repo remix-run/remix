@@ -1,12 +1,11 @@
-import type { BuildRouteHandler } from '@remix-run/fetch-router'
+import type { BuildAction } from '@remix-run/fetch-router'
 
 import type { routes } from './routes.ts'
-
 import { MessageStream } from './assets/message-stream.tsx'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 
-export let home: BuildRouteHandler<'GET', typeof routes.home> = (context) => {
+export let home: BuildAction<'GET', typeof routes.home> = (context) => {
   let limitParam = context.url.searchParams.get('limit')
   let limit = limitParam ? parseInt(limitParam, 10) : null
   if (!limit || !isFinite(limit)) limit = null

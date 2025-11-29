@@ -1,4 +1,4 @@
-import type { RouteHandlers } from '@remix-run/fetch-router'
+import type { Controller } from '@remix-run/fetch-router'
 import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
 
 import { routes } from './routes.ts'
@@ -15,7 +15,7 @@ import { render } from './utils/render.ts'
 
 export default {
   middleware: [loadAuth()],
-  handlers: {
+  actions: {
     login: {
       index({ session, url }) {
         let error = session.get('error')
@@ -321,4 +321,4 @@ export default {
       },
     },
   },
-} satisfies RouteHandlers<typeof routes.auth>
+} satisfies Controller<typeof routes.auth>

@@ -1,4 +1,4 @@
-import type { RouteHandlers } from '@remix-run/fetch-router'
+import type { Controller } from '@remix-run/fetch-router'
 import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
 
 import { routes } from './routes.ts'
@@ -405,4 +405,4 @@ export default {
 
     return redirect(routes.admin.books.index.href())
   },
-} satisfies RouteHandlers<typeof routes.admin.books>
+} satisfies Controller<typeof routes.admin.books>

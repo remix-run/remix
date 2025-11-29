@@ -19,7 +19,7 @@ Then visit http://localhost:44100
 
 ## Code Highlights
 
-- [`app/routes.ts`](app/routes.ts) shows declarative route definitions using `route()`, `formAction()`, and `resources()` helpers. All route URLs are generated with full type safety, so `routes.admin.books.edit.href({ bookId: '123' })` ensures you never have broken links.
+- [`app/routes.ts`](app/routes.ts) shows declarative route definitions using `route()`, `form()`, and `resources()` helpers. All route URLs are generated with full type safety, so `routes.admin.books.edit.href({ bookId: '123' })` ensures you never have broken links.
 - [`app/router.ts`](app/router.ts) demonstrates how to compose middleware for cross-cutting concerns: static file serving, form data parsing, method override, sessions, and async context. Each middleware is independent and reusable.
 - [`app/middleware/auth.ts`](app/middleware/auth.ts) provides two patterns:
   - **`loadAuth()`** - Optionally loads the current user without requiring authentication

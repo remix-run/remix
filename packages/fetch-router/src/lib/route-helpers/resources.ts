@@ -1,6 +1,6 @@
 import type { RoutePattern } from '@remix-run/route-pattern'
 
-import { type BuildRouteMap, createRoutes } from './route-map.ts'
+import { type BuildRouteMap, createRoutes } from '../route-map.ts'
 
 export type ResourcesMethod = 'index' | 'new' | 'show' | 'create' | 'edit' | 'update' | 'destroy'
 
@@ -54,7 +54,7 @@ export type ResourcesOptions = {
  * @param options Options to configure the resource routes
  * @return The route map with CRUD routes
  */
-export function createResources<base extends string, const options extends ResourcesOptions>(
+export function createResourcesRoutes<base extends string, const options extends ResourcesOptions>(
   base: base | RoutePattern<base>,
   options?: options,
 ): BuildResourcesMap<base, options> {

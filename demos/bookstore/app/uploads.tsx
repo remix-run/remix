@@ -1,10 +1,10 @@
-import type { BuildRouteHandler } from '@remix-run/fetch-router'
+import type { BuildAction } from '@remix-run/fetch-router'
 import { createFileResponse as sendFile } from '@remix-run/response/file'
 
 import type { routes } from './routes.ts'
 import { uploadsStorage } from './utils/uploads.ts'
 
-export let uploadsHandler: BuildRouteHandler<'GET', typeof routes.uploads> = async ({
+export let uploadsAction: BuildAction<'GET', typeof routes.uploads> = async ({
   request,
   params,
 }) => {

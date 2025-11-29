@@ -1,4 +1,4 @@
-import type { RouteHandlers } from '@remix-run/fetch-router'
+import type { Controller } from '@remix-run/fetch-router'
 import { Frame } from '@remix-run/dom'
 
 import { routes } from './routes.ts'
@@ -10,7 +10,7 @@ import { ImageCarousel } from './assets/image-carousel.tsx'
 
 export default {
   middleware: [loadAuth()],
-  handlers: {
+  actions: {
     index() {
       let books = getAllBooks()
       let genres = getAvailableGenres()
@@ -186,4 +186,4 @@ export default {
       )
     },
   },
-} satisfies RouteHandlers<typeof routes.books>
+} satisfies Controller<typeof routes.books>

@@ -1,4 +1,4 @@
-import type { RouteHandlers } from '@remix-run/fetch-router'
+import type { Controller } from '@remix-run/fetch-router'
 import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
 
 import { routes } from './routes.ts'
@@ -11,7 +11,7 @@ import { getCurrentUser, getCurrentCart } from './utils/context.ts'
 
 export default {
   middleware: [requireAuth()],
-  handlers: {
+  actions: {
     index() {
       let cart = getCurrentCart()
       let total = getCartTotal(cart)
@@ -199,4 +199,4 @@ export default {
       )
     },
   },
-} satisfies RouteHandlers<typeof routes.checkout>
+} satisfies Controller<typeof routes.checkout>

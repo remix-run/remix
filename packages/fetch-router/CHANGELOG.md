@@ -2,6 +2,76 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- BREAKING CHANGE: Renamed "route handlers" terminology to "controller/action" throughout the package. This is a breaking change for anyone using the types or properties from this package. Update your code:
+
+  ```tsx
+  // Before
+  import type { RouteHandlers, RouteHandler, BuildRouteHandler } from '@remix-run/fetch-router'
+
+  router.map(routes, {
+    middleware: [auth()],
+    handlers: {
+      home() {
+        return new Response('Home')
+      },
+      admin: {
+        middleware: [requireAdmin()],
+        handler() {
+          return new Response('Admin')
+        },
+      },
+    },
+  }) satisfies RouteHandlers<typeof routes>
+
+  // After
+  import type { Controller, Action, BuildAction } from '@remix-run/fetch-router'
+
+  router.map(routes, {
+    middleware: [auth()],
+    actions: {
+      home() {
+        return new Response('Home')
+      },
+      admin: {
+        middleware: [requireAdmin()],
+        action() {
+          return new Response('Admin')
+        },
+      },
+    },
+  }) satisfies Controller<typeof routes>
+  ```
+
+  Summary of changes:
+
+  - `RouteHandlers` type => `Controller`
+  - `RouteHandler` type => `Action`
+  - `BuildRouteHandler` type => `BuildAction`
+  - `handlers` property => `actions`
+  - `handler` property => `action`
+
+- BREAKING CHANGE: Renamed `formAction` route helper to `form` and moved route helpers to `lib/route-helpers/` subdirectory. Update your imports:
+
+  ```tsx
+  // Before
+  import { route, formAction } from '@remix-run/fetch-router'
+
+  let routes = route({
+    login: formAction('/login'),
+  })
+
+  // After
+  import { route, form } from '@remix-run/fetch-router'
+
+  let routes = route({
+    login: form('/login'),
+  })
+  ```
+
+  The `FormActionOptions` type has also been renamed to `FormOptions`.
+
 ## v0.12.0 (2025-11-25)
 
 - BREAKING CHANGE: Moved all response helpers to `@remix-run/response`. Update your imports:
