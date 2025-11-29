@@ -72,6 +72,24 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
   The `FormActionOptions` type has also been renamed to `FormOptions`.
 
+- Add functional aliases for creating routes that respond to a single request method
+
+  ```tsx
+  import { del, get, patch, post } from '@remix-run/fetch-router'
+
+  let routes = route({
+    home: get('/'),
+    login: post('/login'),
+    logout: post('/logout'),
+    profile: {
+      show: get('/profile'),
+      edit: get('/profile/edit'),
+      update: patch('/profile'),
+      destroy: del('/profile'),
+    },
+  })
+  ```
+
 ## v0.12.0 (2025-11-25)
 
 - BREAKING CHANGE: Moved all response helpers to `@remix-run/response`. Update your imports:
@@ -319,7 +337,6 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 - Add support for `request.signal` abort, which now short-circuits the middleware chain. `router.fetch()` will now throw `DOMException` with `error.name === 'AbortError'` when a request is aborted
 - Fix an issue where `Router`'s `fetch` wasn't spec-compliant
 - Provide empty `context.formData` to `POST`/`PUT`/etc handlers when `parseFormData: false`
-- Add functional aliases for routes that respond to a single HTTP verb
 
 ## v0.6.0 (2025-10-10)
 

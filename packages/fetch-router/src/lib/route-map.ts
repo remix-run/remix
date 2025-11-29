@@ -59,6 +59,15 @@ export class Route<
 }
 
 /**
+ * Build a `Route` type from a request method and pattern.
+ */
+// prettier-ignore
+export type BuildRoute<method extends RequestMethod | 'ANY', pattern extends string | RoutePattern> =
+  pattern extends string ? Route<method, pattern> :
+  pattern extends RoutePattern<infer source extends string> ? Route<method, source> :
+  never
+
+/**
  * Create a route map from a set of route definitions.
  *
  * @param defs The route definitions
@@ -112,17 +121,17 @@ function buildRouteMap<base extends string, defs extends RouteDefs>(
 export type BuildRouteMap<base extends string, defs extends RouteDefs> = Simplify<{
   -readonly [name in keyof defs]: (
     defs[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? Route<method, Join<base, pattern>> :
-    defs[name] extends RouteDef ? BuildRoute<base, defs[name]> :
+    defs[name] extends RouteDef ? BuildRouteWithBase<base, defs[name]> :
     defs[name] extends RouteDefs ? BuildRouteMap<base, defs[name]> :
     never
   )
 }>
 
 // prettier-ignore
-type BuildRoute<base extends string, defs extends RouteDef> = 
-  defs extends string ? Route<'ANY', Join<base, defs>> :
-  defs extends RoutePattern<infer pattern extends string> ? Route<'ANY', Join<base, pattern>> :
-  defs extends { method: infer method extends RequestMethod | 'ANY', pattern: infer pattern } ? (
+type BuildRouteWithBase<base extends string, def extends RouteDef> = 
+  def extends string ? Route<'ANY', Join<base, def>> :
+  def extends RoutePattern<infer pattern extends string> ? Route<'ANY', Join<base, pattern>> :
+  def extends { method: infer method extends RequestMethod | 'ANY', pattern: infer pattern } ? (
     pattern extends string ? Route<method, Join<base, pattern>> :
     pattern extends RoutePattern<infer source extends string> ? Route<method, Join<base, source>> :
     never

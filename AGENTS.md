@@ -25,6 +25,7 @@
 - **Classes**: Use native fields (omit `public`), `#private` for private members (no TypeScript accessibility modifiers)
 - **Formatting**: Prettier (printWidth: 100, no semicolons, single quotes, spaces not tabs)
 - **TypeScript**: Strict mode, ESNext target, ES2022 modules, bundler resolution, verbatimModuleSyntax
+- **Generics**: Use descriptive lowercase names for type parameters (e.g., `source`, `method`, `pattern`) instead of single uppercase letters like `T`, `P`, or `K`
 - **Comments**: Only add non-JSDoc comments when the code is doing something surprising or non-obvious
 
 ## Test Structure
