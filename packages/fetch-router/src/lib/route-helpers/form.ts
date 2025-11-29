@@ -1,10 +1,10 @@
 import type { RoutePattern } from '@remix-run/route-pattern'
 
-import type { RequestMethod } from './request-methods.ts'
-import { createRoutes } from './route-map.ts'
-import type { BuildRouteMap } from './route-map.ts'
+import type { RequestMethod } from '../request-methods.ts'
+import { createRoutes } from '../route-map.ts'
+import type { BuildRouteMap } from '../route-map.ts'
 
-export interface FormActionOptions {
+export interface FormOptions {
   /**
    * The method the `<form>` uses to submit the action.
    *
@@ -29,10 +29,10 @@ export interface FormActionOptions {
  * @param options Options to configure the form action routes
  * @return The route map with `index` and `action` routes
  */
-export function createFormAction<pattern extends string, const options extends FormActionOptions>(
+export function createFormRoutes<pattern extends string, const options extends FormOptions>(
   pattern: pattern | RoutePattern<pattern>,
   options?: options,
-): BuildFormActionMap<pattern, options> {
+): BuildFormMap<pattern, options> {
   let formMethod = options?.formMethod ?? 'POST'
   let indexName = options?.names?.index ?? 'index'
   let actionName = options?.names?.action ?? 'action'
@@ -40,11 +40,11 @@ export function createFormAction<pattern extends string, const options extends F
   return createRoutes(pattern, {
     [indexName]: { method: 'GET', pattern: '/' },
     [actionName]: { method: formMethod, pattern: '/' },
-  }) as BuildFormActionMap<pattern, options>
+  }) as BuildFormMap<pattern, options>
 }
 
 // prettier-ignore
-type BuildFormActionMap<pattern extends string, options extends FormActionOptions> = BuildRouteMap<
+type BuildFormMap<pattern extends string, options extends FormOptions> = BuildRouteMap<
   pattern,
   {
     [

@@ -127,7 +127,7 @@ router.post(routes.logout, ({ session }) => {
 router.map(routes.posts, {
   new: {
     middleware: [requireAuth()],
-    handler({ session: _session }) {
+    action() {
       return createHtmlResponse(`
         <html>
           <head>

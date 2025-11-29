@@ -1,11 +1,11 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { ResourceMethods, createResource as resource } from './resource.ts'
-import { Route } from './route-map.ts'
-import type { Assert, IsEqual } from './type-utils.ts'
+import { Route } from '../route-map.ts'
+import type { Assert, IsEqual } from '../type-utils.ts'
+import { ResourceMethods, createResourceRoutes as resource } from './resource.ts'
 
-describe('createResource', () => {
+describe('resource routes helper', () => {
   it('creates a resource', () => {
     let book = resource('book')
 

@@ -1,4 +1,4 @@
-import { route, formAction, resources } from '@remix-run/fetch-router'
+import { route, form, resources } from '@remix-run/fetch-router'
 
 export let routes = route({
   assets: '/assets/*path',
@@ -27,17 +27,17 @@ export let routes = route({
 
   // Auth routes
   auth: {
-    login: formAction('login'),
-    register: formAction('register'),
+    login: form('login'),
+    register: form('register'),
     logout: { method: 'POST', pattern: '/logout' },
-    forgotPassword: formAction('forgot-password'),
-    resetPassword: formAction('reset-password/:token'),
+    forgotPassword: form('forgot-password'),
+    resetPassword: form('reset-password/:token'),
   },
 
   // Account section (protected, nested routes)
   account: route('/account', {
     index: '/',
-    settings: formAction('settings', {
+    settings: form('settings', {
       formMethod: 'PUT',
       names: {
         action: 'update',

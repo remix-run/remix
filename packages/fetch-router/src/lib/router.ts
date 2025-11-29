@@ -5,7 +5,7 @@ import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 import type { RequestMethod } from './request-methods.ts'
-import { type RouteHandlers, type RouteHandler, hasHandlers, hasHandler } from './route-handlers.ts'
+import { type Controller, type Action, hasActions, hasAction } from './controller.ts'
 import { type RouteMap, Route } from './route-map.ts'
 
 type MatchData = {
@@ -38,7 +38,7 @@ export interface RouterOptions {
 }
 
 /**
- * A router maps incoming requests to route handler functions and middleware.
+ * A router maps incoming requests to request handlers and middleware.
  */
 export interface Router {
   /**
@@ -58,110 +58,110 @@ export interface Router {
    *
    * @param method The request method to match
    * @param pattern The pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   route<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
-    handler: RouteHandler<method, pattern>,
+    action: Action<method, pattern>,
   ): void
   /**
-   * Map a route map (or route/pattern) to request handler(s).
+   * Map a route map (or route/pattern) to controller action(s).
    *
    * @param route The route(s)/pattern to match
-   * @param handler The request handler(s) to invoke when the routes match
+   * @param controller The controller/action(s) to invoke when the routes match
    */
   map<
     route extends RouteMap | Route<RequestMethod | 'ANY', string> | RoutePattern<string> | string,
   >(
     route: route,
-    handler: // prettier-ignore
-    // map(routeMap, routeHandlers)
-    [route] extends [RouteMap] ? RouteHandlers<route> :
+    controller: // prettier-ignore
+    // map(routeMap, controller)
+    [route] extends [RouteMap] ? Controller<route> :
 
-    // map(route, routeHandler)
+    // map(route, action)
     route extends Route<
       infer method extends RequestMethod | 'ANY',
       infer source extends string
-    > ? method extends 'ANY' ? RouteHandler<RequestMethod | 'ANY', source> : RouteHandler<method, source> :
+    > ? method extends 'ANY' ? Action<RequestMethod | 'ANY', source> : Action<method, source> :
 
-    // map(pattern, routeHandler)
-    route extends RoutePattern<infer source extends string> ? RouteHandler<RequestMethod | 'ANY', source> :
+    // map(pattern, action)
+    route extends RoutePattern<infer source extends string> ? Action<RequestMethod | 'ANY', source> :
 
-    // map(stringPattern, routeHandler)
-    route extends string ? RouteHandler<RequestMethod | 'ANY', route>:
+    // map(stringPattern, action)
+    route extends string ? Action<RequestMethod | 'ANY', route>:
 
     never,
   ): void
   /**
-   * Map a `GET` route/pattern to a request handler.
+   * Map a `GET` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   get<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
-    handler: RouteHandler<'GET', pattern>,
+    action: Action<'GET', pattern>,
   ): void
   /**
-   * Map a `HEAD` route/pattern to a request handler.
+   * Map a `HEAD` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   head<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
-    handler: RouteHandler<'HEAD', pattern>,
+    action: Action<'HEAD', pattern>,
   ): void
   /**
-   * Map a `POST` route/pattern to a request handler.
+   * Map a `POST` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   post<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
-    handler: RouteHandler<'POST', pattern>,
+    action: Action<'POST', pattern>,
   ): void
   /**
-   * Map a `PUT` route/pattern to a request handler.
+   * Map a `PUT` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   put<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
-    handler: RouteHandler<'PUT', pattern>,
+    action: Action<'PUT', pattern>,
   ): void
   /**
-   * Map a `PATCH` route/pattern to a request handler.
+   * Map a `PATCH` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   patch<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
-    handler: RouteHandler<'PATCH', pattern>,
+    action: Action<'PATCH', pattern>,
   ): void
   /**
-   * Map a `DELETE` route/pattern to a request handler.
+   * Map a `DELETE` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   delete<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
-    handler: RouteHandler<'DELETE', pattern>,
+    action: Action<'DELETE', pattern>,
   ): void
   /**
-   * Map an `OPTIONS` route/pattern to a request handler.
+   * Map an `OPTIONS` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   options<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
-    handler: RouteHandler<'OPTIONS', pattern>,
+    action: Action<'OPTIONS', pattern>,
   ): void
 }
 
@@ -205,15 +205,15 @@ export function createRouter(options?: RouterOptions): Router {
   function addRoute<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
-    handler: RouteHandler<method, pattern>,
+    action: Action<method, pattern>,
   ): void {
     let routeMiddleware: Middleware<any, any>[] | undefined
     let requestHandler: RequestHandler<any, any>
-    if (hasHandler(handler)) {
-      routeMiddleware = handler.middleware
-      requestHandler = handler.handler
+    if (hasAction(action)) {
+      routeMiddleware = action.middleware
+      requestHandler = action.action
     } else {
-      requestHandler = handler
+      requestHandler = action
     }
 
     matcher.add(pattern instanceof Route ? pattern.pattern : pattern, {
@@ -223,59 +223,59 @@ export function createRouter(options?: RouterOptions): Router {
     })
   }
 
-  function mapRoute(routeArg: any, handlerArg: any): void {
+  function mapRoute(routeArg: any, controllerArg: any): void {
     if (typeof routeArg === 'string' || routeArg instanceof RoutePattern) {
-      // map(pattern, handler)
-      addRoute('ANY', routeArg, handlerArg)
+      // map(pattern, action)
+      addRoute('ANY', routeArg, controllerArg)
     } else if (routeArg instanceof Route) {
-      // map(route, handler)
-      addRoute(routeArg.method, routeArg.pattern, handlerArg)
-    } else if (!hasHandlers(handlerArg)) {
-      // map(routes, handlers)
-      let handlers = handlerArg
+      // map(route, action)
+      addRoute(routeArg.method, routeArg.pattern, controllerArg)
+    } else if (!hasActions(controllerArg)) {
+      // map(routes, controller)
+      let controller = controllerArg
       for (let key in routeArg) {
         let route = routeArg[key]
-        let handler = handlers[key]
+        let action = controller[key]
 
         if (route instanceof Route) {
-          addRoute(route.method, route.pattern, handler)
+          addRoute(route.method, route.pattern, action)
         } else {
-          mapRoute(route, handler)
+          mapRoute(route, action)
         }
       }
     } else {
-      // map(routes, { middleware?, handlers })
-      let mapMiddleware = handlerArg.middleware
-      let handlers = handlerArg.handlers
+      // map(routes, { middleware?, actions })
+      let controllerMiddleware = controllerArg.middleware
+      let actions = controllerArg.actions
       for (let key in routeArg) {
         let route = routeArg[key]
-        let handler = (handlers as any)[key]
+        let action = (actions as any)[key]
 
         if (route instanceof Route) {
-          let routeMiddleware =
-            mapMiddleware && handler.middleware
-              ? mapMiddleware.concat(handler.middleware)
-              : mapMiddleware || handler.middleware
+          let actionMiddleware =
+            controllerMiddleware && action.middleware
+              ? controllerMiddleware.concat(action.middleware)
+              : (controllerMiddleware ?? action.middleware)
 
-          if (hasHandler(handler)) {
+          if (hasAction(action)) {
             addRoute(route.method, route.pattern, {
-              middleware: routeMiddleware,
-              handler: handler.handler,
+              middleware: actionMiddleware,
+              action: action.action,
             })
           } else {
-            addRoute(route.method, route.pattern, { middleware: routeMiddleware, handler })
+            addRoute(route.method, route.pattern, { middleware: actionMiddleware, action })
           }
-        } else if (hasHandlers(handler)) {
-          // map(routes, { middleware?, handlers: { home: { middleware?, handlers } } })
+        } else if (hasActions(action)) {
+          // map(routes, { middleware?, actions: { home: { middleware?, actions } } })
           let routeMiddleware =
-            mapMiddleware && handler.middleware
-              ? mapMiddleware.concat(handler.middleware)
-              : mapMiddleware || handler.middleware
+            controllerMiddleware && action.middleware
+              ? controllerMiddleware.concat(action.middleware)
+              : (controllerMiddleware ?? action.middleware)
 
-          mapRoute(route, { middleware: routeMiddleware, handlers: handler.handlers })
+          mapRoute(route, { middleware: routeMiddleware, actions: action.actions })
         } else {
-          // map(routes, { middleware?, handlers })
-          mapRoute(route, { middleware: mapMiddleware, handlers: handler })
+          // map(routes, { middleware?, actions })
+          mapRoute(route, { middleware: controllerMiddleware, actions: action })
         }
       }
     }
@@ -303,45 +303,45 @@ export function createRouter(options?: RouterOptions): Router {
     map: mapRoute,
     get<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
-      handler: RouteHandler<'GET', pattern>,
+      action: Action<'GET', pattern>,
     ): void {
-      addRoute('GET', route, handler)
+      addRoute('GET', route, action)
     },
     head<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
-      handler: RouteHandler<'HEAD', pattern>,
+      action: Action<'HEAD', pattern>,
     ): void {
-      addRoute('HEAD', route, handler)
+      addRoute('HEAD', route, action)
     },
     post<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
-      handler: RouteHandler<'POST', pattern>,
+      action: Action<'POST', pattern>,
     ): void {
-      addRoute('POST', route, handler)
+      addRoute('POST', route, action)
     },
     put<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
-      handler: RouteHandler<'PUT', pattern>,
+      action: Action<'PUT', pattern>,
     ): void {
-      addRoute('PUT', route, handler)
+      addRoute('PUT', route, action)
     },
     patch<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
-      handler: RouteHandler<'PATCH', pattern>,
+      action: Action<'PATCH', pattern>,
     ): void {
-      addRoute('PATCH', route, handler)
+      addRoute('PATCH', route, action)
     },
     delete<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
-      handler: RouteHandler<'DELETE', pattern>,
+      action: Action<'DELETE', pattern>,
     ): void {
-      addRoute('DELETE', route, handler)
+      addRoute('DELETE', route, action)
     },
     options<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
-      handler: RouteHandler<'OPTIONS', pattern>,
+      action: Action<'OPTIONS', pattern>,
     ): void {
-      addRoute('OPTIONS', route, handler)
+      addRoute('OPTIONS', route, action)
     },
   }
 }

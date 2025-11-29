@@ -25,7 +25,7 @@ npm install @remix-run/fetch-router
 
 ## Usage
 
-The main purpose of the router is to map incoming requests to route handler functions. The router uses the `fetch()` API to accept a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and return a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
+The main purpose of the router is to map incoming requests to request handlers and middleware. The router uses the `fetch()` API to accept a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and return a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
 The example below is a small site with a home page, an "about" page, and a blog.
 
@@ -45,13 +45,13 @@ let routes = route({
 })
 
 let router = createRouter({
-  // Middleware may be used to run code before and/or after route handlers run.
+  // Middleware may be used to run code before and/or after actions run.
   // In this case, the `logger()` middleware logs the request to the console.
   middleware: [logger()],
 })
 
-// Map the routes to "handlers" for each route. The structure of the route
-// handlers object mirrors the structure of the route map, with full type safety.
+// Map the routes to a "controller" that defines actions for each route. The structure
+// of the controller mirrors the structure of the route map, with full type safety.
 router.map(routes, {
   home() {
     return new Response('Home')
@@ -108,7 +108,7 @@ let routes = route({
 
 let router = createRouter()
 
-// Register a handler for `GET /`
+// Register an action for `GET /`
 router.get(routes.home, () => {
   return createHtmlResponse(`
     <html>
@@ -122,7 +122,7 @@ router.get(routes.home, () => {
   `)
 })
 
-// Register a handler for `GET /contact`
+// Register an action for `GET /contact`
 router.get(routes.contact, () => {
   return createHtmlResponse(`
     <html>
@@ -145,11 +145,11 @@ router.get(routes.contact, () => {
   `)
 })
 
-// Register a handler for `POST /contact`
+// Register an action for `POST /contact`
 router.post(routes.contact, ({ formData }) => {
-  // POST handlers receive a `context` object with a `formData` property that
+  // POST actions receive a `context` object with a `formData` property that
   // contains the `FormData` from the form submission. It is automatically
-  // parsed from the request body and available in all POST handlers.
+  // parsed from the request body and available in all POST actions.
   let message = formData.get('message') as string
   let body = html`
     <html>
@@ -180,9 +180,9 @@ type HomeRoute = typeof routes.home // Route<'ANY', '/'>
 type ContactRoute = typeof routes.contact // Route<'ANY', '/contact'>
 ```
 
-We used `router.get()` and `router.post()` to register handlers on each route specifically for the `GET` and `POST` request methods.
+We used `router.get()` and `router.post()` to register actions on each route specifically for the `GET` and `POST` request methods.
 
-However, we can also encode the request method into the route definition itself using the `method` property on the route. When you include the `method` in the route definition, `router.map()` will register the handler only for that specific request method. This can be more convenient than using `router.get()` and `router.post()` to register handlers one at a time.
+However, we can also encode the request method into the route definition itself using the `method` property on the route. When you include the `method` in the route definition, `router.map()` will register the action only for that specific request method. This can be more convenient than using `router.get()` and `router.post()` to register actions one at a time.
 
 ```ts
 import * as assert from 'node:assert/strict'
@@ -230,23 +230,23 @@ router.map(routes, {
 
 In additon to the `{ method, pattern }` syntax shown above, the router provides a few shorthand methods that help to eliminate some of the boilerplate when building complex route maps:
 
-- [`formAction`](#declaring-form-routes) - creates a route map with an `index` (`GET`) and `action` (`POST`) route. This is well-suited to showing a standard HTML `<form>` and handling its submit action at the same URL.
+- [`form`](#declaring-form-routes) - creates a route map with an `index` (`GET`) and `action` (`POST`) route. This is well-suited to showing a standard HTML `<form>` and handling its submit action at the same URL.
 - [`resources` (and `resource`)](#resource-based-routes) - creates a route map with a set of resource-based routes, useful when defining RESTful API routes or [Rails-style resource-based routes](https://guides.rubyonrails.org/routing.html#resource-routing-the-rails-default).
 
 #### Declaring Form Routes
 
-Continuing with [the example of the contact page](#routing-based-on-request-method), let's use the `formAction` shorthand to make the route map a little less verbose.
+Continuing with [the example of the contact page](#routing-based-on-request-method), let's use the `form` shorthand to make the route map a little less verbose.
 
-A `formAction()` route map contains two routes: `index` and `action`. The `index` route is a `GET` route that shows the form, and the `action` route is a `POST` route that handles the form submission.
+A `form()` route map contains two routes: `index` and `action`. The `index` route is a `GET` route that shows the form, and the `action` route is a `POST` route that handles the form submission.
 
 ```tsx
-import { createRouter, route, formAction } from '@remix-run/fetch-router'
+import { createRouter, route, form } from '@remix-run/fetch-router'
 import { html } from '@remix-run/html-template'
 import { createHtmlResponse } from '@remix-run/response/html'
 
 let routes = route({
   home: '/',
-  contact: formAction('contact'),
+  contact: form('contact'),
 })
 
 type Routes = typeof routes
@@ -473,9 +473,9 @@ type Routes = typeof routes
 // }
 ```
 
-### Middleware and Route Handlers
+### Controllers and Middleware
 
-A middleware is a function used to run code before and/or after route handlers run. It is a powerful way to add functionality to your app.
+Middleware functions run code before and/or after actions. They are a powerful way to add functionality to your app.
 
 A basic logging middleware might look like this:
 
@@ -487,7 +487,7 @@ function logger(): Middleware {
   return async (context, next) => {
     let start = new Date()
 
-    // Call the next() function to invoke the next middleware or handler in the chain.
+    // Call next() to invoke the next middleware or action in the chain.
     let response = await next()
 
     let end = new Date()
@@ -524,11 +524,11 @@ function auth(options?: AuthOptions): Middleware {
 }
 ```
 
-Middleware may be used in two different contexts: globally (at the router level) or locally (inline, at the route level).
+Middleware may be used in two different contexts: globally (at the router level) or inline (at the route level).
 
 Global middleware is added to the router when it is created using the `createRouter({ middleware })` option. This middleware runs before any routes are matched and is useful for doing things like logging, serving static files, profiling, and a variety of other things. Global middleware runs on every request, so it's important to keep them lightweight and fast.
 
-Local middleware is added to the router when handlers are registered using either `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. Local middleware runs after global middleware but before the route handler, and is useful for doing things like authentication, authorization, and data validation.
+Inline (or "route") middleware is added to the router when actions are registered using either `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. Route middleware runs after global middleware but before the route action, and is useful for doing things like authentication, authorization, and data validation.
 
 ```tsx
 let routes = route({
@@ -548,7 +548,7 @@ router.map(routes.home, () => new Response('Home'))
 router.map(routes.admin.dashboard, {
   // This middleware runs only on the `/admin/dashboard` route.
   middleware: [auth({ token: 'secret' })],
-  handler() {
+  action() {
     return new Response('Dashboard')
   },
 })
@@ -556,7 +556,7 @@ router.map(routes.admin.dashboard, {
 
 ### Request Context
 
-Every middleware and request handler receives a `context` object with useful properties:
+Every action and middleware receives a `context` object with useful properties:
 
 ```ts
 router.get('/posts/:id', ({ request, url, params, storage }) => {
@@ -583,7 +583,7 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
 #### Scaling Your Application
 
 - how to use a TrieMatcher
-- how to spread route handlers across multiple files
+- how to spread controllers across multiple files
 
 #### Error Handling and Aborted Requests
 
