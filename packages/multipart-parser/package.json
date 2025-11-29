@@ -40,6 +40,7 @@
     "@remix-run/headers": "workspace:^"
   },
   "devDependencies": {
+    "@remix-run/config": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "typescript": "catalog:"

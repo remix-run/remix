@@ -32,6 +32,7 @@
     }
   },
   "devDependencies": {
+    "@remix-run/config": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/mime": "workspace:*",
     "@remix-run/response": "workspace:*",

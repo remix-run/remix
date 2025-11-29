@@ -1,4 +1,4 @@
-import type { Assert, IsEqual } from './type-utils'
+import type { Assert, IsEqual } from './type-utils.ts'
 import type { Variant } from './variant.ts'
 
 // prettier-ignore

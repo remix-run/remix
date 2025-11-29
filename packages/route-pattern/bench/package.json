@@ -6,6 +6,7 @@
     "bench": "node --disable-warning=ExperimentalWarning runner.ts"
   },
   "dependencies": {
+    "@remix-run/config": "workspace:*",
     "@remix-run/route-pattern": "workspace:^",
     "find-my-way": "^9.1.0",
     "path-to-regexp": "^8.2.0"

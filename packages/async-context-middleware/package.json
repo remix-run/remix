@@ -32,6 +32,7 @@
     }
   },
   "devDependencies": {
+    "@remix-run/config": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",

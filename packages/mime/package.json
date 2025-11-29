@@ -32,6 +32,7 @@
     }
   },
   "devDependencies": {
+    "@remix-run/config": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "mime-db": "^1.53.0",

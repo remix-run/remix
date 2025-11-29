@@ -1,5 +1,5 @@
 {
-  "include": ["index.ts", "../../global.d.ts"],
+  "include": ["index.ts"],
   "compilerOptions": {
     "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
