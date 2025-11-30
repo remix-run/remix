@@ -9,7 +9,7 @@ on:
       - v2
 
 jobs:
-  typecheck:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,5 +28,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Run build
+        run: pnpm build
+
       - name: Run typechecks
         run: pnpm typecheck
+
