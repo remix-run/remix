@@ -10,14 +10,18 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -30,17 +34,21 @@ jobs:
 
       - name: Get Playwright Version
         id: playwright-version
+        shell: bash
         run: echo "version=$(pnpm --filter @remix-run/interaction exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
         uses: actions/cache@v4
         id: cache-browsers
         with:
-          path: ~/.cache/ms-playwright
+          path: |
+            ~/.cache/ms-playwright
+            ~/AppData/Local/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
+        shell: bash
         run: pnpm --filter "@remix-run/*" exec playwright install --with-deps 2>/dev/null || true
 
       - name: Run tests
