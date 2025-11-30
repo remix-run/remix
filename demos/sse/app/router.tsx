@@ -1,11 +1,34 @@
-import type { Controller } from '@remix-run/fetch-router'
+import { createRouter } from '@remix-run/fetch-router'
+import { compression } from '@remix-run/compression-middleware'
+import { logger } from '@remix-run/logger-middleware'
+import { staticFiles } from '@remix-run/static-middleware'
 
-import type { routes } from './routes.ts'
+import { routes } from './routes.ts'
 import { MessageStream } from './assets/message-stream.tsx'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 
-export let pagesController: Controller<Omit<typeof routes, 'assets'>> = {
+let middleware = []
+
+if (process.env.NODE_ENV === 'development') {
+  middleware.push(logger())
+}
+
+middleware.push(compression())
+middleware.push(
+  staticFiles('./public', {
+    cacheControl: 'no-store',
+    etag: false,
+    lastModified: false,
+  }),
+)
+
+export let router = createRouter({ middleware })
+
+// The assets route is handled by the static files middleware above
+let { assets, ...pageRoutes } = routes
+
+router.map(pageRoutes, {
   home(context) {
     let limitParam = context.url.searchParams.get('limit')
     let limit = limitParam ? parseInt(limitParam, 10) : null
@@ -188,4 +211,4 @@ export let pagesController: Controller<Omit<typeof routes, 'assets'>> = {
       },
     })
   },
-}
+})

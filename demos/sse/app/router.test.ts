@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { router } from './router.ts'
+import { router } from './router.tsx'
 
 describe('router', () => {
   describe('home page', () => {
@@ -73,10 +73,11 @@ describe('router', () => {
     })
 
     it('returns 404 for non-GET requests to messages', async () => {
-      let response = await router.fetch(new Request('http://localhost/messages', { method: 'POST' }))
+      let response = await router.fetch(
+        new Request('http://localhost/messages', { method: 'POST' }),
+      )
 
       assert.equal(response.status, 404)
     })
   })
 })
-
