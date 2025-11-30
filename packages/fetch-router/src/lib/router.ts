@@ -5,7 +5,12 @@ import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
 import type { RequestHandler } from './request-handler.ts'
 import type { RequestMethod } from './request-methods.ts'
-import { type Controller, type Action, hasActions, hasAction } from './controller.ts'
+import {
+  type Controller,
+  type Action,
+  isControllerWithMiddleware,
+  isActionWithMiddleware,
+} from './controller.ts'
 import { type RouteMap, Route } from './route-map.ts'
 
 type MatchData = {
@@ -76,8 +81,11 @@ export interface Router {
   >(
     route: route,
     controller: // prettier-ignore
-    // map(routeMap, controller)
-    [route] extends [RouteMap] ? Controller<route> :
+    // map(stringPattern, action)
+    route extends string ? Action<RequestMethod | 'ANY', route> :
+
+    // map(pattern, action)
+    route extends RoutePattern<infer source extends string> ? Action<RequestMethod | 'ANY', source> :
 
     // map(route, action)
     route extends Route<
@@ -85,11 +93,8 @@ export interface Router {
       infer source extends string
     > ? method extends 'ANY' ? Action<RequestMethod | 'ANY', source> : Action<method, source> :
 
-    // map(pattern, action)
-    route extends RoutePattern<infer source extends string> ? Action<RequestMethod | 'ANY', source> :
-
-    // map(stringPattern, action)
-    route extends string ? Action<RequestMethod | 'ANY', route>:
+    // map(routeMap, controller)
+    [route] extends [RouteMap] ? Controller<route> :
 
     never,
   ): void
@@ -209,11 +214,11 @@ export function createRouter(options?: RouterOptions): Router {
   ): void {
     let routeMiddleware: Middleware<any, any>[] | undefined
     let requestHandler: RequestHandler<any, any>
-    if (hasAction(action)) {
-      routeMiddleware = action.middleware
+    if (isActionWithMiddleware(action)) {
+      routeMiddleware = action.middleware.length > 0 ? action.middleware : undefined
       requestHandler = action.action
     } else {
-      requestHandler = action
+      requestHandler = action as RequestHandler<any, any>
     }
 
     matcher.add(pattern instanceof Route ? pattern.pattern : pattern, {
@@ -223,60 +228,75 @@ export function createRouter(options?: RouterOptions): Router {
     })
   }
 
-  function mapRoute(routeArg: any, controllerArg: any): void {
+  function mapRoute(
+    routeArg: RouteMap | Route | RoutePattern | string,
+    controllerArg: unknown,
+  ): void {
     if (typeof routeArg === 'string' || routeArg instanceof RoutePattern) {
       // map(pattern, action)
-      addRoute('ANY', routeArg, controllerArg)
+      addRoute('ANY', routeArg, controllerArg as Action<any, any>)
     } else if (routeArg instanceof Route) {
       // map(route, action)
-      addRoute(routeArg.method, routeArg.pattern, controllerArg)
-    } else if (!hasActions(controllerArg)) {
-      // map(routes, controller)
-      let controller = controllerArg
-      for (let key in routeArg) {
-        let route = routeArg[key]
-        let action = controller[key]
-
-        if (route instanceof Route) {
-          addRoute(route.method, route.pattern, action)
-        } else {
-          mapRoute(route, action)
-        }
-      }
+      addRoute(routeArg.method, routeArg.pattern, controllerArg as Action<any, any>)
+    } else if (isControllerWithMiddleware(controllerArg)) {
+      // map(routes, { middleware, actions })
+      mapControllerWithMiddleware(routeArg, controllerArg.middleware, controllerArg.actions)
     } else {
-      // map(routes, { middleware?, actions })
-      let controllerMiddleware = controllerArg.middleware
-      let actions = controllerArg.actions
-      for (let key in routeArg) {
-        let route = routeArg[key]
-        let action = (actions as any)[key]
+      // map(routes, controller)
+      mapController(routeArg, controllerArg as Record<string, unknown>)
+    }
+  }
 
-        if (route instanceof Route) {
-          let actionMiddleware =
-            controllerMiddleware && action.middleware
-              ? controllerMiddleware.concat(action.middleware)
-              : (controllerMiddleware ?? action.middleware)
+  function mapControllerWithMiddleware(
+    routes: RouteMap,
+    controllerMiddleware: Middleware[],
+    actions: Record<string, unknown>,
+  ): void {
+    for (let key in routes) {
+      let route = routes[key]
+      let action = actions[key]
 
-          if (hasAction(action)) {
-            addRoute(route.method, route.pattern, {
-              middleware: actionMiddleware,
-              action: action.action,
-            })
-          } else {
-            addRoute(route.method, route.pattern, { middleware: actionMiddleware, action })
-          }
-        } else if (hasActions(action)) {
-          // map(routes, { middleware?, actions: { home: { middleware?, actions } } })
-          let routeMiddleware =
-            controllerMiddleware && action.middleware
-              ? controllerMiddleware.concat(action.middleware)
-              : (controllerMiddleware ?? action.middleware)
-
-          mapRoute(route, { middleware: routeMiddleware, actions: action.actions })
+      if (route instanceof Route) {
+        // Single route - check if action has its own middleware
+        if (isActionWithMiddleware(action)) {
+          let mergedMiddleware = controllerMiddleware.concat(action.middleware)
+          addRoute(route.method, route.pattern, {
+            middleware: mergedMiddleware,
+            action: action.action,
+          })
         } else {
-          // map(routes, { middleware?, actions })
-          mapRoute(route, { middleware: controllerMiddleware, actions: action })
+          addRoute(route.method, route.pattern, {
+            middleware: controllerMiddleware,
+            action: action as RequestHandler<any, any>,
+          })
         }
+      } else if (isControllerWithMiddleware(action)) {
+        // Nested controller with its own middleware - merge and recurse
+        mapControllerWithMiddleware(
+          route as RouteMap,
+          controllerMiddleware.concat(action.middleware),
+          action.actions,
+        )
+      } else {
+        // Nested controller without middleware - pass down current middleware
+        mapControllerWithMiddleware(
+          route as RouteMap,
+          controllerMiddleware,
+          action as Record<string, unknown>,
+        )
+      }
+    }
+  }
+
+  function mapController(routes: RouteMap, controller: Record<string, unknown>): void {
+    for (let key in routes) {
+      let route = routes[key]
+      let action = controller[key]
+
+      if (route instanceof Route) {
+        addRoute(route.method, route.pattern, action as Action<any, any>)
+      } else {
+        mapRoute(route as RouteMap, action)
       }
     }
   }

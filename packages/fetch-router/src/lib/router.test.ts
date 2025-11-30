@@ -177,24 +177,6 @@ describe('router.map()', () => {
     assert.equal(await response.text(), 'Home')
   })
 
-  it('maps a single route to an action without middleware', async () => {
-    let routes = route({
-      home: '/',
-    })
-
-    let router = createRouter()
-
-    router.map(routes.home, {
-      action() {
-        return new Response('Home')
-      },
-    })
-
-    let response = await router.fetch('https://remix.run')
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Home')
-  })
-
   it('maps a single route to an action with middleware', async () => {
     let routes = route({
       home: '/',
@@ -269,34 +251,6 @@ describe('router.map()', () => {
     assert.equal(await response.text(), 'Blog Post 1')
   })
 
-  it('maps a route map to actions without middleware', async () => {
-    let routes = route({
-      home: '/',
-      blog: '/blog',
-    })
-
-    let router = createRouter()
-
-    router.map(routes, {
-      actions: {
-        home() {
-          return new Response('Home')
-        },
-        blog() {
-          return new Response('Blog')
-        },
-      },
-    })
-
-    let response = await router.fetch('https://remix.run')
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Home')
-
-    response = await router.fetch('https://remix.run/blog')
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Blog')
-  })
-
   it('maps a route map to actions with middleware', async () => {
     let routes = route({
       home: '/',
@@ -333,13 +287,17 @@ describe('router.map()', () => {
 
     let router = createRouter()
 
-    router.map(routes, {
-      middleware: [],
-      // @ts-expect-error - should not allow middleware alongside actions
-      home() {
-        return new Response('OK')
-      },
-    })
+    // This is a compile-time type check only - we use a never-executed block
+    // to verify that TypeScript catches the error without running the code.
+    if (false as boolean) {
+      router.map(routes, {
+        middleware: [],
+        // @ts-expect-error - should not allow middleware alongside actions
+        home() {
+          return new Response('OK')
+        },
+      })
+    }
   })
 
   it('supports middleware in nested controllers', async () => {
@@ -488,19 +446,6 @@ describe('router.get()', () => {
   it('maps a single route to a request handler', async () => {
     let router = createRouter()
     router.get('/', () => new Response('Home'))
-
-    let response = await router.fetch('https://remix.run')
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Home')
-  })
-
-  it('maps a single route to an action object without middleware', async () => {
-    let router = createRouter()
-    router.get('/', {
-      action() {
-        return new Response('Home')
-      },
-    })
 
     let response = await router.fetch('https://remix.run')
     assert.equal(response.status, 200)

@@ -94,6 +94,48 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   })
   ```
 
+- BREAKING CHANGE: The `middleware` property is now required (not optional) in controller and action objects that use the `{ middleware, actions }` or `{ middleware, action }` format. This eliminates ambiguity when route names like `action` collide with the `action` property name.
+
+  ```tsx
+  // Before: { action } without middleware was allowed
+  router.map(routes.home, {
+    action() {
+      return new Response('Home')
+    },
+  })
+
+  // After: just use a plain request handler function instead
+  router.map(routes.home, () => {
+    return new Response('Home')
+  })
+
+  // Before: { actions } without middleware was allowed
+  router.map(routes, {
+    actions: {
+      home() {
+        return new Response('Home')
+      },
+    },
+  })
+
+  // After: just use a plain controller object instead
+  router.map(routes, {
+    home() {
+      return new Response('Home')
+    },
+  })
+
+  // With middleware, the syntax remains the same (but middleware is now required)
+  router.map(routes, {
+    middleware: [auth()],
+    actions: {
+      home() {
+        return new Response('Home')
+      },
+    },
+  })
+  ```
+
 ## v0.12.0 (2025-11-25)
 
 - BREAKING CHANGE: Moved all response helpers to `@remix-run/response`. Update your imports:

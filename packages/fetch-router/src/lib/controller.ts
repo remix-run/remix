@@ -11,20 +11,14 @@ export type Controller<routes extends RouteMap> =
   | ControllerWithoutMiddleware<routes>
 
 type ControllerWithMiddleware<routes extends RouteMap> = {
-  middleware?: Middleware[]
+  middleware: Middleware[]
   actions: ControllerWithoutMiddleware<routes>
 } & (routes extends Record<string, any>
   ? {
-      // Explicitly exclude route name keys from objects with `actions`
+      // Explicitly exclude route name keys from objects with `middleware`
       [name in keyof routes as routes extends any ? never : name]?: never
     }
   : {})
-
-export function hasActions<routes extends RouteMap>(
-  controller: any,
-): controller is ControllerWithMiddleware<routes> {
-  return typeof controller === 'object' && controller != null && 'actions' in controller
-}
 
 // prettier-ignore
 type ControllerWithoutMiddleware<routes extends RouteMap> = routes extends any ?
@@ -35,9 +29,8 @@ type ControllerWithoutMiddleware<routes extends RouteMap> = routes extends any ?
       never
     )
   } & {
-    // Explicitly exclude `middleware` and `actions` from objects with route name keys
+    // Explicitly exclude `middleware` from objects with route name keys
     middleware?: never
-    actions?: never
   }) :
   never
 
@@ -49,14 +42,8 @@ export type Action<method extends RequestMethod | 'ANY', pattern extends string>
   | RequestHandler<method, Params<pattern>>
 
 type RequestHandlerWithMiddleware<method extends RequestMethod | 'ANY', pattern extends string> = {
-  middleware?: Middleware<method, Params<pattern>>[]
+  middleware: Middleware<method, Params<pattern>>[]
   action: RequestHandler<method, Params<pattern>>
-}
-
-export function hasAction<method extends RequestMethod | 'ANY', pattern extends string>(
-  action: any,
-): action is RequestHandlerWithMiddleware<method, pattern> {
-  return typeof action === 'object' && action != null && 'action' in action
 }
 
 /**
@@ -68,3 +55,33 @@ export type BuildAction<method extends RequestMethod | 'ANY', route extends stri
   route extends RoutePattern<infer pattern> ? Action<method, pattern> :
   route extends Route<infer _, infer pattern> ? Action<method, pattern> :
   never
+
+/**
+ * Runtime shape for a controller with middleware.
+ */
+export interface ControllerWithMiddlewareShape {
+  middleware: Middleware[]
+  actions: Record<string, unknown>
+}
+
+/**
+ * Check if an object has middleware and an `actions` property (controller with middleware).
+ */
+export function isControllerWithMiddleware(obj: unknown): obj is ControllerWithMiddlewareShape {
+  return typeof obj === 'object' && obj != null && 'middleware' in obj && 'actions' in obj
+}
+
+/**
+ * Runtime shape for an action with middleware.
+ */
+export interface ActionWithMiddlewareShape {
+  middleware: Middleware[]
+  action: RequestHandler<any, any>
+}
+
+/**
+ * Check if an object has middleware and an `action` property (action with middleware).
+ */
+export function isActionWithMiddleware(obj: unknown): obj is ActionWithMiddlewareShape {
+  return typeof obj === 'object' && obj != null && 'middleware' in obj && 'action' in obj
+}
