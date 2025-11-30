@@ -159,7 +159,7 @@ describe('router.fetch()', () => {
   })
 })
 
-describe('router.map()', () => {
+describe('router.any()', () => {
   it('maps a single route to a request handler', async () => {
     let routes = route({
       home: '/',
@@ -167,7 +167,7 @@ describe('router.map()', () => {
 
     let router = createRouter()
 
-    router.map(routes.home, () => {
+    router.any(routes.home, () => {
       return new Response('Home')
     })
 
@@ -179,7 +179,6 @@ describe('router.map()', () => {
 
   it('maps a single route to an action with middleware', async () => {
     let routes = route({
-      home: '/',
       profile: '/profile/:id',
     })
 
@@ -190,7 +189,7 @@ describe('router.map()', () => {
       requestLog.push(`middleware ${context.params.id}`)
     }
 
-    router.map(routes.profile, {
+    router.any(routes.profile, {
       middleware: [middleware],
       action() {
         requestLog.push('action')
@@ -205,6 +204,20 @@ describe('router.map()', () => {
     assert.deepEqual(requestLog, ['middleware 1', 'action'])
   })
 
+  it('matches any request method', async () => {
+    let router = createRouter()
+
+    router.any('/', ({ method }) => new Response(method))
+
+    for (let method of ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']) {
+      let response = await router.fetch('https://remix.run', { method })
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), method)
+    }
+  })
+})
+
+describe('router.map()', () => {
   it('maps a route map to a map of actions', async () => {
     let routes = route({
       home: '/',
@@ -364,7 +377,7 @@ describe('router.map()', () => {
     let router = createRouter()
 
     // Public route - no middleware
-    router.map(routes.public, () => {
+    router.any(routes.public, () => {
       requestLog.push('public')
       return new Response('Public')
     })

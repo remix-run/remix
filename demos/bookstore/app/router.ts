@@ -44,10 +44,10 @@ export let router = createRouter({ middleware })
 
 router.get(routes.uploads, uploadsAction)
 
-router.map(routes.home, marketingController.home)
-router.map(routes.about, marketingController.about)
+router.any(routes.home, marketingController.home)
+router.any(routes.about, marketingController.about)
 router.map(routes.contact, marketingController.contact)
-router.map(routes.search, marketingController.search)
+router.any(routes.search, marketingController.search)
 
 router.map(routes.fragments, fragmentsController)
 

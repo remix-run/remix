@@ -31,7 +31,7 @@ describe('session middleware', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.map('/', ({ session }) => {
+    router.any('/', ({ session }) => {
       session.set('count', Number(session.get('count') ?? 0) + 1)
       return new Response(`Count: ${session.get('count')}`)
     })
@@ -67,7 +67,7 @@ describe('session middleware', () => {
       ],
     })
 
-    router.map('/', () => {
+    router.any('/', () => {
       return new Response('Home')
     })
 
@@ -84,7 +84,7 @@ describe('session middleware', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.map('/', (context) => {
+    router.any('/', (context) => {
       context.session = createSession()
       return new Response('Home')
     })

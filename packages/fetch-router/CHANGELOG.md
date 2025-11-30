@@ -4,6 +4,24 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
+- BREAKING CHANGE: `router.map()` now only accepts route maps (nested route structures). Use the new `router.any()` method to map a single route/pattern to an action that handles any request method.
+
+  ```tsx
+  // Before
+  router.map(routes.home, () => new Response('Home'))
+  router.map(routes.profile, { middleware: [...], action() { ... } })
+
+  // After
+  router.any(routes.home, () => new Response('Home'))
+  router.any(routes.profile, { middleware: [...], action() { ... } })
+
+  // Route maps continue to use router.map()
+  router.map(routes, controller)
+  router.map(routes.admin, { middleware: [...], actions: { ... } })
+  ```
+
+  The `router.any()` method mirrors the existing method-specific helpers (`router.get()`, `router.post()`, etc.) but matches any request method.
+
 - BREAKING CHANGE: Renamed "route handlers" terminology to "controller/action" throughout the package. This is a breaking change for anyone using the types or properties from this package. Update your code:
 
   ```tsx
@@ -76,36 +94,18 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
   The `FormActionOptions` type has also been renamed to `FormOptions`.
 
-- Add functional aliases for creating routes that respond to a single request method
-
-  ```tsx
-  import { del, get, patch, post } from '@remix-run/fetch-router'
-
-  let routes = route({
-    home: get('/'),
-    login: post('/login'),
-    logout: post('/logout'),
-    profile: {
-      show: get('/profile'),
-      edit: get('/profile/edit'),
-      update: patch('/profile'),
-      destroy: del('/profile'),
-    },
-  })
-  ```
-
 - BREAKING CHANGE: The `middleware` property is now required (not optional) in controller and action objects that use the `{ middleware, actions }` or `{ middleware, action }` format. This eliminates ambiguity when route names like `action` collide with the `action` property name.
 
   ```tsx
   // Before: { action } without middleware was allowed
-  router.map(routes.home, {
+  router.any(routes.home, {
     action() {
       return new Response('Home')
     },
   })
 
   // After: just use a plain request handler function instead
-  router.map(routes.home, () => {
+  router.any(routes.home, () => {
     return new Response('Home')
   })
 
@@ -132,6 +132,24 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
       home() {
         return new Response('Home')
       },
+    },
+  })
+  ```
+
+- Add functional aliases for creating routes that respond to a single request method
+
+  ```tsx
+  import { del, get, patch, post } from '@remix-run/fetch-router'
+
+  let routes = route({
+    home: get('/'),
+    login: post('/login'),
+    logout: post('/logout'),
+    profile: {
+      show: get('/profile'),
+      edit: get('/profile/edit'),
+      update: patch('/profile'),
+      destroy: del('/profile'),
     },
   })
   ```

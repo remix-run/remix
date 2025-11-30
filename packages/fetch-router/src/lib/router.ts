@@ -71,32 +71,21 @@ export interface Router {
     action: Action<method, pattern>,
   ): void
   /**
-   * Map a route map (or route/pattern) to controller action(s).
+   * Map a route map to a controller.
    *
-   * @param route The route(s)/pattern to match
-   * @param controller The controller/action(s) to invoke when the routes match
+   * @param routes The route map to match
+   * @param controller The controller to invoke when the routes match
    */
-  map<
-    route extends RouteMap | Route<RequestMethod | 'ANY', string> | RoutePattern<string> | string,
-  >(
-    route: route,
-    controller: // prettier-ignore
-    // map(stringPattern, action)
-    route extends string ? Action<RequestMethod | 'ANY', route> :
-
-    // map(pattern, action)
-    route extends RoutePattern<infer source extends string> ? Action<RequestMethod | 'ANY', source> :
-
-    // map(route, action)
-    route extends Route<
-      infer method extends RequestMethod | 'ANY',
-      infer source extends string
-    > ? method extends 'ANY' ? Action<RequestMethod | 'ANY', source> : Action<method, source> :
-
-    // map(routeMap, controller)
-    [route] extends [RouteMap] ? Controller<route> :
-
-    never,
+  map<routes extends RouteMap>(routes: routes, controller: Controller<routes>): void
+  /**
+   * Map a route/pattern to an action that handles any request method.
+   *
+   * @param route The route/pattern to match
+   * @param action The action to invoke when the route matches
+   */
+  any<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<RequestMethod | 'ANY', pattern>,
+    action: Action<RequestMethod | 'ANY', pattern>,
   ): void
   /**
    * Map a `GET` route/pattern to an action.
@@ -228,22 +217,13 @@ export function createRouter(options?: RouterOptions): Router {
     })
   }
 
-  function mapRoute(
-    routeArg: RouteMap | Route | RoutePattern | string,
-    controllerArg: unknown,
-  ): void {
-    if (typeof routeArg === 'string' || routeArg instanceof RoutePattern) {
-      // map(pattern, action)
-      addRoute('ANY', routeArg, controllerArg as Action<any, any>)
-    } else if (routeArg instanceof Route) {
-      // map(route, action)
-      addRoute(routeArg.method, routeArg.pattern, controllerArg as Action<any, any>)
-    } else if (isControllerWithMiddleware(controllerArg)) {
+  function mapRoutes(routes: RouteMap, controllerArg: unknown): void {
+    if (isControllerWithMiddleware(controllerArg)) {
       // map(routes, { middleware, actions })
-      mapControllerWithMiddleware(routeArg, controllerArg.middleware, controllerArg.actions)
+      mapControllerWithMiddleware(routes, controllerArg.middleware, controllerArg.actions)
     } else {
       // map(routes, controller)
-      mapController(routeArg, controllerArg as Record<string, unknown>)
+      mapController(routes, controllerArg as Record<string, unknown>)
     }
   }
 
@@ -296,7 +276,7 @@ export function createRouter(options?: RouterOptions): Router {
       if (route instanceof Route) {
         addRoute(route.method, route.pattern, action as Action<any, any>)
       } else {
-        mapRoute(route as RouteMap, action)
+        mapRoutes(route as RouteMap, action)
       }
     }
   }
@@ -320,7 +300,13 @@ export function createRouter(options?: RouterOptions): Router {
       return matcher.size
     },
     route: addRoute,
-    map: mapRoute,
+    map: mapRoutes,
+    any<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<RequestMethod | 'ANY', pattern>,
+      action: Action<RequestMethod | 'ANY', pattern>,
+    ): void {
+      addRoute('ANY', route, action)
+    },
     get<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
       action: Action<'GET', pattern>,

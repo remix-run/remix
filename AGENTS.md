@@ -42,3 +42,5 @@
 
 - Use `## Unreleased` as the heading for unreleased changes (not `## HEAD`)
 - Scripts in `./scripts` are configured to replace `## Unreleased` with version and date on release
+- **Only modify the `## Unreleased` section**: Older changelog entries represent a point in time when that release was made. Do not modify code examples or text in past releases, even if they reference outdated APIs.
+- **BREAKING CHANGEs come first**: Within a release section, list all BREAKING CHANGE entries before any feature additions. This makes it easy for users to quickly identify what broke in a release.

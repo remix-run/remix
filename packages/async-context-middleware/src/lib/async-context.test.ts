@@ -15,7 +15,7 @@ describe('asyncContext', () => {
       middleware: [asyncContext()],
     })
 
-    router.map(routes.home, (context) => {
+    router.any(routes.home, (context) => {
       assert.equal(context, getContext())
       return new Response('Home')
     })

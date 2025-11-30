@@ -34,7 +34,7 @@ export let router = createRouter({
   middleware: [logger(), formData(), session(sessionCookie, sessionStorage)],
 })
 
-router.map(routes.home, ({ session }) => {
+router.any(routes.home, ({ session }) => {
   let posts = data.getPosts()
   let username = session.get('username') as string | undefined
 
