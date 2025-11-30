@@ -1,8 +1,8 @@
-import { route } from '@remix-run/fetch-router'
+import { get, route } from '@remix-run/fetch-router'
 
 export let routes = route({
   // Home page with instructions
-  home: '/',
+  home: get('/'),
 
   // Package browser - handles all package paths
   // Examples:
@@ -11,5 +11,5 @@ export let routes = route({
   //   /lodash@4.17.21/package.json
   //   /@remix-run/cookie
   //   /@remix-run/cookie@1.0.0/src/index.ts
-  browse: '/*path',
+  browse: get('/*path'),
 })

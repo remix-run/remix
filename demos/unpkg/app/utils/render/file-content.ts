@@ -1,7 +1,7 @@
-import { html, render, formatBytes } from '../lib/render.ts'
-import type { PackageFile } from '../lib/npm.ts'
+import type { PackageFile } from '../npm.ts'
+import { html, render, formatBytes } from '../render.ts'
+import { renderBreadcrumb } from './breadcrumb.ts'
 
-// Text file extensions that we can display
 const TEXT_EXTENSIONS = new Set([
   '.js',
   '.mjs',
@@ -75,10 +75,8 @@ const TEXT_EXTENSIONS = new Set([
   'Dockerfile',
 ])
 
-// Image file extensions
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.bmp'])
 
-// Get MIME type for images
 const IMAGE_MIME_TYPES: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -91,7 +89,7 @@ const IMAGE_MIME_TYPES: Record<string, string> = {
 
 function getExtension(filename: string): string {
   let lastDot = filename.lastIndexOf('.')
-  if (lastDot === -1) return filename.toUpperCase() // Files like LICENSE, README
+  if (lastDot === -1) return filename.toUpperCase()
   return filename.slice(lastDot).toLowerCase()
 }
 
@@ -106,16 +104,22 @@ function isImageFile(filename: string): boolean {
 }
 
 function isLikelyText(data: Uint8Array): boolean {
-  // Check if the data looks like text by examining the first chunk
   let sampleSize = Math.min(data.length, 8192)
   for (let i = 0; i < sampleSize; i++) {
     let byte = data[i]
-    // Check for common binary indicators (null bytes, control characters except newline/tab/CR)
     if (byte === 0 || (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13)) {
       return false
     }
   }
   return true
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary)
 }
 
 export function renderFileContent(
@@ -127,25 +131,7 @@ export function renderFileContent(
 ): Response {
   let title = `${packageName}@${version}/${filePath}`
   let ext = getExtension(file.name)
-
-  // Build breadcrumb
-  let pathParts = filePath.split('/')
-  let parentPath = pathParts.slice(0, -1).join('/')
-  let breadcrumbLinks = [
-    html`<a href="/">Home</a>`,
-    html` / <a href="/${packageName}@${version}">${packageName}@${version}</a>`,
-  ]
-
-  let currentPath = ''
-  for (let i = 0; i < pathParts.length - 1; i++) {
-    currentPath += (currentPath ? '/' : '') + pathParts[i]
-    breadcrumbLinks.push(
-      html` / <a href="/${packageName}@${version}/${currentPath}">${pathParts[i]}</a>`,
-    )
-  }
-  breadcrumbLinks.push(html` / <span>${pathParts[pathParts.length - 1]}</span>`)
-
-  let breadcrumb = html`<nav class="breadcrumb">${breadcrumbLinks}</nav>`
+  let breadcrumb = renderBreadcrumb(packageName, version, filePath)
 
   let content
   if (isImageFile(file.name)) {
@@ -181,12 +167,4 @@ export function renderFileContent(
       ${content}
     `,
   )
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = ''
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i])
-  }
-  return btoa(binary)
 }

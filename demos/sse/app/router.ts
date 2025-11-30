@@ -4,8 +4,7 @@ import { logger } from '@remix-run/logger-middleware'
 import { staticFiles } from '@remix-run/static-middleware'
 
 import { routes } from './routes.ts'
-import { home } from './home.tsx'
-import { messages } from './messages.ts'
+import { pagesController } from './pages.tsx'
 
 let middleware = []
 
@@ -24,5 +23,4 @@ middleware.push(
 
 export let router = createRouter({ middleware })
 
-router.get(routes.home, home)
-router.get(routes.messages, messages)
+router.map(routes, pagesController)
