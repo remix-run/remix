@@ -1,14 +1,4 @@
 {
-  "include": ["server.ts", "../../global.d.ts"],
-  "compilerOptions": {
-    "strict": true,
-    "lib": ["ES2024", "DOM", "DOM.Iterable"],
-    "module": "ES2022",
-    "moduleResolution": "Bundler",
-    "target": "ESNext",
-    "allowImportingTsExtensions": true,
-    "rewriteRelativeImportExtensions": true,
-    "verbatimModuleSyntax": true,
-    "skipLibCheck": true
-  }
+  "extends": ["@remix-run/config/tsconfig.json"],
+  "include": ["server.ts"]
 }

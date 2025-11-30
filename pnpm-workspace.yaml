@@ -6,6 +6,7 @@ catalog:
   typescript: ^5.9.3
 
 packages:
+  - config
   - demos/*
   - packages/*
   - packages/fetch-router/demos/*

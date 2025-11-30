@@ -32,6 +32,7 @@
     }
   },
   "devDependencies": {
+    "@remix-run/config": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/form-data-parser": "workspace:*",
     "@types/node": "catalog:",

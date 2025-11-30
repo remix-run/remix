@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@remix-run/config": "workspace:*",
     "@remix-run/file-storage": "workspace:^",
     "@remix-run/form-data-parser": "workspace:^",
     "@remix-run/multipart-parser": "workspace:^",
