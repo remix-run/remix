@@ -8,9 +8,9 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
   ```tsx
   // Before
-  import type { RouteHandlers, RouteHandler, BuildRouteHandler } from '@remix-run/fetch-router'
+  import type { RouteHandlers } from '@remix-run/fetch-router'
 
-  router.map(routes, {
+  let routeHandlers = {
     middleware: [auth()],
     handlers: {
       home() {
@@ -23,12 +23,14 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
         },
       },
     },
-  }) satisfies RouteHandlers<typeof routes>
+  } satisfies RouteHandlers<typeof routes>
+
+  router.map(routes, routeHandlers)
 
   // After
-  import type { Controller, Action, BuildAction } from '@remix-run/fetch-router'
+  import type { Controller } from '@remix-run/fetch-router'
 
-  router.map(routes, {
+  let controller = {
     middleware: [auth()],
     actions: {
       home() {
@@ -41,7 +43,9 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
         },
       },
     },
-  }) satisfies Controller<typeof routes>
+  } satisfies Controller<typeof routes>
+
+  router.map(routes, controller)
   ```
 
   Summary of changes:
