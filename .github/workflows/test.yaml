@@ -48,8 +48,7 @@ jobs:
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        shell: bash
-        run: pnpm --filter "@remix-run/*" exec playwright install --with-deps 2>/dev/null || true
+        run: pnpm --filter @remix-run/interaction exec playwright install --with-deps
 
       - name: Run tests
         run: pnpm test
