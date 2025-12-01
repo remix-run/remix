@@ -1,4 +1,4 @@
-import { html } from '../render.ts'
+import { html } from './utils/render.ts'
 
 export function renderBreadcrumb(packageName: string, version: string, dirPath: string) {
   let parts: Array<{ name: string; href: string }> = [

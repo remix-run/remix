@@ -1,4 +1,4 @@
-import { html, render } from '../render.ts'
+import { html, render } from './utils/render.ts'
 
 export function renderError(title: string, message: string): Response {
   return render(
@@ -15,4 +15,3 @@ export function renderError(title: string, message: string): Response {
     { status: 404 },
   )
 }
-

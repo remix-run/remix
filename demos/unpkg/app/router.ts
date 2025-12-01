@@ -2,10 +2,9 @@ import { createRouter } from '@remix-run/fetch-router'
 import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
 
 import { routes } from './routes.ts'
-import { html, render } from './utils/render.ts'
-import { renderFileContent } from './utils/render/file-content.ts'
-import { renderDirectoryListing } from './utils/render/directory.ts'
-import { renderError } from './utils/render/error.ts'
+import { renderFileContent } from './file-content.ts'
+import { renderDirectoryListing } from './directory.ts'
+import { renderError } from './error.ts'
 import {
   parsePackagePath,
   fetchPackageMetadata,
@@ -17,6 +16,7 @@ import {
   VersionNotFoundError,
   InvalidPathError,
 } from './utils/npm.ts'
+import { html, render } from './utils/render.ts'
 
 export let router = createRouter()
 
