@@ -4,24 +4,6 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
-- BREAKING CHANGE: `router.map()` now only accepts route maps (nested route structures). Use the new `router.any()` method to map a single route/pattern to an action that handles any request method.
-
-  ```tsx
-  // Before
-  router.map(routes.home, () => new Response('Home'))
-  router.map(routes.profile, { middleware: [...], action() { ... } })
-
-  // After
-  router.any(routes.home, () => new Response('Home'))
-  router.any(routes.profile, { middleware: [...], action() { ... } })
-
-  // Route maps continue to use router.map()
-  router.map(routes, controller)
-  router.map(routes.admin, { middleware: [...], actions: { ... } })
-  ```
-
-  The `router.any()` method mirrors the existing method-specific helpers (`router.get()`, `router.post()`, etc.) but matches any request method.
-
 - BREAKING CHANGE: Renamed "route handlers" terminology to "controller/action" throughout the package. This is a breaking change for anyone using the types or properties from this package. Update your code:
 
   ```tsx

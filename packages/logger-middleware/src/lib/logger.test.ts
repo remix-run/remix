@@ -17,7 +17,7 @@ describe('logger', () => {
       middleware: [logger({ log: (message) => messages.push(message) })],
     })
 
-    router.any(routes.home, () => {
+    router.map(routes.home, () => {
       return new Response('Home', {
         headers: {
           'Content-Length': '4',

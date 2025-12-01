@@ -528,7 +528,7 @@ Middleware may be used in two different contexts: globally (at the router level)
 
 Global middleware is added to the router when it is created using the `createRouter({ middleware })` option. This middleware runs before any routes are matched and is useful for doing things like logging, serving static files, profiling, and a variety of other things. Global middleware runs on every request, so it's important to keep them lightweight and fast.
 
-Inline (or "route") middleware is added to the router when actions are registered using either `router.map()`, `router.any()`, or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. Route middleware runs after global middleware but before the route action, and is useful for doing things like authentication, authorization, and data validation.
+Inline (or "route") middleware is added to the router when actions are registered using either `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. Route middleware runs after global middleware but before the route action, and is useful for doing things like authentication, authorization, and data validation.
 
 ```tsx
 let routes = route({
@@ -543,9 +543,9 @@ let router = createRouter({
   middleware: [staticFiles('./public')],
 })
 
-router.any(routes.home, () => new Response('Home'))
+router.map(routes.home, () => new Response('Home'))
 
-router.any(routes.admin.dashboard, {
+router.map(routes.admin.dashboard, {
   // This middleware runs only on the `/admin/dashboard` route.
   middleware: [auth({ token: 'secret' })],
   action() {

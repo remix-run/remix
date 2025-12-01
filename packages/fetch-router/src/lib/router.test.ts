@@ -159,7 +159,7 @@ describe('router.fetch()', () => {
   })
 })
 
-describe('router.any()', () => {
+describe('router.map() with single routes', () => {
   it('maps a single route to a request handler', async () => {
     let routes = route({
       home: '/',
@@ -167,7 +167,7 @@ describe('router.any()', () => {
 
     let router = createRouter()
 
-    router.any(routes.home, () => {
+    router.map(routes.home, () => {
       return new Response('Home')
     })
 
@@ -189,7 +189,7 @@ describe('router.any()', () => {
       requestLog.push(`middleware ${context.params.id}`)
     }
 
-    router.any(routes.profile, {
+    router.map(routes.profile, {
       middleware: [middleware],
       action() {
         requestLog.push('action')
@@ -207,7 +207,7 @@ describe('router.any()', () => {
   it('matches any request method', async () => {
     let router = createRouter()
 
-    router.any('/', ({ method }) => new Response(method))
+    router.map('/', ({ method }) => new Response(method))
 
     for (let method of ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']) {
       let response = await router.fetch('https://remix.run', { method })
@@ -377,7 +377,7 @@ describe('router.map()', () => {
     let router = createRouter()
 
     // Public route - no middleware
-    router.any(routes.public, () => {
+    router.map(routes.public, () => {
       requestLog.push('public')
       return new Response('Public')
     })
