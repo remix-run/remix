@@ -1,13 +1,13 @@
 {
-  "name": "route-pattern-bench",
   "private": true,
   "type": "module",
   "scripts": {
-    "bench": "node --disable-warning=ExperimentalWarning runner.ts"
+    "bench": "vitest bench"
   },
   "dependencies": {
     "@remix-run/route-pattern": "workspace:^",
     "find-my-way": "^9.1.0",
-    "path-to-regexp": "^8.2.0"
+    "path-to-regexp": "^8.2.0",
+    "vitest": "4.0.15"
   }
 }
