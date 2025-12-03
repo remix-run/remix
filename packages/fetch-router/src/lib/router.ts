@@ -32,7 +32,7 @@ export type MapTarget =
  * Infer the correct handler type (Action or Controller) based on the map target.
  */
 // prettier-ignore
-export type MapHandler<target> =
+export type MapHandler<target extends MapTarget> =
   target extends string ? Action<RequestMethod | 'ANY', target> :
   target extends RoutePattern<infer pattern extends string> ? Action<RequestMethod | 'ANY', pattern> :
   target extends Route<RequestMethod | 'ANY', infer pattern extends string> ? Action<RequestMethod | 'ANY', pattern> :
@@ -182,7 +182,7 @@ function noMatchHandler({ url }: RequestContext): Response {
 export function createRouter(options?: RouterOptions): Router {
   let defaultHandler = options?.defaultHandler ?? noMatchHandler
   let matcher = options?.matcher ?? new RegExpMatcher<MatchData>()
-  let middleware = options?.middleware
+  let globalMiddleware = options?.middleware
 
   async function dispatch(context: RequestContext): Promise<Response> {
     for (let match of matcher.matchAll(context.url)) {
@@ -246,7 +246,7 @@ export function createRouter(options?: RouterOptions): Router {
 
   function mapControllerWithMiddleware(
     routes: RouteMap,
-    controllerMiddleware: Middleware[],
+    middleware: Middleware[],
     actions: Record<string, unknown>,
   ): void {
     for (let key in routes) {
@@ -256,14 +256,13 @@ export function createRouter(options?: RouterOptions): Router {
       if (route instanceof Route) {
         // Single route - check if action has its own middleware
         if (isActionWithMiddleware(action)) {
-          let mergedMiddleware = controllerMiddleware.concat(action.middleware)
           addRoute(route.method, route.pattern, {
-            middleware: mergedMiddleware,
+            middleware: middleware.concat(action.middleware),
             action: action.action,
           })
         } else {
           addRoute(route.method, route.pattern, {
-            middleware: controllerMiddleware,
+            middleware,
             action: action as RequestHandler<any, any>,
           })
         }
@@ -271,14 +270,14 @@ export function createRouter(options?: RouterOptions): Router {
         // Nested controller with its own middleware - merge and recurse
         mapControllerWithMiddleware(
           route as RouteMap,
-          controllerMiddleware.concat(action.middleware),
+          middleware.concat(action.middleware),
           action.actions,
         )
       } else {
         // Nested controller without middleware - pass down current middleware
         mapControllerWithMiddleware(
           route as RouteMap,
-          controllerMiddleware,
+          middleware,
           action as Record<string, unknown>,
         )
       }
@@ -307,8 +306,8 @@ export function createRouter(options?: RouterOptions): Router {
       }
 
       let context = new RequestContext(request)
-      let response = middleware
-        ? await runMiddleware(middleware, context, dispatch)
+      let response = globalMiddleware
+        ? await runMiddleware(globalMiddleware, context, dispatch)
         : await dispatch(context)
 
       return response
