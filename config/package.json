@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "name": "@remix-run/config",
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.5",
+    "@tsconfig/node-ts": "^23.6.2"
+  }
+}

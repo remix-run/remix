@@ -48,6 +48,15 @@ importers:
         specifier: ^8.40.0
         version: 8.40.0(eslint@9.33.0)(typescript@5.9.3)
 
+  config:
+    devDependencies:
+      '@tsconfig/node-ts':
+        specifier: ^23.6.2
+        version: 23.6.2
+      '@tsconfig/node22':
+        specifier: ^22.0.5
+        version: 22.0.5
+
   demos/bookstore:
     dependencies:
       '@remix-run/async-context-middleware':
@@ -203,6 +212,9 @@ importers:
 
   packages/async-context-middleware:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../fetch-router
@@ -218,6 +230,9 @@ importers:
 
   packages/compression-middleware:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../fetch-router
@@ -243,6 +258,9 @@ importers:
         specifier: workspace:^
         version: link:../headers
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -259,6 +277,9 @@ importers:
         specifier: workspace:^
         version: link:../headers
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -278,6 +299,9 @@ importers:
         specifier: workspace:^
         version: link:../route-pattern
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@remix-run/session':
         specifier: workspace:*
         version: link:../session
@@ -367,6 +391,9 @@ importers:
 
   packages/fetch-router/demos/node:
     dependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../../../config
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../../../cookie
@@ -414,6 +441,9 @@ importers:
         specifier: workspace:^
         version: link:../lazy-file
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@remix-run/form-data-parser':
         specifier: workspace:*
         version: link:../form-data-parser
@@ -429,6 +459,9 @@ importers:
 
   packages/form-data-middleware:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../fetch-router
@@ -451,6 +484,9 @@ importers:
         specifier: workspace:^
         version: link:../multipart-parser
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -463,6 +499,9 @@ importers:
 
   packages/form-data-parser/demos/node:
     dependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../../../config
       '@remix-run/file-storage':
         specifier: workspace:^
         version: link:../../../file-storage
@@ -492,6 +531,9 @@ importers:
         specifier: workspace:^
         version: link:../mime
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -504,6 +546,9 @@ importers:
 
   packages/headers:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -516,6 +561,9 @@ importers:
 
   packages/html-template:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -528,6 +576,12 @@ importers:
 
   packages/interaction:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.6.0
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
@@ -569,6 +623,9 @@ importers:
         specifier: workspace:^
         version: link:../mime
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -581,6 +638,9 @@ importers:
 
   packages/logger-middleware:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../fetch-router
@@ -596,6 +656,9 @@ importers:
 
   packages/method-override-middleware:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../fetch-router
@@ -614,6 +677,9 @@ importers:
 
   packages/mime:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -633,6 +699,9 @@ importers:
         specifier: workspace:^
         version: link:../headers
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -725,6 +794,9 @@ importers:
         specifier: ^0.2.3
         version: 0.2.3
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -737,6 +809,9 @@ importers:
 
   packages/node-fetch-server:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -775,6 +850,9 @@ importers:
         specifier: workspace:^
         version: link:../html-template
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@remix-run/mime':
         specifier: workspace:*
         version: link:../mime
@@ -793,6 +871,9 @@ importers:
       '@ark/attest':
         specifier: ^0.49.0
         version: 0.49.0(typescript@5.9.3)
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -805,6 +886,9 @@ importers:
 
   packages/route-pattern/bench:
     dependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../../config
       '@remix-run/route-pattern':
         specifier: workspace:^
         version: link:..
@@ -820,6 +904,9 @@ importers:
 
   packages/session:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
@@ -832,6 +919,9 @@ importers:
 
   packages/session-middleware:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../cookie
@@ -863,6 +953,9 @@ importers:
         specifier: workspace:^
         version: link:../html-template
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../fetch-router
@@ -902,6 +995,9 @@ importers:
 
   packages/tar-parser:
     devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../../config
       '@remix-run/fs':
         specifier: workspace:*
         version: link:../fs
@@ -957,6 +1053,10 @@ importers:
       semver:
         specifier: ^7.6.3
         version: 7.6.3
+    devDependencies:
+      '@remix-run/config':
+        specifier: workspace:*
+        version: link:../config
 
 packages:
 
@@ -2074,6 +2174,12 @@ packages:
     engines: {node: '>=12', npm: '>=6'}
     peerDependencies:
       '@testing-library/dom': '>=7.21.4'
+
+  '@tsconfig/node-ts@23.6.2':
+    resolution: {integrity: sha512-WcU3KR3tHB8XMotRBpUEGfPLT3W0gAhrHcTxU7mNQ4N1+fwF3LbjpWP07TuhZtN5ehK3bcK/R4Zzqp7Pqd7Nqg==}
+
+  '@tsconfig/node22@22.0.5':
+    resolution: {integrity: sha512-hLf2ld+sYN/BtOJjHUWOk568dvjFQkHnLNa6zce25GIH+vxKfvTgm3qpaH6ToF5tu/NN0IH66s+Bb5wElHrLcw==}
 
   '@types/aria-query@5.0.4':
     resolution: {integrity: sha512-rfT93uj5s0PRL7EzccGMs3brplhcrghnDoV26NqKhCAS1hVo+WdNsPvE/yb6ilfr5hi2MEk6d5EWJTKdxg8jVw==}
@@ -4719,6 +4825,10 @@ snapshots:
   '@testing-library/user-event@14.6.1(@testing-library/dom@10.4.1)':
     dependencies:
       '@testing-library/dom': 10.4.1
+
+  '@tsconfig/node-ts@23.6.2': {}
+
+  '@tsconfig/node22@22.0.5': {}
 
   '@types/aria-query@5.0.4': {}
 

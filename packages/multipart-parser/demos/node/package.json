@@ -7,6 +7,7 @@
     "tmp": "^0.2.3"
   },
   "devDependencies": {
+    "@remix-run/config": "workspace:*",
     "@types/node": "catalog:",
     "@types/tmp": "^0.2.6",
     "typescript": "catalog:"

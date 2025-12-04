@@ -33,6 +33,7 @@
     }
   },
   "devDependencies": {
+    "@remix-run/config": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
