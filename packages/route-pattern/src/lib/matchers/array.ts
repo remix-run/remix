@@ -1,5 +1,5 @@
-import type { Matcher, MatchResult } from './matcher.ts'
-import { RoutePattern } from './route-pattern.ts'
+import type { Matcher, MatchResult } from '../matcher.ts'
+import { RoutePattern } from '../route-pattern.ts'
 
 /**
  * A simple array-based matcher that compiles route patterns to regular expressions.
@@ -10,7 +10,7 @@ import { RoutePattern } from './route-pattern.ts'
  * - Pattern set changes frequently (cheap to rebuild)
  * - Memory footprint needs to be minimal
  */
-export class RegExpMatcher<T = any> implements Matcher<T> {
+export class ArrayMatcher<T = any> implements Matcher<T> {
   #pairs: { pattern: RoutePattern; data: T }[] = []
   #count = 0
 

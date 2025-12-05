@@ -36,11 +36,14 @@
     "@ark/attest": "^0.49.0",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "typescript": "catalog:"
+    "find-my-way": "^9.1.0",
+    "path-to-regexp": "^8.2.0",
+    "typescript": "catalog:",
+    "vitest": "4.0.15"
   },
   "scripts": {
-    "bench": "pnpm --dir bench bench",
-    "bench:types": "node src/lib/parse.types.bench.ts && node src/lib/params.types.bench.ts",
+    "bench": "vitest bench",
+    "bench:types": "node src/**/*.bench.types.ts",
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",

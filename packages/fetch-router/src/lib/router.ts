@@ -1,4 +1,4 @@
-import { type Matcher, RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { type Matcher, ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
 
 import { type Middleware, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
@@ -52,7 +52,7 @@ export interface RouterOptions {
   /**
    * The matcher to use for matching routes.
    *
-   * @default `new RegExpMatcher()`
+   * @default `new ArrayMatcher()`
    */
   matcher?: Matcher<MatchData>
   /**
@@ -181,7 +181,7 @@ function noMatchHandler({ url }: RequestContext): Response {
  */
 export function createRouter(options?: RouterOptions): Router {
   let defaultHandler = options?.defaultHandler ?? noMatchHandler
-  let matcher = options?.matcher ?? new RegExpMatcher<MatchData>()
+  let matcher = options?.matcher ?? new ArrayMatcher<MatchData>()
   let globalMiddleware = options?.middleware
 
   async function dispatch(context: RequestContext): Promise<Response> {

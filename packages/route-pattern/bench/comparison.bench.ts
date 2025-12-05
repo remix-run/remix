@@ -10,7 +10,7 @@
 import { bench, describe } from 'vitest'
 import FindMyWay from 'find-my-way'
 import { match } from 'path-to-regexp'
-import { RegExpMatcher, TrieMatcher } from '../src'
+import { ArrayMatcher, TrieMatcher } from '../src'
 
 type Syntax = 'route-pattern' | 'find-my-way' | 'path-to-regexp'
 
@@ -32,7 +32,7 @@ const matchers: Array<{
   {
     name: 'route-pattern/array',
     syntax: 'route-pattern',
-    createMatcher: () => new RegExpMatcher(),
+    createMatcher: () => new ArrayMatcher(),
   },
   {
     /** https://github.com/delvedor/find-my-way */
