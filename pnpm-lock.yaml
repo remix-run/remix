@@ -799,21 +799,15 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-
-  packages/route-pattern/bench:
-    dependencies:
-      '@remix-run/route-pattern':
-        specifier: workspace:^
-        version: link:..
       find-my-way:
         specifier: ^9.1.0
         version: 9.3.0
       path-to-regexp:
         specifier: ^8.2.0
         version: 8.3.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
       vitest:
         specifier: 4.0.15
         version: 4.0.15(@types/node@24.6.0)(tsx@4.20.6)
