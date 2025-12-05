@@ -1,5 +1,5 @@
-import type { Matcher, MatchResult } from './matcher.ts'
-import { RoutePattern } from './route-pattern.ts'
+import type { Matcher, MatchResult } from '../matcher.ts'
+import { RoutePattern } from '../route-pattern.ts'
 
 /**
  * A simple array-based matcher that compiles route patterns to regular expressions.

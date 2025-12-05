@@ -12,7 +12,7 @@ export { ParseError } from './lib/parse.ts'
 export { RoutePattern } from './lib/route-pattern.ts'
 export type { RoutePatternOptions, RouteMatch } from './lib/route-pattern.ts'
 
-export { RegExpMatcher } from './lib/regexp-matcher.ts'
+export { RegExpMatcher } from './lib/matchers/array.ts'
 
 export { TrieMatcher } from './lib/trie-matcher.ts'
 export type { TrieMatcherOptions } from './lib/trie-matcher.ts'

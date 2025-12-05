@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { RoutePattern } from './route-pattern.ts'
-import { TrieMatcher } from './trie-matcher.ts'
+import { RoutePattern } from '../route-pattern.ts'
+import { TrieMatcher } from './trie.ts'
 
 interface TestNode {
   name: string
