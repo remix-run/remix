@@ -125,16 +125,15 @@ function generateCommonPatterns(count: number): Array<Pattern> {
 function generateUrls(): Array<URL> {
   let urls: string[] = []
 
-  // Add varied URLs that will/won't match
   for (let i = 0; i < 20; i++) {
     urls.push(`api/v${i % 3}/users/${i}`)
     urls.push(`posts/post-${i}/comments/${i}`)
     urls.push(`users/user${i}/posts/post${i}/${i}`)
-    urls.push(`api/resource/${i}`) // Optional without version
-    urls.push(`api/resource/${i}/v${i % 2}`) // Optional with version
-    urls.push(`files/${i}/deep/nested/path.txt`) // Wildcard
-    urls.push(`files/${i}/another/file.js`) // Wildcard
-    urls.push(`nonexistent/path/${i}`) // Won't match
+    urls.push(`api/resource/${i}`)
+    urls.push(`api/resource/${i}/v${i % 2}`)
+    urls.push(`files/${i}/deep/nested/path.txt`)
+    urls.push(`files/${i}/another/file.js`)
+    urls.push(`nonexistent/path/${i}`)
   }
 
   return urls.map((url) => new URL(`https://example.com/${url}`))
