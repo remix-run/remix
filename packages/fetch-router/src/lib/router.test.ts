@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
 
 import type { RequestContext } from './request-context.ts'
 import { createRoutes as route } from './route-map.ts'
@@ -907,7 +907,7 @@ describe('custom matcher', () => {
     let matchAllCalls = 0
 
     // Create a custom matcher that tracks calls
-    class CustomMatcher extends RegExpMatcher {
+    class CustomMatcher extends ArrayMatcher {
       *matchAll(url: string | URL) {
         matchAllCalls++
         yield* super.matchAll(url)
@@ -926,7 +926,7 @@ describe('custom matcher', () => {
   it('adds routes to the custom matcher', async () => {
     let addedPatterns: string[] = []
 
-    class CustomMatcher extends RegExpMatcher {
+    class CustomMatcher extends ArrayMatcher {
       add<P extends string>(pattern: P | RoutePattern<P>, data: any): void {
         let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
         addedPatterns.push(routePattern.source)

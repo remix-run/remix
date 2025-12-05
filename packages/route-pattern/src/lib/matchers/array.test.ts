@@ -2,31 +2,31 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { RoutePattern } from '../route-pattern.ts'
-import { RegExpMatcher } from './array.ts'
+import { ArrayMatcher } from './array.ts'
 
 interface TestNode {
   name: string
   handler?: string
 }
 
-describe('RegExpMatcher', () => {
+describe('ArrayMatcher', () => {
   describe('constructor', () => {
     it('creates an empty matcher', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       assert.equal(matcher.size, 0)
     })
   })
 
   describe('add', () => {
     it('adds a simple static pattern', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('users', { name: 'users-handler' })
 
       assert.equal(matcher.size, 1)
     })
 
     it('adds multiple static patterns', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('users', { name: 'users' })
       matcher.add('posts', { name: 'posts' })
       matcher.add('admin', { name: 'admin' })
@@ -35,7 +35,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('adds patterns with variables', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('users/:id', { name: 'user-detail' })
       matcher.add('posts/:slug', { name: 'post-detail' })
 
@@ -43,7 +43,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('adds patterns with wildcards', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('files/*path', { name: 'file-handler' })
       matcher.add('assets/*', { name: 'asset-handler' })
 
@@ -51,21 +51,21 @@ describe('RegExpMatcher', () => {
     })
 
     it('adds patterns with optionals', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('api(/:version)', { name: 'api-handler' })
 
       assert.equal(matcher.size, 1)
     })
 
     it('adds empty pattern for root', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('', { name: 'root' })
 
       assert.equal(matcher.size, 1)
     })
 
     it('adds full URL patterns', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
 
       matcher.add('https://example.com/api', { name: 'api' })
       matcher.add('://api.example.com/users/:id', { name: 'api-users' })
@@ -77,7 +77,7 @@ describe('RegExpMatcher', () => {
   describe('match', () => {
     describe('static patterns', () => {
       it('matches exact static pattern', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('users', { name: 'users-handler' })
 
         let match = matcher.match('https://example.com/users')
@@ -88,7 +88,7 @@ describe('RegExpMatcher', () => {
       })
 
       it('matches nested static patterns', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('api/v1/users', { name: 'api-users' })
 
         let match = matcher.match('https://example.com/api/v1/users')
@@ -98,7 +98,7 @@ describe('RegExpMatcher', () => {
       })
 
       it('returns null for non-matching static pattern', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('users', { name: 'users' })
 
         let match = matcher.match('https://example.com/posts')
@@ -106,7 +106,7 @@ describe('RegExpMatcher', () => {
       })
 
       it('matches root pattern', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('', { name: 'root' })
 
         let match = matcher.match('https://example.com/')
@@ -118,7 +118,7 @@ describe('RegExpMatcher', () => {
 
     describe('variable patterns', () => {
       it('matches single variable', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('users/:id', { name: 'user-detail' })
 
         let match = matcher.match('https://example.com/users/123')
@@ -128,7 +128,7 @@ describe('RegExpMatcher', () => {
       })
 
       it('matches multiple variables', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('users/:userId/posts/:postId', { name: 'user-post' })
 
         let match = matcher.match('https://example.com/users/123/posts/456')
@@ -138,7 +138,7 @@ describe('RegExpMatcher', () => {
       })
 
       it('matches variables with special characters', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('users/:id', { name: 'user' })
 
         let match = matcher.match('https://example.com/users/user-123_test')
@@ -147,7 +147,7 @@ describe('RegExpMatcher', () => {
       })
 
       it('matches variables with URL encoding', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('search/:query', { name: 'search' })
 
         let match = matcher.match('https://example.com/search/hello%20world')
@@ -158,7 +158,7 @@ describe('RegExpMatcher', () => {
 
     describe('wildcard patterns', () => {
       it('matches named wildcard', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('files/*path', { name: 'file-handler' })
 
         let match = matcher.match('https://example.com/files/docs/readme.txt')
@@ -168,7 +168,7 @@ describe('RegExpMatcher', () => {
       })
 
       it('matches unnamed wildcard', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('assets/*', { name: 'asset-handler' })
 
         let match = matcher.match('https://example.com/assets/css/main.css')
@@ -178,7 +178,7 @@ describe('RegExpMatcher', () => {
       })
 
       it('matches wildcard with continuation', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('proxy/*url/status', { name: 'proxy-status' })
 
         let match = matcher.match('https://example.com/proxy/api.example.com/v1/users/status')
@@ -190,19 +190,19 @@ describe('RegExpMatcher', () => {
 
     describe('pattern precedence', () => {
       it('prefers first matching pattern (order matters)', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('users/:id', { name: 'user-detail' })
         matcher.add('users/admin', { name: 'admin' })
 
         let match = matcher.match('https://example.com/users/admin')
         assert.ok(match)
-        // First pattern wins in RegExpMatcher
+        // First pattern wins in ArrayMatcher
         assert.equal(match.data.name, 'user-detail')
         assert.deepEqual(match.params, { id: 'admin' })
       })
 
       it('matches in registration order', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('api/:version', { name: 'api-version' })
         matcher.add('api/v1/users', { name: 'api-v1-users' })
 
@@ -216,7 +216,7 @@ describe('RegExpMatcher', () => {
 
     describe('complex patterns', () => {
       it('matches complex mixed pattern', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('api/v:version/users/:id/posts/*path', { name: 'complex' })
 
         let match = matcher.match('https://example.com/api/v2/users/123/posts/2024/01/hello-world')
@@ -230,7 +230,7 @@ describe('RegExpMatcher', () => {
       })
 
       it('handles multiple patterns with shared prefixes', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('api/users', { name: 'users-list' })
         matcher.add('api/users/:id', { name: 'user-detail' })
         matcher.add('api/users/:id/posts', { name: 'user-posts' })
@@ -254,7 +254,7 @@ describe('RegExpMatcher', () => {
 
     describe('edge cases', () => {
       it('handles trailing slashes consistently', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('users', { name: 'users' })
 
         let match1 = matcher.match('https://example.com/users')
@@ -267,7 +267,7 @@ describe('RegExpMatcher', () => {
       })
 
       it('returns null for partial matches', () => {
-        let matcher = new RegExpMatcher<TestNode>()
+        let matcher = new ArrayMatcher<TestNode>()
         matcher.add('api/v1/users', { name: 'api-users' })
 
         let match = matcher.match('https://example.com/api/v1')
@@ -278,7 +278,7 @@ describe('RegExpMatcher', () => {
 
   describe('matchAll', () => {
     it('returns all matching patterns', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('users/:id', { name: 'user-detail' })
       matcher.add('*path', { name: 'catch-all' })
 
@@ -294,7 +294,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('returns empty iterator when no matches', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('users', { name: 'users' })
 
       let matches = Array.from(matcher.matchAll('https://example.com/posts'))
@@ -304,7 +304,7 @@ describe('RegExpMatcher', () => {
 
   describe('optional patterns', () => {
     it('matches optional when present', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('api(/:version)', { name: 'api' })
 
       let match = matcher.match('https://example.com/api/v1')
@@ -314,7 +314,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches optional when absent', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('api(/:version)', { name: 'api' })
 
       let match = matcher.match('https://example.com/api')
@@ -324,7 +324,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches nested optionals', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('api(/:major(/:minor))', { name: 'api' })
 
       // All present
@@ -344,7 +344,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches optional with wildcard', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('files(/*path)', { name: 'files' })
 
       let match1 = matcher.match('https://example.com/files/docs/readme.txt')
@@ -357,7 +357,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('handles multiple optional patterns', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('api(/:version)', { name: 'api-optional' })
       matcher.add('api/:version', { name: 'api-required' })
 
@@ -369,7 +369,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches complex optional patterns', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('users/:id(.:format)', { name: 'user' })
 
       let match1 = matcher.match('https://example.com/users/123.json')
@@ -384,7 +384,7 @@ describe('RegExpMatcher', () => {
 
   describe('full URL patterns', () => {
     it('matches protocol patterns', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('https://example.com/api', { name: 'https-api' })
       matcher.add('http://example.com/api', { name: 'http-api' })
 
@@ -400,7 +400,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches any protocol patterns', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('://example.com/api', { name: 'any-protocol' })
 
       let match1 = matcher.match('https://example.com/api')
@@ -413,7 +413,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches hostname variables', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('https://:subdomain.example.com/api', { name: 'subdomain-api' })
 
       let match = matcher.match('https://api.example.com/api')
@@ -423,7 +423,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches hostname wildcards', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('https://*host.example.com/api', { name: 'wildcard-host' })
 
       let match = matcher.match('https://api.v1.example.com/api')
@@ -433,7 +433,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches port-specific patterns', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('://localhost:3000/api', { name: 'dev-api' })
       matcher.add('://localhost:8080/api', { name: 'prod-api' })
 
@@ -447,7 +447,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('prefers first matching pattern (order-dependent)', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('api/users', { name: 'pathname-only' })
       matcher.add('https://example.com/api/users', { name: 'full-url' })
 
@@ -459,7 +459,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('combines protocol, hostname, and pathname parameters', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add(':protocol://:subdomain.example.com/users/:id', { name: 'complex' })
 
       let match = matcher.match('https://api.example.com/users/123')
@@ -473,7 +473,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('handles case insensitivity for protocol and hostname', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('HTTPS://EXAMPLE.COM/api', { name: 'upper-case' })
 
       let match = matcher.match('https://example.com/api')
@@ -482,7 +482,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('supports protocol optionals like http(s)', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('http(s)://example.com/api', { name: 'http-or-https' })
 
       let match1 = matcher.match('http://example.com/api')
@@ -498,7 +498,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('supports protocol optionals with other URL components', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('http(s)://:subdomain.example.com/users/:id', { name: 'flexible-protocol' })
 
       let match1 = matcher.match('http://api.example.com/users/123')
@@ -515,7 +515,7 @@ describe('RegExpMatcher', () => {
 
   describe('search constraint patterns', () => {
     it('matches patterns with search constraints', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('search?q=test', { name: 'search-test' })
       matcher.add('search?q=other', { name: 'search-other' })
 
@@ -529,7 +529,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('returns null when search constraints not met', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('search?q=test', { name: 'search-test' })
 
       let match1 = matcher.match('https://example.com/search?q=wrong')
@@ -540,7 +540,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches bare search parameters', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('api?debug', { name: 'debug-api' })
 
       let match1 = matcher.match('https://example.com/api?debug')
@@ -556,7 +556,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches required assignment parameters', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('search?q=', { name: 'search-any' })
 
       let match1 = matcher.match('https://example.com/search?q=test')
@@ -572,7 +572,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches multiple search constraints', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('api?format=json&version=v1', { name: 'api-v1-json' })
 
       let match1 = matcher.match('https://example.com/api?format=json&version=v1')
@@ -588,7 +588,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches with extra search parameters', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('search?q=test', { name: 'search-test' })
 
       let match = matcher.match('https://example.com/search?q=test&extra=value&utm_source=google')
@@ -597,7 +597,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('combines pathname params with search constraints', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('users/:id?format=json', { name: 'user-json' })
 
       let match = matcher.match('https://example.com/users/123?format=json')
@@ -607,7 +607,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('combines full URL with search constraints', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('https://:subdomain.example.com/api/:version?format=json', { name: 'api-json' })
 
       let match = matcher.match('https://api.example.com/api/v1?format=json')
@@ -620,7 +620,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('handles URL-encoded search parameters', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('search?q=hello%20world', { name: 'encoded-search' })
 
       let match = matcher.match('https://example.com/search?q=hello%20world')
@@ -629,7 +629,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('handles repeated search parameter values', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('search?tags=javascript', { name: 'js-search' })
 
       let match = matcher.match('https://example.com/search?tags=javascript&tags=react')
@@ -640,7 +640,7 @@ describe('RegExpMatcher', () => {
 
   describe('comprehensive feature combinations', () => {
     it('combines all features: full URL + optionals + wildcards + search', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add(':protocol://:tenant.example.com/api(/:version)/files/*path?format=json&debug', {
         name: 'ultimate-pattern',
       })
@@ -677,7 +677,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('handles complex precedence with search constraints', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('api/users', { name: 'users-any' })
       matcher.add('api/users?format=json', { name: 'users-json' })
       matcher.add('https://api.example.com/api/users', { name: 'origin-users' })
@@ -708,7 +708,7 @@ describe('RegExpMatcher', () => {
     }
 
     it('works with custom node types', () => {
-      let matcher = new RegExpMatcher<CustomNode>()
+      let matcher = new ArrayMatcher<CustomNode>()
 
       let handler = () => 'user data'
       let middleware = [(req: any) => req, (req: any) => req]
@@ -730,7 +730,7 @@ describe('RegExpMatcher', () => {
 
   describe('performance characteristics', () => {
     it('handles many patterns', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
 
       // Add many patterns with shared prefixes
       for (let i = 0; i < 100; i++) {
@@ -748,7 +748,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('handles deep nesting', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
 
       let deepPattern = 'a/b/c/d/e/f/g/h/i/j/:id'
       matcher.add(deepPattern, { name: 'deep' })
@@ -762,7 +762,7 @@ describe('RegExpMatcher', () => {
 
   describe('case sensitivity', () => {
     it('matches case-sensitively by default', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('API/Users', { name: 'users' })
 
       let match1 = matcher.match('https://example.com/API/Users')
@@ -774,7 +774,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('matches case-insensitively when pattern has ignoreCase', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       let pattern = new RoutePattern('API/Users', { ignoreCase: true })
       matcher.add(pattern, { name: 'users' })
 
@@ -792,7 +792,7 @@ describe('RegExpMatcher', () => {
     })
 
     it('mixes case-sensitive and case-insensitive patterns', () => {
-      let matcher = new RegExpMatcher<TestNode>()
+      let matcher = new ArrayMatcher<TestNode>()
       matcher.add('users/Admin', { name: 'case-sensitive' })
       matcher.add(new RoutePattern('users/Settings', { ignoreCase: true }), {
         name: 'case-insensitive',
