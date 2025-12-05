@@ -93,4 +93,27 @@ describe('session middleware', () => {
       await router.fetch('https://remix.run')
     }, new Error('Cannot save session that was initialized by another middleware/handler'))
   })
+
+  it('does not overwrite cookies set by other middleware/handlers', async () => {
+    let cookie = createCookie('__sess', { secrets: ['secret1'] })
+    let storage = createCookieSessionStorage()
+
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+
+    router.map('/', ({ session }) => {
+      session.set('count', Number(session.get('count') ?? 0) + 1)
+      return new Response(`Count: ${session.get('count')}`, {
+        headers: {
+          'Set-Cookie': `count=${session.get('count')}`,
+        },
+      })
+    })
+
+    let response = await router.fetch('https://remix.run')
+
+    let setCookie = response.headers.getSetCookie()
+    assert.equal(setCookie.length, 2)
+  })
 })

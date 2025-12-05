@@ -32,7 +32,7 @@ export function session(cookie: Cookie, storage: SessionStorage): Middleware {
 
     let setCookieValue = await storage.save(session)
     if (setCookieValue != null) {
-      response.headers.set('Set-Cookie', await cookie.serialize(setCookieValue))
+      response.headers.append('Set-Cookie', await cookie.serialize(setCookieValue))
     }
 
     return response
