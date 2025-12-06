@@ -2,7 +2,7 @@
 
 This is the changelog for [`session`](https://github.com/remix-run/remix/tree/main/packages/session). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.4.1 (2025-12-06)
 
 - Always delete the original session ID when it is regenerated with the `deleteOldSession` option. Intermediate IDs are never saved to storage, so they can't be deleted.
 
