@@ -5,12 +5,12 @@ import type { SessionStorage } from '@remix-run/session'
 /**
  * Middleware that manages `context.session` based on the session cookie.
  *
- * @param cookie The session cookie to use
- * @param storage The storage backend for session data
+ * @param sessionCookie The session cookie to use
+ * @param sessionStorage The storage backend for session data
  * @return The session middleware
  */
-export function session(cookie: Cookie, storage: SessionStorage): Middleware {
-  if (!cookie.signed) {
+export function session(sessionCookie: Cookie, sessionStorage: SessionStorage): Middleware {
+  if (!sessionCookie.signed) {
     throw new Error('Session cookie must be signed')
   }
 
@@ -19,8 +19,8 @@ export function session(cookie: Cookie, storage: SessionStorage): Middleware {
       throw new Error('Existing session found, refusing to overwrite')
     }
 
-    let cookieValue = await cookie.parse(context.headers.get('Cookie'))
-    let session = await storage.read(cookieValue)
+    let cookieValue = await sessionCookie.parse(context.headers.get('Cookie'))
+    let session = await sessionStorage.read(cookieValue)
 
     context.session = session
 
@@ -30,9 +30,9 @@ export function session(cookie: Cookie, storage: SessionStorage): Middleware {
       throw new Error('Cannot save session that was initialized by another middleware/handler')
     }
 
-    let setCookieValue = await storage.save(session)
+    let setCookieValue = await sessionStorage.save(session)
     if (setCookieValue != null) {
-      response.headers.append('Set-Cookie', await cookie.serialize(setCookieValue))
+      response.headers.append('Set-Cookie', await sessionCookie.serialize(setCookieValue))
     }
 
     return response
