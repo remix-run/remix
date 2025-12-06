@@ -2,7 +2,7 @@
 
 This is the changelog for [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.1.1 (2025-12-06)
 
 - Use `response.headers.append('Set-Cookie', ...)` instead of `response.headers.set('Set-Cookie', ...)` to not overwrite cookies set by other middleware/handlers
 
