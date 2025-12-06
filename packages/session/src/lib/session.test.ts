@@ -115,6 +115,19 @@ describe('Session', () => {
     assert.equal(session.destroyed, true)
   })
 
+  it('deletes the original session when the session id is regenerated more than once', () => {
+    let session = createSession()
+    let originalId = session.id
+
+    session.regenerateId(true)
+    assert.notEqual(session.id, originalId)
+    assert.equal(session.deleteId, originalId)
+
+    session.regenerateId(true)
+    assert.notEqual(session.id, originalId)
+    assert.equal(session.deleteId, originalId)
+  })
+
   describe('a destroyed session', () => {
     it('flash() throws an error', () => {
       let session = createSession()

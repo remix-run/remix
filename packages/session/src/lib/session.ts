@@ -9,6 +9,7 @@ export type SessionData<valueData extends Data = Data, flashData extends Data = 
  * A session persists data for a specific user across multiple requests to a server.
  */
 export class Session<valueData extends Data = Data, flashData extends Data = Data> {
+  #originalId: string
   #currentId: string
   #deleteId: string | undefined = undefined
   #valueMap: Map<keyof valueData, valueData[keyof valueData]>
@@ -22,6 +23,7 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
    * @param initialData The initial session data
    */
   constructor(id = createSessionId(), initialData?: SessionData<valueData, flashData>) {
+    this.#originalId = id
     this.#currentId = id
     this.#valueMap = toMap(initialData?.[0])
     this.#flashMap = toMap(initialData?.[1])
@@ -129,7 +131,7 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
    */
   regenerateId(deleteOldSession = false): void {
     this.#checkDestroyed()
-    if (deleteOldSession) this.#deleteId = this.#currentId
+    if (deleteOldSession) this.#deleteId = this.#originalId
     this.#currentId = createSessionId()
     this.#dirty = true
   }
