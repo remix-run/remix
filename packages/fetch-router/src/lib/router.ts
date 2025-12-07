@@ -208,22 +208,22 @@ export function createRouter(options?: RouterOptions): Router {
 
   function addRoute<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
-    pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
+    route: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
     action: Action<method, pattern>,
   ): void {
-    let routeMiddleware: Middleware<any, any>[] | undefined
+    let middleware: Middleware<any, any>[] | undefined
     let requestHandler: RequestHandler<any, any>
     if (isActionWithMiddleware(action)) {
-      routeMiddleware = action.middleware.length > 0 ? action.middleware : undefined
+      middleware = action.middleware.length > 0 ? action.middleware : undefined
       requestHandler = action.action
     } else {
       requestHandler = action as RequestHandler<any, any>
     }
 
-    matcher.add(pattern instanceof Route ? pattern.pattern : pattern, {
+    matcher.add(route instanceof Route ? route.pattern : route, {
       handler: requestHandler,
       method,
-      middleware: routeMiddleware,
+      middleware,
     })
   }
 
