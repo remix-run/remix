@@ -1,0 +1,65 @@
+{
+  "name": "@remix-run/auth-middleware",
+  "version": "0.0.0",
+  "description": "Middleware for authentication in Remix applications",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/auth-middleware"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/auth-middleware#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "devDependencies": {
+    "@remix-run/auth": "workspace:*",
+    "@remix-run/cookie": "workspace:*",
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/form-data-middleware": "workspace:*",
+    "@remix-run/headers": "workspace:*",
+    "@remix-run/session": "workspace:*",
+    "@remix-run/session-middleware": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@remix-run/auth": "workspace:^",
+    "@remix-run/fetch-router": "workspace:^"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "remix",
+    "authentication",
+    "auth",
+    "middleware",
+    "fetch-router"
+  ]
+}
+

@@ -48,6 +48,55 @@ importers:
         specifier: ^8.40.0
         version: 8.40.0(eslint@9.33.0)(typescript@5.9.3)
 
+  demos/auth-spike:
+    dependencies:
+      '@remix-run/async-context-middleware':
+        specifier: workspace:*
+        version: link:../../packages/async-context-middleware
+      '@remix-run/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@remix-run/auth-middleware':
+        specifier: workspace:*
+        version: link:../../packages/auth-middleware
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../../packages/cookie
+      '@remix-run/dom':
+        specifier: jam
+        version: 0.0.0-experimental-remix-jam.6
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../../packages/fetch-router
+      '@remix-run/form-data-middleware':
+        specifier: workspace:*
+        version: link:../../packages/form-data-middleware
+      '@remix-run/headers':
+        specifier: workspace:*
+        version: link:../../packages/headers
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../../packages/node-fetch-server
+      '@remix-run/response':
+        specifier: workspace:*
+        version: link:../../packages/response
+      '@remix-run/session':
+        specifier: workspace:*
+        version: link:../../packages/session
+      '@remix-run/session-middleware':
+        specifier: workspace:*
+        version: link:../../packages/session-middleware
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.6.0
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      tsx:
+        specifier: 'catalog:'
+        version: 4.20.6
+
   demos/bookstore:
     dependencies:
       '@remix-run/async-context-middleware':
@@ -206,6 +255,60 @@ importers:
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../fetch-router
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.6.0
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/auth:
+    devDependencies:
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../cookie
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../fetch-router
+      '@remix-run/session':
+        specifier: workspace:*
+        version: link:../session
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.6.0
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/auth-middleware:
+    devDependencies:
+      '@remix-run/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../cookie
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../fetch-router
+      '@remix-run/form-data-middleware':
+        specifier: workspace:*
+        version: link:../form-data-middleware
+      '@remix-run/headers':
+        specifier: workspace:*
+        version: link:../headers
+      '@remix-run/session':
+        specifier: workspace:*
+        version: link:../session
+      '@remix-run/session-middleware':
+        specifier: workspace:*
+        version: link:../session-middleware
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0

@@ -1,0 +1,31 @@
+{
+  "name": "@remix-demos/auth-spike",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@remix-run/async-context-middleware": "workspace:*",
+    "@remix-run/auth": "workspace:*",
+    "@remix-run/auth-middleware": "workspace:*",
+    "@remix-run/cookie": "workspace:*",
+    "@remix-run/dom": "jam",
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/form-data-middleware": "workspace:*",
+    "@remix-run/headers": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*",
+    "@remix-run/response": "workspace:*",
+    "@remix-run/session": "workspace:*",
+    "@remix-run/session-middleware": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "tsx": "catalog:"
+  },
+  "scripts": {
+    "dev": "NODE_ENV=development tsx watch server.ts",
+    "start": "tsx server.ts",
+    "test": "NODE_ENV=test tsx --test",
+    "typecheck": "tsgo --noEmit"
+  }
+}

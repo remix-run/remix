@@ -1,0 +1,70 @@
+{
+  "name": "@remix-run/auth",
+  "version": "0.0.0",
+  "description": "Authentication primitives and utilities for Remix",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/auth"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/auth#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./oauth-providers/*": "./src/oauth-providers/*.ts",
+    "./storage-adapters/*": "./src/storage-adapters/*.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./oauth-providers/*": {
+        "types": "./dist/oauth-providers/*.d.ts",
+        "default": "./dist/oauth-providers/*.js"
+      },
+      "./storage-adapters/*": {
+        "types": "./dist/storage-adapters/*.d.ts",
+        "default": "./dist/storage-adapters/*.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "peerDependencies": {
+    "@remix-run/cookie": "workspace:^",
+    "@remix-run/session": "workspace:^"
+  },
+  "devDependencies": {
+    "@remix-run/cookie": "workspace:*",
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/session": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "remix",
+    "authentication",
+    "auth",
+    "password",
+    "session"
+  ]
+}
