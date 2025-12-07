@@ -38,12 +38,15 @@ type ControllerWithoutMiddleware<routes extends RouteMap> = routes extends any ?
  * An individual route action.
  */
 export type Action<method extends RequestMethod | 'ANY', pattern extends string> =
-  | RequestHandlerWithMiddleware<method, pattern>
+  | RequestHandlerWithMiddleware<method, Params<pattern>>
   | RequestHandler<method, Params<pattern>>
 
-type RequestHandlerWithMiddleware<method extends RequestMethod | 'ANY', pattern extends string> = {
-  middleware: Middleware<method, Params<pattern>>[]
-  action: RequestHandler<method, Params<pattern>>
+type RequestHandlerWithMiddleware<
+  method extends RequestMethod | 'ANY',
+  params extends Record<string, any>,
+> = {
+  middleware: Middleware<method, params>[]
+  action: RequestHandler<method, params>
 }
 
 /**

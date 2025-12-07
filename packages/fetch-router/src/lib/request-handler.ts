@@ -1,4 +1,4 @@
-import type { Params } from '@remix-run/route-pattern'
+import type { Params, RoutePattern } from '@remix-run/route-pattern'
 
 import type { RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
@@ -19,10 +19,11 @@ export interface RequestHandler<
 }
 
 /**
- * Build a `RequestHandler` type from a `Route` or string pattern.
+ * Build a `RequestHandler` type from a string, `RoutePattern`, or `Route`.
  */
 // prettier-ignore
-export type BuildRequestHandler<T extends Route | string> =
-  T extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? RequestHandler<method, Params<pattern>> :
-  T extends string ? RequestHandler<'ANY', Params<T>> :
+export type BuildRequestHandler<route extends string | RoutePattern | Route> =
+  route extends string ? RequestHandler<'ANY', Params<route>> :
+  route extends RoutePattern<infer pattern extends string> ? RequestHandler<'ANY', Params<pattern>> :
+  route extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? RequestHandler<method, Params<pattern>> :
   never
