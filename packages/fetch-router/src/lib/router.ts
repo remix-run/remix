@@ -3,11 +3,11 @@ import { type Matcher, ArrayMatcher, RoutePattern } from '@remix-run/route-patte
 import { type Middleware, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
-import type { RequestHandler } from './request-handler.ts'
 import type { RequestMethod } from './request-methods.ts'
 import {
   type Controller,
   type Action,
+  type RequestHandler,
   isControllerWithMiddleware,
   isActionWithMiddleware,
 } from './controller.ts'

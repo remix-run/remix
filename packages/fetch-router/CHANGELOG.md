@@ -4,7 +4,8 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
 
 ## Unreleased
 
-- Add support for `RoutePattern` in `BuildRequestHandler` type
+- BREAKING CHANGE: Remove `BuildRequestHandler` type. Use `RequestHandler` type directly instead.
+- BREAKING CHANGE: Remove `T` generic parameter from `RequestHandler` type. Request handlers always return a `Response`.
 
 ## v0.13.0 (2025-12-01)
 
