@@ -3,28 +3,28 @@ import type { RoutePattern } from './route-pattern.ts'
 /**
  * An interface for matching URLs against patterns.
  */
-export interface Matcher<T = any> {
+export interface Matcher<data = unknown> {
   /**
    * Add a pattern to the matcher.
    *
    * @param pattern The pattern to add
    * @param data The data to associate with the pattern
    */
-  add<P extends string>(pattern: P | RoutePattern<P>, data: T): void
+  add<source extends string>(pattern: source | RoutePattern<source>, data: data): void
   /**
    * Find the best match for a URL.
    *
    * @param url The URL to match
    * @return The match result, or `null` if no match was found
    */
-  match(url: string | URL): MatchResult<T> | null
+  match(url: string | URL): MatchResult<data> | null
   /**
    * Find all matches for a URL.
    *
    * @param url The URL to match
    * @return A generator that yields all matches
    */
-  matchAll(url: string | URL): Generator<MatchResult<T>>
+  matchAll(url: string | URL): Generator<MatchResult<data>>
   /**
    * The number of patterns in the matcher.
    */
@@ -34,11 +34,11 @@ export interface Matcher<T = any> {
 /**
  * The result of matching a URL against a pattern.
  */
-export interface MatchResult<T = any> {
+export interface MatchResult<data = unknown> {
   /**
    * The data associated with the matched pattern.
    */
-  data: T
+  data: data
   /**
    * The parameters extracted from the URL.
    */
