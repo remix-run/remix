@@ -158,7 +158,7 @@ export interface TrieMatcherOptions {
  * - Match performance matters more than build time
  * - You need exhaustive matching via `matchAll()`
  */
-export class TrieMatcher<T = any> implements Matcher<T> {
+export class TrieMatcher<data = unknown> implements Matcher<data> {
   #pathnameOnlyRoot: TrieNode
   #originRoot: OriginTrieNode
   #patternCount = 0
@@ -183,7 +183,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
    * @param pattern The pattern to add
    * @param node The data to associate with the pattern
    */
-  add(pattern: string | RoutePattern, node: T): void {
+  add(pattern: string | RoutePattern, node: data): void {
     let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
     let parsed = parse(routePattern.source)
 
@@ -299,7 +299,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
    * @param url The URL to match
    * @return The match result, or `null` if no match was found
    */
-  match(url: string | URL): MatchResult<T> | null {
+  match(url: string | URL): MatchResult<data> | null {
     let urlObj = typeof url === 'string' ? new URL(url) : url
 
     let parsedUrl: ParsedURL = {
@@ -343,7 +343,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
    * @param url The URL to match
    * @return A generator that yields all matches
    */
-  *matchAll(url: string | URL): Generator<MatchResult<T>> {
+  *matchAll(url: string | URL): Generator<MatchResult<data>> {
     let urlObj = typeof url === 'string' ? new URL(url) : url
     let pathname = urlObj.pathname
 
@@ -477,7 +477,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     port: string | undefined,
     pathnameTokens: Token[] | undefined,
     pattern: RoutePattern,
-    userNode: T,
+    userNode: data,
     searchConstraints?: SearchConstraints,
     parsed?: ParseResult,
   ): void {
@@ -579,7 +579,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     node: TrieNode,
     tokens: Token[],
     pattern: RoutePattern,
-    userNode: T,
+    userNode: data,
     searchConstraints?: SearchConstraints,
     parsed?: ParseResult,
   ): void {
@@ -818,7 +818,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
   #addPatternMatch(
     node: TrieNode,
     pattern: RoutePattern,
-    userNode: T,
+    userNode: data,
     paramNames: string[],
     matchOrigin: boolean,
     searchConstraints?: SearchConstraints,
@@ -1499,7 +1499,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     }
   }
 
-  #tryOriginMatch(parsedUrl: ParsedURL, segments: string[], urlObj: URL): MatchResult<T> | null {
+  #tryOriginMatch(parsedUrl: ParsedURL, segments: string[], urlObj: URL): MatchResult<data> | null {
     let results = this.#findOriginMatches(urlObj, segments, parsedUrl.search, true)
     if (results.length > 0) {
       let best = results[0]
@@ -1514,7 +1514,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     baseParams: Record<string, string>,
     search: string,
     urlObj: URL,
-  ): MatchResult<T> | null {
+  ): MatchResult<data> | null {
     let initialState: MatchState = {
       segments,
       segmentIndex: 0,
@@ -1530,7 +1530,7 @@ export class TrieMatcher<T = any> implements Matcher<T> {
     return null
   }
 
-  #tryStaticPathMatch(segments: string[], search: string, url: URL): MatchResult<T> | null {
+  #tryStaticPathMatch(segments: string[], search: string, url: URL): MatchResult<data> | null {
     let results = this.#walkStaticPath(segments, search, false)
     if (results.length > 0) {
       let best = results[0]
