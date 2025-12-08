@@ -11,9 +11,8 @@ import type {
 
 // prettier-ignore
 export type Variant<T extends string> =
-  [T] extends [string] ?
-    string extends T ? string : VariantString<Parse<T>, HasLeadingSlash<T>> :
-  never
+  string extends T ? string :
+  VariantString<Parse<T>, HasLeadingSlash<T>>
 
 // Detect if the original pattern begins with a leading slash (and is not an origin URL)
 // prettier-ignore

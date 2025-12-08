@@ -91,5 +91,10 @@ export type Tests = [
   Assert<IsEqual<
     Variant<'://:env(.staging).example.com'>,
     '://:env.example.com' | '://:env.staging.example.com'
+  >>,
+
+  Assert<IsEqual<
+    Variant<'users(/:id)' | 'api(/:version)'>,
+    'users' | 'users/:id' | 'api' | 'api/:version'
   >>
 ]

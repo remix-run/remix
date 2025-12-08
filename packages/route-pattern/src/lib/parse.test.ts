@@ -1295,4 +1295,41 @@ export type Tests = [
       }
     >
   >,
+  Assert<
+    IsEqual<
+      Parse<'users/:id' | 'api/(v:major(.:minor))'>,
+      | {
+          protocol: undefined
+          hostname: undefined
+          port: undefined
+          pathname: [
+            { type: 'text'; value: 'users' },
+            { type: 'separator' },
+            { type: 'variable'; name: 'id' },
+          ]
+          search: undefined
+        }
+      | {
+          protocol: undefined
+          hostname: undefined
+          port: undefined
+          pathname: [
+            { type: 'text'; value: 'api' },
+            { type: 'separator' },
+            {
+              type: 'optional'
+              tokens: [
+                { type: 'text'; value: 'v' },
+                { type: 'variable'; name: 'major' },
+                {
+                  type: 'optional'
+                  tokens: [{ type: 'text'; value: '.' }, { type: 'variable'; name: 'minor' }]
+                },
+              ]
+            },
+          ]
+          search: undefined
+        }
+    >
+  >,
 ]
