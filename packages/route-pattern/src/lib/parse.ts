@@ -1,5 +1,6 @@
 import { split, type SplitPattern, type Split } from './split.ts'
 import { parseSearchConstraints, type SearchConstraints } from './search-constraints.ts'
+import type { ForceDistributive } from './type-utils.ts'
 
 /**
  * An error thrown when a pattern fails to parse.
@@ -176,7 +177,7 @@ export interface ParsedPattern {
 
 // prettier-ignore
 export type Parse<T extends string> =
-  T extends any ?
+  T extends ForceDistributive ?
     Split<T> extends infer S extends SplitPattern ?
       {
         protocol: S['protocol'] extends string ? ParsePart<S['protocol']> : undefined
