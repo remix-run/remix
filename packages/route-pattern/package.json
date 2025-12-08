@@ -43,7 +43,7 @@
   },
   "scripts": {
     "bench": "vitest bench",
-    "bench:types": "node src/**/*.bench.types.ts",
+    "bench:types": "node --test 'src/**/*.bench.types.ts'",
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
