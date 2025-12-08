@@ -16,6 +16,8 @@ import { describe, it } from 'node:test'
 import { SuperHeaders } from '@remix-run/headers'
 import { compressResponse, compressStream, type Encoding } from './compress.ts'
 
+const isWindows = process.platform === 'win32'
+
 const gunzipAsync = promisify(gunzip)
 const brotliDecompressAsync = promisify(brotliDecompress)
 const inflateAsync = promisify(inflate)
@@ -745,9 +747,12 @@ describe('compressResponse()', () => {
 
       // Test that data arrives before stream closes AND is valid SSE format
       let receivedData = await new Promise<string>((resolve, reject) => {
-        let timeout = setTimeout(() => {
-          reject(new Error(`Timeout: data not flushed - flush may not be working`))
-        }, 500)
+        let timeout = setTimeout(
+          () => {
+            reject(new Error(`Timeout: data not flushed - flush may not be working`))
+          },
+          isWindows ? 2_000 : 500,
+        )
 
         decompressed.once('data', (chunk) => {
           clearTimeout(timeout)
