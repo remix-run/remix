@@ -148,7 +148,7 @@ export function createRequest(
 
   let protocol =
     options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:')
-  let host = options?.host ?? headers.get('Host') ?? 'localhost'
+  let host = options?.host ?? headers.get('Host') ?? req.headers[':authority'] ?? 'localhost'
   let url = new URL(req.url!, `${protocol}//${host}`)
 
   let init: RequestInit = { method, headers, signal: controller.signal }
