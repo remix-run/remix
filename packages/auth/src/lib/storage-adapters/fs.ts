@@ -1,27 +1,61 @@
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 import type { Storage, Where } from '../storage.ts'
 
 /**
- * In-memory storage structure
+ * File-based storage structure
  * Each model is stored as an array of records
  */
-export interface MemoryDB {
+interface FsDB {
   [model: string]: any[]
 }
 
 /**
- * Create an in-memory storage adapter for testing and demos.
+ * Create a file-based storage adapter for local development
+ *
+ * This adapter stores all data in a single JSON file, making it easy to
+ * inspect and debug during development. Data persists across server restarts.
+ *
+ * The file is read from disk on every operation (no caching), so you can
+ * manually edit the JSON file and see changes immediately without restarting.
+ *
+ * ⚠️ This adapter is intended for local development only. It is not suitable
+ * for production use.
  *
  * @example
  * ```ts
- * import { createMemoryStorageAdapter } from '@remix-run/auth/storage-adapters/memory'
+ * import { createFsStorageAdapter } from '@remix-run/auth/storage-adapters/fs'
  *
  * let authClient = createAuthClient({
- *   storage: createMemoryStorageAdapter(),
+ *   storage: createFsStorageAdapter('./tmp/db/db.json'),
  * })
  * ```
+ *
+ * @param filePath - Path to the JSON file (directory will be created if needed)
  */
-export function createMemoryStorageAdapter(db?: MemoryDB): Storage {
-  let storage: MemoryDB = db || {}
+export function createFsStorageAdapter(filePath: string): Storage {
+  function loadFromDisk(): FsDB {
+    // Create directory if it doesn't exist
+    let dir = dirname(filePath)
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true })
+    }
+
+    // Load existing data or start fresh
+    if (existsSync(filePath)) {
+      let content = readFileSync(filePath, 'utf-8')
+      return JSON.parse(content) as FsDB
+    } else {
+      return {}
+    }
+  }
+
+  function persist(data: FsDB): void {
+    // Atomic write: write to temp file, then rename
+    let tmpPath = `${filePath}.tmp`
+    writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8')
+    renameSync(tmpPath, filePath)
+  }
 
   function matchesWhere(record: any, where: Where[]): boolean {
     if (!where.length) return true
@@ -71,6 +105,7 @@ export function createMemoryStorageAdapter(db?: MemoryDB): Storage {
 
   return {
     async findOne({ model, where }) {
+      let storage = loadFromDisk()
       let table = storage[model]
       if (!table) return null
 
@@ -83,6 +118,7 @@ export function createMemoryStorageAdapter(db?: MemoryDB): Storage {
     },
 
     async findMany({ model, where = [], limit, offset }) {
+      let storage = loadFromDisk()
       let table = storage[model]
       if (!table) return []
 
@@ -105,6 +141,7 @@ export function createMemoryStorageAdapter(db?: MemoryDB): Storage {
       model: string
       data: Record<string, any>
     }): Promise<T> {
+      let storage = loadFromDisk()
       let table = storage[model]
       if (!table) {
         table = []
@@ -117,10 +154,12 @@ export function createMemoryStorageAdapter(db?: MemoryDB): Storage {
       }
 
       table.push(data)
+      persist(storage)
       return data as T
     },
 
     async update({ model, where, data }) {
+      let storage = loadFromDisk()
       let table = storage[model]
       if (!table) throw new Error(`Model ${model} not found`)
 
@@ -128,6 +167,7 @@ export function createMemoryStorageAdapter(db?: MemoryDB): Storage {
         if (matchesWhere(table[i], where)) {
           let updated = { ...table[i], ...data }
           table[i] = updated
+          persist(storage)
           return updated
         }
       }
@@ -136,12 +176,14 @@ export function createMemoryStorageAdapter(db?: MemoryDB): Storage {
     },
 
     async delete({ model, where }) {
+      let storage = loadFromDisk()
       let table = storage[model]
       if (!table) return
 
       let index = table.findIndex((record) => matchesWhere(record, where))
       if (index !== -1) {
         table.splice(index, 1)
+        persist(storage)
       }
     },
   }

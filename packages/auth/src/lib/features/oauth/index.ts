@@ -1,6 +1,14 @@
 import type { Session } from '@remix-run/session'
-import type { Feature, FeatureContext, FeatureSchema } from '../types.ts'
+import type {
+  Feature,
+  FeatureContext,
+  FeatureSchema,
+  FeatureRoutes,
+  FeatureHandlers,
+  FeatureRouteHelpers,
+} from '../types.ts'
 import type { AuthUser } from '../../types.ts'
+import { setAuthFlash, getAuthFlash, type OAuthFlash } from '../../flash.ts'
 
 /**
  * OAuth account linked to a user
@@ -16,7 +24,15 @@ export interface OAuthAccount {
 /**
  * Error codes returned by OAuth sign in
  */
-export type OAuthSignInErrorCode = 'provider_not_found' | 'user_not_found'
+export type OAuthSignInErrorCode =
+  | 'provider_not_found'
+  | 'user_not_found'
+  | 'account_exists_unverified_email'
+  | 'access_denied'
+  | 'invalid_state'
+  | 'missing_code'
+  | 'provider_error'
+  | 'unknown_error'
 
 /**
  * OAuth 2.0 Provider Interface
@@ -62,6 +78,7 @@ export interface OAuthProvider {
   getUserProfile(accessToken: string): Promise<{
     id: string
     email: string
+    emailVerified?: boolean
     name?: string
     avatarUrl?: string
   }>
@@ -116,18 +133,30 @@ export interface OAuthFeatureConfig {
       scopes?: string[]
     }
   >
-  baseURL: string | ((request: Request) => string)
   successURL: string
   newUserURL?: string
   errorURL: string
 }
 
 /**
- * OAuth flow handlers
+ * OAuth route definitions
+ * Following fetch-router idiom: { routeName: { method, pattern } }
  */
-export interface OAuthFlow {
-  initiate(request: Request, session: Session): Response
-  callback(request: Request, session: Session): Promise<Response>
+export let oauthRoutes = {
+  initiate: { method: 'GET' as const, pattern: '/:provider' },
+  callback: { method: 'GET' as const, pattern: '/:provider/callback' },
+} satisfies FeatureRoutes
+
+/**
+ * Public provider info for UI rendering
+ */
+export interface OAuthProviderInfo {
+  /** Provider identifier (e.g., 'github') */
+  name: string
+  /** Display name for UI (e.g., 'GitHub') */
+  displayName: string
+  /** URL to initiate OAuth sign-in */
+  signInHref: string
 }
 
 /**
@@ -135,21 +164,40 @@ export interface OAuthFlow {
  */
 export interface OAuthFeatureMethods {
   /**
-   * OAuth provider configurations (for UI rendering)
+   * OAuth providers for UI rendering
+   * Each provider has everything needed to render a sign-in button
+   *
+   * @example
+   * ```tsx
+   * Object.values(authClient.oauth.providers).map((provider) => (
+   *   <a href={provider.signInHref}>
+   *     Continue with {provider.displayName}
+   *   </a>
+   * ))
+   * ```
    */
-  providers: Record<
-    string,
-    {
-      provider: OAuthProvider
-      clientId: string
-      scopes?: string[]
-    }
-  >
+  providers: Record<string, OAuthProviderInfo>
 
   /**
-   * OAuth flow handlers (for routing)
+   * Routes for URL generation
    */
-  flows: Record<string, OAuthFlow>
+  routes: FeatureRouteHelpers<typeof oauthRoutes>
+
+  /**
+   * Get flash message from OAuth redirect
+   *
+   * @example
+   * ```ts
+   * let flash = authClient.oauth.getFlash(session)
+   * if (flash?.type === 'success') {
+   *   // User signed in/up via OAuth
+   * }
+   * if (flash?.type === 'error') {
+   *   // OAuth flow failed - check flash.code
+   * }
+   * ```
+   */
+  getFlash(session: Session): OAuthFlash | null
 
   /**
    * Sign in/up with OAuth provider
@@ -158,6 +206,7 @@ export interface OAuthFeatureMethods {
   signIn<TData extends Record<string, unknown> = {}>(
     options: {
       session: Session
+      request: Request
       provider: string
       providerAccountId: string
       email: string
@@ -176,7 +225,10 @@ export interface OAuthFeatureMethods {
 /**
  * OAuth authentication feature
  */
-export const oauthFeature: Feature<OAuthFeatureConfig, OAuthFeatureMethods> = {
+export const oauthFeature: Feature<OAuthFeatureConfig, OAuthFeatureMethods, typeof oauthRoutes> = {
+  name: 'oauth',
+  routes: oauthRoutes,
+
   isEnabled(config: any): config is OAuthFeatureConfig {
     return config?.oauth?.enabled === true
   },
@@ -199,188 +251,167 @@ export const oauthFeature: Feature<OAuthFeatureConfig, OAuthFeatureMethods> = {
     }
   },
 
-  createMethods(context: FeatureContext): OAuthFeatureMethods {
-    let { config, storage, sessionKey } = context
+  getHandlers(context: FeatureContext): FeatureHandlers<typeof oauthRoutes> {
+    let { config, storage, sessionKey, authBasePath } = context
     let oauthConfig = config.oauth as OAuthFeatureConfig
 
-    // Prepare providers for public access (without secrets)
-    let publicProviders = Object.fromEntries(
-      Object.entries(oauthConfig.providers).map(([name, cfg]) => [
-        name,
-        {
-          provider: cfg.provider,
-          clientId: cfg.clientId,
-          scopes: cfg.scopes,
-        },
-      ]),
-    )
+    return {
+      initiate({ request, session, params }) {
+        let providerName = params.provider
 
-    // Create OAuth flow handlers
-    let flows: Record<string, OAuthFlow> = {}
-
-    for (let [providerName, providerConfig] of Object.entries(oauthConfig.providers)) {
-      let { provider, clientId, clientSecret, scopes } = providerConfig
-
-      flows[providerName] = {
-        initiate(request: Request, session: Session): Response {
-          // Generate and store state
-          let state = generateState()
-          oauthStates.set(state, { createdAt: Date.now() })
-
-          // Build redirect URI
-          let baseUrl =
-            typeof oauthConfig.baseURL === 'function'
-              ? oauthConfig.baseURL(request)
-              : oauthConfig.baseURL
-          let redirectUri = `${baseUrl}/auth/${providerName}/callback`
-
-          // Get authorization URL
-          let authUrl = provider.getAuthorizationUrl({
-            clientId,
-            redirectUri,
-            state,
-            scopes: scopes || [],
+        let providerConfig = oauthConfig.providers[providerName]
+        if (!providerConfig) {
+          setAuthFlash(session, {
+            feature: 'oauth',
+            route: 'callback',
+            type: 'error',
+            code: 'provider_not_found',
           })
-
           return new Response(null, {
             status: 302,
-            headers: { Location: authUrl },
+            headers: { Location: oauthConfig.errorURL },
           })
-        },
+        }
 
-        async callback(request: Request, session: Session): Promise<Response> {
-          let url = new URL(request.url)
-          let code = url.searchParams.get('code')
-          let state = url.searchParams.get('state')
-          let error = url.searchParams.get('error')
-          let errorDescription = url.searchParams.get('error_description')
+        let { provider, clientId, scopes } = providerConfig
 
-          // Handle OAuth error from provider
-          if (error) {
-            session.flash('error', errorDescription || `OAuth error: ${error}`)
-            return new Response(null, {
-              status: 302,
-              headers: { Location: oauthConfig.errorURL },
+        // Generate and store state
+        let state = generateState()
+        oauthStates.set(state, { createdAt: Date.now() })
+
+        // Build redirect URI using auto-generated route helpers
+        let baseUrl = context.getBaseURL(request)
+        let redirectUri = `${baseUrl}${context.routes.callback.href({ provider: providerName })}`
+
+        // Get authorization URL
+        let authUrl = provider.getAuthorizationUrl({
+          clientId,
+          redirectUri,
+          state,
+          scopes: scopes || [],
+        })
+
+        return new Response(null, {
+          status: 302,
+          headers: { Location: authUrl },
+        })
+      },
+
+      async callback({ request, session, params }) {
+        let providerName = params.provider
+        let url = new URL(request.url)
+        let code = url.searchParams.get('code')
+        let state = url.searchParams.get('state')
+        let error = url.searchParams.get('error')
+        let errorDescription = url.searchParams.get('error_description')
+
+        let providerConfig = oauthConfig.providers[providerName]
+        if (!providerConfig) {
+          setAuthFlash(session, {
+            feature: 'oauth',
+            route: 'callback',
+            type: 'error',
+            code: 'provider_not_found',
+          })
+          return new Response(null, {
+            status: 302,
+            headers: { Location: oauthConfig.errorURL },
+          })
+        }
+
+        let { provider, clientId, clientSecret } = providerConfig
+
+        // Handle OAuth error from provider
+        if (error) {
+          setAuthFlash(session, {
+            feature: 'oauth',
+            route: 'callback',
+            type: 'error',
+            code: error === 'access_denied' ? 'access_denied' : 'provider_error',
+          })
+          return new Response(null, {
+            status: 302,
+            headers: { Location: oauthConfig.errorURL },
+          })
+        }
+
+        // Validate state
+        if (!state || !oauthStates.has(state)) {
+          setAuthFlash(session, {
+            feature: 'oauth',
+            route: 'callback',
+            type: 'error',
+            code: 'invalid_state',
+          })
+          return new Response(null, {
+            status: 302,
+            headers: { Location: oauthConfig.errorURL },
+          })
+        }
+
+        // Clean up state
+        oauthStates.delete(state)
+
+        if (!code) {
+          setAuthFlash(session, {
+            feature: 'oauth',
+            route: 'callback',
+            type: 'error',
+            code: 'missing_code',
+          })
+          return new Response(null, {
+            status: 302,
+            headers: { Location: oauthConfig.errorURL },
+          })
+        }
+
+        try {
+          // Build redirect URI
+          let baseUrl = context.getBaseURL(request)
+          let redirectUri = `${baseUrl}${context.routes.callback.href({ provider: providerName })}`
+
+          // Exchange code for token
+          let tokenData = await provider.exchangeCodeForToken({
+            clientId,
+            clientSecret,
+            code,
+            redirectUri,
+          })
+
+          // Get user profile
+          let oauthProfile = await provider.getUserProfile(tokenData.accessToken)
+
+          // Check if OAuth account already exists
+          let existingAccount = await storage.findOne<{ userId: string } & OAuthAccount>({
+            model: 'oauthAccount',
+            where: [
+              { field: 'provider', value: providerName },
+              { field: 'providerAccountId', value: oauthProfile.id },
+            ],
+          })
+
+          let user: AuthUser
+          let resultType: 'sign_in' | 'sign_up' | 'account_linked'
+
+          if (existingAccount) {
+            // Account exists - sign in existing user
+            let existingUser = await storage.findOne<AuthUser>({
+              model: 'user',
+              where: [{ field: 'id', value: existingAccount.userId }],
             })
-          }
+            if (!existingUser) {
+              throw new Error('User not found for OAuth account')
+            }
 
-          // Validate state
-          if (!state || !oauthStates.has(state)) {
-            session.flash('error', 'Invalid or expired OAuth state. Please try again.')
-            return new Response(null, {
-              status: 302,
-              headers: { Location: oauthConfig.errorURL },
-            })
-          }
-
-          // Clean up state
-          oauthStates.delete(state)
-
-          if (!code) {
-            session.flash('error', 'Authorization code not received from OAuth provider.')
-            return new Response(null, {
-              status: 302,
-              headers: { Location: oauthConfig.errorURL },
-            })
-          }
-
-          try {
-            // Build redirect URI
-            let baseUrl =
-              typeof oauthConfig.baseURL === 'function'
-                ? oauthConfig.baseURL(request)
-                : oauthConfig.baseURL
-            let redirectUri = `${baseUrl}/auth/${providerName}/callback`
-
-            // Exchange code for token
-            let tokenData = await provider.exchangeCodeForToken({
-              clientId,
-              clientSecret,
-              code,
-              redirectUri,
-            })
-
-            // Get user profile
-            let profile = await provider.getUserProfile(tokenData.accessToken)
-
-            // Check if OAuth account already exists
-            let existingAccount = await storage.findOne<{ userId: string } & OAuthAccount>({
-              model: 'oauthAccount',
-              where: [
-                { field: 'provider', value: providerName },
-                { field: 'providerAccountId', value: profile.id },
-              ],
-            })
-
-            let user: AuthUser
-            let resultType: 'sign_in' | 'sign_up' | 'account_linked'
-
-            if (existingAccount) {
-              // Account exists - sign in existing user
-              let existingUser = await storage.findOne<AuthUser>({
-                model: 'user',
-                where: [{ field: 'id', value: existingAccount.userId }],
-              })
-              if (!existingUser) {
-                throw new Error('User not found for OAuth account')
-              }
-
-              // Update tokens if provided
-              if (tokenData.accessToken) {
-                await storage.update({
-                  model: 'oauthAccount',
-                  where: [
-                    { field: 'userId', value: existingUser.id },
-                    { field: 'provider', value: providerName },
-                  ],
-                  data: {
-                    accessToken: tokenData.accessToken,
-                    refreshToken: tokenData.refreshToken,
-                    expiresAt: tokenData.expiresIn
-                      ? new Date(Date.now() + tokenData.expiresIn * 1000)
-                      : undefined,
-                  },
-                })
-              }
-
-              user = existingUser
-              resultType = 'sign_in'
-            } else {
-              // Check if user with this email exists
-              let email = profile.email.toLowerCase().trim()
-              let existingUser = await storage.findOne<AuthUser>({
-                model: 'user',
-                where: [{ field: 'email', value: email }],
-              })
-
-              if (existingUser) {
-                // Link OAuth account to existing user
-                user = existingUser
-                resultType = 'account_linked'
-              } else {
-                // Create new user
-                let now = new Date()
-                user = await storage.create<AuthUser>({
-                  model: 'user',
-                  data: {
-                    email,
-                    name: profile.name || profile.email.split('@')[0],
-                    image: profile.avatarUrl,
-                    emailVerified: false, // OAuth users can verify email later if needed
-                    createdAt: now,
-                    updatedAt: now,
-                  },
-                })
-                resultType = 'sign_up'
-              }
-
-              // Create OAuth account
-              await storage.create({
+            // Update tokens if provided
+            if (tokenData.accessToken) {
+              await storage.update({
                 model: 'oauthAccount',
+                where: [
+                  { field: 'userId', value: existingUser.id },
+                  { field: 'provider', value: providerName },
+                ],
                 data: {
-                  userId: user.id,
-                  provider: providerName,
-                  providerAccountId: profile.id,
                   accessToken: tokenData.accessToken,
                   refreshToken: tokenData.refreshToken,
                   expiresAt: tokenData.expiresIn
@@ -390,45 +421,159 @@ export const oauthFeature: Feature<OAuthFeatureConfig, OAuthFeatureMethods> = {
               })
             }
 
-            // Set session
-            session.regenerateId(true)
-            session.set(sessionKey, user.id)
-
-            // Call onUserCreated hook for new users (will be composed with feature hooks by client)
-            if (resultType === 'sign_up' && context.onUserCreatedHook) {
-              await context.onUserCreatedHook(user)
+            // Promote emailVerified if OAuth provider verified the email
+            if (
+              oauthProfile.emailVerified &&
+              !existingUser.emailVerified &&
+              oauthProfile.email.toLowerCase().trim() === existingUser.email
+            ) {
+              existingUser = await storage.update<AuthUser>({
+                model: 'user',
+                where: [{ field: 'id', value: existingUser.id }],
+                data: { emailVerified: true, updatedAt: new Date() },
+              })
             }
 
-            // Redirect to success URL
-            let redirectUrl =
-              resultType === 'sign_up' && oauthConfig.newUserURL
-                ? oauthConfig.newUserURL
-                : oauthConfig.successURL
-
-            return new Response(null, {
-              status: 302,
-              headers: { Location: redirectUrl },
+            user = existingUser
+            resultType = 'sign_in'
+          } else {
+            // Check if user with this email exists
+            let email = oauthProfile.email.toLowerCase().trim()
+            let existingUser = await storage.findOne<AuthUser>({
+              model: 'user',
+              where: [{ field: 'email', value: email }],
             })
-          } catch (err) {
-            let errorMessage =
-              err instanceof Error
-                ? err.message
-                : 'An error occurred during OAuth sign in. Please try again.'
-            session.flash('error', errorMessage)
-            return new Response(null, {
-              status: 302,
-              headers: { Location: oauthConfig.errorURL },
+
+            if (existingUser) {
+              // Security check: don't allow linking if OAuth email is unverified
+              if (!oauthProfile.emailVerified) {
+                setAuthFlash(session, {
+                  feature: 'oauth',
+                  route: 'callback',
+                  type: 'error',
+                  code: 'account_exists_unverified_email',
+                })
+                return new Response(null, {
+                  status: 302,
+                  headers: { Location: oauthConfig.errorURL },
+                })
+              }
+
+              // Link OAuth account to existing user
+              // Promote emailVerified if OAuth provider verified the email
+              if (!existingUser.emailVerified && email === existingUser.email) {
+                existingUser = await storage.update<AuthUser>({
+                  model: 'user',
+                  where: [{ field: 'id', value: existingUser.id }],
+                  data: { emailVerified: true, updatedAt: new Date() },
+                })
+              }
+
+              user = existingUser
+              resultType = 'account_linked'
+            } else {
+              // Create new user
+              let now = new Date()
+              user = await storage.create<AuthUser>({
+                model: 'user',
+                data: {
+                  email,
+                  name: oauthProfile.name || oauthProfile.email.split('@')[0],
+                  image: oauthProfile.avatarUrl,
+                  emailVerified: oauthProfile.emailVerified ?? false,
+                  createdAt: now,
+                  updatedAt: now,
+                },
+              })
+              resultType = 'sign_up'
+            }
+
+            // Create OAuth account
+            await storage.create({
+              model: 'oauthAccount',
+              data: {
+                userId: user.id,
+                provider: providerName,
+                providerAccountId: oauthProfile.id,
+                accessToken: tokenData.accessToken,
+                refreshToken: tokenData.refreshToken,
+                expiresAt: tokenData.expiresIn
+                  ? new Date(Date.now() + tokenData.expiresIn * 1000)
+                  : undefined,
+              },
             })
           }
-        },
-      }
+
+          // Set session
+          session.regenerateId(true)
+          session.set(sessionKey, user.id)
+
+          // Call onUserCreated hook for new users
+          if (resultType === 'sign_up' && context.onUserCreatedHook) {
+            await context.onUserCreatedHook({ user, request })
+          }
+
+          // Flash success
+          setAuthFlash(session, {
+            feature: 'oauth',
+            route: 'callback',
+            type: 'success',
+            code: resultType,
+          })
+
+          // Redirect to success URL
+          let redirectUrl =
+            resultType === 'sign_up' && oauthConfig.newUserURL
+              ? oauthConfig.newUserURL
+              : oauthConfig.successURL
+
+          return new Response(null, {
+            status: 302,
+            headers: { Location: redirectUrl },
+          })
+        } catch (err) {
+          setAuthFlash(session, {
+            feature: 'oauth',
+            route: 'callback',
+            type: 'error',
+            code: 'unknown_error',
+          })
+          return new Response(null, {
+            status: 302,
+            headers: { Location: oauthConfig.errorURL },
+          })
+        }
+      },
     }
+  },
+
+  createMethods(context): OAuthFeatureMethods {
+    let { config, storage, sessionKey } = context
+    let oauthConfig = config.oauth as OAuthFeatureConfig
+
+    // Build providers with everything needed for UI rendering
+    let providers: Record<string, OAuthProviderInfo> = Object.fromEntries(
+      Object.entries(oauthConfig.providers).map(([name, cfg]) => [
+        name,
+        {
+          name,
+          displayName: cfg.provider.displayName,
+          signInHref: context.routes.initiate.href({ provider: name }),
+        },
+      ]),
+    )
 
     return {
-      providers: publicProviders,
-      flows,
+      providers,
+      // Expose auto-generated routes from context
+      routes: context.routes,
 
-      async signIn({ session, provider, providerAccountId, email, ...extraData }) {
+      getFlash(session: Session): OAuthFlash | null {
+        let flash = getAuthFlash(session, { feature: 'oauth' })
+        return flash
+      },
+
+      async signIn({ session, request, provider, providerAccountId, email, ...extraData }) {
         // Check if provider exists
         if (!oauthConfig.providers[provider]) {
           return { error: 'provider_not_found' }
@@ -477,6 +622,19 @@ export const oauthFeature: Feature<OAuthFeatureConfig, OAuthFeatureMethods> = {
             })
           }
 
+          // Promote emailVerified if OAuth provider verified the email
+          if (
+            extraData.emailVerified &&
+            !existingUser.emailVerified &&
+            email === existingUser.email
+          ) {
+            existingUser = await storage.update<AuthUser>({
+              model: 'user',
+              where: [{ field: 'id', value: existingUser.id }],
+              data: { emailVerified: true, updatedAt: new Date() },
+            })
+          }
+
           user = existingUser
           type = 'sign_in'
         } else {
@@ -487,7 +645,21 @@ export const oauthFeature: Feature<OAuthFeatureConfig, OAuthFeatureMethods> = {
           })
 
           if (existingUser) {
+            // Security check: don't allow linking if OAuth email is unverified
+            if (!extraData.emailVerified) {
+              return { error: 'account_exists_unverified_email' }
+            }
+
             // Link OAuth account to existing user
+            // Promote emailVerified if OAuth provider verified the email
+            if (!existingUser.emailVerified && email === existingUser.email) {
+              existingUser = await storage.update<AuthUser>({
+                model: 'user',
+                where: [{ field: 'id', value: existingUser.id }],
+                data: { emailVerified: true, updatedAt: new Date() },
+              })
+            }
+
             user = existingUser
             type = 'account_linked'
           } else {
@@ -499,7 +671,7 @@ export const oauthFeature: Feature<OAuthFeatureConfig, OAuthFeatureMethods> = {
                 email,
                 name: (extraData.name as string) || email.split('@')[0],
                 image: (extraData.image as string) || undefined,
-                emailVerified: false, // OAuth users can verify email later if needed
+                emailVerified: (extraData.emailVerified as boolean) ?? false,
                 createdAt: now,
                 updatedAt: now,
                 ...extraData,
@@ -528,9 +700,9 @@ export const oauthFeature: Feature<OAuthFeatureConfig, OAuthFeatureMethods> = {
         session.regenerateId(true)
         session.set(sessionKey, user.id)
 
-        // Call onUserCreated hook for new users (will be composed with feature hooks by client)
+        // Call onUserCreated hook for new users
         if (type === 'sign_up' && context.onUserCreatedHook) {
-          await context.onUserCreatedHook(user)
+          await context.onUserCreatedHook({ user, request })
         }
 
         return { type, user }

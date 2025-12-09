@@ -1,15 +1,56 @@
+import type { RequestContext } from '@remix-run/fetch-router'
 import { routes } from './routes.ts'
 import { render } from './utils/render.tsx'
-import { getUser } from './utils/auth.ts'
+import { authClient, getUser } from './utils/auth.ts'
 import { getAllPosts, hasLiked } from './models/posts.ts'
 import { Layout } from './layout.tsx'
 
-export function home() {
+export function home({ session }: RequestContext<'GET', any>) {
   let user = getUser()
+  let successMessage: string | undefined
+
+  // Check for email verification flash
+  let emailFlash = authClient.emailVerification.getFlash(session)
+  if (emailFlash?.type === 'success') {
+    successMessage = 'Your email has been verified!'
+  }
+
+  // Check for OAuth flash
+  let oauthFlash = authClient.oauth.getFlash(session)
+  if (oauthFlash?.type === 'success') {
+    switch (oauthFlash.code) {
+      case 'sign_in':
+        successMessage = 'Welcome back!'
+        break
+      case 'sign_up':
+        successMessage = 'Account created successfully!'
+        break
+      case 'account_linked':
+        successMessage = 'Account linked successfully!'
+        break
+    }
+  }
+
   let posts = getAllPosts()
 
   return render(
     <Layout>
+      {successMessage ? (
+        <div
+          css={{
+            background: '#d4edda',
+            border: '1px solid #c3e6cb',
+            borderRadius: '8px',
+            padding: '1rem',
+            marginBottom: '1.5rem',
+            color: '#155724',
+            fontSize: '0.9375rem',
+          }}
+        >
+          {successMessage}
+        </div>
+      ) : null}
+
       <h1
         css={{
           fontSize: '2rem',

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { createAuthClient } from '@remix-run/auth'
 import type { MemoryDB } from '@remix-run/auth/storage-adapters/memory'
 import { createMemoryStorageAdapter } from '@remix-run/auth/storage-adapters/memory'
+import { createFsStorageAdapter } from '@remix-run/auth/storage-adapters/fs'
 import { createGitHubOAuthProvider } from '@remix-run/auth/oauth-providers/github'
 import { createMockOAuthProvider } from '../mock-oauth/provider.ts'
 import { createMockOAuthHandlers } from '../mock-oauth/handlers.ts'
@@ -17,13 +18,23 @@ import { routes } from '../routes.ts'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// Shared memory storage for auth (exposed for tests)
-export let authStorage: MemoryDB = {
-  user: [],
-  password: [],
-  oauthAccount: [],
-  passwordResetToken: [],
+// Shared memory storage for tests (allows direct inspection/manipulation)
+export let authStorage: MemoryDB = {}
+
+/**
+ * Clear all data from auth storage (for tests)
+ */
+export function clearAuthStorage() {
+  for (let key of Object.keys(authStorage)) {
+    delete authStorage[key]
+  }
 }
+
+// Use FS storage for dev (persists across restarts), memory for tests
+let storage =
+  process.env.NODE_ENV === 'test'
+    ? createMemoryStorageAdapter(authStorage)
+    : createFsStorageAdapter(path.resolve(__dirname, '..', '..', 'tmp', 'db', 'db.json'))
 
 export let sessionCookie = createCookie('session', {
   httpOnly: true,
@@ -37,19 +48,26 @@ export let sessionStorage = createFsSessionStorage(
   path.resolve(__dirname, '..', '..', 'tmp', 'sessions'),
 )
 
+// baseURL is required when using emailVerification because verification emails
+// are sent during signup (via onUserCreated hook) which runs without request context
+let baseURL = process.env.NODE_ENV === 'test' ? 'https://app.example.com' : 'http://localhost:44100'
+
 export let authClient = createAuthClient({
   secret: process.env.AUTH_SECRET ?? 'demo-secret-key-DO-NOT-USE-IN-PRODUCTION',
-  storage: createMemoryStorageAdapter(authStorage),
+  baseURL,
+  authBasePath: '/api/auth',
+  storage,
   emailVerification: {
     enabled: true,
-    sendVerification: ({ user, token, isNewUser }) => {
-      let url = `http://localhost:44100/verify-email?token=${token}`
+    successURL: routes.home.href(),
+    errorURL: routes.auth.login.index.href(),
+    sendVerification: ({ user, href, isNewUser }) => {
       sendEmail({
         to: user.email,
         subject: isNewUser ? 'Welcome! Verify your email' : 'Verify your email address',
         text: isNewUser
-          ? `Hi ${user.name},\n\nWelcome to Auth Demo! Click the link below to verify your email and get started:\n\n${url}\n\nThis link will expire in 1 hour.`
-          : `Hi ${user.name},\n\nClick the link below to verify your email address:\n\n${url}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`,
+          ? `Hi ${user.name},\n\nWelcome to Auth Demo! Click the link below to verify your email and get started:\n\n${href}\n\nThis link will expire in 1 hour.`
+          : `Hi ${user.name},\n\nClick the link below to verify your email address:\n\n${href}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`,
       })
     },
     onVerified: (user) => {
@@ -62,14 +80,6 @@ export let authClient = createAuthClient({
   },
   password: {
     enabled: true,
-    sendReset: ({ user, token }) => {
-      let url = `http://localhost:44100${routes.auth.resetPassword.index.href({ token })}`
-      sendEmail({
-        to: user.email,
-        subject: 'Reset your password',
-        text: `Hi ${user.name},\n\nClick the link below to reset your password:\n\n${url}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`,
-      })
-    },
   },
   oauth: {
     enabled: true,
@@ -82,20 +92,15 @@ export let authClient = createAuthClient({
       // Mock OAuth provider for development and testing
       ...(process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
         ? {
-            mock: {
-              provider: createMockOAuthProvider(
+            mock: createMockOAuthProvider({
+              baseUrl:
                 process.env.NODE_ENV === 'test'
                   ? 'https://app.example.com/mock-oauth' // Test mode
                   : 'http://localhost:44100/mock-oauth', // Dev mode
-              ),
-              clientId: 'mock-client-id',
-              clientSecret: 'mock-client-secret',
-              scopes: [],
-            },
+            }),
           }
         : {}),
     },
-    baseURL: (request) => new URL(request.url).origin,
     successURL: routes.home.href(),
     errorURL: routes.auth.login.index.href(),
   },
@@ -108,6 +113,7 @@ export let mockOAuthEndpoints =
         profile: {
           id: 'dev-user-123',
           email: 'dev@example.com',
+          emailVerified: true,
           name: 'Dev User',
         },
         showUI: process.env.NODE_ENV === 'development', // Show UI in dev, auto-approve in tests
@@ -115,6 +121,7 @@ export let mockOAuthEndpoints =
     : null
 
 // Create typed middleware and getUser function
+// The middleware automatically handles auth API routes at authClient.authBasePath
 export let { auth, getUser } = createAuthMiddleware(authClient)
 
 /**

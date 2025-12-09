@@ -25,11 +25,11 @@ describe('Mock OAuth Integration (Full Flow)', () => {
 
     try {
       // Step 1: Initiate OAuth flow
-      let initiateResponse = await router.fetch('https://app.example.com/auth/mock', {
+      let initiateResponse = await router.fetch('https://app.example.com/api/auth/oauth/mock', {
         redirect: 'manual',
       })
 
-      assert.equal(initiateResponse.status, 302, 'Should redirect from /auth/mock')
+      assert.equal(initiateResponse.status, 302, 'Should redirect from /api/auth/oauth/mock')
       let authUrl = initiateResponse.headers.get('Location')
       assert.ok(authUrl, 'Should have Location header')
 

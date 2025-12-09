@@ -43,6 +43,7 @@
   },
   "peerDependencies": {
     "@remix-run/cookie": "workspace:^",
+    "@remix-run/fetch-router": "workspace:^",
     "@remix-run/session": "workspace:^"
   },
   "devDependencies": {

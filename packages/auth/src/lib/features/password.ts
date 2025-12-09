@@ -1,5 +1,5 @@
 import type { Session } from '@remix-run/session'
-import type { Feature, FeatureContext, FeatureSchema } from './types.ts'
+import type { Feature, FeatureContext, FeatureSchema, FeatureRoutes } from './types.ts'
 import type { AuthUser } from '../types.ts'
 
 /**
@@ -13,9 +13,9 @@ export type PasswordSignInErrorCode = 'invalid_credentials'
 export type PasswordSignUpErrorCode = 'email_taken'
 
 /**
- * Error codes returned by password reset request
+ * Error codes returned by getResetToken
  */
-export type PasswordResetRequestErrorCode = 'user_not_found'
+export type PasswordGetResetTokenErrorCode = 'user_not_found'
 
 /**
  * Error codes returned by password reset completion
@@ -25,7 +25,12 @@ export type PasswordResetCompleteErrorCode = 'invalid_or_expired_token' | 'user_
 /**
  * Error codes returned by password change
  */
-export type PasswordChangeErrorCode = 'not_authenticated' | 'invalid_password'
+export type PasswordChangeErrorCode = 'not_authenticated' | 'invalid_password' | 'no_password'
+
+/**
+ * Error codes returned by password set (adding password to OAuth-only account)
+ */
+export type PasswordSetErrorCode = 'not_authenticated' | 'password_already_set'
 
 /**
  * Password hashing and verification using PBKDF2 (Web Crypto API)
@@ -145,7 +150,6 @@ export interface PasswordFeatureConfig {
         hash: (password: string) => Promise<string>
         verify: (password: string, hash: string) => Promise<boolean>
       }
-  sendReset(data: { user: AuthUser; token: string }): void | Promise<void>
 }
 
 /**
@@ -156,6 +160,7 @@ export interface PasswordFeatureMethods {
     session: Session
     email: string
     password: string
+    request: Request
   }): Promise<{ user: AuthUser } | { error: PasswordSignInErrorCode }>
 
   signUp<TData extends Record<string, unknown> = {}>(
@@ -163,20 +168,39 @@ export interface PasswordFeatureMethods {
       session: Session
       email: string
       password: string
+      request: Request
     } & TData,
   ): Promise<{ user: AuthUser } | { error: PasswordSignUpErrorCode }>
 
+  /**
+   * Check if the current user has a password credential
+   */
+  hasPassword(session: Session): Promise<boolean>
+
+  /**
+   * Set a password for an OAuth-only account (no current password required)
+   */
+  set(options: {
+    session: Session
+    password: string
+  }): Promise<{ success: true } | { error: PasswordSetErrorCode }>
+
+  /**
+   * Change an existing password (requires current password)
+   */
   change(options: {
     session: Session
     currentPassword: string
     newPassword: string
   }): Promise<{ success: true } | { error: PasswordChangeErrorCode }>
 
-  requestReset(
-    email: string,
-  ): Promise<
-    { success: true } | { error: PasswordResetRequestErrorCode | 'no_password_credential' }
-  >
+  /**
+   * Generate a password reset token for a user.
+   * Returns the user and token on success - you handle sending the email.
+   */
+  getResetToken(args: {
+    email: string
+  }): Promise<{ user: AuthUser; token: string } | { error: PasswordGetResetTokenErrorCode }>
 
   reset(options: {
     session: Session
@@ -186,9 +210,21 @@ export interface PasswordFeatureMethods {
 }
 
 /**
+ * Password route definitions (empty - password auth uses app-level forms, not API routes)
+ */
+export let passwordRoutes = {} satisfies FeatureRoutes
+
+/**
  * Password authentication feature
  */
-export const passwordFeature: Feature<PasswordFeatureConfig, PasswordFeatureMethods> = {
+export const passwordFeature: Feature<
+  PasswordFeatureConfig,
+  PasswordFeatureMethods,
+  typeof passwordRoutes
+> = {
+  name: 'password',
+  routes: passwordRoutes,
+
   isEnabled(config: any): config is PasswordFeatureConfig {
     return config?.password?.enabled === true
   },
@@ -260,7 +296,55 @@ export const passwordFeature: Feature<PasswordFeatureConfig, PasswordFeatureMeth
         return { user }
       },
 
-      async signUp({ session, email, password, ...extraData }) {
+      async hasPassword(session) {
+        let userId = session.get(sessionKey)
+        if (typeof userId !== 'string') {
+          return false
+        }
+
+        let credential = await storage.findOne<{ hashedPassword: string }>({
+          model: 'password',
+          where: [{ field: 'userId', value: userId }],
+        })
+
+        return credential !== null
+      },
+
+      async set({ session, password }) {
+        // Get current user from session
+        let userId = session.get(sessionKey)
+        if (typeof userId !== 'string') {
+          return { error: 'not_authenticated' as const }
+        }
+
+        let user = await storage.findOne<AuthUser>({
+          model: 'user',
+          where: [{ field: 'id', value: userId }],
+        })
+        if (!user) {
+          return { error: 'not_authenticated' as const }
+        }
+
+        // Check if user already has a password
+        let existingCredential = await storage.findOne<{ hashedPassword: string }>({
+          model: 'password',
+          where: [{ field: 'userId', value: user.id }],
+        })
+        if (existingCredential) {
+          return { error: 'password_already_set' as const }
+        }
+
+        // Hash and create password credential
+        let hashedPassword = await hash(password)
+        await storage.create({
+          model: 'password',
+          data: { userId: user.id, hashedPassword },
+        })
+
+        return { success: true as const }
+      },
+
+      async signUp({ session, email, password, request, ...extraData }) {
         // Normalize email
         email = email.toLowerCase().trim()
 
@@ -301,9 +385,9 @@ export const passwordFeature: Feature<PasswordFeatureConfig, PasswordFeatureMeth
         session.regenerateId(true)
         session.set(sessionKey, user.id)
 
-        // Call onUserCreated hook (will be composed with feature hooks by client)
+        // Call onUserCreated hook with request context
         if (context.onUserCreatedHook) {
-          await context.onUserCreatedHook(user)
+          await context.onUserCreatedHook({ user, request })
         }
 
         return { user }
@@ -330,7 +414,7 @@ export const passwordFeature: Feature<PasswordFeatureConfig, PasswordFeatureMeth
           where: [{ field: 'userId', value: user.id }],
         })
         if (!credential) {
-          return { error: 'not_authenticated' as const }
+          return { error: 'no_password' as const }
         }
 
         // Verify current password
@@ -350,11 +434,7 @@ export const passwordFeature: Feature<PasswordFeatureConfig, PasswordFeatureMeth
         return { success: true as const }
       },
 
-      async requestReset(email) {
-        if (!passwordConfig.sendReset) {
-          throw new Error('Password reset not configured')
-        }
-
+      async getResetToken({ email }) {
         let user = await storage.findOne<AuthUser>({
           model: 'user',
           where: [{ field: 'email', value: email }],
@@ -383,10 +463,7 @@ export const passwordFeature: Feature<PasswordFeatureConfig, PasswordFeatureMeth
           data: { token, userId: user.id, expiresAt },
         })
 
-        // Call callback to send email
-        await passwordConfig.sendReset({ user, token })
-
-        return { success: true as const }
+        return { user, token }
       },
 
       async reset({ session, token, newPassword }) {

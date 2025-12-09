@@ -1,6 +1,6 @@
 import { SetCookie, Cookie } from '@remix-run/headers'
 import { resetPosts } from '../app/models/posts.ts'
-import { authStorage } from '../app/utils/auth.ts'
+import { clearAuthStorage } from '../app/utils/auth.ts'
 import { getLastEmailTo, clearSentEmails } from '../app/services/email.ts'
 
 /**
@@ -85,12 +85,7 @@ export async function signup(
 export function setupTest() {
   resetPosts()
   clearSentEmails()
-
-  // Reset auth storage (clear all arrays)
-  authStorage.user.length = 0
-  authStorage.password.length = 0
-  authStorage.oauthAccount.length = 0
-  authStorage.passwordResetToken.length = 0
+  clearAuthStorage()
 }
 
 /**

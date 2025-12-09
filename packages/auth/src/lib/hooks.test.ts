@@ -24,12 +24,7 @@ describe('Feature Hooks System', () => {
   test('onUserCreated hook is called for password signup', async () => {
     let hooksCalled: string[] = []
 
-    let storage: MemoryDB = {
-      user: [],
-      password: [],
-      oauthAccount: [],
-      passwordResetToken: [],
-    }
+    let storage: MemoryDB = {}
 
     let authClient = createAuthClient({
       secret: 'test-secret-key',
@@ -47,12 +42,12 @@ describe('Feature Hooks System', () => {
       },
       password: {
         enabled: true,
-        sendReset: () => {},
       },
     })
 
     let session = createSession()
     let result = await authClient.password.signUp({
+      request: new Request('http://localhost/'),
       session,
       email: 'test@example.com',
       password: 'password123',
@@ -70,16 +65,9 @@ describe('Feature Hooks System', () => {
   test('onUserCreated hook is called for OAuth signup', async () => {
     let hooksCalled: string[] = []
 
-    let storage: MemoryDB = {
-      user: [],
-      password: [],
-      oauthAccount: [],
-      passwordResetToken: [],
-    }
-
     let config = {
       secret: 'test-secret-key',
-      storage: createMemoryStorageAdapter(storage),
+      storage: createMemoryStorageAdapter(),
       hooks: {
         onUserCreated: (user) => {
           hooksCalled.push(`user-hook:${user.email}`)
@@ -100,7 +88,6 @@ describe('Feature Hooks System', () => {
             clientSecret: 'test-client-secret',
           },
         },
-        baseURL: 'http://localhost',
         successURL: '/',
         errorURL: '/error',
       },
@@ -110,6 +97,7 @@ describe('Feature Hooks System', () => {
 
     let session = createSession()
     let result = await authClient.oauth.signIn({
+      request: new Request('http://localhost/'),
       session,
       provider: 'github',
       providerAccountId: '123',
@@ -130,16 +118,9 @@ describe('Feature Hooks System', () => {
   test('feature hooks run even without user hook', async () => {
     let verificationSent = false
 
-    let storage: MemoryDB = {
-      user: [],
-      password: [],
-      oauthAccount: [],
-      passwordResetToken: [],
-    }
-
     let authClient = createAuthClient({
       secret: 'test-secret-key',
-      storage: createMemoryStorageAdapter(storage),
+      storage: createMemoryStorageAdapter(),
       emailVerification: {
         enabled: true,
         sendVerification: () => {
@@ -148,12 +129,12 @@ describe('Feature Hooks System', () => {
       },
       password: {
         enabled: true,
-        sendReset: () => {},
       },
     })
 
     let session = createSession()
     await authClient.password.signUp({
+      request: new Request('http://localhost/'),
       session,
       email: 'test@example.com',
       password: 'password123',
@@ -165,16 +146,9 @@ describe('Feature Hooks System', () => {
   test('user hook runs even without feature hooks', async () => {
     let userHookCalled = false
 
-    let storage: MemoryDB = {
-      user: [],
-      password: [],
-      oauthAccount: [],
-      passwordResetToken: [],
-    }
-
     let authClient = createAuthClient({
       secret: 'test-secret-key',
-      storage: createMemoryStorageAdapter(storage),
+      storage: createMemoryStorageAdapter(),
       hooks: {
         onUserCreated: () => {
           userHookCalled = true
@@ -182,12 +156,12 @@ describe('Feature Hooks System', () => {
       },
       password: {
         enabled: true,
-        sendReset: () => {},
       },
     })
 
     let session = createSession()
     await authClient.password.signUp({
+      request: new Request('http://localhost/'),
       session,
       email: 'test@example.com',
       password: 'password123',
@@ -199,16 +173,9 @@ describe('Feature Hooks System', () => {
   test('onUserCreated hook NOT called for password signin', async () => {
     let hooksCalled = 0
 
-    let storage: MemoryDB = {
-      user: [],
-      password: [],
-      oauthAccount: [],
-      passwordResetToken: [],
-    }
-
     let authClient = createAuthClient({
       secret: 'test-secret-key',
-      storage: createMemoryStorageAdapter(storage),
+      storage: createMemoryStorageAdapter(),
       hooks: {
         onUserCreated: () => {
           hooksCalled++
@@ -216,7 +183,6 @@ describe('Feature Hooks System', () => {
       },
       password: {
         enabled: true,
-        sendReset: () => {},
       },
     })
 
@@ -224,6 +190,7 @@ describe('Feature Hooks System', () => {
 
     // Sign up first
     await authClient.password.signUp({
+      request: new Request('http://localhost/'),
       session,
       email: 'test@example.com',
       password: 'password123',
@@ -234,6 +201,7 @@ describe('Feature Hooks System', () => {
     // Sign in - should NOT call hook again
     let session2 = createSession()
     await authClient.password.signIn({
+      request: new Request('http://localhost/'),
       session: session2,
       email: 'test@example.com',
       password: 'password123',
@@ -245,16 +213,9 @@ describe('Feature Hooks System', () => {
   test('onUserCreated hook NOT called for OAuth account linking', async () => {
     let hooksCalled = 0
 
-    let storage: MemoryDB = {
-      user: [],
-      password: [],
-      oauthAccount: [],
-      passwordResetToken: [],
-    }
-
     let config = {
       secret: 'test-secret-key',
-      storage: createMemoryStorageAdapter(storage),
+      storage: createMemoryStorageAdapter(),
       hooks: {
         onUserCreated: () => {
           hooksCalled++
@@ -262,7 +223,6 @@ describe('Feature Hooks System', () => {
       },
       password: {
         enabled: true,
-        sendReset: () => {},
       },
       oauth: {
         enabled: true,
@@ -273,7 +233,6 @@ describe('Feature Hooks System', () => {
             clientSecret: 'test-client-secret',
           },
         },
-        baseURL: 'http://localhost',
         successURL: '/',
         errorURL: '/error',
       },
@@ -285,6 +244,7 @@ describe('Feature Hooks System', () => {
 
     // Create user with password
     await authClient.password.signUp({
+      request: new Request('http://localhost/'),
       session,
       email: 'test@example.com',
       password: 'password123',
@@ -296,10 +256,12 @@ describe('Feature Hooks System', () => {
     // Link OAuth account - should NOT call hook again
     let session2 = createSession()
     let result = await authClient.oauth.signIn({
+      request: new Request('http://localhost/'),
       session: session2,
       provider: 'github',
       providerAccountId: '123',
       email: 'test@example.com', // Same email
+      emailVerified: true, // Required for account linking
       name: 'Test User',
     })
 

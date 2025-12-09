@@ -15,12 +15,12 @@ export default {
         return render(<SignupForm />)
       },
 
-      async action({ formData, session }) {
+      async action({ formData, session, request }) {
         let name = formData.get('name') as string
         let email = formData.get('email') as string
         let password = formData.get('password') as string
 
-        let result = await authClient.password.signUp({ session, email, password, name })
+        let result = await authClient.password.signUp({ request, session, email, password, name })
 
         if ('error' in result) {
           let getErrorMessage = () => {
@@ -35,20 +35,6 @@ export default {
           return render(<SignupForm error={getErrorMessage()} />)
         }
 
-        // Success - send welcome email
-        sendEmail({
-          to: result.user.email,
-          subject: 'Welcome to Auth Demo!',
-          text: `Hi ${result.user.name},
-
-Welcome to Auth Demo! Your account has been created successfully.
-
-Email: ${result.user.email}
-User ID: ${result.user.id}
-
-Get started by exploring the community posts!`,
-        })
-
         // Success - logged in (session set by auth client)
         return redirect(routes.home.href(), 302)
       },
@@ -57,16 +43,48 @@ Get started by exploring the community posts!`,
     login: {
       index({ url, session }) {
         let returnTo = url.searchParams.get('returnTo')
-        let flashError = session.get('error') as string | undefined
+        let flashError: string | undefined
+
+        // Check for OAuth flash messages
+        let oauthFlash = authClient.oauth.getFlash(session)
+        if (oauthFlash?.type === 'error') {
+          switch (oauthFlash.code) {
+            case 'access_denied':
+              flashError = 'You cancelled the sign in process'
+              break
+            case 'account_exists_unverified_email':
+              flashError =
+                'An account with this email already exists. Please sign in with your original method, or use an OAuth provider that verifies your email address.'
+              break
+            case 'invalid_state':
+              flashError = 'Invalid or expired OAuth state. Please try again.'
+              break
+            default:
+              flashError = 'An error occurred. Please try again.'
+          }
+        }
+
+        // Check for email verification flash messages
+        let emailFlash = authClient.emailVerification.getFlash(session)
+        if (emailFlash?.type === 'error') {
+          switch (emailFlash.code) {
+            case 'invalid_or_expired_token':
+              flashError = 'Invalid or expired verification link. Please request a new one.'
+              break
+            default:
+              flashError = 'An error occurred. Please try again.'
+          }
+        }
+
         return render(<LoginForm error={flashError} returnTo={returnTo} />)
       },
 
-      async action({ formData, session, url }) {
+      async action({ formData, session, url, request }) {
         let email = formData.get('email') as string
         let password = formData.get('password') as string
         let returnTo = (formData.get('returnTo') as string) || '/'
 
-        let result = await authClient.password.signIn({ session, email, password })
+        let result = await authClient.password.signIn({ request, session, email, password })
 
         if ('error' in result) {
           let getErrorMessage = () => {
@@ -91,18 +109,27 @@ Get started by exploring the community posts!`,
         return render(<ForgotPasswordForm />)
       },
 
-      async action({ formData }) {
+      async action({ formData, request }) {
         let email = formData.get('email') as string
 
-        let result = await authClient.password.requestReset(email)
+        let result = await authClient.password.getResetToken({ email })
 
-        // Log error in development, but don't reveal if email exists
-        if ('error' in result && process.env.NODE_ENV === 'development') {
+        // If we got a token, send the email
+        if (!('error' in result)) {
+          let { user, token } = result
+          let baseURL = new URL(request.url).origin
+          let resetFormUrl = `${baseURL}${routes.auth.resetPassword.index.href({ token })}`
+          sendEmail({
+            to: user.email,
+            subject: 'Reset your password',
+            text: `Hi ${user.name},\n\nClick the link below to reset your password:\n\n${resetFormUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`,
+          })
+        } else if (process.env.NODE_ENV === 'development') {
+          // Log error in development, but don't reveal if email exists
           console.log('Password reset error:', result.error)
         }
 
         // Always show the same success message (don't reveal if email exists)
-        // The auth client handles sending the email internally
         return render(
           <Layout>
             <div css={{ maxWidth: '500px', margin: '4rem auto', padding: '0 20px' }}>
@@ -380,7 +407,7 @@ function SignupForm({ error }: { error?: string }) {
           </button>
         </form>
 
-        {authClient.oauth.providers && Object.keys(authClient.oauth.providers).length > 0 ? (
+        {Object.keys(authClient.oauth.providers).length > 0 ? (
           <>
             <div
               css={{
@@ -396,10 +423,10 @@ function SignupForm({ error }: { error?: string }) {
               <div css={{ flex: 1, height: '1px', background: '#d2d2d7' }} />
             </div>
 
-            {Object.entries(authClient.oauth.providers).map(([name, config]) => (
+            {Object.values(authClient.oauth.providers).map((provider) => (
               <a
-                key={name}
-                href={`/auth/${name}`}
+                key={provider.name}
+                href={provider.signInHref}
                 css={{
                   display: 'flex',
                   alignItems: 'center',
@@ -407,7 +434,7 @@ function SignupForm({ error }: { error?: string }) {
                   gap: '0.5rem',
                   width: '100%',
                   padding: '0.75rem 1.5rem',
-                  background: name === 'github' ? '#24292f' : '#007aff',
+                  background: provider.name === 'github' ? '#24292f' : '#007aff',
                   color: 'white',
                   borderRadius: '6px',
                   fontWeight: 500,
@@ -416,17 +443,17 @@ function SignupForm({ error }: { error?: string }) {
                   transition: 'all 0.15s ease',
                   marginBottom: '0.75rem',
                   ':hover': {
-                    background: name === 'github' ? '#1b1f23' : '#0051d5',
+                    background: provider.name === 'github' ? '#1b1f23' : '#0051d5',
                     transform: 'translateY(-1px)',
                   },
                 }}
               >
-                {name === 'github' ? (
+                {provider.name === 'github' ? (
                   <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor">
                     <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
                   </svg>
                 ) : null}
-                Continue with {config.provider.displayName}
+                Continue with {provider.displayName}
               </a>
             ))}
           </>
@@ -579,10 +606,10 @@ function LoginForm({ error, returnTo }: { error?: string; returnTo?: string | nu
               <div css={{ flex: 1, height: '1px', background: '#d2d2d7' }} />
             </div>
 
-            {Object.entries(authClient.oauth.providers).map(([name, config]) => (
+            {Object.values(authClient.oauth.providers).map((provider) => (
               <a
-                key={name}
-                href={`/auth/${name}`}
+                key={provider.name}
+                href={provider.signInHref}
                 css={{
                   display: 'flex',
                   alignItems: 'center',
@@ -590,7 +617,7 @@ function LoginForm({ error, returnTo }: { error?: string; returnTo?: string | nu
                   gap: '0.5rem',
                   width: '100%',
                   padding: '0.75rem 1.5rem',
-                  background: name === 'github' ? '#24292f' : '#007aff',
+                  background: provider.name === 'github' ? '#24292f' : '#007aff',
                   color: 'white',
                   borderRadius: '6px',
                   fontWeight: 500,
@@ -599,17 +626,17 @@ function LoginForm({ error, returnTo }: { error?: string; returnTo?: string | nu
                   transition: 'all 0.15s ease',
                   marginBottom: '0.75rem',
                   ':hover': {
-                    background: name === 'github' ? '#1b1f23' : '#0051d5',
+                    background: provider.name === 'github' ? '#1b1f23' : '#0051d5',
                     transform: 'translateY(-1px)',
                   },
                 }}
               >
-                {name === 'github' ? (
+                {provider.name === 'github' ? (
                   <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor">
                     <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
                   </svg>
                 ) : null}
-                Continue with {config.provider.displayName}
+                Continue with {provider.displayName}
               </a>
             ))}
           </>

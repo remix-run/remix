@@ -5,11 +5,15 @@ import type { AuthClientBase, AuthUser } from '@remix-run/auth'
 /**
  * Create auth middleware and typed user getter for your auth client.
  *
+ * The middleware automatically:
+ * - Handles all auth API routes (OAuth, email verification, etc.)
+ * - Loads and caches the current user for route handlers
+ *
  * **Requires:**
  * - `session()` middleware - to load and persist sessions
  *
  * Returns an object with:
- * - `auth`: Middleware that loads and caches the current user
+ * - `auth`: Middleware that handles auth API routes and loads/caches the current user
  * - `getUser`: Function to synchronously get the cached user
  *
  * For protected routes, check the user manually:
@@ -42,7 +46,16 @@ export function createAuthMiddleware(authClient: AuthClientBase<AuthUser>) {
   // Each auth client gets its own storage instance
   let userStorage = new AsyncLocalStorage<AuthUser | null>()
 
-  let auth: Middleware = async ({ session }, next) => {
+  let authApiHandler = authClient.createHandler()
+
+  let auth: Middleware = async ({ request, session, url }, next) => {
+    if (url.pathname.startsWith(authClient.authBasePath)) {
+      let response = await authApiHandler(request, session)
+      if (response) {
+        return response
+      }
+    }
+
     let user = await authClient.getUser(session)
     return userStorage.run(user, () => next())
   }

@@ -34,11 +34,7 @@ describe('createAuthMiddleware', () => {
         enabled: true,
         sendReset: () => {},
       },
-      storage: createMemoryStorageAdapter({
-        user: [],
-        password: [],
-        passwordResetToken: [],
-      }),
+      storage: createMemoryStorageAdapter(),
     })
 
     // Create middleware and getUser from factory
@@ -49,10 +45,10 @@ describe('createAuthMiddleware', () => {
     })
 
     // Create signup route
-    router.post('/signup', async ({ formData, session }) => {
+    router.post('/signup', async ({ formData, session, request }) => {
       let email = formData.get('email') as string
       let password = formData.get('password') as string
-      let result = await authClient.password.signUp({ session, email, password })
+      let result = await authClient.password.signUp({ request, session, email, password })
       if ('error' in result) return new Response(result.error, { status: 400 })
       return new Response('ok')
     })
@@ -86,11 +82,7 @@ describe('createAuthMiddleware', () => {
         enabled: true,
         sendReset: () => {},
       },
-      storage: createMemoryStorageAdapter({
-        user: [],
-        password: [],
-        passwordResetToken: [],
-      }),
+      storage: createMemoryStorageAdapter(),
     })
 
     // Create middleware and getUser from factory

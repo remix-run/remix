@@ -20,15 +20,11 @@ describe('OAuth integration', () => {
     let sessionCookie = createCookie('session', { secrets: ['secret'] })
     let sessionStorage = createMemorySessionStorage()
 
-    let db: MemoryDB = {
-      user: [],
-      password: [],
-      oauthAccount: [],
-      passwordResetToken: [],
-    }
+    let db: MemoryDB = {}
 
     let authClient = createAuthClient({
       secret: 'test-secret-key',
+      authBasePath: '/api/auth',
       user: {
         additionalFields: {
           name: { type: 'string', required: true },
@@ -56,27 +52,18 @@ describe('OAuth integration', () => {
 
     let { auth, getUser } = createAuthMiddleware(authClient)
 
-    // Set up app router
+    // Set up app router - auth middleware handles API routes automatically
     let router = createRouter({
       middleware: [formDataMiddleware(), sessionMiddleware(sessionCookie, sessionStorage), auth],
     })
 
-    // Map OAuth handlers directly from authClient.oauth
-    if (authClient.oauth.flows.mock) {
-      router.get('/auth/mock', ({ request, session }) =>
-        authClient.oauth.flows.mock.initiate(request, session),
-      )
-      router.get('/auth/mock/callback', ({ request, session }) =>
-        authClient.oauth.flows.mock.callback(request, session),
-      )
-    }
     router.get('/home', () => {
       let user = getUser()
       return new Response(user ? `Welcome ${user.name}!` : 'Not logged in')
     })
 
     // Step 1: Initiate OAuth flow
-    let initiateResponse = await router.fetch('https://app.example.com/auth/mock', {
+    let initiateResponse = await router.fetch('https://app.example.com/api/auth/oauth/mock', {
       redirect: 'manual',
     })
 
@@ -137,6 +124,7 @@ describe('OAuth integration', () => {
 
     let authClient = createAuthClient({
       secret: 'test-secret-key',
+      authBasePath: '/api/auth',
       oauth: {
         enabled: true,
         providers: {
@@ -144,6 +132,7 @@ describe('OAuth integration', () => {
             provider: createTestMockOAuthProvider({
               id: 'mock-oauth-456',
               email: 'existing@example.com', // Same email!
+              emailVerified: true, // Must be verified to link to existing account
               name: 'Existing User',
             }),
             clientId: 'test-client-id',
@@ -159,22 +148,13 @@ describe('OAuth integration', () => {
 
     let { auth, getUser } = createAuthMiddleware(authClient)
 
+    // Set up app router - auth middleware handles API routes automatically
     let router = createRouter({
       middleware: [formDataMiddleware(), sessionMiddleware(sessionCookie, sessionStorage), auth],
     })
 
-    // Map OAuth handlers directly from authClient.oauth
-    if (authClient.oauth.flows.mock) {
-      router.get('/auth/mock', ({ request, session }) =>
-        authClient.oauth.flows.mock.initiate(request, session),
-      )
-      router.get('/auth/mock/callback', ({ request, session }) =>
-        authClient.oauth.flows.mock.callback(request, session),
-      )
-    }
-
     // Initiate and complete OAuth flow
-    let initiateResponse = await router.fetch('https://app.example.com/auth/mock', {
+    let initiateResponse = await router.fetch('https://app.example.com/api/auth/oauth/mock', {
       redirect: 'manual',
     })
 
@@ -196,15 +176,11 @@ describe('OAuth integration', () => {
     let sessionCookie = createCookie('session', { secrets: ['secret'] })
     let sessionStorage = createMemorySessionStorage()
 
-    let db: MemoryDB = {
-      user: [],
-      password: [],
-      oauthAccount: [],
-      passwordResetToken: [],
-    }
+    let db: MemoryDB = {}
 
     let authClient = createAuthClient({
       secret: 'test-secret-key',
+      authBasePath: '/api/auth',
       oauth: {
         enabled: true,
         providers: {
@@ -226,33 +202,26 @@ describe('OAuth integration', () => {
 
     let { auth } = createAuthMiddleware(authClient)
 
+    // Set up app router - auth middleware handles API routes automatically
     let router = createRouter({
       middleware: [formDataMiddleware(), sessionMiddleware(sessionCookie, sessionStorage), auth],
     })
 
-    // Map OAuth handlers directly from authClient.oauth
-    if (authClient.oauth.flows.mock) {
-      router.get('/auth/mock', ({ request, session }) =>
-        authClient.oauth.flows.mock.initiate(request, session),
-      )
-      router.get('/auth/mock/callback', ({ request, session }) =>
-        authClient.oauth.flows.mock.callback(request, session),
-      )
-    }
-
-    // Add login route to display errors
+    // Add login route to display errors using structured flash
     router.get('/login', ({ session }) => {
-      let error = session.get('error')
-      return new Response(
-        error
-          ? `<html><body>Error: ${error}</body></html>`
-          : '<html><body>Login page</body></html>',
-        { headers: { 'Content-Type': 'text/html' } },
-      )
+      let flash = authClient.oauth.getFlash(session)
+      if (flash?.type === 'error') {
+        return new Response(`<html><body>Error: ${flash.code}</body></html>`, {
+          headers: { 'Content-Type': 'text/html' },
+        })
+      }
+      return new Response('<html><body>Login page</body></html>', {
+        headers: { 'Content-Type': 'text/html' },
+      })
     })
 
     // Step 1: Initiate OAuth flow to get a valid state
-    let initiateResponse = await router.fetch('https://app.example.com/auth/mock', {
+    let initiateResponse = await router.fetch('https://app.example.com/api/auth/oauth/mock', {
       redirect: 'manual',
     })
     let authUrl = initiateResponse.headers.get('Location')!
@@ -260,14 +229,14 @@ describe('OAuth integration', () => {
 
     // Step 2: Simulate OAuth provider error during callback
     let errorResponse = await router.fetch(
-      `https://app.example.com/auth/mock/callback?error=access_denied&error_description=User+denied+authorization&state=${state}`,
+      `https://app.example.com/api/auth/oauth/mock/callback?error=access_denied&error_description=User+denied+authorization&state=${state}`,
       { redirect: 'manual' },
     )
 
     assert.equal(errorResponse.status, 302)
     assert.equal(errorResponse.headers.get('Location'), '/login')
 
-    // Step 3: Follow redirect and verify error message is displayed
+    // Step 3: Follow redirect and verify error code is flashed
     let errorSessionCookie = errorResponse.headers.get('Set-Cookie')
     assert.ok(errorSessionCookie, 'Should have session cookie')
 
@@ -276,6 +245,100 @@ describe('OAuth integration', () => {
     })
 
     let html = await loginResponse.text()
-    assert.ok(html.includes('User denied authorization'), 'Should display OAuth error message')
+    assert.ok(html.includes('access_denied'), 'Should display OAuth error code')
+  })
+
+  it('blocks account linking when OAuth email is unverified', async () => {
+    let sessionCookie = createCookie('session', { secrets: ['secret'] })
+    let sessionStorage = createMemorySessionStorage()
+
+    // Pre-existing user created via email/password
+    let db: MemoryDB = {
+      user: [
+        {
+          id: 'existing-user-789',
+          email: 'existing@example.com',
+          name: 'Existing User',
+          emailVerified: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      password: [{ userId: 'existing-user-789', hashedPassword: 'hashed' }],
+    }
+
+    let authClient = createAuthClient({
+      secret: 'test-secret-key',
+      authBasePath: '/api/auth',
+      oauth: {
+        enabled: true,
+        providers: {
+          mock: {
+            provider: createTestMockOAuthProvider({
+              id: 'mock-oauth-789',
+              email: 'existing@example.com', // Same email as existing user
+              emailVerified: false, // Unverified email - should block linking
+              name: 'Existing User',
+            }),
+            clientId: 'test-client-id',
+            clientSecret: 'test-client-secret',
+          },
+        },
+        baseURL: 'https://app.example.com',
+        successURL: '/home',
+        errorURL: '/login',
+      },
+      storage: createMemoryStorageAdapter(db),
+    })
+
+    let { auth } = createAuthMiddleware(authClient)
+
+    // Set up app router - auth middleware handles API routes automatically
+    let router = createRouter({
+      middleware: [formDataMiddleware(), sessionMiddleware(sessionCookie, sessionStorage), auth],
+    })
+
+    // Add login route to display errors using structured flash
+    router.get('/login', ({ session }) => {
+      let flash = authClient.oauth.getFlash(session)
+      if (flash?.type === 'error') {
+        return new Response(`<html><body>Error: ${flash.code}</body></html>`, {
+          headers: { 'Content-Type': 'text/html' },
+        })
+      }
+      return new Response('<html><body>Login page</body></html>', {
+        headers: { 'Content-Type': 'text/html' },
+      })
+    })
+
+    // Initiate and complete OAuth flow
+    let initiateResponse = await router.fetch('https://app.example.com/api/auth/oauth/mock', {
+      redirect: 'manual',
+    })
+
+    let authUrl = initiateResponse.headers.get('Location')!
+    let authUrlParsed = new URL(authUrl)
+    let state = authUrlParsed.searchParams.get('state')
+    let redirectUri = authUrlParsed.searchParams.get('redirect_uri')
+
+    let callbackResponse = await router.fetch(
+      `${redirectUri}?code=mock_auth_code_789&state=${state}`,
+      { redirect: 'manual' },
+    )
+
+    // Should redirect to error URL, not success
+    assert.equal(callbackResponse.status, 302)
+    assert.equal(callbackResponse.headers.get('Location'), '/login')
+
+    // Should show error code about existing account with unverified email
+    let errorSessionCookie = callbackResponse.headers.get('Set-Cookie')
+    let loginResponse = await router.fetch('https://app.example.com/login', {
+      headers: { Cookie: errorSessionCookie! },
+    })
+    let html = await loginResponse.text()
+    assert.ok(
+      html.includes('account_exists_unverified_email'),
+      'Should display error code about existing account',
+    )
   })
 })

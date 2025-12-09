@@ -7,6 +7,7 @@ let customProfiles = new Map<
   {
     id: string
     email: string
+    emailVerified?: boolean
     name?: string
     avatarUrl?: string
   }
@@ -19,6 +20,7 @@ let authorizationCodes = new Map<
     profile: {
       id: string
       email: string
+      emailVerified?: boolean
       name?: string
       avatarUrl?: string
     }
@@ -42,6 +44,7 @@ export function createMockOAuthHandlers(options: {
   profile: {
     id: string
     email: string
+    emailVerified?: boolean
     name?: string
     avatarUrl?: string
   }
@@ -339,6 +342,11 @@ export function createMockOAuthHandlers(options: {
           <input type="text" id="name" name="name" value="${profile.name || ''}" />
         </div>
 
+        <div class="field" style="display: flex; align-items: center; gap: 0.5rem;">
+          <input type="checkbox" id="emailVerified" name="emailVerified" value="true" ${profile.emailVerified !== false ? 'checked' : ''} style="width: auto;" />
+          <label for="emailVerified" style="margin-bottom: 0;">Email Verified</label>
+        </div>
+
         ${
           url.searchParams.get('scope')
             ? `
@@ -434,6 +442,7 @@ export function createMockOAuthHandlers(options: {
         let customProfile = {
           id: (formData.get('id') as string) || profile.id,
           email: (formData.get('email') as string) || profile.email,
+          emailVerified: formData.get('emailVerified') === 'true',
           name: (formData.get('name') as string) || profile.name,
           avatarUrl: profile.avatarUrl,
         }

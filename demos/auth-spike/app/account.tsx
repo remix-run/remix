@@ -8,9 +8,11 @@ import { sendEmail } from './services/email.ts'
 
 export default {
   handlers: {
-    index({ url }) {
+    async index({ url, session }) {
       let user = requireUser(url)
       if (user instanceof Response) return user
+
+      let hasPassword = await authClient.password.hasPassword(session)
 
       return render(
         <Layout>
@@ -78,12 +80,21 @@ export default {
             </p>
           </div>
           <div css={{ marginTop: '2rem' }}>
-            <a
-              href={routes.account.changePassword.index.href()}
-              css={{ color: '#007aff', textDecoration: 'none', fontWeight: 600 }}
-            >
-              Change Password →
-            </a>
+            {hasPassword ? (
+              <a
+                href={routes.account.changePassword.index.href()}
+                css={{ color: '#007aff', textDecoration: 'none', fontWeight: 600 }}
+              >
+                Change Password →
+              </a>
+            ) : (
+              <a
+                href={routes.account.addPassword.index.href()}
+                css={{ color: '#007aff', textDecoration: 'none', fontWeight: 600 }}
+              >
+                Add Password →
+              </a>
+            )}
           </div>
           {!user.emailVerified && (
             <div
@@ -161,11 +172,10 @@ export default {
       )
     },
 
-    async action({ request, url }: { request: Request; url: URL }) {
+    async action({ formData, url }) {
       let user = requireUser(url)
       if (user instanceof Response) return user
 
-      let formData = await request.formData()
       let action = formData.get('action')
 
       if (action === 'resend-verification') {
@@ -212,10 +222,103 @@ export default {
       return createRedirectResponse(routes.home.href())
     },
 
-    changePassword: {
-      index({ url }) {
+    addPassword: {
+      async index({ url, session }) {
         let user = requireUser(url)
         if (user instanceof Response) return user
+
+        // Redirect to change password if user already has one
+        let hasPassword = await authClient.password.hasPassword(session)
+        if (hasPassword) {
+          return createRedirectResponse(routes.account.changePassword.index.href())
+        }
+
+        return render(<AddPasswordForm />)
+      },
+
+      async action({ formData, url, session }) {
+        let user = requireUser(url)
+        if (user instanceof Response) return user
+
+        let password = formData.get('password') as string
+        let confirmPassword = formData.get('confirmPassword') as string
+
+        if (password !== confirmPassword) {
+          return render(<AddPasswordForm error="Passwords do not match" />)
+        }
+
+        // Set password
+        let result = await authClient.password.set({
+          session,
+          password,
+        })
+
+        if ('error' in result) {
+          let errorMessage =
+            result.error === 'password_already_set'
+              ? 'You already have a password. Use "Change Password" instead.'
+              : result.error === 'not_authenticated'
+                ? 'You must be logged in to add a password'
+                : 'An unknown error occurred'
+          return render(<AddPasswordForm error={errorMessage} />)
+        }
+
+        // Send confirmation email
+        sendEmail({
+          to: user.email,
+          subject: 'Password Added to Your Account',
+          text: `Hi there,
+
+A password has been added to your account. You can now sign in with your email and password.
+
+If you didn't make this change, please contact support immediately.`,
+        })
+
+        return render(
+          <Layout>
+            <h1
+              css={{
+                fontSize: '2rem',
+                fontWeight: 600,
+                marginBottom: '1rem',
+                color: '#1d1d1f',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Password Added
+            </h1>
+            <div
+              css={{
+                background: '#d4edda',
+                border: '1px solid #28a745',
+                padding: '1rem',
+                marginBottom: '1rem',
+                borderRadius: '6px',
+              }}
+            >
+              Your password has been set successfully! You can now sign in with your email and
+              password.
+            </div>
+            <div css={{ marginTop: '1.5rem' }}>
+              <a href={routes.account.index.href()} css={{ color: '#007aff' }}>
+                Back to Account
+              </a>
+            </div>
+          </Layout>,
+        )
+      },
+    },
+
+    changePassword: {
+      async index({ url, session }) {
+        let user = requireUser(url)
+        if (user instanceof Response) return user
+
+        // Redirect to add password if user doesn't have one
+        let hasPassword = await authClient.password.hasPassword(session)
+        if (!hasPassword) {
+          return createRedirectResponse(routes.account.addPassword.index.href())
+        }
 
         return render(<ChangePasswordForm />)
       },
@@ -240,18 +343,15 @@ export default {
         })
 
         if ('error' in result) {
-          let getErrorMessage = () => {
-            switch (result.error) {
-              case 'invalid_password':
-                return 'Current password is incorrect'
-              case 'not_authenticated':
-                return 'You must be logged in to change your password'
-              default: {
-                return 'An unknown error occurred'
-              }
-            }
-          }
-          return render(<ChangePasswordForm error={getErrorMessage()} />)
+          let errorMessage =
+            result.error === 'invalid_password'
+              ? 'Current password is incorrect'
+              : result.error === 'not_authenticated'
+                ? 'You must be logged in to change your password'
+                : result.error === 'no_password'
+                  ? 'You do not have a password set. Use "Add Password" instead.'
+                  : 'An unknown error occurred'
+          return render(<ChangePasswordForm error={errorMessage} />)
         }
 
         // Send confirmation email
@@ -300,6 +400,139 @@ If you didn't make this change, please contact support immediately.`,
     },
   },
 } satisfies RouteHandlers<typeof routes.account>
+
+function AddPasswordForm({ error }: { error?: string }) {
+  return (
+    <Layout>
+      <div css={{ maxWidth: '500px', margin: '4rem auto', padding: '0 20px' }}>
+        <h1
+          css={{
+            fontSize: '2rem',
+            fontWeight: 600,
+            marginBottom: '1rem',
+            color: '#1d1d1f',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          Add Password
+        </h1>
+        <p css={{ color: '#666', marginBottom: '1.5rem', fontSize: '0.9375rem' }}>
+          Add a password to your account so you can sign in with your email and password in addition
+          to social login.
+        </p>
+        {error ? (
+          <div
+            css={{
+              background: '#fff3f3',
+              border: '1px solid #ffcccc',
+              color: '#cc0000',
+              padding: '1rem',
+              borderRadius: '6px',
+              marginBottom: '1rem',
+              fontSize: '0.875rem',
+            }}
+          >
+            {error}
+          </div>
+        ) : null}
+        <form method="POST" action={routes.account.addPassword.action.href()}>
+          <div css={{ marginBottom: '1.5rem' }}>
+            <label
+              for="password"
+              css={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontWeight: 500,
+                fontSize: '0.875rem',
+                color: '#1d1d1f',
+              }}
+            >
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              css={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #d2d2d7',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                transition: 'border-color 0.15s ease',
+                ':focus': {
+                  outline: 'none',
+                  borderColor: '#007aff',
+                  boxShadow: '0 0 0 3px rgba(0, 122, 255, 0.1)',
+                },
+              }}
+            />
+          </div>
+          <div css={{ marginBottom: '1.5rem' }}>
+            <label
+              for="confirmPassword"
+              css={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontWeight: 500,
+                fontSize: '0.875rem',
+                color: '#1d1d1f',
+              }}
+            >
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              required
+              css={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #d2d2d7',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                transition: 'border-color 0.15s ease',
+                ':focus': {
+                  outline: 'none',
+                  borderColor: '#007aff',
+                  boxShadow: '0 0 0 3px rgba(0, 122, 255, 0.1)',
+                },
+              }}
+            />
+          </div>
+          <button
+            type="submit"
+            css={{
+              display: 'inline-block',
+              padding: '0.75rem 1.5rem',
+              background: '#007aff',
+              color: 'white',
+              borderRadius: '6px',
+              fontWeight: 500,
+              fontSize: '1rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              border: 'none',
+              ':hover': {
+                background: '#0051d5',
+                transform: 'translateY(-1px)',
+              },
+            }}
+          >
+            Add Password
+          </button>
+        </form>
+        <div css={{ marginTop: '1.5rem' }}>
+          <a href={routes.account.index.href()} css={{ color: '#007aff' }}>
+            ← Back to Account
+          </a>
+        </div>
+      </div>
+    </Layout>
+  )
+}
 
 function ChangePasswordForm({ error }: { error?: string }) {
   return (

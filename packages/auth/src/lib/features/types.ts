@@ -1,20 +1,80 @@
+import type { Session } from '@remix-run/session'
+import type { RequestMethod } from '@remix-run/fetch-router'
 import type { Storage } from '../storage.ts'
 import type { ModelSchema } from '../schema.ts'
 import type { AuthUser } from '../types.ts'
 
 /**
- * Base context provided to all features
- * Note: config is the full AuthClientConfig, not feature-specific
+ * Route definition using fetch-router idiom
  */
-export interface FeatureContext {
+export interface FeatureRouteDef {
+  method: RequestMethod | 'ANY'
+  pattern: string
+}
+
+/**
+ * Routes object - maps route names to route definitions
+ * Following fetch-router idiom: { routeName: { method, pattern } }
+ */
+export type FeatureRoutes = Record<string, FeatureRouteDef>
+
+/**
+ * Auto-generated route helper for a single route
+ */
+export interface FeatureRouteHelper {
+  /** Returns the path (e.g., "/_auth/email-verification/verify/abc123") */
+  href(params?: Record<string, string>): string
+  /** Returns the full URL (e.g., "http://localhost:44100/_auth/email-verification/verify/abc123") */
+  url(params?: Record<string, string>, request?: Request): string
+}
+
+/**
+ * Auto-generated route helpers for all routes in a feature
+ */
+export type FeatureRouteHelpers<TRoutes extends FeatureRoutes = FeatureRoutes> = {
+  [K in keyof TRoutes]: FeatureRouteHelper
+}
+
+/**
+ * Base context provided to all features (without routes)
+ */
+export interface FeatureContextBase {
   config: any
   storage: Storage
   secret: string
   sessionKey: string
   /**
+   * Base path where auth routes are mounted (e.g., '/_auth/')
+   * Always ends with trailing slash
+   */
+  authBasePath: string
+  /**
+   * Get the base URL for the application.
+   * If a request is provided, can infer from request.url.
+   * Falls back to configured baseURL or throws if neither available.
+   */
+  getBaseURL: (request?: Request) => string
+  /**
    * Composed hook that calls both user-defined and feature hooks
    */
-  onUserCreatedHook?: (user: AuthUser) => Promise<void>
+  onUserCreatedHook?: (args: { user: AuthUser; request: Request }) => Promise<void>
+  /**
+   * Build a URL for a feature path (for non-route URLs like password reset forms)
+   * Prefer using context.routes for actual API routes
+   */
+  buildURL: (featureName: string, routePath: string) => string
+}
+
+/**
+ * Feature context with auto-generated route helpers
+ */
+export interface FeatureContext<TRoutes extends FeatureRoutes = FeatureRoutes>
+  extends FeatureContextBase {
+  /**
+   * Auto-generated route helpers for this feature
+   * Each route has href() and url() methods
+   */
+  routes: FeatureRouteHelpers<TRoutes>
 }
 
 /**
@@ -27,17 +87,63 @@ export interface FeatureSchema {
 /**
  * Lifecycle hooks that features can register
  */
-export interface FeatureHooks {
+export interface FeatureHooks<TRoutes extends FeatureRoutes = FeatureRoutes> {
   /**
    * Called after a new user is created (via any signup method)
+   * @param args.user - The newly created user
+   * @param args.context - Feature context
+   * @param args.request - The request (for deriving URLs, headers, etc.)
    */
-  onUserCreated?: (user: AuthUser, context: FeatureContext) => void | Promise<void>
+  onUserCreated?: (args: {
+    user: AuthUser
+    context: FeatureContext<TRoutes>
+    request: Request
+  }) => void | Promise<void>
+}
+
+/**
+ * Handler context passed to feature route handlers
+ */
+export interface FeatureHandlerContext<TParams = Record<string, string>> {
+  request: Request
+  session: Session
+  params: TParams
+  url: URL
+}
+
+/**
+ * A route handler function
+ */
+export type FeatureHandler<TParams = Record<string, string>> = (
+  context: FeatureHandlerContext<TParams>,
+) => Response | Promise<Response>
+
+/**
+ * Handlers object - maps route names to handler functions
+ * Keys must match the routes object
+ */
+export type FeatureHandlers<TRoutes extends FeatureRoutes = FeatureRoutes> = {
+  [K in keyof TRoutes]: FeatureHandler<Record<string, string>>
 }
 
 /**
  * Feature definition
  */
-export interface Feature<TConfig = any, TMethods = any> {
+export interface Feature<
+  TConfig = any,
+  TMethods = any,
+  TRoutes extends FeatureRoutes = FeatureRoutes,
+> {
+  /**
+   * Feature name, used as route prefix (e.g., 'oauth', 'email-verification')
+   */
+  name: string
+
+  /**
+   * Route definitions for this feature
+   */
+  routes: TRoutes
+
   /**
    * Check if this feature is enabled based on config
    */
@@ -50,12 +156,51 @@ export interface Feature<TConfig = any, TMethods = any> {
 
   /**
    * Create the feature methods
-   * Context contains the full config, storage, and sessionKey
+   * Context includes auto-generated route helpers
    */
-  createMethods(context: FeatureContext): TMethods
+  createMethods(context: FeatureContext<TRoutes>): TMethods
+
+  /**
+   * Get route handlers for this feature
+   * Keys must match the routes object
+   */
+  getHandlers?(context: FeatureContext<TRoutes>): FeatureHandlers<TRoutes>
 
   /**
    * Optional lifecycle hooks this feature provides
    */
-  hooks?: FeatureHooks
+  hooks?: FeatureHooks<TRoutes>
+}
+
+/**
+ * Create route helpers for a feature from its route definitions
+ */
+export function createRouteHelpers<TRoutes extends FeatureRoutes>(
+  featureName: string,
+  routes: TRoutes,
+  authBasePath: string,
+  getBaseURL: (request?: Request) => string,
+): FeatureRouteHelpers<TRoutes> {
+  let helpers = {} as FeatureRouteHelpers<TRoutes>
+
+  for (let routeName of Object.keys(routes) as (keyof TRoutes)[]) {
+    let routeDef = routes[routeName]
+
+    helpers[routeName] = {
+      href(params?: Record<string, string>): string {
+        let path = routeDef.pattern
+        if (params) {
+          for (let [key, value] of Object.entries(params)) {
+            path = path.replace(`:${key}`, value)
+          }
+        }
+        return `${authBasePath}${featureName}${path}`
+      },
+      url(params?: Record<string, string>, request?: Request): string {
+        return `${getBaseURL(request)}${this.href(params)}`
+      },
+    }
+  }
+
+  return helpers
 }

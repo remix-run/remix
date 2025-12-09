@@ -10,15 +10,13 @@ let server = http.createServer(
       console.error(error)
       return new Response('Internal Server Error', { status: 500 })
     }
-  })
+  }),
 )
 
 let port = 44100
 
 server.listen(port, () => {
   console.log('🚀 Auth spike running at http://localhost:44100')
-  console.log('')
-  console.log('Try liking posts - you\'ll need to log in first!')
 })
 
 let shuttingDown = false

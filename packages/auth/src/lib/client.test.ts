@@ -10,29 +10,18 @@ import type { AuthUser } from './client.ts'
 
 // Helper to create a test auth client
 function createTestAuthClient(customConfig?: Partial<Parameters<typeof createAuthClient>[0]>) {
-  let db: MemoryDB = {
-    user: [],
-    password: [],
-    oauthAccount: [],
-    passwordResetToken: [],
-  }
-
-  let sentEmails: Array<{ user: AuthUser; token: string }> = []
+  let db: MemoryDB = {}
 
   return {
     auth: createAuthClient({
       secret: 'test-secret-key',
       password: {
         enabled: true,
-        sendReset(data) {
-          sentEmails.push(data)
-        },
       },
       storage: createMemoryStorageAdapter(db),
       ...customConfig,
     }),
     db,
-    sentEmails,
   }
 }
 
@@ -43,6 +32,7 @@ describe('createAuthClient', () => {
       let session = createSession()
 
       let result = await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'mypassword123',
@@ -63,6 +53,7 @@ describe('createAuthClient', () => {
       let session = createSession()
 
       let result = await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'Test@EXAMPLE.com',
         password: 'password123',
@@ -77,12 +68,14 @@ describe('createAuthClient', () => {
       let session = createSession()
 
       await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'password123',
       })
 
       let result = await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session: createSession(),
         email: 'test@example.com',
         password: 'differentpassword',
@@ -100,6 +93,7 @@ describe('createAuthClient', () => {
 
       // Create user
       let signupResult = await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'mypassword123',
@@ -108,6 +102,7 @@ describe('createAuthClient', () => {
 
       // Sign in
       let result = await auth.password.signIn({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'mypassword123',
@@ -123,12 +118,14 @@ describe('createAuthClient', () => {
       let session = createSession()
 
       await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'password123',
       })
 
       let result = await auth.password.signIn({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'Test@EXAMPLE.com',
         password: 'password123',
@@ -143,6 +140,7 @@ describe('createAuthClient', () => {
       let session = createSession()
 
       let result = await auth.password.signIn({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'nonexistent@example.com',
         password: 'password123',
@@ -157,12 +155,14 @@ describe('createAuthClient', () => {
       let session = createSession()
 
       await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'correctpassword',
       })
 
       let result = await auth.password.signIn({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'wrongpassword',
@@ -180,6 +180,7 @@ describe('createAuthClient', () => {
 
       // Create user (automatically sets session)
       let signupResult = await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'password123',
@@ -223,6 +224,7 @@ describe('createAuthClient', () => {
 
       // Sign up (sets session)
       await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'password123',
@@ -237,57 +239,62 @@ describe('createAuthClient', () => {
   })
 
   describe('passwordReset', () => {
-    it('request generates token for existing user', async () => {
-      let { auth, sentEmails } = createTestAuthClient()
+    it('getResetToken returns user and token for existing user', async () => {
+      let { auth } = createTestAuthClient()
       let session = createSession()
 
       // Create user
       let signupResult = await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'password123',
       })
       assert.ok(!('error' in signupResult))
 
-      // Request password reset
-      let result = await auth.password.requestReset('test@example.com')
+      // Get reset token
+      let result = await auth.password.getResetToken({
+        email: 'test@example.com',
+      })
 
       assert.ok(!('error' in result))
-      assert.equal(result.success, true)
-
-      // Check that email was sent
-      assert.equal(sentEmails.length, 1)
-      assert.equal(sentEmails[0].user.id, signupResult.user.id)
-      assert.equal(sentEmails[0].user.email, 'test@example.com')
-      assert.ok(sentEmails[0].token)
+      assert.equal(result.user.id, signupResult.user.id)
+      assert.equal(result.user.email, 'test@example.com')
+      assert.ok(result.token, 'Expected token to be returned')
+      assert.equal(typeof result.token, 'string')
+      assert.ok(result.token.length > 0)
     })
 
-    it('request returns error for non-existent user', async () => {
+    it('getResetToken returns error for non-existent user', async () => {
       let { auth } = createTestAuthClient()
 
-      let result = await auth.password.requestReset('nonexistent@example.com')
+      let result = await auth.password.getResetToken({
+        email: 'nonexistent@example.com',
+      })
 
       assert.ok('error' in result)
       assert.equal(result.error, 'user_not_found')
     })
 
     it('reset updates password with valid token', async () => {
-      let { auth, sentEmails } = createTestAuthClient()
+      let { auth } = createTestAuthClient()
       let session = createSession()
 
       // Create user
       await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'oldpassword',
       })
 
-      // Request password reset
-      let requestResult = await auth.password.requestReset('test@example.com')
-      assert.ok(!('error' in requestResult))
+      // Get reset token
+      let tokenResult = await auth.password.getResetToken({
+        email: 'test@example.com',
+      })
+      assert.ok(!('error' in tokenResult))
 
-      // Get token from sent email
-      let token = sentEmails[0].token
+      let { token } = tokenResult
 
       // Reset password
       let resetResult = await auth.password.reset({
@@ -302,6 +309,7 @@ describe('createAuthClient', () => {
 
       // Verify can login with new password
       let loginResult = await auth.password.signIn({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'newpassword',
@@ -325,21 +333,23 @@ describe('createAuthClient', () => {
     })
 
     it('reset invalidates token after use', async () => {
-      let { auth, sentEmails } = createTestAuthClient()
+      let { auth } = createTestAuthClient()
       let session = createSession()
 
       // Create user and get reset token
       await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'oldpassword',
       })
 
-      let requestResult = await auth.password.requestReset('test@example.com')
-      assert.ok(!('error' in requestResult))
+      let tokenResult = await auth.password.getResetToken({
+        email: 'test@example.com',
+      })
+      assert.ok(!('error' in tokenResult))
 
-      // Get token from sent email
-      let token = sentEmails[0].token
+      let { token } = tokenResult
 
       // Reset password
       await auth.password.reset({
@@ -368,6 +378,7 @@ describe('createAuthClient', () => {
       let session = createSession()
 
       await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'password123',
@@ -383,12 +394,7 @@ describe('createAuthClient', () => {
     it('uses custom hashPassword when provided', async () => {
       let customHash = mock.fn(async (password: string) => `custom-hash:${password}`)
 
-      let db: MemoryDB = {
-        user: [],
-        password: [],
-        oauthAccount: [],
-        passwordResetToken: [],
-      }
+      let db: MemoryDB = {}
 
       let auth = createAuthClient({
         secret: 'test-secret-key',
@@ -399,12 +405,12 @@ describe('createAuthClient', () => {
             hash: customHash,
             verify: async () => true, // Not used in this test
           },
-          sendReset: () => {},
         },
       })
       let session = createSession()
 
       let result = await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'mypassword',
@@ -446,13 +452,13 @@ describe('createAuthClient', () => {
             hash: async (password) => `custom-hash:${password}`,
             verify: customVerify,
           },
-          sendReset: () => {},
         },
       })
       let session = createSession()
 
       // Test correct password
       let result = await auth.password.signIn({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'correctpassword',
@@ -467,6 +473,7 @@ describe('createAuthClient', () => {
 
       // Test incorrect password
       let failResult = await auth.password.signIn({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'wrongpassword',
@@ -481,19 +488,13 @@ describe('createAuthClient', () => {
     })
 
     it('uses default password functions when custom ones not provided', async () => {
-      let db: MemoryDB = {
-        user: [],
-        password: [],
-        oauthAccount: [],
-        passwordResetToken: [],
-      }
+      let db: MemoryDB = {}
 
       let auth = createAuthClient({
         secret: 'test-secret-key',
         storage: createMemoryStorageAdapter(db),
         password: {
           enabled: true,
-          sendReset: () => {},
         },
         // No custom algorithm provided - uses default PBKDF2
       })
@@ -501,6 +502,7 @@ describe('createAuthClient', () => {
 
       // Sign up with default hash
       let signupResult = await auth.password.signUp({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'mypassword',
@@ -515,6 +517,7 @@ describe('createAuthClient', () => {
 
       // Sign in with default verify
       let signinResult = await auth.password.signIn({
+        request: new Request('http://test.example.com/'),
         session,
         email: 'test@example.com',
         password: 'mypassword',
@@ -539,8 +542,6 @@ describe('createAuthClient', () => {
         passwordResetToken: [],
       }
 
-      let sentToken: string | undefined = undefined
-
       let auth = createAuthClient({
         secret: 'test-secret-key',
         storage: createMemoryStorageAdapter(db),
@@ -550,22 +551,22 @@ describe('createAuthClient', () => {
             hash: customHash,
             verify: async () => true, // Not used in this test
           },
-          sendReset(data) {
-            sentToken = data.token
-          },
         },
       })
       let session = createSession()
 
-      // Request password reset (user already exists in setup)
-      let requestResult = await auth.password.requestReset('test@example.com')
-      assert.ok(!('error' in requestResult), 'Expected password reset request to succeed')
-      assert.ok(sentToken, 'Expected token to be sent via email')
+      // Get reset token (user already exists in setup)
+      let tokenResult = await auth.password.getResetToken({
+        email: 'test@example.com',
+      })
+      assert.ok(!('error' in tokenResult), 'Expected getResetToken to succeed')
+
+      let { token } = tokenResult
 
       // Reset password with token
       let resetResult = await auth.password.reset({
         session,
-        token: sentToken!,
+        token,
         newPassword: 'newpassword',
       })
       assert.ok(!('error' in resetResult), 'Expected password reset to succeed')

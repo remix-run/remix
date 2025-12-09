@@ -1,15 +1,30 @@
-import type { OAuthProvider } from '@remix-run/auth'
+import type { OAuthProvider, OAuthProviderConfig } from '@remix-run/auth'
 
 /**
- * Create a mock OAuth provider for local development and testing.
+ * Create a mock OAuth provider configuration for local development and testing.
  *
  * This provider points to local mock OAuth handlers that serve an
  * interactive authorization UI in development mode.
  *
- * User profiles are configured via the mock OAuth handlers, not here.
+ * @example
+ * ```ts
+ * oauth: {
+ *   providers: {
+ *     mock: createMockOAuthProvider({
+ *       baseUrl: 'http://localhost:44100/mock-oauth',
+ *     }),
+ *   },
+ * }
+ * ```
  */
-export function createMockOAuthProvider(baseUrl: string): OAuthProvider {
-  return {
+export function createMockOAuthProvider(options: {
+  baseUrl: string
+  clientId?: string
+  clientSecret?: string
+}): OAuthProviderConfig {
+  let { baseUrl, clientId = 'mock-client-id', clientSecret = 'mock-client-secret' } = options
+
+  let provider: OAuthProvider = {
     name: 'mock',
     displayName: 'Mock OAuth',
 
@@ -60,6 +75,13 @@ export function createMockOAuthProvider(baseUrl: string): OAuthProvider {
       return await response.json()
     },
   }
+
+  return {
+    provider,
+    clientId,
+    clientSecret,
+    scopes: [],
+  }
 }
 
 /**
@@ -72,6 +94,7 @@ export function createMockOAuthProvider(baseUrl: string): OAuthProvider {
 export function createTestMockOAuthProvider(profile: {
   id: string
   email: string
+  emailVerified?: boolean
   name?: string
   avatarUrl?: string
 }): OAuthProvider {

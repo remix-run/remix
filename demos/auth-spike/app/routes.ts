@@ -8,11 +8,11 @@ export let routes = route({
     forgotPassword: formAction('forgot-password'),
     resetPassword: formAction('reset-password/:token'),
   },
-  verifyEmail: { method: 'GET', pattern: '/verify-email' },
   account: route('/account', {
     index: { method: 'GET', pattern: '/' },
     action: { method: 'POST', pattern: '/' },
     logout: { method: 'POST', pattern: '/logout' },
+    addPassword: formAction('add-password'),
     changePassword: formAction('change-password'),
   }),
   posts: {

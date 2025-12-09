@@ -1,18 +1,14 @@
 import * as assert from 'node:assert/strict'
 import { describe, test, beforeEach } from 'node:test'
 import { router } from './router.ts'
-import { authStorage, authClient } from './utils/auth.ts'
+import { authStorage, authClient, clearAuthStorage } from './utils/auth.ts'
 
 // Import JWT utils directly from source for testing
 import { signJWT } from '../../../packages/auth/src/lib/jwt.ts'
 
 describe('Email Verification', () => {
   beforeEach(() => {
-    // Clear all data before each test
-    authStorage.user = []
-    authStorage.password = []
-    authStorage.oauthAccount = []
-    authStorage.passwordResetToken = []
+    clearAuthStorage()
   })
 
   test('signs up user and sends verification email', async () => {
@@ -31,7 +27,7 @@ describe('Email Verification', () => {
     assert.equal(response.status, 302)
 
     // User should be created but not verified
-    let user = authStorage.user.find((u) => u.email === 'test@example.com')
+    let user = authStorage.user?.find((u: any) => u.email === 'test@example.com')
 
     assert.ok(user)
     assert.equal(user.emailVerified, false)
@@ -58,7 +54,7 @@ describe('Email Verification', () => {
 
     // Extract token from the test (in real app, this would be from email)
     // For testing, we'll generate a token directly
-    let user = authStorage.user.find((u) => u.email === 'test@example.com')
+    let user = authStorage.user?.find((u: any) => u.email === 'test@example.com')
     assert.ok(user)
 
     // Create a test session and call verify directly
@@ -119,9 +115,12 @@ describe('Email Verification', () => {
   })
 
   test('verification endpoint redirects with invalid token', async () => {
-    let response = await router.fetch('https://app.example.com/verify-email?token=invalid-token', {
-      redirect: 'manual',
-    })
+    let response = await router.fetch(
+      'https://app.example.com/api/auth/email-verification/verify/invalid-token',
+      {
+        redirect: 'manual',
+      },
+    )
 
     assert.equal(response.status, 302)
     assert.equal(response.headers.get('Location'), '/login')
@@ -146,9 +145,12 @@ describe('Email Verification', () => {
       3600,
     )
 
-    let response = await router.fetch(`https://app.example.com/verify-email?token=${token}`, {
-      redirect: 'manual',
-    })
+    let response = await router.fetch(
+      `https://app.example.com/api/auth/email-verification/verify/${token}`,
+      {
+        redirect: 'manual',
+      },
+    )
 
     assert.equal(response.status, 302)
     assert.equal(response.headers.get('Location'), '/')
@@ -157,7 +159,7 @@ describe('Email Verification', () => {
     assert.ok(sessionCookie)
 
     // Verify user is now verified
-    let user = authStorage.user.find((u) => u.email === 'test@example.com')
+    let user = authStorage.user?.find((u: any) => u.email === 'test@example.com')
     assert.ok(user)
     assert.equal(user.emailVerified, true)
   })
