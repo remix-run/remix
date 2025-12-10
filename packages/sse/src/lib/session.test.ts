@@ -135,6 +135,8 @@ describe('SSE Session', async () => {
       let body = await response.text()
       let [_, keepAliveData] = body.split('#')
 
+      console.log('WAAAAAAAAHT', keepAliveData)
+
       // ho ! node ?!? sometimes 3 ticks sometime 4 ?!?
       // TODO: find a better way to handle this check
       assert.ok(keepAliveData.startsWith('\n\n: \n\n: \n\n')) // aborted - 1?

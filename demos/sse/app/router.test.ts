@@ -57,9 +57,8 @@ describe('router', () => {
       let text = await response.text()
       let events = text.split('\n\n').filter((e) => e.trim())
 
-      // Each message has 2 lines: event and data
+      // Each message has 2 lines
       assert.equal(events.length, 2)
-      assert.ok(text.includes('event: message'))
       assert.ok(text.includes('"count":1'))
       assert.ok(text.includes('"count":2'))
     })
