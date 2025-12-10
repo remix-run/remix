@@ -141,6 +141,9 @@ importers:
       '@remix-run/response':
         specifier: workspace:*
         version: link:../../packages/response
+      '@remix-run/sse':
+        specifier: workspace:*
+        version: link:../../packages/sse
       '@remix-run/static-middleware':
         specifier: workspace:*
         version: link:../../packages/static-middleware
@@ -838,6 +841,18 @@ importers:
       '@remix-run/session':
         specifier: workspace:*
         version: link:../session
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.6.0
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/sse:
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0

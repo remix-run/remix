@@ -119,6 +119,7 @@ describe('SSE Session', async () => {
       assert.equal(body, ': comment1\n\nretry: 2000\n\n: comment2\n\n')
     })
 
+    // TODO: find a better way to handle this test
     it('keep alive with specified value', async () => {
       let controller = new AbortController()
       let request = new Request(`https://remix-run/sse`, {
@@ -128,17 +129,14 @@ describe('SSE Session', async () => {
         keepAlive: 1,
       })
 
-      setTimeout(() => controller.abort(), 4)
+      setTimeout(() => controller.abort(), 6)
 
       let response = new Response(session.stream)
       session.send('before-keep-alive#')
       let body = await response.text()
       let [_, keepAliveData] = body.split('#')
 
-      console.log('WAAAAAAAAHT', keepAliveData)
-
       // ho ! node ?!? sometimes 3 ticks sometime 4 ?!?
-      // TODO: find a better way to handle this check
       assert.ok(keepAliveData.startsWith('\n\n: \n\n: \n\n')) // aborted - 1?
     })
 
