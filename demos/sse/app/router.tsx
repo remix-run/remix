@@ -1,6 +1,7 @@
 import { createRouter } from '@remix-run/fetch-router'
 import { compression } from '@remix-run/compression-middleware'
 import { logger } from '@remix-run/logger-middleware'
+import { createSseSession } from '@remix-run/sse'
 import { staticFiles } from '@remix-run/static-middleware'
 
 import { routes } from './routes.ts'
@@ -163,47 +164,36 @@ router.map(pageRoutes, {
     let limit = limitParam ? parseInt(limitParam, 10) : null
     if (!limit || !isFinite(limit)) limit = null
 
-    let stream = new ReadableStream({
-      start(controller) {
-        let messageCount = 0
+    let messageCount = 0
+    let sseSession = createSseSession(context.request)
+    let interval = setInterval(() => {
+      messageCount++
 
-        let interval = setInterval(() => {
-          try {
-            messageCount++
+      let timestamp = new Date().toLocaleTimeString()
+      let text = `Message #${messageCount} at ${timestamp}`
 
-            let timestamp = new Date().toLocaleTimeString()
-            let text = `Message #${messageCount} at ${timestamp}`
+      sseSession.send(
+        JSON.stringify(
+          {
+            count: messageCount,
+            message: text,
+          },
+          null,
+          4,
+        ),
+      )
 
-            // Send SSE formatted message
-            controller.enqueue(new TextEncoder().encode(`event: message\n`))
-            controller.enqueue(
-              new TextEncoder().encode(
-                `data: ${JSON.stringify({ count: messageCount, message: text })}\n\n`,
-              ),
-            )
+      if (limit && messageCount >= limit) {
+        clearInterval(interval)
+        sseSession.disconnect()
+      }
+    }, 1000)
 
-            if (limit && messageCount >= limit) {
-              clearInterval(interval)
-              controller.close()
-            }
-          } catch (error) {
-            console.error('Error enqueuing message:', error)
-            clearInterval(interval)
-          }
-        }, 1000)
-
-        context.request.signal.addEventListener('abort', () => {
-          clearInterval(interval)
-          try {
-            controller.close()
-          } catch (error) {
-            // Stream may already be closed
-          }
-        })
-      },
+    context.request.signal.addEventListener('abort', () => {
+      clearInterval(interval)
     })
 
-    return new Response(stream, {
+    return new Response(sseSession.stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
