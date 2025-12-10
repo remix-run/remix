@@ -20,7 +20,7 @@ export class SseSession {
   #options?: SseSessionOptions
 
   /**
-   * @param request The underlining request
+   * @param request The underlyning request
    * @param options The session options
    */
   constructor(request: Request, options?: SseSessionOptions) {
@@ -101,7 +101,7 @@ export class SseSession {
   }
 
   /**
-   * abort the stream
+   * Abort the stream
    */
   disconnect() {
     if (this.#keepAliveInterval) {
@@ -123,7 +123,7 @@ export class SseSession {
   }
 
   /**
-   * Wheter this session is connected
+   * Whether this session is connected
    */
   get connected(): boolean {
     return this.#connected
