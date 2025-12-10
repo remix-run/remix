@@ -72,7 +72,7 @@ export class LazyBlob extends Blob {
    *
    * @return A promise that resolves to an `ArrayBuffer`
    */
-  async arrayBuffer(): Promise<ArrayBuffer> {
+  arrayBuffer(): Promise<ArrayBuffer> {
     return this.#content.arrayBuffer()
   }
 
@@ -83,7 +83,7 @@ export class LazyBlob extends Blob {
    *
    * @return A promise that resolves to a `Uint8Array`
    */
-  async bytes(): Promise<Uint8Array<ArrayBuffer>> {
+  bytes(): Promise<Uint8Array<ArrayBuffer>> {
     return this.#content.bytes()
   }
 
@@ -128,7 +128,7 @@ export class LazyBlob extends Blob {
    *
    * @return A promise that resolves to the blob's contents as a string
    */
-  async text(): Promise<string> {
+  text(): Promise<string> {
     return this.#content.text()
   }
 }
@@ -182,7 +182,7 @@ export class LazyFile extends File {
    *
    * @return A promise that resolves to an `ArrayBuffer`
    */
-  async arrayBuffer(): Promise<ArrayBuffer> {
+  arrayBuffer(): Promise<ArrayBuffer> {
     return this.#content.arrayBuffer()
   }
 
@@ -193,7 +193,7 @@ export class LazyFile extends File {
    *
    * @return A promise that resolves to a `Uint8Array`
    */
-  async bytes(): Promise<Uint8Array<ArrayBuffer>> {
+  bytes(): Promise<Uint8Array<ArrayBuffer>> {
     return this.#content.bytes()
   }
 
@@ -238,7 +238,7 @@ export class LazyFile extends File {
    *
    * @return A promise that resolves to the file's contents as a string
    */
-  async text(): Promise<string> {
+  text(): Promise<string> {
     return this.#content.text()
   }
 }

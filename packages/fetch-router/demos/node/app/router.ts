@@ -19,7 +19,7 @@ let sessionCookie = createCookie('__sess', {
 let sessionStorage = createCookieSessionStorage()
 
 function requireAuth(): Middleware {
-  return async ({ session }, next) => {
+  return ({ session }, next) => {
     let username = session.get('username')
     if (!username) {
       return redirect(routes.login.index.href())

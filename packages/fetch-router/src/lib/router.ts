@@ -184,7 +184,7 @@ export function createRouter(options?: RouterOptions): Router {
   let matcher = options?.matcher ?? new ArrayMatcher<MatchData>()
   let globalMiddleware = options?.middleware
 
-  async function dispatch(context: RequestContext): Promise<Response> {
+  function dispatch(context: RequestContext): Promise<Response> {
     for (let match of matcher.matchAll(context.url)) {
       let { handler, method, middleware } = match.data
 

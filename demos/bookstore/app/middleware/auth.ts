@@ -11,7 +11,7 @@ import { setCurrentUser } from '../utils/context.ts'
  * Attaches user (if any) to context.storage.
  */
 export function loadAuth(): Middleware {
-  return async ({ session }) => {
+  return ({ session }) => {
     let userId = session.get('userId')
 
     // Only set current user if authenticated
@@ -40,7 +40,7 @@ export interface RequireAuthOptions {
 export function requireAuth(options?: RequireAuthOptions): Middleware {
   let redirectRoute = options?.redirectTo ?? routes.auth.login.index
 
-  return async ({ session, url }) => {
+  return ({ session, url }) => {
     let userId = session.get('userId')
     let user = typeof userId === 'string' && getUserById(userId)
 
