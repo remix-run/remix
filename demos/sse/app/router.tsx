@@ -172,16 +172,7 @@ router.map(pageRoutes, {
       let timestamp = new Date().toLocaleTimeString()
       let text = `Message #${messageCount} at ${timestamp}`
 
-      sseSession.send(
-        JSON.stringify(
-          {
-            count: messageCount,
-            message: text,
-          },
-          null,
-          4,
-        ),
-      )
+      sseSession.send(JSON.stringify({ count: messageCount, message: text }))
 
       if (limit && messageCount >= limit) {
         clearInterval(interval)
