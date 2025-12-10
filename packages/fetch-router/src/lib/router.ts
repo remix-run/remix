@@ -194,7 +194,6 @@ export function createRouter(options?: RouterOptions): Router {
       }
 
       context.params = match.params
-      context.url = match.url
 
       if (middleware) {
         return runMiddleware(middleware, context, handler)
