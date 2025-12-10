@@ -298,7 +298,7 @@ export function createRouter(options?: RouterOptions): Router {
   }
 
   return {
-    async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+    fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
       let request = new Request(input, init)
 
       if (request.signal.aborted) {
@@ -306,11 +306,12 @@ export function createRouter(options?: RouterOptions): Router {
       }
 
       let context = new RequestContext(request)
-      let response = globalMiddleware
-        ? await runMiddleware(globalMiddleware, context, dispatch)
-        : await dispatch(context)
 
-      return response
+      if (globalMiddleware) {
+        return runMiddleware(globalMiddleware, context, dispatch)
+      }
+
+      return dispatch(context)
     },
     get size(): number {
       return matcher.size
