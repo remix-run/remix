@@ -1,6 +1,5 @@
+import type { Span } from '../span'
 import type { AST } from './ast'
-
-type Span = [begin: number, end: number]
 
 const identifierRE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
