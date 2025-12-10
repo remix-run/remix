@@ -104,6 +104,7 @@ export class SseSession {
    * Abort the stream
    */
   disconnect() {
+    this.#connected = false
     if (this.#keepAliveInterval) {
       clearInterval(this.#keepAliveInterval)
     }
@@ -116,6 +117,7 @@ export class SseSession {
    */
   get stream(): ReadableStream {
     if (this.#signal.aborted) throw new Error(`Request already aborted`)
+    if (this.connected) throw new Error(`Stream already consumed`)
 
     this.#connected = true
     this.#init()
