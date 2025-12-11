@@ -8,6 +8,10 @@ describe('variants', () => {
   it('returns all possible combinations of optionals', () => {
     let source = 'api/(v:major(.:minor)/)run'
     let ast = parse(source)
-    assert.deepEqual(variants(ast), ['api/run', 'api/v{:0}/run', 'api/v{:0}.{:1}/run'])
+    assert.deepEqual(variants(ast), [
+      { key: 'api/run', paramIndices: [] },
+      { key: 'api/v{:}/run', paramIndices: [0] },
+      { key: 'api/v{:}.{:}/run', paramIndices: [0, 1] },
+    ])
   })
 })
