@@ -12,7 +12,8 @@ export default {
       let user = requireUser(url)
       if (user instanceof Response) return user
 
-      let hasPassword = await authClient.password.hasPassword(session)
+      let accounts = await authClient.getAccounts(user.id)
+      let hasPassword = accounts.some((a) => a.strategy === 'password')
 
       return render(
         <Layout>
@@ -172,19 +173,28 @@ export default {
       )
     },
 
-    async action({ formData, url }) {
+    async action({ formData, url, request }) {
       let user = requireUser(url)
       if (user instanceof Response) return user
 
       let action = formData.get('action')
 
       if (action === 'resend-verification') {
-        let result = await authClient.emailVerification.requestVerification(user.email)
+        let result = await authClient.emailVerification.requestVerification({
+          email: user.email,
+          request,
+        })
 
-        if ('error' in result) {
+        if (result.type === 'error') {
+          let errorMessage =
+            result.code === 'rate_limited'
+              ? `Too many attempts. Please try again in ${result.retryAfter} seconds.`
+              : result.code === 'already_verified'
+                ? 'Your email is already verified.'
+                : 'Failed to send verification email.'
           return render(
             <Layout>
-              <div css={{ color: 'red' }}>Failed to send verification email.</div>
+              <div css={{ color: 'red' }}>{errorMessage}</div>
             </Layout>,
           )
         }
@@ -228,15 +238,15 @@ export default {
         if (user instanceof Response) return user
 
         // Redirect to change password if user already has one
-        let hasPassword = await authClient.password.hasPassword(session)
-        if (hasPassword) {
+        let accounts = await authClient.getAccounts(user.id)
+        if (accounts.some((a) => a.strategy === 'password')) {
           return createRedirectResponse(routes.account.changePassword.index.href())
         }
 
         return render(<AddPasswordForm />)
       },
 
-      async action({ formData, url, session }) {
+      async action({ formData, url, session, request }) {
         let user = requireUser(url)
         if (user instanceof Response) return user
 
@@ -251,15 +261,18 @@ export default {
         let result = await authClient.password.set({
           session,
           password,
+          request,
         })
 
-        if ('error' in result) {
+        if (result.type === 'error') {
           let errorMessage =
-            result.error === 'password_already_set'
+            result.code === 'password_already_set'
               ? 'You already have a password. Use "Change Password" instead.'
-              : result.error === 'not_authenticated'
+              : result.code === 'not_authenticated'
                 ? 'You must be logged in to add a password'
-                : 'An unknown error occurred'
+                : result.code === 'rate_limited'
+                  ? `Too many attempts. Please try again in ${result.retryAfter} seconds.`
+                  : 'An unknown error occurred'
           return render(<AddPasswordForm error={errorMessage} />)
         }
 
@@ -315,15 +328,15 @@ If you didn't make this change, please contact support immediately.`,
         if (user instanceof Response) return user
 
         // Redirect to add password if user doesn't have one
-        let hasPassword = await authClient.password.hasPassword(session)
-        if (!hasPassword) {
+        let accounts = await authClient.getAccounts(user.id)
+        if (!accounts.some((a) => a.strategy === 'password')) {
           return createRedirectResponse(routes.account.addPassword.index.href())
         }
 
         return render(<ChangePasswordForm />)
       },
 
-      async action({ formData, url, session }) {
+      async action({ formData, url, session, request }) {
         let user = requireUser(url)
         if (user instanceof Response) return user
 
@@ -340,17 +353,20 @@ If you didn't make this change, please contact support immediately.`,
           session,
           currentPassword,
           newPassword,
+          request,
         })
 
-        if ('error' in result) {
+        if (result.type === 'error') {
           let errorMessage =
-            result.error === 'invalid_password'
+            result.code === 'invalid_password'
               ? 'Current password is incorrect'
-              : result.error === 'not_authenticated'
+              : result.code === 'not_authenticated'
                 ? 'You must be logged in to change your password'
-                : result.error === 'no_password'
+                : result.code === 'no_password'
                   ? 'You do not have a password set. Use "Add Password" instead.'
-                  : 'An unknown error occurred'
+                  : result.code === 'rate_limited'
+                    ? `Too many attempts. Please try again in ${result.retryAfter} seconds.`
+                    : 'An unknown error occurred'
           return render(<ChangePasswordForm error={errorMessage} />)
         }
 

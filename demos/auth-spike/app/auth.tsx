@@ -22,11 +22,13 @@ export default {
 
         let result = await authClient.password.signUp({ request, session, email, password, name })
 
-        if ('error' in result) {
+        if (result.type === 'error') {
           let getErrorMessage = () => {
-            switch (result.error) {
+            switch (result.code) {
               case 'email_taken':
                 return 'An account with this email already exists'
+              case 'rate_limited':
+                return `Too many attempts. Please try again in ${result.retryAfter} seconds.`
               default: {
                 return 'An unknown error occurred'
               }
@@ -86,11 +88,13 @@ export default {
 
         let result = await authClient.password.signIn({ request, session, email, password })
 
-        if ('error' in result) {
+        if (result.type === 'error') {
           let getErrorMessage = () => {
-            switch (result.error) {
+            switch (result.code) {
               case 'invalid_credentials':
                 return 'Invalid email or password'
+              case 'rate_limited':
+                return `Too many login attempts. Please try again in ${result.retryAfter} seconds.`
               default: {
                 return 'An unknown error occurred'
               }
@@ -112,11 +116,20 @@ export default {
       async action({ formData, request }) {
         let email = formData.get('email') as string
 
-        let result = await authClient.password.getResetToken({ email })
+        let result = await authClient.password.getResetToken({ email, request })
+
+        // Rate limit error - show to user (doesn't reveal if email exists)
+        if (result.type === 'error' && result.code === 'rate_limited') {
+          return render(
+            <ForgotPasswordForm
+              error={`Too many attempts. Please try again in ${result.retryAfter} seconds.`}
+            />,
+          )
+        }
 
         // If we got a token, send the email
-        if (!('error' in result)) {
-          let { user, token } = result
+        if (result.type === 'success') {
+          let { user, token } = result.data
           let baseURL = new URL(request.url).origin
           let resetFormUrl = `${baseURL}${routes.auth.resetPassword.index.href({ token })}`
           sendEmail({
@@ -124,9 +137,9 @@ export default {
             subject: 'Reset your password',
             text: `Hi ${user.name},\n\nClick the link below to reset your password:\n\n${resetFormUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`,
           })
-        } else if (process.env.NODE_ENV === 'development') {
+        } else if (result.type === 'error' && process.env.NODE_ENV === 'development') {
           // Log error in development, but don't reveal if email exists
-          console.log('Password reset error:', result.error)
+          console.log('Password reset error:', result.code)
         }
 
         // Always show the same success message (don't reveal if email exists)
@@ -177,7 +190,7 @@ export default {
         return render(<ResetPasswordForm token={token} />)
       },
 
-      async action({ formData, params, session }) {
+      async action({ formData, params, session, request }) {
         let newPassword = formData.get('password') as string
         let confirmPassword = formData.get('confirmPassword') as string
         let token = params.token
@@ -186,15 +199,17 @@ export default {
           return render(<ResetPasswordForm token={token} error="Passwords do not match" />)
         }
 
-        let result = await authClient.password.reset({ session, token, newPassword })
+        let result = await authClient.password.reset({ session, token, newPassword, request })
 
-        if ('error' in result) {
+        if (result.type === 'error') {
           let getErrorMessage = () => {
-            switch (result.error) {
+            switch (result.code) {
               case 'invalid_or_expired_token':
                 return 'Invalid or expired reset token'
               case 'user_not_found':
                 return 'User not found'
+              case 'rate_limited':
+                return `Too many attempts. Please try again in ${result.retryAfter} seconds.`
               default: {
                 return 'An unknown error occurred'
               }
@@ -205,7 +220,7 @@ export default {
 
         // Success - send confirmation email
         sendEmail({
-          to: result.user.email,
+          to: result.data.user.email,
           subject: 'Your Password Has Been Reset',
           text: `Hi there,
 
@@ -407,7 +422,7 @@ function SignupForm({ error }: { error?: string }) {
           </button>
         </form>
 
-        {Object.keys(authClient.oauth.providers).length > 0 ? (
+        {Object.keys(authClient.oauth.providers).length > 0 && (
           <>
             <div
               css={{
@@ -423,41 +438,52 @@ function SignupForm({ error }: { error?: string }) {
               <div css={{ flex: 1, height: '1px', background: '#d2d2d7' }} />
             </div>
 
-            {Object.values(authClient.oauth.providers).map((provider) => (
-              <a
-                key={provider.name}
-                href={provider.signInHref}
-                css={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  width: '100%',
-                  padding: '0.75rem 1.5rem',
-                  background: provider.name === 'github' ? '#24292f' : '#007aff',
-                  color: 'white',
-                  borderRadius: '6px',
-                  fontWeight: 500,
-                  fontSize: '1rem',
-                  textDecoration: 'none',
-                  transition: 'all 0.15s ease',
-                  marginBottom: '0.75rem',
-                  ':hover': {
-                    background: provider.name === 'github' ? '#1b1f23' : '#0051d5',
-                    transform: 'translateY(-1px)',
-                  },
-                }}
-              >
-                {provider.name === 'github' ? (
-                  <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
-                  </svg>
-                ) : null}
-                Continue with {provider.displayName}
-              </a>
-            ))}
+            {Object.values(authClient.oauth.providers).map((provider) => {
+              let form = provider.getSignInForm({
+                callbackURL: routes.home.href(),
+                errorCallbackURL: routes.auth.signUp.index.href(),
+              })
+              return (
+                <form key={provider.name} method={form.method} action={form.action}>
+                  {form.inputs.map((input) => (
+                    <input key={input.name} type="hidden" name={input.name} value={input.value} />
+                  ))}
+                  <button
+                    type="submit"
+                    css={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      width: '100%',
+                      padding: '0.75rem 1.5rem',
+                      background: provider.name === 'github' ? '#24292f' : '#007aff',
+                      color: 'white',
+                      borderRadius: '6px',
+                      fontWeight: 500,
+                      fontSize: '1rem',
+                      cursor: 'pointer',
+                      border: 'none',
+                      transition: 'all 0.15s ease',
+                      marginBottom: '0.75rem',
+                      ':hover': {
+                        background: provider.name === 'github' ? '#1b1f23' : '#0051d5',
+                        transform: 'translateY(-1px)',
+                      },
+                    }}
+                  >
+                    {provider.name === 'github' && (
+                      <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                      </svg>
+                    )}
+                    Continue with {provider.displayName}
+                  </button>
+                </form>
+              )
+            })}
           </>
-        ) : null}
+        )}
 
         <div css={{ marginTop: '1.5rem' }}>
           <a href={routes.auth.login.index.href()} css={{ color: '#007aff' }}>
@@ -590,7 +616,7 @@ function LoginForm({ error, returnTo }: { error?: string; returnTo?: string | nu
           </button>
         </form>
 
-        {authClient.oauth.providers && Object.keys(authClient.oauth.providers).length > 0 ? (
+        {Object.keys(authClient.oauth.providers).length > 0 && (
           <>
             <div
               css={{
@@ -606,41 +632,52 @@ function LoginForm({ error, returnTo }: { error?: string; returnTo?: string | nu
               <div css={{ flex: 1, height: '1px', background: '#d2d2d7' }} />
             </div>
 
-            {Object.values(authClient.oauth.providers).map((provider) => (
-              <a
-                key={provider.name}
-                href={provider.signInHref}
-                css={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  width: '100%',
-                  padding: '0.75rem 1.5rem',
-                  background: provider.name === 'github' ? '#24292f' : '#007aff',
-                  color: 'white',
-                  borderRadius: '6px',
-                  fontWeight: 500,
-                  fontSize: '1rem',
-                  textDecoration: 'none',
-                  transition: 'all 0.15s ease',
-                  marginBottom: '0.75rem',
-                  ':hover': {
-                    background: provider.name === 'github' ? '#1b1f23' : '#0051d5',
-                    transform: 'translateY(-1px)',
-                  },
-                }}
-              >
-                {provider.name === 'github' ? (
-                  <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
-                  </svg>
-                ) : null}
-                Continue with {provider.displayName}
-              </a>
-            ))}
+            {Object.values(authClient.oauth.providers).map((provider) => {
+              let form = provider.getSignInForm({
+                callbackURL: routes.home.href(),
+                errorCallbackURL: routes.auth.login.index.href(),
+              })
+              return (
+                <form key={provider.name} method={form.method} action={form.action}>
+                  {form.inputs.map((input) => (
+                    <input key={input.name} type="hidden" name={input.name} value={input.value} />
+                  ))}
+                  <button
+                    type="submit"
+                    css={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      width: '100%',
+                      padding: '0.75rem 1.5rem',
+                      background: provider.name === 'github' ? '#24292f' : '#007aff',
+                      color: 'white',
+                      borderRadius: '6px',
+                      fontWeight: 500,
+                      fontSize: '1rem',
+                      cursor: 'pointer',
+                      border: 'none',
+                      transition: 'all 0.15s ease',
+                      marginBottom: '0.75rem',
+                      ':hover': {
+                        background: provider.name === 'github' ? '#1b1f23' : '#0051d5',
+                        transform: 'translateY(-1px)',
+                      },
+                    }}
+                  >
+                    {provider.name === 'github' && (
+                      <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                      </svg>
+                    )}
+                    Continue with {provider.displayName}
+                  </button>
+                </form>
+              )
+            })}
           </>
-        ) : null}
+        )}
 
         <div
           css={{
@@ -662,7 +699,7 @@ function LoginForm({ error, returnTo }: { error?: string; returnTo?: string | nu
   )
 }
 
-function ForgotPasswordForm() {
+function ForgotPasswordForm({ error }: { error?: string } = {}) {
   return (
     <Layout>
       <div css={{ maxWidth: '500px', margin: '4rem auto', padding: '0 20px' }}>
@@ -680,6 +717,20 @@ function ForgotPasswordForm() {
         <p css={{ fontSize: '1rem', marginBottom: '1.5rem', color: '#6e6e73' }}>
           Enter your email address and we'll send you a link to reset your password.
         </p>
+        {error && (
+          <div
+            css={{
+              background: '#ffebee',
+              color: '#c62828',
+              padding: '0.75rem 1rem',
+              borderRadius: '6px',
+              marginBottom: '1rem',
+              fontWeight: 500,
+            }}
+          >
+            {error}
+          </div>
+        )}
         <form method="POST">
           <div css={{ marginBottom: '1.5rem' }}>
             <label

@@ -1,27 +1,45 @@
 import type { Session } from '@remix-run/session'
+import { RegExpMatcher } from '@remix-run/route-pattern'
 import type { Storage } from './storage.ts'
+import type { SecondaryStorage } from './secondary-storage/types.ts'
 import type { AuthSchema, ModelSchema } from './schema.ts'
-import type { AuthUser } from './types.ts'
+import type { AuthUser, AuthAccount } from './types.ts'
+import type {
+  OperationsDefinition,
+  OperationDefinition,
+  FeatureContextBase,
+} from './features/types.ts'
 import {
   passwordFeature,
   oauthFeature,
   emailVerificationFeature,
   createRouteHelpers,
-  type PasswordFeatureMethods,
-  type OAuthFeatureMethods,
-  type EmailVerificationFeatureMethods,
+  type PasswordOperations,
+  type PasswordHelpers,
+  type OAuthOperations,
+  type OAuthHelpers,
+  type EmailVerificationOperations,
+  type EmailVerificationHelpers,
   type OAuthProvider,
-  type OAuthAccount,
   type PasswordSignInErrorCode,
   type PasswordSignUpErrorCode,
   type PasswordChangeErrorCode,
   type PasswordGetResetTokenErrorCode,
-  type PasswordResetCompleteErrorCode,
-  type OAuthSignInErrorCode,
+  type PasswordResetErrorCode,
+  type PasswordSetErrorCode,
+  type OAuthErrorCode,
   type EmailVerificationRequestErrorCode,
   type EmailVerificationCompleteErrorCode,
-  type FeatureContextBase,
 } from './features/index.ts'
+import { createMemorySecondaryStorage } from './secondary-storage/memory.ts'
+import { checkRateLimit, findRateLimitRule, getIp, type RateLimitRule } from './rate-limit.ts'
+
+// Re-export types
+export type { AuthUser, AuthAccount } from './types.ts'
+
+// ============================================================================
+// Configuration
+// ============================================================================
 
 export interface AuthClientConfig {
   /**
@@ -118,7 +136,7 @@ export interface AuthClientConfig {
   }
 
   /**
-   * OAuth provider configurations
+   * OAuth authentication configuration
    */
   oauth?: {
     /**
@@ -139,22 +157,6 @@ export interface AuthClientConfig {
         scopes?: string[]
       }
     >
-
-    /**
-     * URL to redirect to after successful authentication
-     */
-    successURL: string
-
-    /**
-     * URL to redirect to after a new user signs up via OAuth
-     * @default successURL
-     */
-    newUserURL?: string
-
-    /**
-     * URL to redirect to if an error occurs during authentication
-     */
-    errorURL: string
   }
 
   /**
@@ -228,7 +230,47 @@ export interface AuthClientConfig {
    * ```
    */
   storage: Storage
+
+  /**
+   * Secondary storage for ephemeral data (rate limits, etc.)
+   * @default In-memory storage
+   */
+  secondaryStorage?: SecondaryStorage
+
+  /**
+   * Rate limiting configuration
+   * Enabled by default with sensible defaults
+   */
+  rateLimit?: {
+    /** Enable/disable rate limiting @default true */
+    enabled?: boolean
+    /**
+     * Headers to check for client IP address, in order of priority
+     *
+     * The first header with a valid value will be used. If none are found,
+     * rate limiting is skipped for that request.
+     *
+     * ⚠️ Only include headers that your reverse proxy sets. Headers not set
+     * by your proxy can be spoofed by malicious clients.
+     *
+     * @example ['x-forwarded-for'] - Standard proxy header
+     * @example ['cf-connecting-ip'] - Cloudflare
+     * @example ['x-real-ip'] - Nginx
+     * @default ['x-forwarded-for']
+     */
+    ipAddressHeaders?: string[]
+    /** Default time window in seconds @default 60 */
+    window?: number
+    /** Default max requests per window @default 100 */
+    max?: number
+    /** Override rules for specific operations */
+    rules?: Record<string, RateLimitRule | false>
+  }
 }
+
+// ============================================================================
+// Auth Handler Types
+// ============================================================================
 
 /**
  * Options for creating an auth API handler
@@ -243,8 +285,28 @@ export interface AuthHandlerOptions {
 /**
  * Auth API handler function
  * Returns a Response for matched routes, or null if no route matches
+ *
+ * @param request - The incoming request
+ * @param session - The session
+ * @param formData - Optionally, the pre-parsed form data (if middleware already consumed the body)
  */
-export type AuthHandler = (request: Request, session: Session) => Promise<Response | null>
+export type AuthHandler = (
+  request: Request,
+  session: Session,
+  formData?: FormData,
+) => Promise<Response | null>
+
+// ============================================================================
+// Public Feature Method Types (with rate limiting integrated into return types)
+// ============================================================================
+
+type PasswordFeatureMethods = PasswordOperations & PasswordHelpers
+type OAuthFeatureMethods = OAuthOperations & OAuthHelpers
+type EmailVerificationFeatureMethods = EmailVerificationOperations & EmailVerificationHelpers
+
+// ============================================================================
+// Auth Client Types
+// ============================================================================
 
 /**
  * Base auth client interface (always present)
@@ -267,6 +329,22 @@ export interface AuthClientBase<TUser extends AuthUser = AuthUser> {
    * Get the current authenticated user from session
    */
   getUser(session: Session): Promise<TUser | null>
+
+  /**
+   * Get all accounts (authentication strategies) for a user
+   *
+   * @example
+   * ```ts
+   * let accounts = await authClient.getAccounts(userId)
+   *
+   * // Check for password auth
+   * if (accounts.some(a => a.strategy === 'password')) { ... }
+   *
+   * // Get all OAuth accounts
+   * let oauthAccounts = accounts.filter(a => a.strategy.startsWith('oauth.'))
+   * ```
+   */
+  getAccounts(userId: string): Promise<AuthAccount[]>
 
   /**
    * Sign out (destroy session)
@@ -306,16 +384,15 @@ export type AuthClient<TConfig extends AuthClientConfig = AuthClientConfig> =
       ? { emailVerification: EmailVerificationFeatureMethods }
       : {})
 
-/**
- * Compose schema from enabled features
- * Supports both adding new models and extending existing models with additional fields
- */
+// ============================================================================
+// Schema Composition
+// ============================================================================
+
 function composeSchema(config: AuthClientConfig): AuthSchema {
   let modelMap = new Map<string, ModelSchema>()
 
-  // Start with base user model
-  modelMap.set('user', {
-    name: 'user',
+  modelMap.set('authUser', {
+    name: 'authUser',
     fields: {
       id: { type: 'string', required: true },
       email: { type: 'string', required: true },
@@ -327,7 +404,6 @@ function composeSchema(config: AuthClientConfig): AuthSchema {
     },
   })
 
-  // Merge in feature schemas
   let features = [passwordFeature, oauthFeature, emailVerificationFeature] as const
   for (let feature of features) {
     if (feature.isEnabled(config)) {
@@ -336,14 +412,11 @@ function composeSchema(config: AuthClientConfig): AuthSchema {
         for (let model of featureSchema.models) {
           let existing = modelMap.get(model.name)
           if (existing) {
-            // Merge fields into existing model
             existing.fields = { ...existing.fields, ...model.fields }
-            // Merge indexes
             if (model.indexes) {
               existing.indexes = [...(existing.indexes || []), ...model.indexes]
             }
           } else {
-            // Add new model
             modelMap.set(model.name, model)
           }
         }
@@ -354,35 +427,116 @@ function composeSchema(config: AuthClientConfig): AuthSchema {
   return { models: Array.from(modelMap.values()) }
 }
 
+// ============================================================================
+// Operation Wrapping (automatic rate limiting)
+// ============================================================================
+
+interface RateLimitContext {
+  enabled: boolean
+  secondaryStorage: SecondaryStorage
+  ipAddressHeaders: string[]
+  defaultWindow: number
+  defaultMax: number
+  rules: Record<string, RateLimitRule | false>
+}
+
+/**
+ * Wrap operation definitions with automatic rate limiting
+ * Each operation handler returns structured results, rate limiting is applied automatically
+ */
+function wrapOperations<TDef extends Record<string, OperationDefinition<any, any, any, any>>>(
+  featureName: string,
+  operationsDef: TDef,
+  rateLimitContext: RateLimitContext,
+): {
+  [K in keyof TDef]: TDef[K] extends OperationDefinition<infer TArgs, any, any, any>
+    ? (args: TArgs) => ReturnType<TDef[K]['handler']>
+    : never
+} {
+  let wrapped = {} as any
+
+  for (let [opName, opDef] of Object.entries(operationsDef)) {
+    let operation = opName
+    let { rateLimit: opRateLimit, handler } = opDef as OperationDefinition<any, any, any, any>
+
+    wrapped[opName] = async (args: any) => {
+      // Check rate limit if enabled and the operation has rate limit config
+      if (rateLimitContext.enabled && opRateLimit) {
+        let request = args.request as Request | undefined
+        if (request) {
+          // Find the applicable rule (operation-specific or from global config)
+          let ruleKey = `${featureName}.${operation}`
+          let rule = findRateLimitRule(
+            ruleKey,
+            rateLimitContext.rules,
+            opRateLimit, // Use operation's default if no global rule
+          )
+
+          if (rule !== false) {
+            let ip = getIp(request, rateLimitContext.ipAddressHeaders)
+
+            // Skip rate limiting if we can't determine IP
+            if (ip !== null) {
+              let key = `ratelimit--${ip}--${ruleKey}`
+              let result = await checkRateLimit(rateLimitContext.secondaryStorage, key, rule)
+
+              if (result.limited) {
+                return { type: 'error', code: 'rate_limited', retryAfter: result.retryAfter }
+              }
+            }
+          }
+        }
+      }
+
+      // Call the actual handler
+      return handler(args)
+    }
+  }
+
+  return wrapped
+}
+
+// ============================================================================
+// Auth Client Factory
+// ============================================================================
+
 export function createAuthClient<const TConfig extends AuthClientConfig>(
   config: TConfig,
 ): AuthClient<TConfig> {
   let sessionKey = config.sessionKey ?? '@remix-run/auth:userId'
-  // Normalize authBasePath to always end with trailing slash for proper prefix matching
   let rawAuthBasePath = config.authBasePath ?? '/_auth'
   let authBasePath = rawAuthBasePath.endsWith('/') ? rawAuthBasePath : `${rawAuthBasePath}/`
   let baseURLConfig = config.baseURL
   let trustProxyHeaders = config.trustProxyHeaders ?? false
 
-  // Compose schema from enabled features
+  let secondaryStorage = config.secondaryStorage ?? createMemorySecondaryStorage()
+
+  // Rate limit configuration
+  let rateLimitEnabled = config.rateLimit?.enabled ?? true
+  let rateLimitIpAddressHeaders = config.rateLimit?.ipAddressHeaders ?? ['x-forwarded-for']
+  let rateLimitDefaultWindow = config.rateLimit?.window ?? 60
+  let rateLimitDefaultMax = config.rateLimit?.max ?? 100
+  let rateLimitRules = config.rateLimit?.rules ?? {}
+
+  let rateLimitContext: RateLimitContext = {
+    enabled: rateLimitEnabled,
+    secondaryStorage,
+    ipAddressHeaders: rateLimitIpAddressHeaders,
+    defaultWindow: rateLimitDefaultWindow,
+    defaultMax: rateLimitDefaultMax,
+    rules: rateLimitRules,
+  }
+
   let schema = composeSchema(config)
 
-  // Helper to get base URL - supports static string, function, or inference from request
   function getBaseURL(request?: Request): string {
-    // 1. Explicit function config
     if (typeof baseURLConfig === 'function') {
-      if (!request) {
-        throw new Error('baseURL is a function but no request was provided')
-      }
+      if (!request) throw new Error('baseURL is a function but no request was provided')
       return baseURLConfig(request)
     }
 
-    // 2. Explicit string config
-    if (typeof baseURLConfig === 'string') {
-      return baseURLConfig
-    }
+    if (typeof baseURLConfig === 'string') return baseURLConfig
 
-    // 3. Infer from proxy headers (if trusted)
     if (request && trustProxyHeaders) {
       let forwardedHost = request.headers.get('x-forwarded-host')
       let forwardedProto = request.headers.get('x-forwarded-proto')
@@ -391,34 +545,30 @@ export function createAuthClient<const TConfig extends AuthClientConfig>(
       }
     }
 
-    // 4. Infer from request URL
-    if (request) {
-      return new URL(request.url).origin
-    }
+    if (request) return new URL(request.url).origin
 
     throw new Error('baseURL not configured and no request available to infer from')
   }
 
-  // Helper to build full URLs for feature routes
   function buildURL(featureName: string, routePath: string): string {
-    // This is used without request context, so requires static baseURL
     let base = typeof baseURLConfig === 'string' ? baseURLConfig : ''
     return `${base}${authBasePath}${featureName}${routePath}`
   }
 
-  // Base context shared by all features (without routes)
-  let baseContext: FeatureContextBase = {
+  // Base context (without checkRateLimit - it's now handled by wrapping)
+  let baseContext: Omit<FeatureContextBase, 'checkRateLimit'> = {
     config,
     storage: config.storage,
+    secondaryStorage,
     secret: config.secret,
     sessionKey,
+    trustProxyHeaders,
     authBasePath,
     getBaseURL,
     buildURL,
     onUserCreatedHook: undefined,
   }
 
-  // Create feature-specific contexts with auto-generated route helpers
   let passwordContext = {
     ...baseContext,
     routes: createRouteHelpers(
@@ -442,12 +592,9 @@ export function createAuthClient<const TConfig extends AuthClientConfig>(
     ),
   }
 
-  // Compose onUserCreated hook from features and user config
-  // Request is required so hooks can access headers, derive URLs, etc.
   let onUserCreatedHook = async (args: { user: AuthUser; request: Request }) => {
     let { user, request } = args
 
-    // Call feature hooks first (e.g., email verification)
     if (passwordFeature.isEnabled(config) && passwordFeature.hooks?.onUserCreated) {
       await passwordFeature.hooks.onUserCreated({ user, context: passwordContext as any, request })
     }
@@ -465,52 +612,80 @@ export function createAuthClient<const TConfig extends AuthClientConfig>(
       })
     }
 
-    // Then call user-defined hook
     if (config.hooks?.onUserCreated) {
       await config.hooks.onUserCreated(user)
     }
   }
 
-  // Update all contexts with the composed hook
-  baseContext.onUserCreatedHook = onUserCreatedHook
-  passwordContext.onUserCreatedHook = onUserCreatedHook
-  oauthContext.onUserCreatedHook = onUserCreatedHook
-  emailVerificationContext.onUserCreatedHook = onUserCreatedHook
+  // Update contexts with hook
+  ;(baseContext as any).onUserCreatedHook = onUserCreatedHook
+  ;(passwordContext as any).onUserCreatedHook = onUserCreatedHook
+  ;(oauthContext as any).onUserCreatedHook = onUserCreatedHook
+  ;(emailVerificationContext as any).onUserCreatedHook = onUserCreatedHook
 
-  // Build client by composing features
+  // Build client with wrapped operations
   let client = {
     schema,
     authBasePath,
 
     ...(passwordFeature.isEnabled(config)
       ? {
-          password: passwordFeature.createMethods(passwordContext as any),
+          password: {
+            ...wrapOperations(
+              'password',
+              passwordFeature.createOperations(passwordContext as any) as any,
+              rateLimitContext,
+            ),
+            ...passwordFeature.createHelpers(passwordContext as any),
+          },
         }
       : {}),
 
     ...(oauthFeature.isEnabled(config)
-      ? {
-          oauth: oauthFeature.createMethods(oauthContext as any),
-        }
+      ? (() => {
+          let helpers = oauthFeature.createHelpers(oauthContext as any)
+          return {
+            oauth: {
+              ...wrapOperations(
+                'oauth',
+                oauthFeature.createOperations(oauthContext as any) as any,
+                rateLimitContext,
+              ),
+              ...helpers,
+              // Spread providers at top level for direct access (e.g., authClient.oauth.github)
+              ...helpers.providers,
+            },
+          }
+        })()
       : {}),
 
     ...(emailVerificationFeature.isEnabled(config)
       ? {
-          emailVerification: emailVerificationFeature.createMethods(
-            emailVerificationContext as any,
-          ),
+          emailVerification: {
+            ...wrapOperations(
+              'emailVerification',
+              emailVerificationFeature.createOperations(emailVerificationContext as any) as any,
+              rateLimitContext,
+            ),
+            ...emailVerificationFeature.createHelpers(emailVerificationContext as any),
+          },
         }
       : {}),
 
     async getUser(session: Session): Promise<AuthUser | null> {
       let userId = session.get(sessionKey)
-      if (typeof userId !== 'string') {
-        return null
-      }
+      if (typeof userId !== 'string') return null
 
       return await config.storage.findOne<AuthUser>({
-        model: 'user',
+        model: 'authUser',
         where: [{ field: 'id', value: userId }],
+      })
+    },
+
+    async getAccounts(userId: string): Promise<AuthAccount[]> {
+      return await config.storage.findMany<AuthAccount>({
+        model: 'authAccount',
+        where: [{ field: 'userId', value: userId }],
       })
     },
 
@@ -519,23 +694,21 @@ export function createAuthClient<const TConfig extends AuthClientConfig>(
     },
 
     createHandler(options: AuthHandlerOptions = {}): AuthHandler {
-      // Note: basePath option is now ignored - use config.authBasePath instead
-      // This is for backwards compatibility but the config value takes precedence
+      type RouteHandler = (ctx: {
+        request: Request
+        session: Session
+        params: Record<string, string>
+        url: URL
+        formData: FormData | null
+      }) => Response | Promise<Response>
 
-      // Collect all routes from enabled features
-      type RouteEntry = {
+      type MatchData = {
         method: string
-        pattern: string
-        handler: (ctx: {
-          request: Request
-          session: Session
-          params: Record<string, string>
-          url: URL
-        }) => Response | Promise<Response>
+        handler: RouteHandler
       }
-      let routes: RouteEntry[] = []
 
-      // Collect handlers from each enabled feature
+      let matcher = new RegExpMatcher<MatchData>()
+
       let allFeatures = [
         { feature: passwordFeature, context: passwordContext },
         { feature: oauthFeature, context: oauthContext },
@@ -551,68 +724,49 @@ export function createAuthClient<const TConfig extends AuthClientConfig>(
             let handler = (featureHandlers as Record<string, any>)[routeName]
             if (!handler) continue
 
-            // Mount route at: authBasePath/featureName/routePattern
             let fullPattern = `${authBasePath}${feature.name}${routeDef.pattern}`
-            routes.push({
+            matcher.add(fullPattern, {
               method: routeDef.method,
-              pattern: fullPattern,
               handler: (ctx) =>
                 handler({
                   request: ctx.request,
                   session: ctx.session,
                   params: ctx.params,
                   url: ctx.url,
+                  formData: ctx.formData,
                 }),
             })
           }
         }
       }
 
-      // Simple pattern matching helper
-      function matchRoute(
-        method: string,
-        pathname: string,
-      ): { handler: RouteEntry['handler']; params: Record<string, string> } | null {
-        for (let route of routes) {
-          if (route.method !== method && route.method !== 'ANY') continue
-
-          // Convert pattern to regex for matching
-          let paramNames: string[] = []
-          let regexPattern = route.pattern.replace(/:([^/]+)/g, (_, name) => {
-            paramNames.push(name)
-            return '([^/]+)'
-          })
-
-          let regex = new RegExp(`^${regexPattern}$`)
-          let match = pathname.match(regex)
-
-          if (match) {
-            let params: Record<string, string> = {}
-            paramNames.forEach((name, i) => {
-              params[name] = match![i + 1]
-            })
-            return { handler: route.handler, params }
-          }
-        }
-        return null
-      }
-
-      // Return handler function
-      return async (request: Request, session: Session): Promise<Response | null> => {
+      return async (
+        request: Request,
+        session: Session,
+        formData: FormData | null = null,
+      ): Promise<Response | null> => {
         let url = new URL(request.url)
 
-        // Quick check if path could match any auth routes
         if (!url.pathname.startsWith(authBasePath)) {
           return null
         }
 
-        // Match route
-        let matched = matchRoute(request.method, url.pathname)
-        if (!matched) {
-          return null
+        // Find matching route (method check happens after pattern match, like fetch-router)
+        for (let match of matcher.matchAll(url)) {
+          if (match.data.method !== request.method && match.data.method !== 'ANY') {
+            continue
+          }
+
+          return match.data.handler({
+            request,
+            session,
+            params: match.params,
+            url: match.url,
+            formData,
+          })
         }
 
-        return matched.handler({ request, session, params: matched.params, url })
+        return null
       }
     },
   }
@@ -620,14 +774,17 @@ export function createAuthClient<const TConfig extends AuthClientConfig>(
   return client as AuthClient<TConfig>
 }
 
-// Re-export core types for convenience
+// Re-export core types
 export type {
-  AuthUser,
-  OAuthAccount,
   PasswordSignInErrorCode,
   PasswordSignUpErrorCode,
   PasswordChangeErrorCode,
   PasswordGetResetTokenErrorCode,
-  PasswordResetCompleteErrorCode,
-  OAuthSignInErrorCode,
+  PasswordResetErrorCode,
+  PasswordSetErrorCode,
+  OAuthErrorCode,
+  EmailVerificationRequestErrorCode,
+  EmailVerificationCompleteErrorCode,
+  SecondaryStorage,
+  RateLimitRule,
 }

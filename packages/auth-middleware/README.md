@@ -58,8 +58,8 @@ The middleware provides two key features:
 
 Automatically handles all auth-related HTTP routes:
 
-- `GET {authBasePath}/oauth/:provider` - Initiate OAuth flow
-- `GET {authBasePath}/oauth/:provider/callback` - OAuth callback
+- `POST {authBasePath}/oauth/sign-in/:provider` - Initiate OAuth flow
+- `GET {authBasePath}/oauth/callback/:provider` - OAuth callback
 - `GET {authBasePath}/email-verification/verify/:token` - Email verification
 
 No manual route wiring needed.
@@ -202,8 +202,6 @@ export let authClient = createAuthClient({
         clientSecret: process.env.GITHUB_CLIENT_SECRET!,
       }),
     },
-    successURL: '/',
-    errorURL: '/login',
   },
 })
 

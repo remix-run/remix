@@ -49,7 +49,7 @@ describe('createAuthMiddleware', () => {
       let email = formData.get('email') as string
       let password = formData.get('password') as string
       let result = await authClient.password.signUp({ request, session, email, password })
-      if ('error' in result) return new Response(result.error, { status: 400 })
+      if (result.type === 'error') return new Response(result.code, { status: 400 })
       return new Response('ok')
     })
 

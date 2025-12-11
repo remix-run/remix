@@ -1,53 +1,12 @@
 export { createAuthClient } from './lib/client.ts'
-export type {
-  AuthClientConfig,
-  AuthClient,
-  AuthClientBase,
-  AuthHandler,
-  AuthHandlerOptions,
-  AuthUser,
-  OAuthAccount,
-} from './lib/client.ts'
+export type { AuthClient } from './lib/client.ts'
 
-// Storage
-export type { Storage, Where } from './lib/storage.ts'
+// Core types
+export type { AuthUser, AuthAccount, AuthVerification } from './lib/types.ts'
 
-// Schema
-export type { AuthSchema, ModelSchema, FieldSchema } from './lib/schema.ts'
+// Storage (for implementing adapters)
+export type { Storage } from './lib/storage.ts'
+export type { SecondaryStorage } from './lib/secondary-storage/types.ts'
 
-// OAuth (from features)
-export type {
-  OAuthProvider,
-  OAuthProviderConfig,
-  OAuthProviderInfo,
-  OAuthSignInErrorCode,
-  OAuthFeatureMethods,
-} from './lib/features/oauth/index.ts'
-
-// Password (from features)
-export type {
-  PasswordSignInErrorCode,
-  PasswordSignUpErrorCode,
-  PasswordChangeErrorCode,
-  PasswordSetErrorCode,
-  PasswordGetResetTokenErrorCode,
-  PasswordResetCompleteErrorCode,
-  PasswordFeatureMethods,
-} from './lib/features/password.ts'
-
-// Email verification (from features)
-export type {
-  EmailVerificationRequestErrorCode,
-  EmailVerificationCompleteErrorCode,
-  EmailVerificationFeatureMethods,
-} from './lib/features/email-verification.ts'
-
-// Flash types
-export type {
-  AuthFlash,
-  AuthFlashFilter,
-  EmailVerificationFlash,
-  EmailVerificationVerifyFlash,
-  OAuthFlash,
-  OAuthCallbackFlash,
-} from './lib/flash.ts'
+// OAuth provider types (for creating custom providers)
+export type { OAuthProvider, OAuthProviderConfig } from './lib/features/oauth/index.ts'

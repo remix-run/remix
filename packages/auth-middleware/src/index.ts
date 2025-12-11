@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import type { Middleware } from '@remix-run/fetch-router'
-import type { AuthClientBase, AuthUser } from '@remix-run/auth'
+import type { AuthClient, AuthUser } from '@remix-run/auth'
 
 /**
  * Create auth middleware and typed user getter for your auth client.
@@ -42,15 +42,16 @@ import type { AuthClientBase, AuthUser } from '@remix-run/auth'
  * let user = getUser() // Typed as User | null
  * ```
  */
-export function createAuthMiddleware(authClient: AuthClientBase<AuthUser>) {
+export function createAuthMiddleware(authClient: AuthClient<any>) {
   // Each auth client gets its own storage instance
   let userStorage = new AsyncLocalStorage<AuthUser | null>()
 
   let authApiHandler = authClient.createHandler()
 
-  let auth: Middleware = async ({ request, session, url }, next) => {
+  let auth: Middleware = async ({ request, session, url, formData }, next) => {
     if (url.pathname.startsWith(authClient.authBasePath)) {
-      let response = await authApiHandler(request, session)
+      // Pass formData from context if middleware already parsed the body
+      let response = await authApiHandler(request, session, formData ?? undefined)
       if (response) {
         return response
       }

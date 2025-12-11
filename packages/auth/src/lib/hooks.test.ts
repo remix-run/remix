@@ -53,7 +53,7 @@ describe('Feature Hooks System', () => {
       password: 'password123',
     })
 
-    assert.ok('user' in result)
+    assert.equal(result.type, 'success')
 
     // Verify hooks were called in correct order
     assert.deepEqual(hooksCalled, [
@@ -88,8 +88,6 @@ describe('Feature Hooks System', () => {
             clientSecret: 'test-client-secret',
           },
         },
-        successURL: '/',
-        errorURL: '/error',
       },
     } satisfies AuthClientConfig
 
@@ -105,8 +103,8 @@ describe('Feature Hooks System', () => {
       name: 'Test User',
     })
 
-    assert.ok('type' in result)
-    assert.equal(result.type, 'sign_up')
+    assert.equal(result.type, 'success')
+    assert.equal(result.code, 'sign_up')
 
     // Verify hooks were called in correct order
     assert.deepEqual(hooksCalled, [
@@ -233,8 +231,6 @@ describe('Feature Hooks System', () => {
             clientSecret: 'test-client-secret',
           },
         },
-        successURL: '/',
-        errorURL: '/error',
       },
     } satisfies AuthClientConfig
 
@@ -265,8 +261,8 @@ describe('Feature Hooks System', () => {
       name: 'Test User',
     })
 
-    assert.ok('type' in result)
-    assert.equal(result.type, 'account_linked')
+    assert.equal(result.type, 'success')
+    assert.equal(result.code, 'account_linked')
     assert.equal(hooksCalled, 1) // Still 1, not 2
   })
 })

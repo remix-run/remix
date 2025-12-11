@@ -22,6 +22,7 @@
     ".": "./src/index.ts",
     "./oauth-providers/*": "./src/oauth-providers/*.ts",
     "./storage-adapters/*": "./src/storage-adapters/*.ts",
+    "./secondary-storage/*": "./src/secondary-storage/*.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -38,17 +39,21 @@
         "types": "./dist/storage-adapters/*.d.ts",
         "default": "./dist/storage-adapters/*.js"
       },
+      "./secondary-storage/*": {
+        "types": "./dist/secondary-storage/*.d.ts",
+        "default": "./dist/secondary-storage/*.js"
+      },
       "./package.json": "./package.json"
     }
   },
   "peerDependencies": {
     "@remix-run/cookie": "workspace:^",
-    "@remix-run/fetch-router": "workspace:^",
+    "@remix-run/route-pattern": "workspace:^",
     "@remix-run/session": "workspace:^"
   },
   "devDependencies": {
     "@remix-run/cookie": "workspace:*",
-    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/route-pattern": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",

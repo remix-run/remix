@@ -3,9 +3,14 @@ import { createRequestListener } from '@remix-run/node-fetch-server'
 import { router } from './app/router.ts'
 
 let server = http.createServer(
-  createRequestListener(async (request) => {
+  createRequestListener(async (request, client) => {
+    // Set x-forwarded-for like a reverse proxy would
+    let headers = new Headers(request.headers)
+    headers.set('x-forwarded-for', client.address)
+    let reqWithIp = new Request(request, { headers })
+
     try {
-      return await router.fetch(request)
+      return await router.fetch(reqWithIp)
     } catch (error) {
       console.error(error)
       return new Response('Internal Server Error', { status: 500 })

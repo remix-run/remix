@@ -4,6 +4,8 @@ import { createAuthClient } from '@remix-run/auth'
 import type { MemoryDB } from '@remix-run/auth/storage-adapters/memory'
 import { createMemoryStorageAdapter } from '@remix-run/auth/storage-adapters/memory'
 import { createFsStorageAdapter } from '@remix-run/auth/storage-adapters/fs'
+import { createMemorySecondaryStorage } from '@remix-run/auth/secondary-storage/memory'
+import { createFsSecondaryStorage } from '@remix-run/auth/secondary-storage/fs'
 import { createGitHubOAuthProvider } from '@remix-run/auth/oauth-providers/github'
 import { createMockOAuthProvider } from '../mock-oauth/provider.ts'
 import { createMockOAuthHandlers } from '../mock-oauth/handlers.ts'
@@ -36,6 +38,13 @@ let storage =
     ? createMemoryStorageAdapter(authStorage)
     : createFsStorageAdapter(path.resolve(__dirname, '..', '..', 'tmp', 'db', 'db.json'))
 
+// Secondary storage for ephemeral data (rate limits, etc.)
+// Use FS for dev (survives restarts), memory for tests
+let secondaryStorage =
+  process.env.NODE_ENV === 'test'
+    ? createMemorySecondaryStorage()
+    : createFsSecondaryStorage(path.resolve(__dirname, '..', '..', 'tmp', 'kv', 'kv.json'))
+
 export let sessionCookie = createCookie('session', {
   httpOnly: true,
   path: '/',
@@ -57,6 +66,14 @@ export let authClient = createAuthClient({
   baseURL,
   authBasePath: '/api/auth',
   storage,
+  secondaryStorage,
+  // Trust x-forwarded-host/x-forwarded-proto headers for base URL inference
+  trustProxyHeaders: true,
+  // Rate limiting is enabled by default - disable in tests to avoid test pollution
+  // ipAddressHeaders defaults to ['x-forwarded-for'] which our server injects
+  rateLimit: {
+    enabled: process.env.NODE_ENV !== 'test',
+  },
   emailVerification: {
     enabled: true,
     successURL: routes.home.href(),
@@ -101,8 +118,6 @@ export let authClient = createAuthClient({
           }
         : {}),
     },
-    successURL: routes.home.href(),
-    errorURL: routes.auth.login.index.href(),
   },
 })
 

@@ -27,7 +27,7 @@ describe('Email Verification', () => {
     assert.equal(response.status, 302)
 
     // User should be created but not verified
-    let user = authStorage.user?.find((u: any) => u.email === 'test@example.com')
+    let user = authStorage.authUser?.find((u: any) => u.email === 'test@example.com')
 
     assert.ok(user)
     assert.equal(user.emailVerified, false)
@@ -49,12 +49,15 @@ describe('Email Verification', () => {
     assert.ok(signupSessionCookie)
 
     // Request verification
-    let result = await authClient.emailVerification.requestVerification('test@example.com')
-    assert.ok('success' in result)
+    let result = await authClient.emailVerification.requestVerification({
+      email: 'test@example.com',
+      request: new Request('https://app.example.com/'),
+    })
+    assert.equal(result.type, 'success')
 
     // Extract token from the test (in real app, this would be from email)
     // For testing, we'll generate a token directly
-    let user = authStorage.user?.find((u: any) => u.email === 'test@example.com')
+    let user = authStorage.authUser?.find((u: any) => u.email === 'test@example.com')
     assert.ok(user)
 
     // Create a test session and call verify directly
@@ -69,21 +72,29 @@ describe('Email Verification', () => {
       3600,
     )
 
-    let verifyResult = await authClient.emailVerification.verify({ session, token })
+    let verifyResult = await authClient.emailVerification.verify({
+      session,
+      token,
+      request: new Request('https://app.example.com/'),
+    })
 
-    assert.ok('success' in verifyResult)
-    assert.ok(verifyResult.user)
-    assert.equal(verifyResult.user.emailVerified, true)
+    assert.equal(verifyResult.type, 'success')
+    assert.ok(verifyResult.data.user)
+    assert.equal(verifyResult.data.user.emailVerified, true)
   })
 
   test('rejects invalid verification token', async () => {
     let { createSession } = await import('@remix-run/session')
     let session = createSession()
 
-    let result = await authClient.emailVerification.verify({ session, token: 'invalid-token' })
+    let result = await authClient.emailVerification.verify({
+      session,
+      token: 'invalid-token',
+      request: new Request('https://app.example.com/'),
+    })
 
-    assert.ok('error' in result)
-    assert.equal(result.error, 'invalid_or_expired_token')
+    assert.equal(result.type, 'error')
+    assert.equal(result.code, 'invalid_or_expired_token')
   })
 
   test('rejects expired verification token', async () => {
@@ -108,10 +119,14 @@ describe('Email Verification', () => {
       -1,
     ) // Already expired
 
-    let result = await authClient.emailVerification.verify({ session, token })
+    let result = await authClient.emailVerification.verify({
+      session,
+      token,
+      request: new Request('https://app.example.com/'),
+    })
 
-    assert.ok('error' in result)
-    assert.equal(result.error, 'invalid_or_expired_token')
+    assert.equal(result.type, 'error')
+    assert.equal(result.code, 'invalid_or_expired_token')
   })
 
   test('verification endpoint redirects with invalid token', async () => {
@@ -159,15 +174,18 @@ describe('Email Verification', () => {
     assert.ok(sessionCookie)
 
     // Verify user is now verified
-    let user = authStorage.user?.find((u: any) => u.email === 'test@example.com')
+    let user = authStorage.authUser?.find((u: any) => u.email === 'test@example.com')
     assert.ok(user)
     assert.equal(user.emailVerified, true)
   })
 
   test('requestVerification returns error for non-existent user', async () => {
-    let result = await authClient.emailVerification.requestVerification('nonexistent@example.com')
+    let result = await authClient.emailVerification.requestVerification({
+      email: 'nonexistent@example.com',
+      request: new Request('https://app.example.com/'),
+    })
 
-    assert.ok('error' in result)
-    assert.equal(result.error, 'user_not_found')
+    assert.equal(result.type, 'error')
+    assert.equal(result.code, 'user_not_found')
   })
 })

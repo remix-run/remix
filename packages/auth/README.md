@@ -83,8 +83,6 @@ let authClient = createAuthClient({
         clientSecret: process.env.GITHUB_CLIENT_SECRET!,
       }),
     },
-    successURL: '/',
-    errorURL: '/login',
   },
 
   // Email verification
@@ -134,26 +132,54 @@ createAuthClient({
 
 ⚠️ **Security Warning:** Only enable this if your app is behind a trusted proxy. These headers can be spoofed by malicious clients if your app is directly exposed to the internet.
 
+### Rate Limiting
+
+Rate limiting is enabled by default and uses IP-based limiting. Configure which header contains the client IP:
+
+```ts
+createAuthClient({
+  rateLimit: {
+    // Headers to check for client IP (in order of priority)
+    // Default: ['x-forwarded-for']
+    ipAddressHeaders: ['cf-connecting-ip'], // Cloudflare example
+
+    // Default limits (per IP per operation)
+    window: 60, // seconds
+    max: 100, // requests per window
+
+    // Override for specific operations
+    rules: {
+      'password.signIn': { window: 60, max: 5 },
+      'password.*': { window: 60, max: 10 },
+      '*.signIn': { window: 60, max: 5 },
+    },
+  },
+})
+```
+
+⚠️ Only include headers that your server or reverse proxy sets. Headers not set by your proxy can be spoofed by malicious clients.
+
 ## Password Authentication
 
 ### Sign Up
 
 ```ts
 let result = await authClient.password.signUp({
+  request,
   session,
   email: 'user@example.com',
   password: 'secure-password',
   name: 'Jane Doe',
 })
 
-if ('error' in result) {
-  switch (result.error) {
+if (result.type === 'error') {
+  switch (result.code) {
     case 'email_taken':
       return 'An account with this email already exists'
   }
 } else {
   // User created and signed in
-  console.log('Welcome:', result.user.name)
+  console.log('Welcome:', result.data.user.name)
 }
 ```
 
@@ -161,13 +187,14 @@ if ('error' in result) {
 
 ```ts
 let result = await authClient.password.signIn({
+  request,
   session,
   email: 'user@example.com',
   password: 'user-password',
 })
 
-if ('error' in result) {
-  switch (result.error) {
+if (result.type === 'error') {
+  switch (result.code) {
     case 'invalid_credentials':
       return 'Invalid email or password'
   }
@@ -181,20 +208,24 @@ if ('error' in result) {
 
 ```ts
 // Request reset (sends email via sendReset callback)
-let result = await authClient.password.requestReset('user@example.com')
+let result = await authClient.password.getResetToken({
+  request,
+  email: 'user@example.com',
+})
 
-if ('error' in result) {
+if (result.type === 'error') {
   // 'user_not_found'
 }
 
 // Complete reset (user submits new password)
 let result = await authClient.password.reset({
+  request,
   session,
   token: tokenFromEmail,
   newPassword: 'new-secure-password',
 })
 
-if ('error' in result) {
+if (result.type === 'error') {
   // 'invalid_or_expired_token' | 'user_not_found'
 }
 ```
@@ -203,25 +234,28 @@ if ('error' in result) {
 
 ```ts
 let result = await authClient.password.change({
+  request,
   session,
   currentPassword: 'old-password',
   newPassword: 'new-password',
 })
 
-if ('error' in result) {
+if (result.type === 'error') {
   // 'not_authenticated' | 'invalid_password'
 }
 ```
 
-### Add Password to OAuth Account
+### Add Password to Existing Account
 
 ```ts
-// Check if user has a password
-let hasPassword = await authClient.password.hasPassword(userId)
+// Check if user has a password via getAccounts
+let accounts = await authClient.getAccounts(userId)
+let hasPassword = accounts.some((a) => a.strategy === 'password')
 
 if (!hasPassword) {
   // User signed up via OAuth, let them add a password
   let result = await authClient.password.set({
+    request,
     session,
     password: 'new-password',
   })
@@ -248,23 +282,28 @@ let authClient = createAuthClient({
         scopes: ['user:email'],
       }),
     },
-    successURL: '/dashboard',
-    newUserURL: '/welcome', // Optional: redirect new users here
-    errorURL: '/login',
   },
 })
 ```
 
-### Rendering Sign-In Links
+### Rendering Sign-In Buttons
 
 ```tsx
-// Each provider has everything needed for UI rendering
 {
-  Object.values(authClient.oauth.providers).map((provider) => (
-    <a key={provider.name} href={provider.signInHref}>
-      Continue with {provider.displayName}
-    </a>
-  ))
+  Object.values(authClient.oauth.providers).map((provider) => {
+    let form = provider.getSignInForm({
+      callbackURL: '/dashboard',
+      errorCallbackURL: '/login',
+    })
+    return (
+      <form key={provider.name} method={form.method} action={form.action}>
+        {form.inputs.map((input) => (
+          <input key={input.name} type="hidden" name={input.name} value={input.value} />
+        ))}
+        <button type="submit">Continue with {provider.displayName}</button>
+      </form>
+    )
+  })
 }
 ```
 
@@ -286,6 +325,20 @@ if (flash?.type === 'error') {
     case 'account_exists_unverified_email':
       return 'An account exists but email is unverified'
   }
+}
+```
+
+### Accessing Third-Party APIs
+
+Get an access token to use with provider APIs:
+
+```ts
+let result = await authClient.oauth.github.getAccessToken({ userId: user.id })
+
+if (result.type === 'success') {
+  let response = await fetch('https://api.github.com/user/repos', {
+    headers: { Authorization: `Bearer ${result.data.accessToken}` },
+  })
 }
 ```
 
@@ -319,9 +372,9 @@ let authClient = createAuthClient({
 
 ```ts
 // User requests a new verification email
-let result = await authClient.emailVerification.requestVerification(email)
+let result = await authClient.emailVerification.requestVerification({ request, email })
 
-if ('error' in result) {
+if (result.type === 'error') {
   // 'user_not_found' | 'already_verified'
 }
 ```
@@ -382,7 +435,7 @@ let router = createRouter({
 })
 
 // The auth middleware automatically handles API routes
-// at authClient.authBasePath (e.g., /api/auth/oauth/github)
+// at authClient.authBasePath (e.g., /api/auth/oauth/sign-in/github)
 
 router.get('/dashboard', () => {
   let user = getUser() // Synchronous access
@@ -453,91 +506,14 @@ let authClient = createAuthClient({
 
 ## Schema Introspection
 
-Access the data schema for ORM integration:
-
 ```ts
 let schema = authClient.schema
 // {
 //   models: [
-//     { name: 'user', fields: { id, email, name, ... } },
-//     { name: 'password', fields: { userId, hashedPassword } },
-//     { name: 'oauthAccount', fields: { userId, provider, ... } },
+//     { name: 'authUser', fields: { id, email, name, ... } },
+//     { name: 'authAccount', fields: { id, userId, strategy, ... } },
 //   ]
 // }
-```
-
-## User Type
-
-The base `AuthUser` type includes:
-
-```ts
-interface AuthUser {
-  id: string
-  email: string
-  name: string
-  image?: string
-  emailVerified: boolean
-  createdAt: Date
-  updatedAt: Date
-}
-```
-
-## Error Types
-
-All operations return discriminated unions with specific error codes:
-
-```ts
-// Password errors
-type PasswordSignInErrorCode = 'invalid_credentials'
-type PasswordSignUpErrorCode = 'email_taken'
-type PasswordChangeErrorCode = 'not_authenticated' | 'invalid_password'
-type PasswordSetErrorCode = 'not_authenticated' | 'password_already_set'
-type PasswordResetRequestErrorCode = 'user_not_found'
-type PasswordResetCompleteErrorCode = 'invalid_or_expired_token' | 'user_not_found'
-
-// OAuth errors
-type OAuthSignInErrorCode =
-  | 'provider_not_found'
-  | 'access_denied'
-  | 'invalid_state'
-  | 'account_exists_unverified_email'
-  | ...
-
-// Email verification errors
-type EmailVerificationRequestErrorCode = 'user_not_found' | 'already_verified'
-type EmailVerificationCompleteErrorCode = 'invalid_or_expired_token' | 'user_not_found'
-```
-
-## Custom OAuth Providers
-
-Create custom OAuth providers:
-
-```ts
-import type { OAuthProvider } from '@remix-run/auth'
-
-let myProvider: OAuthProvider = {
-  name: 'my-provider',
-  displayName: 'My Provider',
-
-  getAuthorizationUrl({ clientId, redirectUri, state, scopes }) {
-    let url = new URL('https://provider.com/oauth/authorize')
-    url.searchParams.set('client_id', clientId)
-    url.searchParams.set('redirect_uri', redirectUri)
-    url.searchParams.set('state', state)
-    url.searchParams.set('scope', scopes.join(' '))
-    return url.toString()
-  },
-
-  async exchangeCodeForToken({ code, clientId, clientSecret, redirectUri }) {
-    // Exchange code for access token
-    return { accessToken, refreshToken, expiresIn }
-  },
-
-  async getUserProfile({ accessToken }) {
-    // Fetch user profile
-    return { id, email, name, avatarUrl, emailVerified }
-  },
-}
 ```
 
 ## Related Packages

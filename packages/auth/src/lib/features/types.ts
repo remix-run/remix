@@ -1,8 +1,80 @@
 import type { Session } from '@remix-run/session'
-import type { RequestMethod } from '@remix-run/fetch-router'
 import type { Storage } from '../storage.ts'
+
+/**
+ * HTTP request methods
+ */
+export type RequestMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
+import type { SecondaryStorage } from '../secondary-storage/types.ts'
 import type { ModelSchema } from '../schema.ts'
 import type { AuthUser } from '../types.ts'
+
+// ============================================================================
+// Structured Result Types
+// ============================================================================
+
+/**
+ * Success result from an operation
+ */
+export interface SuccessResult<TCode extends string, TData extends object = {}> {
+  type: 'success'
+  code: TCode
+  data: TData
+}
+
+/**
+ * Error result from an operation
+ */
+export interface ErrorResult<TCode extends string> {
+  type: 'error'
+  code: TCode | 'rate_limited'
+  retryAfter?: number
+}
+
+/**
+ * Combined result type for operations
+ */
+export type OperationResult<
+  TSuccessCode extends string,
+  TSuccessData extends object,
+  TErrorCode extends string,
+> = SuccessResult<TSuccessCode, TSuccessData> | ErrorResult<TErrorCode>
+
+// ============================================================================
+// Operation Definition Types
+// ============================================================================
+
+/**
+ * Rate limit configuration for an operation
+ */
+export interface OperationRateLimit {
+  /** Time window in seconds */
+  window: number
+  /** Maximum requests allowed in the window */
+  max: number
+}
+
+/**
+ * Base operation definition with rate limit metadata
+ */
+export interface OperationDefinition<
+  TArgs extends object,
+  TSuccessType extends string,
+  TSuccessData extends object,
+  TErrorType extends string,
+> {
+  /** Rate limit configuration (optional - if not set, uses global defaults) */
+  rateLimit?: OperationRateLimit
+  /** The operation handler */
+  handler: (args: TArgs) => Promise<OperationResult<TSuccessType, TSuccessData, TErrorType>>
+}
+
+/**
+ * Operations definition object - maps operation names to their definitions
+ */
+export type OperationsDefinition = {
+  [key: string]: OperationDefinition<any, any, any, any>
+}
 
 /**
  * Route definition using fetch-router idiom
@@ -41,8 +113,10 @@ export type FeatureRouteHelpers<TRoutes extends FeatureRoutes = FeatureRoutes> =
 export interface FeatureContextBase {
   config: any
   storage: Storage
+  secondaryStorage: SecondaryStorage
   secret: string
   sessionKey: string
+  trustProxyHeaders: boolean
   /**
    * Base path where auth routes are mounted (e.g., '/_auth/')
    * Always ends with trailing slash
@@ -109,6 +183,7 @@ export interface FeatureHandlerContext<TParams = Record<string, string>> {
   session: Session
   params: TParams
   url: URL
+  formData: FormData | null
 }
 
 /**
@@ -127,11 +202,15 @@ export type FeatureHandlers<TRoutes extends FeatureRoutes = FeatureRoutes> = {
 }
 
 /**
- * Feature definition
+ * Feature definition with operations/helpers split
+ *
+ * Operations: Rate-limitable methods with declarative config
+ * Helpers: Non-rate-limitable utilities (providers, getFlash, etc.)
  */
 export interface Feature<
   TConfig = any,
-  TMethods = any,
+  TOperationsDef = any,
+  THelpers = any,
   TRoutes extends FeatureRoutes = FeatureRoutes,
 > {
   /**
@@ -155,10 +234,15 @@ export interface Feature<
   getSchema(config: TConfig): FeatureSchema
 
   /**
-   * Create the feature methods
-   * Context includes auto-generated route helpers
+   * Create operation definitions with declarative rate limit config
+   * The framework wraps these to apply rate limiting automatically
    */
-  createMethods(context: FeatureContext<TRoutes>): TMethods
+  createOperations(context: FeatureContext<TRoutes>): TOperationsDef
+
+  /**
+   * Create non-rate-limitable helpers (utilities, data access, etc.)
+   */
+  createHelpers(context: FeatureContext<TRoutes>): THelpers
 
   /**
    * Get route handlers for this feature

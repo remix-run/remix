@@ -270,9 +270,9 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../cookie
-      '@remix-run/fetch-router':
+      '@remix-run/route-pattern':
         specifier: workspace:*
-        version: link:../fetch-router
+        version: link:../route-pattern
       '@remix-run/session':
         specifier: workspace:*
         version: link:../session

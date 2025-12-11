@@ -11,6 +11,12 @@ export type {
   FeatureHandler,
   FeatureHandlers,
   Feature,
+  SuccessResult,
+  ErrorResult,
+  OperationResult,
+  OperationRateLimit,
+  OperationDefinition,
+  OperationsDefinition,
 } from './types.ts'
 export { createRouteHelpers } from './types.ts'
 export * from './password.ts'

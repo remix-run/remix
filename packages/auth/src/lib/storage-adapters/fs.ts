@@ -148,8 +148,8 @@ export function createFsStorageAdapter(filePath: string): Storage {
         storage[model] = table
       }
 
-      // Generate ID if not provided and if this looks like a primary model
-      if (!data.id && model === 'user') {
+      // Generate ID if not provided
+      if (!data.id) {
         data.id = crypto.randomUUID()
       }
 

@@ -1,11 +1,11 @@
 import type { Session } from '@remix-run/session'
 import type { EmailVerificationCompleteErrorCode } from './features/email-verification.ts'
-import type { OAuthSignInErrorCode } from './features/oauth/index.ts'
+import type { OAuthErrorCode } from './features/oauth/index.ts'
 
 /**
  * Session key used for auth flash data
  */
-export const AUTH_FLASH_KEY = '@remix-run/auth'
+export const AUTH_FLASH_KEY = '@remix-run/auth:flash'
 
 /**
  * Email verification flash types
@@ -40,7 +40,7 @@ export type OAuthCallbackFlash =
       feature: 'oauth'
       route: 'callback'
       type: 'error'
-      code: OAuthSignInErrorCode
+      code: OAuthErrorCode
     }
 
 export type OAuthFlash = OAuthCallbackFlash

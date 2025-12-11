@@ -43,9 +43,6 @@ describe('OAuth integration', () => {
             clientSecret: 'test-client-secret',
           },
         },
-        baseURL: 'https://app.example.com',
-        successURL: '/home',
-        errorURL: '/login',
       },
       storage: createMemoryStorageAdapter(db),
     })
@@ -62,10 +59,18 @@ describe('OAuth integration', () => {
       return new Response(user ? `Welcome ${user.name}!` : 'Not logged in')
     })
 
-    // Step 1: Initiate OAuth flow
-    let initiateResponse = await router.fetch('https://app.example.com/api/auth/oauth/mock', {
-      redirect: 'manual',
-    })
+    // Step 1: Initiate OAuth flow via POST form
+    let initiateResponse = await router.fetch(
+      'https://app.example.com/api/auth/oauth/sign-in/mock',
+      {
+        method: 'POST',
+        body: new URLSearchParams({
+          callbackURL: '/home',
+          errorCallbackURL: '/login',
+        }),
+        redirect: 'manual',
+      },
+    )
 
     assert.equal(initiateResponse.status, 302)
     let authUrl = initiateResponse.headers.get('Location')
@@ -105,21 +110,26 @@ describe('OAuth integration', () => {
     let sessionStorage = createMemorySessionStorage()
 
     let db: MemoryDB = {
-      user: [
+      authUser: [
         {
           id: 'existing-user-id',
           email: 'existing@example.com',
           name: 'Existing User',
+          emailVerified: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
       ],
-      password: [
+      authAccount: [
         {
           userId: 'existing-user-id',
-          hashedPassword: 'hashed-password',
+          strategy: 'password',
+          passwordHash: 'hashed-password',
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
       ],
-      oauthAccount: [],
-      passwordResetToken: [],
+      authVerification: [],
     }
 
     let authClient = createAuthClient({
@@ -139,9 +149,6 @@ describe('OAuth integration', () => {
             clientSecret: 'test-client-secret',
           },
         },
-        baseURL: 'https://app.example.com',
-        successURL: '/home',
-        errorURL: '/login',
       },
       storage: createMemoryStorageAdapter(db),
     })
@@ -153,10 +160,18 @@ describe('OAuth integration', () => {
       middleware: [formDataMiddleware(), sessionMiddleware(sessionCookie, sessionStorage), auth],
     })
 
-    // Initiate and complete OAuth flow
-    let initiateResponse = await router.fetch('https://app.example.com/api/auth/oauth/mock', {
-      redirect: 'manual',
-    })
+    // Initiate and complete OAuth flow via POST
+    let initiateResponse = await router.fetch(
+      'https://app.example.com/api/auth/oauth/sign-in/mock',
+      {
+        method: 'POST',
+        body: new URLSearchParams({
+          callbackURL: '/home',
+          errorCallbackURL: '/login',
+        }),
+        redirect: 'manual',
+      },
+    )
 
     let authUrl = initiateResponse.headers.get('Location')!
     let authUrlParsed = new URL(authUrl)
@@ -193,9 +208,6 @@ describe('OAuth integration', () => {
             clientSecret: 'test-client-secret',
           },
         },
-        baseURL: 'https://app.example.com',
-        successURL: '/home',
-        errorURL: '/login',
       },
       storage: createMemoryStorageAdapter(db),
     })
@@ -221,15 +233,23 @@ describe('OAuth integration', () => {
     })
 
     // Step 1: Initiate OAuth flow to get a valid state
-    let initiateResponse = await router.fetch('https://app.example.com/api/auth/oauth/mock', {
-      redirect: 'manual',
-    })
+    let initiateResponse = await router.fetch(
+      'https://app.example.com/api/auth/oauth/sign-in/mock',
+      {
+        method: 'POST',
+        body: new URLSearchParams({
+          callbackURL: '/home',
+          errorCallbackURL: '/login',
+        }),
+        redirect: 'manual',
+      },
+    )
     let authUrl = initiateResponse.headers.get('Location')!
     let state = new URL(authUrl).searchParams.get('state')!
 
     // Step 2: Simulate OAuth provider error during callback
     let errorResponse = await router.fetch(
-      `https://app.example.com/api/auth/oauth/mock/callback?error=access_denied&error_description=User+denied+authorization&state=${state}`,
+      `https://app.example.com/api/auth/oauth/callback/mock?error=access_denied&error_description=User+denied+authorization&state=${state}`,
       { redirect: 'manual' },
     )
 
@@ -254,7 +274,7 @@ describe('OAuth integration', () => {
 
     // Pre-existing user created via email/password
     let db: MemoryDB = {
-      user: [
+      authUser: [
         {
           id: 'existing-user-789',
           email: 'existing@example.com',
@@ -264,7 +284,13 @@ describe('OAuth integration', () => {
           updatedAt: new Date(),
         },
       ],
-      password: [{ userId: 'existing-user-789', hashedPassword: 'hashed' }],
+      authAccount: [
+        {
+          userId: 'existing-user-789',
+          strategy: 'password',
+          passwordHash: 'hashed',
+        },
+      ],
     }
 
     let authClient = createAuthClient({
@@ -284,9 +310,6 @@ describe('OAuth integration', () => {
             clientSecret: 'test-client-secret',
           },
         },
-        baseURL: 'https://app.example.com',
-        successURL: '/home',
-        errorURL: '/login',
       },
       storage: createMemoryStorageAdapter(db),
     })
@@ -311,10 +334,18 @@ describe('OAuth integration', () => {
       })
     })
 
-    // Initiate and complete OAuth flow
-    let initiateResponse = await router.fetch('https://app.example.com/api/auth/oauth/mock', {
-      redirect: 'manual',
-    })
+    // Initiate and complete OAuth flow via POST
+    let initiateResponse = await router.fetch(
+      'https://app.example.com/api/auth/oauth/sign-in/mock',
+      {
+        method: 'POST',
+        body: new URLSearchParams({
+          callbackURL: '/home',
+          errorCallbackURL: '/login',
+        }),
+        redirect: 'manual',
+      },
+    )
 
     let authUrl = initiateResponse.headers.get('Location')!
     let authUrlParsed = new URL(authUrl)
