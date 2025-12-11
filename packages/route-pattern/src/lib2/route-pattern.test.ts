@@ -1,12 +1,11 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import { describe, expect, it } from 'vitest'
 
 import { parse } from './route-pattern.ts'
 
 describe('parse', () => {
   it('parses a simple pathname', () => {
     let ast = parse('users/:id')
-    assert.deepEqual(ast, {
+    expect(ast).toEqual({
       protocol: undefined,
       hostname: undefined,
       port: undefined,
@@ -24,7 +23,7 @@ describe('parse', () => {
 
   it('parses a full URL pattern', () => {
     let ast = parse('https://example.com/users/:id')
-    assert.deepEqual(ast, {
+    expect(ast).toEqual({
       protocol: {
         tokens: [{ type: 'text', text: 'https' }],
         paramNames: [],
@@ -50,7 +49,7 @@ describe('parse', () => {
 
   it('parses protocol and pathname without hostname', () => {
     let ast = parse('file:///path/to/file')
-    assert.deepEqual(ast, {
+    expect(ast).toEqual({
       protocol: {
         tokens: [{ type: 'text', text: 'file' }],
         paramNames: [],

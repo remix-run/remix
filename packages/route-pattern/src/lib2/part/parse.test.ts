@@ -1,5 +1,4 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import { describe, expect, it } from 'vitest'
 
 import { parse } from './parse.ts'
 
@@ -7,7 +6,7 @@ describe('parse', () => {
   it('creates an AST', () => {
     let source = 'api/(v:major(.:minor)/)run'
     let ast = parse(source)
-    assert.deepEqual(ast, {
+    expect(ast).toEqual({
       tokens: [
         { type: 'text', text: 'api/' },
         { type: '(' },

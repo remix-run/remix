@@ -1,5 +1,4 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import { describe, expect, it } from 'vitest'
 
 import { parse } from './parse.ts'
 import { toRegExp } from './to-regexp.ts'
@@ -12,13 +11,13 @@ describe('toRegExp', () => {
     let result = toRegExp(ast, paramValueRE)
 
     // The regex should match the full pattern
-    assert.match('api/v1.2/run', result)
-    assert.match('api/v1/run', result)
-    assert.match('api/run', result)
+    expect('api/v1.2/run').toMatch(result)
+    expect('api/v1/run').toMatch(result)
+    expect('api/run').toMatch(result)
 
     // Should not match patterns that don't fit
-    assert.doesNotMatch('api/', result)
-    assert.doesNotMatch('api/v1.2/walk', result)
+    expect('api/').not.toMatch(result)
+    expect('api/v1.2/walk').not.toMatch(result)
   })
 
   it('handles static text', () => {
@@ -27,8 +26,8 @@ describe('toRegExp', () => {
     let paramValueRE = /[^/]+/
     let result = toRegExp(ast, paramValueRE)
 
-    assert.match('hello/world', result)
-    assert.doesNotMatch('hello/there', result)
+    expect('hello/world').toMatch(result)
+    expect('hello/there').not.toMatch(result)
   })
 
   it('handles parameters', () => {
@@ -37,10 +36,10 @@ describe('toRegExp', () => {
     let paramValueRE = /[^/]+/
     let result = toRegExp(ast, paramValueRE)
 
-    assert.match('users/123', result)
-    assert.match('users/abc', result)
-    assert.doesNotMatch('users/', result)
-    assert.doesNotMatch('users/123/posts', result)
+    expect('users/123').toMatch(result)
+    expect('users/abc').toMatch(result)
+    expect('users/').not.toMatch(result)
+    expect('users/123/posts').not.toMatch(result)
   })
 
   it('handles wildcards', () => {
@@ -49,9 +48,9 @@ describe('toRegExp', () => {
     let paramValueRE = /[^/]+/
     let result = toRegExp(ast, paramValueRE)
 
-    assert.match('files/anything', result)
-    assert.match('files/path/to/file', result)
-    assert.match('files/', result)
+    expect('files/anything').toMatch(result)
+    expect('files/path/to/file').toMatch(result)
+    expect('files/').toMatch(result)
   })
 
   it('escapes special regex characters in static text', () => {
@@ -61,8 +60,8 @@ describe('toRegExp', () => {
     let result = toRegExp(ast, paramValueRE)
 
     // The literal '.' and parentheses should be escaped
-    assert.match('api/v1.0/users/123/notes', result)
-    assert.match('api/v1.0/users/123/', result)
-    assert.doesNotMatch('api/v1X0/users/123/notes', result) // '.' shouldn't match any char
+    expect('api/v1.0/users/123/notes').toMatch(result)
+    expect('api/v1.0/users/123/').toMatch(result)
+    expect('api/v1X0/users/123/notes').not.toMatch(result) // '.' shouldn't match any char
   })
 })
