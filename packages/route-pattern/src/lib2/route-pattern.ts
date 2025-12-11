@@ -1,7 +1,7 @@
 import { split } from './split.ts'
 import * as Part from './part/index.ts'
 
-type AST = {
+export type AST = {
   protocol: Part.AST | undefined
   hostname: Part.AST | undefined
   port: string | undefined
