@@ -915,6 +915,7 @@ describe('custom matcher', () => {
     }
 
     let customMatcher = new CustomMatcher()
+    // @ts-expect-error
     let router = createRouter({ matcher: customMatcher })
     router.get('/', () => new Response('Home'))
 
@@ -935,6 +936,7 @@ describe('custom matcher', () => {
     }
 
     let customMatcher = new CustomMatcher()
+    // @ts-expect-error
     let router = createRouter({ matcher: customMatcher })
     router.get('/home', () => new Response('Home'))
     router.get('/about', () => new Response('About'))

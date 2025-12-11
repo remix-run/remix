@@ -7,6 +7,7 @@ catalog:
 
 packages:
   - demos/*
+  - docs
   - packages/*
   - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*

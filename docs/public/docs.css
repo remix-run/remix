@@ -1,0 +1,186 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+    sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+.container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 300px;
+  background: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+  padding: 20px;
+  overflow-y: auto;
+  position: fixed;
+  height: 100vh;
+}
+
+.sidebar h1 {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  color: #212529;
+}
+
+.package-group {
+  margin-bottom: 20px;
+}
+
+.package-name {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.sidebar ul {
+  list-style: none;
+  margin-left: 12px;
+}
+
+.sidebar li {
+  margin: 4px 0;
+}
+
+.sidebar a {
+  color: #007bff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  display: block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.sidebar a:hover {
+  background-color: #e9ecef;
+}
+
+.sidebar a.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 300px;
+  padding: 40px 60px;
+  max-width: 1200px;
+}
+
+.content {
+  max-width: 800px;
+}
+
+.content h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #212529;
+}
+
+.content h2 {
+  font-size: 1.8rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  color: #212529;
+}
+
+.content h3 {
+  font-size: 1.4rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.8rem;
+  color: #212529;
+}
+
+.content p {
+  margin-bottom: 1rem;
+}
+
+.content a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.content a:hover {
+  text-decoration: underline;
+}
+
+.content code {
+  background: #f8f9fa;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.content pre {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.content pre code {
+  background: none;
+  padding: 0;
+}
+
+.content ul,
+.content ol {
+  margin-left: 2rem;
+  margin-bottom: 1rem;
+}
+
+.content li {
+  margin-bottom: 0.5rem;
+}
+
+.content blockquote {
+  border-left: 4px solid #007bff;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: #495057;
+}
+
+.content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.content th,
+.content td {
+  border: 1px solid #dee2e6;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.content th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+.error {
+  padding: 20px;
+  background: #f8d7da;
+  color: #721c24;
+  border-radius: 4px;
+  margin: 20px 0;
+}
+
+.home-message {
+  text-align: center;
+  padding: 40px;
+  color: #6c757d;
+}
