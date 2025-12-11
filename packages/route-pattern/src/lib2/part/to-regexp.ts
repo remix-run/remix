@@ -1,3 +1,4 @@
+import * as RE from '../regexp.ts'
 import type { AST } from './ast'
 
 export function toRegExp(ast: AST, paramValueRE: RegExp): RegExp {
@@ -30,7 +31,7 @@ export function toRegExpSource(ast: AST, paramValueRE: RegExp): string {
     }
 
     if (token.type === 'text') {
-      source += escape(token.text)
+      source += RE.escape(token.text)
       continue
     }
 
@@ -39,6 +40,3 @@ export function toRegExpSource(ast: AST, paramValueRE: RegExp): string {
   }
   return source
 }
-
-/** Polyfill for `RegExp.escape` */
-const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
