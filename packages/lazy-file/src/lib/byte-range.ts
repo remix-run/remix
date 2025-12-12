@@ -19,7 +19,7 @@ export interface ByteRange {
  *
  * @param range The byte range
  * @param size The total size of the buffer
- * @return The length of the byte range
+ * @returns The length of the byte range
  */
 export function getByteLength(range: ByteRange, size: number): number {
   let [start, end] = getIndexes(range, size)
@@ -31,7 +31,7 @@ export function getByteLength(range: ByteRange, size: number): number {
  *
  * @param range The byte range
  * @param size The total size of the buffer
- * @return A tuple of `[start, end]` indexes
+ * @returns A tuple of `[start, end]` indexes
  */
 export function getIndexes(range: ByteRange, size: number): [number, number] {
   let start = Math.min(Math.max(0, range.start < 0 ? size + range.start : range.start), size)

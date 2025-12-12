@@ -272,7 +272,7 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/get)
    *
    * @param name The name of the header to get
-   * @return The header value, or `null` if not found
+   * @returns The header value, or `null` if not found
    */
   get(name: string): string | null {
     let key = name.toLowerCase()
@@ -298,7 +298,7 @@ export class SuperHeaders extends Headers {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/getSetCookie)
    *
-   * @return An array of `Set-Cookie` header values
+   * @returns An array of `Set-Cookie` header values
    */
   getSetCookie(): string[] {
     return this.#setCookies.map((v) => (typeof v === 'string' ? v : v.toString()))
@@ -310,7 +310,7 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/has)
    *
    * @param name The name of the header to check
-   * @return `true` if the header is present, `false` otherwise
+   * @returns `true` if the header is present, `false` otherwise
    */
   has(name: string): boolean {
     let key = name.toLowerCase()
@@ -340,7 +340,7 @@ export class SuperHeaders extends Headers {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/keys)
    *
-   * @return An iterator of header keys
+   * @returns An iterator of header keys
    */
   *keys(): HeadersIterator<string> {
     for (let [key] of this) yield key
@@ -351,7 +351,7 @@ export class SuperHeaders extends Headers {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/values)
    *
-   * @return An iterator of header values
+   * @returns An iterator of header values
    */
   *values(): HeadersIterator<string> {
     for (let [, value] of this) yield value
@@ -362,7 +362,7 @@ export class SuperHeaders extends Headers {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/entries)
    *
-   * @return An iterator of `[key, value]` tuples
+   * @returns An iterator of `[key, value]` tuples
    */
   *entries(): HeadersIterator<[string, string]> {
     for (let [key] of this.#map) {
@@ -396,7 +396,7 @@ export class SuperHeaders extends Headers {
   /**
    * Returns a string representation of the headers suitable for use in a HTTP message.
    *
-   * @return The headers formatted for HTTP
+   * @returns The headers formatted for HTTP
    */
   toString(): string {
     let lines: string[] = []

@@ -43,7 +43,7 @@ export interface LoggerOptions {
  * Creates a middleware handler that logs various request/response info.
  *
  * @param options Options for the logger
- * @return The logger middleware
+ * @returns The logger middleware
  */
 export function logger(options: LoggerOptions = {}): Middleware {
   let { format = '[%date] %method %path %status %contentLength', log = console.log } = options

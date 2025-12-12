@@ -27,7 +27,7 @@ export interface FormOptions {
  *
  * @param pattern The route pattern to use for the form and its submit action
  * @param options Options to configure the form action routes
- * @return The route map with `index` and `action` routes
+ * @returns The route map with `index` and `action` routes
  */
 export function createFormRoutes<pattern extends string, const options extends FormOptions>(
   pattern: pattern | RoutePattern<pattern>,

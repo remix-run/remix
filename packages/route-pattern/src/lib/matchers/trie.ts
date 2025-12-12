@@ -297,7 +297,7 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
    * Find the best match for a URL.
    *
    * @param url The URL to match
-   * @return The match result, or `null` if no match was found
+   * @returns The match result, or `null` if no match was found
    */
   match(url: string | URL): MatchResult<data> | null {
     let urlObj = typeof url === 'string' ? new URL(url) : url
@@ -341,7 +341,7 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
    * Find all matches for a URL.
    *
    * @param url The URL to match
-   * @return A generator that yields all matches
+   * @returns A generator that yields all matches
    */
   *matchAll(url: string | URL): Generator<MatchResult<data>> {
     let urlObj = typeof url === 'string' ? new URL(url) : url
