@@ -264,7 +264,7 @@ export class CacheControl implements HeaderValue, CacheControlInit {
   /**
    * Returns the string representation of the header value.
    *
-   * @return The header value as a string
+   * @returns The header value as a string
    */
   toString(): string {
     let parts = []

@@ -6,7 +6,7 @@ import { defineInteraction, type Interaction } from '../interaction'
  * Dispatches on the owner of a popover when the popover toggles.
  *
  * ### Example
-
+ *
  * ```html
  * <button popovertarget="my-popover">
  *   Toggle Popover

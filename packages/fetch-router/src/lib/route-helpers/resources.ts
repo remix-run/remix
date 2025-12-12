@@ -52,7 +52,7 @@ export type ResourcesOptions = {
  *
  * @param base The base route pattern to use for the resources
  * @param options Options to configure the resource routes
- * @return The route map with CRUD routes
+ * @returns The route map with CRUD routes
  */
 export function createResourcesRoutes<base extends string, const options extends ResourcesOptions>(
   base: base | RoutePattern<base>,
