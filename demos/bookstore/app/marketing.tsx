@@ -1,4 +1,4 @@
-import type { BuildAction, Controller } from '@remix-run/fetch-router'
+import type { BuildAction, Controller } from 'remix'
 import { Frame } from '@remix-run/dom'
 
 import { routes } from './routes.ts'

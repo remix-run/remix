@@ -1,5 +1,5 @@
-import type { Controller } from '@remix-run/fetch-router'
-import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
+import type { Controller } from 'remix'
+import { createRedirectResponse as redirect } from 'remix'
 
 import { routes } from './routes.ts'
 import {
