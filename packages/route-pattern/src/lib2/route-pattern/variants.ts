@@ -1,5 +1,5 @@
-import type { AST } from './route-pattern.ts'
-import * as Part from './part/index.ts'
+import type { AST } from './ast.ts'
+import * as Part from '../part/index.ts'
 
 export function* variants(pattern: AST) {
   let protocols = pattern.protocol ? Part.variants(pattern.protocol) : undefined

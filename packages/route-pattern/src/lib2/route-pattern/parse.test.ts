@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parse } from './route-pattern.ts'
+import { parse } from './parse.ts'
 
 describe('parse', () => {
   it('parses a simple pathname', () => {
