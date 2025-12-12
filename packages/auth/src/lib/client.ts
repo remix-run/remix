@@ -1,5 +1,5 @@
 import type { Session } from '@remix-run/session'
-import { RegExpMatcher } from '@remix-run/route-pattern'
+import { ArrayMatcher } from '@remix-run/route-pattern'
 import type { Storage } from './storage.ts'
 import type { SecondaryStorage } from './secondary-storage/types.ts'
 import type { AuthSchema, ModelSchema } from './schema.ts'
@@ -707,7 +707,7 @@ export function createAuthClient<const TConfig extends AuthClientConfig>(
         handler: RouteHandler
       }
 
-      let matcher = new RegExpMatcher<MatchData>()
+      let matcher = new ArrayMatcher<MatchData>()
 
       let allFeatures = [
         { feature: passwordFeature, context: passwordContext },

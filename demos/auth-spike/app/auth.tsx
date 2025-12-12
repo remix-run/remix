@@ -1,4 +1,4 @@
-import type { RouteHandlers } from '@remix-run/fetch-router'
+import type { Controller } from '@remix-run/fetch-router'
 import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
 import { routes } from './routes.ts'
 import { authClient } from './utils/auth.ts'
@@ -9,263 +9,261 @@ import { sendEmail } from './services/email.ts'
 // Route handlers
 
 export default {
-  handlers: {
-    signUp: {
-      index() {
-        return render(<SignupForm />)
-      },
-
-      async action({ formData, session, request }) {
-        let name = formData.get('name') as string
-        let email = formData.get('email') as string
-        let password = formData.get('password') as string
-
-        let result = await authClient.password.signUp({ request, session, email, password, name })
-
-        if (result.type === 'error') {
-          let getErrorMessage = () => {
-            switch (result.code) {
-              case 'email_taken':
-                return 'An account with this email already exists'
-              case 'rate_limited':
-                return `Too many attempts. Please try again in ${result.retryAfter} seconds.`
-              default: {
-                return 'An unknown error occurred'
-              }
-            }
-          }
-          return render(<SignupForm error={getErrorMessage()} />)
-        }
-
-        // Success - logged in (session set by auth client)
-        return redirect(routes.home.href(), 302)
-      },
+  signUp: {
+    index() {
+      return render(<SignupForm />)
     },
 
-    login: {
-      index({ url, session }) {
-        let returnTo = url.searchParams.get('returnTo')
-        let flashError: string | undefined
+    async action({ formData, session, request }) {
+      let name = formData.get('name') as string
+      let email = formData.get('email') as string
+      let password = formData.get('password') as string
 
-        // Check for OAuth flash messages
-        let oauthFlash = authClient.oauth.getFlash(session)
-        if (oauthFlash?.type === 'error') {
-          switch (oauthFlash.code) {
-            case 'access_denied':
-              flashError = 'You cancelled the sign in process'
-              break
-            case 'account_exists_unverified_email':
-              flashError =
-                'An account with this email already exists. Please sign in with your original method, or use an OAuth provider that verifies your email address.'
-              break
-            case 'invalid_state':
-              flashError = 'Invalid or expired OAuth state. Please try again.'
-              break
-            default:
-              flashError = 'An error occurred. Please try again.'
-          }
-        }
+      let result = await authClient.password.signUp({ request, session, email, password, name })
 
-        // Check for email verification flash messages
-        let emailFlash = authClient.emailVerification.getFlash(session)
-        if (emailFlash?.type === 'error') {
-          switch (emailFlash.code) {
-            case 'invalid_or_expired_token':
-              flashError = 'Invalid or expired verification link. Please request a new one.'
-              break
-            default:
-              flashError = 'An error occurred. Please try again.'
-          }
-        }
-
-        return render(<LoginForm error={flashError} returnTo={returnTo} />)
-      },
-
-      async action({ formData, session, url, request }) {
-        let email = formData.get('email') as string
-        let password = formData.get('password') as string
-        let returnTo = (formData.get('returnTo') as string) || '/'
-
-        let result = await authClient.password.signIn({ request, session, email, password })
-
-        if (result.type === 'error') {
-          let getErrorMessage = () => {
-            switch (result.code) {
-              case 'invalid_credentials':
-                return 'Invalid email or password'
-              case 'rate_limited':
-                return `Too many login attempts. Please try again in ${result.retryAfter} seconds.`
-              default: {
-                return 'An unknown error occurred'
-              }
+      if (result.type === 'error') {
+        let getErrorMessage = () => {
+          switch (result.code) {
+            case 'email_taken':
+              return 'An account with this email already exists'
+            case 'rate_limited':
+              return `Too many attempts. Please try again in ${result.retryAfter} seconds.`
+            default: {
+              return 'An unknown error occurred'
             }
           }
-          return render(<LoginForm error={getErrorMessage()} returnTo={returnTo} />)
         }
+        return render(<SignupForm error={getErrorMessage()} />)
+      }
 
-        // Success - logged in (session set by auth client)
-        return redirect(returnTo, 302)
-      },
+      // Success - logged in (session set by auth client)
+      return redirect(routes.home.href(), 302)
+    },
+  },
+
+  login: {
+    index({ url, session }) {
+      let returnTo = url.searchParams.get('returnTo')
+      let flashError: string | undefined
+
+      // Check for OAuth flash messages
+      let oauthFlash = authClient.oauth.getFlash(session)
+      if (oauthFlash?.type === 'error') {
+        switch (oauthFlash.code) {
+          case 'access_denied':
+            flashError = 'You cancelled the sign in process'
+            break
+          case 'account_exists_unverified_email':
+            flashError =
+              'An account with this email already exists. Please sign in with your original method, or use an OAuth provider that verifies your email address.'
+            break
+          case 'invalid_state':
+            flashError = 'Invalid or expired OAuth state. Please try again.'
+            break
+          default:
+            flashError = 'An error occurred. Please try again.'
+        }
+      }
+
+      // Check for email verification flash messages
+      let emailFlash = authClient.emailVerification.getFlash(session)
+      if (emailFlash?.type === 'error') {
+        switch (emailFlash.code) {
+          case 'invalid_or_expired_token':
+            flashError = 'Invalid or expired verification link. Please request a new one.'
+            break
+          default:
+            flashError = 'An error occurred. Please try again.'
+        }
+      }
+
+      return render(<LoginForm error={flashError} returnTo={returnTo} />)
     },
 
-    forgotPassword: {
-      index() {
-        return render(<ForgotPasswordForm />)
-      },
+    async action({ formData, session, url, request }) {
+      let email = formData.get('email') as string
+      let password = formData.get('password') as string
+      let returnTo = (formData.get('returnTo') as string) || '/'
 
-      async action({ formData, request }) {
-        let email = formData.get('email') as string
+      let result = await authClient.password.signIn({ request, session, email, password })
 
-        let result = await authClient.password.getResetToken({ email, request })
-
-        // Rate limit error - show to user (doesn't reveal if email exists)
-        if (result.type === 'error' && result.code === 'rate_limited') {
-          return render(
-            <ForgotPasswordForm
-              error={`Too many attempts. Please try again in ${result.retryAfter} seconds.`}
-            />,
-          )
+      if (result.type === 'error') {
+        let getErrorMessage = () => {
+          switch (result.code) {
+            case 'invalid_credentials':
+              return 'Invalid email or password'
+            case 'rate_limited':
+              return `Too many login attempts. Please try again in ${result.retryAfter} seconds.`
+            default: {
+              return 'An unknown error occurred'
+            }
+          }
         }
+        return render(<LoginForm error={getErrorMessage()} returnTo={returnTo} />)
+      }
 
-        // If we got a token, send the email
-        if (result.type === 'success') {
-          let { user, token } = result.data
-          let baseURL = new URL(request.url).origin
-          let resetFormUrl = `${baseURL}${routes.auth.resetPassword.index.href({ token })}`
-          sendEmail({
-            to: user.email,
-            subject: 'Reset your password',
-            text: `Hi ${user.name},\n\nClick the link below to reset your password:\n\n${resetFormUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`,
-          })
-        } else if (result.type === 'error' && process.env.NODE_ENV === 'development') {
-          // Log error in development, but don't reveal if email exists
-          console.log('Password reset error:', result.code)
-        }
+      // Success - logged in (session set by auth client)
+      return redirect(returnTo, 302)
+    },
+  },
 
-        // Always show the same success message (don't reveal if email exists)
+  forgotPassword: {
+    index() {
+      return render(<ForgotPasswordForm />)
+    },
+
+    async action({ formData, request }) {
+      let email = formData.get('email') as string
+
+      let result = await authClient.password.getResetToken({ email, request })
+
+      // Rate limit error - show to user (doesn't reveal if email exists)
+      if (result.type === 'error' && result.code === 'rate_limited') {
         return render(
-          <Layout>
-            <div css={{ maxWidth: '500px', margin: '4rem auto', padding: '0 20px' }}>
-              <h1
-                css={{
-                  fontSize: '2rem',
-                  fontWeight: 600,
-                  marginBottom: '1rem',
-                  color: '#1d1d1f',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                Check Your Email
-              </h1>
-              <div
-                css={{
-                  background: '#d4edda',
-                  border: '1px solid #28a745',
-                  padding: '1rem',
-                  marginBottom: '1rem',
-                  borderRadius: '6px',
-                }}
-              >
-                Password reset link sent! Check your email for instructions.
-              </div>
-              <p css={{ fontSize: '0.875rem', color: '#6e6e73', marginBottom: '1.5rem' }}>
-                <strong>Demo Mode:</strong> In production, this page wouldn't reveal whether the
-                account exists, and the reset link would only be sent via email. For this demo,
-                check the terminal to see the email (if sent).
-              </p>
-              <div css={{ marginTop: '1.5rem' }}>
-                <a href={routes.auth.login.index.href()} css={{ color: '#007aff' }}>
-                  Back to Login
-                </a>
-              </div>
-            </div>
-          </Layout>,
+          <ForgotPasswordForm
+            error={`Too many attempts. Please try again in ${result.retryAfter} seconds.`}
+          />,
         )
-      },
+      }
+
+      // If we got a token, send the email
+      if (result.type === 'success') {
+        let { user, token } = result.data
+        let baseURL = new URL(request.url).origin
+        let resetFormUrl = `${baseURL}${routes.auth.resetPassword.index.href({ token })}`
+        sendEmail({
+          to: user.email,
+          subject: 'Reset your password',
+          text: `Hi ${user.name},\n\nClick the link below to reset your password:\n\n${resetFormUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`,
+        })
+      } else if (result.type === 'error' && process.env.NODE_ENV === 'development') {
+        // Log error in development, but don't reveal if email exists
+        console.log('Password reset error:', result.code)
+      }
+
+      // Always show the same success message (don't reveal if email exists)
+      return render(
+        <Layout>
+          <div css={{ maxWidth: '500px', margin: '4rem auto', padding: '0 20px' }}>
+            <h1
+              css={{
+                fontSize: '2rem',
+                fontWeight: 600,
+                marginBottom: '1rem',
+                color: '#1d1d1f',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Check Your Email
+            </h1>
+            <div
+              css={{
+                background: '#d4edda',
+                border: '1px solid #28a745',
+                padding: '1rem',
+                marginBottom: '1rem',
+                borderRadius: '6px',
+              }}
+            >
+              Password reset link sent! Check your email for instructions.
+            </div>
+            <p css={{ fontSize: '0.875rem', color: '#6e6e73', marginBottom: '1.5rem' }}>
+              <strong>Demo Mode:</strong> In production, this page wouldn't reveal whether the
+              account exists, and the reset link would only be sent via email. For this demo, check
+              the terminal to see the email (if sent).
+            </p>
+            <div css={{ marginTop: '1.5rem' }}>
+              <a href={routes.auth.login.index.href()} css={{ color: '#007aff' }}>
+                Back to Login
+              </a>
+            </div>
+          </div>
+        </Layout>,
+      )
+    },
+  },
+
+  resetPassword: {
+    index({ params }) {
+      let token = params.token
+      return render(<ResetPasswordForm token={token} />)
     },
 
-    resetPassword: {
-      index({ params }) {
-        let token = params.token
-        return render(<ResetPasswordForm token={token} />)
-      },
+    async action({ formData, params, session, request }) {
+      let newPassword = formData.get('password') as string
+      let confirmPassword = formData.get('confirmPassword') as string
+      let token = params.token
 
-      async action({ formData, params, session, request }) {
-        let newPassword = formData.get('password') as string
-        let confirmPassword = formData.get('confirmPassword') as string
-        let token = params.token
+      if (newPassword !== confirmPassword) {
+        return render(<ResetPasswordForm token={token} error="Passwords do not match" />)
+      }
 
-        if (newPassword !== confirmPassword) {
-          return render(<ResetPasswordForm token={token} error="Passwords do not match" />)
-        }
+      let result = await authClient.password.reset({ session, token, newPassword, request })
 
-        let result = await authClient.password.reset({ session, token, newPassword, request })
-
-        if (result.type === 'error') {
-          let getErrorMessage = () => {
-            switch (result.code) {
-              case 'invalid_or_expired_token':
-                return 'Invalid or expired reset token'
-              case 'user_not_found':
-                return 'User not found'
-              case 'rate_limited':
-                return `Too many attempts. Please try again in ${result.retryAfter} seconds.`
-              default: {
-                return 'An unknown error occurred'
-              }
+      if (result.type === 'error') {
+        let getErrorMessage = () => {
+          switch (result.code) {
+            case 'invalid_or_expired_token':
+              return 'Invalid or expired reset token'
+            case 'user_not_found':
+              return 'User not found'
+            case 'rate_limited':
+              return `Too many attempts. Please try again in ${result.retryAfter} seconds.`
+            default: {
+              return 'An unknown error occurred'
             }
           }
-          return render(<ResetPasswordForm token={token} error={getErrorMessage()} />)
         }
+        return render(<ResetPasswordForm token={token} error={getErrorMessage()} />)
+      }
 
-        // Success - send confirmation email
-        sendEmail({
-          to: result.data.user.email,
-          subject: 'Your Password Has Been Reset',
-          text: `Hi there,
+      // Success - send confirmation email
+      sendEmail({
+        to: result.data.user.email,
+        subject: 'Your Password Has Been Reset',
+        text: `Hi there,
 
 Your password has been successfully reset.
 
 If you didn't make this change, please contact support immediately.`,
-        })
+      })
 
-        return render(
-          <Layout>
-            <div css={{ maxWidth: '500px', margin: '4rem auto', padding: '0 20px' }}>
-              <h1
-                css={{
-                  fontSize: '2rem',
-                  fontWeight: 600,
-                  marginBottom: '1rem',
-                  color: '#1d1d1f',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                Password Reset Successful
-              </h1>
-              <div
-                css={{
-                  background: '#d4edda',
-                  border: '1px solid #28a745',
-                  padding: '1rem',
-                  marginBottom: '1rem',
-                  borderRadius: '6px',
-                }}
-              >
-                Password reset successfully! You can now login with your new password.
-              </div>
-              <div css={{ marginTop: '1.5rem' }}>
-                <a href={routes.auth.login.index.href()} css={{ color: '#007aff' }}>
-                  Login
-                </a>
-              </div>
+      return render(
+        <Layout>
+          <div css={{ maxWidth: '500px', margin: '4rem auto', padding: '0 20px' }}>
+            <h1
+              css={{
+                fontSize: '2rem',
+                fontWeight: 600,
+                marginBottom: '1rem',
+                color: '#1d1d1f',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Password Reset Successful
+            </h1>
+            <div
+              css={{
+                background: '#d4edda',
+                border: '1px solid #28a745',
+                padding: '1rem',
+                marginBottom: '1rem',
+                borderRadius: '6px',
+              }}
+            >
+              Password reset successfully! You can now login with your new password.
             </div>
-          </Layout>,
-        )
-      },
+            <div css={{ marginTop: '1.5rem' }}>
+              <a href={routes.auth.login.index.href()} css={{ color: '#007aff' }}>
+                Login
+              </a>
+            </div>
+          </div>
+        </Layout>,
+      )
     },
   },
-} satisfies RouteHandlers<typeof routes.auth>
+} satisfies Controller<typeof routes.auth>
 
 // Form components
 

@@ -1,4 +1,4 @@
-import type { RouteHandlers } from '@remix-run/fetch-router'
+import type { Controller } from '@remix-run/fetch-router'
 import type { routes } from '../routes.ts'
 
 // Storage for customized profiles by access token
@@ -583,5 +583,5 @@ export function createMockOAuthHandlers(options: {
         headers: { 'Content-Type': 'application/json' },
       })
     },
-  } satisfies RouteHandlers<typeof routes.mockOAuth>
+  } satisfies Controller<typeof routes.mockOAuth>
 }

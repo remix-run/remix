@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it, beforeEach } from 'node:test'
-import { createRouter, type RouteHandler } from '@remix-run/fetch-router'
+import { createRouter } from '@remix-run/fetch-router'
 import { formData as formDataMiddleware } from '@remix-run/form-data-middleware'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
 import { createAuthClient } from '@remix-run/auth'
