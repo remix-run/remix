@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/fetch-router",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "A minimal, composable router for the web Fetch API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -47,7 +47,7 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "test": "node --disable-warning=ExperimentalWarning --test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

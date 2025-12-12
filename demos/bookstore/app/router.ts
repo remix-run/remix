@@ -11,15 +11,15 @@ import { routes } from './routes.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
 import { uploadHandler } from './utils/uploads.ts'
 
-import adminHandlers from './admin.tsx'
-import accountHandlers from './account.tsx'
-import authHandlers from './auth.tsx'
-import booksHandlers from './books.tsx'
-import cartHandlers from './cart.tsx'
-import checkoutHandlers from './checkout.tsx'
-import fragmentsHandlers from './fragments.tsx'
-import * as marketingHandlers from './marketing.tsx'
-import { uploadsHandler } from './uploads.tsx'
+import adminController from './admin.tsx'
+import accountController from './account.tsx'
+import authController from './auth.tsx'
+import booksController from './books.tsx'
+import cartController from './cart.tsx'
+import checkoutController from './checkout.tsx'
+import fragmentsController from './fragments.tsx'
+import * as marketingController from './marketing.tsx'
+import { uploadsAction } from './uploads.tsx'
 
 let middleware = []
 
@@ -42,18 +42,18 @@ middleware.push(asyncContext())
 
 export let router = createRouter({ middleware })
 
-router.get(routes.uploads, uploadsHandler)
+router.get(routes.uploads, uploadsAction)
 
-router.map(routes.home, marketingHandlers.home)
-router.map(routes.about, marketingHandlers.about)
-router.map(routes.contact, marketingHandlers.contact)
-router.map(routes.search, marketingHandlers.search)
+router.map(routes.home, marketingController.home)
+router.map(routes.about, marketingController.about)
+router.map(routes.contact, marketingController.contact)
+router.map(routes.search, marketingController.search)
 
-router.map(routes.fragments, fragmentsHandlers)
+router.map(routes.fragments, fragmentsController)
 
-router.map(routes.books, booksHandlers)
-router.map(routes.auth, authHandlers)
-router.map(routes.cart, cartHandlers)
-router.map(routes.account, accountHandlers)
-router.map(routes.checkout, checkoutHandlers)
-router.map(routes.admin, adminHandlers)
+router.map(routes.books, booksController)
+router.map(routes.auth, authController)
+router.map(routes.cart, cartController)
+router.map(routes.account, accountController)
+router.map(routes.checkout, checkoutController)
+router.map(routes.admin, adminController)

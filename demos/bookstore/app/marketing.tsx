@@ -1,16 +1,15 @@
-import type { BuildRouteHandler, RouteHandlers } from '@remix-run/fetch-router'
+import type { BuildAction, Controller } from '@remix-run/fetch-router'
 import { Frame } from '@remix-run/dom'
 
 import { routes } from './routes.ts'
-
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { searchBooks } from './models/books.ts'
 import { render } from './utils/render.ts'
 
-export let home: BuildRouteHandler<'GET', typeof routes.home> = {
+export let home: BuildAction<'GET', typeof routes.home> = {
   middleware: [loadAuth()],
-  handler() {
+  action() {
     return render(
       <Layout>
         <div class="card">
@@ -37,9 +36,9 @@ export let home: BuildRouteHandler<'GET', typeof routes.home> = {
   },
 }
 
-export let about: BuildRouteHandler<'GET', typeof routes.about> = {
+export let about: BuildAction<'GET', typeof routes.about> = {
   middleware: [loadAuth()],
-  handler() {
+  action() {
     return render(
       <Layout>
         <div class="card">
@@ -98,9 +97,9 @@ export let about: BuildRouteHandler<'GET', typeof routes.about> = {
   },
 }
 
-export let contact: RouteHandlers<typeof routes.contact> = {
+export let contact: Controller<typeof routes.contact> = {
   middleware: [loadAuth()],
-  handlers: {
+  actions: {
     index() {
       return render(
         <Layout>
@@ -152,9 +151,9 @@ export let contact: RouteHandlers<typeof routes.contact> = {
   },
 }
 
-export let search: BuildRouteHandler<'GET', typeof routes.search> = {
+export let search: BuildAction<'GET', typeof routes.search> = {
   middleware: [loadAuth()],
-  handler({ url }) {
+  action({ url }) {
     let query = url.searchParams.get('q') ?? ''
     let books = query ? searchBooks(query) : []
 

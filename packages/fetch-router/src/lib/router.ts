@@ -1,11 +1,16 @@
-import { type Matcher, RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { type Matcher, ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
 
 import { type Middleware, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
-import type { RequestHandler } from './request-handler.ts'
 import type { RequestMethod } from './request-methods.ts'
-import { type RouteHandlers, type RouteHandler, hasHandlers, hasHandler } from './route-handlers.ts'
+import {
+  type Controller,
+  type Action,
+  type RequestHandler,
+  isControllerWithMiddleware,
+  isActionWithMiddleware,
+} from './controller.ts'
 import { type RouteMap, Route } from './route-map.ts'
 
 type MatchData = {
@@ -13,6 +18,26 @@ type MatchData = {
   method: RequestMethod | 'ANY'
   middleware: Middleware<any>[] | undefined
 }
+
+/**
+ * The valid types for the first argument to `router.map()`.
+ */
+export type MapTarget =
+  | string
+  | RoutePattern<string>
+  | Route<RequestMethod | 'ANY', string>
+  | RouteMap
+
+/**
+ * Infer the correct handler type (Action or Controller) based on the map target.
+ */
+// prettier-ignore
+export type MapHandler<target extends MapTarget> =
+  target extends string ? Action<RequestMethod | 'ANY', target> :
+  target extends RoutePattern<infer pattern extends string> ? Action<RequestMethod | 'ANY', pattern> :
+  target extends Route<RequestMethod | 'ANY', infer pattern extends string> ? Action<RequestMethod | 'ANY', pattern> :
+  target extends RouteMap ? Controller<target> :
+  never
 
 /**
  * Options for creating a router.
@@ -27,7 +52,7 @@ export interface RouterOptions {
   /**
    * The matcher to use for matching routes.
    *
-   * @default `new RegExpMatcher()`
+   * @default `new ArrayMatcher()`
    */
   matcher?: Matcher<MatchData>
   /**
@@ -38,7 +63,7 @@ export interface RouterOptions {
 }
 
 /**
- * A router maps incoming requests to route handler functions and middleware.
+ * A router maps incoming requests to request handlers and middleware.
  */
 export interface Router {
   /**
@@ -58,110 +83,89 @@ export interface Router {
    *
    * @param method The request method to match
    * @param pattern The pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   route<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
-    handler: RouteHandler<method, pattern>,
+    action: Action<method, pattern>,
   ): void
   /**
-   * Map a route map (or route/pattern) to request handler(s).
+   * Map a route or route map to an action or controller.
    *
-   * @param route The route(s)/pattern to match
-   * @param handler The request handler(s) to invoke when the routes match
+   * @param target The route/pattern or route map to match
+   * @param handler The action or controller to invoke when the route(s) match
    */
-  map<
-    route extends RouteMap | Route<RequestMethod | 'ANY', string> | RoutePattern<string> | string,
-  >(
-    route: route,
-    handler: // prettier-ignore
-    // map(routeMap, routeHandlers)
-    [route] extends [RouteMap] ? RouteHandlers<route> :
-
-    // map(route, routeHandler)
-    route extends Route<
-      infer method extends RequestMethod | 'ANY',
-      infer source extends string
-    > ? method extends 'ANY' ? RouteHandler<RequestMethod | 'ANY', source> : RouteHandler<method, source> :
-
-    // map(pattern, routeHandler)
-    route extends RoutePattern<infer source extends string> ? RouteHandler<RequestMethod | 'ANY', source> :
-
-    // map(stringPattern, routeHandler)
-    route extends string ? RouteHandler<RequestMethod | 'ANY', route>:
-
-    never,
-  ): void
+  map<target extends MapTarget>(target: target, handler: MapHandler<target>): void
   /**
-   * Map a `GET` route/pattern to a request handler.
+   * Map a `GET` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   get<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
-    handler: RouteHandler<'GET', pattern>,
+    action: Action<'GET', pattern>,
   ): void
   /**
-   * Map a `HEAD` route/pattern to a request handler.
+   * Map a `HEAD` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   head<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
-    handler: RouteHandler<'HEAD', pattern>,
+    action: Action<'HEAD', pattern>,
   ): void
   /**
-   * Map a `POST` route/pattern to a request handler.
+   * Map a `POST` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   post<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
-    handler: RouteHandler<'POST', pattern>,
+    action: Action<'POST', pattern>,
   ): void
   /**
-   * Map a `PUT` route/pattern to a request handler.
+   * Map a `PUT` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   put<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
-    handler: RouteHandler<'PUT', pattern>,
+    action: Action<'PUT', pattern>,
   ): void
   /**
-   * Map a `PATCH` route/pattern to a request handler.
+   * Map a `PATCH` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   patch<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
-    handler: RouteHandler<'PATCH', pattern>,
+    action: Action<'PATCH', pattern>,
   ): void
   /**
-   * Map a `DELETE` route/pattern to a request handler.
+   * Map a `DELETE` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   delete<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
-    handler: RouteHandler<'DELETE', pattern>,
+    action: Action<'DELETE', pattern>,
   ): void
   /**
-   * Map an `OPTIONS` route/pattern to a request handler.
+   * Map an `OPTIONS` route/pattern to an action.
    *
    * @param route The route/pattern to match
-   * @param handler The request handler to invoke when the route matches
+   * @param action The action to invoke when the route matches
    */
   options<pattern extends string>(
     route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
-    handler: RouteHandler<'OPTIONS', pattern>,
+    action: Action<'OPTIONS', pattern>,
   ): void
 }
 
@@ -177,10 +181,10 @@ function noMatchHandler({ url }: RequestContext): Response {
  */
 export function createRouter(options?: RouterOptions): Router {
   let defaultHandler = options?.defaultHandler ?? noMatchHandler
-  let matcher = options?.matcher ?? new RegExpMatcher<MatchData>()
-  let middleware = options?.middleware
+  let matcher = options?.matcher ?? new ArrayMatcher<MatchData>()
+  let globalMiddleware = options?.middleware
 
-  async function dispatch(context: RequestContext): Promise<Response> {
+  function dispatch(context: RequestContext): Promise<Response> {
     for (let match of matcher.matchAll(context.url)) {
       let { handler, method, middleware } = match.data
 
@@ -190,7 +194,6 @@ export function createRouter(options?: RouterOptions): Router {
       }
 
       context.params = match.params
-      context.url = match.url
 
       if (middleware) {
         return runMiddleware(middleware, context, handler)
@@ -204,85 +207,97 @@ export function createRouter(options?: RouterOptions): Router {
 
   function addRoute<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
-    pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
-    handler: RouteHandler<method, pattern>,
+    route: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
+    action: Action<method, pattern>,
   ): void {
-    let routeMiddleware: Middleware<any, any>[] | undefined
+    let middleware: Middleware<any, any>[] | undefined
     let requestHandler: RequestHandler<any, any>
-    if (hasHandler(handler)) {
-      routeMiddleware = handler.middleware
-      requestHandler = handler.handler
+    if (isActionWithMiddleware(action)) {
+      middleware = action.middleware.length > 0 ? action.middleware : undefined
+      requestHandler = action.action
     } else {
-      requestHandler = handler
+      requestHandler = action as RequestHandler<any, any>
     }
 
-    matcher.add(pattern instanceof Route ? pattern.pattern : pattern, {
+    matcher.add(route instanceof Route ? route.pattern : route, {
       handler: requestHandler,
       method,
-      middleware: routeMiddleware,
+      middleware,
     })
   }
 
-  function mapRoute(routeArg: any, handlerArg: any): void {
-    if (typeof routeArg === 'string' || routeArg instanceof RoutePattern) {
-      // map(pattern, handler)
-      addRoute('ANY', routeArg, handlerArg)
-    } else if (routeArg instanceof Route) {
-      // map(route, handler)
-      addRoute(routeArg.method, routeArg.pattern, handlerArg)
-    } else if (!hasHandlers(handlerArg)) {
-      // map(routes, handlers)
-      let handlers = handlerArg
-      for (let key in routeArg) {
-        let route = routeArg[key]
-        let handler = handlers[key]
+  function mapRoutes(target: MapTarget, handler: unknown): void {
+    // Single route: string, RoutePattern, or Route
+    if (typeof target === 'string' || target instanceof RoutePattern || target instanceof Route) {
+      addRoute('ANY', target as any, handler as Action<any, any>)
+      return
+    }
 
-        if (route instanceof Route) {
-          addRoute(route.method, route.pattern, handler)
-        } else {
-          mapRoute(route, handler)
-        }
-      }
+    // Route map
+    if (isControllerWithMiddleware(handler)) {
+      // map(routes, { middleware, actions })
+      mapControllerWithMiddleware(target, handler.middleware, handler.actions)
     } else {
-      // map(routes, { middleware?, handlers })
-      let mapMiddleware = handlerArg.middleware
-      let handlers = handlerArg.handlers
-      for (let key in routeArg) {
-        let route = routeArg[key]
-        let handler = (handlers as any)[key]
+      // map(routes, controller)
+      mapController(target, handler as Record<string, unknown>)
+    }
+  }
 
-        if (route instanceof Route) {
-          let routeMiddleware =
-            mapMiddleware && handler.middleware
-              ? mapMiddleware.concat(handler.middleware)
-              : mapMiddleware || handler.middleware
+  function mapControllerWithMiddleware(
+    routes: RouteMap,
+    middleware: Middleware[],
+    actions: Record<string, unknown>,
+  ): void {
+    for (let key in routes) {
+      let route = routes[key]
+      let action = actions[key]
 
-          if (hasHandler(handler)) {
-            addRoute(route.method, route.pattern, {
-              middleware: routeMiddleware,
-              handler: handler.handler,
-            })
-          } else {
-            addRoute(route.method, route.pattern, { middleware: routeMiddleware, handler })
-          }
-        } else if (hasHandlers(handler)) {
-          // map(routes, { middleware?, handlers: { home: { middleware?, handlers } } })
-          let routeMiddleware =
-            mapMiddleware && handler.middleware
-              ? mapMiddleware.concat(handler.middleware)
-              : mapMiddleware || handler.middleware
-
-          mapRoute(route, { middleware: routeMiddleware, handlers: handler.handlers })
+      if (route instanceof Route) {
+        // Single route - check if action has its own middleware
+        if (isActionWithMiddleware(action)) {
+          addRoute(route.method, route.pattern, {
+            middleware: middleware.concat(action.middleware),
+            action: action.action,
+          })
         } else {
-          // map(routes, { middleware?, handlers })
-          mapRoute(route, { middleware: mapMiddleware, handlers: handler })
+          addRoute(route.method, route.pattern, {
+            middleware,
+            action: action as RequestHandler<any, any>,
+          })
         }
+      } else if (isControllerWithMiddleware(action)) {
+        // Nested controller with its own middleware - merge and recurse
+        mapControllerWithMiddleware(
+          route as RouteMap,
+          middleware.concat(action.middleware),
+          action.actions,
+        )
+      } else {
+        // Nested controller without middleware - pass down current middleware
+        mapControllerWithMiddleware(
+          route as RouteMap,
+          middleware,
+          action as Record<string, unknown>,
+        )
+      }
+    }
+  }
+
+  function mapController(routes: RouteMap, controller: Record<string, unknown>): void {
+    for (let key in routes) {
+      let route = routes[key]
+      let action = controller[key]
+
+      if (route instanceof Route) {
+        addRoute(route.method, route.pattern, action as Action<any, any>)
+      } else {
+        mapRoutes(route as RouteMap, action)
       }
     }
   }
 
   return {
-    async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+    fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
       let request = new Request(input, init)
 
       if (request.signal.aborted) {
@@ -290,58 +305,59 @@ export function createRouter(options?: RouterOptions): Router {
       }
 
       let context = new RequestContext(request)
-      let response = middleware
-        ? await runMiddleware(middleware, context, dispatch)
-        : await dispatch(context)
 
-      return response
+      if (globalMiddleware) {
+        return runMiddleware(globalMiddleware, context, dispatch)
+      }
+
+      return dispatch(context)
     },
     get size(): number {
       return matcher.size
     },
     route: addRoute,
-    map: mapRoute,
+    map: mapRoutes,
     get<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
-      handler: RouteHandler<'GET', pattern>,
+      action: Action<'GET', pattern>,
     ): void {
-      addRoute('GET', route, handler)
+      addRoute('GET', route, action)
     },
     head<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
-      handler: RouteHandler<'HEAD', pattern>,
+      action: Action<'HEAD', pattern>,
     ): void {
-      addRoute('HEAD', route, handler)
+      addRoute('HEAD', route, action)
     },
     post<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
-      handler: RouteHandler<'POST', pattern>,
+      action: Action<'POST', pattern>,
     ): void {
-      addRoute('POST', route, handler)
+      addRoute('POST', route, action)
     },
     put<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
-      handler: RouteHandler<'PUT', pattern>,
+      action: Action<'PUT', pattern>,
     ): void {
-      addRoute('PUT', route, handler)
+      addRoute('PUT', route, action)
     },
     patch<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
-      handler: RouteHandler<'PATCH', pattern>,
+      action: Action<'PATCH', pattern>,
     ): void {
-      addRoute('PATCH', route, handler)
+      addRoute('PATCH', route, action)
     },
     delete<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
-      handler: RouteHandler<'DELETE', pattern>,
+      action: Action<'DELETE', pattern>,
     ): void {
-      addRoute('DELETE', route, handler)
+      addRoute('DELETE', route, action)
     },
     options<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
-      handler: RouteHandler<'OPTIONS', pattern>,
+      action: Action<'OPTIONS', pattern>,
     ): void {
-      addRoute('OPTIONS', route, handler)
+      addRoute('OPTIONS', route, action)
     },
   }
 }

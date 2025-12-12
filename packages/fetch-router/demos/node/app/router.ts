@@ -19,7 +19,7 @@ let sessionCookie = createCookie('__sess', {
 let sessionStorage = createCookieSessionStorage()
 
 function requireAuth(): Middleware {
-  return async ({ session }, next) => {
+  return ({ session }, next) => {
     let username = session.get('username')
     if (!username) {
       return redirect(routes.login.index.href())
@@ -127,7 +127,7 @@ router.post(routes.logout, ({ session }) => {
 router.map(routes.posts, {
   new: {
     middleware: [requireAuth()],
-    handler({ session: _session }) {
+    action() {
       return createHtmlResponse(`
         <html>
           <head>

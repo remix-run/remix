@@ -1,13 +1,13 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createFormAction as formAction } from './form-action.ts'
-import { createRoutes as route, Route } from './route-map.ts'
-import type { Assert, IsEqual } from './type-utils.ts'
+import { createFormRoutes as form } from './form.ts'
+import { createRoutes as route, Route } from '../route-map.ts'
+import type { Assert, IsEqual } from '../type-utils.ts'
 
-describe('createFormAction', () => {
+describe('form routes helper', () => {
   it('creates a route map with index and action routes', () => {
-    let login = formAction('login')
+    let login = form('login')
 
     type T = [
       Assert<
@@ -26,7 +26,7 @@ describe('createFormAction', () => {
   })
 
   it('supports a custom form method', () => {
-    let settings = formAction('settings', { formMethod: 'PUT' })
+    let settings = form('settings', { formMethod: 'PUT' })
 
     type T = [
       Assert<
@@ -45,7 +45,7 @@ describe('createFormAction', () => {
   })
 
   it('supports a custom index name', () => {
-    let profile = formAction('profile', { names: { index: 'show' } })
+    let profile = form('profile', { names: { index: 'show' } })
 
     type T = [
       Assert<
@@ -64,7 +64,7 @@ describe('createFormAction', () => {
   })
 
   it('supports a custom action name', () => {
-    let signup = formAction('signup', { names: { action: 'register' } })
+    let signup = form('signup', { names: { action: 'register' } })
 
     type T = [
       Assert<
@@ -83,9 +83,9 @@ describe('createFormAction', () => {
   })
 
   it('supports custom names for both index and action', () => {
-    let contact = formAction('contact', {
+    let contact = form('contact', {
       names: {
-        index: 'form',
+        index: 'show',
         action: 'submit',
       },
     })
@@ -95,19 +95,19 @@ describe('createFormAction', () => {
         IsEqual<
           typeof contact,
           {
-            form: Route<'GET', '/contact'>
+            show: Route<'GET', '/contact'>
             submit: Route<'POST', '/contact'>
           }
         >
       >,
     ]
 
-    assert.deepEqual(contact.form, new Route('GET', '/contact'))
+    assert.deepEqual(contact.show, new Route('GET', '/contact'))
     assert.deepEqual(contact.submit, new Route('POST', '/contact'))
   })
 
   it('supports custom names with custom form method', () => {
-    let account = formAction('account', {
+    let account = form('account', {
       formMethod: 'PATCH',
       names: {
         index: 'edit',
@@ -131,11 +131,11 @@ describe('createFormAction', () => {
     assert.deepEqual(account.update, new Route('PATCH', '/account'))
   })
 
-  it('creates nested form actions', () => {
+  it('creates nested forms', () => {
     let routes = route({
       account: {
-        ...formAction('account'),
-        settings: formAction('account/settings'),
+        ...form('account'),
+        settings: form('account/settings'),
       },
     })
 

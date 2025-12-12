@@ -1,4 +1,4 @@
-import type { RouteHandlers } from '@remix-run/fetch-router'
+import type { Controller } from '@remix-run/fetch-router'
 
 import type { routes } from './routes.ts'
 import { BookCard } from './components/book-card.tsx'
@@ -9,7 +9,7 @@ import { getCurrentCart } from './utils/context.ts'
 
 export default {
   middleware: [loadAuth()],
-  handlers: {
+  actions: {
     async bookCard({ params }) {
       // Simulate network latency
       // await new Promise((resolve) => setTimeout(resolve, 1000 * Math.random()))
@@ -26,4 +26,4 @@ export default {
       return render(<BookCard book={book} inCart={inCart} />)
     },
   },
-} satisfies RouteHandlers<typeof routes.fragments>
+} satisfies Controller<typeof routes.fragments>

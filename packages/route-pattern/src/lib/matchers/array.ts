@@ -1,5 +1,5 @@
-import type { Matcher, MatchResult } from './matcher.ts'
-import { RoutePattern } from './route-pattern.ts'
+import type { Matcher, MatchResult } from '../matcher.ts'
+import { RoutePattern } from '../route-pattern.ts'
 
 /**
  * A simple array-based matcher that compiles route patterns to regular expressions.
@@ -10,15 +10,15 @@ import { RoutePattern } from './route-pattern.ts'
  * - Pattern set changes frequently (cheap to rebuild)
  * - Memory footprint needs to be minimal
  */
-export class RegExpMatcher<T = any> implements Matcher<T> {
-  #pairs: { pattern: RoutePattern; data: T }[] = []
+export class ArrayMatcher<data = unknown> implements Matcher<data> {
+  #pairs: { pattern: RoutePattern; data: data }[] = []
   #count = 0
 
   /**
    * @param pattern The pattern to add
    * @param data The data to associate with the pattern
    */
-  add<P extends string>(pattern: P | RoutePattern<P>, data: T): void {
+  add<source extends string>(pattern: source | RoutePattern<source>, data: data): void {
     let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
     this.#pairs.push({ pattern: routePattern, data })
     this.#count++
@@ -28,7 +28,7 @@ export class RegExpMatcher<T = any> implements Matcher<T> {
    * @param url The URL to match
    * @return The match result, or `null` if no match was found
    */
-  match(url: string | URL): MatchResult<T> | null {
+  match(url: string | URL): MatchResult<data> | null {
     if (typeof url === 'string') url = new URL(url)
 
     for (let { pattern, data } of this.#pairs) {
@@ -45,7 +45,7 @@ export class RegExpMatcher<T = any> implements Matcher<T> {
    * @param url The URL to match
    * @return A generator that yields all matches
    */
-  *matchAll(url: string | URL): Generator<MatchResult<T>> {
+  *matchAll(url: string | URL): Generator<MatchResult<data>> {
     if (typeof url === 'string') url = new URL(url)
 
     for (let { pattern, data } of this.#pairs) {

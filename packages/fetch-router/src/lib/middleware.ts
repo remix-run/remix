@@ -1,6 +1,6 @@
+import type { RequestHandler } from './controller.ts'
 import { raceRequestAbort } from './request-abort.ts'
 import type { RequestContext } from './request-context.ts'
-import type { RequestHandler } from './request-handler.ts'
 import type { RequestMethod } from './request-methods.ts'
 
 /**
@@ -34,7 +34,7 @@ export function runMiddleware<
 >(
   middleware: Middleware<method, params>[],
   context: RequestContext<method, params>,
-  handler: RequestHandler<method, params, Response>,
+  handler: RequestHandler<method, params>,
 ): Promise<Response> {
   let index = -1
 

@@ -1,6 +1,7 @@
 import type { RequiredParams, OptionalParams } from './params.ts'
 import { parse, type ParseResult, type Token } from './parse.ts'
 import type { RoutePattern } from './route-pattern.ts'
+import type { UnknownArgs } from './type-utils.ts'
 import type { Variant } from './variant.ts'
 
 /**
@@ -28,7 +29,7 @@ export class MissingParamError extends Error {
  * @return A function that builds hrefs from patterns and parameters
  */
 export function createHrefBuilder<T extends string | RoutePattern = string>(): HrefBuilder<T> {
-  return (pattern: string | RoutePattern, ...args: any) =>
+  return (pattern: string | RoutePattern, ...args: UnknownArgs) =>
     formatHref(parse(typeof pattern === 'string' ? pattern : pattern.source), ...args)
 }
 

@@ -57,7 +57,7 @@ let sessionCookie = createCookie('session', {
   secrets: ['secret1'],
 })
 
-console.log(sessionCookie.isSigned) // true
+console.log(sessionCookie.signed) // true
 
 let response = new Response('Hello, world!', {
   headers: {
@@ -86,7 +86,7 @@ let response = new Response('Hello, world!', {
 
 ### Custom Encoding
 
-By default, the library will use `encodeURIComponent` and `decodeURIComponent` to encode and decode the cookie value. This is suitable for most use cases, but you can provide your own functions to customize the encoding and decoding of the cookie value.
+By default, [`encodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent) and [`decodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/decodeURIComponent) are used to encode and decode the cookie value. This is suitable for most use cases, but you can provide your own functions to customize the encoding and decoding of the cookie value.
 
 ```tsx
 let sessionCookie = createCookie('session', {

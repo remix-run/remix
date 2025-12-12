@@ -1,7 +1,8 @@
 import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { openFile } from '@remix-run/fs'
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const fixturesDir = path.resolve(__dirname, 'fixtures')
 
 export const fixtures = {

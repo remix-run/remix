@@ -1,4 +1,4 @@
-export async function raceRequestAbort<T>(promise: Promise<T>, request: Request): Promise<T> {
+export function raceRequestAbort<T>(promise: Promise<T>, request: Request): Promise<T> {
   let signal = request.signal
 
   if (signal.aborted) {

@@ -42,7 +42,7 @@
     "clean": "git clean -fdX",
     "codegen": "node --disable-warning=ExperimentalWarning ./scripts/codegen.js",
     "prepublishOnly": "pnpm run build",
-    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts' './scripts/**/*.test.ts'",
+    "test": "node --disable-warning=ExperimentalWarning --test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [
