@@ -17,6 +17,9 @@
     "src"
   ],
   "type": "module",
+  "bin": {
+    "remix": "./dist/cli.js"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./platform": "./src/index-platform.ts",
