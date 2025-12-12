@@ -750,6 +750,88 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/remix:
+    dependencies:
+      '@remix-run/compression-middleware':
+        specifier: workspace:^
+        version: link:../compression-middleware
+      '@remix-run/cookie':
+        specifier: workspace:^
+        version: link:../cookie
+      '@remix-run/fetch-proxy':
+        specifier: workspace:^
+        version: link:../fetch-proxy
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+      '@remix-run/file-storage':
+        specifier: workspace:^
+        version: link:../file-storage
+      '@remix-run/form-data-middleware':
+        specifier: workspace:^
+        version: link:../form-data-middleware
+      '@remix-run/form-data-parser':
+        specifier: workspace:^
+        version: link:../form-data-parser
+      '@remix-run/fs':
+        specifier: workspace:^
+        version: link:../fs
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
+      '@remix-run/html-template':
+        specifier: workspace:^
+        version: link:../html-template
+      '@remix-run/interaction':
+        specifier: workspace:^
+        version: link:../interaction
+      '@remix-run/lazy-file':
+        specifier: workspace:^
+        version: link:../lazy-file
+      '@remix-run/logger-middleware':
+        specifier: workspace:^
+        version: link:../logger-middleware
+      '@remix-run/method-override-middleware':
+        specifier: workspace:^
+        version: link:../method-override-middleware
+      '@remix-run/mime':
+        specifier: workspace:^
+        version: link:../mime
+      '@remix-run/multipart-parser':
+        specifier: workspace:^
+        version: link:../multipart-parser
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../node-fetch-server
+      '@remix-run/response':
+        specifier: workspace:^
+        version: link:../response
+      '@remix-run/route-pattern':
+        specifier: workspace:^
+        version: link:../route-pattern
+      '@remix-run/session':
+        specifier: workspace:^
+        version: link:../session
+      '@remix-run/session-middleware':
+        specifier: workspace:^
+        version: link:../session-middleware
+      '@remix-run/static-middleware':
+        specifier: workspace:^
+        version: link:../static-middleware
+      '@remix-run/tar-parser':
+        specifier: workspace:^
+        version: link:../tar-parser
+    devDependencies:
+      '@remix-run/async-context-middleware':
+        specifier: workspace:^
+        version: link:../async-context-middleware
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.6.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
   packages/response:
     dependencies:
       '@remix-run/headers':
