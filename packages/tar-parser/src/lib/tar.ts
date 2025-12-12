@@ -91,7 +91,7 @@ export interface ParseTarHeaderOptions {
  *
  * @param block The tar header block
  * @param options Options that control how the header is parsed
- * @return The parsed tar header
+ * @returns The parsed tar header
  */
 export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOptions): TarHeader {
   if (block.length !== TarBlockSize) {
@@ -187,7 +187,7 @@ export type ParseTarOptions = ParseTarHeaderOptions
  *
  * @param archive The tar archive source data
  * @param handler A function to call for each entry in the archive
- * @return A promise that resolves when the parse is finished
+ * @returns A promise that resolves when the parse is finished
  */
 export async function parseTar(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void>
 export async function parseTar(
@@ -245,7 +245,7 @@ export class TarParser {
    *
    * @param archive The tar archive source data
    * @param handler A function to call for each entry in the archive
-   * @return A promise that resolves when the parse is finished
+   * @returns A promise that resolves when the parse is finished
    */
   async parse(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void> {
     this.#reset()
@@ -468,7 +468,7 @@ export class TarEntry {
   /**
    * The content of this entry as an [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer).
    *
-   * @return A promise that resolves to an `ArrayBuffer`
+   * @returns A promise that resolves to an `ArrayBuffer`
    */
   async arrayBuffer(): Promise<ArrayBuffer> {
     return (await this.bytes()).buffer as ArrayBuffer
@@ -491,7 +491,7 @@ export class TarEntry {
   /**
    * The content of this entry buffered into a single typed array.
    *
-   * @return A promise that resolves to a `Uint8Array`
+   * @returns A promise that resolves to a `Uint8Array`
    */
   async bytes(): Promise<Uint8Array> {
     if (this.#bodyUsed) {
@@ -536,7 +536,7 @@ export class TarEntry {
    *
    * Note: Do not use this for binary data, use `await entry.bytes()` or stream `entry.body` directly instead.
    *
-   * @return A promise that resolves to the entry's content as a string
+   * @returns A promise that resolves to the entry's content as a string
    */
   async text(): Promise<string> {
     return new TextDecoder().decode(await this.bytes())

@@ -7,7 +7,7 @@ import type { SessionStorage } from '@remix-run/session'
  *
  * @param sessionCookie The session cookie to use
  * @param sessionStorage The storage backend for session data
- * @return The session middleware
+ * @returns The session middleware
  */
 export function session(sessionCookie: Cookie, sessionStorage: SessionStorage): Middleware {
   if (!sessionCookie.signed) {

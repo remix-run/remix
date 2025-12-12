@@ -65,7 +65,7 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
    * Gets the value of a cookie with the given name from the header.
    *
    * @param name The name of the cookie
-   * @return The value of the cookie, or `null` if the cookie does not exist
+   * @returns The value of the cookie, or `null` if the cookie does not exist
    */
   get(name: string): string | null {
     return this.#map.get(name) ?? null
@@ -94,7 +94,7 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
    * True if a cookie with the given name exists in the header.
    *
    * @param name The name of the cookie
-   * @return `true` if a cookie with the given name exists in the header
+   * @returns `true` if a cookie with the given name exists in the header
    */
   has(name: string): boolean {
     return this.#map.has(name)
@@ -110,7 +110,7 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
   /**
    * Returns an iterator of all cookie name and value pairs.
    *
-   * @return An iterator of `[name, value]` tuples
+   * @returns An iterator of `[name, value]` tuples
    */
   entries(): IterableIterator<[string, string]> {
     return this.#map.entries()
@@ -135,7 +135,7 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
   /**
    * Returns the string representation of the header value.
    *
-   * @return The header value as a string
+   * @returns The header value as a string
    */
   toString(): string {
     let pairs: string[] = []

@@ -63,7 +63,7 @@ export type BuildAction<method extends RequestMethod | 'ANY', route extends stri
  * A request handler function that returns some kind of response.
  *
  * @param context The request context
- * @return The response
+ * @returns The response
  */
 export interface RequestHandler<
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',

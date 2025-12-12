@@ -26,7 +26,7 @@ export class ArrayMatcher<data = unknown> implements Matcher<data> {
 
   /**
    * @param url The URL to match
-   * @return The match result, or `null` if no match was found
+   * @returns The match result, or `null` if no match was found
    */
   match(url: string | URL): MatchResult<data> | null {
     if (typeof url === 'string') url = new URL(url)
@@ -43,7 +43,7 @@ export class ArrayMatcher<data = unknown> implements Matcher<data> {
 
   /**
    * @param url The URL to match
-   * @return A generator that yields all matches
+   * @returns A generator that yields all matches
    */
   *matchAll(url: string | URL): Generator<MatchResult<data>> {
     if (typeof url === 'string') url = new URL(url)

@@ -89,7 +89,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
    * Returns `true` if the header matches the given encoding (i.e. it is "acceptable").
    *
    * @param encoding The encoding to check
-   * @return `true` if the encoding is acceptable, `false` otherwise
+   * @returns `true` if the encoding is acceptable, `false` otherwise
    */
   accepts(encoding: string): boolean {
     return encoding.toLowerCase() === 'identity' || this.getWeight(encoding) > 0
@@ -99,7 +99,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
    * Gets the weight an encoding. Performs wildcard matching so `*` matches all encodings.
    *
    * @param encoding The encoding to get
-   * @return The weight of the encoding, or `0` if it is not in the header
+   * @returns The weight of the encoding, or `0` if it is not in the header
    */
   getWeight(encoding: string): number {
     let lower = encoding.toLowerCase()
@@ -117,7 +117,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
    * Returns the most preferred encoding from the given list of encodings.
    *
    * @param encodings The encodings to choose from
-   * @return The most preferred encoding or `null` if none match
+   * @returns The most preferred encoding or `null` if none match
    */
   getPreferred<encoding extends string>(encodings: readonly encoding[]): encoding | null {
     let sorted = encodings
@@ -133,7 +133,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
    * Gets the weight of an encoding. If it is not in the header verbatim, this returns `null`.
    *
    * @param encoding The encoding to get
-   * @return The weight of the encoding, or `null` if it is not in the header
+   * @returns The weight of the encoding, or `null` if it is not in the header
    */
   get(encoding: string): number | null {
     return this.#map.get(encoding.toLowerCase()) ?? null
@@ -163,7 +163,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
    * Checks if the header contains a given encoding.
    *
    * @param encoding The encoding to check
-   * @return `true` if the encoding is in the header, `false` otherwise
+   * @returns `true` if the encoding is in the header, `false` otherwise
    */
   has(encoding: string): boolean {
     return this.#map.has(encoding.toLowerCase())
@@ -179,7 +179,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
   /**
    * Returns an iterator of all encoding and weight pairs.
    *
-   * @return An iterator of `[encoding, weight]` tuples
+   * @returns An iterator of `[encoding, weight]` tuples
    */
   entries(): IterableIterator<[string, number]> {
     return this.#map.entries()
@@ -207,7 +207,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
   /**
    * Returns the string representation of the header value.
    *
-   * @return The header value as a string
+   * @returns The header value as a string
    */
   toString(): string {
     let pairs: string[] = []

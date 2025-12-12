@@ -86,7 +86,7 @@ export class Range implements HeaderValue, RangeInit {
    * Checks if this range can be satisfied for a resource of the given size.
    *
    * @param resourceSize The size of the resource in bytes
-   * @return `false` if the range is malformed or all ranges are beyond the resource size
+   * @returns `false` if the range is malformed or all ranges are beyond the resource size
    */
   canSatisfy(resourceSize: number): boolean {
     // No unit or no ranges means header was malformed or empty
@@ -125,7 +125,7 @@ export class Range implements HeaderValue, RangeInit {
    * Returns an empty array if the range cannot be satisfied.
    *
    * @param resourceSize The size of the resource in bytes
-   * @return An array of ranges with resolved start and end values
+   * @returns An array of ranges with resolved start and end values
    */
   normalize(resourceSize: number): Array<{ start: number; end: number }> {
     if (!this.canSatisfy(resourceSize)) {
@@ -159,7 +159,7 @@ export class Range implements HeaderValue, RangeInit {
   /**
    * Returns the string representation of the header value.
    *
-   * @return The header value as a string
+   * @returns The header value as a string
    */
   toString(): string {
     if (!this.unit || this.ranges.length === 0) return ''
