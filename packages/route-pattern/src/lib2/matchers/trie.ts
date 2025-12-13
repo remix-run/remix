@@ -1,5 +1,5 @@
+import { RegExp_escape, Set_difference } from '../es2025.ts'
 import * as RoutePattern from '../route-pattern/index.ts'
-import * as RE from '../regexp.ts'
 import type { Matcher } from './matcher.ts'
 
 export class TrieMatcher<data> implements Matcher<data> {
@@ -31,8 +31,10 @@ const SEPARATORS = ['', '.', '/']
 type TrieIndex = [partIndex: number, segmentIndex: number]
 
 type Match<data> = {
-  paramNames: Array<string>
-  // todo: could pre-compute unused paramNames per variant here to get `undefined` for those
+  paramNames: {
+    included: Iterable<string>
+    excluded: Iterable<string>
+  }
   data: data
 }
 
@@ -51,9 +53,18 @@ export class Trie<data> {
   match?: Match<data>
 
   insert(pattern: RoutePattern.AST, data: data) {
+    let patternParamNames = new Set([
+      ...(pattern.protocol?.paramNames ?? []),
+      ...(pattern.hostname?.paramNames ?? []),
+      ...(pattern.pathname?.paramNames ?? []),
+    ])
+
     for (let variant of RoutePattern.variants(pattern)) {
       let match: Match<data> = {
-        paramNames: variant.paramNames,
+        paramNames: {
+          included: variant.paramNames,
+          excluded: Set_difference(patternParamNames, new Set(variant.paramNames)),
+        },
         data,
       }
 
@@ -132,12 +143,11 @@ export class Trie<data> {
       let state = stack.pop()!
 
       if (state.index[0] === query.length) {
-        if (state.trie.match) {
-          let { paramNames, data } = state.trie.match
-          let { paramValues } = state
+        let { match } = state.trie
+        if (match) {
           yield {
-            params: Trie.#toParams(paramNames, paramValues),
-            data,
+            params: Trie.#toParams(match, state.paramValues),
+            data: match.data,
           }
         }
         continue
@@ -206,7 +216,7 @@ export class Trie<data> {
   }
 
   static #keyToRegExp(key: string, separator: string): RegExp {
-    let variablePattern = `[^${RE.escape(separator)}]*`
+    let variablePattern = `[^${RegExp_escape(separator)}]*`
     let wildcardPattern = '.*'
 
     let source = key
@@ -215,18 +225,26 @@ export class Trie<data> {
       .map((part) => {
         if (part === '{:}') return `(${variablePattern})`
         if (part === '{*}') return `(${wildcardPattern})`
-        return RE.escape(part)
+        return RegExp_escape(part)
       })
       .join('')
 
     return new RegExp(`^${source}$`)
   }
 
-  static #toParams(paramNames: Array<string>, paramValues: Array<string>): Params {
+  static #toParams(match: Match<unknown>, paramValues: Array<string>): Params {
     let params: Params = {}
-    paramNames.forEach((name, i) => {
+
+    for (let name of match.paramNames.excluded) {
+      params[name] = undefined
+    }
+
+    let i = 0
+    for (let name of match.paramNames.included) {
       params[name] = paramValues[i]
-    })
+      i += 1
+    }
+
     return params
   }
 }

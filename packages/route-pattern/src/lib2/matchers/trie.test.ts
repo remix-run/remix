@@ -286,5 +286,41 @@ describe('trie', () => {
       expect(matches2[0]?.data).toBe(pattern1)
       expect(matches2[0]?.params).toEqual({ id: '123' })
     })
+
+    it('matches a pattern with optional variable when optional is not matched', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let pattern = parse('api/v:major(.:minor)')
+      trie.insert(pattern, pattern)
+
+      // Match without the optional minor version - minor should be explicitly undefined
+      let matches = searchAll(trie, new URL('https://example.com/api/v2'))
+      expect(matches.length).toBe(1)
+      expect(matches[0]?.data).toBe(pattern)
+      expect(matches[0]?.params).toStrictEqual({ major: '2', minor: undefined })
+
+      // Match with the optional minor version
+      let matches2 = searchAll(trie, new URL('https://example.com/api/v2.1'))
+      expect(matches2.length).toBe(2)
+      expect(matches2[0]?.data).toBe(pattern)
+      expect(matches2[0]?.params).toStrictEqual({ major: '2', minor: '1' })
+    })
+
+    it('matches a pattern with optional segment when optional is not matched', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let pattern = parse('users/:id(/details)')
+      trie.insert(pattern, pattern)
+
+      // Match without the optional segment
+      let matches = searchAll(trie, new URL('https://example.com/users/123'))
+      expect(matches.length).toBe(1)
+      expect(matches[0]?.data).toBe(pattern)
+      expect(matches[0]?.params).toEqual({ id: '123' })
+
+      // Match with the optional segment
+      let matches2 = searchAll(trie, new URL('https://example.com/users/123/details'))
+      expect(matches2.length).toBe(1)
+      expect(matches2[0]?.data).toBe(pattern)
+      expect(matches2[0]?.params).toEqual({ id: '123' })
+    })
   })
 })

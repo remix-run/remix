@@ -1,5 +1,5 @@
-import * as RE from '../regexp.ts'
-import type { AST } from './ast'
+import { RegExp_escape } from '../es2025.ts'
+import type { AST } from './ast.ts'
 
 export function toRegExp(ast: AST, paramValueRE: RegExp): RegExp {
   let source = toRegExpSource(ast, paramValueRE)
@@ -31,7 +31,7 @@ export function toRegExpSource(ast: AST, paramValueRE: RegExp): string {
     }
 
     if (token.type === 'text') {
-      source += RE.escape(token.text)
+      source += RegExp_escape(token.text)
       continue
     }
 
