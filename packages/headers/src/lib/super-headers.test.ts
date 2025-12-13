@@ -166,7 +166,7 @@ describe('SuperHeaders', () => {
     assert.equal(headers.toString(), 'Content-Type: text/plain')
   })
 
-  describe('native Headers synchronization', { only: true }, () => {
+  describe('native Headers synchronization', () => {
     it('synchronizes set() with native Headers', () => {
       let headers = new SuperHeaders()
 
@@ -176,7 +176,7 @@ describe('SuperHeaders', () => {
       assert.equal(new Headers(headers).get('Content-Type'), 'text/plain')
     })
 
-    it('synchronizes append() with native Headers', { only: true }, () => {
+    it('synchronizes append() with native Headers', () => {
       let headers = new SuperHeaders()
       headers.append('X-Custom', 'value1')
       headers.append('X-Custom', 'value2')
