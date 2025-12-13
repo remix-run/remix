@@ -2,14 +2,14 @@ import type { AST } from './ast'
 
 export type Variant = {
   key: string
-  paramIndices: Array<number>
+  paramNames: Array<string>
 }
 
 export function variants(ast: AST): Array<Variant> {
   let result: Array<Variant> = []
 
   let q: Array<{ index: number; variant: Variant }> = [
-    { index: 0, variant: { key: '', paramIndices: [] } },
+    { index: 0, variant: { key: '', paramNames: [] } },
   ]
   while (q.length > 0) {
     let { index, variant } = q.pop()!
@@ -34,7 +34,7 @@ export function variants(ast: AST): Array<Variant> {
 
     if (token.type === ':') {
       variant.key += '{:}'
-      variant.paramIndices.push(token.nameIndex)
+      variant.paramNames.push(ast.paramNames[token.nameIndex])
       q.push({ index: index + 1, variant })
       continue
     }
@@ -42,7 +42,7 @@ export function variants(ast: AST): Array<Variant> {
     if (token.type === '*') {
       variant.key += '{*}'
       if (token.nameIndex) {
-        variant.paramIndices.push(token.nameIndex)
+        variant.paramNames.push(ast.paramNames[token.nameIndex])
       }
       q.push({ index: index + 1, variant })
       continue

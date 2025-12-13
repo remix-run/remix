@@ -1,7 +1,12 @@
 import type { AST } from './ast.ts'
 import * as Part from '../part/index.ts'
 
-export function* variants(pattern: AST) {
+type Variant = {
+  key: Array<Array<string>>
+  paramNames: Array<string>
+}
+
+export function* variants(pattern: AST): Generator<Variant> {
   let protocols = pattern.protocol ? Part.variants(pattern.protocol) : undefined
   let hostnames = pattern.hostname ? Part.variants(pattern.hostname) : undefined
   let pathnames = pattern.pathname ? Part.variants(pattern.pathname) : undefined
@@ -9,17 +14,17 @@ export function* variants(pattern: AST) {
   for (let protocol of protocols ?? [null]) {
     for (let hostname of hostnames ?? [null]) {
       for (let pathname of pathnames ?? [null]) {
+        let paramNames: Array<string> = []
+        paramNames.push(...(protocol?.paramNames ?? []))
+        paramNames.push(...(hostname?.paramNames ?? []))
+        paramNames.push(...(pathname?.paramNames ?? []))
         yield {
           key: [
             protocol ? [protocol.key] : [],
             hostname?.key.split('.').reverse() ?? [],
             pathname?.key.split('/') ?? [],
           ],
-          paramIndices: [
-            protocol?.paramIndices ?? [],
-            hostname?.paramIndices ?? [],
-            pathname?.paramIndices ?? [],
-          ],
+          paramNames,
         }
       }
     }
