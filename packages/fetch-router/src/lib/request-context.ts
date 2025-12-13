@@ -20,7 +20,6 @@ export class RequestContext<
    * @param request The incoming request
    */
   constructor(request: Request) {
-    this.headers = new SuperHeaders(request.headers)
     this.method = request.method.toUpperCase() as RequestMethod
     this.params = {} as params
     this.request = request
@@ -72,7 +71,15 @@ export class RequestContext<
   /**
    * The headers of the request.
    */
-  headers: SuperHeaders
+  get headers(): SuperHeaders {
+    if (this.#headers == null) {
+      this.#headers = new SuperHeaders(this.request.headers)
+    }
+
+    return this.#headers
+  }
+
+  #headers?: SuperHeaders
 
   /**
    * The request method. This may differ from `request.method` when using the `methodOverride`

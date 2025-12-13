@@ -53,7 +53,7 @@ export interface FileUploadHandler {
   (file: FileUpload): void | null | string | Blob | Promise<void | null | string | Blob>
 }
 
-async function defaultFileUploadHandler(file: FileUpload): Promise<File> {
+function defaultFileUploadHandler(file: FileUpload): File {
   // By default just keep the file around in memory.
   return file
 }

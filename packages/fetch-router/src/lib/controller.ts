@@ -1,7 +1,7 @@
 import type { Params, RoutePattern } from '@remix-run/route-pattern'
 
 import type { Middleware } from './middleware.ts'
-import type { RequestHandler } from './request-handler.ts'
+import type { RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import type { Route, RouteMap } from './route-map.ts'
 
@@ -38,12 +38,15 @@ type ControllerWithoutMiddleware<routes extends RouteMap> = routes extends any ?
  * An individual route action.
  */
 export type Action<method extends RequestMethod | 'ANY', pattern extends string> =
-  | RequestHandlerWithMiddleware<method, pattern>
+  | RequestHandlerWithMiddleware<method, Params<pattern>>
   | RequestHandler<method, Params<pattern>>
 
-type RequestHandlerWithMiddleware<method extends RequestMethod | 'ANY', pattern extends string> = {
-  middleware: Middleware<method, Params<pattern>>[]
-  action: RequestHandler<method, Params<pattern>>
+type RequestHandlerWithMiddleware<
+  method extends RequestMethod | 'ANY',
+  params extends Record<string, any>,
+> = {
+  middleware: Middleware<method, params>[]
+  action: RequestHandler<method, params>
 }
 
 /**
@@ -55,6 +58,19 @@ export type BuildAction<method extends RequestMethod | 'ANY', route extends stri
   route extends RoutePattern<infer pattern> ? Action<method, pattern> :
   route extends Route<infer _, infer pattern> ? Action<method, pattern> :
   never
+
+/**
+ * A request handler function that returns some kind of response.
+ *
+ * @param context The request context
+ * @return The response
+ */
+export interface RequestHandler<
+  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+  params extends Record<string, any> = {},
+> {
+  (context: RequestContext<method, params>): Response | Promise<Response>
+}
 
 /**
  * Runtime shape for a controller with middleware.

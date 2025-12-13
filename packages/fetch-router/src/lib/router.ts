@@ -3,11 +3,11 @@ import { type Matcher, ArrayMatcher, RoutePattern } from '@remix-run/route-patte
 import { type Middleware, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
-import type { RequestHandler } from './request-handler.ts'
 import type { RequestMethod } from './request-methods.ts'
 import {
   type Controller,
   type Action,
+  type RequestHandler,
   isControllerWithMiddleware,
   isActionWithMiddleware,
 } from './controller.ts'
@@ -184,7 +184,7 @@ export function createRouter(options?: RouterOptions): Router {
   let matcher = options?.matcher ?? new ArrayMatcher<MatchData>()
   let globalMiddleware = options?.middleware
 
-  async function dispatch(context: RequestContext): Promise<Response> {
+  function dispatch(context: RequestContext): Promise<Response> {
     for (let match of matcher.matchAll(context.url)) {
       let { handler, method, middleware } = match.data
 
@@ -194,7 +194,6 @@ export function createRouter(options?: RouterOptions): Router {
       }
 
       context.params = match.params
-      context.url = match.url
 
       if (middleware) {
         return runMiddleware(middleware, context, handler)
@@ -298,7 +297,7 @@ export function createRouter(options?: RouterOptions): Router {
   }
 
   return {
-    async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+    fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
       let request = new Request(input, init)
 
       if (request.signal.aborted) {
@@ -306,11 +305,12 @@ export function createRouter(options?: RouterOptions): Router {
       }
 
       let context = new RequestContext(request)
-      let response = globalMiddleware
-        ? await runMiddleware(globalMiddleware, context, dispatch)
-        : await dispatch(context)
 
-      return response
+      if (globalMiddleware) {
+        return runMiddleware(globalMiddleware, context, dispatch)
+      }
+
+      return dispatch(context)
     },
     get size(): number {
       return matcher.size
