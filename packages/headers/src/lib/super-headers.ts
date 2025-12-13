@@ -247,6 +247,7 @@ export class SuperHeaders extends Headers {
     } else {
       let existingValue = this.#map.get(key)
       this.#map.set(key, existingValue ? `${existingValue}, ${value}` : value)
+      super.append(key, value)
     }
   }
 
@@ -263,6 +264,7 @@ export class SuperHeaders extends Headers {
       this.#setCookies = []
     } else {
       this.#map.delete(key)
+      super.delete(name)
     }
   }
 
@@ -332,6 +334,7 @@ export class SuperHeaders extends Headers {
       this.#setCookies = [value]
     } else {
       this.#map.set(key, value)
+      super.set(name, value)
     }
   }
 
