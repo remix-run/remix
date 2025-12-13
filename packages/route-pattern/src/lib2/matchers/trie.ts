@@ -1,5 +1,30 @@
 import * as RoutePattern from '../route-pattern/index.ts'
 import * as RE from '../regexp.ts'
+import type { Matcher } from './matcher.ts'
+
+export class TrieMatcher<data> implements Matcher<data> {
+  #trie: Trie<data> = new Trie()
+  #size: number = 0
+
+  add(pattern: RoutePattern.AST, data: data) {
+    this.#trie.insert(pattern, data)
+    this.#size += 1
+  }
+
+  match(url: URL) {
+    // todo: "best" match via ranking
+    for (let match of this.#trie.search(url)) {
+      return match.data
+    }
+    return null
+  }
+
+  get size() {
+    return this.#size
+  }
+}
+
+// Trie --------------------------------------------------------------------------------------------
 
 const SEPARATORS = ['', '.', '/']
 
