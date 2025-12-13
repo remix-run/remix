@@ -14,17 +14,17 @@ export function* variants(pattern: AST): Generator<Variant> {
   for (let protocol of protocols ?? [null]) {
     for (let hostname of hostnames ?? [null]) {
       for (let pathname of pathnames ?? [null]) {
-        let paramNames: Array<string> = []
-        paramNames.push(...(protocol?.paramNames ?? []))
-        paramNames.push(...(hostname?.paramNames ?? []))
-        paramNames.push(...(pathname?.paramNames ?? []))
         yield {
           key: [
             protocol ? [protocol.key] : [],
             hostname?.key.split('.').reverse() ?? [],
             pathname?.key.split('/') ?? [],
           ],
-          paramNames,
+          paramNames: [
+            ...(protocol?.paramNames ?? []),
+            ...(hostname?.paramNames ?? []),
+            ...(pathname?.paramNames ?? []),
+          ],
         }
       }
     }

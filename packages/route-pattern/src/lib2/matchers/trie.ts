@@ -32,6 +32,14 @@ type TrieIndex = [partIndex: number, segmentIndex: number]
 
 type Match<data> = {
   paramNames: Array<string>
+  // todo: could pre-compute unused paramNames per variant here to get `undefined` for those
+  data: data
+}
+
+type Params = Record<string, string | undefined>
+
+type SearchResult<data> = {
+  params: Params
   data: data
 }
 
@@ -107,7 +115,7 @@ export class Trie<data> {
     }
   }
 
-  *search(url: URL): Generator<Match<data>> {
+  *search(url: URL): Generator<SearchResult<data>> {
     let protocol = url.protocol.slice(0, -1)
     let hostname = url.hostname.split('.').reverse()
     let pathname = url.pathname.slice(1).split('/')
@@ -116,23 +124,21 @@ export class Trie<data> {
     type State = {
       index: TrieIndex
       trie: Trie<data>
-      paramValues: [protocol: Array<string>, hostname: Array<string>, pathname: Array<string>]
+      paramValues: Array<string>
     }
-    let stack: Array<State> = [
-      {
-        index: [0, 0],
-        trie: this,
-        // todo: make `paramValues` just `Array<string>` since match now has `paramNames` specific to the variant!
-        paramValues: [[], [], []],
-      },
-    ]
+    let stack: Array<State> = [{ index: [0, 0], trie: this, paramValues: [] }]
 
     while (stack.length > 0) {
       let state = stack.pop()!
 
       if (state.index[0] === query.length) {
         if (state.trie.match) {
-          yield state.trie.match
+          let { paramNames, data } = state.trie.match
+          let { paramValues } = state
+          yield {
+            params: Trie.#toParams(paramNames, paramValues),
+            data,
+          }
         }
         continue
       }
@@ -163,7 +169,7 @@ export class Trie<data> {
         let match = regexp.exec(segment)
         if (match) {
           let paramValues = structuredClone(state.paramValues)
-          paramValues[state.index[0]].push(...match.slice(1))
+          paramValues.push(...match.slice(1))
           stack.push({
             index: [state.index[0], state.index[1] + 1],
             trie,
@@ -177,7 +183,7 @@ export class Trie<data> {
         let match = regexp.exec(key)
         if (match) {
           let paramValues = structuredClone(state.paramValues)
-          paramValues[state.index[0]].push(...match.slice(1))
+          paramValues.push(...match.slice(1))
           stack.push({
             index: [state.index[0] + 1, 0],
             trie,
@@ -214,5 +220,13 @@ export class Trie<data> {
       .join('')
 
     return new RegExp(`^${source}$`)
+  }
+
+  static #toParams(paramNames: Array<string>, paramValues: Array<string>): Params {
+    let params: Params = {}
+    paramNames.forEach((name, i) => {
+      params[name] = paramValues[i]
+    })
+    return params
   }
 }

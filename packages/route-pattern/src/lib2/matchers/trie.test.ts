@@ -202,6 +202,7 @@ describe('trie', () => {
       let matches = searchAll(trie, new URL('https://example.com/users/list'))
       expect(matches.length).toBe(1)
       expect(matches[0]?.data).toBe(pattern)
+      expect(matches[0]?.params).toEqual({})
     })
 
     it('returns no matches for non-matching URL', () => {
@@ -221,6 +222,7 @@ describe('trie', () => {
       let matches = searchAll(trie, new URL('https://example.com/users/123'))
       expect(matches.length).toBe(1)
       expect(matches[0]?.data).toBe(pattern)
+      expect(matches[0]?.params).toEqual({ id: '123' })
     })
 
     it('matches a full URL pattern', () => {
@@ -231,6 +233,7 @@ describe('trie', () => {
       let matches = searchAll(trie, new URL('https://example.com/users/456'))
       expect(matches.length).toBe(1)
       expect(matches[0]?.data).toBe(pattern)
+      expect(matches[0]?.params).toEqual({ id: '456' })
     })
 
     it('does not match wrong protocol', () => {
@@ -259,6 +262,7 @@ describe('trie', () => {
       let matches = searchAll(trie, new URL('https://example.com/files/a/b/c'))
       expect(matches.length).toBe(1)
       expect(matches[0]?.data).toBe(pattern)
+      expect(matches[0]?.params).toEqual({ path: 'a/b/c' })
     })
 
     it('matches multiple patterns with shared prefix', () => {
@@ -271,11 +275,16 @@ describe('trie', () => {
       // Should match the static pattern
       let matches1 = searchAll(trie, new URL('https://example.com/users/admin'))
       expect(matches1.length).toBe(2) // Both patterns match
+      // Static match has no params
+      expect(matches1.find((m) => m.data === pattern2)?.params).toEqual({})
+      // Dynamic match captures 'admin' as the id
+      expect(matches1.find((m) => m.data === pattern1)?.params).toEqual({ id: 'admin' })
 
       // Should only match the dynamic pattern
       let matches2 = searchAll(trie, new URL('https://example.com/users/123'))
       expect(matches2.length).toBe(1)
       expect(matches2[0]?.data).toBe(pattern1)
+      expect(matches2[0]?.params).toEqual({ id: '123' })
     })
   })
 })
