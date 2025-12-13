@@ -166,6 +166,53 @@ describe('SuperHeaders', () => {
     assert.equal(headers.toString(), 'Content-Type: text/plain')
   })
 
+  describe('native Headers synchronization', { only: true }, () => {
+    it('synchronizes set() with native Headers', () => {
+      let headers = new SuperHeaders()
+
+      headers.set('Content-Type', 'text/plain')
+      assert.equal(headers.get('Content-Type'), 'text/plain')
+
+      assert.equal(new Headers(headers).get('Content-Type'), 'text/plain')
+    })
+
+    it('synchronizes append() with native Headers', { only: true }, () => {
+      let headers = new SuperHeaders()
+      headers.append('X-Custom', 'value1')
+      headers.append('X-Custom', 'value2')
+      headers.append('X-Custom', 'value3')
+
+      assert.equal(headers.get('X-Custom'), 'value1, value2, value3')
+
+      let nativeHeaders = new Headers(headers)
+      assert.equal(nativeHeaders.get('X-Custom'), 'value1, value2, value3')
+    })
+
+    it('synchronizes delete() with native Headers', () => {
+      let headers = new SuperHeaders({ 'X-Custom': 'value' })
+      headers.delete('X-Custom')
+
+      assert.equal(headers.has('X-Custom'), false)
+
+      let nativeHeaders = new Headers(headers)
+      assert.equal(nativeHeaders.has('X-Custom'), false)
+    })
+
+    it('maintains synchronization after multiple operations', () => {
+      let headers = new SuperHeaders()
+      headers.set('X-One', 'value1')
+      headers.append('X-Two', 'value2a')
+      headers.append('X-Two', 'value2b')
+      headers.set('X-Three', 'value3')
+      headers.delete('X-Three')
+
+      let nativeHeaders = new Headers(headers)
+      assert.equal(nativeHeaders.get('X-One'), 'value1')
+      assert.equal(nativeHeaders.get('X-Two'), 'value2a, value2b')
+      assert.equal(nativeHeaders.has('X-Three'), false)
+    })
+  })
+
   describe('constructor property init', () => {
     it('handles the accept property', () => {
       let headers = new SuperHeaders({ accept: { 'text/html': 1, 'application/json': 0.9 } })
