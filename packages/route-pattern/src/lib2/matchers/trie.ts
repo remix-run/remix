@@ -28,6 +28,7 @@ export class Trie<data> {
       let index: TrieIndex = [0, 0]
       while (true) {
         if (index[0] === variant.key.length) {
+          // todo: what if `match` already exists (duplicate / conflict)?
           trie.match = match
           break
         }
@@ -47,7 +48,7 @@ export class Trie<data> {
         if (hasWildcard) {
           let segments = part.slice(index[1])
           let key = segments.join(SEPARATORS[index[0]])
-          // todo: check if key in wildcard map
+          // todo: get `next` from `trie.wildcard`, don't just make a new one everytime
           if (!trie.next) trie.next = new Trie()
           let regexp = Trie.#keyToRegExp(key, SEPARATORS[index[0]])
           trie.wildcard.set(key, [regexp, trie.next])
@@ -96,6 +97,7 @@ export class Trie<data> {
       {
         index: [0, 0],
         trie: this,
+        // todo: make `paramValues` just `Array<string>` since match now has `paramNames` specific to the variant!
         paramValues: [[], [], []],
       },
     ]
