@@ -322,5 +322,48 @@ describe('trie', () => {
       expect(matches2[0]?.data).toBe(pattern)
       expect(matches2[0]?.params).toEqual({ id: '123' })
     })
+
+    it('ranks static matches higher than dynamic matches', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let staticPattern = parse('users/@admin')
+      let dynamicPattern = parse('users/@:id')
+      trie.insert(staticPattern, staticPattern)
+      trie.insert(dynamicPattern, dynamicPattern)
+
+      let matches = searchAll(trie, new URL('https://example.com/users/@admin'))
+      expect(matches.length).toBe(2)
+
+      // Static match should have rank of all 0s for pathname segments
+      // Dynamic match should have rank of 1s where the variable matched
+      let staticMatch = matches.find((m) => m.data === staticPattern)
+      let dynamicMatch = matches.find((m) => m.data === dynamicPattern)
+
+      // The rank array covers: protocol (5 chars "https") + hostname (3 "com" + 7 "example") + pathname (5 "users" + 5 "admin")
+      // Total: 5 + 3 + 7 + 5 + 5 = 25
+
+      expect(staticMatch).toStrictEqual({
+        // prettier-ignore
+        rank: new Uint8Array([
+          3, 3, 3, 3, 3,                // protocol "https" - skipped (3)
+          3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // hostname "com" + "example" - skipped (3)
+          0, 0, 0, 0, 0,                // pathname "users" - static (0)
+          0, 0, 0, 0, 0, 0,             // pathname "@admin" - static (0)
+        ]),
+        params: {},
+        data: staticPattern,
+      })
+
+      expect(dynamicMatch).toStrictEqual({
+        // prettier-ignore
+        rank: new Uint8Array([
+          3, 3, 3, 3, 3,                // protocol "https" - skipped (3)
+          3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // hostname "com" + "example" - skipped (3)
+          0, 0, 0, 0, 0,                // pathname "users" - static (0)
+          0, 1, 1, 1, 1, 1,             // pathname "@admin" matched by @:id - variable (1)
+        ]),
+        params: { id: 'admin' },
+        data: dynamicPattern,
+      })
+    })
   })
 })

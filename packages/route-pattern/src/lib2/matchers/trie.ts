@@ -12,11 +12,14 @@ export class TrieMatcher<data> implements Matcher<data> {
   }
 
   match(url: URL) {
-    // todo: "best" match via ranking
+    let best: SearchResult<data> | null = null
     for (let match of this.#trie.search(url)) {
-      return match.data
+      if (best === null || match.rank < best.rank) {
+        best = match
+      }
     }
-    return null
+    // todo: also return params for this match
+    return best?.data ?? null
   }
 
   get size() {
@@ -42,6 +45,7 @@ type Match<data> = {
 type Params = Record<string, string | undefined>
 
 type SearchResult<data> = {
+  rank: Uint8Array
   params: Params
   data: data
 }
@@ -135,12 +139,27 @@ export class Trie<data> {
     let pathname = url.pathname.slice(1).split('/')
     let query = [[protocol], hostname, pathname]
 
+    let rankLength = protocol.length
+    hostname.forEach((segment) => (rankLength += segment.length))
+    pathname.forEach((segment) => (rankLength += segment.length))
+
     type State = {
       index: TrieIndex
       trie: Trie<data>
       paramValues: Array<string>
+      /** 0 => static, 1 => variable, 2 => wilcard, 3 => skipped */
+      rank: Uint8Array
+      rankIndex: number
     }
-    let stack: Array<State> = [{ index: [0, 0], trie: this, paramValues: [] }]
+    let stack: Array<State> = [
+      {
+        index: [0, 0],
+        trie: this,
+        paramValues: [],
+        rank: new Uint8Array(rankLength),
+        rankIndex: 0,
+      },
+    ]
 
     while (stack.length > 0) {
       let state = stack.pop()!
@@ -149,6 +168,7 @@ export class Trie<data> {
         let { match } = state.trie
         if (match) {
           yield {
+            rank: state.rank,
             params: Trie.#toParams(match, state.paramValues),
             data: match.data,
           }
@@ -175,32 +195,52 @@ export class Trie<data> {
           index: [state.index[0], state.index[1] + 1],
           trie: staticMatch,
           paramValues: state.paramValues,
+          rank: state.rank,
+          rankIndex: state.rankIndex + segment.length,
         })
       }
 
       for (let { regexp, trie } of state.trie.variable.values()) {
         let match = regexp.exec(segment)
         if (match) {
-          let paramValues = structuredClone(state.paramValues)
+          let rank = state.rank.slice()
+          match.indices?.forEach((span, i) => {
+            if (i === 0) return // ignore span for entire match
+            rank.fill(1, state.rankIndex + span[0], state.rankIndex + span[1])
+          })
+          let paramValues = state.paramValues.slice()
           paramValues.push(...match.slice(1))
           stack.push({
             index: [state.index[0], state.index[1] + 1],
             trie,
             paramValues,
+            rank,
+            rankIndex: state.rankIndex + segment.length,
           })
         }
       }
 
       for (let { regexp, trie } of state.trie.wildcard.values()) {
-        let key = part.slice(state.index[1]).join(SEPARATORS[state.index[0]])
-        let match = regexp.exec(key)
+        let segments = part.slice(state.index[1]).join(SEPARATORS[state.index[0]])
+        let match = regexp.exec(segments)
         if (match) {
-          let paramValues = structuredClone(state.paramValues)
+          let rank = state.rank.slice()
+          Object.entries(match.indices?.groups ?? {}).forEach(([group, span]) => {
+            if (group.startsWith('v_')) {
+              rank.fill(1, state.rankIndex + span[0], state.rankIndex + span[1])
+            }
+            if (group.startsWith('w_')) {
+              rank.fill(2, state.rankIndex + span[0], state.rankIndex + span[1])
+            }
+          })
+          let paramValues = state.paramValues.slice()
           paramValues.push(...match.slice(1))
           stack.push({
             index: [state.index[0] + 1, 0],
             trie,
             paramValues,
+            rank,
+            rankIndex: state.rankIndex + segments.length,
           })
         }
       }
@@ -210,10 +250,14 @@ export class Trie<data> {
       // will want to "skip" the protocol
       // todo: better explanation
       if (state.index[1] === 0 && state.trie.next) {
-        state.index[0] += 1
-        state.index[1] = 0
-        state.trie = state.trie.next
-        stack.push(state)
+        let length = query[state.index[0]].reduce((acc, segment) => acc + segment.length, 0)
+        stack.push({
+          index: [state.index[0] + 1, 0],
+          trie: state.trie.next,
+          paramValues: state.paramValues,
+          rank: state.rank.slice().fill(3, state.rankIndex, state.rankIndex + length),
+          rankIndex: state.rankIndex + length,
+        })
       }
     }
   }
@@ -222,17 +266,18 @@ export class Trie<data> {
     let variablePattern = `[^${RegExp_escape(separator)}]*`
     let wildcardPattern = '.*'
 
+    let i = 0
     let source = key
       // use capture group so that `split` includes the delimiters in the result
       .split(/(\{:\}|\{\*\})/)
       .map((part) => {
-        if (part === '{:}') return `(${variablePattern})`
-        if (part === '{*}') return `(${wildcardPattern})`
+        if (part === '{:}') return `(?<v_${i++}>${variablePattern})`
+        if (part === '{*}') return `(?<w_${i++}>${wildcardPattern})`
         return RegExp_escape(part)
       })
       .join('')
 
-    return new RegExp(`^${source}$`)
+    return new RegExp(`^${source}$`, 'd')
   }
 
   static #toParams(match: Match<unknown>, paramValues: Array<string>): Params {
