@@ -1,4 +1,4 @@
-import { RegExp_escape, Set_difference } from '../es2025.ts'
+import { RegExp_escape } from '../es2025.ts'
 import * as RoutePattern from '../route-pattern/index.ts'
 import type { Matcher } from './matcher.ts'
 
@@ -47,23 +47,23 @@ type SearchResult<data> = {
 
 export class Trie<data> {
   static: Record<string, Trie<data> | undefined> = {}
-  variable: Map<string, [RegExp, Trie<data>]> = new Map()
-  wildcard: Map<string, [RegExp, Trie<data>]> = new Map()
+  variable: Map<string, { regexp: RegExp; trie: Trie<data> }> = new Map()
+  wildcard: Map<string, { regexp: RegExp; trie: Trie<data> }> = new Map()
   next?: Trie<data>
   match?: Match<data>
 
   insert(pattern: RoutePattern.AST, data: data) {
-    let patternParamNames = new Set([
+    let patternParamNames = [
       ...(pattern.protocol?.paramNames ?? []),
       ...(pattern.hostname?.paramNames ?? []),
       ...(pattern.pathname?.paramNames ?? []),
-    ])
+    ]
 
     for (let variant of RoutePattern.variants(pattern)) {
       let match: Match<data> = {
         paramNames: {
           included: variant.paramNames,
-          excluded: Set_difference(patternParamNames, new Set(variant.paramNames)),
+          excluded: patternParamNames.filter((name) => !variant.paramNames.includes(name)),
         },
         data,
       }
@@ -92,13 +92,15 @@ export class Trie<data> {
         if (hasWildcard) {
           let segments = part.slice(index[1])
           let key = segments.join(SEPARATORS[index[0]])
-          // todo: get `next` from `trie.wildcard`, don't just make a new one everytime
-          if (!trie.next) trie.next = new Trie()
-          let regexp = Trie.#keyToRegExp(key, SEPARATORS[index[0]])
-          trie.wildcard.set(key, [regexp, trie.next])
+          let next = trie.wildcard.get(key)
+          if (!next) {
+            let regexp = Trie.#keyToRegExp(key, SEPARATORS[index[0]])
+            next = { regexp, trie: new Trie() }
+            trie.wildcard.set(key, next)
+          }
+          trie = next.trie
           index[0] += 1
           index[1] = 0
-          trie = trie.next
           continue
         }
 
@@ -107,10 +109,10 @@ export class Trie<data> {
           let next = trie.variable.get(segment)
           if (!next) {
             let regexp = Trie.#keyToRegExp(segment, SEPARATORS[index[0]])
-            next = [regexp, new Trie()]
+            next = { regexp, trie: new Trie() }
             trie.variable.set(segment, next)
           }
-          trie = next[1]
+          trie = next.trie
           index[1] += 1
           continue
         }
@@ -175,7 +177,7 @@ export class Trie<data> {
         })
       }
 
-      for (let [regexp, trie] of state.trie.variable.values()) {
+      for (let { regexp, trie } of state.trie.variable.values()) {
         let match = regexp.exec(segment)
         if (match) {
           let paramValues = structuredClone(state.paramValues)
@@ -188,7 +190,7 @@ export class Trie<data> {
         }
       }
 
-      for (let [regexp, trie] of state.trie.wildcard.values()) {
+      for (let { regexp, trie } of state.trie.wildcard.values()) {
         let key = part.slice(state.index[1]).join(SEPARATORS[state.index[0]])
         let match = regexp.exec(key)
         if (match) {
