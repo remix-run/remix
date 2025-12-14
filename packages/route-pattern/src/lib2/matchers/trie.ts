@@ -32,8 +32,9 @@ type TrieIndex = [partIndex: number, segmentIndex: number]
 
 type Match<data> = {
   paramNames: {
-    included: Iterable<string>
-    excluded: Iterable<string>
+    /** In the same order as they appear in their variant */
+    included: Array<string>
+    excluded: Array<string>
   }
   data: data
 }
@@ -237,15 +238,13 @@ export class Trie<data> {
   static #toParams(match: Match<unknown>, paramValues: Array<string>): Params {
     let params: Params = {}
 
-    for (let name of match.paramNames.excluded) {
+    match.paramNames.excluded.forEach((name) => {
       params[name] = undefined
-    }
+    })
 
-    let i = 0
-    for (let name of match.paramNames.included) {
+    match.paramNames.included.forEach((name, i) => {
       params[name] = paramValues[i]
-      i += 1
-    }
+    })
 
     return params
   }
