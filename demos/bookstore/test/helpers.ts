@@ -81,13 +81,13 @@ export async function login(router: any, email: string, password: string): Promi
 /**
  * Login as admin and return the session cookie
  */
-export async function loginAsAdmin(router: any): Promise<string> {
+export function loginAsAdmin(router: any): Promise<string> {
   return login(router, 'admin@bookstore.com', 'admin123')
 }
 
 /**
  * Login as customer and return the session cookie
  */
-export async function loginAsCustomer(router: any): Promise<string> {
+export function loginAsCustomer(router: any): Promise<string> {
   return login(router, 'customer@example.com', 'password123')
 }

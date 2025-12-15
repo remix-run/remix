@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
 
 import type { RequestContext } from './request-context.ts'
 import { createRoutes as route } from './route-map.ts'
@@ -31,7 +31,7 @@ describe('router.fetch()', () => {
           requestLog.push('middleware')
         },
       ],
-      handler() {
+      action() {
         return new Response('Home')
       },
     })
@@ -65,7 +65,7 @@ describe('router.fetch()', () => {
           requestLog.push('route middleware')
         },
       ],
-      handler() {
+      action() {
         return new Response('Home')
       },
     })
@@ -76,7 +76,7 @@ describe('router.fetch()', () => {
     assert.deepEqual(requestLog, ['router middleware', 'route middleware'])
   })
 
-  it('fetches a route with specific method handlers', async () => {
+  it('fetches a route with specific method actions', async () => {
     let routes = route({
       home: '/',
     })
@@ -108,7 +108,7 @@ describe('router.fetch()', () => {
           requestLog.push(headers.get('From'))
         },
       ],
-      handler() {
+      action() {
         return new Response('Home')
       },
     })
@@ -159,7 +159,7 @@ describe('router.fetch()', () => {
   })
 })
 
-describe('router.map()', () => {
+describe('router.map() with single routes', () => {
   it('maps a single route to a request handler', async () => {
     let routes = route({
       home: '/',
@@ -177,27 +177,8 @@ describe('router.map()', () => {
     assert.equal(await response.text(), 'Home')
   })
 
-  it('maps a single route to a route handler without middleware', async () => {
+  it('maps a single route to an action with middleware', async () => {
     let routes = route({
-      home: '/',
-    })
-
-    let router = createRouter()
-
-    router.map(routes.home, {
-      handler() {
-        return new Response('Home')
-      },
-    })
-
-    let response = await router.fetch('https://remix.run')
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Home')
-  })
-
-  it('maps a single route to a route handler with middleware', async () => {
-    let routes = route({
-      home: '/',
       profile: '/profile/:id',
     })
 
@@ -210,8 +191,8 @@ describe('router.map()', () => {
 
     router.map(routes.profile, {
       middleware: [middleware],
-      handler() {
-        requestLog.push('handler')
+      action() {
+        requestLog.push('action')
         return new Response('OK')
       },
     })
@@ -220,10 +201,24 @@ describe('router.map()', () => {
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'OK')
 
-    assert.deepEqual(requestLog, ['middleware 1', 'handler'])
+    assert.deepEqual(requestLog, ['middleware 1', 'action'])
   })
 
-  it('maps a route map to a map of request handlers', async () => {
+  it('matches any request method', async () => {
+    let router = createRouter()
+
+    router.map('/', ({ method }) => new Response(method))
+
+    for (let method of ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']) {
+      let response = await router.fetch('https://remix.run', { method })
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), method)
+    }
+  })
+})
+
+describe('router.map()', () => {
+  it('maps a route map to a map of actions', async () => {
     let routes = route({
       home: '/',
       blog: {
@@ -269,35 +264,7 @@ describe('router.map()', () => {
     assert.equal(await response.text(), 'Blog Post 1')
   })
 
-  it('maps a route map to route handlers without middleware', async () => {
-    let routes = route({
-      home: '/',
-      blog: '/blog',
-    })
-
-    let router = createRouter()
-
-    router.map(routes, {
-      handlers: {
-        home() {
-          return new Response('Home')
-        },
-        blog() {
-          return new Response('Blog')
-        },
-      },
-    })
-
-    let response = await router.fetch('https://remix.run')
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Home')
-
-    response = await router.fetch('https://remix.run/blog')
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Blog')
-  })
-
-  it('maps a route map to route handlers with middleware', async () => {
+  it('maps a route map to actions with middleware', async () => {
     let routes = route({
       home: '/',
     })
@@ -311,9 +278,9 @@ describe('router.map()', () => {
 
     router.map(routes, {
       middleware: [middleware],
-      handlers: {
+      actions: {
         home() {
-          requestLog.push('handler')
+          requestLog.push('action')
           return new Response('OK')
         },
       },
@@ -323,26 +290,30 @@ describe('router.map()', () => {
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'OK')
 
-    assert.deepEqual(requestLog, ['middleware', 'handler'])
+    assert.deepEqual(requestLog, ['middleware', 'action'])
   })
 
-  it('does not allow middleware alongside request handlers', async () => {
+  it('does not allow middleware alongside actions', async () => {
     let routes = route({
       home: '/',
     })
 
     let router = createRouter()
 
-    router.map(routes, {
-      middleware: [],
-      // @ts-expect-error - should not allow middleware alongside request handlers
-      home() {
-        return new Response('OK')
-      },
-    })
+    // This is a compile-time type check only - we use a never-executed block
+    // to verify that TypeScript catches the error without running the code.
+    if (false as boolean) {
+      router.map(routes, {
+        middleware: [],
+        // @ts-expect-error - should not allow middleware alongside actions
+        home() {
+          return new Response('OK')
+        },
+      })
+    }
   })
 
-  it('supports middleware in nested route handlers', async () => {
+  it('supports middleware in nested controllers', async () => {
     let routes = route({
       blog: {
         index: '/blog',
@@ -359,14 +330,14 @@ describe('router.map()', () => {
           requestLog.push('outer middleware')
         },
       ],
-      handlers: {
+      actions: {
         blog: {
           middleware: [
             () => {
               requestLog.push('inner middleware')
             },
           ],
-          handlers: {
+          actions: {
             index() {
               requestLog.push('blog-index')
               return new Response('Blog')
@@ -418,7 +389,7 @@ describe('router.map()', () => {
           requestLog.push('auth')
         },
       ],
-      handlers: {
+      actions: {
         dashboard() {
           requestLog.push('dashboard')
           return new Response('Dashboard')
@@ -468,9 +439,9 @@ describe('router.map()', () => {
           requestLog.push('inline')
         },
       ],
-      handlers: {
+      actions: {
         home() {
-          requestLog.push('handler')
+          requestLog.push('action')
           return new Response('OK')
         },
       },
@@ -480,7 +451,7 @@ describe('router.map()', () => {
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'OK')
 
-    assert.deepEqual(requestLog, ['global', 'inline', 'handler'])
+    assert.deepEqual(requestLog, ['global', 'inline', 'action'])
   })
 })
 
@@ -494,20 +465,7 @@ describe('router.get()', () => {
     assert.equal(await response.text(), 'Home')
   })
 
-  it('maps a single route to a route handler object without middleware', async () => {
-    let router = createRouter()
-    router.get('/', {
-      handler() {
-        return new Response('Home')
-      },
-    })
-
-    let response = await router.fetch('https://remix.run')
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Home')
-  })
-
-  it('maps a single route to a route handler object with middleware', async () => {
+  it('maps a single route to an action with middleware', async () => {
     let requestLog: string[] = []
     let router = createRouter()
     router.get('/', {
@@ -516,7 +474,7 @@ describe('router.get()', () => {
           requestLog.push('middleware')
         },
       ],
-      handler() {
+      action() {
         return new Response('Home')
       },
     })
@@ -547,15 +505,15 @@ describe('inline middleware', () => {
           requestLog.push('inline-2')
         },
       ],
-      handler() {
-        requestLog.push('handler')
+      action() {
+        requestLog.push('action')
         return new Response('OK')
       },
     })
 
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 200)
-    assert.deepEqual(requestLog, ['global', 'inline-1', 'inline-2', 'handler'])
+    assert.deepEqual(requestLog, ['global', 'inline-1', 'inline-2', 'action'])
   })
 
   it('runs only on the route it is defined on', async () => {
@@ -568,27 +526,27 @@ describe('inline middleware', () => {
           requestLog.push('inline-a')
         },
       ],
-      handler() {
-        requestLog.push('handler-a')
+      action() {
+        requestLog.push('action-a')
         return new Response('A')
       },
     })
 
     router.get('/b', () => {
-      requestLog.push('handler-b')
+      requestLog.push('action-b')
       return new Response('B')
     })
 
     let response = await router.fetch('https://remix.run/a')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'A')
-    assert.deepEqual(requestLog, ['inline-a', 'handler-a'])
+    assert.deepEqual(requestLog, ['inline-a', 'action-a'])
 
     requestLog = []
     response = await router.fetch('https://remix.run/b')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'B')
-    assert.deepEqual(requestLog, ['handler-b'])
+    assert.deepEqual(requestLog, ['action-b'])
   })
 
   it('works with empty middleware array', async () => {
@@ -597,15 +555,15 @@ describe('inline middleware', () => {
 
     router.get('/', {
       middleware: [],
-      handler() {
-        requestLog.push('handler')
+      action() {
+        requestLog.push('action')
         return new Response('OK')
       },
     })
 
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 200)
-    assert.deepEqual(requestLog, ['handler'])
+    assert.deepEqual(requestLog, ['action'])
   })
 
   it('handles middleware that returns a response (short-circuits)', async () => {
@@ -625,8 +583,8 @@ describe('inline middleware', () => {
           requestLog.push('m3')
         },
       ],
-      handler() {
-        requestLog.push('handler')
+      action() {
+        requestLog.push('action')
         return new Response('OK')
       },
     })
@@ -657,9 +615,9 @@ describe('inline middleware', () => {
           requestLog.push('admin')
         },
       ],
-      handlers: {
+      actions: {
         dashboard() {
-          requestLog.push('dashboard-handler')
+          requestLog.push('dashboard-action')
           return new Response('Dashboard')
         },
         users: {
@@ -668,8 +626,8 @@ describe('inline middleware', () => {
               requestLog.push('users-middleware')
             },
           ],
-          handler() {
-            requestLog.push('users-handler')
+          action() {
+            requestLog.push('users-action')
             return new Response('Users')
           },
         },
@@ -679,14 +637,14 @@ describe('inline middleware', () => {
     let response1 = await router.fetch('https://remix.run/admin/dashboard')
     assert.equal(response1.status, 200)
     assert.equal(await response1.text(), 'Dashboard')
-    assert.deepEqual(requestLog, ['auth', 'admin', 'dashboard-handler'])
+    assert.deepEqual(requestLog, ['auth', 'admin', 'dashboard-action'])
 
     requestLog = []
 
     let response2 = await router.fetch('https://remix.run/admin/users')
     assert.equal(response2.status, 200)
     assert.equal(await response2.text(), 'Users')
-    assert.deepEqual(requestLog, ['auth', 'admin', 'users-middleware', 'users-handler'])
+    assert.deepEqual(requestLog, ['auth', 'admin', 'users-middleware', 'users-action'])
   })
 })
 
@@ -744,27 +702,27 @@ describe('404 handling', () => {
 })
 
 describe('error handling', () => {
-  it('propagates errors thrown in route handlers', async () => {
+  it('propagates errors thrown in request handlers', async () => {
     let router = createRouter()
     router.get('/', () => {
-      throw new Error('Handler error')
+      throw new Error('Action error')
     })
 
     await assert.rejects(async () => {
       await router.fetch('https://remix.run/')
-    }, new Error('Handler error'))
+    }, new Error('Action error'))
   })
 
-  it('propagates async errors thrown in route handlers', async () => {
+  it('propagates async errors thrown in route actions', async () => {
     let router = createRouter()
     router.get('/', async () => {
       await Promise.resolve()
-      throw new Error('Async handler error')
+      throw new Error('Async action error')
     })
 
     await assert.rejects(async () => {
       await router.fetch('https://remix.run/')
-    }, new Error('Async handler error'))
+    }, new Error('Async action error'))
   })
 
   it('propagates errors thrown in router middleware', async () => {
@@ -792,7 +750,7 @@ describe('error handling', () => {
           throw new Error('Route middleware error')
         },
       ],
-      handler() {
+      action() {
         return new Response('OK')
       },
     })
@@ -830,12 +788,12 @@ describe('error handling', () => {
     })
 
     router.get('/', () => {
-      throw new Error('Handler error')
+      throw new Error('Action error')
     })
 
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 500)
-    assert.equal(await response.text(), 'Caught: Handler error')
+    assert.equal(await response.text(), 'Caught: Action error')
   })
 })
 
@@ -949,7 +907,7 @@ describe('custom matcher', () => {
     let matchAllCalls = 0
 
     // Create a custom matcher that tracks calls
-    class CustomMatcher extends RegExpMatcher {
+    class CustomMatcher extends ArrayMatcher {
       *matchAll(url: string | URL) {
         matchAllCalls++
         yield* super.matchAll(url)
@@ -968,7 +926,7 @@ describe('custom matcher', () => {
   it('adds routes to the custom matcher', async () => {
     let addedPatterns: string[] = []
 
-    class CustomMatcher extends RegExpMatcher {
+    class CustomMatcher extends ArrayMatcher {
       add<P extends string>(pattern: P | RoutePattern<P>, data: any): void {
         let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
         addedPatterns.push(routePattern.source)

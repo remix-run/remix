@@ -2,6 +2,145 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- BREAKING CHANGE: Remove `BuildRequestHandler` type. Use `RequestHandler` type directly instead.
+- BREAKING CHANGE: Remove `T` generic parameter from `RequestHandler` type. Request handlers always return a `Response`.
+
+## v0.13.0 (2025-12-01)
+
+- BREAKING CHANGE: Renamed "route handlers" terminology to "controller/action" throughout the package. This is a breaking change for anyone using the types or properties from this package. Update your code:
+
+  ```tsx
+  // Before
+  import type { RouteHandlers } from '@remix-run/fetch-router'
+
+  let routeHandlers = {
+    middleware: [auth()],
+    handlers: {
+      home() {
+        return new Response('Home')
+      },
+      admin: {
+        middleware: [requireAdmin()],
+        handler() {
+          return new Response('Admin')
+        },
+      },
+    },
+  } satisfies RouteHandlers<typeof routes>
+
+  router.map(routes, routeHandlers)
+
+  // After
+  import type { Controller } from '@remix-run/fetch-router'
+
+  let controller = {
+    middleware: [auth()],
+    actions: {
+      home() {
+        return new Response('Home')
+      },
+      admin: {
+        middleware: [requireAdmin()],
+        action() {
+          return new Response('Admin')
+        },
+      },
+    },
+  } satisfies Controller<typeof routes>
+
+  router.map(routes, controller)
+  ```
+
+  Summary of changes:
+
+  - `RouteHandlers` type => `Controller`
+  - `RouteHandler` type => `Action`
+  - `BuildRouteHandler` type => `BuildAction`
+  - `handlers` property => `actions`
+  - `handler` property => `action`
+
+- BREAKING CHANGE: Renamed `formAction` route helper to `form` and moved route helpers to `lib/route-helpers/` subdirectory. Update your imports:
+
+  ```tsx
+  // Before
+  import { route, formAction } from '@remix-run/fetch-router'
+
+  let routes = route({
+    login: formAction('/login'),
+  })
+
+  // After
+  import { route, form } from '@remix-run/fetch-router'
+
+  let routes = route({
+    login: form('/login'),
+  })
+  ```
+
+  The `FormActionOptions` type has also been renamed to `FormOptions`.
+
+- BREAKING CHANGE: The `middleware` property is now required (not optional) in controller and action objects that use the `{ middleware, actions }` or `{ middleware, action }` format. This eliminates ambiguity when route names like `action` collide with the `action` property name.
+
+  ```tsx
+  // Before: { action } without middleware was allowed
+  router.any(routes.home, {
+    action() {
+      return new Response('Home')
+    },
+  })
+
+  // After: just use a plain request handler function instead
+  router.any(routes.home, () => {
+    return new Response('Home')
+  })
+
+  // Before: { actions } without middleware was allowed
+  router.map(routes, {
+    actions: {
+      home() {
+        return new Response('Home')
+      },
+    },
+  })
+
+  // After: just use a plain controller object instead
+  router.map(routes, {
+    home() {
+      return new Response('Home')
+    },
+  })
+
+  // With middleware, the syntax remains the same (but middleware is now required)
+  router.map(routes, {
+    middleware: [auth()],
+    actions: {
+      home() {
+        return new Response('Home')
+      },
+    },
+  })
+  ```
+
+- Add functional aliases for creating routes that respond to a single request method
+
+  ```tsx
+  import { del, get, patch, post } from '@remix-run/fetch-router'
+
+  let routes = route({
+    home: get('/'),
+    login: post('/login'),
+    logout: post('/logout'),
+    profile: {
+      show: get('/profile'),
+      edit: get('/profile/edit'),
+      update: patch('/profile'),
+      destroy: del('/profile'),
+    },
+  })
+  ```
+
 ## v0.12.0 (2025-11-25)
 
 - BREAKING CHANGE: Moved all response helpers to `@remix-run/response`. Update your imports:

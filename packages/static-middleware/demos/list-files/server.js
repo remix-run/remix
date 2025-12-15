@@ -1,10 +1,11 @@
 import * as http from 'node:http'
 import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createRequestListener } from '@remix-run/node-fetch-server'
 import { createRouter } from '@remix-run/fetch-router'
 import { staticFiles } from '@remix-run/static-middleware'
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = 44100
 
 // Point to the monorepo root (two levels up from demos/list-files)

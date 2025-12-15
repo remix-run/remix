@@ -16,20 +16,22 @@ import * as data from './data.ts'
 let sessionCookie = createCookie('__sess', {
   secrets: ['s3cr3t'],
 })
-let storage = createCookieSessionStorage()
+let sessionStorage = createCookieSessionStorage()
 
 function requireAuth(): Middleware {
-  return async ({ session }, next) => {
+  return ({ session }, next) => {
     let username = session.get('username')
+
     if (!username) {
       return redirect(routes.login.index.href())
     }
+
     return next()
   }
 }
 
 export let router = createRouter({
-  middleware: [logger(), formData(), session(sessionCookie, storage)],
+  middleware: [logger(), formData(), session(sessionCookie, sessionStorage)],
 })
 
 router.map(routes.home, async ({ session }) => {
@@ -111,11 +113,13 @@ router.map(routes.login, {
   },
   async action({ formData, session }) {
     let username = formData.get('username') as string
-    if (!username) {
-      return redirect(routes.login.index.href())
+
+    if (username) {
+      session.set('username', username)
+      return redirect(routes.home.href())
     }
-    session.set('username', username)
-    return redirect(routes.home.href())
+
+    return redirect(routes.login.index.href())
   },
 })
 
@@ -127,7 +131,7 @@ router.post(routes.logout, ({ session }) => {
 router.map(routes.posts, {
   new: {
     middleware: [requireAuth()],
-    handler({ session: _session }) {
+    action() {
       return createHtmlResponse(`
         <html>
           <head>

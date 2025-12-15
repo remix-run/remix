@@ -34,7 +34,7 @@ export async function unsign(cookie: string, secret: string): Promise<string | f
   }
 }
 
-async function createKey(secret: string, usages: CryptoKey['usages']): Promise<CryptoKey> {
+function createKey(secret: string, usages: CryptoKey['usages']): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     'raw',
     encoder.encode(secret),

@@ -50,7 +50,7 @@ type Coder = (value: string) => string
  * Also supports cryptographic signing of the cookie value to ensure it's not tampered with, and
  * secret rotation to easily rotate secrets without breaking existing cookies.
  */
-export class Cookie {
+export class Cookie implements CookieProperties {
   #name: string
   #decode: Coder
   #encode: Coder

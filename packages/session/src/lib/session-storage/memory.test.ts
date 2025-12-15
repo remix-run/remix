@@ -21,7 +21,7 @@ describe('memory session storage', () => {
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
-      session.set('count', ((session.get('count') as number | undefined) ?? 0) + 1)
+      session.set('count', Number(session.get('count') ?? 0) + 1)
       return {
         cookie: await storage.save(session),
         session,
@@ -43,7 +43,7 @@ describe('memory session storage', () => {
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
-      session.set('count', ((session.get('count') as number | undefined) ?? 0) + 1)
+      session.set('count', Number(session.get('count') ?? 0) + 1)
       return {
         cookie: await storage.save(session),
         session,
@@ -127,7 +127,7 @@ describe('memory session storage', () => {
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
-      session.set('count', ((session.get('count') as number | undefined) ?? 0) + 1)
+      session.set('count', Number(session.get('count') ?? 0) + 1)
       return {
         cookie: await storage.save(session),
         session,
@@ -161,7 +161,7 @@ describe('memory session storage', () => {
 
     async function requestIndex(cookie: string | null = null) {
       let session = await storage.read(cookie)
-      session.set('count', ((session.get('count') as number | undefined) ?? 0) + 1)
+      session.set('count', Number(session.get('count') ?? 0) + 1)
       return {
         cookie: await storage.save(session),
         session,

@@ -25,7 +25,7 @@ export interface MethodOverrideOptions {
 export function methodOverride(options?: MethodOverrideOptions): Middleware {
   let fieldName = options?.fieldName ?? '_method'
 
-  return async (context: RequestContext) => {
+  return (context: RequestContext) => {
     let method = context.formData?.get(fieldName)
     if (typeof method !== 'string') {
       return

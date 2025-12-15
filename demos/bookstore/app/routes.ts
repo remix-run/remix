@@ -1,4 +1,4 @@
-import { route, formAction, resources } from '@remix-run/fetch-router'
+import { del, get, post, put, route, form, resources } from '@remix-run/fetch-router'
 
 export let routes = route({
   assets: '/assets/*path',
@@ -7,10 +7,7 @@ export let routes = route({
   // Simple static routes
   home: '/',
   about: '/about',
-  contact: route('/contact', {
-    index: { method: 'GET', pattern: '/' },
-    action: { method: 'POST', pattern: '/' },
-  }),
+  contact: form('contact'),
   search: '/search',
 
   // Fragments
@@ -27,17 +24,17 @@ export let routes = route({
 
   // Auth routes
   auth: {
-    login: formAction('login'),
-    register: formAction('register'),
-    logout: { method: 'POST', pattern: '/logout' },
-    forgotPassword: formAction('forgot-password'),
-    resetPassword: formAction('reset-password/:token'),
+    login: form('login'),
+    register: form('register'),
+    logout: post('logout'),
+    forgotPassword: form('forgot-password'),
+    resetPassword: form('reset-password/:token'),
   },
 
   // Account section (protected, nested routes)
-  account: route('/account', {
+  account: route('account', {
     index: '/',
-    settings: formAction('settings', {
+    settings: form('settings', {
       formMethod: 'PUT',
       names: {
         action: 'update',
@@ -52,27 +49,27 @@ export let routes = route({
   }),
 
   // Cart and shopping
-  cart: route('/cart', {
-    index: { method: 'GET', pattern: '/' },
+  cart: route('cart', {
+    index: get('/'),
 
     // API-style endpoints under /cart/api
     api: {
-      add: { method: 'POST', pattern: '/api/add' },
-      update: { method: 'PUT', pattern: '/api/update' },
-      remove: { method: 'DELETE', pattern: '/api/remove' },
+      add: post('/api/add'),
+      update: put('/api/update'),
+      remove: del('/api/remove'),
     },
   }),
 
   // Checkout flow
-  checkout: route('/checkout', {
-    index: { method: 'GET', pattern: '/' },
-    action: { method: 'POST', pattern: '/' },
-    confirmation: { method: 'GET', pattern: '/:orderId/confirmation' },
+  checkout: route('checkout', {
+    index: get('/'),
+    action: post('/'),
+    confirmation: get('/:orderId/confirmation'),
   }),
 
   // Admin section (protected, showcases full CRUD on multiple resources)
-  admin: route('/admin', {
-    index: { method: 'GET', pattern: '/' },
+  admin: route('admin', {
+    index: get('/'),
 
     // Full CRUD on books
     books: resources('books', { param: 'bookId' }),

@@ -22,9 +22,11 @@
 - **Imports**: Always use `import type { X }` for types (separate from value imports); use `export type { X }` for type exports; include `.ts` extensions
 - **Variables**: Prefer `let` for locals, `const` only at module scope; never use `var`
 - **Functions**: Use regular function declarations/expressions by default. Only use arrow functions as callbacks (e.g., route handlers, array methods) where preserving lexical `this` is beneficial or the syntax is more concise
+- **Object methods**: When defining functions in object literals, use shorthand method syntax (`{ method() {} }`) instead of arrow functions (`{ method: () => {} }`)
 - **Classes**: Use native fields (omit `public`), `#private` for private members (no TypeScript accessibility modifiers)
 - **Formatting**: Prettier (printWidth: 100, no semicolons, single quotes, spaces not tabs)
 - **TypeScript**: Strict mode, ESNext target, ES2022 modules, bundler resolution, verbatimModuleSyntax
+- **Generics**: Use descriptive lowercase names for type parameters (e.g., `source`, `method`, `pattern`) instead of single uppercase letters like `T`, `P`, or `K`
 - **Comments**: Only add non-JSDoc comments when the code is doing something surprising or non-obvious
 
 ## Test Structure
