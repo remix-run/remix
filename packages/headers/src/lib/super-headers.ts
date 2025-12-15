@@ -16,6 +16,8 @@ import { type SetCookieInit, SetCookie } from './set-cookie.ts'
 import { type VaryInit, Vary } from './vary.ts'
 import { isIterable, quoteEtag } from './utils.ts'
 
+let isBun = 'Bun' in globalThis
+
 type DateInit = number | Date
 
 /**
@@ -247,6 +249,7 @@ export class SuperHeaders extends Headers {
     } else {
       let existingValue = this.#map.get(key)
       this.#map.set(key, existingValue ? `${existingValue}, ${value}` : value)
+      super.append(key, value) // Bun compatibility - see note at bottom of file
     }
   }
 
@@ -263,6 +266,7 @@ export class SuperHeaders extends Headers {
       this.#setCookies = []
     } else {
       this.#map.delete(key)
+      super.delete(name) // Bun compatibility - see note at bottom of file
     }
   }
 
@@ -332,6 +336,7 @@ export class SuperHeaders extends Headers {
       this.#setCookies = [value]
     } else {
       this.#map.set(key, value)
+      super.set(key, value) // Bun compatibility - see note at bottom of file
     }
   }
 
@@ -900,25 +905,64 @@ export class SuperHeaders extends Headers {
 
     if (value !== undefined) {
       if (typeof value === 'string') {
-        let obj = new ctor(value)
+        let obj = this.#wrapForBunMutationSync(key, new ctor(value))
         this.#map.set(key, obj) // cache the new object
-        return obj
+        return obj as T
       } else {
         return value as T
       }
     }
 
-    let obj = new ctor()
+    let obj = this.#wrapForBunMutationSync(key, new ctor())
     this.#map.set(key, obj) // cache the new object
-    return obj
+    return obj as T
   }
 
   #setHeaderValue(key: string, ctor: new (init?: string) => HeaderValue, value: any): void {
     if (value != null) {
-      this.#map.set(key, typeof value === 'string' ? value : new ctor(value))
+      if (typeof value === 'string') {
+        this.#map.set(key, value)
+        super.set(key, value) // Bun compatibility - see note at bottom of file
+      } else {
+        let obj = new ctor(value)
+        this.#map.set(key, this.#wrapForBunMutationSync(key, obj))
+        super.set(key, obj.toString()) // Bun compatibility - see note at bottom of file
+      }
     } else {
       this.#map.delete(key)
+      super.delete(key) // Bun compatibility - see note at bottom of file
     }
+  }
+
+  // Bun compatibility: wrap header value objects in Proxy to sync mutations to native storage.
+  // See note at bottom of file for details.
+  //
+  // The Proxy needs both `get` and `set` traps:
+  // - `set`: syncs property mutations to native Headers storage
+  // - `get`: binds methods to the original object so private fields are accessible
+  //
+  // This is necessary because private fields are bound to object identity, and a Proxy
+  // is a different identity than its target. Bun (correctly per spec) doesn't allow
+  // accessing private fields through a Proxy.
+  #wrapForBunMutationSync<T extends HeaderValue>(key: string, obj: T): T {
+    if (!isBun) return obj
+
+    return new Proxy(obj, {
+      get(target, prop, receiver) {
+        let value = Reflect.get(target, prop, target) // Use target as receiver for private field access
+        // Bind methods to the original object so they can access private fields
+        if (typeof value === 'function') {
+          return value.bind(target)
+        }
+        return value
+      },
+      set: (target: any, prop, newValue) => {
+        target[prop] = newValue
+        // Sync mutation to native storage (obj and target are the same original object)
+        super.set(key, obj.toString())
+        return true
+      },
+    }) as T
   }
 
   #getDateValue(key: string): Date | null {
@@ -928,14 +972,15 @@ export class SuperHeaders extends Headers {
 
   #setDateValue(key: string, value: string | DateInit | undefined | null): void {
     if (value != null) {
-      this.#map.set(
-        key,
+      let str =
         typeof value === 'string'
           ? value
-          : (typeof value === 'number' ? new Date(value) : value).toUTCString(),
-      )
+          : (typeof value === 'number' ? new Date(value) : value).toUTCString()
+      this.#map.set(key, str)
+      super.set(key, str) // Bun compatibility - see note at bottom of file
     } else {
       this.#map.delete(key)
+      super.delete(key) // Bun compatibility - see note at bottom of file
     }
   }
 
@@ -946,9 +991,12 @@ export class SuperHeaders extends Headers {
 
   #setNumberValue(key: string, value: string | number | undefined | null): void {
     if (value != null) {
-      this.#map.set(key, typeof value === 'string' ? value : value.toString())
+      let str = typeof value === 'string' ? value : value.toString()
+      this.#map.set(key, str)
+      super.set(key, str) // Bun compatibility - see note at bottom of file
     } else {
       this.#map.delete(key)
+      super.delete(key) // Bun compatibility - see note at bottom of file
     }
   }
 
@@ -960,8 +1008,30 @@ export class SuperHeaders extends Headers {
   #setStringValue(key: string, value: string | undefined | null): void {
     if (value != null) {
       this.#map.set(key, value)
+      super.set(key, value) // Bun compatibility - see note at bottom of file
     } else {
       this.#map.delete(key)
+      super.delete(key) // Bun compatibility - see note at bottom of file
     }
   }
 }
+
+// NOTE: Bun compatibility - why we call super.set() / super.delete() / super.append()
+//
+// SuperHeaders uses a private #map to store header values (including rich parsed objects).
+// However, Bun reads directly from the native Headers internal storage when constructing
+// Response objects - it casts the Headers subclass to its internal FetchHeaders type and
+// reads from C++ storage, bypassing our JavaScript methods entirely.
+//
+// To ensure headers are visible to Bun, we must keep the native Headers storage in sync
+// by calling super.set()/super.delete()/super.append() alongside our #map operations.
+//
+// Additionally, when header value objects (e.g. ContentType) are mutated after being set,
+// the native storage becomes stale. To handle this, we wrap header value objects in a Proxy
+// (in Bun only) that syncs mutations back to native storage. See #wrapForBunMutationSync().
+//
+// See Bun's implementation:
+// - FetchHeaders.cast (casts JS Headers to native):
+//   https://github.com/oven-sh/bun/blob/f0d18d73c932c5eeef5382e26bc938fbc4a095f1/src/bun.js/bindings/FetchHeaders.zig#L376-L382
+// - Response using .as(FetchHeaders) to read headers directly:
+//   https://github.com/oven-sh/bun/blob/f0d18d73c932c5eeef5382e26bc938fbc4a095f1/src/bun.js/webcore/Response.zig#L819

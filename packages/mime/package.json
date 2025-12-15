@@ -43,6 +43,7 @@
     "codegen": "node --disable-warning=ExperimentalWarning ./scripts/codegen.js",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test",
+    "test:bun": "bun test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

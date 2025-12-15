@@ -53,7 +53,7 @@ describe('staticFiles middleware', () => {
 
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'Hello, World!')
-      assert.equal(response.headers.get('Content-Type'), 'text/plain')
+      assert.equal(response.headers.get('Content-Type'), 'text/plain;charset=utf-8')
     })
 
     it('serves a file with HEAD request', async () => {
@@ -71,7 +71,7 @@ describe('staticFiles middleware', () => {
 
       assert.equal(response.status, 200)
       assert.equal(await response.text(), '')
-      assert.equal(response.headers.get('Content-Type'), 'text/plain')
+      assert.equal(response.headers.get('Content-Type'), 'text/plain;charset=utf-8')
     })
 
     it('serves files from nested directories', async () => {
@@ -440,7 +440,7 @@ describe('staticFiles middleware', () => {
       let response = await router.fetch('https://remix.run/subdir/')
       assert.equal(response.status, 200)
       assert.equal(await response.text(), '<h1>Index Page</h1>')
-      assert.equal(response.headers.get('Content-Type'), 'text/html')
+      assert.equal(response.headers.get('Content-Type'), 'text/html;charset=utf-8')
     })
 
     it('serves default index.html when requesting a directory without trailing slash', async () => {
@@ -457,7 +457,7 @@ describe('staticFiles middleware', () => {
       let response = await router.fetch('https://remix.run/subdir')
       assert.equal(response.status, 200)
       assert.equal(await response.text(), '<h1>Index Page</h1>')
-      assert.equal(response.headers.get('Content-Type'), 'text/html')
+      assert.equal(response.headers.get('Content-Type'), 'text/html;charset=utf-8')
     })
 
     it('serves default index.htm when index.html does not exist', async () => {
@@ -474,7 +474,7 @@ describe('staticFiles middleware', () => {
       let response = await router.fetch('https://remix.run/subdir/')
       assert.equal(response.status, 200)
       assert.equal(await response.text(), '<h1>HTM Index Page</h1>')
-      assert.equal(response.headers.get('Content-Type'), 'text/html')
+      assert.equal(response.headers.get('Content-Type'), 'text/html;charset=utf-8')
     })
 
     it('prefers index.html over index.htm when both exist', async () => {
@@ -660,7 +660,7 @@ describe('staticFiles middleware', () => {
 
       assert.equal(response.status, 200)
       assert.equal(await response.text(), 'Hello, World!')
-      assert.equal(response.headers.get('Content-Type'), 'text/plain')
+      assert.equal(response.headers.get('Content-Type'), 'text/plain;charset=utf-8')
     })
   })
 })

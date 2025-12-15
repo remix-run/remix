@@ -1,6 +1,24 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+let isBun = 'Bun' in globalThis
+
+// Bun deliberately doesn't store certain Request properties. The constructor ignores these
+// options and the getters return hardcoded values:
+//   - cache: always 'default'
+//   - credentials: always 'include'
+//   - integrity: always ''
+//   - keepalive: always undefined
+//   - mode: always 'navigate'
+//   - referrer: always ''
+//   - referrerPolicy: always ''
+//
+// This is a deliberate design choice, not a bug. See Bun's Request.zig implementation:
+// - Fields enum (shows what's implemented vs commented out):
+//   https://github.com/oven-sh/bun/blob/f0d18d73c932c5eeef5382e26bc938fbc4a095f1/src/bun.js/webcore/Request.zig#L557-L572
+// - Hardcoded getters:
+//   https://github.com/oven-sh/bun/blob/f0d18d73c932c5eeef5382e26bc938fbc4a095f1/src/bun.js/webcore/Request.zig#L331-L384
+
 import { type FetchProxyOptions, createFetchProxy } from './fetch-proxy.ts'
 
 async function testProxy(
@@ -135,7 +153,8 @@ describe('fetch proxy', () => {
     )
 
     assert.equal(request.method, 'DELETE')
-    assert.equal(request.cache, 'no-cache')
+    // See note at top of file for Bun differences
+    assert.equal(request.cache, isBun ? 'default' : 'no-cache')
     assert.equal(request.credentials, 'include')
     assert.equal(request.redirect, 'manual')
   })
@@ -213,14 +232,18 @@ describe('fetch proxy', () => {
 
     assert.ok(capturedRequest!)
     assert.equal(capturedRequest.method, 'PUT')
-    assert.equal(capturedRequest.cache, 'no-store')
-    assert.equal(capturedRequest.credentials, 'omit')
-    assert.equal(capturedRequest.integrity, 'sha256-BpfBw7ivV8q2jLiT13fxDYAe2tJllusRSZ273h2nFSE=')
-    assert.equal(capturedRequest.keepalive, true)
-    assert.equal(capturedRequest.mode, 'cors')
+    // See note at top of file for Bun differences
+    assert.equal(capturedRequest.cache, isBun ? 'default' : 'no-store')
+    assert.equal(capturedRequest.credentials, isBun ? 'include' : 'omit')
+    assert.equal(
+      capturedRequest.integrity,
+      isBun ? '' : 'sha256-BpfBw7ivV8q2jLiT13fxDYAe2tJllusRSZ273h2nFSE=',
+    )
+    assert.equal(capturedRequest.keepalive, isBun ? undefined : true)
+    assert.equal(capturedRequest.mode, isBun ? 'navigate' : 'cors')
     assert.equal(capturedRequest.redirect, 'error')
-    assert.equal(capturedRequest.referrer, 'http://example.com/')
-    assert.equal(capturedRequest.referrerPolicy, 'no-referrer')
+    assert.equal(capturedRequest.referrer, isBun ? '' : 'http://example.com/')
+    assert.equal(capturedRequest.referrerPolicy, isBun ? '' : 'no-referrer')
   })
 
   it('allows init to override request properties', async () => {
@@ -272,8 +295,9 @@ describe('fetch proxy (double-arg style)', () => {
 
     assert.ok(capturedRequest!)
     assert.equal(capturedRequest.method, 'PATCH')
-    assert.equal(capturedRequest.cache, 'reload')
-    assert.equal(capturedRequest.credentials, 'same-origin')
+    // See note at top of file for Bun differences
+    assert.equal(capturedRequest.cache, isBun ? 'default' : 'reload')
+    assert.equal(capturedRequest.credentials, isBun ? 'include' : 'same-origin')
     assert.equal(capturedRequest.headers.get('X-Custom'), 'value')
     assert.equal(capturedRequest.url, 'https://remix.run:3000/dest/api/resource')
   })

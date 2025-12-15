@@ -7,6 +7,8 @@ import { parseFormData } from '@remix-run/form-data-parser'
 
 import { createFsFileStorage } from './fs.ts'
 
+let isBun = 'Bun' in globalThis
+
 describe('fs file storage', () => {
   let tmpDir: string
   beforeEach(() => {
@@ -33,7 +35,8 @@ describe('fs file storage', () => {
 
     assert.ok(retrieved)
     assert.equal(retrieved.name, 'hello.txt')
-    assert.equal(retrieved.type, 'text/plain')
+    // Bun normalizes text types to include charset
+    assert.equal(retrieved.type, isBun ? 'text/plain;charset=utf-8' : 'text/plain')
     assert.equal(retrieved.lastModified, lastModified)
     assert.equal(retrieved.size, 13)
 
@@ -189,7 +192,8 @@ describe('fs file storage', () => {
     assert.ok(await storage.has('hello'))
     assert.ok(retrieved)
     assert.equal(retrieved.name, 'hello.txt')
-    assert.equal(retrieved.type, 'text/plain')
+    // Bun normalizes text types to include charset
+    assert.equal(retrieved.type, isBun ? 'text/plain;charset=utf-8' : 'text/plain')
     assert.equal(retrieved.lastModified, lastModified)
     assert.equal(retrieved.size, 13)
   })
@@ -226,7 +230,8 @@ describe('fs file storage', () => {
       assert.equal(files[0].key, 'hello')
       assert.equal(files[0].name, 'hello.txt')
       assert.equal(files[0].size, 13)
-      assert.equal(files[0].type, 'text/plain')
+      // Bun normalizes text types to include charset
+      assert.equal(files[0].type, isBun ? 'text/plain;charset=utf-8' : 'text/plain')
       assert.ok(files[0].lastModified)
     })
   })

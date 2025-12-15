@@ -1,5 +1,6 @@
 import SuperHeaders from '@remix-run/headers'
-import { isCompressibleMimeType } from '@remix-run/mime'
+import { LazyBlob, LazyFile } from '@remix-run/lazy-file'
+import { isCompressibleMimeType, mimeTypeToContentType } from '@remix-run/mime'
 
 /**
  * Custom function for computing file digests.
@@ -105,7 +106,7 @@ export async function createFileResponse(
 
   let headers = new SuperHeaders(request.headers)
 
-  let contentType = file.type
+  let contentType = mimeTypeToContentType(file.type)
   let contentLength = file.size
 
   let etag: string | undefined
@@ -239,7 +240,7 @@ export async function createFileResponse(
       let { start, end } = normalizedRanges[0]
       let { size } = file
 
-      return new Response(file.slice(start, end + 1), {
+      return new Response(getResponseBody(file.slice(start, end + 1)), {
         status: 206,
         headers: new SuperHeaders(
           omitNullableValues({
@@ -256,7 +257,7 @@ export async function createFileResponse(
     }
   }
 
-  return new Response(request.method === 'HEAD' ? null : file, {
+  return new Response(request.method === 'HEAD' ? null : getResponseBody(file), {
     status: 200,
     headers: new SuperHeaders(
       omitNullableValues({
@@ -273,6 +274,19 @@ export async function createFileResponse(
 
 function generateWeakETag(file: File): string {
   return `W/"${file.size}-${file.lastModified}"`
+}
+
+/**
+ * Gets the appropriate body for a Response.
+ *
+ * LazyFile/LazyBlob must use .stream() because Bun's Response constructor
+ * doesn't properly read from Blob subclasses that use private storage.
+ *
+ * Native File/Blob should be passed directly because Bun's .stream() on
+ * sliced blobs incorrectly returns the full original content.
+ */
+function getResponseBody(blob: Blob): ReadableStream | Blob {
+  return blob instanceof LazyFile || blob instanceof LazyBlob ? blob.stream() : blob
 }
 
 type OmitNullableValues<T> = {

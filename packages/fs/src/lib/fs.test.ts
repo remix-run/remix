@@ -7,6 +7,8 @@ import { beforeEach, afterEach, describe, it } from 'node:test'
 
 import { openFile, writeFile } from './fs.ts'
 
+let isBun = 'Bun' in globalThis
+
 describe('openFile', () => {
   let tmpDir: string
 
@@ -45,9 +47,10 @@ describe('openFile', () => {
     let jsonPath = createTestFile('test.json', '{}')
     let txtPath = createTestFile('test.txt', 'text')
 
-    assert.equal(openFile(htmlPath).type, 'text/html')
-    assert.equal(openFile(jsonPath).type, 'application/json')
-    assert.equal(openFile(txtPath).type, 'text/plain')
+    // Bun normalizes text types to include charset
+    assert.equal(openFile(htmlPath).type, isBun ? 'text/html;charset=utf-8' : 'text/html')
+    assert.equal(openFile(jsonPath).type, isBun ? 'application/json;charset=utf-8' : 'application/json')
+    assert.equal(openFile(txtPath).type, isBun ? 'text/plain;charset=utf-8' : 'text/plain')
   })
 
   it('sets lastModified from file stats', () => {

@@ -858,4 +858,39 @@ describe('SuperHeaders', () => {
       assert.equal(headers.vary.size, 0)
     })
   })
+
+  describe('Bun compatibility', () => {
+    // This test documents a known limitation: mutating cached header value objects
+    // after setting them will NOT be reflected when headers are passed to Response in Bun.
+    // Bun reads directly from native Headers storage, which contains the original stringified value.
+    // See note at bottom of super-headers.ts for details.
+    it('reflects mutated header values when passed to Response', () => {
+      let headers = new SuperHeaders()
+
+      // Set content type - this stores ContentType object in #map and string in native
+      headers.contentType = 'text/html'
+      assert.equal(headers.get('content-type'), 'text/html')
+
+      // Get the cached ContentType object and mutate it
+      let ct = headers.contentType
+      assert.ok(ct)
+      ct.mediaType = 'text/plain'
+
+      // Our get() sees the mutation (reads from #map, stringifies the object)
+      assert.equal(headers.get('content-type'), 'text/plain')
+
+      // Create a Response with these headers
+      let response = new Response('hello', { headers })
+
+      // Does Response see the mutated value?
+      // - Node: Yes, because it iterates via entries() which reads from #map
+      // - Bun: No, because it reads directly from native storage (stale!)
+      let responseContentType = response.headers.get('content-type')
+
+      // This assertion documents the expected behavior.
+      // Currently FAILS in Bun (sees 'text/html'), PASSES in Node (sees 'text/plain').
+      // TODO: Fix by syncing native storage when header value objects are mutated.
+      assert.equal(responseContentType, 'text/plain')
+    })
+  })
 })

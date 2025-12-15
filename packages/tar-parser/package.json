@@ -43,6 +43,7 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --disable-warning=ExperimentalWarning --test",
+    "test:bun": "bun test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

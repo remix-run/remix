@@ -12,7 +12,7 @@ describe('createFileResponse()', () => {
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, World!')
-    assert.equal(response.headers.get('Content-Type'), 'text/plain')
+    assert.equal(response.headers.get('Content-Type'), 'text/plain;charset=utf-8')
     assert.equal(response.headers.get('Content-Length'), '13')
   })
 
@@ -24,7 +24,7 @@ describe('createFileResponse()', () => {
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), '')
-    assert.equal(response.headers.get('Content-Type'), 'text/plain')
+    assert.equal(response.headers.get('Content-Type'), 'text/plain;charset=utf-8')
     assert.equal(response.headers.get('Content-Length'), '13')
   })
 
@@ -1254,15 +1254,49 @@ describe('createFileResponse()', () => {
   })
 
   describe('Content-Type', () => {
-    it('sets Content-Type from file', async () => {
+    it('sets Content-Type from file with charset for text-based types', async () => {
       let testCases = [
-        { type: 'text/html', name: 'test.html' },
-        { type: 'text/css', name: 'test.css' },
-        { type: 'text/javascript', name: 'test.js' },
-        { type: 'application/json', name: 'test.json' },
+        { type: 'text/html', name: 'test.html', expected: 'text/html;charset=utf-8' },
+        { type: 'text/css', name: 'test.css', expected: 'text/css;charset=utf-8' },
+        { type: 'text/plain', name: 'test.txt', expected: 'text/plain;charset=utf-8' },
+        { type: 'text/javascript', name: 'test.js', expected: 'text/javascript;charset=utf-8' },
+        { type: 'application/json', name: 'test.json', expected: 'application/json;charset=utf-8' },
+        { type: 'image/svg+xml', name: 'test.svg', expected: 'image/svg+xml;charset=utf-8' },
+        { type: 'application/xml', name: 'test.xml', expected: 'application/xml;charset=utf-8' },
+      ]
+
+      for (let { type, name, expected } of testCases) {
+        let mockFile = new File(['test content'], name, { type })
+        let request = new Request(`http://localhost/${name}`)
+
+        let response = await createFileResponse(mockFile, request)
+        assert.equal(response.status, 200)
+        assert.equal(response.headers.get('Content-Type'), expected)
+      }
+    })
+
+    it('sets Content-Type with charset for application/javascript', async () => {
+      // Note: Bun normalizes application/javascript to text/javascript, which is the modern standard
+      let mockFile = new File(['test content'], 'app.js', { type: 'application/javascript' })
+      let request = new Request('http://localhost/app.js')
+
+      let response = await createFileResponse(mockFile, request)
+      let contentType = response.headers.get('Content-Type')
+      assert.equal(response.status, 200)
+      // Bun normalizes to text/javascript, Node keeps application/javascript
+      assert.ok(
+        contentType === 'application/javascript;charset=utf-8' ||
+          contentType === 'text/javascript;charset=utf-8',
+        `Expected JavaScript type with charset=utf-8, got "${contentType}"`,
+      )
+    })
+
+    it('does not add charset to binary types', async () => {
+      let testCases = [
         { type: 'image/png', name: 'test.png' },
         { type: 'image/jpeg', name: 'test.jpg' },
-        { type: 'image/svg+xml', name: 'test.svg' },
+        { type: 'application/pdf', name: 'test.pdf' },
+        { type: 'application/zip', name: 'test.zip' },
       ]
 
       for (let { type, name } of testCases) {
@@ -1282,7 +1316,9 @@ describe('createFileResponse()', () => {
       let response = await createFileResponse(mockFile, request)
 
       assert.equal(response.status, 200)
-      assert.equal(response.headers.get('Content-Type'), null)
+      // Content-Type is null (Node) or empty string (Bun) when file has no type
+      let contentType = response.headers.get('Content-Type')
+      assert.ok(contentType === null || contentType === '', `Expected null or empty, got "${contentType}"`)
     })
   })
 })

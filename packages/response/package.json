@@ -55,6 +55,7 @@
   "peerDependencies": {
     "@remix-run/headers": "workspace:^",
     "@remix-run/html-template": "workspace:^",
+    "@remix-run/lazy-file": "workspace:^",
     "@remix-run/mime": "workspace:^"
   },
   "scripts": {

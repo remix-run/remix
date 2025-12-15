@@ -3,6 +3,8 @@ import { describe, it } from 'node:test'
 
 import { type LazyContent, LazyFile } from './lazy-file.ts'
 
+let isBun = 'Bun' in globalThis
+
 function createLazyContent(value = ''): LazyContent {
   let buffer = new TextEncoder().encode(value)
   return {
@@ -28,7 +30,8 @@ describe('LazyFile', () => {
 
     assert.equal(file.name, 'example.txt')
     assert.equal(file.size, 100)
-    assert.equal(file.type, 'text/plain')
+    // Bun normalizes text types to include charset
+    assert.equal(file.type, isBun ? 'text/plain;charset=utf-8' : 'text/plain')
     assert.equal(file.lastModified, now)
   })
 
@@ -106,49 +109,84 @@ describe('LazyFile', () => {
       assert.equal(slice.size, 0)
     })
 
-    it('calls content.stream() with the correct range', (t) => {
+    it('calls content.stream() with the correct range', () => {
       let content = createLazyContent('X'.repeat(100))
-      let read = t.mock.method(content, 'stream')
+      let streamCalls: [number?, number?][] = []
+      let originalStream = content.stream.bind(content)
+      content.stream = (start?: number, end?: number) => {
+        streamCalls.push([start, end])
+        return originalStream(start, end)
+      }
+
       let file = new LazyFile(content, 'example.txt', { type: 'text/plain' })
       file.slice(10, 20).stream()
-      assert.equal(read.mock.calls.length, 1)
-      assert.deepEqual(read.mock.calls[0].arguments, [10, 20])
+
+      assert.equal(streamCalls.length, 1)
+      assert.deepEqual(streamCalls[0], [10, 20])
     })
 
-    it('calls content.stream() with the correct range when slicing a file with a negative "start" index', (t) => {
+    it('calls content.stream() with the correct range when slicing a file with a negative "start" index', () => {
       let content = createLazyContent('X'.repeat(100))
-      let read = t.mock.method(content, 'stream')
+      let streamCalls: [number?, number?][] = []
+      let originalStream = content.stream.bind(content)
+      content.stream = (start?: number, end?: number) => {
+        streamCalls.push([start, end])
+        return originalStream(start, end)
+      }
+
       let file = new LazyFile(content, 'example.txt', { type: 'text/plain' })
       file.slice(-10).stream()
-      assert.equal(read.mock.calls.length, 1)
-      assert.deepEqual(read.mock.calls[0].arguments, [90, 100])
+
+      assert.equal(streamCalls.length, 1)
+      assert.deepEqual(streamCalls[0], [90, 100])
     })
 
-    it('calls content.stream() with the correct range when slicing a file with a negative "end" index', (t) => {
+    it('calls content.stream() with the correct range when slicing a file with a negative "end" index', () => {
       let content = createLazyContent('X'.repeat(100))
-      let read = t.mock.method(content, 'stream')
+      let streamCalls: [number?, number?][] = []
+      let originalStream = content.stream.bind(content)
+      content.stream = (start?: number, end?: number) => {
+        streamCalls.push([start, end])
+        return originalStream(start, end)
+      }
+
       let file = new LazyFile(content, 'example.txt', { type: 'text/plain' })
       file.slice(0, -10).stream()
-      assert.equal(read.mock.calls.length, 1)
-      assert.deepEqual(read.mock.calls[0].arguments, [0, 90])
+
+      assert.equal(streamCalls.length, 1)
+      assert.deepEqual(streamCalls[0], [0, 90])
     })
 
-    it('calls content.stream() with the correct range when slicing a file with negative "start" and "end" indexes', (t) => {
+    it('calls content.stream() with the correct range when slicing a file with negative "start" and "end" indexes', () => {
       let content = createLazyContent('X'.repeat(100))
-      let read = t.mock.method(content, 'stream')
+      let streamCalls: [number?, number?][] = []
+      let originalStream = content.stream.bind(content)
+      content.stream = (start?: number, end?: number) => {
+        streamCalls.push([start, end])
+        return originalStream(start, end)
+      }
+
       let file = new LazyFile(content, 'example.txt', { type: 'text/plain' })
       file.slice(-20, -10).stream()
-      assert.equal(read.mock.calls.length, 1)
-      assert.deepEqual(read.mock.calls[0].arguments, [80, 90])
+
+      assert.equal(streamCalls.length, 1)
+      assert.deepEqual(streamCalls[0], [80, 90])
     })
 
-    it('calls content.stream() with the correct range when slicing a file with a "start" index greater than the "end" index', (t) => {
+    it('calls content.stream() with the correct range when slicing a file with a "start" index greater than the "end" index', () => {
       let content = createLazyContent('X'.repeat(100))
-      let read = t.mock.method(content, 'stream')
+      let streamCalls: [number?, number?][] = []
+      let originalStream = content.stream.bind(content)
+      content.stream = (start?: number, end?: number) => {
+        streamCalls.push([start, end])
+        return originalStream(start, end)
+      }
+
       let file = new LazyFile(content, 'example.txt', { type: 'text/plain' })
       file.slice(20, 10).stream()
-      assert.equal(read.mock.calls.length, 1)
-      assert.deepEqual(read.mock.calls[0].arguments, [20, 20])
+
+      assert.equal(streamCalls.length, 1)
+      assert.deepEqual(streamCalls[0], [20, 20])
     })
   })
 })

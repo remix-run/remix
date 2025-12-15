@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict'
-import { describe, it, mock } from 'node:test'
+import { describe, it } from 'node:test'
 
 import { createCookieSessionStorage } from './cookie.ts'
 
@@ -144,44 +144,51 @@ describe('cookie session storage', () => {
   })
 
   it('logs a warning when the id is regenerated and the deleteOldSession option is true', async () => {
-    let consoleWarn = mock.method(console, 'warn', () => {})
-
-    let storage = createCookieSessionStorage()
-
-    async function requestIndex(cookie: string | null = null) {
-      let session = await storage.read(cookie)
-      session.set('count', Number(session.get('count') ?? 0) + 1)
-      return {
-        cookie: await storage.save(session),
-        session,
-      }
+    // Spy on console.warn without using mock.method (works in both Node and Bun)
+    let warnCalls: unknown[][] = []
+    let originalWarn = console.warn
+    console.warn = (...args: unknown[]) => {
+      warnCalls.push(args)
     }
 
-    async function requestLoginAndDeleteOldSession(cookie: string | null = null) {
-      let session = await storage.read(cookie)
-      session.regenerateId(true)
-      return {
-        cookie: await storage.save(session),
-        session,
+    try {
+      let storage = createCookieSessionStorage()
+
+      async function requestIndex(cookie: string | null = null) {
+        let session = await storage.read(cookie)
+        session.set('count', Number(session.get('count') ?? 0) + 1)
+        return {
+          cookie: await storage.save(session),
+          session,
+        }
       }
+
+      async function requestLoginAndDeleteOldSession(cookie: string | null = null) {
+        let session = await storage.read(cookie)
+        session.regenerateId(true)
+        return {
+          cookie: await storage.save(session),
+          session,
+        }
+      }
+
+      let response1 = await requestIndex()
+      assert.equal(response1.session.get('count'), 1)
+
+      let response2 = await requestLoginAndDeleteOldSession(response1.cookie)
+      assert.notEqual(response2.session.id, response1.session.id)
+
+      let response3 = await requestIndex(response2.cookie)
+      assert.equal(response3.session.get('count'), 2)
+
+      assert.equal(warnCalls.length, 1)
+      let warning = warnCalls[0][0] as string
+      assert.match(
+        warning,
+        /Session ID [\w-]+ was regenerated, but the old session cannot be deleted when using cookie storage/,
+      )
+    } finally {
+      console.warn = originalWarn
     }
-
-    let response1 = await requestIndex()
-    assert.equal(response1.session.get('count'), 1)
-
-    let response2 = await requestLoginAndDeleteOldSession(response1.cookie)
-    assert.notEqual(response2.session.id, response1.session.id)
-
-    let response3 = await requestIndex(response2.cookie)
-    assert.equal(response3.session.get('count'), 2)
-
-    assert.equal(consoleWarn.mock.calls.length, 1)
-    let warning = consoleWarn.mock.calls[0].arguments[0] as string
-    assert.match(
-      warning,
-      /Session ID [\w-]+ was regenerated, but the old session cannot be deleted when using cookie storage/,
-    )
-
-    consoleWarn.mock.restore()
   })
 })

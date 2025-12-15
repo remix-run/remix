@@ -774,6 +774,9 @@ importers:
       '@remix-run/html-template':
         specifier: workspace:^
         version: link:../html-template
+      '@remix-run/lazy-file':
+        specifier: workspace:^
+        version: link:../lazy-file
     devDependencies:
       '@remix-run/mime':
         specifier: workspace:*
