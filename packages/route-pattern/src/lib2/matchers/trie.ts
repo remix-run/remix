@@ -22,6 +22,15 @@ export class TrieMatcher<data> implements Matcher<data> {
     return best ? { params: best.params, data: best.data } : null
   }
 
+  matchAll(url: URL) {
+    let matches = []
+    for (let match of this.#trie.search(url)) {
+      matches.push(match)
+    }
+    matches.sort((a, b) => rankCompare(a.rank, b.rank))
+    return matches
+  }
+
   get size() {
     return this.#size
   }
@@ -39,13 +48,17 @@ const RANK = {
 type Rank = Array<string>
 
 function rankLessThan(a: Rank, b: Rank) {
+  return rankCompare(a, b) === -1
+}
+
+function rankCompare(a: Rank, b: Rank) {
   for (let i = 0; i < a.length; i++) {
     let segmentA = a[i]
     let segmentB = b[i]
-    if (segmentA < segmentB) return true
-    if (segmentA > segmentB) return false
+    if (segmentA < segmentB) return -1
+    if (segmentA > segmentB) return 1
   }
-  return false
+  return 0
 }
 
 // Trie --------------------------------------------------------------------------------------------
