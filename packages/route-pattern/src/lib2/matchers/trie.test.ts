@@ -333,36 +333,203 @@ describe('trie', () => {
       let matches = searchAll(trie, new URL('https://example.com/users/@admin'))
       expect(matches.length).toBe(2)
 
-      // Static match should have rank of all 0s for pathname segments
-      // Dynamic match should have rank of 1s where the variable matched
       let staticMatch = matches.find((m) => m.data === staticPattern)
       let dynamicMatch = matches.find((m) => m.data === dynamicPattern)
 
-      // The rank array covers: protocol (5 chars "https") + hostname (3 "com" + 7 "example") + pathname (5 "users" + 5 "admin")
-      // Total: 5 + 3 + 7 + 5 + 5 = 25
-
       expect(staticMatch).toStrictEqual({
-        // prettier-ignore
-        rank: new Uint8Array([
-          3, 3, 3, 3, 3,                // protocol "https" - skipped (3)
-          3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // hostname "com" + "example" - skipped (3)
-          0, 0, 0, 0, 0,                // pathname "users" - static (0)
-          0, 0, 0, 0, 0, 0,             // pathname "@admin" - static (0)
-        ]),
+        rank: [
+          '3', // protocol: "https" (skipped: 3)
+          '3', // hostname: "com" (skipped: 3)
+          '3', // hostname: "example" (skipped: 3)
+          '0', // pathname: "users" (static: 0)
+          '0', // pathname: "@admin" (static: 0)
+        ],
         params: {},
         data: staticPattern,
       })
 
       expect(dynamicMatch).toStrictEqual({
-        // prettier-ignore
-        rank: new Uint8Array([
-          3, 3, 3, 3, 3,                // protocol "https" - skipped (3)
-          3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // hostname "com" + "example" - skipped (3)
-          0, 0, 0, 0, 0,                // pathname "users" - static (0)
-          0, 1, 1, 1, 1, 1,             // pathname "@admin" matched by @:id - variable (1)
-        ]),
+        rank: [
+          '3', // protocol: "https" (skipped: 3)
+          '3', // hostname: "com" (skipped: 3)
+          '3', // hostname: "example" (skipped: 3)
+          '0', // pathname: "users" (static: 0)
+          '011111', // pathname: "@admin" (dynamic: "011111")
+        ],
         params: { id: 'admin' },
         data: dynamicPattern,
+      })
+    })
+
+    it('matches pattern with static prefix + wildcard in segment', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let pattern = parse('files/image-*rest')
+      trie.insert(pattern, pattern)
+
+      let matches = searchAll(trie, new URL('https://example.com/files/image-photo/gallery/2024'))
+      expect(matches.length).toBe(1)
+      expect(matches[0]).toStrictEqual({
+        rank: [
+          '3', // protocol: "https" (skipped: 3)
+          '3', // hostname: "com" (skipped: 3)
+          '3', // hostname: "example" (skipped: 3)
+          '0', // pathname: "files" (static: 0)
+          '00000022222', // pathname: "image-" (static) + "photo" (wildcard)
+          '2222222', // pathname: "gallery" (wildcard)
+          '2222', // pathname: "2024" (wildcard)
+        ],
+        params: { rest: 'photo/gallery/2024' },
+        data: pattern,
+      })
+    })
+
+    it('matches pattern with variable + static suffix in segment', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let pattern = parse('assets/:name.png')
+      trie.insert(pattern, pattern)
+
+      let matches = searchAll(trie, new URL('https://example.com/assets/logo.png'))
+      expect(matches.length).toBe(1)
+      expect(matches[0]).toStrictEqual({
+        rank: [
+          '3', // protocol: "https" (skipped: 3)
+          '3', // hostname: "com" (skipped: 3)
+          '3', // hostname: "example" (skipped: 3)
+          '0', // pathname: "assets" (static: 0)
+          '11110000', // pathname: "logo" (variable) + ".png" (static)
+        ],
+        params: { name: 'logo' },
+        data: pattern,
+      })
+    })
+
+    it('matches pattern with static + variable + static in same segment', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let pattern = parse('api/v:version-beta')
+      trie.insert(pattern, pattern)
+
+      let matches = searchAll(trie, new URL('https://example.com/api/v2-beta'))
+      expect(matches.length).toBe(1)
+      expect(matches[0]).toStrictEqual({
+        rank: [
+          '3', // protocol: "https" (skipped: 3)
+          '3', // hostname: "com" (skipped: 3)
+          '3', // hostname: "example" (skipped: 3)
+          '0', // pathname: "api" (static: 0)
+          '0100000', // pathname: "v" (static) + "2" (variable) + "-beta" (static)
+        ],
+        params: { version: '2' },
+        data: pattern,
+      })
+    })
+
+    it('matches pattern with static + wildcard + static across segments', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let pattern = parse('docs/*path/edit')
+      trie.insert(pattern, pattern)
+
+      let matches = searchAll(trie, new URL('https://example.com/docs/guides/intro/edit'))
+      expect(matches.length).toBe(1)
+      expect(matches[0]).toStrictEqual({
+        rank: [
+          '3', // protocol: "https" (skipped: 3)
+          '3', // hostname: "com" (skipped: 3)
+          '3', // hostname: "example" (skipped: 3)
+          '0', // pathname: "docs" (static: 0)
+          '222222', // pathname: "guides" (wildcard)
+          '22222', // pathname: "intro" (wildcard)
+          '0000', // pathname: "edit" (static)
+        ],
+        params: { path: 'guides/intro' },
+        data: pattern,
+      })
+    })
+
+    it('matches pattern with variable, wildcard, and static in later segments', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let pattern = parse('org/:orgId/*path/settings')
+      trie.insert(pattern, pattern)
+
+      let matches = searchAll(trie, new URL('https://example.com/org/acme/projects/web/settings'))
+      expect(matches.length).toBe(1)
+      expect(matches[0]).toStrictEqual({
+        rank: [
+          '3', // protocol: "https" (skipped: 3)
+          '3', // hostname: "com" (skipped: 3)
+          '3', // hostname: "example" (skipped: 3)
+          '0', // pathname: "org" (static: 0)
+          '1111', // pathname: "acme" (variable)
+          '22222222', // pathname: "projects" (wildcard)
+          '222', // pathname: "web" (wildcard)
+          '00000000', // pathname: "settings" (static)
+        ],
+        params: { orgId: 'acme', path: 'projects/web' },
+        data: pattern,
+      })
+    })
+
+    it('ranks patterns with more static content higher', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let moreStatic = parse('files/images-*rest')
+      let lessStatic = parse('files/*rest')
+      trie.insert(moreStatic, moreStatic)
+      trie.insert(lessStatic, lessStatic)
+
+      let matches = searchAll(trie, new URL('https://example.com/files/images-photo.jpg'))
+      expect(matches.length).toBe(2)
+
+      let moreStaticMatch = matches.find((m) => m.data === moreStatic)
+      let lessStaticMatch = matches.find((m) => m.data === lessStatic)
+
+      // More static should have lower rank (better) - string comparison works lexicographically
+      expect(moreStaticMatch!.rank.join(',') < lessStaticMatch!.rank.join(',')).toBe(true)
+
+      expect(moreStaticMatch).toStrictEqual({
+        rank: [
+          '3', // protocol: "https" (skipped: 3)
+          '3', // hostname: "com" (skipped: 3)
+          '3', // hostname: "example" (skipped: 3)
+          '0', // pathname: "files" (static: 0)
+          '0000000222222222', // pathname: "images-" (static) + "photo.jpg" (wildcard)
+        ],
+        params: { rest: 'photo.jpg' },
+        data: moreStatic,
+      })
+
+      expect(lessStaticMatch).toStrictEqual({
+        rank: [
+          '3', // protocol: "https" (skipped: 3)
+          '3', // hostname: "com" (skipped: 3)
+          '3', // hostname: "example" (skipped: 3)
+          '0', // pathname: "files" (static: 0)
+          '2222222222222222', // pathname: "images-photo.jpg" (all wildcard)
+        ],
+        params: { rest: 'images-photo.jpg' },
+        data: lessStatic,
+      })
+    })
+
+    it('matches complex pattern with multiple dynamic segments and wildcards', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let pattern = parse('api/:version/users/:userId/*action')
+      trie.insert(pattern, pattern)
+
+      let matches = searchAll(trie, new URL('https://example.com/api/v2/users/123/posts/create'))
+      expect(matches.length).toBe(1)
+      expect(matches[0]).toStrictEqual({
+        rank: [
+          '3', // protocol: "https" (skipped: 3)
+          '3', // hostname: "com" (skipped: 3)
+          '3', // hostname: "example" (skipped: 3)
+          '0', // pathname: "api" (static: 0)
+          '11', // pathname: "v2" (variable)
+          '0', // pathname: "users" (static: 0)
+          '111', // pathname: "123" (variable)
+          '22222', // pathname: "posts" (wildcard)
+          '222222', // pathname: "create" (wildcard)
+        ],
+        params: { version: 'v2', userId: '123', action: 'posts/create' },
+        data: pattern,
       })
     })
   })

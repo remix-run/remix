@@ -14,7 +14,7 @@ export class TrieMatcher<data> implements Matcher<data> {
   match(url: URL) {
     let best: SearchResult<data> | null = null
     for (let match of this.#trie.search(url)) {
-      if (best === null || match.rank < best.rank) {
+      if (best === null || rankLessThan(match.rank, best.rank)) {
         best = match
       }
     }
@@ -27,8 +27,30 @@ export class TrieMatcher<data> implements Matcher<data> {
   }
 }
 
+// Rank --------------------------------------------------------------------------------------------
+
+const RANK = {
+  skip: '3',
+  wildcard: '2',
+  variable: '1',
+  static: '0',
+}
+
+type Rank = Array<string>
+
+function rankLessThan(a: Rank, b: Rank) {
+  for (let i = 0; i < a.length; i++) {
+    let segmentA = a[i]
+    let segmentB = b[i]
+    if (segmentA < segmentB) return -1
+    if (segmentA > segmentB) return 1
+    return 0
+  }
+}
+
 // Trie --------------------------------------------------------------------------------------------
 
+// todo: NOT_SEPARATORS: Array<RegExp> ?
 const SEPARATORS = ['', '.', '/']
 
 type TrieIndex = [partIndex: number, segmentIndex: number]
@@ -45,7 +67,7 @@ type Match<data> = {
 type Params = Record<string, string | undefined>
 
 type SearchResult<data> = {
-  rank: Uint8Array
+  rank: Array<string>
   params: Params
   data: data
 }
@@ -139,25 +161,18 @@ export class Trie<data> {
     let pathname = url.pathname.slice(1).split('/')
     let query = [[protocol], hostname, pathname]
 
-    let rankLength = protocol.length
-    hostname.forEach((segment) => (rankLength += segment.length))
-    pathname.forEach((segment) => (rankLength += segment.length))
-
     type State = {
       index: TrieIndex
       trie: Trie<data>
       paramValues: Array<string>
-      /** 0 => static, 1 => variable, 2 => wilcard, 3 => skipped */
-      rank: Uint8Array
-      rankIndex: number
+      rank: Rank
     }
     let stack: Array<State> = [
       {
         index: [0, 0],
         trie: this,
         paramValues: [],
-        rank: new Uint8Array(rankLength),
-        rankIndex: 0,
+        rank: [],
       },
     ]
 
@@ -191,57 +206,55 @@ export class Trie<data> {
 
       let staticMatch = state.trie.static[segment]
       if (staticMatch) {
+        let rank = state.rank.slice()
+        rank.push(RANK.static)
         stack.push({
           index: [state.index[0], state.index[1] + 1],
           trie: staticMatch,
           paramValues: state.paramValues,
-          rank: state.rank,
-          rankIndex: state.rankIndex + segment.length,
+          rank,
         })
       }
+
+      let separator = SEPARATORS[state.index[0]]
 
       for (let { regexp, trie } of state.trie.variable.values()) {
         let match = regexp.exec(segment)
         if (match) {
-          let rank = state.rank.slice()
-          match.indices?.forEach((span, i) => {
-            if (i === 0) return // ignore span for entire match
-            rank.fill(1, state.rankIndex + span[0], state.rankIndex + span[1])
-          })
+          let dynamic = Trie.#dynamicMatch(match, separator)
+
           let paramValues = state.paramValues.slice()
-          paramValues.push(...match.slice(1))
+          paramValues.push(...dynamic.paramValues)
+
+          let rank = state.rank.slice()
+          rank.push(...dynamic.rank)
+
           stack.push({
             index: [state.index[0], state.index[1] + 1],
             trie,
             paramValues,
             rank,
-            rankIndex: state.rankIndex + segment.length,
           })
         }
       }
 
       for (let { regexp, trie } of state.trie.wildcard.values()) {
         let remaining = part.slice(state.index[1])
-        let match = regexp.exec(remaining.join(SEPARATORS[state.index[0]]))
+        let match = regexp.exec(remaining.join(separator))
         if (match) {
-          let rank = state.rank.slice()
-          Object.entries(match.indices?.groups ?? {}).forEach(([group, span]) => {
-            if (group.startsWith('v_')) {
-              rank.fill(1, state.rankIndex + span[0], state.rankIndex + span[1])
-            }
-            if (group.startsWith('w_')) {
-              rank.fill(2, state.rankIndex + span[0], state.rankIndex + span[1])
-            }
-          })
+          let dynamic = Trie.#dynamicMatch(match, separator)
+
           let paramValues = state.paramValues.slice()
-          paramValues.push(...match.slice(1))
+          paramValues.push(...dynamic.paramValues)
+
+          let rank = state.rank.slice()
+          rank.push(...dynamic.rank)
+
           stack.push({
             index: [state.index[0] + 1, 0],
             trie,
             paramValues,
             rank,
-            rankIndex:
-              state.rankIndex + remaining.reduce((acc, segment) => acc + segment.length, 0),
           })
         }
       }
@@ -251,13 +264,15 @@ export class Trie<data> {
       // will want to "skip" the protocol
       // todo: better explanation
       if (state.index[1] === 0 && state.trie.next) {
-        let length = query[state.index[0]].reduce((acc, segment) => acc + segment.length, 0)
+        let rank = state.rank.slice()
+        query[state.index[0]].forEach(() => {
+          rank.push('3')
+        })
         stack.push({
           index: [state.index[0] + 1, 0],
           trie: state.trie.next,
           paramValues: state.paramValues,
-          rank: state.rank.slice().fill(3, state.rankIndex, state.rankIndex + length),
-          rankIndex: state.rankIndex + length,
+          rank,
         })
       }
     }
@@ -272,13 +287,34 @@ export class Trie<data> {
       // use capture group so that `split` includes the delimiters in the result
       .split(/(\{:\}|\{\*\})/)
       .map((part) => {
-        if (part === '{:}') return `(?<v_${i++}>${variablePattern})`
-        if (part === '{*}') return `(?<w_${i++}>${wildcardPattern})`
-        return RegExp_escape(part)
+        if (part === '{*}') return `(?<wildcard_${i++}>${wildcardPattern})`
+        if (part === '{:}') return `(?<variable_${i++}>${variablePattern})`
+        return `(?<static_${i++}>${RegExp_escape(part)})`
       })
       .join('')
 
     return new RegExp(`^${source}$`, 'd')
+  }
+
+  static #dynamicMatch(
+    match: RegExpExecArray,
+    separator: string,
+  ): { paramValues: Array<string>; rank: Rank } {
+    let paramValues: Array<string> = []
+    let notSeparator = new RegExp(`[^${separator}]`, 'g')
+    let segmentRank = ''
+    Object.entries(match.indices?.groups ?? {}).forEach(([group, span]) => {
+      let type = group.split('_')[0] as keyof typeof RANK
+      let lexeme = match[0].slice(...span)
+      segmentRank += lexeme.replaceAll(notSeparator, RANK[type])
+      if (type === 'variable' || type === 'wildcard') {
+        if (lexeme.length > 0) paramValues.push(lexeme)
+      }
+    })
+    return {
+      paramValues,
+      rank: segmentRank.split(separator),
+    }
   }
 
   static #toParams(match: Match<unknown>, paramValues: Array<string>): Params {
