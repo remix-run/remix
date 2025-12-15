@@ -1,4 +1,5 @@
 import { RegExp_escape } from '../es2025.ts'
+import type { Params } from '../params.ts'
 import * as RoutePattern from '../route-pattern/index.ts'
 import type { Matcher } from './matcher.ts'
 
@@ -18,8 +19,7 @@ export class TrieMatcher<data> implements Matcher<data> {
         best = match
       }
     }
-    // todo: also return params for this match
-    return best?.data ?? null
+    return best ?? null
   }
 
   get size() {
@@ -63,8 +63,6 @@ type Match<data> = {
   }
   data: data
 }
-
-type Params = Record<string, string | undefined>
 
 type SearchResult<data> = {
   rank: Array<string>
