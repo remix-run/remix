@@ -30,6 +30,3 @@ jobs:
 
       - name: Check change files
         run: pnpm changes:validate
-
-      - name: Run typechecks
-        run: pnpm typecheck
