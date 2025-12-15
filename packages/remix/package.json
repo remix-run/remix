@@ -18,7 +18,10 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "client": "./src/index-client.ts",
+      "default": "./src/index.ts"
+    },
     "./async-context-middleware": "./src/lib/async-context-middleware.ts",
     "./compression-middleware": "./src/lib/compression-middleware.ts",
     "./cookie": "./src/lib/cookie.ts",
@@ -62,6 +65,7 @@
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
+        "client": "./dist/index-client.js",
         "default": "./dist/index.js"
       },
       "./async-context-middleware": {
