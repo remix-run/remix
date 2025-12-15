@@ -75,33 +75,15 @@ importers:
 
   demos/sse:
     dependencies:
-      '@remix-run/compression-middleware':
-        specifier: workspace:*
-        version: link:../../packages/compression-middleware
       '@remix-run/dom':
         specifier: jam
         version: 0.0.0-experimental-remix-jam.6
       '@remix-run/events':
         specifier: jam
         version: 0.0.0-experimental-remix-jam.5
-      '@remix-run/fetch-router':
+      remix:
         specifier: workspace:*
-        version: link:../../packages/fetch-router
-      '@remix-run/interaction':
-        specifier: workspace:*
-        version: link:../../packages/interaction
-      '@remix-run/logger-middleware':
-        specifier: workspace:*
-        version: link:../../packages/logger-middleware
-      '@remix-run/node-fetch-server':
-        specifier: workspace:*
-        version: link:../../packages/node-fetch-server
-      '@remix-run/response':
-        specifier: workspace:*
-        version: link:../../packages/response
-      '@remix-run/static-middleware':
-        specifier: workspace:*
-        version: link:../../packages/static-middleware
+        version: link:../../packages/remix
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

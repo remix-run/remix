@@ -20,6 +20,7 @@ export {
   resources,
 } from './lib/fetch-router'
 export { SetCookie, Cookie as CookieHeader } from './lib/headers'
+export { on } from './lib/interaction.ts'
 export { logger } from './lib/logger-middleware'
 export { methodOverride } from './lib/method-override-middleware'
 export { createRequestListener } from './lib/node-fetch-server'

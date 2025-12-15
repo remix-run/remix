@@ -1,5 +1,5 @@
 import { hydrated } from '@remix-run/dom'
-import { on } from '@remix-run/interaction'
+import { on } from 'remix/interaction'
 
 import { routes } from '../routes.ts'
 

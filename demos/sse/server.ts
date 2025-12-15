@@ -1,5 +1,5 @@
 import * as http from 'node:http'
-import { createRequestListener } from '@remix-run/node-fetch-server'
+import { createRequestListener } from 'remix'
 
 import { router } from './app/router.tsx'
 
