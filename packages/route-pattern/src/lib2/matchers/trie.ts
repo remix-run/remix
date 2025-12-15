@@ -42,10 +42,10 @@ function rankLessThan(a: Rank, b: Rank) {
   for (let i = 0; i < a.length; i++) {
     let segmentA = a[i]
     let segmentB = b[i]
-    if (segmentA < segmentB) return -1
-    if (segmentA > segmentB) return 1
-    return 0
+    if (segmentA < segmentB) return true
+    if (segmentA > segmentB) return false
   }
+  return false
 }
 
 // Trie --------------------------------------------------------------------------------------------
