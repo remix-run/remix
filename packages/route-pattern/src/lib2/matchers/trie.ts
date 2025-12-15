@@ -19,7 +19,7 @@ export class TrieMatcher<data> implements Matcher<data> {
         best = match
       }
     }
-    return best ?? null
+    return best ? { params: best.params, data: best.data } : null
   }
 
   get size() {
