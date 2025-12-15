@@ -1,7 +1,4 @@
-// TODO: We need to import this from the sub-export because this file is included in
-// the client bundle, and if we import from the `remix` package then esbuild will
-// encounter `node:*` imports within other re-exports in the root remix `index.ts`
-import { del, get, post, put, route, form, resources } from 'remix/fetch-router'
+import { del, get, post, put, route, form, resources } from 'remix'
 
 export let routes = route({
   assets: '/assets/*path',
