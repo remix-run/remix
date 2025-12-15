@@ -221,8 +221,8 @@ export class Trie<data> {
       }
 
       for (let { regexp, trie } of state.trie.wildcard.values()) {
-        let segments = part.slice(state.index[1]).join(SEPARATORS[state.index[0]])
-        let match = regexp.exec(segments)
+        let remaining = part.slice(state.index[1])
+        let match = regexp.exec(remaining.join(SEPARATORS[state.index[0]]))
         if (match) {
           let rank = state.rank.slice()
           Object.entries(match.indices?.groups ?? {}).forEach(([group, span]) => {
@@ -240,7 +240,8 @@ export class Trie<data> {
             trie,
             paramValues,
             rank,
-            rankIndex: state.rankIndex + segments.length,
+            rankIndex:
+              state.rankIndex + remaining.reduce((acc, segment) => acc + segment.length, 0),
           })
         }
       }
