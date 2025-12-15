@@ -229,7 +229,10 @@ function createLookupMaps(reflection: typedoc.ProjectReflection): Maps {
 
       let apiName = alias || child.getFriendlyFullName()
       apiName = apiName.replace(/\.\.+/g, '.') // Clean up any `..` in top-level remix re-exports
-      comments.set(apiName, child)
+
+      if (child.kind !== typedoc.ReflectionKind.Module) {
+        comments.set(apiName, child)
+      }
 
       let indent = '  '.repeat(apiName.split('.').length - 1)
       let logApi = (suffix: string) =>
@@ -486,6 +489,9 @@ function getDocumentedType(fullName: string, node: typedoc.DeclarationReflection
 
   let childrenSignature = ''
   node.traverse((c) => {
+    if (c.isTypeParameter()) {
+      return
+    }
     let childSignature = c.toString().replace(/^Property /, '')
     if (c.flags.isOptional) {
       childSignature = childSignature.replace(/: /, '?: ')
