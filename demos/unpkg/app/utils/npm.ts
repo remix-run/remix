@@ -1,5 +1,5 @@
 import * as zlib from 'node:zlib'
-import { parseTar, type TarEntry } from 'remix'
+import { parseTar, type TarEntry } from 'remix/platform'
 import * as semver from 'semver'
 
 import { tarballCache, getTarballCacheKey } from './cache.ts'

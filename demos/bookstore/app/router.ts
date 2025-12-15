@@ -1,13 +1,5 @@
-import {
-  createRouter,
-  asyncContext,
-  compression,
-  formData,
-  logger,
-  methodOverride,
-  session,
-  staticFiles,
-} from 'remix'
+import { createRouter, formData, logger, methodOverride } from 'remix'
+import { asyncContext, compression, session, staticFiles } from 'remix/platform'
 
 import { routes } from './routes.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'

@@ -18,10 +18,8 @@
   ],
   "type": "module",
   "exports": {
-    ".": {
-      "client": "./src/index-client.ts",
-      "default": "./src/index.ts"
-    },
+    ".": "./src/index.ts",
+    "./platform": "./src/index-platform.ts",
     "./async-context-middleware": "./src/lib/async-context-middleware.ts",
     "./compression-middleware": "./src/lib/compression-middleware.ts",
     "./cookie": "./src/lib/cookie.ts",
@@ -65,8 +63,11 @@
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
-        "client": "./dist/index-client.js",
         "default": "./dist/index.js"
+      },
+      "./platform": {
+        "types": "./dist/index-platform.d.ts",
+        "default": "./dist/index-platform.js"
       },
       "./async-context-middleware": {
         "types": "./dist/async-context-middleware.d.ts",

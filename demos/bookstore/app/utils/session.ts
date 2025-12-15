@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createCookie } from 'remix'
-import { createFsSessionStorage } from 'remix'
+import { createFsSessionStorage } from 'remix/platform'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
