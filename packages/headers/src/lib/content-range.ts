@@ -64,7 +64,7 @@ export class ContentRange implements HeaderValue, ContentRangeInit {
   /**
    * Returns the string representation of the header value.
    *
-   * @return The header value as a string
+   * @returns The header value as a string
    */
   toString(): string {
     if (!this.unit || this.size === undefined) return ''

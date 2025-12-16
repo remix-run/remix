@@ -41,7 +41,7 @@ export class Route<
    * Build a URL href for this route using the given parameters.
    *
    * @param args The parameters to use for building the href
-   * @return The built URL href
+   * @returns The built URL href
    */
   href(...args: HrefBuilderArgs<pattern>): string {
     return this.pattern.href(...args)
@@ -51,7 +51,7 @@ export class Route<
    * Match a URL against this route's pattern.
    *
    * @param url The URL to match
-   * @return The match result, or `null` if the URL doesn't match
+   * @returns The match result, or `null` if the URL doesn't match
    */
   match(url: string | URL): RouteMatch<pattern> | null {
     return this.pattern.match(url)
@@ -71,7 +71,7 @@ export type BuildRoute<method extends RequestMethod | 'ANY', pattern extends str
  * Create a route map from a set of route definitions.
  *
  * @param defs The route definitions
- * @return The route map
+ * @returns The route map
  */
 export function createRoutes<const defs extends RouteDefs>(defs: defs): BuildRouteMap<'/', defs>
 /**
@@ -79,7 +79,7 @@ export function createRoutes<const defs extends RouteDefs>(defs: defs): BuildRou
  *
  * @param base The base pattern for all routes
  * @param defs The route definitions
- * @return The route map
+ * @returns The route map
  */
 export function createRoutes<base extends string, const defs extends RouteDefs>(
   base: base | RoutePattern<base>,
@@ -128,7 +128,7 @@ export type BuildRouteMap<base extends string, defs extends RouteDefs> = Simplif
 }>
 
 // prettier-ignore
-type BuildRouteWithBase<base extends string, def extends RouteDef> = 
+type BuildRouteWithBase<base extends string, def extends RouteDef> =
   def extends string ? Route<'ANY', Join<base, def>> :
   def extends RoutePattern<infer pattern extends string> ? Route<'ANY', Join<base, pattern>> :
   def extends { method: infer method extends RequestMethod | 'ANY', pattern: infer pattern } ? (

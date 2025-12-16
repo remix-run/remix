@@ -38,7 +38,7 @@ export interface FetchProxyOptions {
  *
  * @param input The URL or request to forward
  * @param init Optional request init options
- * @return A promise that resolves to the proxied response
+ * @returns A promise that resolves to the proxied response
  */
 export interface FetchProxy {
   (input: URL | RequestInfo, init?: RequestInit): Promise<Response>
@@ -49,7 +49,7 @@ export interface FetchProxy {
  *
  * @param target The URL of the server to proxy requests to
  * @param options Options to customize the behavior of the proxy
- * @return A fetch function that forwards requests to the target server
+ * @returns A fetch function that forwards requests to the target server
  */
 export function createFetchProxy(target: string | URL, options?: FetchProxyOptions): FetchProxy {
   let localFetch = options?.fetch ?? globalThis.fetch

@@ -107,7 +107,7 @@ export type InteractionSetup = (this: Interaction) => void
  *
  * @param type The unique string identifier for this interaction type
  * @param interaction The setup function that configures the interaction
- * @return The type string, for use as an event name
+ * @returns The type string, for use as an event name
  */
 export function defineInteraction<type extends string>(type: type, interaction: InteractionSetup) {
   interactions.set(type, interaction)
@@ -161,7 +161,7 @@ export type ContainerOptions = {
  *
  * @param target The event target to wrap (DOM element, window, document, or any EventTarget)
  * @param options Optional configuration for the container
- * @return An `EventsContainer` with `dispose()` and `set()` methods
+ * @returns An `EventsContainer` with `dispose()` and `set()` methods
  */
 export function createContainer<target extends EventTarget>(
   target: target,
@@ -272,7 +272,7 @@ export function createContainer<target extends EventTarget>(
  *
  * @param target The event target to add listeners to
  * @param listeners The event listeners to add
- * @return A function to dispose all listeners
+ * @returns A function to dispose all listeners
  */
 export function on<target extends EventTarget>(
   target: target,

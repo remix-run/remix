@@ -41,7 +41,7 @@ export class RoutePattern<T extends string = string> {
    * Generate a href (URL) for this pattern.
    *
    * @param args The parameters and optional search params
-   * @return The href
+   * @returns The href
    */
   href(...args: HrefBuilderArgs<T>): string {
     return formatHref(this.#parsed, ...(args as any))
@@ -54,7 +54,7 @@ export class RoutePattern<T extends string = string> {
    * Note: The returned pattern will use the same options as this pattern.
    *
    * @param input The pattern to join with
-   * @return The joined pattern
+   * @returns The joined pattern
    */
   join<P extends string>(input: P | RoutePattern<P>): RoutePattern<Join<T, P>> {
     let parsedInput = parse(typeof input === 'string' ? input : input.source)
@@ -67,7 +67,7 @@ export class RoutePattern<T extends string = string> {
    * Match a URL against this pattern.
    *
    * @param url The URL to match
-   * @return The match result, or `null` if the URL doesn't match
+   * @returns The match result, or `null` if the URL doesn't match
    */
   match(url: URL | string): RouteMatch<T> | null {
     if (typeof url === 'string') url = new URL(url)
@@ -105,7 +105,7 @@ export class RoutePattern<T extends string = string> {
    * Test if a URL matches this pattern.
    *
    * @param url The URL to test
-   * @return `true` if the URL matches this pattern, `false` otherwise
+   * @returns `true` if the URL matches this pattern, `false` otherwise
    */
   test(url: URL | string): boolean {
     return this.match(url) !== null

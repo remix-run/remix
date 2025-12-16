@@ -3,7 +3,7 @@ import { mimeTypes } from '../generated/mime-types.ts'
 /**
  * Detects the MIME type for a given file extension or filename.
  *
- * @param extension - The file extension (e.g. "txt", ".txt") or filename (e.g. "file.txt")
+ * @param extension The file extension (e.g. "txt", ".txt") or filename (e.g. "file.txt")
  * @returns The MIME type string, or undefined if not found
  *
  * @example
