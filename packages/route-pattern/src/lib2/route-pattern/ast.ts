@@ -1,4 +1,4 @@
-import type * as Part from '../part/index.ts'
+import type * as Part from './part/index.ts'
 
 export type AST = {
   protocol: Part.AST | undefined

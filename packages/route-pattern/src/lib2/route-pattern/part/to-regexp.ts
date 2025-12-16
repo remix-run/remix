@@ -1,4 +1,4 @@
-import { RegExp_escape } from '../es2025.ts'
+import { RegExp_escape } from '../../es2025.ts'
 import type { AST } from './ast.ts'
 
 export function toRegExp(ast: AST, paramValueRE: RegExp): RegExp {

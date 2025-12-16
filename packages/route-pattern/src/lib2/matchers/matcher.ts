@@ -1,5 +1,6 @@
-import type { Params } from '../params.ts'
 import type * as RoutePattern from '../route-pattern/index.ts'
+
+export type Params = Record<string, string | undefined>
 
 export type Matcher<data> = {
   add: (pattern: RoutePattern.AST, data: data) => void

@@ -1,6 +1,6 @@
 import type { AST } from './ast.ts'
 import { split } from './split.ts'
-import * as Part from '../part/index.ts'
+import * as Part from './part/index.ts'
 
 export function parse(source: string): AST {
   let ast: AST = {

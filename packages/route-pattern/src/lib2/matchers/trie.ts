@@ -1,7 +1,6 @@
 import { RegExp_escape } from '../es2025.ts'
-import type { Params } from '../params.ts'
 import * as RoutePattern from '../route-pattern/index.ts'
-import type { Matcher } from './matcher.ts'
+import type { Matcher, Params } from './matcher.ts'
 
 export class TrieMatcher<data> implements Matcher<data> {
   #trie: Trie<data> = new Trie()
