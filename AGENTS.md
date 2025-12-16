@@ -43,9 +43,9 @@
 
 - **Adding changes**: Create `packages/*/.changes/[major|minor|patch].short-description.md` files. See [CONTRIBUTING.md](./CONTRIBUTING.md#adding-a-change-file) for details.
 - **Updating changes**: If iterating on an unpublished change with a change file, update it in place rather than creating a new one.
-- **Versioning**: Follow semver 0.x.x conventions where breaking changes can happen in minor releases:
-  - For **v0.x.x packages**: Use "minor" for breaking changes and new features, "patch" for bug fixes. Never use "major" unless explicitly instructed.
-  - For **v1.x.x+ packages**: Use standard semver - "major" for breaking changes, "minor" for new features, "patch" for bug fixes.
+- **Versioning**: Follow semver, but ensure you follow 0.x conventions where breaking changes can happen in minor releases:
+  - For **v0.x packages**: Use "minor" for breaking changes and new features, "patch" for bug fixes. Never use "major" unless explicitly instructed. Change files for breaking changes in v0.x packages should start with `BREAKING CHANGE: ` so they are hoisted to the top.
+  - For **v1.x+ packages**: Use standard semver - "major" for breaking changes, "minor" for new features, "patch" for bug fixes.
   - **Breaking changes are relative to main**: If you introduce a new API in a PR and then change it within the same PR before merging, that's not considered a breaking change.
 - **Validating changes**: `pnpm changes:validate` checks that all change files follow the correct naming convention and format.
 - **Previewing releases**: `pnpm changes:preview` shows which packages will be released, what the CHANGELOG will look like, the commit message and tags.

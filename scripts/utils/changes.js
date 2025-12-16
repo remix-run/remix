@@ -222,6 +222,20 @@ export function getHighestBump(bumps) {
 }
 
 /**
+ * Checks if content starts with "BREAKING CHANGE: " (case-insensitive,
+ * ignoring markdown formatting and leading whitespace)
+ * @param {string} content
+ * @returns {boolean}
+ */
+function hasBreakingChangePrefix(content) {
+  return content
+    .trimStart()
+    .replace(/^[*_]+/, '')
+    .toLowerCase()
+    .startsWith('breaking change: ')
+}
+
+/**
  * Formats a changelog entry from change file content
  * @param {string} content
  * @returns {string}
@@ -258,8 +272,13 @@ export function generateChangelogContent(release, date) {
   lines.push(`## v${release.nextVersion} (${dateStr})`)
   lines.push('')
 
-  // Sort changes alphabetically by filename for consistency
-  let sortedChanges = [...release.changes].sort((a, b) => a.file.localeCompare(b.file))
+  // Sort changes alphabetically by filename, with breaking changes hoisted to the top
+  let sortedChanges = [...release.changes].sort((a, b) => {
+    let aBreaking = hasBreakingChangePrefix(a.content)
+    let bBreaking = hasBreakingChangePrefix(b.content)
+    if (aBreaking !== bBreaking) return aBreaking ? -1 : 1
+    return a.file.localeCompare(b.file)
+  })
 
   for (let change of sortedChanges) {
     lines.push(formatChangelogEntry(change.content))

@@ -54,29 +54,34 @@ When making changes to a package, create a markdown file in the package's `.chan
 [major|minor|patch].short-description.md
 ```
 
+- `major` - Breaking changes for v1.x+ packages
+- `minor` - Breaking changes for v0.x packages, new features
+- `patch` - Bug fixes
+
 #### Examples
 
-- `major.breaking-api-change.md` - Breaking change requiring major version bump
-- `minor.add-new-feature.md` - New feature requiring minor version bump
-- `patch.fix-bug.md` - Bug fix requiring patch version bump
+- `major.change-something.md` - Breaking change for v1.x+ packages
+- `minor.change-something.md` - Breaking change for v0.x packages
+- `minor.add-something.md` - New feature
+- `patch.fix-something.md` - Bug fix
 
 #### Content Format
 
 Write your change as a bullet point (without the leading `-` or `*`). This content will be added to the CHANGELOG during release.
 
-**Simple change:**
-
 ```markdown
 Add support for X feature
+
+This is an optional longer explanation that will be indented
+under the main bullet point in the CHANGELOG.
 ```
 
-**Multi-line change:**
+For breaking changes in v0.x packages, any change files that begin with `BREAKING CHANGE: ` will be hoisted to the top of the release notes:
 
 ```markdown
-Add support for X feature
+BREAKING CHANGE: Renamed `foo` option to `bar`
 
-This is a longer explanation that will be indented
-under the main bullet point in the CHANGELOG.
+Migration: Update your config to use `bar` instead of `foo`.
 ```
 
 #### Validation
