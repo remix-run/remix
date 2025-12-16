@@ -1,5 +1,3 @@
-export { TypedEventTarget } from '@remix-run/interaction'
-
 export { createRoot } from './lib/vdom.ts'
 
 export { createElement } from './lib/create-element.ts'

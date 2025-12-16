@@ -557,7 +557,7 @@ Setting context values does not automatically trigger updates. If a provider nee
 import { TypedEventTarget } from '@remix-run/interaction'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
-  #value: string = 'light'
+  #value: 'light' | 'dark' = 'light'
 
   get value() {
     return this.#value
@@ -603,69 +603,6 @@ function ThemedContent(this: Remix.Handle) {
   )
 }
 ```
-
-## TypedEventTarget
-
-Use `TypedEventTarget<eventMap>` from [`@remix-run/interaction`](../interaction) to get type-safe event targets that work seamlessly with `this.on()`.
-
-```tsx
-import { TypedEventTarget } from '@remix-run/interaction'
-
-interface CounterEventMap {
-  increment: Event
-  decrement: Event
-  change: Event
-}
-
-class Counter extends TypedEventTarget<CounterEventMap> {
-  #count = 0
-
-  get count() {
-    return this.#count
-  }
-
-  increment() {
-    this.#count++
-    this.dispatchEvent(new Event('increment'))
-    this.dispatchEvent(new Event('change'))
-  }
-
-  decrement() {
-    this.#count--
-    this.dispatchEvent(new Event('decrement'))
-    this.dispatchEvent(new Event('change'))
-  }
-}
-
-function CounterDisplay(this: Remix.Handle) {
-  let counter = new Counter()
-
-  // Subscribe to counter events with type safety
-  this.on(counter, { change: () => this.update() })
-
-  return () => (
-    <div>
-      <button
-        on={{
-          click: () => counter.increment(),
-        }}
-      >
-        Increment
-      </button>
-      <button
-        on={{
-          click: () => counter.decrement(),
-        }}
-      >
-        Decrement
-      </button>
-      <div>Count: {counter.count}</div>
-    </div>
-  )
-}
-```
-
-`TypedEventTarget` extends the native `EventTarget` API with TypeScript type safety. When used with `this.on()`, you get full type inference for event types and listeners. This is especially useful for services, managers, or any object that needs to notify components of state changes.
 
 ## Fragments
 
