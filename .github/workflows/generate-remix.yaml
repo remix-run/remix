@@ -16,8 +16,6 @@ on:
     branches-ignore:
       - release-v2
       - v2
-    paths:
-      - 'packages/**/package.json'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
