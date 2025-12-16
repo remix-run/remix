@@ -1,1 +1,1 @@
-export { TrieMatcher } from './matchers/'
+export { TrieMatcher } from './matchers/index.ts'
