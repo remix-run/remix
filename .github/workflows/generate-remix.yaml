@@ -65,8 +65,5 @@ jobs:
           fi
 
           git commit -a -m "build: update remix package"
-
-          # Temporary to let CI run a bit for testing purposes
-          sleep 20
           git push
           echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
