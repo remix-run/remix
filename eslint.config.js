@@ -1,4 +1,5 @@
 import tseslint from 'typescript-eslint'
+import importPlugin from 'eslint-plugin-import'
 import jsdoc from 'eslint-plugin-jsdoc'
 import preferLet from 'eslint-plugin-prefer-let'
 
@@ -31,6 +32,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tseslint.plugin,
+      import: importPlugin,
     },
     rules: {
       // Always use `import type { X }` and keep type imports separate from value imports
@@ -73,6 +75,15 @@ export default [
 
       // Ensure no rule asks for explicit member accessibility
       '@typescript-eslint/explicit-member-accessibility': 'off',
+
+      // Require file extensions on imports
+      'import/extensions': [
+        'error',
+        'always',
+        {
+          ignorePackages: true,
+        },
+      ],
     },
   },
   {
