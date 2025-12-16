@@ -30,13 +30,14 @@ function joinPathname(a: Part.AST | undefined, b: Part.AST | undefined): Part.AS
   if (needsSlash) tokens.push({ type: 'text', text: '/' })
   b.tokens.forEach((token) => {
     if (token.type === ':') {
-      token = structuredClone(token)
-      token.nameIndex += a.paramNames.length
-      tokens.push(token)
+      tokens.push({
+        ...token,
+        nameIndex: token.nameIndex + a.paramNames.length,
+      })
       return
     }
     if (token.type === '*') {
-      token = structuredClone(token)
+      token = { ...token }
       if (token.nameIndex) token.nameIndex += a.paramNames.length
       tokens.push(token)
       return
