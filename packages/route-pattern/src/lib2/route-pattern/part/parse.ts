@@ -37,7 +37,7 @@ export function parse(source: string, span?: Span): AST {
     // optional end
     if (char === ')') {
       let begin = optionalStack.pop()
-      if (!begin) {
+      if (begin === undefined) {
         throw new Error(`unmatched ) at ${i}`)
       }
       ast.optionals.set(begin, ast.tokens.length)
