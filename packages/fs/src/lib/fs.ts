@@ -35,6 +35,7 @@ export interface OpenFileOptions {
  *
  * [MDN `File` Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
  *
+ * @alias getFile
  * @param filename The path to the file
  * @param options Options to override the file's metadata
  * @return A `File` object
