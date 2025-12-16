@@ -25,6 +25,7 @@
     "codegen": "pnpm -r run codegen",
     "create-github-release": "node --env-file .env ./scripts/create-github-release.js",
     "docs": "rm -rf docs/api && node docs/generate.ts",
+    "docs:prerender": "node docs/prerender.ts",
     "docs:serve": "node docs/server.ts",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
