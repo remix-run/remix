@@ -1,24 +1,50 @@
-name: API Docs
+# Auto-generate the Remix API docs on pushes to `main`
+
+name: 📘 Generate API Docs
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        required: true
+  push:
+    branches:
+      - 'main'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  api-docs:
+  docs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger remix-api-docs
-        uses: actions/github-script@v8
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          github-token: ${{ secrets.REMIX_API_DOCS_PAT }}
-          script: |
-            await github.rest.repos.createDispatchEvent({
-              owner: 'remix-run',
-              repo: 'remix-api-docs',
-              event_type: 'update-docs',
-              client_payload: { tag: '${{ github.event.inputs.tag }}' }
-            });
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run docs
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+          git add .
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "💿 no updates to the remix package needed"
+            exit 0
+          fi
+
+          git commit -a -m "build: update Remix API docs"
+          git push
+          echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"

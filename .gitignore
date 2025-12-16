@@ -1,5 +1,6 @@
 dist/
 docs/api/
+docs/public/**/*.html
 docs/typedoc/
 node_modules/
 pnpm-publish-summary.json
