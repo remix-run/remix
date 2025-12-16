@@ -150,6 +150,7 @@ async function main() {
 
   // Write out docs
   await writeMarkdownFiles(documentedAPIs)
+  info('Documentation generation complete!')
 }
 
 //#region TypeDoc
@@ -158,7 +159,7 @@ async function main() {
 // TypeDoc against the project
 async function loadTypedocJson(): Promise<typedoc.ProjectReflection> {
   if (cliArgs.input) {
-    log(`Loading TypeDoc JSON from: ${cliArgs.input}`)
+    info(`Loading TypeDoc JSON from: ${cliArgs.input}`)
     let app = await typedoc.Application.bootstrap({
       name: 'Remix',
       entryPoints: [cliArgs.input],
@@ -169,7 +170,7 @@ async function loadTypedocJson(): Promise<typedoc.ProjectReflection> {
     return reflection
   }
 
-  log(`Generating TypeDoc from project`)
+  info(`Generating TypeDoc from project`)
   let app = await typedoc.Application.bootstrap({
     name: 'Remix',
     entryPoints: ['./packages/*'],
@@ -183,11 +184,11 @@ async function loadTypedocJson(): Promise<typedoc.ProjectReflection> {
 
   let outPath = path.resolve(process.cwd(), cliArgs.typedocDir)
   await app.renderer.render(reflection!, outPath)
-  log(`HTML docs generated at: ${outPath}`)
+  info(`HTML docs generated at: ${outPath}`)
 
   let jsonPath = path.join(outPath, 'api.json')
   await app.application.generateJson(reflection, jsonPath)
-  log(`JSON docs generated at: ${jsonPath}`)
+  info(`JSON docs generated at: ${jsonPath}`)
 
   return reflection
 }
@@ -222,12 +223,16 @@ function createLookupMaps(reflection: typedoc.ProjectReflection): Maps {
         child.kind === typedoc.ReflectionKind.Module &&
         child.name !== cliArgs.module
       ) {
-        log('Skipping module due to --module flag: ' + child.name)
+        info('Skipping module due to --module flag: ' + child.name)
         return
       }
 
       let apiName = alias || child.getFriendlyFullName()
-      comments.set(apiName, child)
+      apiName = apiName.replace(/\.\.+/g, '.') // Clean up any `..` in top-level remix re-exports
+
+      if (child.kind !== typedoc.ReflectionKind.Module) {
+        comments.set(apiName, child)
+      }
 
       let indent = '  '.repeat(apiName.split('.').length - 1)
       let logApi = (suffix: string) =>
@@ -285,16 +290,27 @@ function getDuplicateAPIs(apisToDocument: Set<string>): Set<string> {
       continue
     }
 
-    let remixAPI = fullNames.find((name) => name.split('.')[0] === 'remix')
+    let remixAPI = fullNames.find(
+      (name) => name.split('.').length === 2 && name.split('.')[0] === 'remix',
+    )
+    let deepRemixAPIs = fullNames.filter(
+      (name) => name.split('.').length > 2 && name.split('.')[0] === 'remix',
+    )
     let nonRemixAPIs = fullNames.filter((name) => name.split('.')[0] !== 'remix')
 
-    if (remixAPI && nonRemixAPIs.length > 0) {
+    if (remixAPI) {
       // Remove non-remix APIs, keep the remix one
-      for (let api of nonRemixAPIs) {
-        log(`Preferring remix export for ${apiName}, removing: ${api}`)
+      for (let api of [...deepRemixAPIs, ...nonRemixAPIs]) {
+        debug(`Preferring \`remix\` export for ${apiName}, removing: ${api}`)
         duplicates.add(api)
       }
-    } else if (!remixAPI && fullNames.length > 1) {
+    } else if (deepRemixAPIs.length > 0) {
+      // Remove non-remix APIs, keep the remix/* one
+      for (let api of nonRemixAPIs) {
+        debug(`Preferring \`${deepRemixAPIs[0]}\` export, removing: ${api}`)
+        duplicates.add(api)
+      }
+    } else if (fullNames.length > 1) {
       // Multiple non-remix packages export this API
       warn(`Multiple packages export ${apiName}: ${fullNames.join(', ')}`)
     }
@@ -320,7 +336,7 @@ function getAliasedAPIs(comments: Map<string, typedoc.Reflection>): Set<string> 
       }, '')
       if (apiName !== aliasName) {
         let aliasFullName = [...parts, aliasName].join('.')
-        log(`Preferring canonical API \`${name}\` over alias \`${aliasFullName}\``)
+        debug(`Preferring canonical API \`${name}\` over alias \`${aliasFullName}\``)
         aliasedAPIs.add(aliasFullName)
       }
     }
@@ -473,6 +489,9 @@ function getDocumentedType(fullName: string, node: typedoc.DeclarationReflection
 
   let childrenSignature = ''
   node.traverse((c) => {
+    if (c.isTypeParameter()) {
+      return
+    }
     let childSignature = c.toString().replace(/^Property /, '')
     if (c.flags.isOptional) {
       childSignature = childSignature.replace(/: /, '?: ')
@@ -513,12 +532,8 @@ function getApiAliases(typedocComment: typedoc.Comment): string[] | undefined {
 
 function getApiFilePath(fullName: string): string {
   let nameParts = fullName.split('.')
-  return (
-    nameParts
-      .map((s) => s.replace(/^@remix-run\//g, ''))
-      .map((s) => s.replace(/\//g, '-'))
-      .join('/') + '.md'
-  )
+  let name = nameParts.pop()
+  return [...nameParts.map((s) => s.replace(/^@remix-run\//g, '')), `${name}.md`].join('/')
 }
 
 function getApiDescription(typedocComment: typedoc.Comment): string {
@@ -717,7 +732,7 @@ async function writeMarkdownFiles(comments: DocumentedAPI[]) {
   for (let comment of comments) {
     let mdPath = path.join(cliArgs.docsDir, comment.path)
     await fs.mkdir(path.dirname(mdPath), { recursive: true })
-    log('✅ Writing markdown file:', mdPath)
+    debug('Writing markdown file:', mdPath)
     if (comment.type === 'function') {
       await fs.writeFile(mdPath, await getFunctionMarkdown(comment))
     } else if (comment.type === 'class') {
@@ -755,7 +770,7 @@ const pre = async (content: string, lang = 'ts') => {
         'Failed to format code block, using unformatted content: ',
         content.length > 30 ? content.substring(0, 30) + '...' : content,
       )
-      warn(e)
+      debug(e)
     }
   }
   return `\`\`\`${lang}\n${content}\n\`\`\``
@@ -927,8 +942,8 @@ function debug(...args: unknown[]) {
   }
 }
 
-function log(...args: unknown[]) {
-  console.log(...args)
+function info(...args: unknown[]) {
+  console.log('ℹ️', ...args)
 }
 
 function warn(...args: unknown[]) {
