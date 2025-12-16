@@ -240,7 +240,7 @@ export class SuperHeaders extends Headers {
    * @param name The name of the header to append to
    * @param value The value to append
    */
-  append(name: string, value: string): void {
+  override append(name: string, value: string): void {
     let key = name.toLowerCase()
     if (key === SetCookieKey) {
       this.#setCookies.push(value)
@@ -257,7 +257,7 @@ export class SuperHeaders extends Headers {
    *
    * @param name The name of the header to delete
    */
-  delete(name: string): void {
+  override delete(name: string): void {
     let key = name.toLowerCase()
     if (key === SetCookieKey) {
       this.#setCookies = []
@@ -274,7 +274,7 @@ export class SuperHeaders extends Headers {
    * @param name The name of the header to get
    * @return The header value, or `null` if not found
    */
-  get(name: string): string | null {
+  override get(name: string): string | null {
     let key = name.toLowerCase()
     if (key === SetCookieKey) {
       return this.getSetCookie().join(', ')
@@ -300,7 +300,7 @@ export class SuperHeaders extends Headers {
    *
    * @return An array of `Set-Cookie` header values
    */
-  getSetCookie(): string[] {
+  override getSetCookie(): string[] {
     return this.#setCookies.map((v) => (typeof v === 'string' ? v : v.toString()))
   }
 
@@ -312,7 +312,7 @@ export class SuperHeaders extends Headers {
    * @param name The name of the header to check
    * @return `true` if the header is present, `false` otherwise
    */
-  has(name: string): boolean {
+  override has(name: string): boolean {
     let key = name.toLowerCase()
     return key === SetCookieKey ? this.#setCookies.length > 0 : this.get(key) != null
   }
@@ -326,7 +326,7 @@ export class SuperHeaders extends Headers {
    * @param name The name of the header to set
    * @param value The value to set
    */
-  set(name: string, value: string): void {
+  override set(name: string, value: string): void {
     let key = name.toLowerCase()
     if (key === SetCookieKey) {
       this.#setCookies = [value]
@@ -342,7 +342,7 @@ export class SuperHeaders extends Headers {
    *
    * @return An iterator of header keys
    */
-  *keys(): HeadersIterator<string> {
+  override *keys(): HeadersIterator<string> {
     for (let [key] of this) yield key
   }
 
@@ -353,7 +353,7 @@ export class SuperHeaders extends Headers {
    *
    * @return An iterator of header values
    */
-  *values(): HeadersIterator<string> {
+  override *values(): HeadersIterator<string> {
     for (let [, value] of this) yield value
   }
 
@@ -364,7 +364,7 @@ export class SuperHeaders extends Headers {
    *
    * @return An iterator of `[key, value]` tuples
    */
-  *entries(): HeadersIterator<[string, string]> {
+  override *entries(): HeadersIterator<[string, string]> {
     for (let [key] of this.#map) {
       let str = this.get(key)
       if (str) yield [key, str]
@@ -375,7 +375,7 @@ export class SuperHeaders extends Headers {
     }
   }
 
-  [Symbol.iterator](): HeadersIterator<[string, string]> {
+  override [Symbol.iterator](): HeadersIterator<[string, string]> {
     return this.entries()
   }
 
@@ -387,7 +387,7 @@ export class SuperHeaders extends Headers {
    * @param callback The function to call for each pair
    * @param thisArg The value to use as `this` when calling the callback
    */
-  forEach(callback: (value: string, key: string, parent: Headers) => void, thisArg?: any): void {
+  override forEach(callback: (value: string, key: string, parent: Headers) => void, thisArg?: any): void {
     for (let [key, value] of this) {
       callback.call(thisArg, value, key, this)
     }
@@ -398,7 +398,7 @@ export class SuperHeaders extends Headers {
    *
    * @return The headers formatted for HTTP
    */
-  toString(): string {
+  override toString(): string {
     let lines: string[] = []
 
     for (let [key, value] of this) {

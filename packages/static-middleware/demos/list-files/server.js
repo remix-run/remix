@@ -21,7 +21,9 @@ let router = createRouter({
   ],
 })
 
-let server = http.createServer(createRequestListener(router.fetch))
+let server = http.createServer(
+  createRequestListener((request) => router.fetch(request)),
+)
 
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`)

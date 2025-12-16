@@ -358,9 +358,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
       wrangler:
         specifier: ^4.50.0
         version: 4.50.0
@@ -401,9 +398,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
 
   packages/file-storage:
     dependencies:
@@ -479,9 +473,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0
-      typescript:
+      '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 7.0.0-dev.20251125.1
 
   packages/fs:
     dependencies:
@@ -553,6 +547,9 @@ importers:
         specifier: workspace:^
         version: link:..
     devDependencies:
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
@@ -680,9 +677,9 @@ importers:
       '@types/tmp':
         specifier: ^0.2.6
         version: 0.2.6
-      typescript:
+      '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 7.0.0-dev.20251125.1
 
   packages/multipart-parser/demos/cf-workers:
     dependencies:
@@ -693,9 +690,12 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20251014.0
         version: 4.20251014.0
-      typescript:
+      '@types/node':
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 24.6.0
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
       wrangler:
         specifier: ^4.20.0
         version: 4.20.0(@cloudflare/workers-types@4.20251014.0)
@@ -712,9 +712,6 @@ importers:
       '@types/tmp':
         specifier: ^0.2.6
         version: 0.2.6
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
 
   packages/multipart-parser/demos/node:
     dependencies:
@@ -731,9 +728,9 @@ importers:
       '@types/tmp':
         specifier: ^0.2.6
         version: 0.2.6
-      typescript:
+      '@typescript/native-preview':
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 7.0.0-dev.20251125.1
 
   packages/node-fetch-server:
     devDependencies:
@@ -765,6 +762,13 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:../..
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.6.0
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
 
   packages/response:
     dependencies:
@@ -893,6 +897,13 @@ importers:
       '@remix-run/static-middleware':
         specifier: workspace:^
         version: link:../..
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.6.0
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
 
   packages/tar-parser:
     devDependencies:

@@ -6,9 +6,11 @@ export function createSearch(pattern: string): SearchFunction {
   let needle = new TextEncoder().encode(pattern)
 
   let search: SearchFunction
-  if ('Buffer' in globalThis && !('Bun' in globalThis || 'Deno' in globalThis)) {
-    // Use the built-in Buffer.indexOf method on Node.js for better perf.
-    search = (haystack, start = 0) => Buffer.prototype.indexOf.call(haystack, needle, start)
+  // Use the built-in Buffer.indexOf method on Node.js for better perf.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let BufferClass = (globalThis as any).Buffer as { prototype: { indexOf(this: Uint8Array, needle: Uint8Array, start: number): number } } | undefined
+  if (BufferClass && !('Bun' in globalThis || 'Deno' in globalThis)) {
+    search = (haystack, start = 0) => BufferClass.prototype.indexOf.call(haystack, needle, start)
   } else {
     let needleEnd = needle.length - 1
     let skipTable = new Uint8Array(256).fill(needle.length)

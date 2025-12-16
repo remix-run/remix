@@ -6,13 +6,15 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251014.0",
-    "typescript": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
     "wrangler": "^4.20.0"
   },
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev --port 44100",
     "start": "wrangler dev --port 44100",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "typecheck": "tsgo --noEmit"
   }
 }

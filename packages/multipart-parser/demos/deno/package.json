@@ -6,8 +6,7 @@
     "tmp": "^0.2.3"
   },
   "devDependencies": {
-    "@types/tmp": "^0.2.6",
-    "typescript": "catalog:"
+    "@types/tmp": "^0.2.6"
   },
   "scripts": {
     "start": "deno run --allow-all main.ts"

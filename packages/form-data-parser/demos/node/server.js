@@ -16,8 +16,7 @@ const PORT = 44100
 const oneMb = 1024 * 1024
 const maxFileSize = 10 * oneMb
 
-// @ts-ignore
-const fileStorage = new createFsFileStorage(await fsp.mkdtemp(path.join(os.tmpdir(), 'uploads-')))
+const fileStorage = createFsFileStorage(await fsp.mkdtemp(path.join(os.tmpdir(), 'uploads-')))
 
 /** @type (file: File) => Promise<string> */
 async function getDataUrl(file) {
