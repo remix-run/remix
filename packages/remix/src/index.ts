@@ -1,16 +1,32 @@
 // This file should only export agnostic Javascript/Web Fetch API exports that
 // are available everywhere (server, client, etc.).  Anything relying on
-// platform-specific APIs should be exported from `index-platform.ts`
+// platform/runtime-specific APIs should not be re-exported here. Consumers
+// can import them directly from the sub-package exports.
 
 export { Cookie, createCookie } from './lib/cookie.ts'
 export {
+  createDeleteRoute,
+  createFormRoutes,
+  createGetRoute,
+  createHeadRoute,
+  createOptionsRoute,
+  createPatchRoute,
+  createPostRoute,
+  createPutRoute,
+  createResourceRoutes,
+  createResourcesRoutes,
   createRouter,
+  createRoutes,
   createStorageKey,
   del,
   form,
   get,
+  head,
+  options,
+  patch,
   post,
   put,
+  resource,
   resources,
   route,
   type BuildAction,
@@ -28,4 +44,4 @@ export { methodOverride } from './lib/method-override-middleware.ts'
 export { detectMimeType, isCompressibleMimeType } from './lib/mime.ts'
 export { createFileResponse } from './lib/response/file.ts'
 export { createHtmlResponse } from './lib/response/html.ts'
-export { createRedirectResponse } from './lib/response/redirect.ts'
+export { createRedirectResponse, redirect } from './lib/response/redirect.ts'
