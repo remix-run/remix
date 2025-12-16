@@ -11,6 +11,7 @@ import { bench, describe } from 'vitest'
 import FindMyWay from 'find-my-way'
 import { match } from 'path-to-regexp'
 import { ArrayMatcher, TrieMatcher } from '../src'
+import { TrieMatcher as TrieMatcher2 } from '../src/lib2'
 
 type Syntax = 'route-pattern' | 'find-my-way' | 'path-to-regexp'
 
@@ -24,6 +25,11 @@ const matchers: Array<{
   syntax: Syntax
   createMatcher: () => Matcher
 }> = [
+  {
+    name: 'route-pattern/lib2/trie',
+    syntax: 'route-pattern',
+    createMatcher: () => new TrieMatcher2(),
+  },
   {
     name: 'route-pattern/trie',
     syntax: 'route-pattern',

@@ -7,7 +7,8 @@ export class TrieMatcher<data> implements Matcher<data> {
   #trie: Trie<data> = new Trie()
   #size: number = 0
 
-  add(pattern: RoutePattern.AST, data: data) {
+  add(pattern: string | RoutePattern.AST, data: data) {
+    pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
     this.#trie.insert(pattern, data)
     this.#size += 1
   }
