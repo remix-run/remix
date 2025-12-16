@@ -68,7 +68,7 @@ export function parse(source: string, span?: Span): AST {
         ast.paramNames.push(name)
         i += name.length
       } else {
-        ast.tokens.push({ type: '*' })
+        ast.tokens.push({ type: '*', nameIndex: undefined })
       }
       continue
     }
