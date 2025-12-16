@@ -1,5 +1,5 @@
 import * as http from 'node:http'
-import { createRequestListener } from 'remix/platform'
+import { createRequestListener } from 'remix/node-fetch-server'
 
 import { router } from './app/router.ts'
 

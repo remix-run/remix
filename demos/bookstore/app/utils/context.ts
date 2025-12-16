@@ -1,5 +1,5 @@
 import { createStorageKey } from 'remix'
-import { getContext } from 'remix/platform'
+import { getContext } from 'remix/async-context-middleware'
 
 import { type Cart, getCart } from '../models/cart.ts'
 import type { User } from '../models/users.ts'

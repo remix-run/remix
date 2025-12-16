@@ -1,10 +1,11 @@
 import { createRouter, logger } from 'remix'
-import { compression, staticFiles } from 'remix/platform'
 
 import { routes } from './routes.ts'
 import { MessageStream } from './assets/message-stream.tsx'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
+import { compression } from 'remix/compression-middleware'
+import { staticFiles } from 'remix/static-middleware'
 
 let middleware = []
 
