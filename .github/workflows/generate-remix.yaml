@@ -1,5 +1,6 @@
-# Update the Remix package by auto-generating from the @remix-run/* packages in the repo
-# runs on any pushes/PRs to `main` that touch any `package.json` files.
+# Update the `remix` package by auto-generating from the `@remix-run/*` packages in the repo
+# runs on any pushes/PRs to `main` that touch any `package.json` files since that would
+# potentially alter the sub-exports that need to be reflected in the `remix` package.
 
 # Note: Does not currently run on PRs from forked repos.
 
@@ -12,8 +13,9 @@ on:
     paths:
       - 'packages/**/package.json'
   pull_request:
-    branches:
-      - 'main'
+    branches-ignore:
+      - release-v2
+      - v2
     paths:
       - 'packages/**/package.json'
 
@@ -22,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  generate-remix:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
@@ -62,10 +64,6 @@ jobs:
             exit 0
           fi
 
-          git status
-          git diff
-
-          # TODO: Commented out until we can do a few test runs
-          # git commit -a -m "build: update remix package"
-          # git push
-          # echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
+          git commit -a -m "build: update remix package"
+          git push
+          echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
