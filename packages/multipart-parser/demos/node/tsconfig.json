@@ -3,10 +3,16 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "strict": true,
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
     "types": ["node"],
-    "noEmit": true,
-    "strict": true
+    "noEmit": true
   }
 }

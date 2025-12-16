@@ -48,8 +48,7 @@
   "devDependencies": {
     "@remix-run/form-data-parser": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
-    "typescript": "catalog:"
+    "@typescript/native-preview": "catalog:"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",

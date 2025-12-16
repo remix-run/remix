@@ -39,9 +39,14 @@
 - **Accessible navigation**: Always use proper `<a>` elements for navigation links. Never use JavaScript `onclick` handlers on non-interactive elements like `<tr>`, `<div>`, or `<span>` for navigation. Links should be keyboard accessible and work with screen readers.
 - **Clean shutdown**: Demo servers should handle `SIGINT` and `SIGTERM` signals to exit cleanly when Ctrl+C is pressed. Close the server and call `process.exit(0)`.
 
-## Changelog Formatting
+## Changes and Releases
 
-- Use `## Unreleased` as the heading for unreleased changes (not `## HEAD`)
-- Scripts in `./scripts` are configured to replace `## Unreleased` with version and date on release
-- **Only modify the `## Unreleased` section**: Older changelog entries represent a point in time when that release was made. Do not modify code examples or text in past releases, even if they reference outdated APIs.
-- **BREAKING CHANGEs come first**: Within a release section, list all BREAKING CHANGE entries before any feature additions. This makes it easy for users to quickly identify what broke in a release.
+- **Adding changes**: Create `packages/*/.changes/[major|minor|patch].short-description.md` files. See [CONTRIBUTING.md](./CONTRIBUTING.md#adding-a-change-file) for details.
+- **Updating changes**: If iterating on an unpublished change with a change file, update it in place rather than creating a new one.
+- **Versioning**: Follow semver, but ensure you follow 0.x conventions where breaking changes can happen in minor releases:
+  - For **v0.x packages**: Use "minor" for breaking changes and new features, "patch" for bug fixes. Never use "major" unless explicitly instructed. Change files for breaking changes in v0.x packages should start with `BREAKING CHANGE: ` so they are hoisted to the top.
+  - For **v1.x+ packages**: Use standard semver - "major" for breaking changes, "minor" for new features, "patch" for bug fixes.
+  - **Breaking changes are relative to main**: If you introduce a new API in a PR and then change it within the same PR before merging, that's not considered a breaking change.
+- **Validating changes**: `pnpm changes:validate` checks that all change files follow the correct naming convention and format.
+- **Previewing releases**: `pnpm changes:preview` shows which packages will be released, what the CHANGELOG will look like, the commit message and tags.
+- **Versioning releases**: `pnpm changes:version` updates package.json, CHANGELOG.md, creates a git commit and tags. Don't run this unless explicitly instructed to do so. We don't want accidental releases during development.

@@ -7,8 +7,13 @@
     "@remix-run/node-fetch-server": "workspace:^",
     "@remix-run/static-middleware": "workspace:^"
   },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
   "scripts": {
     "dev": "node --watch server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "typecheck": "tsgo --noEmit"
   }
 }
