@@ -3,6 +3,7 @@
     "lib": ["ES2024"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "strict": true,
     "allowJs": true,
