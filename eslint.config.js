@@ -10,6 +10,8 @@ export default [
       '**/*.d.ts',
       '**/dist/**',
       '**/docs/**',
+      '**/demos/bookstore/public/assets/**',
+      '**/demos/sse/public/assets/**',
       '**/coverage/**',
       '**/bench/**',
       '**/examples/**',
