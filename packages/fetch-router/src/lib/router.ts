@@ -13,7 +13,7 @@ import {
 } from './controller.ts'
 import { type RouteMap, Route } from './route-map.ts'
 
-type MatchData = {
+export type MatchData = {
   handler: RequestHandler<any>
   method: RequestMethod | 'ANY'
   middleware: Middleware<any>[] | undefined
