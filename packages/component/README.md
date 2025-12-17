@@ -23,7 +23,7 @@ Create a root and render a component:
 ```tsx
 import { createRoot } from '@remix-run/component'
 
-function App(this: Remix.Handle) {
+function App(this: Handle) {
   let count = 0
   return () => (
     <button
@@ -49,7 +49,7 @@ Components are functions that receive a `Handle` as `this`. They can return a re
 State is managed with plain JavaScript variables. Call `this.update()` to schedule an update:
 
 ```tsx
-function Counter(this: Remix.Handle) {
+function Counter(this: Handle) {
   let count = 0
 
   return () => (
@@ -79,7 +79,7 @@ Components can be either **stateful** or **non-stateful**, depending on what the
 Non-stateful components return JSX directly. They are called on every parent (or self) update so function scope is new each time.
 
 ```tsx
-function Greeting(this: Remix.Handle, props: { name: string }) {
+function Greeting(this: Handle, props: { name: string }) {
   return <h1>Hello, {props.name}!</h1>
 }
 ```
@@ -91,7 +91,7 @@ Use non-stateful components when you don't need to maintain state between render
 Stateful components return a function. The setup function runs **once** when the component is first created, and the returned render function runs on **every update**:
 
 ```tsx
-function Counter(this: Remix.Handle, setupProps: { initial: number }) {
+function Counter(this: Handle, setupProps: { initial: number }) {
   // Setup phase: runs once
   let count = setupProps.initial
 
@@ -137,7 +137,7 @@ When you use a stateful component both functions receive all props. However, you
 let el = <Counter initial={5} label="Total" />
 
 function Counter(
-  this: Remix.Handle,
+  this: Handle,
   setupProps: { initial: number }, // receives { initial: 5, label: "Total" }
 ) {
   let count = setupProps.initial // use initial for setup
@@ -158,7 +158,7 @@ function Counter(
 Events use the `on` prop and are handled by [`@remix-run/interaction`](../interaction). Listeners receive an `AbortSignal` that's aborted when the component is disconnected or the handler is re-entered.
 
 ```tsx
-function SearchInput(this: Remix.Handle) {
+function SearchInput(this: Handle) {
   let query = ''
 
   return () => (
@@ -188,7 +188,7 @@ function SearchInput(this: Remix.Handle) {
 You can also listen to global event targets like `document` or `window` using `this.on()` with automatic cleanup on component removal:
 
 ```tsx
-function KeyboardTracker(this: Remix.Handle) {
+function KeyboardTracker(this: Handle) {
   let keys: string[] = []
 
   this.on(document, {
@@ -207,7 +207,7 @@ function KeyboardTracker(this: Remix.Handle) {
 Use the `css` prop for inline styles with pseudo-selectors and nested rules:
 
 ```tsx
-function Button(this: Remix.Handle) {
+function Button(this: Handle) {
   return () => (
     <button
       css={{
@@ -259,7 +259,7 @@ The syntax mirrors modern CSS nesting, but in object form. Use `&` to reference 
 ```
 
 ```tsx
-function Button(this: Remix.Handle) {
+function Button(this: Handle) {
   return () => (
     <button
       css={{
@@ -296,7 +296,7 @@ function Button(this: Remix.Handle) {
 Use the `connect` prop to get a reference to the DOM node after it's rendered. This is useful for DOM operations like focusing elements, scrolling, or measuring dimensions.
 
 ```tsx
-function Form(this: Remix.Handle) {
+function Form(this: Handle) {
   let inputRef: HTMLInputElement
 
   return () => (
@@ -324,7 +324,7 @@ function Form(this: Remix.Handle) {
 The `connect` callback can optionally receive an `AbortSignal` as a second parameter, which is aborted when the element is removed from the DOM:
 
 ```tsx
-function Component(this: Remix.Handle) {
+function Component(this: Handle) {
   return () => (
     <div
       connect={(node, signal) => {
@@ -362,7 +362,7 @@ Components receive a `Handle` as `this` with the following API:
 Schedule an update. Optionally provide a task to run after the update completes.
 
 ```tsx
-function Counter(this: Remix.Handle) {
+function Counter(this: Handle) {
   let count = 0
 
   return () => (
@@ -383,7 +383,7 @@ function Counter(this: Remix.Handle) {
 You can pass a task to run after the update:
 
 ```tsx
-function Player(this: Remix.Handle) {
+function Player(this: Handle) {
   let isPlaying = false
   let playButton: HTMLButtonElement
   let stopButton: HTMLButtonElement
@@ -430,7 +430,7 @@ function Player(this: Remix.Handle) {
 Schedule a task to run after the next update. Useful for DOM operations that need to happen after rendering (e.g., moving focus, scrolling, measuring elements).
 
 ```tsx
-function Form(this: Remix.Handle) {
+function Form(this: Handle) {
   let showDetails = false
   let detailsSection: HTMLElement
 
@@ -478,7 +478,7 @@ function Form(this: Remix.Handle) {
 Listen to an [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) with automatic cleanup when the component disconnects. Ideal for listening to events on global event targets like `document` and `window`.
 
 ```tsx
-function KeyboardTracker(this: Remix.Handle) {
+function KeyboardTracker(this: Handle) {
   let keys: string[] = []
 
   this.on(document, {
@@ -517,7 +517,7 @@ function Clock(this: Handle) {
 Stable identifier per component instance. Useful for HTML APIs like `htmlFor`, `aria-owns`, etc. so consumers don't have to supply an id.
 
 ```tsx
-function LabeledInput(this: Remix.Handle) {
+function LabeledInput(this: Handle) {
   return () => (
     <div>
       <label htmlFor={this.id}>Name</label>
@@ -532,7 +532,7 @@ function LabeledInput(this: Remix.Handle) {
 Context API for ancestor/descendant communication. All components are potential context providers and consumers. Use `this.context.set()` to provide values and `this.context.get()` to consume them.
 
 ```tsx
-function App(this: Remix.Handle<{ theme: string }>) {
+function App(this: Handle<{ theme: string }>) {
   this.context.set({ theme: 'dark' })
 
   return () => (
@@ -543,11 +543,18 @@ function App(this: Remix.Handle<{ theme: string }>) {
   )
 }
 
-function Header(this: Remix.Handle) {
+function Header(this: Handle) {
   // Consume context from App
   let { theme } = this.context.get(App)
-
-  return () => <header css={{ backgroundColor: theme === 'dark' ? '#000' : '#fff' }}>Header</header>
+  return (
+    <header
+      css={{
+        backgroundColor: theme === 'dark' ? '#000' : '#fff',
+      }}
+    >
+      Header
+    </header>
+  )
 }
 ```
 
@@ -569,7 +576,7 @@ class Theme extends TypedEventTarget<{ change: Event }> {
   }
 }
 
-function App(this: Remix.Handle<Theme>) {
+function App(this: Handle<Theme>) {
   let theme = new Theme()
   this.context.set(theme)
 
@@ -590,11 +597,11 @@ function App(this: Remix.Handle<Theme>) {
   )
 }
 
-function ThemedContent(this: Remix.Handle) {
+function ThemedContent(this: Handle) {
   let theme = this.context.get(App)
 
   // Subscribe to theme changes and update when it changes
-  this.on(theme, { change: this.update })
+  this.on(theme, { change: () => this.update() })
 
   return () => (
     <div css={{ backgroundColor: theme.value === 'dark' ? '#000' : '#fff' }}>
@@ -609,9 +616,7 @@ function ThemedContent(this: Remix.Handle) {
 Use `Fragment` to group elements without adding extra DOM nodes:
 
 ```tsx
-import { Fragment } from '@remix-run/component'
-
-function List(this: Remix.Handle) {
+function List(this: Handle) {
   return () => (
     <>
       <li>Item 1</li>
