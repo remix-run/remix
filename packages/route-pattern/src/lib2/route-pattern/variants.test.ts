@@ -10,16 +10,16 @@ describe('variants', () => {
     let results = Array.from(variants(ast))
     expect(results).toEqual([
       {
-        key: [[], [], ['api', 'run']],
-        paramNames: [],
+        key: [[], [], [], ['api', 'run']],
+        paramIndices: new Set([]),
       },
       {
-        key: [[], [], ['api', 'v{:}', 'run']],
-        paramNames: ['major'],
+        key: [[], [], [], ['api', 'v{:}', 'run']],
+        paramIndices: new Set([0]),
       },
       {
-        key: [[], [], ['api', 'v{:}.{:}', 'run']],
-        paramNames: ['major', 'minor'],
+        key: [[], [], [], ['api', 'v{:}.{:}', 'run']],
+        paramIndices: new Set([0, 1]),
       },
     ])
   })
@@ -30,8 +30,8 @@ describe('variants', () => {
     let results = Array.from(variants(ast))
     expect(results).toEqual([
       {
-        key: [['https'], ['com', 'example'], ['users', '{:}']],
-        paramNames: ['id'],
+        key: [['https'], ['com', 'example'], [], ['users', '{:}']],
+        paramIndices: new Set([0]),
       },
     ])
   })

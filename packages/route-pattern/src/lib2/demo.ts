@@ -1,4 +1,4 @@
-import { TrieMatcher } from './matchers/trie.ts'
+import { TrieMatcher } from './matchers/trie/index.ts'
 import { parse } from './route-pattern/index.ts'
 
 // ============================================================================

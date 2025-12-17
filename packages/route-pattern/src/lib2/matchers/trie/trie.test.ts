@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import { parse } from '../route-pattern/parse.ts'
-import type * as RoutePattern from '../route-pattern/index.ts'
+import { parse } from '../../route-pattern/parse.ts'
+import type * as RoutePattern from '../../route-pattern/index.ts'
 import { Trie } from './trie.ts'
 
 function searchAll(trie: Trie<RoutePattern.AST>, url: URL) {
   return [...trie.search(url)]
 }
 
-describe('trie', () => {
+describe('Trie', () => {
   describe('constructor', () => {
     it('creates a trie with empty nodes', () => {
       let trie = new Trie()
@@ -16,7 +16,7 @@ describe('trie', () => {
       expect(trie.variable).toEqual(new Map())
       expect(trie.wildcard).toEqual(new Map())
       expect(trie.next).toBe(undefined)
-      expect(trie.match).toBe(undefined)
+      expect(trie.value).toBe(undefined)
     })
   })
 
@@ -26,9 +26,9 @@ describe('trie', () => {
       let pattern = parse('users/list')
       trie.insert(pattern, null)
 
-      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (pathname)
-      expect(trie.next?.next?.static['users']).toBeTruthy()
-      expect(trie.next?.next?.static['users']?.static['list']).toBeTruthy()
+      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (port) -> next (pathname)
+      expect(trie.next?.next?.next?.static['users']).toBeTruthy()
+      expect(trie.next?.next?.next?.static['users']?.static['list']).toBeTruthy()
     })
 
     it('inserts a pattern with dynamic segment', () => {
@@ -36,9 +36,9 @@ describe('trie', () => {
       let pattern = parse('users/:id')
       trie.insert(pattern, null)
 
-      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (pathname)
-      expect(trie.next?.next?.static['users']).toBeTruthy()
-      expect(trie.next?.next?.static['users']?.variable.has('{:}')).toBeTruthy()
+      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (port) -> next (pathname)
+      expect(trie.next?.next?.next?.static['users']).toBeTruthy()
+      expect(trie.next?.next?.next?.static['users']?.variable.has('{:}')).toBeTruthy()
     })
 
     it('inserts a full URL pattern', () => {
@@ -63,8 +63,8 @@ describe('trie', () => {
       let pattern = parse('api/(v:major(.:minor)/)run')
       trie.insert(pattern, null)
 
-      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (pathname)
-      let pathnameLevel = trie.next?.next
+      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (port) -> next (pathname)
+      let pathnameLevel = trie.next?.next?.next
 
       // Should have multiple variants added to the trie
       // Variant 1: api/run
@@ -88,8 +88,8 @@ describe('trie', () => {
       trie.insert(pattern2, null)
       trie.insert(pattern3, null)
 
-      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (pathname)
-      let pathnameLevel = trie.next?.next
+      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (port) -> next (pathname)
+      let pathnameLevel = trie.next?.next?.next
 
       // Users branch
       expect(pathnameLevel?.static['users']).toBeTruthy()
@@ -106,8 +106,8 @@ describe('trie', () => {
       let pattern = parse('files/*path')
       trie.insert(pattern, null)
 
-      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (pathname)
-      let pathnameLevel = trie.next?.next
+      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (port) -> next (pathname)
+      let pathnameLevel = trie.next?.next?.next
 
       // Should have static 'files' segment
       expect(pathnameLevel?.static['files']).toBeTruthy()
@@ -120,8 +120,8 @@ describe('trie', () => {
       let pattern = parse('assets/images/*file')
       trie.insert(pattern, null)
 
-      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (pathname)
-      let pathnameLevel = trie.next?.next
+      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (port) -> next (pathname)
+      let pathnameLevel = trie.next?.next?.next
 
       expect(pathnameLevel?.static['assets']).toBeTruthy()
       expect(pathnameLevel?.static['assets']?.static['images']).toBeTruthy()
@@ -133,8 +133,8 @@ describe('trie', () => {
       let pattern = parse('files/prefix-*rest')
       trie.insert(pattern, null)
 
-      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (pathname)
-      let pathnameLevel = trie.next?.next
+      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (port) -> next (pathname)
+      let pathnameLevel = trie.next?.next?.next
 
       expect(pathnameLevel?.static['files']).toBeTruthy()
       // Wildcard key should include the prefix
@@ -146,8 +146,8 @@ describe('trie', () => {
       let pattern = parse('api/*')
       trie.insert(pattern, null)
 
-      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (pathname)
-      let pathnameLevel = trie.next?.next
+      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (port) -> next (pathname)
+      let pathnameLevel = trie.next?.next?.next
 
       expect(pathnameLevel?.static['api']).toBeTruthy()
       expect(pathnameLevel?.static['api']?.wildcard.has('{*}')).toBeTruthy()
@@ -158,8 +158,8 @@ describe('trie', () => {
       let pattern = parse('files/*path/details')
       trie.insert(pattern, null)
 
-      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (pathname)
-      let pathnameLevel = trie.next?.next
+      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (port) -> next (pathname)
+      let pathnameLevel = trie.next?.next?.next
 
       expect(pathnameLevel?.static['files']).toBeTruthy()
       // Wildcard key should include the segments after the wildcard
@@ -171,8 +171,8 @@ describe('trie', () => {
       let pattern = parse('files/*path/foo/bar')
       trie.insert(pattern, null)
 
-      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (pathname)
-      let pathnameLevel = trie.next?.next
+      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (port) -> next (pathname)
+      let pathnameLevel = trie.next?.next?.next
 
       expect(pathnameLevel?.static['files']).toBeTruthy()
       // Wildcard key should include all segments after the wildcard
@@ -184,12 +184,47 @@ describe('trie', () => {
       let pattern = parse('files/*path/:id')
       trie.insert(pattern, null)
 
-      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (pathname)
-      let pathnameLevel = trie.next?.next
+      // Navigate to pathname level: root (protocol) -> next (hostname) -> next (port) -> next (pathname)
+      let pathnameLevel = trie.next?.next?.next
 
       expect(pathnameLevel?.static['files']).toBeTruthy()
       // Wildcard key should include the dynamic segment after the wildcard
       expect(pathnameLevel?.static['files']?.wildcard.has('{*}/{:}')).toBeTruthy()
+    })
+
+    it('stores value with paramNames and paramIndices', () => {
+      let trie = new Trie()
+      let pattern = parse('users/:id')
+      let data = { route: 'user-detail' }
+      trie.insert(pattern, data)
+
+      // Navigate to the leaf node: protocol -> hostname -> port -> pathname (users) -> variable ({:}) -> port -> search
+      let pathnameLevel = trie.next?.next?.next
+      let usersLevel = pathnameLevel?.static['users']
+      let variableLevel = usersLevel?.variable.get('{:}')?.trie
+      // After variable, we need to traverse to the end
+      let leaf = variableLevel?.next
+      expect(leaf?.value).toBeTruthy()
+      expect(leaf?.value?.data).toBe(data)
+      expect(leaf?.value?.paramNames).toEqual(['id'])
+    })
+
+    it('stores correct paramNames for multiple params', () => {
+      let trie = new Trie()
+      let pattern = parse('org/:orgId/repo/:repoId')
+      let data = { route: 'repo-detail' }
+      trie.insert(pattern, data)
+
+      // Navigate through the trie to find the leaf
+      let pathnameLevel = trie.next?.next?.next
+      let orgLevel = pathnameLevel?.static['org']
+      let orgIdLevel = orgLevel?.variable.get('{:}')?.trie
+      let repoLevel = orgIdLevel?.static['repo']
+      let repoIdLevel = repoLevel?.variable.get('{:}')?.trie
+      let leaf = repoIdLevel?.next
+
+      expect(leaf?.value).toBeTruthy()
+      expect(leaf?.value?.paramNames).toEqual(['orgId', 'repoId'])
     })
   })
 
@@ -341,6 +376,7 @@ describe('trie', () => {
           '3', // protocol: "https" (skipped: 3)
           '3', // hostname: "com" (skipped: 3)
           '3', // hostname: "example" (skipped: 3)
+          '3', // port: "" (skipped: 3)
           '0', // pathname: "users" (static: 0)
           '0', // pathname: "@admin" (static: 0)
         ],
@@ -353,6 +389,7 @@ describe('trie', () => {
           '3', // protocol: "https" (skipped: 3)
           '3', // hostname: "com" (skipped: 3)
           '3', // hostname: "example" (skipped: 3)
+          '3', // port: "" (skipped: 3)
           '0', // pathname: "users" (static: 0)
           '011111', // pathname: "@admin" (dynamic: "011111")
         ],
@@ -373,6 +410,7 @@ describe('trie', () => {
           '3', // protocol: "https" (skipped: 3)
           '3', // hostname: "com" (skipped: 3)
           '3', // hostname: "example" (skipped: 3)
+          '3', // port: "" (skipped: 3)
           '0', // pathname: "files" (static: 0)
           '00000022222', // pathname: "image-" (static) + "photo" (wildcard)
           '2222222', // pathname: "gallery" (wildcard)
@@ -395,6 +433,7 @@ describe('trie', () => {
           '3', // protocol: "https" (skipped: 3)
           '3', // hostname: "com" (skipped: 3)
           '3', // hostname: "example" (skipped: 3)
+          '3', // port: "" (skipped: 3)
           '0', // pathname: "assets" (static: 0)
           '11110000', // pathname: "logo" (variable) + ".png" (static)
         ],
@@ -415,6 +454,7 @@ describe('trie', () => {
           '3', // protocol: "https" (skipped: 3)
           '3', // hostname: "com" (skipped: 3)
           '3', // hostname: "example" (skipped: 3)
+          '3', // port: "" (skipped: 3)
           '0', // pathname: "api" (static: 0)
           '0100000', // pathname: "v" (static) + "2" (variable) + "-beta" (static)
         ],
@@ -435,6 +475,7 @@ describe('trie', () => {
           '3', // protocol: "https" (skipped: 3)
           '3', // hostname: "com" (skipped: 3)
           '3', // hostname: "example" (skipped: 3)
+          '3', // port: "" (skipped: 3)
           '0', // pathname: "docs" (static: 0)
           '222222', // pathname: "guides" (wildcard)
           '22222', // pathname: "intro" (wildcard)
@@ -457,6 +498,7 @@ describe('trie', () => {
           '3', // protocol: "https" (skipped: 3)
           '3', // hostname: "com" (skipped: 3)
           '3', // hostname: "example" (skipped: 3)
+          '3', // port: "" (skipped: 3)
           '0', // pathname: "org" (static: 0)
           '1111', // pathname: "acme" (variable)
           '22222222', // pathname: "projects" (wildcard)
@@ -489,6 +531,7 @@ describe('trie', () => {
           '3', // protocol: "https" (skipped: 3)
           '3', // hostname: "com" (skipped: 3)
           '3', // hostname: "example" (skipped: 3)
+          '3', // port: "" (skipped: 3)
           '0', // pathname: "files" (static: 0)
           '0000000222222222', // pathname: "images-" (static) + "photo.jpg" (wildcard)
         ],
@@ -501,6 +544,7 @@ describe('trie', () => {
           '3', // protocol: "https" (skipped: 3)
           '3', // hostname: "com" (skipped: 3)
           '3', // hostname: "example" (skipped: 3)
+          '3', // port: "" (skipped: 3)
           '0', // pathname: "files" (static: 0)
           '2222222222222222', // pathname: "images-photo.jpg" (all wildcard)
         ],
@@ -521,6 +565,7 @@ describe('trie', () => {
           '3', // protocol: "https" (skipped: 3)
           '3', // hostname: "com" (skipped: 3)
           '3', // hostname: "example" (skipped: 3)
+          '3', // port: "" (skipped: 3)
           '0', // pathname: "api" (static: 0)
           '11', // pathname: "v2" (variable)
           '0', // pathname: "users" (static: 0)

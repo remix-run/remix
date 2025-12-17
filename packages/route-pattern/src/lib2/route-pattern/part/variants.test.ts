@@ -8,9 +8,9 @@ describe('variants', () => {
     let source = 'api/(v:major(.:minor)/)run'
     let ast = parse(source)
     expect(variants(ast)).toEqual([
-      { key: 'api/run', paramNames: [] },
-      { key: 'api/v{:}/run', paramNames: ['major'] },
-      { key: 'api/v{:}.{:}/run', paramNames: ['major', 'minor'] },
+      { key: 'api/run', paramIndices: [] },
+      { key: 'api/v{:}/run', paramIndices: [0] },
+      { key: 'api/v{:}.{:}/run', paramIndices: [0, 1] },
     ])
   })
 })
