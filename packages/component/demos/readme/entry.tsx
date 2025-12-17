@@ -297,6 +297,7 @@ function ResizeComponent(this: Handle) {
         overflow: 'auto',
         minWidth: '100px',
         minHeight: '60px',
+        border: '1px solid rgb(209, 213, 219)',
       }}
     >
       Resize me! ({dimensions.width} × {dimensions.height})
