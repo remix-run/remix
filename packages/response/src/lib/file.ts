@@ -240,7 +240,7 @@ export async function createFileResponse(
       let { start, end } = normalizedRanges[0]
       let { size } = file
 
-      return new Response(getResponseBody(file.slice(start, end + 1)), {
+      return new Response(await getResponseBody(file.slice(start, end + 1)), {
         status: 206,
         headers: new SuperHeaders(
           omitNullableValues({
@@ -257,7 +257,7 @@ export async function createFileResponse(
     }
   }
 
-  return new Response(request.method === 'HEAD' ? null : getResponseBody(file), {
+  return new Response(request.method === 'HEAD' ? null : await getResponseBody(file), {
     status: 200,
     headers: new SuperHeaders(
       omitNullableValues({
@@ -277,16 +277,71 @@ function generateWeakETag(file: File): string {
 }
 
 /**
+ * Cached result of feature detection for whether the runtime needs the
+ * LazyBlob workaround.
+ * - undefined: not yet tested
+ * - true: runtime has the issue, need to use .stream()
+ * - false: runtime works correctly, can pass LazyBlob directly
+ */
+let needsLazyBlobWorkaround: boolean | undefined
+
+/**
+ * Detects whether the runtime's Response constructor can properly read
+ * from Blob subclasses that use private JavaScript storage (like LazyBlob).
+ *
+ * Bun's native Response constructor bypasses JavaScript and reads directly
+ * from the native Blob structure, which doesn't include JS private fields.
+ * This results in empty response bodies.
+ */
+async function detectNeedsLazyBlobWorkaround(): Promise<boolean> {
+  if (needsLazyBlobWorkaround !== undefined) {
+    return needsLazyBlobWorkaround
+  }
+
+  try {
+    // Create a LazyBlob with known content
+    let testContent = 'test'
+    let testBlob = new LazyBlob([testContent])
+
+    // Pass it directly to Response (not using .stream())
+    let response = new Response(testBlob)
+    let text = await response.text()
+
+    // If we got empty string, the runtime has the issue
+    needsLazyBlobWorkaround = text !== testContent
+  } catch {
+    // If something fails, assume we need the workaround
+    needsLazyBlobWorkaround = true
+  }
+
+  return needsLazyBlobWorkaround
+}
+
+/**
  * Gets the appropriate body for a Response.
  *
- * LazyFile/LazyBlob must use .stream() because Bun's Response constructor
- * doesn't properly read from Blob subclasses that use private storage.
+ * Bun's native Response constructor can't read from Blob subclasses that
+ * store data in private JS fields (like LazyFile/LazyBlob)—it bypasses JS
+ * and reads from native Blob storage, which is empty for these subclasses.
  *
- * Native File/Blob should be passed directly because Bun's .stream() on
- * sliced blobs incorrectly returns the full original content.
+ * Calling .stream() invokes our JS implementation, which can access the
+ * private fields and returns a standard ReadableStream that Bun handles
+ * correctly.
+ *
+ * Native File/Blob is always passed directly since they don't have this issue.
  */
-function getResponseBody(blob: Blob): ReadableStream | Blob {
-  return blob instanceof LazyFile || blob instanceof LazyBlob ? blob.stream() : blob
+async function getResponseBody(blob: Blob): Promise<ReadableStream | Blob> {
+  // Native File/Blob works fine everywhere - pass directly
+  if (!(blob instanceof LazyFile || blob instanceof LazyBlob)) {
+    return blob
+  }
+
+  // Check if this runtime needs the workaround for LazyFile/LazyBlob
+  if (await detectNeedsLazyBlobWorkaround()) {
+    return blob.stream()
+  }
+
+  return blob
 }
 
 type OmitNullableValues<T> = {
