@@ -1006,8 +1006,8 @@ importers:
         specifier: ^5.1.0
         version: 5.1.6
       valibot:
-        specifier: ^0.41.0
-        version: 0.41.0(typescript@5.1.6)
+        specifier: ^1.2.0
+        version: 1.2.0(typescript@5.1.6)
       vite:
         specifier: ^5.1.0 || ^6.0.0
         version: 6.0.6(@types/node@18.17.1)
@@ -14305,8 +14305,8 @@ packages:
       '@types/istanbul-lib-coverage': 2.0.3
       convert-source-map: 1.8.0
 
-  /valibot@0.41.0(typescript@5.1.6):
-    resolution: {integrity: sha512-igDBb8CTYr8YTQlOKgaN9nSS0Be7z+WRuaeYqGf3Cjz3aKmSnqEmYnkfVjzIuumGqfHpa3fLIvMEAfhrpqN8ng==}
+  /valibot@1.2.0(typescript@5.1.6):
+    resolution: {integrity: sha512-mm1rxUsmOxzrwnX5arGS+U4T25RdvpPjPN4yR0u9pUBov9+zGVtO84tif1eY4r6zWxVxu3KzIyknJy3rxfRZZg==}
     peerDependencies:
       typescript: '>=5'
     peerDependenciesMeta:

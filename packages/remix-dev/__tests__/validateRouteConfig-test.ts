@@ -75,7 +75,7 @@ describe("validateRouteConfig", () => {
         "Route config in "routes.ts" is invalid.
 
         Path: routes.0.children.0.file
-        Invalid type: Expected string but received undefined"
+        Invalid key: Expected "file" but received undefined"
       `);
   });
 
@@ -129,7 +129,7 @@ describe("validateRouteConfig", () => {
         "Route config in "routes.ts" is invalid.
 
         Path: routes.0.children.0.file
-        Invalid type: Expected string but received undefined
+        Invalid key: Expected "file" but received undefined
 
         Path: routes.0.children.1.file
         Invalid type: Expected string but received 123
