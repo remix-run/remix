@@ -1,4 +1,3 @@
-export { type HeaderValueInit, HeaderValue } from './lib/header-value.ts'
 export { type AcceptInit, Accept } from './lib/accept.ts'
 export { type AcceptEncodingInit, AcceptEncoding } from './lib/accept-encoding.ts'
 export { type AcceptLanguageInit, AcceptLanguage } from './lib/accept-language.ts'
