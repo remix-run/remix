@@ -5,7 +5,7 @@ import { router } from './router.ts'
 
 describe('router', () => {
   it('responds to basic GET request', async () => {
-    let response = await router.fetch('http://localhost:3000/')
+    let response = await router.fetch('https://remix.run/')
 
     assert.equal(response.status, 200)
     assert.equal(response.headers.get('Content-Type'), 'text/html; charset=UTF-8')
@@ -15,7 +15,7 @@ describe('router', () => {
   })
 
   it('returns 404 for unknown routes', async () => {
-    let response = await router.fetch('http://localhost:3000/does-not-exist')
+    let response = await router.fetch('https://remix.run/does-not-exist')
 
     assert.equal(response.status, 404)
   })

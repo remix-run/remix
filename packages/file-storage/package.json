@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/file-storage",
-  "version": "0.9.0",
+  "version": "0.13.0",
   "description": "Key/value storage for JavaScript File objects",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
@@ -20,7 +20,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./local": "./src/local.ts",
+    "./fs": "./src/fs.ts",
     "./memory": "./src/memory.ts",
     "./package.json": "./package.json"
   },
@@ -30,9 +30,9 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./local": {
-        "types": "./dist/local.d.ts",
-        "default": "./dist/local.js"
+      "./fs": {
+        "types": "./dist/fs.d.ts",
+        "default": "./dist/fs.js"
       },
       "./memory": {
         "types": "./dist/memory.d.ts",
@@ -41,24 +41,21 @@
       "./package.json": "./package.json"
     }
   },
-  "dependencies": {
+  "peerDependencies": {
+    "@remix-run/fs": "workspace:^",
     "@remix-run/lazy-file": "workspace:^"
   },
   "devDependencies": {
-    "@remix-run/form-data-parser": "workspace:^",
-    "@types/node": "^24.6.0",
-    "esbuild": "^0.25.10"
+    "@remix-run/form-data-parser": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
   },
   "scripts": {
-    "build": "pnpm run clean && pnpm run build:types && pnpm run build:esm && pnpm run build:esm:local && pnpm run build:esm:memory",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=esm --platform=neutral --sourcemap",
-    "build:esm:local": "esbuild src/local.ts --bundle --outfile=dist/local.js --format=esm --platform=node --sourcemap",
-    "build:esm:memory": "esbuild src/memory.ts --bundle --outfile=dist/memory.js --format=esm --platform=neutral --sourcemap",
-    "build:types": "tsc --project tsconfig.build.json",
-    "clean": "rm -rf dist",
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
-    "typecheck": "tsc --noEmit"
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "typecheck": "tsgo --noEmit"
   },
   "keywords": [
     "file",

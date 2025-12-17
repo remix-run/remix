@@ -1,16 +1,15 @@
-import type { InferRouteHandler, RouteHandlers } from '@remix-run/fetch-router'
+import type { BuildAction, Controller } from '@remix-run/fetch-router'
 import { Frame } from '@remix-run/dom'
 
-import { routes } from '../routes.ts'
-
+import { routes } from './routes.ts'
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { searchBooks } from './models/books.ts'
 import { render } from './utils/render.ts'
 
-export let home: InferRouteHandler<typeof routes.home> = {
-  use: [loadAuth],
-  handler() {
+export let home: BuildAction<'GET', typeof routes.home> = {
+  middleware: [loadAuth()],
+  action() {
     return render(
       <Layout>
         <div class="card">
@@ -37,9 +36,9 @@ export let home: InferRouteHandler<typeof routes.home> = {
   },
 }
 
-export let about: InferRouteHandler<typeof routes.about> = {
-  use: [loadAuth],
-  handler() {
+export let about: BuildAction<'GET', typeof routes.about> = {
+  middleware: [loadAuth()],
+  action() {
     return render(
       <Layout>
         <div class="card">
@@ -98,9 +97,9 @@ export let about: InferRouteHandler<typeof routes.about> = {
   },
 }
 
-export let contact: RouteHandlers<typeof routes.contact> = {
-  use: [loadAuth],
-  handlers: {
+export let contact: Controller<typeof routes.contact> = {
+  middleware: [loadAuth()],
+  actions: {
     index() {
       return render(
         <Layout>
@@ -140,7 +139,6 @@ export let contact: RouteHandlers<typeof routes.contact> = {
             Thank you for your message! We'll get back to you soon.
           </div>
           <div class="card">
-            r
             <p>
               <a href={routes.home.href()} class="btn">
                 Return Home
@@ -153,9 +151,9 @@ export let contact: RouteHandlers<typeof routes.contact> = {
   },
 }
 
-export let search: InferRouteHandler<typeof routes.search> = {
-  use: [loadAuth],
-  handler({ url }) {
+export let search: BuildAction<'GET', typeof routes.search> = {
+  middleware: [loadAuth()],
+  action({ url }) {
     let query = url.searchParams.get('q') ?? ''
     let books = query ? searchBooks(query) : []
 

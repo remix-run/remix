@@ -1,0 +1,28 @@
+{
+  "name": "unpkg-demo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/file-storage": "workspace:*",
+    "@remix-run/headers": "workspace:*",
+    "@remix-run/html-template": "workspace:*",
+    "@remix-run/mime": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*",
+    "@remix-run/response": "workspace:*",
+    "@remix-run/tar-parser": "workspace:*",
+    "semver": "^7.6.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/semver": "^7.5.8",
+    "@typescript/native-preview": "catalog:",
+    "tsx": "catalog:"
+  },
+  "scripts": {
+    "dev": "tsx watch server.ts",
+    "start": "tsx server.ts",
+    "test": "tsx --test",
+    "typecheck": "tsgo --noEmit"
+  }
+}

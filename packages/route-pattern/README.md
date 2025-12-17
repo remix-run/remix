@@ -9,7 +9,13 @@ A powerful and flexible URL pattern matching library for modern JavaScript appli
 - **Type Safety**: Generate URLs with type-safe parameter validation and autocompletion
 - **Universal Runtime Support**: Works seamlessly across all JavaScript environments including Node.js, Bun, Deno, Cloudflare Workers, and browsers
 
-## Examples
+## Installation
+
+```sh
+npm install @remix-run/route-pattern
+```
+
+## Usage
 
 The following examples show how to create route patterns and use them to match and generate URLs. Parts of a route pattern that begin with a colon (`:`) are dynamic parameters.
 
@@ -296,7 +302,15 @@ pattern.match('https://api.shopify.com/api/v2/products')
 
 Optionals are perfect for backward compatibility, feature flags, or supporting multiple URL formats in a single pattern.
 
-## Alternatives
+## Benchmark
+
+To run benchmarks comparing `route-pattern` performance with comparable libraries:
+
+```sh
+pnpm run bench
+```
+
+## Related Work
 
 - [`path-to-regexp`](https://www.npmjs.com/package/path-to-regexp)
 - [`URLPattern`](https://developer.mozilla.org/en-US/docs/Web/API/URLPattern)

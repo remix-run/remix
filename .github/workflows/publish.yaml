@@ -13,16 +13,14 @@ jobs:
 
     permissions:
       contents: write # Required for publishing the GitHub release
-      id-token: write # The OIDC ID token is used for authentication with JSR
+      id-token: write # OIDC ID token is used for authentication with npm/jsr
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          run_install: false
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -32,7 +30,22 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Playwright Version
+        id: playwright-version
+        run: echo "version=$(pnpm --filter @remix-run/interaction exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright Browsers
+        uses: actions/cache@v4
+        id: cache-browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: steps.cache-browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @remix-run/interaction exec playwright install --with-deps
 
       - name: Run tests
         run: pnpm test
@@ -40,8 +53,27 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      - name: Publish
-        run: pnpm publish-release-ci ${{ github.ref_name }}
+      - name: Parse package name from tag
+        id: parse_tag
+        run: |
+          TAG="${{ github.ref_name }}"
+          SHORT_PACKAGE_NAME="${TAG%@*}"
+          PACKAGE_VERSION="${TAG##*@}"
+
+          # The "remix" package is unscoped, all others are under @remix-run/
+          if [ "$SHORT_PACKAGE_NAME" = "remix" ]; then
+            PACKAGE_NAME="${SHORT_PACKAGE_NAME}"
+          else
+            PACKAGE_NAME="@remix-run/${SHORT_PACKAGE_NAME}"
+          fi
+
+          echo "package_name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "package_version=${PACKAGE_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Publish to npm
+        run: pnpm publish --filter "${{ steps.parse_tag.outputs.package_name }}" --access public --no-git-checks
+
+      - name: Create GitHub Release
+        run: node ./scripts/create-github-release.js ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

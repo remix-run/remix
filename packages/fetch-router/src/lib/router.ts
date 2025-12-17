@@ -1,58 +1,173 @@
-import { FormDataParseError, parseFormData } from '@remix-run/form-data-parser'
-import type { ParseFormDataOptions, FileUploadHandler } from '@remix-run/form-data-parser'
-import { RegExpMatcher, RoutePattern } from '@remix-run/route-pattern'
-import type { Matcher } from '@remix-run/route-pattern'
+import { type Matcher, ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
 
-import { runMiddleware } from './middleware.ts'
-import type { Middleware } from './middleware.ts'
+import { type Middleware, runMiddleware } from './middleware.ts'
+import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
-import type { RequestHandler } from './request-handler.ts'
-import { RequestBodyMethods } from './request-methods.ts'
-import type { RequestBodyMethod, RequestMethod } from './request-methods.ts'
-import { isRequestHandlerWithMiddleware, isRouteHandlersWithMiddleware } from './route-handlers.ts'
-import type { RouteHandlers, InferRouteHandler } from './route-handlers.ts'
-import { Route } from './route-map.ts'
-import type { RouteMap } from './route-map.ts'
+import type { RequestMethod } from './request-methods.ts'
+import {
+  type Controller,
+  type Action,
+  type RequestHandler,
+  isControllerWithMiddleware,
+  isActionWithMiddleware,
+} from './controller.ts'
+import { type RouteMap, Route } from './route-map.ts'
 
+export type MatchData = {
+  handler: RequestHandler<any>
+  method: RequestMethod | 'ANY'
+  middleware: Middleware<any>[] | undefined
+}
+
+/**
+ * The valid types for the first argument to `router.map()`.
+ */
+export type MapTarget =
+  | string
+  | RoutePattern<string>
+  | Route<RequestMethod | 'ANY', string>
+  | RouteMap
+
+/**
+ * Infer the correct handler type (Action or Controller) based on the map target.
+ */
+// prettier-ignore
+export type MapHandler<target extends MapTarget> =
+  target extends string ? Action<RequestMethod | 'ANY', target> :
+  target extends RoutePattern<infer pattern extends string> ? Action<RequestMethod | 'ANY', pattern> :
+  target extends Route<RequestMethod | 'ANY', infer pattern extends string> ? Action<RequestMethod | 'ANY', pattern> :
+  target extends RouteMap ? Controller<target> :
+  never
+
+/**
+ * Options for creating a router.
+ */
 export interface RouterOptions {
   /**
    * The default request handler that runs when no route matches.
-   * Default is a 404 "Not Found" response.
+   *
+   * @default A 404 "Not Found" response
    */
   defaultHandler?: RequestHandler
   /**
    * The matcher to use for matching routes.
-   * Default is a `new RegExpMatcher()`.
+   *
+   * @default `new ArrayMatcher()`
    */
   matcher?: Matcher<MatchData>
   /**
-   * The name of the form field to check for request method override. Default is `_method`.
-   * Set `false` to disable method override support.
+   * Global middleware to run for all routes. This middleware runs on every request before any
+   * routes are matched.
    */
-  methodOverride?: string | boolean
-  /**
-   * Options for parsing form data.
-   * Set `false` to disable form data parsing.
-   */
-  parseFormData?: (ParseFormDataOptions & { suppressErrors?: boolean }) | boolean
-  /**
-   * A function that handles file uploads. It receives a `FileUpload` object and may return any
-   * value that is a valid `FormData` value.
-   */
-  uploadHandler?: FileUploadHandler
+  middleware?: Middleware[]
 }
 
-type MatchData =
-  | {
-      method: RequestMethod | 'ANY'
-      middleware: Middleware<any>[] | undefined
-      handler: RequestHandler<any>
-    }
-  | {
-      middleware: Middleware<any>[] | undefined
-      prefix: string
-      router: Router
-    }
+/**
+ * A router maps incoming requests to request handlers and middleware.
+ */
+export interface Router {
+  /**
+   * Fetch a response from the router.
+   *
+   * @param input The request input to fetch
+   * @param init The request init options
+   * @returns The response from the route that matched the request
+   */
+  fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>
+  /**
+   * The number of routes in the router.
+   */
+  readonly size: number
+  /**
+   * Add a route to the router.
+   *
+   * @param method The request method to match
+   * @param pattern The pattern to match
+   * @param action The action to invoke when the route matches
+   */
+  route<method extends RequestMethod | 'ANY', pattern extends string>(
+    method: method,
+    pattern: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
+    action: Action<method, pattern>,
+  ): void
+  /**
+   * Map a route or route map to an action or controller.
+   *
+   * @param target The route/pattern or route map to match
+   * @param handler The action or controller to invoke when the route(s) match
+   */
+  map<target extends MapTarget>(target: target, handler: MapHandler<target>): void
+  /**
+   * Map a `GET` route/pattern to an action.
+   *
+   * @param route The route/pattern to match
+   * @param action The action to invoke when the route matches
+   */
+  get<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
+    action: Action<'GET', pattern>,
+  ): void
+  /**
+   * Map a `HEAD` route/pattern to an action.
+   *
+   * @param route The route/pattern to match
+   * @param action The action to invoke when the route matches
+   */
+  head<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
+    action: Action<'HEAD', pattern>,
+  ): void
+  /**
+   * Map a `POST` route/pattern to an action.
+   *
+   * @param route The route/pattern to match
+   * @param action The action to invoke when the route matches
+   */
+  post<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
+    action: Action<'POST', pattern>,
+  ): void
+  /**
+   * Map a `PUT` route/pattern to an action.
+   *
+   * @param route The route/pattern to match
+   * @param action The action to invoke when the route matches
+   */
+  put<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
+    action: Action<'PUT', pattern>,
+  ): void
+  /**
+   * Map a `PATCH` route/pattern to an action.
+   *
+   * @param route The route/pattern to match
+   * @param action The action to invoke when the route matches
+   */
+  patch<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
+    action: Action<'PATCH', pattern>,
+  ): void
+  /**
+   * Map a `DELETE` route/pattern to an action.
+   *
+   * @param route The route/pattern to match
+   * @param action The action to invoke when the route matches
+   */
+  delete<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
+    action: Action<'DELETE', pattern>,
+  ): void
+  /**
+   * Map an `OPTIONS` route/pattern to an action.
+   *
+   * @param route The route/pattern to match
+   * @param action The action to invoke when the route matches
+   */
+  options<pattern extends string>(
+    route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
+    action: Action<'OPTIONS', pattern>,
+  ): void
+}
 
 function noMatchHandler({ url }: RequestContext): Response {
   return new Response(`Not Found: ${url.pathname}`, { status: 404 })
@@ -60,331 +175,189 @@ function noMatchHandler({ url }: RequestContext): Response {
 
 /**
  * Create a new router.
+ *
+ * @param options Options to configure the router
+ * @returns The new router
  */
 export function createRouter(options?: RouterOptions): Router {
-  return new Router(options)
-}
+  let defaultHandler = options?.defaultHandler ?? noMatchHandler
+  let matcher = options?.matcher ?? new ArrayMatcher<MatchData>()
+  let globalMiddleware = options?.middleware
 
-export class Router {
-  #defaultHandler: RequestHandler
-  #matcher: Matcher<MatchData>
-  #middleware: Middleware[] | undefined
-  #parseFormData: (ParseFormDataOptions & { suppressErrors?: boolean }) | boolean
-  #uploadHandler: FileUploadHandler | undefined
-  #methodOverride: string | boolean
-
-  constructor(options?: RouterOptions) {
-    this.#defaultHandler = options?.defaultHandler ?? noMatchHandler
-    this.#matcher = options?.matcher ?? new RegExpMatcher()
-    this.#parseFormData = options?.parseFormData ?? true
-    this.#uploadHandler = options?.uploadHandler
-    this.#methodOverride = options?.methodOverride ?? true
-  }
-
-  /**
-   * Fetch a response from the router.
-   */
-  async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-    let request = input instanceof Request ? input : new Request(input, init)
-
-    let response = await this.dispatch(request)
-    if (response == null) {
-      response = await this.#defaultHandler(new RequestContext(request))
-    }
-
-    return response
-  }
-
-  /**
-   * Low-level method that runs a request through the router and returns a response or null if no
-   * match is found.
-   *
-   * Note: This method does not invoke the router's default handler when no match is found. If
-   * that's what you want, use `router.fetch()` instead.
-   */
-  async dispatch(
-    request: Request | RequestContext,
-    upstreamMiddleware?: Middleware[],
-  ): Promise<Response | null> {
-    let context = request instanceof Request ? await this.#parseRequest(request) : request
-
-    for (let match of this.#matcher.matchAll(context.url)) {
-      if ('router' in match.data) {
-        // Matched a sub-router, try to dispatch to it
-        let { middleware: mountMiddleware, prefix, router } = match.data
-
-        // Save original URL and create new URL with stripped pathname
-        let originalUrl = context.url
-        let strippedUrl = new URL(match.url)
-        strippedUrl.pathname = strippedUrl.pathname.slice(prefix.length)
-        context.url = strippedUrl
-
-        let response = await router.dispatch(
-          context,
-          // For mounts, pass upstream + mount middleware
-          concatMiddleware(upstreamMiddleware, mountMiddleware),
-        )
-
-        // Always restore original URL
-        context.url = originalUrl
-
-        if (response != null) {
-          return response
-        }
-
-        // No match in sub-router, continue to next match
-        continue
-      }
-
-      let { method, middleware: routeMiddleware, handler } = match.data
+  function dispatch(context: RequestContext): Promise<Response> {
+    for (let match of matcher.matchAll(context.url)) {
+      let { handler, method, middleware } = match.data
 
       if (method !== context.method && method !== 'ANY') {
+        // Request method does not match, continue to next match
         continue
       }
 
       context.params = match.params
-      context.url = match.url
 
-      let middleware = concatMiddleware(upstreamMiddleware, routeMiddleware)
-      return middleware != null
-        ? await runMiddleware(middleware, context, handler)
-        : await handler(context)
+      if (middleware) {
+        return runMiddleware(middleware, context, handler)
+      }
+
+      return raceRequestAbort(Promise.resolve(handler(context)), context.request)
     }
 
-    return null
+    return raceRequestAbort(Promise.resolve(defaultHandler(context)), context.request)
   }
 
-  async #parseRequest(request: Request): Promise<RequestContext> {
-    let context = new RequestContext(request)
-
-    if (this.#parseFormData === false) {
-      return context
-    }
-
-    if (shouldParseFormData(request)) {
-      let suppressParseErrors: boolean
-      let parseOptions: ParseFormDataOptions
-      if (this.#parseFormData === true) {
-        suppressParseErrors = false
-        parseOptions = {}
-      } else {
-        suppressParseErrors = this.#parseFormData.suppressErrors ?? false
-        parseOptions = this.#parseFormData
-      }
-
-      try {
-        context.formData = await parseFormData(request, parseOptions, this.#uploadHandler)
-      } catch (error) {
-        if (!suppressParseErrors || !(error instanceof FormDataParseError)) {
-          throw error
-        }
-
-        // Suppress parse error, continue with empty formData
-        context.formData = new FormData()
-      }
+  function addRoute<method extends RequestMethod | 'ANY', pattern extends string>(
+    method: method,
+    route: pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>,
+    action: Action<method, pattern>,
+  ): void {
+    let middleware: Middleware<any, any>[] | undefined
+    let requestHandler: RequestHandler<any, any>
+    if (isActionWithMiddleware(action)) {
+      middleware = action.middleware.length > 0 ? action.middleware : undefined
+      requestHandler = action.action
     } else {
-      // No form data to parse, continue with empty formData
-      context.formData = new FormData()
+      requestHandler = action as RequestHandler<any, any>
     }
 
-    if (this.#methodOverride) {
-      let fieldName = this.#methodOverride === true ? '_method' : this.#methodOverride
-      let methodOverride = context.formData.get(fieldName)
-      if (typeof methodOverride === 'string' && methodOverride !== '') {
-        context.method = methodOverride.toUpperCase() as RequestMethod
-      }
-    }
-
-    return context
+    matcher.add(route instanceof Route ? route.pattern : route, {
+      handler: requestHandler,
+      method,
+      middleware,
+    })
   }
 
-  /**
-   * Mount a router at a given pathname prefix in the current router.
-   */
-  mount(router: Router): void
-  mount(pathnamePrefix: string, router: Router): void
-  mount(arg: string | Router, router?: Router): void {
-    let pathnamePrefix = '/'
-    if (typeof arg === 'string') {
-      if (!arg.startsWith('/') || arg.includes('?') || arg.includes(':') || arg.includes('*')) {
-        throw new Error(
-          `Invalid mount prefix: "${arg}"; prefix must start with "/" and contain only static segments`,
+  function mapRoutes(target: MapTarget, handler: unknown): void {
+    // Single route: string, RoutePattern, or Route
+    if (typeof target === 'string' || target instanceof RoutePattern || target instanceof Route) {
+      addRoute('ANY', target as any, handler as Action<any, any>)
+      return
+    }
+
+    // Route map
+    if (isControllerWithMiddleware(handler)) {
+      // map(routes, { middleware, actions })
+      mapControllerWithMiddleware(target, handler.middleware, handler.actions)
+    } else {
+      // map(routes, controller)
+      mapController(target, handler as Record<string, unknown>)
+    }
+  }
+
+  function mapControllerWithMiddleware(
+    routes: RouteMap,
+    middleware: Middleware[],
+    actions: Record<string, unknown>,
+  ): void {
+    for (let key in routes) {
+      let route = routes[key]
+      let action = actions[key]
+
+      if (route instanceof Route) {
+        // Single route - check if action has its own middleware
+        if (isActionWithMiddleware(action)) {
+          addRoute(route.method, route.pattern, {
+            middleware: middleware.concat(action.middleware),
+            action: action.action,
+          })
+        } else {
+          addRoute(route.method, route.pattern, {
+            middleware,
+            action: action as RequestHandler<any, any>,
+          })
+        }
+      } else if (isControllerWithMiddleware(action)) {
+        // Nested controller with its own middleware - merge and recurse
+        mapControllerWithMiddleware(
+          route as RouteMap,
+          middleware.concat(action.middleware),
+          action.actions,
+        )
+      } else {
+        // Nested controller without middleware - pass down current middleware
+        mapControllerWithMiddleware(
+          route as RouteMap,
+          middleware,
+          action as Record<string, unknown>,
         )
       }
-
-      pathnamePrefix = arg
-    } else {
-      router = arg
     }
-
-    // Add an optional catch-all segment so the pattern matches any pathname
-    // that starts with the prefix.
-    let pattern = pathnamePrefix.replace(/\/*$/, '(/*)')
-
-    this.#matcher.add(pattern, {
-      middleware: this.#middleware,
-      prefix: pathnamePrefix,
-      router: router!,
-    })
   }
 
-  /**
-   * Add middleware to the router.
-   */
-  use(middleware: Middleware | Middleware[]): void {
-    this.#middleware = (this.#middleware ?? []).concat(middleware)
-  }
+  function mapController(routes: RouteMap, controller: Record<string, unknown>): void {
+    for (let key in routes) {
+      let route = routes[key]
+      let action = controller[key]
 
-  /**
-   * The number of routes in the router.
-   */
-  get size(): number {
-    return this.#matcher.size
-  }
-
-  // Route mapping
-
-  route<M extends RequestMethod | 'ANY', P extends string>(
-    method: M,
-    pattern: P | RoutePattern<P> | Route<M | 'ANY', P>,
-    handler: InferRouteHandler<P>,
-  ): void {
-    let routeMiddleware: Middleware[] | undefined
-    let requestHandler: RequestHandler
-    if (isRequestHandlerWithMiddleware(handler)) {
-      routeMiddleware = handler.use
-      requestHandler = handler.handler
-    } else {
-      requestHandler = handler
-    }
-
-    this.#matcher.add(pattern instanceof Route ? pattern.pattern : pattern, {
-      method,
-      middleware: concatMiddleware(this.#middleware, routeMiddleware),
-      handler: requestHandler,
-    })
-  }
-
-  map<M extends RequestMethod | 'ANY', P extends string>(
-    route: P | RoutePattern<P> | Route<M, P>,
-    handler: InferRouteHandler<P>,
-  ): void
-  map<T extends RouteMap>(routes: T, handlers: RouteHandlers<T>): void
-  map(routeOrRoutes: any, handler: any): void {
-    if (typeof routeOrRoutes === 'string' || routeOrRoutes instanceof RoutePattern) {
-      // map(pattern, handler)
-      this.route('ANY', routeOrRoutes, handler)
-    } else if (routeOrRoutes instanceof Route) {
-      // map(route, handler)
-      this.route(routeOrRoutes.method, routeOrRoutes.pattern, handler)
-    } else if (isRouteHandlersWithMiddleware(handler)) {
-      // map(routes, { use, handlers })
-      let use = handler.use
-      let handlers = handler.handlers
-      for (let key in routeOrRoutes) {
-        let route = routeOrRoutes[key]
-        let handler = (handlers as any)[key]
-
-        if (route instanceof Route) {
-          if (isRequestHandlerWithMiddleware(handler)) {
-            this.route(route.method, route.pattern, {
-              use: use.concat(handler.use),
-              handler: handler.handler,
-            })
-          } else {
-            this.route(route.method, route.pattern, { use, handler })
-          }
-        } else if (isRouteHandlersWithMiddleware(handler)) {
-          this.map(route, { use: use.concat(handler.use), handlers: handler.handlers })
-        } else {
-          this.map(route, { use, handlers: handler })
-        }
-      }
-    } else {
-      // map(routes, handlers)
-      let handlers = handler
-      for (let key in routeOrRoutes) {
-        let route = routeOrRoutes[key]
-        let handler = handlers[key]
-
-        if (route instanceof Route) {
-          this.route(route.method, route.pattern, handler)
-        } else {
-          this.map(route, handler)
-        }
+      if (route instanceof Route) {
+        addRoute(route.method, route.pattern, action as Action<any, any>)
+      } else {
+        mapRoutes(route as RouteMap, action)
       }
     }
   }
 
-  // HTTP-method specific shorthand
+  return {
+    fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+      let request = new Request(input, init)
 
-  get<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'GET' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
-  ): void {
-    this.route('GET', pattern, handler)
+      if (request.signal.aborted) {
+        throw request.signal.reason
+      }
+
+      let context = new RequestContext(request)
+
+      if (globalMiddleware) {
+        return runMiddleware(globalMiddleware, context, dispatch)
+      }
+
+      return dispatch(context)
+    },
+    get size(): number {
+      return matcher.size
+    },
+    route: addRoute,
+    map: mapRoutes,
+    get<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'GET' | 'ANY', pattern>,
+      action: Action<'GET', pattern>,
+    ): void {
+      addRoute('GET', route, action)
+    },
+    head<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'HEAD' | 'ANY', pattern>,
+      action: Action<'HEAD', pattern>,
+    ): void {
+      addRoute('HEAD', route, action)
+    },
+    post<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'POST' | 'ANY', pattern>,
+      action: Action<'POST', pattern>,
+    ): void {
+      addRoute('POST', route, action)
+    },
+    put<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'PUT' | 'ANY', pattern>,
+      action: Action<'PUT', pattern>,
+    ): void {
+      addRoute('PUT', route, action)
+    },
+    patch<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'PATCH' | 'ANY', pattern>,
+      action: Action<'PATCH', pattern>,
+    ): void {
+      addRoute('PATCH', route, action)
+    },
+    delete<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'DELETE' | 'ANY', pattern>,
+      action: Action<'DELETE', pattern>,
+    ): void {
+      addRoute('DELETE', route, action)
+    },
+    options<pattern extends string>(
+      route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
+      action: Action<'OPTIONS', pattern>,
+    ): void {
+      addRoute('OPTIONS', route, action)
+    },
   }
-
-  head<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'HEAD' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
-  ): void {
-    this.route('HEAD', pattern, handler)
-  }
-
-  post<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'POST' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
-  ): void {
-    this.route('POST', pattern, handler)
-  }
-
-  put<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'PUT' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
-  ): void {
-    this.route('PUT', pattern, handler)
-  }
-
-  patch<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'PATCH' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
-  ): void {
-    this.route('PATCH', pattern, handler)
-  }
-
-  delete<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'DELETE' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
-  ): void {
-    this.route('DELETE', pattern, handler)
-  }
-
-  options<P extends string>(
-    pattern: P | RoutePattern<P> | Route<'OPTIONS' | 'ANY', P>,
-    handler: InferRouteHandler<P>,
-  ): void {
-    this.route('OPTIONS', pattern, handler)
-  }
-}
-
-function shouldParseFormData(request: Request): boolean {
-  if (!RequestBodyMethods.includes(request.method as RequestBodyMethod)) {
-    return false
-  }
-
-  let contentType = request.headers.get('Content-Type')
-
-  return (
-    contentType != null &&
-    (contentType.startsWith('multipart/') ||
-      contentType.startsWith('application/x-www-form-urlencoded'))
-  )
-}
-
-function concatMiddleware(
-  a: Middleware[] | undefined,
-  b: Middleware[] | undefined,
-): Middleware[] | undefined {
-  return a == null ? b : b == null ? a : a.concat(b)
 }

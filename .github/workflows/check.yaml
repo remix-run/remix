@@ -1,0 +1,31 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches-ignore:
+      - release-v2
+      - v2
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check change files
+        run: pnpm changes:validate

@@ -1,5 +1,8 @@
 dist/
+docs/api/
+docs/typedoc/
 node_modules/
+reference/
+.tmp/
 
-.claude/settings.local.json
 .env

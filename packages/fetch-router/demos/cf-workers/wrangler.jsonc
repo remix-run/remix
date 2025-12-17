@@ -1,0 +1,21 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fetch-router-cf-workers-demo",
+  "main": "worker.ts",
+  "compatibility_date": "2025-11-18",
+  "observability": {
+    "enabled": true,
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fetch-router-blog",
+      "database_id": "local",
+      "migrations_dir": "migrations",
+    },
+  ],
+}

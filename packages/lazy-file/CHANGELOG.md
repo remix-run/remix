@@ -2,7 +2,50 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v4.2.0 (2025-11-26)
+
+- Move `@remix-run/mime` to `peerDependencies`
+
+## v4.1.0 (2025-11-25)
+
+- Replaced `mrmime` dependency with `@remix-run/mime` for MIME type detection
+
+## v4.0.0 (2025-11-20)
+
+- BREAKING CHANGE: Removed `lazy-file/fs` export. Use `@remix-run/fs` package instead.
+
+  ```ts
+  // before
+  import { openFile, writeFile } from '@remix-run/lazy-file/fs'
+
+  // after
+  import { openFile, writeFile } from '@remix-run/fs'
+  ```
+
+## v3.8.0 (2025-11-18)
+
+- BREAKING CHANGE: `openFile()` now sets `file.name` to the `filename` argument as provided, instead of using `path.basename(filename)`. You can still override this with `options.name`.
+
+```ts
+// before
+let file = openFile('./public/assets/favicon.ico')
+file.name // "favicon.ico"
+
+// after
+let file = openFile('./public/assets/favicon.ico')
+file.name // "./public/assets/favicon.ico"
+
+// You can still override the name
+let file = openFile('./public/assets/favicon.ico', { name: 'favicon.ico' })
+file.name // "favicon.ico"
+```
+
+## v3.7.0 (2025-11-04)
+
+- Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
+- Fix type errors in TypeScript 5.7+ when using typed arrays
+
+## v3.6.0 (2025-10-22)
 
 - BREAKING CHANGE: Removed CommonJS build. This package is now ESM-only. If you need to use this package in a CommonJS project, you will need to use dynamic `import()`.
 

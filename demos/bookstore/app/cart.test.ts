@@ -6,7 +6,7 @@ import { getSessionCookie, requestWithSession, assertContains } from '../test/he
 
 describe('cart handlers', () => {
   it('POST /cart/api/add adds book to cart', async () => {
-    let response = await router.fetch('http://localhost:3000/cart/api/add', {
+    let response = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
         bookId: '001',
@@ -21,7 +21,7 @@ describe('cart handlers', () => {
 
   it('GET /cart shows cart items', async () => {
     // First, add item to cart to get a session
-    let addResponse = await router.fetch('http://localhost:3000/cart/api/add', {
+    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
         bookId: '002',
@@ -34,7 +34,7 @@ describe('cart handlers', () => {
     assert.ok(sessionId)
 
     // Now view cart with session
-    let request = requestWithSession('http://localhost:3000/cart', sessionId)
+    let request = requestWithSession('https://remix.run/cart', sessionId)
     let response = await router.fetch(request)
 
     assert.equal(response.status, 200)
@@ -45,7 +45,7 @@ describe('cart handlers', () => {
 
   it('cart persists state across requests with same session', async () => {
     // Add first item
-    let addResponse1 = await router.fetch('http://localhost:3000/cart/api/add', {
+    let addResponse1 = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
         bookId: '001',
@@ -58,7 +58,7 @@ describe('cart handlers', () => {
     assert.ok(sessionId)
 
     // Add second item with same session
-    let addRequest2 = requestWithSession('http://localhost:3000/cart/api/add', sessionId, {
+    let addRequest2 = requestWithSession('https://remix.run/cart/api/add', sessionId, {
       method: 'POST',
       body: new URLSearchParams({
         bookId: '003',
@@ -68,7 +68,7 @@ describe('cart handlers', () => {
     await router.fetch(addRequest2)
 
     // View cart - should have both items
-    let cartRequest = requestWithSession('http://localhost:3000/cart', sessionId)
+    let cartRequest = requestWithSession('https://remix.run/cart', sessionId)
     let cartResponse = await router.fetch(cartRequest)
 
     let html = await cartResponse.text()

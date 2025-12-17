@@ -1,6 +1,9 @@
 import { type HeaderValue } from './header-value.ts'
 import { quoteEtag } from './utils.ts'
 
+/**
+ * Initializer for an `If-None-Match` header value.
+ */
 export interface IfNoneMatchInit {
   /**
    * The entity tags to compare against the current entity.
@@ -18,6 +21,9 @@ export interface IfNoneMatchInit {
 export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
   tags: string[] = []
 
+  /**
+   * @param init A string, array of strings, or object to initialize the header
+   */
   constructor(init?: string | string[] | IfNoneMatchInit) {
     if (init) {
       if (typeof init === 'string') {
@@ -35,8 +41,8 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
    *
    * Note: This method checks only for exact matches and does not consider wildcards.
    *
-   * @param tag The entity tag to check for.
-   * @returns `true` if the tag is present in the header, `false` otherwise.
+   * @param tag The entity tag to check for
+   * @returns `true` if the tag is present in the header, `false` otherwise
    */
   has(tag: string): boolean {
     return this.tags.includes(quoteEtag(tag))
@@ -45,13 +51,18 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
   /**
    * Checks if this header matches the given entity tag.
    *
-   * @param tag The entity tag to check for.
-   * @returns `true` if the tag is present in the header (or the header contains a wildcard), `false` otherwise.
+   * @param tag The entity tag to check for
+   * @returns `true` if the tag is present in the header (or the header contains a wildcard), `false` otherwise
    */
   matches(tag: string): boolean {
     return this.has(tag) || this.tags.includes('*')
   }
 
+  /**
+   * Returns the string representation of the header value.
+   *
+   * @returns The header value as a string
+   */
   toString() {
     return this.tags.join(', ')
   }

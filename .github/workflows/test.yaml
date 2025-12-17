@@ -1,8 +1,7 @@
 on:
   push:
-    branches-ignore:
-      - release-v2
-      - v2
+    branches:
+      - main
   pull_request:
     branches-ignore:
       - release-v2
@@ -10,16 +9,18 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          run_install: false
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -28,7 +29,25 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Playwright Version
+        id: playwright-version
+        shell: bash
+        run: echo "version=$(pnpm --filter @remix-run/interaction exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright Browsers
+        uses: actions/cache@v4
+        id: cache-browsers
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/AppData/Local/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: steps.cache-browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @remix-run/interaction exec playwright install --with-deps
 
       - name: Run tests
         run: pnpm test

@@ -3,15 +3,16 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@remix-run/multipart-parser": "workspace:*",
+    "@remix-run/multipart-parser": "workspace:^",
     "tmp": "^0.2.3"
   },
   "devDependencies": {
-    "@types/node": "^24.6.0",
+    "@types/node": "catalog:",
     "@types/tmp": "^0.2.6",
-    "typescript": "^5.7.2"
+    "@typescript/native-preview": "catalog:"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "typecheck": "tsgo --noEmit"
   }
 }

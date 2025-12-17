@@ -5,7 +5,7 @@ import { fixtures, readFixture } from '../../test/utils.ts'
 
 import { type TarHeader, parseTar } from './tar.ts'
 
-async function bufferBytes(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> {
+async function bufferBytes(stream: ReadableStream<Uint8Array>): Promise<Uint8Array<ArrayBuffer>> {
   let chunks: Uint8Array[] = []
   let length = 0
 
@@ -41,7 +41,10 @@ async function bufferString(
   return string
 }
 
-async function computeHash(buffer: Uint8Array, algorithm = 'SHA-256'): Promise<string> {
+async function computeHash(
+  buffer: Uint8Array<ArrayBuffer>,
+  algorithm = 'SHA-256',
+): Promise<string> {
   let digest = await crypto.subtle.digest(algorithm, buffer)
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, '0'))
@@ -78,33 +81,39 @@ describe('TarParser', () => {
   })
 
   it('parses fetch-proxy-0.1.0.tar.gz', async () => {
-    let entries: [string, number, string][] = []
+    let count = 0
     await parseTar(readFixture(fixtures.fetchProxyGithubArchive), async (entry) => {
-      let hash = await computeHash(await bufferBytes(entry.body))
-      entries.push([entry.name, entry.size, hash])
+      // Drain the body stream to avoid memory accumulation
+      for await (let _ of entry.body) {
+      }
+      count++
     })
 
-    assert.equal(entries.length, 192)
+    assert.equal(count, 192)
   })
 
   it('parses lodash-4.17.21.tgz', async () => {
-    let entries: [string, number, string][] = []
+    let count = 0
     await parseTar(readFixture(fixtures.lodashNpmPackage), async (entry) => {
-      let hash = await computeHash(await bufferBytes(entry.body))
-      entries.push([entry.name, entry.size, hash])
+      // Drain the body stream to avoid memory accumulation
+      for await (let _ of entry.body) {
+      }
+      count++
     })
 
-    assert.equal(entries.length, 1054)
+    assert.equal(count, 1054)
   })
 
   it('parses npm-11.0.0.tgz', async () => {
-    let entries: [string, number, string][] = []
+    let count = 0
     await parseTar(readFixture(fixtures.npmNpmPackage), async (entry) => {
-      let hash = await computeHash(await bufferBytes(entry.body))
-      entries.push([entry.name, entry.size, hash])
+      // Drain the body stream to avoid memory accumulation
+      for await (let _ of entry.body) {
+      }
+      count++
     })
 
-    assert.equal(entries.length, 2368)
+    assert.equal(count, 2368)
   })
 })
 

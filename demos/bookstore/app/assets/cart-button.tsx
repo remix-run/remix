@@ -1,7 +1,7 @@
 import { type Remix, hydrated } from '@remix-run/dom'
 import { dom } from '@remix-run/events'
 
-import { routes } from '../../routes.ts'
+import { routes } from '../routes.ts'
 
 export const CartButton = hydrated(
   routes.assets.href({ path: 'cart-button.js#CartButton' }),

@@ -1,13 +1,21 @@
 import type { RequiredParams, OptionalParams } from './params.ts'
-import { parse } from './parse.ts'
-import type { ParseResult } from './parse.ts'
-import type { Token } from './parse.ts'
+import { parse, type ParseResult, type Token } from './parse.ts'
 import type { RoutePattern } from './route-pattern.ts'
+import type { UnknownArgs } from './type-utils.ts'
 import type { Variant } from './variant.ts'
 
+/**
+ * An error thrown when a required parameter is missing when building an href.
+ */
 export class MissingParamError extends Error {
+  /**
+   * The name of the missing parameter.
+   */
   readonly paramName: string
 
+  /**
+   * @param paramName The name of the missing parameter
+   */
   constructor(paramName: string) {
     super(`Missing required parameter: ${paramName}`)
     this.name = 'MissingParamError'
@@ -15,8 +23,13 @@ export class MissingParamError extends Error {
   }
 }
 
+/**
+ * Create a reusable href builder function.
+ *
+ * @returns A function that builds hrefs from patterns and parameters
+ */
 export function createHrefBuilder<T extends string | RoutePattern = string>(): HrefBuilder<T> {
-  return (pattern: string | RoutePattern, ...args: any) =>
+  return (pattern: string | RoutePattern, ...args: UnknownArgs) =>
     formatHref(parse(typeof pattern === 'string' ? pattern : pattern.source), ...args)
 }
 
@@ -46,7 +59,28 @@ export function formatHref(
   }
 
   if (searchParams) {
-    href += `?${new URLSearchParams(searchParams)}`
+    let urlSearchParams: URLSearchParams
+    if (
+      typeof searchParams === 'object' &&
+      !Array.isArray(searchParams) &&
+      !(searchParams instanceof URLSearchParams)
+    ) {
+      let filteredParams: Record<string, string> = {}
+      for (let key in searchParams) {
+        let value = searchParams[key]
+        if (value != null) {
+          filteredParams[key] = String(value)
+        }
+      }
+      urlSearchParams = new URLSearchParams(filteredParams)
+    } else {
+      urlSearchParams = new URLSearchParams(searchParams)
+    }
+
+    let search = urlSearchParams.toString()
+    if (search !== '') {
+      href += `?${search}`
+    }
   } else if (parsed.search) {
     href += `?${parsed.search}`
   }
@@ -82,7 +116,15 @@ function resolveTokens(tokens: Token[], sep: string, params: Record<string, any>
   return str
 }
 
+/**
+ * A function that builds hrefs from patterns and parameters.
+ */
 export interface HrefBuilder<T extends string | RoutePattern = string> {
+  /**
+   * @param pattern The pattern to build an href for
+   * @param args The parameters and optional search params
+   * @returns The built href
+   */
   <P extends string extends T ? string : SourceOf<T> | Variant<SourceOf<T>>>(
     pattern: P | RoutePattern<P>,
     ...args: HrefBuilderArgs<P>
@@ -95,6 +137,9 @@ type SourceOf<T> =
   T extends RoutePattern<infer S extends string> ? S :
   never
 
+/**
+ * The arguments for a `href()` function.
+ */
 // prettier-ignore
 export type HrefBuilderArgs<T extends string> =
   [RequiredParams<T>] extends [never] ?
@@ -108,6 +153,6 @@ type HrefParams<T extends string> =
 
 type HrefSearchParams =
   | NonNullable<ConstructorParameters<typeof URLSearchParams>[0]>
-  | Record<string, ParamValue>
+  | Record<string, ParamValue | undefined | null>
 
 type ParamValue = string | number | bigint | boolean

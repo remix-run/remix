@@ -184,6 +184,24 @@ describe('createRequestListener', () => {
     })
   })
 
+  it('uses the `:authority` header to construct the URL for http/2 requests', async () => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async (request) => {
+        assert.equal(request.url, 'http://example.com/')
+        return new Response('Hello, world!')
+      }
+
+      let listener = createRequestListener(handler)
+      assert.ok(listener)
+
+      let req = createMockRequest({ headers: { ':authority': 'example.com' } })
+      let res = createMockResponse({ req })
+
+      listener(req, res)
+      resolve()
+    })
+  })
+
   it('uses the `host` option to override the `Host` header', async () => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async (request) => {
@@ -397,6 +415,7 @@ function createMockRequest({
       method,
       rawHeaders,
       socket,
+      headers,
     },
   ) as http.IncomingMessage
 }

@@ -3,24 +3,35 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@remix-run/async-context-middleware": "workspace:*",
+    "@remix-run/compression-middleware": "workspace:*",
+    "@remix-run/cookie": "workspace:*",
     "@remix-run/dom": "jam",
     "@remix-run/events": "jam",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/file-storage": "workspace:*",
+    "@remix-run/form-data-middleware": "workspace:*",
     "@remix-run/headers": "workspace:*",
     "@remix-run/lazy-file": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*"
+    "@remix-run/logger-middleware": "workspace:*",
+    "@remix-run/method-override-middleware": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*",
+    "@remix-run/response": "workspace:*",
+    "@remix-run/session": "workspace:*",
+    "@remix-run/session-middleware": "workspace:*",
+    "@remix-run/static-middleware": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^24.6.0",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
     "esbuild": "^0.25.10",
-    "tsx": "^4.20.6"
+    "tsx": "catalog:"
   },
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server.ts",
     "dev:browser": "esbuild app/assets/*.tsx --outbase=app/assets --outdir=public/assets --bundle --minify --splitting --format=esm --entry-names='[dir]/[name]' --chunk-names='chunks/[name]-[hash]' --sourcemap --watch",
     "start": "tsx server.ts",
     "test": "NODE_ENV=test tsx --test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   }
 }

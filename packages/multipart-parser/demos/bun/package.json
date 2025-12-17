@@ -2,15 +2,16 @@
   "name": "multipart-parser-bun-example",
   "private": true,
   "dependencies": {
-    "@remix-run/multipart-parser": "workspace:*",
+    "@remix-run/multipart-parser": "workspace:^",
     "tmp": "^0.2.3"
   },
   "devDependencies": {
     "@types/bun": "^1.1.6",
     "@types/tmp": "^0.2.6",
-    "typescript": "^5.7.2"
+    "@typescript/native-preview": "catalog:"
   },
   "scripts": {
-    "start": "bun run server.ts"
+    "start": "bun run server.ts",
+    "typecheck": "tsgo --noEmit"
   }
 }

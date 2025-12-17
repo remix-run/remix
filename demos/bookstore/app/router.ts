@@ -1,43 +1,59 @@
 import { createRouter } from '@remix-run/fetch-router'
-import { logger } from '@remix-run/fetch-router/logger-middleware'
+import { asyncContext } from '@remix-run/async-context-middleware'
+import { compression } from '@remix-run/compression-middleware'
+import { formData } from '@remix-run/form-data-middleware'
+import { logger } from '@remix-run/logger-middleware'
+import { methodOverride } from '@remix-run/method-override-middleware'
+import { session } from '@remix-run/session-middleware'
+import { staticFiles } from '@remix-run/static-middleware'
 
-import { routes } from '../routes.ts'
-import { storeContext } from './middleware/context.ts'
+import { routes } from './routes.ts'
+import { sessionCookie, sessionStorage } from './utils/session.ts'
 import { uploadHandler } from './utils/uploads.ts'
 
-import adminHandlers from './admin.tsx'
-import accountHandlers from './account.tsx'
-import authHandlers from './auth.tsx'
-import booksHandlers from './books.tsx'
-import cartHandlers from './cart.tsx'
-import checkoutHandlers from './checkout.tsx'
-import fragmentsHandlers from './fragments.tsx'
-import * as publicHandlers from './public.ts'
-import * as marketingHandlers from './marketing.tsx'
-import { uploadsHandler } from './uploads.tsx'
+import adminController from './admin.tsx'
+import accountController from './account.tsx'
+import authController from './auth.tsx'
+import booksController from './books.tsx'
+import cartController from './cart.tsx'
+import checkoutController from './checkout.tsx'
+import fragmentsController from './fragments.tsx'
+import * as marketingController from './marketing.tsx'
+import { uploadsAction } from './uploads.tsx'
 
-export let router = createRouter({ uploadHandler })
-
-router.use(storeContext)
+let middleware = []
 
 if (process.env.NODE_ENV === 'development') {
-  router.use(logger())
+  middleware.push(logger())
 }
 
-router.get(routes.assets, publicHandlers.assets)
-router.get(routes.images, publicHandlers.images)
-router.get(routes.uploads, uploadsHandler)
+middleware.push(compression())
+middleware.push(
+  staticFiles('./public', {
+    cacheControl: 'no-store, must-revalidate',
+    etag: false,
+    lastModified: false,
+  }),
+)
+middleware.push(formData({ uploadHandler }))
+middleware.push(methodOverride())
+middleware.push(session(sessionCookie, sessionStorage))
+middleware.push(asyncContext())
 
-router.map(routes.home, marketingHandlers.home)
-router.map(routes.about, marketingHandlers.about)
-router.map(routes.contact, marketingHandlers.contact)
-router.map(routes.search, marketingHandlers.search)
+export let router = createRouter({ middleware })
 
-router.map(routes.fragments, fragmentsHandlers)
+router.get(routes.uploads, uploadsAction)
 
-router.map(routes.books, booksHandlers)
-router.map(routes.auth, authHandlers)
-router.map(routes.cart, cartHandlers)
-router.map(routes.account, accountHandlers)
-router.map(routes.checkout, checkoutHandlers)
-router.map(routes.admin, adminHandlers)
+router.map(routes.home, marketingController.home)
+router.map(routes.about, marketingController.about)
+router.map(routes.contact, marketingController.contact)
+router.map(routes.search, marketingController.search)
+
+router.map(routes.fragments, fragmentsController)
+
+router.map(routes.books, booksController)
+router.map(routes.auth, authController)
+router.map(routes.cart, cartController)
+router.map(routes.account, accountController)
+router.map(routes.checkout, checkoutController)
+router.map(routes.admin, adminController)

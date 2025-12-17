@@ -1,7 +1,7 @@
-import type { RouteHandlers } from '@remix-run/fetch-router'
-import { redirect } from '@remix-run/fetch-router'
+import type { Controller } from '@remix-run/fetch-router'
+import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
 
-import { routes } from '../routes.ts'
+import { routes } from './routes.ts'
 import { Layout } from './layout.tsx'
 import { requireAuth } from './middleware/auth.ts'
 import { getOrdersByUserId, getOrderById } from './models/orders.ts'
@@ -11,8 +11,8 @@ import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  use: [requireAuth],
-  handlers: {
+  middleware: [requireAuth()],
+  actions: {
     index() {
       let user = getCurrentUser()
 
@@ -121,7 +121,7 @@ export default {
 
         updateUser(user.id, updateData)
 
-        return redirect(routes.account.index)
+        return redirect(routes.account.index.href())
       },
     },
 
@@ -264,4 +264,4 @@ export default {
       },
     },
   },
-} satisfies RouteHandlers<typeof routes.account>
+} satisfies Controller<typeof routes.account>

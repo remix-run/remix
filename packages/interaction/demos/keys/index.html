@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Keys</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <style>
+      * {
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+    </style>
+  </head>
+  <body
+    style="
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100dvh;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    "
+  >
+    <div
+      style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px"
+    >
+      <div
+        tabindex="0"
+        id="subject"
+        style="
+          background: linear-gradient(145deg, #f0f0f0, #ddd);
+          border: none;
+          border-radius: 16px;
+          padding: 24px;
+          width: 240px;
+          height: 240px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow:
+            0 8px 32px rgba(0, 0, 0, 0.12),
+            0 2px 8px rgba(0, 0, 0, 0.08);
+          transition: all 0.2s ease;
+          cursor: default;
+          font-size: 18px;
+          font-weight: 500;
+          color: #374151;
+          line-height: 1.4;
+          position: relative;
+          overflow: hidden;
+        "
+      >
+        <div style="margin-bottom: 8px; text-align: center">
+          Focus me and press arrow keys, escape, enter, space, backspace, delete, home, end, page
+          up, page down, tab
+        </div>
+      </div>
+    </div>
+    <pre
+      id="log"
+      style="
+        background: rgba(17, 24, 39, 0.95);
+        color: #f9fafb;
+        height: 25vh;
+        width: 100%;
+        overflow-y: auto;
+        padding: 20px;
+        box-sizing: border-box;
+        margin: 0;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New',
+          monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(8px);
+      "
+    ></pre>
+    <script type="module" src="./entry.bundled.js"></script>
+  </body>
+</html>

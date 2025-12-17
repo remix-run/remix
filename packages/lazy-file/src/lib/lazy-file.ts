@@ -12,19 +12,28 @@ export interface LazyContent {
    * Returns a stream that can be used to read the content. When given, the `start` index is
    * inclusive indicating the index of the first byte to read. The `end` index is exclusive
    * indicating the index of the first byte not to read.
+   *
+   * @param start The start index (inclusive)
+   * @param end The end index (exclusive)
+   * @returns A readable stream of the content
    */
-  stream(start?: number, end?: number): ReadableStream<Uint8Array>
+  stream(start?: number, end?: number): ReadableStream<Uint8Array<ArrayBuffer>>
 }
 
+/**
+ * Options for creating a `LazyBlob`.
+ */
 export interface LazyBlobOptions {
   /**
    * The range of bytes to include from the content. If not specified, all content is included.
    */
   range?: ByteRange
   /**
-   * The MIME type of the content. The default is an empty string.
+   * The MIME type of the content.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/Blob#type)
+   *
+   * @default ''
    */
   type?: string
 }
@@ -47,6 +56,10 @@ export interface LazyBlobOptions {
 export class LazyBlob extends Blob {
   readonly #content: BlobContent
 
+  /**
+   * @param parts The blob parts or lazy content
+   * @param options Options for the blob
+   */
   constructor(parts: BlobPart[] | LazyContent, options?: LazyBlobOptions) {
     super([], options)
     this.#content = new BlobContent(parts, options)
@@ -56,8 +69,10 @@ export class LazyBlob extends Blob {
    * Returns the blob's contents as an [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer).
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/arrayBuffer)
+   *
+   * @returns A promise that resolves to an `ArrayBuffer`
    */
-  async arrayBuffer(): Promise<ArrayBuffer> {
+  arrayBuffer(): Promise<ArrayBuffer> {
     return this.#content.arrayBuffer()
   }
 
@@ -65,8 +80,10 @@ export class LazyBlob extends Blob {
    * Returns the blob's contents as a byte array.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/bytes)
+   *
+   * @returns A promise that resolves to a `Uint8Array`
    */
-  async bytes(): Promise<Uint8Array> {
+  bytes(): Promise<Uint8Array<ArrayBuffer>> {
     return this.#content.bytes()
   }
 
@@ -83,6 +100,11 @@ export class LazyBlob extends Blob {
    * Returns a new [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) that contains the data in the specified range.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
+   *
+   * @param start The start index (inclusive)
+   * @param end The end index (exclusive)
+   * @param contentType The content type of the new blob
+   * @returns A new `Blob` containing the sliced data
    */
   slice(start?: number, end?: number, contentType?: string): Blob {
     return this.#content.slice(start, end, contentType)
@@ -92,8 +114,10 @@ export class LazyBlob extends Blob {
    * Returns a stream that can be used to read the blob's contents.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/stream)
+   *
+   * @returns A readable stream of the blob's contents
    */
-  stream(): ReadableStream<Uint8Array> {
+  stream(): ReadableStream<Uint8Array<ArrayBuffer>> {
     return this.#content.stream()
   }
 
@@ -101,17 +125,24 @@ export class LazyBlob extends Blob {
    * Returns the blob's contents as a string.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/text)
+   *
+   * @returns A promise that resolves to the blob's contents as a string
    */
-  async text(): Promise<string> {
+  text(): Promise<string> {
     return this.#content.text()
   }
 }
 
+/**
+ * Options for creating a `LazyFile`.
+ */
 export interface LazyFileOptions extends LazyBlobOptions {
   /**
-   * The last modified timestamp of the file in milliseconds. Defaults to `Date.now()`.
+   * The last modified timestamp of the file in milliseconds.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/File/File#lastmodified)
+   *
+   * @default `Date.now()`
    */
   lastModified?: number
 }
@@ -134,6 +165,11 @@ export interface LazyFileOptions extends LazyBlobOptions {
 export class LazyFile extends File {
   readonly #content: BlobContent
 
+  /**
+   * @param parts The file parts or lazy content
+   * @param name The name of the file
+   * @param options Options for the file
+   */
   constructor(parts: BlobPart[] | LazyContent, name: string, options?: LazyFileOptions) {
     super([], name, options)
     this.#content = new BlobContent(parts, options)
@@ -143,8 +179,10 @@ export class LazyFile extends File {
    * Returns the file's content as an [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer).
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/arrayBuffer)
+   *
+   * @returns A promise that resolves to an `ArrayBuffer`
    */
-  async arrayBuffer(): Promise<ArrayBuffer> {
+  arrayBuffer(): Promise<ArrayBuffer> {
     return this.#content.arrayBuffer()
   }
 
@@ -152,8 +190,10 @@ export class LazyFile extends File {
    * Returns the file's contents as a byte array.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/bytes)
+   *
+   * @returns A promise that resolves to a `Uint8Array`
    */
-  async bytes(): Promise<Uint8Array> {
+  bytes(): Promise<Uint8Array<ArrayBuffer>> {
     return this.#content.bytes()
   }
 
@@ -170,6 +210,11 @@ export class LazyFile extends File {
    * Returns a new [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) that contains the data in the specified range.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
+   *
+   * @param start The start index (inclusive)
+   * @param end The end index (exclusive)
+   * @param contentType The content type of the new blob
+   * @returns A new `Blob` containing the sliced data
    */
   slice(start?: number, end?: number, contentType?: string): Blob {
     return this.#content.slice(start, end, contentType)
@@ -179,8 +224,10 @@ export class LazyFile extends File {
    * Returns a stream that can be used to read the file's contents.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/stream)
+   *
+   * @returns A readable stream of the file's contents
    */
-  stream(): ReadableStream<Uint8Array> {
+  stream(): ReadableStream<Uint8Array<ArrayBuffer>> {
     return this.#content.stream()
   }
 
@@ -188,14 +235,16 @@ export class LazyFile extends File {
    * Returns the file's contents as a string.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/text)
+   *
+   * @returns A promise that resolves to the file's contents as a string
    */
-  async text(): Promise<string> {
+  text(): Promise<string> {
     return this.#content.text()
   }
 }
 
 class BlobContent {
-  readonly source: (Blob | Uint8Array)[] | LazyContent
+  readonly source: (Blob | Uint8Array<ArrayBuffer>)[] | LazyContent
   readonly totalSize: number
   readonly range?: ByteRange
   readonly type: string
@@ -219,7 +268,7 @@ class BlobContent {
             array = new Uint8Array(part)
           }
 
-          this.source.push(array)
+          this.source.push(array as Uint8Array<ArrayBuffer>)
           this.totalSize += array.byteLength
         }
       }
@@ -236,7 +285,7 @@ class BlobContent {
     return (await this.bytes()).buffer as ArrayBuffer
   }
 
-  async bytes(): Promise<Uint8Array> {
+  async bytes(): Promise<Uint8Array<ArrayBuffer>> {
     let result = new Uint8Array(this.size)
 
     let offset = 0
@@ -262,7 +311,7 @@ class BlobContent {
     return new LazyBlob(this.source, { range, type: contentType })
   }
 
-  stream(): ReadableStream<Uint8Array> {
+  stream(): ReadableStream<Uint8Array<ArrayBuffer>> {
     if (this.range != null) {
       let [start, end] = getIndexes(this.range, this.totalSize)
       return Array.isArray(this.source)
@@ -279,10 +328,10 @@ class BlobContent {
 }
 
 function streamContentArray(
-  content: (Blob | Uint8Array)[],
+  content: (Blob | Uint8Array<ArrayBuffer>)[],
   start = 0,
   end = Infinity,
-): ReadableStream<Uint8Array> {
+): ReadableStream<Uint8Array<ArrayBuffer>> {
   let index = 0
   let bytesRead = 0
 
@@ -295,7 +344,7 @@ function streamContentArray(
 
       let hasPushed = false
 
-      function pushChunk(chunk: Uint8Array) {
+      function pushChunk(chunk: Uint8Array<ArrayBuffer>) {
         let chunkLength = chunk.byteLength
 
         if (!(bytesRead + chunkLength < start || bytesRead >= end)) {
@@ -308,7 +357,7 @@ function streamContentArray(
         bytesRead += chunkLength
       }
 
-      async function pushPart(part: Blob | Uint8Array) {
+      async function pushPart(part: Blob | Uint8Array<ArrayBuffer>) {
         if (part instanceof Blob) {
           if (bytesRead + part.size <= start) {
             // We can skip this part entirely.

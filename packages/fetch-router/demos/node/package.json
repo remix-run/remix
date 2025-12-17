@@ -1,0 +1,25 @@
+{
+  "name": "fetch-router-node-demo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@remix-run/cookie": "workspace:*",
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/form-data-middleware": "workspace:*",
+    "@remix-run/html-template": "workspace:*",
+    "@remix-run/logger-middleware": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*",
+    "@remix-run/response": "workspace:*",
+    "@remix-run/session": "workspace:*",
+    "@remix-run/session-middleware": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "scripts": {
+    "dev": "node --watch server.ts",
+    "start": "node server.ts",
+    "typecheck": "tsgo --noEmit"
+  }
+}

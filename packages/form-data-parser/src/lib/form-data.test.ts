@@ -1,8 +1,12 @@
 import * as assert from 'node:assert/strict'
 import { describe, it, mock } from 'node:test'
 
-import type { FileUploadHandler } from './form-data.ts'
-import { FormDataParseError, MaxFilesExceededError, parseFormData } from './form-data.ts'
+import {
+  type FileUploadHandler,
+  FormDataParseError,
+  MaxFilesExceededError,
+  parseFormData,
+} from './form-data.ts'
 
 describe('parseFormData', () => {
   it('parses a application/x-www-form-urlencoded request', async () => {
@@ -192,5 +196,43 @@ describe('parseFormData', () => {
     await assert.rejects(async () => {
       await parseFormData(request)
     }, FormDataParseError)
+  })
+
+  it('throws when the request contains malformed multipart/form-data', async () => {
+    let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: 'invalid',
+    })
+
+    await assert.rejects(async () => {
+      await parseFormData(request)
+    }, FormDataParseError)
+  })
+
+  it('parses a multipart file without a media type', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=----BOUNDARY',
+      },
+      body: [
+        '------BOUNDARY',
+        'Content-Disposition: form-data; name="file"; filename="example.txt"',
+        '',
+        'This is an example file.',
+        '------BOUNDARY--',
+      ].join('\r\n'),
+    })
+
+    let formData = await parseFormData(request)
+    let file = formData.get('file')
+    assert.ok(file instanceof File)
+    assert.equal(file.name, 'example.txt')
+    assert.equal(file.type, 'application/octet-stream')
+    assert.equal(await file.text(), 'This is an example file.')
   })
 })

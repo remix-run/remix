@@ -1,11 +1,23 @@
+catalog:
+  '@types/node': ^24.6.0
+  '@typescript/native-preview': 7.0.0-dev.20251125.1
+  playwright: ^1.53.1
+  tsx: ^4.20.6
+
 packages:
   - demos/*
+  - docs
   - packages/*
+  - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*
+  - packages/interaction/demos
   - packages/multipart-parser/bench
   - packages/multipart-parser/demos/*
   - packages/node-fetch-server/bench
   - packages/node-fetch-server/demos/*
   - packages/route-pattern/bench
+  - packages/static-middleware/demos/*
   - packages/tar-parser/bench
   - scripts
+
+shellEmulator: true

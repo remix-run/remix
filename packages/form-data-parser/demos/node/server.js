@@ -3,7 +3,7 @@ import * as http from 'node:http'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
-import { LocalFileStorage } from '@remix-run/file-storage/local'
+import { createFsFileStorage } from '@remix-run/file-storage/fs'
 import {
   MultipartParseError,
   MaxFileSizeExceededError,
@@ -11,12 +11,12 @@ import {
 } from '@remix-run/form-data-parser'
 import { createRequestListener } from '@remix-run/node-fetch-server'
 
-const PORT = 3000
+const PORT = 44100
 
 const oneMb = 1024 * 1024
 const maxFileSize = 10 * oneMb
 
-const fileStorage = new LocalFileStorage(await fsp.mkdtemp(path.join(os.tmpdir(), 'uploads-')))
+const fileStorage = createFsFileStorage(await fsp.mkdtemp(path.join(os.tmpdir(), 'uploads-')))
 
 /** @type (file: File) => Promise<string> */
 async function getDataUrl(file) {

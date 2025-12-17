@@ -1,16 +1,18 @@
 import type { Middleware } from '@remix-run/fetch-router'
 
-import { USER_KEY } from './auth.ts'
+import { getCurrentUser } from '../utils/context.ts'
 
 /**
  * Middleware that requires a user to have admin role.
  * Returns 403 Forbidden if user is not an admin.
  * Must be used after requireAuth middleware.
  */
-export let requireAdmin: Middleware = async ({ storage }) => {
-  let user = storage.get(USER_KEY)
+export function requireAdmin(): Middleware {
+  return () => {
+    let user = getCurrentUser()
 
-  if (user.role !== 'admin') {
-    return new Response('Forbidden', { status: 403 })
+    if (user.role !== 'admin') {
+      return new Response('Forbidden', { status: 403 })
+    }
   }
 }

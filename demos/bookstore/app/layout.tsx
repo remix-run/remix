@@ -1,8 +1,7 @@
 import type { Remix } from '@remix-run/dom'
 
-import { routes } from '../routes.ts'
-import { getCurrentUser } from './utils/context.ts'
-import type { User } from './models/users.ts'
+import { routes } from './routes.ts'
+import { getCurrentUserSafely } from './utils/context.ts'
 
 export function Document({
   title = 'Bookstore',
@@ -78,12 +77,7 @@ export function Document({
 }
 
 export function Layout({ children }: { children?: Remix.RemixNode }) {
-  let user: User | null = null
-  try {
-    user = getCurrentUser()
-  } catch {
-    // user not authenticated
-  }
+  let user = getCurrentUserSafely()
 
   return (
     <Document>
@@ -107,11 +101,7 @@ export function Layout({ children }: { children?: Remix.RemixNode }) {
                   action={routes.auth.logout.href()}
                   style={{ display: 'inline' }}
                 >
-                  <button
-                    type="submit"
-                    className="btn btn-secondary"
-                    style={{ marginLeft: '1rem' }}
-                  >
+                  <button type="submit" class="btn btn-secondary" style="margin-left: 1rem;">
                     Logout
                   </button>
                 </form>
@@ -126,10 +116,10 @@ export function Layout({ children }: { children?: Remix.RemixNode }) {
         </div>
       </header>
       <main>
-        <div className="container">{children}</div>
+        <div class="container">{children}</div>
       </main>
       <footer>
-        <div className="container">
+        <div class="container">
           <p>&copy; {new Date().getFullYear()} Bookstore Demo. Built with Remix.</p>
         </div>
       </footer>

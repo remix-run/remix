@@ -2,7 +2,120 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.18.0 (2025-11-25)
+
+- Add `Vary` support
+
+```ts
+import { Vary } from '@remix-run/headers'
+
+let header = new Vary('Accept-Encoding')
+header.add('Accept-Language')
+header.headerNames // ['accept-encoding', 'accept-language']
+header.toString() // 'accept-encoding, accept-language'
+```
+
+- `Accept.getPreferred()`, `AcceptEncoding.getPreferred()`, and `AcceptLanguage.getPreferred()` are now generic, preserving the union type of the input array in the return type
+
+## v0.17.2 (2025-11-25)
+
+- Fix `secure` property type in `SetCookie` to accept `boolean` instead of only `true`, making it consistent with `httpOnly` and `partitioned`
+
+## v0.17.1 (2025-11-21)
+
+- Fix bug where `Max-Age=0` did not show up in `SetCookie` header
+
+## v0.17.0 (2025-11-18)
+
+- Add `Range` support
+
+```ts
+import { Range } from '@remix-run/headers'
+
+let header = new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] })
+header.toString() // "bytes=0-999"
+
+// Parse from string
+let header = new Range('bytes=0-999,2000-2999')
+header.ranges // [{ start: 0, end: 999 }, { start: 2000, end: 2999 }]
+
+// Check if range is satisfiable for a given file size
+header.isSatisfiable(5000) // true
+
+// Normalize ranges to concrete start/end values for a given file size
+let header = new Range('bytes=0-')
+header.normalize(5000) // [{ start: 0, end: 4999 }]
+```
+
+- Add `Content-Range` support
+
+```ts
+import { ContentRange } from '@remix-run/headers'
+
+let header = new ContentRange({
+  unit: 'bytes',
+  start: 0,
+  end: 999,
+  size: 5000,
+})
+header.toString() // "bytes 0-999/5000"
+
+// Parse from string
+let header = new ContentRange('bytes 200-1000/67589')
+header.start // 200
+header.end // 1000
+header.size // 67589
+```
+
+- Add `If-Match` support
+
+```ts
+import { IfMatch } from '@remix-run/headers'
+
+let header = new IfMatch(['"abc123"', '"def456"'])
+header.has('"abc123"') // true
+
+// Check if precondition passes
+header.matches('"abc123"') // true
+header.matches('"xyz789"') // false
+header.matches('W/"abc123"') // false (weak ETags never match)
+```
+
+- Add `If-Range` support
+
+```ts
+import { IfRange } from '@remix-run/headers'
+
+// With ETag
+let header = new IfRange('"abc123"')
+header.matches({ etag: '"abc123"' }) // true
+header.matches({ etag: 'W/"abc123"' }) // false (weak ETags never match)
+
+// With Last-Modified date
+let header = new IfRange(new Date('2025-10-21T07:28:00Z'))
+header.matches({ lastModified: new Date('2025-10-21T07:28:00Z') }) // true
+```
+
+- Add `Allow` support
+
+```ts
+import { SuperHeaders } from '@remix-run/headers'
+
+let headers = new SuperHeaders({ allow: ['GET', 'POST', 'OPTIONS'] })
+headers.get('Allow') // "GET, POST, OPTIONS"
+```
+
+## v0.16.0 (2025-11-05)
+
+- Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
+
+## v0.15.0 (2025-11-04)
+
+- Add support for `httpOnly: false` in `SetCookie` constructor
+- Export `CookieProperties` type with all cookie properties
+- Add `Partitioned` support to `SetCookie`
+
+## v0.14.0 (2025-10-22)
 
 - BREAKING CHANGE: Removed CommonJS build. This package is now ESM-only. If you need to use this package in a CommonJS project, you will need to use dynamic `import()`.
 
@@ -12,7 +125,7 @@ This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/ma
 
 ## v0.12.0 (2025-07-18)
 
-- Renamed package from `@mjackson/headers` to `@remix-run/headers`
+- Rename package from `@mjackson/headers` to `@remix-run/headers`
 
 ## v0.11.1 (2025-06-06)
 

@@ -1,0 +1,25 @@
+{
+  "name": "fetch-router-bun-demo",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@remix-run/cookie": "workspace:*",
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/form-data-middleware": "workspace:*",
+    "@remix-run/html-template": "workspace:*",
+    "@remix-run/logger-middleware": "workspace:*",
+    "@remix-run/response": "workspace:*",
+    "@remix-run/session": "workspace:*",
+    "@remix-run/session-middleware": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.8",
+    "@typescript/native-preview": "catalog:"
+  },
+  "scripts": {
+    "dev": "bun --watch index.ts",
+    "start": "bun index.ts",
+    "typecheck": "tsgo --noEmit"
+  }
+}

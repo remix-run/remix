@@ -1,6 +1,9 @@
 import { type HeaderValue } from './header-value.ts'
 import { parseParams, quote } from './param-values.ts'
 
+/**
+ * Initializer for a `Content-Type` header value.
+ */
 export interface ContentTypeInit {
   /**
    * For multipart entities, the boundary that separates the different parts of the message.
@@ -34,6 +37,9 @@ export class ContentType implements HeaderValue, ContentTypeInit {
   charset?: string
   mediaType?: string
 
+  /**
+   * @param init A string or object to initialize the header
+   */
   constructor(init?: string | ContentTypeInit) {
     if (init) {
       if (typeof init === 'string') {
@@ -56,6 +62,11 @@ export class ContentType implements HeaderValue, ContentTypeInit {
     }
   }
 
+  /**
+   * Returns the string representation of the header value.
+   *
+   * @returns The header value as a string
+   */
   toString(): string {
     if (!this.mediaType) {
       return ''

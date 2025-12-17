@@ -2,6 +2,23 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.15.3 (2025-11-19)
+
+- Exclude benchmark files from published npm package
+
+## v0.15.2 (2025-11-19)
+
+- Exclude test files from published npm package
+
+## v0.15.1 (2025-11-19)
+
+- `href()` now filters out `undefined` and `null` values from search parameters, preventing them from appearing in the generated URL's query string
+- `href()` no longer adds a trailing `?` when search parameters are empty
+
+## v0.15.0 (2025-11-05)
+
+- Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
+
 ## v0.14.0 (2025-10-04)
 
 - Add `Matcher` and `MatchResult` interfaces. These are new public APIs for matching sets of patterns.

@@ -134,20 +134,4 @@ describe('runMiddleware', () => {
       await runMiddleware(middleware, context, handler)
     }, new Error('Middleware error!'))
   })
-
-  it('merges additional context when next() is called', async () => {
-    let middleware = [
-      (_: any, next: NextFunction) => {
-        return next({ params: { id: '1' } })
-      },
-    ]
-    let context = mockContext('https://remix.run')
-    let handler = ({ params }: RequestContext<'ANY', { id: string }>) =>
-      new Response(`Hello, ${params.id}!`)
-
-    let response = await runMiddleware(middleware, context as any, handler)
-
-    assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Hello, 1!')
-  })
 })

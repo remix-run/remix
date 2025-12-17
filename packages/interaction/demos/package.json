@@ -1,0 +1,19 @@
+{
+  "name": "interaction-demos",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@remix-run/interaction": "workspace:^"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "catalog:",
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.25.11",
+    "serve": "^14.2.5"
+  },
+  "scripts": {
+    "start": "concurrently \"pnpm watch\" \"npx serve .\"",
+    "typecheck": "tsgo --noEmit",
+    "watch": "esbuild ./*/entry.ts --bundle --outdir=. --out-extension:.js=.bundled.js --format=esm --platform=browser --target=es2020 --sourcemap=inline --watch"
+  }
+}

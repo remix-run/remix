@@ -1,12 +1,8 @@
-import { formatHref } from './href.ts'
-import type { HrefBuilderArgs } from './href.ts'
-import { join } from './join.ts'
-import type { Join } from './join.ts'
+import { formatHref, type HrefBuilderArgs } from './href.ts'
+import { join, type Join } from './join.ts'
 import type { Params } from './params.ts'
-import { parse } from './parse.ts'
-import type { Token, ParseResult } from './parse.ts'
-import { parseSearch } from './search-constraints.ts'
-import type { SearchConstraints } from './search-constraints.ts'
+import { parse, type Token, type ParseResult } from './parse.ts'
+import { parseSearch, type SearchConstraints } from './search-constraints.ts'
 
 export interface RoutePatternOptions {
   /**
@@ -31,6 +27,10 @@ export class RoutePattern<T extends string = string> {
   #parsed: ParseResult
   #compiled: CompileResult | undefined
 
+  /**
+   * @param source The source pattern string or another `RoutePattern` to copy
+   * @param options Options for the pattern
+   */
   constructor(source: T | RoutePattern<T>, options?: RoutePatternOptions) {
     this.source = typeof source === 'string' ? source : source.source
     this.ignoreCase = options?.ignoreCase === true
@@ -40,8 +40,7 @@ export class RoutePattern<T extends string = string> {
   /**
    * Generate a href (URL) for this pattern.
    *
-   * @param params The parameters to use in the href.
-   * @param searchParams The search parameters to use in the href.
+   * @param args The parameters and optional search params
    * @returns The href
    */
   href(...args: HrefBuilderArgs<T>): string {
@@ -49,8 +48,8 @@ export class RoutePattern<T extends string = string> {
   }
 
   /**
-   * Join this pattern with another pattern. This is useful when building a pattern
-   * relative to a base pattern.
+   * Join this pattern with another pattern. This is useful when building a pattern relative to a
+   * base pattern.
    *
    * Note: The returned pattern will use the same options as this pattern.
    *
@@ -68,7 +67,7 @@ export class RoutePattern<T extends string = string> {
    * Match a URL against this pattern.
    *
    * @param url The URL to match
-   * @returns The parameters if the URL matches this pattern, `null` otherwise
+   * @returns The match result, or `null` if the URL doesn't match
    */
   match(url: URL | string): RouteMatch<T> | null {
     if (typeof url === 'string') url = new URL(url)

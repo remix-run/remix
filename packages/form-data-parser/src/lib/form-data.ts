@@ -1,5 +1,9 @@
-import type { MultipartParserOptions, MultipartPart } from '@remix-run/multipart-parser'
-import { isMultipartRequest, parseMultipartRequest } from '@remix-run/multipart-parser'
+import {
+  type MultipartParserOptions,
+  type MultipartPart,
+  isMultipartRequest,
+  parseMultipartRequest,
+} from '@remix-run/multipart-parser'
 
 /**
  * The base class for errors thrown by the form data parser.
@@ -26,7 +30,7 @@ export class MaxFilesExceededError extends FormDataParseError {
  */
 export class FileUpload extends File {
   /**
-   * The name of the <input> field used to upload the file.
+   * The name of the `<input>` field used to upload the file.
    */
   readonly fieldName: string
 
@@ -41,22 +45,28 @@ export class FileUpload extends File {
 
 /**
  * A function used for handling file uploads.
+ *
+ * @param file The uploaded file
+ * @returns A value to store in `FormData`, or `void`/`null` to skip
  */
 export interface FileUploadHandler {
   (file: FileUpload): void | null | string | Blob | Promise<void | null | string | Blob>
 }
 
-async function defaultFileUploadHandler(file: FileUpload): Promise<File> {
+function defaultFileUploadHandler(file: FileUpload): File {
   // By default just keep the file around in memory.
   return file
 }
 
+/**
+ * Options for parsing form data.
+ */
 export interface ParseFormDataOptions extends MultipartParserOptions {
   /**
-   * The maximum number of files that can be uploaded in a single request.
-   * If this limit is exceeded, a `MaxFilesExceededError` will be thrown.
+   * The maximum number of files that can be uploaded in a single request. If this limit is
+   * exceeded, a `MaxFilesExceededError` will be thrown.
    *
-   * Default: 20
+   * @default 20
    */
   maxFiles?: number
 }
@@ -74,7 +84,7 @@ export interface ParseFormDataOptions extends MultipartParserOptions {
  * @param request The `Request` object to parse
  * @param options Options for the parser
  * @param uploadHandler A function that handles file uploads. It receives a `File` object and may return any value that is valid in a `FormData` object
- * @return A `Promise` that resolves to a `FormData` object containing the parsed data
+ * @returns A `Promise` that resolves to a `FormData` object containing the parsed data
  */
 export async function parseFormData(
   request: Request,
@@ -104,9 +114,7 @@ export async function parseFormData(
     try {
       return await request.formData()
     } catch (error) {
-      throw new FormDataParseError('Cannot parse form data', {
-        cause: error,
-      })
+      throw new FormDataParseError('Cannot parse form data', { cause: error })
     }
   }
 
@@ -115,22 +123,30 @@ export async function parseFormData(
   let formData = new FormData()
   let fileCount = 0
 
-  for await (let part of parseMultipartRequest(request, parserOptions)) {
-    let fieldName = part.name
-    if (!fieldName) continue
+  try {
+    for await (let part of parseMultipartRequest(request, parserOptions)) {
+      let fieldName = part.name
+      if (!fieldName) continue
 
-    if (part.isFile) {
-      if (++fileCount > maxFiles) {
-        throw new MaxFilesExceededError(maxFiles)
-      }
+      if (part.isFile) {
+        if (++fileCount > maxFiles) {
+          throw new MaxFilesExceededError(maxFiles)
+        }
 
-      let value = await uploadHandler(new FileUpload(part, fieldName))
-      if (value != null) {
-        formData.append(fieldName, value)
+        let value = await uploadHandler(new FileUpload(part, fieldName))
+        if (value != null) {
+          formData.append(fieldName, value)
+        }
+      } else {
+        formData.append(fieldName, part.text)
       }
-    } else {
-      formData.append(fieldName, part.text)
     }
+  } catch (error) {
+    if (error instanceof FormDataParseError) {
+      throw error
+    }
+
+    throw new FormDataParseError('Cannot parse form data', { cause: error })
   }
 
   return formData

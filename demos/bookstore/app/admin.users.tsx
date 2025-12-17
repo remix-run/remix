@@ -1,7 +1,7 @@
-import type { RouteHandlers } from '@remix-run/fetch-router'
-import { redirect } from '@remix-run/fetch-router'
+import type { Controller } from '@remix-run/fetch-router'
+import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
 
-import { routes } from '../routes.ts'
+import { routes } from './routes.ts'
 import { getAllUsers, getUserById, updateUser, deleteUser } from './models/users.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
@@ -198,12 +198,12 @@ export default {
       role: (formData.get('role')?.toString() ?? 'customer') as 'customer' | 'admin',
     })
 
-    return redirect(routes.admin.users.index)
+    return redirect(routes.admin.users.index.href())
   },
 
   destroy({ params }) {
     deleteUser(params.userId)
 
-    return redirect(routes.admin.users.index)
+    return redirect(routes.admin.users.index.href())
   },
-} satisfies RouteHandlers<typeof routes.admin.users>
+} satisfies Controller<typeof routes.admin.users>

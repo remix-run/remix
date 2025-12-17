@@ -1,13 +1,30 @@
-import { split } from './split.ts'
-import type { SplitPattern, Split } from './split.ts'
-import { parseSearchConstraints } from './search-constraints.ts'
-import type { SearchConstraints } from './search-constraints.ts'
+import { split, type SplitPattern, type Split } from './split.ts'
+import { parseSearchConstraints, type SearchConstraints } from './search-constraints.ts'
+import type { ForceDistributive } from './type-utils.ts'
 
+/**
+ * An error thrown when a pattern fails to parse.
+ */
 export class ParseError extends Error {
+  /**
+   * The source pattern that failed to parse.
+   */
   source: string
+  /**
+   * The position in the source where the error occurred.
+   */
   position: number
+  /**
+   * The name of the part being parsed (e.g., "pathname", "hostname").
+   */
   partName: string
 
+  /**
+   * @param description A description of the error
+   * @param partName The name of the part being parsed
+   * @param source The source pattern
+   * @param position The position in the source where the error occurred
+   */
   constructor(description: string, partName: string, source: string, position: number) {
     super(`${description} in ${partName}`)
     this.name = 'ParseError'
@@ -160,7 +177,7 @@ export interface ParsedPattern {
 
 // prettier-ignore
 export type Parse<T extends string> =
-  [T] extends [string] ?
+  T extends ForceDistributive ?
     Split<T> extends infer S extends SplitPattern ?
       {
         protocol: S['protocol'] extends string ? ParsePart<S['protocol']> : undefined

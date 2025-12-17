@@ -1,0 +1,69 @@
+{
+  "name": "@remix-run/interaction",
+  "version": "0.3.0",
+  "description": "Like components but for events",
+  "author": "Ryan Florence <rpflorence@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/events"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/events#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./form": "./src/lib/interactions/form.ts",
+    "./keys": "./src/lib/interactions/keys.ts",
+    "./popover": "./src/lib/interactions/popover.ts",
+    "./press": "./src/lib/interactions/press.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./form": {
+        "types": "./dist/lib/interactions/form.d.ts",
+        "default": "./dist/lib/interactions/form.js"
+      },
+      "./keys": {
+        "types": "./dist/lib/interactions/keys.d.ts",
+        "default": "./dist/lib/interactions/keys.js"
+      },
+      "./popover": {
+        "types": "./dist/lib/interactions/popover.d.ts",
+        "default": "./dist/lib/interactions/popover.js"
+      },
+      "./press": {
+        "types": "./dist/lib/interactions/press.d.ts",
+        "default": "./dist/lib/interactions/press.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "demos": "cd demos && pnpm start",
+    "size": "esbuild src/index.ts --bundle --minify --outfile=.temp-bundle.js --format=esm && echo \"📦 Bundle sizes:\" && echo \"   Uncompressed: $(ls -lah .temp-bundle.js | awk '{print $5}')\" && echo \"   Gzipped: $(gzip -c .temp-bundle.js | wc -c | tr -d ' ') bytes\" && rm .temp-bundle.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsgo --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "catalog:",
+    "@vitest/browser": "^3.2.4",
+    "esbuild": "^0.25.5",
+    "playwright": "catalog:",
+    "vitest": "^3.2.4"
+  }
+}

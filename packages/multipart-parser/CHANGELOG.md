@@ -2,7 +2,15 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.14.0 (2025-11-26)
+
+- Move `@remix-run/headers` to `peerDependencies`
+
+## v0.13.0 (2025-11-04)
+
+- Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
+
+## v0.12.0 (2025-10-22)
 
 - BREAKING CHANGE: Removed CommonJS build. This package is now ESM-only. If you need to use this package in a CommonJS project, you will need to use dynamic `import()`.
 

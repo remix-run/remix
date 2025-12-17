@@ -1,6 +1,6 @@
-import type { RouteHandlers } from '@remix-run/fetch-router'
+import type { Controller } from '@remix-run/fetch-router'
 
-import { routes } from '../routes.ts'
+import { routes } from './routes.ts'
 import { getAllOrders, getOrderById } from './models/orders.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
@@ -133,4 +133,4 @@ export default {
       </Layout>,
     )
   },
-} satisfies RouteHandlers<typeof routes.admin.orders>
+} satisfies Controller<typeof routes.admin.orders>

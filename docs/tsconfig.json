@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2024"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "resolveJsonModule": true,
+    "strict": true,
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true
+  }
+}

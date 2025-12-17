@@ -2,7 +2,35 @@
 
 This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
-## Unreleased
+## v0.13.0 (2025-11-25)
+
+- BREAKING CHANGE: `LocalFileStorage` class has been replaced with `createFsFileStorage(directory)`
+- BREAKING CHANGE: `MemoryFileStorage` class has been replaced with `createMemoryFileStorage()`
+
+  ```ts
+  // before
+  import { LocalFileStorage } from '@remix-run/file-storage/local'
+  import { MemoryFileStorage } from '@remix-run/file-storage/memory'
+  let fsStorage = new LocalFileStorage('./files')
+  let memoryStorage = new MemoryFileStorage()
+
+  // after
+  import { createFsFileStorage } from '@remix-run/file-storage/fs'
+  import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
+  let fsStorage = createFsFileStorage('./files')
+  let memoryStorage = createMemoryFileStorage()
+  ```
+
+## v0.12.0 (2025-11-20)
+
+- Add `@remix-run/fs` as a peer dependency. This package now imports from `@remix-run/fs` instead of `@remix-run/lazy-file/fs`.
+
+## v0.11.0 (2025-11-05)
+
+- Move `@remix-run/lazy-file` to `peerDependencies`
+- Build using `tsc` instead of `esbuild`. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.
+
+## v0.10.0 (2025-10-22)
 
 - BREAKING CHANGE: Removed CommonJS build. This package is now ESM-only. If you need to use this package in a CommonJS project, you will need to use dynamic `import()`.
 

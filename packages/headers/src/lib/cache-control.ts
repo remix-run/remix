@@ -3,6 +3,10 @@ import { parseParams } from './param-values.ts'
 
 // Taken from https://github.com/jjenzz/pretty-cache-header by jjenzz
 // License: MIT https://github.com/jjenzz/pretty-cache-header/blob/main/LICENSE
+
+/**
+ * Initializer for a `Cache-Control` header value.
+ */
 export interface CacheControlInit {
   /**
    * The `max-age=N` **request directive** indicates that the client allows a stored response that
@@ -175,6 +179,9 @@ export class CacheControl implements HeaderValue, CacheControlInit {
   staleWhileRevalidate?: number
   staleIfError?: number
 
+  /**
+   * @param init A string or object to initialize the header
+   */
   constructor(init?: string | CacheControlInit) {
     if (init) {
       if (typeof init === 'string') {
@@ -254,6 +261,11 @@ export class CacheControl implements HeaderValue, CacheControlInit {
     }
   }
 
+  /**
+   * Returns the string representation of the header value.
+   *
+   * @returns The header value as a string
+   */
   toString(): string {
     let parts = []
 

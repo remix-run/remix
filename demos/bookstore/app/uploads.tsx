@@ -1,20 +1,20 @@
-import type { InferRouteHandler } from '@remix-run/fetch-router'
+import type { BuildAction } from '@remix-run/fetch-router'
+import { createFileResponse as sendFile } from '@remix-run/response/file'
 
-import { routes } from '../routes.ts'
+import type { routes } from './routes.ts'
 import { uploadsStorage } from './utils/uploads.ts'
 
-export let uploadsHandler: InferRouteHandler<typeof routes.uploads> = async ({ params }) => {
+export let uploadsAction: BuildAction<'GET', typeof routes.uploads> = async ({
+  request,
+  params,
+}) => {
   let file = await uploadsStorage.get(params.key)
 
   if (!file) {
     return new Response('File not found', { status: 404 })
   }
 
-  return new Response(file, {
-    headers: {
-      'Content-Type': file.type || 'application/octet-stream',
-      'Content-Length': file.size.toString(),
-      'Cache-Control': 'public, max-age=31536000',
-    },
+  return sendFile(file, request, {
+    cacheControl: 'public, max-age=31536000',
   })
 }
