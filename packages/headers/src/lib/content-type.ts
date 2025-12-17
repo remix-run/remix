@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import { HeaderValue } from './header-value.ts'
 import { parseParams, quote } from './param-values.ts'
 
 /**
@@ -32,7 +32,7 @@ export interface ContentTypeInit {
  *
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-3.1.1.5)
  */
-export class ContentType implements HeaderValue, ContentTypeInit {
+export class ContentType extends HeaderValue<string | ContentTypeInit> implements ContentTypeInit {
   boundary?: string
   charset?: string
   mediaType?: string
@@ -41,6 +41,20 @@ export class ContentType implements HeaderValue, ContentTypeInit {
    * @param init A string or object to initialize the header
    */
   constructor(init?: string | ContentTypeInit) {
+    super(init)
+    this.reset(init)
+  }
+
+  /**
+   * Resets the header to the given value, or clears it if no value is provided.
+   *
+   * @param init A string or object to reinitialize the header
+   */
+  reset(init?: string | ContentTypeInit): void {
+    this.boundary = undefined
+    this.charset = undefined
+    this.mediaType = undefined
+
     if (init) {
       if (typeof init === 'string') {
         let params = parseParams(init)

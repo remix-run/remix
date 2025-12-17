@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import { HeaderValue } from './header-value.ts'
 
 /**
  * Initializer for a `Content-Range` header value.
@@ -32,7 +32,7 @@ export interface ContentRangeInit {
  *
  * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.content-range)
  */
-export class ContentRange implements HeaderValue, ContentRangeInit {
+export class ContentRange extends HeaderValue<string | ContentRangeInit> implements ContentRangeInit {
   unit: string = ''
   start: number | null = null
   end: number | null = null
@@ -42,6 +42,21 @@ export class ContentRange implements HeaderValue, ContentRangeInit {
    * @param init A string or object to initialize the header
    */
   constructor(init?: string | ContentRangeInit) {
+    super(init)
+    this.reset(init)
+  }
+
+  /**
+   * Resets the header to the given value, or clears it if no value is provided.
+   *
+   * @param init A string or object to reinitialize the header
+   */
+  reset(init?: string | ContentRangeInit): void {
+    this.unit = ''
+    this.start = null
+    this.end = null
+    this.size = undefined
+
     if (init) {
       if (typeof init === 'string') {
         // Parse: "bytes 200-1000/67589" or "bytes */67589" or "bytes 200-1000/*"

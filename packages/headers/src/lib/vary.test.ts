@@ -143,4 +143,26 @@ describe('Vary', () => {
     })
     assert.deepEqual(names, ['accept-encoding', 'accept-language'])
   })
+
+  describe('reset', () => {
+    it('resets to a new string value', () => {
+      let header = new Vary('Accept-Encoding, Accept-Language')
+      header.reset('User-Agent, Cookie')
+      assert.deepEqual(header.headerNames, ['user-agent', 'cookie'])
+      assert.equal(header.size, 2)
+    })
+
+    it('resets to an array value', () => {
+      let header = new Vary('Accept-Encoding')
+      header.reset(['Host', 'Origin'])
+      assert.deepEqual(header.headerNames, ['host', 'origin'])
+    })
+
+    it('clears all values when called with no argument', () => {
+      let header = new Vary('Accept-Encoding, Accept-Language')
+      header.reset()
+      assert.equal(header.size, 0)
+      assert.equal(header.toString(), '')
+    })
+  })
 })

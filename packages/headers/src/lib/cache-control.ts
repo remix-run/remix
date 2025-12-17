@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import { HeaderValue } from './header-value.ts'
 import { parseParams } from './param-values.ts'
 
 // Taken from https://github.com/jjenzz/pretty-cache-header by jjenzz
@@ -161,7 +161,10 @@ export interface CacheControlInit {
  *
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.2)
  */
-export class CacheControl implements HeaderValue, CacheControlInit {
+export class CacheControl
+  extends HeaderValue<string | CacheControlInit>
+  implements CacheControlInit
+{
   maxAge?: number
   maxStale?: number
   minFresh?: number
@@ -183,6 +186,33 @@ export class CacheControl implements HeaderValue, CacheControlInit {
    * @param init A string or object to initialize the header
    */
   constructor(init?: string | CacheControlInit) {
+    super(init)
+    this.reset(init)
+  }
+
+  /**
+   * Resets the header to the given value, or clears it if no value is provided.
+   *
+   * @param init A string or object to reinitialize the header
+   */
+  reset(init?: string | CacheControlInit): void {
+    this.maxAge = undefined
+    this.maxStale = undefined
+    this.minFresh = undefined
+    this.sMaxage = undefined
+    this.noCache = undefined
+    this.noStore = undefined
+    this.noTransform = undefined
+    this.onlyIfCached = undefined
+    this.mustRevalidate = undefined
+    this.proxyRevalidate = undefined
+    this.mustUnderstand = undefined
+    this.private = undefined
+    this.public = undefined
+    this.immutable = undefined
+    this.staleWhileRevalidate = undefined
+    this.staleIfError = undefined
+
     if (init) {
       if (typeof init === 'string') {
         let params = parseParams(init, ',')

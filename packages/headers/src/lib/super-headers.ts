@@ -7,7 +7,8 @@ import { type ContentRangeInit, ContentRange } from './content-range.ts'
 import { type ContentTypeInit, ContentType } from './content-type.ts'
 import { type CookieInit, Cookie } from './cookie.ts'
 import { canonicalHeaderName } from './header-names.ts'
-import { type HeaderValue } from './header-value.ts'
+import { type HeaderStorage, createHeaderStorage } from './header-storage.ts'
+import { type HeaderValue, type HeaderValueInit } from './header-value.ts'
 import { type IfMatchInit, IfMatch } from './if-match.ts'
 import { type IfNoneMatchInit, IfNoneMatch } from './if-none-match.ts'
 import { IfRange } from './if-range.ts'
@@ -15,8 +16,6 @@ import { type RangeInit, Range } from './range.ts'
 import { type SetCookieInit, SetCookie } from './set-cookie.ts'
 import { type VaryInit, Vary } from './vary.ts'
 import { isIterable, quoteEtag } from './utils.ts'
-
-let isBun = 'Bun' in globalThis
 
 type DateInit = number | Date
 
@@ -151,7 +150,7 @@ interface SuperHeadersPropertyInit {
  */
 export type SuperHeadersInit =
   | Iterable<[string, string]>
-  | (SuperHeadersPropertyInit & Record<string, string | HeaderValue>)
+  | (SuperHeadersPropertyInit & Record<string, string | HeaderValueInit>)
 
 const CRLF = '\r\n'
 
@@ -194,8 +193,7 @@ const VaryKey = 'vary'
  * [MDN `Headers` Base Class Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
  */
 export class SuperHeaders extends Headers {
-  #map: Map<string, string | HeaderValue>
-  #setCookies: (string | SetCookie)[] = []
+  #storage: HeaderStorage
 
   /**
    * @param init A string, iterable, object, or `Headers` instance to initialize with
@@ -203,7 +201,7 @@ export class SuperHeaders extends Headers {
   constructor(init?: string | SuperHeadersInit | Headers) {
     super()
 
-    this.#map = new Map()
+    this.#storage = createHeaderStorage(this)
 
     if (init) {
       if (typeof init === 'string') {
@@ -243,14 +241,7 @@ export class SuperHeaders extends Headers {
    * @param value The value to append
    */
   append(name: string, value: string): void {
-    let key = name.toLowerCase()
-    if (key === SetCookieKey) {
-      this.#setCookies.push(value)
-    } else {
-      let existingValue = this.#map.get(key)
-      this.#map.set(key, existingValue ? `${existingValue}, ${value}` : value)
-      super.append(key, value) // Bun compatibility - see note at bottom of file
-    }
+    this.#storage.append(name, value)
   }
 
   /**
@@ -261,13 +252,7 @@ export class SuperHeaders extends Headers {
    * @param name The name of the header to delete
    */
   delete(name: string): void {
-    let key = name.toLowerCase()
-    if (key === SetCookieKey) {
-      this.#setCookies = []
-    } else {
-      this.#map.delete(key)
-      super.delete(name) // Bun compatibility - see note at bottom of file
-    }
+    this.#storage.delete(name)
   }
 
   /**
@@ -279,20 +264,10 @@ export class SuperHeaders extends Headers {
    * @return The header value, or `null` if not found
    */
   get(name: string): string | null {
-    let key = name.toLowerCase()
-    if (key === SetCookieKey) {
+    if (name.toLowerCase() === SetCookieKey) {
       return this.getSetCookie().join(', ')
-    } else {
-      let value = this.#map.get(key)
-      if (typeof value === 'string') {
-        return value
-      } else if (value != null) {
-        let str = value.toString()
-        return str === '' ? null : str
-      } else {
-        return null
-      }
     }
+    return this.#storage.get(name)
   }
 
   /**
@@ -305,7 +280,7 @@ export class SuperHeaders extends Headers {
    * @return An array of `Set-Cookie` header values
    */
   getSetCookie(): string[] {
-    return this.#setCookies.map((v) => (typeof v === 'string' ? v : v.toString()))
+    return this.#storage.getSetCookie()
   }
 
   /**
@@ -317,8 +292,7 @@ export class SuperHeaders extends Headers {
    * @return `true` if the header is present, `false` otherwise
    */
   has(name: string): boolean {
-    let key = name.toLowerCase()
-    return key === SetCookieKey ? this.#setCookies.length > 0 : this.get(key) != null
+    return this.#storage.has(name)
   }
 
   /**
@@ -331,13 +305,7 @@ export class SuperHeaders extends Headers {
    * @param value The value to set
    */
   set(name: string, value: string): void {
-    let key = name.toLowerCase()
-    if (key === SetCookieKey) {
-      this.#setCookies = [value]
-    } else {
-      this.#map.set(key, value)
-      super.set(key, value) // Bun compatibility - see note at bottom of file
-    }
+    this.#storage.set(name, value)
   }
 
   /**
@@ -370,11 +338,13 @@ export class SuperHeaders extends Headers {
    * @return An iterator of `[key, value]` tuples
    */
   *entries(): HeadersIterator<[string, string]> {
-    for (let [key] of this.#map) {
-      let str = this.get(key)
-      if (str) yield [key, str]
+    for (let key of this.#storage.keys()) {
+      if (key === SetCookieKey) continue
+      let value = this.get(key)
+      if (value !== null) {
+        yield [key, value]
+      }
     }
-
     for (let value of this.getSetCookie()) {
       yield [SetCookieKey, value]
     }
@@ -858,25 +828,17 @@ export class SuperHeaders extends Headers {
    *
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.1)
    */
-  get setCookie(): SetCookie[] {
-    let setCookies = this.#setCookies
-
-    for (let i = 0; i < setCookies.length; ++i) {
-      if (typeof setCookies[i] === 'string') {
-        setCookies[i] = new SetCookie(setCookies[i])
-      }
-    }
-
-    return setCookies as SetCookie[]
+  get setCookie(): (SetCookie | SetCookieInit)[] {
+    return this.#storage.getSetCookieObjects()
   }
 
   set setCookie(value: (string | SetCookieInit)[] | string | SetCookieInit | undefined | null) {
+    this.#storage.delete(SetCookieKey)
     if (value != null) {
-      this.#setCookies = (Array.isArray(value) ? value : [value]).map((v) =>
-        typeof v === 'string' ? v : new SetCookie(v),
-      )
-    } else {
-      this.#setCookies = []
+      let values = Array.isArray(value) ? value : [value]
+      for (let v of values) {
+        this.#storage.append(SetCookieKey, typeof v === 'string' ? v : new SetCookie(v).toString())
+      }
     }
   }
 
@@ -901,73 +863,16 @@ export class SuperHeaders extends Headers {
   // Helpers
 
   #getHeaderValue<T extends HeaderValue>(key: string, ctor: new (init?: any) => T): T {
-    let value = this.#map.get(key)
-
-    if (value !== undefined) {
-      if (typeof value === 'string') {
-        let obj = this.#wrapForBunMutationSync(key, new ctor(value))
-        this.#map.set(key, obj) // cache the new object
-        return obj as T
-      } else {
-        return value as T
-      }
-    }
-
-    let obj = this.#wrapForBunMutationSync(key, new ctor())
-    this.#map.set(key, obj) // cache the new object
-    return obj as T
+    return this.#storage.getHeaderValue(key, ctor)
   }
 
   #setHeaderValue(key: string, ctor: new (init?: string) => HeaderValue, value: any): void {
-    if (value != null) {
-      if (typeof value === 'string') {
-        this.#map.set(key, value)
-        super.set(key, value) // Bun compatibility - see note at bottom of file
-      } else {
-        let obj = new ctor(value)
-        this.#map.set(key, this.#wrapForBunMutationSync(key, obj))
-        super.set(key, obj.toString()) // Bun compatibility - see note at bottom of file
-      }
-    } else {
-      this.#map.delete(key)
-      super.delete(key) // Bun compatibility - see note at bottom of file
-    }
-  }
-
-  // Bun compatibility: wrap header value objects in Proxy to sync mutations to native storage.
-  // See note at bottom of file for details.
-  //
-  // The Proxy needs both `get` and `set` traps:
-  // - `set`: syncs property mutations to native Headers storage
-  // - `get`: binds methods to the original object so private fields are accessible
-  //
-  // This is necessary because private fields are bound to object identity, and a Proxy
-  // is a different identity than its target. Bun (correctly per spec) doesn't allow
-  // accessing private fields through a Proxy.
-  #wrapForBunMutationSync<T extends HeaderValue>(key: string, obj: T): T {
-    if (!isBun) return obj
-
-    return new Proxy(obj, {
-      get(target, prop, receiver) {
-        let value = Reflect.get(target, prop, target) // Use target as receiver for private field access
-        // Bind methods to the original object so they can access private fields
-        if (typeof value === 'function') {
-          return value.bind(target)
-        }
-        return value
-      },
-      set: (target: any, prop, newValue) => {
-        target[prop] = newValue
-        // Sync mutation to native storage (obj and target are the same original object)
-        super.set(key, obj.toString())
-        return true
-      },
-    }) as T
+    this.#storage.setHeaderValue(key, ctor, value)
   }
 
   #getDateValue(key: string): Date | null {
-    let value = this.#map.get(key)
-    return value === undefined ? null : new Date(value as string)
+    let value = this.#storage.get(key)
+    return value === null ? null : new Date(value)
   }
 
   #setDateValue(key: string, value: string | DateInit | undefined | null): void {
@@ -976,62 +881,41 @@ export class SuperHeaders extends Headers {
         typeof value === 'string'
           ? value
           : (typeof value === 'number' ? new Date(value) : value).toUTCString()
-      this.#map.set(key, str)
-      super.set(key, str) // Bun compatibility - see note at bottom of file
+      this.#storage.set(key, str)
     } else {
-      this.#map.delete(key)
-      super.delete(key) // Bun compatibility - see note at bottom of file
+      this.#storage.delete(key)
     }
   }
 
   #getNumberValue(key: string): number | null {
-    let value = this.#map.get(key)
-    return value === undefined ? null : parseInt(value as string, 10)
+    let value = this.#storage.get(key)
+    return value === null ? null : parseInt(value, 10)
   }
 
   #setNumberValue(key: string, value: string | number | undefined | null): void {
     if (value != null) {
       let str = typeof value === 'string' ? value : value.toString()
-      this.#map.set(key, str)
-      super.set(key, str) // Bun compatibility - see note at bottom of file
+      this.#storage.set(key, str)
     } else {
-      this.#map.delete(key)
-      super.delete(key) // Bun compatibility - see note at bottom of file
+      this.#storage.delete(key)
     }
   }
 
   #getStringValue(key: string): string | null {
-    let value = this.#map.get(key)
-    return value === undefined ? null : (value as string)
+    return this.#storage.get(key)
   }
 
   #setStringValue(key: string, value: string | undefined | null): void {
     if (value != null) {
-      this.#map.set(key, value)
-      super.set(key, value) // Bun compatibility - see note at bottom of file
+      this.#storage.set(key, value)
     } else {
-      this.#map.delete(key)
-      super.delete(key) // Bun compatibility - see note at bottom of file
+      this.#storage.delete(key)
     }
   }
 }
 
-// NOTE: Bun compatibility - why we call super.set() / super.delete() / super.append()
+// NOTE: All runtime-specific logic (Node vs Bun) is centralized in header-storage.ts.
+// SuperHeaders delegates all storage operations to the HeaderStorage abstraction,
+// which handles the differences transparently.
 //
-// SuperHeaders uses a private #map to store header values (including rich parsed objects).
-// However, Bun reads directly from the native Headers internal storage when constructing
-// Response objects - it casts the Headers subclass to its internal FetchHeaders type and
-// reads from C++ storage, bypassing our JavaScript methods entirely.
-//
-// To ensure headers are visible to Bun, we must keep the native Headers storage in sync
-// by calling super.set()/super.delete()/super.append() alongside our #map operations.
-//
-// Additionally, when header value objects (e.g. ContentType) are mutated after being set,
-// the native storage becomes stale. To handle this, we wrap header value objects in a Proxy
-// (in Bun only) that syncs mutations back to native storage. See #wrapForBunMutationSync().
-//
-// See Bun's implementation:
-// - FetchHeaders.cast (casts JS Headers to native):
-//   https://github.com/oven-sh/bun/blob/f0d18d73c932c5eeef5382e26bc938fbc4a095f1/src/bun.js/bindings/FetchHeaders.zig#L376-L382
-// - Response using .as(FetchHeaders) to read headers directly:
-//   https://github.com/oven-sh/bun/blob/f0d18d73c932c5eeef5382e26bc938fbc4a095f1/src/bun.js/webcore/Response.zig#L819
+// See header-storage.ts for details on why Bun requires special handling.

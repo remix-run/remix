@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import { HeaderValue } from './header-value.ts'
 
 /**
  * Initializer for a `Range` header value.
@@ -24,7 +24,7 @@ export interface RangeInit {
  *
  * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.range)
  */
-export class Range implements HeaderValue, RangeInit {
+export class Range extends HeaderValue<string | RangeInit> implements RangeInit {
   unit: string = ''
   ranges: Array<{ start?: number; end?: number }> = []
 
@@ -32,6 +32,19 @@ export class Range implements HeaderValue, RangeInit {
    * @param init A string or object to initialize the header
    */
   constructor(init?: string | RangeInit) {
+    super(init)
+    this.reset(init)
+  }
+
+  /**
+   * Resets the header to the given value, or clears it if no value is provided.
+   *
+   * @param init A string or object to reinitialize the header
+   */
+  reset(init?: string | RangeInit): void {
+    this.unit = ''
+    this.ranges = []
+
     if (init) {
       if (typeof init === 'string') {
         // Parse: "bytes=200-1000" or "bytes=200-" or "bytes=-500" or "bytes=0-99,200-299"

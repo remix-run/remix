@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import { HeaderValue } from './header-value.ts'
 
 export interface VaryInit {
   /**
@@ -19,11 +19,25 @@ export interface VaryInit {
  *
  * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.vary)
  */
-export class Vary implements HeaderValue, VaryInit, Iterable<string> {
-  #set: Set<string>
+export class Vary
+  extends HeaderValue<string | string[] | VaryInit>
+  implements VaryInit, Iterable<string>
+{
+  #set: Set<string> = new Set()
 
   constructor(init?: string | string[] | VaryInit) {
-    this.#set = new Set()
+    super(init)
+    this.reset(init)
+  }
+
+  /**
+   * Resets the header to the given value, or clears it if no value is provided.
+   *
+   * @param init A string, array of strings, or object to reinitialize the header
+   */
+  reset(init?: string | string[] | VaryInit): void {
+    this.#set.clear()
+
     if (init) {
       if (typeof init === 'string') {
         for (let headerName of init.split(',')) {

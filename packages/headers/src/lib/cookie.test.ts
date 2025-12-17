@@ -141,4 +141,29 @@ describe('Cookie', () => {
     header.set('name', 'value2')
     assert.equal(header.get('name'), 'value2')
   })
+
+  describe('reset', () => {
+    it('resets to a new string value', () => {
+      let header = new Cookie('name1=value1; name2=value2')
+      header.reset('newName=newValue')
+      assert.equal(header.size, 1)
+      assert.equal(header.get('newName'), 'newValue')
+      assert.equal(header.get('name1'), null)
+    })
+
+    it('resets to an object value', () => {
+      let header = new Cookie('name1=value1')
+      header.reset({ foo: 'bar', baz: 'qux' })
+      assert.equal(header.size, 2)
+      assert.equal(header.get('foo'), 'bar')
+      assert.equal(header.get('baz'), 'qux')
+    })
+
+    it('clears all values when called with no argument', () => {
+      let header = new Cookie('name1=value1; name2=value2')
+      header.reset()
+      assert.equal(header.size, 0)
+      assert.equal(header.toString(), '')
+    })
+  })
 })

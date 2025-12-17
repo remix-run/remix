@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import { HeaderValue } from './header-value.ts'
 import { parseHttpDate, removeMilliseconds } from './utils.ts'
 import { quoteEtag } from './utils.ts'
 
@@ -11,13 +11,25 @@ import { quoteEtag } from './utils.ts'
  *
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7233#section-3.2)
  */
-export class IfRange implements HeaderValue {
+export class IfRange extends HeaderValue<string | Date> {
   value: string = ''
 
   /**
    * @param init A string or Date to initialize the header
    */
   constructor(init?: string | Date) {
+    super(init)
+    this.reset(init)
+  }
+
+  /**
+   * Resets the header to the given value, or clears it if no value is provided.
+   *
+   * @param init A string or Date to reinitialize the header
+   */
+  reset(init?: string | Date): void {
+    this.value = ''
+
     if (init) {
       if (typeof init === 'string') {
         this.value = init

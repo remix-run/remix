@@ -217,4 +217,38 @@ describe('SetCookie', () => {
     header.value = 'need; quotes'
     assert.equal(header.toString(), 'test="need; quotes"')
   })
+
+  describe('reset', () => {
+    it('resets to a new string value', () => {
+      let header = new SetCookie('session=abc123; Domain=example.com; Secure')
+      header.reset('newSession=xyz789; Path=/api; HttpOnly')
+      assert.equal(header.name, 'newSession')
+      assert.equal(header.value, 'xyz789')
+      assert.equal(header.path, '/api')
+      assert.equal(header.httpOnly, true)
+      assert.equal(header.domain, undefined)
+      assert.equal(header.secure, undefined)
+    })
+
+    it('resets to an object value', () => {
+      let header = new SetCookie('session=abc123; Secure')
+      header.reset({ name: 'user', value: 'john', maxAge: 3600 })
+      assert.equal(header.name, 'user')
+      assert.equal(header.value, 'john')
+      assert.equal(header.maxAge, 3600)
+      assert.equal(header.secure, undefined)
+    })
+
+    it('clears all properties when called with no argument', () => {
+      let header = new SetCookie('session=abc123; Domain=example.com; Path=/; Secure; HttpOnly')
+      header.reset()
+      assert.equal(header.name, undefined)
+      assert.equal(header.value, undefined)
+      assert.equal(header.domain, undefined)
+      assert.equal(header.path, undefined)
+      assert.equal(header.secure, undefined)
+      assert.equal(header.httpOnly, undefined)
+      assert.equal(header.toString(), '')
+    })
+  })
 })

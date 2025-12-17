@@ -105,4 +105,31 @@ describe('ContentType', () => {
     let header = new ContentType('multipart/form-data; charset=utf-8; boundary=abc123')
     assert.equal(header.toString(), 'multipart/form-data; charset=utf-8; boundary=abc123')
   })
+
+  describe('reset', () => {
+    it('resets to a new string value', () => {
+      let header = new ContentType('text/plain; charset=utf-8')
+      header.reset('application/json; charset=iso-8859-1')
+      assert.equal(header.mediaType, 'application/json')
+      assert.equal(header.charset, 'iso-8859-1')
+      assert.equal(header.boundary, undefined)
+    })
+
+    it('resets to an object value', () => {
+      let header = new ContentType('text/plain')
+      header.reset({ mediaType: 'text/html', boundary: 'abc123' })
+      assert.equal(header.mediaType, 'text/html')
+      assert.equal(header.charset, undefined)
+      assert.equal(header.boundary, 'abc123')
+    })
+
+    it('clears all properties when called with no argument', () => {
+      let header = new ContentType('text/plain; charset=utf-8; boundary=abc123')
+      header.reset()
+      assert.equal(header.mediaType, undefined)
+      assert.equal(header.charset, undefined)
+      assert.equal(header.boundary, undefined)
+      assert.equal(header.toString(), '')
+    })
+  })
 })

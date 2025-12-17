@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import { HeaderValue } from './header-value.ts'
 import { parseParams, quote } from './param-values.ts'
 import { isIterable } from './utils.ts'
 
@@ -14,14 +14,25 @@ export type CookieInit = Iterable<[string, string]> | Record<string, string>
  *
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.2)
  */
-export class Cookie implements HeaderValue, Iterable<[string, string]> {
-  #map: Map<string, string>
+export class Cookie extends HeaderValue<string | CookieInit> implements Iterable<[string, string]> {
+  #map: Map<string, string> = new Map()
 
   /**
    * @param init A string, iterable, or record to initialize the header
    */
   constructor(init?: string | CookieInit) {
-    this.#map = new Map()
+    super(init)
+    this.reset(init)
+  }
+
+  /**
+   * Resets the header to the given value, or clears it if no value is provided.
+   *
+   * @param init A string, iterable, or record to reinitialize the header
+   */
+  reset(init?: string | CookieInit): void {
+    this.#map.clear()
+
     if (init) {
       if (typeof init === 'string') {
         let params = parseParams(init)

@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import { HeaderValue } from './header-value.ts'
 import { quoteEtag } from './utils.ts'
 
 /**
@@ -18,13 +18,25 @@ export interface IfMatchInit {
  *
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.1)
  */
-export class IfMatch implements HeaderValue, IfMatchInit {
+export class IfMatch extends HeaderValue<string | string[] | IfMatchInit> implements IfMatchInit {
   tags: string[] = []
 
   /**
    * @param init A string, array of strings, or object to initialize the header
    */
   constructor(init?: string | string[] | IfMatchInit) {
+    super(init)
+    this.reset(init)
+  }
+
+  /**
+   * Resets the header to the given value, or clears it if no value is provided.
+   *
+   * @param init A string, array of strings, or object to reinitialize the header
+   */
+  reset(init?: string | string[] | IfMatchInit): void {
+    this.tags = []
+
     if (init) {
       if (typeof init === 'string') {
         this.tags.push(...init.split(/\s*,\s*/).map(quoteEtag))

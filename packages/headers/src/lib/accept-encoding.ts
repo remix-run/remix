@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import { HeaderValue } from './header-value.ts'
 import { parseParams } from './param-values.ts'
 import { isIterable } from './utils.ts'
 
@@ -14,14 +14,27 @@ export type AcceptEncodingInit = Iterable<string | [string, number]> | Record<st
  *
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4)
  */
-export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
-  #map: Map<string, number>
+export class AcceptEncoding
+  extends HeaderValue<string | AcceptEncodingInit>
+  implements Iterable<[string, number]>
+{
+  #map: Map<string, number> = new Map()
 
   /**
    * @param init A string, iterable, or record to initialize the header
    */
   constructor(init?: string | AcceptEncodingInit) {
-    this.#map = new Map()
+    super(init)
+    this.reset(init)
+  }
+
+  /**
+   * Resets the header to the given value, or clears it if no value is provided.
+   *
+   * @param init A string, iterable, or record to reinitialize the header
+   */
+  reset(init?: string | AcceptEncodingInit): void {
+    this.#map.clear()
 
     if (init) {
       if (typeof init === 'string') {

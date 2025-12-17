@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import { HeaderValue } from './header-value.ts'
 import { parseParams, quote } from './param-values.ts'
 import { capitalize, isValidDate } from './utils.ts'
 
@@ -85,7 +85,7 @@ export interface SetCookieInit extends CookieProperties {
  *
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.1)
  */
-export class SetCookie implements HeaderValue, SetCookieInit {
+export class SetCookie extends HeaderValue<string | SetCookieInit> implements SetCookieInit {
   domain?: string
   expires?: Date
   httpOnly?: boolean
@@ -101,6 +101,27 @@ export class SetCookie implements HeaderValue, SetCookieInit {
    * @param init A string or object to initialize the header
    */
   constructor(init?: string | SetCookieInit) {
+    super(init)
+    this.reset(init)
+  }
+
+  /**
+   * Resets the header to the given value, or clears it if no value is provided.
+   *
+   * @param init A string or object to reinitialize the header
+   */
+  reset(init?: string | SetCookieInit): void {
+    this.domain = undefined
+    this.expires = undefined
+    this.httpOnly = undefined
+    this.maxAge = undefined
+    this.name = undefined
+    this.partitioned = undefined
+    this.path = undefined
+    this.sameSite = undefined
+    this.secure = undefined
+    this.value = undefined
+
     if (init) {
       if (typeof init === 'string') {
         let params = parseParams(init)

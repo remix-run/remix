@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import { HeaderValue } from './header-value.ts'
 import { parseParams, quote } from './param-values.ts'
 
 /**
@@ -31,7 +31,10 @@ export interface ContentDispositionInit {
  *
  * [RFC 6266](https://tools.ietf.org/html/rfc6266)
  */
-export class ContentDisposition implements HeaderValue, ContentDispositionInit {
+export class ContentDisposition
+  extends HeaderValue<string | ContentDispositionInit>
+  implements ContentDispositionInit
+{
   filename?: string
   filenameSplat?: string
   name?: string
@@ -41,6 +44,21 @@ export class ContentDisposition implements HeaderValue, ContentDispositionInit {
    * @param init A string or object to initialize the header
    */
   constructor(init?: string | ContentDispositionInit) {
+    super(init)
+    this.reset(init)
+  }
+
+  /**
+   * Resets the header to the given value, or clears it if no value is provided.
+   *
+   * @param init A string or object to reinitialize the header
+   */
+  reset(init?: string | ContentDispositionInit): void {
+    this.filename = undefined
+    this.filenameSplat = undefined
+    this.name = undefined
+    this.type = undefined
+
     if (init) {
       if (typeof init === 'string') {
         let params = parseParams(init)
