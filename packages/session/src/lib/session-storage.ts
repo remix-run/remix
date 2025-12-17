@@ -8,7 +8,7 @@ export interface SessionStorage {
    * Retrieve a new session from storage based on the session cookie.
    *
    * @param cookie The session cookie value, or `null` if no session cookie is available
-   * @return The session
+   * @returns The session
    */
   read(cookie: string | null): Promise<Session>
   /**
@@ -17,7 +17,7 @@ export interface SessionStorage {
    * Note: If no session cookie should be set, this method returns `null`.
    *
    * @param session The session to save
-   * @return The session cookie value, or `null` if no session cookie should be set
+   * @returns The session cookie value, or `null` if no session cookie should be set
    */
   save(session: Session): Promise<string | null>
 }

@@ -80,7 +80,7 @@ export interface ParseMultipartOptions {
  *
  * @param message The multipart message as a `Uint8Array` or an iterable of `Uint8Array` chunks
  * @param options Options for the parser
- * @return A generator that yields `MultipartPart` objects
+ * @returns A generator that yields `MultipartPart` objects
  */
 export function* parseMultipart(
   message: Uint8Array | Iterable<Uint8Array>,
@@ -114,7 +114,7 @@ export function* parseMultipart(
  *
  * @param stream A stream containing multipart data as a `ReadableStream<Uint8Array>`
  * @param options Options for the parser
- * @return An async generator that yields `MultipartPart` objects
+ * @returns An async generator that yields `MultipartPart` objects
  */
 export async function* parseMultipartStream(
   stream: ReadableStream<Uint8Array>,
@@ -191,7 +191,7 @@ export class MultipartParser {
    * Write a chunk of data to the parser.
    *
    * @param chunk A chunk of data to write to the parser
-   * @return A generator yielding `MultipartPart` objects as they are parsed
+   * @returns A generator yielding `MultipartPart` objects as they are parsed
    */
   *write(chunk: Uint8Array): Generator<MultipartPart, void, unknown> {
     if (this.#state === MultipartParserStateDone) {
@@ -321,7 +321,7 @@ export class MultipartParser {
    * Note: This will throw if the multipart message is incomplete or
    * wasn't properly terminated.
    *
-   * @return void
+   * @returns void
    */
   finish(): void {
     if (this.#state !== MultipartParserStateDone) {

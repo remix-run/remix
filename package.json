@@ -2,14 +2,15 @@
   "name": "remix-the-web",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.24.0",
+  "packageManager": "pnpm@10.26.0",
   "dependencies": {
     "@typescript/native-preview": "catalog:",
     "eslint": "^9.33.0",
+    "eslint-plugin-jsdoc": "^61.5.0",
     "eslint-plugin-prefer-let": "^4.0.0",
     "prettier": "^3.3.3",
     "tsx": "catalog:",
-    "typescript": "catalog:",
+    "typescript": "^5.9.3",
     "typescript-eslint": "^8.40.0"
   },
   "engines": {
@@ -23,6 +24,8 @@
     "clean": "git clean -fdX -e '!/.env' .",
     "codegen": "pnpm -r run codegen",
     "create-github-release": "node --env-file .env ./scripts/create-github-release.js",
+    "docs": "rm -rf docs/api && node docs/generate.ts",
+    "docs:serve": "node docs/server.ts",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "test": "pnpm --parallel run test",

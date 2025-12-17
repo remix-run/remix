@@ -65,7 +65,6 @@
     "@vitest/browser": "^3.2.4",
     "esbuild": "^0.25.5",
     "playwright": "catalog:",
-    "typescript": "catalog:",
     "vitest": "^3.2.4"
   }
 }

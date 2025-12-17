@@ -5,7 +5,7 @@ import { MultipartParseError, parseMultipartStream } from './multipart.ts'
  * Extracts the boundary string from a `multipart/*` content type.
  *
  * @param contentType The `Content-Type` header value from the request
- * @return The boundary string if found, or null if not present
+ * @returns The boundary string if found, or null if not present
  */
 export function getMultipartBoundary(contentType: string): string | null {
   let match = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType)
@@ -16,7 +16,7 @@ export function getMultipartBoundary(contentType: string): string | null {
  * Returns true if the given request contains multipart data.
  *
  * @param request The `Request` object to check
- * @return `true` if the request is a multipart request, `false` otherwise
+ * @returns `true` if the request is a multipart request, `false` otherwise
  */
 export function isMultipartRequest(request: Request): boolean {
   let contentType = request.headers.get('Content-Type')
@@ -29,7 +29,7 @@ export function isMultipartRequest(request: Request): boolean {
  *
  * @param request The `Request` object containing multipart data
  * @param options Optional parser options, such as `maxHeaderSize` and `maxFileSize`
- * @return An async generator yielding `MultipartPart` objects
+ * @returns An async generator yielding `MultipartPart` objects
  */
 export async function* parseMultipartRequest(
   request: Request,

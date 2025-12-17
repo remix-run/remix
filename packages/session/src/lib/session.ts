@@ -95,7 +95,7 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
    * Get a value from the session.
    *
    * @param key The key of the value to get
-   * @return The value for the given key
+   * @returns The value for the given key
    */
   get<key extends keyof valueData>(key: key): valueData[key] | undefined
   get<key extends keyof flashData>(key: key): flashData[key] | undefined
@@ -109,7 +109,7 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
    * Check if a value is stored for the given key.
    *
    * @param key The key to check
-   * @return `true` if a value is stored for the given key, `false` otherwise
+   * @returns `true` if a value is stored for the given key, `false` otherwise
    */
   has(key: keyof valueData | keyof flashData): boolean {
     if (this.#destroyed) return false
@@ -180,7 +180,7 @@ function toMap<data extends Data>(data?: data): Map<keyof data, data[keyof data]
  *
  * @param id The ID of the session
  * @param initialData The initial data for the session
- * @return The new session
+ * @returns The new session
  */
 export function createSession<valueData extends Data = Data, flashData extends Data = Data>(
   id = createSessionId(),
@@ -192,7 +192,7 @@ export function createSession<valueData extends Data = Data, flashData extends D
 /**
  * Create a new cryptographically secure session ID.
  *
- * @return A new session ID
+ * @returns A new session ID
  */
 export function createSessionId(): string {
   return crypto.randomUUID()

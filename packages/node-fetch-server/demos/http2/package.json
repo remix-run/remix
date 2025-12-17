@@ -4,5 +4,12 @@
   "type": "module",
   "dependencies": {
     "@remix-run/node-fetch-server": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "scripts": {
+    "typecheck": "tsgo --noEmit"
   }
 }

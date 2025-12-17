@@ -1,8 +1,7 @@
 on:
   push:
-    branches-ignore:
-      - release-v2
-      - v2
+    branches:
+      - main
   pull_request:
     branches-ignore:
       - release-v2

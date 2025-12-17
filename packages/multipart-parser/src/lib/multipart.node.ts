@@ -17,7 +17,7 @@ import { getMultipartBoundary } from './multipart-request.ts'
  *
  * @param message The multipart message as a `Buffer` or an iterable of `Buffer` chunks
  * @param options Options for the parser
- * @return A generator yielding `MultipartPart` objects
+ * @returns A generator yielding `MultipartPart` objects
  */
 export function* parseMultipart(
   message: Buffer | Iterable<Buffer>,
@@ -34,7 +34,7 @@ export function* parseMultipart(
  *
  * @param stream A Node.js `Readable` stream containing multipart data
  * @param options Options for the parser
- * @return An async generator yielding `MultipartPart` objects
+ * @returns An async generator yielding `MultipartPart` objects
  */
 export async function* parseMultipartStream(
   stream: Readable,
@@ -47,7 +47,7 @@ export async function* parseMultipartStream(
  * Returns true if the given request is a multipart request.
  *
  * @param req The Node.js `http.IncomingMessage` object to check
- * @return `true` if the request is a multipart request, `false` otherwise
+ * @returns `true` if the request is a multipart request, `false` otherwise
  */
 export function isMultipartRequest(req: http.IncomingMessage): boolean {
   let contentType = req.headers['content-type']
@@ -59,7 +59,7 @@ export function isMultipartRequest(req: http.IncomingMessage): boolean {
  *
  * @param req The Node.js `http.IncomingMessage` object containing multipart data
  * @param options Options for the parser
- * @return An async generator yielding `MultipartPart` objects
+ * @returns An async generator yielding `MultipartPart` objects
  */
 export async function* parseMultipartRequest(
   req: http.IncomingMessage,

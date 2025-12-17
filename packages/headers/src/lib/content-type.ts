@@ -79,7 +79,7 @@ export class ContentType extends HeaderValue<string | ContentTypeInit> implement
   /**
    * Returns the string representation of the header value.
    *
-   * @return The header value as a string
+   * @returns The header value as a string
    */
   toString(): string {
     if (!this.mediaType) {

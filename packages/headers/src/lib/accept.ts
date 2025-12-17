@@ -99,7 +99,7 @@ export class Accept extends HeaderValue<string | AcceptInit> implements Iterable
    * Returns `true` if the header matches the given media type (i.e. it is "acceptable").
    *
    * @param mediaType The media type to check
-   * @return `true` if the media type is acceptable, `false` otherwise
+   * @returns `true` if the media type is acceptable, `false` otherwise
    */
   accepts(mediaType: string): boolean {
     return this.getWeight(mediaType) > 0
@@ -109,7 +109,7 @@ export class Accept extends HeaderValue<string | AcceptInit> implements Iterable
    * Gets the weight of a given media type. Also supports wildcards, so e.g. `text/*` will match `text/html`.
    *
    * @param mediaType The media type to get the weight of
-   * @return The weight of the media type
+   * @returns The weight of the media type
    */
   getWeight(mediaType: string): number {
     let [type, subtype] = mediaType.toLowerCase().split('/')
@@ -131,7 +131,7 @@ export class Accept extends HeaderValue<string | AcceptInit> implements Iterable
    * Returns the most preferred media type from the given list of media types.
    *
    * @param mediaTypes The list of media types to choose from
-   * @return The most preferred media type or `null` if none match
+   * @returns The most preferred media type or `null` if none match
    */
   getPreferred<mediaType extends string>(mediaTypes: readonly mediaType[]): mediaType | null {
     let sorted = mediaTypes
@@ -147,7 +147,7 @@ export class Accept extends HeaderValue<string | AcceptInit> implements Iterable
    * Returns the weight of a media type. If it is not in the header verbatim, this returns `null`.
    *
    * @param mediaType The media type to get the weight of
-   * @return The weight of the media type, or `null` if it is not in the header
+   * @returns The weight of the media type, or `null` if it is not in the header
    */
   get(mediaType: string): number | null {
     return this.#map.get(mediaType.toLowerCase()) ?? null
@@ -177,7 +177,7 @@ export class Accept extends HeaderValue<string | AcceptInit> implements Iterable
    * Checks if a media type is in the header.
    *
    * @param mediaType The media type to check
-   * @return `true` if the media type is in the header (verbatim), `false` otherwise
+   * @returns `true` if the media type is in the header (verbatim), `false` otherwise
    */
   has(mediaType: string): boolean {
     return this.#map.has(mediaType.toLowerCase())
@@ -193,7 +193,7 @@ export class Accept extends HeaderValue<string | AcceptInit> implements Iterable
   /**
    * Returns an iterator of all media type and weight pairs.
    *
-   * @return An iterator of `[mediaType, weight]` tuples
+   * @returns An iterator of `[mediaType, weight]` tuples
    */
   entries(): IterableIterator<[string, number]> {
     return this.#map.entries()
@@ -221,7 +221,7 @@ export class Accept extends HeaderValue<string | AcceptInit> implements Iterable
   /**
    * Returns the string representation of the header value.
    *
-   * @return The header value as a string
+   * @returns The header value as a string
    */
   toString(): string {
     let pairs: string[] = []

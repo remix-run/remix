@@ -49,8 +49,7 @@
   "devDependencies": {
     "@remix-run/mime": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
-    "typescript": "catalog:"
+    "@typescript/native-preview": "catalog:"
   },
   "peerDependencies": {
     "@remix-run/headers": "workspace:^",

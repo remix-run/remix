@@ -3,10 +3,10 @@ catalog:
   '@typescript/native-preview': 7.0.0-dev.20251125.1
   playwright: ^1.53.1
   tsx: ^4.20.6
-  typescript: ^5.9.3
 
 packages:
   - demos/*
+  - docs
   - packages/*
   - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*

@@ -38,7 +38,6 @@
     "@typescript/native-preview": "catalog:",
     "find-my-way": "^9.1.0",
     "path-to-regexp": "^8.2.0",
-    "typescript": "catalog:",
     "vitest": "4.0.15"
   },
   "scripts": {

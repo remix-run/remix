@@ -53,7 +53,7 @@ export class IfRange extends HeaderValue<string | Date> {
    * Weak entity tags (prefixed with `W/`) are never considered a match.
    *
    * @param resource The current resource state to compare against
-   * @return `true` if the condition is satisfied, `false` otherwise
+   * @returns `true` if the condition is satisfied, `false` otherwise
    *
    * @example
    * ```ts
@@ -96,7 +96,7 @@ export class IfRange extends HeaderValue<string | Date> {
   /**
    * Returns the string representation of the header value.
    *
-   * @return The header value as a string
+   * @returns The header value as a string
    */
   toString() {
     return this.value

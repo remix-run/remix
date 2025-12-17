@@ -35,8 +35,7 @@
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/form-data-middleware": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
-    "typescript": "catalog:"
+    "@typescript/native-preview": "catalog:"
   },
   "peerDependencies": {
     "@remix-run/fetch-router": "workspace:^"

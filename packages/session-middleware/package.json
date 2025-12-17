@@ -37,8 +37,7 @@
     "@remix-run/headers": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
-    "typescript": "catalog:"
+    "@typescript/native-preview": "catalog:"
   },
   "peerDependencies": {
     "@remix-run/cookie": "workspace:^",

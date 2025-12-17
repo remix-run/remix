@@ -57,7 +57,7 @@ export class IfNoneMatch
    * Note: This method checks only for exact matches and does not consider wildcards.
    *
    * @param tag The entity tag to check for
-   * @return `true` if the tag is present in the header, `false` otherwise
+   * @returns `true` if the tag is present in the header, `false` otherwise
    */
   has(tag: string): boolean {
     return this.tags.includes(quoteEtag(tag))
@@ -67,7 +67,7 @@ export class IfNoneMatch
    * Checks if this header matches the given entity tag.
    *
    * @param tag The entity tag to check for
-   * @return `true` if the tag is present in the header (or the header contains a wildcard), `false` otherwise
+   * @returns `true` if the tag is present in the header (or the header contains a wildcard), `false` otherwise
    */
   matches(tag: string): boolean {
     return this.has(tag) || this.tags.includes('*')
@@ -76,7 +76,7 @@ export class IfNoneMatch
   /**
    * Returns the string representation of the header value.
    *
-   * @return The header value as a string
+   * @returns The header value as a string
    */
   toString() {
     return this.tags.join(', ')

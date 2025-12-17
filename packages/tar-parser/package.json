@@ -34,8 +34,7 @@
   "devDependencies": {
     "@remix-run/fs": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
-    "typescript": "catalog:"
+    "@typescript/native-preview": "catalog:"
   },
   "scripts": {
     "bench": "node --disable-warning=ExperimentalWarning ./bench/runner.ts",
