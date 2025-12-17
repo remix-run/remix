@@ -6,6 +6,5 @@
       "parameters": ["--import", "tsx"]
     }
   ],
-  "typescript.tsdk": "./node_modules/typescript/lib",
-  "typescript.experimental.useTsgo": true
+  "typescript.tsdk": "./node_modules/typescript/lib"
 }
