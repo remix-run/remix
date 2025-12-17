@@ -2,6 +2,8 @@ import { type HeaderValue } from './header-value.ts'
 import { observeDeepProxy } from './observe-deep-proxy.ts'
 import { type SetCookieInit, SetCookie } from './set-cookie.ts'
 
+const SetCookieKey = 'set-cookie'
+
 /**
  * Detect if the runtime bypasses JS Headers iteration when creating a Response.
  * In Bun, Response reads from native C++ storage instead of calling JS methods,
@@ -94,7 +96,7 @@ class PrivateDataHeaderStorage implements HeaderStorage {
 
   set(key: string, value: string): void {
     key = key.toLowerCase()
-    if (key === 'set-cookie') {
+    if (key === SetCookieKey) {
       this.#setCookies = [value]
     } else {
       this.#setOrReset(key, value)
@@ -103,7 +105,7 @@ class PrivateDataHeaderStorage implements HeaderStorage {
 
   delete(key: string): void {
     key = key.toLowerCase()
-    if (key === 'set-cookie') {
+    if (key === SetCookieKey) {
       this.#setCookies = []
     } else {
       this.#setOrReset(key, undefined)
@@ -112,7 +114,7 @@ class PrivateDataHeaderStorage implements HeaderStorage {
 
   append(key: string, value: string): void {
     key = key.toLowerCase()
-    if (key === 'set-cookie') {
+    if (key === SetCookieKey) {
       this.#setCookies.push(value)
     } else {
       let existing = this.get(key)
@@ -122,7 +124,7 @@ class PrivateDataHeaderStorage implements HeaderStorage {
 
   has(key: string): boolean {
     key = key.toLowerCase()
-    if (key === 'set-cookie') {
+    if (key === SetCookieKey) {
       return this.#setCookies.length > 0
     }
     return this.get(key) != null
@@ -188,7 +190,7 @@ class PrivateDataHeaderStorage implements HeaderStorage {
 
 /**
  * Syncs all operations to native Headers storage via Headers.prototype methods.
- * Native storage is the source of truth. Wraps values in proxies to track mutations.
+ * Native storage is the source of truth. Wraps header value objects in proxies to track mutations.
  * Maintains a single cached object instance per header that's kept in sync via reset().
  *
  * Used in Bun where Response reads from native C++ Headers, bypassing JS iteration.
@@ -230,7 +232,7 @@ class NativeSyncHeaderStorage implements HeaderStorage {
     key = key.toLowerCase()
     Headers.prototype.set.call(this.#headers, key, value)
     this.#resetCached(key, value)
-    if (key === 'set-cookie') {
+    if (key === SetCookieKey) {
       this.#setCookies = [value]
     }
   }
@@ -239,7 +241,7 @@ class NativeSyncHeaderStorage implements HeaderStorage {
     key = key.toLowerCase()
     Headers.prototype.delete.call(this.#headers, key)
     this.#resetCached(key, undefined)
-    if (key === 'set-cookie') {
+    if (key === SetCookieKey) {
       this.#setCookies = []
     }
   }
@@ -248,7 +250,7 @@ class NativeSyncHeaderStorage implements HeaderStorage {
     key = key.toLowerCase()
     Headers.prototype.append.call(this.#headers, key, value)
     this.#resetCached(key, Headers.prototype.get.call(this.#headers, key) ?? undefined)
-    if (key === 'set-cookie' && this.#setCookies !== null) {
+    if (key === SetCookieKey && this.#setCookies !== null) {
       this.#setCookies.push(value)
     }
   }
@@ -326,11 +328,11 @@ class NativeSyncHeaderStorage implements HeaderStorage {
 
     // Wrap in proxy to sync mutations back to native storage
     return observeDeepProxy(this.#setCookies as SetCookie[], () => {
-      Headers.prototype.delete.call(this.#headers, 'set-cookie')
+      Headers.prototype.delete.call(this.#headers, SetCookieKey)
       for (let c of this.#setCookies!) {
         let str =
           c instanceof SetCookie ? c.toString() : new SetCookie(c as SetCookieInit).toString()
-        Headers.prototype.append.call(this.#headers, 'set-cookie', str)
+        Headers.prototype.append.call(this.#headers, SetCookieKey, str)
       }
     })
   }
