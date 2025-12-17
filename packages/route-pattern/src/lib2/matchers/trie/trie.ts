@@ -274,14 +274,16 @@ function dynamicMatch(
 ): { paramValues: Array<string>; rank: Rank.Type } {
   let paramValues: Array<string> = []
   let segmentRank = ''
-  Object.entries(match.indices?.groups ?? {}).forEach(([group, span]) => {
+  for (let group in match.indices?.groups) {
+    let span = match.indices.groups[group]
     let type = group.split('_')[0] as keyof typeof RANK
     let lexeme = match[0].slice(...span)
     segmentRank += lexeme.replaceAll(notSeparator, RANK[type])
     if (type === 'variable' || type === 'wildcard') {
       if (lexeme.length > 0) paramValues.push(lexeme)
     }
-  })
+  }
+
   return {
     paramValues,
     rank: segmentRank.split(separator),
