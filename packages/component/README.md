@@ -627,4 +627,13 @@ function List(this: Handle) {
 }
 ```
 
+## Future
+
+This package is a work in progress. Future features (demo'd at Remix Jam) include:
+
+- Server Rendering
+- Selective Hydration
+- `<Frame>` for streamable, reloadable partial server UI
+- `<Catch>`
+
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)
