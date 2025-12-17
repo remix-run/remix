@@ -29,66 +29,43 @@ const PACKAGES = [
   "remix",
 ];
 
-function getTaggedVersion() {
-  let output = cp.execSync("git tag --list --points-at HEAD").toString().trim();
-  return output.replace(/^v/, "").replace(/^remix@/, "");
-}
-
-/**
- * @param {string} dir
- * @param {string} tag
- */
-function publish(dir, tag) {
-  let cmd = `pnpm publish ${dir} --access public --tag ${tag} --no-git-checks`;
-  console.log("Publishing command:", cmd);
-  cp.execSync(cmd, { stdio: "inherit" });
-}
-
-/**
- * @param {string} dir
- * @param {string} tag
- */
-function validateVersion(dir, tag) {
-  let file = path.join(dir, "package.json");
-  let json = JSON.parse(fs.readFileSync(file, "utf8"));
-  if (json.version !== tag) {
-    throw new Error(
-      `Package ${dir} is on version ${json.version}, but should be on ${tag}`
-    );
-  }
-}
-
 async function run() {
   ensureCleanWorkingDirectory();
 
   // Make sure there's a current tag
-  let taggedVersion = getTaggedVersion();
+  let output = cp.execSync("git tag --list --points-at HEAD").toString().trim();
+  let taggedVersion = output.replace(/^v/, "").replace(/^remix@/, "");
 
   if (taggedVersion === "") {
-    console.error("Missing release version. Run the version script first.");
-    process.exit(1);
+    throw new Error("Missing release version. Run the version script first.");
   }
 
   console.log("Found tagged version:", taggedVersion);
 
   let prerelease = semver.prerelease(taggedVersion);
-  let prereleaseTag = prerelease ? String(prerelease[0]) : undefined;
-  let tag = prereleaseTag
-    ? prereleaseTag.includes("nightly")
-      ? "nightly"
-      : prereleaseTag.includes("experimental")
-      ? "experimental"
-      : prereleaseTag
-    : "latest";
+  if (prerelease) {
+    throw new Error("Prereleases not supported for v2 publishes");
+  }
 
   // Validate all packages
   for (let name of PACKAGES) {
-    validateVersion(path.join(packageDir, name), taggedVersion);
+    let file = path.join(packageDir, name, "package.json");
+    let json = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (json.version !== taggedVersion) {
+      throw new Error(
+        `Package ${name} is on version ${json.version}, but should be on ${taggedVersion}`
+      );
+    }
   }
+
+  let tag = "v2";
 
   // Publish all packages
   for (let name of PACKAGES) {
-    publish(path.join(packageDir, name), tag);
+    let dir = path.join(packageDir, name);
+    let cmd = `pnpm publish ${dir} --access public --tag ${tag} --no-git-checks`;
+    console.log("Publishing command:", cmd);
+    cp.execSync(cmd, { stdio: "inherit" });
   }
 }
 
