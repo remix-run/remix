@@ -1,6 +1,9 @@
-import { createRouter, formData, logger, methodOverride } from 'remix'
+import { createRouter } from 'remix'
 import { asyncContext } from 'remix/async-context-middleware'
 import { compression } from 'remix/compression-middleware'
+import { formData } from 'remix/form-data-middleware'
+import { logger } from 'remix/logger-middleware'
+import { methodOverride } from 'remix/method-override-middleware'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
