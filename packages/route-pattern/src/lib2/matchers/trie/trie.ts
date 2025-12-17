@@ -171,17 +171,26 @@ export class Trie<data> {
       let separator = SEPARATORS[state.partIndex]
       let notSeparator = NOT_SEPARATORS[state.partIndex]
 
-      for (let { regexp, trie } of state.trie.variable.values()) {
+      for (let [key, { regexp, trie }] of state.trie.variable) {
         let match = regexp.exec(segment)
         if (match) {
-          let dynamic = dynamicMatch(match, separator, notSeparator)
-
           let paramValues = state.paramValues.slice()
-          paramValues.push(...dynamic.paramValues)
-
           let rank = state.rank.slice()
+          if (key === '{:}') {
+            paramValues.push(segment)
+            rank.push(RANK.variable.repeat(segment.length))
+            stack.push({
+              partIndex: state.partIndex,
+              segmentIndex: state.segmentIndex + 1,
+              trie,
+              paramValues,
+              rank,
+            })
+            continue
+          }
+          let dynamic = dynamicMatch(match, separator, notSeparator)
+          paramValues.push(...dynamic.paramValues)
           rank.push(...dynamic.rank)
-
           stack.push({
             partIndex: state.partIndex,
             segmentIndex: state.segmentIndex + 1,
@@ -192,18 +201,28 @@ export class Trie<data> {
         }
       }
 
-      for (let { regexp, trie } of state.trie.wildcard.values()) {
-        let rest = part.slice(state.segmentIndex).join(separator)
+      for (let [key, { regexp, trie }] of state.trie.wildcard) {
+        let segments = part.slice(state.segmentIndex)
+        let rest = segments.join(separator)
         let match = regexp.exec(rest)
         if (match) {
-          let dynamic = dynamicMatch(match, separator, notSeparator)
-
           let paramValues = state.paramValues.slice()
-          paramValues.push(...dynamic.paramValues)
-
           let rank = state.rank.slice()
+          if (key === '{*}') {
+            paramValues.push(rest)
+            segments.forEach((segment) => rank.push(RANK.wildcard.repeat(segment.length)))
+            stack.push({
+              partIndex: state.partIndex + 1,
+              segmentIndex: 0,
+              trie,
+              paramValues,
+              rank,
+            })
+            continue
+          }
+          let dynamic = dynamicMatch(match, separator, notSeparator)
+          paramValues.push(...dynamic.paramValues)
           rank.push(...dynamic.rank)
-
           stack.push({
             partIndex: state.partIndex + 1,
             segmentIndex: 0,
