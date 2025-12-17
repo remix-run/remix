@@ -916,9 +916,3 @@ export class SuperHeaders extends Headers {
     }
   }
 }
-
-// NOTE: All runtime-specific logic (Node vs Bun) is centralized in header-storage.ts.
-// SuperHeaders delegates all storage operations to the HeaderStorage abstraction,
-// which handles the differences transparently.
-//
-// See header-storage.ts for details on why Bun requires special handling.
