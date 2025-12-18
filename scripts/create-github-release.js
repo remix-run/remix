@@ -7,17 +7,14 @@ let args = process.argv.slice(2)
 let preview = args.includes('--preview')
 let tag = args.find((arg) => !arg.startsWith('--'))
 
-// If no tag provided, print usage and exit, or default to latest tag in preview mode
+// If no tag provided, print usage and exit
 if (tag === undefined) {
-  if (preview) {
-    tag = cp.execSync('git tag --sort=-creatordate').toString().trim().split('\n')[0]
-    console.log(`Using latest tag for preview: ${tag}`)
-    console.log()
-  } else {
-    console.error('Usage:')
-    console.error('  node create-github-release.js <tag> [--preview]')
-    process.exit(1)
-  }
+  console.error('Usage:')
+  console.error('  node create-github-release.js <tag> [--preview]')
+  console.error()
+  console.error('To preview the latest tag:')
+  console.error('  pnpm create-github-release:preview $(git tag --sort=-creatordate | head -1)')
+  process.exit(1)
 }
 
 // Parse and validate the tag
@@ -37,10 +34,9 @@ if (!preview) {
 }
 
 // Create the GitHub Release
-if (!preview) {
-  console.log(`Creating GitHub Release for ${tag} ...`)
-  console.log()
-}
+
+console.log(`${preview ? 'Previewing' : 'Creating'} GitHub Release for ${tag} ...`)
+console.log()
 
 let url = await createRelease(packageName, version, { preview })
 

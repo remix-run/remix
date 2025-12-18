@@ -24,8 +24,6 @@ export async function createRelease(packageName, version, options = {}) {
   let body = changes?.body ?? 'No changes.'
 
   if (preview) {
-    console.log('GITHUB RELEASE PREVIEW')
-    console.log()
     console.log(`  Tag:  ${tagName}`)
     console.log(`  Name: ${releaseName}`)
     console.log()
