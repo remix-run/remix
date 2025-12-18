@@ -1,4 +1,4 @@
-import { createRoot, Fragment, type Handle } from '@remix-run/component'
+import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
 import { TypedEventTarget } from '@remix-run/interaction'
 
 // ============================================================================
@@ -540,7 +540,7 @@ function ListWithFragment(this: Handle) {
 // ============================================================================
 // Example Container Component
 // ============================================================================
-function Example(this: Handle, props: { title: string; children: Remix.JSX.Element }) {
+function Example(this: Handle, props: { title: string; children: RemixNode }) {
   return (
     <div className="example">
       <h2>{props.title}</h2>
