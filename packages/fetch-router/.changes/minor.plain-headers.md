@@ -3,8 +3,6 @@ BREAKING CHANGE: `RequestContext.headers` now returns a standard `Headers` insta
 If you were relying on the type-safe property accessors on `RequestContext.headers`, you should use the new parse functions from `@remix-run/headers` instead:
 
 ```ts
-import { parseAccept } from '@remix-run/headers'
-
 // Before:
 router.get('/api/users', (context) => {
   let acceptsJson = context.headers.accept.accepts('application/json')
@@ -12,6 +10,8 @@ router.get('/api/users', (context) => {
 })
 
 // After:
+import { parseAccept } from '@remix-run/headers'
+
 router.get('/api/users', (context) => {
   let accept = parseAccept(context.headers.get('accept'))
   let acceptsJson = accept.accepts('application/json')
