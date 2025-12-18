@@ -14,7 +14,7 @@
   "scripts": {
     "start": "tsx server.ts",
     "dev": "tsx watch server.ts",
-    "build": "pnpm --filter \"./frameworks/*\" run build",
+    "build": "pnpm --filter \"component-benchmark-*\" run build",
     "bench": "tsx runner.ts"
   }
 }

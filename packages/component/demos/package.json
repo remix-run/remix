@@ -15,7 +15,8 @@
     "esbuild": "^0.25.11"
   },
   "scripts": {
-    "start": "concurrently \"pnpm build\" \"node --experimental-strip-types server.ts\"",
-    "build": "esbuild ./*/entry.tsx --bundle --outdir=. --out-extension:.js=.bundled.js --format=esm --platform=browser --target=es2020 --sourcemap=inline --watch"
+    "start": "concurrently \"pnpm dev\" \"node --experimental-strip-types server.ts\"",
+    "build": "esbuild ./*/entry.tsx --bundle --outdir=. --out-extension:.js=.bundled.js --format=esm --platform=browser --target=es2020 --sourcemap=inline",
+    "dev": "esbuild ./*/entry.tsx --bundle --outdir=. --out-extension:.js=.bundled.js --format=esm --platform=browser --target=es2020 --sourcemap=inline --watch"
   }
 }

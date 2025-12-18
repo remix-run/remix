@@ -1,4 +1,5 @@
 {
+  "name": "component-benchmark-remix",
   "private": true,
   "type": "module",
   "scripts": {
