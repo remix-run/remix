@@ -1,3 +1,4 @@
+import { ParseError } from '../../errors.ts'
 import type { Span } from '../span'
 import type { AST } from './ast'
 
@@ -38,7 +39,7 @@ export function parse(source: string, span?: Span): AST {
     if (char === ')') {
       let begin = optionalStack.pop()
       if (begin === undefined) {
-        throw new Error(`unmatched ) at ${i}`)
+        throw new ParseError('unmatched )', source, i)
       }
       ast.optionals.set(begin, ast.tokens.length)
       ast.tokens.push({ type: char })
@@ -51,7 +52,7 @@ export function parse(source: string, span?: Span): AST {
       i += 1
       let name = identifierRE.exec(source.slice(i, span[1]))?.[0]
       if (!name) {
-        throw new Error(`missing variable name at ${i}`)
+        throw new ParseError('missing variable name', source, i)
       }
       ast.tokens.push({ type: ':', nameIndex: ast.paramNames.length })
       ast.paramNames.push(name)
@@ -72,7 +73,7 @@ export function parse(source: string, span?: Span): AST {
     // escaped char
     if (char === '\\') {
       if (i + 1 === span[1]) {
-        throw new Error(`dangling escape at ${i}`)
+        throw new ParseError('dangling escape', source, i)
       }
       let text = source.slice(i, i + 2)
       appendText(text)
@@ -85,7 +86,7 @@ export function parse(source: string, span?: Span): AST {
     i += 1
   }
   if (optionalStack.length > 0) {
-    throw new Error(`unmatched ( at ${optionalStack.at(-1)!}`)
+    throw new ParseError('unmatched (', source, optionalStack.at(-1)!)
   }
 
   return ast
