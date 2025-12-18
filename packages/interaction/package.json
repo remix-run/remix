@@ -51,7 +51,7 @@
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
-    "clean": "rm -rf dist",
+    "clean": "git clean -fdX",
     "demos": "cd demos && pnpm start",
     "size": "esbuild src/index.ts --bundle --minify --outfile=.temp-bundle.js --format=esm && echo \"📦 Bundle sizes:\" && echo \"   Uncompressed: $(ls -lah .temp-bundle.js | awk '{print $5}')\" && echo \"   Gzipped: $(gzip -c .temp-bundle.js | wc -c | tr -d ' ') bytes\" && rm .temp-bundle.js",
     "test": "vitest run",

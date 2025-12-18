@@ -260,7 +260,7 @@ importers:
         specifier: ^0.25.5
         version: 0.25.12
       playwright:
-        specifier: ^1.53.1
+        specifier: 'catalog:'
         version: 1.57.0
       typescript:
         specifier: ^5.9.3
