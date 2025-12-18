@@ -235,7 +235,12 @@ describe('join', () => {
       let a = parse('/path?a=1')
       let b = parse('/other?b=2')
       let result = join(a, b)
-      expect(result.search).toBe('b=2')
+      expect(result.search).toStrictEqual(
+        new Map([
+          ['a', new Set(['1'])],
+          ['b', new Set(['2'])],
+        ]),
+      )
     })
   })
 

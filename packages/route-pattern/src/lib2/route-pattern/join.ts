@@ -1,5 +1,6 @@
 import type { AST } from './ast.ts'
 import type * as Part from './part/index.ts'
+import * as Search from './search.ts'
 
 export function join(a: AST, b: AST): AST {
   return {
@@ -7,7 +8,7 @@ export function join(a: AST, b: AST): AST {
     hostname: b.hostname ?? a.hostname,
     port: b.port ?? a.port,
     pathname: joinPathname(a.pathname, b.pathname),
-    search: b.search, // todo
+    search: Search.join(a.search, b.search),
   }
 }
 

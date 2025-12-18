@@ -1,6 +1,7 @@
 import type { AST } from './ast.ts'
 import { split } from './split.ts'
 import * as Part from './part/index.ts'
+import * as Search from './search.ts'
 
 export function parse(source: string): AST {
   let ast: AST = {
@@ -26,7 +27,7 @@ export function parse(source: string): AST {
     ast.pathname = Part.parse(source, pathname)
   }
   if (search && search[0] !== search[1]) {
-    ast.search = source.slice(...search)
+    ast.search = Search.parse(source.slice(...search))
   }
   return ast
 }
