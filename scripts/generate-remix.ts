@@ -8,6 +8,8 @@
  * Run: node docs/generate-remix.ts
  */
 
+// TODO: remix@nightly release flow?
+
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
@@ -241,14 +243,18 @@ async function outputExportsAndPeerDepChanges() {
     (key) => !newPeerDepsSet.has(key),
   )
 
-  let type = removedExports.length > 0 || removedPeerDeps.length > 0 ? 'major' : 'minor'
-
   if (
     addedExports.length > 0 ||
     addedPeerDeps.length > 0 ||
     removedExports.length > 0 ||
     removedPeerDeps.length > 0
   ) {
+    let semverType = removedExports.length > 0 || removedPeerDeps.length > 0 ? 'major' : 'minor'
+    let changeFile = path.join(
+      `${remixDir}`,
+      '.changes',
+      `${semverType}.update-exports-or-peer-deps-${Date.now()}.md`,
+    )
     let changes = ''
 
     if (removedPeerDeps.length > 0) {
@@ -260,6 +266,7 @@ async function outputExportsAndPeerDepChanges() {
         changes += `  - \`${peerDep}\`\n`
       }
     }
+
     if (addedPeerDeps.length > 0) {
       console.log()
       console.log('✨ Added peer dependencies:')
@@ -279,6 +286,20 @@ async function outputExportsAndPeerDepChanges() {
         exportPath = `remix/${exportPath.replace('./', '')}`
         console.log(`   - ${exportPath}`)
         changes += `  - \`${exportPath}\`\n`
+
+        // Remove re-export file
+        let srcFile = path.join(
+          remixDir,
+          SUB_EXPORT_SRC_FOLDER,
+          exportPath.replace('remix/', '') + '.ts',
+        )
+        try {
+          await fs.unlink(srcFile)
+        } catch (e) {
+          if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
+            throw e
+          }
+        }
       }
     }
 
@@ -296,11 +317,6 @@ async function outputExportsAndPeerDepChanges() {
       }
     }
 
-    let changeFile = path.join(
-      `${remixDir}`,
-      '.changes',
-      `${type}.update-exports-or-peer-deps-${Date.now()}.md`,
-    )
     await fs.writeFile(changeFile, changes, 'utf-8')
     console.log()
     console.log('✨ Created exports/peerDeps change file:')

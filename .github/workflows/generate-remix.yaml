@@ -62,15 +62,25 @@ jobs:
 
       - name: Commit and push changes
         run: |
-          git config --local user.email "hello@remix.run"
-          git config --local user.name "Remix Run Bot"
-          git add .
-
           if [ -z "$(git status --porcelain)" ]; then
             echo "💿 no updates to the remix package needed"
             exit 0
           fi
 
+          # Check for unintentional changes
+          OUTSIDE_CHANGES=$(git status --porcelain | awk '{print $2}' | grep -v "^packages/remix/" || true)
+          if [ -n "$OUTSIDE_CHANGES" ]; then
+            echo "Refusing to commit changes outside of packages/remix/:"
+            echo "$OUTSIDE_CHANGES"
+            exit 1
+          fi
+
+          # Re-install to ensure any new remix peerDependencies are reflected
+          pnpm install
+
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+          git add .
           git commit -a -m "build: update remix package"
           git push
           echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
