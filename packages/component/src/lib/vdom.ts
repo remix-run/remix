@@ -271,10 +271,7 @@ export function createRangeRoot(
   }
 }
 
-export function createRoot(
-  container: HTMLElement,
-  options: VirtualRootOptions = {},
-): VirtualRoot {
+export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
   let root: VNode | null = null
   let frameStub = options.frame ?? createFrameHandle()
   let scheduler = options.scheduler ?? createScheduler(container.ownerDocument ?? document)
