@@ -2,7 +2,7 @@
 
 Utilities for working with MIME types.
 
-Data used for these utilities is generated at build time from [mime-db](https://github.com/jshttp/mime-db), but only includes standard MIME types, Experimental (`x-`) and vendor-specific (`vnd.`) MIME types have been excluded.
+Data used for these utilities is generated at build time from [mime-db](https://github.com/jshttp/mime-db), but only includes standard MIME types. Experimental (`x-`) and vendor-specific (`vnd.`) MIME types have been excluded.
 
 ## Installation
 
@@ -24,6 +24,19 @@ detectMimeType('.txt') // 'text/plain'
 detectMimeType('file.txt') // 'text/plain'
 detectMimeType('path/to/file.txt') // 'text/plain'
 detectMimeType('unknown') // undefined
+```
+
+### `detectContentType(extension)`
+
+Detects the Content-Type header value for a given file extension or filename, including `charset` for text-based types. See [`mimeTypeToContentType`](#mimetypetocontenttypemimetype) for charset logic.
+
+```ts
+import { detectContentType } from '@remix-run/mime'
+
+detectContentType('css') // 'text/css; charset=utf-8'
+detectContentType('.json') // 'application/json; charset=utf-8'
+detectContentType('image.png') // 'image/png'
+detectContentType('path/to/file.unknown') // undefined
 ```
 
 ### `isCompressibleMimeType(mimeType)`
@@ -48,6 +61,19 @@ isCompressibleMimeType('text/html; charset=utf-8') // true
 isCompressibleMimeType('application/json; charset=utf-8') // true
 isCompressibleMimeType('image/png; charset=utf-8') // false
 isCompressibleMimeType('video/mp4; charset=utf-8') // false
+```
+
+### `mimeTypeToContentType(mimeType)`
+
+Converts a MIME type to a Content-Type header value, adding `; charset=utf-8` to text-based MIME types: `text/*` (except `text/xml` which has built-in encoding declarations), `application/json`, `application/javascript`, and all `+json` suffixed types. All other types are returned unchanged.
+
+```ts
+import { mimeTypeToContentType } from '@remix-run/mime'
+
+mimeTypeToContentType('text/css') // 'text/css; charset=utf-8'
+mimeTypeToContentType('application/json') // 'application/json; charset=utf-8'
+mimeTypeToContentType('application/ld+json') // 'application/ld+json; charset=utf-8'
+mimeTypeToContentType('image/png') // 'image/png'
 ```
 
 ## License
