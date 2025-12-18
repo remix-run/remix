@@ -2,6 +2,10 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.16.0 (2025-12-18)
+
+- BREAKING CHANGE: Rename `RegExpMatcher` to `ArrayMatcher`
+
 ## v0.15.3 (2025-11-19)
 
 - Exclude benchmark files from published npm package
