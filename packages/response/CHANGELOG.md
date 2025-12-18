@@ -2,6 +2,10 @@
 
 This is the changelog for [`response`](https://github.com/remix-run/remix/tree/main/packages/response). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.1 (2025-12-18)
+
+- `createFileResponse` now includes `charset` in Content-Type for text-based files.
+
 ## v0.2.0 (2025-11-25)
 
 - BREAKING CHANGE: Add `@remix-run/mime` as a peer dependency. This package is used by the `createFileResponse()` response helper to determine if HTTP Range requests should be supported by default for a given MIME type.
