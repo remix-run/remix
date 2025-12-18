@@ -8,8 +8,6 @@
  * Run: node docs/generate-remix.ts
  */
 
-// TODO: remix@nightly release flow?
-
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
@@ -29,7 +27,7 @@ type RemixRunPackage = {
   name: string
   version: string
   exports: ExportEntry[]
-  changeFiles: ChangeFile[]
+  changeFiles: string[]
 }
 
 type ExportEntry = {
@@ -39,13 +37,6 @@ type ExportEntry = {
   exportPath: string
   // The package/sub-export to re-export from: `@remix-run/headers`, `@remix-run/headers/cookie-storage`
   reExportFrom: string
-}
-
-type ChangeFile = {
-  // The type of change: "major", "minor", or "patch"
-  changeType: string
-  // Absolute path to the change file
-  filePath: string
 }
 
 let { remixRunPackages, allExports } = await getRemixRunPackages()
@@ -152,10 +143,7 @@ async function getRemixRunPackages() {
         if (changeFile === 'README.md') {
           continue
         }
-        remixRunPackage.changeFiles.push({
-          filePath: path.join(changesDir, changeFile),
-          changeType: changeFile.split('.')[0], // major, minor, patch,
-        })
+        remixRunPackage.changeFiles.push(path.join(changesDir, changeFile))
       }
     } catch (e) {
       // No .changes directory or can't read it, skip
@@ -329,23 +317,20 @@ async function copySubPackageChangeFiles() {
     let copiedFiles: string[] = []
     for (let packageInfo of remixRunPackages) {
       for (let changeFile of packageInfo.changeFiles) {
-        let [_, ...rest] = path.basename(changeFile.filePath).split('.')
+        let [changeType, ...rest] = path.basename(changeFile).split('.')
         let changeFileName = rest.join('.')
         let packageShortName = packageInfo.name.replace('@remix-run/', '')
+
+        // Insert the sub-package name in the file so sorting will group changes by sub-package
         let destChangeFilePath = path.join(
           remixDir,
           '.changes',
-          `${changeFile.changeType}.${packageShortName}--${changeFileName}`,
+          `${changeType}.${packageShortName}--${changeFileName}`,
         )
 
-        try {
-          // Throws if the file doesn't exist.  This feels weird using try/catch for control flow
-          // but `fs.exists` is deprecated and `fs.stat` recommends `fs.access`:
-          //   https://nodejs.org/api/fs.html#fsexistspath-callback
-          //   https://nodejs.org/api/fs.html#fsstatpath-options-callback
-          await fs.access(destChangeFilePath, fs.constants.F_OK)
-        } catch (e) {
-          await fs.copyFile(changeFile.filePath, destChangeFilePath)
+        let exists = await fileExists(destChangeFilePath)
+        if (!exists) {
+          await fs.copyFile(changeFile, destChangeFilePath)
           copiedFiles.push(destChangeFilePath)
         }
       }
@@ -358,5 +343,18 @@ async function copySubPackageChangeFiles() {
         console.log(`   - ${path.relative(process.cwd(), file)}`)
       }
     }
+  }
+}
+
+async function fileExists(filePath: string) {
+  try {
+    // Throws if the file doesn't exist.  This feels weird using try/catch for control flow
+    // but `fs.exists` is deprecated and `fs.stat` recommends `fs.access`:
+    //   https://nodejs.org/api/fs.html#fsexistspath-callback
+    //   https://nodejs.org/api/fs.html#fsstatpath-options-callback
+    await fs.access(filePath, fs.constants.F_OK)
+    return true
+  } catch (e) {
+    return false
   }
 }
