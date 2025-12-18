@@ -27,30 +27,39 @@ export function createMultipartMessage(
     for (let [name, value] of Object.entries(parts)) {
       pushLine(`--${boundary}`)
 
-      let headers = new Headers({
-        'Content-Disposition': new ContentDisposition({
-          type: 'form-data',
-          name,
-          filename: typeof value === 'object' ? value.filename : undefined,
-          filenameSplat: typeof value === 'object' ? value.filenameSplat : undefined,
-        }).toString(),
-      })
-
-      if (typeof value === 'object' && value.mediaType) {
-        let contentType = new ContentType({ mediaType: value.mediaType })
-        headers.set('Content-Type', contentType.toString())
-      }
-
-      pushLine(stringifyRawHeaders(headers))
-      pushLine()
-
       if (typeof value === 'string') {
-        pushLine(value)
-      } else if (typeof value.content === 'string') {
-        pushLine(value.content)
-      } else {
-        chunks.push(value.content as Uint8Array<ArrayBuffer>)
+        let headers = new Headers({
+          'Content-Disposition': new ContentDisposition({
+            type: 'form-data',
+            name,
+          }),
+        })
+
+        pushLine(stringifyRawHeaders(headers))
         pushLine()
+        pushLine(value)
+      } else {
+        let headers = new Headers({
+          'Content-Disposition': new ContentDisposition({
+            type: 'form-data',
+            name,
+            filename: value.filename,
+            filenameSplat: value.filenameSplat,
+          }),
+        })
+
+        if (value.mediaType) {
+          headers.set('Content-Type', new ContentType({ mediaType: value.mediaType }))
+        }
+
+        pushLine(stringifyRawHeaders(headers))
+        pushLine()
+        if (typeof value.content === 'string') {
+          pushLine(value.content)
+        } else {
+          chunks.push(value.content as Uint8Array<ArrayBuffer>)
+          pushLine()
+        }
       }
     }
   }
