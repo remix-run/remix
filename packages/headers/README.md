@@ -455,7 +455,7 @@ headers.get('cache-control') // 'no-cache'
 
 // Stringify Headers object back to raw format
 let raw = stringifyRawHeaders(headers)
-// 'content-type: text/html\r\ncache-control: no-cache'
+// 'Content-Type: text/html\r\nCache-Control: no-cache'
 ```
 
 ## Related Packages

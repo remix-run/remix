@@ -1,3 +1,5 @@
+import { canonicalHeaderName } from './header-names.ts'
+
 const CRLF = '\r\n'
 
 /**
@@ -32,14 +34,14 @@ export function parseRawHeaders(raw: string): Headers {
  *
  * @example
  * let headers = new Headers({ 'Content-Type': 'text/html', 'Cache-Control': 'no-cache' })
- * stringifyRawHeaders(headers) // 'content-type: text/html\r\ncache-control: no-cache'
+ * stringifyRawHeaders(headers) // 'Content-Type: text/html\r\nCache-Control: no-cache'
  */
 export function stringifyRawHeaders(headers: Headers): string {
   let result = ''
 
   for (let [name, value] of headers) {
     if (result) result += CRLF
-    result += `${name}: ${value}`
+    result += `${canonicalHeaderName(name)}: ${value}`
   }
 
   return result
