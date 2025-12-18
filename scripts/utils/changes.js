@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { getAllPackageNames, getPackageDir, getPackageFile } from './packages.js'
-import { readJson } from './fs.js'
+import { fileExists, readFile, readJson } from './fs.js'
 import { getNextVersion } from './semver.js'
 
 /**
@@ -339,4 +339,60 @@ export function generateCommitMessage(releases) {
     .join('\n')
 
   return `${subject}\n\n${body}`
+}
+
+// =============================================================================
+// CHANGELOG.md parsing utilities (for reading already-released changes)
+// =============================================================================
+
+/** @typedef {{ version: string; date?: Date; body: string }} ChangelogEntry */
+/** @typedef {Record<string, ChangelogEntry>} AllChangelogEntries */
+
+/**
+ * Parses a package's CHANGELOG.md and returns all version entries
+ * @param {string} packageName
+ * @returns {AllChangelogEntries | null}
+ */
+export function parseChangelog(packageName) {
+  let changelogFile = getPackageFile(packageName, 'CHANGELOG.md')
+
+  if (!fileExists(changelogFile)) {
+    return null
+  }
+
+  let changelog = readFile(changelogFile)
+  let parser = /^## ([a-z\d\.\-]+)(?: \(([^)]+)\))?$/gim
+
+  /** @type {AllChangelogEntries} */
+  let result = {}
+
+  let match
+  while ((match = parser.exec(changelog))) {
+    let [_, versionString, dateString] = match
+    let lastIndex = parser.lastIndex
+    let version = versionString.startsWith('v') ? versionString.slice(1) : versionString
+    let date = dateString ? new Date(dateString) : undefined
+    let nextMatch = parser.exec(changelog)
+    let body = changelog.slice(lastIndex, nextMatch ? nextMatch.index : undefined).trim()
+    result[version] = { version, date, body }
+    parser.lastIndex = lastIndex
+  }
+
+  return result
+}
+
+/**
+ * Gets a specific version's entry from a package's CHANGELOG.md
+ * @param {string} packageName
+ * @param {string} version
+ * @returns {ChangelogEntry | null}
+ */
+export function getChangelogEntry(packageName, version) {
+  let allEntries = parseChangelog(packageName)
+
+  if (allEntries !== null) {
+    return allEntries[version] ?? null
+  }
+
+  return null
 }

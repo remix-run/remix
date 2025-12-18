@@ -1,18 +1,47 @@
 import { request } from '@octokit/request'
 
-import { getChanges } from './changes.js'
+import { getChangelogEntry } from './changes.js'
 
 const token = process.env.GITHUB_TOKEN
 
-/** @type (packageName: string, version: string) => Promise<string> */
-export async function createRelease(packageName, version) {
+/**
+ * @typedef {{ preview?: boolean }} CreateReleaseOptions
+ */
+
+/**
+ * Creates a GitHub release for a package version
+ * @param {string} packageName
+ * @param {string} version
+ * @param {CreateReleaseOptions} [options]
+ * @returns {Promise<string | null>}
+ */
+export async function createRelease(packageName, version, options = {}) {
+  let { preview = false } = options
+
+  let tagName = `${packageName}@${version}`
+  let releaseName = `${packageName} v${version}`
+  let changes = getChangelogEntry(packageName, version)
+  let body = changes?.body ?? 'No changes.'
+
+  if (preview) {
+    console.log('GITHUB RELEASE PREVIEW')
+    console.log()
+    console.log(`  Tag:  ${tagName}`)
+    console.log(`  Name: ${releaseName}`)
+    console.log()
+    console.log('  Body:')
+    console.log()
+    for (let line of body.split('\n')) {
+      console.log(`    ${line}`)
+    }
+    console.log()
+    return null
+  }
+
   if (token === undefined) {
     console.error('GITHUB_TOKEN environment variable is required to create a GitHub release')
     process.exit(1)
   }
-
-  let tagName = `${packageName}@${version}`
-  let changes = getChanges(packageName, version)
 
   let response = await request('POST /repos/{owner}/{repo}/releases', {
     headers: {
@@ -21,8 +50,8 @@ export async function createRelease(packageName, version) {
     owner: 'remix-run',
     repo: 'remix',
     tag_name: tagName,
-    name: `${packageName} v${version}`,
-    body: changes?.body ?? 'No changes.',
+    name: releaseName,
+    body,
   })
 
   if (response.status !== 201) {
