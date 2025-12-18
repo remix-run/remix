@@ -42,11 +42,12 @@ export class Trie<data> {
       segmentIndex: number
       trie: Trie<data>
     }
+    let paramNames = toParamNames(pattern)
 
     for (let variant of RoutePattern.variants(pattern)) {
       let value: Value<data> = {
         searchConstraints: pattern.search,
-        paramNames: RoutePattern.paramNames(pattern),
+        paramNames,
         paramIndices: variant.paramIndices,
         data,
       }
@@ -316,4 +317,12 @@ function dynamicMatch(
     paramValues,
     rank: segmentRank.split(separator),
   }
+}
+
+export function toParamNames(pattern: RoutePattern.AST): Array<string> {
+  let paramNames: Array<string> = []
+  if (pattern.protocol) paramNames.push(...pattern.protocol.paramNames)
+  if (pattern.hostname) paramNames.push(...pattern.hostname.paramNames)
+  if (pattern.pathname) paramNames.push(...pattern.pathname.paramNames)
+  return paramNames
 }
