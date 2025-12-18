@@ -65,152 +65,152 @@
         "default": "./dist/index.js"
       },
       "./async-context-middleware": {
-        "types": "./dist/async-context-middleware.d.ts",
-        "default": "./dist/async-context-middleware.js"
+        "types": "./dist/lib/async-context-middleware.d.ts",
+        "default": "./dist/lib/async-context-middleware.js"
       },
       "./compression-middleware": {
-        "types": "./dist/compression-middleware.d.ts",
-        "default": "./dist/compression-middleware.js"
+        "types": "./dist/lib/compression-middleware.d.ts",
+        "default": "./dist/lib/compression-middleware.js"
       },
       "./cookie": {
-        "types": "./dist/cookie.d.ts",
-        "default": "./dist/cookie.js"
+        "types": "./dist/lib/cookie.d.ts",
+        "default": "./dist/lib/cookie.js"
       },
       "./fetch-proxy": {
-        "types": "./dist/fetch-proxy.d.ts",
-        "default": "./dist/fetch-proxy.js"
+        "types": "./dist/lib/fetch-proxy.d.ts",
+        "default": "./dist/lib/fetch-proxy.js"
       },
       "./fetch-router": {
-        "types": "./dist/fetch-router.d.ts",
-        "default": "./dist/fetch-router.js"
+        "types": "./dist/lib/fetch-router.d.ts",
+        "default": "./dist/lib/fetch-router.js"
       },
       "./file-storage": {
-        "types": "./dist/file-storage.d.ts",
-        "default": "./dist/file-storage.js"
+        "types": "./dist/lib/file-storage.d.ts",
+        "default": "./dist/lib/file-storage.js"
       },
       "./file-storage/fs": {
-        "types": "./dist/file-storage/fs.d.ts",
-        "default": "./dist/file-storage/fs.js"
+        "types": "./dist/lib/file-storage/fs.d.ts",
+        "default": "./dist/lib/file-storage/fs.js"
       },
       "./file-storage/memory": {
-        "types": "./dist/file-storage/memory.d.ts",
-        "default": "./dist/file-storage/memory.js"
+        "types": "./dist/lib/file-storage/memory.d.ts",
+        "default": "./dist/lib/file-storage/memory.js"
       },
       "./form-data-middleware": {
-        "types": "./dist/form-data-middleware.d.ts",
-        "default": "./dist/form-data-middleware.js"
+        "types": "./dist/lib/form-data-middleware.d.ts",
+        "default": "./dist/lib/form-data-middleware.js"
       },
       "./form-data-parser": {
-        "types": "./dist/form-data-parser.d.ts",
-        "default": "./dist/form-data-parser.js"
+        "types": "./dist/lib/form-data-parser.d.ts",
+        "default": "./dist/lib/form-data-parser.js"
       },
       "./fs": {
-        "types": "./dist/fs.d.ts",
-        "default": "./dist/fs.js"
+        "types": "./dist/lib/fs.d.ts",
+        "default": "./dist/lib/fs.js"
       },
       "./headers": {
-        "types": "./dist/headers.d.ts",
-        "default": "./dist/headers.js"
+        "types": "./dist/lib/headers.d.ts",
+        "default": "./dist/lib/headers.js"
       },
       "./html-template": {
-        "types": "./dist/html-template.d.ts",
-        "default": "./dist/html-template.js"
+        "types": "./dist/lib/html-template.d.ts",
+        "default": "./dist/lib/html-template.js"
       },
       "./interaction": {
-        "types": "./dist/interaction.d.ts",
-        "default": "./dist/interaction.js"
+        "types": "./dist/lib/interaction.d.ts",
+        "default": "./dist/lib/interaction.js"
       },
       "./interaction/form": {
-        "types": "./dist/interaction/form.d.ts",
-        "default": "./dist/interaction/form.js"
+        "types": "./dist/lib/interaction/form.d.ts",
+        "default": "./dist/lib/interaction/form.js"
       },
       "./interaction/keys": {
-        "types": "./dist/interaction/keys.d.ts",
-        "default": "./dist/interaction/keys.js"
+        "types": "./dist/lib/interaction/keys.d.ts",
+        "default": "./dist/lib/interaction/keys.js"
       },
       "./interaction/popover": {
-        "types": "./dist/interaction/popover.d.ts",
-        "default": "./dist/interaction/popover.js"
+        "types": "./dist/lib/interaction/popover.d.ts",
+        "default": "./dist/lib/interaction/popover.js"
       },
       "./interaction/press": {
-        "types": "./dist/interaction/press.d.ts",
-        "default": "./dist/interaction/press.js"
+        "types": "./dist/lib/interaction/press.d.ts",
+        "default": "./dist/lib/interaction/press.js"
       },
       "./lazy-file": {
-        "types": "./dist/lazy-file.d.ts",
-        "default": "./dist/lazy-file.js"
+        "types": "./dist/lib/lazy-file.d.ts",
+        "default": "./dist/lib/lazy-file.js"
       },
       "./logger-middleware": {
-        "types": "./dist/logger-middleware.d.ts",
-        "default": "./dist/logger-middleware.js"
+        "types": "./dist/lib/logger-middleware.d.ts",
+        "default": "./dist/lib/logger-middleware.js"
       },
       "./method-override-middleware": {
-        "types": "./dist/method-override-middleware.d.ts",
-        "default": "./dist/method-override-middleware.js"
+        "types": "./dist/lib/method-override-middleware.d.ts",
+        "default": "./dist/lib/method-override-middleware.js"
       },
       "./mime": {
-        "types": "./dist/mime.d.ts",
-        "default": "./dist/mime.js"
+        "types": "./dist/lib/mime.d.ts",
+        "default": "./dist/lib/mime.js"
       },
       "./multipart-parser": {
-        "types": "./dist/multipart-parser.d.ts",
-        "default": "./dist/multipart-parser.js"
+        "types": "./dist/lib/multipart-parser.d.ts",
+        "default": "./dist/lib/multipart-parser.js"
       },
       "./multipart-parser/node": {
-        "types": "./dist/multipart-parser/node.d.ts",
-        "default": "./dist/multipart-parser/node.js"
+        "types": "./dist/lib/multipart-parser/node.d.ts",
+        "default": "./dist/lib/multipart-parser/node.js"
       },
       "./node-fetch-server": {
-        "types": "./dist/node-fetch-server.d.ts",
-        "default": "./dist/node-fetch-server.js"
+        "types": "./dist/lib/node-fetch-server.d.ts",
+        "default": "./dist/lib/node-fetch-server.js"
       },
       "./response/compress": {
-        "types": "./dist/response/compress.d.ts",
-        "default": "./dist/response/compress.js"
+        "types": "./dist/lib/response/compress.d.ts",
+        "default": "./dist/lib/response/compress.js"
       },
       "./response/file": {
-        "types": "./dist/response/file.d.ts",
-        "default": "./dist/response/file.js"
+        "types": "./dist/lib/response/file.d.ts",
+        "default": "./dist/lib/response/file.js"
       },
       "./response/html": {
-        "types": "./dist/response/html.d.ts",
-        "default": "./dist/response/html.js"
+        "types": "./dist/lib/response/html.d.ts",
+        "default": "./dist/lib/response/html.js"
       },
       "./response/redirect": {
-        "types": "./dist/response/redirect.d.ts",
-        "default": "./dist/response/redirect.js"
+        "types": "./dist/lib/response/redirect.d.ts",
+        "default": "./dist/lib/response/redirect.js"
       },
       "./route-pattern": {
-        "types": "./dist/route-pattern.d.ts",
-        "default": "./dist/route-pattern.js"
+        "types": "./dist/lib/route-pattern.d.ts",
+        "default": "./dist/lib/route-pattern.js"
       },
       "./session": {
-        "types": "./dist/session.d.ts",
-        "default": "./dist/session.js"
+        "types": "./dist/lib/session.d.ts",
+        "default": "./dist/lib/session.js"
       },
       "./session-middleware": {
-        "types": "./dist/session-middleware.d.ts",
-        "default": "./dist/session-middleware.js"
+        "types": "./dist/lib/session-middleware.d.ts",
+        "default": "./dist/lib/session-middleware.js"
       },
       "./session/cookie-storage": {
-        "types": "./dist/session/cookie-storage.d.ts",
-        "default": "./dist/session/cookie-storage.js"
+        "types": "./dist/lib/session/cookie-storage.d.ts",
+        "default": "./dist/lib/session/cookie-storage.js"
       },
       "./session/fs-storage": {
-        "types": "./dist/session/fs-storage.d.ts",
-        "default": "./dist/session/fs-storage.js"
+        "types": "./dist/lib/session/fs-storage.d.ts",
+        "default": "./dist/lib/session/fs-storage.js"
       },
       "./session/memory-storage": {
-        "types": "./dist/session/memory-storage.d.ts",
-        "default": "./dist/session/memory-storage.js"
+        "types": "./dist/lib/session/memory-storage.d.ts",
+        "default": "./dist/lib/session/memory-storage.js"
       },
       "./static-middleware": {
-        "types": "./dist/static-middleware.d.ts",
-        "default": "./dist/static-middleware.js"
+        "types": "./dist/lib/static-middleware.d.ts",
+        "default": "./dist/lib/static-middleware.js"
       },
       "./tar-parser": {
-        "types": "./dist/tar-parser.d.ts",
-        "default": "./dist/tar-parser.js"
+        "types": "./dist/lib/tar-parser.d.ts",
+        "default": "./dist/lib/tar-parser.js"
       },
       "./package.json": "./package.json"
     },

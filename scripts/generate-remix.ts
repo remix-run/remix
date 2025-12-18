@@ -21,7 +21,8 @@ let remixPackageJsonPath = path.join(remixDir, 'package.json')
 // release, since only then will we care to start documenting what changed.
 // And Maybe not even until our first stable release.
 const GENERATE_CHANGE_FILES = false
-const SUB_EXPORT_SRC_FOLDER = path.join('src', 'lib')
+const SOURCE_FOLDER = 'src'
+const SUB_EXPORT_FOLDER = 'lib'
 
 type RemixRunPackage = {
   name: string
@@ -164,7 +165,7 @@ async function getRemixRunPackages() {
 async function generateRemixSourceFiles() {
   console.log('📄 Generating source files...')
   for (let entry of allExports) {
-    let sourceFilePath = path.join(remixDir, SUB_EXPORT_SRC_FOLDER, entry.sourceFile)
+    let sourceFilePath = path.join(remixDir, SOURCE_FOLDER, SUB_EXPORT_FOLDER, entry.sourceFile)
     // Create subdirectory if needed
     let sourceFileDir = path.dirname(sourceFilePath)
     await fs.mkdir(sourceFileDir, { recursive: true })
@@ -188,10 +189,10 @@ function getRemixExports() {
   }
 
   for (let entry of allExports) {
-    let exportPath = path.join(SUB_EXPORT_SRC_FOLDER, entry.sourceFile)
+    let exportPath = path.join(SOURCE_FOLDER, SUB_EXPORT_FOLDER, entry.sourceFile)
     exportsConfig[entry.exportPath] = `./${exportPath}`
 
-    let distFile = entry.sourceFile.replace('.ts', '')
+    let distFile = path.join(SUB_EXPORT_FOLDER, entry.sourceFile.replace(/\.ts$/, ''))
     publishConfigExports[entry.exportPath] = {
       types: `./dist/${distFile}.d.ts`,
       default: `./dist/${distFile}.js`,
