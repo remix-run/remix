@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { ContentRange } from './content-range.ts'
+import { ContentRange, parseContentRange } from './content-range.ts'
 
 describe('ContentRange', () => {
   it('initializes with an empty string', () => {
@@ -157,5 +157,16 @@ describe('ContentRange', () => {
     assert.equal(contentRange.end, 0)
     assert.equal(contentRange.size, 1)
     assert.equal(contentRange.toString(), 'bytes 0-0/1')
+  })
+})
+
+describe('parseContentRange', () => {
+  it('parses a string value', () => {
+    let result = parseContentRange('bytes 0-499/1234')
+    assert.ok(result instanceof ContentRange)
+    assert.equal(result.unit, 'bytes')
+    assert.equal(result.start, 0)
+    assert.equal(result.end, 499)
+    assert.equal(result.size, 1234)
   })
 })

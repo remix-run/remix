@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { ContentDisposition } from './content-disposition.ts'
+import { ContentDisposition, parseContentDisposition } from './content-disposition.ts'
 
 describe('ContentDisposition', () => {
   it('initializes with an empty string', () => {
@@ -215,5 +215,14 @@ describe('ContentDisposition', () => {
 
       console.warn = warn
     })
+  })
+})
+
+describe('parseContentDisposition', () => {
+  it('parses a string value', () => {
+    let result = parseContentDisposition('attachment; filename="test.txt"')
+    assert.ok(result instanceof ContentDisposition)
+    assert.equal(result.type, 'attachment')
+    assert.equal(result.filename, 'test.txt')
   })
 })

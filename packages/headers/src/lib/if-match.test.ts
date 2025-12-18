@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { IfMatch } from './if-match.ts'
+import { IfMatch, parseIfMatch } from './if-match.ts'
 
 describe('IfMatch', () => {
   it('initializes with an empty string', () => {
@@ -132,5 +132,13 @@ describe('IfMatch', () => {
         assert.ok(header.matches('"54ed21"'))
       })
     })
+  })
+})
+
+describe('parseIfMatch', () => {
+  it('parses a string value', () => {
+    let result = parseIfMatch('"abc", "def"')
+    assert.ok(result instanceof IfMatch)
+    assert.equal(result.tags.length, 2)
   })
 })

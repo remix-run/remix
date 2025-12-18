@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { Range } from './range.ts'
+import { Range, parseRange } from './range.ts'
 
 describe('Range', () => {
   it('initializes with an empty string', () => {
@@ -246,5 +246,14 @@ describe('Range', () => {
       range.ranges = [{ start: 0, end: 99 }]
       assert.equal(range.toString(), '')
     })
+  })
+})
+
+describe('parseRange', () => {
+  it('parses a string value', () => {
+    let result = parseRange('bytes=0-499')
+    assert.ok(result instanceof Range)
+    assert.equal(result.unit, 'bytes')
+    assert.equal(result.ranges.length, 1)
   })
 })
