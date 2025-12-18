@@ -17,10 +17,10 @@ let packagesDir = path.resolve(__dirname, '../packages')
 let remixDir = path.join(packagesDir, 'remix')
 let remixPackageJsonPath = path.join(remixDir, 'package.json')
 
-// Don't copy/commit change files from sub-packages until we actually publish
-// an initial Remix v3 alpha release, since only then will we care to start
-// documenting what changed.  Maybe not even until our first stable release.
-const COPY_CHANGE_FILES = false
+// Don't do anything with change files until we actually publish an initial Remix v3 alpha
+// release, since only then will we care to start documenting what changed.
+// And Maybe not even until our first stable release.
+const GENERATE_CHANGE_FILES = false
 const SUB_EXPORT_SRC_FOLDER = path.join('src', 'lib')
 
 type RemixRunPackage = {
@@ -74,7 +74,7 @@ await fs.writeFile(remixPackageJsonPath, JSON.stringify(remixPackageJson, null, 
 await outputExportsAndPeerDepChanges()
 
 //  Copy change files up to remix changes directory
-if (COPY_CHANGE_FILES) {
+if (GENERATE_CHANGE_FILES) {
   await copySubPackageChangeFiles()
 }
 
@@ -305,10 +305,12 @@ async function outputExportsAndPeerDepChanges() {
       }
     }
 
-    await fs.writeFile(changeFile, changes, 'utf-8')
-    console.log()
-    console.log('✨ Created exports/peerDeps change file:')
-    console.log(`   - ${path.relative(process.cwd(), changeFile)}`)
+    if (GENERATE_CHANGE_FILES) {
+      await fs.writeFile(changeFile, changes, 'utf-8')
+      console.log()
+      console.log('✨ Created exports/peerDeps change file:')
+      console.log(`   - ${path.relative(process.cwd(), changeFile)}`)
+    }
   }
 }
 
