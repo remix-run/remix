@@ -74,3 +74,13 @@ export class ContentRange implements HeaderValue, ContentRangeInit {
     return `${this.unit} ${range}/${this.size}`
   }
 }
+
+/**
+ * Parse a Content-Range header value.
+ *
+ * @param value The header value (string, init object, or null)
+ * @returns A ContentRange instance (empty if null)
+ */
+export function parseContentRange(value: string | ContentRangeInit | null): ContentRange {
+  return new ContentRange(value ?? undefined)
+}

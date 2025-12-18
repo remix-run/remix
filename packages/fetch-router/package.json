@@ -38,7 +38,6 @@
     "@typescript/native-preview": "catalog:"
   },
   "peerDependencies": {
-    "@remix-run/headers": "workspace:^",
     "@remix-run/route-pattern": "workspace:^",
     "@remix-run/session": "workspace:^"
   },

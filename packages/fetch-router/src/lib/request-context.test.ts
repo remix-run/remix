@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { RequestContext } from './request-context.ts'
 
 describe('new RequestContext()', () => {
-  it('has a header object that is SuperHeaders', () => {
+  it('provides access to request headers', () => {
     let req = new Request('https://remix.run/test', {
       headers: {
         'Content-Type': 'application/json',
@@ -11,13 +11,8 @@ describe('new RequestContext()', () => {
     })
     let context = new RequestContext(req)
 
-    assert.equal('contentType' in context.headers, true)
-    assert.equal('contentType' in context.request.headers, false)
-    assert.equal(context.headers.contentType.toString(), 'application/json')
-    assert.equal(
-      context.headers.contentType.toString(),
-      context.request.headers.get('content-type'),
-    )
+    assert.equal(context.headers.get('content-type'), 'application/json')
+    assert.equal(context.headers, context.request.headers)
   })
 
   it('does not provide formData on GET requests', () => {

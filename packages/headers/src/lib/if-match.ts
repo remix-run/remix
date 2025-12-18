@@ -96,3 +96,13 @@ export class IfMatch implements HeaderValue, IfMatchInit {
     return this.tags.join(', ')
   }
 }
+
+/**
+ * Parse an If-Match header value.
+ *
+ * @param value The header value (string, string[], init object, or null)
+ * @returns An IfMatch instance (empty if null)
+ */
+export function parseIfMatch(value: string | string[] | IfMatchInit | null): IfMatch {
+  return new IfMatch(value ?? undefined)
+}

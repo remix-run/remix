@@ -1,4 +1,3 @@
-import SuperHeaders from '@remix-run/headers'
 import { createSession, type Session } from '@remix-run/session'
 
 import { AppStorage } from './app-storage.ts'
@@ -20,6 +19,7 @@ export class RequestContext<
    * @param request The incoming request
    */
   constructor(request: Request) {
+    this.headers = request.headers
     this.method = request.method.toUpperCase() as RequestMethod
     this.params = {} as params
     this.request = request
@@ -71,15 +71,7 @@ export class RequestContext<
   /**
    * The headers of the request.
    */
-  get headers(): SuperHeaders {
-    if (this.#headers == null) {
-      this.#headers = new SuperHeaders(this.request.headers)
-    }
-
-    return this.#headers
-  }
-
-  #headers?: SuperHeaders
+  headers: Headers
 
   /**
    * The request method. This may differ from `request.method` when using the `methodOverride`

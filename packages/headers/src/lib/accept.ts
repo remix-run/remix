@@ -223,3 +223,13 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
     return pairs.join(',')
   }
 }
+
+/**
+ * Parse an Accept header value.
+ *
+ * @param value The header value (string, init object, or null)
+ * @returns An Accept instance (empty if null)
+ */
+export function parseAccept(value: string | AcceptInit | null): Accept {
+  return new Accept(value ?? undefined)
+}

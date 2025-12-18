@@ -84,3 +84,13 @@ export class ContentType implements HeaderValue, ContentTypeInit {
     return parts.join('; ')
   }
 }
+
+/**
+ * Parse a Content-Type header value.
+ *
+ * @param value The header value (string, init object, or null)
+ * @returns A ContentType instance (empty if null)
+ */
+export function parseContentType(value: string | ContentTypeInit | null): ContentType {
+  return new ContentType(value ?? undefined)
+}

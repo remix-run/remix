@@ -147,3 +147,13 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
     return pairs.join('; ')
   }
 }
+
+/**
+ * Parse a Cookie header value.
+ *
+ * @param value The header value (string, init object, or null)
+ * @returns A Cookie instance (empty if null)
+ */
+export function parseCookie(value: string | CookieInit | null): Cookie {
+  return new Cookie(value ?? undefined)
+}

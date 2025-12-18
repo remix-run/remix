@@ -1,4 +1,11 @@
-import SuperHeaders from '@remix-run/headers'
+import {
+  type ContentRangeInit,
+  ContentRange,
+  parseIfMatch,
+  parseIfNoneMatch,
+  parseIfRange,
+  parseRange,
+} from '@remix-run/headers'
 import { isCompressibleMimeType } from '@remix-run/mime'
 
 /**
@@ -103,7 +110,7 @@ export async function createFileResponse(
     acceptRanges: acceptRangesOption,
   } = options
 
-  let headers = new SuperHeaders(request.headers)
+  let headers = request.headers
 
   let contentType = file.type
   let contentLength = file.size
@@ -134,33 +141,33 @@ export async function createFileResponse(
   let hasIfMatch = headers.has('If-Match')
 
   // If-Match support: https://httpwg.org/specs/rfc9110.html#field.if-match
-  if (etag && hasIfMatch && !headers.ifMatch.matches(etag)) {
-    return new Response('Precondition Failed', {
-      status: 412,
-      headers: new SuperHeaders(
-        omitNullableValues({
+  if (etag && hasIfMatch) {
+    let ifMatch = parseIfMatch(headers.get('if-match'))
+    if (!ifMatch.matches(etag)) {
+      return new Response('Precondition Failed', {
+        status: 412,
+        headers: buildResponseHeaders({
           etag,
           lastModified,
           acceptRanges,
         }),
-      ),
-    })
+      })
+    }
   }
 
   // If-Unmodified-Since support: https://httpwg.org/specs/rfc9110.html#field.if-unmodified-since
   if (lastModified && !hasIfMatch) {
-    let ifUnmodifiedSince = headers.ifUnmodifiedSince
-    if (ifUnmodifiedSince != null) {
+    let ifUnmodifiedSinceHeader = headers.get('if-unmodified-since')
+    if (ifUnmodifiedSinceHeader != null) {
+      let ifUnmodifiedSince = new Date(ifUnmodifiedSinceHeader)
       if (removeMilliseconds(lastModified) > removeMilliseconds(ifUnmodifiedSince)) {
         return new Response('Precondition Failed', {
           status: 412,
-          headers: new SuperHeaders(
-            omitNullableValues({
-              etag,
-              lastModified,
-              acceptRanges,
-            }),
-          ),
+          headers: buildResponseHeaders({
+            etag,
+            lastModified,
+            acceptRanges,
+          }),
         })
       }
     }
@@ -170,12 +177,14 @@ export async function createFileResponse(
   // If-Modified-Since support: https://httpwg.org/specs/rfc9110.html#field.if-modified-since
   if (etag || lastModified) {
     let shouldReturnNotModified = false
+    let ifNoneMatch = parseIfNoneMatch(headers.get('if-none-match'))
 
-    if (etag && headers.ifNoneMatch.matches(etag)) {
+    if (etag && ifNoneMatch.matches(etag)) {
       shouldReturnNotModified = true
-    } else if (lastModified && headers.ifNoneMatch.tags.length === 0) {
-      let ifModifiedSince = headers.ifModifiedSince
-      if (ifModifiedSince != null) {
+    } else if (lastModified && ifNoneMatch.tags.length === 0) {
+      let ifModifiedSinceHeader = headers.get('if-modified-since')
+      if (ifModifiedSinceHeader != null) {
+        let ifModifiedSince = new Date(ifModifiedSinceHeader)
         if (removeMilliseconds(lastModified) <= removeMilliseconds(ifModifiedSince)) {
           shouldReturnNotModified = true
         }
@@ -185,13 +194,11 @@ export async function createFileResponse(
     if (shouldReturnNotModified) {
       return new Response(null, {
         status: 304,
-        headers: new SuperHeaders(
-          omitNullableValues({
-            etag,
-            lastModified,
-            acceptRanges,
-          }),
-        ),
+        headers: buildResponseHeaders({
+          etag,
+          lastModified,
+          acceptRanges,
+        }),
       })
     }
   }
@@ -199,7 +206,7 @@ export async function createFileResponse(
   // Range support: https://httpwg.org/specs/rfc9110.html#field.range
   // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
   if (acceptRanges && request.method === 'GET' && headers.has('Range')) {
-    let range = headers.range
+    let range = parseRange(headers.get('range'))
 
     // Check if the Range header was sent but parsing resulted in no valid ranges (malformed)
     if (range.ranges.length === 0) {
@@ -209,8 +216,9 @@ export async function createFileResponse(
     }
 
     // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
+    let ifRange = parseIfRange(headers.get('if-range'))
     if (
-      headers.ifRange.matches({
+      ifRange.matches({
         etag,
         lastModified,
       })
@@ -218,8 +226,8 @@ export async function createFileResponse(
       if (!range.canSatisfy(file.size)) {
         return new Response('Range Not Satisfiable', {
           status: 416,
-          headers: new SuperHeaders({
-            contentRange: { unit: 'bytes', size: file.size },
+          headers: buildResponseHeaders({
+            contentRange: new ContentRange({ unit: 'bytes', size: file.size }),
           }),
         })
       }
@@ -230,8 +238,8 @@ export async function createFileResponse(
       if (normalizedRanges.length > 1) {
         return new Response('Range Not Satisfiable', {
           status: 416,
-          headers: new SuperHeaders({
-            contentRange: { unit: 'bytes', size: file.size },
+          headers: buildResponseHeaders({
+            contentRange: new ContentRange({ unit: 'bytes', size: file.size }),
           }),
         })
       }
@@ -241,33 +249,29 @@ export async function createFileResponse(
 
       return new Response(file.slice(start, end + 1), {
         status: 206,
-        headers: new SuperHeaders(
-          omitNullableValues({
-            contentType,
-            contentLength: end - start + 1,
-            contentRange: { unit: 'bytes', start, end, size },
-            etag,
-            lastModified,
-            cacheControl,
-            acceptRanges,
-          }),
-        ),
+        headers: buildResponseHeaders({
+          contentType,
+          contentLength: end - start + 1,
+          contentRange: { unit: 'bytes', start, end, size },
+          etag,
+          lastModified,
+          cacheControl,
+          acceptRanges,
+        }),
       })
     }
   }
 
   return new Response(request.method === 'HEAD' ? null : file, {
     status: 200,
-    headers: new SuperHeaders(
-      omitNullableValues({
-        contentType,
-        contentLength,
-        etag,
-        lastModified,
-        cacheControl,
-        acceptRanges,
-      }),
-    ),
+    headers: buildResponseHeaders({
+      contentType,
+      contentLength,
+      etag,
+      lastModified,
+      cacheControl,
+      acceptRanges,
+    }),
   })
 }
 
@@ -275,18 +279,43 @@ function generateWeakETag(file: File): string {
   return `W/"${file.size}-${file.lastModified}"`
 }
 
-type OmitNullableValues<T> = {
-  [K in keyof T as T[K] extends null | undefined ? never : K]: NonNullable<T[K]>
+interface ResponseHeaderValues {
+  contentType?: string
+  contentLength?: number
+  contentRange?: ContentRangeInit
+  etag?: string
+  lastModified?: number
+  cacheControl?: string
+  acceptRanges?: 'bytes'
 }
 
-function omitNullableValues<T extends Record<string, any>>(headers: T): OmitNullableValues<T> {
-  let result: any = {}
-  for (let key in headers) {
-    if (headers[key] != null) {
-      result[key] = headers[key]
-    }
+function buildResponseHeaders(values: ResponseHeaderValues): Headers {
+  let headers = new Headers()
+
+  if (values.contentType) {
+    headers.set('Content-Type', values.contentType)
   }
-  return result
+  if (values.contentLength != null) {
+    headers.set('Content-Length', String(values.contentLength))
+  }
+  if (values.contentRange) {
+    let str = new ContentRange(values.contentRange).toString()
+    if (str) headers.set('Content-Range', str)
+  }
+  if (values.etag) {
+    headers.set('ETag', values.etag)
+  }
+  if (values.lastModified != null) {
+    headers.set('Last-Modified', new Date(values.lastModified).toUTCString())
+  }
+  if (values.cacheControl) {
+    headers.set('Cache-Control', values.cacheControl)
+  }
+  if (values.acceptRanges) {
+    headers.set('Accept-Ranges', values.acceptRanges)
+  }
+
+  return headers
 }
 
 /**
@@ -326,6 +355,9 @@ async function hashFile(file: File, algorithm: AlgorithmIdentifier = 'SHA-256'):
 /**
  * Removes milliseconds from a timestamp, returning seconds.
  * HTTP dates only have second precision, so this is useful for date comparisons.
+ *
+ * @param time The timestamp or Date to convert
+ * @returns The timestamp in seconds (without milliseconds)
  */
 function removeMilliseconds(time: number | Date): number {
   let timestamp = time instanceof Date ? time.getTime() : time
