@@ -1,5 +1,5 @@
 import type { AST } from './ast.ts'
-import type * as Part from './part/index.ts'
+import type * as Part from '../part/index.ts'
 import * as Search from './search.ts'
 
 export function join(a: AST, b: AST): AST {

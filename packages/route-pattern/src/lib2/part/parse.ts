@@ -1,6 +1,6 @@
-import { ParseError } from '../../errors.ts'
-import type { Span } from '../span'
-import type { AST } from './ast'
+import { ParseError } from '../errors.ts'
+import type { Span } from '../span.ts'
+import type { AST } from './ast.ts'
 
 const identifierRE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 

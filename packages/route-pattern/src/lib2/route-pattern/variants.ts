@@ -1,5 +1,5 @@
 import type { AST } from './ast.ts'
-import * as Part from './part/index.ts'
+import * as Part from '../part/index.ts'
 
 type Tuple4<T> = [protocol: T, hostname: T, port: T, pathname: T]
 

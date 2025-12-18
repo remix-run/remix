@@ -1,4 +1,4 @@
-import type * as Part from './part/index.ts'
+import type * as Part from '../part/index.ts'
 import type * as Search from './search.ts'
 
 export type AST = {
