@@ -677,6 +677,9 @@ importers:
 
   packages/remix:
     dependencies:
+      '@remix-run/async-context-middleware':
+        specifier: workspace:^
+        version: link:../async-context-middleware
       '@remix-run/compression-middleware':
         specifier: workspace:^
         version: link:../compression-middleware
@@ -747,9 +750,6 @@ importers:
         specifier: workspace:^
         version: link:../tar-parser
     devDependencies:
-      '@remix-run/async-context-middleware':
-        specifier: workspace:^
-        version: link:../async-context-middleware
       '@types/node':
         specifier: 'catalog:'
         version: 24.6.0

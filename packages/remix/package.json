@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "0.0.0-experimental.1",
+  "version": "3.0.0-experimental.1",
   "description": "Remix Web Framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -213,10 +213,35 @@
         "default": "./dist/tar-parser.js"
       },
       "./package.json": "./package.json"
+    },
+    "peerDependencies": {
+      "@remix-run/async-context-middleware": "^0.1.0",
+      "@remix-run/compression-middleware": "^0.1.0",
+      "@remix-run/cookie": "^0.5.0",
+      "@remix-run/fetch-proxy": "^0.7.0",
+      "@remix-run/fetch-router": "^0.13.0",
+      "@remix-run/file-storage": "^0.13.0",
+      "@remix-run/form-data-middleware": "^0.1.1",
+      "@remix-run/form-data-parser": "^0.14.0",
+      "@remix-run/fs": "^0.3.0",
+      "@remix-run/headers": "^0.18.0",
+      "@remix-run/html-template": "^0.3.0",
+      "@remix-run/interaction": "^0.3.0",
+      "@remix-run/lazy-file": "^4.2.0",
+      "@remix-run/logger-middleware": "^0.1.0",
+      "@remix-run/method-override-middleware": "^0.1.1",
+      "@remix-run/mime": "^0.1.0",
+      "@remix-run/multipart-parser": "^0.14.0",
+      "@remix-run/node-fetch-server": "^0.12.0",
+      "@remix-run/response": "^0.2.0",
+      "@remix-run/route-pattern": "^0.15.3",
+      "@remix-run/session": "^0.4.1",
+      "@remix-run/session-middleware": "^0.1.1",
+      "@remix-run/static-middleware": "^0.4.0",
+      "@remix-run/tar-parser": "^0.7.0"
     }
   },
   "devDependencies": {
-    "@remix-run/async-context-middleware": "workspace:^",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   },
