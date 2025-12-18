@@ -20,6 +20,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./async-context-middleware": "./src/lib/async-context-middleware.ts",
+    "./component": "./src/lib/component.ts",
+    "./component/jsx-dev-runtime": "./src/lib/component/jsx-dev-runtime.ts",
+    "./component/jsx-runtime": "./src/lib/component/jsx-runtime.ts",
     "./compression-middleware": "./src/lib/compression-middleware.ts",
     "./cookie": "./src/lib/cookie.ts",
     "./fetch-proxy": "./src/lib/fetch-proxy.ts",
@@ -67,6 +70,18 @@
       "./async-context-middleware": {
         "types": "./dist/lib/async-context-middleware.d.ts",
         "default": "./dist/lib/async-context-middleware.js"
+      },
+      "./component": {
+        "types": "./dist/lib/component.d.ts",
+        "default": "./dist/lib/component.js"
+      },
+      "./component/jsx-dev-runtime": {
+        "types": "./dist/lib/component/jsx-dev-runtime.d.ts",
+        "default": "./dist/lib/component/jsx-dev-runtime.js"
+      },
+      "./component/jsx-runtime": {
+        "types": "./dist/lib/component/jsx-runtime.d.ts",
+        "default": "./dist/lib/component/jsx-runtime.js"
       },
       "./compression-middleware": {
         "types": "./dist/lib/compression-middleware.d.ts",
@@ -216,10 +231,11 @@
     },
     "peerDependencies": {
       "@remix-run/async-context-middleware": "^0.1.0",
+      "@remix-run/component": "^0.2.0",
       "@remix-run/compression-middleware": "^0.1.0",
       "@remix-run/cookie": "^0.5.0",
       "@remix-run/fetch-proxy": "^0.7.0",
-      "@remix-run/fetch-router": "^0.13.0",
+      "@remix-run/fetch-router": "^0.14.0",
       "@remix-run/file-storage": "^0.13.0",
       "@remix-run/form-data-middleware": "^0.1.1",
       "@remix-run/form-data-parser": "^0.14.0",
@@ -230,11 +246,11 @@
       "@remix-run/lazy-file": "^4.2.0",
       "@remix-run/logger-middleware": "^0.1.0",
       "@remix-run/method-override-middleware": "^0.1.1",
-      "@remix-run/mime": "^0.1.0",
+      "@remix-run/mime": "^0.2.0",
       "@remix-run/multipart-parser": "^0.14.0",
-      "@remix-run/node-fetch-server": "^0.12.0",
-      "@remix-run/response": "^0.2.0",
-      "@remix-run/route-pattern": "^0.15.3",
+      "@remix-run/node-fetch-server": "^0.13.0",
+      "@remix-run/response": "^0.2.1",
+      "@remix-run/route-pattern": "^0.16.0",
       "@remix-run/session": "^0.4.1",
       "@remix-run/session-middleware": "^0.1.1",
       "@remix-run/static-middleware": "^0.4.0",
@@ -247,6 +263,7 @@
   },
   "peerDependencies": {
     "@remix-run/async-context-middleware": "workspace:^",
+    "@remix-run/component": "workspace:^",
     "@remix-run/compression-middleware": "workspace:^",
     "@remix-run/cookie": "workspace:^",
     "@remix-run/fetch-proxy": "workspace:^",
