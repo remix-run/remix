@@ -167,23 +167,52 @@ export function createContainer<target extends EventTarget>(
   target: target,
   options?: ContainerOptions,
 ): EventsContainer<target> {
-  let controller = new AbortController()
+  let disposed = false
   let { signal, onError = defaultOnError } = options ?? {}
-
-  if (signal) {
-    signal.addEventListener('abort', () => controller.abort(), { once: true })
-  }
 
   let bindings: Partial<{ [K in EventType<target>]: Binding<ListenerFor<target, K>>[] }> = {}
 
+  function disposeAll() {
+    if (disposed) return
+    disposed = true
+    for (let type in bindings) {
+      let existing = bindings[type as EventType<target>]
+      if (existing) {
+        for (let binding of existing) {
+          binding.dispose()
+        }
+      }
+    }
+  }
+
+  if (signal) {
+    signal.addEventListener('abort', disposeAll, { once: true })
+  }
+
   return {
-    dispose: () => controller.abort(),
+    dispose: disposeAll,
     set: (listeners) => {
-      if (controller.signal.aborted) {
+      if (disposed) {
         throw new Error('Container has been disposed')
       }
+      let listenerKeys = new Set(Object.keys(listeners) as Array<EventType<target>>)
+
+      // Dispose bindings for types not in the new listeners
+      for (let type in bindings) {
+        let eventType = type as EventType<target>
+        if (!listenerKeys.has(eventType)) {
+          let existing = bindings[eventType]
+          if (existing) {
+            for (let binding of existing) {
+              binding.dispose()
+            }
+            delete bindings[eventType]
+          }
+        }
+      }
+
       // TODO: figure out if we can remove this cast
-      for (let type of Object.keys(listeners) as Array<EventType<target>>) {
+      for (let type of listenerKeys) {
         let raw = listeners[type]
         if (raw == null) continue
 
@@ -201,7 +230,7 @@ export function createContainer<target extends EventTarget>(
           if (!existing) {
             bindings[type] = descriptors.map((d) => {
               let { listener, ...options } = d
-              return createBinding(target, type, listener, options, controller.signal, onError)
+              return createBinding(target, type, listener, options, onError)
             })
             return
           }
@@ -224,9 +253,7 @@ export function createContainer<target extends EventTarget>(
             for (let i = existing.length; i < descriptors.length; i++) {
               let d = descriptors[i]
               let { listener, ...options } = d
-              existing.push(
-                createBinding(target, type, listener, options, controller.signal, onError),
-              )
+              existing.push(createBinding(target, type, listener, options, onError))
             }
           }
 
@@ -383,7 +410,7 @@ type SignaledListener<event extends Event> = (
 /**
  * Encapsulates a binding between an event type and a listener.
  *
- * - Adds reentry signal for async listeners
+ * - Adds reentry signal for async listeners (when listener.length >= 2)
  * - Efficiently updates listeners in place with simple diff (useful for
  *   vdom integrations)
  */
@@ -392,22 +419,29 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
   type: k,
   listener: ListenerFor<target, k>,
   options: AddEventListenerOptions,
-  containerSignal: AbortSignal,
   onError: (error: unknown) => void,
 ): Binding<ListenerFor<target, k>> {
-  let reentry = new AbortController()
+  let reentry: AbortController | null = null
+  let interactionController: AbortController | null = null
   let disposed = false
+  // Track if current listener needs signal (length >= 2: event + signal)
+  let needsSignal = listener.length >= 2
 
   function abort() {
-    reentry.abort(new DOMException('', 'EventReentry'))
-    reentry = new AbortController()
+    if (reentry) {
+      reentry.abort(new DOMException('', 'EventReentry'))
+      reentry = new AbortController()
+    }
   }
 
   let wrappedListener = (event: Event) => {
-    abort()
+    if (needsSignal) {
+      abort()
+      if (!reentry) reentry = new AbortController()
+    }
     try {
       // TODO: figure out if we can remove this cast
-      let result = listener(event as any, reentry.signal)
+      let result = listener(event as any, reentry?.signal as AbortSignal)
       if (result instanceof Promise) {
         result.catch(onError)
       }
@@ -447,11 +481,8 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
     if (disposed) return
     disposed = true
     unbind()
+    if (interactionController) interactionController.abort()
     decrementInteractionRef()
-  }
-
-  if (containerSignal) {
-    containerSignal.addEventListener('abort', cleanup, { once: true })
   }
 
   if (interactions.has(type)) {
@@ -463,7 +494,9 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
     }
     let count = refCounts.get(interaction) ?? 0
     if (count === 0) {
-      let interactionContext = new InteractionHandle(target, containerSignal, onError)
+      // Only create AbortController for interactions that need cleanup coordination
+      interactionController = new AbortController()
+      let interactionContext = new InteractionHandle(target, interactionController.signal, onError)
       interaction.call(interactionContext)
     }
     refCounts.set(interaction, count + 1)
@@ -478,19 +511,16 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
     },
     setListener(newListener) {
       listener = newListener
+      needsSignal = newListener.length >= 2
     },
     rebind(newListener, newOptions) {
       unbind()
       options = newOptions
       listener = newListener
+      needsSignal = newListener.length >= 2
       bind()
     },
-    dispose() {
-      cleanup()
-      if (containerSignal) {
-        containerSignal.removeEventListener('abort', cleanup)
-      }
-    },
+    dispose: cleanup,
   }
 }
 

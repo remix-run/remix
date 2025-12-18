@@ -7,6 +7,7 @@ import {
   generateChangelogContent,
   generateCommitMessage,
 } from './utils/changes.js'
+import { colors, colorize } from './utils/color.js'
 import { getPackageFile, getPackageDir } from './utils/packages.js'
 import { readJson, writeJson, readFile, writeFile } from './utils/fs.js'
 import { logAndExec } from './utils/process.js'
@@ -74,11 +75,11 @@ function deleteChangeFiles(packageName) {
 function main() {
   let skipCommit = process.argv.includes('--no-commit')
 
-  console.log('🔍 Validating change files...\n')
+  console.log('Validating change files...\n')
 
   let validationResult = validateAllChanges()
   if (validationResult.errorCount > 0) {
-    console.error('❌ Validation failed\n')
+    console.error(colorize('Validation failed', colors.red) + '\n')
     console.error(formatValidationErrors(validationResult))
     console.error()
     process.exit(1)
@@ -86,13 +87,13 @@ function main() {
 
   let releases = getAllReleases()
   if (releases.length === 0) {
-    console.log('📭 No packages have changes to release.\n')
+    console.log('No packages have changes to release.\n')
     process.exit(0)
   }
 
-  console.log('✅ Validation passed!\n')
+  console.log(colorize('Validation passed!', colors.lightGreen) + '\n')
   console.log('═'.repeat(80))
-  console.log(skipCommit ? '📦 UPDATING VERSION' : '📦 PREPARING RELEASE')
+  console.log(colorize(skipCommit ? 'UPDATING VERSION' : 'PREPARING RELEASE', colors.lightBlue))
   console.log('═'.repeat(80))
   console.log()
 
@@ -100,7 +101,10 @@ function main() {
 
   // Process each package
   for (let release of releases) {
-    console.log(`📦 ${release.packageName}: ${release.currentVersion} → ${release.nextVersion}`)
+    console.log(
+      colorize(`${release.packageName}:`, colors.gray) +
+        ` ${release.currentVersion} → ${release.nextVersion}`,
+    )
 
     // Update package.json
     updatePackageJson(release.packageName, release.nextVersion)
@@ -118,7 +122,7 @@ function main() {
   if (skipCommit) {
     // Success message for --no-commit
     console.log('═'.repeat(80))
-    console.log('✅ VERSION UPDATED')
+    console.log(colorize('VERSION UPDATED', colors.lightGreen))
     console.log('═'.repeat(80))
     console.log()
     console.log('Files have been updated. Review the changes, then manually commit and tag:')
@@ -133,18 +137,18 @@ function main() {
     console.log()
   } else {
     // Stage all changes
-    console.log('📋 Staging changes...')
+    console.log('Staging changes...')
     logAndExec('git add .')
     console.log()
 
     // Create commit
     let commitMessage = generateCommitMessage(releases)
-    console.log('💾 Creating commit...')
+    console.log('Creating commit...')
     logAndExec(`git commit -m "${commitMessage.split('\n').join('\\n')}"`)
     console.log()
 
     // Create tags
-    console.log('🏷️  Creating tags...')
+    console.log('Creating tags...')
     for (let release of releases) {
       let tag = `${release.packageName}@${release.nextVersion}`
       logAndExec(`git tag ${tag}`)

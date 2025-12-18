@@ -1,0 +1,158 @@
+body {
+  margin: 0;
+  padding: 10px 0 0 0;
+  overflow-y: scroll;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  background: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 15px 40px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -5px;
+  margin-right: -5px;
+}
+
+.col-md-6,
+.col-sm-6 {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+@media (min-width: 768px) {
+  .col-md-6 {
+    width: 50%;
+  }
+}
+
+@media (min-width: 576px) {
+  .col-sm-6 {
+    width: 50%;
+  }
+}
+
+.jumbotron {
+  padding: 10px 20px;
+  margin-bottom: 20px;
+  background-color: #eeeeee;
+  border-radius: 6px;
+}
+
+.jumbotron .row h1 {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 500;
+}
+
+.smallpad {
+  padding: 5px;
+}
+
+.btn {
+  display: inline-block;
+  margin-bottom: 0;
+  font-weight: 400;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  background-image: none;
+  border: 1px solid transparent;
+  padding: 6px 12px;
+  font-size: 14px;
+  line-height: 1.42857143;
+  border-radius: 4px;
+  user-select: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid #222;
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: #337ab7;
+  border-color: #2e6da4;
+}
+
+.btn-primary:hover {
+  background-color: #286090;
+  border-color: #204d74;
+}
+
+.btn-block {
+  display: block;
+  width: 100%;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  /* contain: strict; */
+}
+
+tr {
+  /* contain-intrinsic-size: auto 36px;
+  content-visibility: auto; */
+}
+
+.table > tbody > tr > td {
+  padding: 8px;
+  border-top: 1px solid #dddddd;
+  white-space: nowrap;
+}
+
+.table-hover > tbody > tr:hover {
+  background-color: #f5f5f5;
+}
+
+.table-striped > tbody > tr:nth-child(odd) {
+  background-color: #f9f9f9;
+}
+
+.table > tbody > tr.danger > td {
+  background-color: #f2dede;
+}
+
+.test-data a {
+  display: block;
+  color: #337ab7;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.test-data a:hover {
+  text-decoration: underline;
+}
+
+.glyphicon {
+  position: relative;
+  display: inline-block;
+}
+
+.glyphicon-remove::before {
+  content: '×';
+  font-size: 16px;
+  line-height: 1;
+}
+
+.preloadicon {
+  position: absolute;
+  top: -20px;
+  left: -20px;
+}

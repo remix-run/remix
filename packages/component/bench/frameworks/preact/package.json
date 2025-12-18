@@ -1,0 +1,14 @@
+{
+  "name": "component-benchmark-preact",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:prod": "esbuild index.tsx --bundle --minify --outfile=dist/index.js --format=esm",
+    "build": "esbuild index.tsx --bundle --outfile=dist/index.js --format=esm",
+    "dev": "esbuild index.tsx --bundle --minify --outfile=dist/index.js --format=esm --watch"
+  },
+  "dependencies": {
+    "esbuild": "^0.27.1",
+    "preact": "^10.28.0"
+  }
+}

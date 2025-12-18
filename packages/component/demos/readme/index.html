@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+  <head>
+    <title>README Examples</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+        background: #f8f9fa;
+        min-height: 100vh;
+        margin: 0;
+        padding: 2rem;
+        color: #2d3748;
+      }
+      h1 {
+        color: #1a202c;
+        text-align: center;
+        margin-bottom: 2rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        font-size: 2rem;
+      }
+      .examples-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .example {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      }
+      .example h2 {
+        color: rgb(54, 113, 246);
+        font-size: 0.85rem;
+        margin: 0 0 1rem 0;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+      .example-content {
+        min-height: 60px;
+      }
+      button {
+        font-family: inherit;
+      }
+      input {
+        font-family: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>README Examples</h1>
+    <div id="app"></div>
+    <script type="module" src="./entry.bundled.js"></script>
+  </body>
+</html>

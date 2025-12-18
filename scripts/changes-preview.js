@@ -5,6 +5,7 @@ import {
   generateChangelogContent,
   generateCommitMessage,
 } from './utils/changes.js'
+import { colors, colorize } from './utils/color.js'
 
 /**
  * Main preview function
@@ -13,7 +14,7 @@ function main() {
   let validationResult = validateAllChanges()
 
   if (validationResult.errorCount > 0) {
-    console.error('❌ Validation failed\n')
+    console.error(colorize('Validation failed', colors.red) + '\n')
     console.error(formatValidationErrors(validationResult))
     console.error()
     process.exit(1)
@@ -22,11 +23,11 @@ function main() {
   let releases = getAllReleases()
 
   if (releases.length === 0) {
-    console.log('📭 No packages have changes to release.\n')
+    console.log('No packages have changes to release.\n')
     process.exit(0)
   }
 
-  console.log('📦 CHANGES')
+  console.log(colorize('CHANGES', colors.lightBlue))
   console.log()
   console.log(`${releases.length} package${releases.length === 1 ? '' : 's'} with changes:\n`)
 
@@ -40,29 +41,29 @@ function main() {
     console.log()
   }
 
-  console.log('📝 CHANGELOG PREVIEW')
+  console.log(colorize('CHANGELOG PREVIEW', colors.lightBlue))
   console.log()
 
   let now = new Date()
   for (let release of releases) {
-    console.log(`${release.packageName}/CHANGELOG.md:`)
+    console.log(colorize(`${release.packageName}/CHANGELOG.md:`, colors.gray))
     console.log()
     console.log(generateChangelogContent(release, now))
   }
 
-  console.log('💾 COMMIT MESSAGE')
+  console.log(colorize('COMMIT MESSAGE', colors.lightBlue))
   console.log()
   console.log(generateCommitMessage(releases))
   console.log()
 
-  console.log('🏷️ GIT TAGS')
+  console.log(colorize('GIT TAGS', colors.lightBlue))
   console.log()
   for (let release of releases) {
     console.log(`${release.packageName}@${release.nextVersion}`)
   }
   console.log()
 
-  console.log('🚀 VERSION COMMAND')
+  console.log(colorize('VERSION COMMAND', colors.lightBlue))
   console.log()
   console.log('pnpm changes:version')
   console.log()

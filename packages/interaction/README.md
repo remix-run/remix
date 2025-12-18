@@ -266,7 +266,7 @@ interface DrummerEventMap {
 }
 
 class DrummerEvent extends Event {
-  constructor(type: DrummerEvent['type']) {
+  constructor(type: keyof DrummerEventMap) {
     super(type)
   }
 }
@@ -280,7 +280,7 @@ class Drummer extends TypedEventTarget<DrummerEventMap> {
 
 let drummer = new Drummer()
 
-// native API is typed
+// native API is NOT typed
 drummer.addEventListener('kick', (event) => {
   // event is DrummerEvent
 })

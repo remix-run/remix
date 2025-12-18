@@ -2,6 +2,10 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## v0.13.0 (2025-12-18)
+
+- Use the `:authority` header to set the URL of http/2 requests.
+
 ## v0.12.0 (2025-11-04)
 
 - Use `tsc` directly instead of `esbuild` to build the package. This means modules in the `dist` directory now mirror the layout of modules in the `src` directory.

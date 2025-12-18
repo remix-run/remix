@@ -63,7 +63,7 @@ describe('createRequestListener', () => {
           assert.equal(statusText, 'Created!')
           assert.equal(headers['x-a'], 'A')
           assert.equal(headers['x-b'], 'B')
-        }
+        },
       )
 
       mock.method(res, 'end', () => resolve())
@@ -99,7 +99,7 @@ describe('createRequestListener', () => {
           assert.equal(status, 201)
           assert.equal(headers['x-a'], 'A')
           assert.equal(headers['x-b'], 'B')
-        }
+        },
       )
 
       mock.method(res, 'end', () => resolve())
@@ -252,12 +252,17 @@ describe('createRequestListener', () => {
       assert.ok(listener)
 
       let req = createMockRequest()
+      req.httpVersionMajor = 1
       let res = createMockResponse({ req })
 
-      let headers: string[]
-      mock.method(res, 'writeHead', (_status: number, headersArray: string[]) => {
-        headers = headersArray
-      })
+      let headers: Record<string, string | string[]>
+      mock.method(
+        res,
+        'writeHead',
+        (_status: number, _statusText: string, headersObj: Record<string, string | string[]>) => {
+          headers = headersObj
+        },
+      )
 
       mock.method(res, 'end', () => {
         assert.deepEqual(headers, {
