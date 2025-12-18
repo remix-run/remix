@@ -1,7 +1,7 @@
 import * as cp from 'node:child_process'
 
-import { createRelease } from './utils/github-releases.js'
-import { isValidVersion } from './utils/semver.js'
+import { createRelease } from './utils/github-releases.ts'
+import { isValidVersion } from './utils/semver.ts'
 
 let tag = process.argv[2]
 

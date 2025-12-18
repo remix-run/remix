@@ -1,37 +1,30 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { getAllPackageNames, getPackageDir, getPackageFile } from './packages.js'
-import { readJson } from './fs.js'
-import { getNextVersion } from './semver.js'
+import { getAllPackageNames, getPackageDir, getPackageFile } from './packages.ts'
+import { readJson, readFile } from './fs.ts'
+import { getNextVersion } from './semver.ts'
 
-/**
- * @typedef {{
- *   package: string
- *   file: string
- *   error: string
- * }} ValidationError
- */
+export interface ValidationError {
+  package: string
+  file: string
+  error: string
+}
 
 /**
  * Valid change file name pattern: (major|minor|patch).description.md
- * @type {RegExp}
  */
 const CHANGE_FILE_PATTERN = /^(major|minor|patch)\..+\.md$/
 
-/**
- * @typedef {{
- *   errorCount: number
- *   errorsByPackage: Record<string, ValidationError[]>
- * }} ValidationResult
- */
+export interface ValidationResult {
+  errorCount: number
+  errorsByPackage: Record<string, ValidationError[]>
+}
 
 /**
  * Formats validation errors for display
- * @param {ValidationResult} validationResult
- * @returns {string} Formatted error message
  */
-export function formatValidationErrors(validationResult) {
-  let lines = []
+export function formatValidationErrors(validationResult: ValidationResult): string {
+  let lines: string[] = []
 
   for (let [packageName, packageErrors] of Object.entries(validationResult.errorsByPackage)) {
     lines.push(`📦 ${packageName}:`)
@@ -51,12 +44,10 @@ export function formatValidationErrors(validationResult) {
 
 /**
  * Validates all change files across all packages
- * @returns {ValidationResult} Validation result with error count and errors grouped by package
  */
-export function validateAllChanges() {
+export function validateAllChanges(): ValidationResult {
   let packageNames = getAllPackageNames()
-  /** @type {Record<string, ValidationError[]>} */
-  let errorsByPackage = {}
+  let errorsByPackage: Record<string, ValidationError[]> = {}
   let errorCount = 0
 
   for (let packageName of packageNames) {
@@ -72,13 +63,11 @@ export function validateAllChanges() {
 
 /**
  * Validates change files for a single package
- * @param {string} packageName
- * @returns {ValidationError[]}
  */
-export function validatePackageChanges(packageName) {
+export function validatePackageChanges(packageName: string): ValidationError[] {
   let packageDir = getPackageDir(packageName)
   let changesDir = path.join(packageDir, '.changes')
-  let errors = []
+  let errors: ValidationError[] = []
 
   // Changes directory should exist (with at least README.md)
   if (!fs.existsSync(changesDir)) {
@@ -157,12 +146,16 @@ export function validatePackageChanges(packageName) {
   return errors
 }
 
+export interface ChangeFile {
+  file: string
+  bump: 'major' | 'minor' | 'patch'
+  content: string
+}
+
 /**
  * Gets all change files for a package
- * @param {string} packageName
- * @returns {{ file: string; bump: 'major' | 'minor' | 'patch'; content: string }[]}
  */
-export function getPackageChangeFiles(packageName) {
+export function getPackageChangeFiles(packageName: string): ChangeFile[] {
   let packageDir = getPackageDir(packageName)
   let changesDir = path.join(packageDir, '.changes')
 
@@ -178,7 +171,7 @@ export function getPackageChangeFiles(packageName) {
     .map((file) => {
       let filePath = path.join(changesDir, file)
       let content = fs.readFileSync(filePath, 'utf-8').trim()
-      let bump = /** @type {'major' | 'minor' | 'patch'} */ (file.split('.')[0])
+      let bump = file.split('.')[0] as 'major' | 'minor' | 'patch'
 
       return {
         file,
@@ -190,9 +183,8 @@ export function getPackageChangeFiles(packageName) {
 
 /**
  * Gets all packages that have change files
- * @returns {string[]}
  */
-export function getPackagesWithChanges() {
+export function getPackagesWithChanges(): string[] {
   let packageNames = getAllPackageNames()
   return packageNames.filter((packageName) => {
     let changeFiles = getPackageChangeFiles(packageName)
@@ -200,22 +192,20 @@ export function getPackagesWithChanges() {
   })
 }
 
-/**
- * @typedef {{
- *   packageName: string
- *   currentVersion: string
- *   nextVersion: string
- *   bump: 'major' | 'minor' | 'patch'
- *   changes: Array<{ file: string; content: string }>
- * }} PackageRelease
- */
+export interface PackageRelease {
+  packageName: string
+  currentVersion: string
+  nextVersion: string
+  bump: 'major' | 'minor' | 'patch'
+  changes: Array<{ file: string; content: string }>
+}
 
 /**
  * Determines the highest severity bump type
- * @param {Array<'major' | 'minor' | 'patch'>} bumps
- * @returns {'major' | 'minor' | 'patch'}
  */
-export function getHighestBump(bumps) {
+export function getHighestBump(
+  bumps: Array<'major' | 'minor' | 'patch'>,
+): 'major' | 'minor' | 'patch' {
   if (bumps.includes('major')) return 'major'
   if (bumps.includes('minor')) return 'minor'
   return 'patch'
@@ -224,10 +214,8 @@ export function getHighestBump(bumps) {
 /**
  * Checks if content starts with "BREAKING CHANGE: " (case-insensitive,
  * ignoring markdown formatting and leading whitespace)
- * @param {string} content
- * @returns {boolean}
  */
-function hasBreakingChangePrefix(content) {
+function hasBreakingChangePrefix(content: string): boolean {
   return content
     .trimStart()
     .replace(/^[*_]+/, '')
@@ -237,10 +225,8 @@ function hasBreakingChangePrefix(content) {
 
 /**
  * Formats a changelog entry from change file content
- * @param {string} content
- * @returns {string}
  */
-export function formatChangelogEntry(content) {
+export function formatChangelogEntry(content: string): string {
   let lines = content.trim().split('\n')
 
   if (lines.length === 1) {
@@ -261,13 +247,10 @@ export function formatChangelogEntry(content) {
 
 /**
  * Generates changelog content for a package release
- * @param {PackageRelease} release
- * @param {Date} date
- * @returns {string}
  */
-export function generateChangelogContent(release, date) {
+export function generateChangelogContent(release: PackageRelease, date: Date): string {
   let dateStr = date.toISOString().split('T')[0] // YYYY-MM-DD
-  let lines = []
+  let lines: string[] = []
 
   lines.push(`## v${release.nextVersion} (${dateStr})`)
   lines.push('')
@@ -290,11 +273,10 @@ export function generateChangelogContent(release, date) {
 
 /**
  * Gets all releases that would be prepared
- * @returns {PackageRelease[]}
  */
-export function getAllReleases() {
+export function getAllReleases(): PackageRelease[] {
   let packageNames = getPackagesWithChanges()
-  let releases = []
+  let releases: PackageRelease[] = []
 
   for (let packageName of packageNames) {
     let packageJsonPath = getPackageFile(packageName, 'package.json')
@@ -323,10 +305,8 @@ export function getAllReleases() {
 
 /**
  * Generates the commit message for all releases
- * @param {PackageRelease[]} releases
- * @returns {string}
  */
-export function generateCommitMessage(releases) {
+export function generateCommitMessage(releases: PackageRelease[]): string {
   // Subject line
   let subject =
     releases.length === 1

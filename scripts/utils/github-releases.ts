@@ -1,11 +1,10 @@
 import { request } from '@octokit/request'
 
-import { getChanges } from './changes.js'
+import { getChanges } from './changes.ts'
 
 const token = process.env.GITHUB_TOKEN
 
-/** @type (packageName: string, version: string) => Promise<string> */
-export async function createRelease(packageName, version) {
+export async function createRelease(packageName: string, version: string): Promise<string> {
   if (token === undefined) {
     console.error('GITHUB_TOKEN environment variable is required to create a GitHub release')
     process.exit(1)
