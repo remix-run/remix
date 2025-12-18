@@ -51,6 +51,15 @@ addRoute('files/:folder/summary', 'Dynamic Folder')
 addRoute('files/:folder/:page', 'Dynamic Folder + Page')
 addRoute('files/*path', 'Files Wildcard')
 
+// ----------------------------------------------------------------------------
+// Search constraint patterns (for search ranking demo)
+// ----------------------------------------------------------------------------
+addRoute('search?q=react&q=hooks', 'Multi-Value Search')
+addRoute('search?q=react', 'Exact Value Search')
+addRoute('search?q=', 'Non-Empty Search')
+addRoute('search?q', 'Has Query Param')
+addRoute('search', 'Basic Search')
+
 // ============================================================================
 // Test URLs
 // ============================================================================
@@ -72,6 +81,10 @@ let testCases: Array<{ url: string; description: string }> = [
   {
     url: 'https://example.com/files/report-2024/summary',
     description: 'Many matches: static > inline var > full var > wildcard',
+  },
+  {
+    url: 'https://example.com/search?q=react&q=hooks',
+    description: 'Search ranking: multi-value > exact > non-empty > exists > none',
   },
 ]
 
