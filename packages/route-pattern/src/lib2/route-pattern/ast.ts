@@ -6,5 +6,5 @@ export type AST = {
   hostname: Part.AST | undefined
   port: string | undefined
   pathname: Part.AST | undefined
-  search: Search.Constraints | undefined
+  search: Search.Constraints
 }

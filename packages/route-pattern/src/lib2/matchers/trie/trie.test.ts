@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { parse } from '../../route-pattern/parse.ts'
 import type * as RoutePattern from '../../route-pattern/index.ts'
+import * as Search from '../../route-pattern/search.ts'
 import { Trie } from './trie.ts'
 
 function searchAll(trie: Trie<RoutePattern.AST>, url: URL) {
@@ -16,7 +17,7 @@ describe('Trie', () => {
       expect(trie.variable).toEqual(new Map())
       expect(trie.wildcard).toEqual(new Map())
       expect(trie.next).toBe(undefined)
-      expect(trie.value).toBe(undefined)
+      expect(trie.values).toEqual([])
     })
   })
 
@@ -198,15 +199,15 @@ describe('Trie', () => {
       let data = { route: 'user-detail' }
       trie.insert(pattern, data)
 
-      // Navigate to the leaf node: protocol -> hostname -> port -> pathname (users) -> variable ({:}) -> port -> search
+      // Navigate to the leaf node: protocol -> hostname -> port -> pathname (users) -> variable ({:}) -> next (end)
       let pathnameLevel = trie.next?.next?.next
       let usersLevel = pathnameLevel?.static['users']
       let variableLevel = usersLevel?.variable.get('{:}')?.trie
       // After variable, we need to traverse to the end
       let leaf = variableLevel?.next
-      expect(leaf?.value).toBeTruthy()
-      expect(leaf?.value?.data).toBe(data)
-      expect(leaf?.value?.paramNames).toEqual(['id'])
+      expect(leaf?.values[0]).toBeTruthy()
+      expect(leaf?.values[0]?.data).toBe(data)
+      expect(leaf?.values[0]?.paramNames).toEqual(['id'])
     })
 
     it('stores correct paramNames for multiple params', () => {
@@ -223,8 +224,8 @@ describe('Trie', () => {
       let repoIdLevel = repoLevel?.variable.get('{:}')?.trie
       let leaf = repoIdLevel?.next
 
-      expect(leaf?.value).toBeTruthy()
-      expect(leaf?.value?.paramNames).toEqual(['orgId', 'repoId'])
+      expect(leaf?.values[0]).toBeTruthy()
+      expect(leaf?.values[0]?.paramNames).toEqual(['orgId', 'repoId'])
     })
   })
 
@@ -372,27 +373,33 @@ describe('Trie', () => {
       let dynamicMatch = matches.find((m) => m.data === dynamicPattern)
 
       expect(staticMatch).toStrictEqual({
-        rank: [
-          '3', // protocol: "https" (skipped: 3)
-          '3', // hostname: "com" (skipped: 3)
-          '3', // hostname: "example" (skipped: 3)
-          '3', // port: "" (skipped: 3)
-          '0', // pathname: "users" (static: 0)
-          '0', // pathname: "@admin" (static: 0)
-        ],
+        rank: {
+          hierarchical: [
+            '3', // protocol: "https" (skipped: 3)
+            '3', // hostname: "com" (skipped: 3)
+            '3', // hostname: "example" (skipped: 3)
+            '3', // port: "" (skipped: 3)
+            '0', // pathname: "users" (static: 0)
+            '0', // pathname: "@admin" (static: 0)
+          ],
+          search: new Map(),
+        },
         params: {},
         data: staticPattern,
       })
 
       expect(dynamicMatch).toStrictEqual({
-        rank: [
-          '3', // protocol: "https" (skipped: 3)
-          '3', // hostname: "com" (skipped: 3)
-          '3', // hostname: "example" (skipped: 3)
-          '3', // port: "" (skipped: 3)
-          '0', // pathname: "users" (static: 0)
-          '011111', // pathname: "@admin" (dynamic: "011111")
-        ],
+        rank: {
+          hierarchical: [
+            '3', // protocol: "https" (skipped: 3)
+            '3', // hostname: "com" (skipped: 3)
+            '3', // hostname: "example" (skipped: 3)
+            '3', // port: "" (skipped: 3)
+            '0', // pathname: "users" (static: 0)
+            '011111', // pathname: "@admin" (dynamic: "011111")
+          ],
+          search: new Map(),
+        },
         params: { id: 'admin' },
         data: dynamicPattern,
       })
@@ -406,16 +413,19 @@ describe('Trie', () => {
       let matches = searchAll(trie, new URL('https://example.com/files/image-photo/gallery/2024'))
       expect(matches.length).toBe(1)
       expect(matches[0]).toStrictEqual({
-        rank: [
-          '3', // protocol: "https" (skipped: 3)
-          '3', // hostname: "com" (skipped: 3)
-          '3', // hostname: "example" (skipped: 3)
-          '3', // port: "" (skipped: 3)
-          '0', // pathname: "files" (static: 0)
-          '00000022222', // pathname: "image-" (static) + "photo" (wildcard)
-          '2222222', // pathname: "gallery" (wildcard)
-          '2222', // pathname: "2024" (wildcard)
-        ],
+        rank: {
+          hierarchical: [
+            '3', // protocol: "https" (skipped: 3)
+            '3', // hostname: "com" (skipped: 3)
+            '3', // hostname: "example" (skipped: 3)
+            '3', // port: "" (skipped: 3)
+            '0', // pathname: "files" (static: 0)
+            '00000022222', // pathname: "image-" (static) + "photo" (wildcard)
+            '2222222', // pathname: "gallery" (wildcard)
+            '2222', // pathname: "2024" (wildcard)
+          ],
+          search: new Map(),
+        },
         params: { rest: 'photo/gallery/2024' },
         data: pattern,
       })
@@ -429,14 +439,17 @@ describe('Trie', () => {
       let matches = searchAll(trie, new URL('https://example.com/assets/logo.png'))
       expect(matches.length).toBe(1)
       expect(matches[0]).toStrictEqual({
-        rank: [
-          '3', // protocol: "https" (skipped: 3)
-          '3', // hostname: "com" (skipped: 3)
-          '3', // hostname: "example" (skipped: 3)
-          '3', // port: "" (skipped: 3)
-          '0', // pathname: "assets" (static: 0)
-          '11110000', // pathname: "logo" (variable) + ".png" (static)
-        ],
+        rank: {
+          hierarchical: [
+            '3', // protocol: "https" (skipped: 3)
+            '3', // hostname: "com" (skipped: 3)
+            '3', // hostname: "example" (skipped: 3)
+            '3', // port: "" (skipped: 3)
+            '0', // pathname: "assets" (static: 0)
+            '11110000', // pathname: "logo" (variable) + ".png" (static)
+          ],
+          search: new Map(),
+        },
         params: { name: 'logo' },
         data: pattern,
       })
@@ -450,14 +463,17 @@ describe('Trie', () => {
       let matches = searchAll(trie, new URL('https://example.com/api/v2-beta'))
       expect(matches.length).toBe(1)
       expect(matches[0]).toStrictEqual({
-        rank: [
-          '3', // protocol: "https" (skipped: 3)
-          '3', // hostname: "com" (skipped: 3)
-          '3', // hostname: "example" (skipped: 3)
-          '3', // port: "" (skipped: 3)
-          '0', // pathname: "api" (static: 0)
-          '0100000', // pathname: "v" (static) + "2" (variable) + "-beta" (static)
-        ],
+        rank: {
+          hierarchical: [
+            '3', // protocol: "https" (skipped: 3)
+            '3', // hostname: "com" (skipped: 3)
+            '3', // hostname: "example" (skipped: 3)
+            '3', // port: "" (skipped: 3)
+            '0', // pathname: "api" (static: 0)
+            '0100000', // pathname: "v" (static) + "2" (variable) + "-beta" (static)
+          ],
+          search: new Map(),
+        },
         params: { version: '2' },
         data: pattern,
       })
@@ -471,16 +487,19 @@ describe('Trie', () => {
       let matches = searchAll(trie, new URL('https://example.com/docs/guides/intro/edit'))
       expect(matches.length).toBe(1)
       expect(matches[0]).toStrictEqual({
-        rank: [
-          '3', // protocol: "https" (skipped: 3)
-          '3', // hostname: "com" (skipped: 3)
-          '3', // hostname: "example" (skipped: 3)
-          '3', // port: "" (skipped: 3)
-          '0', // pathname: "docs" (static: 0)
-          '222222', // pathname: "guides" (wildcard)
-          '22222', // pathname: "intro" (wildcard)
-          '0000', // pathname: "edit" (static)
-        ],
+        rank: {
+          hierarchical: [
+            '3', // protocol: "https" (skipped: 3)
+            '3', // hostname: "com" (skipped: 3)
+            '3', // hostname: "example" (skipped: 3)
+            '3', // port: "" (skipped: 3)
+            '0', // pathname: "docs" (static: 0)
+            '222222', // pathname: "guides" (wildcard)
+            '22222', // pathname: "intro" (wildcard)
+            '0000', // pathname: "edit" (static)
+          ],
+          search: new Map(),
+        },
         params: { path: 'guides/intro' },
         data: pattern,
       })
@@ -494,17 +513,20 @@ describe('Trie', () => {
       let matches = searchAll(trie, new URL('https://example.com/org/acme/projects/web/settings'))
       expect(matches.length).toBe(1)
       expect(matches[0]).toStrictEqual({
-        rank: [
-          '3', // protocol: "https" (skipped: 3)
-          '3', // hostname: "com" (skipped: 3)
-          '3', // hostname: "example" (skipped: 3)
-          '3', // port: "" (skipped: 3)
-          '0', // pathname: "org" (static: 0)
-          '1111', // pathname: "acme" (variable)
-          '22222222', // pathname: "projects" (wildcard)
-          '222', // pathname: "web" (wildcard)
-          '00000000', // pathname: "settings" (static)
-        ],
+        rank: {
+          hierarchical: [
+            '3', // protocol: "https" (skipped: 3)
+            '3', // hostname: "com" (skipped: 3)
+            '3', // hostname: "example" (skipped: 3)
+            '3', // port: "" (skipped: 3)
+            '0', // pathname: "org" (static: 0)
+            '1111', // pathname: "acme" (variable)
+            '22222222', // pathname: "projects" (wildcard)
+            '222', // pathname: "web" (wildcard)
+            '00000000', // pathname: "settings" (static)
+          ],
+          search: new Map(),
+        },
         params: { orgId: 'acme', path: 'projects/web' },
         data: pattern,
       })
@@ -524,30 +546,38 @@ describe('Trie', () => {
       let lessStaticMatch = matches.find((m) => m.data === lessStatic)
 
       // More static should have lower rank (better) - string comparison works lexicographically
-      expect(moreStaticMatch!.rank.join(',') < lessStaticMatch!.rank.join(',')).toBe(true)
+      expect(
+        moreStaticMatch!.rank.hierarchical.join(',') < lessStaticMatch!.rank.hierarchical.join(','),
+      ).toBe(true)
 
       expect(moreStaticMatch).toStrictEqual({
-        rank: [
-          '3', // protocol: "https" (skipped: 3)
-          '3', // hostname: "com" (skipped: 3)
-          '3', // hostname: "example" (skipped: 3)
-          '3', // port: "" (skipped: 3)
-          '0', // pathname: "files" (static: 0)
-          '0000000222222222', // pathname: "images-" (static) + "photo.jpg" (wildcard)
-        ],
+        rank: {
+          hierarchical: [
+            '3', // protocol: "https" (skipped: 3)
+            '3', // hostname: "com" (skipped: 3)
+            '3', // hostname: "example" (skipped: 3)
+            '3', // port: "" (skipped: 3)
+            '0', // pathname: "files" (static: 0)
+            '0000000222222222', // pathname: "images-" (static) + "photo.jpg" (wildcard)
+          ],
+          search: new Map(),
+        },
         params: { rest: 'photo.jpg' },
         data: moreStatic,
       })
 
       expect(lessStaticMatch).toStrictEqual({
-        rank: [
-          '3', // protocol: "https" (skipped: 3)
-          '3', // hostname: "com" (skipped: 3)
-          '3', // hostname: "example" (skipped: 3)
-          '3', // port: "" (skipped: 3)
-          '0', // pathname: "files" (static: 0)
-          '2222222222222222', // pathname: "images-photo.jpg" (all wildcard)
-        ],
+        rank: {
+          hierarchical: [
+            '3', // protocol: "https" (skipped: 3)
+            '3', // hostname: "com" (skipped: 3)
+            '3', // hostname: "example" (skipped: 3)
+            '3', // port: "" (skipped: 3)
+            '0', // pathname: "files" (static: 0)
+            '2222222222222222', // pathname: "images-photo.jpg" (all wildcard)
+          ],
+          search: new Map(),
+        },
         params: { rest: 'images-photo.jpg' },
         data: lessStatic,
       })
@@ -561,21 +591,109 @@ describe('Trie', () => {
       let matches = searchAll(trie, new URL('https://example.com/api/v2/users/123/posts/create'))
       expect(matches.length).toBe(1)
       expect(matches[0]).toStrictEqual({
-        rank: [
-          '3', // protocol: "https" (skipped: 3)
-          '3', // hostname: "com" (skipped: 3)
-          '3', // hostname: "example" (skipped: 3)
-          '3', // port: "" (skipped: 3)
-          '0', // pathname: "api" (static: 0)
-          '11', // pathname: "v2" (variable)
-          '0', // pathname: "users" (static: 0)
-          '111', // pathname: "123" (variable)
-          '22222', // pathname: "posts" (wildcard)
-          '222222', // pathname: "create" (wildcard)
-        ],
+        rank: {
+          hierarchical: [
+            '3', // protocol: "https" (skipped: 3)
+            '3', // hostname: "com" (skipped: 3)
+            '3', // hostname: "example" (skipped: 3)
+            '3', // port: "" (skipped: 3)
+            '0', // pathname: "api" (static: 0)
+            '11', // pathname: "v2" (variable)
+            '0', // pathname: "users" (static: 0)
+            '111', // pathname: "123" (variable)
+            '22222', // pathname: "posts" (wildcard)
+            '222222', // pathname: "create" (wildcard)
+          ],
+          search: new Map(),
+        },
         params: { version: 'v2', userId: '123', action: 'posts/create' },
         data: pattern,
       })
+    })
+
+    it('ranks search constraints with exact values higher than existence checks', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let exactValue = parse('users?role=admin')
+      let existsOnly = parse('users?role')
+      trie.insert(exactValue, exactValue)
+      trie.insert(existsOnly, existsOnly)
+
+      let matches = searchAll(trie, new URL('https://example.com/users?role=admin'))
+      expect(matches.length).toBe(2)
+
+      let exactMatch = matches.find((m) => m.data === exactValue)!
+      let existsMatch = matches.find((m) => m.data === existsOnly)!
+
+      // ?role=admin is more specific than ?role
+      expect(Search.compare(exactMatch.rank.search, existsMatch.rank.search)).toBeLessThan(0)
+    })
+
+    it('ranks search constraints with more exact values higher', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let twoValues = parse('users?a=1&a=2')
+      let oneValue = parse('users?a=1')
+      trie.insert(twoValues, twoValues)
+      trie.insert(oneValue, oneValue)
+
+      let matches = searchAll(trie, new URL('https://example.com/users?a=1&a=2'))
+      expect(matches.length).toBe(2)
+
+      let twoValuesMatch = matches.find((m) => m.data === twoValues)!
+      let oneValueMatch = matches.find((m) => m.data === oneValue)!
+
+      // ?a=1&a=2 is more specific than ?a=1
+      expect(Search.compare(twoValuesMatch.rank.search, oneValueMatch.rank.search)).toBeLessThan(0)
+    })
+
+    it('ranks search constraints with non-empty check higher than existence check', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let nonEmpty = parse('users?q=')
+      let exists = parse('users?q')
+      trie.insert(nonEmpty, nonEmpty)
+      trie.insert(exists, exists)
+
+      let matches = searchAll(trie, new URL('https://example.com/users?q=search'))
+      expect(matches.length).toBe(2)
+
+      let nonEmptyMatch = matches.find((m) => m.data === nonEmpty)!
+      let existsMatch = matches.find((m) => m.data === exists)!
+
+      // ?q= is more specific than ?q
+      expect(Search.compare(nonEmptyMatch.rank.search, existsMatch.rank.search)).toBeLessThan(0)
+    })
+
+    it('ranks search constraints with more parameters higher when value counts are equal', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let twoParams = parse('users?a=1&b=1')
+      let oneParam = parse('users?a=1')
+      trie.insert(twoParams, twoParams)
+      trie.insert(oneParam, oneParam)
+
+      let matches = searchAll(trie, new URL('https://example.com/users?a=1&b=1'))
+      expect(matches.length).toBe(2)
+
+      let twoParamsMatch = matches.find((m) => m.data === twoParams)!
+      let oneParamMatch = matches.find((m) => m.data === oneParam)!
+
+      // ?a=1&b=1 is more specific than ?a=1
+      expect(Search.compare(twoParamsMatch.rank.search, oneParamMatch.rank.search)).toBeLessThan(0)
+    })
+
+    it('matches pattern with search constraints only when URL has matching params', () => {
+      let trie = new Trie<RoutePattern.AST>()
+      let withSearch = parse('users?admin=true')
+      let withoutSearch = parse('users')
+      trie.insert(withSearch, withSearch)
+      trie.insert(withoutSearch, withoutSearch)
+
+      // URL without the required param only matches the pattern without search constraints
+      let matchesWithout = searchAll(trie, new URL('https://example.com/users'))
+      expect(matchesWithout.length).toBe(1)
+      expect(matchesWithout[0]?.data).toBe(withoutSearch)
+
+      // URL with the required param matches both patterns
+      let matchesWith = searchAll(trie, new URL('https://example.com/users?admin=true'))
+      expect(matchesWith.length).toBe(2)
     })
   })
 })

@@ -1,12 +1,11 @@
 import { RegExp_escape } from '../../es2025.ts'
 import * as RoutePattern from '../../route-pattern/index.ts'
 import type { Params } from '../matcher.ts'
-import type * as Rank from './rank.ts'
 
 const SEPARATORS = ['', '.', '', '/']
 const NOT_SEPARATORS = [/.*/g, /[^.]/g, /.*/g, /[^/]/g]
 
-const RANK: Record<string, Rank.Type[number]> = {
+const RANK: Record<string, string> = {
   skip: '3',
   wildcard: '2',
   variable: '1',
@@ -14,13 +13,18 @@ const RANK: Record<string, Rank.Type[number]> = {
 }
 
 type Value<data> = {
+  searchConstraints: RoutePattern.Search.Constraints
   paramNames: Array<string>
   paramIndices: Set<number>
   data: data
 }
 
 export type Match<data> = {
-  rank: Array<string>
+  rank: {
+    hierarchical: Array<string>
+    // todo: insert only cost, so maybe consider pre-computing search "rank"
+    search: RoutePattern.Search.Constraints
+  }
   params: Params
   data: data
 }
@@ -29,8 +33,8 @@ export class Trie<data> {
   static: Record<string, Trie<data> | undefined> = {}
   variable: Map<string, { regexp: RegExp; trie: Trie<data> }> = new Map()
   wildcard: Map<string, { regexp: RegExp; trie: Trie<data> }> = new Map()
+  values: Array<Value<data>> = []
   next?: Trie<data>
-  value?: Value<data>
 
   insert(pattern: RoutePattern.AST, data: data) {
     type State = {
@@ -41,6 +45,7 @@ export class Trie<data> {
 
     for (let variant of RoutePattern.variants(pattern)) {
       let value: Value<data> = {
+        searchConstraints: pattern.search,
         paramNames: RoutePattern.paramNames(pattern),
         paramIndices: variant.paramIndices,
         data,
@@ -97,7 +102,7 @@ export class Trie<data> {
         state.trie = next
       }
 
-      state.trie.value = value
+      state.trie.values.push(value)
     }
   }
 
@@ -128,12 +133,16 @@ export class Trie<data> {
       let state = stack.pop()!
 
       if (state.partIndex === query.length) {
-        let { value } = state.trie
-        if (value) {
-          yield {
-            rank: state.rank,
-            params: params(value.paramNames, value.paramIndices, state.paramValues),
-            data: value.data,
+        for (let value of state.trie.values) {
+          if (RoutePattern.Search.match(url.searchParams, value.searchConstraints)) {
+            yield {
+              rank: {
+                hierarchical: state.rank,
+                search: value.searchConstraints,
+              },
+              params: params(value.paramNames, value.paramIndices, state.paramValues),
+              data: value.data,
+            }
           }
         }
         continue
@@ -290,7 +299,7 @@ function dynamicMatch(
   match: RegExpExecArray,
   separator: string,
   notSeparator: RegExp,
-): { paramValues: Array<string>; rank: Rank.Type } {
+): { paramValues: Array<string>; rank: Array<string> } {
   let paramValues: Array<string> = []
   let segmentRank = ''
   for (let group in match.indices?.groups) {

@@ -35,9 +35,6 @@ export function parse(search: string): Constraints {
   return constraints
 }
 
-// todo: URLSearchParams.get() will treat `+` as spaces!!!
-// should we account for that? probably yes so that we can compare apples-to-apples in `match`
-
 export function match(params: URLSearchParams, constraints: Constraints): boolean {
   for (let [name, constraint] of constraints) {
     if (constraint === null) {
@@ -75,4 +72,52 @@ export function join(a: Constraints | undefined, b: Constraints | undefined): Co
     constraint?.forEach((value) => current.add(value))
   }
   return result
+}
+
+export function equal(a: Constraints, b: Constraints): boolean {
+  if (a.size !== b.size) return false
+  for (let [name, aConstraint] of a) {
+    let bConstraint = b.get(name)
+    if (aConstraint === null) {
+      if (bConstraint !== null) return false
+      continue
+    }
+    if (bConstraint === null || bConstraint === undefined) return false
+    if (aConstraint.size !== bConstraint.size) return false
+    for (let value of aConstraint) {
+      if (!bConstraint.has(value)) return false
+    }
+  }
+  return true
+}
+
+type Rank = [value: number, assigned: number, key: number]
+
+export function compare(a: Constraints, b: Constraints): number {
+  let aRank = rank(a)
+  let bRank = rank(b)
+  for (let i = 0; i < aRank.length; i++) {
+    if (aRank[i] !== bRank[i]) return aRank[i] - bRank[i]
+  }
+  return 0
+}
+
+function rank(constraints: Constraints): Rank {
+  let exactValue = 0
+  let anyValue = 0
+  let key = 0
+
+  for (let constraint of constraints.values()) {
+    if (constraint === null) {
+      key -= 1
+      continue
+    }
+    if (constraint.size === 0) {
+      anyValue -= 1
+      continue
+    }
+    exactValue -= constraint.size
+  }
+
+  return [exactValue, anyValue, key]
 }

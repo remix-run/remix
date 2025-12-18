@@ -17,7 +17,7 @@ describe('parse', () => {
         paramNames: ['id'],
         optionals: new Map(),
       },
-      search: undefined,
+      search: new Map(),
     })
   })
 
@@ -43,7 +43,7 @@ describe('parse', () => {
         paramNames: ['id'],
         optionals: new Map(),
       },
-      search: undefined,
+      search: new Map(),
     })
   })
 
@@ -62,7 +62,7 @@ describe('parse', () => {
         paramNames: [],
         optionals: new Map(),
       },
-      search: undefined,
+      search: new Map(),
     })
   })
 })

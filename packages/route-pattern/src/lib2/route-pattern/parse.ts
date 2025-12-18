@@ -9,7 +9,7 @@ export function parse(source: string): AST {
     hostname: undefined,
     port: undefined,
     pathname: undefined,
-    search: undefined,
+    search: new Map(),
   }
 
   let { protocol, hostname, port, pathname, search } = split(source)
@@ -29,5 +29,6 @@ export function parse(source: string): AST {
   if (search && search[0] !== search[1]) {
     ast.search = Search.parse(source.slice(...search))
   }
+
   return ast
 }
