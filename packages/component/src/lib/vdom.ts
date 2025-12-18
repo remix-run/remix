@@ -1189,9 +1189,7 @@ function diffChildren(
         }
       }
 
-      if (typeof childVNode.type !== 'function') {
-        childVNode._flags = (childVNode._flags ?? 0) | INSERT_VNODE
-      }
+      childVNode._flags = (childVNode._flags ?? 0) | INSERT_VNODE
     } else if (matchingIndex !== i + skew) {
       if (matchingIndex === i + skew - 1) {
         skew--

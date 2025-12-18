@@ -3,6 +3,60 @@ import { createRoot } from './vdom.ts'
 import { invariant } from './invariant.ts'
 
 describe('vnode rendering (keys extra)', () => {
+  describe('keyed list with non-keyed sibling', () => {
+    it('appends keyed component before non-keyed sibling', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      type CardData = { id: string; title: string }
+
+      function Card({ card }: { card: CardData }) {
+        return <div data-id={card.id}>{card.title}</div>
+      }
+
+      function Column({ cards, isAddingCard }: { cards: CardData[]; isAddingCard: boolean }) {
+        return (
+          <div>
+            {cards.map((card) => (
+              <Card key={card.id} card={card} />
+            ))}
+            {isAddingCard ? <div id="form">Form</div> : <button>Add</button>}
+          </div>
+        )
+      }
+
+      // Initial: 2 cards, button visible
+      let cards: CardData[] = [
+        { id: '1', title: 'Card 1' },
+        { id: '2', title: 'Card 2' },
+      ]
+      root.render(<Column cards={cards} isAddingCard={false} />)
+
+      let col = container.querySelector('div')
+      invariant(col)
+      expect(col.innerHTML).toBe(
+        '<div data-id="1">Card 1</div><div data-id="2">Card 2</div><button>Add</button>',
+      )
+
+      // Click "Add" - form appears
+      root.render(<Column cards={cards} isAddingCard={true} />)
+      expect(col.innerHTML).toBe(
+        '<div data-id="1">Card 1</div><div data-id="2">Card 2</div><div id="form">Form</div>',
+      )
+
+      // Add a new card while form is visible
+      cards = [...cards, { id: '3', title: 'Card 3' }]
+      root.render(<Column cards={cards} isAddingCard={true} />)
+
+      // BUG: The new card appears AFTER the form instead of before it
+      // Expected: Card 1 | Card 2 | Card 3 | Form
+      // Actual:   Card 1 | Card 2 | Form | Card 3
+      expect(col.innerHTML).toBe(
+        '<div data-id="1">Card 1</div><div data-id="2">Card 2</div><div data-id="3">Card 3</div><div id="form">Form</div>',
+      )
+    })
+  })
+
   describe('basic keyed list operations', () => {
     it('handles prepending items with keys', () => {
       let container = document.createElement('div')
