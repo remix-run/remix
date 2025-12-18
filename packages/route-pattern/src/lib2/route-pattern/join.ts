@@ -40,7 +40,7 @@ function joinPathname(a: Part.AST | undefined, b: Part.AST | undefined): Part.AS
     if (token.type === '*') {
       tokens.push({
         ...token,
-        nameIndex: token.nameIndex ? token.nameIndex + a.paramNames.length : undefined,
+        nameIndex: token.nameIndex + a.paramNames.length,
       })
       return
     }

@@ -62,14 +62,10 @@ export function parse(source: string, span?: Span): AST {
     // wildcard
     if (char === '*') {
       i += 1
-      let name = identifierRE.exec(source.slice(i, span[1]))?.[0]
-      if (name) {
-        ast.tokens.push({ type: '*', nameIndex: ast.paramNames.length })
-        ast.paramNames.push(name)
-        i += name.length
-      } else {
-        ast.tokens.push({ type: '*', nameIndex: undefined })
-      }
+      let name = identifierRE.exec(source.slice(i, span[1]))?.[0] ?? '*'
+      ast.tokens.push({ type: '*', nameIndex: ast.paramNames.length })
+      ast.paramNames.push(name)
+      i += name.length
       continue
     }
 

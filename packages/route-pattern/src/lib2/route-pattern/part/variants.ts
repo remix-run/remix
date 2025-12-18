@@ -41,9 +41,7 @@ export function variants(ast: AST): Array<Variant> {
 
     if (token.type === '*') {
       variant.key += '{*}'
-      if (token.nameIndex !== undefined) {
-        variant.paramIndices.push(token.nameIndex)
-      }
+      variant.paramIndices.push(token.nameIndex)
       q.push({ index: index + 1, variant })
       continue
     }

@@ -7,5 +7,4 @@ export type AST = {
 type Token =
   | { type: 'text'; text: string }
   | { type: '(' | ')' }
-  | { type: ':'; nameIndex: number }
-  | { type: '*'; nameIndex: number | undefined }
+  | { type: ':' | '*'; nameIndex: number }
