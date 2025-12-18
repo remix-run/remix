@@ -223,7 +223,7 @@ export async function sendResponse(
   }
 
   if (res.req.httpVersionMajor === 1) {
-    res.writeHead(response.status, response.statusText, headers)
+    ;(res as http.ServerResponse).writeHead(response.status, response.statusText, headers)
   } else {
     // HTTP/2 doesn't support status messages
     // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.4
@@ -231,7 +231,7 @@ export async function sendResponse(
     // HTTP2 `res.writeHead()` will safely ignore the statusText parameter, but
     // it will emit a warning which we want to avoid.
     // https://nodejs.org/docs/latest-v22.x/api/http2.html#responsewriteheadstatuscode-statusmessage-headers
-    res.writeHead(response.status, headers)
+    ;(res as http2.Http2ServerResponse).writeHead(response.status, headers)
   }
 
   if (response.body != null && res.req.method !== 'HEAD') {
