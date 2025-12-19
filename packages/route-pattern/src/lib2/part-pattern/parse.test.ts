@@ -4,9 +4,7 @@ import { parse } from './parse.ts'
 
 describe('parse', () => {
   it('creates an AST', () => {
-    let source = 'api/(v:major(.:minor)/)run'
-    let ast = parse(source)
-    expect(ast).toEqual({
+    expect(parse('api/(v:major(.:minor)/)run')).toEqual({
       tokens: [
         { type: 'text', text: 'api/' },
         { type: '(' },

@@ -1,5 +1,5 @@
 import type { AST } from './ast.ts'
-import type * as Part from '../part/index.ts'
+import type * as PartPattern from '../part-pattern/index.ts'
 import * as Search from './search.ts'
 
 export function join(a: AST, b: AST): AST {
@@ -12,7 +12,10 @@ export function join(a: AST, b: AST): AST {
   }
 }
 
-function joinPathname(a: Part.AST | undefined, b: Part.AST | undefined): Part.AST | undefined {
+function joinPathname(
+  a: PartPattern.AST | undefined,
+  b: PartPattern.AST | undefined,
+): PartPattern.AST | undefined {
   if (a === undefined) return b
   if (b === undefined) return a
 
