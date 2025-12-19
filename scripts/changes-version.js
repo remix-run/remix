@@ -127,13 +127,17 @@ function main() {
     console.log()
     console.log('Files have been updated. Review the changes, then manually commit and tag:')
     console.log()
+    console.log('```sh')
     let commitMessage = generateCommitMessage(releases)
-    console.log(`  git add .`)
-    console.log(`  git commit -m "${commitMessage.split('\n').join('\\n')}"`)
+    console.log(`git add .`)
+    console.log()
+    console.log(`git commit -m "${commitMessage}"`)
+    console.log()
     for (let release of releases) {
       let tag = `${release.packageName}@${release.nextVersion}`
-      console.log(`  git tag ${tag}`)
+      console.log(`git tag ${tag}`)
     }
+    console.log('```')
     console.log()
   } else {
     // Stage all changes
@@ -144,7 +148,7 @@ function main() {
     // Create commit
     let commitMessage = generateCommitMessage(releases)
     console.log('Creating commit...')
-    logAndExec(`git commit -m "${commitMessage.split('\n').join('\\n')}"`)
+    logAndExec(`git commit -m "${commitMessage}"`)
     console.log()
 
     // Create tags

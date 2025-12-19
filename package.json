@@ -26,6 +26,7 @@
     "clean": "git clean -fdX -e '!/.env' .",
     "codegen": "pnpm -r run codegen",
     "create-github-release": "node --env-file .env ./scripts/create-github-release.js",
+    "create-github-release:preview": "node ./scripts/create-github-release.js --preview",
     "docs": "rm -rf docs/api && node docs/generate.ts",
     "docs:serve": "node docs/server.ts",
     "generate-remix": "node scripts/generate-remix.ts",
