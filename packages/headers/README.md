@@ -65,6 +65,13 @@ headers.set('Accept', accept)
 new Accept('text/html, text/*;q=0.9')
 new Accept({ 'text/html': 1, 'text/*': 0.9 })
 new Accept(['text/html', ['text/*', 0.9]])
+
+// Use class for type safety when setting Headers values
+// via Accept's `.toString()` method
+let headers = new Headers({
+  Accept: new Accept({ 'text/html': 1, 'application/json': 0.8 }),
+})
+headers.set('Accept', new Accept({ 'text/html': 1, 'application/json': 0.8 }))
 ```
 
 ### Accept-Encoding
@@ -94,6 +101,13 @@ headers.set('Accept-Encoding', acceptEncoding)
 // Construct directly
 new AcceptEncoding('gzip, deflate;q=0.8')
 new AcceptEncoding({ gzip: 1, deflate: 0.8 })
+
+// Use class for type safety when setting Headers values
+// via AcceptEncoding's `.toString()` method
+let headers = new Headers({
+  'Accept-Encoding': new AcceptEncoding({ gzip: 1, br: 0.9 }),
+})
+headers.set('Accept-Encoding', new AcceptEncoding({ gzip: 1, br: 0.9 }))
 ```
 
 ### Accept-Language
@@ -123,6 +137,13 @@ headers.set('Accept-Language', acceptLanguage)
 // Construct directly
 new AcceptLanguage('en-US, en;q=0.9')
 new AcceptLanguage({ 'en-US': 1, en: 0.9 })
+
+// Use class for type safety when setting Headers values
+// via AcceptLanguage's `.toString()` method
+let headers = new Headers({
+  'Accept-Language': new AcceptLanguage({ 'en-US': 1, fr: 0.5 }),
+})
+headers.set('Accept-Language', new AcceptLanguage({ 'en-US': 1, fr: 0.5 }))
 ```
 
 ### Cache-Control
@@ -152,6 +173,13 @@ headers.set('Cache-Control', cacheControl)
 // Construct directly
 new CacheControl('public, max-age=3600')
 new CacheControl({ public: true, maxAge: 3600 })
+
+// Use class for type safety when setting Headers values
+// via CacheControl's `.toString()` method
+let headers = new Headers({
+  'Cache-Control': new CacheControl({ public: true, maxAge: 3600 }),
+})
+headers.set('Cache-Control', new CacheControl({ public: true, maxAge: 3600 }))
 ```
 
 ### Content-Disposition
@@ -176,6 +204,16 @@ headers.set('Content-Disposition', contentDisposition)
 // Construct directly
 new ContentDisposition('attachment; filename="example.pdf"')
 new ContentDisposition({ type: 'attachment', filename: 'example.pdf' })
+
+// Use class for type safety when setting Headers values
+// via ContentDisposition's `.toString()` method
+let headers = new Headers({
+  'Content-Disposition': new ContentDisposition({ type: 'attachment', filename: 'example.pdf' }),
+})
+headers.set(
+  'Content-Disposition',
+  new ContentDisposition({ type: 'attachment', filename: 'example.pdf' }),
+)
 ```
 
 ### Content-Range
@@ -199,9 +237,15 @@ unsatisfied.start // null
 unsatisfied.end // null
 unsatisfied.size // 67589
 
-// Construct and set
-let newRange = new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 })
-headers.set('Content-Range', newRange)
+// Construct directly
+new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 })
+
+// Use class for type safety when setting Headers values
+// via ContentRange's `.toString()` method
+let headers = new Headers({
+  'Content-Range': new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 }),
+})
+headers.set('Content-Range', new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 }))
 ```
 
 ### Content-Type
@@ -225,6 +269,13 @@ headers.set('Content-Type', contentType)
 // Construct directly
 new ContentType('text/html; charset=utf-8')
 new ContentType({ mediaType: 'text/html', charset: 'utf-8' })
+
+// Use class for type safety when setting Headers values
+// via ContentType's `.toString()` method
+let headers = new Headers({
+  'Content-Type': new ContentType({ mediaType: 'text/html', charset: 'utf-8' }),
+})
+headers.set('Content-Type', new ContentType({ mediaType: 'text/html', charset: 'utf-8' }))
 ```
 
 ### Cookie
@@ -261,6 +312,13 @@ new Cookie([
   ['session_id', 'abc123'],
   ['theme', 'dark'],
 ])
+
+// Use class for type safety when setting Headers values
+// via Cookie's `.toString()` method
+let headers = new Headers({
+  Cookie: new Cookie({ session_id: 'abc123', theme: 'dark' }),
+})
+headers.set('Cookie', new Cookie({ session_id: 'abc123', theme: 'dark' }))
 ```
 
 ### If-Match
@@ -291,6 +349,13 @@ headers.set('If-Match', ifMatch)
 
 // Construct directly
 new IfMatch(['abc123', 'def456'])
+
+// Use class for type safety when setting Headers values
+// via IfMatch's `.toString()` method
+let headers = new Headers({
+  'If-Match': new IfMatch(['"abc123"', '"def456"']),
+})
+headers.set('If-Match', new IfMatch(['"abc123"', '"def456"']))
 ```
 
 ### If-None-Match
@@ -320,6 +385,13 @@ headers.set('If-None-Match', ifNoneMatch)
 
 // Construct directly
 new IfNoneMatch(['abc123'])
+
+// Use class for type safety when setting Headers values
+// via IfNoneMatch's `.toString()` method
+let headers = new Headers({
+  'If-None-Match': new IfNoneMatch(['"abc123"']),
+})
+headers.set('If-None-Match', new IfNoneMatch(['"abc123"']))
 ```
 
 ### If-Range
@@ -344,9 +416,15 @@ etagHeader.matches({ etag: '"67ab43"' }) // true
 let empty = parseIfRange(null)
 empty.matches({ etag: '"any"' }) // true
 
-// Construct and set
-let newIfRange = new IfRange('"abc123"')
-headers.set('If-Range', newIfRange)
+// Construct directly
+new IfRange('"abc123"')
+
+// Use class for type safety when setting Headers values
+// via IfRange's `.toString()` method
+let headers = new Headers({
+  'If-Range': new IfRange('"abc123"'),
+})
+headers.set('If-Range', new IfRange('"abc123"'))
 ```
 
 ### Range
@@ -373,9 +451,15 @@ multi.ranges.length // 2
 let suffix = parseRange('bytes=-500')
 suffix.normalize(2000) // [{ start: 1500, end: 1999 }]
 
-// Construct and set
-let newRange = new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] })
-headers.set('Range', newRange)
+// Construct directly
+new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] })
+
+// Use class for type safety when setting Headers values
+// via Range's `.toString()` method
+let headers = new Headers({
+  Range: new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] }),
+})
+headers.set('Range', new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] }))
 ```
 
 ### Set-Cookie
@@ -412,6 +496,13 @@ new SetCookie({
   httpOnly: true,
   secure: true,
 })
+
+// Use class for type safety when setting Headers values
+// via SetCookie's `.toString()` method
+let headers = new Headers({
+  'Set-Cookie': new SetCookie({ name: 'session_id', value: 'abc', httpOnly: true }),
+})
+headers.set('Set-Cookie', new SetCookie({ name: 'session_id', value: 'abc', httpOnly: true }))
 ```
 
 ### Vary
@@ -439,6 +530,13 @@ headers.set('Vary', vary)
 new Vary('Accept-Encoding, Accept-Language')
 new Vary(['Accept-Encoding', 'Accept-Language'])
 new Vary({ headerNames: ['Accept-Encoding', 'Accept-Language'] })
+
+// Use class for type safety when setting Headers values
+// via Vary's `.toString()` method
+let headers = new Headers({
+  Vary: new Vary(['Accept-Encoding', 'Accept-Language']),
+})
+headers.set('Vary', new Vary(['Accept-Encoding', 'Accept-Language']))
 ```
 
 ## Raw Headers
