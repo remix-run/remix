@@ -192,6 +192,36 @@ describe('vnode rendering', () => {
       // Attribute should remain correct post-hydration
       expect(postPath.getAttribute('stroke-linecap')).toBe('round')
     })
+
+    it('propagates SVG namespace through components', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function SvgLink({ href, children }: { href: string; children?: RemixNode }) {
+        return () => <a href={href}>{children}</a>
+      }
+
+      root.render(
+        <svg width="100" height="100">
+          <SvgLink href="/test">
+            <path id="p" />
+          </SvgLink>
+        </svg>,
+      )
+
+      let svg = container.querySelector('svg')
+      let anchor = container.querySelector('a')
+      let path = container.querySelector('path')
+
+      invariant(svg instanceof SVGSVGElement)
+      invariant(anchor instanceof SVGAElement)
+      invariant(path instanceof SVGPathElement)
+
+      // All elements should have SVG namespace
+      expect(svg.namespaceURI).toBe('http://www.w3.org/2000/svg')
+      expect(anchor.namespaceURI).toBe('http://www.w3.org/2000/svg')
+      expect(path.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    })
   })
 
   describe('inserts', () => {

@@ -773,9 +773,11 @@ function insert(
   cursor?: Node | null,
 ): Node | null | undefined {
   node._parent = vParent // set parent for initial render context lookups
-  if (isHostNode(node)) {
-    node._svg = getSvgContext(vParent, node.type)
-  }
+  // if (isHostNode(node)) {
+  //   node._svg = getSvgContext(vParent, node.type)
+  // }
+  node._svg = getSvgContext(vParent, node.type)
+
   cursor = skipComments(cursor ?? null)
 
   let doInsert = anchor
