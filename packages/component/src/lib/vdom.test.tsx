@@ -1731,4 +1731,72 @@ describe('vnode rendering', () => {
     root.flush()
     expect(connectCalls).toBe(1)
   })
+
+  describe('conditional rendering and DOM order', () => {
+    it('maintains DOM order when component switches element types via self-update', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      let showB = false
+      let capturedUpdate = () => {}
+
+      function A(this: Handle) {
+        capturedUpdate = () => this.update()
+        return () => (showB ? <span>B</span> : <div>A</div>)
+      }
+
+      root.render(
+        <main>
+          <A />
+          <p>C</p>
+        </main>,
+      )
+      expect(container.innerHTML).toBe('<main><div>A</div><p>C</p></main>')
+
+      showB = true
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><span>B</span><p>C</p></main>')
+
+      showB = false
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><div>A</div><p>C</p></main>')
+    })
+
+    it('maintains DOM order when component switches from component to element via self-update', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      let showB = false
+      let capturedUpdate = () => {}
+
+      function B() {
+        return <span>B</span>
+      }
+
+      function A(this: Handle) {
+        capturedUpdate = () => this.update()
+        return () => (showB ? <B /> : <div>A</div>)
+      }
+
+      root.render(
+        <main>
+          <A />
+          <p>C</p>
+        </main>,
+      )
+      expect(container.innerHTML).toBe('<main><div>A</div><p>C</p></main>')
+
+      showB = true
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><span>B</span><p>C</p></main>')
+
+      showB = false
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><div>A</div><p>C</p></main>')
+    })
+  })
 })
