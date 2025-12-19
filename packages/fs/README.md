@@ -1,12 +1,12 @@
 # fs
 
-Filesystem utilities using the Web File API.
+Lazy, streaming filesystem utilities for JavaScript.
 
-This package provides utilities for working with files on the local filesystem using the Web [File API](https://developer.mozilla.org/en-US/docs/Web/API/File).
+This package provides utilities for working with files on the local filesystem using the [`LazyFile`](https://github.com/remix-run/remix/tree/main/packages/lazy-file)/ [Web `File` API](https://developer.mozilla.org/en-US/docs/Web/API/File) API.
 
 ## Features
 
-- **Web Standards** - Use the Web File API for maximum portability
+- **Web Standards** - Uses [`LazyFile`](https://github.com/remix-run/remix/tree/main/packages/lazy-file) which matches the native [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) API and provides `.stream()`, `.toFile()`, and `.toBlob()` for converting to native types.
 - **Seamless Node.js Compat** - Works seamlessly with Node.js file descriptors and handles
 
 ## Installation
@@ -19,19 +19,19 @@ npm install @remix-run/fs
 
 ## Usage
 
-### Opening Files
+### Opening Lazy Files
 
 ```ts
-import { openFile } from '@remix-run/fs'
+import { openLazyFile } from '@remix-run/fs'
 
 // Open a file from the filesystem
-let file = openFile('./path/to/file.json')
+let lazyFile = openLazyFile('./path/to/file.json')
 
-// The file is lazy - no data is read until you call file.text(), file.bytes(), etc.
-let json = JSON.parse(await file.text())
+// The file is lazy - no data is read until you call lazyFile.text(), lazyFile.bytes(), etc.
+let json = JSON.parse(await lazyFile.text())
 
 // You can override file metadata
-let customFile = openFile('./image.jpg', {
+let customLazyFile = openLazyFile('./image.jpg', {
   name: 'custom-name.jpg',
   type: 'image/jpeg',
   lastModified: Date.now(),
@@ -41,16 +41,16 @@ let customFile = openFile('./image.jpg', {
 ### Writing Files
 
 ```ts
-import { openFile, writeFile } from '@remix-run/fs'
+import { openLazyFile, writeFile } from '@remix-run/fs'
 
 // Read a file and write it elsewhere
-let file = openFile('./source.txt')
-await writeFile('./destination.txt', file)
+let lazyFile = openLazyFile('./source.txt')
+await writeFile('./destination.txt', lazyFile)
 
 // Write to an open file handle
 import * as fsp from 'node:fs/promises'
 let handle = await fsp.open('./destination.txt', 'w')
-await writeFile(handle, file)
+await writeFile(handle, lazyFile)
 await handle.close()
 ```
 
