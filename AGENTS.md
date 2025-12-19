@@ -50,3 +50,4 @@
 - **Validating changes**: `pnpm changes:validate` checks that all change files follow the correct naming convention and format.
 - **Previewing releases**: `pnpm changes:preview` shows which packages will be released, what the CHANGELOG will look like, the commit message and tags.
 - **Versioning releases**: `pnpm changes:version` updates package.json, CHANGELOG.md, creates a git commit and tags. Don't run this unless explicitly instructed to do so. We don't want accidental releases during development.
+- **Test change/release code with preview scripts**: When modifying any change/release code, run `pnpm changes:preview` and `pnpm create-github-release:preview` to test locally.
