@@ -817,6 +817,9 @@ importers:
       '@remix-run/async-context-middleware':
         specifier: workspace:^
         version: link:../async-context-middleware
+      '@remix-run/component':
+        specifier: workspace:^
+        version: link:../component
       '@remix-run/compression-middleware':
         specifier: workspace:^
         version: link:../compression-middleware
