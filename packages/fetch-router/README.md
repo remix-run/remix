@@ -31,7 +31,7 @@ The example below is a small site with a home page, an "about" page, and a blog.
 
 ```ts
 import { createRouter, route } from '@remix-run/fetch-router'
-import { logger } from '@remix-run/fetch-router/logger-middleware'
+import { logger } from '@remix-run/logger-middleware'
 
 // `route()` creates a "route map" that organizes routes by name. The keys
 // of the map may be any name, and may be nested to group related routes.
