@@ -37,6 +37,7 @@ The benefit is code that's not just reusable, but **future-proof**.
 We currently publish the following packages:
 
 - [async-context-middleware](packages/async-context-middleware): Middleware for storing request context in AsyncLocalStorage
+- [component](packages/component): A minimal component system that leans on JavaScript and DOM primitives
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
 - [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
 - [fetch-proxy](packages/fetch-proxy): An HTTP proxy for the web Fetch API
