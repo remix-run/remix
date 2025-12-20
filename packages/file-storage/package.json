@@ -22,6 +22,7 @@
     ".": "./src/index.ts",
     "./fs": "./src/fs.ts",
     "./memory": "./src/memory.ts",
+    "./s3": "./src/s3.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -37,6 +38,10 @@
       "./memory": {
         "types": "./dist/memory.d.ts",
         "default": "./dist/memory.js"
+      },
+      "./s3": {
+        "types": "./dist/s3.d.ts",
+        "default": "./dist/s3.js"
       },
       "./package.json": "./package.json"
     }
