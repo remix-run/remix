@@ -119,3 +119,13 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
     return Array.from(this.#set).join(', ')
   }
 }
+
+/**
+ * Parse a Vary header value.
+ *
+ * @param value The header value (string, string[], init object, or null)
+ * @returns A Vary instance (empty if null)
+ */
+export function parseVary(value: string | string[] | VaryInit | null): Vary {
+  return new Vary(value ?? undefined)
+}

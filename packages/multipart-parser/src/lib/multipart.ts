@@ -1,4 +1,4 @@
-import Headers from '@remix-run/headers'
+import { parseContentDisposition, parseContentType, parseRawHeaders } from '@remix-run/headers'
 
 import {
   createSearch,
@@ -327,6 +327,7 @@ export class MultipartParser {
     if (this.#state !== MultipartParserStateDone) {
       throw new MultipartParseError('Multipart stream not finished')
     }
+    return undefined
   }
 }
 
@@ -381,7 +382,7 @@ export class MultipartPart {
    */
   get headers(): Headers {
     if (!this.#headers) {
-      this.#headers = new Headers(decoder.decode(this.#header))
+      this.#headers = parseRawHeaders(decoder.decode(this.#header))
     }
 
     return this.#headers
@@ -405,21 +406,21 @@ export class MultipartPart {
    * The filename of the part, if it is a file upload.
    */
   get filename(): string | undefined {
-    return this.headers.contentDisposition.preferredFilename
+    return parseContentDisposition(this.headers.get('content-disposition')).preferredFilename
   }
 
   /**
    * The media type of the part.
    */
   get mediaType(): string | undefined {
-    return this.headers.contentType.mediaType
+    return parseContentType(this.headers.get('content-type')).mediaType
   }
 
   /**
    * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
    */
   get name(): string | undefined {
-    return this.headers.contentDisposition.name
+    return parseContentDisposition(this.headers.get('content-disposition')).name
   }
 
   /**

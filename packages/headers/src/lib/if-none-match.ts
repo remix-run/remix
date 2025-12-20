@@ -67,3 +67,13 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
     return this.tags.join(', ')
   }
 }
+
+/**
+ * Parse an If-None-Match header value.
+ *
+ * @param value The header value (string, string[], init object, or null)
+ * @returns An IfNoneMatch instance (empty if null)
+ */
+export function parseIfNoneMatch(value: string | string[] | IfNoneMatchInit | null): IfNoneMatch {
+  return new IfNoneMatch(value ?? undefined)
+}

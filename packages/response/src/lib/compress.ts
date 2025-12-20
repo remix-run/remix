@@ -9,7 +9,8 @@ import {
 } from 'node:zlib'
 import type { BrotliOptions, ZlibOptions } from 'node:zlib'
 
-import { AcceptEncoding, SuperHeaders } from '@remix-run/headers'
+import type { AcceptEncoding } from '@remix-run/headers'
+import { parseAcceptEncoding, parseCacheControl, parseVary } from '@remix-run/headers'
 
 export type Encoding = 'br' | 'gzip' | 'deflate'
 const defaultEncodings: Encoding[] = ['br', 'gzip', 'deflate']
@@ -84,7 +85,13 @@ export async function compressResponse(
   let supportedEncodings = compressOptions.encodings ?? defaultEncodings
   let threshold = compressOptions.threshold ?? 1024
   let acceptEncodingHeader = request.headers.get('Accept-Encoding')
-  let responseHeaders = new SuperHeaders(response.headers)
+  let responseHeaders = new Headers(response.headers)
+
+  let contentEncodingHeader = responseHeaders.get('content-encoding')
+  let contentLengthHeader = responseHeaders.get('content-length')
+  let contentLength = contentLengthHeader != null ? parseInt(contentLengthHeader, 10) : null
+  let acceptRangesHeader = responseHeaders.get('accept-ranges')
+  let cacheControl = parseCacheControl(responseHeaders.get('cache-control'))
 
   if (
     !acceptEncodingHeader ||
@@ -92,20 +99,20 @@ export async function compressResponse(
     // Empty response
     (request.method !== 'HEAD' && !response.body) ||
     // Already compressed
-    responseHeaders.contentEncoding != null ||
+    contentEncodingHeader != null ||
     // Content-Length below threshold
-    (responseHeaders.contentLength != null && responseHeaders.contentLength < threshold) ||
+    (contentLength != null && contentLength < threshold) ||
     // Cache-Control: no-transform
-    responseHeaders.cacheControl.noTransform ||
+    cacheControl.noTransform ||
     // Response advertising range support
-    responseHeaders.acceptRanges === 'bytes' ||
+    acceptRangesHeader === 'bytes' ||
     // Partial content responses
     response.status === 206
   ) {
     return response
   }
 
-  let acceptEncoding = new AcceptEncoding(acceptEncodingHeader)
+  let acceptEncoding = parseAcceptEncoding(acceptEncodingHeader)
   let selectedEncoding = negotiateEncoding(acceptEncoding, supportedEncodings)
   if (selectedEncoding === null) {
     // Client has explicitly rejected all supported encodings, including 'identity'
@@ -155,15 +162,20 @@ function negotiateEncoding(
   return preferred
 }
 
-function setCompressionHeaders(headers: SuperHeaders, encoding: string): void {
-  headers.contentEncoding = encoding
-  headers.acceptRanges = 'none'
-  headers.contentLength = null
-  headers.vary.add('Accept-Encoding')
+function setCompressionHeaders(headers: Headers, encoding: string): void {
+  headers.set('content-encoding', encoding)
+  headers.set('accept-ranges', 'none')
+  headers.delete('content-length')
+
+  // Update Vary header to include Accept-Encoding
+  let vary = parseVary(headers.get('vary'))
+  vary.add('Accept-Encoding')
+  headers.set('vary', vary.toString())
 
   // Convert strong ETags to weak since compressed representation is byte-different
-  if (headers.etag && !headers.etag.startsWith('W/')) {
-    headers.etag = `W/${headers.etag}`
+  let etagHeader = headers.get('etag')
+  if (etagHeader && !etagHeader.startsWith('W/')) {
+    headers.set('etag', `W/${etagHeader}`)
   }
 }
 
@@ -177,7 +189,7 @@ const brotliFlushOptions = {
 
 function applyCompression(
   response: Response,
-  responseHeaders: SuperHeaders,
+  responseHeaders: Headers,
   encoding: Encoding,
   options: CompressResponseOptions,
 ): Response {
@@ -186,8 +198,8 @@ function applyCompression(
   }
 
   // Detect SSE for automatic flush configuration
-  let contentType = response.headers.get('Content-Type')
-  let mediaType = contentType?.split(';')[0].trim()
+  let contentTypeHeader = response.headers.get('Content-Type')
+  let mediaType = contentTypeHeader?.split(';')[0].trim()
   let isSSE = mediaType === 'text/event-stream'
 
   let compressor = createCompressor(encoding, {
@@ -216,6 +228,10 @@ function applyCompression(
  * Compresses a response stream that bridges node:zlib to Web Streams.
  * Reads from the input stream, compresses chunks through the compressor,
  * and returns a new ReadableStream with the compressed data.
+ *
+ * @param input The input stream to compress
+ * @param compressor The zlib compressor instance
+ * @returns A compressed ReadableStream
  */
 export function compressStream(
   input: ReadableStream<Uint8Array>,

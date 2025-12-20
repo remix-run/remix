@@ -225,3 +225,13 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
     return pairs.join(',')
   }
 }
+
+/**
+ * Parse an Accept-Language header value.
+ *
+ * @param value The header value (string, init object, or null)
+ * @returns An AcceptLanguage instance (empty if null)
+ */
+export function parseAcceptLanguage(value: string | AcceptLanguageInit | null): AcceptLanguage {
+  return new AcceptLanguage(value ?? undefined)
+}

@@ -178,3 +178,13 @@ export class Range implements HeaderValue, RangeInit {
     return `${this.unit}=${rangeParts.join(',')}`
   }
 }
+
+/**
+ * Parse a Range header value.
+ *
+ * @param value The header value (string, init object, or null)
+ * @returns A Range instance (empty if null)
+ */
+export function parseRange(value: string | RangeInit | null): Range {
+  return new Range(value ?? undefined)
+}
