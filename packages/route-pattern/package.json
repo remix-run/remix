@@ -36,6 +36,7 @@
     "@ark/attest": "^0.49.0",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "dedent": "^1.7.1",
     "find-my-way": "^9.1.0",
     "path-to-regexp": "^8.2.0",
     "vitest": "4.0.15"
