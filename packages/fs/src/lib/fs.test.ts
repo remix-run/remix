@@ -5,9 +5,9 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { beforeEach, afterEach, describe, it } from 'node:test'
 
-import { openFile, writeFile } from './fs.ts'
+import { openLazyFile, writeFile } from './fs.ts'
 
-describe('openFile', () => {
+describe('openLazyFile', () => {
   let tmpDir: string
 
   beforeEach(() => {
@@ -33,11 +33,11 @@ describe('openFile', () => {
   it('opens a file and reads content', async () => {
     let filePath = createTestFile('test.txt', 'hello world')
 
-    let file = openFile(filePath)
+    let lazyFile = openLazyFile(filePath)
 
-    assert.equal(file.name, filePath)
-    assert.equal(file.size, 11)
-    assert.equal(await file.text(), 'hello world')
+    assert.equal(lazyFile.name, filePath)
+    assert.equal(lazyFile.size, 11)
+    assert.equal(await lazyFile.text(), 'hello world')
   })
 
   it('sets MIME type based on file extension', () => {
@@ -45,50 +45,50 @@ describe('openFile', () => {
     let jsonPath = createTestFile('test.json', '{}')
     let txtPath = createTestFile('test.txt', 'text')
 
-    assert.equal(openFile(htmlPath).type, 'text/html')
-    assert.equal(openFile(jsonPath).type, 'application/json')
-    assert.equal(openFile(txtPath).type, 'text/plain')
+    assert.equal(openLazyFile(htmlPath).type, 'text/html')
+    assert.equal(openLazyFile(jsonPath).type, 'application/json')
+    assert.equal(openLazyFile(txtPath).type, 'text/plain')
   })
 
   it('sets lastModified from file stats', () => {
     let filePath = createTestFile('test.txt', 'content')
     let stats = fs.statSync(filePath)
 
-    let file = openFile(filePath)
+    let lazyFile = openLazyFile(filePath)
 
-    assert.equal(file.lastModified, stats.mtimeMs)
+    assert.equal(lazyFile.lastModified, stats.mtimeMs)
   })
 
   it('overrides file name with options.name', () => {
     let filePath = createTestFile('test.txt', 'content')
 
-    let file = openFile(filePath, { name: 'custom.txt' })
+    let lazyFile = openLazyFile(filePath, { name: 'custom.txt' })
 
-    assert.equal(file.name, 'custom.txt')
+    assert.equal(lazyFile.name, 'custom.txt')
   })
 
   it('overrides MIME type with options.type', () => {
     let filePath = createTestFile('test.txt', 'content')
 
-    let file = openFile(filePath, { type: 'application/custom' })
+    let lazyFile = openLazyFile(filePath, { type: 'application/custom' })
 
-    assert.equal(file.type, 'application/custom')
+    assert.equal(lazyFile.type, 'application/custom')
   })
 
   it('overrides lastModified with options.lastModified', () => {
     let filePath = createTestFile('test.txt', 'content')
     let customTime = Date.now() - 1000000
 
-    let file = openFile(filePath, { lastModified: customTime })
+    let lazyFile = openLazyFile(filePath, { lastModified: customTime })
 
-    assert.equal(file.lastModified, customTime)
+    assert.equal(lazyFile.lastModified, customTime)
   })
 
   it('reads file as ArrayBuffer', async () => {
     let filePath = createTestFile('test.txt', 'hello')
 
-    let file = openFile(filePath)
-    let buffer = await file.arrayBuffer()
+    let lazyFile = openLazyFile(filePath)
+    let buffer = await lazyFile.arrayBuffer()
 
     assert.equal(buffer.byteLength, 5)
     assert.equal(new TextDecoder().decode(buffer), 'hello')
@@ -97,10 +97,10 @@ describe('openFile', () => {
   it('streams file content', async () => {
     let filePath = createTestFile('test.txt', 'streaming content')
 
-    let file = openFile(filePath)
+    let lazyFile = openLazyFile(filePath)
     let chunks: Uint8Array[] = []
 
-    for await (let chunk of file.stream()) {
+    for await (let chunk of lazyFile.stream()) {
       chunks.push(chunk)
     }
 
@@ -117,27 +117,27 @@ describe('openFile', () => {
   it('handles empty files', async () => {
     let filePath = createTestFile('empty.txt', '')
 
-    let file = openFile(filePath)
+    let lazyFile = openLazyFile(filePath)
 
-    assert.equal(file.size, 0)
-    assert.equal(await file.text(), '')
+    assert.equal(lazyFile.size, 0)
+    assert.equal(await lazyFile.text(), '')
   })
 
   it('handles large files', async () => {
     let largeContent = 'x'.repeat(10000)
     let filePath = createTestFile('large.txt', largeContent)
 
-    let file = openFile(filePath)
+    let lazyFile = openLazyFile(filePath)
 
-    assert.equal(file.size, 10000)
-    assert.equal(await file.text(), largeContent)
+    assert.equal(lazyFile.size, 10000)
+    assert.equal(await lazyFile.text(), largeContent)
   })
 
   it('throws error for non-existent files', () => {
     let nonExistentPath = path.join(tmpDir, 'nonexistent.txt')
 
     assert.throws(
-      () => openFile(nonExistentPath),
+      () => openLazyFile(nonExistentPath),
       (error: Error) => error.message.includes('ENOENT'),
     )
   })
@@ -147,7 +147,7 @@ describe('openFile', () => {
     fs.mkdirSync(dirPath)
 
     assert.throws(
-      () => openFile(dirPath),
+      () => openLazyFile(dirPath),
       (error: Error) => error.message.includes('is not a file'),
     )
   })
@@ -171,8 +171,8 @@ describe('writeFile', () => {
     let destPath = path.join(tmpDir, 'dest.txt')
     fs.writeFileSync(sourcePath, 'test content')
 
-    let file = openFile(sourcePath)
-    await writeFile(destPath, file)
+    let lazyFile = openLazyFile(sourcePath)
+    await writeFile(destPath, lazyFile)
 
     assert.equal(fs.readFileSync(destPath, 'utf-8'), 'test content')
   })
@@ -182,10 +182,10 @@ describe('writeFile', () => {
     let destPath = path.join(tmpDir, 'dest.txt')
     fs.writeFileSync(sourcePath, 'test content')
 
-    let file = openFile(sourcePath)
+    let lazyFile = openLazyFile(sourcePath)
     let fd = fs.openSync(destPath, 'w')
 
-    await writeFile(fd, file)
+    await writeFile(fd, lazyFile)
     // Note: fd is automatically closed by the write stream
 
     assert.equal(fs.readFileSync(destPath, 'utf-8'), 'test content')
@@ -196,10 +196,10 @@ describe('writeFile', () => {
     let destPath = path.join(tmpDir, 'dest.txt')
     fs.writeFileSync(sourcePath, 'test content')
 
-    let file = openFile(sourcePath)
+    let lazyFile = openLazyFile(sourcePath)
     let handle = await fsp.open(destPath, 'w')
 
-    await writeFile(handle, file)
+    await writeFile(handle, lazyFile)
     await handle.close()
 
     assert.equal(fs.readFileSync(destPath, 'utf-8'), 'test content')
@@ -210,8 +210,8 @@ describe('writeFile', () => {
     let destPath = path.join(tmpDir, 'dest.txt')
     fs.writeFileSync(sourcePath, '')
 
-    let file = openFile(sourcePath)
-    await writeFile(destPath, file)
+    let lazyFile = openLazyFile(sourcePath)
+    await writeFile(destPath, lazyFile)
 
     assert.equal(fs.readFileSync(destPath, 'utf-8'), '')
   })
@@ -222,8 +222,8 @@ describe('writeFile', () => {
     let destPath = path.join(tmpDir, 'dest.txt')
     fs.writeFileSync(sourcePath, largeContent)
 
-    let file = openFile(sourcePath)
-    await writeFile(destPath, file)
+    let lazyFile = openLazyFile(sourcePath)
+    await writeFile(destPath, lazyFile)
 
     assert.equal(fs.readFileSync(destPath, 'utf-8'), largeContent)
   })
@@ -234,8 +234,8 @@ describe('writeFile', () => {
     fs.writeFileSync(sourcePath, 'content')
     fs.mkdirSync(path.dirname(destPath), { recursive: true })
 
-    let file = openFile(sourcePath)
-    await writeFile(destPath, file)
+    let lazyFile = openLazyFile(sourcePath)
+    await writeFile(destPath, lazyFile)
 
     assert.ok(fs.existsSync(destPath))
     assert.equal(fs.readFileSync(destPath, 'utf-8'), 'content')
@@ -247,8 +247,8 @@ describe('writeFile', () => {
     let destPath = path.join(tmpDir, 'dest.dat')
     fs.writeFileSync(sourcePath, binaryData)
 
-    let file = openFile(sourcePath)
-    await writeFile(destPath, file)
+    let lazyFile = openLazyFile(sourcePath)
+    await writeFile(destPath, lazyFile)
 
     let written = fs.readFileSync(destPath)
     assert.deepEqual(written, binaryData)

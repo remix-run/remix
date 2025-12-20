@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { openFile } from '@remix-run/fs'
+import { openLazyFile } from '@remix-run/fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const fixturesDir = path.resolve(__dirname, 'fixtures')
@@ -29,7 +29,7 @@ export const fixtures = {
 }
 
 export function readFixture(filename: string): ReadableStream<Uint8Array> {
-  let stream = openFile(filename).stream()
+  let stream = openLazyFile(filename).stream()
   return filename.endsWith('.tar.gz') || filename.endsWith('.tgz')
     ? stream.pipeThrough(new DecompressionStream('gzip'))
     : stream
