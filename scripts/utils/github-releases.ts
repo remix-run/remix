@@ -1,21 +1,21 @@
 import { request } from '@octokit/request'
 
-import { getChangelogEntry } from './changes.js'
+import { getChangelogEntry } from './changes.ts'
 
 const token = process.env.GITHUB_TOKEN
 
-/**
- * @typedef {{ preview?: boolean }} CreateReleaseOptions
- */
+interface CreateReleaseOptions {
+  preview?: boolean
+}
 
 /**
  * Creates a GitHub release for a package version
- * @param {string} packageName
- * @param {string} version
- * @param {CreateReleaseOptions} [options]
- * @returns {Promise<string | null>}
  */
-export async function createRelease(packageName, version, options = {}) {
+export async function createRelease(
+  packageName: string,
+  version: string,
+  options: CreateReleaseOptions = {},
+): Promise<string | null> {
   let { preview = false } = options
 
   let tagName = `${packageName}@${version}`

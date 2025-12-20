@@ -1,5 +1,5 @@
-import { validateAllChanges, formatValidationErrors } from './utils/changes.js'
-import { colors, colorize } from './utils/color.js'
+import { validateAllChanges, formatValidationErrors } from './utils/changes.ts'
+import { colors, colorize } from './utils/color.ts'
 
 /**
  * Validates all change files in the repository

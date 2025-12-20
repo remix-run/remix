@@ -4,8 +4,8 @@ import {
   getAllReleases,
   generateChangelogContent,
   generateCommitMessage,
-} from './utils/changes.js'
-import { colors, colorize } from './utils/color.js'
+} from './utils/changes.ts'
+import { colors, colorize } from './utils/color.ts'
 
 /**
  * Main preview function
