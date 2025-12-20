@@ -1,4 +1,4 @@
-import { defineInteraction, type Interaction } from '../interaction'
+import { defineInteraction, type Interaction } from '../interaction.ts'
 
 /**
  * ### Description

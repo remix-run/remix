@@ -1,7 +1,7 @@
-import { createRouter } from '@remix-run/fetch-router'
-import { compression } from '@remix-run/compression-middleware'
-import { logger } from '@remix-run/logger-middleware'
-import { staticFiles } from '@remix-run/static-middleware'
+import { createRouter } from 'remix'
+import { compression } from 'remix/compression-middleware'
+import { logger } from 'remix/logger-middleware'
+import { staticFiles } from 'remix/static-middleware'
 
 import { routes } from './routes.ts'
 import { MessageStream } from './assets/message-stream.tsx'
