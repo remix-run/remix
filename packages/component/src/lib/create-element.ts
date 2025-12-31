@@ -6,7 +6,7 @@ export function createElement(
   props: Record<string, any>,
   ...children: any[]
 ): RemixElement {
-  if (props.key != null) {
+  if (props?.key != null) {
     let { key, ...rest } = props
     return jsx(type, { ...rest, children }, key)
   }
