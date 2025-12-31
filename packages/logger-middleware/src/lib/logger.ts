@@ -1,4 +1,5 @@
 import type { Middleware } from '@remix-run/fetch-router'
+import { Colorizer } from './colorizer.ts'
 
 /**
  * Options for the `logger` middleware.
@@ -12,7 +13,9 @@ export interface LoggerOptions {
    * - `%date` - The date and time of the request in Apache/nginx log format (dd/Mon/yyyy:HH:mm:ss ±zzzz)
    * - `%dateISO` - The date and time of the request in ISO format
    * - `%duration` - The duration of the request in milliseconds
+   * - `%durationPretty` - The duration of the request in a human-readable format (e.g., '1.2s', '120ms')
    * - `%contentLength` - The `Content-Length` header of the response
+   * - `%contentLengthPretty` - The `Content-Length` header of the response in a human-readable format (e.g., '1.2kB', '120B')
    * - `%contentType` - The `Content-Type` header of the response
    * - `%host` - The host of the request URL
    * - `%hostname` - The hostname of the request URL
@@ -28,7 +31,7 @@ export interface LoggerOptions {
    * - `%url` - The full URL of the request
    * - `%userAgent` - The `User-Agent` header of the request
    *
-   * @default '[%date] %method %path %status %contentLength'
+   * @default '[%date] %method %path %status %durationPretty %contentLengthPretty'
    */
   format?: string
   /**
@@ -37,6 +40,19 @@ export interface LoggerOptions {
    * @default console.log
    */
   log?: (message: string) => void
+  /**
+   * Enables or disables colorized output for the log messages.
+   * When set to `true`, colorized output is enabled if the environment supports it
+   * (i.e., running in a TTY and the `NO_COLOR` environment variable is not set).
+   *
+   * When `false` or not provided, colorized output is disabled.
+   *
+   * When enabled, the following tokens will be color-coded in the output:
+   * `%status`, `%method`, `%duration`, `%durationPretty`, `%contentLength`, and `%contentLengthPretty`.
+   *
+   * @default false
+   */
+  colors?: boolean
 }
 
 /**
@@ -46,22 +62,38 @@ export interface LoggerOptions {
  * @returns The logger middleware
  */
 export function logger(options: LoggerOptions = {}): Middleware {
-  let { format = '[%date] %method %path %status %contentLength', log = console.log } = options
+  let {
+    format = '[%date] %method %path %status %durationPretty %contentLengthPretty',
+    log = console.log,
+    colors,
+  } = options
+  let useColor =
+    typeof process !== 'undefined' && process.stdout?.isTTY && process.env.NO_COLOR == null
+  let colorizer = new Colorizer(useColor && colors)
 
   return async ({ request, url }, next) => {
     let start = new Date()
     let response = await next()
     let end = new Date()
+    let duration = end.getTime() - start.getTime()
+    let contentLength = response.headers.get('Content-Length')
+    let contentLengthNum = contentLength ? parseInt(contentLength, 10) : undefined
 
     let tokens: Record<string, () => string> = {
       date: () => formatApacheDate(start),
       dateISO: () => start.toISOString(),
-      duration: () => String(end.getTime() - start.getTime()),
-      contentLength: () => response.headers.get('Content-Length') ?? '-',
+      duration: () => colorizer.duration(duration, String(duration)),
+      durationPretty: () => colorizer.duration(duration, formatDuration(duration)),
+      contentLength: () => colorizer.contentLength(contentLengthNum, contentLength ?? '-'),
+      contentLengthPretty: () =>
+        colorizer.contentLength(
+          contentLengthNum,
+          contentLength ? formatFileSize(contentLengthNum!) : '-',
+        ),
       contentType: () => response.headers.get('Content-Type') ?? '-',
       host: () => url.host,
       hostname: () => url.hostname,
-      method: () => request.method,
+      method: () => colorizer.method(request.method),
       path: () => url.pathname + url.search,
       pathname: () => url.pathname,
       port: () => url.port,
@@ -69,14 +101,13 @@ export function logger(options: LoggerOptions = {}): Middleware {
       query: () => url.search,
       referer: () => request.headers.get('Referer') ?? '-',
       search: () => url.search,
-      status: () => String(response.status),
+      status: () => colorizer.status(response.status),
       statusText: () => response.statusText,
       url: () => url.href,
       userAgent: () => request.headers.get('User-Agent') ?? '-',
     }
 
     let message = format.replace(/%(\w+)/g, (_, key) => tokens[key]?.() ?? '-')
-
     log(message)
 
     return response
@@ -100,7 +131,6 @@ function formatApacheDate(date: Date): string {
   let minutes = String(date.getMinutes()).padStart(2, '0')
   let seconds = String(date.getSeconds()).padStart(2, '0')
 
-  // Get timezone offset in minutes and convert to ±HHMM format
   let timezoneOffset = date.getTimezoneOffset()
   let sign = timezoneOffset <= 0 ? '+' : '-'
   let offsetHours = String(Math.floor(Math.abs(timezoneOffset) / 60)).padStart(2, '0')
@@ -108,4 +138,36 @@ function formatApacheDate(date: Date): string {
   let timezone = `${sign}${offsetHours}${offsetMinutes}`
 
   return `${day}/${month}/${year}:${hours}:${minutes}:${seconds} ${timezone}`
+}
+
+/**
+ * Formats a file size in a human-readable format.
+ * Example: 1024 -> "1.0 kB"
+ */
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  let units = ['B', 'kB', 'MB', 'GB', 'TB']
+  let i = Math.floor(Math.log(bytes) / Math.log(1024))
+  let size = bytes / Math.pow(1024, i)
+  return size.toFixed(i === 0 ? 0 : 1) + ' ' + units[i]
+}
+
+const MINUTE_IN_MS = 60 * 1000
+const HOUR_IN_MS = 60 * MINUTE_IN_MS
+
+/**
+ * Formats a duration in a human-readable format.
+ * Example: 1200 -> "1.20s"
+ */
+export function formatDuration(ms: number): string {
+  if (ms >= HOUR_IN_MS) {
+    return `${(ms / HOUR_IN_MS).toFixed(2)}h`
+  }
+  if (ms >= MINUTE_IN_MS) {
+    return `${(ms / MINUTE_IN_MS).toFixed(2)}m`
+  }
+  if (ms >= 1000) {
+    return `${(ms / 1000).toFixed(2)}s`
+  }
+  return `${ms}ms`
 }
