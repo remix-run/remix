@@ -27,7 +27,7 @@ export let colors = {
   reset: '\x1b[0m',
 }
 
-export function colorize(text, color) {
+export function colorize(text: string, color: string): string {
   if (process.env.NO_COLOR) {
     return text
   }

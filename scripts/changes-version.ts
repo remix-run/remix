@@ -6,18 +6,16 @@ import {
   getAllReleases,
   generateChangelogContent,
   generateCommitMessage,
-} from './utils/changes.js'
-import { colors, colorize } from './utils/color.js'
-import { getPackageFile, getPackageDir } from './utils/packages.js'
-import { readJson, writeJson, readFile, writeFile } from './utils/fs.js'
-import { logAndExec } from './utils/process.js'
+} from './utils/changes.ts'
+import { colors, colorize } from './utils/color.ts'
+import { getPackageFile, getPackageDir } from './utils/packages.ts'
+import { readJson, writeJson, readFile, writeFile } from './utils/fs.ts'
+import { logAndExec } from './utils/process.ts'
 
 /**
  * Updates package.json version
- * @param {string} packageName
- * @param {string} newVersion
  */
-function updatePackageJson(packageName, newVersion) {
+function updatePackageJson(packageName: string, newVersion: string) {
   let packageJsonPath = getPackageFile(packageName, 'package.json')
   let packageJson = readJson(packageJsonPath)
   packageJson.version = newVersion
@@ -27,10 +25,8 @@ function updatePackageJson(packageName, newVersion) {
 
 /**
  * Updates CHANGELOG.md with new content
- * @param {string} packageName
- * @param {string} newContent
  */
-function updateChangelog(packageName, newContent) {
+function updateChangelog(packageName: string, newContent: string) {
   let changelogPath = getPackageFile(packageName, 'CHANGELOG.md')
   let existingChangelog = readFile(changelogPath)
 
@@ -54,9 +50,8 @@ function updateChangelog(packageName, newContent) {
 
 /**
  * Deletes all change files (except README.md)
- * @param {string} packageName
  */
-function deleteChangeFiles(packageName) {
+function deleteChangeFiles(packageName: string) {
   let changesDir = path.join(getPackageDir(packageName), '.changes')
   let files = fs.readdirSync(changesDir)
   let changeFiles = files.filter((file) => file !== 'README.md' && file.endsWith('.md'))
