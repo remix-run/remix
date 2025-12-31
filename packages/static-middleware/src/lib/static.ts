@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import * as fsp from 'node:fs/promises'
-import { openFile } from '@remix-run/fs'
+import { openLazyFile } from '@remix-run/fs'
 import type { Middleware } from '@remix-run/fetch-router'
 import { createFileResponse as sendFile, type FileResponseOptions } from '@remix-run/response/file'
 
@@ -141,19 +141,19 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
 
     if (filePath) {
       let fileName = path.relative(root, filePath)
-      let file = openFile(filePath, { name: fileName })
+      let lazyFile = openLazyFile(filePath, { name: fileName })
 
       let finalFileOptions: FileResponseOptions = { ...fileOptions }
 
-      // If acceptRanges is a function, evaluate it with the file
+      // If acceptRanges is a function, evaluate it with the lazyFile
       // Otherwise, pass it directly to sendFile
       if (typeof acceptRanges === 'function') {
-        finalFileOptions.acceptRanges = acceptRanges(file)
+        finalFileOptions.acceptRanges = acceptRanges(lazyFile)
       } else if (acceptRanges !== undefined) {
         finalFileOptions.acceptRanges = acceptRanges
       }
 
-      return sendFile(file, context.request, finalFileOptions)
+      return sendFile(lazyFile, context.request, finalFileOptions)
     }
 
     return next()

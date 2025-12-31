@@ -4,9 +4,9 @@ import { detectMimeType } from '@remix-run/mime'
 import { type LazyContent, LazyFile } from '@remix-run/lazy-file'
 
 /**
- * Options for opening a file from the local filesystem.
+ * Options for opening a lazy file from the local filesystem.
  */
-export interface OpenFileOptions {
+export interface OpenLazyFileOptions {
   /**
    * Overrides the name of the file.
    *
@@ -28,19 +28,16 @@ export interface OpenFileOptions {
 }
 
 /**
- * Returns a `File` from the local filesytem.
+ * Returns a `LazyFile` from the local filesystem.
  *
  * The returned file's `name` property will be set to the `filename` argument as provided,
  * unless overridden via `options.name`.
  *
- * [MDN `File` Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
- *
- * @alias getFile
  * @param filename The path to the file
  * @param options Options to override the file's metadata
- * @returns A `File` object
+ * @returns A `LazyFile` object
  */
-export function openFile(filename: string, options?: OpenFileOptions): File {
+export function openLazyFile(filename: string, options?: OpenLazyFileOptions): LazyFile {
   let stats = fs.statSync(filename)
 
   if (!stats.isFile()) {
@@ -57,7 +54,7 @@ export function openFile(filename: string, options?: OpenFileOptions): File {
   return new LazyFile(content, options?.name ?? filename, {
     type: options?.type ?? detectMimeType(filename) ?? '',
     lastModified: options?.lastModified ?? stats.mtimeMs,
-  }) as File
+  })
 }
 
 function streamFile(
@@ -80,19 +77,21 @@ function streamFile(
   })
 }
 
-// Preserve backwards compat with v3.0
-export { type OpenFileOptions as GetFileOptions, openFile as getFile }
-
 /**
- * Writes a `File` to the local filesytem and resolves when the stream is finished.
+ * Writes a file-like object to the local filesystem and resolves when the stream is finished.
+ *
+ * Accepts any object with a `stream()` method, including native `File`, `Blob`, and `LazyFile`.
  *
  * [MDN `File` Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
  *
  * @param to The path to write the file to, or an open file descriptor
- * @param file The file to write
+ * @param file The file to write (any object with a `stream()` method)
  * @returns A promise that resolves when the file is written
  */
-export function writeFile(to: string | number | fs.promises.FileHandle, file: File): Promise<void> {
+export function writeFile(
+  to: string | number | fs.promises.FileHandle,
+  file: { stream(): ReadableStream<Uint8Array> },
+): Promise<void> {
   return new Promise(async (resolve, reject) => {
     let writeStream =
       typeof to === 'string'

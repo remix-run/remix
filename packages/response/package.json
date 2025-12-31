@@ -47,6 +47,7 @@
     }
   },
   "devDependencies": {
+    "@remix-run/lazy-file": "workspace:*",
     "@remix-run/mime": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"

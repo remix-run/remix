@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { openFile, writeFile } from '@remix-run/fs'
+import { openLazyFile, writeFile } from '@remix-run/fs'
 
 import type { FileStorage, FileMetadata, ListOptions, ListResult } from '../file-storage.ts'
 
@@ -69,7 +69,7 @@ export function createFsFileStorage(directory: string): FileStorage {
 
     let metaData = await readMetadata(metaPath)
 
-    return openFile(filePath, {
+    return openLazyFile(filePath, {
       lastModified: metaData.lastModified,
       name: metaData.name,
       type: metaData.type,
@@ -83,7 +83,7 @@ export function createFsFileStorage(directory: string): FileStorage {
       try {
         let meta = await readMetadata(metaPath)
 
-        return openFile(filePath, {
+        return openLazyFile(filePath, {
           lastModified: meta.lastModified,
           name: meta.name,
           type: meta.type,
