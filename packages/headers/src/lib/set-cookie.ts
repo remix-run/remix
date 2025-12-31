@@ -204,3 +204,13 @@ export class SetCookie implements HeaderValue, SetCookieInit {
     return parts.join('; ')
   }
 }
+
+/**
+ * Parse a Set-Cookie header value.
+ *
+ * @param value The header value (string, init object, or null)
+ * @returns A SetCookie instance (empty if null)
+ */
+export function parseSetCookie(value: string | SetCookieInit | null): SetCookie {
+  return new SetCookie(value ?? undefined)
+}

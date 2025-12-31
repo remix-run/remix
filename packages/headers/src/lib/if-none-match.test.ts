@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { IfNoneMatch } from './if-none-match.ts'
+import { IfNoneMatch, parseIfNoneMatch } from './if-none-match.ts'
 
 describe('IfNoneMatch', () => {
   it('initializes with an empty string', () => {
@@ -90,5 +90,13 @@ describe('IfNoneMatch', () => {
   it('converts to a string', () => {
     let header = new IfNoneMatch('W/"67ab43", "54ed21"')
     assert.equal(header.toString(), 'W/"67ab43", "54ed21"')
+  })
+})
+
+describe('parseIfNoneMatch', () => {
+  it('parses a string value', () => {
+    let result = parseIfNoneMatch('"abc", "def"')
+    assert.ok(result instanceof IfNoneMatch)
+    assert.equal(result.tags.length, 2)
   })
 })

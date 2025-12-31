@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { SetCookie } from './set-cookie.ts'
+import { SetCookie, parseSetCookie } from './set-cookie.ts'
 
 describe('SetCookie', () => {
   it('initializes with an empty string', () => {
@@ -216,5 +216,16 @@ describe('SetCookie', () => {
     let header = new SetCookie('test=value')
     header.value = 'need; quotes'
     assert.equal(header.toString(), 'test="need; quotes"')
+  })
+})
+
+describe('parseSetCookie', () => {
+  it('parses a string value', () => {
+    let result = parseSetCookie('session=abc123; Path=/; HttpOnly')
+    assert.ok(result instanceof SetCookie)
+    assert.equal(result.name, 'session')
+    assert.equal(result.value, 'abc123')
+    assert.equal(result.path, '/')
+    assert.equal(result.httpOnly, true)
   })
 })

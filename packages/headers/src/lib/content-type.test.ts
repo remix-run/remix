@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { ContentType } from './content-type.ts'
+import { ContentType, parseContentType } from './content-type.ts'
 
 describe('ContentType', () => {
   it('initializes with an empty string', () => {
@@ -104,5 +104,21 @@ describe('ContentType', () => {
   it('preserves order of attributes in toString()', () => {
     let header = new ContentType('multipart/form-data; charset=utf-8; boundary=abc123')
     assert.equal(header.toString(), 'multipart/form-data; charset=utf-8; boundary=abc123')
+  })
+})
+
+describe('parseContentType', () => {
+  it('parses a string value', () => {
+    let result = parseContentType('text/html; charset=utf-8')
+    assert.ok(result instanceof ContentType)
+    assert.equal(result.mediaType, 'text/html')
+    assert.equal(result.charset, 'utf-8')
+  })
+
+  it('accepts init object', () => {
+    let result = parseContentType({ mediaType: 'text/html', charset: 'utf-8' })
+    assert.ok(result instanceof ContentType)
+    assert.equal(result.mediaType, 'text/html')
+    assert.equal(result.charset, 'utf-8')
   })
 })

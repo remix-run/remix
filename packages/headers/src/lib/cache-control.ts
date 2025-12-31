@@ -321,3 +321,13 @@ export class CacheControl implements HeaderValue, CacheControlInit {
     return parts.join(', ')
   }
 }
+
+/**
+ * Parse a Cache-Control header value.
+ *
+ * @param value The header value (string, init object, or null)
+ * @returns A CacheControl instance (empty if null)
+ */
+export function parseCacheControl(value: string | CacheControlInit | null): CacheControl {
+  return new CacheControl(value ?? undefined)
+}

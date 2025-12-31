@@ -219,3 +219,13 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
     return pairs.join(',')
   }
 }
+
+/**
+ * Parse an Accept-Encoding header value.
+ *
+ * @param value The header value (string, init object, or null)
+ * @returns An AcceptEncoding instance (empty if null)
+ */
+export function parseAcceptEncoding(value: string | AcceptEncodingInit | null): AcceptEncoding {
+  return new AcceptEncoding(value ?? undefined)
+}

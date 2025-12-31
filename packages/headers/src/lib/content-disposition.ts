@@ -134,3 +134,13 @@ function percentDecode(value: string): string {
     return String.fromCharCode(parseInt(hex, 16))
   })
 }
+
+/**
+ * Parse a Content-Disposition header value.
+ *
+ * @param value The header value (string, init object, or null)
+ * @returns A ContentDisposition instance (empty if null)
+ */
+export function parseContentDisposition(value: string | ContentDispositionInit | null): ContentDisposition {
+  return new ContentDisposition(value ?? undefined)
+}

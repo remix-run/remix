@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { Accept } from './accept.ts'
+import { Accept, parseAccept } from './accept.ts'
 
 describe('Accept', () => {
   it('initializes with an empty string', () => {
@@ -158,5 +158,27 @@ describe('Accept', () => {
     header.set('application/json', 0.8)
     assert.equal(header.toString(), 'text/html,application/json;q=0.8')
     assert.deepEqual(header.mediaTypes, ['text/html', 'application/json'])
+  })
+})
+
+describe('parseAccept', () => {
+  it('parses a string value', () => {
+    let result = parseAccept('text/html, application/json;q=0.9')
+    assert.ok(result instanceof Accept)
+    assert.equal(result.size, 2)
+    assert.equal(result.getWeight('text/html'), 1)
+    assert.equal(result.getWeight('application/json'), 0.9)
+  })
+
+  it('returns empty instance for null', () => {
+    let result = parseAccept(null)
+    assert.ok(result instanceof Accept)
+    assert.equal(result.size, 0)
+  })
+
+  it('accepts init object', () => {
+    let result = parseAccept({ 'text/html': 1 })
+    assert.ok(result instanceof Accept)
+    assert.equal(result.size, 1)
   })
 })
