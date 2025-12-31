@@ -1,4 +1,4 @@
-import type { Middleware } from '@remix-run/fetch-router'
+import type { Middleware } from 'remix'
 
 import { getCurrentUser } from '../utils/context.ts'
 

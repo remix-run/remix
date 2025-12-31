@@ -1,5 +1,4 @@
-import { createRouter } from '@remix-run/fetch-router'
-import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
+import { createRouter, createRedirectResponse as redirect } from 'remix'
 
 import { routes } from './routes.ts'
 import { renderFileContent } from './file-content.ts'

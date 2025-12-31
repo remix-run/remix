@@ -1,6 +1,6 @@
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { createFsFileStorage } from '@remix-run/file-storage/fs'
+import { createFsFileStorage } from 'remix/file-storage/fs'
 
 let cacheDir = path.join(os.tmpdir(), 'unpkg-cache')
 
