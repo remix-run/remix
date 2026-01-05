@@ -14,7 +14,7 @@
     "typescript-eslint": "^8.40.0"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "scripts": {
     "postinstall": "test -n \"$CI\" || pnpm --filter @remix-run/component exec playwright install",
