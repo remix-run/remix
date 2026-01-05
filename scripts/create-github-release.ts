@@ -10,7 +10,7 @@ let tag = args.find((arg) => !arg.startsWith('--'))
 // If no tag provided, print usage and exit
 if (tag === undefined) {
   console.error('Usage:')
-  console.error('  node create-github-release.js <tag> [--preview]')
+  console.error('  node create-github-release.ts <tag> [--preview]')
   console.error()
   console.error('To preview the latest tag:')
   console.error('  pnpm create-github-release:preview $(git tag --sort=-creatordate | head -1)')
