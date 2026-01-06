@@ -10,10 +10,10 @@ router.get('/api/users', (context) => {
 })
 
 // After:
-import { parseAccept } from '@remix-run/headers'
+import { Accept } from '@remix-run/headers'
 
 router.get('/api/users', (context) => {
-  let accept = parseAccept(context.headers.get('accept'))
+  let accept = Accept.from(context.headers.get('accept'))
   let acceptsJson = accept.accepts('application/json')
   // ...
 })
