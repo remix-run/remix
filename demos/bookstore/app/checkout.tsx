@@ -1,5 +1,5 @@
 import type { Controller } from 'remix'
-import { createRedirectResponse as redirect } from 'remix'
+import { redirect } from 'remix'
 
 import { routes } from './routes.ts'
 import { requireAuth } from './middleware/auth.ts'
