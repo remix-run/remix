@@ -12,6 +12,7 @@ rm -rf docs/public/
 rm -rf docs/typedoc/
 rm -rf packages/async-context-middleware
 rm -rf packages/compression-middleware
+rm -rf packages/component
 rm -rf packages/cookie
 rm -rf packages/fetch-proxy
 rm -rf packages/fetch-router
