@@ -71,7 +71,7 @@ jobs:
           fi
 
           # Re-install to ensure any new remix peerDependencies are reflected
-          pnpm install
+          pnpm install --no-frozen-lockfile
 
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
