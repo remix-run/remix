@@ -6,18 +6,16 @@ import {
   getAllReleases,
   generateChangelogContent,
   generateCommitMessage,
-} from './utils/changes.js'
-import { colors, colorize } from './utils/color.js'
-import { getPackageFile, getPackageDir } from './utils/packages.js'
-import { readJson, writeJson, readFile, writeFile } from './utils/fs.js'
-import { logAndExec } from './utils/process.js'
+} from './utils/changes.ts'
+import { colors, colorize } from './utils/color.ts'
+import { getPackageFile, getPackageDir } from './utils/packages.ts'
+import { readJson, writeJson, readFile, writeFile } from './utils/fs.ts'
+import { logAndExec } from './utils/process.ts'
 
 /**
  * Updates package.json version
- * @param {string} packageName
- * @param {string} newVersion
  */
-function updatePackageJson(packageName, newVersion) {
+function updatePackageJson(packageName: string, newVersion: string) {
   let packageJsonPath = getPackageFile(packageName, 'package.json')
   let packageJson = readJson(packageJsonPath)
   packageJson.version = newVersion
@@ -27,10 +25,8 @@ function updatePackageJson(packageName, newVersion) {
 
 /**
  * Updates CHANGELOG.md with new content
- * @param {string} packageName
- * @param {string} newContent
  */
-function updateChangelog(packageName, newContent) {
+function updateChangelog(packageName: string, newContent: string) {
   let changelogPath = getPackageFile(packageName, 'CHANGELOG.md')
   let existingChangelog = readFile(changelogPath)
 
@@ -54,9 +50,8 @@ function updateChangelog(packageName, newContent) {
 
 /**
  * Deletes all change files (except README.md)
- * @param {string} packageName
  */
-function deleteChangeFiles(packageName) {
+function deleteChangeFiles(packageName: string) {
   let changesDir = path.join(getPackageDir(packageName), '.changes')
   let files = fs.readdirSync(changesDir)
   let changeFiles = files.filter((file) => file !== 'README.md' && file.endsWith('.md'))
@@ -127,13 +122,17 @@ function main() {
     console.log()
     console.log('Files have been updated. Review the changes, then manually commit and tag:')
     console.log()
+    console.log('```sh')
     let commitMessage = generateCommitMessage(releases)
-    console.log(`  git add .`)
-    console.log(`  git commit -m "${commitMessage.split('\n').join('\\n')}"`)
+    console.log(`git add .`)
+    console.log()
+    console.log(`git commit -m "${commitMessage}"`)
+    console.log()
     for (let release of releases) {
       let tag = `${release.packageName}@${release.nextVersion}`
-      console.log(`  git tag ${tag}`)
+      console.log(`git tag ${tag}`)
     }
+    console.log('```')
     console.log()
   } else {
     // Stage all changes
@@ -144,7 +143,7 @@ function main() {
     // Create commit
     let commitMessage = generateCommitMessage(releases)
     console.log('Creating commit...')
-    logAndExec(`git commit -m "${commitMessage.split('\n').join('\\n')}"`)
+    logAndExec(`git commit -m "${commitMessage}"`)
     console.log()
 
     // Create tags

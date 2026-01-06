@@ -1,7 +1,14 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createFileResponse } from './file.ts'
+import { LazyFile } from '@remix-run/lazy-file'
+
+import { createFileResponse, type FileLike } from './file.ts'
+
+// Type assertions: ensure FileLike is compatible with native File and LazyFile.
+// If FileLike drifts from their APIs, TypeScript will error here.
+null as unknown as File satisfies FileLike
+null as unknown as LazyFile satisfies FileLike
 
 describe('createFileResponse()', () => {
   it('serves a file', async () => {
@@ -9,6 +16,18 @@ describe('createFileResponse()', () => {
     let request = new Request('http://localhost/test.txt')
 
     let response = await createFileResponse(mockFile, request)
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Hello, World!')
+    assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
+    assert.equal(response.headers.get('Content-Length'), '13')
+  })
+
+  it('serves a LazyFile', async () => {
+    let lazyFile = new LazyFile(['Hello, World!'], 'test.txt', { type: 'text/plain' })
+    let request = new Request('http://localhost/test.txt')
+
+    let response = await createFileResponse(lazyFile, request)
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Hello, World!')

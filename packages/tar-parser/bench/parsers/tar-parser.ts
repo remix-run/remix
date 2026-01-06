@@ -1,8 +1,8 @@
 import { parseTar } from '@remix-run/tar-parser'
-import { openFile } from '@remix-run/fs'
+import { openLazyFile } from '@remix-run/fs'
 
 export async function parse(filename: string): Promise<number> {
-  let stream = openFile(filename).stream().pipeThrough(new DecompressionStream('gzip'))
+  let stream = openLazyFile(filename).stream().pipeThrough(new DecompressionStream('gzip'))
 
   let start = performance.now()
 

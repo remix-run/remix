@@ -893,6 +893,9 @@ importers:
         specifier: workspace:^
         version: link:../html-template
     devDependencies:
+      '@remix-run/lazy-file':
+        specifier: workspace:*
+        version: link:../lazy-file
       '@remix-run/mime':
         specifier: workspace:*
         version: link:../mime

@@ -25,8 +25,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
-          registry-url: https://registry.npmjs.org
+          node-version-file: 'package.json'
           cache: pnpm
 
       - name: Install dependencies
@@ -74,6 +73,6 @@ jobs:
         run: pnpm publish --filter "${{ steps.parse_tag.outputs.package_name }}" --access public --no-git-checks
 
       - name: Create GitHub Release
-        run: node ./scripts/create-github-release.js ${{ github.ref_name }}
+        run: node ./scripts/create-github-release.ts ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
