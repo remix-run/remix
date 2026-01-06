@@ -56,6 +56,7 @@ jobs:
         run: pnpm run generate-remix
 
       - name: Commit and push changes
+        id: commit
         run: |
           if [ -z "$(git status --porcelain)" ]; then
             echo "💿 no updates to the remix package needed"
@@ -79,3 +80,8 @@ jobs:
           git commit -a -m "build: update remix package"
           git push
           echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
+          echo "new_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: 📝 Comment on PR
+        if: github.event_name == 'pull_request' && steps.commit.outputs.new_sha != ''
+        run: gh pr comment ${{ github.event.pull_request.number }} --body "This PR has been updated with changes to the `remix` package in ${{ steps.commit.outputs.new_sha }} - please review those changes prior to merging"
