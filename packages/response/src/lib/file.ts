@@ -2,6 +2,30 @@ import SuperHeaders from '@remix-run/headers'
 import { isCompressibleMimeType, mimeTypeToContentType } from '@remix-run/mime'
 
 /**
+ * Minimal interface for file-like objects used by `createFileResponse`.
+ */
+export interface FileLike {
+  /** File compatibility - included for interface completeness */
+  readonly name: string
+  /** Used for Content-Length header and range calculations */
+  readonly size: number
+  /** Used for Content-Type header */
+  readonly type: string
+  /** Used for Last-Modified header and weak ETag generation */
+  readonly lastModified: number
+  /** Used for streaming the response body */
+  stream(): ReadableStream<Uint8Array>
+  /** Used for strong ETag digest calculation */
+  arrayBuffer(): Promise<ArrayBuffer>
+  /** Used for range requests (206 Partial Content) */
+  slice(
+    start?: number,
+    end?: number,
+    contentType?: string,
+  ): { stream(): ReadableStream<Uint8Array> }
+}
+
+/**
  * Custom function for computing file digests.
  *
  * @param file The file to hash
@@ -13,12 +37,12 @@ import { isCompressibleMimeType, mimeTypeToContentType } from '@remix-run/mime'
  *   return customHash(buffer)
  * }
  */
-export type FileDigestFunction = (file: File) => Promise<string>
+export type FileDigestFunction<file extends FileLike = File> = (file: file) => Promise<string>
 
 /**
  * Options for creating a file response.
  */
-export interface FileResponseOptions {
+export interface FileResponseOptions<file extends FileLike = File> {
   /**
    * Cache-Control header value. If not provided, no Cache-Control header will be set.
    *
@@ -43,14 +67,14 @@ export interface FileResponseOptions {
    * - String: Web Crypto API algorithm name ('SHA-256', 'SHA-384', 'SHA-512', 'SHA-1').
    *   Note: Using strong ETags will buffer the entire file into memory before hashing.
    *   Consider using weak ETags (default) or a custom digest function for large files.
-   * - Function: Custom digest computation that receives a File and returns the digest string
+   * - Function: Custom digest computation that receives a file and returns the digest string
    *
    * Only used when `etag: 'strong'`. Ignored for weak ETags.
    *
    * @default 'SHA-256'
    * @example async (file) => await customHash(file)
    */
-  digest?: AlgorithmIdentifier | FileDigestFunction
+  digest?: AlgorithmIdentifier | FileDigestFunction<file>
   /**
    * Whether to include `Last-Modified` headers.
    *
@@ -78,22 +102,26 @@ export interface FileResponseOptions {
  * Creates a file [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
  * with full HTTP semantics including ETags, Last-Modified, conditional requests, and Range support.
  *
- * @param file The file to send
+ * Accepts both native `File` objects and `LazyFile` from `@remix-run/lazy-file`.
+ *
+ * @param file The file to send (native `File` or `LazyFile`)
  * @param request The request object
  * @param options Configuration options
  * @returns A `Response` object containing the file
  *
  * @example
  * import { createFileResponse } from '@remix-run/response/file'
- * let file = openFile('./public/image.jpg')
- * return createFileResponse(file, request, {
+ * import { openLazyFile } from '@remix-run/fs'
+ *
+ * let lazyFile = openLazyFile('./public/image.jpg')
+ * return createFileResponse(lazyFile, request, {
  *   cacheControl: 'public, max-age=3600'
  * })
  */
-export async function createFileResponse(
-  file: File,
+export async function createFileResponse<file extends FileLike>(
+  file: file,
   request: Request,
-  options: FileResponseOptions = {},
+  options: FileResponseOptions<file> = {},
 ): Promise<Response> {
   let {
     cacheControl,
@@ -239,7 +267,7 @@ export async function createFileResponse(
       let { start, end } = normalizedRanges[0]
       let { size } = file
 
-      return new Response(file.slice(start, end + 1), {
+      return new Response(file.slice(start, end + 1).stream(), {
         status: 206,
         headers: new SuperHeaders(
           omitNullableValues({
@@ -256,7 +284,7 @@ export async function createFileResponse(
     }
   }
 
-  return new Response(request.method === 'HEAD' ? null : file, {
+  return new Response(request.method === 'HEAD' ? null : file.stream(), {
     status: 200,
     headers: new SuperHeaders(
       omitNullableValues({
@@ -271,7 +299,7 @@ export async function createFileResponse(
   })
 }
 
-function generateWeakETag(file: File): string {
+function generateWeakETag(file: FileLike): string {
   return `W/"${file.size}-${file.lastModified}"`
 }
 
@@ -296,9 +324,9 @@ function omitNullableValues<T extends Record<string, any>>(headers: T): OmitNull
  * @param digestOption Web Crypto algorithm name or custom digest function
  * @returns The computed digest as a hex string
  */
-async function computeDigest(
-  file: File,
-  digestOption: AlgorithmIdentifier | FileDigestFunction,
+async function computeDigest<file extends FileLike>(
+  file: file,
+  digestOption: AlgorithmIdentifier | FileDigestFunction<file>,
 ): Promise<string> {
   return typeof digestOption === 'function'
     ? await digestOption(file)
@@ -315,7 +343,10 @@ async function computeDigest(
  * @param algorithm Web Crypto API algorithm name (default: 'SHA-256')
  * @returns The hash as a hex string
  */
-async function hashFile(file: File, algorithm: AlgorithmIdentifier = 'SHA-256'): Promise<string> {
+async function hashFile<F extends FileLike>(
+  file: F,
+  algorithm: AlgorithmIdentifier = 'SHA-256',
+): Promise<string> {
   let buffer = await file.arrayBuffer()
   let hashBuffer = await crypto.subtle.digest(algorithm, buffer)
   return Array.from(new Uint8Array(hashBuffer))
