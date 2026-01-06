@@ -248,11 +248,12 @@ Date: YYYY-MM-DD
 
 ## v2.17.3
 
-Date: 2025-12-17
+Date: 2026-01-06
 
 ### Patch Changes
 
 - `@remix-run/dev` - Update `valibot` to address CVE ([GHSA-vqpr-j7v3-hqw9](https://github.com/advisories/GHSA-vqpr-j7v3-hqw9))
+- `@remix-run/react` - Escape HTML during SSR for in `<ScrollRestoration>` keys
 
 **Full Changelog**: [`v2.17.2...v2.17.3`](https://github.com/remix-run/remix/compare/remix@2.17.2...remix@2.17.3)
 

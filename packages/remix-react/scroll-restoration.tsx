@@ -8,6 +8,7 @@ import {
 
 import type { ScriptProps } from "./components";
 import { useRemixContext } from "./components";
+import { escapeHtml } from "./markup";
 
 let STORAGE_KEY = "positions";
 
@@ -77,9 +78,9 @@ export function ScrollRestoration({
       {...props}
       suppressHydrationWarning
       dangerouslySetInnerHTML={{
-        __html: `(${restoreScroll})(${JSON.stringify(
-          STORAGE_KEY
-        )}, ${JSON.stringify(key)})`,
+        __html: `(${restoreScroll})(${escapeHtml(
+          JSON.stringify(STORAGE_KEY)
+        )}, ${escapeHtml(JSON.stringify(key))})`,
       }}
     />
   );
