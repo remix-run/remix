@@ -1,4 +1,8 @@
-import { ContentDisposition, ContentType, stringifyRawHeaders } from '@remix-run/headers'
+import {
+  ContentDisposition,
+  ContentType,
+  stringify as stringifyRawHeaders,
+} from '@remix-run/headers'
 
 export type PartValue =
   | string

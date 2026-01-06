@@ -544,15 +544,13 @@ headers.set('Vary', new Vary(['Accept-Encoding', 'Accept-Language']))
 Parse and stringify raw HTTP header strings.
 
 ```ts
-import { parseRawHeaders, stringifyRawHeaders } from '@remix-run/headers'
+import { parse, stringify } from '@remix-run/headers'
 
-// Parse raw header string into Headers object
-let headers = parseRawHeaders('Content-Type: text/html\r\nCache-Control: no-cache')
+let headers = parse('Content-Type: text/html\r\nCache-Control: no-cache')
 headers.get('content-type') // 'text/html'
 headers.get('cache-control') // 'no-cache'
 
-// Stringify Headers object back to raw format
-let raw = stringifyRawHeaders(headers)
+stringify(headers)
 // 'Content-Type: text/html\r\nCache-Control: no-cache'
 ```
 

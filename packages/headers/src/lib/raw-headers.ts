@@ -9,11 +9,11 @@ const CRLF = '\r\n'
  * @returns A `Headers` object containing the parsed headers
  *
  * @example
- * let headers = parseRawHeaders('Content-Type: text/html\r\nCache-Control: no-cache')
+ * let headers = parse('Content-Type: text/html\r\nCache-Control: no-cache')
  * headers.get('content-type') // 'text/html'
  * headers.get('cache-control') // 'no-cache'
  */
-export function parseRawHeaders(raw: string): Headers {
+export function parse(raw: string): Headers {
   let headers = new Headers()
 
   for (let line of raw.split(CRLF)) {
@@ -34,9 +34,9 @@ export function parseRawHeaders(raw: string): Headers {
  *
  * @example
  * let headers = new Headers({ 'Content-Type': 'text/html', 'Cache-Control': 'no-cache' })
- * stringifyRawHeaders(headers) // 'Content-Type: text/html\r\nCache-Control: no-cache'
+ * stringify(headers) // 'Content-Type: text/html\r\nCache-Control: no-cache'
  */
-export function stringifyRawHeaders(headers: Headers): string {
+export function stringify(headers: Headers): string {
   let result = ''
 
   for (let [name, value] of headers) {

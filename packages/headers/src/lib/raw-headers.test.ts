@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { parseRawHeaders, stringifyRawHeaders } from './raw-headers.ts'
+import { parse as parseRawHeaders, stringify as stringifyRawHeaders } from './raw-headers.ts'
 
 describe('parseRawHeaders', () => {
   it('parses a single header', () => {

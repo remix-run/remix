@@ -19,8 +19,8 @@ New individual header `.from()` methods:
 
 New raw header utilities added:
 
-- `parseRawHeaders()`
-- `stringifyRawHeaders()`
+- `parse()`
+- `stringify()`
 
 Migration example:
 
@@ -36,7 +36,7 @@ let contentType = ContentType.from(request.headers.get('content-type'))
 let mediaType = contentType.mediaType
 ```
 
-If you were using the `Headers` constructor to parse raw HTTP header strings, use `parseRawHeaders()` instead:
+If you were using the `Headers` constructor to parse raw HTTP header strings, use `parse()` instead:
 
 ```ts
 // Before:
@@ -44,22 +44,22 @@ import SuperHeaders from '@remix-run/headers'
 let headers = new SuperHeaders('Content-Type: text/html\r\nCache-Control: no-cache')
 
 // After:
-import { parseRawHeaders } from '@remix-run/headers'
-let headers = parseRawHeaders('Content-Type: text/html\r\nCache-Control: no-cache')
+import { parse } from '@remix-run/headers'
+let headers = parse('Content-Type: text/html\r\nCache-Control: no-cache')
 ```
 
-If you were using `headers.toString()` to convert headers to raw format, use `stringifyRawHeaders()` instead:
+If you were using `headers.toString()` to convert headers to raw format, use `stringify()` instead:
 
 ```ts
 // Before:
 import SuperHeaders from '@remix-run/headers'
 let headers = new SuperHeaders()
 headers.set('Content-Type', 'text/html')
-let raw = headers.toString()
+let rawHeaders = headers.toString()
 
 // After:
-import { stringifyRawHeaders } from '@remix-run/headers'
+import { stringify } from '@remix-run/headers'
 let headers = new Headers()
 headers.set('Content-Type', 'text/html')
-let raw = stringifyRawHeaders(headers)
+let rawHeaders = stringify(headers)
 ```

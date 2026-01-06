@@ -1,4 +1,4 @@
-import { ContentDisposition, ContentType, parseRawHeaders } from '@remix-run/headers'
+import { ContentDisposition, ContentType, parse as parseRawHeaders } from '@remix-run/headers'
 
 import {
   createSearch,
