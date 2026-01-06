@@ -1,10 +1,14 @@
+import { customCharsetByMimeType } from './define-mime-type.ts'
+
 /**
  * Converts a MIME type to a Content-Type header value, adding charset when appropriate.
  *
- * Adds `; charset=utf-8` to text-based MIME types:
+ * By default, adds `; charset=utf-8` to text-based MIME types:
  * - All `text/*` types (except `text/xml`)
  * - All `+json` suffixed types (RFC 8259 defines JSON as UTF-8)
  * - `application/json`, `application/javascript`
+ *
+ * Custom charset registered via `defineMimeType()` takes precedence over built-in rules.
  *
  * Note: `text/xml` is excluded because XML has built-in encoding detection.
  * Per the XML spec, documents without an encoding declaration must be UTF-8 or
@@ -24,13 +28,20 @@
  * mimeTypeToContentType('text/xml')            // 'text/xml'
  */
 export function mimeTypeToContentType(mimeType: string): string {
-  if (
-    // Already has charset
-    mimeType.includes('charset') ||
-    // Exclude text/xml - XML has built-in encoding detection (see JSDoc above)
-    mimeType === 'text/xml'
-  ) {
+  // Already has charset - return as-is
+  if (mimeType.includes('charset')) {
     return mimeType
+  }
+
+  // Exclude text/xml - XML has built-in encoding detection (see JSDoc above)
+  if (mimeType === 'text/xml') {
+    return mimeType
+  }
+
+  // Check custom charset registry
+  let customCharset = customCharsetByMimeType?.get(mimeType)
+  if (customCharset !== undefined) {
+    return `${mimeType}; charset=${customCharset}`
   }
 
   // Text-based types that should have charset=utf-8

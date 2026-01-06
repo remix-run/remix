@@ -1,7 +1,7 @@
 import * as cp from 'node:child_process'
 
-import { createRelease } from './utils/github-releases.js'
-import { isValidVersion } from './utils/semver.js'
+import { createRelease } from './utils/github-releases.ts'
+import { isValidVersion } from './utils/semver.ts'
 
 let args = process.argv.slice(2)
 let preview = args.includes('--preview')
@@ -10,7 +10,7 @@ let tag = args.find((arg) => !arg.startsWith('--'))
 // If no tag provided, print usage and exit
 if (tag === undefined) {
   console.error('Usage:')
-  console.error('  node create-github-release.js <tag> [--preview]')
+  console.error('  node create-github-release.ts <tag> [--preview]')
   console.error()
   console.error('To preview the latest tag:')
   console.error('  pnpm create-github-release:preview $(git tag --sort=-creatordate | head -1)')
