@@ -12,7 +12,24 @@ describe('new RequestContext()', () => {
     let context = new RequestContext(req)
 
     assert.equal(context.headers.get('content-type'), 'application/json')
-    assert.equal(context.headers, context.request.headers)
+  })
+
+  it('provides a copy of request headers that can be mutated independently', () => {
+    let req = new Request('https://remix.run/test', {
+      headers: { 'X-Original': 'value' },
+    })
+    let context = new RequestContext(req)
+
+    context.headers.set('X-New', 'new-value')
+    context.headers.delete('X-Original')
+
+    // context.headers was mutated
+    assert.equal(context.headers.get('X-New'), 'new-value')
+    assert.equal(context.headers.get('X-Original'), null)
+
+    // original request.headers unchanged
+    assert.equal(req.headers.get('X-Original'), 'value')
+    assert.equal(req.headers.get('X-New'), null)
   })
 
   it('does not provide formData on GET requests', () => {

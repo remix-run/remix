@@ -19,7 +19,7 @@ export class RequestContext<
    * @param request The incoming request
    */
   constructor(request: Request) {
-    this.headers = request.headers
+    this.headers = new Headers(request.headers)
     this.method = request.method.toUpperCase() as RequestMethod
     this.params = {} as params
     this.request = request
