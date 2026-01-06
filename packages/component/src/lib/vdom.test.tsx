@@ -192,6 +192,36 @@ describe('vnode rendering', () => {
       // Attribute should remain correct post-hydration
       expect(postPath.getAttribute('stroke-linecap')).toBe('round')
     })
+
+    it('propagates SVG namespace through components', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function SvgGroup({ href, children }: { href: string; children?: RemixNode }) {
+        return () => <g href={href}>{children}</g>
+      }
+
+      root.render(
+        <svg width="100" height="100">
+          <SvgGroup href="/test">
+            <path id="p" />
+          </SvgGroup>
+        </svg>,
+      )
+
+      let svg = container.querySelector('svg')
+      let group = container.querySelector('g')
+      let path = container.querySelector('path')
+
+      invariant(svg instanceof SVGSVGElement)
+      invariant(group instanceof SVGGElement)
+      invariant(path instanceof SVGPathElement)
+
+      // All elements should have SVG namespace
+      expect(svg.namespaceURI).toBe('http://www.w3.org/2000/svg')
+      expect(group.namespaceURI).toBe('http://www.w3.org/2000/svg')
+      expect(path.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    })
   })
 
   describe('inserts', () => {
@@ -1730,5 +1760,73 @@ describe('vnode rendering', () => {
     capturedUpdate()
     root.flush()
     expect(connectCalls).toBe(1)
+  })
+
+  describe('conditional rendering and DOM order', () => {
+    it('maintains DOM order when component switches element types via self-update', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      let showB = false
+      let capturedUpdate = () => {}
+
+      function A(this: Handle) {
+        capturedUpdate = () => this.update()
+        return () => (showB ? <span>B</span> : <div>A</div>)
+      }
+
+      root.render(
+        <main>
+          <A />
+          <p>C</p>
+        </main>,
+      )
+      expect(container.innerHTML).toBe('<main><div>A</div><p>C</p></main>')
+
+      showB = true
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><span>B</span><p>C</p></main>')
+
+      showB = false
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><div>A</div><p>C</p></main>')
+    })
+
+    it('maintains DOM order when component switches from component to element via self-update', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      let showB = false
+      let capturedUpdate = () => {}
+
+      function B() {
+        return <span>B</span>
+      }
+
+      function A(this: Handle) {
+        capturedUpdate = () => this.update()
+        return () => (showB ? <B /> : <div>A</div>)
+      }
+
+      root.render(
+        <main>
+          <A />
+          <p>C</p>
+        </main>,
+      )
+      expect(container.innerHTML).toBe('<main><div>A</div><p>C</p></main>')
+
+      showB = true
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><span>B</span><p>C</p></main>')
+
+      showB = false
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><div>A</div><p>C</p></main>')
+    })
   })
 })

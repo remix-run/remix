@@ -463,9 +463,10 @@ function replace(
   vParent: VNode,
   anchor?: Node,
 ) {
-  anchor = anchor || findNextSiblingDomAnchor(curr, curr._parent) || undefined
-  remove(curr, domParent, scheduler)
+  anchor =
+    anchor || findFirstDomAnchor(curr) || findNextSiblingDomAnchor(curr, curr._parent) || undefined
   insert(next, domParent, frame, scheduler, vParent, anchor)
+  remove(curr, domParent, scheduler)
 }
 
 function diffHost(
@@ -772,9 +773,8 @@ function insert(
   cursor?: Node | null,
 ): Node | null | undefined {
   node._parent = vParent // set parent for initial render context lookups
-  if (isHostNode(node)) {
-    node._svg = getSvgContext(vParent, node.type)
-  }
+  node._svg = getSvgContext(vParent, node.type)
+
   cursor = skipComments(cursor ?? null)
 
   let doInsert = anchor
