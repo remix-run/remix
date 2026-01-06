@@ -39,30 +39,30 @@ export interface LazyBlobOptions {
 }
 
 /**
- * A [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) that may be backed by a stream
- * of data. This is useful for working with large blobs that would be impractical to load into
- * memory all at once.
+ * A lazy, streaming alternative to [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob).
  *
- * This class is an extension of JavaScript's built-in `Blob` class with the following additions:
+ * **Important:** Since `LazyBlob` is not a `Blob` subclass, you cannot pass it directly to APIs
+ * that expect a real `Blob` (like `new Response(blob)` or `formData.append('file', blob)`).
+ * Instead, use one of:
  *
- * - The constructor may accept a `LazyContent` object instead of a `BlobPart[]` array
- * - The constructor may accept a `range` in the options to specify a subset of the content
- *
- * In normal usage you shouldn't have to specify the `range` yourself. The `slice()` method
- * automatically takes care of creating new `LazyBlob` instances with the correct range.
+ * - `.stream()` - Returns a `ReadableStream` for `Response` and other streaming APIs
+ * - `.toBlob()` - Returns a `Promise<Blob>` for non-streaming APIs that require a complete `Blob` (e.g. `FormData`)
  *
  * [MDN `Blob` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob)
  */
-export class LazyBlob extends Blob {
+export class LazyBlob {
   readonly #content: BlobContent
 
   /**
    * @param parts The blob parts or lazy content
    * @param options Options for the blob
    */
-  constructor(parts: BlobPart[] | LazyContent, options?: LazyBlobOptions) {
-    super([], options)
+  constructor(parts: BlobPartLike[] | LazyContent, options?: LazyBlobOptions) {
     this.#content = new BlobContent(parts, options)
+  }
+
+  get [Symbol.toStringTag](): string {
+    return 'LazyBlob'
   }
 
   /**
@@ -97,16 +97,25 @@ export class LazyBlob extends Blob {
   }
 
   /**
-   * Returns a new [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) that contains the data in the specified range.
+   * The MIME type of the blob.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/type)
+   */
+  get type(): string {
+    return this.#content.type
+  }
+
+  /**
+   * Returns a new `LazyBlob` that contains the data in the specified range.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
    *
    * @param start The start index (inclusive)
    * @param end The end index (exclusive)
    * @param contentType The content type of the new blob
-   * @returns A new `Blob` containing the sliced data
+   * @returns A new `LazyBlob` containing the sliced data
    */
-  slice(start?: number, end?: number, contentType?: string): Blob {
+  slice(start?: number, end?: number, contentType?: string): LazyBlob {
     return this.#content.slice(start, end, contentType)
   }
 
@@ -131,6 +140,29 @@ export class LazyBlob extends Blob {
   text(): Promise<string> {
     return this.#content.text()
   }
+
+  /**
+   * Converts this `LazyBlob` to a native `Blob`.
+   *
+   * **Warning:** This reads the entire content into memory, which defeats the purpose of using
+   * a lazy blob for large files. Only use this for non-streaming APIs that require a complete `Blob`.
+   * Use `.stream()` to get a `ReadableStream` for `Response` and other streaming APIs.
+   *
+   * @returns A promise that resolves to a native `Blob`
+   */
+  async toBlob(): Promise<Blob> {
+    return new Blob([await this.bytes()], { type: this.type })
+  }
+
+  /**
+   * @throws Always throws a TypeError. LazyBlob cannot be implicitly converted to a string.
+   * Use `.stream()` to get a `ReadableStream` for `Response` and other streaming APIs, or `.toBlob()` for non-streaming APIs that require a complete `Blob` (e.g. `FormData`). Always prefer `.stream()` when possible.
+   */
+  toString(): never {
+    throw new TypeError(
+      'Cannot convert LazyBlob to string. Use .stream() to get a ReadableStream for Response and other streaming APIs, or .toBlob() for non-streaming APIs that require a complete Blob (e.g. FormData). Always prefer .stream() when possible.',
+    )
+  }
 }
 
 /**
@@ -148,31 +180,57 @@ export interface LazyFileOptions extends LazyBlobOptions {
 }
 
 /**
- * A [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) that may be backed by a stream
- * of data. This is useful for working with large files that would be impractical to load into
- * memory all at once.
+ * A lazy, streaming alternative to [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File).
  *
- * This class is an extension of JavaScript's built-in `File` class with the following additions:
+ * **Important:** Since `LazyFile` is not a `File` subclass, you cannot pass it directly to APIs
+ * that expect a real `File` (like `new Response(file)` or `formData.append('file', file)`).
+ * Instead, use one of:
  *
- * - The constructor may accept a `LazyContent` object instead of a `BlobPart[]` array
- * - The constructor may accept a `range` in the options to specify a subset of the content
- *
- * In normal usage you shouldn't have to specify the `range` yourself. The `slice()` method
- * automatically takes care of creating new `LazyBlob` instances with the correct range.
+ * - `.stream()` - Returns a `ReadableStream` for `Response` and other streaming APIs
+ * - `.toFile()` - Returns a `Promise<File>` for non-streaming APIs that require a complete `File` (e.g. `FormData`)
+ * - `.toBlob()` - Returns a `Promise<Blob>` for non-streaming APIs that require a complete `Blob` (e.g. `FormData`)
  *
  * [MDN `File` Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
  */
-export class LazyFile extends File {
+export class LazyFile {
   readonly #content: BlobContent
+
+  /**
+   * The name of the file.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/File/name)
+   */
+  readonly name: string
+
+  /**
+   * The last modified timestamp of the file in milliseconds.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/File/lastModified)
+   */
+  readonly lastModified: number
+
+  /**
+   * Always empty string. This property exists only for structural compatibility with the native
+   * `File` interface. It's a browser-specific property for files selected via `<input type="file">`
+   * with the `webkitdirectory` attribute, which doesn't apply to programmatically created files.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/File/webkitRelativePath)
+   */
+  readonly webkitRelativePath = ''
 
   /**
    * @param parts The file parts or lazy content
    * @param name The name of the file
    * @param options Options for the file
    */
-  constructor(parts: BlobPart[] | LazyContent, name: string, options?: LazyFileOptions) {
-    super([], name, options)
+  constructor(parts: BlobPartLike[] | LazyContent, name: string, options?: LazyFileOptions) {
     this.#content = new BlobContent(parts, options)
+    this.name = name
+    this.lastModified = options?.lastModified ?? Date.now()
+  }
+
+  get [Symbol.toStringTag](): string {
+    return 'LazyFile'
   }
 
   /**
@@ -207,16 +265,27 @@ export class LazyFile extends File {
   }
 
   /**
-   * Returns a new [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) that contains the data in the specified range.
+   * The MIME type of the file.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/type)
+   */
+  get type(): string {
+    return this.#content.type
+  }
+
+  /**
+   * Returns a new `LazyBlob` that contains the data in the specified range.
+   *
+   * Note: Like the native `File.slice()`, this returns a `Blob` (not a `File`).
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
    *
    * @param start The start index (inclusive)
    * @param end The end index (exclusive)
    * @param contentType The content type of the new blob
-   * @returns A new `Blob` containing the sliced data
+   * @returns A new `LazyBlob` containing the sliced data
    */
-  slice(start?: number, end?: number, contentType?: string): Blob {
+  slice(start?: number, end?: number, contentType?: string): LazyBlob {
     return this.#content.slice(start, end, contentType)
   }
 
@@ -241,21 +310,74 @@ export class LazyFile extends File {
   text(): Promise<string> {
     return this.#content.text()
   }
+
+  /**
+   * Converts this `LazyFile` to a native `Blob`.
+   *
+   * **Warning:** This reads the entire content into memory, which defeats the purpose of using
+   * a lazy file for large files. Only use this for non-streaming APIs that require a complete `Blob`.
+   * Use `.stream()` to get a `ReadableStream` for `Response` and other streaming APIs.
+   *
+   * @returns A promise that resolves to a native `Blob`
+   */
+  async toBlob(): Promise<Blob> {
+    return new Blob([await this.bytes()], { type: this.type })
+  }
+
+  /**
+   * Converts this `LazyFile` to a native `File`.
+   *
+   * **Warning:** This reads the entire content into memory, which defeats the purpose of using
+   * a lazy file for large files. Only use this for non-streaming APIs that require a complete `File`
+   * (e.g. `FormData`). For streaming, use `.stream()` instead.
+   *
+   * @returns A promise that resolves to a native `File`
+   */
+  async toFile(): Promise<File> {
+    return new File([await this.bytes()], this.name, {
+      type: this.type,
+      lastModified: this.lastModified,
+    })
+  }
+
+  /**
+   * @throws Always throws a TypeError. LazyFile cannot be implicitly converted to a string.
+   * Use `.stream()` to get a `ReadableStream` for `Response` and other streaming APIs, or `.toFile()`/`.toBlob()` for non-streaming APIs that require a complete `File`/`Blob` (e.g. `FormData`). Always prefer `.stream()` when possible.
+   */
+  toString(): never {
+    throw new TypeError(
+      'Cannot convert LazyFile to string. Use .stream() to get a ReadableStream for Response and other streaming APIs, or .toFile()/.toBlob() for non-streaming APIs that require a complete File/Blob (e.g. FormData). Always prefer .stream() when possible.',
+    )
+  }
+}
+
+/**
+ * Union of Blob and lazy blob types.
+ */
+type BlobLike = Blob | LazyBlob | LazyFile
+
+/**
+ * Union of BlobPart and lazy blob types. Used for constructor signatures.
+ */
+type BlobPartLike = BlobPart | LazyBlob | LazyFile
+
+function isBlobLike(value: unknown): value is BlobLike {
+  return value instanceof Blob || value instanceof LazyBlob || value instanceof LazyFile
 }
 
 class BlobContent {
-  readonly source: (Blob | Uint8Array<ArrayBuffer>)[] | LazyContent
+  readonly source: (BlobLike | Uint8Array<ArrayBuffer>)[] | LazyContent
   readonly totalSize: number
   readonly range?: ByteRange
   readonly type: string
 
-  constructor(parts: BlobPart[] | LazyContent, options?: LazyBlobOptions) {
+  constructor(parts: BlobPartLike[] | LazyContent, options?: LazyBlobOptions) {
     if (Array.isArray(parts)) {
       this.source = []
       this.totalSize = 0
 
       for (let part of parts) {
-        if (part instanceof Blob) {
+        if (isBlobLike(part)) {
           this.source.push(part)
           this.totalSize += part.size
         } else {
@@ -358,7 +480,7 @@ function streamContentArray(
       }
 
       async function pushPart(part: Blob | Uint8Array<ArrayBuffer>) {
-        if (part instanceof Blob) {
+        if (isBlobLike(part)) {
           if (bytesRead + part.size <= start) {
             // We can skip this part entirely.
             bytesRead += part.size

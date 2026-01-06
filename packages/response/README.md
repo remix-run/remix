@@ -31,14 +31,14 @@ import { compressResponse } from '@remix-run/response/compress'
 
 ### File Responses
 
-The `createFileResponse` helper creates a response for serving files with full HTTP semantics:
+The `createFileResponse` helper creates a response for serving files with full HTTP semantics. It works with both native `File` objects and `LazyFile` from `@remix-run/lazy-file`:
 
 ```ts
 import { createFileResponse } from '@remix-run/response/file'
-import { openFile } from '@remix-run/fs'
+import { openLazyFile } from '@remix-run/fs'
 
-let file = await openFile('./public/image.jpg')
-let response = await createFileResponse(file, request, {
+let lazyFile = openLazyFile('./public/image.jpg')
+let response = await createFileResponse(lazyFile, request, {
   cacheControl: 'public, max-age=3600',
 })
 ```
