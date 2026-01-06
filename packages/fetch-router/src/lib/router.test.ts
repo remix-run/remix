@@ -8,6 +8,15 @@ import type { MatchData } from './router.ts'
 import { createRouter } from './router.ts'
 
 describe('router.fetch()', () => {
+  // FIXME: Temporary!
+  // FIXME: Temporary!
+  // FIXME: Temporary!
+  // FIXME: Temporary!
+  // FIXME: Temporary!
+  it('TEMPORARY FAILING TEST', async () => {
+    assert.equal(0, 1)
+  })
+
   it('fetches a route', async () => {
     let router = createRouter()
     router.get('/', () => new Response('Home'))
