@@ -1,6 +1,6 @@
 {
   "imports": {
-    "@remix-run/server-runtime": "https://esm.sh/@remix-run/server-runtime@2.17.3",
+    "@remix-run/server-runtime": "https://esm.sh/@remix-run/server-runtime@2.17.2",
     "mime": "https://esm.sh/mime@^3.0.0"
   }
 }
