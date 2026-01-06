@@ -76,6 +76,30 @@ mimeTypeToContentType('application/ld+json') // 'application/ld+json; charset=ut
 mimeTypeToContentType('image/png') // 'image/png'
 ```
 
+### `defineMimeType(definition)`
+
+Registers or overrides a MIME type for one or more file extensions.
+
+```ts
+import { defineMimeType } from '@remix-run/mime'
+
+defineMimeType({
+  extensions: ['myformat'],
+  mimeType: 'application/x-myformat',
+})
+```
+
+You can also optionally configure the charset and whether the MIME type is compressible:
+
+```ts
+defineMimeType({
+  extensions: ['myformat'],
+  mimeType: 'application/x-myformat',
+  compressible: true,
+  charset: 'utf-8',
+})
+```
+
 ## License
 
 MIT
