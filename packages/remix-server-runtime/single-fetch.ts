@@ -26,6 +26,7 @@ import type {
   ClientLoaderFunctionArgs,
   LoaderFunctionArgs,
 } from "./routeModules";
+import { throwIfPotentialCSRFAttack } from "./actions";
 
 export const SingleFetchRedirectSymbol = Symbol("SingleFetchRedirect");
 
@@ -91,6 +92,8 @@ export async function singleFetchAction(
   handleError: (err: unknown) => void
 ): Promise<{ result: SingleFetchResult; headers: Headers; status: number }> {
   try {
+    throwIfPotentialCSRFAttack(request.headers);
+
     let handlerRequest = new Request(handlerUrl, {
       method: request.method,
       body: request.body,
