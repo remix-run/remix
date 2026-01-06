@@ -1,4 +1,4 @@
-import type { Controller } from '@remix-run/fetch-router'
+import type { Controller } from 'remix'
 
 import { routes } from './routes.ts'
 import { getAllOrders, getOrderById } from './models/orders.ts'

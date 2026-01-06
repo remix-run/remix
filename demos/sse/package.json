@@ -3,15 +3,9 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@remix-run/compression-middleware": "workspace:*",
     "@remix-run/dom": "jam",
     "@remix-run/events": "jam",
-    "@remix-run/fetch-router": "workspace:*",
-    "@remix-run/interaction": "workspace:*",
-    "@remix-run/logger-middleware": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*",
-    "@remix-run/response": "workspace:*",
-    "@remix-run/static-middleware": "workspace:*"
+    "remix": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

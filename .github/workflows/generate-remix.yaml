@@ -1,0 +1,86 @@
+# Update the `remix` package by auto-generating from the `@remix-run/*` packages in the repo
+# runs on any pushes/PRs to `main` that touch any `package.json` files since that would
+# potentially alter the sub-exports that need to be reflected in the `remix` package.
+
+# Note: Does not currently run on PRs from forked repos.
+
+name: 💿 Update Remix Package
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'packages/**/package.json'
+  # For now we do not run this on pull requests because pushing back to that PR branch
+  # via the $GITHUB_TOKEN will not re-run CI runs, but it will cancel ongoing CI runs
+  # for the prior developer commit, which opens up the case for false positives on CI runs.
+  # See: https://docs.github.com/en/actions/tutorials/authenticate-with-github_token#using-the-github_token-in-a-workflow
+  #
+  # If we want to re-enable, we would just need to setup a PAT and use that instead of $GITHUB_TOKEN
+  #
+  # pull_request:
+  #   branches-ignore:
+  #     - release-v2
+  #     - v2
+  #   paths:
+  #     - 'packages/**/package.json'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate-remix:
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        if: github.event_name == 'push'
+        uses: actions/checkout@v4
+
+      - name: Checkout
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run generate-remix
+
+      - name: Commit and push changes
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "💿 no updates to the remix package needed"
+            exit 0
+          fi
+
+          # Check for unintentional changes
+          OUTSIDE_CHANGES=$(git status --porcelain | awk '{print $2}' | grep -v "^packages/remix/" || true)
+          if [ -n "$OUTSIDE_CHANGES" ]; then
+            echo "Refusing to commit changes outside of packages/remix/:"
+            echo "$OUTSIDE_CHANGES"
+            exit 1
+          fi
+
+          # Re-install to ensure any new remix peerDependencies are reflected
+          pnpm install
+
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+          git add .
+          git commit -a -m "build: update remix package"
+          git push
+          echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"

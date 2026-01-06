@@ -1,4 +1,4 @@
-import { detectMimeType } from '@remix-run/mime'
+import { detectMimeType } from 'remix/mime'
 
 import { renderBreadcrumb } from './breadcrumb.ts'
 import type { PackageFile } from './utils/npm.ts'

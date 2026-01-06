@@ -6,11 +6,12 @@
   "dependencies": {
     "@typescript/native-preview": "catalog:",
     "eslint": "^9.33.0",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsdoc": "^61.5.0",
     "eslint-plugin-prefer-let": "^4.0.0",
     "prettier": "^3.3.3",
     "tsx": "catalog:",
-    "typescript": "^5.9.3",
+    "typescript": "catalog:",
     "typescript-eslint": "^8.40.0"
   },
   "engines": {
@@ -30,6 +31,7 @@
     "docs:serve": "node docs/server.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "generate-remix": "node scripts/generate-remix.ts",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "test": "pnpm --parallel run test",
