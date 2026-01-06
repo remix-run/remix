@@ -1,4 +1,4 @@
-import type { Controller } from '@remix-run/fetch-router'
+import type { Controller } from 'remix'
 
 import type { routes } from './routes.ts'
 import { BookCard } from './components/book-card.tsx'
