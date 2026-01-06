@@ -29,10 +29,10 @@ export function createMultipartMessage(
 
       if (typeof value === 'string') {
         let headers = new Headers({
-          'Content-Disposition': new ContentDisposition({
+          'Content-Disposition': ContentDisposition.from({
             type: 'form-data',
             name,
-          }),
+          }).toString(),
         })
 
         pushLine(stringifyRawHeaders(headers))
@@ -40,16 +40,16 @@ export function createMultipartMessage(
         pushLine(value)
       } else {
         let headers = new Headers({
-          'Content-Disposition': new ContentDisposition({
+          'Content-Disposition': ContentDisposition.from({
             type: 'form-data',
             name,
             filename: value.filename,
             filenameSplat: value.filenameSplat,
-          }),
+          }).toString(),
         })
 
         if (value.mediaType) {
-          headers.set('Content-Type', new ContentType({ mediaType: value.mediaType }))
+          headers.set('Content-Type', ContentType.from({ mediaType: value.mediaType }).toString())
         }
 
         pushLine(stringifyRawHeaders(headers))

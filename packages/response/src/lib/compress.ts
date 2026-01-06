@@ -9,8 +9,7 @@ import {
 } from 'node:zlib'
 import type { BrotliOptions, ZlibOptions } from 'node:zlib'
 
-import type { AcceptEncoding } from '@remix-run/headers'
-import { parseAcceptEncoding, parseCacheControl, parseVary } from '@remix-run/headers'
+import { AcceptEncoding, CacheControl, Vary } from '@remix-run/headers'
 
 export type Encoding = 'br' | 'gzip' | 'deflate'
 const defaultEncodings: Encoding[] = ['br', 'gzip', 'deflate']
@@ -91,7 +90,7 @@ export async function compressResponse(
   let contentLengthHeader = responseHeaders.get('content-length')
   let contentLength = contentLengthHeader != null ? parseInt(contentLengthHeader, 10) : null
   let acceptRangesHeader = responseHeaders.get('accept-ranges')
-  let cacheControl = parseCacheControl(responseHeaders.get('cache-control'))
+  let cacheControl = CacheControl.from(responseHeaders.get('cache-control'))
 
   if (
     !acceptEncodingHeader ||
@@ -112,7 +111,7 @@ export async function compressResponse(
     return response
   }
 
-  let acceptEncoding = parseAcceptEncoding(acceptEncodingHeader)
+  let acceptEncoding = AcceptEncoding.from(acceptEncodingHeader)
   let selectedEncoding = negotiateEncoding(acceptEncoding, supportedEncodings)
   if (selectedEncoding === null) {
     // Client has explicitly rejected all supported encodings, including 'identity'
@@ -168,7 +167,7 @@ function setCompressionHeaders(headers: Headers, encoding: string): void {
   headers.delete('content-length')
 
   // Update Vary header to include Accept-Encoding
-  let vary = parseVary(headers.get('vary'))
+  let vary = Vary.from(headers.get('vary'))
   vary.add('Accept-Encoding')
   headers.set('vary', vary.toString())
 

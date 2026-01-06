@@ -1,10 +1,10 @@
 import {
   type ContentRangeInit,
   ContentRange,
-  parseIfMatch,
-  parseIfNoneMatch,
-  parseIfRange,
-  parseRange,
+  IfMatch,
+  IfNoneMatch,
+  IfRange,
+  Range,
 } from '@remix-run/headers'
 import { isCompressibleMimeType, mimeTypeToContentType } from '@remix-run/mime'
 
@@ -142,7 +142,7 @@ export async function createFileResponse(
 
   // If-Match support: https://httpwg.org/specs/rfc9110.html#field.if-match
   if (etag && hasIfMatch) {
-    let ifMatch = parseIfMatch(headers.get('if-match'))
+    let ifMatch = IfMatch.from(headers.get('if-match'))
     if (!ifMatch.matches(etag)) {
       return new Response('Precondition Failed', {
         status: 412,
@@ -177,7 +177,7 @@ export async function createFileResponse(
   // If-Modified-Since support: https://httpwg.org/specs/rfc9110.html#field.if-modified-since
   if (etag || lastModified) {
     let shouldReturnNotModified = false
-    let ifNoneMatch = parseIfNoneMatch(headers.get('if-none-match'))
+    let ifNoneMatch = IfNoneMatch.from(headers.get('if-none-match'))
 
     if (etag && ifNoneMatch.matches(etag)) {
       shouldReturnNotModified = true
@@ -206,7 +206,7 @@ export async function createFileResponse(
   // Range support: https://httpwg.org/specs/rfc9110.html#field.range
   // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
   if (acceptRanges && request.method === 'GET' && headers.has('Range')) {
-    let range = parseRange(headers.get('range'))
+    let range = Range.from(headers.get('range'))
 
     // Check if the Range header was sent but parsing resulted in no valid ranges (malformed)
     if (range.ranges.length === 0) {
@@ -216,7 +216,7 @@ export async function createFileResponse(
     }
 
     // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
-    let ifRange = parseIfRange(headers.get('if-range'))
+    let ifRange = IfRange.from(headers.get('if-range'))
     if (
       ifRange.matches({
         etag,
@@ -227,7 +227,7 @@ export async function createFileResponse(
         return new Response('Range Not Satisfiable', {
           status: 416,
           headers: buildResponseHeaders({
-            contentRange: new ContentRange({ unit: 'bytes', size: file.size }),
+            contentRange: ContentRange.from({ unit: 'bytes', size: file.size }),
           }),
         })
       }
@@ -239,7 +239,7 @@ export async function createFileResponse(
         return new Response('Range Not Satisfiable', {
           status: 416,
           headers: buildResponseHeaders({
-            contentRange: new ContentRange({ unit: 'bytes', size: file.size }),
+            contentRange: ContentRange.from({ unit: 'bytes', size: file.size }),
           }),
         })
       }
@@ -299,7 +299,7 @@ function buildResponseHeaders(values: ResponseHeaderValues): Headers {
     headers.set('Content-Length', String(values.contentLength))
   }
   if (values.contentRange) {
-    let str = new ContentRange(values.contentRange).toString()
+    let str = ContentRange.from(values.contentRange).toString()
     if (str) headers.set('Content-Range', str)
   }
   if (values.etag) {
