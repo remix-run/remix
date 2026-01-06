@@ -1,8 +1,8 @@
 import * as cp from 'node:child_process'
 
-import { getPackageFile } from './utils/packages.js'
-import { readJson, writeJson } from './utils/fs.js'
-import { logAndExec } from './utils/process.js'
+import { getPackageFile } from './utils/packages.ts'
+import { readJson, writeJson } from './utils/fs.ts'
+import { logAndExec } from './utils/process.ts'
 
 let skipCommit = process.argv.includes('--no-commit')
 
