@@ -32,7 +32,6 @@
     "./file-storage/memory": "./src/lib/file-storage/memory.ts",
     "./form-data-middleware": "./src/lib/form-data-middleware.ts",
     "./form-data-parser": "./src/lib/form-data-parser.ts",
-    "./fs": "./src/lib/fs.ts",
     "./headers": "./src/lib/headers.ts",
     "./html-template": "./src/lib/html-template.ts",
     "./interaction": "./src/lib/interaction.ts",
@@ -118,10 +117,6 @@
       "./form-data-parser": {
         "types": "./dist/lib/form-data-parser.d.ts",
         "default": "./dist/lib/form-data-parser.js"
-      },
-      "./fs": {
-        "types": "./dist/lib/fs.d.ts",
-        "default": "./dist/lib/fs.js"
       },
       "./headers": {
         "types": "./dist/lib/headers.d.ts",
@@ -239,7 +234,6 @@
       "@remix-run/file-storage": "^0.13.0",
       "@remix-run/form-data-middleware": "^0.1.1",
       "@remix-run/form-data-parser": "^0.14.0",
-      "@remix-run/fs": "^0.3.0",
       "@remix-run/headers": "^0.18.0",
       "@remix-run/html-template": "^0.3.0",
       "@remix-run/interaction": "^0.3.0",
@@ -271,7 +265,6 @@
     "@remix-run/file-storage": "workspace:^",
     "@remix-run/form-data-middleware": "workspace:^",
     "@remix-run/form-data-parser": "workspace:^",
-    "@remix-run/fs": "workspace:^",
     "@remix-run/headers": "workspace:^",
     "@remix-run/html-template": "workspace:^",
     "@remix-run/interaction": "workspace:^",
