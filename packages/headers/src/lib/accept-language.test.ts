@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { AcceptLanguage, parseAcceptLanguage } from './accept-language.ts'
+import { AcceptLanguage } from './accept-language.ts'
 
 describe('Accept-Language', () => {
   it('initializes with an empty string', () => {
@@ -163,9 +163,9 @@ describe('Accept-Language', () => {
   })
 })
 
-describe('parseAcceptLanguage', () => {
+describe('AcceptLanguage.from', () => {
   it('parses a string value', () => {
-    let result = parseAcceptLanguage('en-US, en;q=0.9')
+    let result = AcceptLanguage.from('en-US, en;q=0.9')
     assert.ok(result instanceof AcceptLanguage)
     assert.equal(result.size, 2)
   })

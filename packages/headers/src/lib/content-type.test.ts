@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { ContentType, parseContentType } from './content-type.ts'
+import { ContentType } from './content-type.ts'
 
 describe('ContentType', () => {
   it('initializes with an empty string', () => {
@@ -107,16 +107,16 @@ describe('ContentType', () => {
   })
 })
 
-describe('parseContentType', () => {
+describe('ContentType.from', () => {
   it('parses a string value', () => {
-    let result = parseContentType('text/html; charset=utf-8')
+    let result = ContentType.from('text/html; charset=utf-8')
     assert.ok(result instanceof ContentType)
     assert.equal(result.mediaType, 'text/html')
     assert.equal(result.charset, 'utf-8')
   })
 
   it('accepts init object', () => {
-    let result = parseContentType({ mediaType: 'text/html', charset: 'utf-8' })
+    let result = ContentType.from({ mediaType: 'text/html', charset: 'utf-8' })
     assert.ok(result instanceof ContentType)
     assert.equal(result.mediaType, 'text/html')
     assert.equal(result.charset, 'utf-8')

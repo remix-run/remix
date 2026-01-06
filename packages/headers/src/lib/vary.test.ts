@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { Vary, parseVary } from './vary.ts'
+import { Vary } from './vary.ts'
 
 describe('Vary', () => {
   it('initializes with an empty string', () => {
@@ -145,9 +145,9 @@ describe('Vary', () => {
   })
 })
 
-describe('parseVary', () => {
+describe('Vary.from', () => {
   it('parses a string value', () => {
-    let result = parseVary('Accept-Encoding, Accept-Language')
+    let result = Vary.from('Accept-Encoding, Accept-Language')
     assert.ok(result instanceof Vary)
     assert.equal(result.size, 2)
     assert.equal(result.has('Accept-Encoding'), true)
@@ -155,7 +155,7 @@ describe('parseVary', () => {
   })
 
   it('parses an array value', () => {
-    let result = parseVary(['Accept-Encoding', 'Accept-Language'])
+    let result = Vary.from(['Accept-Encoding', 'Accept-Language'])
     assert.ok(result instanceof Vary)
     assert.equal(result.size, 2)
   })

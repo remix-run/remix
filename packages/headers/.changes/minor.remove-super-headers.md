@@ -1,21 +1,21 @@
-BREAKING CHANGE: Removed `Headers`/`SuperHeaders` class and default export. Use the native `Headers` class with the parse functions instead.
+BREAKING CHANGE: Removed `Headers`/`SuperHeaders` class and default export. Use the native `Headers` class with the static `from()` method on each header class instead.
 
-New individual header parsing utilities added:
+New individual header `.from()` methods:
 
-- `parseAccept()`
-- `parseAcceptEncoding()`
-- `parseAcceptLanguage()`
-- `parseCacheControl()`
-- `parseContentDisposition()`
-- `parseContentRange()`
-- `parseContentType()`
-- `parseCookie()`
-- `parseIfMatch()`
-- `parseIfNoneMatch()`
-- `parseIfRange()`
-- `parseRange()`
-- `parseSetCookie()`
-- `parseVary()`
+- `Accept.from()`
+- `AcceptEncoding.from()`
+- `AcceptLanguage.from()`
+- `CacheControl.from()`
+- `ContentDisposition.from()`
+- `ContentRange.from()`
+- `ContentType.from()`
+- `Cookie.from()`
+- `IfMatch.from()`
+- `IfNoneMatch.from()`
+- `IfRange.from()`
+- `Range.from()`
+- `SetCookie.from()`
+- `Vary.from()`
 
 New raw header utilities added:
 
@@ -31,8 +31,8 @@ let headers = new SuperHeaders(request.headers)
 let mediaType = headers.contentType.mediaType
 
 // After:
-import { parseContentType } from '@remix-run/headers'
-let contentType = parseContentType(request.headers.get('content-type'))
+import { ContentType } from '@remix-run/headers'
+let contentType = ContentType.from(request.headers.get('content-type'))
 let mediaType = contentType.mediaType
 ```
 

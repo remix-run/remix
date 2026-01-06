@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { Cookie, parseCookie } from './cookie.ts'
+import { Cookie } from './cookie.ts'
 
 describe('Cookie', () => {
   it('initializes with an empty string', () => {
@@ -143,9 +143,9 @@ describe('Cookie', () => {
   })
 })
 
-describe('parseCookie', () => {
+describe('Cookie.from', () => {
   it('parses a string value', () => {
-    let result = parseCookie('session=abc123; user=john')
+    let result = Cookie.from('session=abc123; user=john')
     assert.ok(result instanceof Cookie)
     assert.equal(result.get('session'), 'abc123')
     assert.equal(result.get('user'), 'john')

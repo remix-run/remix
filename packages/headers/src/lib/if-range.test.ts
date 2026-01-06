@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { IfRange, parseIfRange } from './if-range.ts'
+import { IfRange } from './if-range.ts'
 
 describe('IfRange', () => {
   let testDate = new Date('2021-01-01T00:00:00Z')
@@ -157,16 +157,16 @@ describe('IfRange', () => {
   })
 })
 
-describe('parseIfRange', () => {
+describe('IfRange.from', () => {
   it('parses a string value', () => {
-    let result = parseIfRange('"abc"')
+    let result = IfRange.from('"abc"')
     assert.ok(result instanceof IfRange)
     assert.equal(result.value, '"abc"')
   })
 
   it('parses a Date value', () => {
     let date = new Date('2024-01-01T00:00:00.000Z')
-    let result = parseIfRange(date)
+    let result = IfRange.from(date)
     assert.ok(result instanceof IfRange)
     assert.equal(result.value, date.toUTCString())
   })

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { IfNoneMatch, parseIfNoneMatch } from './if-none-match.ts'
+import { IfNoneMatch } from './if-none-match.ts'
 
 describe('IfNoneMatch', () => {
   it('initializes with an empty string', () => {
@@ -93,9 +93,9 @@ describe('IfNoneMatch', () => {
   })
 })
 
-describe('parseIfNoneMatch', () => {
+describe('IfNoneMatch.from', () => {
   it('parses a string value', () => {
-    let result = parseIfNoneMatch('"abc", "def"')
+    let result = IfNoneMatch.from('"abc", "def"')
     assert.ok(result instanceof IfNoneMatch)
     assert.equal(result.tags.length, 2)
   })

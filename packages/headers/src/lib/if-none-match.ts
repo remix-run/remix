@@ -21,19 +21,8 @@ export interface IfNoneMatchInit {
 export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
   tags: string[] = []
 
-  /**
-   * @param init A string, array of strings, or object to initialize the header
-   */
   constructor(init?: string | string[] | IfNoneMatchInit) {
-    if (init) {
-      if (typeof init === 'string') {
-        this.tags.push(...init.split(/\s*,\s*/).map(quoteEtag))
-      } else if (Array.isArray(init)) {
-        this.tags.push(...init.map(quoteEtag))
-      } else {
-        this.tags.push(...init.tags.map(quoteEtag))
-      }
-    }
+    if (init) return IfNoneMatch.from(init)
   }
 
   /**
@@ -66,14 +55,26 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
   toString() {
     return this.tags.join(', ')
   }
-}
 
-/**
- * Parse an If-None-Match header value.
- *
- * @param value The header value (string, string[], init object, or null)
- * @returns An IfNoneMatch instance (empty if null)
- */
-export function parseIfNoneMatch(value: string | string[] | IfNoneMatchInit | null): IfNoneMatch {
-  return new IfNoneMatch(value ?? undefined)
+  /**
+   * Parse an If-None-Match header value.
+   *
+   * @param value The header value (string, string[], init object, or null)
+   * @returns An IfNoneMatch instance (empty if null)
+   */
+  static from(value: string | string[] | IfNoneMatchInit | null): IfNoneMatch {
+    let header = new IfNoneMatch()
+
+    if (value !== null) {
+      if (typeof value === 'string') {
+        header.tags.push(...value.split(/\s*,\s*/).map(quoteEtag))
+      } else if (Array.isArray(value)) {
+        header.tags.push(...value.map(quoteEtag))
+      } else {
+        header.tags.push(...value.tags.map(quoteEtag))
+      }
+    }
+
+    return header
+  }
 }

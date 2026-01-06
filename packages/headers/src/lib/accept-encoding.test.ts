@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { AcceptEncoding, parseAcceptEncoding } from './accept-encoding.ts'
+import { AcceptEncoding } from './accept-encoding.ts'
 
 describe('Accept-Encoding', () => {
   it('initializes with an empty string', () => {
@@ -150,9 +150,9 @@ describe('Accept-Encoding', () => {
   })
 })
 
-describe('parseAcceptEncoding', () => {
+describe('AcceptEncoding.from', () => {
   it('parses a string value', () => {
-    let result = parseAcceptEncoding('gzip, deflate;q=0.5')
+    let result = AcceptEncoding.from('gzip, deflate;q=0.5')
     assert.ok(result instanceof AcceptEncoding)
     assert.equal(result.size, 2)
   })

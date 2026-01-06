@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { CacheControl, parseCacheControl } from './cache-control.ts'
+import { CacheControl } from './cache-control.ts'
 
 const paramTestCases: Array<[string, keyof CacheControl, string, unknown]> = [
   ['max-age', 'maxAge', '3600', 3600],
@@ -94,16 +94,16 @@ describe('CacheControl', () => {
   })
 })
 
-describe('parseCacheControl', () => {
+describe('CacheControl.from', () => {
   it('parses a string value', () => {
-    let result = parseCacheControl('max-age=3600, public')
+    let result = CacheControl.from('max-age=3600, public')
     assert.ok(result instanceof CacheControl)
     assert.equal(result.maxAge, 3600)
     assert.equal(result.public, true)
   })
 
   it('accepts init object', () => {
-    let result = parseCacheControl({ maxAge: 3600, public: true })
+    let result = CacheControl.from({ maxAge: 3600, public: true })
     assert.ok(result instanceof CacheControl)
     assert.equal(result.maxAge, 3600)
     assert.equal(result.public, true)

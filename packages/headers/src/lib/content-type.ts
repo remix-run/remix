@@ -37,29 +37,8 @@ export class ContentType implements HeaderValue, ContentTypeInit {
   charset?: string
   mediaType?: string
 
-  /**
-   * @param init A string or object to initialize the header
-   */
   constructor(init?: string | ContentTypeInit) {
-    if (init) {
-      if (typeof init === 'string') {
-        let params = parseParams(init)
-        if (params.length > 0) {
-          this.mediaType = params[0][0]
-          for (let [name, value] of params.slice(1)) {
-            if (name === 'boundary') {
-              this.boundary = value
-            } else if (name === 'charset') {
-              this.charset = value
-            }
-          }
-        }
-      } else {
-        this.boundary = init.boundary
-        this.charset = init.charset
-        this.mediaType = init.mediaType
-      }
-    }
+    if (init) return ContentType.from(init)
   }
 
   /**
@@ -83,14 +62,36 @@ export class ContentType implements HeaderValue, ContentTypeInit {
 
     return parts.join('; ')
   }
-}
 
-/**
- * Parse a Content-Type header value.
- *
- * @param value The header value (string, init object, or null)
- * @returns A ContentType instance (empty if null)
- */
-export function parseContentType(value: string | ContentTypeInit | null): ContentType {
-  return new ContentType(value ?? undefined)
+  /**
+   * Parse a Content-Type header value.
+   *
+   * @param value The header value (string, init object, or null)
+   * @returns A ContentType instance (empty if null)
+   */
+  static from(value: string | ContentTypeInit | null): ContentType {
+    let header = new ContentType()
+
+    if (value !== null) {
+      if (typeof value === 'string') {
+        let params = parseParams(value)
+        if (params.length > 0) {
+          header.mediaType = params[0][0]
+          for (let [name, val] of params.slice(1)) {
+            if (name === 'boundary') {
+              header.boundary = val
+            } else if (name === 'charset') {
+              header.charset = val
+            }
+          }
+        }
+      } else {
+        header.boundary = value.boundary
+        header.charset = value.charset
+        header.mediaType = value.mediaType
+      }
+    }
+
+    return header
+  }
 }

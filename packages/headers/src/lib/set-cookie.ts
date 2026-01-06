@@ -97,71 +97,8 @@ export class SetCookie implements HeaderValue, SetCookieInit {
   secure?: boolean
   value?: string
 
-  /**
-   * @param init A string or object to initialize the header
-   */
   constructor(init?: string | SetCookieInit) {
-    if (init) {
-      if (typeof init === 'string') {
-        let params = parseParams(init)
-        if (params.length > 0) {
-          this.name = params[0][0]
-          this.value = params[0][1]
-
-          for (let [key, value] of params.slice(1)) {
-            switch (key.toLowerCase()) {
-              case 'domain':
-                this.domain = value
-                break
-              case 'expires': {
-                if (typeof value === 'string') {
-                  let date = new Date(value)
-                  if (isValidDate(date)) {
-                    this.expires = date
-                  }
-                }
-                break
-              }
-              case 'httponly':
-                this.httpOnly = true
-                break
-              case 'max-age': {
-                if (typeof value === 'string') {
-                  let v = parseInt(value, 10)
-                  if (!isNaN(v)) this.maxAge = v
-                }
-                break
-              }
-              case 'partitioned':
-                this.partitioned = true
-                break
-              case 'path':
-                this.path = value
-                break
-              case 'samesite':
-                if (typeof value === 'string' && /strict|lax|none/i.test(value)) {
-                  this.sameSite = capitalize(value) as SameSiteValue
-                }
-                break
-              case 'secure':
-                this.secure = true
-                break
-            }
-          }
-        }
-      } else {
-        this.domain = init.domain
-        this.expires = init.expires
-        this.httpOnly = init.httpOnly
-        this.maxAge = init.maxAge
-        this.name = init.name
-        this.partitioned = init.partitioned
-        this.path = init.path
-        this.sameSite = init.sameSite
-        this.secure = init.secure
-        this.value = init.value
-      }
-    }
+    if (init) return SetCookie.from(init)
   }
 
   /**
@@ -203,14 +140,78 @@ export class SetCookie implements HeaderValue, SetCookieInit {
 
     return parts.join('; ')
   }
-}
 
-/**
- * Parse a Set-Cookie header value.
- *
- * @param value The header value (string, init object, or null)
- * @returns A SetCookie instance (empty if null)
- */
-export function parseSetCookie(value: string | SetCookieInit | null): SetCookie {
-  return new SetCookie(value ?? undefined)
+  /**
+   * Parse a Set-Cookie header value.
+   *
+   * @param value The header value (string, init object, or null)
+   * @returns A SetCookie instance (empty if null)
+   */
+  static from(value: string | SetCookieInit | null): SetCookie {
+    let header = new SetCookie()
+
+    if (value !== null) {
+      if (typeof value === 'string') {
+        let params = parseParams(value)
+        if (params.length > 0) {
+          header.name = params[0][0]
+          header.value = params[0][1]
+
+          for (let [key, val] of params.slice(1)) {
+            switch (key.toLowerCase()) {
+              case 'domain':
+                header.domain = val
+                break
+              case 'expires': {
+                if (typeof val === 'string') {
+                  let date = new Date(val)
+                  if (isValidDate(date)) {
+                    header.expires = date
+                  }
+                }
+                break
+              }
+              case 'httponly':
+                header.httpOnly = true
+                break
+              case 'max-age': {
+                if (typeof val === 'string') {
+                  let v = parseInt(val, 10)
+                  if (!isNaN(v)) header.maxAge = v
+                }
+                break
+              }
+              case 'partitioned':
+                header.partitioned = true
+                break
+              case 'path':
+                header.path = val
+                break
+              case 'samesite':
+                if (typeof val === 'string' && /strict|lax|none/i.test(val)) {
+                  header.sameSite = capitalize(val) as SameSiteValue
+                }
+                break
+              case 'secure':
+                header.secure = true
+                break
+            }
+          }
+        }
+      } else {
+        header.domain = value.domain
+        header.expires = value.expires
+        header.httpOnly = value.httpOnly
+        header.maxAge = value.maxAge
+        header.name = value.name
+        header.partitioned = value.partitioned
+        header.path = value.path
+        header.sameSite = value.sameSite
+        header.secure = value.secure
+        header.value = value.value
+      }
+    }
+
+    return header
+  }
 }

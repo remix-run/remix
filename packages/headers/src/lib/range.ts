@@ -28,58 +28,8 @@ export class Range implements HeaderValue, RangeInit {
   unit: string = ''
   ranges: Array<{ start?: number; end?: number }> = []
 
-  /**
-   * @param init A string or object to initialize the header
-   */
   constructor(init?: string | RangeInit) {
-    if (init) {
-      if (typeof init === 'string') {
-        // Parse: "bytes=200-1000" or "bytes=200-" or "bytes=-500" or "bytes=0-99,200-299"
-        let match = init.match(/^(\w+)=(.+)$/)
-        if (match) {
-          this.unit = match[1]
-          let rangeParts = match[2].split(',')
-
-          // Track if any range part is invalid to mark the entire header as malformed
-          let hasInvalidPart = false
-
-          for (let part of rangeParts) {
-            let rangeMatch = part.trim().match(/^(\d*)-(\d*)$/)
-            if (!rangeMatch) {
-              // Invalid syntax for this range part
-              hasInvalidPart = true
-              continue
-            }
-
-            let [, startStr, endStr] = rangeMatch
-            // At least one bound must be specified
-            if (!startStr && !endStr) {
-              hasInvalidPart = true
-              continue
-            }
-
-            let start = startStr ? parseInt(startStr, 10) : undefined
-            let end = endStr ? parseInt(endStr, 10) : undefined
-
-            // If both bounds are specified, start must be <= end
-            if (start !== undefined && end !== undefined && start > end) {
-              hasInvalidPart = true
-              continue
-            }
-
-            this.ranges.push({ start, end })
-          }
-
-          // If any part was invalid, mark as malformed by clearing ranges
-          if (hasInvalidPart) {
-            this.ranges = []
-          }
-        }
-      } else {
-        if (init.unit !== undefined) this.unit = init.unit
-        if (init.ranges !== undefined) this.ranges = init.ranges
-      }
-    }
+    if (init) return Range.from(init)
   }
 
   /**
@@ -177,14 +127,65 @@ export class Range implements HeaderValue, RangeInit {
 
     return `${this.unit}=${rangeParts.join(',')}`
   }
-}
 
-/**
- * Parse a Range header value.
- *
- * @param value The header value (string, init object, or null)
- * @returns A Range instance (empty if null)
- */
-export function parseRange(value: string | RangeInit | null): Range {
-  return new Range(value ?? undefined)
+  /**
+   * Parse a Range header value.
+   *
+   * @param value The header value (string, init object, or null)
+   * @returns A Range instance (empty if null)
+   */
+  static from(value: string | RangeInit | null): Range {
+    let header = new Range()
+
+    if (value !== null) {
+      if (typeof value === 'string') {
+        // Parse: "bytes=200-1000" or "bytes=200-" or "bytes=-500" or "bytes=0-99,200-299"
+        let match = value.match(/^(\w+)=(.+)$/)
+        if (match) {
+          header.unit = match[1]
+          let rangeParts = match[2].split(',')
+
+          // Track if any range part is invalid to mark the entire header as malformed
+          let hasInvalidPart = false
+
+          for (let part of rangeParts) {
+            let rangeMatch = part.trim().match(/^(\d*)-(\d*)$/)
+            if (!rangeMatch) {
+              // Invalid syntax for this range part
+              hasInvalidPart = true
+              continue
+            }
+
+            let [, startStr, endStr] = rangeMatch
+            // At least one bound must be specified
+            if (!startStr && !endStr) {
+              hasInvalidPart = true
+              continue
+            }
+
+            let start = startStr ? parseInt(startStr, 10) : undefined
+            let end = endStr ? parseInt(endStr, 10) : undefined
+
+            // If both bounds are specified, start must be <= end
+            if (start !== undefined && end !== undefined && start > end) {
+              hasInvalidPart = true
+              continue
+            }
+
+            header.ranges.push({ start, end })
+          }
+
+          // If any part was invalid, mark as malformed by clearing ranges
+          if (hasInvalidPart) {
+            header.ranges = []
+          }
+        }
+      } else {
+        if (value.unit !== undefined) header.unit = value.unit
+        if (value.ranges !== undefined) header.ranges = value.ranges
+      }
+    }
+
+    return header
+  }
 }
