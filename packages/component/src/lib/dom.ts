@@ -1,4 +1,4 @@
-import type { StyleProps } from './style/lib/style'
+import type { CSSProps, StyleProps } from './style/lib/style.ts'
 import type { EventListeners } from '@remix-run/interaction'
 import type { RemixNode } from './jsx.ts'
 
@@ -14,7 +14,7 @@ export interface HostProps<eventTarget extends EventTarget> {
   key?: any
   children?: RemixNode
   on?: EventListeners<eventTarget> | undefined
-  css?: import('./style/lib/style.ts').CSSProps
+  css?: CSSProps
   connect?: (node: eventTarget, signal: AbortSignal) => void
 }
 
@@ -2327,8 +2327,10 @@ export interface MFracMathMLProps<eventTarget extends EventTarget>
 }
 
 export interface MiMathMLProps<eventTarget extends EventTarget> extends MathMLProps<eventTarget> {
-  /** The only value allowed in the current specification is normal (case insensitive)
-   * See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mi#mathvariant */
+  /**
+   * The only value allowed in the current specification is normal (case insensitive)
+   * See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mi#mathvariant
+   */
   mathvariant?: Trackable<
     | 'normal'
     | 'bold'

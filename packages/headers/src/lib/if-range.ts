@@ -41,6 +41,8 @@ export class IfRange implements HeaderValue {
    * Weak entity tags (prefixed with `W/`) are never considered a match.
    *
    * @param resource The current resource state to compare against
+   * @param resource.etag The resource's ETag value
+   * @param resource.lastModified The resource's last modified timestamp
    * @returns `true` if the condition is satisfied, `false` otherwise
    *
    * @example

@@ -28,6 +28,8 @@
     "create-github-release:preview": "node ./scripts/create-github-release.js --preview",
     "docs": "rm -rf docs/api && node docs/generate.ts",
     "docs:serve": "node docs/server.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "test": "pnpm --parallel run test",

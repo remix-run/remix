@@ -1,0 +1,9 @@
+node_modules/
+dist/
+tmp/
+reference/
+**/*.bundled.*
+**/public/assets/
+**/test/fixtures/
+**/worker-configuration.d.ts
+pnpm-lock.yaml

@@ -216,6 +216,10 @@ function applyCompression(
  * Compresses a response stream that bridges node:zlib to Web Streams.
  * Reads from the input stream, compresses chunks through the compressor,
  * and returns a new ReadableStream with the compressed data.
+ *
+ * @param input The input stream to compress
+ * @param compressor The zlib compressor instance to use
+ * @returns A new ReadableStream with the compressed data
  */
 export function compressStream(
   input: ReadableStream<Uint8Array>,
