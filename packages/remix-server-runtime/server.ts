@@ -43,6 +43,7 @@ import {
   SINGLE_FETCH_REDIRECT_STATUS,
 } from "./single-fetch";
 import { resourceRouteJsonWarning } from "./deprecations";
+import { throwIfPotentialCSRFAttack } from "./actions";
 
 export type RequestHandler = (
   request: Request,
@@ -489,6 +490,9 @@ async function handleDocumentRequest(
 ) {
   let context;
   try {
+    if (request.method === "POST") {
+      throwIfPotentialCSRFAttack(request.headers);
+    }
     context = await staticHandler.query(request, {
       requestContext: loadContext,
     });

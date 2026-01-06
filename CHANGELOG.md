@@ -254,6 +254,7 @@ Date: 2026-01-06
 
 - `@remix-run/dev` - Update `valibot` to address CVE ([GHSA-vqpr-j7v3-hqw9](https://github.com/advisories/GHSA-vqpr-j7v3-hqw9))
 - `@remix-run/react` - Escape HTML during SSR for in `<ScrollRestoration>` keys
+- `@remix-run/server-runtime` - Add additional layer of CSRF protection by rejecting submissions to UI routes from external origins
 
 **Full Changelog**: [`v2.17.2...v2.17.3`](https://github.com/remix-run/remix/compare/remix@2.17.2...remix@2.17.3)
 
