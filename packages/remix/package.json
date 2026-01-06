@@ -231,7 +231,7 @@
     },
     "peerDependencies": {
       "@remix-run/async-context-middleware": "^0.1.0",
-      "@remix-run/component": "^0.2.0",
+      "@remix-run/component": "^0.2.1",
       "@remix-run/compression-middleware": "^0.1.0",
       "@remix-run/cookie": "^0.5.0",
       "@remix-run/fetch-proxy": "^0.7.0",

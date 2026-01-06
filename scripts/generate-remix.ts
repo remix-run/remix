@@ -72,7 +72,8 @@ remixPackageJson.publishConfig.peerDependencies = publishConfigPeerDependencies
 await fs.writeFile(remixPackageJsonPath, JSON.stringify(remixPackageJson, null, 2) + '\n', 'utf-8')
 
 // Generate change summary
-await outputExportsAndPeerDepChanges()
+await outputExportsChanges()
+await outputPeerDependencyChanges()
 
 //  Copy change files up to remix changes directory
 if (GENERATE_CHANGE_FILES) {
@@ -216,14 +217,72 @@ function getRemixPeerDependencies() {
   return { peerDependencies, publishConfigPeerDependencies }
 }
 
-async function outputExportsAndPeerDepChanges() {
+// Build exports change summary
+async function outputExportsChanges() {
   let newExportsSet = new Set<string>(
     Object.keys(exportsConfig).filter((key) => key !== '.' && key !== './package.json'),
   )
   let addedExports = Array.from(newExportsSet).filter((key) => !existingInfo.exports.has(key))
   let removedExports = Array.from(existingInfo.exports).filter((key) => !newExportsSet.has(key))
 
-  // Build peerDependencies/publishConfig.peerDependencies change summary
+  if (addedExports.length === 0 && removedExports.length === 0) {
+    return
+  }
+
+  let semverType = removedExports.length > 0 ? 'major' : 'minor'
+  let changeFile = path.join(
+    `${remixDir}`,
+    '.changes',
+    `${semverType}.update-exports-${Date.now()}.md`,
+  )
+  let changes = ''
+
+  if (removedExports.length > 0) {
+    console.log()
+    console.log('⚠️ Removed package.json exports:')
+    changes += 'Removed `package.json` `exports`:\n'
+    for (let exportPath of removedExports) {
+      exportPath = exportPath.replace('./', '')
+      let exportName = `remix/${exportPath}`
+      console.log(`   - ${exportName}`)
+      changes += ` - \`${exportName}\`\n`
+
+      // Remove re-export file
+      let srcFile = path.join(remixDir, SOURCE_FOLDER, SUB_EXPORT_FOLDER, exportPath + '.ts')
+      try {
+        await fs.unlink(srcFile)
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw e
+        }
+      }
+    }
+  }
+
+  if (addedExports.length > 0) {
+    console.log()
+    console.log('✨ Added package.json exports:')
+    changes += 'Added `package.json` `exports`:\n'
+    for (let exportPath of addedExports) {
+      let entry = allExports.find((e) => e.exportPath === exportPath)
+      exportPath = `remix/${exportPath.replace('./', '')}`
+      if (entry) {
+        console.log(`   - ${exportPath} → ${entry.reExportFrom}`)
+        changes += ` - \`${exportPath}\` to re-export APIs from \`${entry.reExportFrom}\`\n`
+      }
+    }
+  }
+
+  if (GENERATE_CHANGE_FILES) {
+    await fs.writeFile(changeFile, changes, 'utf-8')
+    console.log()
+    console.log('✨ Created exports change file:')
+    console.log(`   - ${path.relative(process.cwd(), changeFile)}`)
+  }
+}
+
+// Build peerDependencies/publishConfig.peerDependencies change summary
+async function outputPeerDependencyChanges() {
   let newPeerDepsSet = new Set<string>(Object.keys(peerDependencies))
   let addedPeerDeps = Array.from(newPeerDepsSet).filter(
     (key) => !existingInfo.peerDependencies.has(key),
@@ -232,86 +291,44 @@ async function outputExportsAndPeerDepChanges() {
     (key) => !newPeerDepsSet.has(key),
   )
 
-  if (
-    addedExports.length > 0 ||
-    addedPeerDeps.length > 0 ||
-    removedExports.length > 0 ||
-    removedPeerDeps.length > 0
-  ) {
-    let semverType = removedExports.length > 0 || removedPeerDeps.length > 0 ? 'major' : 'minor'
-    let changeFile = path.join(
-      `${remixDir}`,
-      '.changes',
-      `${semverType}.update-exports-or-peer-deps-${Date.now()}.md`,
-    )
-    let changes = ''
+  if (addedPeerDeps.length === 0 && removedPeerDeps.length === 0) {
+    return
+  }
 
-    if (removedPeerDeps.length > 0) {
-      console.log()
-      console.log('⚠️ Removed peer dependencies:')
-      changes += '- Removed `peerDependencies`:\n'
-      for (let peerDep of removedPeerDeps) {
-        console.log(`   - ${peerDep}`)
-        changes += `  - \`${peerDep}\`\n`
-      }
+  let semverType = removedPeerDeps.length > 0 ? 'major' : 'minor'
+  let changeFile = path.join(
+    `${remixDir}`,
+    '.changes',
+    `${semverType}.update-peer-dependencies-${Date.now()}.md`,
+  )
+  let changes = ''
+
+  if (removedPeerDeps.length > 0) {
+    console.log()
+    console.log('⚠️ Removed peerDependencies:')
+    changes += 'Removed `peerDependencies`:\n'
+    for (let peerDep of removedPeerDeps) {
+      console.log(`   - ${peerDep}`)
+      changes += ` - \`${peerDep}\`\n`
     }
+  }
 
-    if (addedPeerDeps.length > 0) {
-      console.log()
-      console.log('✨ Added peer dependencies:')
-      changes += '- Added `peerDependencies`:\n'
-      for (let peerDep of addedPeerDeps) {
-        let version = remixPackageJson.publishConfig.peerDependencies[peerDep]
-        console.log(`   - ${peerDep}@${version}`)
-        changes += `  - \`${peerDep}@${version}\`\n`
-      }
+  if (addedPeerDeps.length > 0) {
+    console.log()
+    console.log('✨ Added peerDependencies:')
+    changes += 'Added `peerDependencies`:\n'
+    for (let peerDep of addedPeerDeps) {
+      let version = remixPackageJson.publishConfig.peerDependencies[peerDep]
+      console.log(`   - ${peerDep}@${version}`)
+      changes += ` - \`${peerDep}@${version}\`\n`
     }
+  }
 
-    if (removedExports.length > 0) {
-      console.log()
-      console.log('⚠️ Removed exports:')
-      changes += '- Removed `exports`:\n'
-      for (let exportPath of removedExports) {
-        exportPath = `remix/${exportPath.replace('./', '')}`
-        console.log(`   - ${exportPath}`)
-        changes += `  - \`${exportPath}\`\n`
-
-        // Remove re-export file
-        let srcFile = path.join(
-          remixDir,
-          SUB_EXPORT_SRC_FOLDER,
-          exportPath.replace('remix/', '') + '.ts',
-        )
-        try {
-          await fs.unlink(srcFile)
-        } catch (e) {
-          if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
-            throw e
-          }
-        }
-      }
-    }
-
-    if (addedExports.length > 0) {
-      console.log()
-      console.log('✨ Added exports:')
-      changes += '- Added `exports`:\n'
-      for (let exportPath of addedExports) {
-        let entry = allExports.find((e) => e.exportPath === exportPath)
-        exportPath = `remix/${exportPath.replace('./', '')}`
-        if (entry) {
-          console.log(`   - ${exportPath} → ${entry.reExportFrom}`)
-          changes += `  - \`${exportPath}\` to re-export APIs from \`${entry.reExportFrom}\`\n`
-        }
-      }
-    }
-
-    if (GENERATE_CHANGE_FILES) {
-      await fs.writeFile(changeFile, changes, 'utf-8')
-      console.log()
-      console.log('✨ Created exports/peerDeps change file:')
-      console.log(`   - ${path.relative(process.cwd(), changeFile)}`)
-    }
+  if (GENERATE_CHANGE_FILES) {
+    await fs.writeFile(changeFile, changes, 'utf-8')
+    console.log()
+    console.log('✨ Created peerDependencies change file:')
+    console.log(`   - ${path.relative(process.cwd(), changeFile)}`)
   }
 }
 
