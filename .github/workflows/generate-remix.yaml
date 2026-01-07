@@ -96,4 +96,4 @@ jobs:
         env:
           # `GH_TOKEN` is required to use the `gh` CLI to add comments to PRs.
           GH_TOKEN: ${{ secrets.GH_REMIX_PAT }}
-        run: gh pr comment ${{ github.event.pull_request.number }} --body "This PR has been updated with changes to the \`remix\` package in ${{ steps.commit.outputs.new_sha }} - please review those changes prior to merging"
+        run: gh pr comment ${{ github.event.pull_request.number }} --body "Changes in this PR resulted in updates to the auto-generated \`remix\` package in ${{ steps.commit.outputs.new_sha }}. Please review those changes prior to merging."
