@@ -2,7 +2,7 @@
 
 Utilities for working with MIME types.
 
-Data used for these utilities is generated at build time from [mime-db](https://github.com/jshttp/mime-db), but only includes standard MIME types. Experimental (`x-`) and vendor-specific (`vnd.`) MIME types have been excluded.
+Data used for these utilities is generated at build time from [mime-db](https://github.com/jshttp/mime-db).
 
 ## Installation
 
