@@ -58,7 +58,7 @@ async function run() {
     }
   }
 
-  let tag = "v2";
+  let tag = "latest";
 
   // Publish all packages
   for (let name of PACKAGES) {
