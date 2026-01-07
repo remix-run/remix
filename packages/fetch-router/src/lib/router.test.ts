@@ -5,7 +5,7 @@ import { ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
 import type { RequestContext } from './request-context.ts'
 import { createRoutes as route } from './route-map.ts'
 import type { MatchData } from './router.ts'
-import { createRouter } from './router.ts'
+import { createRouter, createHandlers } from './router.ts'
 
 describe('router.fetch()', () => {
   it('fetches a route', async () => {
@@ -903,43 +903,169 @@ describe('trailing slash handling', () => {
   })
 })
 
-describe('custom matcher', () => {
-  it('uses a custom matcher when provided', async () => {
-    let matchAllCalls = 0
+describe('createHandlers() and .router()', () => {
+  it('creates a router from handlers', async () => {
+    let handlers = createHandlers()
+    handlers.get('/', () => new Response('Home'))
+    handlers.get('/about', () => new Response('About'))
 
-    // Create a custom matcher that tracks calls
-    class CustomMatcher extends ArrayMatcher<MatchData> {
-      *matchAll(url: string | URL) {
-        matchAllCalls++
-        yield* super.matchAll(url)
-      }
-    }
+    let router = handlers.router()
 
-    let customMatcher = new CustomMatcher()
-    let router = createRouter({ matcher: customMatcher })
-    router.get('/', () => new Response('Home'))
+    let response1 = await router('https://remix.run/')
+    assert.equal(response1.status, 200)
+    assert.equal(await response1.text(), 'Home')
 
-    await router.fetch('https://remix.run/')
-
-    assert.ok(matchAllCalls > 0, 'Custom matcher should be called')
+    let response2 = await router('https://remix.run/about')
+    assert.equal(response2.status, 200)
+    assert.equal(await response2.text(), 'About')
   })
 
-  it('adds routes to the custom matcher', async () => {
-    let addedPatterns: string[] = []
+  it('supports .add() for explicit method', async () => {
+    let handlers = createHandlers()
+    handlers.add('GET', '/users', () => new Response('Users'))
+    handlers.add('POST', '/users', () => new Response('Created'))
 
-    class CustomMatcher extends ArrayMatcher<MatchData> {
-      add<P extends string>(pattern: P | RoutePattern<P>, data: MatchData): void {
-        let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
-        addedPatterns.push(routePattern.source)
-        super.add(pattern, data)
-      }
-    }
+    let router = handlers.router()
 
-    let customMatcher = new CustomMatcher()
-    let router = createRouter({ matcher: customMatcher })
-    router.get('/home', () => new Response('Home'))
-    router.get('/about', () => new Response('About'))
+    let response1 = await router('https://remix.run/users', { method: 'GET' })
+    assert.equal(response1.status, 200)
+    assert.equal(await response1.text(), 'Users')
 
-    assert.deepEqual(addedPatterns, ['/home', '/about'])
+    let response2 = await router('https://remix.run/users', { method: 'POST' })
+    assert.equal(response2.status, 200)
+    assert.equal(await response2.text(), 'Created')
+  })
+
+  it('supports .add() for controller', async () => {
+    let routes = route({
+      home: '/',
+      about: '/about',
+    })
+
+    let handlers = createHandlers()
+    handlers.add(routes, {
+      home: () => new Response('Home'),
+      about: () => new Response('About'),
+    })
+
+    let router = handlers.router()
+
+    let response1 = await router('https://remix.run/')
+    assert.equal(response1.status, 200)
+    assert.equal(await response1.text(), 'Home')
+
+    let response2 = await router('https://remix.run/about')
+    assert.equal(response2.status, 200)
+    assert.equal(await response2.text(), 'About')
+  })
+
+  it('accepts middleware in .router()', async () => {
+    let requestLog: string[] = []
+
+    let handlers = createHandlers()
+    handlers.get('/', () => new Response('Home'))
+
+    let router = handlers.router({
+      middleware: [
+        () => {
+          requestLog.push('global middleware')
+        },
+      ],
+    })
+
+    let response = await router('https://remix.run/')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Home')
+    assert.deepEqual(requestLog, ['global middleware'])
+  })
+
+  it('accepts defaultHandler in .router()', async () => {
+    let handlers = createHandlers()
+    handlers.get('/', () => new Response('Home'))
+
+    let router = handlers.router({
+      defaultHandler: () => new Response('Custom 404', { status: 404 }),
+    })
+
+    let response = await router('https://remix.run/missing')
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Custom 404')
+  })
+
+  it('router is immutable - handlers can be modified after router creation', async () => {
+    let handlers = createHandlers()
+    handlers.get('/', () => new Response('Home'))
+
+    let router = handlers.router()
+
+    // Add more routes after creating router - should not affect the router
+    handlers.get('/about', () => new Response('About'))
+
+    let response1 = await router('https://remix.run/')
+    assert.equal(response1.status, 200)
+    assert.equal(await response1.text(), 'Home')
+
+    // New route should not be in the router
+    let response2 = await router('https://remix.run/about')
+    assert.equal(response2.status, 404)
+
+    // But we can create a new router that includes the new route
+    let router2 = handlers.router()
+    let response3 = await router2('https://remix.run/about')
+    assert.equal(response3.status, 200)
+    assert.equal(await response3.text(), 'About')
+  })
+
+  it('supports all HTTP method shortcuts', async () => {
+    let handlers = createHandlers()
+    handlers.get('/get', () => new Response('GET'))
+    handlers.head('/head', () => new Response('HEAD'))
+    handlers.post('/post', () => new Response('POST'))
+    handlers.put('/put', () => new Response('PUT'))
+    handlers.patch('/patch', () => new Response('PATCH'))
+    handlers.delete('/delete', () => new Response('DELETE'))
+    handlers.options('/options', () => new Response('OPTIONS'))
+
+    let router = handlers.router()
+
+    let response1 = await router('https://remix.run/get', { method: 'GET' })
+    assert.equal(await response1.text(), 'GET')
+
+    let response2 = await router('https://remix.run/head', { method: 'HEAD' })
+    assert.equal(await response2.text(), 'HEAD')
+
+    let response3 = await router('https://remix.run/post', { method: 'POST' })
+    assert.equal(await response3.text(), 'POST')
+
+    let response4 = await router('https://remix.run/put', { method: 'PUT' })
+    assert.equal(await response4.text(), 'PUT')
+
+    let response5 = await router('https://remix.run/patch', { method: 'PATCH' })
+    assert.equal(await response5.text(), 'PATCH')
+
+    let response6 = await router('https://remix.run/delete', { method: 'DELETE' })
+    assert.equal(await response6.text(), 'DELETE')
+
+    let response7 = await router('https://remix.run/options', { method: 'OPTIONS' })
+    assert.equal(await response7.text(), 'OPTIONS')
+  })
+
+  it('router accepts Request object, URL, or string', async () => {
+    let handlers = createHandlers()
+    handlers.get('/', () => new Response('Home'))
+
+    let router = handlers.router()
+
+    // String
+    let response1 = await router('https://remix.run/')
+    assert.equal(await response1.text(), 'Home')
+
+    // URL
+    let response2 = await router(new URL('https://remix.run/'))
+    assert.equal(await response2.text(), 'Home')
+
+    // Request
+    let response3 = await router(new Request('https://remix.run/'))
+    assert.equal(await response3.text(), 'Home')
   })
 })

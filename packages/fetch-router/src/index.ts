@@ -13,12 +13,11 @@ export type { RequestMethod } from './lib/request-methods.ts'
 export {
   Route,
   createRoutes,
-  createRoutes as route, // shorthand
 } from './lib/route-map.ts'
 export type { BuildRoute, RouteMap, RouteDefs, RouteDef } from './lib/route-map.ts'
 
-export { createRouter } from './lib/router.ts'
-export type { MatchData, Router, RouterOptions } from './lib/router.ts'
+export { createHandlers, createRouter } from './lib/router.ts'
+export type { MatchData, Router, RouterOptions, Handlers, LegacyRouter } from './lib/router.ts'
 
 // Route helpers
 

@@ -1,6 +1,6 @@
-import { route, form, resources } from '@remix-run/fetch-router'
+import { createRoutes, form, resources } from '@remix-run/fetch-router'
 
-export let routes = route({
+export let routes = createRoutes({
   home: '/',
   login: form('/login'),
   logout: { method: 'POST', pattern: '/logout' },

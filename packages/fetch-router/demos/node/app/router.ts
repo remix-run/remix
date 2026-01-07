@@ -1,4 +1,4 @@
-import { createRouter } from '@remix-run/fetch-router'
+import { createHandlers } from '@remix-run/fetch-router'
 import { createCookie } from '@remix-run/cookie'
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { formData } from '@remix-run/form-data-middleware'
@@ -28,11 +28,9 @@ function requireAuth(): Middleware {
   }
 }
 
-export let router = createRouter({
-  middleware: [logger(), formData(), session(sessionCookie, sessionStorage)],
-})
+let handlers = createHandlers()
 
-router.map(routes.home, ({ session }) => {
+handlers.add(routes.home, ({ session }) => {
   let posts = data.getPosts()
   let username = session.get('username') as string | undefined
 
@@ -78,7 +76,7 @@ router.map(routes.home, ({ session }) => {
   `)
 })
 
-router.map(routes.login, {
+handlers.add(routes.login, {
   index({ session }) {
     let username = session.get('username') as string | undefined
     if (username) {
@@ -119,12 +117,12 @@ router.map(routes.login, {
   },
 })
 
-router.post(routes.logout, ({ session }) => {
+handlers.post(routes.logout, ({ session }) => {
   session.destroy()
   return redirect(routes.home.href())
 })
 
-router.map(routes.posts, {
+handlers.add(routes.posts, {
   new: {
     middleware: [requireAuth()],
     action() {
@@ -190,4 +188,8 @@ router.map(routes.posts, {
       </html>
     `)
   },
+})
+
+export let router = handlers.router({
+  middleware: [logger(), formData(), session(sessionCookie, sessionStorage)],
 })
