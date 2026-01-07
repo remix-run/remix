@@ -94,57 +94,37 @@ pnpm changes:validate
 
 ## Releases
 
-Cutting releases is a multi-step process:
+Releases are automated via the [changes-version-pr workflow](/.github/workflows/changes-version-pr.yaml).
 
-1. **Preview** - See what will be released
-2. **Version** - Update versions and create commit/tags locally
-3. **Push** - Push to GitHub (triggers CI to publish to npm)
+### How It Works
+
+1. **You push changes to `main`** with change files in `packages/*/.changes/`
+2. **A "Version Packages" PR is automatically opened** (or updated if one exists)
+3. **When you merge the PR**, tags are created which then trigger the publish workflow
+
+The PR contains:
+
+- Updated `package.json` versions
+- Updated `CHANGELOG.md` files
+- Deleted change files
 
 ### Preview a Release
 
-To see which packages have changes and preview the release:
+To see which packages have changes and preview the release locally:
 
 ```sh
 pnpm changes:preview
 ```
 
-This shows:
+### Manual Releases
 
-- Which packages will be released with version bumps
-- CHANGELOG additions
-- Git tags that will be created
-- Commit message
-
-### Version a Release
-
-When ready to release, update versions and create the commit and tags locally:
+If you need to release manually (e.g., for a hotfix), you can still use the local workflow:
 
 ```sh
+# Update versions and create commit/tags locally
 pnpm changes:version
-```
 
-This will:
-
-- Validate all change files
-- Update `package.json` versions
-- Update `CHANGELOG.md` files
-- Delete processed change files
-- Create a git commit
-- Create git tags
-
-If you want to review the file changes before committing:
-
-```sh
-pnpm changes:version --no-commit
-```
-
-This updates the files but skips git operations. After reviewing, the script will show you the exact git commands to run to create the commit and tags.
-
-### Push the Release
-
-Push the release commit and tags to GitHub:
-
-```sh
+# Push to trigger CI
 git push && git push --tags
 ```
 

@@ -61,7 +61,7 @@ function deleteChangeFiles(packageName: string) {
     fs.unlinkSync(filePath)
   }
 
-  console.log(`  ✓ Deleted ${changeFiles.length} change file(s)`)
+  console.log(`  ✓ Deleted ${changeFiles.length} change file${changeFiles.length === 1 ? '' : 's'}`)
 }
 
 /**
@@ -105,7 +105,7 @@ function main() {
     updatePackageJson(release.packageName, release.nextVersion)
 
     // Update CHANGELOG.md
-    let changelogContent = generateChangelogContent(release, now)
+    let changelogContent = generateChangelogContent(release, { date: now })
     updateChangelog(release.packageName, changelogContent)
 
     // Delete change files
@@ -155,17 +155,19 @@ function main() {
     }
     console.log()
 
-    // Success message
-    console.log('═'.repeat(80))
-    console.log('✅ RELEASE PREPARED')
-    console.log('═'.repeat(80))
-    console.log()
-    console.log('Release commit and tags have been created locally.')
-    console.log()
-    console.log('To push the release, run:')
-    console.log()
-    console.log('  git push && git push --tags')
-    console.log()
+    // Success message (skip in CI since the workflow handles pushing tags)
+    if (!process.env.CI) {
+      console.log('═'.repeat(80))
+      console.log('✅ RELEASE PREPARED')
+      console.log('═'.repeat(80))
+      console.log()
+      console.log('Release commit and tags have been created locally.')
+      console.log()
+      console.log('To push the release, run:')
+      console.log()
+      console.log('  git push && git push --tags')
+      console.log()
+    }
   }
 }
 

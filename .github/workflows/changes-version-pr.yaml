@@ -1,0 +1,45 @@
+name: Changes Version PR
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  changes-version-pr:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Fetch 2 commits so we can compare versions with parent commit
+          fetch-depth: 2
+          # Use bot token so pushes trigger other workflows
+          token: ${{ secrets.GH_BOT_TOKEN }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Open or update Changes Version PR if changes exist
+        run: node scripts/changes-version-pr-open.ts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
+
+      - name: Create tags if Changes Version PR was merged
+        run: node scripts/changes-version-pr-complete.ts
