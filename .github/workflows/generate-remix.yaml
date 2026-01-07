@@ -28,12 +28,11 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     env:
-      # Pushing using the default GITHUB_TOKEN will not trigger CI, so
-      # use a PAT to ensure new commits will run CI checks.
-      #   See: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
-      # `GH_TOKEN` is also required to use the `gh` CLI to add comments to PRs
-      # GH_TOKEN: ${{ secrets.TODO_PAT }}
-      GH_TOKEN: ${{ github.token }}
+      # `GH_TOKEN` is required to use the `gh` CLI to add comments to PRs.
+      # We use a PAT because using the default `GITHUB_TOKEN`/`github.token` will not
+      # trigger workflow runs, so use a PAT to ensure new commits will run CI checks.
+      # See: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
+      GH_TOKEN: ${{ secrets.GH_REMIX_PAT }}
     steps:
       # Normal checkout of the trigger branch on pushes
       - name: Checkout
