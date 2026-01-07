@@ -27,17 +27,16 @@ jobs:
   generate-remix:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
-    env:
-      # `GH_TOKEN` is required to use the `gh` CLI to add comments to PRs.
-      # We use a PAT because using the default `GITHUB_TOKEN`/`github.token` will not
-      # trigger workflow runs, so use a PAT to ensure new commits will run CI checks.
-      # See: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
-      GH_TOKEN: ${{ secrets.GH_REMIX_PAT }}
     steps:
       # Normal checkout of the trigger branch on pushes
       - name: Checkout
         if: github.event_name == 'push'
         uses: actions/checkout@v4
+        with:
+          # Use a PAT because using the default `GITHUB_TOKEN`/`github.token` will not
+          # trigger workflow runs, so use a PAT to ensure new commits will run CI checks.
+          # See: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
+          token: ${{ secrets.GH_REMIX_PAT }}
 
       # Checkout the PR branch when running on PRs
       - name: Checkout
@@ -45,6 +44,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
+          # Use a PAT because using the default `GITHUB_TOKEN`/`github.token` will not
+          # trigger workflow runs, so use a PAT to ensure new commits will run CI checks.
+          # See: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
+          token: ${{ secrets.GH_REMIX_PAT }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -90,4 +93,7 @@ jobs:
 
       - name: Comment on PR
         if: github.event_name == 'pull_request' && steps.commit.outputs.new_sha != ''
+        env:
+          # `GH_TOKEN` is required to use the `gh` CLI to add comments to PRs.
+          GH_TOKEN: ${{ secrets.GH_REMIX_PAT }}
         run: gh pr comment ${{ github.event.pull_request.number }} --body "This PR has been updated with changes to the \`remix\` package in ${{ steps.commit.outputs.new_sha }} - please review those changes prior to merging"
