@@ -5,10 +5,6 @@ import { RoutePattern } from './route-pattern.ts'
 
 describe('RoutePattern', () => {
   describe('constructor', () => {
-    it('TEMPORARY FAILING TEST', () => {
-      assert.equal(true, false)
-    })
-
     it('stores the input pattern', () => {
       let pattern = new RoutePattern('users/:id')
       assert.equal(pattern.source, 'users/:id')
