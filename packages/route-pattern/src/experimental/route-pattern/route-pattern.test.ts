@@ -127,4 +127,114 @@ describe('RoutePattern', () => {
       assertParse('?q&q=&q=1&q=2', { search: { q: ['1', '2'] } })
     })
   })
+
+  describe('join', () => {
+    function assertJoin(a: string, b: string, expected: string) {
+      assert.deepStrictEqual(
+        RoutePattern.parse(a).join(RoutePattern.parse(b)),
+        RoutePattern.parse(expected),
+      )
+    }
+
+    test('protocol', () => {
+      assertJoin('http://', '*://', 'http://')
+      assertJoin('*://', '*://', '*://')
+      assertJoin('*://', 'http://', 'http://')
+
+      assertJoin('http://', '*proto://', '*proto://')
+      assertJoin('*proto://', 'http://', 'http://')
+      assertJoin('*proto://', '*other://', '*other://')
+      assertJoin('*://', '*proto://', '*proto://')
+
+      assertJoin('http://', 'https://', 'https://')
+      assertJoin('://example.com', 'https://', 'https://example.com')
+      assertJoin('http://example.com', 'https://', 'https://example.com')
+    })
+
+    test('hostname', () => {
+      assertJoin('://example.com', '://*', '://example.com')
+      assertJoin('://*', '://*', '://*')
+      assertJoin('://*', '://example.com', '://example.com')
+
+      assertJoin('://example.com', '://*host', '://*host')
+      assertJoin('://*host', '://example.com', '://example.com')
+      assertJoin('://*host', '://*other', '://*other')
+      assertJoin('://*', '://*host', '://*host')
+
+      assertJoin('://example.com', '://other.com', '://other.com')
+      assertJoin('://', '://other.com', '://other.com')
+      assertJoin('http://example.com', '://other.com', 'http://other.com')
+      assertJoin('://example.com/pathname', '://other.com', '://other.com/pathname')
+      assertJoin('/pathname', '://other.com', '://other.com/pathname')
+    })
+
+    test('port', () => {
+      assertJoin('://:8000', '://', '://:8000')
+      assertJoin('://', '://:8000', '://:8000')
+      assertJoin('://:8000', '://:3000', '://:3000')
+      assertJoin('://example.com', '://example.com:8000', '://example.com:8000')
+      assertJoin('http://example.com:4321', '://example.com:8000', 'http://example.com:8000')
+    })
+
+    test('pathname', () => {
+      assertJoin('', '', '')
+      assertJoin('', 'b', 'b')
+      assertJoin('a', '', 'a')
+
+      assertJoin('a', 'b', 'a/b')
+      assertJoin('a/', 'b', 'a/b')
+      assertJoin('a', '/b', 'a/b')
+      assertJoin('a/', '/b', 'a/b')
+
+      assertJoin('(a/)', 'b', '(a/)/b')
+      assertJoin('(a/)', '/b', '(a/)/b')
+      assertJoin('a', '(/b)', 'a/(/b)')
+      assertJoin('a/', '(/b)', 'a/(/b)')
+
+      assertJoin('(a/)', '(/b)', '(a/)/(/b)')
+      assertJoin('((a/))', '((/b))', '((a/))/((/b))')
+    })
+
+    test('search', () => {
+      assertJoin('path', '?a', 'path?a')
+      assertJoin('?a', '?b=1', '?a&b=1')
+      assertJoin('?a=1', '?b=2', '?a=1&b=2')
+    })
+
+    test('combos', () => {
+      assertJoin('http://example.com/a', '*proto://*host/b', '*proto://*host/a/b')
+      assertJoin('http://example.com:8000/a', 'https:///b', 'https://example.com:8000/a/b')
+      assertJoin('http://example.com:8000/a', '://other.com/b', 'http://other.com:8000/a/b')
+
+      assertJoin(
+        'https://api.example.com:8000/v1/:resource',
+        '/users/(admin/)posts?filter&sort=asc',
+        'https://api.example.com:8000/v1/:resource/users/(admin/)posts?filter&sort=asc',
+      )
+
+      assertJoin(
+        '*proto://example.com/base',
+        '*proto://other.com/path',
+        '*proto://other.com/base/path',
+      )
+
+      assertJoin(
+        'http://old.com:3000/keep/this',
+        'https://new.com:8080',
+        'https://new.com:8080/keep/this',
+      )
+
+      assertJoin(
+        'users/:id?tab=profile',
+        'posts/:postId?sort=recent',
+        'users/:id/posts/:postId?tab=profile&sort=recent',
+      )
+
+      assertJoin(
+        '://(staging.)example.com/api(/:version)',
+        '://*/resources/:id(.json)',
+        '://(staging.)example.com/api(/:version)/resources/:id(.json)',
+      )
+    })
+  })
 })
