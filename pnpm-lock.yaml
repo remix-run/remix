@@ -841,6 +841,9 @@ importers:
       '@remix-run/form-data-parser':
         specifier: workspace:^
         version: link:../form-data-parser
+      '@remix-run/fs':
+        specifier: workspace:^
+        version: link:../fs
       '@remix-run/headers':
         specifier: workspace:^
         version: link:../headers
