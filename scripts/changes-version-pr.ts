@@ -2,7 +2,7 @@
  * Opens or updates the version PR.
  *
  * Usage:
- *   node scripts/changes-version-pr-open.ts [--preview]
+ *   node scripts/changes-version-pr.ts [--preview]
  *
  * Environment:
  *   GITHUB_TOKEN - Required (unless --preview)
@@ -10,7 +10,7 @@
 import { validateAllChanges, getAllReleases, generateCommitMessage } from './utils/changes.ts'
 import { generatePrBody } from './utils/version-pr.ts'
 import { logAndExec } from './utils/process.ts'
-import { findOpenPr, createPr, updatePr, setPrPkgLabels } from './utils/github.ts'
+import { findOpenPr, createPr, updatePr, setPrPkgLabels, closePr } from './utils/github.ts'
 
 let args = process.argv.slice(2)
 let preview = args.includes('--preview')
@@ -39,6 +39,20 @@ async function main() {
   let releases = getAllReleases()
   if (releases.length === 0) {
     console.log('No pending changes to release.')
+
+    // Check if there's a stale PR that should be closed
+    if (!preview && process.env.GITHUB_TOKEN) {
+      let existingPr = await findOpenPr(prBranch, baseBranch)
+      if (existingPr) {
+        console.log(`\nClosing stale PR #${existingPr.number}...`)
+        await closePr(
+          existingPr.number,
+          'Closing automatically — all change files have been removed or released.',
+        )
+        console.log(`✅ Closed PR: ${existingPr.html_url}`)
+      }
+    }
+
     process.exit(0)
   }
 

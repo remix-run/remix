@@ -94,3 +94,26 @@ export async function setPrPkgLabels(prNumber: number, packageNames: string[]) {
     labels: newLabels,
   })
 }
+
+/**
+ * Close a PR with an optional comment
+ */
+export async function closePr(prNumber: number, comment?: string) {
+  if (comment) {
+    await request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+      ...auth(),
+      owner,
+      repo,
+      issue_number: prNumber,
+      body: comment,
+    })
+  }
+
+  await request('PATCH /repos/{owner}/{repo}/pulls/{pull_number}', {
+    ...auth(),
+    owner,
+    repo,
+    pull_number: prNumber,
+    state: 'closed',
+  })
+}

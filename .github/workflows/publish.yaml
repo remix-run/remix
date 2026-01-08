@@ -1,23 +1,62 @@
+name: Publish
+
 on:
   push:
-    tags:
-      - '[a-z]+@[0-9]+.[0-9]+.[0-9]+'
-      - '[a-z]+-[a-z]+@[0-9]+.[0-9]+.[0-9]+'
-      - '[a-z]+-[a-z]+-[a-z]+@[0-9]+.[0-9]+.[0-9]+'
-      - '!remix@2.*' # Ignore remix@2.x.x tags
-      - '!create-remix@2.*' # Ignore create-remix@2.x.x tags
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  check:
+    name: Check for release commit
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.check.outputs.is_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for release commit with version changes
+        id: check
+        run: |
+          # Must be a Release commit
+          if ! git log -1 --format=%s | grep -q '^Release '; then
+            echo "is_release=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Must have actual version changes in package.json files
+          has_changes=false
+          for pkg in packages/*/package.json; do
+            current=$(git show HEAD:"$pkg" 2>/dev/null | grep '"version"' | head -1 || true)
+            previous=$(git show HEAD~1:"$pkg" 2>/dev/null | grep '"version"' | head -1 || true)
+            if [ -n "$current" ] && [ "$current" != "$previous" ]; then
+              has_changes=true
+              break
+            fi
+          done
+
+          echo "is_release=$has_changes" >> $GITHUB_OUTPUT
+
   publish:
+    name: Publish to npm
+    needs: check
+    if: needs.check.outputs.is_release == 'true'
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write # Required for publishing the GitHub release
+      contents: write # Required for creating tags and GitHub releases
       id-token: write # OIDC ID token is used for authentication with npm/jsr
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Fetch 2 commits so we can compare versions with parent commit
+          fetch-depth: 2
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -52,27 +91,10 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      - name: Parse package name from tag
-        id: parse_tag
-        run: |
-          TAG="${{ github.ref_name }}"
-          SHORT_PACKAGE_NAME="${TAG%@*}"
-          PACKAGE_VERSION="${TAG##*@}"
-
-          # The "remix" package is unscoped, all others are under @remix-run/
-          if [ "$SHORT_PACKAGE_NAME" = "remix" ]; then
-            PACKAGE_NAME="${SHORT_PACKAGE_NAME}"
-          else
-            PACKAGE_NAME="@remix-run/${SHORT_PACKAGE_NAME}"
-          fi
-
-          echo "package_name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
-          echo "package_version=${PACKAGE_VERSION}" >> $GITHUB_OUTPUT
-
       - name: Publish to npm
-        run: pnpm publish --filter "${{ steps.parse_tag.outputs.package_name }}" --access public --no-git-checks
+        run: pnpm publish --recursive --access public --no-git-checks
 
-      - name: Create GitHub Release
-        run: node ./scripts/create-github-release.ts ${{ github.ref_name }}
+      - name: Create tags and GitHub releases
+        run: node ./scripts/publish.ts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

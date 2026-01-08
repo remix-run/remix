@@ -30,8 +30,7 @@ export function generatePrBody(releases: PackageRelease[]): string {
 function generateHeader(): string {
   return [
     'This PR was opened by the [changes-version-pr](/.github/workflows/changes-version-pr.yaml) workflow. ' +
-      'When you merge this PR, tags will be created automatically. ' +
-      'This will trigger packages to be published to npm via the [publish](/.github/workflows/publish.yaml) workflow.',
+      'When you merge this PR, packages will be published to npm via the [publish](/.github/workflows/publish.yaml) workflow.',
     '',
     "If you're not ready to release yet, that's fine — whenever you add or modify change files in `main`, this PR will be updated.",
   ].join('\n')

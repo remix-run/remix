@@ -17,3 +17,15 @@ export function getFileAtRef(filepath: string, ref: string): string | null {
     return null
   }
 }
+
+/**
+ * Check if a git tag exists
+ */
+export function tagExists(tag: string): boolean {
+  try {
+    cp.execSync(`git rev-parse ${tag}`, { stdio: 'pipe' })
+    return true
+  } catch {
+    return false
+  }
+}

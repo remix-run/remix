@@ -94,13 +94,13 @@ pnpm changes:validate
 
 ## Releases
 
-Releases are automated via the [changes-version-pr workflow](/.github/workflows/changes-version-pr.yaml).
+Releases are automated via the [changes-version-pr workflow](/.github/workflows/changes-version-pr.yaml) and [publish workflow](/.github/workflows/publish.yaml).
 
 ### How It Works
 
 1. **You push changes to `main`** with change files in `packages/*/.changes/`
 2. **A "Version Packages" PR is automatically opened** (or updated if one exists)
-3. **When you merge the PR**, tags are created which then trigger the publish workflow
+3. **When you merge the PR**, the publish workflow detects the release commit and publishes all versioned packages to npm
 
 The PR contains:
 
@@ -121,11 +121,11 @@ pnpm changes:preview
 If you need to release manually (e.g., for a hotfix), you can still use the local workflow:
 
 ```sh
-# Update versions and create commit/tags locally
+# Update versions, changelog, and create release commit
 pnpm changes:version
 
-# Push to trigger CI
-git push && git push --tags
+# Push to trigger publish workflow
+git push
 ```
 
-GitHub Actions will automatically publish the tagged packages to npm and create GitHub Releases.
+The publish workflow detects release commits (those starting with "Release " that also have version changes in `package.json`) and handles publishing to npm, creating git tags, and creating GitHub Releases.
