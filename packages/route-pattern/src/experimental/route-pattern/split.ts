@@ -1,3 +1,5 @@
+/* eslint-disable jsdoc/require-returns */
+/* eslint-disable jsdoc/require-param */
 import type { Span } from '../span'
 
 export type SplitResult = {
@@ -47,9 +49,9 @@ export function split(source: string): SplitResult {
   if (slashIndex === -1) {
     // (protocol)://(host)
     result.protocol = span(0, solidusIndex)
-    const host = span(solidusIndex + 3, source.length)
+    let host = span(solidusIndex + 3, source.length)
     if (host) {
-      const { hostname, port } = hostSpans(source, host)
+      let { hostname, port } = hostSpans(source, host)
       result.hostname = hostname
       result.port = port
     }
@@ -64,9 +66,9 @@ export function split(source: string): SplitResult {
 
   // (protocol)://(host)/(pathname)
   result.protocol = span(0, solidusIndex)
-  const host = span(solidusIndex + 3, slashIndex)
+  let host = span(solidusIndex + 3, slashIndex)
   if (host) {
-    const { hostname, port } = hostSpans(source, host)
+    let { hostname, port } = hostSpans(source, host)
     result.hostname = hostname
     result.port = port
   }
