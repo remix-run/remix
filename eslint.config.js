@@ -16,9 +16,12 @@ export default [
       '**/bench/**',
       '**/examples/**',
       '**/*.min.js',
+      '**/*.bundled.*',
+      '**/public/assets/**',
       'node_modules/**',
       'reference/**',
       'packages/multipart-parser/demos/deno/**',
+      'packages/remix/src/lib/**',
     ],
   },
   {

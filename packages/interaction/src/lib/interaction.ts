@@ -413,6 +413,13 @@ type SignaledListener<event extends Event> = (
  * - Adds reentry signal for async listeners (when listener.length >= 2)
  * - Efficiently updates listeners in place with simple diff (useful for
  *   vdom integrations)
+ *
+ * @param target The event target to bind to
+ * @param type The event type to listen for
+ * @param listener The listener function to call
+ * @param options The event listener options
+ * @param onError The error handler for listener errors
+ * @returns The binding object for managing the listener
  */
 function createBinding<target extends EventTarget, k extends EventType<target>>(
   target: target,

@@ -12,6 +12,5 @@
     "skipLibCheck": true,
     "jsx": "react-jsx",
     "jsxImportSource": "@remix-run/component"
-  },
-  "include": ["server.ts"]
+  }
 }

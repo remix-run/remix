@@ -11,6 +11,9 @@ export interface SplitResult {
 /**
  * Split a route pattern into protocol, hostname, port, pathname, and search
  * ranges. Ranges are [start (inclusive), end (exclusive)].
+ *
+ * @param source The route pattern string to split
+ * @returns The split result with ranges for each component
  */
 export function split<T extends string>(source: T): SplitResult {
   let protocol: Range | undefined

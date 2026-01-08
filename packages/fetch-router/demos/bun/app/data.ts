@@ -42,4 +42,3 @@ export function createPost(title: string, content: string, author: string) {
   posts.push(post)
   return post
 }
-
