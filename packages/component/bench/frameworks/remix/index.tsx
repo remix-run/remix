@@ -12,8 +12,8 @@ import { type Handle, createRoot } from '@remix-run/component'
 
 export const name = 'remix'
 
-function Button({ id, text, fn }: { id: string; text: string; fn: () => void }) {
-  return (
+function Button() {
+  return ({ id, text, fn }: { id: string; text: string; fn: () => void }) => (
     <div class="col-sm-6 smallpad">
       <button id={id} class="btn btn-primary btn-block" type="button" on={{ click: fn }}>
         {text}
@@ -23,28 +23,25 @@ function Button({ id, text, fn }: { id: string; text: string; fn: () => void }) 
 }
 
 // Stateful Metric Card Component
-function MetricCard(
-  this: Handle,
-  { id, label, value, change }: { id: number; label: string; value: string; change: string },
-) {
+function MetricCard(handle: Handle) {
   let selected = false
   let hovered = false
 
-  return () => (
+  return ({ id, label, value, change }: { id: number; label: string; value: string; change: string }) => (
     <div
       class={`metric-card ${selected ? 'selected' : ''}`}
       on={{
         click: () => {
           selected = !selected
-          this.update()
+          handle.update()
         },
         mouseenter: () => {
           hovered = true
-          this.update()
+          handle.update()
         },
         mouseleave: () => {
           hovered = false
-          this.update()
+          handle.update()
         },
         focus: (e: any) => {
           e.currentTarget.style.outline = '2px solid #222'
@@ -76,10 +73,10 @@ function MetricCard(
 }
 
 // Stateful Chart Bar Component
-function ChartBar(this: Handle, { value, index }: { value: number; index: number }) {
+function ChartBar(handle: Handle) {
   let hovered = false
 
-  return () => (
+  return ({ value, index }: { value: number; index: number }) => (
     <div
       class="chart-bar"
       style={{
@@ -96,11 +93,11 @@ function ChartBar(this: Handle, { value, index }: { value: number; index: number
         click: () => {},
         mouseenter: () => {
           hovered = true
-          this.update()
+          handle.update()
         },
         mouseleave: () => {
           hovered = false
-          this.update()
+          handle.update()
         },
         focus: (e: any) => {
           e.currentTarget.style.outline = '2px solid #222'
@@ -116,28 +113,25 @@ function ChartBar(this: Handle, { value, index }: { value: number; index: number
 }
 
 // Stateful Activity Item Component
-function ActivityItem(
-  this: Handle,
-  { id, title, time, icon }: { id: number; title: string; time: string; icon: string },
-) {
+function ActivityItem(handle: Handle) {
   let read = false
   let hovered = false
 
-  return () => (
+  return ({ id, title, time, icon }: { id: number; title: string; time: string; icon: string }) => (
     <li
       class={`activity-item ${read ? 'read' : ''}`}
       on={{
         click: () => {
           read = !read
-          this.update()
+          handle.update()
         },
         mouseenter: () => {
           hovered = true
-          this.update()
+          handle.update()
         },
         mouseleave: () => {
           hovered = false
-          this.update()
+          handle.update()
         },
       }}
       style={{
@@ -174,13 +168,13 @@ function ActivityItem(
 }
 
 // Stateful Dropdown Menu Component
-function DropdownMenu(this: Handle, { rowId }: { rowId: number }) {
+function DropdownMenu(handle: Handle) {
   let open = false
   let hovered = false
 
   let actions = ['View Details', 'Edit', 'Duplicate', 'Archive', 'Delete']
 
-  return () => (
+  return ({ rowId }: { rowId: number }) => (
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <button
         class="btn btn-primary"
@@ -188,15 +182,15 @@ function DropdownMenu(this: Handle, { rowId }: { rowId: number }) {
           click: (e: any) => {
             e.stopPropagation()
             open = !open
-            this.update()
+            handle.update()
           },
           mouseenter: () => {
             hovered = true
-            this.update()
+            handle.update()
           },
           mouseleave: () => {
             hovered = false
-            this.update()
+            handle.update()
           },
           focus: (e: any) => {
             e.currentTarget.style.outline = '2px solid #222'
@@ -231,7 +225,7 @@ function DropdownMenu(this: Handle, { rowId }: { rowId: number }) {
           on={{
             mouseleave: () => {
               open = false
-              this.update()
+              handle.update()
             },
           }}
         >
@@ -242,7 +236,7 @@ function DropdownMenu(this: Handle, { rowId }: { rowId: number }) {
                 click: (e: any) => {
                   e.stopPropagation()
                   open = false
-                  this.update()
+                  handle.update()
                 },
                 mouseenter: (e: any) => {
                   e.currentTarget.style.backgroundColor = '#f5f5f5'
@@ -267,25 +261,25 @@ function DropdownMenu(this: Handle, { rowId }: { rowId: number }) {
 }
 
 // Stateful Dashboard Table Row Component
-function DashboardTableRow(this: Handle, { row }: { row: Row }) {
+function DashboardTableRow(handle: Handle) {
   let hovered = false
   let selected = false
 
-  return () => (
+  return ({ row }: { row: Row }) => (
     <tr
       class={selected ? 'danger' : ''}
       on={{
         click: () => {
           selected = !selected
-          this.update()
+          handle.update()
         },
         mouseenter: () => {
           hovered = true
-          this.update()
+          handle.update()
         },
         mouseleave: () => {
           hovered = false
-          this.update()
+          handle.update()
         },
       }}
       style={{
@@ -309,7 +303,7 @@ function DashboardTableRow(this: Handle, { row }: { row: Row }) {
 }
 
 // Stateful Search Input Component
-function SearchInput(this: Handle) {
+function SearchInput(handle: Handle) {
   let value = ''
   let focused = false
 
@@ -321,15 +315,15 @@ function SearchInput(this: Handle) {
       on={{
         input: (e: any) => {
           value = e.target.value
-          this.update()
+          handle.update()
         },
         focus: () => {
           focused = true
-          this.update()
+          handle.update()
         },
         blur: () => {
           focused = false
-          this.update()
+          handle.update()
         },
       }}
       style={{
@@ -346,7 +340,7 @@ function SearchInput(this: Handle) {
 }
 
 // Stateful Form Widgets Component
-function FormWidgets(this: Handle) {
+function FormWidgets(handle: Handle) {
   let selectValue = 'option1'
   let checkboxValues = new Set<string>()
   let radioValue = 'radio1'
@@ -365,7 +359,7 @@ function FormWidgets(this: Handle) {
           on={{
             change: (e: any) => {
               selectValue = e.target.value
-              this.update()
+              handle.update()
             },
             focus: (e: any) => {
               e.currentTarget.style.borderColor = '#337ab7'
@@ -407,7 +401,7 @@ function FormWidgets(this: Handle) {
                 } else {
                   checkboxValues.delete(`checkbox-${idx}`)
                 }
-                this.update()
+                handle.update()
               },
               focus: (e: any) => {
                 e.currentTarget.style.outline = '2px solid #337ab7'
@@ -434,7 +428,7 @@ function FormWidgets(this: Handle) {
               on={{
                 change: (e: any) => {
                   radioValue = e.target.value
-                  this.update()
+                  handle.update()
                 },
                 focus: (e: any) => {
                   e.currentTarget.style.outline = '2px solid #337ab7'
@@ -469,7 +463,7 @@ function FormWidgets(this: Handle) {
             on={{
               change: (e: any) => {
                 toggleValue = e.target.checked
-                this.update()
+                handle.update()
               },
               focus: (e: any) => {
                 e.currentTarget.style.outline = '2px solid #222'
@@ -545,17 +539,17 @@ function FormWidgets(this: Handle) {
   )
 }
 
-function Dashboard(this: Handle, { onSwitchToTable }: { onSwitchToTable: () => void }) {
+function Dashboard(handle: Handle) {
   let dashboardRows = buildData(300)
 
   let sortDashboardAsc = () => {
     dashboardRows = sortRows(dashboardRows, true)
-    this.update()
+    handle.update()
   }
 
   let sortDashboardDesc = () => {
     dashboardRows = sortRows(dashboardRows, false)
-    this.update()
+    handle.update()
   }
   let chartData = [65, 45, 78, 52, 89, 34, 67, 91, 43, 56, 72, 38, 55, 82, 47, 63, 71, 39, 58, 84]
   let activities = Array.from({ length: 50 }, (_, i) => ({
@@ -565,7 +559,7 @@ function Dashboard(this: Handle, { onSwitchToTable }: { onSwitchToTable: () => v
     icon: ['O', 'P', 'S', 'C', 'U'][i % 5],
   }))
 
-  return () => (
+  return ({ onSwitchToTable }: { onSwitchToTable: () => void }) => (
     <div class="container" style={{ maxWidth: '1400px' }}>
       <div
         style={{
@@ -726,29 +720,29 @@ function Dashboard(this: Handle, { onSwitchToTable }: { onSwitchToTable: () => v
   )
 }
 
-function App(this: Handle) {
+function App(handle: Handle) {
   let rows: Row[] = []
   let selected: number | null = null
   let view: 'table' | 'dashboard' = 'table'
 
   let setRows = (newRows: Row[]) => {
     rows = newRows
-    this.update()
+    handle.update()
   }
 
   let setSelected = (newSelected: number | null) => {
     selected = newSelected
-    this.update()
+    handle.update()
   }
 
   let switchToDashboard = () => {
     view = 'dashboard'
-    this.update()
+    handle.update()
   }
 
   let switchToTable = () => {
     view = 'table'
-    this.update()
+    handle.update()
   }
 
   return () => {
@@ -771,7 +765,7 @@ function App(this: Handle) {
                   fn={() => {
                     rows = get1000Rows()
                     selected = null
-                    this.update()
+                    handle.update()
                   }}
                 />
                 <Button
@@ -780,7 +774,7 @@ function App(this: Handle) {
                   fn={() => {
                     rows = get10000Rows()
                     selected = null
-                    this.update()
+                    handle.update()
                   }}
                 />
                 <Button
@@ -803,7 +797,7 @@ function App(this: Handle) {
                   fn={() => {
                     rows = []
                     selected = null
-                    this.update()
+                    handle.update()
                   }}
                 />
                 <Button

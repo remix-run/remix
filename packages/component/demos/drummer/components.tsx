@@ -1,7 +1,7 @@
 import type { Handle, RemixNode, Props } from '@remix-run/component'
 
-export function Layout({ children }: { children: RemixNode }) {
-  return (
+export function Layout() {
+  return ({ children }: { children: RemixNode }) => (
     <div
       css={{
         boxSizing: 'border-box',
@@ -52,8 +52,8 @@ export function Layout({ children }: { children: RemixNode }) {
   )
 }
 
-export function EqualizerLayout({ children }: { children: RemixNode }) {
-  return (
+export function EqualizerLayout() {
+  return ({ children }: { children: RemixNode }) => (
     <div
       css={{
         display: 'flex',
@@ -72,8 +72,8 @@ export function EqualizerLayout({ children }: { children: RemixNode }) {
   )
 }
 
-export function TempoLayout({ children }: { children: RemixNode }) {
-  return (
+export function TempoLayout() {
+  return ({ children }: { children: RemixNode }) => (
     <div
       css={{
         display: 'flex',
@@ -88,8 +88,8 @@ export function TempoLayout({ children }: { children: RemixNode }) {
   )
 }
 
-export function TempoButtons({ children }: { children: RemixNode }) {
-  return (
+export function TempoButtons() {
+  return ({ children }: { children: RemixNode }) => (
     <div
       css={{
         width: 56,
@@ -105,8 +105,8 @@ export function TempoButtons({ children }: { children: RemixNode }) {
   )
 }
 
-export function BPMDisplay(this: Handle, { bpm }: { bpm: number }) {
-  return (
+export function BPMDisplay() {
+  return ({ bpm }: { bpm: number }) => (
     <div
       css={{
         height: '100%',
@@ -149,7 +149,7 @@ export function BPMDisplay(this: Handle, { bpm }: { bpm: number }) {
   )
 }
 
-export function EqualizerBar(this: Handle) {
+export function EqualizerBar(handle: Handle) {
   let colors = [
     '#FF3000',
     '#FF3000',
@@ -192,8 +192,8 @@ export function EqualizerBar(this: Handle) {
   }
 }
 
-export function ControlGroup({ children, css, ...rest }: Props<'div'>) {
-  return (
+export function ControlGroup() {
+  return ({ children, css, ...rest }: Props<'div'>) => (
     <div
       {...rest}
       css={{
@@ -215,8 +215,8 @@ export function ControlGroup({ children, css, ...rest }: Props<'div'>) {
   )
 }
 
-export function Button({ children, ...rest }: Props<'button'>) {
-  return (
+export function Button() {
+  return ({ children, ...rest }: Props<'button'>) => (
     <button
       {...rest}
       css={{
@@ -249,29 +249,31 @@ export function Button({ children, ...rest }: Props<'button'>) {
   )
 }
 
-export function Triangle({ label, orientation }: { label: string; orientation: 'up' | 'down' }) {
-  let up = '5,1.34 9.33,8.66 0.67,8.66'
-  let down = '5,8.66 9.33,1.34 0.67,1.34'
-  return (
-    <svg
-      aria-label={label}
-      viewBox="0 0 10 10"
-      style={{
-        width: 14,
-        height: 14,
-      }}
-    >
-      <polygon points={orientation === 'up' ? up : down} fill="currentColor" />
-    </svg>
-  )
+export function Triangle() {
+  return ({ label, orientation }: { label: string; orientation: 'up' | 'down' }) => {
+    let up = '5,1.34 9.33,8.66 0.67,8.66'
+    let down = '5,8.66 9.33,1.34 0.67,1.34'
+    return (
+      <svg
+        aria-label={label}
+        viewBox="0 0 10 10"
+        style={{
+          width: 14,
+          height: 14,
+        }}
+      >
+        <polygon points={orientation === 'up' ? up : down} fill="currentColor" />
+      </svg>
+    )
+  }
 }
 
 interface TempoButtonProps extends Props<'button'> {
   orientation: 'up' | 'down'
 }
 
-export function TempoButton({ orientation, css, ...rest }: TempoButtonProps) {
-  return (
+export function TempoButton() {
+  return ({ orientation, css, ...rest }: TempoButtonProps) => (
     <button
       {...rest}
       css={{
@@ -305,7 +307,7 @@ export function TempoButton({ orientation, css, ...rest }: TempoButtonProps) {
 }
 
 export function Logo() {
-  return (
+  return () => (
     <svg
       height="65"
       viewBox="0 0 400 143"

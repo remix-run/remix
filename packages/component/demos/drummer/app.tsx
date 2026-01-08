@@ -16,10 +16,10 @@ import {
 } from './components.tsx'
 import { createVoiceLooper } from './voice-looper.ts'
 
-export function App(this: Handle<Drummer>) {
+export function App(handle: Handle<Drummer>) {
   let drummer = new Drummer(80)
 
-  this.on(document, {
+  handle.on(document, {
     [space]() {
       drummer.toggle()
     },
@@ -31,7 +31,7 @@ export function App(this: Handle<Drummer>) {
     },
   })
 
-  this.context.set(drummer)
+  handle.context.set(drummer)
 
   return () => (
     <Layout>
@@ -41,20 +41,20 @@ export function App(this: Handle<Drummer>) {
   )
 }
 
-export function Equalizer(this: Handle) {
-  let drummer = this.context.get(App)
+export function Equalizer(handle: Handle) {
+  let drummer = handle.context.get(App)
 
   let kickVolumes = [0.4, 0.8, 0.3, 0.1]
   let snareVolumes = [0.4, 1, 0.7]
   let hatVolumes = [0.1, 0.8]
 
-  let createVoice = createVoiceLooper(this.update)
+  let createVoice = createVoiceLooper(handle.update)
 
   let kick = createVoice()
   let snare = createVoice()
   let hat = createVoice()
 
-  this.on(drummer, {
+  handle.on(drummer, {
     kick() {
       kick.trigger(1)
     },
@@ -67,8 +67,8 @@ export function Equalizer(this: Handle) {
   })
 
   // initial animation on connect
-  this.queueTask(() => {
-    this.update()
+  handle.queueTask(() => {
+    handle.update()
   })
 
   return () => {
@@ -98,13 +98,13 @@ export function Equalizer(this: Handle) {
   }
 }
 
-function DrumControls(this: Handle) {
-  let drummer = this.context.get(App)
+function DrumControls(handle: Handle) {
+  let drummer = handle.context.get(App)
   let stop: HTMLButtonElement
   let play: HTMLButtonElement
 
-  this.on(drummer, {
-    change: () => this.update(),
+  handle.on(drummer, {
+    change: () => handle.update(),
   })
 
   return () => (
@@ -127,7 +127,7 @@ function DrumControls(this: Handle) {
         on={{
           click: () => {
             drummer.play()
-            this.queueTask(() => {
+            handle.queueTask(() => {
               stop.focus()
             })
           },
@@ -142,7 +142,7 @@ function DrumControls(this: Handle) {
         on={{
           [press]: () => {
             drummer.stop()
-            this.queueTask(() => {
+            handle.queueTask(() => {
               play.focus()
             })
           },
@@ -154,8 +154,8 @@ function DrumControls(this: Handle) {
   )
 }
 
-function TempoDisplay(this: Handle) {
-  let drummer = this.context.get(App)
+function TempoDisplay(handle: Handle) {
+  let drummer = handle.context.get(App)
   return () => (
     <TempoLayout>
       <BPMDisplay bpm={drummer.bpm} />

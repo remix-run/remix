@@ -1,5 +1,5 @@
 import type * as dom from './dom.d.ts'
-import type { ComponentProps } from './component.ts'
+import type { Component, Handle, RenderFn } from './component.ts'
 
 /**
  * Any valid element type accepted by JSX or `createElement`.
@@ -32,14 +32,17 @@ export interface RemixElement {
 export type Renderable = RemixElement | string | number | bigint | boolean | null | undefined
 
 /**
- * Anything that Remix can render, including arrays of renderable values.
+ * Anything that Remix can render, including nested arrays of renderable values.
+ * This mirrors how JSX spreads children into arrays (e.g. when using `map`)
+ * and how our reconciler flattens children at runtime.
+ *
  * Particularly useful for `props.children`.
  *
  * ```tsx
  * function MyComponent({ children }: { children: RemixNode }) {}
  * ```
  */
-export type RemixNode = Renderable | Renderable[]
+export type RemixNode = Renderable | RemixNode[]
 
 /**
  * Get the props for a specific element type with normalized `on` prop.
@@ -51,13 +54,13 @@ export type RemixNode = Renderable | Renderable[]
  *
  * @example
  * function Button({ on, ...rest }: Props<"button">) {
- *   return <button {...rest} on={{ ...on, click: handler }} />
+ *   return () => <button {...rest} on={{ ...on, click: handler }} />
  * }
  */
 export type Props<T extends keyof JSX.IntrinsicElements> = JSX.IntrinsicElements[T]
 
 export function jsx(type: string, props: ElementProps, key?: string): RemixElement
-export function jsx(type: Function, props: ComponentProps<Function>, key?: string): RemixElement
+export function jsx(type: Function, props: ElementProps, key?: string): RemixElement
 export function jsx(type: any, props: any, key?: any): RemixElement {
   return { type, props, key, $rmx: true }
 }
@@ -70,17 +73,30 @@ declare global {
       key?: any
     }
 
+    type Element = RemixElement
+
+    type ElementType =
+      // host elements
+      | keyof IntrinsicElements
+      // Factory component
+      | ((handle: Handle<any>, setup: any) => RenderFn<any>)
+
+    type ElementChildrenAttribute = {
+      children: any
+    }
+
     export interface ElementAttributesProperty {
       props: any
     }
 
-    export interface ElementChildrenAttribute {
-      children: any
-    }
-
-    type Element = RemixElement | any
-
-    type LibraryManagedAttributes<C, P> = C extends Function ? ComponentProps<C> : P
+    type LibraryManagedAttributes<component, props> = component extends (
+      handle: Handle<any>,
+      setup: infer S,
+    ) => RenderFn<infer R>
+      ? // It's a ComponentFactory - combine setup + render props
+        (unknown extends S ? {} : undefined extends S ? { setup?: S } : { setup: S }) & R
+      : // Otherwise use props as-is (simple function component)
+        props
 
     export interface IntrinsicSVGElements {
       svg: dom.SVGProps<SVGSVGElement>
