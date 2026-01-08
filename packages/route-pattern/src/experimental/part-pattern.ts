@@ -14,7 +14,7 @@ type Token =
 
 type Variant = {
   key: string
-  paramIndices: Array<number>
+  paramNames: Array<string>
 }
 
 const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
@@ -23,6 +23,7 @@ export class PartPattern {
   readonly tokens: AST['tokens']
   readonly paramNames: AST['paramNames']
   readonly optionals: AST['optionals']
+  #variants: Array<Variant> | undefined
 
   constructor(ast: AST) {
     this.tokens = ast.tokens
@@ -118,11 +119,15 @@ export class PartPattern {
     return new PartPattern(ast)
   }
 
-  variants(): Array<Variant> {
+  get variants(): Array<Variant> {
+    if (this.#variants !== undefined) {
+      return this.#variants
+    }
+
     let result: Array<Variant> = []
 
     let stack: Array<{ index: number; variant: Variant }> = [
-      { index: 0, variant: { key: '', paramIndices: [] } },
+      { index: 0, variant: { key: '', paramNames: [] } },
     ]
     while (stack.length > 0) {
       let { index, variant } = stack.pop()!
@@ -147,14 +152,14 @@ export class PartPattern {
 
       if (token.type === ':') {
         variant.key += '{:}'
-        variant.paramIndices.push(token.nameIndex)
+        variant.paramNames.push(this.paramNames[token.nameIndex])
         stack.push({ index: index + 1, variant })
         continue
       }
 
       if (token.type === '*') {
         variant.key += '{*}'
-        variant.paramIndices.push(token.nameIndex)
+        variant.paramNames.push(this.paramNames[token.nameIndex])
         stack.push({ index: index + 1, variant })
         continue
       }
@@ -168,6 +173,7 @@ export class PartPattern {
       throw unrecognized(token.type)
     }
 
+    this.#variants = result
     return result
   }
 

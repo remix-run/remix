@@ -206,37 +206,37 @@ describe('PartPattern', () => {
   })
 
   describe('variants', () => {
-    function assertVariants(source: string, variants: ReturnType<PartPattern['variants']>) {
-      assert.deepStrictEqual(PartPattern.parse(source).variants(), variants)
+    function assertVariants(source: string, variants: PartPattern['variants']) {
+      assert.deepStrictEqual(PartPattern.parse(source).variants, variants)
     }
 
     test('produces all possible combinations of optionals', () => {
       assertVariants('a(:b)*c', [
-        { key: 'a{*}', paramIndices: [1] },
-        { key: 'a{:}{*}', paramIndices: [0, 1] },
+        { key: 'a{*}', paramNames: ['c'] },
+        { key: 'a{:}{*}', paramNames: ['b', 'c'] },
       ])
       assertVariants('a(:b)*c', [
-        { key: 'a{*}', paramIndices: [1] },
-        { key: 'a{:}{*}', paramIndices: [0, 1] },
+        { key: 'a{*}', paramNames: ['c'] },
+        { key: 'a{:}{*}', paramNames: ['b', 'c'] },
       ])
       assertVariants('a(:b)c(*d)e', [
-        { key: 'ace', paramIndices: [] },
-        { key: 'ac{*}e', paramIndices: [1] },
-        { key: 'a{:}ce', paramIndices: [0] },
-        { key: 'a{:}c{*}e', paramIndices: [0, 1] },
+        { key: 'ace', paramNames: [] },
+        { key: 'ac{*}e', paramNames: ['d'] },
+        { key: 'a{:}ce', paramNames: ['b'] },
+        { key: 'a{:}c{*}e', paramNames: ['b', 'd'] },
       ])
       assertVariants('a(:b(*c):d)e', [
-        { key: 'ae', paramIndices: [] },
-        { key: 'a{:}{:}e', paramIndices: [0, 2] },
-        { key: 'a{:}{*}{:}e', paramIndices: [0, 1, 2] },
+        { key: 'ae', paramNames: [] },
+        { key: 'a{:}{:}e', paramNames: ['b', 'd'] },
+        { key: 'a{:}{*}{:}e', paramNames: ['b', 'c', 'd'] },
       ])
       assertVariants('a(:b(*c):d)e(*f)g', [
-        { key: 'aeg', paramIndices: [] },
-        { key: 'ae{*}g', paramIndices: [3] },
-        { key: 'a{:}{:}eg', paramIndices: [0, 2] },
-        { key: 'a{:}{:}e{*}g', paramIndices: [0, 2, 3] },
-        { key: 'a{:}{*}{:}eg', paramIndices: [0, 1, 2] },
-        { key: 'a{:}{*}{:}e{*}g', paramIndices: [0, 1, 2, 3] },
+        { key: 'aeg', paramNames: [] },
+        { key: 'ae{*}g', paramNames: ['f'] },
+        { key: 'a{:}{:}eg', paramNames: ['b', 'd'] },
+        { key: 'a{:}{:}e{*}g', paramNames: ['b', 'd', 'f'] },
+        { key: 'a{:}{*}{:}eg', paramNames: ['b', 'c', 'd'] },
+        { key: 'a{:}{*}{:}e{*}g', paramNames: ['b', 'c', 'd', 'f'] },
       ])
     })
   })
