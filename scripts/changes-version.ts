@@ -6,7 +6,7 @@
  *
  * Options:
  *   --tags       Also create git tags (default: no tags, publish workflow creates them)
- *   --no-commit  Only update files, don't commit (for manual review)
+ *   --no-commit  Only update files, don't commit (for manual review, incompatible with --tags)
  */
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -79,7 +79,12 @@ function deleteChangeFiles(packageName: string) {
  */
 function main() {
   let skipCommit = process.argv.includes('--no-commit')
-  let createTags = process.argv.includes('--tags')
+  let createTags = process.argv.includes('--tags') && !skipCommit
+
+  if (process.argv.includes('--tags') && skipCommit) {
+    console.error('Cannot use --tags with --no-commit (tags require a commit to point to)\n')
+    process.exit(1)
+  }
 
   console.log('Validating change files...\n')
 
