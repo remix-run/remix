@@ -96,36 +96,36 @@ pnpm changes:validate
 
 Releases are automated via the [changes-version-pr workflow](/.github/workflows/changes-version-pr.yaml) and [publish workflow](/.github/workflows/publish.yaml).
 
-### How It Works
-
 1. **You push changes to `main`** with change files in `packages/*/.changes/`
+
 2. **A "Version Packages" PR is automatically opened** (or updated if one exists)
+
+   The PR contains:
+
+   - Updated `package.json` versions
+   - Updated `CHANGELOG.md` files
+   - Deleted change files
+
 3. **When you merge the PR**, the publish workflow detects the release commit and publishes all versioned packages to npm, adds version tags to the commit, and publishes GitHub releases.
 
-The PR contains:
+### Manual Versioning
 
-- Updated `package.json` versions
-- Updated `CHANGELOG.md` files
-- Deleted change files
-
-### Preview a Release
-
-To see which packages have changes and preview the release locally:
+The "Version Packages" PR simply automates the `pnpm changes:version` command. If needed, you can run this command manually. This will update the `package.json` versions, `CHANGELOG.md` files, and delete the change files.
 
 ```sh
-pnpm changes:preview
-```
-
-### Manual Releases
-
-If you need to release manually (e.g., for a hotfix), you can still use the local workflow:
-
-```sh
-# Update versions, changelog, and create release commit
 pnpm changes:version
-
-# Push to trigger publish workflow
-git push
 ```
 
-The publish workflow detects release commits (those starting with "Release " that also have version changes in `package.json`) and handles publishing to npm, creating git tags, and creating GitHub Releases.
+You can skip committing the changes by using the `--no-commit` flag.
+
+```sh
+pnpm changes:version --no-commit
+```
+
+You can also create tags locally by using the `--tags` flag.
+
+```sh
+pnpm changes:version --tags
+```
+
+Note that the publish workflow will create tags for release commits in main automatically. This is the preferred way to create tags.
