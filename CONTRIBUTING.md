@@ -100,7 +100,7 @@ Releases are automated via the [changes-version-pr workflow](/.github/workflows/
 
 1. **You push changes to `main`** with change files in `packages/*/.changes/`
 2. **A "Version Packages" PR is automatically opened** (or updated if one exists)
-3. **When you merge the PR**, the publish workflow detects the release commit and publishes all versioned packages to npm
+3. **When you merge the PR**, the publish workflow detects the release commit and publishes all versioned packages to npm, adds version tags to the commit, and publishes GitHub releases.
 
 The PR contains:
 
