@@ -1,3 +1,13 @@
+/**
+ * Updates package.json versions, CHANGELOG.md files, and creates a release commit.
+ *
+ * Usage:
+ *   pnpm changes:version [--tags] [--no-commit]
+ *
+ * Options:
+ *   --tags       Also create git tags (default: no tags, publish workflow creates them)
+ *   --no-commit  Only update files, don't commit (for manual review)
+ */
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import {
