@@ -101,7 +101,7 @@ async function main() {
   // Reset to base branch
   logAndExec(`git reset --hard origin/${baseBranch}`)
 
-  // Run version command (commits and creates local tags, but we only push the branch)
+  // Run version command
   console.log('\nRunning pnpm changes:version...')
   logAndExec('pnpm changes:version')
 
