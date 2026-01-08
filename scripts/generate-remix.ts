@@ -8,6 +8,7 @@
  * Run: node docs/generate-remix.ts
  */
 
+import cp from 'node:child_process'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
@@ -42,8 +43,15 @@ type ExportEntry = {
 
 let { remixRunPackages, allExports } = await getRemixRunPackages()
 
-// Generate source files iun
+// Ensure we have a passing linter before generating code
+lintRemixPackage(false)
+
+// Generate source files
 await generateRemixSourceFiles()
+
+// Run the linter against generated source code with --fix to ensure generated
+// code passes linting
+lintRemixPackage(true)
 
 // Update package.json
 console.log('📦 Updating package.json...')
@@ -81,6 +89,19 @@ if (GENERATE_CHANGE_FILES) {
 }
 
 // Implementations
+
+function lintRemixPackage(fix: boolean) {
+  console.log('🔍 Running ESLint on remix package...')
+  let eslintBefore = cp.spawnSync(
+    'eslint',
+    ['packages/remix/', '--max-warnings=0', fix ? '--fix' : ''],
+    { stdio: 'inherit' },
+  )
+
+  if (eslintBefore.status !== 0) {
+    throw new Error(`ESLint failed. Please fix linting errors before continuing.`)
+  }
+}
 
 async function getRemixRunPackages() {
   console.log('🔍 Scanning packages...')
