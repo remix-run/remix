@@ -41,8 +41,10 @@ export function getVersionedPackages(): VersionedPackage[] {
   let versioned: VersionedPackage[] = []
 
   for (let packageName of packageNames) {
-    let currentVersion = readJson(getPackageFile(packageName, 'package.json')).version
-    let previousContent = getFileAtRef(getPackageFile(packageName, 'package.json'), 'HEAD~1')
+    let packageJsonPath = getPackageFile(packageName, 'package.json')
+
+    let currentVersion = readJson(packageJsonPath).version
+    let previousContent = getFileAtRef(packageJsonPath, 'HEAD~1')
     let previousVersion = previousContent ? JSON.parse(previousContent).version : null
 
     if (previousVersion !== null && currentVersion !== previousVersion) {
