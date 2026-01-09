@@ -320,6 +320,8 @@ export class MultipartParser {
    *
    * Note: This will throw if the multipart message is incomplete or
    * wasn't properly terminated.
+   *
+   * @returns void
    */
   finish(): void {
     if (this.#state !== MultipartParserStateDone) {
