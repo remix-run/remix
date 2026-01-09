@@ -14,10 +14,13 @@ We manage release notes in this file instead of the paginated GitHub Releases Pa
 
 - [Remix v2 Releases](#remix-v2-releases)
   - [v2.17.3](#v2173)
+    - [Security Notice](#security-notice)
     - [Patch Changes](#patch-changes)
   - [v2.17.2](#v2172)
+    - [Security Notice](#security-notice-1)
     - [Patch Changes](#patch-changes-1)
   - [v2.17.1](#v2171)
+    - [Security Notice](#security-notice-2)
     - [Patch Changes](#patch-changes-2)
   - [v2.17.0](#v2170)
     - [Minor Changes](#minor-changes)
@@ -33,7 +36,7 @@ We manage release notes in this file instead of the paginated GitHub Releases Pa
   - [v2.16.4](#v2164)
     - [Patch Changes](#patch-changes-7)
   - [v2.16.3](#v2163)
-    - [Security Notice](#security-notice)
+    - [Security Notice](#security-notice-3)
     - [Patch Changes](#patch-changes-8)
   - [v2.16.2](#v2162)
     - [Patch Changes](#patch-changes-9)
@@ -250,6 +253,13 @@ Date: YYYY-MM-DD
 
 Date: 2026-01-07
 
+### Security Notice
+
+This release addresses 2 security vulnerabilities:
+
+- [CSRF in React Router Action/Server Action Request Processing](https://github.com/remix-run/react-router/security/advisories/GHSA-h5cw-625j-3rxh)
+- [React Router SSR XSS in ScrollRestoration](https://github.com/remix-run/react-router/security/advisories/GHSA-8v8x-cx79-35w7)
+
 ### Patch Changes
 
 - `@remix-run/dev` - Update `valibot` to address CVE ([GHSA-vqpr-j7v3-hqw9](https://github.com/advisories/GHSA-vqpr-j7v3-hqw9))
@@ -262,6 +272,12 @@ Date: 2026-01-07
 
 Date: 2025-10-29
 
+### Security Notice
+
+This release addresses 1 security vulnerability:
+
+- [Unauthorized file access when using `createFileSessionStorage()` with unsigned cookies](https://github.com/remix-run/react-router/security/advisories/GHSA-9583-h5hc-x8cw)
+
 ### Patch Changes
 
 - `@remix-run/deno` - Validate format of incoming session ids in `createFileSessionStorage`
@@ -272,6 +288,12 @@ Date: 2025-10-29
 ## v2.17.1
 
 Date: 2025-09-17
+
+### Security Notice
+
+This release addresses 1 security vulnerability:
+
+- [XSS via Meta component when generating script:ld+json tags](https://github.com/remix-run/react-router/security/advisories/GHSA-3cgp-3xvw-98x8)
 
 ### Patch Changes
 
@@ -1656,7 +1678,7 @@ export default defineConfig({
     remix({
       unstable_serverBundles: ({ branch }) => {
         const isAuthenticatedRoute = branch.some(
-          (route) => route.id === "routes/_authenticated"
+          (route) => route.id === "routes/_authenticated",
         );
 
         return isAuthenticatedRoute ? "authenticated" : "unauthenticated";
