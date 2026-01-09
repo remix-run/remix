@@ -1,5 +1,7 @@
 import { request } from '@octokit/request'
 
+import { getChangelogEntry } from './changes.ts'
+
 let owner = 'remix-run'
 let repo = 'remix'
 
@@ -13,6 +15,71 @@ function getToken(): string {
 
 function auth() {
   return { headers: { authorization: `token ${getToken()}` } }
+}
+
+/**
+ * Creates a GitHub release for a package version.
+ * Returns the release URL, or null if skipped (preview mode or already exists).
+ */
+export async function createRelease(
+  packageName: string,
+  version: string,
+  options: {
+    preview?: boolean
+  } = {},
+): Promise<string | null> {
+  let { preview = false } = options
+
+  let tagName = `${packageName}@${version}`
+  let releaseName = `${packageName} v${version}`
+  let changes = getChangelogEntry(packageName, version)
+  let body = changes?.body ?? 'No changes.'
+
+  if (preview) {
+    console.log(`  Tag:  ${tagName}`)
+    console.log(`  Name: ${releaseName}`)
+    console.log()
+    console.log('  Body:')
+    console.log()
+    for (let line of body.split('\n')) {
+      console.log(`    ${line}`)
+    }
+    console.log()
+    return null
+  }
+
+  // Check if release already exists
+  try {
+    await request('GET /repos/{owner}/{repo}/releases/tags/{tag}', {
+      ...auth(),
+      owner,
+      repo,
+      tag: tagName,
+    })
+    // Release exists, skip creation
+    return null
+  } catch (error) {
+    // Only proceed if release doesn't exist (404)
+    if (!(error instanceof Error && 'status' in error && error.status === 404)) {
+      throw error
+    }
+  }
+
+  try {
+    let response = await request('POST /repos/{owner}/{repo}/releases', {
+      ...auth(),
+      owner,
+      repo,
+      tag_name: tagName,
+      name: releaseName,
+      body,
+    })
+
+    return response.data.html_url
+  } catch (error) {
+    console.error(`Failed to create release for ${tagName}:`, error)
+    process.exit(1)
+  }
 }
 
 /**

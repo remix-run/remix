@@ -10,7 +10,7 @@ import * as cp from 'node:child_process'
 import { getVersionedPackages } from './utils/packages.ts'
 import { tagExists } from './utils/git.ts'
 import { logAndExec } from './utils/process.ts'
-import { createRelease } from './utils/github-releases.ts'
+import { createRelease } from './utils/github.ts'
 
 let args = process.argv.slice(2)
 let preview = args.includes('--preview')
@@ -75,12 +75,14 @@ async function main() {
     console.log('\nNo new tags to push.')
   }
 
-  // Create GitHub releases
+  // Create GitHub releases (skip if already exists)
   console.log('\nCreating GitHub releases...')
   for (let pkg of versioned) {
     let url = await createRelease(pkg.packageName, pkg.version)
     if (url) {
       console.log(`  ✓ ${pkg.packageName} v${pkg.version}`)
+    } else {
+      console.log(`  ⊘ ${pkg.packageName} v${pkg.version} (already exists)`)
     }
   }
 

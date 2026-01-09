@@ -92,11 +92,7 @@ async function main() {
 
   // Create or switch to PR branch
   console.log(`\nSwitching to branch: ${prBranch}`)
-  try {
-    logAndExec(`git checkout -B ${prBranch}`)
-  } catch {
-    logAndExec(`git checkout ${prBranch}`)
-  }
+  logAndExec(`git checkout -B ${prBranch}`)
 
   // Reset to base branch
   logAndExec(`git reset --hard origin/${baseBranch}`)
