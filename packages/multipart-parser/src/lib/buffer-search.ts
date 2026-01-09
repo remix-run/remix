@@ -7,8 +7,9 @@ export function createSearch(pattern: string): SearchFunction {
 
   let search: SearchFunction
   // Use the built-in Buffer.indexOf method on Node.js for better perf.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let BufferClass = (globalThis as any).Buffer as { prototype: { indexOf(this: Uint8Array, needle: Uint8Array, start: number): number } } | undefined
+  let BufferClass = (globalThis as any).Buffer as
+    | { prototype: { indexOf(this: Uint8Array, needle: Uint8Array, start: number): number } }
+    | undefined
   if (BufferClass && !('Bun' in globalThis || 'Deno' in globalThis)) {
     search = (haystack, start = 0) => BufferClass.prototype.indexOf.call(haystack, needle, start)
   } else {

@@ -88,6 +88,9 @@ const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 /**
  * Formats a date in Apache/nginx log format: "dd/Mon/yyyy:HH:mm:ss ±zzzz"
  * Example: "23/Sep/2025:11:34:12 -0700"
+ *
+ * @param date The date to format
+ * @returns The formatted date string
  */
 function formatApacheDate(date: Date): string {
   let day = String(date.getDate()).padStart(2, '0')

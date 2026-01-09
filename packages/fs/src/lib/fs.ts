@@ -86,6 +86,7 @@ function streamFile(
  *
  * @param to The path to write the file to, or an open file descriptor
  * @param file The file to write (any object with a `stream()` method)
+ * @param file.stream Method that returns a readable stream of the file's contents
  * @returns A promise that resolves when the file is written
  */
 export function writeFile(

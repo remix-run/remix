@@ -387,8 +387,8 @@ async function hashFile<F extends FileLike>(
  * Removes milliseconds from a timestamp, returning seconds.
  * HTTP dates only have second precision, so this is useful for date comparisons.
  *
- * @param time The timestamp or Date to convert
- * @returns The timestamp in seconds (without milliseconds)
+ * @param time The timestamp or Date to truncate
+ * @returns The timestamp in seconds (milliseconds removed)
  */
 function removeMilliseconds(time: number | Date): number {
   let timestamp = time instanceof Date ? time.getTime() : time
