@@ -1678,7 +1678,7 @@ export default defineConfig({
     remix({
       unstable_serverBundles: ({ branch }) => {
         const isAuthenticatedRoute = branch.some(
-          (route) => route.id === "routes/_authenticated",
+          (route) => route.id === "routes/_authenticated"
         );
 
         return isAuthenticatedRoute ? "authenticated" : "unauthenticated";
