@@ -27,6 +27,8 @@
     "codegen": "pnpm -r run codegen",
     "docs": "rm -rf docs/api && node docs/generate.ts",
     "docs:serve": "node docs/server.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "generate-remix": "node scripts/generate-remix.ts",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",

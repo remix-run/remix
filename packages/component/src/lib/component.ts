@@ -1,11 +1,6 @@
 import type { EventListeners } from '@remix-run/interaction'
 import { createContainer } from '@remix-run/interaction'
-import type {
-  ElementProps,
-  ElementType,
-  RemixNode,
-  Renderable,
-} from './jsx.ts'
+import type { ElementProps, ElementType, RemixNode, Renderable } from './jsx.ts'
 
 export type Task = (signal: AbortSignal) => void
 
@@ -82,9 +77,8 @@ export interface Handle<C = Record<string, never>> {
    * }
    * ```
    *
-   * @discussion
    * You don't need to check both this.signal and a render/event signal as
-   * render/event signals are aborted when the component disconnects
+   * render/event signals are aborted when the component disconnects.
    */
   signal: AbortSignal
 
@@ -120,10 +114,7 @@ export type Component<
   Context = NoContext,
   SetupProps = ElementProps,
   RenderProps = ElementProps,
-> = (
-  this: Handle<Context>,
-  props: SetupProps,
-) => RemixNode | ((props: RenderProps) => RemixNode)
+> = (this: Handle<Context>, props: SetupProps) => RemixNode | ((props: RenderProps) => RemixNode)
 
 export type ContextFrom<ComponentType> =
   ComponentType extends Component<infer Provided, any, any>

@@ -1,11 +1,7 @@
 import { signal, batch, useComputed, type Signal } from '@preact/signals'
 import { For } from '@preact/signals/utils'
 import { render } from 'preact'
-import {
-  buildData as buildPlainData,
-  sortRows as sortPlainRows,
-  get1000Rows,
-} from '../shared.ts'
+import { buildData as buildPlainData, sortRows as sortPlainRows, get1000Rows } from '../shared.ts'
 import type { Benchmark, Row as PlainRow } from '../shared.ts'
 
 export const name = 'preact-signals'

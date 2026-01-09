@@ -387,7 +387,10 @@ export class SuperHeaders extends Headers {
    * @param callback The function to call for each pair
    * @param thisArg The value to use as `this` when calling the callback
    */
-  override forEach(callback: (value: string, key: string, parent: Headers) => void, thisArg?: any): void {
+  override forEach(
+    callback: (value: string, key: string, parent: Headers) => void,
+    thisArg?: any,
+  ): void {
     for (let [key, value] of this) {
       callback.call(thisArg, value, key, this)
     }

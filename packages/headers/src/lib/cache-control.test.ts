@@ -19,9 +19,8 @@ const paramTestCases: Array<[string, keyof CacheControl, string, unknown]> = [
   ['public', 'public', '', true],
   ['immutable', 'immutable', '', true],
   ['stale-while-revalidate', 'staleWhileRevalidate', '60', 60],
-  ['stale-if-error', 'staleIfError', '120', 120]
-];
-
+  ['stale-if-error', 'staleIfError', '120', 120],
+]
 
 describe('CacheControl', () => {
   it('initializes with an empty string', () => {

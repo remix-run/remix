@@ -21,4 +21,3 @@ if (isWatch) {
   await build(buildOptions)
   console.log('Build complete')
 }
-

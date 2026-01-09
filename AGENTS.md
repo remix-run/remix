@@ -7,6 +7,7 @@
 - **Single test file**: `node --disable-warning=ExperimentalWarning --test './packages/<package>/src/**/<filename>.test.ts'`
 - **Typecheck**: `pnpm run typecheck` (all packages) or `pnpm --filter @remix-run/<package> run typecheck`
 - **Lint**: `pnpm run lint` (check) or `pnpm run lint:fix` (auto-fix)
+- **Format**: `pnpm run format` (auto-fix) or `pnpm run format:check` (check only)
 - **Clean**: `pnpm run clean` (git clean -fdX)
 
 ## Architecture
