@@ -21,7 +21,6 @@ export default [
       'node_modules/**',
       'reference/**',
       'packages/multipart-parser/demos/deno/**',
-      'packages/remix/src/lib/**',
     ],
   },
   {
