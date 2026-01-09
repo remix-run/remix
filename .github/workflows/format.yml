@@ -41,6 +41,7 @@ jobs:
           git config --local user.name "Remix Run Bot"
 
           git add .
+          git reset .github/workflows # PAT doesn't have permission to push workflow changes
           if [ -z "$(git status --porcelain)" ]; then
             echo "No formatting changes"
             exit 0
@@ -48,4 +49,3 @@ jobs:
           git commit -m "chore: format"
           git push
           echo "Pushed formatting changes https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
-
