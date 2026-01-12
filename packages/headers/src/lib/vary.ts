@@ -20,34 +20,11 @@ export interface VaryInit {
  * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.vary)
  */
 export class Vary implements HeaderValue, VaryInit, Iterable<string> {
-  #set: Set<string>
+  #set!: Set<string>
 
   constructor(init?: string | string[] | VaryInit) {
+    if (init) return Vary.from(init)
     this.#set = new Set()
-    if (init) {
-      if (typeof init === 'string') {
-        for (let headerName of init.split(',')) {
-          let trimmed = headerName.trim()
-          if (trimmed) {
-            this.#set.add(trimmed.toLowerCase())
-          }
-        }
-      } else if (Array.isArray(init)) {
-        for (let headerName of init) {
-          let trimmed = headerName.trim()
-          if (trimmed) {
-            this.#set.add(trimmed.toLowerCase())
-          }
-        }
-      } else {
-        for (let headerName of init.headerNames) {
-          let trimmed = headerName.trim()
-          if (trimmed) {
-            this.#set.add(trimmed.toLowerCase())
-          }
-        }
-      }
-    }
   }
 
   /**
@@ -117,5 +94,42 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
 
   toString() {
     return Array.from(this.#set).join(', ')
+  }
+
+  /**
+   * Parse a Vary header value.
+   *
+   * @param value The header value (string, string[], init object, or null)
+   * @returns A Vary instance (empty if null)
+   */
+  static from(value: string | string[] | VaryInit | null): Vary {
+    let header = new Vary()
+
+    if (value !== null) {
+      if (typeof value === 'string') {
+        for (let headerName of value.split(',')) {
+          let trimmed = headerName.trim()
+          if (trimmed) {
+            header.#set.add(trimmed.toLowerCase())
+          }
+        }
+      } else if (Array.isArray(value)) {
+        for (let headerName of value) {
+          let trimmed = headerName.trim()
+          if (trimmed) {
+            header.#set.add(trimmed.toLowerCase())
+          }
+        }
+      } else {
+        for (let headerName of value.headerNames) {
+          let trimmed = headerName.trim()
+          if (trimmed) {
+            header.#set.add(trimmed.toLowerCase())
+          }
+        }
+      }
+    }
+
+    return header
   }
 }

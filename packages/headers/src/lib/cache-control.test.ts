@@ -93,3 +93,19 @@ describe('CacheControl', () => {
     assert.equal(header.toString(), 'max-age=0')
   })
 })
+
+describe('CacheControl.from', () => {
+  it('parses a string value', () => {
+    let result = CacheControl.from('max-age=3600, public')
+    assert.ok(result instanceof CacheControl)
+    assert.equal(result.maxAge, 3600)
+    assert.equal(result.public, true)
+  })
+
+  it('accepts init object', () => {
+    let result = CacheControl.from({ maxAge: 3600, public: true })
+    assert.ok(result instanceof CacheControl)
+    assert.equal(result.maxAge, 3600)
+    assert.equal(result.public, true)
+  })
+})

@@ -218,3 +218,14 @@ describe('SetCookie', () => {
     assert.equal(header.toString(), 'test="need; quotes"')
   })
 })
+
+describe('SetCookie.from', () => {
+  it('parses a string value', () => {
+    let result = SetCookie.from('session=abc123; Path=/; HttpOnly')
+    assert.ok(result instanceof SetCookie)
+    assert.equal(result.name, 'session')
+    assert.equal(result.value, 'abc123')
+    assert.equal(result.path, '/')
+    assert.equal(result.httpOnly, true)
+  })
+})

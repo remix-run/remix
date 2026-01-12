@@ -37,32 +37,8 @@ export class ContentDisposition implements HeaderValue, ContentDispositionInit {
   name?: string
   type?: string
 
-  /**
-   * @param init A string or object to initialize the header
-   */
   constructor(init?: string | ContentDispositionInit) {
-    if (init) {
-      if (typeof init === 'string') {
-        let params = parseParams(init)
-        if (params.length > 0) {
-          this.type = params[0][0]
-          for (let [name, value] of params.slice(1)) {
-            if (name === 'filename') {
-              this.filename = value
-            } else if (name === 'filename*') {
-              this.filenameSplat = value
-            } else if (name === 'name') {
-              this.name = value
-            }
-          }
-        }
-      } else {
-        this.filename = init.filename
-        this.filenameSplat = init.filenameSplat
-        this.name = init.name
-        this.type = init.type
-      }
-    }
+    if (init) return ContentDisposition.from(init)
   }
 
   /**
@@ -108,6 +84,41 @@ export class ContentDisposition implements HeaderValue, ContentDispositionInit {
     }
 
     return parts.join('; ')
+  }
+
+  /**
+   * Parse a Content-Disposition header value.
+   *
+   * @param value The header value (string, init object, or null)
+   * @returns A ContentDisposition instance (empty if null)
+   */
+  static from(value: string | ContentDispositionInit | null): ContentDisposition {
+    let header = new ContentDisposition()
+
+    if (value !== null) {
+      if (typeof value === 'string') {
+        let params = parseParams(value)
+        if (params.length > 0) {
+          header.type = params[0][0]
+          for (let [name, val] of params.slice(1)) {
+            if (name === 'filename') {
+              header.filename = val
+            } else if (name === 'filename*') {
+              header.filenameSplat = val
+            } else if (name === 'name') {
+              header.name = val
+            }
+          }
+        }
+      } else {
+        header.filename = value.filename
+        header.filenameSplat = value.filenameSplat
+        header.name = value.name
+        header.type = value.type
+      }
+    }
+
+    return header
   }
 }
 

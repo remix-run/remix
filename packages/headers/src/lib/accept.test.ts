@@ -160,3 +160,25 @@ describe('Accept', () => {
     assert.deepEqual(header.mediaTypes, ['text/html', 'application/json'])
   })
 })
+
+describe('Accept.from', () => {
+  it('parses a string value', () => {
+    let result = Accept.from('text/html, application/json;q=0.9')
+    assert.ok(result instanceof Accept)
+    assert.equal(result.size, 2)
+    assert.equal(result.getWeight('text/html'), 1)
+    assert.equal(result.getWeight('application/json'), 0.9)
+  })
+
+  it('returns empty instance for null', () => {
+    let result = Accept.from(null)
+    assert.ok(result instanceof Accept)
+    assert.equal(result.size, 0)
+  })
+
+  it('accepts init object', () => {
+    let result = Accept.from({ 'text/html': 1 })
+    assert.ok(result instanceof Accept)
+    assert.equal(result.size, 1)
+  })
+})

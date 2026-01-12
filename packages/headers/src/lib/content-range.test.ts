@@ -159,3 +159,14 @@ describe('ContentRange', () => {
     assert.equal(contentRange.toString(), 'bytes 0-0/1')
   })
 })
+
+describe('ContentRange.from', () => {
+  it('parses a string value', () => {
+    let result = ContentRange.from('bytes 0-499/1234')
+    assert.ok(result instanceof ContentRange)
+    assert.equal(result.unit, 'bytes')
+    assert.equal(result.start, 0)
+    assert.equal(result.end, 499)
+    assert.equal(result.size, 1234)
+  })
+})

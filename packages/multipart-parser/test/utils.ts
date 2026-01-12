@@ -1,4 +1,8 @@
-import SuperHeaders from '@remix-run/headers'
+import {
+  ContentDisposition,
+  ContentType,
+  stringify as stringifyRawHeaders,
+} from '@remix-run/headers'
 
 export type PartValue =
   | string
@@ -28,31 +32,31 @@ export function createMultipartMessage(
       pushLine(`--${boundary}`)
 
       if (typeof value === 'string') {
-        let headers = new SuperHeaders({
-          contentDisposition: {
+        let headers = new Headers({
+          'Content-Disposition': ContentDisposition.from({
             type: 'form-data',
             name,
-          },
+          }).toString(),
         })
 
-        pushLine(`${headers}`)
+        pushLine(stringifyRawHeaders(headers))
         pushLine()
         pushLine(value)
       } else {
-        let headers = new SuperHeaders({
-          contentDisposition: {
+        let headers = new Headers({
+          'Content-Disposition': ContentDisposition.from({
             type: 'form-data',
             name,
             filename: value.filename,
             filenameSplat: value.filenameSplat,
-          },
+          }).toString(),
         })
 
         if (value.mediaType) {
-          headers.contentType = value.mediaType
+          headers.set('Content-Type', ContentType.from({ mediaType: value.mediaType }).toString())
         }
 
-        pushLine(`${headers}`)
+        pushLine(stringifyRawHeaders(headers))
         pushLine()
         if (typeof value.content === 'string') {
           pushLine(value.content)

@@ -142,3 +142,12 @@ describe('Cookie', () => {
     assert.equal(header.get('name'), 'value2')
   })
 })
+
+describe('Cookie.from', () => {
+  it('parses a string value', () => {
+    let result = Cookie.from('session=abc123; user=john')
+    assert.ok(result instanceof Cookie)
+    assert.equal(result.get('session'), 'abc123')
+    assert.equal(result.get('user'), 'john')
+  })
+})

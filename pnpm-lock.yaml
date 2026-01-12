@@ -355,9 +355,6 @@ importers:
 
   packages/fetch-router:
     dependencies:
-      '@remix-run/headers':
-        specifier: workspace:^
-        version: link:../headers
       '@remix-run/route-pattern':
         specifier: workspace:^
         version: link:../route-pattern

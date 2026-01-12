@@ -156,3 +156,18 @@ describe('IfRange', () => {
     })
   })
 })
+
+describe('IfRange.from', () => {
+  it('parses a string value', () => {
+    let result = IfRange.from('"abc"')
+    assert.ok(result instanceof IfRange)
+    assert.equal(result.value, '"abc"')
+  })
+
+  it('parses a Date value', () => {
+    let date = new Date('2024-01-01T00:00:00.000Z')
+    let result = IfRange.from(date)
+    assert.ok(result instanceof IfRange)
+    assert.equal(result.value, date.toUTCString())
+  })
+})

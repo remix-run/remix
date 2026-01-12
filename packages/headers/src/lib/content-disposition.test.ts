@@ -217,3 +217,12 @@ describe('ContentDisposition', () => {
     })
   })
 })
+
+describe('ContentDisposition.from', () => {
+  it('parses a string value', () => {
+    let result = ContentDisposition.from('attachment; filename="test.txt"')
+    assert.ok(result instanceof ContentDisposition)
+    assert.equal(result.type, 'attachment')
+    assert.equal(result.filename, 'test.txt')
+  })
+})

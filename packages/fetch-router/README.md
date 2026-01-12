@@ -592,7 +592,7 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
 
 #### Content Negotiation
 
-- use `headers.accept.accepts()` to serve different responses based on the client's `Accept` header
+- use `Accept.from()` from `@remix-run/headers` to serve different responses based on the client's `Accept` header
   - maybe put this on `context.accepts()` for convenience?
 
 #### Sessions

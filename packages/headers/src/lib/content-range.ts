@@ -38,27 +38,8 @@ export class ContentRange implements HeaderValue, ContentRangeInit {
   end: number | null = null
   size?: number | '*'
 
-  /**
-   * @param init A string or object to initialize the header
-   */
   constructor(init?: string | ContentRangeInit) {
-    if (init) {
-      if (typeof init === 'string') {
-        // Parse: "bytes 200-1000/67589" or "bytes */67589" or "bytes 200-1000/*"
-        let match = init.match(/^(\w+)\s+(?:(\d+)-(\d+)|\*)\/((?:\d+|\*))$/)
-        if (match) {
-          this.unit = match[1]
-          this.start = match[2] ? parseInt(match[2], 10) : null
-          this.end = match[3] ? parseInt(match[3], 10) : null
-          this.size = match[4] === '*' ? '*' : parseInt(match[4], 10)
-        }
-      } else {
-        if (init.unit !== undefined) this.unit = init.unit
-        if (init.start !== undefined) this.start = init.start
-        if (init.end !== undefined) this.end = init.end
-        if (init.size !== undefined) this.size = init.size
-      }
-    }
+    if (init) return ContentRange.from(init)
   }
 
   /**
@@ -72,5 +53,35 @@ export class ContentRange implements HeaderValue, ContentRangeInit {
     let range = this.start !== null && this.end !== null ? `${this.start}-${this.end}` : '*'
 
     return `${this.unit} ${range}/${this.size}`
+  }
+
+  /**
+   * Parse a Content-Range header value.
+   *
+   * @param value The header value (string, init object, or null)
+   * @returns A ContentRange instance (empty if null)
+   */
+  static from(value: string | ContentRangeInit | null): ContentRange {
+    let header = new ContentRange()
+
+    if (value !== null) {
+      if (typeof value === 'string') {
+        // Parse: "bytes 200-1000/67589" or "bytes */67589" or "bytes 200-1000/*"
+        let match = value.match(/^(\w+)\s+(?:(\d+)-(\d+)|\*)\/((?:\d+|\*))$/)
+        if (match) {
+          header.unit = match[1]
+          header.start = match[2] ? parseInt(match[2], 10) : null
+          header.end = match[3] ? parseInt(match[3], 10) : null
+          header.size = match[4] === '*' ? '*' : parseInt(match[4], 10)
+        }
+      } else {
+        if (value.unit !== undefined) header.unit = value.unit
+        if (value.start !== undefined) header.start = value.start
+        if (value.end !== undefined) header.end = value.end
+        if (value.size !== undefined) header.size = value.size
+      }
+    }
+
+    return header
   }
 }

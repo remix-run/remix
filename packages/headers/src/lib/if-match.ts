@@ -21,19 +21,8 @@ export interface IfMatchInit {
 export class IfMatch implements HeaderValue, IfMatchInit {
   tags: string[] = []
 
-  /**
-   * @param init A string, array of strings, or object to initialize the header
-   */
   constructor(init?: string | string[] | IfMatchInit) {
-    if (init) {
-      if (typeof init === 'string') {
-        this.tags.push(...init.split(/\s*,\s*/).map(quoteEtag))
-      } else if (Array.isArray(init)) {
-        this.tags.push(...init.map(quoteEtag))
-      } else {
-        this.tags.push(...init.tags.map(quoteEtag))
-      }
-    }
+    if (init) return IfMatch.from(init)
   }
 
   /**
@@ -94,5 +83,27 @@ export class IfMatch implements HeaderValue, IfMatchInit {
    */
   toString() {
     return this.tags.join(', ')
+  }
+
+  /**
+   * Parse an If-Match header value.
+   *
+   * @param value The header value (string, string[], init object, or null)
+   * @returns An IfMatch instance (empty if null)
+   */
+  static from(value: string | string[] | IfMatchInit | null): IfMatch {
+    let header = new IfMatch()
+
+    if (value !== null) {
+      if (typeof value === 'string') {
+        header.tags.push(...value.split(/\s*,\s*/).map(quoteEtag))
+      } else if (Array.isArray(value)) {
+        header.tags.push(...value.map(quoteEtag))
+      } else {
+        header.tags.push(...value.tags.map(quoteEtag))
+      }
+    }
+
+    return header
   }
 }

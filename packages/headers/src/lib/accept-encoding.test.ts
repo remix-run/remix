@@ -149,3 +149,11 @@ describe('Accept-Encoding', () => {
     assert.equal(header.toString(), 'br,deflate;q=0.9,gzip;q=0.8')
   })
 })
+
+describe('AcceptEncoding.from', () => {
+  it('parses a string value', () => {
+    let result = AcceptEncoding.from('gzip, deflate;q=0.5')
+    assert.ok(result instanceof AcceptEncoding)
+    assert.equal(result.size, 2)
+  })
+})

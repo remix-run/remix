@@ -162,3 +162,11 @@ describe('Accept-Language', () => {
     assert.equal(header.toString(), 'fi,en;q=0.9,en-us;q=0.8')
   })
 })
+
+describe('AcceptLanguage.from', () => {
+  it('parses a string value', () => {
+    let result = AcceptLanguage.from('en-US, en;q=0.9')
+    assert.ok(result instanceof AcceptLanguage)
+    assert.equal(result.size, 2)
+  })
+})
