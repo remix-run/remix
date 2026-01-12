@@ -927,6 +927,9 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      dedent:
+        specifier: ^1.7.1
+        version: 1.7.1
       find-my-way:
         specifier: ^9.1.0
         version: 9.3.0
@@ -2801,6 +2804,14 @@ packages:
       supports-color:
         optional: true
 
+  dedent@1.7.1:
+    resolution: {integrity: sha512-9JmrhGZpOlEgOLdQgSm0zxFaYoQon408V1v49aqTWuXENVlnCuY9JBZcXZiCsZQWDjTm5Qf/nIvAy77mXDAjEg==}
+    peerDependencies:
+      babel-plugin-macros: ^3.1.0
+    peerDependenciesMeta:
+      babel-plugin-macros:
+        optional: true
+
   deep-eql@5.0.2:
     resolution: {integrity: sha512-h5k/5U50IJJFpzfL6nO9jaaumfjO/f2NjK/oYB2Djzm4p9L+3T9qWpZqZ2hAbLPuuYq9wrU08WQyBTL5GbPk5Q==}
     engines: {node: '>=6'}
@@ -4557,6 +4568,7 @@ packages:
   wrangler@4.55.0:
     resolution: {integrity: sha512-50icmLX8UbNaq0FmFHbcvvOh7I6rDA/FyaMYRcNSl1iX0JwuKswezmmtYvYPxPTkbYz7FUYR8GPZLaT23uzFqw==}
     engines: {node: '>=20.0.0'}
+    deprecated: This version can incorrectly automatically delegate 'wrangler deploy' to 'opennextjs-cloudflare'
     hasBin: true
     peerDependencies:
       '@cloudflare/workers-types': ^4.20251213.0
@@ -6246,6 +6258,8 @@ snapshots:
   debug@4.4.3:
     dependencies:
       ms: 2.1.3
+
+  dedent@1.7.1: {}
 
   deep-eql@5.0.2: {}
 
