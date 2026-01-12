@@ -36,6 +36,37 @@ export class RoutePattern {
     })
   }
 
+  get protocol(): string {
+    return this.ast.protocol.toString()
+  }
+
+  get hostname(): string {
+    return this.ast.hostname.toString()
+  }
+
+  get port(): string {
+    return this.ast.port ?? ''
+  }
+
+  get pathname(): string {
+    return this.ast.pathname.toString()
+  }
+
+  get search(): string {
+    return Search.toString(this.ast.search) ?? ''
+  }
+
+  toString(): string {
+    let port = this.port === '' ? '' : `:${this.port}`
+
+    let result = `${this.protocol}://${this.hostname}${port}/${this.pathname}`
+
+    let search = this.search
+    if (search) result += `?${search}`
+
+    return result
+  }
+
   join(other: RoutePattern): RoutePattern {
     return new RoutePattern({
       protocol: isNamelessWildcard(other.ast.protocol) ? this.ast.protocol : other.ast.protocol,

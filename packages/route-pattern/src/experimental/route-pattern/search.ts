@@ -103,6 +103,29 @@ export function join(a: Constraints, b: Constraints): Constraints {
 
 export type HrefParams = Record<string, string | number | Array<string | number>>
 
+export function toString(constraints: Constraints): string | undefined {
+  if (constraints.size === 0) {
+    return undefined
+  }
+
+  let parts: Array<string> = []
+
+  for (let [key, constraint] of constraints) {
+    if (constraint === null) {
+      parts.push(encodeURIComponent(key))
+    } else if (constraint.size === 0) {
+      parts.push(`${encodeURIComponent(key)}=`)
+    } else {
+      for (let value of constraint) {
+        parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+      }
+    }
+  }
+
+  let result = parts.join('&')
+  return result || undefined
+}
+
 export function href(constraints: Constraints, params: HrefParams): string | undefined {
   if (constraints.size === 0 && Object.keys(params).length === 0) {
     return undefined
