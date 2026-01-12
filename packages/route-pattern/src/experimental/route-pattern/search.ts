@@ -1,6 +1,9 @@
 /* eslint-disable jsdoc/require-param */
 /* eslint-disable jsdoc/require-returns */
 
+import type { RoutePattern } from './route-pattern.ts'
+import { HrefError } from '../errors.ts'
+
 /**
  * - `null`: key must be present
  * - Empty `Set`: key must be present with a value
@@ -126,7 +129,8 @@ export function toString(constraints: Constraints): string | undefined {
   return result || undefined
 }
 
-export function href(constraints: Constraints, params: HrefParams): string | undefined {
+export function href(pattern: RoutePattern, params: HrefParams): string | undefined {
+  let constraints = pattern.ast.search
   if (constraints.size === 0 && Object.keys(params).length === 0) {
     return undefined
   }
@@ -143,19 +147,29 @@ export function href(constraints: Constraints, params: HrefParams): string | und
     }
   }
 
+  let missingParams: Array<string> = []
   for (let [key, constraint] of constraints) {
     if (constraint === null) {
       if (key in params) continue
       urlSearchParams.append(key, '')
     } else if (constraint.size === 0) {
       if (key in params) continue
-      throw new Error(`todo: [href] missing required search param '${key}'`)
+      missingParams.push(key)
     } else {
       for (let value of constraint) {
         if (urlSearchParams.getAll(key).includes(value)) continue
         urlSearchParams.append(key, value)
       }
     }
+  }
+
+  if (missingParams.length > 0) {
+    throw new HrefError({
+      type: 'missing-search-params',
+      pattern,
+      missingParams,
+      searchParams: params,
+    })
   }
 
   let result = urlSearchParams.toString()
