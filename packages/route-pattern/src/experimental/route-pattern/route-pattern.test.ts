@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict'
 import test, { describe } from 'node:test'
 import { RoutePattern } from './route-pattern.ts'
+import type * as Href from './href.ts'
 import type { AST } from './ast.ts'
 
 describe('RoutePattern', () => {
@@ -234,6 +235,120 @@ describe('RoutePattern', () => {
         '://(staging.)example.com/api(/:version)',
         '://*/resources/:id(.json)',
         '://(staging.)example.com/api(/:version)/resources/:id(.json)',
+      )
+    })
+  })
+
+  describe('href', () => {
+    function assertHref(
+      pattern: string,
+      params: Record<string, string | number> | undefined,
+      expected: string,
+    ) {
+      assert.equal(RoutePattern.parse(pattern).href(params), expected)
+    }
+
+    function assertHrefWithSearch(
+      pattern: string,
+      params: Record<string, string | number> | undefined,
+      searchParams: Href.Params,
+      expected: string,
+    ) {
+      assert.equal(RoutePattern.parse(pattern).href(params, searchParams), expected)
+    }
+
+    function assertHrefThrows(
+      pattern: string,
+      params: Record<string, string | number> | undefined,
+      expected: RegExp,
+    ) {
+      assert.throws(
+        () => RoutePattern.parse(pattern).href(params),
+        (error: unknown) => {
+          return error instanceof Error && expected.test(error.message)
+        },
+      )
+    }
+
+    test('pathname only', () => {
+      assertHref('/posts/:id', { id: '123' }, '/posts/123')
+      assertHref('posts/:id', { id: '123' }, '/posts/123')
+      assertHref('/posts(/:id)', { id: '123' }, '/posts/123')
+      assertHref('/posts(/:id)', undefined, '/posts')
+      assertHref('*://*/posts/:id', { id: '123' }, '/posts/123')
+    })
+
+    test('with origin - protocol defaults to https', () => {
+      assertHref('://example.com/path', undefined, 'https://example.com/path')
+      assertHref('://:host/path', { host: 'example.com' }, 'https://example.com/path')
+      assertHref(
+        '://:host/posts/:id',
+        { host: 'example.com', id: '123' },
+        'https://example.com/posts/123',
+      )
+    })
+
+    test('with origin - explicit protocol', () => {
+      assertHref('http://example.com/path', undefined, 'http://example.com/path')
+      assertHref('https://example.com/posts/:id', { id: '123' }, 'https://example.com/posts/123')
+      assertHref('*proto://example.com/path', { proto: 'ftp' }, 'ftp://example.com/path')
+    })
+
+    test('with origin - port', () => {
+      assertHref('://example.com:8080/path', undefined, 'https://example.com:8080/path')
+      assertHref('http://example.com:3000/path', undefined, 'http://example.com:3000/path')
+      assertHref('://:host:8080/path', { host: 'localhost' }, 'https://localhost:8080/path')
+    })
+
+    test('origin validation - hostname required when protocol specified', () => {
+      assertHrefThrows('https://*/path', undefined, /\[href\] missing hostname/)
+      assertHrefThrows('*proto://*/path', { proto: 'https' }, /\[href\] missing hostname/)
+      assertHrefThrows('http://*host/path', undefined, /\[href\] invalid parameters/)
+    })
+
+    test('origin validation - hostname required when port specified', () => {
+      assertHrefThrows('://:8080/path', undefined, /\[href\] missing hostname/)
+      assertHrefThrows('*://*:3000/path', undefined, /\[href\] missing hostname/)
+    })
+
+    test('search params', () => {
+      assertHref('/posts?filter', undefined, '/posts?filter=')
+      assertHrefWithSearch('/posts?filter', undefined, { filter: 'active' }, '/posts?filter=active')
+      assertHref('/posts?sort=asc', undefined, '/posts?sort=asc')
+      assertHrefWithSearch(
+        '/posts?sort=asc',
+        undefined,
+        { sort: 'desc' },
+        '/posts?sort=desc&sort=asc',
+      )
+      assertHrefThrows('/posts?filter=', undefined, /\[href\] missing required search param/)
+      assertHrefWithSearch(
+        '/posts?filter=',
+        undefined,
+        { filter: 'active' },
+        '/posts?filter=active',
+      )
+      assertHrefWithSearch('/posts?sort=asc', undefined, { page: '2' }, '/posts?page=2&sort=asc')
+      assertHref('/posts?tag=foo&tag=bar', undefined, '/posts?tag=foo&tag=bar')
+      assertHrefWithSearch(
+        '/posts?tag=foo&tag=bar',
+        undefined,
+        { tag: ['baz', 'qux'] },
+        '/posts?tag=baz&tag=qux&tag=foo&tag=bar',
+      )
+      assertHrefWithSearch(
+        '/posts',
+        undefined,
+        { category: ['books', 'electronics'] },
+        '/posts?category=books&category=electronics',
+      )
+      // Deduplication: user provides same value as pattern
+      assertHrefWithSearch('/posts?tag=foo', undefined, { tag: 'foo' }, '/posts?tag=foo')
+      assertHrefWithSearch(
+        '/posts?tag=foo&tag=bar',
+        undefined,
+        { tag: 'foo' },
+        '/posts?tag=foo&tag=bar',
       )
     })
   })
