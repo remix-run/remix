@@ -1,8 +1,7 @@
 import * as assert from 'node:assert/strict'
 import test, { describe } from 'node:test'
-import { RoutePattern } from './route-pattern.ts'
-import type * as Href from './href.ts'
-import type { AST } from './ast.ts'
+import { RoutePattern, type AST } from './route-pattern.ts'
+import type * as Search from './search.ts'
 
 describe('RoutePattern', () => {
   describe('parse', () => {
@@ -251,7 +250,7 @@ describe('RoutePattern', () => {
     function assertHrefWithSearch(
       pattern: string,
       params: Record<string, string | number> | undefined,
-      searchParams: Href.Params,
+      searchParams: Search.HrefParams,
       expected: string,
     ) {
       assert.equal(RoutePattern.parse(pattern).href(params, searchParams), expected)

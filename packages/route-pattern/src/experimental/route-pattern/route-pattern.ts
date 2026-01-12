@@ -1,9 +1,15 @@
-import type { AST } from './ast.ts'
 import { split } from './split.ts'
-import * as Join from './join.ts'
-import * as Parse from './parse.ts'
-import * as Href from './href.ts'
+import * as Pathname from './pathname.ts'
+import * as Search from './search.ts'
 import { PartPattern } from '../part-pattern.ts'
+
+export type AST = {
+  protocol: PartPattern
+  hostname: PartPattern
+  port: string | null
+  pathname: PartPattern
+  search: Search.Constraints
+}
 
 export class RoutePattern {
   readonly ast: AST
@@ -26,7 +32,7 @@ export class RoutePattern {
       pathname: spans.pathname
         ? PartPattern.parse(source, spans.pathname)
         : PartPattern.parse('', [0, 0]),
-      search: spans.search ? Parse.search(source.slice(...spans.search)) : new Map(),
+      search: spans.search ? Search.parse(source.slice(...spans.search)) : new Map(),
     })
   }
 
@@ -35,12 +41,12 @@ export class RoutePattern {
       protocol: isNamelessWildcard(other.ast.protocol) ? this.ast.protocol : other.ast.protocol,
       hostname: isNamelessWildcard(other.ast.hostname) ? this.ast.hostname : other.ast.hostname,
       port: other.ast.port ?? this.ast.port,
-      pathname: Join.pathname(this.ast.pathname, other.ast.pathname),
-      search: Join.search(this.ast.search, other.ast.search),
+      pathname: Pathname.join(this.ast.pathname, other.ast.pathname),
+      search: Search.join(this.ast.search, other.ast.search),
     })
   }
 
-  href(params?: Record<string, string | number>, searchParams?: Href.Params): string {
+  href(params?: Record<string, string | number>, searchParams?: Search.HrefParams): string {
     params ??= {}
     searchParams ??= {}
 
@@ -64,7 +70,7 @@ export class RoutePattern {
     let pathname = this.ast.pathname.href(params)
     result += '/' + pathname
 
-    let search = Href.search(this.ast.search, searchParams)
+    let search = Search.href(this.ast.search, searchParams)
     if (search) result += `?${search}`
 
     return result
