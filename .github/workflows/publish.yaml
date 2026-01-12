@@ -1,18 +1,44 @@
+name: Publish
+
 on:
   push:
-    tags:
-      - '[a-z]+@[0-9]+.[0-9]+.[0-9]+'
-      - '[a-z]+-[a-z]+@[0-9]+.[0-9]+.[0-9]+'
-      - '[a-z]+-[a-z]+-[a-z]+@[0-9]+.[0-9]+.[0-9]+'
-      - '!remix@2.*' # Ignore remix@2.x.x tags
-      - '!create-remix@2.*' # Ignore create-remix@2.x.x tags
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    outputs:
+      has_change_files: ${{ steps.check.outputs.has_change_files }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for change files
+        id: check
+        run: |
+          # Look for change files in any package's .changes directory (excluding README.md)
+          change_files=$(find packages/*/.changes -name "*.md" ! -name "README.md" 2>/dev/null)
+          if [ -n "$change_files" ]; then
+            echo "Change files found (blocking publish):"
+            echo "$change_files"
+            echo "has_change_files=true" >> $GITHUB_OUTPUT
+          else
+            echo "No change files found, proceeding to publish."
+            echo "has_change_files=false" >> $GITHUB_OUTPUT
+          fi
+
   publish:
+    name: Publish to npm
+    needs: check
+    if: needs.check.outputs.has_change_files == 'false'
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write # Required for publishing the GitHub release
+      contents: write # Required for creating tags and GitHub releases
       id-token: write # OIDC ID token is used for authentication with npm/jsr
 
     steps:
@@ -52,27 +78,7 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      - name: Parse package name from tag
-        id: parse_tag
-        run: |
-          TAG="${{ github.ref_name }}"
-          SHORT_PACKAGE_NAME="${TAG%@*}"
-          PACKAGE_VERSION="${TAG##*@}"
-
-          # The "remix" package is unscoped, all others are under @remix-run/
-          if [ "$SHORT_PACKAGE_NAME" = "remix" ]; then
-            PACKAGE_NAME="${SHORT_PACKAGE_NAME}"
-          else
-            PACKAGE_NAME="@remix-run/${SHORT_PACKAGE_NAME}"
-          fi
-
-          echo "package_name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
-          echo "package_version=${PACKAGE_VERSION}" >> $GITHUB_OUTPUT
-
-      - name: Publish to npm
-        run: pnpm publish --filter "${{ steps.parse_tag.outputs.package_name }}" --access public --no-git-checks
-
-      - name: Create GitHub Release
-        run: node ./scripts/create-github-release.ts ${{ github.ref_name }}
+      - name: Publish to npm and create releases
+        run: node ./scripts/publish.ts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

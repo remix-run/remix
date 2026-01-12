@@ -48,7 +48,7 @@ function main() {
   for (let release of releases) {
     console.log(colorize(`${release.packageName}/CHANGELOG.md:`, colors.gray))
     console.log()
-    console.log(generateChangelogContent(release, now))
+    console.log(generateChangelogContent(release, { date: now }))
   }
 
   console.log(colorize('COMMIT MESSAGE', colors.lightBlue))

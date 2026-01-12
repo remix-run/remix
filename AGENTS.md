@@ -50,5 +50,7 @@
   - **Breaking changes are relative to main**: If you introduce a new API in a PR and then change it within the same PR before merging, that's not considered a breaking change.
 - **Validating changes**: `pnpm changes:validate` checks that all change files follow the correct naming convention and format.
 - **Previewing releases**: `pnpm changes:preview` shows which packages will be released, what the CHANGELOG will look like, the commit message and tags.
-- **Versioning releases**: `pnpm changes:version` updates package.json, CHANGELOG.md, creates a git commit and tags. Don't run this unless explicitly instructed to do so. We don't want accidental releases during development.
-- **Test change/release code with preview scripts**: When modifying any change/release code, run `pnpm changes:preview` and `pnpm create-github-release:preview` to test locally.
+- **Automated releases**: When changes are pushed to `main`, the [changes-version-pr workflow](/.github/workflows/changes-version-pr.yaml) automatically opens/updates a "Version Packages" PR. The [publish workflow](/.github/workflows/publish.yaml) runs on every push to `main` and publishes when no change files are present (i.e., after merging the Version Packages PR).
+- **Manual releases**: `pnpm changes:version` updates package.json, CHANGELOG.md, and creates a git commit. Push to `main` and the publish workflow will handle the rest (including tags and GitHub releases).
+- **How publishing works**: The publish workflow checks for change files. If none exist, it runs `pnpm publish --recursive --report-summary`, reads the summary JSON to see what was published, then creates git tags and GitHub releases for each published package.
+- **Test change/release code with preview scripts**: When modifying any change/release code, run `pnpm changes:preview` to test locally. For the version PR script, run `node ./scripts/changes-version-pr.ts --preview`.

@@ -25,8 +25,6 @@
     "changes:version": "node ./scripts/changes-version.ts",
     "clean": "git clean -fdX -e '!/.env' .",
     "codegen": "pnpm -r run codegen",
-    "create-github-release": "node --env-file .env ./scripts/create-github-release.ts",
-    "create-github-release:preview": "node ./scripts/create-github-release.ts --preview",
     "docs": "rm -rf docs/api && node docs/generate.ts",
     "docs:serve": "node docs/server.ts",
     "format": "prettier --write .",
