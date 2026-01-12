@@ -258,7 +258,7 @@ Date: 2026-01-12
 
 ### Patch Changes
 
-- Update internal React Router versions
+- Update internal React Router versions to pick up security patches in [6.30.3](https://github.com/remix-run/react-router/blob/main/CHANGELOG.md#v6303)
 
 ### Updated Dependencies
 
