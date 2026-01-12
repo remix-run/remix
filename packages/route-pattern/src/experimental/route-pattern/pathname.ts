@@ -1,7 +1,6 @@
 /* eslint-disable jsdoc/require-param */
 /* eslint-disable jsdoc/require-returns */
 import { PartPattern } from '../part-pattern.ts'
-import type { AST } from './ast.ts'
 
 /**
  * Joins two pathnames, adding `/` at the join point unless already present.
@@ -16,7 +15,7 @@ import type { AST } from './ast.ts'
  * pathname('(a/)', '(/b)') -> '(a/)/(/b)'
  * ```
  */
-export function pathname(a: PartPattern, b: PartPattern): PartPattern {
+export function join(a: PartPattern, b: PartPattern): PartPattern {
   if (a.tokens.length === 0) return b
   if (b.tokens.length === 0) return a
 
@@ -78,41 +77,4 @@ export function pathname(a: PartPattern, b: PartPattern): PartPattern {
   }
 
   return new PartPattern({ tokens, paramNames, optionals })
-}
-
-/**
- * Joins two search patterns, merging params and their constraints.
- *
- * Conceptually:
- *
- * ```ts
- * search('?a', '?b') -> '?a&b'
- * search('?a=1', '?a=2') -> '?a=1&a=2'
- * search('?a=1', '?b=2') -> '?a=1&b=2'
- * search('', '?a') -> '?a'
- * ```
- */
-export function search(a: AST['search'], b: AST['search']): AST['search'] {
-  let result: AST['search'] = new Map()
-
-  for (let [name, constraint] of a) {
-    result.set(name, constraint === null ? null : new Set(constraint))
-  }
-
-  for (let [name, constraint] of b) {
-    let current = result.get(name)
-
-    if (current === null || current === undefined) {
-      result.set(name, constraint === null ? null : new Set(constraint))
-      continue
-    }
-
-    if (constraint !== null) {
-      for (let value of constraint) {
-        current.add(value)
-      }
-    }
-  }
-
-  return result
 }

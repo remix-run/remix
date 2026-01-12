@@ -201,6 +201,34 @@ export class PartPattern {
     }
     return result
   }
+
+  href(params: Record<string, string | number>): string {
+    let best: Variant | undefined
+    for (let variant of this.variants) {
+      let matches = variant.paramNames.every((param) => params[param] !== undefined)
+      if (matches) {
+        let isBest =
+          !best ||
+          variant.paramNames.length > best.paramNames.length ||
+          (variant.paramNames.length === best.paramNames.length &&
+            variant.key.length > best.key.length)
+
+        if (isBest) {
+          best = variant
+        }
+      }
+    }
+
+    if (!best) {
+      throw new Error('todo: [href] invalid parameters')
+    }
+
+    let result = best.key
+    for (let paramName of best.paramNames) {
+      result = result.replace(/\{[:\*]\}/, String(params[paramName]))
+    }
+    return result
+  }
 }
 
 function unrecognized(tokenType: never) {
