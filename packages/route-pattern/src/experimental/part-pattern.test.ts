@@ -259,17 +259,9 @@ describe('PartPattern', () => {
       assert.equal(result, expected)
     }
 
-    function assertHrefThrows(
-      pattern: string,
-      params: Record<string, string | number> | undefined,
-      expected: RegExp,
-    ) {
-      assert.throws(
-        () => PartPattern.parse(pattern).href(params ?? {}),
-        (error: unknown) => {
-          return error instanceof Error && expected.test(error.message)
-        },
-      )
+    function assertHrefNull(pattern: string, params: Record<string, string | number> | undefined) {
+      let result = PartPattern.parse(pattern).href(params ?? {})
+      assert.equal(result, null)
     }
 
     test('text', () => {
@@ -286,7 +278,7 @@ describe('PartPattern', () => {
       assertHref('/posts/:id', { id: '123' }, '/posts/123')
       assertHref('/posts/:id', { id: 123 }, '/posts/123')
       assertHref('/posts/:id', { id: '123', extra: 'ignored', foo: 'bar' }, '/posts/123')
-      assertHrefThrows('/posts/:id', undefined, /\[href\] invalid parameters/)
+      assertHrefNull('/posts/:id', undefined)
     })
 
     test('optional variable', () => {
@@ -300,7 +292,7 @@ describe('PartPattern', () => {
       assertHref('/files/*path', { path: 'a/b/c' }, '/files/a/b/c')
       assertHref('/files/*path', { path: 123 }, '/files/123')
       assertHref('/files/*path', { path: 'a/b/c', extra: 'ignored', foo: 'bar' }, '/files/a/b/c')
-      assertHrefThrows('/files/*path', undefined, /\[href\] invalid parameters/)
+      assertHrefNull('/files/*path', undefined)
     })
 
     test('optional wildcard', () => {
@@ -333,8 +325,8 @@ describe('PartPattern', () => {
       assertHref(':a(:b)-:a(:c)', { a: 1, b: 2 }, '12-1')
       assertHref(':a(:b)-:a(:c)', { a: 1, c: 3 }, '1-13')
       assertHref(':a(:b)-:a(:c)', { a: 1, b: 2, c: 3 }, '12-13')
-      assertHrefThrows(':a(:b)-:a(:c)', { b: 'thing' }, /\[href\] invalid parameters/)
-      assertHrefThrows(':c(:b)-:a(:b)', { b: 'thing' }, /\[href\] invalid parameters/)
+      assertHrefNull(':a(:b)-:a(:c)', { b: 'thing' })
+      assertHrefNull(':c(:b)-:a(:b)', { b: 'thing' })
     })
   })
 })

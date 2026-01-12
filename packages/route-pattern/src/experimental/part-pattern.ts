@@ -1,4 +1,4 @@
-import { ParseError } from './errors.ts'
+import { ParseError, unreachable } from './errors.ts'
 import type { Span } from './span.ts'
 
 type AST = {
@@ -170,7 +170,7 @@ export class PartPattern {
         continue
       }
 
-      throw unrecognized(token.type)
+      unreachable(token.type)
     }
 
     this.#variants = result
@@ -197,12 +197,16 @@ export class PartPattern {
         continue
       }
 
-      throw unrecognized(token.type)
+      unreachable(token.type)
     }
     return result
   }
 
-  href(params: Record<string, string | number>): string {
+  /**
+   * @param params The parameters to substitute into the pattern.
+   * @returns The href (URL) for the given params, or null if no variant matches.
+   */
+  href(params: Record<string, string | number>): string | null {
     let best: Variant | undefined
     for (let variant of this.variants) {
       let matches = variant.paramNames.every((param) => params[param] !== undefined)
@@ -219,9 +223,7 @@ export class PartPattern {
       }
     }
 
-    if (!best) {
-      throw new Error('todo: [href] invalid parameters')
-    }
+    if (!best) return null
 
     let result = best.key
     for (let paramName of best.paramNames) {
@@ -229,8 +231,4 @@ export class PartPattern {
     }
     return result
   }
-}
-
-function unrecognized(tokenType: never) {
-  return new Error(`Unrecognized token type '${tokenType}'`)
 }
