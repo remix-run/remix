@@ -2,6 +2,7 @@ import { split } from './split.ts'
 import * as Pathname from './pathname.ts'
 import * as Search from './search.ts'
 import { PartPattern } from '../part-pattern.ts'
+import { HrefError } from '../errors.ts'
 
 export type AST = {
   protocol: PartPattern
@@ -89,19 +90,29 @@ export class RoutePattern {
 
     let needsOrigin = !isDefaultProtocol || !isDefaultHostname || !isDefaultPort
     if (needsOrigin) {
-      let protocol = isDefaultProtocol ? 'https' : this.ast.protocol.href(params)
+      // protocol
+      let protocol = isDefaultProtocol ? 'https' : hrefOrThrow(this, 'protocol', params)
+
+      // hostname
       if (isDefaultHostname) {
-        throw new Error('todo: [href] missing hostname')
+        throw new HrefError({
+          type: 'missing-hostname',
+          pattern: this,
+        })
       }
-      let hostname = this.ast.hostname.href(params)
+      let hostname = hrefOrThrow(this, 'hostname', params)
+
+      // port
       let port = isDefaultPort ? '' : `:${this.ast.port}`
       result += `${protocol}://${hostname}${port}`
     }
 
-    let pathname = this.ast.pathname.href(params)
+    // pathname
+    let pathname = hrefOrThrow(this, 'pathname', params)
     result += '/' + pathname
 
-    let search = Search.href(this.ast.search, searchParams)
+    // search
+    let search = Search.href(this, searchParams)
     if (search) result += `?${search}`
 
     return result
@@ -114,4 +125,21 @@ function isNamelessWildcard(part: PartPattern): boolean {
   if (token.type !== '*') return false
   let name = part.paramNames[token.nameIndex]
   return name === '*'
+}
+
+function hrefOrThrow(
+  pattern: RoutePattern,
+  partName: 'protocol' | 'hostname' | 'pathname',
+  params: Record<string, string | number>,
+): string {
+  let result = pattern.ast[partName].href(params)
+  if (result === null) {
+    throw new HrefError({
+      type: 'missing-params',
+      pattern,
+      part: partName,
+      params,
+    })
+  }
+  return result
 }
