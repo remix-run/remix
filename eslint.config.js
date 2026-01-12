@@ -67,9 +67,13 @@ export default [
           message: "Use native class fields: omit 'public' and use '#private' for private state.",
         },
         {
-          selector: 'MethodDefinition[accessibility]',
+          selector: 'MethodDefinition[accessibility]:not([kind="constructor"])',
           message:
             "Use native methods: omit 'public'; for private behavior use '#private' fields/methods.",
+        },
+        {
+          selector: 'MethodDefinition[accessibility="public"][kind="constructor"]',
+          message: "Omit 'public' on constructors; it's the default.",
         },
         {
           selector: 'TSParameterProperty[accessibility]',
