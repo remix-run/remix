@@ -1,5 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import * as semver from 'semver'
 import { getAllPackageNames, getPackageDir, getPackageFile } from './packages.ts'
 import { fileExists, readFile, readJson } from './fs.ts'
 import { getNextVersion } from './semver.ts'
@@ -89,6 +90,13 @@ export function validatePackageChanges(packageName: string): ValidationError[] {
     })
   }
 
+  // Get package version to determine if v1+ or v0.x
+  let packageJsonPath = getPackageFile(packageName, 'package.json')
+  let packageJson = readJson(packageJsonPath)
+  let currentVersion = packageJson.version as string
+  let majorVersion = semver.major(currentVersion)
+  let isV1Plus = majorVersion >= 1
+
   // Read all files in .changes directory
   let files = fs.readdirSync(changesDir)
 
@@ -140,6 +148,26 @@ export function validatePackageChanges(packageName: string): ValidationError[] {
           'Change file should not start with a bullet point (- or *). The bullet will be added automatically in the CHANGELOG. Just write the text directly.',
       })
       continue
+    }
+
+    // Validate breaking change prefix matches the correct bump type
+    let bump = file.split('.')[0] as 'major' | 'minor' | 'patch'
+    let isBreakingChange = hasBreakingChangePrefix(content)
+
+    if (isBreakingChange) {
+      if (isV1Plus && bump !== 'major') {
+        errors.push({
+          package: packageName,
+          file,
+          error: `Breaking changes in v1+ packages must use "major." prefix (current version: ${currentVersion}). Rename to "major.${file.slice(file.indexOf('.') + 1)}"`,
+        })
+      } else if (!isV1Plus && bump !== 'minor') {
+        errors.push({
+          package: packageName,
+          file,
+          error: `Breaking changes in v0.x packages must use "minor." prefix (current version: ${currentVersion}). Rename to "minor.${file.slice(file.indexOf('.') + 1)}"`,
+        })
+      }
     }
   }
 
