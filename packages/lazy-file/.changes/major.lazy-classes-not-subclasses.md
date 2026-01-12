@@ -1,4 +1,4 @@
-BREAKING CHANGE: `LazyFile` and `LazyBlob` no longer extend native `File` and `Blob`
+`LazyFile` and `LazyBlob` no longer extend native `File` and `Blob`
 
 Some runtimes (like Bun) bypass the JavaScript layer when accessing `File`/`Blob` internals, leading to issues with missing content due to the lazy loading behavior. `LazyFile` and `LazyBlob` now implement the same interface as their native counterparts but are standalone classes.
 
