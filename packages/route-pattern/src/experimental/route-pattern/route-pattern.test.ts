@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import test, { describe } from 'node:test'
 import { RoutePattern, type AST } from './route-pattern.ts'
 import type * as Search from './search.ts'
+import { HrefError } from '../errors.ts'
 
 describe('RoutePattern', () => {
   describe('parse', () => {
@@ -395,12 +396,12 @@ describe('RoutePattern', () => {
     function assertHrefThrows(
       pattern: string,
       params: Record<string, string | number> | undefined,
-      expected: RegExp,
+      errorType: HrefError['details']['type'],
     ) {
       assert.throws(
         () => RoutePattern.parse(pattern).href(params),
         (error: unknown) => {
-          return error instanceof Error && expected.test(error.message)
+          return error instanceof HrefError && error.details.type === errorType
         },
       )
     }
@@ -436,14 +437,14 @@ describe('RoutePattern', () => {
     })
 
     test('origin validation - hostname required when protocol specified', () => {
-      assertHrefThrows('https://*/path', undefined, /\[href\] missing hostname/)
-      assertHrefThrows('*proto://*/path', { proto: 'https' }, /\[href\] missing hostname/)
-      assertHrefThrows('http://*host/path', undefined, /\[href\] invalid parameters/)
+      assertHrefThrows('https://*/path', undefined, 'missing-hostname')
+      assertHrefThrows('*proto://*/path', { proto: 'https' }, 'missing-hostname')
+      assertHrefThrows('http://*host/path', undefined, 'missing-params')
     })
 
     test('origin validation - hostname required when port specified', () => {
-      assertHrefThrows('://:8080/path', undefined, /\[href\] missing hostname/)
-      assertHrefThrows('*://*:3000/path', undefined, /\[href\] missing hostname/)
+      assertHrefThrows('://:8080/path', undefined, 'missing-hostname')
+      assertHrefThrows('*://*:3000/path', undefined, 'missing-hostname')
     })
 
     test('search params', () => {
@@ -456,7 +457,7 @@ describe('RoutePattern', () => {
         { sort: 'desc' },
         '/posts?sort=desc&sort=asc',
       )
-      assertHrefThrows('/posts?filter=', undefined, /\[href\] missing required search param/)
+      assertHrefThrows('/posts?filter=', undefined, 'missing-search-params')
       assertHrefWithSearch(
         '/posts?filter=',
         undefined,
