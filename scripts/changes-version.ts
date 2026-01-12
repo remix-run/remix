@@ -2,11 +2,10 @@
  * Updates package.json versions, CHANGELOG.md files, and creates a release commit.
  *
  * Usage:
- *   pnpm changes:version [--tags] [--no-commit]
+ *   pnpm changes:version [--no-commit]
  *
  * Options:
- *   --tags       Also create git tags (default: no tags, publish workflow creates them)
- *   --no-commit  Only update files, don't commit (for manual review, incompatible with --tags)
+ *   --no-commit  Only update files, don't commit (for manual review)
  */
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -79,12 +78,6 @@ function deleteChangeFiles(packageName: string) {
  */
 function main() {
   let skipCommit = process.argv.includes('--no-commit')
-  let createTags = process.argv.includes('--tags') && !skipCommit
-
-  if (process.argv.includes('--tags') && skipCommit) {
-    console.error('Cannot use --tags with --no-commit (tags require a commit to point to)\n')
-    process.exit(1)
-  }
 
   console.log('Validating change files...\n')
 
@@ -157,36 +150,17 @@ function main() {
     logAndExec(`git commit -m "${commitMessage}"`)
     console.log()
 
-    // Optionally create tags
-    if (createTags) {
-      console.log('Creating tags...')
-      for (let release of releases) {
-        let tag = `${release.packageName}@${release.nextVersion}`
-        logAndExec(`git tag ${tag}`)
-        console.log(`  ✓ Created tag: ${tag}`)
-      }
-      console.log()
-    }
-
     // Success message (skip in CI since the workflow handles the rest)
     if (!process.env.CI) {
       console.log('═'.repeat(80))
       console.log('✅ RELEASE PREPARED')
       console.log('═'.repeat(80))
       console.log()
-      if (createTags) {
-        console.log('Release commit and tags have been created locally.')
-        console.log()
-        console.log('To publish, run:')
-        console.log()
-        console.log('  git push && git push --tags')
-      } else {
-        console.log('Release commit has been created locally.')
-        console.log()
-        console.log('To publish, push and the publish workflow will handle the rest:')
-        console.log()
-        console.log('  git push')
-      }
+      console.log('Release commit has been created locally.')
+      console.log()
+      console.log('To publish, push and the publish workflow will handle the rest:')
+      console.log()
+      console.log('  git push')
       console.log()
     }
   }

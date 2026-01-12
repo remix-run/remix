@@ -17,9 +17,14 @@ function auth() {
   return { headers: { authorization: `token ${getToken()}` } }
 }
 
+export type CreateReleaseResult =
+  | { status: 'created'; url: string }
+  | { status: 'skipped'; reason: string }
+  | { status: 'error'; error: string }
+
 /**
  * Creates a GitHub release for a package version.
- * Returns the release URL, or null if skipped (preview mode or already exists).
+ * Returns a result object indicating success, already exists, or error.
  */
 export async function createRelease(
   packageName: string,
@@ -27,13 +32,13 @@ export async function createRelease(
   options: {
     preview?: boolean
   } = {},
-): Promise<string | null> {
+): Promise<CreateReleaseResult> {
   let { preview = false } = options
 
   let tagName = `${packageName}@${version}`
   let releaseName = `${packageName} v${version}`
   let changes = getChangelogEntry(packageName, version)
-  let body = changes?.body ?? 'No changes.'
+  let body = changes?.body ?? 'No changelog entry found for this version.'
 
   if (preview) {
     console.log(`  Tag:  ${tagName}`)
@@ -45,7 +50,7 @@ export async function createRelease(
       console.log(`    ${line}`)
     }
     console.log()
-    return null
+    return { status: 'skipped', reason: 'Preview mode' }
   }
 
   // Check if release already exists
@@ -57,11 +62,12 @@ export async function createRelease(
       tag: tagName,
     })
     // Release exists, skip creation
-    return null
+    return { status: 'skipped', reason: 'Already exists' }
   } catch (error) {
     // Only proceed if release doesn't exist (404)
     if (!(error instanceof Error && 'status' in error && error.status === 404)) {
-      throw error
+      let message = error instanceof Error ? error.message : String(error)
+      return { status: 'error', error: message }
     }
   }
 
@@ -75,10 +81,10 @@ export async function createRelease(
       body,
     })
 
-    return response.data.html_url
+    return { status: 'created', url: response.data.html_url }
   } catch (error) {
-    console.error(`Failed to create release for ${tagName}:`, error)
-    process.exit(1)
+    let message = error instanceof Error ? error.message : String(error)
+    return { status: 'error', error: message }
   }
 }
 

@@ -106,7 +106,7 @@ Releases are automated via the [changes-version-pr workflow](/.github/workflows/
    - Updated `CHANGELOG.md` files
    - Deleted change files
 
-3. **When you merge the PR**, the publish workflow detects the release commit and publishes all versioned packages to npm, adds version tags to the commit, and publishes GitHub releases.
+3. **When you merge the PR**, the publish workflow runs (it runs on every push to `main` and checks for change files). Since the change files have been deleted, it publishes all unpublished packages to npm, then creates git tags and GitHub releases based on what was actually published.
 
 ### Manual Versioning
 
@@ -122,10 +122,4 @@ You can skip committing the changes by using the `--no-commit` flag.
 pnpm changes:version --no-commit
 ```
 
-You can also create tags locally by using the `--tags` flag.
-
-```sh
-pnpm changes:version --tags
-```
-
-Note that the publish workflow will create tags for release commits in main automatically. This is the preferred way to create tags.
+Tags and GitHub releases are created automatically by the publish workflow after successful npm publish.

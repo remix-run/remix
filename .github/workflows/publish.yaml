@@ -9,42 +9,32 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   check:
-    name: Check for release commit
+    name: Check
     runs-on: ubuntu-latest
     outputs:
-      is_release: ${{ steps.check.outputs.is_release }}
+      has_change_files: ${{ steps.check.outputs.has_change_files }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
-      - name: Check for release commit with version changes
+      - name: Check for change files
         id: check
         run: |
-          # Must be a Release commit
-          if ! git log -1 --format=%s | grep -q '^Release '; then
-            echo "is_release=false" >> $GITHUB_OUTPUT
-            exit 0
+          # Look for change files in any package's .changes directory (excluding README.md)
+          change_files=$(find packages/*/.changes -name "*.md" ! -name "README.md" 2>/dev/null)
+          if [ -n "$change_files" ]; then
+            echo "Change files found (blocking publish):"
+            echo "$change_files"
+            echo "has_change_files=true" >> $GITHUB_OUTPUT
+          else
+            echo "No change files found, proceeding to publish."
+            echo "has_change_files=false" >> $GITHUB_OUTPUT
           fi
-
-          # Must have actual version changes in package.json files
-          has_changes=false
-          for pkg in packages/*/package.json; do
-            current=$(git show HEAD:"$pkg" 2>/dev/null | grep '"version"' | head -1 || true)
-            previous=$(git show HEAD~1:"$pkg" 2>/dev/null | grep '"version"' | head -1 || true)
-            if [ -n "$current" ] && [ "$current" != "$previous" ]; then
-              has_changes=true
-              break
-            fi
-          done
-
-          echo "is_release=$has_changes" >> $GITHUB_OUTPUT
 
   publish:
     name: Publish to npm
     needs: check
-    if: needs.check.outputs.is_release == 'true'
+    if: needs.check.outputs.has_change_files == 'false'
     runs-on: ubuntu-latest
 
     permissions:
@@ -54,9 +44,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          # Fetch 2 commits so we can compare versions with parent commit
-          fetch-depth: 2
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -91,10 +78,7 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      - name: Publish to npm
-        run: pnpm publish --recursive --access public --no-git-checks
-
-      - name: Create tags and GitHub releases
+      - name: Publish to npm and create releases
         run: node ./scripts/publish.ts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
