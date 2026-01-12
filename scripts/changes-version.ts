@@ -101,8 +101,6 @@ function main() {
   console.log('═'.repeat(80))
   console.log()
 
-  let now = new Date()
-
   // Process each package
   for (let release of releases) {
     console.log(
@@ -114,7 +112,7 @@ function main() {
     updatePackageJson(release.packageName, release.nextVersion)
 
     // Update CHANGELOG.md
-    let changelogContent = generateChangelogContent(release, { date: now })
+    let changelogContent = generateChangelogContent(release)
     updateChangelog(release.packageName, changelogContent)
 
     // Delete change files

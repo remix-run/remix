@@ -246,8 +246,6 @@ export function formatChangelogEntry(content: string): string {
 }
 
 interface ChangelogContentOptions {
-  /** Date to include in the heading. If null, date is omitted. */
-  date?: Date | null
   /** Whether to include package name in heading. Default: false */
   includePackageName?: boolean
   /** Markdown heading level (2 = ##, 3 = ###). Default: 2 */
@@ -261,13 +259,12 @@ export function generateChangelogContent(
   release: PackageRelease,
   options: ChangelogContentOptions = {},
 ): string {
-  let { date = null, includePackageName = false, headingLevel = 2 } = options
+  let { includePackageName = false, headingLevel = 2 } = options
   let lines: string[] = []
 
   let headingPrefix = '#'.repeat(headingLevel)
   let packagePart = includePackageName ? `${release.packageName} ` : ''
-  let datePart = date ? ` (${date.toISOString().split('T')[0]})` : ''
-  lines.push(`${headingPrefix} ${packagePart}v${release.nextVersion}${datePart}`)
+  lines.push(`${headingPrefix} ${packagePart}v${release.nextVersion}`)
   lines.push('')
 
   // Sort changes alphabetically by filename, with breaking changes hoisted to the top
