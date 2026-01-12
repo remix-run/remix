@@ -110,13 +110,13 @@ Releases are automated via the [changes-version-pr workflow](/.github/workflows/
 
 ### Manual Versioning
 
-The "Version Packages" PR simply automates the `pnpm changes:version` command. If needed, you can run this command manually. This will update the `package.json` versions, `CHANGELOG.md` files, and delete the change files.
+The "Version Packages" PR simply automates the `pnpm changes:version` command. If needed, you can run this command manually. This will update the `package.json` versions, `CHANGELOG.md` files, and delete the change files. It will then commit the result.
 
 ```sh
 pnpm changes:version
 ```
 
-You can skip committing the changes by using the `--no-commit` flag.
+You can skip committing the changes by using the `--no-commit` flag. This will leave the changes in a staged state for you to review and commit manually. The command will also output the commit message that would have been used.
 
 ```sh
 pnpm changes:version --no-commit
