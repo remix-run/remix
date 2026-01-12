@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_REMIX_PAT }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
