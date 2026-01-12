@@ -5,6 +5,9 @@ import { getAllPackageNames, getPackageDir, getPackageFile } from './packages.ts
 import { fileExists, readFile, readJson } from './fs.ts'
 import { getNextVersion } from './semver.ts'
 
+export const bumpTypes = ['major', 'minor', 'patch'] as const
+export type BumpType = (typeof bumpTypes)[number]
+
 export interface ValidationError {
   package: string
   file: string
@@ -12,9 +15,13 @@ export interface ValidationError {
 }
 
 /**
- * Valid change file name pattern: (major|minor|patch).description.md
+ * Checks if a filename is a valid change file (e.g. "minor.add-feature.md")
  */
-const CHANGE_FILE_PATTERN = /^(major|minor|patch)\..+\.md$/
+function isValidChangeFileName(file: string): boolean {
+  if (!file.endsWith('.md')) return false
+  let [bump, ...rest] = file.slice(0, -3).split('.') // Remove .md and split
+  return bumpTypes.includes(bump as BumpType) && rest.length > 0
+}
 
 export interface ValidationResult {
   errorCount: number
@@ -104,23 +111,13 @@ export function validatePackageChanges(packageName: string): ValidationError[] {
   let changeFiles = files.filter((file) => file !== 'README.md')
 
   for (let file of changeFiles) {
-    // Check if it's a markdown file
-    if (!file.endsWith('.md')) {
-      errors.push({
-        package: packageName,
-        file,
-        error: 'Change files must have .md extension',
-      })
-      continue
-    }
-
-    // Check if it matches the required pattern
-    if (!CHANGE_FILE_PATTERN.test(file)) {
+    // Check if it has a valid format (e.g. "minor.add-feature.md")
+    if (!isValidChangeFileName(file)) {
       errors.push({
         package: packageName,
         file,
         error:
-          'Change file name must start with "major.", "minor.", or "patch." (e.g. "minor.add-feature.md")',
+          'Change file name must start with "major.", "minor.", or "patch." (e.g. "minor.add-feature.md") and use a ".md" extension',
       })
       continue
     }
@@ -151,7 +148,7 @@ export function validatePackageChanges(packageName: string): ValidationError[] {
     }
 
     // Validate breaking change prefix matches the correct bump type
-    let bump = file.split('.')[0] as 'major' | 'minor' | 'patch'
+    let bump = file.split('.')[0] as BumpType
     let isBreakingChange = hasBreakingChangePrefix(content)
 
     if (isBreakingChange) {
@@ -176,7 +173,7 @@ export function validatePackageChanges(packageName: string): ValidationError[] {
 
 export interface ChangeFile {
   file: string
-  bump: 'major' | 'minor' | 'patch'
+  bump: BumpType
   content: string
 }
 
@@ -194,19 +191,17 @@ export function getPackageChangeFiles(packageName: string): ChangeFile[] {
   let files = fs.readdirSync(changesDir)
   let changeFiles = files.filter((file) => file !== 'README.md' && file.endsWith('.md'))
 
-  return changeFiles
-    .filter((file) => CHANGE_FILE_PATTERN.test(file))
-    .map((file) => {
-      let filePath = path.join(changesDir, file)
-      let content = fs.readFileSync(filePath, 'utf-8').trim()
-      let bump = file.split('.')[0] as 'major' | 'minor' | 'patch'
+  return changeFiles.filter(isValidChangeFileName).map((file) => {
+    let filePath = path.join(changesDir, file)
+    let content = fs.readFileSync(filePath, 'utf-8').trim()
+    let bump = file.split('.')[0] as BumpType
 
-      return {
-        file,
-        bump,
-        content,
-      }
-    })
+    return {
+      file,
+      bump,
+      content,
+    }
+  })
 }
 
 /**
@@ -224,16 +219,14 @@ export interface PackageRelease {
   packageName: string
   currentVersion: string
   nextVersion: string
-  bump: 'major' | 'minor' | 'patch'
-  changes: Array<{ file: string; content: string }>
+  bump: BumpType
+  changes: Array<{ file: string; bump: BumpType; content: string }>
 }
 
 /**
  * Determines the highest severity bump type
  */
-export function getHighestBump(
-  bumps: Array<'major' | 'minor' | 'patch'>,
-): 'major' | 'minor' | 'patch' {
+export function getHighestBump(bumps: BumpType[]): BumpType {
   if (bumps.includes('major')) return 'major'
   if (bumps.includes('minor')) return 'minor'
   return 'patch'
@@ -281,6 +274,48 @@ interface ChangelogContentOptions {
 }
 
 /**
+ * Generates a section for a specific bump type (e.g., "### Major Changes")
+ */
+function generateBumpTypeSection(
+  changes: PackageRelease['changes'],
+  bumpType: BumpType,
+  subheadingLevel: number,
+): string | null {
+  let filtered = changes.filter((c) => c.bump === bumpType)
+
+  if (filtered.length === 0) {
+    return null
+  }
+
+  // Sort with breaking changes hoisted to top, then alphabetically by filename
+  let sorted = [...filtered].sort((a, b) => {
+    let aBreaking = hasBreakingChangePrefix(a.content)
+    let bBreaking = hasBreakingChangePrefix(b.content)
+    if (aBreaking !== bBreaking) return aBreaking ? -1 : 1
+    return a.file.localeCompare(b.file)
+  })
+
+  let lines: string[] = []
+  let subheadingPrefix = '#'.repeat(subheadingLevel)
+  let sectionTitle =
+    bumpType === 'major'
+      ? 'Major Changes'
+      : bumpType === 'minor'
+        ? 'Minor Changes'
+        : 'Patch Changes'
+
+  lines.push(`${subheadingPrefix} ${sectionTitle}`)
+  lines.push('')
+
+  for (let change of sorted) {
+    lines.push(formatChangelogEntry(change.content))
+    lines.push('')
+  }
+
+  return lines.join('\n')
+}
+
+/**
  * Generates changelog content for a package release
  */
 export function generateChangelogContent(
@@ -295,17 +330,14 @@ export function generateChangelogContent(
   lines.push(`${headingPrefix} ${packagePart}v${release.nextVersion}`)
   lines.push('')
 
-  // Sort changes alphabetically by filename, with breaking changes hoisted to the top
-  let sortedChanges = [...release.changes].sort((a, b) => {
-    let aBreaking = hasBreakingChangePrefix(a.content)
-    let bBreaking = hasBreakingChangePrefix(b.content)
-    if (aBreaking !== bBreaking) return aBreaking ? -1 : 1
-    return a.file.localeCompare(b.file)
-  })
+  let subheadingLevel = headingLevel + 1
 
-  for (let change of sortedChanges) {
-    lines.push(formatChangelogEntry(change.content))
-    lines.push('')
+  // Generate sections in order: major, minor, patch (skipping empty sections)
+  for (let bumpType of bumpTypes) {
+    let section = generateBumpTypeSection(release.changes, bumpType, subheadingLevel)
+    if (section) {
+      lines.push(section)
+    }
   }
 
   return lines.join('\n')
@@ -335,6 +367,7 @@ export function getAllReleases(): PackageRelease[] {
       bump,
       changes: changeFiles.map((cf) => ({
         file: cf.file,
+        bump: cf.bump,
         content: cf.content,
       })),
     })
