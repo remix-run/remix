@@ -29,8 +29,9 @@ export function generatePrBody(releases: PackageRelease[]): string {
 
 function generateHeader(): string {
   return [
-    `This PR was opened by the [changes-version-pr](https://github.com/remix-run/remix/blob/main/.github/workflows/changes-version-pr.yaml) workflow. ` +
-      `For more information, see [CONTRIBUTING.md](https://github.com/remix-run/remix/blob/main/CONTRIBUTING.md#releases).`,
+    'This PR is managed by the [`changes-version-pr`](https://github.com/remix-run/remix/blob/main/.github/workflows/changes-version-pr.yaml) workflow. ' +
+      'Do not edit it manually. ' +
+      'See [CONTRIBUTING.md](https://github.com/remix-run/remix/blob/main/CONTRIBUTING.md#releases) for more.',
   ].join('\n')
 }
 

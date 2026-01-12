@@ -106,6 +106,8 @@ Releases are automated via the [changes-version-pr workflow](/.github/workflows/
    - Updated `CHANGELOG.md` files
    - Deleted change files
 
+   This PR should not be edited manually. If you need to make changes, modify the change files and/or scripts in `main` to trigger an update to the PR.
+
 3. **When you merge the PR**, the publish workflow runs (it runs on every push to `main` and checks for change files). Since the change files have been deleted, it publishes all unpublished packages to npm, then creates git tags and GitHub releases based on what was actually published.
 
 ### Manual Versioning

@@ -380,13 +380,7 @@ export function getAllReleases(): PackageRelease[] {
  * Generates the commit message for all releases
  */
 export function generateCommitMessage(releases: PackageRelease[]): string {
-  // Subject line
-  let subject =
-    releases.length === 1
-      ? `Release ${releases[0].packageName}@${releases[0].nextVersion}`
-      : `Release ${releases.map((r) => `${r.packageName}@${r.nextVersion}`).join(', ')}`
-
-  // Body with version changes
+  let subject = 'Version Packages'
   let body = releases
     .map((r) => `- ${r.packageName}: ${r.currentVersion} -> ${r.nextVersion}`)
     .join('\n')
