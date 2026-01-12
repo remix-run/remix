@@ -248,4 +248,93 @@ describe('PartPattern', () => {
       }
     })
   })
+
+  describe('href', () => {
+    function assertHref(
+      pattern: string,
+      params: Record<string, string | number> | undefined,
+      expected: string,
+    ) {
+      let result = PartPattern.parse(pattern).href(params ?? {})
+      assert.equal(result, expected)
+    }
+
+    function assertHrefThrows(
+      pattern: string,
+      params: Record<string, string | number> | undefined,
+      expected: RegExp,
+    ) {
+      assert.throws(
+        () => PartPattern.parse(pattern).href(params ?? {}),
+        (error: unknown) => {
+          return error instanceof Error && expected.test(error.message)
+        },
+      )
+    }
+
+    test('text', () => {
+      assertHref('/posts', undefined, '/posts')
+      assertHref('/posts', { extra: 'ignored', foo: 'bar' }, '/posts')
+    })
+
+    test('optional text', () => {
+      assertHref('hello(-world)', undefined, 'hello-world')
+      assertHref('hello(-world)', { extra: 'ignored', foo: 'bar' }, 'hello-world')
+    })
+
+    test('variable', () => {
+      assertHref('/posts/:id', { id: '123' }, '/posts/123')
+      assertHref('/posts/:id', { id: 123 }, '/posts/123')
+      assertHref('/posts/:id', { id: '123', extra: 'ignored', foo: 'bar' }, '/posts/123')
+      assertHrefThrows('/posts/:id', undefined, /\[href\] invalid parameters/)
+    })
+
+    test('optional variable', () => {
+      assertHref('/posts(/:id)', undefined, '/posts')
+      assertHref('/posts(/:id)', { id: '123' }, '/posts/123')
+      assertHref('/posts(/:id)', { id: 123 }, '/posts/123')
+      assertHref('/posts(/:id)', { id: '123', extra: 'ignored', foo: 'bar' }, '/posts/123')
+    })
+
+    test('wildcard', () => {
+      assertHref('/files/*path', { path: 'a/b/c' }, '/files/a/b/c')
+      assertHref('/files/*path', { path: 123 }, '/files/123')
+      assertHref('/files/*path', { path: 'a/b/c', extra: 'ignored', foo: 'bar' }, '/files/a/b/c')
+      assertHrefThrows('/files/*path', undefined, /\[href\] invalid parameters/)
+    })
+
+    test('optional wildcard', () => {
+      assertHref('/files/(*path)', undefined, '/files/')
+      assertHref('/files/(*path)', { path: 'a/b/c' }, '/files/a/b/c')
+      assertHref('/files/(*path)', { path: 123 }, '/files/123')
+      assertHref('/files/(*path)', { path: 'a/b/c', extra: 'ignored', foo: 'bar' }, '/files/a/b/c')
+    })
+
+    test('nested optionals', () => {
+      assertHref(':a/(:b/(:c/))', { a: 'x', b: 'some', c: 'thing' }, 'x/some/thing/')
+      assertHref(
+        ':a/(:b/(:c/))',
+        { a: 'x', b: 'some', c: 'thing', extra: 'ignored', foo: 'bar' },
+        'x/some/thing/',
+      )
+      assertHref(':a/(:b/(:c/))', { a: 'x', b: 'some' }, 'x/some/')
+      assertHref(':a/(:b/(:c/))', { a: 'x', c: 'thing' }, 'x/')
+    })
+
+    test('independent params', () => {
+      assertHref('(:a)(:b)', { a: 'x', b: 'y' }, 'xy')
+      assertHref('(:a)(:b)', { a: 'x' }, 'x')
+      assertHref('(:a)(:b)', { b: 'y' }, 'y')
+      assertHref('(:a)(:b)', { a: 'x', b: 'y', extra: 'ignored', foo: 'bar' }, 'xy')
+      assertHref('(:a)(:b)', undefined, '')
+    })
+
+    test('dependent params', () => {
+      assertHref(':a(:b)-:a(:c)', { a: 1, b: 2 }, '12-1')
+      assertHref(':a(:b)-:a(:c)', { a: 1, c: 3 }, '1-13')
+      assertHref(':a(:b)-:a(:c)', { a: 1, b: 2, c: 3 }, '12-13')
+      assertHrefThrows(':a(:b)-:a(:c)', { b: 'thing' }, /\[href\] invalid parameters/)
+      assertHrefThrows(':c(:b)-:a(:b)', { b: 'thing' }, /\[href\] invalid parameters/)
+    })
+  })
 })
