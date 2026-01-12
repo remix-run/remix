@@ -16,5 +16,3 @@ export class ParseError extends Error {
     this.index = index
   }
 }
-
-export class InternalError extends Error {}
