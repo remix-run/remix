@@ -18,9 +18,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          # Use bot token so pushes trigger other workflows
-          token: ${{ secrets.GH_BOT_TOKEN }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -37,4 +34,4 @@ jobs:
       - name: Update PR
         run: node scripts/changes-version-pr.ts
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_REMIX_PAT }}
