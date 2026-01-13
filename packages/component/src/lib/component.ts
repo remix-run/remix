@@ -110,10 +110,10 @@ export interface Handle<C = Record<string, never>> {
  */
 export type NoContext = Record<string, never>
 
-export type Component<Context = NoContext, Setup = undefined, RenderProps = ElementProps> = (
+export type Component<Context = NoContext, Setup = undefined, Props = ElementProps> = (
   handle: Handle<Context>,
   setup: Setup,
-) => (props: RenderProps) => RemixNode
+) => (props: Props) => RemixNode
 
 export type ContextFrom<ComponentType> =
   ComponentType extends Component<infer Provided, any, any>
@@ -146,8 +146,8 @@ export interface FrameProps {
 export type ComponentFn<
   Context = NoContext,
   Setup = undefined,
-  RenderProps = Record<string, never>,
-> = (handle: Handle<Context>, setup: Setup) => RenderFn<RenderProps>
+  Props = Record<string, never>,
+> = (handle: Handle<Context>, setup: Setup) => RenderFn<Props>
 
 export type RenderFn<P = {}> = (props: P) => RemixNode
 
@@ -252,14 +252,14 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
 
     if (!getContent) {
       // Extract setup prop (passed to component setup function, not render)
-      let { setup, ...renderProps } = props as { setup?: unknown }
+      let { setup, ...propsWithoutSetup } = props as { setup?: unknown }
       let result = config.type(handle, setup)
       if (typeof result !== 'function') {
         let name = config.type.name || 'Anonymous'
         throw new Error(`${name} must return a render function, received ${typeof result}`)
       } else {
         getContent = (props) => {
-          // Strip setup from render props since it's only for setup
+          // Strip setup from props since it's only for setup
           let { setup: _, ...rest } = props as { setup?: unknown }
           return result(rest)
         }

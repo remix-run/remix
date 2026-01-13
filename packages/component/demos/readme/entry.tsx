@@ -76,7 +76,7 @@ function CounterWithSetup(handle: Handle, setup: number) {
 }
 
 // ============================================================================
-// Setup Props vs Render Props - CounterWithLabel
+// Setup Prop vs Props - CounterWithLabel
 // ============================================================================
 function CounterWithLabel(handle: Handle, setup: number) {
   let count = setup // use setup for initialization
@@ -140,6 +140,49 @@ function SearchInput(handle: Handle) {
         </ul>
       )}
     </div>
+  )
+}
+
+// ============================================================================
+// Controlled Input - Slug Form
+// ============================================================================
+function SlugForm(handle: Handle) {
+  let slug = ''
+  let generatedSlug = ''
+
+  return () => (
+    <form>
+      <label css={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <input
+          type="checkbox"
+          on={{
+            change: (event) => {
+              if (event.currentTarget.checked) {
+                generatedSlug = crypto.randomUUID().slice(0, 8)
+              } else {
+                generatedSlug = ''
+              }
+              handle.update()
+            },
+          }}
+        />
+        Auto-generate slug
+      </label>
+      <label css={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        Slug
+        <input
+          type="text"
+          value={generatedSlug || slug}
+          disabled={!!generatedSlug}
+          on={{
+            input: (event) => {
+              slug = event.currentTarget.value
+              handle.update()
+            },
+          }}
+        />
+      </label>
+    </form>
   )
 }
 
@@ -568,12 +611,16 @@ function DemoApp(handle: Handle) {
         <CounterWithSetup setup={10} label="Total" />
       </Example>
 
-      <Example title="Setup vs Render Props">
+      <Example title="Setup vs Props">
         <CounterWithLabel setup={5} label="Score" />
       </Example>
 
       <Example title="Events - Search Input">
         <SearchInput />
+      </Example>
+
+      <Example title="Controlled Input - Slug Form">
+        <SlugForm />
       </Example>
 
       <Example title="Global Events - Keyboard Tracker">

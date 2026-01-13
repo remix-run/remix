@@ -93,7 +93,7 @@ declare global {
       handle: Handle<any>,
       setup: infer S,
     ) => RenderFn<infer R>
-      ? // It's a ComponentFactory - combine setup + render props
+      ? // It's a ComponentFactory - combine setup + props
         (unknown extends S ? {} : undefined extends S ? { setup?: S } : { setup: S }) & R
       : // Otherwise use props as-is (simple function component)
         props

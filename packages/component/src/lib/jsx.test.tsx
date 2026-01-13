@@ -43,7 +43,7 @@ describe('jsx', () => {
   })
 
   describe('library managed attributes', () => {
-    it('infers component setup and render props', () => {
+    it('infers component setup and props', () => {
       function Counter(handle: Handle, setup: number) {
         let count = setup
 
@@ -70,7 +70,7 @@ describe('jsx', () => {
       let bad = <Counter setup={{ initial: 10 }} label={10} />
     })
 
-    it('infers component setup and render props with context', () => {
+    it('infers component setup and props with context', () => {
       function Counter(handle: Handle<number>, setup: number) {
         let count = setup
 
