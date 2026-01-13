@@ -263,10 +263,10 @@ describe('interaction', () => {
       let hostType = 'host-event'
       let myType = defineInteraction('my:type', Test)
 
-      function Test(this: Interaction) {
-        this.on(this.target, {
+      function Test(handle: Interaction) {
+        handle.on(handle.target, {
           [hostType]: () => {
-            this.target.dispatchEvent(new Event(myType))
+            handle.target.dispatchEvent(new Event(myType))
           },
         })
       }
@@ -304,10 +304,10 @@ describe('interaction', () => {
     let hostType = 'host-event'
     let myType = defineInteraction('my:type', Test)
 
-    function Test(this: Interaction) {
-      this.on(this.target, {
+    function Test(handle: Interaction) {
+      handle.on(handle.target, {
         [hostType]: () => {
-          this.target.dispatchEvent(new Event(myType))
+          handle.target.dispatchEvent(new Event(myType))
         },
       })
     }
