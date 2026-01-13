@@ -4,14 +4,14 @@ import { TypedEventTarget } from '@remix-run/interaction'
 // ============================================================================
 // Getting Started - Basic App Example
 // ============================================================================
-function App(this: Handle) {
+function App(handle: Handle) {
   let count = 0
   return () => (
     <button
       on={{
         click: () => {
           count++
-          this.update()
+          handle.update()
         },
       }}
     >
@@ -23,7 +23,7 @@ function App(this: Handle) {
 // ============================================================================
 // Component State and Updates - Counter
 // ============================================================================
-function Counter(this: Handle) {
+function Counter(handle: Handle) {
   let count = 0
 
   return () => (
@@ -33,7 +33,7 @@ function Counter(this: Handle) {
         on={{
           click: () => {
             count++
-            this.update()
+            handle.update()
           },
         }}
       >
@@ -44,28 +44,28 @@ function Counter(this: Handle) {
 }
 
 // ============================================================================
-// Non-Stateful Components - Greeting
+// Components - Greeting
 // ============================================================================
-function Greeting(this: Handle, props: { name: string }) {
-  return <h1>Hello, {props.name}!</h1>
+function Greeting(handle: Handle) {
+  return (props: { name: string }) => <h1>Hello, {props.name}!</h1>
 }
 
 // ============================================================================
 // Stateful Components - CounterWithSetup
 // ============================================================================
-function CounterWithSetup(this: Handle, setupProps: { initial: number }) {
+function CounterWithSetup(handle: Handle, setup: number) {
   // Setup phase: runs once
-  let count = setupProps.initial
+  let count = setup
 
   // Return render function: runs on every update
-  return (renderProps: { label?: string }) => (
+  return (props: { label?: string }) => (
     <div>
-      {renderProps.label || 'Count'}: {count}
+      {props.label || 'Count'}: {count}
       <button
         on={{
           click: () => {
             count++
-            this.update()
+            handle.update()
           },
         }}
       >
@@ -78,22 +78,19 @@ function CounterWithSetup(this: Handle, setupProps: { initial: number }) {
 // ============================================================================
 // Setup Props vs Render Props - CounterWithLabel
 // ============================================================================
-function CounterWithLabel(
-  this: Handle,
-  setupProps: { initial: number }, // receives { initial: 5, label: "Total" }
-) {
-  let count = setupProps.initial // use initial for setup
+function CounterWithLabel(handle: Handle, setup: number) {
+  let count = setup // use setup for initialization
 
-  return (renderProps: { label?: string }) => {
-    // renderProps also receives { initial: 5, label: "Total" }
+  return (props: { label?: string }) => {
+    // props only contains render-time values
     return (
       <div>
-        {renderProps.label}: {count}
+        {props.label}: {count}
         <button
           on={{
             click: () => {
               count++
-              this.update()
+              handle.update()
             },
           }}
         >
@@ -107,7 +104,7 @@ function CounterWithLabel(
 // ============================================================================
 // Events - SearchInput
 // ============================================================================
-function SearchInput(this: Handle) {
+function SearchInput(handle: Handle) {
   let query = ''
   let results: string[] = []
   let loading = false
@@ -122,14 +119,14 @@ function SearchInput(this: Handle) {
           input: (event, signal) => {
             query = event.currentTarget.value
             loading = true
-            this.update()
+            handle.update()
 
             // Simulated search with timeout
             setTimeout(() => {
               if (signal.aborted) return
               results = query ? [`Result for "${query}" 1`, `Result for "${query}" 2`] : []
               loading = false
-              this.update()
+              handle.update()
             }, 300)
           },
         }}
@@ -149,14 +146,14 @@ function SearchInput(this: Handle) {
 // ============================================================================
 // Global Events - KeyboardTracker
 // ============================================================================
-function KeyboardTracker(this: Handle) {
+function KeyboardTracker(handle: Handle) {
   let keys: string[] = []
 
-  this.on(document, {
+  handle.on(document, {
     keydown: (event) => {
       keys.push(event.key)
       if (keys.length > 10) keys.shift()
-      this.update()
+      handle.update()
     },
   })
 
@@ -166,7 +163,7 @@ function KeyboardTracker(this: Handle) {
 // ============================================================================
 // CSS Prop - Button (Basic)
 // ============================================================================
-function ButtonBasic(this: Handle) {
+function ButtonBasic(handle: Handle) {
   return () => (
     <button
       css={{
@@ -192,7 +189,7 @@ function ButtonBasic(this: Handle) {
 // ============================================================================
 // CSS Prop - Button (Advanced with nested rules)
 // ============================================================================
-function ButtonAdvanced(this: Handle) {
+function ButtonAdvanced(handle: Handle) {
   return () => (
     <button
       css={{
@@ -237,7 +234,7 @@ function ButtonAdvanced(this: Handle) {
 // ============================================================================
 // Connect Prop - Form (Basic)
 // ============================================================================
-function FormBasic(this: Handle) {
+function FormBasic(handle: Handle) {
   let inputRef: HTMLInputElement
 
   return () => (
@@ -267,7 +264,7 @@ function FormBasic(this: Handle) {
 // ============================================================================
 // Connect Prop with AbortSignal - ResizeObserver Component
 // ============================================================================
-function ResizeComponent(this: Handle) {
+function ResizeComponent(handle: Handle) {
   let dimensions = { width: 0, height: 0 }
 
   return () => (
@@ -279,7 +276,7 @@ function ResizeComponent(this: Handle) {
           if (entry) {
             dimensions.width = Math.round(entry.contentRect.width)
             dimensions.height = Math.round(entry.contentRect.height)
-            this.update()
+            handle.update()
           }
         })
         observer.observe(node)
@@ -306,9 +303,9 @@ function ResizeComponent(this: Handle) {
 }
 
 // ============================================================================
-// this.update(task) - Player
+// handle.update(task) - Player
 // ============================================================================
-function Player(this: Handle) {
+function Player(handle: Handle) {
   let isPlaying = false
   let playButton: HTMLButtonElement
   let stopButton: HTMLButtonElement
@@ -321,7 +318,7 @@ function Player(this: Handle) {
         on={{
           click: () => {
             isPlaying = true
-            this.update(() => {
+            handle.update(() => {
               // Focus the enabled button after update completes
               stopButton.focus()
             })
@@ -340,7 +337,7 @@ function Player(this: Handle) {
         on={{
           click: () => {
             isPlaying = false
-            this.update(() => {
+            handle.update(() => {
               // Focus the enabled button after update completes
               playButton.focus()
             })
@@ -358,9 +355,9 @@ function Player(this: Handle) {
 }
 
 // ============================================================================
-// this.queueTask - Form with scroll
+// handle.queueTask - Form with scroll
 // ============================================================================
-function FormWithScroll(this: Handle) {
+function FormWithScroll(handle: Handle) {
   let showDetails = false
   let detailsSection: HTMLElement
 
@@ -373,10 +370,10 @@ function FormWithScroll(this: Handle) {
           on={{
             change: (event) => {
               showDetails = event.currentTarget.checked
-              this.update()
+              handle.update()
               if (showDetails) {
                 // Scroll to the expanded section after it renders
-                this.queueTask(() => {
+                handle.queueTask(() => {
                   detailsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 })
               }
@@ -405,29 +402,29 @@ function FormWithScroll(this: Handle) {
 }
 
 // ============================================================================
-// this.signal - Clock
+// handle.signal - Clock
 // ============================================================================
-function Clock(this: Handle) {
+function Clock(handle: Handle) {
   let interval = setInterval(() => {
     // clear the interval when the component is disconnected
-    if (this.signal.aborted) {
+    if (handle.signal.aborted) {
       clearInterval(interval)
       return
     }
-    this.update()
+    handle.update()
   }, 1000)
   return () => <span>{new Date().toLocaleTimeString()}</span>
 }
 
 // ============================================================================
-// this.id - LabeledInput
+// handle.id - LabeledInput
 // ============================================================================
-function LabeledInput(this: Handle) {
+function LabeledInput(handle: Handle) {
   return () => (
     <div css={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <label htmlFor={this.id}>Name</label>
+      <label htmlFor={handle.id}>Name</label>
       <input
-        id={this.id}
+        id={handle.id}
         type="text"
         css={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.3)' }}
       />
@@ -438,8 +435,8 @@ function LabeledInput(this: Handle) {
 // ============================================================================
 // Context API - Theme Provider and Consumer
 // ============================================================================
-function ThemeProvider(this: Handle<{ theme: string }>) {
-  this.context.set({ theme: 'dark' })
+function ThemeProvider(handle: Handle<{ theme: string }>) {
+  handle.context.set({ theme: 'dark' })
 
   return () => (
     <div css={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -448,11 +445,11 @@ function ThemeProvider(this: Handle<{ theme: string }>) {
   )
 }
 
-function ThemedHeader(this: Handle) {
+function ThemedHeader(handle: Handle) {
   // Consume context from ThemeProvider
-  let { theme } = this.context.get(ThemeProvider)
+  let { theme } = handle.context.get(ThemeProvider)
 
-  return (
+  return () => (
     <header
       css={{
         backgroundColor: theme === 'dark' ? '#000' : '#fff',
@@ -480,9 +477,9 @@ class Theme extends TypedEventTarget<{ change: Event }> {
   }
 }
 
-function ThemeProviderAdvanced(this: Handle<Theme>) {
+function ThemeProviderAdvanced(handle: Handle<Theme>) {
   let theme = new Theme()
-  this.context.set(theme)
+  handle.context.set(theme)
 
   return () => (
     <div css={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -502,11 +499,11 @@ function ThemeProviderAdvanced(this: Handle<Theme>) {
   )
 }
 
-function ThemedContent(this: Handle) {
-  let theme = this.context.get(ThemeProviderAdvanced)
+function ThemedContent(handle: Handle) {
+  let theme = handle.context.get(ThemeProviderAdvanced)
 
   // Subscribe to theme changes and update when it changes
-  this.on(theme, { change: () => this.update() })
+  handle.on(theme, { change: () => handle.update() })
 
   return () => (
     <div
@@ -525,7 +522,7 @@ function ThemedContent(this: Handle) {
 // ============================================================================
 // Fragments - List
 // ============================================================================
-function ListWithFragment(this: Handle) {
+function ListWithFragment(handle: Handle) {
   return () => (
     <ul css={{ margin: 0, paddingLeft: '20px' }}>
       <>
@@ -540,8 +537,8 @@ function ListWithFragment(this: Handle) {
 // ============================================================================
 // Example Container Component
 // ============================================================================
-function Example(this: Handle, props: { title: string; children: RemixNode }) {
-  return (
+function Example(handle: Handle) {
+  return (props: { title: string; children: RemixNode }) => (
     <div className="example">
       <h2>{props.title}</h2>
       <div className="example-content">{props.children}</div>
@@ -552,7 +549,7 @@ function Example(this: Handle, props: { title: string; children: RemixNode }) {
 // ============================================================================
 // Main Demo App
 // ============================================================================
-function DemoApp(this: Handle) {
+function DemoApp(handle: Handle) {
   return () => (
     <div className="examples-grid">
       <Example title="Getting Started - Counter">
@@ -563,16 +560,16 @@ function DemoApp(this: Handle) {
         <Counter />
       </Example>
 
-      <Example title="Non-Stateful - Greeting">
+      <Example title="Greeting">
         <Greeting name="World" />
       </Example>
 
-      <Example title="Stateful - Counter with Setup">
-        <CounterWithSetup initial={10} label="Total" />
+      <Example title="Counter with Setup">
+        <CounterWithSetup setup={10} label="Total" />
       </Example>
 
       <Example title="Setup vs Render Props">
-        <CounterWithLabel initial={5} label="Score" />
+        <CounterWithLabel setup={5} label="Score" />
       </Example>
 
       <Example title="Events - Search Input">
@@ -599,19 +596,19 @@ function DemoApp(this: Handle) {
         <ResizeComponent />
       </Example>
 
-      <Example title="this.update(task) - Player">
+      <Example title="handle.update(task) - Player">
         <Player />
       </Example>
 
-      <Example title="this.queueTask - Scroll to Section">
+      <Example title="handle.queueTask - Scroll to Section">
         <FormWithScroll />
       </Example>
 
-      <Example title="this.signal - Clock">
+      <Example title="handle.signal - Clock">
         <Clock />
       </Example>
 
-      <Example title="this.id - Labeled Input">
+      <Example title="handle.id - Labeled Input">
         <LabeledInput />
       </Example>
 

@@ -25,4 +25,4 @@ export type { HostProps } from './lib/dom.ts'
 export type { VirtualRoot, VirtualRootOptions } from './lib/vdom.ts'
 
 // Export types from component.ts
-export type { Handle, ComponentProps } from './lib/component.ts'
+export type { Handle } from './lib/component.ts'

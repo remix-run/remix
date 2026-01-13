@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Assert, Equal } from './test/utils'
 import type { Dispatched } from '@remix-run/interaction'
+import type { Handle } from './component'
 
 describe('jsx', () => {
   it('creates an element', () => {
@@ -16,7 +17,13 @@ describe('jsx', () => {
     let badElement = <a target={123}>Hello, world!</a>
   })
 
-  describe('remix attributes', () => {
+  describe('intrinsic elements', () => {
+    it('uses literal types for element props', () => {
+      let good = <button type="button">Click me</button>
+      // @ts-expect-error - wrong type
+      let bad = <button type="lol">Click me</button>
+    })
+
     it('infers the event target type from the element type', () => {
       let element = (
         <button
@@ -32,6 +39,61 @@ describe('jsx', () => {
           Click me
         </button>
       )
+    })
+  })
+
+  describe('library managed attributes', () => {
+    it('infers component setup and render props', () => {
+      function Counter(handle: Handle, setup: number) {
+        let count = setup
+
+        return (props: { label: string }) => {
+          // no `props.setup`
+          type componentProps = Assert<Equal<typeof props, { label: string }>>
+          return (
+            <button
+              on={{
+                click: () => {
+                  count++
+                  handle.update()
+                },
+              }}
+            >
+              {props.label} {count}
+            </button>
+          )
+        }
+      }
+
+      let good = <Counter setup={10} label="Count" />
+      // @ts-expect-error - wrong type
+      let bad = <Counter setup={{ initial: 10 }} label={10} />
+    })
+
+    it('infers component setup and render props with context', () => {
+      function Counter(handle: Handle<number>, setup: number) {
+        let count = setup
+
+        return (props: { label: string }) => {
+          handle.context.set(count)
+          // no `props.setup`
+          type componentProps = Assert<Equal<typeof props, { label: string }>>
+          return (
+            <button
+              on={{
+                click: () => {
+                  count++
+                  handle.update()
+                },
+              }}
+            >
+              {props.label} {count}
+            </button>
+          )
+        }
+      }
+
+      let good = <Counter setup={10} label="Count" />
     })
   })
 })

@@ -1,6 +1,6 @@
 import type { EventListeners } from '@remix-run/interaction'
 import { createContainer } from '@remix-run/interaction'
-import type { ElementProps, ElementType, RemixNode, Renderable } from './jsx.ts'
+import type { ElementProps, ElementType, RemixElement, RemixNode, Renderable } from './jsx.ts'
 
 export type Task = (signal: AbortSignal) => void
 
@@ -39,7 +39,7 @@ export interface Handle<C = Record<string, never>> {
    *
    * @example
    * ```tsx
-   * this.raise(new Error("Oops"))
+   * handle.raise(new Error("Oops"))
    * ```
    */
   raise(error: unknown): void
@@ -56,13 +56,13 @@ export interface Handle<C = Record<string, never>> {
    *
    * @example Clear a timer
    * ```ts
-   * function Clock(this: Handle) {
+   * function Clock(handle: Handle) {
    *   let interval = setInterval(() => {
-   *     if (this.signal.aborted) {
+   *     if (handle.signal.aborted) {
    *       clearInterval(interval)
    *       return
    *     }
-   *     this.update()
+   *     handle.update()
    *   }, 1000)
    *   return () => <span>{new Date().toString()}</span>
    * }
@@ -70,9 +70,9 @@ export interface Handle<C = Record<string, never>> {
    *
    * Because signals are event targets, you can also add an event instead.
    * ```ts
-   * function Clock(this: Handle) {
-   *   let interval = setInterval(this.update)
-   *   this.signal.addEventListener("abort", () => clearInterval(interval))
+   * function Clock(handle: Handle) {
+   *   let interval = setInterval(handle.update)
+   *   handle.signal.addEventListener("abort", () => clearInterval(interval))
    *   return () => <span>{new Date().toString()}</span>
    * }
    * ```
@@ -90,12 +90,12 @@ export interface Handle<C = Record<string, never>> {
    *
    * @example
    * ```ts
-   * function SomeComp() {
+   * function SomeComp(handle: Handle) {
    *   let keys = []
-   *   this.on(document, {
+   *   handle.on(document, {
    *     keydown: (event) => {
    *       keys.push(event.key)
-   *       this.update()
+   *       handle.update()
    *     },
    *   })
    *   return () => <span>{keys.join(', ')}</span>
@@ -110,16 +110,15 @@ export interface Handle<C = Record<string, never>> {
  */
 export type NoContext = Record<string, never>
 
-export type Component<
-  Context = NoContext,
-  SetupProps = ElementProps,
-  RenderProps = ElementProps,
-> = (this: Handle<Context>, props: SetupProps) => RemixNode | ((props: RenderProps) => RemixNode)
+export type Component<Context = NoContext, Setup = undefined, RenderProps = ElementProps> = (
+  handle: Handle<Context>,
+  setup: Setup,
+) => (props: RenderProps) => RemixNode
 
 export type ContextFrom<ComponentType> =
   ComponentType extends Component<infer Provided, any, any>
     ? Provided
-    : ComponentType extends (this: Handle<infer Provided>, ...args: any[]) => any
+    : ComponentType extends (handle: Handle<infer Provided>, ...args: any[]) => any
       ? Provided
       : never
 
@@ -144,13 +143,13 @@ export interface FrameProps {
   on?: EventListeners
 }
 
-export type ComponentProps<T> = T extends {
-  (props: infer Setup): infer R
-}
-  ? R extends (props: infer Render) => any
-    ? Setup & Render
-    : Setup
-  : never
+export type ComponentFn<
+  Context = NoContext,
+  Setup = undefined,
+  RenderProps = Record<string, never>,
+> = (handle: Handle<Context>, setup: Setup) => RenderFn<RenderProps>
+
+export type RenderFn<P = {}> = (props: P) => RemixNode
 
 export type { RemixNode } from './jsx.ts'
 
@@ -236,7 +235,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
       renderCtrl = new AbortController()
     }
     let signal = renderCtrl?.signal
-    return taskQueue.splice(0, taskQueue.length).map((task) => () => task.call(handle, signal!))
+    return taskQueue.splice(0, taskQueue.length).map((task) => () => task(signal!))
   }
 
   function render(props: ElementProps): [RemixNode, Array<() => void>] {
@@ -252,11 +251,18 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
     }
 
     if (!getContent) {
-      let result = config.type.call(handle, props)
-      if (typeof result === 'function') {
-        getContent = (props) => result.call(handle, props)
+      // Extract setup prop (passed to component setup function, not render)
+      let { setup, ...renderProps } = props as { setup?: unknown }
+      let result = config.type(handle, setup)
+      if (typeof result !== 'function') {
+        let name = config.type.name || 'Anonymous'
+        throw new Error(`${name} must return a render function, received ${typeof result}`)
       } else {
-        getContent = (props) => config.type.call(handle, props)
+        getContent = (props) => {
+          // Strip setup from render props since it's only for setup
+          let { setup: _, ...rest } = props as { setup?: unknown }
+          return result(rest)
+        }
       }
     }
 
@@ -280,16 +286,16 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
   return { render, remove, setScheduleUpdate, frame: config.frame, getContextValue }
 }
 
-export function Frame(this: Handle<FrameHandle>, _: FrameProps) {
-  return null // reconciler renders
+export function Frame(handle: Handle<FrameHandle>) {
+  return (_: FrameProps) => null // reconciler renders
 }
 
-export function Fragment(_: FragmentProps) {
-  return null // reconciler renders
+export function Fragment() {
+  return (_: FragmentProps) => null // reconciler renders
 }
 
-export function Catch(_: CatchProps) {
-  return null // reconciler renders
+export function Catch() {
+  return (_: CatchProps) => null // reconciler renders
 }
 
 export function createFrameHandle(
