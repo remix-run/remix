@@ -1745,9 +1745,9 @@ describe('vnode rendering', () => {
     let capturedUpdate = () => {}
     let connectCalls = 0
 
-      function App(handle: Handle) {
-        capturedUpdate = () => handle.update()
-        return () => (
+    function App(handle: Handle) {
+      capturedUpdate = () => handle.update()
+      return () => (
         <div
           connect={() => {
             connectCalls++

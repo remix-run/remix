@@ -27,7 +27,17 @@ function MetricCard(handle: Handle) {
   let selected = false
   let hovered = false
 
-  return ({ id, label, value, change }: { id: number; label: string; value: string; change: string }) => (
+  return ({
+    id,
+    label,
+    value,
+    change,
+  }: {
+    id: number
+    label: string
+    value: string
+    change: string
+  }) => (
     <div
       class={`metric-card ${selected ? 'selected' : ''}`}
       on={{
