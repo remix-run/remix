@@ -98,14 +98,14 @@ function Counter(handle: Handle, setup: number) {
 }
 ```
 
-### Setup Prop vs Render Props
+### Setup Prop vs Props
 
 When a component returns a function, it has two phases:
 
 1. **Setup phase** - The component function receives the `setup` prop and runs once. Use this for initialization.
-2. **Render phase** - The returned function receives regular props and runs on initial render and every update afterward. Use this for rendering.
+2. **Render phase** - The returned function receives props and runs on initial render and every update afterward. Use this for rendering.
 
-The `setup` prop is separate from regular props. Only the `setup` prop is passed to the setup function, and only regular props are passed to the render function.
+The `setup` prop is separate from regular props. Only the `setup` prop is passed to the setup function, and only props are passed to the render function.
 
 - `setup` prop for values that initialize state (e.g., `initial`, `defaultValue`)
 - Regular props for values that change over time (e.g., `label`, `disabled`)
