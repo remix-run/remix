@@ -22,17 +22,17 @@ declare global {
   }
 }
 
-function FormReset(this: Interaction) {
-  if (!(this.target instanceof HTMLElement)) return
+function FormReset(handle: Interaction) {
+  if (!(handle.target instanceof HTMLElement)) return
 
-  let target = this.target
+  let target = handle.target
   let form =
     'form' in target && target.form instanceof HTMLFormElement
       ? target.form
       : target.closest('form')
 
   if (form) {
-    this.on(form, {
+    handle.on(form, {
       reset() {
         target.dispatchEvent(new Event(formReset))
       },
