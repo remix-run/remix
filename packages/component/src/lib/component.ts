@@ -143,11 +143,10 @@ export interface FrameProps {
   on?: EventListeners
 }
 
-export type ComponentFn<
-  Context = NoContext,
-  Setup = undefined,
-  Props = Record<string, never>,
-> = (handle: Handle<Context>, setup: Setup) => RenderFn<Props>
+export type ComponentFn<Context = NoContext, Setup = undefined, Props = Record<string, never>> = (
+  handle: Handle<Context>,
+  setup: Setup,
+) => RenderFn<Props>
 
 export type RenderFn<P = {}> = (props: P) => RemixNode
 
