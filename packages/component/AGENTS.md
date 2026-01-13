@@ -292,6 +292,49 @@ function GoodExample(handle: Handle) {
 }
 ```
 
+**❌ Anti-pattern: Don't call `handle.update()` before async work in a task:**
+
+The task's signal is aborted when the component re-renders. If you call `handle.update()` before your async work completes, the re-render will abort the signal you're using for the async operation:
+
+```tsx
+// ❌ Avoid: Calling handle.update() before async work
+function BadAsyncExample(handle: Handle) {
+  let data: string[] = []
+  let loading = false
+
+  handle.queueTask(async (signal) => {
+    loading = true
+    handle.update() // This triggers a re-render, which aborts signal!
+
+    let response = await fetch('/api/data', { signal }) // AbortError: signal is aborted
+    if (signal.aborted) return
+
+    data = await response.json()
+    loading = false
+    handle.update()
+  })
+
+  return () => <div>{loading ? 'Loading...' : data.join(', ')}</div>
+}
+
+// ✅ Prefer: Set initial state in setup, only call handle.update() after async work
+function GoodAsyncExample(handle: Handle) {
+  let data: string[] = []
+  let loading = true // Start in loading state
+
+  handle.queueTask(async (signal) => {
+    let response = await fetch('/api/data', { signal })
+    if (signal.aborted) return
+
+    data = await response.json()
+    loading = false
+    handle.update() // Safe - async work is complete
+  })
+
+  return () => <div>{loading ? 'Loading...' : data.join(', ')}</div>
+}
+```
+
 **Signals in events and tasks are how you manage interruptions and disconnects:**
 
 Both event handlers and `queueTask` receive `AbortSignal` parameters that are automatically aborted when:
