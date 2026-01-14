@@ -3,6 +3,7 @@ import test, { describe } from 'node:test'
 
 import { PartPattern } from './part-pattern.ts'
 import { ParseError } from './errors.ts'
+import * as Variant from './variant.ts'
 
 describe('PartPattern', () => {
   describe('parse', () => {
@@ -206,46 +207,36 @@ describe('PartPattern', () => {
   })
 
   describe('variants', () => {
-    function assertVariants(source: string, variants: PartPattern['variants']) {
-      assert.deepStrictEqual(PartPattern.parse(source).variants, variants)
+    function assertVariants(source: string, expected: Array<string>) {
+      let pattern = PartPattern.parse(source)
+      let actual = pattern.variants.map((v) => Variant.toString(v.tokens, pattern.paramNames))
+      assert.deepStrictEqual(actual, expected)
     }
 
     test('produces all possible combinations of optionals', () => {
-      assertVariants('a(:b)*c', [
-        { key: 'a{*}', paramNames: ['c'] },
-        { key: 'a{:}{*}', paramNames: ['b', 'c'] },
-      ])
-      assertVariants('a(:b)c(*d)e', [
-        { key: 'ace', paramNames: [] },
-        { key: 'ac{*}e', paramNames: ['d'] },
-        { key: 'a{:}ce', paramNames: ['b'] },
-        { key: 'a{:}c{*}e', paramNames: ['b', 'd'] },
-      ])
-      assertVariants('a(:b(*c):d)e', [
-        { key: 'ae', paramNames: [] },
-        { key: 'a{:}{:}e', paramNames: ['b', 'd'] },
-        { key: 'a{:}{*}{:}e', paramNames: ['b', 'c', 'd'] },
-      ])
+      assertVariants('a.:b.c', ['a.{:b}.c'])
+      assertVariants('a(:b)*c', ['a{*c}', 'a{:b}{*c}'])
+      assertVariants('a(:b)c(*d)e', ['ace', 'ac{*d}e', 'a{:b}ce', 'a{:b}c{*d}e'])
+      assertVariants('a(:b(*c):d)e', ['ae', 'a{:b}{:d}e', 'a{:b}{*c}{:d}e'])
       assertVariants('a(:b(*c):d)e(*f)g', [
-        { key: 'aeg', paramNames: [] },
-        { key: 'ae{*}g', paramNames: ['f'] },
-        { key: 'a{:}{:}eg', paramNames: ['b', 'd'] },
-        { key: 'a{:}{:}e{*}g', paramNames: ['b', 'd', 'f'] },
-        { key: 'a{:}{*}{:}eg', paramNames: ['b', 'c', 'd'] },
-        { key: 'a{:}{*}{:}e{*}g', paramNames: ['b', 'c', 'd', 'f'] },
+        'aeg',
+        'ae{*f}g',
+        'a{:b}{:d}eg',
+        'a{:b}{:d}e{*f}g',
+        'a{:b}{*c}{:d}eg',
+        'a{:b}{*c}{:d}e{*f}g',
       ])
     })
   })
 
   describe('toString', () => {
+    function assertToString(source: string) {
+      assert.equal(PartPattern.parse(source).toString(), source)
+    }
+
     test('stringifies combinations of text, variables, wildcards, optionals', () => {
-      let examples = [
-        'api/(v:major(.:minor)/)run',
-        '*/node_modules/(*path/):package/dist/index.:ext',
-      ]
-      for (let source of examples) {
-        assert.equal(PartPattern.parse(source).toString(), source)
-      }
+      assertToString('api/(v:major(.:minor)/)run')
+      assertToString('*/node_modules/(*path/):package/dist/index.:ext')
     })
   })
 
