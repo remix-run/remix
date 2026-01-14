@@ -14,7 +14,7 @@ describe('ParseError', () => {
     assert.equal(error.index, 3)
   })
 
-  test('shows caret under the problematic index', () => {
+  test('underlines the error indices', () => {
     let error = new ParseError('unmatched (', 'api/(v:major', 4)
     assert.equal(
       error.toString(),
@@ -41,7 +41,7 @@ describe('HrefError', () => {
         dedent`
           HrefError: pattern requires hostname
 
-          https://*:8080/api
+          Pattern: https://*:8080/api
         `,
       )
     })
@@ -59,12 +59,12 @@ describe('HrefError', () => {
       assert.equal(
         error.toString(),
         dedent`
-          HrefError: missing params for pathname
+          HrefError: missing params
 
           Pattern: https://example.com/:id
           Params: {}
-          Variants for pathname:
-            - :id (missing: id)
+          Pathname variants:
+            - {:id} (missing: id)
         `,
       )
     })
@@ -80,13 +80,13 @@ describe('HrefError', () => {
       assert.equal(
         error.toString(),
         dedent`
-          HrefError: missing params for pathname
+          HrefError: missing params
 
           Pattern: https://example.com/:a/:b(/:c)
           Params: {"a":"x"}
-          Variants for pathname:
-            - :a/:b (missing: b)
-            - :a/:b/:c (missing: b, c)
+          Pathname variants:
+            - {:a}/{:b} (missing: b)
+            - {:a}/{:b}/{:c} (missing: b, c)
         `,
       )
     })
@@ -102,15 +102,15 @@ describe('HrefError', () => {
       assert.equal(
         error.toString(),
         dedent`
-          HrefError: missing params for pathname
+          HrefError: missing params
 
           Pattern: https://example.com/:a(:b)-:a(:c)
           Params: {"b":"thing"}
-          Variants for pathname:
-            - :a-:a (missing: a)
-            - :a-:a:c (missing: a, c)
-            - :a:b-:a (missing: a)
-            - :a:b-:a:c (missing: a, c)
+          Pathname variants:
+            - {:a}-{:a} (missing: a)
+            - {:a}-{:a}{:c} (missing: a, c)
+            - {:a}{:b}-{:a} (missing: a)
+            - {:a}{:b}-{:a}{:c} (missing: a, c)
         `,
       )
     })
@@ -168,7 +168,7 @@ describe('HrefError', () => {
         dedent`
           HrefError: pattern contains nameless wildcard
 
-          https://example.com/api/*/users
+          Pattern: https://example.com/api/*/users
         `,
       )
     })
