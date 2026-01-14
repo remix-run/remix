@@ -125,3 +125,58 @@ pnpm changes:version --no-commit
 ```
 
 Tags and GitHub releases are created automatically by the publish workflow after successful npm publish.
+
+### Prerelease Packages
+
+Packages can be in prerelease mode by having a `.changes/prerelease.json` file:
+
+```json
+{
+  "tag": "alpha"
+}
+```
+
+When a package has this file:
+
+- Normal `major/minor/patch` change files still describe what kind of change it is
+- But the version bumps the prerelease counter instead (e.g. `1.0.0-alpha.1` → `1.0.0-alpha.2`)
+- Changelog entries still get proper "Major Changes" / "Minor Changes" / "Patch Changes" sections
+
+#### Entering prerelease mode
+
+Prerelease mode is currently only for major version bumps. To start a prerelease:
+
+1. Create `.changes/prerelease.json` with `{ "tag": "..." }`, e.g. `{ "tag": "alpha" }`
+2. Add a **major** change file describing the release (e.g. `major.release-v2-alpha.md`)
+3. The version will bump to the next major with the prerelease suffix (e.g. `1.5.0` → `2.0.0-alpha.0`)
+
+> **Note:** Entering prerelease mode requires a `major.*` change file. This ensures prereleases are always for upcoming major versions.
+
+#### Bumping prerelease versions
+
+While in prerelease mode, just add change files as normal. The prerelease counter increments:
+
+- `2.0.0-alpha.0` + `minor.add-feature.md` → `2.0.0-alpha.1`
+- `2.0.0-alpha.1` + `patch.fix-bug.md` → `2.0.0-alpha.2`
+
+The bump type (major/minor/patch) is for changelog categorization only—it doesn't affect the version since the version bump is predefined.
+
+#### Transitioning between prerelease tags
+
+To transition between prerelease tags (e.g. alpha → beta → rc):
+
+1. Update `.changes/prerelease.json` to the new tag (e.g. `{ "tag": "beta" }`)
+2. Add a change file describing the transition (e.g. `patch.release-v2-beta.md`)
+3. Version resets to the new tag (e.g. `2.0.0-alpha.5` → `2.0.0-beta.0`)
+
+The bump type is for changelog categorization only—by convention, use `patch` for tag transitions.
+
+#### Graduating to stable
+
+To release a stable version:
+
+1. Delete `.changes/prerelease.json`
+2. Add a change file describing the stable release (e.g. `major.release-v2.md`)
+3. The prerelease suffix is stripped (e.g. `2.0.0-alpha.5` → `2.0.0`)
+
+The bump type is for changelog categorization only—by convention, use `major` for graduating to stable (it's a significant release announcement).

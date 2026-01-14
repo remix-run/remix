@@ -10,9 +10,8 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import {
-  validateAllChanges,
+  parseAllChangeFiles,
   formatValidationErrors,
-  getAllReleases,
   generateChangelogContent,
   generateCommitMessage,
 } from './utils/changes.ts'
@@ -81,15 +80,17 @@ function main() {
 
   console.log('Validating change files...\n')
 
-  let validationResult = validateAllChanges()
-  if (validationResult.errorCount > 0) {
+  let result = parseAllChangeFiles()
+
+  if (!result.valid) {
     console.error(colorize('Validation failed', colors.red) + '\n')
-    console.error(formatValidationErrors(validationResult))
+    console.error(formatValidationErrors(result.errors))
     console.error()
     process.exit(1)
   }
 
-  let releases = getAllReleases()
+  let { releases } = result
+
   if (releases.length === 0) {
     console.log('No packages have changes to release.\n')
     process.exit(0)

@@ -3,88 +3,167 @@ import * as path from 'node:path'
 import * as semver from 'semver'
 import { getAllPackageNames, getPackageDir, getPackageFile } from './packages.ts'
 import { fileExists, readFile, readJson } from './fs.ts'
-import { getNextVersion } from './semver.ts'
 
-export const bumpTypes = ['major', 'minor', 'patch'] as const
-export type BumpType = (typeof bumpTypes)[number]
+const bumpTypes = ['major', 'minor', 'patch'] as const
+type BumpType = (typeof bumpTypes)[number]
 
-export interface ValidationError {
+// Prerelease configuration (from .changes/prerelease.json)
+const prereleaseTagTypes = ['alpha'] as const
+type PrereleaseTag = (typeof prereleaseTagTypes)[number]
+
+interface PrereleaseConfig {
+  tag: PrereleaseTag
+}
+
+type ParsedPrereleaseConfig =
+  | { exists: false }
+  | { exists: true; valid: true; config: PrereleaseConfig }
+  | { exists: true; valid: false; error: string }
+
+/**
+ * Reads and validates prerelease.json for a package.
+ */
+function readPrereleaseConfig(packageName: string): ParsedPrereleaseConfig {
+  let packageDir = getPackageDir(packageName)
+  let prereleaseJsonPath = path.join(packageDir, '.changes', 'prerelease.json')
+
+  if (!fs.existsSync(prereleaseJsonPath)) {
+    return { exists: false }
+  }
+
+  let content: unknown
+  try {
+    content = JSON.parse(fs.readFileSync(prereleaseJsonPath, 'utf-8'))
+  } catch {
+    return { exists: true, valid: false, error: 'Invalid JSON in prerelease.json' }
+  }
+
+  if (typeof content !== 'object' || content === null) {
+    return {
+      exists: true,
+      valid: false,
+      error: 'prerelease.json must be an object with a "tag" field',
+    }
+  }
+
+  let obj = content as Record<string, unknown>
+
+  if (!('tag' in obj)) {
+    return { exists: true, valid: false, error: 'prerelease.json must have a "tag" field' }
+  }
+
+  if (!prereleaseTagTypes.includes(obj.tag as PrereleaseTag)) {
+    return {
+      exists: true,
+      valid: false,
+      error: `prerelease.json "tag" must be one of: ${prereleaseTagTypes.join(', ')} (got: ${obj.tag})`,
+    }
+  }
+
+  return { exists: true, valid: true, config: { tag: obj.tag as PrereleaseTag } }
+}
+
+/**
+ * Extracts the prerelease identifier from a version string (e.g., "alpha" from "3.0.0-alpha.5")
+ */
+function getPrereleaseIdentifier(version: string): string | null {
+  let prerelease = semver.prerelease(version)
+  if (prerelease === null || prerelease.length === 0) {
+    return null
+  }
+  return typeof prerelease[0] === 'string' ? prerelease[0] : null
+}
+
+/**
+ * Calculates the next version based on current version, bump type, and prerelease config.
+ */
+function getNextVersion(
+  currentVersion: string,
+  bumpType: BumpType,
+  prereleaseConfig: PrereleaseConfig | null,
+): string {
+  let currentPrereleaseId = getPrereleaseIdentifier(currentVersion)
+  let isCurrentPrerelease = currentPrereleaseId !== null
+
+  if (prereleaseConfig !== null) {
+    // In prerelease mode
+    let targetTag = prereleaseConfig.tag
+
+    if (currentPrereleaseId === targetTag) {
+      // Same tag - just bump the counter
+      let nextVersion = semver.inc(currentVersion, 'prerelease', targetTag)
+      if (nextVersion == null) {
+        throw new Error(`Invalid prerelease increment: ${currentVersion}`)
+      }
+      return nextVersion
+    } else {
+      // Entering prerelease or transitioning to a new tag (e.g., stable → alpha, or alpha → beta)
+      // Apply the bump type to get the base version, then add prerelease suffix
+      let baseVersion = isCurrentPrerelease
+        ? currentVersion.replace(/-.*$/, '') // Strip existing prerelease suffix
+        : semver.inc(currentVersion, bumpType as semver.ReleaseType)
+
+      if (baseVersion == null) {
+        throw new Error(`Invalid version increment: ${currentVersion} + ${bumpType}`)
+      }
+
+      return `${baseVersion}-${targetTag}.0`
+    }
+  } else {
+    // Not in prerelease mode
+    if (isCurrentPrerelease) {
+      // Graduating from prerelease to stable - strip the prerelease suffix
+      let baseVersion = currentVersion.replace(/-.*$/, '')
+      return baseVersion
+    } else {
+      // Normal stable release
+      let nextVersion = semver.inc(currentVersion, bumpType as semver.ReleaseType)
+      if (nextVersion == null) {
+        throw new Error(`Invalid version increment: ${currentVersion} + ${bumpType}`)
+      }
+      return nextVersion
+    }
+  }
+}
+
+interface ChangeFile {
+  file: string
+  bump: BumpType
+  content: string
+}
+
+interface ValidationError {
   package: string
   file: string
   error: string
 }
 
-/**
- * Checks if a filename is a valid change file (e.g. "minor.add-feature.md")
- */
-function isValidChangeFileName(file: string): boolean {
-  if (!file.endsWith('.md')) return false
-  let [bump, ...rest] = file.slice(0, -3).split('.') // Remove .md and split
-  return bumpTypes.includes(bump as BumpType) && rest.length > 0
-}
-
-export interface ValidationResult {
-  errorCount: number
-  errorsByPackage: Record<string, ValidationError[]>
-}
+type ParsedPackageChanges =
+  | { valid: true; changes: ChangeFile[]; prereleaseConfig: PrereleaseConfig | null }
+  | { valid: false; errors: ValidationError[] }
 
 /**
- * Formats validation errors for display
+ * Parses and validates all change files for a package.
+ * Returns changes if valid, or errors if invalid.
  */
-export function formatValidationErrors(validationResult: ValidationResult): string {
-  let lines: string[] = []
-
-  for (let [packageName, packageErrors] of Object.entries(validationResult.errorsByPackage)) {
-    lines.push(`📦 ${packageName}:`)
-    for (let error of packageErrors) {
-      lines.push(`   ${error.file}: ${error.error}`)
-    }
-    lines.push('')
-  }
-
-  let packageCount = Object.keys(validationResult.errorsByPackage).length
-  lines.push(
-    `Found ${validationResult.errorCount} error${validationResult.errorCount === 1 ? '' : 's'} in ${packageCount} package${packageCount === 1 ? '' : 's'}`,
-  )
-
-  return lines.join('\n')
-}
-
-/**
- * Validates all change files across all packages
- */
-export function validateAllChanges(): ValidationResult {
-  let packageNames = getAllPackageNames()
-  let errorsByPackage: Record<string, ValidationError[]> = {}
-  let errorCount = 0
-
-  for (let packageName of packageNames) {
-    let packageErrors = validatePackageChanges(packageName)
-    if (packageErrors.length > 0) {
-      errorsByPackage[packageName] = packageErrors
-      errorCount += packageErrors.length
-    }
-  }
-
-  return { errorCount, errorsByPackage }
-}
-
-/**
- * Validates change files for a single package
- */
-export function validatePackageChanges(packageName: string): ValidationError[] {
+function parsePackageChanges(packageName: string): ParsedPackageChanges {
   let packageDir = getPackageDir(packageName)
   let changesDir = path.join(packageDir, '.changes')
+  let changes: ChangeFile[] = []
   let errors: ValidationError[] = []
 
   // Changes directory should exist (with at least README.md)
   if (!fs.existsSync(changesDir)) {
-    errors.push({
-      package: packageName,
-      file: '.changes/',
-      error: 'Changes directory does not exist',
-    })
-    return errors
+    return {
+      valid: false,
+      errors: [
+        {
+          package: packageName,
+          file: '.changes/',
+          error: 'Changes directory does not exist',
+        },
+      ],
+    }
   }
 
   // README.md should exist in .changes directory so it persists between releases
@@ -97,35 +176,104 @@ export function validatePackageChanges(packageName: string): ValidationError[] {
     })
   }
 
-  // Get package version to determine if v1+ or v0.x
+  // Get package version to determine validation rules
   let packageJsonPath = getPackageFile(packageName, 'package.json')
   let packageJson = readJson(packageJsonPath)
   let currentVersion = packageJson.version as string
   let majorVersion = semver.major(currentVersion)
   let isV1Plus = majorVersion >= 1
+  let currentVersionPrereleaseId = getPrereleaseIdentifier(currentVersion)
+  let isCurrentVersionPrerelease = currentVersionPrereleaseId !== null
+
+  // Read prerelease.json if it exists
+  let parsedPrereleaseConfig = readPrereleaseConfig(packageName)
+  let prereleaseConfig: PrereleaseConfig | null = null
+
+  if (parsedPrereleaseConfig.exists) {
+    if (!parsedPrereleaseConfig.valid) {
+      errors.push({
+        package: packageName,
+        file: '.changes/prerelease.json',
+        error: parsedPrereleaseConfig.error,
+      })
+      return { valid: false, errors }
+    }
+    prereleaseConfig = parsedPrereleaseConfig.config
+  }
 
   // Read all files in .changes directory
   let files = fs.readdirSync(changesDir)
+  let changeFileNames = files.filter((file) => file !== 'README.md' && file !== 'prerelease.json')
+  let hasChangeFiles = changeFileNames.filter((f) => f.endsWith('.md')).length > 0
 
-  // Filter out README.md and validate the rest
-  let changeFiles = files.filter((file) => file !== 'README.md')
+  // Validate prerelease.json / version consistency
+  if (prereleaseConfig !== null) {
+    // Config exists
+    if (
+      currentVersionPrereleaseId !== null &&
+      currentVersionPrereleaseId !== prereleaseConfig.tag
+    ) {
+      // Tag mismatch (e.g., version is alpha but config says beta) - need change files to transition
+      if (!hasChangeFiles) {
+        errors.push({
+          package: packageName,
+          file: '.changes/prerelease.json',
+          error: `prerelease.json tag '${prereleaseConfig.tag}' doesn't match version's prerelease identifier '${currentVersionPrereleaseId}'. Add a change file to transition to ${prereleaseConfig.tag}.`,
+        })
+      }
+    } else if (!isCurrentVersionPrerelease && !hasChangeFiles) {
+      // Config says prerelease but version is stable AND no change files - need change files to enter prerelease
+      errors.push({
+        package: packageName,
+        file: '.changes/prerelease.json',
+        error: `prerelease.json exists but version ${currentVersion} is stable. Add a change file to enter prerelease mode, or delete prerelease.json if this package should not be in prerelease.`,
+      })
+    }
+  } else {
+    // No config - validate version is stable (unless graduating with change files)
+    if (isCurrentVersionPrerelease && !hasChangeFiles) {
+      errors.push({
+        package: packageName,
+        file: '.changes/',
+        error: `Version ${currentVersion} is a prerelease but no prerelease.json exists. Either add prerelease.json with { "tag": "${currentVersionPrereleaseId}" }, or add a change file to graduate to stable.`,
+      })
+    }
+  }
 
-  for (let file of changeFiles) {
-    // Check if it has a valid format (e.g. "minor.add-feature.md")
-    if (!isValidChangeFileName(file)) {
+  for (let file of changeFileNames) {
+    // Skip non-.md files
+    if (!file.endsWith('.md')) {
+      continue
+    }
+
+    // Parse and validate filename format (e.g. "minor.add-feature.md")
+    let bump: BumpType | null = null
+
+    let withoutExt = file.slice(0, -3)
+    let dotIndex = withoutExt.indexOf('.')
+    if (dotIndex !== -1) {
+      let bumpStr = withoutExt.slice(0, dotIndex)
+      let name = withoutExt.slice(dotIndex + 1)
+      if (bumpTypes.includes(bumpStr as BumpType) && name.length > 0) {
+        bump = bumpStr as BumpType
+      }
+    }
+
+    if (bump == null) {
       errors.push({
         package: packageName,
         file,
         error:
-          'Change file name must start with "major.", "minor.", or "patch." (e.g. "minor.add-feature.md") and use a ".md" extension',
+          'Change file must be a ".md" file starting with "major.", "minor.", or "patch." (e.g. "minor.add-feature.md")',
       })
       continue
     }
 
-    // Check if file is not empty
+    // Read file content
     let filePath = path.join(changesDir, file)
     let content = fs.readFileSync(filePath, 'utf-8').trim()
 
+    // Check if file is not empty
     if (content.length === 0) {
       errors.push({
         package: packageName,
@@ -147,72 +295,52 @@ export function validatePackageChanges(packageName: string): ValidationError[] {
       continue
     }
 
-    // Validate breaking change prefix matches the correct bump type
-    let bump = file.split('.')[0] as BumpType
-    let isBreakingChange = hasBreakingChangePrefix(content)
+    // Validate breaking change prefix matches the correct bump type (only for stable releases)
+    // In prerelease mode, breaking changes don't need special handling since we're just bumping counter
+    if (prereleaseConfig === null) {
+      let isBreakingChange = hasBreakingChangePrefix(content)
 
-    if (isBreakingChange) {
-      if (isV1Plus && bump !== 'major') {
-        errors.push({
-          package: packageName,
-          file,
-          error: `Breaking changes in v1+ packages must use "major." prefix (current version: ${currentVersion}). Rename to "major.${file.slice(file.indexOf('.') + 1)}"`,
-        })
-      } else if (!isV1Plus && bump !== 'minor') {
-        errors.push({
-          package: packageName,
-          file,
-          error: `Breaking changes in v0.x packages must use "minor." prefix (current version: ${currentVersion}). Rename to "minor.${file.slice(file.indexOf('.') + 1)}"`,
-        })
+      if (isBreakingChange) {
+        if (isV1Plus && bump !== 'major') {
+          errors.push({
+            package: packageName,
+            file,
+            error: `Breaking changes in v1+ packages must use "major." prefix (current version: ${currentVersion}). Rename to "major.${file.slice(file.indexOf('.') + 1)}"`,
+          })
+          continue
+        } else if (!isV1Plus && !isCurrentVersionPrerelease && bump !== 'minor') {
+          errors.push({
+            package: packageName,
+            file,
+            error: `Breaking changes in v0.x packages must use "minor." prefix (current version: ${currentVersion}). Rename to "minor.${file.slice(file.indexOf('.') + 1)}"`,
+          })
+          continue
+        }
       }
     }
+
+    // File is valid, add to changes
+    changes.push({ file, bump, content })
   }
 
-  return errors
-}
-
-export interface ChangeFile {
-  file: string
-  bump: BumpType
-  content: string
-}
-
-/**
- * Gets all change files for a package
- */
-export function getPackageChangeFiles(packageName: string): ChangeFile[] {
-  let packageDir = getPackageDir(packageName)
-  let changesDir = path.join(packageDir, '.changes')
-
-  if (!fs.existsSync(changesDir)) {
-    return []
-  }
-
-  let files = fs.readdirSync(changesDir)
-  let changeFiles = files.filter((file) => file !== 'README.md' && file.endsWith('.md'))
-
-  return changeFiles.filter(isValidChangeFileName).map((file) => {
-    let filePath = path.join(changesDir, file)
-    let content = fs.readFileSync(filePath, 'utf-8').trim()
-    let bump = file.split('.')[0] as BumpType
-
-    return {
-      file,
-      bump,
-      content,
+  // Validate entering prerelease requires a major bump
+  if (prereleaseConfig !== null && !isCurrentVersionPrerelease && changes.length > 0) {
+    let hasMajorBump = changes.some((c) => c.bump === 'major')
+    if (!hasMajorBump) {
+      errors.push({
+        package: packageName,
+        file: '.changes/prerelease.json',
+        error:
+          'Entering prerelease mode requires a major version bump. Add a change file with "major." prefix (e.g. "major.release-v2-alpha.md").',
+      })
     }
-  })
-}
+  }
 
-/**
- * Gets all packages that have change files
- */
-export function getPackagesWithChanges(): string[] {
-  let packageNames = getAllPackageNames()
-  return packageNames.filter((packageName) => {
-    let changeFiles = getPackageChangeFiles(packageName)
-    return changeFiles.length > 0
-  })
+  if (errors.length > 0) {
+    return { valid: false, errors }
+  }
+
+  return { valid: true, changes, prereleaseConfig }
 }
 
 export interface PackageRelease {
@@ -220,16 +348,96 @@ export interface PackageRelease {
   currentVersion: string
   nextVersion: string
   bump: BumpType
-  changes: Array<{ file: string; bump: BumpType; content: string }>
+  changes: ChangeFile[]
+}
+
+type ParsedChanges =
+  | { valid: true; releases: PackageRelease[] }
+  | { valid: false; errors: ValidationError[] }
+
+/**
+ * Parses and validates all change files across all packages.
+ * Returns releases if valid, or errors if invalid.
+ */
+export function parseAllChangeFiles(): ParsedChanges {
+  let packageNames = getAllPackageNames()
+  let releases: PackageRelease[] = []
+  let errors: ValidationError[] = []
+
+  for (let packageName of packageNames) {
+    let parsed = parsePackageChanges(packageName)
+
+    if (!parsed.valid) {
+      errors.push(...parsed.errors)
+      continue
+    }
+
+    // Only create a release if there are changes
+    if (parsed.changes.length > 0) {
+      let packageJsonPath = getPackageFile(packageName, 'package.json')
+      let packageJson = readJson(packageJsonPath)
+      let currentVersion = packageJson.version as string
+
+      let bump = getHighestBump(parsed.changes.map((c) => c.bump))
+      if (bump == null) continue
+
+      let nextVersion = getNextVersion(currentVersion, bump, parsed.prereleaseConfig)
+
+      releases.push({
+        packageName,
+        currentVersion,
+        nextVersion,
+        bump,
+        changes: parsed.changes,
+      })
+    }
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, errors }
+  }
+
+  return { valid: true, releases }
 }
 
 /**
- * Determines the highest severity bump type
+ * Formats validation errors for display
  */
-export function getHighestBump(bumps: BumpType[]): BumpType {
+export function formatValidationErrors(errors: ValidationError[]): string {
+  let errorsByPackage: Record<string, ValidationError[]> = {}
+  for (let error of errors) {
+    if (!errorsByPackage[error.package]) {
+      errorsByPackage[error.package] = []
+    }
+    errorsByPackage[error.package].push(error)
+  }
+
+  let lines: string[] = []
+
+  for (let [packageName, packageErrors] of Object.entries(errorsByPackage)) {
+    lines.push(`📦 ${packageName}:`)
+    for (let error of packageErrors) {
+      lines.push(`   ${error.file}: ${error.error}`)
+    }
+    lines.push('')
+  }
+
+  let packageCount = Object.keys(errorsByPackage).length
+  lines.push(
+    `Found ${errors.length} error${errors.length === 1 ? '' : 's'} in ${packageCount} package${packageCount === 1 ? '' : 's'}`,
+  )
+
+  return lines.join('\n')
+}
+
+/**
+ * Determines the highest severity bump type from an array of bump types.
+ */
+function getHighestBump(bumps: BumpType[]): BumpType | null {
   if (bumps.includes('major')) return 'major'
   if (bumps.includes('minor')) return 'minor'
-  return 'patch'
+  if (bumps.includes('patch')) return 'patch'
+  return null
 }
 
 /**
@@ -247,7 +455,7 @@ function hasBreakingChangePrefix(content: string): boolean {
 /**
  * Formats a changelog entry from change file content
  */
-export function formatChangelogEntry(content: string): string {
+function formatChangelogEntry(content: string): string {
   let lines = content.trim().split('\n')
 
   if (lines.length === 1) {
@@ -266,16 +474,15 @@ export function formatChangelogEntry(content: string): string {
   return formatted.join('\n')
 }
 
-interface ChangelogContentOptions {
-  /** Whether to include package name in heading. Default: false */
-  includePackageName?: boolean
-  /** Markdown heading level (2 = ##, 3 = ###). Default: 2 */
-  headingLevel?: 2 | 3
-}
-
 /**
  * Generates a section for a specific bump type (e.g., "### Major Changes")
  */
+const sectionTitles: Record<BumpType, string> = {
+  major: 'Major Changes',
+  minor: 'Minor Changes',
+  patch: 'Patch Changes',
+}
+
 function generateBumpTypeSection(
   changes: PackageRelease['changes'],
   bumpType: BumpType,
@@ -297,14 +504,8 @@ function generateBumpTypeSection(
 
   let lines: string[] = []
   let subheadingPrefix = '#'.repeat(subheadingLevel)
-  let sectionTitle =
-    bumpType === 'major'
-      ? 'Major Changes'
-      : bumpType === 'minor'
-        ? 'Minor Changes'
-        : 'Patch Changes'
 
-  lines.push(`${subheadingPrefix} ${sectionTitle}`)
+  lines.push(`${subheadingPrefix} ${sectionTitles[bumpType]}`)
   lines.push('')
 
   for (let change of sorted) {
@@ -320,7 +521,12 @@ function generateBumpTypeSection(
  */
 export function generateChangelogContent(
   release: PackageRelease,
-  options: ChangelogContentOptions = {},
+  options: {
+    /** Whether to include package name in heading. Default: false */
+    includePackageName?: boolean
+    /** Markdown heading level (2 = ##, 3 = ###). Default: 2 */
+    headingLevel?: 2 | 3
+  } = {},
 ): string {
   let { includePackageName = false, headingLevel = 2 } = options
   let lines: string[] = []
@@ -341,39 +547,6 @@ export function generateChangelogContent(
   }
 
   return lines.join('\n')
-}
-
-/**
- * Gets all releases that would be prepared
- */
-export function getAllReleases(): PackageRelease[] {
-  let packageNames = getPackagesWithChanges()
-  let releases: PackageRelease[] = []
-
-  for (let packageName of packageNames) {
-    let packageJsonPath = getPackageFile(packageName, 'package.json')
-    let packageJson = readJson(packageJsonPath)
-    let currentVersion = packageJson.version
-
-    let changeFiles = getPackageChangeFiles(packageName)
-    let bumps = changeFiles.map((cf) => cf.bump)
-    let bump = getHighestBump(bumps)
-    let nextVersion = getNextVersion(currentVersion, bump)
-
-    releases.push({
-      packageName,
-      currentVersion,
-      nextVersion,
-      bump,
-      changes: changeFiles.map((cf) => ({
-        file: cf.file,
-        bump: cf.bump,
-        content: cf.content,
-      })),
-    })
-  }
-
-  return releases
 }
 
 /**
@@ -403,7 +576,7 @@ type AllChangelogEntries = Record<string, ChangelogEntry>
 /**
  * Parses a package's CHANGELOG.md and returns all version entries
  */
-export function parseChangelog(packageName: string): AllChangelogEntries | null {
+function parseChangelog(packageName: string): AllChangelogEntries | null {
   let changelogFile = getPackageFile(packageName, 'CHANGELOG.md')
 
   if (!fileExists(changelogFile)) {
