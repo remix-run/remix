@@ -1,20 +1,16 @@
 import { ParseError, unreachable } from './errors.ts'
 import type { Span } from './span.ts'
+import * as Variant from './variant.ts'
+
+export type Token =
+  | { type: 'text'; text: string }
+  | { type: '(' | ')' }
+  | { type: ':' | '*'; nameIndex: number }
 
 type AST = {
   tokens: Array<Token>
   paramNames: Array<string>
   optionals: Map<number, number>
-}
-
-type Token =
-  | { type: 'text'; text: string }
-  | { type: '(' | ')' }
-  | { type: ':' | '*'; nameIndex: number }
-
-type Variant = {
-  key: string
-  paramNames: Array<string>
 }
 
 const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
@@ -23,7 +19,7 @@ export class PartPattern {
   readonly tokens: AST['tokens']
   readonly paramNames: AST['paramNames']
   readonly optionals: AST['optionals']
-  #variants: Array<Variant> | undefined
+  #variants: Array<Variant.Type> | undefined
 
   constructor(ast: AST) {
     this.tokens = ast.tokens
@@ -119,76 +115,20 @@ export class PartPattern {
     return new PartPattern(ast)
   }
 
-  get variants(): Array<Variant> {
-    if (this.#variants !== undefined) {
-      return this.#variants
+  get variants(): Array<Variant.Type> {
+    if (this.#variants === undefined) {
+      this.#variants = Variant.generate(this)
     }
 
-    let result: Array<Variant> = []
-
-    let stack: Array<{ index: number; variant: Variant }> = [
-      { index: 0, variant: { key: '', paramNames: [] } },
-    ]
-    while (stack.length > 0) {
-      let { index, variant } = stack.pop()!
-
-      if (index === this.tokens.length) {
-        result.push(variant)
-        continue
-      }
-
-      let token = this.tokens[index]
-      if (token.type === '(') {
-        stack.push(
-          { index: index + 1, variant }, // include optional
-          { index: this.optionals.get(index)! + 1, variant: structuredClone(variant) }, // exclude optional
-        )
-        continue
-      }
-      if (token.type === ')') {
-        stack.push({ index: index + 1, variant })
-        continue
-      }
-
-      if (token.type === ':') {
-        variant.key += '{:}'
-        variant.paramNames.push(this.paramNames[token.nameIndex])
-        stack.push({ index: index + 1, variant })
-        continue
-      }
-
-      if (token.type === '*') {
-        variant.key += '{*}'
-        variant.paramNames.push(this.paramNames[token.nameIndex])
-        stack.push({ index: index + 1, variant })
-        continue
-      }
-
-      if (token.type === 'text') {
-        variant.key += token.text
-        stack.push({ index: index + 1, variant })
-        continue
-      }
-
-      unreachable(token.type)
-    }
-
-    this.#variants = result
-    return result
+    return this.#variants
   }
 
   toString(): string {
     let result = ''
+
     for (let token of this.tokens) {
       if (token.type === '(' || token.type === ')') {
         result += token.type
-        continue
-      }
-
-      if (token.type === ':' || token.type === '*') {
-        let name = this.paramNames[token.nameIndex]
-        if (name === '*') name = ''
-        result += token.type + name
         continue
       }
 
@@ -197,8 +137,16 @@ export class PartPattern {
         continue
       }
 
+      if (token.type === ':' || token.type === '*') {
+        let name = this.paramNames[token.nameIndex]
+        if (name === '*') name = ''
+        result += `${token.type}${name}`
+        continue
+      }
+
       unreachable(token.type)
     }
+
     return result
   }
 
@@ -207,27 +155,45 @@ export class PartPattern {
    * @returns The href (URL) for the given params, or null if no variant matches.
    */
   href(params: Record<string, string | number>): string | null {
-    let best: Variant | undefined
+    let best: Variant.Type | undefined
     for (let variant of this.variants) {
-      let matches = variant.paramNames.every((param) => params[param] !== undefined)
-      if (matches) {
-        let isBest =
-          !best ||
-          variant.paramNames.length > best.paramNames.length ||
-          (variant.paramNames.length === best.paramNames.length &&
-            variant.key.length > best.key.length)
+      let matches = variant.requiredParams.every((param) => params[param] !== undefined)
+      if (!matches) continue
 
-        if (isBest) {
+      if (best === undefined) {
+        best = variant
+        continue
+      }
+
+      if (variant.requiredParams.length > best.requiredParams.length) {
+        best = variant
+        continue
+      }
+      if (variant.requiredParams.length === best.requiredParams.length) {
+        if (variant.tokens.length > best.tokens.length) {
           best = variant
+          continue
         }
       }
     }
 
+    // todo: I can't think of any case where there would end up being a tie
+    // but the logic doesn't explicitly rule it out.
+    // need to figure out if its possible and how to handle it.
     if (!best) return null
 
-    let result = best.key
-    for (let paramName of best.paramNames) {
-      result = result.replace(/\{[:\*]\}/, String(params[paramName]))
+    let result = ''
+    for (let token of best.tokens) {
+      if (token.type === 'text') {
+        result += token.text
+        continue
+      }
+
+      if (token.type === ':' || token.type === '*') {
+        let paramName = this.paramNames[token.nameIndex]
+        result += String(params[paramName])
+        continue
+      }
     }
     return result
   }
