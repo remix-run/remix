@@ -1,4 +1,5 @@
 import type { RoutePattern } from './route-pattern/route-pattern.ts'
+import * as Variant from './variant.ts'
 
 type ParseErrorType = 'unmatched (' | 'unmatched )' | 'missing variable name' | 'dangling escape'
 
@@ -56,11 +57,11 @@ export class HrefError extends Error {
     let pattern = details.pattern.toString()
 
     if (details.type === 'missing-hostname') {
-      return `pattern requires hostname\n\n${pattern}`
+      return `pattern requires hostname\n\nPattern: ${pattern}`
     }
 
     if (details.type === 'nameless-wildcard') {
-      return `pattern contains nameless wildcard\n\n${pattern}`
+      return `pattern contains nameless wildcard\n\nPattern: ${pattern}`
     }
 
     if (details.type === 'missing-search-params') {
@@ -73,23 +74,19 @@ export class HrefError extends Error {
       let paramNames = Object.keys(details.params)
       let partPattern = details.pattern.ast[details.part]
       let variants = partPattern.variants.map((variant) => {
-        let key = variant.key
-        for (let paramName of variant.paramNames) {
-          key = key.replace(/\{[:*]\}/, (match) => {
-            return match === '{:}' ? `:${paramName}` : `*${paramName}`
-          })
-        }
-        let missing = new Set(variant.paramNames.filter((p) => !paramNames.includes(p)))
+        let key = Variant.toString(variant.tokens, partPattern.paramNames)
+        let missing = new Set(variant.requiredParams.filter((p) => !paramNames.includes(p)))
         return `  - ${key || '<empty>'} (missing: ${Array.from(missing).join(', ')})`
       })
-      let paramsStr = JSON.stringify(details.params)
-      return `missing params for ${details.part}\n\nPattern: ${pattern}\nParams: ${paramsStr}\nVariants for ${details.part}:\n${variants.join('\n')}`
+      let partTitle = details.part.charAt(0).toUpperCase() + details.part.slice(1)
+      return `missing params\n\nPattern: ${pattern}\nParams: ${JSON.stringify(details.params)}\n${partTitle} variants:\n${variants.join('\n')}`
     }
 
     unreachable(details)
   }
 }
 
-export function unreachable(value: never): never {
-  throw new Error(`Unreachable: ${value}`)
+export function unreachable(value?: never): never {
+  let message = value === undefined ? 'Unreachable' : `Unreachable: ${value}`
+  throw new Error(message)
 }
