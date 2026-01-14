@@ -110,8 +110,8 @@ async function main() {
 
   if (remixPrereleaseTag) {
     let commands = [
-      // Phase 1: Publish everything except remix (with --report-summary)
-      'pnpm publish --recursive --filter "!remix" --access public --no-git-checks --report-summary',
+      // Phase 1: Publish everything in `packages` except remix (with --report-summary so we know what was published)
+      'pnpm publish --recursive --filter "./packages/*" --filter "!remix" --access public --no-git-checks --report-summary',
       // Phase 2: Publish remix with prerelease tag (no --report-summary to preserve phase 1's file)
       `pnpm publish --filter remix --tag ${remixPrereleaseTag} --access public --no-git-checks`,
     ]
@@ -129,7 +129,8 @@ async function main() {
     }
   } else {
     // Single-phase publish: everything as latest
-    let command = 'pnpm publish --recursive --access public --no-git-checks --report-summary'
+    let command =
+      'pnpm publish --recursive --filter "./packages/*" --access public --no-git-checks --report-summary'
 
     if (dryRun) {
       console.log('Would run:')
