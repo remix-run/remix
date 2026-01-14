@@ -2,6 +2,7 @@ dist/
 docs/api/
 docs/typedoc/
 node_modules/
+pnpm-publish-summary.json
 reference/
 .tmp/
 

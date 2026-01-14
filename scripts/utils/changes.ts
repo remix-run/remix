@@ -7,24 +7,23 @@ import { fileExists, readFile, readJson } from './fs.ts'
 const bumpTypes = ['major', 'minor', 'patch'] as const
 type BumpType = (typeof bumpTypes)[number]
 
-// Prerelease configuration (from .changes/prerelease.json)
-const prereleaseTagTypes = ['alpha'] as const
-type PrereleaseTag = (typeof prereleaseTagTypes)[number]
-
-interface PrereleaseConfig {
-  tag: PrereleaseTag
+// Prerelease configuration (from packages/remix/.changes/prerelease.json)
+// Only the remix package supports prerelease mode.
+export interface RemixPrereleaseConfig {
+  tag: string
 }
 
-type ParsedPrereleaseConfig =
+export type ParsedRemixPrereleaseConfig =
   | { exists: false }
-  | { exists: true; valid: true; config: PrereleaseConfig }
+  | { exists: true; valid: true; config: RemixPrereleaseConfig }
   | { exists: true; valid: false; error: string }
 
 /**
- * Reads and validates prerelease.json for a package.
+ * Reads and validates the remix package's prerelease.json.
+ * Only remix supports prerelease mode - other packages publish as "latest".
  */
-function readPrereleaseConfig(packageName: string): ParsedPrereleaseConfig {
-  let packageDir = getPackageDir(packageName)
+export function readRemixPrereleaseConfig(): ParsedRemixPrereleaseConfig {
+  let packageDir = getPackageDir('remix')
   let prereleaseJsonPath = path.join(packageDir, '.changes', 'prerelease.json')
 
   if (!fs.existsSync(prereleaseJsonPath)) {
@@ -52,15 +51,15 @@ function readPrereleaseConfig(packageName: string): ParsedPrereleaseConfig {
     return { exists: true, valid: false, error: 'prerelease.json must have a "tag" field' }
   }
 
-  if (!prereleaseTagTypes.includes(obj.tag as PrereleaseTag)) {
+  if (typeof obj.tag !== 'string' || obj.tag.trim().length === 0) {
     return {
       exists: true,
       valid: false,
-      error: `prerelease.json "tag" must be one of: ${prereleaseTagTypes.join(', ')} (got: ${obj.tag})`,
+      error: 'prerelease.json "tag" must be a non-empty string',
     }
   }
 
-  return { exists: true, valid: true, config: { tag: obj.tag as PrereleaseTag } }
+  return { exists: true, valid: true, config: { tag: obj.tag.trim() } }
 }
 
 /**
@@ -80,7 +79,7 @@ function getPrereleaseIdentifier(version: string): string | null {
 function getNextVersion(
   currentVersion: string,
   bumpType: BumpType,
-  prereleaseConfig: PrereleaseConfig | null,
+  prereleaseConfig: RemixPrereleaseConfig | null,
 ): string {
   let currentPrereleaseId = getPrereleaseIdentifier(currentVersion)
   let isCurrentPrerelease = currentPrereleaseId !== null
@@ -139,7 +138,7 @@ interface ValidationError {
 }
 
 type ParsedPackageChanges =
-  | { valid: true; changes: ChangeFile[]; prereleaseConfig: PrereleaseConfig | null }
+  | { valid: true; changes: ChangeFile[]; prereleaseConfig: RemixPrereleaseConfig | null }
   | { valid: false; errors: ValidationError[] }
 
 /**
@@ -185,20 +184,34 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
   let currentVersionPrereleaseId = getPrereleaseIdentifier(currentVersion)
   let isCurrentVersionPrerelease = currentVersionPrereleaseId !== null
 
-  // Read prerelease.json if it exists
-  let parsedPrereleaseConfig = readPrereleaseConfig(packageName)
-  let prereleaseConfig: PrereleaseConfig | null = null
+  // Handle prerelease.json - only supported for remix package
+  let prereleaseConfig: RemixPrereleaseConfig | null = null
+  let prereleaseJsonPath = path.join(changesDir, 'prerelease.json')
 
-  if (parsedPrereleaseConfig.exists) {
-    if (!parsedPrereleaseConfig.valid) {
+  if (packageName === 'remix') {
+    // For remix, read and validate the prerelease config
+    let parsedRemixPrereleaseConfig = readRemixPrereleaseConfig()
+    if (parsedRemixPrereleaseConfig.exists) {
+      if (!parsedRemixPrereleaseConfig.valid) {
+        errors.push({
+          package: packageName,
+          file: '.changes/prerelease.json',
+          error: parsedRemixPrereleaseConfig.error,
+        })
+        return { valid: false, errors }
+      }
+      prereleaseConfig = parsedRemixPrereleaseConfig.config
+    }
+  } else {
+    // For non-remix packages, error if prerelease.json exists
+    if (fs.existsSync(prereleaseJsonPath)) {
       errors.push({
         package: packageName,
         file: '.changes/prerelease.json',
-        error: parsedPrereleaseConfig.error,
+        error: 'prerelease.json is only supported for the "remix" package. Remove this file.',
       })
       return { valid: false, errors }
     }
-    prereleaseConfig = parsedPrereleaseConfig.config
   }
 
   // Read all files in .changes directory

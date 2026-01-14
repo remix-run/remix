@@ -126,9 +126,9 @@ pnpm changes:version --no-commit
 
 Tags and GitHub releases are created automatically by the publish workflow after successful npm publish.
 
-### Prerelease Packages
+### Prerelease Mode for `remix`
 
-Packages can be in prerelease mode by having a `.changes/prerelease.json` file:
+The `remix` package supports prerelease mode via an optional `.changes/prerelease.json` file:
 
 ```json
 {
@@ -136,47 +136,26 @@ Packages can be in prerelease mode by having a `.changes/prerelease.json` file:
 }
 ```
 
-When a package has this file:
+This is only supported for `remix` because it's the only package that needs to publish prereleases alongside an existing stable version on npm. All other packages in this monorepo are new and publish directly as `latest`.
 
-- Normal `major/minor/patch` change files still describe what kind of change it is
-- But the version bumps the prerelease counter instead (e.g. `1.0.0-alpha.1` → `1.0.0-alpha.2`)
-- Changelog entries still get proper "Major Changes" / "Minor Changes" / "Patch Changes" sections
+#### Bumping `remix` prerelease versions
 
-#### Entering prerelease mode
+While in prerelease mode, add change files as normal. The prerelease counter increments (e.g. `3.0.0-alpha.1` → `3.0.0-alpha.2`). Changelog entries still get proper "Major Changes" / "Minor Changes" / "Patch Changes" sections, but the bump type is otherwise ignored—only the prerelease counter is bumped.
 
-Prerelease mode is currently only for major version bumps. To start a prerelease:
+#### Transitioning between `remix` prerelease tags
 
-1. Create `.changes/prerelease.json` with `{ "tag": "..." }`, e.g. `{ "tag": "alpha" }`
-2. Add a **major** change file describing the release (e.g. `major.release-v2-alpha.md`)
-3. The version will bump to the next major with the prerelease suffix (e.g. `1.5.0` → `2.0.0-alpha.0`)
+To transition between tags (e.g. `alpha` → `beta`):
 
-> **Note:** Entering prerelease mode requires a `major.*` change file. This ensures prereleases are always for upcoming major versions.
+1. Update `.changes/prerelease.json` to the new tag
+2. Add a change file describing the transition
 
-#### Bumping prerelease versions
+Version resets to the new tag (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The bump type is for changelog categorization only—by convention, use `patch`.
 
-While in prerelease mode, just add change files as normal. The prerelease counter increments:
+#### Graduating `remix` to stable
 
-- `2.0.0-alpha.0` + `minor.add-feature.md` → `2.0.0-alpha.1`
-- `2.0.0-alpha.1` + `patch.fix-bug.md` → `2.0.0-alpha.2`
-
-The bump type (major/minor/patch) is for changelog categorization only—it doesn't affect the version since the version bump is predefined.
-
-#### Transitioning between prerelease tags
-
-To transition between prerelease tags (e.g. alpha → beta → rc):
-
-1. Update `.changes/prerelease.json` to the new tag (e.g. `{ "tag": "beta" }`)
-2. Add a change file describing the transition (e.g. `patch.release-v2-beta.md`)
-3. Version resets to the new tag (e.g. `2.0.0-alpha.5` → `2.0.0-beta.0`)
-
-The bump type is for changelog categorization only—by convention, use `patch` for tag transitions.
-
-#### Graduating to stable
-
-To release a stable version:
+To release the stable version:
 
 1. Delete `.changes/prerelease.json`
-2. Add a change file describing the stable release (e.g. `major.release-v2.md`)
-3. The prerelease suffix is stripped (e.g. `2.0.0-alpha.5` → `2.0.0`)
+2. Add a change file describing the stable release
 
-The bump type is for changelog categorization only—by convention, use `major` for graduating to stable (it's a significant release announcement).
+The prerelease suffix is stripped (e.g. `3.0.0-rc.7` → `3.0.0`). The bump type is for changelog categorization only—by convention, use `major` for a major release announcement.
