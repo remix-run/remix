@@ -6,7 +6,7 @@ BREAKING CHANGE: Updated Component API
   - `setup` prop is passed to the setup function
   - `props` are only passed to the render function
 
-## Example:
+#### Example:
 
 **Before**
 
@@ -66,9 +66,9 @@ function Counter(
 let el = <Counter setup={10} label="Count" />
 ```
 
-## Discussion:
+#### Discussion:
 
-### Removing stateless components
+##### Removing stateless components
 
 There was conceptual overhead of "stateful vs. stateless components" that is completely gone. All components must return a render function whether state is managed or not.
 
@@ -139,7 +139,7 @@ function SomeLayout() {
 }
 ```
 
-### The `setup` prop
+##### The `setup` prop
 
 The `setup` prop exists primarily to keep regular props out of the setup scope, preventing accidental stale captures.
 
@@ -231,7 +231,7 @@ function Counter(handle: Handle, setup: number) {
 
 However, it is advised to use the setup prop if you intend for a value to be static, like `setup.count`. Props that are rendered should typically be props and not setup.
 
-### `this` binding removal
+##### `this` binding removal
 
 We used `this` simply for its "optional first position" characteristic. Otherwise, it was difficult to decide which parameter should come first: handle or props?
 

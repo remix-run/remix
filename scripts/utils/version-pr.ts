@@ -36,7 +36,7 @@ function generateHeader(): string {
 }
 
 function generateReleasesTable(releases: PackageRelease[]): string {
-  let lines = ['## Releases', '', '| Package | Version |', '|---------|---------|']
+  let lines = ['# Releases', '', '| Package | Version |', '|---------|---------|']
 
   for (let release of releases) {
     lines.push(
@@ -48,7 +48,7 @@ function generateReleasesTable(releases: PackageRelease[]): string {
 }
 
 function generateChangelogs(releases: PackageRelease[]): string {
-  let lines = ['## Changelogs']
+  let lines = ['# Changelogs']
 
   for (let release of releases) {
     lines.push('')
@@ -61,12 +61,12 @@ function generateChangelogs(releases: PackageRelease[]): string {
 function generatePackageChangelog(release: PackageRelease): string {
   return generateChangelogContent(release, {
     includePackageName: true,
-    headingLevel: 3,
+    headingLevel: 2,
   })
 }
 
 function truncateChangelogs(releases: PackageRelease[], maxLength: number): string {
-  let lines = ['## Changelogs']
+  let lines = ['# Changelogs']
   let currentLength = lines.join('\n').length
   let includedCount = 0
 

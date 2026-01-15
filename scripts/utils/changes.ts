@@ -308,6 +308,18 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
       continue
     }
 
+    // Check for headings that aren't level 4, 5, or 6
+    let invalidHeadingMatch = content.match(/^(#{1,3}|#{7,})\s+/m)
+    if (invalidHeadingMatch) {
+      let headingLevel = invalidHeadingMatch[1].length
+      errors.push({
+        package: packageName,
+        file,
+        error: `Headings in change files must be level 4 (####), 5 (#####), or 6 (######), but found level ${headingLevel}. This is because change files are nested within the changelog which already uses heading levels 1-3.`,
+      })
+      continue
+    }
+
     // Validate breaking change prefix matches the correct bump type (only for stable releases)
     // In prerelease mode, breaking changes don't need special handling since we're just bumping counter
     if (prereleaseConfig === null) {
