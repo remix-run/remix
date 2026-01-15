@@ -54,13 +54,6 @@ function main() {
   console.log(generateCommitMessage(releases))
   console.log()
 
-  console.log(colorize('GIT TAGS', colors.lightBlue))
-  console.log()
-  for (let release of releases) {
-    console.log(`${release.packageName}@${release.nextVersion}`)
-  }
-  console.log()
-
   console.log(colorize('VERSION COMMAND', colors.lightBlue))
   console.log()
   console.log('pnpm changes:version')
