@@ -63,7 +63,7 @@ export interface LoggerOptions {
  */
 export function logger(options: LoggerOptions = {}): Middleware {
   let {
-    format = '[%date] %method %path %status %durationPretty %contentLengthPretty',
+    format = '[%date] %method %path %status %contentLength',
     log = console.log,
     colors,
   } = options
