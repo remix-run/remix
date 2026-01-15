@@ -31,7 +31,7 @@ export interface LoggerOptions {
    * - `%url` - The full URL of the request
    * - `%userAgent` - The `User-Agent` header of the request
    *
-   * @default '[%date] %method %path %status %durationPretty %contentLengthPretty'
+   * @default '[%date] %method %path %status %duration %contentLength'
    */
   format?: string
   /**
