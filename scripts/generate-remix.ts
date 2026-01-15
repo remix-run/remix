@@ -92,13 +92,7 @@ if (GENERATE_CHANGE_FILES) {
 
 function lintRemixPackage(fix: boolean) {
   console.log('🔍 Running ESLint on remix package...')
-  let eslint = cp.spawnSync('eslint', ['packages/remix/', '--max-warnings=0', fix ? '--fix' : ''], {
-    stdio: 'inherit',
-  })
-
-  if (eslint.status !== 0) {
-    throw new Error(`ESLint failed. Please fix linting errors before continuing.`)
-  }
+  cp.execSync(`npx eslint packages/remix/ --max-warnings=0 ${fix ? '--fix' : ''}`)
 }
 
 async function getRemixRunPackages() {
