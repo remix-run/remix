@@ -12,19 +12,12 @@ on:
       - 'main'
     paths:
       - 'packages/**/package.json'
-  # For now we do not run this on pull requests because pushing back to that PR branch
-  # via the $GITHUB_TOKEN will not re-run CI runs, but it will cancel ongoing CI runs
-  # for the prior developer commit, which opens up the case for false positives on CI runs.
-  # See: https://docs.github.com/en/actions/tutorials/authenticate-with-github_token#using-the-github_token-in-a-workflow
-  #
-  # If we want to re-enable, we would just need to setup a PAT and use that instead of $GITHUB_TOKEN
-  #
-  # pull_request:
-  #   branches-ignore:
-  #     - release-v2
-  #     - v2
-  #   paths:
-  #     - 'packages/**/package.json'
+  pull_request:
+    branches-ignore:
+      - release-v2
+      - v2
+    paths:
+      - 'packages/**/package.json'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -35,15 +28,26 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
+      # Normal checkout of the trigger branch on pushes
       - name: Checkout
         if: github.event_name == 'push'
         uses: actions/checkout@v4
+        with:
+          # Use a PAT because using the default `GITHUB_TOKEN`/`github.token` will not
+          # trigger workflow runs, so use a PAT to ensure new commits will run CI checks.
+          # See: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
+          token: ${{ secrets.GH_REMIX_PAT }}
 
+      # Checkout the PR branch when running on PRs
       - name: Checkout
         if: github.event_name == 'pull_request'
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
+          # Use a PAT because using the default `GITHUB_TOKEN`/`github.token` will not
+          # trigger workflow runs, so use a PAT to ensure new commits will run CI checks.
+          # See: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
+          token: ${{ secrets.GH_REMIX_PAT }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -57,10 +61,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
+      - name: Generate remix package
         run: pnpm run generate-remix
 
       - name: Commit and push changes
+        id: commit
         run: |
           if [ -z "$(git status --porcelain)" ]; then
             echo "💿 no updates to the remix package needed"
@@ -76,7 +81,7 @@ jobs:
           fi
 
           # Re-install to ensure any new remix peerDependencies are reflected
-          pnpm install
+          pnpm install --no-frozen-lockfile
 
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
@@ -84,3 +89,11 @@ jobs:
           git commit -a -m "build: update remix package"
           git push
           echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
+          echo "new_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && steps.commit.outputs.new_sha != ''
+        env:
+          # `GH_TOKEN` is required to use the `gh` CLI to add comments to PRs.
+          GH_TOKEN: ${{ secrets.GH_REMIX_PAT }}
+        run: gh pr comment ${{ github.event.pull_request.number }} --body "Changes in this PR resulted in updates to the auto-generated \`remix\` package in ${{ steps.commit.outputs.new_sha }}. Please review those changes prior to merging."
