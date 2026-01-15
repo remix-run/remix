@@ -2,6 +2,12 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
+## v0.14.1
+
+### Patch Changes
+
+- Update `@remix-run/headers` peer dependency to use the new header parsing methods.
+
 ## v0.14.0 (2025-11-26)
 
 - Move `@remix-run/headers` to `peerDependencies`

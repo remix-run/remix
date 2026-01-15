@@ -2,6 +2,31 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## v0.15.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `RequestContext.headers` now returns a standard `Headers` instance instead of the `SuperHeaders`/`Headers` subclass from `@remix-run/headers`. As a result, the `@remix-run/headers` peer dependency has now been removed.
+
+  If you were relying on the type-safe property accessors on `RequestContext.headers`, you should use the new parse functions from `@remix-run/headers` instead:
+
+  ```ts
+  // Before:
+  router.get('/api/users', (context) => {
+    let acceptsJson = context.headers.accept.accepts('application/json')
+    // ...
+  })
+
+  // After:
+  import { Accept } from '@remix-run/headers'
+
+  router.get('/api/users', (context) => {
+    let accept = Accept.from(context.headers.get('accept'))
+    let acceptsJson = accept.accepts('application/json')
+    // ...
+  })
+  ```
+
 ## v0.14.0 (2025-12-18)
 
 - BREAKING CHANGE: Remove `BuildRequestHandler` type. Use `RequestHandler` type directly instead.

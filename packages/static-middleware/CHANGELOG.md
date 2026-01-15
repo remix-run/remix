@@ -2,6 +2,12 @@
 
 This is the changelog for [`static-middleware`](https://github.com/remix-run/remix/tree/main/packages/static-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.1
+
+### Patch Changes
+
+- Update `@remix-run/fs` peer dependency to use new `openLazyFile()` API
+
 ## v0.4.0 (2025-11-25)
 
 - BREAKING CHANGE: Replace `mrmime` dependency with `@remix-run/mime` for MIME type detection which is now a peer dependency.
