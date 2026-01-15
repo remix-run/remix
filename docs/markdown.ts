@@ -1,4 +1,4 @@
-import { html, SafeHtml } from '@remix-run/html-template'
+import * as frontmatter from 'front-matter'
 import { marked } from 'marked'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -13,7 +13,7 @@ export type DocFile = {
   urlPath: string
 }
 
-export async function discoverMarkdownFiles(dir: string): Promise<DocFile[]> {
+export async function discoverMarkdownFiles(baseDir: string): Promise<DocFile[]> {
   let files: DocFile[] = []
 
   let packagesDir = path.resolve(process.cwd(), 'packages')
@@ -38,14 +38,17 @@ export async function discoverMarkdownFiles(dir: string): Promise<DocFile[]> {
       if (entry.isDirectory()) {
         walk(fullPath)
       } else if (entry.isFile() && entry.name.endsWith('.md')) {
-        let relativePath = path.relative(dir, fullPath)
+        let relativePath = path.relative(baseDir, fullPath)
         let parts = relativePath.split(path.sep)
         let packageName = parts.slice(0, parts.length - 1).join('/')
         let urlPath = '/docs/' + relativePath.replace(/\.md$/, '').replace(/\\/g, '/')
 
         let markdown = fs.readFileSync(fullPath, 'utf-8')
-        // @ts-expect-error No types
-        let { attributes } = frontmatter.default(markdown)
+        // No types exist for the `frontmatter` package
+        let parseFrontmatter = frontmatter.default as unknown as (md: string) => {
+          attributes: Record<string, any>
+        }
+        let { attributes } = parseFrontmatter(markdown)
 
         files.push({
           path: fullPath,
@@ -58,11 +61,11 @@ export async function discoverMarkdownFiles(dir: string): Promise<DocFile[]> {
     }
   }
 
-  walk(dir)
+  walk(baseDir)
   return files.sort((a, b) => a.urlPath.localeCompare(b.urlPath))
 }
 
-export async function renderMarkdownFile(filePath: string): Promise<SafeHtml> {
+export async function renderMarkdownFile(filePath: string): Promise<string> {
   try {
     let markdown = fs.readFileSync(filePath, 'utf-8')
 
@@ -70,9 +73,9 @@ export async function renderMarkdownFile(filePath: string): Promise<SafeHtml> {
     markdown = markdown.replace(/^---\n[\s\S]*?\n---\n/, '')
 
     let htmlContent = await marked.parse(markdown)
-    return html.raw`${htmlContent}`
+    return htmlContent
   } catch (error) {
-    return html`
+    return `
       <div class="error">
         <h2>Error loading file</h2>
         <p>Could not read file: ${filePath}</p>

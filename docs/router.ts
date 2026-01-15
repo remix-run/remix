@@ -2,7 +2,6 @@ import * as path from 'node:path'
 import { createRouter, route } from '@remix-run/fetch-router'
 import { createHtmlResponse } from '@remix-run/response/html'
 import { staticFiles } from '@remix-run/static-middleware'
-import { html, SafeHtml } from '@remix-run/html-template'
 import { discoverMarkdownFiles, DOCS_DIR, renderMarkdownFile, type DocFile } from './markdown.ts'
 
 let docFiles = await discoverMarkdownFiles(DOCS_DIR)
@@ -59,9 +58,8 @@ function buildNavigation(currentPath: string): string {
   return navItems.join('')
 }
 
-function createLayout(content: string | SafeHtml, currentPath: string): SafeHtml {
-  return html`
-    <!doctype html>
+function createLayout(content: string, currentPath: string): string {
+  return `<!doctype html>
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
@@ -94,7 +92,7 @@ let router = createRouter({
 })
 
 router.get(routes.home, () => {
-  let content = html`
+  let content = `
     <div class="home-message">
       <h1>Welcome to Remix API Documentation</h1>
       <p>Select a document from the sidebar to get started.</p>
@@ -110,7 +108,7 @@ router.get(routes.docs, async ({ url }) => {
   let docFile = docFiles.find((file) => file.urlPath === pathname)
 
   if (!docFile) {
-    let content = html`
+    let content = `
       <div class="error">
         <h2>404 - Not Found</h2>
         <p>The requested document was not found.</p>
