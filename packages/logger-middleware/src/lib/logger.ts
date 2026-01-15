@@ -140,10 +140,6 @@ function formatApacheDate(date: Date): string {
   return `${day}/${month}/${year}:${hours}:${minutes}:${seconds} ${timezone}`
 }
 
-/**
- * Formats a file size in a human-readable format.
- * Example: 1024 -> "1.0 kB"
- */
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B'
   let units = ['B', 'kB', 'MB', 'GB', 'TB']
@@ -155,10 +151,6 @@ function formatFileSize(bytes: number): string {
 const MINUTE_IN_MS = 60 * 1000
 const HOUR_IN_MS = 60 * MINUTE_IN_MS
 
-/**
- * Formats a duration in a human-readable format.
- * Example: 1200 -> "1.20s"
- */
 export function formatDuration(ms: number): string {
   if (ms >= HOUR_IN_MS) {
     return `${(ms / HOUR_IN_MS).toFixed(2)}h`
