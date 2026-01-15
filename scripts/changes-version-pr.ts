@@ -7,7 +7,7 @@
  * Environment:
  *   GITHUB_TOKEN - Required (unless --preview)
  */
-import { validateAllChanges, getAllReleases, generateCommitMessage } from './utils/changes.ts'
+import { parseAllChangeFiles, generateCommitMessage } from './utils/changes.ts'
 import { generatePrBody } from './utils/version-pr.ts'
 import { logAndExec } from './utils/process.ts'
 import { findOpenPr, createPr, updatePr, setPrPkgLabels, closePr } from './utils/github.ts'
@@ -22,21 +22,20 @@ let prTitle = 'Version Packages'
 async function main() {
   console.log(preview ? '🔍 PREVIEW MODE\n' : '')
 
-  // Validate changes
+  // Parse and validate changes
   console.log('Validating change files...')
-  let validationResult = validateAllChanges()
-  if (validationResult.errorCount > 0) {
+  let result = parseAllChangeFiles()
+
+  if (!result.valid) {
     console.error('Validation errors found:')
-    for (let [pkg, errors] of Object.entries(validationResult.errorsByPackage)) {
-      for (let error of errors) {
-        console.error(`  ${pkg}/${error.file}: ${error.error}`)
-      }
+    for (let error of result.errors) {
+      console.error(`  ${error.package}/${error.file}: ${error.error}`)
     }
     process.exit(1)
   }
 
-  // Get releases
-  let releases = getAllReleases()
+  let { releases } = result
+
   if (releases.length === 0) {
     console.log('No pending changes to release.')
 

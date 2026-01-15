@@ -125,3 +125,37 @@ pnpm changes:version --no-commit
 ```
 
 Tags and GitHub releases are created automatically by the publish workflow after successful npm publish.
+
+### Prerelease Mode for `remix`
+
+The `remix` package supports prerelease mode via an optional `.changes/prerelease.json` file:
+
+```json
+{
+  "tag": "alpha"
+}
+```
+
+This is only supported for `remix` because it's the only package that needs to publish prereleases alongside an existing stable version on npm. All other packages in this monorepo are new and publish directly as `latest`.
+
+#### Bumping `remix` prerelease versions
+
+While in prerelease mode, add change files as normal. The prerelease counter increments (e.g. `3.0.0-alpha.1` → `3.0.0-alpha.2`). Changelog entries still get proper "Major Changes" / "Minor Changes" / "Patch Changes" sections, but the bump type is otherwise ignored—only the prerelease counter is bumped.
+
+#### Transitioning between `remix` prerelease tags
+
+To transition between tags (e.g. `alpha` → `beta`):
+
+1. Update `.changes/prerelease.json` to the new tag
+2. Add a change file describing the transition
+
+Version resets to the new tag (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The bump type is for changelog categorization only—by convention, use `patch`.
+
+#### Graduating `remix` to stable
+
+To release the stable version:
+
+1. Delete `.changes/prerelease.json`
+2. Add a change file describing the stable release
+
+The prerelease suffix is stripped (e.g. `3.0.0-rc.7` → `3.0.0`). The bump type is for changelog categorization only—by convention, use `major` for a major release announcement.

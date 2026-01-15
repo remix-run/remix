@@ -1,7 +1,6 @@
 import {
-  validateAllChanges,
+  parseAllChangeFiles,
   formatValidationErrors,
-  getAllReleases,
   generateChangelogContent,
   generateCommitMessage,
 } from './utils/changes.ts'
@@ -11,16 +10,16 @@ import { colors, colorize } from './utils/color.ts'
  * Main preview function
  */
 function main() {
-  let validationResult = validateAllChanges()
+  let result = parseAllChangeFiles()
 
-  if (validationResult.errorCount > 0) {
+  if (!result.valid) {
     console.error(colorize('Validation failed', colors.red) + '\n')
-    console.error(formatValidationErrors(validationResult))
+    console.error(formatValidationErrors(result.errors))
     console.error()
     process.exit(1)
   }
 
-  let releases = getAllReleases()
+  let { releases } = result
 
   if (releases.length === 0) {
     console.log('No packages have changes to release.\n')
