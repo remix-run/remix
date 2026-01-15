@@ -61,7 +61,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
+      - name: Generate remix package
         run: pnpm run generate-remix
 
       - name: Commit and push changes
