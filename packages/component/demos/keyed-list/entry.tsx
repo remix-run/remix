@@ -5,7 +5,7 @@ type ListItem = {
   label: string
 }
 
-function App(this: Handle) {
+function App(handle: Handle) {
   let items: ListItem[] = [
     { id: 'a', label: 'Item A' },
     { id: 'b', label: 'Item B' },
@@ -20,7 +20,7 @@ function App(this: Handle) {
     let newItems = [...items]
     ;[newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]]
     items = newItems
-    this.update()
+    handle.update()
   }
 
   let moveDown = (index: number) => {
@@ -28,12 +28,12 @@ function App(this: Handle) {
     let newItems = [...items]
     ;[newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]]
     items = newItems
-    this.update()
+    handle.update()
   }
 
   let reverse = () => {
     items = [...items].reverse()
-    this.update()
+    handle.update()
   }
 
   let shuffle = () => {
@@ -43,7 +43,7 @@ function App(this: Handle) {
       ;[newItems[i], newItems[j]] = [newItems[j], newItems[i]]
     }
     items = newItems
-    this.update()
+    handle.update()
   }
 
   let toggleAutoShuffle = () => {
@@ -55,7 +55,7 @@ function App(this: Handle) {
         shuffle()
       }, 1000)
     }
-    this.update()
+    handle.update()
   }
 
   return () => (

@@ -92,3 +92,11 @@ describe('IfNoneMatch', () => {
     assert.equal(header.toString(), 'W/"67ab43", "54ed21"')
   })
 })
+
+describe('IfNoneMatch.from', () => {
+  it('parses a string value', () => {
+    let result = IfNoneMatch.from('"abc", "def"')
+    assert.ok(result instanceof IfNoneMatch)
+    assert.equal(result.tags.length, 2)
+  })
+})

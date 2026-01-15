@@ -1,18 +1,8 @@
 # headers
 
-Tired of manually parsing and stringifying HTTP header values in JavaScript? `headers` supercharges the standard `Headers` interface, providing a robust toolkit for effortless and type-safe header manipulation.
+Utilities for parsing, manipulating and stringifying HTTP header values.
 
-HTTP headers are packed with critical information—from content negotiation and caching directives to authentication tokens and file metadata. While the native `Headers` API provides a basic string-based interface, it leaves the complexities of parsing specific header formats (like `Accept`, `Content-Type`, or `Set-Cookie`) entirely up to you.
-
-## Features
-
-- **Type-Safe Accessors:** Interact with complex header values (e.g., media types, quality factors, cookie attributes) through strongly-typed properties and methods, eliminating guesswork and manual parsing.
-- **Automatic Parsing & Stringification:** The library intelligently handles the parsing of raw header strings into structured objects and stringifies your structured data back into spec-compliant header values.
-- **Fluent Interface:** Enjoy a more expressive and developer-friendly API for reading and writing header information.
-- **Drop-in Enhancement:** As a subclass of the standard `Headers` object, it can be used anywhere a `Headers` object is expected, providing progressive enhancement to your existing code.
-- **Individual Header Utilities:** For fine-grained control, use standalone utility classes for specific headers, perfect for scenarios outside of a full `Headers` object.
-
-Unlock a more powerful and elegant way to work with HTTP headers in your JavaScript and TypeScript projects!
+HTTP headers contain critical information—from content negotiation and caching directives to authentication tokens and file metadata. While the native `Headers` API provides a basic string-based interface, it leaves the complexities of parsing specific header formats entirely up to you.
 
 ## Installation
 
@@ -20,564 +10,548 @@ Unlock a more powerful and elegant way to work with HTTP headers in your JavaScr
 npm install @remix-run/headers
 ```
 
-## Overview
-
-The following should give you a sense of what kinds of things you can do with this library:
-
-```ts
-import Headers from '@remix-run/headers'
-
-let headers = new Headers()
-
-// Accept
-headers.accept = 'text/html, text/*;q=0.9'
-
-headers.accept.mediaTypes // [ 'text/html', 'text/*' ]
-Object.fromEntries(headers.accept.entries()) // { 'text/html': 1, 'text/*': 0.9 }
-
-headers.accept.accepts('text/html') // true
-headers.accept.accepts('text/plain') // true
-headers.accept.accepts('image/jpeg') // false
-
-headers.accept.getPreferred(['text/plain', 'text/html']) // 'text/html'
-
-headers.accept.set('text/plain', 0.9)
-headers.accept.set('text/*', 0.8)
-
-headers.get('Accept') // 'text/html,text/plain;q=0.9,text/*;q=0.8'
-
-// Accept-Encoding
-headers.acceptEncoding = 'gzip, deflate;q=0.8'
-
-headers.acceptEncoding.encodings // [ 'gzip', 'deflate' ]
-Object.fromEntries(headers.acceptEncoding.entries()) // { 'gzip': 1, 'deflate': 0.8 }
-
-headers.acceptEncoding.accepts('gzip') // true
-headers.acceptEncoding.accepts('br') // false
-
-headers.acceptEncoding.getPreferred(['gzip', 'deflate']) // 'gzip'
-
-// Accept-Language
-headers.acceptLanguage = 'en-US, en;q=0.9'
-
-headers.acceptLanguage.languages // [ 'en-us', 'en' ]
-Object.fromEntries(headers.acceptLanguage.entries()) // { 'en-us': 1, en: 0.9 }
-
-headers.acceptLanguage.accepts('en') // true
-headers.acceptLanguage.accepts('ja') // false
-
-headers.acceptLanguage.getPreferred(['en-US', 'en-GB']) // 'en-US'
-headers.acceptLanguage.getPreferred(['en', 'fr']) // 'en'
-
-// Accept-Ranges
-headers.acceptRanges = 'bytes'
-
-// Allow
-headers.allow = ['GET', 'POST', 'PUT']
-headers.get('Allow') // 'GET, POST, PUT'
-
-// Connection
-headers.connection = 'close'
-
-// Content-Type
-headers.contentType = 'application/json; charset=utf-8'
-
-headers.contentType.mediaType // "application/json"
-headers.contentType.charset // "utf-8"
-
-headers.contentType.charset = 'iso-8859-1'
-
-headers.get('Content-Type') // "application/json; charset=iso-8859-1"
-
-// Content-Disposition
-headers.contentDisposition =
-  'attachment; filename="example.pdf"; filename*=UTF-8\'\'%E4%BE%8B%E5%AD%90.pdf'
-
-headers.contentDisposition.type // 'attachment'
-headers.contentDisposition.filename // 'example.pdf'
-headers.contentDisposition.filenameSplat // 'UTF-8\'\'%E4%BE%8B%E5%AD%90.pdf'
-headers.contentDisposition.preferredFilename // '例子.pdf'
-
-// Cookie
-headers.cookie = 'session_id=abc123; user_id=12345'
-
-headers.cookie.get('session_id') // 'abc123'
-headers.cookie.get('user_id') // '12345'
-
-headers.cookie.set('theme', 'dark')
-headers.get('Cookie') // 'session_id=abc123; user_id=12345; theme=dark'
-
-// Host
-headers.host = 'example.com'
-
-// If-Match
-headers.ifMatch = ['67ab43', '54ed21']
-headers.get('If-Match') // '"67ab43", "54ed21"'
-
-headers.ifMatch.matches('67ab43') // true
-headers.ifMatch.matches('abc123') // false
-
-// If-None-Match
-headers.ifNoneMatch = ['67ab43', '54ed21']
-headers.get('If-None-Match') // '"67ab43", "54ed21"'
-
-headers.ifNoneMatch.matches('67ab43') // true
-headers.ifNoneMatch.matches('abc123') // false
-
-// If-Range
-headers.ifRange = new Date('2021-01-01T00:00:00Z')
-headers.get('If-Range') // 'Fri, 01 Jan 2021 00:00:00 GMT'
-
-headers.ifRange.matches({ lastModified: 1609459200000 }) // true (timestamp)
-headers.ifRange.matches({ lastModified: new Date('2021-01-01T00:00:00Z') }) // true (Date)
-
-// Last-Modified
-headers.lastModified = new Date('2021-01-01T00:00:00Z')
-// or headers.lastModified = new Date('2021-01-01T00:00:00Z').getTime();
-headers.get('Last-Modified') // 'Fri, 01 Jan 2021 00:00:00 GMT'
-
-// Location
-headers.location = 'https://example.com'
-
-// Range
-headers.range = 'bytes=200-1000'
-
-headers.range.unit // "bytes"
-headers.range.ranges // [{ start: 200, end: 1000 }]
-headers.range.canSatisfy(2000) // true
-
-// Referer
-headers.referer = 'https://example.com/'
-
-// Set-Cookie
-headers.setCookie = ['session_id=abc123; Path=/; HttpOnly']
-
-headers.setCookie[0].name // 'session_id'
-headers.setCookie[0].value // 'abc123'
-headers.setCookie[0].path // '/'
-headers.setCookie[0].httpOnly // true
-
-// Modifying Set-Cookie attributes
-headers.setCookie[0].maxAge = 3600
-headers.setCookie[0].secure = true
-
-headers.get('Set-Cookie') // 'session_id=abc123; Path=/; HttpOnly; Max-Age=3600; Secure'
-
-// Setting multiple cookies is easy, it's just an array
-headers.setCookie.push('user_id=12345; Path=/api; Secure')
-// or headers.setCookie = [...headers.setCookie, '...']
-
-// Accessing multiple Set-Cookie headers
-for (let cookie of headers.getSetCookie()) {
-  console.log(cookie)
-}
-// session_id=abc123; Path=/; HttpOnly; Max-Age=3600; Secure
-// user_id=12345; Path=/api; Secure
-```
-
-`Headers` can be initialized with an object config:
-
-```ts
-let headers = new Headers({
-  contentType: {
-    mediaType: 'text/html',
-    charset: 'utf-8',
-  },
-  setCookie: [
-    { name: 'session', value: 'abc', path: '/' },
-    { name: 'theme', value: 'dark', expires: new Date('2021-12-31T23:59:59Z') },
-  ],
-})
-
-console.log(`${headers}`)
-// Content-Type: text/html; charset=utf-8
-// Set-Cookie: session=abc; Path=/
-// Set-Cookie: theme=dark; Expires=Fri, 31 Dec 2021 23:59:59 GMT
-```
-
-`Headers` works just like [DOM's `Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) (it's a subclass) so you can use them anywhere you need a `Headers`.
-
-```ts
-import Headers from '@remix-run/headers'
-
-// Use in a fetch()
-let response = await fetch('https://example.com', {
-  headers: new Headers(),
-})
-
-// Convert from DOM Headers
-let headers = new Headers(response.headers)
-
-headers.set('Content-Type', 'text/html')
-headers.get('Content-Type') // "text/html"
-```
-
-If you're familiar with using DOM `Headers`, everything works as you'd expect.
-
-`Headers` are iterable:
-
-```ts
-let headers = new Headers({
-  'Content-Type': 'application/json',
-  'X-API-Key': 'secret-key',
-  'Accept-Language': 'en-US,en;q=0.9',
-})
-
-for (let [name, value] of headers) {
-  console.log(`${name}: ${value}`)
-}
-// Content-Type: application/json
-// X-Api-Key: secret-key
-// Accept-Language: en-US,en;q=0.9
-```
-
-If you're assembling HTTP messages, you can easily convert to a multiline string suitable for using as a Request/Response header block:
-
-```ts
-let headers = new Headers({
-  'Content-Type': 'application/json',
-  'Accept-Language': 'en-US,en;q=0.9',
-})
-
-console.log(`${headers}`)
-// Content-Type: application/json
-// Accept-Language: en-US,en;q=0.9
-```
-
-## Individual Header Utility Classes
-
-In addition to the high-level `Headers` API, `headers` also provides a rich set of primitives you can use to work with just about any complex HTTP header value. Each header class includes a spec-compliant parser (the constructor), stringifier (`toString`), and getters/setters for all relevant attributes. Classes for headers that contain a list of fields, like `Cookie`, are iterable.
-
-If you need support for a header that isn't listed here, please [send a PR](https://github.com/remix-run/remix/pulls)! The goal is to have first-class support for all common HTTP headers.
+## Individual Header Utilities
+
+Each supported header has a class that represents the header value. Use the static `from()` method to parse header values. Each class has a `toString()` method that returns the header value as a string, which you can either call manually, or will be called automatically when the header class is used in a context that expects a string.
+
+The following headers are currently supported:
+
+- [Accept](./README.md#accept)
+- [Accept-Encoding](./README.md#accept-encoding)
+- [Accept-Language](./README.md#accept-language)
+- [Cache-Control](./README.md#cache-control)
+- [Content-Disposition](./README.md#content-disposition)
+- [Content-Range](./README.md#content-range)
+- [Content-Type](./README.md#content-type)
+- [Cookie](./README.md#cookie)
+- [If-Match](./README.md#if-match)
+- [If-None-Match](./README.md#if-none-match)
+- [If-Range](./README.md#if-range)
+- [Range](./README.md#range)
+- [Set-Cookie](./README.md#set-cookie)
+- [Vary](./README.md#vary)
 
 ### Accept
+
+Parse, manipulate and stringify [`Accept` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept).
+
+Implements `Map<mediaType, quality>`.
 
 ```ts
 import { Accept } from '@remix-run/headers'
 
-let header = new Accept('text/html;text/*;q=0.9')
+// Parse from headers
+let accept = Accept.from(request.headers.get('accept'))
 
-header.has('text/html') // true
-header.has('text/plain') // false
+accept.mediaTypes // ['text/html', 'text/*']
+accept.weights // [1, 0.9]
+accept.accepts('text/html') // true
+accept.accepts('text/plain') // true (matches text/*)
+accept.accepts('image/jpeg') // false
+accept.getWeight('text/plain') // 1 (matches text/*)
+accept.getPreferred(['text/html', 'text/plain']) // 'text/html'
 
-header.accepts('text/html') // true
-header.accepts('text/plain') // true
-header.accepts('text/*') // true
-header.accepts('image/jpeg') // false
-
-header.getPreferred(['text/html', 'text/plain']) // 'text/html'
-
-for (let [mediaType, quality] of header) {
+// Iterate
+for (let [mediaType, quality] of accept) {
   // ...
 }
 
-// Alternative init styles
-let header = new Accept({ 'text/html': 1, 'text/*': 0.9 })
-let header = new Accept(['text/html', ['text/*', 0.9]])
+// Modify and set header
+accept.set('application/json', 0.8)
+accept.delete('text/*')
+headers.set('Accept', accept)
+
+// Construct directly
+new Accept('text/html, text/*;q=0.9')
+new Accept({ 'text/html': 1, 'text/*': 0.9 })
+new Accept(['text/html', ['text/*', 0.9]])
+
+// Use class for type safety when setting Headers values
+// via Accept's `.toString()` method
+let headers = new Headers({
+  Accept: new Accept({ 'text/html': 1, 'application/json': 0.8 }),
+})
+headers.set('Accept', new Accept({ 'text/html': 1, 'application/json': 0.8 }))
 ```
 
 ### Accept-Encoding
 
+Parse, manipulate and stringify [`Accept-Encoding` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding).
+
+Implements `Map<encoding, quality>`.
+
 ```ts
 import { AcceptEncoding } from '@remix-run/headers'
 
-let header = new AcceptEncoding('gzip,deflate;q=0.9')
+// Parse from headers
+let acceptEncoding = AcceptEncoding.from(request.headers.get('accept-encoding'))
 
-header.has('gzip') // true
-header.has('br') // false
+acceptEncoding.encodings // ['gzip', 'deflate']
+acceptEncoding.weights // [1, 0.8]
+acceptEncoding.accepts('gzip') // true
+acceptEncoding.accepts('br') // false
+acceptEncoding.getWeight('gzip') // 1
+acceptEncoding.getPreferred(['gzip', 'deflate', 'br']) // 'gzip'
 
-header.accepts('gzip') // true
-header.accepts('deflate') // true
-header.accepts('identity') // true
-header.accepts('br') // true
+// Modify and set header
+acceptEncoding.set('br', 1)
+acceptEncoding.delete('deflate')
+headers.set('Accept-Encoding', acceptEncoding)
 
-header.getPreferred(['gzip', 'deflate']) // 'gzip'
+// Construct directly
+new AcceptEncoding('gzip, deflate;q=0.8')
+new AcceptEncoding({ gzip: 1, deflate: 0.8 })
 
-for (let [encoding, weight] of header) {
-  // ...
-}
-
-// Alternative init styles
-let header = new AcceptEncoding({ gzip: 1, deflate: 0.9 })
-let header = new AcceptEncoding(['gzip', ['deflate', 0.9]])
+// Use class for type safety when setting Headers values
+// via AcceptEncoding's `.toString()` method
+let headers = new Headers({
+  'Accept-Encoding': new AcceptEncoding({ gzip: 1, br: 0.9 }),
+})
+headers.set('Accept-Encoding', new AcceptEncoding({ gzip: 1, br: 0.9 }))
 ```
 
 ### Accept-Language
 
+Parse, manipulate and stringify [`Accept-Language` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language).
+
+Implements `Map<language, quality>`.
+
 ```ts
 import { AcceptLanguage } from '@remix-run/headers'
 
-let header = new AcceptLanguage('en-US,en;q=0.9')
+// Parse from headers
+let acceptLanguage = AcceptLanguage.from(request.headers.get('accept-language'))
 
-header.has('en-US') // true
-header.has('en-GB') // false
+acceptLanguage.languages // ['en-us', 'en']
+acceptLanguage.weights // [1, 0.9]
+acceptLanguage.accepts('en-US') // true
+acceptLanguage.accepts('en-GB') // true (matches en)
+acceptLanguage.getWeight('en-GB') // 1 (matches en)
+acceptLanguage.getPreferred(['en-US', 'en-GB', 'fr']) // 'en-US'
 
-header.accepts('en-US') // true
-header.accepts('en-GB') // true
-header.accepts('en') // true
-header.accepts('fr') // true
+// Modify and set header
+acceptLanguage.set('fr', 0.5)
+acceptLanguage.delete('en')
+headers.set('Accept-Language', acceptLanguage)
 
-header.getPreferred(['en-US', 'en-GB']) // 'en-US'
-header.getPreferred(['en', 'fr']) // 'en'
+// Construct directly
+new AcceptLanguage('en-US, en;q=0.9')
+new AcceptLanguage({ 'en-US': 1, en: 0.9 })
 
-for (let [language, quality] of header) {
-  // ...
-}
-
-// Alternative init styles
-let header = new AcceptLanguage({ 'en-US': 1, en: 0.9 })
-let header = new AcceptLanguage(['en-US', ['en', 0.9]])
+// Use class for type safety when setting Headers values
+// via AcceptLanguage's `.toString()` method
+let headers = new Headers({
+  'Accept-Language': new AcceptLanguage({ 'en-US': 1, fr: 0.5 }),
+})
+headers.set('Accept-Language', new AcceptLanguage({ 'en-US': 1, fr: 0.5 }))
 ```
 
 ### Cache-Control
 
+Parse, manipulate and stringify [`Cache-Control` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control).
+
 ```ts
 import { CacheControl } from '@remix-run/headers'
 
-let header = new CacheControl('public, max-age=3600, s-maxage=3600')
-header.public // true
-header.maxAge // 3600
-header.sMaxage // 3600
+// Parse from headers
+let cacheControl = CacheControl.from(response.headers.get('cache-control'))
 
-// Alternative init style
-let header = new CacheControl({ public: true, maxAge: 3600 })
+cacheControl.public // true
+cacheControl.maxAge // 3600
+cacheControl.sMaxage // 7200
+cacheControl.noCache // undefined
+cacheControl.noStore // undefined
+cacheControl.noTransform // undefined
+cacheControl.mustRevalidate // undefined
+cacheControl.immutable // undefined
 
-// Full set of supported properties
-header.public // true/false
-header.private // true/false
-header.noCache // true/false
-header.noStore // true/false
-header.noTransform // true/false
-header.mustRevalidate // true/false
-header.proxyRevalidate // true/false
-header.maxAge // number
-header.sMaxage // number
-header.minFresh // number
-header.maxStale // number
-header.onlyIfCached // true/false
-header.immutable // true/false
-header.staleWhileRevalidate // number
-header.staleIfError // number
+// Modify and set header
+cacheControl.maxAge = 7200
+cacheControl.immutable = true
+headers.set('Cache-Control', cacheControl)
+
+// Construct directly
+new CacheControl('public, max-age=3600')
+new CacheControl({ public: true, maxAge: 3600 })
+
+// Use class for type safety when setting Headers values
+// via CacheControl's `.toString()` method
+let headers = new Headers({
+  'Cache-Control': new CacheControl({ public: true, maxAge: 3600 }),
+})
+headers.set('Cache-Control', new CacheControl({ public: true, maxAge: 3600 }))
 ```
 
 ### Content-Disposition
 
+Parse, manipulate and stringify [`Content-Disposition` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition).
+
 ```ts
 import { ContentDisposition } from '@remix-run/headers'
 
-let header = new ContentDisposition('attachment; name=file1; filename=file1.txt')
-header.type // "attachment"
-header.name // "file1"
-header.filename // "file1.txt"
-header.preferredFilename // "file1.txt"
+// Parse from headers
+let contentDisposition = ContentDisposition.from(response.headers.get('content-disposition'))
 
-// Alternative init style
-let header = new ContentDisposition({
-  type: 'attachment',
-  name: 'file1',
-  filename: 'file1.txt',
+contentDisposition.type // 'attachment'
+contentDisposition.filename // 'example.pdf'
+contentDisposition.filenameSplat // "UTF-8''%E4%BE%8B%E5%AD%90.pdf"
+contentDisposition.preferredFilename // '例子.pdf' (decoded from filename*)
+
+// Modify and set header
+contentDisposition.filename = 'download.pdf'
+headers.set('Content-Disposition', contentDisposition)
+
+// Construct directly
+new ContentDisposition('attachment; filename="example.pdf"')
+new ContentDisposition({ type: 'attachment', filename: 'example.pdf' })
+
+// Use class for type safety when setting Headers values
+// via ContentDisposition's `.toString()` method
+let headers = new Headers({
+  'Content-Disposition': new ContentDisposition({ type: 'attachment', filename: 'example.pdf' }),
 })
-```
-
-### Content-Type
-
-```ts
-import { ContentType } from '@remix-run/headers'
-
-let header = new ContentType('text/html; charset=utf-8')
-header.mediaType // "text/html"
-header.boundary // undefined
-header.charset // "utf-8"
-
-// Alternative init style
-let header = new ContentType({
-  mediaType: 'multipart/form-data',
-  boundary: '------WebKitFormBoundary12345',
-  charset: 'utf-8',
-})
+headers.set(
+  'Content-Disposition',
+  new ContentDisposition({ type: 'attachment', filename: 'example.pdf' }),
+)
 ```
 
 ### Content-Range
 
+Parse, manipulate and stringify [`Content-Range` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Range).
+
 ```ts
 import { ContentRange } from '@remix-run/headers'
 
-// Satisfied range
-let header = new ContentRange('bytes 200-1000/67589')
-header.unit // "bytes"
-header.start // 200
-header.end // 1000
-header.size // 67589
+// Parse from headers
+let contentRange = ContentRange.from(response.headers.get('content-range'))
+
+contentRange.unit // "bytes"
+contentRange.start // 200
+contentRange.end // 1000
+contentRange.size // 67589
 
 // Unsatisfied range
-let header = new ContentRange('bytes */67589')
-header.unit // "bytes"
-header.start // null
-header.end // null
-header.size // 67589
+let unsatisfied = ContentRange.from('bytes */67589')
+unsatisfied.start // null
+unsatisfied.end // null
+unsatisfied.size // 67589
 
-// Alternative init style
-let header = new ContentRange({
-  unit: 'bytes',
-  start: 200,
-  end: 1000,
-  size: 67589,
+// Construct directly
+new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 })
+
+// Use class for type safety when setting Headers values
+// via ContentRange's `.toString()` method
+let headers = new Headers({
+  'Content-Range': new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 }),
 })
+headers.set('Content-Range', new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 }))
+```
+
+### Content-Type
+
+Parse, manipulate and stringify [`Content-Type` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type).
+
+```ts
+import { ContentType } from '@remix-run/headers'
+
+// Parse from headers
+let contentType = ContentType.from(request.headers.get('content-type'))
+
+contentType.mediaType // "text/html"
+contentType.charset // "utf-8"
+contentType.boundary // undefined (or boundary string for multipart)
+
+// Modify and set header
+contentType.charset = 'iso-8859-1'
+headers.set('Content-Type', contentType)
+
+// Construct directly
+new ContentType('text/html; charset=utf-8')
+new ContentType({ mediaType: 'text/html', charset: 'utf-8' })
+
+// Use class for type safety when setting Headers values
+// via ContentType's `.toString()` method
+let headers = new Headers({
+  'Content-Type': new ContentType({ mediaType: 'text/html', charset: 'utf-8' }),
+})
+headers.set('Content-Type', new ContentType({ mediaType: 'text/html', charset: 'utf-8' }))
 ```
 
 ### Cookie
 
+Parse, manipulate and stringify [`Cookie` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie).
+
+Implements `Map<name, value>`.
+
 ```ts
 import { Cookie } from '@remix-run/headers'
 
-let header = new Cookie('theme=dark; session_id=123')
-header.get('theme') // "dark"
-header.set('theme', 'light')
-header.delete('theme')
-header.has('session_id') // true
+// Parse from headers
+let cookie = Cookie.from(request.headers.get('cookie'))
 
-// Iterate over cookie name/value pairs
-for (let [name, value] of header) {
+cookie.get('session_id') // 'abc123'
+cookie.get('theme') // 'dark'
+cookie.has('session_id') // true
+cookie.size // 2
+
+// Iterate
+for (let [name, value] of cookie) {
   // ...
 }
 
-// Alternative init styles
-let header = new Cookie({ theme: 'dark', session_id: '123' })
-let header = new Cookie([
+// Modify and set header
+cookie.set('theme', 'light')
+cookie.delete('session_id')
+headers.set('Cookie', cookie)
+
+// Construct directly
+new Cookie('session_id=abc123; theme=dark')
+new Cookie({ session_id: 'abc123', theme: 'dark' })
+new Cookie([
+  ['session_id', 'abc123'],
   ['theme', 'dark'],
-  ['session_id', '123'],
 ])
+
+// Use class for type safety when setting Headers values
+// via Cookie's `.toString()` method
+let headers = new Headers({
+  Cookie: new Cookie({ session_id: 'abc123', theme: 'dark' }),
+})
+headers.set('Cookie', new Cookie({ session_id: 'abc123', theme: 'dark' }))
 ```
 
 ### If-Match
 
+Parse, manipulate and stringify [`If-Match` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match).
+
+Implements `Set<etag>`.
+
 ```ts
 import { IfMatch } from '@remix-run/headers'
 
-let header = new IfMatch('"67ab43", "54ed21"')
+// Parse from headers
+let ifMatch = IfMatch.from(request.headers.get('if-match'))
 
-header.has('67ab43') // true
-header.has('21ba69') // false
-
-// Check if precondition passes
-header.matches('"67ab43"') // true
-header.matches('"abc123"') // false
+ifMatch.tags // ['"67ab43"', '"54ed21"']
+ifMatch.has('"67ab43"') // true
+ifMatch.matches('"67ab43"') // true (checks precondition)
+ifMatch.matches('"abc123"') // false
 
 // Note: Uses strong comparison only (weak ETags never match)
-let weakHeader = new IfMatch('W/"67ab43"')
-weakHeader.matches('W/"67ab43"') // false
+let weak = IfMatch.from('W/"67ab43"')
+weak.matches('W/"67ab43"') // false
 
-// Alternative init styles
-let header = new IfMatch(['67ab43', '54ed21'])
-let header = new IfMatch({
-  tags: ['67ab43', '54ed21'],
+// Modify and set header
+ifMatch.add('"newetag"')
+ifMatch.delete('"67ab43"')
+headers.set('If-Match', ifMatch)
+
+// Construct directly
+new IfMatch(['abc123', 'def456'])
+
+// Use class for type safety when setting Headers values
+// via IfMatch's `.toString()` method
+let headers = new Headers({
+  'If-Match': new IfMatch(['"abc123"', '"def456"']),
 })
+headers.set('If-Match', new IfMatch(['"abc123"', '"def456"']))
 ```
 
 ### If-None-Match
 
+Parse, manipulate and stringify [`If-None-Match` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match).
+
+Implements `Set<etag>`.
+
 ```ts
 import { IfNoneMatch } from '@remix-run/headers'
 
-let header = new IfNoneMatch('"67ab43", "54ed21"')
+// Parse from headers
+let ifNoneMatch = IfNoneMatch.from(request.headers.get('if-none-match'))
 
-header.has('67ab43') // true
-header.has('21ba69') // false
+ifNoneMatch.tags // ['"67ab43"', '"54ed21"']
+ifNoneMatch.has('"67ab43"') // true
+ifNoneMatch.matches('"67ab43"') // true
 
-header.matches('"67ab43"') // true
+// Supports weak comparison (unlike If-Match)
+let weak = IfNoneMatch.from('W/"67ab43"')
+weak.matches('W/"67ab43"') // true
 
-// Alternative init styles
-let header = new IfNoneMatch(['67ab43', '54ed21'])
-let header = new IfNoneMatch({
-  tags: ['67ab43', '54ed21'],
+// Modify and set header
+ifNoneMatch.add('"newetag"')
+ifNoneMatch.delete('"67ab43"')
+headers.set('If-None-Match', ifNoneMatch)
+
+// Construct directly
+new IfNoneMatch(['abc123'])
+
+// Use class for type safety when setting Headers values
+// via IfNoneMatch's `.toString()` method
+let headers = new Headers({
+  'If-None-Match': new IfNoneMatch(['"abc123"']),
 })
+headers.set('If-None-Match', new IfNoneMatch(['"abc123"']))
 ```
 
 ### If-Range
 
+Parse, manipulate and stringify [`If-Range` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Range).
+
 ```ts
 import { IfRange } from '@remix-run/headers'
 
-// Initialize with HTTP date
-let header = new IfRange('Fri, 01 Jan 2021 00:00:00 GMT')
-header.matches({ lastModified: 1609459200000 }) // true
-header.matches({ lastModified: new Date('2021-01-01T00:00:00Z') }) // true (Date also supported)
+// Parse from headers
+let ifRange = IfRange.from(request.headers.get('if-range'))
 
-// Initialize with Date object
-let header = new IfRange(new Date('2021-01-01T00:00:00Z'))
-header.matches({ lastModified: 1609459200000 }) // true
+// With HTTP date
+ifRange.matches({ lastModified: 1609459200000 }) // true
+ifRange.matches({ lastModified: new Date('2021-01-01') }) // true
 
-// Initialize with strong ETag
-let header = new IfRange('"67ab43"')
-header.matches({ etag: '"67ab43"' }) // true
+// With ETag
+let etagHeader = IfRange.from('"67ab43"')
+etagHeader.matches({ etag: '"67ab43"' }) // true
 
-// Never matches weak ETags
-let weakHeader = new IfRange('W/"67ab43"')
-header.matches({ etag: 'W/"67ab43"' }) // false
+// Empty/null returns empty instance (range proceeds unconditionally)
+let empty = IfRange.from(null)
+empty.matches({ etag: '"any"' }) // true
 
-// Returns true if header is not present (range should proceed unconditionally)
-let emptyHeader = new IfRange('')
-emptyHeader.matches({ etag: '"67ab43"' }) // true
+// Construct directly
+new IfRange('"abc123"')
+
+// Use class for type safety when setting Headers values
+// via IfRange's `.toString()` method
+let headers = new Headers({
+  'If-Range': new IfRange('"abc123"'),
+})
+headers.set('If-Range', new IfRange('"abc123"'))
 ```
 
 ### Range
 
+Parse, manipulate and stringify [`Range` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range).
+
 ```ts
 import { Range } from '@remix-run/headers'
 
-let header = new Range('bytes=200-1000')
+// Parse from headers
+let range = Range.from(request.headers.get('range'))
 
-header.unit // "bytes"
-header.ranges // [{ start: 200, end: 1000 }]
-
-// Check if ranges can be satisfied for a given file size
-header.canSatisfy(2000) // true
-header.canSatisfy(500) // false (end is beyond file size)
+range.unit // "bytes"
+range.ranges // [{ start: 200, end: 1000 }]
+range.canSatisfy(2000) // true
+range.canSatisfy(500) // false
+range.normalize(2000) // [{ start: 200, end: 1000 }]
 
 // Multiple ranges
-let header = new Range('bytes=0-499, 1000-1499')
-header.ranges.length // 2
+let multi = Range.from('bytes=0-499, 1000-1499')
+multi.ranges.length // 2
 
-// Normalize to concrete start/end values for a given file size
-let header = new Range('bytes=1000-')
-header.normalize(2000)
-// [{ start: 1000, end: 1999 }]
+// Suffix range (last N bytes)
+let suffix = Range.from('bytes=-500')
+suffix.normalize(2000) // [{ start: 1500, end: 1999 }]
 
-// Alternative init style
-let header = new Range({
-  unit: 'bytes',
-  ranges: [
-    { start: 200, end: 1000 },
-    { start: 2000, end: 2999 },
-  ],
+// Construct directly
+new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] })
+
+// Use class for type safety when setting Headers values
+// via Range's `.toString()` method
+let headers = new Headers({
+  Range: new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] }),
 })
+headers.set('Range', new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] }))
 ```
 
 ### Set-Cookie
 
+Parse, manipulate and stringify [`Set-Cookie` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie).
+
 ```ts
 import { SetCookie } from '@remix-run/headers'
 
-let header = new SetCookie('session_id=abc; Domain=example.com; Path=/; Secure; HttpOnly')
-header.name // "session_id"
-header.value // "abc"
-header.domain // "example.com"
-header.path // "/"
-header.secure // true
-header.httpOnly // true
-header.sameSite // undefined
-header.maxAge // undefined
-header.expires // undefined
+// Parse from headers
+let setCookie = SetCookie.from(response.headers.get('set-cookie'))
 
-// Alternative init styles
-let header = new SetCookie({
+setCookie.name // "session_id"
+setCookie.value // "abc"
+setCookie.path // "/"
+setCookie.httpOnly // true
+setCookie.secure // true
+setCookie.domain // undefined
+setCookie.maxAge // undefined
+setCookie.expires // undefined
+setCookie.sameSite // undefined
+
+// Modify and set header
+setCookie.maxAge = 3600
+setCookie.sameSite = 'Strict'
+headers.set('Set-Cookie', setCookie)
+
+// Construct directly
+new SetCookie('session_id=abc; Path=/; HttpOnly; Secure')
+new SetCookie({
   name: 'session_id',
   value: 'abc',
-  domain: 'example.com',
   path: '/',
-  secure: true,
   httpOnly: true,
+  secure: true,
 })
+
+// Use class for type safety when setting Headers values
+// via SetCookie's `.toString()` method
+let headers = new Headers({
+  'Set-Cookie': new SetCookie({ name: 'session_id', value: 'abc', httpOnly: true }),
+})
+headers.set('Set-Cookie', new SetCookie({ name: 'session_id', value: 'abc', httpOnly: true }))
+```
+
+### Vary
+
+Parse, manipulate and stringify [`Vary` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Vary).
+
+Implements `Set<headerName>`.
+
+```ts
+import { Vary } from '@remix-run/headers'
+
+// Parse from headers
+let vary = Vary.from(response.headers.get('vary'))
+
+vary.headerNames // ['accept-encoding', 'accept-language']
+vary.has('Accept-Encoding') // true (case-insensitive)
+vary.size // 2
+
+// Modify and set header
+vary.add('User-Agent')
+vary.delete('Accept-Language')
+headers.set('Vary', vary)
+
+// Construct directly
+new Vary('Accept-Encoding, Accept-Language')
+new Vary(['Accept-Encoding', 'Accept-Language'])
+new Vary({ headerNames: ['Accept-Encoding', 'Accept-Language'] })
+
+// Use class for type safety when setting Headers values
+// via Vary's `.toString()` method
+let headers = new Headers({
+  Vary: new Vary(['Accept-Encoding', 'Accept-Language']),
+})
+headers.set('Vary', new Vary(['Accept-Encoding', 'Accept-Language']))
+```
+
+## Raw Headers
+
+Parse and stringify raw HTTP header strings.
+
+```ts
+import { parse, stringify } from '@remix-run/headers'
+
+let headers = parse('Content-Type: text/html\r\nCache-Control: no-cache')
+headers.get('content-type') // 'text/html'
+headers.get('cache-control') // 'no-cache'
+
+stringify(headers)
+// 'Content-Type: text/html\r\nCache-Control: no-cache'
 ```
 
 ## Related Packages

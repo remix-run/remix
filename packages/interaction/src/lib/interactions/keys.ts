@@ -134,21 +134,21 @@ declare global {
 }
 
 function makeKeyInteraction(key: string) {
-  return function (this: Interaction) {
+  return function (handle: Interaction) {
     if (
       !(
-        this.target instanceof HTMLElement ||
-        this.target instanceof Document ||
-        this.target instanceof Window
+        handle.target instanceof HTMLElement ||
+        handle.target instanceof Document ||
+        handle.target instanceof Window
       )
     )
       return
 
-    this.on(this.target, {
+    handle.on(handle.target, {
       keydown: (event) => {
         if (event.key === key) {
           event.preventDefault()
-          this.target.dispatchEvent(
+          handle.target.dispatchEvent(
             new KeyboardEvent(`keydown:${event.key}`, {
               key: event.key,
             }),

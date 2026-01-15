@@ -14,17 +14,8 @@ import { quoteEtag } from './utils.ts'
 export class IfRange implements HeaderValue {
   value: string = ''
 
-  /**
-   * @param init A string or Date to initialize the header
-   */
   constructor(init?: string | Date) {
-    if (init) {
-      if (typeof init === 'string') {
-        this.value = init
-      } else {
-        this.value = init.toUTCString()
-      }
-    }
+    if (init) return IfRange.from(init)
   }
 
   /**
@@ -41,6 +32,8 @@ export class IfRange implements HeaderValue {
    * Weak entity tags (prefixed with `W/`) are never considered a match.
    *
    * @param resource The current resource state to compare against
+   * @param resource.etag The resource's ETag value
+   * @param resource.lastModified The resource's last modified timestamp
    * @returns `true` if the condition is satisfied, `false` otherwise
    *
    * @example
@@ -88,5 +81,25 @@ export class IfRange implements HeaderValue {
    */
   toString() {
     return this.value
+  }
+
+  /**
+   * Parse an If-Range header value.
+   *
+   * @param value The header value (string, Date, or null)
+   * @returns An IfRange instance (empty if null)
+   */
+  static from(value: string | Date | null): IfRange {
+    let header = new IfRange()
+
+    if (value !== null) {
+      if (typeof value === 'string') {
+        header.value = value
+      } else {
+        header.value = value.toUTCString()
+      }
+    }
+
+    return header
   }
 }

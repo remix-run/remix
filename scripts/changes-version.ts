@@ -1,3 +1,12 @@
+/**
+ * Updates package.json versions, CHANGELOG.md files, and creates a release commit.
+ *
+ * Usage:
+ *   pnpm changes:version [--no-commit]
+ *
+ * Options:
+ *   --no-commit  Only update files, don't commit (for manual review)
+ */
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import {
@@ -61,7 +70,7 @@ function deleteChangeFiles(packageName: string) {
     fs.unlinkSync(filePath)
   }
 
-  console.log(`  ✓ Deleted ${changeFiles.length} change file(s)`)
+  console.log(`  ✓ Deleted ${changeFiles.length} change file${changeFiles.length === 1 ? '' : 's'}`)
 }
 
 /**
@@ -92,8 +101,6 @@ function main() {
   console.log('═'.repeat(80))
   console.log()
 
-  let now = new Date()
-
   // Process each package
   for (let release of releases) {
     console.log(
@@ -105,7 +112,7 @@ function main() {
     updatePackageJson(release.packageName, release.nextVersion)
 
     // Update CHANGELOG.md
-    let changelogContent = generateChangelogContent(release, now)
+    let changelogContent = generateChangelogContent(release)
     updateChangelog(release.packageName, changelogContent)
 
     // Delete change files
@@ -120,18 +127,13 @@ function main() {
     console.log(colorize('VERSION UPDATED', colors.lightGreen))
     console.log('═'.repeat(80))
     console.log()
-    console.log('Files have been updated. Review the changes, then manually commit and tag:')
+    console.log('Files have been updated. Review the changes, then manually commit:')
     console.log()
     console.log('```sh')
     let commitMessage = generateCommitMessage(releases)
     console.log(`git add .`)
     console.log()
     console.log(`git commit -m "${commitMessage}"`)
-    console.log()
-    for (let release of releases) {
-      let tag = `${release.packageName}@${release.nextVersion}`
-      console.log(`git tag ${tag}`)
-    }
     console.log('```')
     console.log()
   } else {
@@ -146,26 +148,19 @@ function main() {
     logAndExec(`git commit -m "${commitMessage}"`)
     console.log()
 
-    // Create tags
-    console.log('Creating tags...')
-    for (let release of releases) {
-      let tag = `${release.packageName}@${release.nextVersion}`
-      logAndExec(`git tag ${tag}`)
-      console.log(`  ✓ Created tag: ${tag}`)
+    // Success message (skip in CI since the workflow handles the rest)
+    if (!process.env.CI) {
+      console.log('═'.repeat(80))
+      console.log('✅ RELEASE PREPARED')
+      console.log('═'.repeat(80))
+      console.log()
+      console.log('Release commit has been created locally.')
+      console.log()
+      console.log('To publish, push and the publish workflow will handle the rest:')
+      console.log()
+      console.log('  git push')
+      console.log()
     }
-    console.log()
-
-    // Success message
-    console.log('═'.repeat(80))
-    console.log('✅ RELEASE PREPARED')
-    console.log('═'.repeat(80))
-    console.log()
-    console.log('Release commit and tags have been created locally.')
-    console.log()
-    console.log('To push the release, run:')
-    console.log()
-    console.log('  git push && git push --tags')
-    console.log()
   }
 }
 

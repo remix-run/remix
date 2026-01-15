@@ -64,17 +64,17 @@ declare global {
   }
 }
 
-function Popover(this: Interaction) {
-  if (!(this.target instanceof HTMLElement)) return
+function Popover(handle: Interaction) {
+  if (!(handle.target instanceof HTMLElement)) return
 
-  let target = this.target
+  let target = handle.target
   let popoverId = target.getAttribute('popovertarget')
   if (!popoverId) return
 
   let popover = target.ownerDocument.getElementById(popoverId)
   if (!(popover instanceof HTMLElement)) return
 
-  this.on(popover, {
+  handle.on(popover, {
     toggle(event) {
       target.dispatchEvent(
         new ToggleEvent(popoverToggle, {

@@ -19,9 +19,8 @@ const paramTestCases: Array<[string, keyof CacheControl, string, unknown]> = [
   ['public', 'public', '', true],
   ['immutable', 'immutable', '', true],
   ['stale-while-revalidate', 'staleWhileRevalidate', '60', 60],
-  ['stale-if-error', 'staleIfError', '120', 120]
-];
-
+  ['stale-if-error', 'staleIfError', '120', 120],
+]
 
 describe('CacheControl', () => {
   it('initializes with an empty string', () => {
@@ -92,5 +91,21 @@ describe('CacheControl', () => {
     let header = new CacheControl()
     header.maxAge = 0
     assert.equal(header.toString(), 'max-age=0')
+  })
+})
+
+describe('CacheControl.from', () => {
+  it('parses a string value', () => {
+    let result = CacheControl.from('max-age=3600, public')
+    assert.ok(result instanceof CacheControl)
+    assert.equal(result.maxAge, 3600)
+    assert.equal(result.public, true)
+  })
+
+  it('accepts init object', () => {
+    let result = CacheControl.from({ maxAge: 3600, public: true })
+    assert.ok(result instanceof CacheControl)
+    assert.equal(result.maxAge, 3600)
+    assert.equal(result.public, true)
   })
 })

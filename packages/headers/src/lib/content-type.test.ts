@@ -106,3 +106,19 @@ describe('ContentType', () => {
     assert.equal(header.toString(), 'multipart/form-data; charset=utf-8; boundary=abc123')
   })
 })
+
+describe('ContentType.from', () => {
+  it('parses a string value', () => {
+    let result = ContentType.from('text/html; charset=utf-8')
+    assert.ok(result instanceof ContentType)
+    assert.equal(result.mediaType, 'text/html')
+    assert.equal(result.charset, 'utf-8')
+  })
+
+  it('accepts init object', () => {
+    let result = ContentType.from({ mediaType: 'text/html', charset: 'utf-8' })
+    assert.ok(result instanceof ContentType)
+    assert.equal(result.mediaType, 'text/html')
+    assert.equal(result.charset, 'utf-8')
+  })
+})

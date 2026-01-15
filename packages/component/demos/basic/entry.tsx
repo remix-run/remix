@@ -1,13 +1,13 @@
 import { createRoot, type Handle } from '@remix-run/component'
 
-function App(this: Handle) {
+function App(handle: Handle) {
   let count = 0
   return () => (
     <button
       on={{
         click: () => {
           count++
-          this.update()
+          handle.update()
         },
       }}
     >

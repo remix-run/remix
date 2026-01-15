@@ -144,3 +144,19 @@ describe('Vary', () => {
     assert.deepEqual(names, ['accept-encoding', 'accept-language'])
   })
 })
+
+describe('Vary.from', () => {
+  it('parses a string value', () => {
+    let result = Vary.from('Accept-Encoding, Accept-Language')
+    assert.ok(result instanceof Vary)
+    assert.equal(result.size, 2)
+    assert.equal(result.has('Accept-Encoding'), true)
+    assert.equal(result.has('Accept-Language'), true)
+  })
+
+  it('parses an array value', () => {
+    let result = Vary.from(['Accept-Encoding', 'Accept-Language'])
+    assert.ok(result instanceof Vary)
+    assert.equal(result.size, 2)
+  })
+})

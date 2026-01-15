@@ -10,12 +10,12 @@ describe('vnode rendering (keys extra)', () => {
 
       type CardData = { id: string; title: string }
 
-      function Card({ card }: { card: CardData }) {
-        return <div data-id={card.id}>{card.title}</div>
+      function Card() {
+        return ({ card }: { card: CardData }) => <div data-id={card.id}>{card.title}</div>
       }
 
-      function Column({ cards, isAddingCard }: { cards: CardData[]; isAddingCard: boolean }) {
-        return (
+      function Column() {
+        return ({ cards, isAddingCard }: { cards: CardData[]; isAddingCard: boolean }) => (
           <div>
             {cards.map((card) => (
               <Card key={card.id} card={card} />
@@ -62,8 +62,8 @@ describe('vnode rendering (keys extra)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List({ values }: { values: (string | number)[] }) {
-        return (
+      function List() {
+        return ({ values }: { values: (string | number)[] }) => (
           <ul>
             {values.map((value) => (
               <li key={value} data-id={value}>
@@ -90,8 +90,8 @@ describe('vnode rendering (keys extra)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List({ values }: { values: string[] }) {
-        return (
+      function List() {
+        return ({ values }: { values: string[] }) => (
           <ol>
             {values.map((value) => (
               <li key={value} data-id={value}>
@@ -125,8 +125,8 @@ describe('vnode rendering (keys extra)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List({ values }: { values: string[] }) {
-        return (
+      function List() {
+        return ({ values }: { values: string[] }) => (
           <ul>
             {values.map((value) => (
               <li key={value} data-id={value}>
@@ -161,8 +161,8 @@ describe('vnode rendering (keys extra)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List({ values }: { values: string[] }) {
-        return (
+      function List() {
+        return ({ values }: { values: string[] }) => (
           <ul>
             {values.map((value) => (
               <li key={value} data-id={value}>
@@ -196,8 +196,8 @@ describe('vnode rendering (keys extra)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List({ values }: { values: string[] }) {
-        return (
+      function List() {
+        return ({ values }: { values: string[] }) => (
           <ul>
             {values.map((value) => (
               <li key={value} data-id={value}>
@@ -230,8 +230,8 @@ describe('vnode rendering (keys extra)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List({ values }: { values: string[] }) {
-        return (
+      function List() {
+        return ({ values }: { values: string[] }) => (
           <ul>
             {values.map((value) => (
               <li key={value} data-id={value}>
@@ -267,8 +267,8 @@ describe('vnode rendering (keys extra)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List({ values }: { values: string[] }) {
-        return (
+      function List() {
+        return ({ values }: { values: string[] }) => (
           <ul>
             {values.map((value) => (
               <li key={value} data-id={value}>
@@ -337,8 +337,8 @@ describe('vnode rendering (keys extra)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function Item({ label }: { label: string }) {
-        return <li>{label}</li>
+      function Item() {
+        return ({ label }: { label: string }) => <li>{label}</li>
       }
 
       root.render(
@@ -369,8 +369,8 @@ describe('vnode rendering (keys extra)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function List({ labels }: { labels: string[] }) {
-        return (
+      function List() {
+        return ({ labels }: { labels: string[] }) => (
           <ul>
             {labels.map((label, index) => (
               <li key="dup" data-index={index}>
@@ -426,8 +426,8 @@ describe('vnode rendering (keys extra)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function Item({ id, label }: { id: string; label: string }) {
-        return (
+      function Item() {
+        return ({ id, label }: { id: string; label: string }) => (
           <>
             <span key={id + '-label'} data-id={id}>
               {label}

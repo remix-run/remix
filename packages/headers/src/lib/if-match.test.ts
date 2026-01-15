@@ -134,3 +134,11 @@ describe('IfMatch', () => {
     })
   })
 })
+
+describe('IfMatch.from', () => {
+  it('parses a string value', () => {
+    let result = IfMatch.from('"abc", "def"')
+    assert.ok(result instanceof IfMatch)
+    assert.equal(result.tags.length, 2)
+  })
+})

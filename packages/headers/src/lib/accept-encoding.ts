@@ -15,49 +15,11 @@ export type AcceptEncodingInit = Iterable<string | [string, number]> | Record<st
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4)
  */
 export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
-  #map: Map<string, number>
+  #map!: Map<string, number>
 
-  /**
-   * @param init A string, iterable, or record to initialize the header
-   */
   constructor(init?: string | AcceptEncodingInit) {
+    if (init) return AcceptEncoding.from(init)
     this.#map = new Map()
-
-    if (init) {
-      if (typeof init === 'string') {
-        for (let piece of init.split(/\s*,\s*/)) {
-          let params = parseParams(piece)
-          if (params.length < 1) continue
-
-          let encoding = params[0][0]
-          let weight = 1
-
-          for (let i = 1; i < params.length; i++) {
-            let [key, value] = params[i]
-            if (key === 'q') {
-              weight = Number(value)
-              break
-            }
-          }
-
-          this.#map.set(encoding.toLowerCase(), weight)
-        }
-      } else if (isIterable(init)) {
-        for (let value of init) {
-          if (Array.isArray(value)) {
-            this.#map.set(value[0].toLowerCase(), value[1])
-          } else {
-            this.#map.set(value.toLowerCase(), 1)
-          }
-        }
-      } else {
-        for (let encoding of Object.getOwnPropertyNames(init)) {
-          this.#map.set(encoding.toLowerCase(), init[encoding])
-        }
-      }
-
-      this.#sort()
-    }
   }
 
   #sort() {
@@ -217,5 +179,53 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
     }
 
     return pairs.join(',')
+  }
+
+  /**
+   * Parse an Accept-Encoding header value.
+   *
+   * @param value The header value (string, init object, or null)
+   * @returns An AcceptEncoding instance (empty if null)
+   */
+  static from(value: string | AcceptEncodingInit | null): AcceptEncoding {
+    let header = new AcceptEncoding()
+
+    if (value !== null) {
+      if (typeof value === 'string') {
+        for (let piece of value.split(/\s*,\s*/)) {
+          let params = parseParams(piece)
+          if (params.length < 1) continue
+
+          let encoding = params[0][0]
+          let weight = 1
+
+          for (let i = 1; i < params.length; i++) {
+            let [key, val] = params[i]
+            if (key === 'q') {
+              weight = Number(val)
+              break
+            }
+          }
+
+          header.#map.set(encoding.toLowerCase(), weight)
+        }
+      } else if (isIterable(value)) {
+        for (let item of value) {
+          if (Array.isArray(item)) {
+            header.#map.set(item[0].toLowerCase(), item[1])
+          } else {
+            header.#map.set(item.toLowerCase(), 1)
+          }
+        }
+      } else {
+        for (let encoding of Object.getOwnPropertyNames(value)) {
+          header.#map.set(encoding.toLowerCase(), value[encoding])
+        }
+      }
+
+      header.#sort()
+    }
+
+    return header
   }
 }

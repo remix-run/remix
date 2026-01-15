@@ -37,7 +37,7 @@ export type EventListeners<target extends EventTarget = EventTarget> = Partial<{
 }>
 
 /**
- * Context object provided to interaction setup functions via `this`.
+ * Context object provided to interaction setup functions as a parameter.
  */
 export interface Interaction {
   /**
@@ -62,7 +62,7 @@ export interface Interaction {
 /**
  * A function that sets up an interaction on a target.
  */
-export type InteractionSetup = (this: Interaction) => void
+export type InteractionSetup = (handle: Interaction) => void
 
 // interactions ------------------------------------------------------------------------------------
 
@@ -87,11 +87,11 @@ export type InteractionSetup = (this: Interaction) => void
  * }
  *
  * // setup the interaction
- * function KeydownEnter(this: Interaction) {
- *   this.on(this.target, {
+ * function KeydownEnter(handle: Interaction) {
+ *   handle.on(handle.target, {
  *     keydown(event) {
  *       if (event.key === 'Enter') {
- *         this.target.dispatchEvent(new KeyboardEvent(keydownEnter, { key: 'Enter' }))
+ *         handle.target.dispatchEvent(new KeyboardEvent(keydownEnter, { key: 'Enter' }))
  *       }
  *     },
  *   })
@@ -413,6 +413,13 @@ type SignaledListener<event extends Event> = (
  * - Adds reentry signal for async listeners (when listener.length >= 2)
  * - Efficiently updates listeners in place with simple diff (useful for
  *   vdom integrations)
+ *
+ * @param target The event target to bind to
+ * @param type The event type to listen for
+ * @param listener The listener function to call
+ * @param options The event listener options
+ * @param onError The error handler for listener errors
+ * @returns The binding object for managing the listener
  */
 function createBinding<target extends EventTarget, k extends EventType<target>>(
   target: target,
@@ -497,7 +504,7 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
       // Only create AbortController for interactions that need cleanup coordination
       interactionController = new AbortController()
       let interactionContext = new InteractionHandle(target, interactionController.signal, onError)
-      interaction.call(interactionContext)
+      interaction(interactionContext)
     }
     refCounts.set(interaction, count + 1)
   }

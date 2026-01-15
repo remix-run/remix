@@ -15,29 +15,11 @@ export type CookieInit = Iterable<[string, string]> | Record<string, string>
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.2)
  */
 export class Cookie implements HeaderValue, Iterable<[string, string]> {
-  #map: Map<string, string>
+  #map!: Map<string, string>
 
-  /**
-   * @param init A string, iterable, or record to initialize the header
-   */
   constructor(init?: string | CookieInit) {
+    if (init) return Cookie.from(init)
     this.#map = new Map()
-    if (init) {
-      if (typeof init === 'string') {
-        let params = parseParams(init)
-        for (let [name, value] of params) {
-          this.#map.set(name, value ?? '')
-        }
-      } else if (isIterable(init)) {
-        for (let [name, value] of init) {
-          this.#map.set(name, value)
-        }
-      } else {
-        for (let name of Object.getOwnPropertyNames(init)) {
-          this.#map.set(name, init[name])
-        }
-      }
-    }
   }
 
   /**
@@ -145,5 +127,34 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
     }
 
     return pairs.join('; ')
+  }
+
+  /**
+   * Parse a Cookie header value.
+   *
+   * @param value The header value (string, init object, or null)
+   * @returns A Cookie instance (empty if null)
+   */
+  static from(value: string | CookieInit | null): Cookie {
+    let header = new Cookie()
+
+    if (value !== null) {
+      if (typeof value === 'string') {
+        let params = parseParams(value)
+        for (let [name, val] of params) {
+          header.#map.set(name, val ?? '')
+        }
+      } else if (isIterable(value)) {
+        for (let [name, val] of value) {
+          header.#map.set(name, val)
+        }
+      } else {
+        for (let name of Object.getOwnPropertyNames(value)) {
+          header.#map.set(name, value[name])
+        }
+      }
+    }
+
+    return header
   }
 }

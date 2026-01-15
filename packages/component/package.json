@@ -13,6 +13,7 @@
   "files": [
     "LICENSE",
     "README.md",
+    "AGENTS.md",
     "dist",
     "src"
   ],

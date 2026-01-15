@@ -197,8 +197,10 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function SvgGroup({ href, children }: { href: string; children?: RemixNode }) {
-        return () => <g href={href}>{children}</g>
+      function SvgGroup() {
+        return ({ href, children }: { href: string; children?: RemixNode }) => (
+          <g href={href}>{children}</g>
+        )
       }
 
       root.render(
@@ -465,7 +467,7 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
 
       let setupCalls = 0
-      function App(this: Handle) {
+      function App(handle: Handle) {
         let state = ++setupCalls
         return ({ title }: { title: string }) => (
           <div>
@@ -485,7 +487,7 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
 
       let setupCalls = 0
-      function App(this: Handle) {
+      function App(handle: Handle) {
         let state = ++setupCalls
         return ({ title }: { title: string }) => (
           <>
@@ -561,7 +563,7 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
       let { render } = createRoot(container)
       function App() {
-        return <div>Hello, world!</div>
+        return () => <div>Hello, world!</div>
       }
       render(
         <div>
@@ -580,7 +582,7 @@ describe('vnode rendering', () => {
     it('inserts a component', () => {
       let container = document.createElement('div')
       function App() {
-        return <div>Hello, world!</div>
+        return () => <div>Hello, world!</div>
       }
       let { render } = createRoot(container)
       render(<App />)
@@ -591,11 +593,11 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
 
       let capturedUpdate = () => {}
-      function App(this: Handle) {
+      function App(handle: Handle) {
         let count = 1
         capturedUpdate = () => {
           count++
-          this.update()
+          handle.update()
         }
         return () => <div>{count}</div>
       }
@@ -621,11 +623,11 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
 
       let capturedUpdate = () => {}
-      function App(this: Handle) {
+      function App(handle: Handle) {
         let count = 1
         capturedUpdate = () => {
           count++
-          this.update()
+          handle.update()
         }
         return () => (
           <>
@@ -659,8 +661,8 @@ describe('vnode rendering', () => {
       let root = createRoot(container)
       let capturedRaise: Handle['raise'] = () => {}
 
-      function App(this: Handle) {
-        capturedRaise = this.raise
+      function App(handle: Handle) {
+        capturedRaise = handle.raise
         return () => <div>App</div>
       }
 
@@ -683,12 +685,12 @@ describe('vnode rendering', () => {
 
     let taskRan = false
     let capturedUpdate = () => {}
-    function App(this: Handle) {
+    function App(handle: Handle) {
       capturedUpdate = () => {
-        this.queueTask(() => {
+        handle.queueTask(() => {
           taskRan = true
         })
-        this.update()
+        handle.update()
       }
 
       return () => <div>Hello, world!</div>
@@ -710,9 +712,9 @@ describe('vnode rendering', () => {
 
     let taskRan = false
     let capturedUpdate = () => {}
-    function App(this: Handle) {
+    function App(handle: Handle) {
       capturedUpdate = () => {
-        this.update(() => {
+        handle.update(() => {
           taskRan = true
         })
       }
@@ -755,7 +757,7 @@ describe('vnode rendering', () => {
       root.render(<div>Hello, world!</div>)
       expect(container.innerHTML).toBe('<div>Hello, world!</div>')
       function App() {
-        return <div>Goodbye, world!</div>
+        return () => <div>Goodbye, world!</div>
       }
       root.render(<App />)
       expect(container.innerHTML).toBe('<div>Goodbye, world!</div>')
@@ -765,7 +767,7 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       function App() {
-        return <div>Hello, world!</div>
+        return () => <div>Hello, world!</div>
       }
       root.render(<App />)
       expect(container.innerHTML).toBe('<div>Hello, world!</div>')
@@ -786,12 +788,12 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       function App() {
-        return <div>Hello, world!</div>
+        return () => <div>Hello, world!</div>
       }
       root.render(<App />)
       expect(container.innerHTML).toBe('<div>Hello, world!</div>')
       function App2() {
-        return <div>Goodbye, world!</div>
+        return () => <div>Goodbye, world!</div>
       }
       root.render(<App2 />)
       expect(container.innerHTML).toBe('<div>Goodbye, world!</div>')
@@ -801,7 +803,7 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       function App() {
-        return <div>Hello, world!</div>
+        return () => <div>Hello, world!</div>
       }
       root.render(<App />)
       expect(container.innerHTML).toBe('<div>Hello, world!</div>')
@@ -824,7 +826,7 @@ describe('vnode rendering', () => {
       )
       expect(container.innerHTML).toBe('<div>Hello, world!</div>')
       function App() {
-        return <div>Goodbye, world!</div>
+        return () => <div>Goodbye, world!</div>
       }
       root.render(<App />)
       expect(container.innerHTML).toBe('<div>Goodbye, world!</div>')
@@ -862,7 +864,7 @@ describe('vnode rendering', () => {
       root.render('Hello, world!')
       expect(container.innerHTML).toBe('Hello, world!')
       function App() {
-        return <div>Goodbye, world!</div>
+        return () => <div>Goodbye, world!</div>
       }
       root.render(<App />)
       expect(container.innerHTML).toBe('<div>Goodbye, world!</div>')
@@ -928,7 +930,7 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       function Frag() {
-        return (
+        return () => (
           <>
             <span>A</span>
             <span>B</span>
@@ -959,7 +961,7 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       function App() {
-        return <div>Hello, world!</div>
+        return () => <div>Hello, world!</div>
       }
       root.render(
         <div>
@@ -969,7 +971,7 @@ describe('vnode rendering', () => {
       expect(container.innerHTML).toBe('<div><div>Hello, world!</div></div>')
 
       function App2() {
-        return <div>Goodbye, world!</div>
+        return () => <div>Goodbye, world!</div>
       }
       root.render(
         <div>
@@ -1008,7 +1010,7 @@ describe('vnode rendering', () => {
     it('renders when descendant throws', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      function Throws() {
+      function Throws(): () => null {
         throw new Error('Test')
       }
       root.render(
@@ -1022,7 +1024,7 @@ describe('vnode rendering', () => {
     it('removes in progress nodes', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      function Throws() {
+      function Throws(): () => null {
         throw new Error('Test')
       }
       root.render(
@@ -1038,12 +1040,12 @@ describe('vnode rendering', () => {
     it('renders fallback from deeply thrown errors', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      function Throws() {
+      function Throws(): () => null {
         throw new Error('Test')
       }
 
       function App() {
-        return (
+        return () => (
           <div>
             <h1>App</h1>
             <Throws />
@@ -1068,7 +1070,7 @@ describe('vnode rendering', () => {
         if (count === 1) {
           throw new Error('Test')
         }
-        return <div>All good</div>
+        return () => <div>All good</div>
       }
 
       root.render(
@@ -1109,7 +1111,7 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function ThrowsOnce() {
+      function ThrowsOnce(): () => null {
         throw new Error('boom')
       }
 
@@ -1131,7 +1133,7 @@ describe('vnode rendering', () => {
       invariant(left instanceof HTMLSpanElement && right instanceof HTMLSpanElement)
 
       function Ok() {
-        return <div id="ok">OK</div>
+        return () => <div id="ok">OK</div>
       }
       root.render(
         <div>
@@ -1154,7 +1156,7 @@ describe('vnode rendering', () => {
       let root = createRoot(container)
 
       function App() {
-        return (
+        return () => (
           <Catch fallback={<div id="outer">Outer</div>}>
             <div>
               <Catch fallback={<div id="inner">Inner</div>}>
@@ -1311,7 +1313,7 @@ describe('vnode rendering', () => {
 
       let clickCount = 0
       function App() {
-        return (
+        return () => (
           <button
             on={{
               click: () => {
@@ -1404,13 +1406,13 @@ describe('vnode rendering', () => {
     it('provides and reads context', () => {
       let container = document.createElement('div')
 
-      function App(this: Handle<{ value: string }>) {
-        this.context.set({ value: 'test' })
+      function App(handle: Handle<{ value: string }>) {
+        handle.context.set({ value: 'test' })
         return ({ children }: { children: RemixNode }) => <div>{children}</div>
       }
 
-      function Child(this: Handle) {
-        let { value } = this.context.get(App)
+      function Child(handle: Handle) {
+        let { value } = handle.context.get(App)
         return () => <main>Child: {value}</main>
       }
 
@@ -1427,18 +1429,20 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
 
       let capturedUpdate = () => {}
-      function App(this: Handle<{ value: string }>) {
-        this.context.set({ value: 'test' })
+      function App(handle: Handle<{ value: string }>) {
+        handle.context.set({ value: 'test' })
         capturedUpdate = () => {
-          this.context.set({ value: 'test2' })
-          this.update()
+          handle.context.set({ value: 'test2' })
+          handle.update()
         }
         return ({ children }: { children: RemixNode }) => <div>{children}</div>
       }
 
-      function Child(this: Handle) {
-        let { value } = this.context.get(App)
-        return <main>Child: {value}</main>
+      function Child(handle: Handle) {
+        return () => {
+          let { value } = handle.context.get(App)
+          return <main>Child: {value}</main>
+        }
       }
 
       let root = createRoot(container)
@@ -1460,14 +1464,14 @@ describe('vnode rendering', () => {
       let options: string[] = []
       let renderListbox = () => {}
 
-      function Listbox(this: Handle<{ registerOption: (option: string) => void }>) {
-        this.context.set({
+      function Listbox(handle: Handle<{ registerOption: (option: string) => void }>) {
+        handle.context.set({
           registerOption: (option: string) => {
             options.push(option)
           },
         })
 
-        renderListbox = this.update
+        renderListbox = handle.update
 
         return ({ children }: { children: RemixNode }) => {
           options = []
@@ -1475,15 +1479,15 @@ describe('vnode rendering', () => {
         }
       }
 
-      function Option(this: Handle) {
-        let { registerOption } = this.context.get(Listbox)
+      function Option(handle: Handle) {
+        let { registerOption } = handle.context.get(Listbox)
         return ({ value }: { value: string }) => {
           registerOption(value)
           return <div>Option</div>
         }
       }
 
-      function App(this: Handle) {
+      function App(handle: Handle) {
         return () => (
           <Listbox>
             <Option value="Option 1" />
@@ -1511,9 +1515,9 @@ describe('vnode rendering', () => {
 
       let capturedParentUpdate = () => {}
       let appRenderCount = 0
-      function Parent(this: Handle) {
+      function Parent(handle: Handle) {
         capturedParentUpdate = () => {
-          this.update()
+          handle.update()
         }
         return ({ children }: { children: RemixNode }) => {
           appRenderCount++
@@ -1523,9 +1527,9 @@ describe('vnode rendering', () => {
 
       let childRenderCount = 0
       let capturedChildUpdate = () => {}
-      function Child(this: Handle) {
+      function Child(handle: Handle) {
         capturedChildUpdate = () => {
-          this.update()
+          handle.update()
         }
         return () => {
           childRenderCount++
@@ -1564,13 +1568,13 @@ describe('vnode rendering', () => {
 
       let taskCount = 0
       let capturedUpdate = () => {}
-      function App(this: Handle) {
-        this.queueTask(() => {
+      function App(handle: Handle) {
+        handle.queueTask(() => {
           taskCount++
         })
 
         capturedUpdate = () => {
-          this.update(() => {
+          handle.update(() => {
             taskCount++
           })
         }
@@ -1588,13 +1592,13 @@ describe('vnode rendering', () => {
   })
 
   describe('signals', () => {
-    it('provides mounted signal on this.signal', () => {
+    it('provides mounted signal on handle.signal', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
       let capturedSignal: AbortSignal | undefined
-      function App(this: Handle) {
-        capturedSignal = this.signal
+      function App(handle: Handle) {
+        capturedSignal = handle.signal
         return () => null
       }
 
@@ -1613,8 +1617,8 @@ describe('vnode rendering', () => {
       let root = createRoot(container)
 
       let signals: AbortSignal[] = []
-      function App(this: Handle) {
-        this.queueTask((signal) => {
+      function App(handle: Handle) {
+        handle.queueTask((signal) => {
           signals.push(signal)
         })
         return () => null
@@ -1642,8 +1646,8 @@ describe('vnode rendering', () => {
       let root = createRoot(container)
       let clickCount = 0
 
-      function App(this: Handle) {
-        this.on(document, {
+      function App(handle: Handle) {
+        handle.on(document, {
           click: () => {
             clickCount++
           },
@@ -1666,8 +1670,8 @@ describe('vnode rendering', () => {
       let root = createRoot(container)
       let clickCount = 0
 
-      function App(this: Handle) {
-        this.on(document, {
+      function App(handle: Handle) {
+        handle.on(document, {
           click: (event) => {
             clickCount++
           },
@@ -1690,8 +1694,8 @@ describe('vnode rendering', () => {
 
     describe('types', () => {
       it('provides literal event and target types to listeners', () => {
-        function App(this: Handle) {
-          this.on(document, {
+        function App(handle: Handle) {
+          handle.on(document, {
             keydown: (event) => {
               type test = Assert<Equal<typeof event, Dispatched<KeyboardEvent, Document>>>
             },
@@ -1709,7 +1713,7 @@ describe('vnode rendering', () => {
 
       let capturedNode: Element | null = null
 
-      function App(this: Handle) {
+      function App(handle: Handle) {
         return () => (
           <div
             connect={(node: Element, signal: AbortSignal) => {
@@ -1741,8 +1745,8 @@ describe('vnode rendering', () => {
     let capturedUpdate = () => {}
     let connectCalls = 0
 
-    function App(this: Handle) {
-      capturedUpdate = () => this.update()
+    function App(handle: Handle) {
+      capturedUpdate = () => handle.update()
       return () => (
         <div
           connect={() => {
@@ -1770,8 +1774,8 @@ describe('vnode rendering', () => {
       let showB = false
       let capturedUpdate = () => {}
 
-      function A(this: Handle) {
-        capturedUpdate = () => this.update()
+      function A(handle: Handle) {
+        capturedUpdate = () => handle.update()
         return () => (showB ? <span>B</span> : <div>A</div>)
       }
 
@@ -1802,11 +1806,11 @@ describe('vnode rendering', () => {
       let capturedUpdate = () => {}
 
       function B() {
-        return <span>B</span>
+        return () => <span>B</span>
       }
 
-      function A(this: Handle) {
-        capturedUpdate = () => this.update()
+      function A(handle: Handle) {
+        capturedUpdate = () => handle.update()
         return () => (showB ? <B /> : <div>A</div>)
       }
 

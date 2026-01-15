@@ -15,49 +15,11 @@ export type AcceptInit = Iterable<string | [string, number]> | Record<string, nu
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2)
  */
 export class Accept implements HeaderValue, Iterable<[string, number]> {
-  #map: Map<string, number>
+  #map!: Map<string, number>
 
-  /**
-   * @param init A string, iterable, or record to initialize the header
-   */
   constructor(init?: string | AcceptInit) {
+    if (init) return Accept.from(init)
     this.#map = new Map()
-
-    if (init) {
-      if (typeof init === 'string') {
-        for (let piece of init.split(/\s*,\s*/)) {
-          let params = parseParams(piece)
-          if (params.length < 1) continue
-
-          let mediaType = params[0][0]
-          let weight = 1
-
-          for (let i = 1; i < params.length; i++) {
-            let [key, value] = params[i]
-            if (key === 'q') {
-              weight = Number(value)
-              break
-            }
-          }
-
-          this.#map.set(mediaType.toLowerCase(), weight)
-        }
-      } else if (isIterable(init)) {
-        for (let mediaType of init) {
-          if (Array.isArray(mediaType)) {
-            this.#map.set(mediaType[0].toLowerCase(), mediaType[1])
-          } else {
-            this.#map.set(mediaType.toLowerCase(), 1)
-          }
-        }
-      } else {
-        for (let mediaType of Object.getOwnPropertyNames(init)) {
-          this.#map.set(mediaType.toLowerCase(), init[mediaType])
-        }
-      }
-
-      this.#sort()
-    }
   }
 
   #sort() {
@@ -221,5 +183,53 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
     }
 
     return pairs.join(',')
+  }
+
+  /**
+   * Parse an Accept header value.
+   *
+   * @param value The header value (string, init object, or null)
+   * @returns An Accept instance (empty if null)
+   */
+  static from(value: string | AcceptInit | null): Accept {
+    let header = new Accept()
+
+    if (value !== null) {
+      if (typeof value === 'string') {
+        for (let piece of value.split(/\s*,\s*/)) {
+          let params = parseParams(piece)
+          if (params.length < 1) continue
+
+          let mediaType = params[0][0]
+          let weight = 1
+
+          for (let i = 1; i < params.length; i++) {
+            let [key, val] = params[i]
+            if (key === 'q') {
+              weight = Number(val)
+              break
+            }
+          }
+
+          header.#map.set(mediaType.toLowerCase(), weight)
+        }
+      } else if (isIterable(value)) {
+        for (let mediaType of value) {
+          if (Array.isArray(mediaType)) {
+            header.#map.set(mediaType[0].toLowerCase(), mediaType[1])
+          } else {
+            header.#map.set(mediaType.toLowerCase(), 1)
+          }
+        }
+      } else {
+        for (let mediaType of Object.getOwnPropertyNames(value)) {
+          header.#map.set(mediaType.toLowerCase(), value[mediaType])
+        }
+      }
+
+      header.#sort()
+    }
+
+    return header
   }
 }

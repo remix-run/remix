@@ -248,3 +248,12 @@ describe('Range', () => {
     })
   })
 })
+
+describe('Range.from', () => {
+  it('parses a string value', () => {
+    let result = Range.from('bytes=0-499')
+    assert.ok(result instanceof Range)
+    assert.equal(result.unit, 'bytes')
+    assert.equal(result.ranges.length, 1)
+  })
+})

@@ -94,58 +94,34 @@ pnpm changes:validate
 
 ## Releases
 
-Cutting releases is a multi-step process:
+Releases are automated via the [changes-version-pr workflow](/.github/workflows/changes-version-pr.yaml) and [publish workflow](/.github/workflows/publish.yaml).
 
-1. **Preview** - See what will be released
-2. **Version** - Update versions and create commit/tags locally
-3. **Push** - Push to GitHub (triggers CI to publish to npm)
+1. **You push changes to `main`** with change files in `packages/*/.changes/`
 
-### Preview a Release
+2. **A "Version Packages" PR is automatically opened** (or updated if one exists)
 
-To see which packages have changes and preview the release:
+   The PR contains:
 
-```sh
-pnpm changes:preview
-```
+   - Updated `package.json` versions
+   - Updated `CHANGELOG.md` files
+   - Deleted change files
 
-This shows:
+   This PR should not be edited manually. If you need to make changes, modify the change files and/or scripts in `main` to trigger an update to the PR.
 
-- Which packages will be released with version bumps
-- CHANGELOG additions
-- Git tags that will be created
-- Commit message
+3. **When you merge the PR**, the publish workflow runs (it runs on every push to `main` and checks for change files). Since the change files have been deleted, it publishes all unpublished packages to npm, then creates git tags and GitHub releases based on what was actually published.
 
-### Version a Release
+### Manual Versioning
 
-When ready to release, update versions and create the commit and tags locally:
+The "Version Packages" PR simply automates the `pnpm changes:version` command. If needed, you can run this command manually. This will update the `package.json` versions, `CHANGELOG.md` files, and delete the change files. It will then commit the result.
 
 ```sh
 pnpm changes:version
 ```
 
-This will:
-
-- Validate all change files
-- Update `package.json` versions
-- Update `CHANGELOG.md` files
-- Delete processed change files
-- Create a git commit
-- Create git tags
-
-If you want to review the file changes before committing:
+You can skip committing the changes by using the `--no-commit` flag. This will leave the changes in a staged state for you to review and commit manually. The command will also output the commit message that would have been used.
 
 ```sh
 pnpm changes:version --no-commit
 ```
 
-This updates the files but skips git operations. After reviewing, the script will show you the exact git commands to run to create the commit and tags.
-
-### Push the Release
-
-Push the release commit and tags to GitHub:
-
-```sh
-git push && git push --tags
-```
-
-GitHub Actions will automatically publish the tagged packages to npm and create GitHub Releases.
+Tags and GitHub releases are created automatically by the publish workflow after successful npm publish.

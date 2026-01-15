@@ -105,10 +105,10 @@ export class PressEvent extends Event {
   }
 }
 
-function Press(this: Interaction) {
-  if (!(this.target instanceof HTMLElement)) return
+function Press(handle: Interaction) {
+  if (!(handle.target instanceof HTMLElement)) return
 
-  let target = this.target
+  let target = handle.target
   let isPointerDown = false
   let isKeyboardDown = false
   let longPressTimer: number = 0
@@ -128,7 +128,7 @@ function Press(this: Interaction) {
     }, 500)
   }
 
-  this.on(this.target, {
+  handle.on(handle.target, {
     pointerdown(event) {
       if (event.isPrimary === false) return
       if (isPointerDown) return
@@ -206,7 +206,7 @@ function Press(this: Interaction) {
     },
   })
 
-  this.on(target.ownerDocument, {
+  handle.on(target.ownerDocument, {
     pointerup() {
       if (isPointerDown) {
         isPointerDown = false

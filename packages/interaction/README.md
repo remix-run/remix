@@ -224,13 +224,13 @@ declare global {
   }
 }
 
-function KeydownEnter(this: Interaction) {
-  if (!(this.target instanceof HTMLElement)) return
+function KeydownEnter(handle: Interaction) {
+  if (!(handle.target instanceof HTMLElement)) return
 
-  this.on(this.target, {
+  handle.on(handle.target, {
     keydown(event) {
       if (event.key === 'Enter') {
-        this.target.dispatchEvent(new KeyboardEvent(keydownEnter, { key: 'Enter' }))
+        handle.target.dispatchEvent(new KeyboardEvent(keydownEnter, { key: 'Enter' }))
       }
     },
   })

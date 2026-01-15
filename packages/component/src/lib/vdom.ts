@@ -318,6 +318,17 @@ function flatMapChildrenToVNodes(node: RemixElement): VNode[] {
     : []
 }
 
+function flattenRemixNodeArray(nodes: RemixNode[], out: RemixNode[] = []): RemixNode[] {
+  for (let child of nodes) {
+    if (Array.isArray(child)) {
+      flattenRemixNodeArray(child, out)
+    } else {
+      out.push(child)
+    }
+  }
+  return out
+}
+
 export function toVNode(node: RemixNode): VNode {
   if (node === null || node === undefined || typeof node === 'boolean') {
     return { type: TEXT_NODE, _text: '' }
@@ -328,7 +339,8 @@ export function toVNode(node: RemixNode): VNode {
   }
 
   if (Array.isArray(node)) {
-    return { type: Fragment, _children: node.flat(Infinity).map(toVNode) }
+    let flatChildren = flattenRemixNodeArray(node)
+    return { type: Fragment, _children: flatChildren.map(toVNode) }
   }
 
   if (node.type === Fragment) {
@@ -669,7 +681,9 @@ function isCommittedComponentNode(node: VNode): node is CommittedComponentNode {
 }
 
 function isFrameworkProp(name: string): boolean {
-  return name === 'children' || name === 'key' || name === 'on' || name === 'css'
+  return (
+    name === 'children' || name === 'key' || name === 'on' || name === 'css' || name === 'setup'
+  )
 }
 
 // TODO: would rather actually diff el.style object directly instead of writing

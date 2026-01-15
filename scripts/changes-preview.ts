@@ -44,23 +44,15 @@ function main() {
   console.log(colorize('CHANGELOG PREVIEW', colors.lightBlue))
   console.log()
 
-  let now = new Date()
   for (let release of releases) {
     console.log(colorize(`${release.packageName}/CHANGELOG.md:`, colors.gray))
     console.log()
-    console.log(generateChangelogContent(release, now))
+    console.log(generateChangelogContent(release))
   }
 
   console.log(colorize('COMMIT MESSAGE', colors.lightBlue))
   console.log()
   console.log(generateCommitMessage(releases))
-  console.log()
-
-  console.log(colorize('GIT TAGS', colors.lightBlue))
-  console.log()
-  for (let release of releases) {
-    console.log(`${release.packageName}@${release.nextVersion}`)
-  }
   console.log()
 
   console.log(colorize('VERSION COMMAND', colors.lightBlue))
