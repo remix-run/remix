@@ -1,72 +1,11 @@
-import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { createRouter, route } from '@remix-run/fetch-router'
 import { createHtmlResponse } from '@remix-run/response/html'
 import { staticFiles } from '@remix-run/static-middleware'
-import { html } from '@remix-run/html-template'
-import * as frontmatter from 'front-matter'
-import { marked } from 'marked'
+import { html, SafeHtml } from '@remix-run/html-template'
+import { discoverMarkdownFiles, DOCS_DIR, renderMarkdownFile, type DocFile } from './markdown.ts'
 
-let DOCS_DIR = path.resolve(process.cwd(), 'docs/api')
-
-interface DocFile {
-  path: string
-  type: string
-  name: string
-  package: string
-  urlPath: string
-}
-
-async function discoverMarkdownFiles(): Promise<DocFile[]> {
-  let files: DocFile[] = []
-
-  let packagesDir = path.resolve(process.cwd(), 'packages')
-  let packageJsons = fs
-    .readdirSync(packagesDir, { withFileTypes: true })
-    .map((d) => path.join(packagesDir, d.name, 'package.json'))
-  let pkgMap: Record<string, string> = {}
-  await Promise.all(
-    packageJsons.map(async (pkgPath) => {
-      let { name } = JSON.parse(await fs.promises.readFile(pkgPath, 'utf-8'))
-      let urlName = name.replace(/^@remix-run\//, '').replace(/\//g, '-')
-      pkgMap[urlName] = name
-    }),
-  )
-
-  function walk(dir: string) {
-    let entries = fs.readdirSync(dir, { withFileTypes: true })
-
-    for (let entry of entries) {
-      let fullPath = path.join(dir, entry.name)
-
-      if (entry.isDirectory()) {
-        walk(fullPath)
-      } else if (entry.isFile() && entry.name.endsWith('.md')) {
-        let relativePath = path.relative(DOCS_DIR, fullPath)
-        let parts = relativePath.split(path.sep)
-        let packageName = parts.slice(0, parts.length - 1).join('/')
-        let urlPath = '/docs/' + relativePath.replace(/\.md$/, '').replace(/\\/g, '/')
-
-        let markdown = fs.readFileSync(fullPath, 'utf-8')
-        // @ts-expect-error No types
-        let { attributes } = frontmatter.default(markdown)
-
-        files.push({
-          path: fullPath,
-          type: attributes.type || 'unknown',
-          name: entry.name.replace(/\.md$/, ''),
-          package: packageName,
-          urlPath: urlPath,
-        })
-      }
-    }
-  }
-
-  walk(DOCS_DIR)
-  return files.sort((a, b) => a.urlPath.localeCompare(b.urlPath))
-}
-
-let docFiles = await discoverMarkdownFiles()
+let docFiles = await discoverMarkdownFiles(DOCS_DIR)
 
 function buildNavigation(currentPath: string): string {
   let packageGroups = new Map<string, DocFile[]>()
@@ -80,7 +19,7 @@ function buildNavigation(currentPath: string): string {
 
   let navItems: string[] = []
 
-  let comparator = (a, b) => {
+  let sortedNavItems = Array.from(packageGroups.entries()).sort((a, b) => {
     // remix above remix/*
     if (a[0] === 'remix' && b[0].startsWith('remix/')) return -1
     if (b[0] === 'remix' && a[0].startsWith('remix/')) return 1
@@ -91,8 +30,7 @@ function buildNavigation(currentPath: string): string {
     if (b[0] === 'remix' || b[0].startsWith('remix/')) return 1
     // Everything else alphabetical
     return a[0].localeCompare(b[0])
-  }
-  let sortedNavItems = Array.from(packageGroups.entries()).sort(comparator)
+  })
 
   for (let [packageName, files] of sortedNavItems) {
     let fileLinks = files
@@ -121,8 +59,8 @@ function buildNavigation(currentPath: string): string {
   return navItems.join('')
 }
 
-function createLayout(content: string, currentPath: string): string {
-  return `
+function createLayout(content: string | SafeHtml, currentPath: string): SafeHtml {
+  return html`
     <!doctype html>
     <html lang="en">
       <head>
@@ -146,25 +84,6 @@ function createLayout(content: string, currentPath: string): string {
   `
 }
 
-function renderMarkdownFile(filePath: string): string {
-  try {
-    let markdown = fs.readFileSync(filePath, 'utf-8')
-
-    // Remove frontmatter if present
-    markdown = markdown.replace(/^---\n[\s\S]*?\n---\n/, '')
-
-    let htmlContent = marked.parse(markdown)
-    return htmlContent
-  } catch (error) {
-    return html`
-      <div class="error">
-        <h2>Error loading file</h2>
-        <p>Could not read file: ${filePath}</p>
-      </div>
-    `
-  }
-}
-
 let routes = route({
   docs: '/docs/*',
   home: '/',
@@ -184,7 +103,7 @@ router.get(routes.home, () => {
   return createHtmlResponse(createLayout(content, '/'))
 })
 
-router.get(routes.docs, ({ url }) => {
+router.get(routes.docs, async ({ url }) => {
   let pathname = url.pathname
 
   // Find the matching doc file
@@ -201,7 +120,7 @@ router.get(routes.docs, ({ url }) => {
     return createHtmlResponse(createLayout(content, pathname), { status: 404 })
   }
 
-  let htmlContent = renderMarkdownFile(docFile.path)
+  let htmlContent = await renderMarkdownFile(docFile.path)
   return createHtmlResponse(createLayout(htmlContent, pathname))
 })
 
