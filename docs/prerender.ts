@@ -1,23 +1,18 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import router from './router.ts'
+import { discoverMarkdownFiles, DOCS_DIR } from './markdown.ts'
 
-// TODO: Don't use a regex to parse out links - probably want a DOM parser
-
-let visited = new Set<string>()
+let mdFiles = await discoverMarkdownFiles(DOCS_DIR)
 let outputDir = path.resolve(process.cwd(), 'docs/public')
 
-// Start crawling from the root
-await crawlPage('/')
+for (let file of mdFiles) {
+  await crawlPage(file.urlPath)
+}
 
-console.log(`\nCrawling complete! Visited ${visited.size} pages.`)
+console.log(`\nCrawling complete!`)
 
 async function crawlPage(urlPath: string): Promise<void> {
-  if (visited.has(urlPath)) {
-    return
-  }
-
-  visited.add(urlPath)
   console.log(`Crawling: ${urlPath}`)
 
   try {
@@ -123,12 +118,7 @@ function isAbsoluteUrl(href: string): boolean {
 }
 
 async function downloadResource(urlPath: string): Promise<void> {
-  if (visited.has(urlPath)) {
-    return
-  }
-
-  visited.add(urlPath)
-  console.log(`Downloading: ${urlPath}`)
+  console.log(`Saving: ${urlPath}`)
 
   try {
     let response = await router.fetch(new Request(`http://localhost${urlPath}`))
