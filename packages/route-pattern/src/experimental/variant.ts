@@ -1,9 +1,9 @@
 import { unreachable } from './errors.ts'
-import type { PartPattern, Token } from './part-pattern.ts'
+import type { PartPattern } from './part-pattern.ts'
 
 type Variant = {
   /** Params use `nameIndex` to reference params in the PartPattern's `paramNames` */
-  tokens: Array<Extract<Token, { type: 'text' | ':' | '*' }>>
+  tokens: Array<Extract<PartPattern.Token, { type: 'text' | ':' | '*' }>>
 
   /** Pre-computed subset of `paramNames` that are required for this variant */
   requiredParams: Array<string>

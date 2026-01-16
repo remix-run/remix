@@ -488,4 +488,160 @@ describe('RoutePattern', () => {
       )
     })
   })
+
+  describe('match', () => {
+    function assertMatch(
+      pattern: string,
+      url: string,
+      expected: {
+        params?: Record<string, string | undefined>
+      } | null,
+    ) {
+      let match = RoutePattern.parse(pattern).match(url)
+
+      if (expected === null) {
+        assert.equal(match, null, `Expected pattern "${pattern}" to not match URL "${url}"`)
+        return
+      }
+
+      assert.notEqual(match, null, `Expected pattern "${pattern}" to match URL "${url}"`)
+      assert.deepStrictEqual(match?.params, expected.params ?? {})
+    }
+
+    describe('protocol', () => {
+      test('http', () => {
+        assertMatch('http://example.com/path', 'http://example.com/path', {})
+      })
+
+      test('https', () => {
+        assertMatch('https://example.com/path', 'https://example.com/path', {})
+      })
+
+      test('http(s)', () => {
+        assertMatch('http(s)://example.com/path', 'http://example.com/path', {})
+        assertMatch('http(s)://example.com/path', 'https://example.com/path', {})
+      })
+    })
+
+    describe('hostname', () => {
+      test('one variable', () => {
+        assertMatch('://:host.com/path', 'https://example.com/path', {
+          params: { host: 'example' },
+        })
+      })
+
+      test('multiple variables', () => {
+        assertMatch('://:subdomain.:domain.com/path', 'https://api.example.com/path', {
+          params: { subdomain: 'api', domain: 'example' },
+        })
+      })
+
+      test('multiple variables with repeated names', () => {
+        assertMatch('://:part.:part.com/path', 'https://api.example.com/path', {
+          params: { part: 'example' },
+        })
+      })
+
+      test('unnamed wildcard does not appear in params', () => {
+        assertMatch('://*.example.com/path', 'https://api.example.com/path', {})
+      })
+    })
+
+    describe('port', () => {
+      test('matches', () => {
+        assertMatch('://example.com:8080/path', 'https://example.com:8080/path', {})
+      })
+
+      test('does not match', () => {
+        assertMatch('://example.com:8080/path', 'https://example.com:3000/path', null)
+      })
+    })
+
+    describe('pathname', () => {
+      test('one variable', () => {
+        assertMatch('/posts/:id', 'https://example.com/posts/123', { params: { id: '123' } })
+      })
+
+      test('multiple variables', () => {
+        assertMatch('/users/:userId/posts/:postId', 'https://example.com/users/42/posts/123', {
+          params: { userId: '42', postId: '123' },
+        })
+      })
+
+      test('multiple variables with repeated names', () => {
+        assertMatch('/:id/nested/:id', 'https://example.com/first/nested/second', {
+          params: { id: 'second' },
+        })
+      })
+
+      test('unnamed wildcard does not appear in params', () => {
+        assertMatch('/posts/*/comments', 'https://example.com/posts/123/comments', {})
+      })
+    })
+
+    describe('search', () => {
+      test('bare parameter (presence only)', () => {
+        assertMatch('?q', 'https://example.com?q', {})
+      })
+
+      test('bare parameter matches when URL has value', () => {
+        assertMatch('?q', 'https://example.com?q=search', {})
+      })
+
+      test('parameter with empty value requires non-empty value in URL', () => {
+        assertMatch('?q=', 'https://example.com?q=search', {})
+        assertMatch('?q=', 'https://example.com?q=', null)
+        assertMatch('?q=', 'https://example.com?q', null)
+      })
+
+      test('parameter with specific value', () => {
+        assertMatch('?sort=asc', 'https://example.com?sort=asc', {})
+      })
+
+      test('parameter with multiple values', () => {
+        assertMatch('?tag=foo&tag=bar', 'https://example.com?tag=foo&tag=bar', {})
+      })
+
+      test('multiple parameters', () => {
+        assertMatch('?filter&sort=asc', 'https://example.com?filter=active&sort=asc', {})
+      })
+
+      test('allows extra parameters with bare constraint', () => {
+        assertMatch('?q', 'https://example.com?q=search&page=2&limit=10', {})
+      })
+
+      test('allows extra parameters with empty value constraint', () => {
+        assertMatch('?filter=', 'https://example.com?filter=active&sort=asc&page=1', {})
+      })
+
+      test('allows extra parameters with specific value', () => {
+        assertMatch('?sort=asc', 'https://example.com?sort=asc&filter=active&page=2', {})
+      })
+
+      test('allows extra parameters with multiple constraints', () => {
+        assertMatch(
+          '?filter&sort=asc',
+          'https://example.com?filter=active&sort=asc&page=1&limit=20',
+          {},
+        )
+      })
+
+      test('allows extra values for constrained parameter', () => {
+        assertMatch('?tag=foo', 'https://example.com?tag=foo&tag=bar&tag=baz', {})
+      })
+
+      test('does not match when required parameter missing', () => {
+        assertMatch('?filter', 'https://example.com?sort=asc', null)
+      })
+
+      test('does not match when required value missing', () => {
+        assertMatch('?sort=asc', 'https://example.com?sort=desc', null)
+      })
+
+      test('no search constraints matches any search params', () => {
+        assertMatch('/posts', 'https://example.com/posts?q=search&page=2', {})
+        assertMatch('/posts', 'https://example.com/posts', {})
+      })
+    })
+  })
 })

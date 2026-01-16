@@ -175,3 +175,24 @@ export function href(pattern: RoutePattern, params: HrefParams): string | undefi
   let result = urlSearchParams.toString()
   return result || undefined
 }
+
+export function test(params: URLSearchParams, constraints: Constraints): boolean {
+  for (let [name, constraint] of constraints) {
+    if (constraint === null) {
+      if (!params.has(name)) return false
+      continue
+    }
+
+    let values = params.getAll(name)
+
+    if (constraint.size === 0) {
+      if (values.every((value) => value === '')) return false
+      continue
+    }
+
+    for (let value of constraint) {
+      if (!values.includes(value)) return false
+    }
+  }
+  return true
+}
