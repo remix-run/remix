@@ -15,20 +15,26 @@ type AST = {
 
 const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
+type MatchParam = { type: ':' | '*'; name: string; value: string; begin: number; end: number }
+type Match = Array<MatchParam>
+
 export class PartPattern {
   readonly tokens: AST['tokens']
   readonly paramNames: AST['paramNames']
   readonly optionals: AST['optionals']
   #variants: Array<Variant.Type> | undefined
+  #separator: '.' | '/' | undefined
+  #regexp: RegExp | undefined
 
-  constructor(ast: AST) {
+  constructor(ast: AST, options: { separator?: '.' | '/' } = {}) {
     this.tokens = ast.tokens
     this.paramNames = ast.paramNames
     this.optionals = ast.optionals
+    this.#separator = options.separator
   }
 
-  static parse(source: string, span?: Span): PartPattern {
-    span ??= [0, source.length]
+  static parse(source: string, options: { span?: Span; separator?: '.' | '/' } = {}): PartPattern {
+    let span = options.span ?? [0, source.length]
 
     let ast: AST = {
       tokens: [],
@@ -112,7 +118,7 @@ export class PartPattern {
       throw new ParseError('unmatched (', source, optionalStack.at(-1)!)
     }
 
-    return new PartPattern(ast)
+    return new PartPattern(ast, { separator: options.separator })
   }
 
   get variants(): Array<Variant.Type> {
@@ -197,4 +203,67 @@ export class PartPattern {
     }
     return result
   }
+
+  match(part: string): Match | null {
+    if (this.#regexp === undefined) {
+      this.#regexp = toRegExp(this.tokens, this.#separator)
+    }
+    let reMatch = this.#regexp.exec(part)
+    if (reMatch === null) return null
+    let match: Match = []
+    for (let group in reMatch.indices?.groups) {
+      let prefix = group[0]
+      let nameIndex = parseInt(group.slice(1))
+      if (prefix !== 'v' && prefix !== 'w') continue
+      let type: ':' | '*' = prefix === 'v' ? ':' : '*'
+      let span = reMatch.indices.groups[group]
+      match.push({
+        type,
+        name: this.paramNames[nameIndex],
+        begin: span[0],
+        end: span[1],
+        value: reMatch.groups![group],
+      })
+    }
+    return match
+  }
+}
+
+function toRegExp(tokens: Array<Token>, separator: '.' | '/' | undefined): RegExp {
+  let result = ''
+  for (let token of tokens) {
+    if (token.type === 'text') {
+      result += escapeRegex(token.text)
+      continue
+    }
+
+    if (token.type === ':') {
+      result += `(?<v${token.nameIndex}>`
+      result += separator ? `[^${separator}]+` : `.+`
+      result += `)`
+      continue
+    }
+
+    if (token.type === '*') {
+      result += `(?<w${token.nameIndex}>.*)`
+      continue
+    }
+
+    if (token.type === '(') {
+      result += '(?:'
+      continue
+    }
+
+    if (token.type === ')') {
+      result += ')?'
+      continue
+    }
+
+    unreachable(token.type)
+  }
+  return new RegExp(`^${result}$`, 'd')
+}
+
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&')
 }
