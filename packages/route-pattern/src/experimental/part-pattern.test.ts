@@ -320,4 +320,52 @@ describe('PartPattern', () => {
       assertHrefNull(':c(:b)-:a(:b)', { b: 'thing' })
     })
   })
+
+  describe('match', () => {
+    type MatchParam = { type: ':' | '*'; name: string; value: string; begin: number; end: number }
+    function assertMatch(pattern: string, part: string, expected: Array<MatchParam>) {
+      let result = PartPattern.parse(pattern).match(part)
+      assert.deepStrictEqual(result, expected)
+    }
+
+    test('variable', () => {
+      assertMatch('posts/:id', 'posts/123', [
+        { type: ':', name: 'id', value: '123', begin: 6, end: 9 },
+      ])
+    })
+
+    test('multiple variables', () => {
+      assertMatch('posts/:id/comments/:commentId', 'posts/123/comments/456', [
+        { type: ':', name: 'id', value: '123', begin: 6, end: 9 },
+        { type: ':', name: 'commentId', value: '456', begin: 19, end: 22 },
+      ])
+    })
+
+    test('multiple variables with repeated names', () => {
+      assertMatch(':id/:id', '123/456', [
+        { type: ':', name: 'id', value: '123', begin: 0, end: 3 },
+        { type: ':', name: 'id', value: '456', begin: 4, end: 7 },
+      ])
+    })
+
+    test('wildcard', () => {
+      assertMatch('files/*path', 'files/a/b/c', [
+        { type: '*', name: 'path', value: 'a/b/c', begin: 6, end: 11 },
+      ])
+    })
+
+    test('multiple wildcards', () => {
+      assertMatch('*prefix/middle/*suffix', 'a/b/middle/c/d', [
+        { type: '*', name: 'prefix', value: 'a/b', begin: 0, end: 3 },
+        { type: '*', name: 'suffix', value: 'c/d', begin: 11, end: 14 },
+      ])
+    })
+
+    test('multiple wildcards with repeated names', () => {
+      assertMatch('*path/*path', 'a/b/c/d', [
+        { type: '*', name: 'path', value: 'a/b/c', begin: 0, end: 5 },
+        { type: '*', name: 'path', value: 'd', begin: 6, end: 7 },
+      ])
+    })
+  })
 })
