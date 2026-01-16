@@ -45,7 +45,7 @@ describe('rank', () => {
 
       test('tie on variables and wildcards, break tie eventually', () => {
         assertCompare(
-          ['https://*.cd.:ef.g*.com', 'https://*.cd.:ef.*.com'],
+          ['https://a*.cd.:ef.*.com', 'https://*.cd.:ef.*.com'],
           'https://ab.cd.ef.gh.com',
           -1,
         )
