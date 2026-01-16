@@ -15,6 +15,6 @@ Major `remix` releases will happen on a predetermined schedule so that users may
 
 Breaking changes will accumulate on a `future` branch. The `future` branch is a preview of what the next major version of Remix will look like. If someone wants to play with the latest stuff, they can build directly from `future`. We don't make any guarantees about the [stability][^stability] of `future`, which is why users must build from source.
 
-We will publish new majors of sub-packages as soon as they are ready from the `future` branch. When it's time to cut the next major `remix` release, we will merge `future` into `main`.
+We will publish new majors of sub-packages as soon as they are ready from the `future` branch. When it's time to cut the next major `remix` release, we will merge `future` into `main`. Of course, this means that `main` should be merged into `future` periodically to make this easier.
 
 [^stability]: By "stable" we mean "won't break between releases". Both `main` and `future` should always pass all tests and be usable, but on `main` we have versions and stability guarantees between them. On `future`, we don't.
