@@ -1,18 +1,22 @@
+import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { type Remix } from '@remix-run/dom'
 import { renderToStream } from '@remix-run/dom/server'
 import { createRouter, route } from '@remix-run/fetch-router'
 import { createHtmlResponse } from '@remix-run/response/html'
 import { staticFiles } from '@remix-run/static-middleware'
-import {
-  discoverMarkdownFiles,
-  API_DOCS_DIR,
-  renderMarkdownFile,
-  type DocFile,
-  DOCS_DIR,
-} from './markdown.ts'
+import * as frontmatter from 'front-matter'
+import { marked } from 'marked'
 
-const docFiles = await discoverMarkdownFiles(API_DOCS_DIR)
+// No types exist for the `frontmatter` package
+const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
+  attributes: Record<string, any>
+  body: string
+}
+
+const REPO_DIR = path.resolve(process.cwd(), '..')
+
+const docFiles = await discoverMarkdownFiles(path.resolve(REPO_DIR, 'docs', 'api'))
 
 const routes = route({
   home: '/',
@@ -20,7 +24,7 @@ const routes = route({
 })
 
 const router = createRouter({
-  middleware: [staticFiles(path.resolve(DOCS_DIR, 'public'))],
+  middleware: [staticFiles(path.resolve(REPO_DIR, 'docs', 'public'))],
 })
 
 const render = (node: Remix.RemixNode, init?: ResponseInit) =>
@@ -63,7 +67,7 @@ function NotFound() {
   }
 }
 
-export function Layout() {
+function Layout() {
   return ({ docFiles, children }: { docFiles: DocFile[]; children: Remix.RemixNode }) => (
     <html lang="en">
       <head>
@@ -87,7 +91,7 @@ export function Layout() {
   )
 }
 
-export function SideBarNav() {
+function SideBarNav() {
   return ({ docFiles }: { docFiles: DocFile[] }) => {
     let packageGroups = new Map<string, DocFile[]>()
 
@@ -131,6 +135,64 @@ function SideBarNavGroup() {
       </ul>
     </div>
   )
+}
+
+type DocFile = {
+  path: string
+  type: string
+  name: string
+  package: string
+  urlPath: string
+}
+
+async function discoverMarkdownFiles(baseDir: string): Promise<DocFile[]> {
+  let files: DocFile[] = []
+  walk(baseDir)
+  return files.sort((a, b) => a.urlPath.localeCompare(b.urlPath))
+
+  function walk(dir: string) {
+    let entries = fs.readdirSync(dir, { withFileTypes: true })
+
+    for (let entry of entries) {
+      let fullPath = path.join(dir, entry.name)
+
+      if (entry.isDirectory()) {
+        walk(fullPath)
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        let relativePath = path.relative(baseDir, fullPath)
+        let parts = relativePath.split(path.sep)
+        let packageName = parts.slice(0, parts.length - 1).join('/')
+        let urlPath = relativePath.replace(/\.md$/, '').replace(/\\/g, '/')
+
+        let markdown = fs.readFileSync(fullPath, 'utf-8')
+        let { attributes } = parseFrontmatter(markdown)
+
+        files.push({
+          path: fullPath,
+          type: attributes.type || 'unknown',
+          name: entry.name.replace(/\.md$/, ''),
+          package: packageName,
+          urlPath: urlPath,
+        })
+      }
+    }
+  }
+}
+
+async function renderMarkdownFile(filePath: string): Promise<string> {
+  try {
+    let markdown = fs.readFileSync(filePath, 'utf-8')
+    let { body } = parseFrontmatter(markdown)
+    let htmlContent = await marked.parse(body)
+    return htmlContent
+  } catch (error) {
+    return `
+      <div class="error">
+        <h2>Error loading file</h2>
+        <p>Could not read file: ${filePath}</p>
+      </div>
+    `
+  }
 }
 
 export default router
