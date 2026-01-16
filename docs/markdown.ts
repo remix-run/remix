@@ -3,7 +3,10 @@ import { marked } from 'marked'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
-export const DOCS_DIR = path.resolve(process.cwd(), 'docs/api')
+const REPO_DIR = path.resolve(process.cwd(), '..')
+export const DOCS_DIR = path.resolve(REPO_DIR, 'docs')
+export const API_DOCS_DIR = path.resolve(DOCS_DIR, 'api')
+export const PACKAGES_DIR = path.resolve(REPO_DIR, 'packages')
 
 export type DocFile = {
   path: string
@@ -16,10 +19,9 @@ export type DocFile = {
 export async function discoverMarkdownFiles(baseDir: string): Promise<DocFile[]> {
   let files: DocFile[] = []
 
-  let packagesDir = path.resolve(process.cwd(), 'packages')
   let packageJsons = fs
-    .readdirSync(packagesDir, { withFileTypes: true })
-    .map((d) => path.join(packagesDir, d.name, 'package.json'))
+    .readdirSync(PACKAGES_DIR, { withFileTypes: true })
+    .map((d) => path.join(PACKAGES_DIR, d.name, 'package.json'))
   let pkgMap: Record<string, string> = {}
   await Promise.all(
     packageJsons.map(async (pkgPath) => {
@@ -41,7 +43,7 @@ export async function discoverMarkdownFiles(baseDir: string): Promise<DocFile[]>
         let relativePath = path.relative(baseDir, fullPath)
         let parts = relativePath.split(path.sep)
         let packageName = parts.slice(0, parts.length - 1).join('/')
-        let urlPath = '/docs/' + relativePath.replace(/\.md$/, '').replace(/\\/g, '/')
+        let urlPath = relativePath.replace(/\.md$/, '').replace(/\\/g, '/')
 
         let markdown = fs.readFileSync(fullPath, 'utf-8')
         // No types exist for the `frontmatter` package
