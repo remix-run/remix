@@ -1,72 +1,66 @@
-import * as fs from 'node:fs'
+import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import router from './router.ts'
+import router from './router.tsx'
 import { parse } from 'node-html-parser'
-import { discoverMarkdownFiles, DOCS_DIR } from './markdown.ts'
+import { discoverMarkdownFiles, API_DOCS_DIR, DOCS_DIR } from './markdown.ts'
+import { html } from '../packages/html-template/src/lib/safe-html.ts'
 
-let mdFiles = await discoverMarkdownFiles(DOCS_DIR)
-let initialUrls = ['/', ...mdFiles.map((file) => file.urlPath)]
-let outputDir = path.resolve(process.cwd(), 'docs/public')
-let downloaded = new Set()
+let outputDir = path.resolve(DOCS_DIR, 'site')
+console.log(`Clearing output directory: ${outputDir}`)
+await fs.rm(outputDir, { recursive: true, force: true })
 
-for (let url of initialUrls) {
-  await crawlPage(url)
+// Queue of URLs to download
+let queuedUrls = ['/']
+
+// Track URLs we have already downloaded to avoid loops
+let downloadedUrls = new Set<string>()
+
+while (queuedUrls.length > 0) {
+  await crawlPage(queuedUrls.shift()!)
 }
 
 console.log(`\nCrawling complete!`)
 
 async function crawlPage(urlPath: string): Promise<void> {
-  if (downloaded.has(urlPath)) {
+  if (downloadedUrls.has(urlPath)) {
     return
   }
 
-  let outputPath: string
-  if (urlPath === '/' || urlPath === '') {
-    outputPath = path.join(outputDir, 'index.html')
-  } else if (urlPath.endsWith('/')) {
-    outputPath = path.join(outputDir, urlPath, 'index.html')
-  } else {
-    outputPath = path.join(outputDir, `${urlPath}.html`)
-  }
+  // Always put `index.html` files into directories - this leads to the best
+  // support with and without trailing slashes on github pages:
+  // https://github.com/slorber/trailing-slash-guide?tab=readme-ov-file#summary
+  let isResource = urlPath.split('/').pop()?.includes('.')
+  let outputPath = isResource
+    ? path.join(outputDir, urlPath)
+    : path.join(outputDir, urlPath, 'index.html')
 
   console.log(`Crawling: ${urlPath} -> ${path.relative(process.cwd(), outputPath)}`)
 
-  try {
-    let response = await router.fetch(new Request(`http://localhost${urlPath}`))
-    let html = await response.text()
-
-    // Create directory if needed
-    let dir = path.dirname(outputPath)
-    await fs.promises.mkdir(dir, { recursive: true })
-
-    // Write the HTML file
-    await fs.promises.writeFile(outputPath, html, 'utf-8')
-    downloaded.add(urlPath)
-
-    // Extract and download link tag resources (CSS, etc.)
-    let resources = parse(html)
-      .querySelectorAll('link')
-      .map((link) => link.getAttribute('href'))
-      .filter((href) => href && !isAbsoluteUrl(href) && !downloaded.has(href))
-      .map((href) => resolveRelativeLink(href!, urlPath))
-
-    for (let href of resources) {
-      await downloadResource(href)
-    }
-
-    // Extract and crawl links
-    let links = parse(html)
-      .querySelectorAll('a')
-      .map((link) => link.getAttribute('href'))
-      .filter((href) => href && !isAbsoluteUrl(href) && !downloaded.has(href))
-      .map((href) => resolveRelativeLink(href!, urlPath))
-
-    for (let href of links) {
-      await crawlPage(href)
-    }
-  } catch (error) {
-    console.error(`  Error crawling ${urlPath}:`, error)
+  let response = await router.fetch(new Request(`http://localhost${urlPath}`))
+  if (!response.ok) {
+    throw new Error(`Error fetching ${urlPath}: ${response.status} ${response.statusText}`)
   }
+
+  if (isResource) {
+    let content = await response.arrayBuffer()
+    await fs.mkdir(path.dirname(outputPath), { recursive: true })
+    await fs.writeFile(outputPath, new Uint8Array(content))
+  } else {
+    let html = await response.text()
+    await fs.mkdir(path.dirname(outputPath), { recursive: true })
+    await fs.writeFile(outputPath, html, 'utf-8')
+
+    // Parse HTML files for other resources/links to add to queue
+    queuedUrls.push(
+      ...parse(html)
+        .querySelectorAll('a,link')
+        .map((link) => link.getAttribute('href'))
+        .filter((href) => href && !isAbsoluteUrl(href) && !downloadedUrls.has(href))
+        .map((href) => resolveRelativeLink(href!, urlPath)),
+    )
+  }
+
+  downloadedUrls.add(urlPath)
 }
 
 function isAbsoluteUrl(href: string): boolean {
@@ -84,7 +78,7 @@ function resolveRelativeLink(link: string, url: string): string {
 }
 
 async function downloadResource(urlPath: string): Promise<void> {
-  if (downloaded.has(urlPath)) {
+  if (downloadedUrls.has(urlPath)) {
     return
   }
 
@@ -97,12 +91,12 @@ async function downloadResource(urlPath: string): Promise<void> {
 
     // Create directory if needed
     let dir = path.dirname(filePath)
-    await fs.promises.mkdir(dir, { recursive: true })
+    await fs.mkdir(dir, { recursive: true })
 
     // Write the file
-    await fs.promises.writeFile(filePath, new Uint8Array(content))
+    await fs.writeFile(filePath, new Uint8Array(content))
     console.log(`  Saved asset: ${path.relative(process.cwd(), filePath)}`)
-    downloaded.add(urlPath)
+    downloadedUrls.add(urlPath)
   } catch (error) {
     console.error(`  Error downloading ${urlPath}:`, error)
   }

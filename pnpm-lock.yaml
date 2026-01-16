@@ -16,7 +16,7 @@ catalogs:
       specifier: ^1.53.1
       version: 1.57.0
     tsx:
-      specifier: ^4.20.6
+      specifier: 4.21.0
       version: 4.21.0
     typescript:
       specifier: ^5.9.3
@@ -128,6 +128,9 @@ importers:
 
   docs:
     dependencies:
+      '@remix-run/dom':
+        specifier: jam
+        version: 0.0.0-experimental-remix-jam.6
       '@remix-run/fetch-router':
         specifier: workspace:*
         version: link:../packages/fetch-router
