@@ -2,11 +2,11 @@
 
 Beginning in Remix 3 the `remix` package is an umbrella package for everything in Remix. This includes a number of "sub-packages" that are all published under the `@remix-run/*` scope. The `remix` package re-exports everything from all sub-packages as a transparent pass-thru. This means users only have to install `remix` to get everything we publish, and they can import everything from some `remix/*` export.
 
-We anticipate the majority of Remix development will happen directly on the `main` branch. `main` should always be publishable, so we can e.g. publish nightlies from `main`. We are also free to publish minor/patch changes from `main` at any time.
+We anticipate the majority of Remix development will happen directly on the `main` branch. `main` should always be publishable. We will publish minor/patch changes from `main` often for both `remix` and any sub-package that needs it.
 
 ## Breaking Changes
 
-When it comes to breaking changes, we have 2 goals:
+When it comes to breaking changes (that require a major version bump), we have 2 goals:
 
 - Be slow and deliberate about cutting major `remix` releases so we don't stress people out by releasing majors too often
 - Release breaking changes in sub-packages as soon as they are ready so people can play with them
