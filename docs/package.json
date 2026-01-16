@@ -20,7 +20,8 @@
   },
   "scripts": {
     "docs": "node generate.ts",
-    "prerender": "node prerender.ts",
+    "prerender": "tsx prerender.ts",
+    "prerender:serve": "npx http-server site",
     "serve": "tsx server.ts"
   }
 }
