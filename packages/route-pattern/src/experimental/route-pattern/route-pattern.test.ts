@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict'
 import test, { describe } from 'node:test'
-import { RoutePattern, type AST } from './route-pattern.ts'
+import { RoutePattern } from './route-pattern.ts'
 import type * as Search from './search.ts'
 import { HrefError } from '../errors.ts'
 
@@ -8,7 +8,7 @@ describe('RoutePattern', () => {
   describe('parse', () => {
     function assertParse(
       source: string,
-      expected: { [K in Exclude<keyof AST, 'search'>]?: string } & {
+      expected: { [K in Exclude<keyof RoutePattern['ast'], 'search'>]?: string } & {
         search?: Record<string, Array<string> | null>
       },
     ) {
