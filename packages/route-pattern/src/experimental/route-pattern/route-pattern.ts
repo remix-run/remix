@@ -170,6 +170,10 @@ export class RoutePattern {
 
     return { params, searchParams: url.searchParams, meta: { hostname, pathname } }
   }
+
+  test(url: string | URL): boolean {
+    return this.match(url) !== null
+  }
 }
 
 function isNamelessWildcard(part: PartPattern): boolean {
