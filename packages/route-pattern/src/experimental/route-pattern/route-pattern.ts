@@ -12,6 +12,15 @@ export type AST = {
   search: Search.Constraints
 }
 
+type Match = {
+  params: Record<string, string | undefined>
+  searchParams: URLSearchParams
+  meta: {
+    hostname: PartPattern.Match
+    pathname: PartPattern.Match
+  }
+}
+
 export class RoutePattern {
   readonly ast: AST
 
@@ -116,6 +125,50 @@ export class RoutePattern {
     if (search) result += `?${search}`
 
     return result
+  }
+
+  match(url: string | URL): Match | null {
+    url = typeof url === 'string' ? new URL(url) : url
+
+    // url.protocol: remove trailing colon
+    let protocol = this.ast.protocol.match(url.protocol.slice(0, -1))
+    if (protocol === null) return null
+
+    let hostname = this.ast.hostname.match(url.hostname)
+    if (hostname === null) return null
+
+    // url.port: '' means no port
+    if ((url.port || null) !== this.ast.port) return null
+
+    // url.pathname: remove leading slash
+    let pathname = this.ast.pathname.match(url.pathname.slice(1))
+    if (pathname === null) return null
+
+    if (!Search.test(url.searchParams, this.ast.search)) return null
+
+    let params: Record<string, string | undefined> = {}
+
+    // hostname params
+    this.ast.hostname.paramNames.forEach((name) => {
+      if (name === '*') return
+      params[name] = undefined
+    })
+    hostname.forEach((param) => {
+      if (param.name === '*') return
+      params[param.name] = param.value
+    })
+
+    // pathname params
+    this.ast.pathname.paramNames.forEach((name) => {
+      if (name === '*') return
+      params[name] = undefined
+    })
+    pathname.forEach((param) => {
+      if (param.name === '*') return
+      params[param.name] = param.value
+    })
+
+    return { params, searchParams: url.searchParams, meta: { hostname, pathname } }
   }
 }
 
