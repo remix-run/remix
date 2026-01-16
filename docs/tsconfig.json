@@ -8,6 +8,8 @@
     "strict": true,
     "allowJs": true,
     "checkJs": true,
-    "noEmit": true
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@remix-run/dom"
   }
 }

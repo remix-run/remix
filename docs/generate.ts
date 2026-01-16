@@ -94,9 +94,16 @@ let { values: cliArgs } = util.parseArgs({
       short: 'd',
     },
     // Path to a TypeDoc JSON file to use as the input, instead of running Typedoc
+    // (mutually exclusive with `entryPoints`)
     input: {
       type: 'string',
       short: 'i',
+    },
+    // Entrypoints to run typedoc against (mutually exclusive with `input`)
+    entryPoints: {
+      type: 'string',
+      short: 'i',
+      default: '../packages/*',
     },
     // Specific module to generate docs for
     module: {
@@ -112,19 +119,19 @@ let { values: cliArgs } = util.parseArgs({
     docsDir: {
       type: 'string',
       short: 'o',
-      default: 'docs/api',
+      default: 'api',
     },
     // Output directory for typedoc JSON (if --input is not specified)
     typedocDir: {
       type: 'string',
       short: 'o',
-      default: 'docs/typedoc',
+      default: 'typedoc',
     },
-    // Output directory for typedoc JSON (if --input is not specified)
+    // Base path (without trailing slash) for docs website, used for link generation
     websiteDocsPath: {
       type: 'string',
       short: 'w',
-      default: '/docs',
+      default: '/api',
     },
   },
 })
@@ -132,6 +139,16 @@ let { values: cliArgs } = util.parseArgs({
 main()
 
 async function main() {
+  // Ensure we're running from the /docs directory
+  let cwd = process.cwd()
+  if (!cwd.endsWith('/docs')) {
+    console.error('❌ This script must be run from the /docs directory')
+    process.exit(1)
+  }
+
+  console.log(`Clearing output directory: ${cliArgs.docsDir}`)
+  await fs.rm(cliArgs.docsDir, { recursive: true, force: true })
+
   // Load the full TypeDoc project and walk it to create a lookup map and
   // determine which APIs we want to generate documentation for
   let project = await loadTypedocJson()
@@ -173,7 +190,7 @@ async function loadTypedocJson(): Promise<typedoc.ProjectReflection> {
   info(`Generating TypeDoc from project`)
   let app = await typedoc.Application.bootstrap({
     name: 'Remix',
-    entryPoints: ['./packages/*'],
+    entryPoints: [cliArgs.entryPoints],
     entryPointStrategy: 'packages',
     packageOptions: {
       blockTags: [...typedoc.OptionDefaults.blockTags, '@alias'],
