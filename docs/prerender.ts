@@ -2,10 +2,8 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import router from './router.tsx'
 import { parse } from 'node-html-parser'
-import { discoverMarkdownFiles, API_DOCS_DIR, DOCS_DIR } from './markdown.ts'
-import { html } from '../packages/html-template/src/lib/safe-html.ts'
 
-let outputDir = path.resolve(DOCS_DIR, 'site')
+let outputDir = path.resolve(process.cwd(), 'site')
 console.log(`Clearing output directory: ${outputDir}`)
 await fs.rm(outputDir, { recursive: true, force: true })
 
