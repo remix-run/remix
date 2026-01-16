@@ -4,7 +4,7 @@ import * as Search from './search.ts'
 import { PartPattern } from '../part-pattern.ts'
 import { HrefError } from '../errors.ts'
 
-export type AST = {
+type AST = {
   protocol: PartPattern
   hostname: PartPattern
   port: string | null
@@ -12,14 +12,17 @@ export type AST = {
   search: Search.Constraints
 }
 
-type Match = {
-  params: Record<string, string | undefined>
-  searchParams: URLSearchParams
-  meta: {
-    hostname: PartPattern.Match
-    pathname: PartPattern.Match
+export namespace RoutePattern {
+  export type Match = {
+    params: Record<string, string | undefined>
+    searchParams: URLSearchParams
+    meta: {
+      hostname: PartPattern.Match
+      pathname: PartPattern.Match
+    }
   }
 }
+type Match = RoutePattern.Match
 
 export class RoutePattern {
   readonly ast: AST
