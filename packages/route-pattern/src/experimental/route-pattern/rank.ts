@@ -3,24 +3,22 @@
 import type { RoutePattern } from './route-pattern.ts'
 import type * as Search from './search.ts'
 
-type Rank = {
-  pattern: RoutePattern
-  match: RoutePattern.Match['meta']
-}
-
 /**
  * Compare two matches to find the more specific one.
  *
- * @param url The URL being matched.
  * @returns -1 if `a` is more specific, 1 if `b` is more specific, 0 if tied.
  */
-export function compare(url: URL, a: Rank, b: Rank): -1 | 0 | 1 {
+export function compare(a: RoutePattern.Match, b: RoutePattern.Match): -1 | 0 | 1 {
+  if (a.url.href !== b.url.href) {
+    throw new Error(`Cannot compare matches for different URLs: ${a.url.href} vs ${b.url.href}`)
+  }
+
   // Hostname comparison
-  let hostnameResult = compareHostname(url.hostname, a.match.hostname, b.match.hostname)
+  let hostnameResult = compareHostname(a.url.hostname, a.meta.hostname, b.meta.hostname)
   if (hostnameResult !== 0) return hostnameResult
 
   // Pathname comparison
-  let pathnameResult = comparePathname(a.match.pathname, b.match.pathname)
+  let pathnameResult = comparePathname(a.meta.pathname, b.meta.pathname)
   if (pathnameResult !== 0) return pathnameResult
 
   // Search comparison
@@ -32,8 +30,8 @@ export function compare(url: URL, a: Rank, b: Rank): -1 | 0 | 1 {
 
 function compareHostname(
   hostname: string,
-  a: Rank['match']['hostname'],
-  b: Rank['match']['hostname'],
+  a: RoutePattern.Match['meta']['hostname'],
+  b: RoutePattern.Match['meta']['hostname'],
 ): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
   if (a.length === 0 && b.length > 0) return -1
@@ -73,7 +71,10 @@ function compareHostname(
   return 0
 }
 
-function comparePathname(a: Rank['match']['pathname'], b: Rank['match']['pathname']): -1 | 0 | 1 {
+function comparePathname(
+  a: RoutePattern.Match['meta']['pathname'],
+  b: RoutePattern.Match['meta']['pathname'],
+): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
   if (a.length === 0 && b.length > 0) return -1
   if (a.length > 0 && b.length === 0) return 1
