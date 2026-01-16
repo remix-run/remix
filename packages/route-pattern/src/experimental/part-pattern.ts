@@ -2,10 +2,23 @@ import { ParseError, unreachable } from './errors.ts'
 import type { Span } from './span.ts'
 import * as Variant from './variant.ts'
 
-export type Token =
-  | { type: 'text'; text: string }
-  | { type: '(' | ')' }
-  | { type: ':' | '*'; nameIndex: number }
+type MatchParam = {
+  type: ':' | '*'
+  name: string
+  value: string
+  begin: number
+  end: number
+}
+
+export namespace PartPattern {
+  export type Match = Array<MatchParam>
+  export type Token =
+    | { type: 'text'; text: string }
+    | { type: '(' | ')' }
+    | { type: ':' | '*'; nameIndex: number }
+}
+type Match = PartPattern.Match
+type Token = PartPattern.Token
 
 type AST = {
   tokens: Array<Token>
@@ -14,9 +27,6 @@ type AST = {
 }
 
 const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
-
-type MatchParam = { type: ':' | '*'; name: string; value: string; begin: number; end: number }
-type Match = Array<MatchParam>
 
 export class PartPattern {
   readonly tokens: AST['tokens']
