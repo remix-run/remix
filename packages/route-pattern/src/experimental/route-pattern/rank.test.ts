@@ -15,10 +15,7 @@ describe('rank', () => {
       assert.notEqual(matchA, null, `Pattern A "${patterns[0]}" should match URL "${url}"`)
       assert.notEqual(matchB, null, `Pattern B "${patterns[1]}" should match URL "${url}"`)
 
-      assert.equal(
-        Rank.compare(url, { pattern: a, match: matchA!.meta }, { pattern: b, match: matchB!.meta }),
-        expected,
-      )
+      assert.equal(Rank.compare(matchA!, matchB!), expected)
     }
 
     describe('hostname', () => {
@@ -48,7 +45,7 @@ describe('rank', () => {
 
       test('tie on variables and wildcards, break tie eventually', () => {
         assertCompare(
-          ['https://*.cd.:ef.g*.com', 'https://*.cd.:ef.*.com'],
+          ['https://a*.cd.:ef.*.com', 'https://*.cd.:ef.*.com'],
           'https://ab.cd.ef.gh.com',
           -1,
         )
@@ -189,6 +186,20 @@ describe('rank', () => {
           -1,
         )
       })
+    })
+
+    test('throws when comparing matches for different URLs', () => {
+      let pattern = RoutePattern.parse('https://example.com/:path')
+      let match1 = pattern.match('https://example.com/foo')
+      let match2 = pattern.match('https://example.com/bar')
+
+      assert.notEqual(match1, null)
+      assert.notEqual(match2, null)
+
+      assert.throws(
+        () => Rank.compare(match1!, match2!),
+        /Cannot compare matches for different URLs/,
+      )
     })
   })
 })

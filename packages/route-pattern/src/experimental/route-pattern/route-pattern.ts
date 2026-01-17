@@ -14,8 +14,9 @@ type AST = {
 
 export namespace RoutePattern {
   export type Match = {
+    pattern: RoutePattern
+    url: URL
     params: Record<string, string | undefined>
-    searchParams: URLSearchParams
     meta: {
       hostname: PartPattern.Match
       pathname: PartPattern.Match
@@ -171,7 +172,7 @@ export class RoutePattern {
       params[param.name] = param.value
     })
 
-    return { params, searchParams: url.searchParams, meta: { hostname, pathname } }
+    return { pattern: this, url, params, meta: { hostname, pathname } }
   }
 
   test(url: string | URL): boolean {
