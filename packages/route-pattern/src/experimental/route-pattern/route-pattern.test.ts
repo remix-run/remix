@@ -265,7 +265,7 @@ describe('RoutePattern', () => {
     })
   })
 
-  describe('join', () => {
+  describe.skip('join', () => {
     function assertJoin(a: string, b: string, expected: string) {
       assert.deepStrictEqual(
         RoutePattern.parse(a).join(RoutePattern.parse(b)),

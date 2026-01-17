@@ -1,6 +1,6 @@
 import { ParseError, unreachable } from './errors.ts'
 import type { Span } from './span.ts'
-import * as Variant from './variant.ts'
+import { Variant } from './variant.ts'
 
 type MatchParam = {
   type: ':' | '*'
@@ -14,6 +14,7 @@ export namespace PartPattern {
   export type Match = Array<MatchParam>
   export type Token =
     | { type: 'text'; text: string }
+    | { type: 'separator' }
     | { type: '(' | ')' }
     | { type: ':' | '*'; nameIndex: number }
 }
@@ -32,15 +33,16 @@ export class PartPattern {
   readonly tokens: AST['tokens']
   readonly paramNames: AST['paramNames']
   readonly optionals: AST['optionals']
-  #variants: Array<Variant.Type> | undefined
-  #separator: '.' | '/' | undefined
+  readonly separator: '.' | '/' | ''
+
+  #variants: Array<Variant> | undefined
   #regexp: RegExp | undefined
 
   constructor(ast: AST, options: { separator?: '.' | '/' } = {}) {
     this.tokens = ast.tokens
     this.paramNames = ast.paramNames
     this.optionals = ast.optionals
-    this.#separator = options.separator
+    this.separator = options.separator ?? ''
   }
 
   static parse(source: string, options: { span?: Span; separator?: '.' | '/' } = {}): PartPattern {
@@ -109,6 +111,13 @@ export class PartPattern {
         continue
       }
 
+      if (char === options.separator) {
+        ast.tokens.push({ type: 'separator' })
+        i += 1
+        continue
+      }
+
+
       // escaped char
       if (char === '\\') {
         if (i + 1 === span[1]) {
@@ -131,7 +140,7 @@ export class PartPattern {
     return new PartPattern(ast, { separator: options.separator })
   }
 
-  get variants(): Array<Variant.Type> {
+  get variants(): Array<Variant> {
     if (this.#variants === undefined) {
       this.#variants = Variant.generate(this)
     }
@@ -160,6 +169,11 @@ export class PartPattern {
         continue
       }
 
+      if (token.type === 'separator') {
+        result += this.separator
+        continue
+      }
+
       unreachable(token.type)
     }
 
@@ -171,7 +185,7 @@ export class PartPattern {
    * @returns The href (URL) for the given params, or null if no variant matches.
    */
   href(params: Record<string, string | number>): string | null {
-    let best: Variant.Type | undefined
+    let best: Variant | undefined
     for (let variant of this.variants) {
       let matches = variant.requiredParams.every((param) => params[param] !== undefined)
       if (!matches) continue
@@ -210,13 +224,18 @@ export class PartPattern {
         result += String(params[paramName])
         continue
       }
+      if (token.type === 'separator') {
+        result += this.separator
+        continue
+      }
+      unreachable(token.type)
     }
     return result
   }
 
   match(part: string): Match | null {
     if (this.#regexp === undefined) {
-      this.#regexp = toRegExp(this.tokens, this.#separator)
+      this.#regexp = toRegExp(this.tokens, this.separator)
     }
     let reMatch = this.#regexp.exec(part)
     if (reMatch === null) return null
@@ -239,7 +258,7 @@ export class PartPattern {
   }
 }
 
-function toRegExp(tokens: Array<Token>, separator: '.' | '/' | undefined): RegExp {
+function toRegExp(tokens: Array<Token>, separator: '.' | '/' | ''): RegExp {
   let result = ''
   for (let token of tokens) {
     if (token.type === 'text') {
@@ -266,6 +285,11 @@ function toRegExp(tokens: Array<Token>, separator: '.' | '/' | undefined): RegEx
 
     if (token.type === ')') {
       result += ')?'
+      continue
+    }
+
+    if (token.type === 'separator') {
+      result += escapeRegex(separator ?? '')
       continue
     }
 
