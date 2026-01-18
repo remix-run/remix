@@ -265,7 +265,7 @@ describe('RoutePattern', () => {
     })
   })
 
-  describe.skip('join', () => {
+  describe('join', () => {
     function assertJoin(a: string, b: string, expected: string) {
       assert.deepStrictEqual(
         RoutePattern.parse(a).join(RoutePattern.parse(b)),
@@ -323,13 +323,10 @@ describe('RoutePattern', () => {
       assertJoin('a', '/b', 'a/b')
       assertJoin('a/', '/b', 'a/b')
 
-      assertJoin('(a/)', 'b', '(a/)/b')
-      assertJoin('(a/)', '/b', '(a/)/b')
-      assertJoin('a', '(/b)', 'a/(/b)')
-      assertJoin('a/', '(/b)', 'a/(/b)')
-
-      assertJoin('(a/)', '(/b)', '(a/)/(/b)')
-      assertJoin('((a/))', '((/b))', '((a/))/((/b))')
+      assertJoin('(a)', '(b)', '(a)/(b)')
+      assertJoin('(a/)', '(b)', '(a)/(b)')
+      assertJoin('(a)', '(/b)', '(a)(/b)')
+      assertJoin('(a/)', '(/b)', '(a)(/b)')
     })
 
     test('search', () => {
