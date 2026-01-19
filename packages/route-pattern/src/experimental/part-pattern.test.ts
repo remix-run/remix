@@ -3,7 +3,6 @@ import test, { describe } from 'node:test'
 
 import { PartPattern } from './part-pattern.ts'
 import { ParseError } from './errors.ts'
-import * as Variant from './variant.ts'
 
 describe('PartPattern', () => {
   describe('parse', () => {
@@ -209,7 +208,7 @@ describe('PartPattern', () => {
   describe('variants', () => {
     function assertVariants(source: string, expected: Array<string>) {
       let pattern = PartPattern.parse(source)
-      let actual = pattern.variants.map((v) => Variant.toString(v.tokens, pattern.paramNames))
+      let actual = pattern.variants.map((variant) => variant.toString())
       assert.deepStrictEqual(actual, expected)
     }
 
