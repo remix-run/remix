@@ -1,5 +1,4 @@
 import type { RoutePattern } from './route-pattern/route-pattern.ts'
-import * as Variant from './variant.ts'
 
 type ParseErrorType = 'unmatched (' | 'unmatched )' | 'missing variable name' | 'dangling escape'
 
@@ -74,7 +73,7 @@ export class HrefError extends Error {
       let paramNames = Object.keys(details.params)
       let partPattern = details.pattern.ast[details.part]
       let variants = partPattern.variants.map((variant) => {
-        let key = Variant.toString(variant.tokens, partPattern.paramNames)
+        let key = variant.toString()
         let missing = new Set(variant.requiredParams.filter((p) => !paramNames.includes(p)))
         return `  - ${key || '<empty>'} (missing: ${Array.from(missing).join(', ')})`
       })
