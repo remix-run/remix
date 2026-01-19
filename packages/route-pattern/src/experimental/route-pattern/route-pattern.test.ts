@@ -323,13 +323,10 @@ describe('RoutePattern', () => {
       assertJoin('a', '/b', 'a/b')
       assertJoin('a/', '/b', 'a/b')
 
-      assertJoin('(a/)', 'b', '(a/)/b')
-      assertJoin('(a/)', '/b', '(a/)/b')
-      assertJoin('a', '(/b)', 'a/(/b)')
-      assertJoin('a/', '(/b)', 'a/(/b)')
-
-      assertJoin('(a/)', '(/b)', '(a/)/(/b)')
-      assertJoin('((a/))', '((/b))', '((a/))/((/b))')
+      assertJoin('(a)', '(b)', '(a)/(b)')
+      assertJoin('(a/)', '(b)', '(a)/(b)')
+      assertJoin('(a)', '(/b)', '(a)(/b)')
+      assertJoin('(a/)', '(/b)', '(a)(/b)')
     })
 
     test('search', () => {
