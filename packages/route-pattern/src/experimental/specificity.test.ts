@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import test, { describe } from 'node:test'
-import * as Rank from './rank.ts'
-import { RoutePattern } from './route-pattern.ts'
+import * as Rank from './specificity.ts'
+import { RoutePattern } from './route-pattern/route-pattern.ts'
 
 describe('rank', () => {
   describe('compare', () => {
@@ -20,11 +20,11 @@ describe('rank', () => {
 
     describe('hostname', () => {
       test('static vs variable', () => {
-        assertCompare(['https://example.com', 'https://:subdomain.com'], 'https://example.com', -1)
+        assertCompare(['https://example.com', 'https://:subdomain.com'], 'https://example.com', 1)
       })
 
       test('variable vs wildcard', () => {
-        assertCompare(['https://:subdomain.com', 'https://*.com'], 'https://example.com', -1)
+        assertCompare(['https://:subdomain.com', 'https://*.com'], 'https://example.com', 1)
       })
 
       test('variable vs variable (same range = tie)', () => {
@@ -36,31 +36,31 @@ describe('rank', () => {
       })
 
       test('variable with prefix and suffix', () => {
-        assertCompare(['https://e:sub.com', 'https://:subdomain.com'], 'https://example.com', -1)
+        assertCompare(['https://e:sub.com', 'https://:subdomain.com'], 'https://example.com', 1)
       })
 
       test('wildcard with prefix and suffix', () => {
-        assertCompare(['https://e*.com', 'https://*.com'], 'https://example.com', -1)
+        assertCompare(['https://e*.com', 'https://*.com'], 'https://example.com', 1)
       })
 
       test('tie on variables and wildcards, break tie eventually', () => {
         assertCompare(
           ['https://a*.cd.:ef.*.com', 'https://*.cd.:ef.*.com'],
           'https://ab.cd.ef.gh.com',
-          -1,
+          1,
         )
       })
 
       test('rank segments right-to-left, but rank chars within segments left-to-right', () => {
-        assertCompare(['https://a.*b-c.d', 'https://a.b-*c.d'], 'https://a.b-xxx.yyy-c.d', -1)
+        assertCompare(['https://a.*b-c.d', 'https://a.b-*c.d'], 'https://a.b-xxx.yyy-c.d', 1)
       })
 
       test('back-to-back variables with static content between', () => {
-        assertCompare(['https://:a-:b.com', 'https://:sub.com'], 'https://ab-cd.com', -1)
+        assertCompare(['https://:a-:b.com', 'https://:sub.com'], 'https://ab-cd.com', 1)
       })
 
       test('back-to-back wildcards with static content between', () => {
-        assertCompare(['https://*-*.com', 'https://*.com'], 'https://ab-cd.com', -1)
+        assertCompare(['https://*-*.com', 'https://*.com'], 'https://ab-cd.com', 1)
       })
     })
 
@@ -69,7 +69,7 @@ describe('rank', () => {
         assertCompare(
           ['https://example.com/posts/123', 'https://example.com/posts/:id'],
           'https://example.com/posts/123',
-          -1,
+          1,
         )
       })
 
@@ -77,7 +77,7 @@ describe('rank', () => {
         assertCompare(
           ['https://example.com/posts/:id', 'https://example.com/posts/*'],
           'https://example.com/posts/123',
-          -1,
+          1,
         )
       })
 
@@ -101,7 +101,7 @@ describe('rank', () => {
         assertCompare(
           ['https://example.com/posts-:id', 'https://example.com/:segment'],
           'https://example.com/posts-123',
-          -1,
+          1,
         )
       })
 
@@ -109,7 +109,7 @@ describe('rank', () => {
         assertCompare(
           ['https://example.com/p*', 'https://example.com/*/:id'],
           'https://example.com/posts/123',
-          -1,
+          1,
         )
       })
 
@@ -117,7 +117,7 @@ describe('rank', () => {
         assertCompare(
           ['https://example.com/*/123/:id/7*', 'https://example.com/*/123/:id/*'],
           'https://example.com/posts/123/456/789',
-          -1,
+          1,
         )
       })
 
@@ -125,7 +125,7 @@ describe('rank', () => {
         assertCompare(
           ['https://example.com/:a/:b', 'https://example.com/*'],
           'https://example.com/posts/123',
-          -1,
+          1,
         )
       })
 
@@ -133,7 +133,7 @@ describe('rank', () => {
         assertCompare(
           ['https://example.com/*/*', 'https://example.com/*'],
           'https://example.com/posts/123',
-          -1,
+          1,
         )
       })
     })
@@ -143,7 +143,7 @@ describe('rank', () => {
         assertCompare(
           ['https://example.com/posts?q=hello', 'https://example.com/posts?q'],
           'https://example.com/posts?q=hello',
-          -1,
+          1,
         )
       })
 
@@ -151,7 +151,7 @@ describe('rank', () => {
         assertCompare(
           ['https://example.com/posts?q=', 'https://example.com/posts?q'],
           'https://example.com/posts?q=hello',
-          -1,
+          1,
         )
       })
 
@@ -159,7 +159,7 @@ describe('rank', () => {
         assertCompare(
           ['https://example.com/posts?q=&a=', 'https://example.com/posts?q='],
           'https://example.com/posts?q=hello&a=1',
-          -1,
+          1,
         )
       })
 
@@ -175,7 +175,7 @@ describe('rank', () => {
         assertCompare(
           ['https://example.com/posts?q=hello&q=world', 'https://example.com/posts?q'],
           'https://example.com/posts?q=hello&q=world',
-          -1,
+          1,
         )
       })
 
@@ -183,7 +183,7 @@ describe('rank', () => {
         assertCompare(
           ['https://example.com/posts?q=hello&a=1', 'https://example.com/posts?q&a'],
           'https://example.com/posts?q=hello&a=1&b=2',
-          -1,
+          1,
         )
       })
     })
