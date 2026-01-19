@@ -3,78 +3,79 @@
 import { PartPattern } from '../part-pattern.ts'
 
 /**
- * Joins two pathnames, adding `/` at the join point unless already present.
+ * Joins two pathnames, adding slash between them if needed.
+ *
+ * Trailing slash is omitted from `a`.
+ * A slash is added between `a` and `b` if `b` does not have a leading slash.
+ *
+ * Definitions:
+ * - A leading slash can only have parens `(` `)` before it.
+ * - A trailing slash can only have parens `(` `)` after it.
  *
  * Conceptually:
  *
  * ```ts
- * pathname('a', 'b') -> 'a/b'
- * pathname('a/', 'b') -> 'a/b'
- * pathname('a', '/b') -> 'a/b'
- * pathname('a/', '/b') -> 'a/b'
- * pathname('(a/)', '(/b)') -> '(a/)/(/b)'
+ * join('a', 'b') -> 'a/b'
+ * join('a/', 'b') -> 'a/b'
+ * join('a', '/b') -> 'a/b'
+ * join('a/', '/b') -> 'a/b'
+ * join('(a)', '(b)') -> '(a)/(b)'
+ * join('(a/)', '(b)') -> '(a)/(b)'
+ * join('(a)', '(/b)') -> '(a)(/b)'
+ * join('(a/)', '(/b)') -> '(a)(/b)'
  * ```
  */
 export function join(a: PartPattern, b: PartPattern): PartPattern {
   if (a.tokens.length === 0) return b
   if (b.tokens.length === 0) return a
 
-  let aLast = a.tokens.at(-1)
-  let bFirst = b.tokens[0]
+  let tokens: Array<PartPattern.Token> = []
 
-  let tokens = a.tokens.slice(0, -1)
-  let tokenOffset = tokens.length
+  // if `a` has a trailing separator (only optionals after it)
+  // then omit the separator
+  let aLastNonOptionalIndex = a.tokens.findLastIndex((token) => token.type !== '(' && token.type !== ')')
+  let aLastNonOptional = a.tokens[aLastNonOptionalIndex]
+  let aHasTrailingSeparator = aLastNonOptional?.type === 'separator'
 
-  if (aLast?.type === 'text' && bFirst?.type === 'text') {
-    // Note: leading `/` is ignored when parsing pathnames so `/b` is the same as `b`
-    // so no need to explicitly dedup `/` for `.join('a/', '/b')` as its the same as `.join('a/', 'b')`
-    let needsSlash = !aLast.text.endsWith('/') && !bFirst.text.startsWith('/')
-    tokens.push({ type: 'text', text: aLast.text + (needsSlash ? '/' : '') + bFirst.text })
-    tokenOffset += 1
-  } else if (aLast?.type === 'text') {
-    let needsSlash = !aLast.text.endsWith('/')
-    tokens.push({ type: 'text', text: needsSlash ? aLast.text + '/' : aLast.text })
-    tokenOffset += 1
-    if (bFirst) {
-      tokens.push(bFirst)
-      tokenOffset += 1
+  a.tokens.forEach((token, index) => {
+    if (index === aLastNonOptionalIndex && token.type === 'separator') {
+      return
     }
-  } else if (bFirst?.type === 'text') {
-    if (aLast) {
-      tokens.push(aLast)
-      tokenOffset += 1
-    }
-    let needsSlash = !bFirst.text.startsWith('/')
-    tokens.push({ type: 'text', text: (needsSlash ? '/' : '') + bFirst.text })
-    tokenOffset += 1
-  } else {
-    if (aLast) {
-      tokens.push(aLast)
-      tokenOffset += 1
-    }
-    tokens.push({ type: 'text', text: '/' })
-    tokenOffset += 1
-    if (bFirst) {
-      tokens.push(bFirst)
-      tokenOffset += 1
-    }
+    tokens.push(token)
+  })
+
+  // if `b` does not have a leading separator (only optionals before it)
+  // then add a separator
+  let bFirstNonOptional = b.tokens.find((token) => token.type !== '(' && token.type !== ')')
+  let needsSeparator = bFirstNonOptional === undefined || bFirstNonOptional.type !== 'separator'
+  if (needsSeparator) {
+    tokens.push({ type: 'separator' })
   }
 
-  for (let i = 1; i < b.tokens.length; i++) {
-    let token = b.tokens[i]
+  let tokenOffset = tokens.length
+
+  b.tokens.forEach((token) => {
     if (token.type === ':' || token.type === '*') {
       tokens.push({ ...token, nameIndex: token.nameIndex + a.paramNames.length })
     } else {
       tokens.push(token)
     }
-  }
+  })
 
   let paramNames = [...a.paramNames, ...b.paramNames]
 
-  let optionals = new Map(a.optionals)
+  let optionals = new Map()
+  for (let [begin, end] of a.optionals) {
+    if (aHasTrailingSeparator) {
+      // one less token before this optional since trailing slash token was omitted
+      if (begin > aLastNonOptionalIndex) begin -= 1
+      if (end > aLastNonOptionalIndex) end -= 1
+    }
+    optionals.set(begin, end)
+  }
   for (let [begin, end] of b.optionals) {
-    optionals.set(tokenOffset + begin - 1, tokenOffset + end - 1)
+    optionals.set(tokenOffset + begin, tokenOffset + end)
   }
 
-  return new PartPattern({ tokens, paramNames, optionals })
+  return new PartPattern({ tokens, paramNames, optionals }, { separator: '/' })
 }
