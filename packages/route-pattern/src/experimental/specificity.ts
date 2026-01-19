@@ -1,12 +1,29 @@
 /* eslint-disable jsdoc/require-param */
 
-import type { RoutePattern } from './route-pattern.ts'
-import type * as Search from './search.ts'
+import type { RoutePattern } from './route-pattern/route-pattern.ts'
+
+export function lessThan(a: RoutePattern.Match, b: RoutePattern.Match): boolean {
+  return compare(a, b) === -1
+}
+
+export function greaterThan(a: RoutePattern.Match, b: RoutePattern.Match): boolean {
+  return compare(a, b) === 1
+}
+
+export function equal(a: RoutePattern.Match, b: RoutePattern.Match): boolean {
+  return compare(a, b) === 0
+}
+
+export let ascending = (a: RoutePattern.Match, b: RoutePattern.Match): number => compare(a, b)
+
+export let descending = (a: RoutePattern.Match, b: RoutePattern.Match): number =>
+  compare(a, b) * -1
 
 /**
- * Compare two matches to find the more specific one.
+ * Compare two matches by specificity.
+ * Passing to `.sort()` will sort matches from least specific to most specific.
  *
- * @returns -1 if `a` is more specific, 1 if `b` is more specific, 0 if tied.
+ * @returns -1 if `a` is less specific, 1 if `a` is more specific, 0 if tied.
  */
 export function compare(a: RoutePattern.Match, b: RoutePattern.Match): -1 | 0 | 1 {
   if (a.url.href !== b.url.href) {
@@ -34,8 +51,8 @@ function compareHostname(
   b: RoutePattern.Match['meta']['hostname'],
 ): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
-  if (a.length === 0 && b.length > 0) return -1
-  if (a.length > 0 && b.length === 0) return 1
+  if (a.length === 0 && b.length > 0) return 1
+  if (a.length > 0 && b.length === 0) return -1
 
   // Encoding of hostname chars: 0 = static, 1 = variable (:), 2 = wildcard (*)
   // Note: `Int8Array` defaults to 0 for all indices not explicitly set.
@@ -63,8 +80,8 @@ function compareHostname(
 
   for (let segment of segments) {
     for (let j = segment.begin; j < segment.end; j++) {
-      if (aEncoding[j] < bEncoding[j]) return -1 // a is more specific
-      if (aEncoding[j] > bEncoding[j]) return 1 // b is more specific
+      if (aEncoding[j] < bEncoding[j]) return 1 // a is more specific
+      if (aEncoding[j] > bEncoding[j]) return -1 // b is more specific
     }
   }
 
@@ -76,8 +93,8 @@ function comparePathname(
   b: RoutePattern.Match['meta']['pathname'],
 ): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
-  if (a.length === 0 && b.length > 0) return -1
-  if (a.length > 0 && b.length === 0) return 1
+  if (a.length === 0 && b.length > 0) return 1
+  if (a.length > 0 && b.length === 0) return -1
 
   let i = 0
   let aIndex = 0
@@ -87,17 +104,17 @@ function comparePathname(
     let aRange = a[aIndex]
     let bRange = b[bIndex]
 
-    if (aRange === undefined) return -1 // a is fully static from here
-    if (bRange === undefined) return 1 // b is fully static from here
+    if (aRange === undefined) return 1 // a is fully static from here
+    if (bRange === undefined) return -1 // b is fully static from here
 
     // Skip to the minimum begin of the two current ranges
     i = Math.min(aRange.begin, bRange.begin)
 
-    if (i < aRange.begin) return -1 // a has static content at i
-    if (i < bRange.begin) return 1 // b has static content at i
+    if (i < aRange.begin) return 1 // a has static content at i
+    if (i < bRange.begin) return -1 // b has static content at i
 
-    if (aRange.type === ':' && bRange.type === '*') return -1 // a is more specific
-    if (aRange.type === '*' && bRange.type === ':') return 1 // b is more specific
+    if (aRange.type === ':' && bRange.type === '*') return 1 // a is more specific
+    if (aRange.type === '*' && bRange.type === ':') return -1 // b is more specific
 
     let minEnd = Math.min(aRange.end, bRange.end)
     i = minEnd
@@ -110,23 +127,27 @@ function comparePathname(
   return 0
 }
 
-function compareSearch(a: Search.Constraints, b: Search.Constraints): -1 | 0 | 1 {
-  let aRank = rankSearch(a)
-  let bRank = rankSearch(b)
 
-  if (aRank.keyAndExactValue > bRank.keyAndExactValue) return -1
-  if (aRank.keyAndExactValue < bRank.keyAndExactValue) return 1
+function compareSearch(
+  a: RoutePattern['ast']['search'],
+  b: RoutePattern['ast']['search']
+): -1 | 0 | 1 {
+  let aSpecificity = searchSpecificity(a)
+  let bSpecificity = searchSpecificity(b)
 
-  if (aRank.keyAndAnyValue > bRank.keyAndAnyValue) return -1
-  if (aRank.keyAndAnyValue < bRank.keyAndAnyValue) return 1
+  if (aSpecificity.keyAndExactValue > bSpecificity.keyAndExactValue) return 1
+  if (aSpecificity.keyAndExactValue < bSpecificity.keyAndExactValue) return -1
 
-  if (aRank.key > bRank.key) return -1
-  if (aRank.key < bRank.key) return 1
+  if (aSpecificity.keyAndAnyValue > bSpecificity.keyAndAnyValue) return 1
+  if (aSpecificity.keyAndAnyValue < bSpecificity.keyAndAnyValue) return -1
+
+  if (aSpecificity.key > bSpecificity.key) return 1
+  if (aSpecificity.key < bSpecificity.key) return -1
 
   return 0
 }
 
-function rankSearch(constraints: Search.Constraints): {
+function searchSpecificity(constraints: RoutePattern['ast']['search']): {
   keyAndExactValue: number
   keyAndAnyValue: number
   key: number
