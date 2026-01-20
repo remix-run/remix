@@ -2,6 +2,28 @@
 
 This is the changelog for [`interaction`](https://github.com/remix-run/remix/tree/main/packages/interaction). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Interaction setup functions now receive `handle` as a parameter instead of using `this` context
+
+  Interaction setup functions now receive the `Interaction` handle as a parameter:
+
+  ```ts
+  // Before
+  function MyInteraction(this: Interaction) {
+    this.on(this.target, { ... })
+  }
+
+  // After
+  function MyInteraction(handle: Interaction) {
+    handle.on(handle.target, { ... })
+  }
+  ```
+
+  This change affects all custom interactions created with `defineInteraction()`.
+
 ## v0.3.0 (2025-11-20)
 
 - BREAKING CHANGE: removed `Tab` key interaction

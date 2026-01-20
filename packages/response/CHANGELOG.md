@@ -2,6 +2,38 @@
 
 This is the changelog for [`response`](https://github.com/remix-run/remix/tree/main/packages/response). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.0
+
+### Minor Changes
+
+- `createFileResponse()` is now generic and accepts any file-like object
+
+  The function now accepts any object satisfying the `FileLike` interface, which includes both native `File` and `LazyFile` from `@remix-run/lazy-file`. This change supports the updated `LazyFile` class which no longer extends native `File`.
+
+  The generic type flows through to the `digest` callback in options, so you get the exact type you passed in:
+
+  ```ts
+  // With native File - digest receives File
+  createFileResponse(nativeFile, request, {
+    digest: async (file) => {
+      /* file is typed as File */
+    },
+  })
+
+  // With LazyFile - digest receives LazyFile
+  createFileResponse(lazyFile, request, {
+    digest: async (file) => {
+      /* file is typed as LazyFile */
+    },
+  })
+  ```
+
+- Add `redirect` export which is a shorthand alias for `createRedirectResponse`
+
+### Patch Changes
+
+- Update `@remix-run/headers` peer dependency to use the new header parsing methods.
+
 ## v0.2.1 (2025-12-18)
 
 - `createFileResponse` now includes `charset` in Content-Type for text-based files.

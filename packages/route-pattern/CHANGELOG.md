@@ -2,6 +2,17 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.17.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remove exports for `TrieMatcher` and `TrieMatcherOptions`
+
+  `TrieMatcher` prototype produces inconsistent matches based on ad hoc scoring.
+  That means that swapping `ArrayMatcher` for `TrieMatcher` could alter which route was picked as the best match for a given URL.
+
+  We'll restore the `TrieMatcher` export after it produces correct, consistent matches.
+
 ## v0.16.0 (2025-12-18)
 
 - BREAKING CHANGE: Rename `RegExpMatcher` to `ArrayMatcher`
