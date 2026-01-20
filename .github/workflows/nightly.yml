@@ -1,7 +1,7 @@
 # Update the `nightly` branch every night with a fresh build from `main` that
 # can be used via direct pnpm install:
 #
-# pnpm i "github:remix-run/remix#nightly&path:packages/remix"
+# pnpm i "remix-run/remix#nightly&path:packages/remix"
 
 name: 💿 Nightly Branch
 
