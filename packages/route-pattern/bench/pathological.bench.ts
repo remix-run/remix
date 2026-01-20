@@ -1,5 +1,6 @@
 import { bench, describe } from 'vitest'
-import { TrieMatcher, ArrayMatcher } from '@remix-run/route-pattern'
+import { ArrayMatcher } from '../src'
+import { TrieMatcher } from '../src/lib/matchers/trie.ts'
 
 function generateRoutes(): string[] {
   let routes: string[] = []

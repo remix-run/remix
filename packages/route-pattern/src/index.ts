@@ -13,5 +13,3 @@ export { RoutePattern } from './lib/route-pattern.ts'
 export type { RoutePatternOptions, RouteMatch } from './lib/route-pattern.ts'
 
 export { ArrayMatcher } from './lib/matchers/array.ts'
-export { TrieMatcher } from './lib/matchers/trie.ts'
-export type { TrieMatcherOptions } from './lib/matchers/trie.ts'
