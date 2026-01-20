@@ -5,6 +5,21 @@ import { invariant } from './invariant.ts'
 import { createDocumentState } from './document-state.ts'
 import { processStyle, createStyleManager, normalizeCssValue } from './style/index.ts'
 import type { ElementProps, RemixElement, RemixNode } from './jsx.ts'
+import type {
+  LayoutAnimationConfig,
+  PresenceConfig,
+  PresenceKeyframe,
+  PresenceKeyframeConfig,
+  AnimateProp,
+} from './dom.ts'
+import {
+  captureLayoutSnapshots,
+  applyLayoutAnimations,
+  registerLayoutElement,
+  updateLayoutElement,
+  unregisterLayoutElement,
+  markLayoutSubtreePending,
+} from './layout-animation.ts'
 
 let fixmeIdCounter = 0
 
@@ -35,6 +50,9 @@ let styleManager =
   typeof window !== 'undefined'
     ? createStyleManager()
     : (null as unknown as ReturnType<typeof createStyleManager>)
+
+// Track nodes that are currently exiting (playing exit animation)
+let exitingNodes = new Set<VNode>()
 
 type VNodeType =
   | typeof ROOT_VNODE
@@ -74,6 +92,11 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _fallback?: ((error: unknown) => RemixNode) | RemixNode
   _added?: VNode[]
   _tripped?: boolean
+
+  // Presence animation
+  _animation?: Animation
+  _exiting?: boolean
+  _exitingParent?: ParentNode
 }
 
 type FragmentNode = VNode & {
@@ -150,6 +173,17 @@ export function createScheduler(doc: Document) {
     let hasWork = batch.size > 0 || tasks.length > 0
     if (!hasWork) return
 
+    // Mark layout elements within updating components as pending BEFORE capture
+    // This ensures we only capture/apply for elements whose components are updating
+    if (batch.size > 0) {
+      for (let [, [domParent]] of batch) {
+        markLayoutSubtreePending(domParent)
+      }
+    }
+
+    // Capture layout snapshots BEFORE any DOM work (for FLIP animations)
+    captureLayoutSnapshots()
+
     documentState.capture()
 
     if (batch.size > 0) {
@@ -167,6 +201,9 @@ export function createScheduler(doc: Document) {
 
     // restore before user tasks so users can move focus/selection etc.
     documentState.restore()
+
+    // Apply FLIP layout animations AFTER DOM work, BEFORE user tasks
+    applyLayoutAnimations()
 
     if (tasks.length > 0) {
       for (let task of tasks) {
@@ -518,6 +555,15 @@ function diffHost(
   }
   // If neither has on, do nothing - no _events to set
 
+  // Update layout animation registration
+  let nextPresenceConfig = getPresenceConfig(next)
+  let currPresenceConfig = getPresenceConfig(curr)
+  if (nextPresenceConfig?.layout) {
+    updateLayoutElement(curr._dom, nextPresenceConfig.layout)
+  } else if (currPresenceConfig?.layout) {
+    unregisterLayoutElement(curr._dom)
+  }
+
   return
 }
 
@@ -540,15 +586,47 @@ function setupHostNode(
   }
 
   let connect = node.props.connect
+  let presenceConfig = getPresenceConfig(node)
+  let playEnter = shouldPlayEnterAnimation(presenceConfig?.enter)
+
+  // Register for layout animations if configured
+  if (presenceConfig?.layout) {
+    registerLayoutElement(dom, presenceConfig.layout)
+  }
+
+  // Schedule connect callback first, then enter animation plays after
   if (connect) {
     // Only create controller if connect callback expects a signal (length >= 2)
     if (connect.length >= 2) {
       let controller = new AbortController()
       node._controller = controller
-      scheduler.enqueueTasks([() => connect(dom, controller.signal)])
+      scheduler.enqueueTasks([
+        () => {
+          connect(dom, controller.signal)
+          // Play enter animation after connect
+          if (playEnter) {
+            playEnterAnimation(node as CommittedHostNode, presenceConfig!.enter!)
+          }
+        },
+      ])
     } else {
-      scheduler.enqueueTasks([() => connect(dom)])
+      scheduler.enqueueTasks([
+        () => {
+          connect(dom)
+          // Play enter animation after connect
+          if (playEnter) {
+            playEnterAnimation(node as CommittedHostNode, presenceConfig!.enter!)
+          }
+        },
+      ])
     }
+  } else if (playEnter) {
+    // No connect, but has animate - play enter animation
+    scheduler.enqueueTasks([
+      () => {
+        playEnterAnimation(node as CommittedHostNode, presenceConfig!.enter!)
+      },
+    ])
   }
 }
 
@@ -682,7 +760,13 @@ function isCommittedComponentNode(node: VNode): node is CommittedComponentNode {
 
 function isFrameworkProp(name: string): boolean {
   return (
-    name === 'children' || name === 'key' || name === 'on' || name === 'css' || name === 'setup'
+    name === 'children' ||
+    name === 'key' ||
+    name === 'on' ||
+    name === 'css' ||
+    name === 'setup' ||
+    name === 'connect' ||
+    name === 'animate'
   )
 }
 
@@ -814,6 +898,13 @@ function insert(
   }
 
   if (isHostNode(node)) {
+    // Check for matching exiting node that can be reclaimed
+    let exitingNode = findMatchingExitingNode(node.type, node.key, domParent)
+    if (exitingNode) {
+      reclaimExitingNode(exitingNode, node, domParent, frame, scheduler, vParent)
+      return cursor
+    }
+
     if (cursor instanceof Element) {
       if (cursor.tagName.toLowerCase() === node.type) {
         // FIXME: hydrate css prop
@@ -984,6 +1075,11 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler): void {
         styleManager.remove(className)
       }
     }
+    // Unregister from layout animations
+    let presenceConfig = getPresenceConfig(node)
+    if (presenceConfig?.layout) {
+      unregisterLayoutElement(node._dom)
+    }
     if (node._controller) node._controller.abort()
     let _events = node._events
     if (_events) {
@@ -1021,26 +1117,50 @@ function remove(node: VNode, domParent: ParentNode, scheduler: Scheduler) {
   }
 
   if (isCommittedHostNode(node)) {
-    // Clean up all descendants first (before removing DOM subtree)
-    for (let child of node._children) {
-      cleanupDescendants(child, scheduler)
+    // Check if already exiting - do nothing
+    if (node._exiting) {
+      return
     }
-    // Clean up CSS before removing DOM element
-    if (node.props.css) {
-      // TODO: can probably avoid calling processStyle by storing className
-      // somewhere or maybe don't use className and a special data-attribute on
-      // the element
-      let { className } = processStyle(node.props.css, styleCache)
-      if (className) {
-        styleManager.remove(className)
+
+    let presenceConfig = getPresenceConfig(node)
+
+    // Only animate exit if there's an exit config defined
+    if (presenceConfig?.exit) {
+      let animation = node._animation
+
+      // Check if enter animation is still running - reverse it instead of playing exit
+      if (animation && animation.playState === 'running') {
+        // Reverse the enter animation
+        animation.reverse()
+        node._exiting = true
+        node._exitingParent = domParent
+        exitingNodes.add(node)
+
+        // Use finished promise for more reliable completion handling
+        animation.finished.then(() => {
+          // Check if node was reclaimed while animating
+          if (!node._exiting) return
+          exitingNodes.delete(node)
+          node._exiting = false
+          node._animation = undefined
+          performHostNodeRemoval(node, domParent, scheduler)
+        })
+        return
       }
+
+      // Enter animation finished or doesn't exist - play exit animation
+      playExitAnimation(node, presenceConfig.exit, domParent, scheduler, () => {
+        performHostNodeRemoval(node, domParent, scheduler)
+      })
+      return
     }
-    domParent.removeChild(node._dom)
-    if (node._controller) node._controller.abort()
-    let _events = node._events
-    if (_events) {
-      scheduler.enqueueTasks([() => _events.dispose()])
+
+    // No exit animation config - remove immediately (cancel any running enter animation)
+    if (node._animation) {
+      node._animation.cancel()
+      node._animation = undefined
     }
+    performHostNodeRemoval(node, domParent, scheduler)
     return
   }
 
@@ -1063,6 +1183,39 @@ function remove(node: VNode, domParent: ParentNode, scheduler: Scheduler) {
       remove(child, domParent, scheduler)
     }
     return
+  }
+}
+
+// Actually remove a host node from DOM and clean up
+function performHostNodeRemoval(
+  node: CommittedHostNode,
+  domParent: ParentNode,
+  scheduler: Scheduler,
+) {
+  // Clean up all descendants first (before removing DOM subtree)
+  for (let child of node._children) {
+    cleanupDescendants(child, scheduler)
+  }
+  // Clean up CSS before removing DOM element
+  if (node.props.css) {
+    let { className } = processStyle(node.props.css, styleCache)
+    if (className) {
+      styleManager.remove(className)
+    }
+  }
+  // Unregister from layout animations
+  let presenceConfig = getPresenceConfig(node)
+  if (presenceConfig?.layout) {
+    unregisterLayoutElement(node._dom)
+  }
+  // Only remove if still in DOM (might have been removed by parent)
+  if (node._dom.parentNode === domParent) {
+    domParent.removeChild(node._dom)
+  }
+  if (node._controller) node._controller.abort()
+  let _events = node._events
+  if (_events) {
+    scheduler.enqueueTasks([() => _events.dispose()])
   }
 }
 
@@ -1373,4 +1526,270 @@ function skipComments(cursor: Node | null): Node | null {
     cursor = cursor.nextSibling
   }
   return cursor
+}
+
+// --- Presence Animation Helpers ---
+
+// Debug multiplier for presence animations (set window.DEBUG_PRESENCE = true to slow down animations)
+function getDebugDurationMultiplier(): number {
+  return typeof window !== 'undefined' && (window as any).DEBUG_PRESENCE ? 10 : 1
+}
+
+// Default configs for each animation type
+const DEFAULT_ENTER: PresenceKeyframeConfig = {
+  opacity: 0,
+  duration: 150,
+  easing: 'ease-out',
+}
+
+const DEFAULT_EXIT: PresenceKeyframeConfig = {
+  opacity: 0,
+  duration: 150,
+  easing: 'ease-in',
+}
+
+const DEFAULT_LAYOUT: LayoutAnimationConfig = {
+  duration: 200,
+  easing: 'ease-in-out',
+}
+
+// Normalized presence config with resolved defaults
+interface NormalizedPresenceProp {
+  enter?: PresenceConfig | PresenceKeyframeConfig
+  exit?: PresenceConfig | PresenceKeyframeConfig
+  layout?: LayoutAnimationConfig
+}
+
+// Normalize presence prop to full config, resolving `true` values to defaults
+function normalizePresence(presence: AnimateProp): NormalizedPresenceProp {
+  let result: NormalizedPresenceProp = {}
+
+  // Normalize enter
+  if (presence.enter === true) {
+    result.enter = DEFAULT_ENTER
+  } else if (presence.enter) {
+    result.enter = presence.enter
+  }
+
+  // Normalize exit
+  if (presence.exit === true) {
+    result.exit = DEFAULT_EXIT
+  } else if (presence.exit) {
+    result.exit = presence.exit
+  }
+
+  // Normalize layout - merge with defaults for partial configs
+  if (presence.layout === true) {
+    result.layout = DEFAULT_LAYOUT
+  } else if (presence.layout) {
+    result.layout = {
+      duration: presence.layout.duration ?? DEFAULT_LAYOUT.duration,
+      easing: presence.layout.easing ?? DEFAULT_LAYOUT.easing,
+    }
+  }
+
+  return result
+}
+
+// Check if config has keyframes array
+function hasKeyframes(config: PresenceConfig | PresenceKeyframeConfig): config is PresenceConfig {
+  return 'keyframes' in config && Array.isArray(config.keyframes)
+}
+
+// Extract style properties from a keyframe config (excluding timing properties)
+function extractStyleProps(config: PresenceKeyframe): Keyframe {
+  let result: Keyframe = {}
+  for (let key in config) {
+    if (
+      key !== 'offset' &&
+      key !== 'easing' &&
+      key !== 'composite' &&
+      key !== 'duration' &&
+      key !== 'delay'
+    ) {
+      result[key as keyof Keyframe] = config[key as keyof PresenceKeyframe] as string | number
+    }
+  }
+  // Include per-keyframe timing if present
+  if (config.offset !== undefined) result.offset = config.offset
+  if (config.easing !== undefined) result.easing = config.easing
+  if (config.composite !== undefined) result.composite = config.composite
+  return result
+}
+
+// Build keyframes array for enter animation
+function buildEnterKeyframes(config: PresenceConfig | PresenceKeyframeConfig): Keyframe[] {
+  if (hasKeyframes(config)) {
+    return config.keyframes.map(extractStyleProps)
+  }
+  // Shorthand: animate FROM enter state TO natural state (empty = browser default)
+  // Don't include easing on keyframe - it's specified in animation options.
+  // Including it on both causes double-easing (WAAPI applies both effect and keyframe easing).
+  let keyframe = extractStyleProps(config)
+  delete keyframe.easing
+  return [keyframe, {}]
+}
+
+// Build keyframes array for exit animation
+function buildExitKeyframes(config: PresenceConfig | PresenceKeyframeConfig): Keyframe[] {
+  if (hasKeyframes(config)) {
+    return config.keyframes.map(extractStyleProps)
+  }
+  // Shorthand: animate FROM natural state TO exit state
+  // Don't include easing on keyframe - it's specified in animation options.
+  let keyframe = extractStyleProps(config)
+  delete keyframe.easing
+  return [{}, keyframe]
+}
+
+// Play enter animation on an element
+function playEnterAnimation(
+  node: CommittedHostNode,
+  config: PresenceConfig | PresenceKeyframeConfig,
+): void {
+  let dom = node._dom as HTMLElement
+  let keyframes = buildEnterKeyframes(config)
+  let multiplier = getDebugDurationMultiplier()
+  let options: KeyframeAnimationOptions = {
+    duration: config.duration * multiplier,
+    delay: config.delay != null ? config.delay * multiplier : undefined,
+    easing: config.easing,
+    composite: config.composite as CompositeOperation | undefined,
+    fill: 'backwards',
+  }
+  let animation = dom.animate(keyframes, options)
+  node._animation = animation
+}
+
+// Play exit animation on an element
+function playExitAnimation(
+  node: CommittedHostNode,
+  config: PresenceConfig | PresenceKeyframeConfig,
+  domParent: ParentNode,
+  scheduler: Scheduler,
+  onComplete: () => void,
+): void {
+  let dom = node._dom as HTMLElement
+  let keyframes = buildExitKeyframes(config)
+  let multiplier = getDebugDurationMultiplier()
+  let options: KeyframeAnimationOptions = {
+    duration: config.duration * multiplier,
+    delay: config.delay != null ? config.delay * multiplier : undefined,
+    easing: config.easing,
+    composite: config.composite as CompositeOperation | undefined,
+    fill: 'forwards',
+  }
+  let animation = dom.animate(keyframes, options)
+  node._animation = animation
+  node._exiting = true
+  node._exitingParent = domParent
+  exitingNodes.add(node)
+
+  // Use finished promise for more reliable completion handling
+  // Check if still exiting - might have been reclaimed
+  animation.finished.then(() => {
+    if (!node._exiting) return // Node was reclaimed, don't remove
+    exitingNodes.delete(node)
+    node._exiting = false
+    node._animation = undefined
+    onComplete()
+  })
+}
+
+// Get animate config from node props
+function getPresenceConfig(node: HostNode): NormalizedPresenceProp | null {
+  let animate = node.props.animate
+  if (!animate) return null
+  return normalizePresence(animate)
+}
+
+// Check if enter animation should play (just checks if config exists)
+function shouldPlayEnterAnimation(
+  config: PresenceConfig | PresenceKeyframeConfig | undefined,
+): boolean {
+  return !!config
+}
+
+// Find a matching exiting node that can be reclaimed
+function findMatchingExitingNode(
+  type: string,
+  key: string | undefined,
+  domParent: ParentNode,
+): CommittedHostNode | null {
+  // Only reclaim nodes with explicit keys - non-keyed nodes should animate
+  // independently. This prevents `cond ? <A /> : <B />` from incorrectly
+  // reclaiming when A and B's inner elements happen to have the same type.
+  if (key == null) return null
+
+  for (let node of exitingNodes) {
+    if (!isCommittedHostNode(node)) continue
+    if (node._exitingParent !== domParent) continue
+    if (node.type !== type) continue
+    if (node.key !== key) continue
+    return node
+  }
+  return null
+}
+
+// Reclaim an exiting node by reversing its exit animation
+function reclaimExitingNode(
+  exitingNode: CommittedHostNode,
+  newNode: HostNode,
+  domParent: ParentNode,
+  frame: FrameHandle,
+  scheduler: Scheduler,
+  vParent: VNode,
+): void {
+  // Reverse the exit animation if it's still running
+  let animation = exitingNode._animation
+  if (animation && animation.playState === 'running') {
+    animation.reverse()
+    animation.finished.then(() => {
+      exitingNode._animation = undefined
+    })
+  }
+
+  // Clear exiting state
+  exitingNodes.delete(exitingNode)
+  exitingNode._exiting = false
+  exitingNode._exitingParent = undefined
+
+  // Transfer exiting node's DOM and state to new node
+  newNode._dom = exitingNode._dom
+  newNode._parent = vParent
+  newNode._controller = exitingNode._controller
+  newNode._events = exitingNode._events
+  newNode._animation = exitingNode._animation
+
+  // Diff props on the existing DOM element
+  diffHostProps(exitingNode.props, newNode.props, exitingNode._dom)
+
+  // Diff children
+  diffChildren(
+    exitingNode._children,
+    newNode._children,
+    exitingNode._dom,
+    frame,
+    scheduler,
+    newNode,
+  )
+
+  // Update event listeners if needed
+  let nextOn = newNode.props.on
+  if (nextOn) {
+    if (newNode._events) {
+      let eventsContainer = newNode._events
+      scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
+    } else {
+      let eventsContainer = createContainer(exitingNode._dom, {
+        onError: (error) => raise(error, newNode, domParent, frame, scheduler),
+      })
+      scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
+      newNode._events = eventsContainer
+    }
+  } else if (newNode._events) {
+    let eventsContainer = newNode._events
+    scheduler.enqueueTasks([() => eventsContainer.dispose()])
+    newNode._events = undefined
+  }
 }

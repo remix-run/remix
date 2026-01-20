@@ -605,6 +605,11 @@ function List(handle: Handle) {
 }
 ```
 
+## Wrapping Components
+
+- use `Props<'div'>`
+- use `RemixNode` not JSX.Element, etc.
+
 ## Future
 
 This package is a work in progress. Future features (demo'd at Remix Jam) include:
