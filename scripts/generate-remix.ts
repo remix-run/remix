@@ -27,7 +27,6 @@ const SUB_EXPORT_FOLDER = 'lib'
 
 type RemixRunPackage = {
   name: string
-  version: string
   exports: ExportEntry[]
   changeFiles: string[]
 }
@@ -67,15 +66,14 @@ let existingInfo = {
   peerDependencies: new Set<string>(Object.keys(remixPackageJson.peerDependencies || {})),
 }
 
-// Build exports/publishConfig.exports/peerDependencies/publishConfig.peerDependencies
+// Build exports/publishConfig.exports/peerDependencies
 let { exportsConfig, publishConfigExports } = getRemixExports()
-let { peerDependencies, publishConfigPeerDependencies } = getRemixPeerDependencies()
+let peerDependencies = getRemixPeerDependencies()
 
 // Update package.json
 remixPackageJson.exports = exportsConfig
 remixPackageJson.publishConfig.exports = publishConfigExports
 remixPackageJson.peerDependencies = peerDependencies
-remixPackageJson.publishConfig.peerDependencies = publishConfigPeerDependencies
 
 await fs.writeFile(remixPackageJsonPath, JSON.stringify(remixPackageJson, null, 2) + '\n', 'utf-8')
 
@@ -118,7 +116,6 @@ async function getRemixRunPackages() {
 
     let remixRunPackage: RemixRunPackage = {
       name: packageName,
-      version: packageJson.version,
       exports: [],
       changeFiles: [],
     }
@@ -221,13 +218,10 @@ function getRemixExports() {
 
 function getRemixPeerDependencies() {
   let peerDependencies: Record<string, string> = {}
-  let publishConfigPeerDependencies: Record<string, string> = {}
   for (let packageInfo of remixRunPackages) {
     peerDependencies[packageInfo.name] = 'workspace:^'
-    publishConfigPeerDependencies[packageInfo.name] = `^${packageInfo.version}`
   }
-
-  return { peerDependencies, publishConfigPeerDependencies }
+  return peerDependencies
 }
 
 // Build exports change summary
@@ -331,9 +325,8 @@ async function outputPeerDependencyChanges() {
     console.log('✨ Added peerDependencies:')
     changes += 'Added `peerDependencies`:\n'
     for (let peerDep of addedPeerDeps) {
-      let version = remixPackageJson.publishConfig.peerDependencies[peerDep]
-      console.log(`   - ${peerDep}@${version}`)
-      changes += ` - \`${peerDep}@${version}\`\n`
+      console.log(`   - ${peerDep}`)
+      changes += ` - \`${peerDep}\`\n`
     }
   }
 
