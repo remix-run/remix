@@ -57,5 +57,5 @@ jobs:
 
       - name: Push changes
         run: |
-          git push
+          git push --set-upstream origin ${{ inputs.installableBranch || 'nightly' }}
           echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
