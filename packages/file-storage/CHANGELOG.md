@@ -2,6 +2,12 @@
 
 This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
+## v0.13.1
+
+### Patch Changes
+
+- Update `@remix-run/fs` peer dependency to use new `openLazyFile()` API
+
 ## v0.13.0 (2025-11-25)
 
 - BREAKING CHANGE: `LocalFileStorage` class has been replaced with `createFsFileStorage(directory)`

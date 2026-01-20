@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/mime",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Utilities for working with MIME types",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
