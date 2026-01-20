@@ -3,6 +3,7 @@ import * as Pathname from './pathname.ts'
 import * as Search from './search.ts'
 import { PartPattern } from '../part-pattern.ts'
 import { HrefError } from '../errors.ts'
+import type { Join, HrefArgs } from '../types/index.ts'
 
 type AST = {
   protocol: PartPattern
@@ -25,14 +26,14 @@ export namespace RoutePattern {
 }
 type Match = RoutePattern.Match
 
-export class RoutePattern {
+export class RoutePattern<source extends string = string> {
   readonly ast: AST
 
   private constructor(ast: AST) {
     this.ast = ast
   }
 
-  static parse(source: string): RoutePattern {
+  static parse<source extends string>(source: source): RoutePattern<source> {
     let spans = split(source)
 
     return new RoutePattern({
@@ -81,7 +82,7 @@ export class RoutePattern {
     return result
   }
 
-  join(other: RoutePattern): RoutePattern {
+  join<other extends string>(other: RoutePattern<other>): RoutePattern<Join<source, other>> {
     return new RoutePattern({
       protocol: isNamelessWildcard(other.ast.protocol) ? this.ast.protocol : other.ast.protocol,
       hostname: isNamelessWildcard(other.ast.hostname) ? this.ast.hostname : other.ast.hostname,
@@ -91,7 +92,8 @@ export class RoutePattern {
     })
   }
 
-  href(params?: Record<string, string | number>, searchParams?: Search.HrefParams): string {
+  href(...args: HrefArgs<source>): string {
+    let [params, searchParams] = args
     params ??= {}
     searchParams ??= {}
 
