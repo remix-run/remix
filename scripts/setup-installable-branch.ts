@@ -43,6 +43,19 @@ let { values, positionals } = util.parseArgs({
 // Use first positional argument or fall back to --branch flag or default
 let installableBranch = positionals[0] || values.branch || 'nightly'
 
+// Refuse to overwrite existing branches except for cron-driven workflow branches
+let allowedOverwrites = ['nightly']
+let remoteBranches = logAndExec('git branch -r', true)
+if (
+  remoteBranches.includes(`origin/${installableBranch}`) &&
+  !allowedOverwrites.includes(installableBranch)
+) {
+  throw new Error(
+    `Error: Branch \`${installableBranch}\` already exists on origin. ` +
+      `Delete it first or use a different branch name.`,
+  )
+}
+
 // Error if git status is not clean
 let gitStatus = logAndExec('git status --porcelain', true)
 if (gitStatus) {
@@ -70,10 +83,14 @@ await updatePackageDependencies()
 logAndExec('git add .')
 logAndExec(`git commit -a -m "installable build from ${baseBranch} at ${sha}"`)
 
-console.log(`\n✅ Done!\n`)
 console.log(
-  `You can now push the \`${installableBranch}\` branch to GitHub and install it locally via:\n\n` +
-    `  pnpm install "remix-run/remix#${installableBranch}&path:packages/remix"\n`,
+  [
+    `✅ Done!`,
+    '',
+    `You can now push the \`${installableBranch}\` branch to GitHub and install via:`,
+    '',
+    `  pnpm install "remix-run/remix#${installableBranch}&path:packages/remix"`,
+  ].join('\n'),
 )
 
 // Remove `dist` from gitignore so we include built code in the repo
