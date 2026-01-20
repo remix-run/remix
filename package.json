@@ -32,6 +32,7 @@
     "generate-remix": "node scripts/generate-remix.ts",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
+    "setup-installable-branch": "node scripts/setup-installable-branch.ts",
     "test": "pnpm --parallel run test",
     "typecheck": "pnpm -r typecheck"
   },

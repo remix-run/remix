@@ -1,0 +1,57 @@
+# Update the `nightly` branch every night with a fresh build from `main` that
+# can be used via direct pnpm install:
+#
+# pnpm i "github:remix-run/remix#nightly&path:packages/remix"
+
+name: 💿 Nightly Branch
+
+on:
+  schedule:
+    - cron: '0 7 * * *' # every day at 12AM PST
+  workflow_dispatch:
+    inputs:
+      baseBranch:
+        description: Base Branch
+        required: true
+      installableBranch:
+        description: Installable Branch
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  nightly:
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baseBranch || 'main' }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup git
+        run: |
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+
+      - name: Build installable branch
+        run: pnpm run setup-installable-branch ${{ inputs.installableBranch || 'nightly' }}
+
+      - name: Push changes
+        run: |
+          git push
+          echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
+          echo "new_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT

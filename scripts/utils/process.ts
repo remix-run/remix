@@ -15,7 +15,12 @@ export function getRootDir(): string {
   return process.cwd()
 }
 
-export function logAndExec(command: string, options?: cp.ExecSyncOptions): void {
+export function logAndExec(command: string, captureOutput = false): string {
   console.log(`$ ${command}`)
-  cp.execSync(command, { stdio: 'inherit', ...options })
+  if (captureOutput) {
+    return cp.execSync(command, { stdio: 'pipe', encoding: 'utf-8' }).trim()
+  } else {
+    cp.execSync(command, { stdio: 'inherit' })
+    return ''
+  }
 }

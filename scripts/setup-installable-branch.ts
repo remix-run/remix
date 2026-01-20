@@ -1,23 +1,20 @@
-import * as cp from 'node:child_process'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
+import * as util from 'node:util'
+import { logAndExec } from './utils/process.ts'
 
 /**
- * This script prepares the current branch (assumed to be `future`) to be
- * PNPM-installable directly from GitHub via:
+ * This script prepares a base branch (usually `main`) to be PNPM-installable
+ * directly from GitHub via a new branch (usually `nightly`):
  *
- *   pnpm install "github:remix-run/remix#<BRANCH>&path:<PATH>"
+ *   pnpm install "github:remix-run/remix#nightly&path:packages/remix"
  *
- * For example, installing `remix` from a `next` branch:
- *
- *   pnpm install "github:remix-run/remix#next&path:packages/remix"
- *
- * To do this, we can run a build and make some minor changes to the repo,
- * so we would always plan to checkout from the source branch and run/commit
- * these changes in a new branch (the installable branch).  These changes would
- * never be down-merged back to the source branch.
+ * To do this, we can run a build, make some minor changes to the repo, and
+ * commit the build + changes to the new branch. These changes would never be
+ * down-merged back to the source branch.
  *
  * This script does the following:
+ *  - Checks out the new branch and resets it to the base (current) branch
  *  - Runs a build
  *  - Removes `dist/` from `.gitignore`
  *  - Moves all `@remix-run/*` peerDeps up to normal deps to get past any peerDep
@@ -25,15 +22,59 @@ import * as path from 'node:path'
  *  - Updates all internal `@remix-run/*` deps to use the `github:` format for the
  *    given installable branch
  *  - Copies all `publishConfig`'s down so we get `exports` from `dist/` instead of `src/`
+ *  - Commits the changes
  *
- * Then, `pnpm install "github:remix-run/remix#<BRANCH>&path:packages/remix"` sees the
- * `remix` nested deps and they all point to github with similar URLs so they install
- * as nested deps the same way.
+ *
+ * Then, after pushing, `pnpm install "github:remix-run/remix#nightly&path:packages/remix"`
+ * sees the `remix` nested deps and they all point to github with similar URLs so
+ * they install as nested deps the same way.
  */
 
-cp.execSync('pnpm build', { stdio: 'inherit' })
+let { values, positionals } = util.parseArgs({
+  options: {
+    branch: {
+      type: 'string',
+      short: 'b',
+    },
+  },
+  allowPositionals: true,
+})
+
+// Use first positional argument or fall back to --branch flag or default
+let installableBranch = positionals[0] || values.branch || 'nightly'
+
+// Error if git status is not clean
+let gitStatus = logAndExec('git status --porcelain', true)
+if (gitStatus) {
+  throw new Error('Error: Git working directory is not clean. Commit or stash changes first.')
+}
+
+// Capture the current branch name
+let baseBranch = logAndExec('git branch --show-current', true).trim()
+let sha = logAndExec('git rev-parse --short HEAD ', true).trim()
+
+console.log(
+  `Preparing installable branch \`${installableBranch}\` from ` +
+    `base branch \`${baseBranch}\` at sha ${sha}`,
+)
+
+// Switch to new branch and reset to current commit on base branch
+logAndExec(`git checkout -B ${installableBranch}`)
+
+// Build dist/ folders
+logAndExec('pnpm build')
+
 await updateGitignore()
 await updatePackageDependencies()
+
+logAndExec('git add .')
+logAndExec(`git commit -a -m "installable build from ${baseBranch} at ${sha}"`)
+
+console.log(`\n✅ Done!\n`)
+console.log(
+  `You can now push the \`${installableBranch}\` branch to GitHub and install it locally via:\n\n` +
+    `  pnpm install "github:remix-run/remix#${installableBranch}&path:packages/remix"\n`,
+)
 
 // Remove `dist` from gitignore so we include built code in the repo
 async function updateGitignore() {
@@ -50,7 +91,6 @@ async function updateGitignore() {
 // Update `package.json` files to point to this branch on github
 async function updatePackageDependencies() {
   let packagesDir = path.join(process.cwd(), 'packages')
-  let branch = 'future-build'
 
   let packageDirs = await fsp.readdir(packagesDir, { withFileTypes: true })
 
@@ -77,7 +117,8 @@ async function updatePackageDependencies() {
       for (let name of Object.keys(pkg.dependencies)) {
         if (name.startsWith('@remix-run/')) {
           let packageName = name.replace('@remix-run/', '')
-          pkg.dependencies[name] = `github:remix-run/remix#${branch}&path:packages/${packageName}`
+          pkg.dependencies[name] =
+            `github:remix-run/remix#${installableBranch}&path:packages/${packageName}`
         }
       }
     }
@@ -98,3 +139,5 @@ async function updatePackageDependencies() {
 
   console.log('Done')
 }
+
+function commitChanges() {}
