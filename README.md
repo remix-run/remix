@@ -61,6 +61,24 @@ We currently publish the following packages:
 - [static-middleware](packages/static-middleware): Middleware for serving static files from the filesystem
 - [tar-parser](packages/tar-parser): A fast, efficient parser for tar streams in any JavaScript environment
 
+## Installation
+
+```sh
+npm install remix
+
+# Or, just install a single package
+npm install @remix-run/fetch-router
+```
+
+If you want to play around with the bleeding edge, we also build the latest `main` branch every night into a `nightly` branch which can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
+
+```sh
+pnpm install "remix-run/remix#nightly&path:packages/remix"
+
+# Or, just install a single package
+pnpm install "remix-run/remix#nightly&path:packages/@remix-run/fetch-router"
+```
+
 ## Contributing
 
 We welcome contributions! If you'd like to contribute, please feel free to open an issue or submit a pull request. See [CONTRIBUTING](https://github.com/remix-run/remix/blob/main/CONTRIBUTING.md) for more information.

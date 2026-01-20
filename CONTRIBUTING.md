@@ -159,3 +159,18 @@ To release the stable version:
 2. Add a change file describing the stable release
 
 The prerelease suffix is stripped (e.g. `3.0.0-rc.7` → `3.0.0`). The bump type is for changelog categorization only—by convention, use `major` for a major release announcement.
+
+## Nightly Builds
+
+We also maintain installable nightly builds in a `nightly` branch as a way for folks to test out the latest `main` branch without needing to publish nightly releases to npm and clutter up the npm registry and version history UI.
+
+This is managed via the [`nightly` workflow](/.github/workflows/nightly.yaml) which uses the [`setup-installable-branch.ts`](./scripts/setup-installable-branch.ts) script to build and commit the build and required `package.json` changes to the `nightly` branch.
+
+The nightly build can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
+
+```sh
+pnpm install "remix-run/remix#nightly&path:packages/remix"
+
+# Or, just install a single package
+pnpm install "remix-run/remix#nightly&path:packages/@remix-run/fetch-router"
+```

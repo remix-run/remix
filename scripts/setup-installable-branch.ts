@@ -7,7 +7,7 @@ import { logAndExec } from './utils/process.ts'
  * This script prepares a base branch (usually `main`) to be PNPM-installable
  * directly from GitHub via a new branch (usually `nightly`):
  *
- *   pnpm install "github:remix-run/remix#nightly&path:packages/remix"
+ *   pnpm install "remix-run/remix#nightly&path:packages/remix"
  *
  * To do this, we can run a build, make some minor changes to the repo, and
  * commit the build + changes to the new branch. These changes would never be
@@ -19,13 +19,13 @@ import { logAndExec } from './utils/process.ts'
  *  - Removes `dist/` from `.gitignore`
  *  - Moves all `@remix-run/*` peerDeps up to normal deps to get past any peerDep
  *    warnings on install
- *  - Updates all internal `@remix-run/*` deps to use the `github:` format for the
+ *  - Updates all internal `@remix-run/*` deps to use the github format for the
  *    given installable branch
  *  - Copies all `publishConfig`'s down so we get `exports` from `dist/` instead of `src/`
  *  - Commits the changes
  *
  *
- * Then, after pushing, `pnpm install "github:remix-run/remix#nightly&path:packages/remix"`
+ * Then, after pushing, `pnpm install "remix-run/remix#nightly&path:packages/remix"`
  * sees the `remix` nested deps and they all point to github with similar URLs so
  * they install as nested deps the same way.
  */
@@ -73,7 +73,7 @@ logAndExec(`git commit -a -m "installable build from ${baseBranch} at ${sha}"`)
 console.log(`\n✅ Done!\n`)
 console.log(
   `You can now push the \`${installableBranch}\` branch to GitHub and install it locally via:\n\n` +
-    `  pnpm install "github:remix-run/remix#${installableBranch}&path:packages/remix"\n`,
+    `  pnpm install "remix-run/remix#${installableBranch}&path:packages/remix"\n`,
 )
 
 // Remove `dist` from gitignore so we include built code in the repo
@@ -118,7 +118,7 @@ async function updatePackageDependencies() {
         if (name.startsWith('@remix-run/')) {
           let packageName = name.replace('@remix-run/', '')
           pkg.dependencies[name] =
-            `github:remix-run/remix#${installableBranch}&path:packages/${packageName}`
+            `remix-run/remix#${installableBranch}&path:packages/${packageName}`
         }
       }
     }
