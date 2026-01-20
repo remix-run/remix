@@ -59,4 +59,3 @@ jobs:
         run: |
           git push
           echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
-          echo "new_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT

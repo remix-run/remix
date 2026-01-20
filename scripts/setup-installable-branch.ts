@@ -85,6 +85,7 @@ logAndExec(`git commit -a -m "installable build from ${baseBranch} at ${sha}"`)
 
 console.log(
   [
+    '',
     `✅ Done!`,
     '',
     `You can now push the \`${installableBranch}\` branch to GitHub and install via:`,
