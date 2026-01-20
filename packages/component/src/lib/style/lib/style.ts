@@ -258,22 +258,22 @@ function atRuleBodyToCss(styles: CSSProps): string {
   return body
 }
 
-// Process style prop and return class name and CSS
+// Process style prop and return selector value and CSS
 export function processStyle(
   styleObj: CSSProps,
-  styleCache: Map<string, { className: string; css: string }>,
+  styleCache: Map<string, { selector: string; css: string }>,
 ): {
-  className: string
+  selector: string
   css: string
 } {
   // Check if the object is empty
   if (Object.keys(styleObj).length === 0) {
-    return { className: '', css: '' }
+    return { selector: '', css: '' }
   }
 
-  // Always extract to CSS class, even for simple styles
+  // Generate a hash for the style object
   let hash = hashStyle(styleObj)
-  let className = `rmx-${hash}`
+  let selector = `rmx-${hash}`
 
   // Check cache first
   let cached = styleCache.get(hash)
@@ -281,9 +281,9 @@ export function processStyle(
     return cached
   }
 
-  // Generate CSS
-  let css = styleToCss(styleObj, `.${className}`)
-  let result = { className, css }
+  // Generate CSS using attribute selector [data-css="..."]
+  let css = styleToCss(styleObj, `[data-css="${selector}"]`)
+  let result = { selector, css }
 
   // Store in cache
   styleCache.set(hash, result)
@@ -292,6 +292,6 @@ export function processStyle(
 }
 
 // Clear style cache (useful for testing)
-export function clearStyleCache(styleCache: Map<string, { className: string; css: string }>): void {
+export function clearStyleCache(styleCache: Map<string, { selector: string; css: string }>): void {
   styleCache.clear()
 }

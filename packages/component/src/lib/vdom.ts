@@ -45,7 +45,7 @@ const INSERT_VNODE = 1 << 0
 const MATCHED = 1 << 1
 
 // global so all roots share it
-let styleCache = new Map<string, { className: string; css: string }>()
+let styleCache = new Map<string, { selector: string; css: string }>()
 let styleManager =
   typeof window !== 'undefined'
     ? createStyleManager()
@@ -631,18 +631,23 @@ function setupHostNode(
 }
 
 function diffCssProp(curr: ElementProps, next: ElementProps, dom: Element) {
-  let prevClassName = curr.css ? processStyle(curr.css, styleCache).className : ''
-  let { className, css } = next.css
+  let prevSelector = curr.css ? processStyle(curr.css, styleCache).selector : ''
+  let { selector: nextSelector, css } = next.css
     ? processStyle(next.css, styleCache)
-    : { className: '', css: '' }
-  if (prevClassName === className) return
-  if (prevClassName) {
-    dom.classList.remove(prevClassName)
-    styleManager.remove(prevClassName)
+    : { selector: '', css: '' }
+
+  if (prevSelector === nextSelector) return
+
+  // Remove old CSS
+  if (prevSelector) {
+    dom.removeAttribute('data-css')
+    styleManager.remove(prevSelector)
   }
-  if (css && className) {
-    dom.classList.add(className)
-    styleManager.insert(className, css)
+
+  // Add new CSS
+  if (css && nextSelector) {
+    dom.setAttribute('data-css', nextSelector)
+    styleManager.insert(nextSelector, css)
   }
 }
 
@@ -1070,9 +1075,9 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler): void {
       cleanupDescendants(child, scheduler)
     }
     if (node.props.css) {
-      let { className } = processStyle(node.props.css, styleCache)
-      if (className) {
-        styleManager.remove(className)
+      let { selector } = processStyle(node.props.css, styleCache)
+      if (selector) {
+        styleManager.remove(selector)
       }
     }
     // Unregister from layout animations
@@ -1198,9 +1203,9 @@ function performHostNodeRemoval(
   }
   // Clean up CSS before removing DOM element
   if (node.props.css) {
-    let { className } = processStyle(node.props.css, styleCache)
-    if (className) {
-      styleManager.remove(className)
+    let { selector } = processStyle(node.props.css, styleCache)
+    if (selector) {
+      styleManager.remove(selector)
     }
   }
   // Unregister from layout animations

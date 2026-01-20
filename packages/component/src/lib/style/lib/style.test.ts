@@ -9,7 +9,7 @@ function createElement(tag = 'div'): HTMLElement {
 }
 
 describe('processStyle', () => {
-  let styleCache: Map<string, { className: string; css: string }>
+  let styleCache: Map<string, { selector: string; css: string }>
 
   beforeEach(() => {
     styleCache = new Map()
@@ -33,9 +33,9 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    element.className = result.className!
+    element.setAttribute('data-css', result.selector)
 
-    expect(result.className).toMatch(/^rmx-/)
+    expect(result.selector).toMatch(/^rmx-/)
 
     // Note: No longer auto-injecting CSS in processStyle
     // So we won't check for injected style elements in these tests
@@ -58,12 +58,12 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    element.className = result.className!
+    element.setAttribute('data-css', result.selector)
 
-    expect(result.className).toMatch(/^rmx-/)
+    expect(result.selector).toMatch(/^rmx-/)
 
     // Check that CSS contains nested hover styles
-    expect(result.css).toContain(`${result.className} {`)
+    expect(result.css).toContain(`[data-css="${result.selector}"] {`)
     expect(result.css).toContain('&:hover')
     expect(result.css).toContain('color: blue')
     expect(result.css).toContain('background-color: yellow')
@@ -97,9 +97,9 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    element.className = result.className!
+    element.setAttribute('data-css', result.selector)
 
-    expect(result.className).toMatch(/^rmx-/)
+    expect(result.selector).toMatch(/^rmx-/)
 
     // Check that CSS contains pseudo-element styles
     expect(result.css).toContain(`  &::before {`)
@@ -126,12 +126,12 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    element.className = result.className!
+    element.setAttribute('data-css', result.selector)
 
-    expect(result.className).toMatch(/^rmx-/)
+    expect(result.selector).toMatch(/^rmx-/)
 
     // Check that CSS contains nested child selector styles
-    expect(result.css).toContain(`${result.className} {`)
+    expect(result.css).toContain(`[data-css="${result.selector}"] {`)
     expect(result.css).toContain('.child')
     expect(result.css).toContain('color: blue')
     expect(result.css).toContain('font-size: 14px')
@@ -152,12 +152,12 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    element.className = result.className!
+    element.setAttribute('data-css', result.selector)
 
-    expect(result.className).toMatch(/^rmx-/)
+    expect(result.selector).toMatch(/^rmx-/)
 
     // Check that CSS contains nested attribute selector
-    expect(result.css).toContain(`${result.className} {`)
+    expect(result.css).toContain(`[data-css="${result.selector}"] {`)
     expect(result.css).toContain(`&[aria-selected='true']`)
     expect(result.css).toContain('color: blue')
     expect(result.css).toContain('background-color: yellow')
@@ -181,12 +181,12 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    element.className = result.className!
+    element.setAttribute('data-css', result.selector)
 
-    expect(result.className).toMatch(/^rmx-/)
+    expect(result.selector).toMatch(/^rmx-/)
 
     // Check that CSS contains media query content
-    expect(result.css).toContain(`${result.className}`)
+    expect(result.css).toContain(`${result.selector}`)
     expect(result.css).toContain('padding: 16px')
     expect(result.css).toContain('@media (max-width: 768px)')
     expect(result.css).toContain('padding: 8px 16px')
@@ -210,9 +210,9 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    element.className = result.className!
+    element.setAttribute('data-css', result.selector)
 
-    expect(result.className).toMatch(/^rmx-/)
+    expect(result.selector).toMatch(/^rmx-/)
 
     // Check that CSS contains media query
     expect(result.css).toContain('@media (max-width: 768px)')
@@ -237,14 +237,14 @@ describe('processStyle', () => {
     let result1 = processStyle(style1, styleCache)
     let result2 = processStyle(style2, styleCache)
 
-    element1.className = result1.className!
-    element2.className = result2.className!
+    element1.setAttribute('data-css', result1.selector)
+    element2.setAttribute('data-css', result2.selector)
 
-    expect(result1.className).toBe(result2.className)
+    expect(result1.selector).toBe(result2.selector)
     expect(result1.css).toBe(result2.css)
   })
 
-  it('generates different class names for different styles', () => {
+  it('generates different selectors for different styles', () => {
     let element1 = createElement()
     let element2 = createElement()
 
@@ -264,17 +264,17 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    element1.className = result1.className!
-    element2.className = result2.className!
+    element1.setAttribute('data-css', result1.selector)
+    element2.setAttribute('data-css', result2.selector)
 
-    expect(result1.className).not.toBe(result2.className)
+    expect(result1.selector).not.toBe(result2.selector)
     expect(result1.css).not.toBe(result2.css)
   })
 
   it('handles empty style objects', () => {
     let result = processStyle({}, styleCache)
 
-    expect(result.className).toBe('')
+    expect(result.selector).toBe('')
     expect(result.css).toBe('')
   })
 
@@ -289,8 +289,8 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    expect(result.className).toMatch(/^rmx-/)
-    expect(result.css).toContain(`${result.className} {`)
+    expect(result.selector).toMatch(/^rmx-/)
+    expect(result.css).toContain(`[data-css="${result.selector}"] {`)
     // Ensure we did not expand or parse the nested selector, it should appear verbatim
     expect(result.css).toContain('&[aria-selected], &[rmx-focus]')
     expect(result.css).toContain('color: blue')
@@ -308,7 +308,7 @@ describe('processStyle', () => {
     )
 
     let expected =
-      `.${result.className} {\n` +
+      `[data-css="${result.selector}"] {\n` +
       `  color: red;\n` +
       `  &[aria-selected], &[rmx-focus] {\n` +
       `    color: blue;\n` +
@@ -336,10 +336,10 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    expect(result.className).toBeTruthy()
+    expect(result.selector).toBeTruthy()
     expect(result.css).toContain('color: red')
     expect(result.css).toContain('padding: 10px')
-    expect(result.css).toContain('.rmx-')
+    expect(result.css).toContain('[data-css="rmx-')
     expect(result.css).toContain(':hover')
     expect(result.css).toContain('color: blue')
 
@@ -353,7 +353,7 @@ describe('processStyle', () => {
     expect(result.css).not.toContain('outline:')
   })
 
-  it('emits @function blocks before the class and supports usage in declarations', () => {
+  it('emits @function blocks before the selector and supports usage in declarations', () => {
     let styleCache = new Map()
     let result = processStyle(
       {
@@ -365,10 +365,10 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    expect(result.className).toBeTruthy()
+    expect(result.selector).toBeTruthy()
     expect(result.css.trim().startsWith('@function --alpha(')).toBe(true)
     expect(result.css).toContain('result: rgb(from var(--color) r g b / var(--opacity));')
-    expect(result.css).toContain(`.${result.className} {`)
+    expect(result.css).toContain(`[data-css="${result.selector}"] {`)
     expect(result.css).toContain('background: --alpha(red, 80%);')
   })
 
@@ -386,7 +386,7 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    expect(result.className).toMatch(/^rmx-/)
+    expect(result.selector).toMatch(/^rmx-/)
     // Numeric values should be normalized to include 'px'
     expect(result.css).toContain('width: 100px')
     expect(result.css).toContain('height: 200px')
@@ -410,7 +410,7 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    expect(result.className).toMatch(/^rmx-/)
+    expect(result.selector).toMatch(/^rmx-/)
     // Unitless properties should remain unitless
     expect(result.css).toContain('z-index: 10')
     expect(result.css).toContain('opacity: 0.5')
@@ -433,7 +433,7 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    expect(result.className).toMatch(/^rmx-/)
+    expect(result.selector).toMatch(/^rmx-/)
     // Zero values should remain as 0
     expect(result.css).toContain('width: 0')
     expect(result.css).toContain('height: 0')
@@ -454,7 +454,7 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    expect(result.className).toMatch(/^rmx-/)
+    expect(result.selector).toMatch(/^rmx-/)
     // CSS variables should remain as numbers (not normalized)
     expect(result.css).toContain('--custom-width: 100')
     expect(result.css).not.toContain('--custom-width: 100px')
@@ -474,7 +474,7 @@ describe('processStyle', () => {
       styleCache,
     )
 
-    expect(result.className).toMatch(/^rmx-/)
+    expect(result.selector).toMatch(/^rmx-/)
     // Base declaration
     expect(result.css).toContain('width: 100px')
     // Nested selector
