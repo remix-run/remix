@@ -1,7 +1,12 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as semver from 'semver'
-import { getAllPackageNames, getPackageDir, getPackageFile } from './packages.ts'
+import {
+  getAllPackageDirNames,
+  getPackageFile,
+  getPackagePath,
+  packageNameToDirectoryName,
+} from './packages.ts'
 import { fileExists, readFile, readJson } from './fs.ts'
 
 const bumpTypes = ['major', 'minor', 'patch'] as const
@@ -23,8 +28,8 @@ export type ParsedRemixPrereleaseConfig =
  * Only remix supports prerelease mode - other packages publish as "latest".
  */
 export function readRemixPrereleaseConfig(): ParsedRemixPrereleaseConfig {
-  let packageDir = getPackageDir('remix')
-  let prereleaseJsonPath = path.join(packageDir, '.changes', 'prerelease.json')
+  let remixPackagePath = getPackagePath('remix')
+  let prereleaseJsonPath = path.join(remixPackagePath, '.changes', 'prerelease.json')
 
   if (!fs.existsSync(prereleaseJsonPath)) {
     return { exists: false }
@@ -132,7 +137,7 @@ interface ChangeFile {
 }
 
 interface ValidationError {
-  package: string
+  packageDirName: string
   file: string
   error: string
 }
@@ -145,9 +150,9 @@ type ParsedPackageChanges =
  * Parses and validates all change files for a package.
  * Returns changes if valid, or errors if invalid.
  */
-function parsePackageChanges(packageName: string): ParsedPackageChanges {
-  let packageDir = getPackageDir(packageName)
-  let changesDir = path.join(packageDir, '.changes')
+function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
+  let packagePath = getPackagePath(packageDirName)
+  let changesDir = path.join(packagePath, '.changes')
   let changes: ChangeFile[] = []
   let errors: ValidationError[] = []
 
@@ -157,7 +162,7 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
       valid: false,
       errors: [
         {
-          package: packageName,
+          packageDirName,
           file: '.changes/',
           error: 'Changes directory does not exist',
         },
@@ -169,14 +174,14 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
   let readmePath = path.join(changesDir, 'README.md')
   if (!fs.existsSync(readmePath)) {
     errors.push({
-      package: packageName,
+      packageDirName,
       file: '.changes/README.md',
       error: 'README.md is missing from .changes directory',
     })
   }
 
   // Get package version to determine validation rules
-  let packageJsonPath = getPackageFile(packageName, 'package.json')
+  let packageJsonPath = getPackageFile(packageDirName, 'package.json')
   let packageJson = readJson(packageJsonPath)
   let currentVersion = packageJson.version as string
   let majorVersion = semver.major(currentVersion)
@@ -188,13 +193,13 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
   let prereleaseConfig: RemixPrereleaseConfig | null = null
   let prereleaseJsonPath = path.join(changesDir, 'prerelease.json')
 
-  if (packageName === 'remix') {
+  if (packageDirName === 'remix') {
     // For remix, read and validate the prerelease config
     let parsedRemixPrereleaseConfig = readRemixPrereleaseConfig()
     if (parsedRemixPrereleaseConfig.exists) {
       if (!parsedRemixPrereleaseConfig.valid) {
         errors.push({
-          package: packageName,
+          packageDirName,
           file: '.changes/prerelease.json',
           error: parsedRemixPrereleaseConfig.error,
         })
@@ -206,7 +211,7 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
     // For non-remix packages, error if prerelease.json exists
     if (fs.existsSync(prereleaseJsonPath)) {
       errors.push({
-        package: packageName,
+        packageDirName,
         file: '.changes/prerelease.json',
         error: 'prerelease.json is only supported for the "remix" package. Remove this file.',
       })
@@ -229,7 +234,7 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
       // Tag mismatch (e.g., version is alpha but config says beta) - need change files to transition
       if (!hasChangeFiles) {
         errors.push({
-          package: packageName,
+          packageDirName,
           file: '.changes/prerelease.json',
           error: `prerelease.json tag '${prereleaseConfig.tag}' doesn't match version's prerelease identifier '${currentVersionPrereleaseId}'. Add a change file to transition to ${prereleaseConfig.tag}.`,
         })
@@ -237,7 +242,7 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
     } else if (!isCurrentVersionPrerelease && !hasChangeFiles) {
       // Config says prerelease but version is stable AND no change files - need change files to enter prerelease
       errors.push({
-        package: packageName,
+        packageDirName,
         file: '.changes/prerelease.json',
         error: `prerelease.json exists but version ${currentVersion} is stable. Add a change file to enter prerelease mode, or delete prerelease.json if this package should not be in prerelease.`,
       })
@@ -246,7 +251,7 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
     // No config - validate version is stable (unless graduating with change files)
     if (isCurrentVersionPrerelease && !hasChangeFiles) {
       errors.push({
-        package: packageName,
+        packageDirName,
         file: '.changes/',
         error: `Version ${currentVersion} is a prerelease but no prerelease.json exists. Either add prerelease.json with { "tag": "${currentVersionPrereleaseId}" }, or add a change file to graduate to stable.`,
       })
@@ -274,7 +279,7 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
 
     if (bump == null) {
       errors.push({
-        package: packageName,
+        packageDirName,
         file,
         error:
           'Change file must be a ".md" file starting with "major.", "minor.", or "patch." (e.g. "minor.add-feature.md")',
@@ -289,7 +294,7 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
     // Check if file is not empty
     if (content.length === 0) {
       errors.push({
-        package: packageName,
+        packageDirName,
         file,
         error: 'Change file cannot be empty',
       })
@@ -300,7 +305,7 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
     let firstLine = content.split('\n')[0].trim()
     if (firstLine.startsWith('- ') || firstLine.startsWith('* ')) {
       errors.push({
-        package: packageName,
+        packageDirName,
         file,
         error:
           'Change file should not start with a bullet point (- or *). The bullet will be added automatically in the CHANGELOG. Just write the text directly.',
@@ -313,7 +318,7 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
     if (invalidHeadingMatch) {
       let headingLevel = invalidHeadingMatch[1].length
       errors.push({
-        package: packageName,
+        packageDirName,
         file,
         error: `Headings in change files must be level 4 (####), 5 (#####), or 6 (######), but found level ${headingLevel}. This is because change files are nested within the changelog which already uses heading levels 1-3.`,
       })
@@ -328,14 +333,14 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
       if (isBreakingChange) {
         if (isV1Plus && bump !== 'major') {
           errors.push({
-            package: packageName,
+            packageDirName,
             file,
             error: `Breaking changes in v1+ packages must use "major." prefix (current version: ${currentVersion}). Rename to "major.${file.slice(file.indexOf('.') + 1)}"`,
           })
           continue
         } else if (!isV1Plus && !isCurrentVersionPrerelease && bump !== 'minor') {
           errors.push({
-            package: packageName,
+            packageDirName,
             file,
             error: `Breaking changes in v0.x packages must use "minor." prefix (current version: ${currentVersion}). Rename to "minor.${file.slice(file.indexOf('.') + 1)}"`,
           })
@@ -353,7 +358,7 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
     let hasMajorBump = changes.some((c) => c.bump === 'major')
     if (!hasMajorBump) {
       errors.push({
-        package: packageName,
+        packageDirName,
         file: '.changes/prerelease.json',
         error:
           'Entering prerelease mode requires a major version bump. Add a change file with "major." prefix (e.g. "major.release-v2-alpha.md").',
@@ -369,6 +374,7 @@ function parsePackageChanges(packageName: string): ParsedPackageChanges {
 }
 
 export interface PackageRelease {
+  packageDirName: string
   packageName: string
   currentVersion: string
   nextVersion: string
@@ -385,12 +391,12 @@ type ParsedChanges =
  * Returns releases if valid, or errors if invalid.
  */
 export function parseAllChangeFiles(): ParsedChanges {
-  let packageNames = getAllPackageNames()
+  let packageDirNames = getAllPackageDirNames()
   let releases: PackageRelease[] = []
   let errors: ValidationError[] = []
 
-  for (let packageName of packageNames) {
-    let parsed = parsePackageChanges(packageName)
+  for (let packageDirName of packageDirNames) {
+    let parsed = parsePackageChanges(packageDirName)
 
     if (!parsed.valid) {
       errors.push(...parsed.errors)
@@ -399,8 +405,9 @@ export function parseAllChangeFiles(): ParsedChanges {
 
     // Only create a release if there are changes
     if (parsed.changes.length > 0) {
-      let packageJsonPath = getPackageFile(packageName, 'package.json')
+      let packageJsonPath = getPackageFile(packageDirName, 'package.json')
       let packageJson = readJson(packageJsonPath)
+      let packageName = packageJson.name as string
       let currentVersion = packageJson.version as string
 
       let bump = getHighestBump(parsed.changes.map((c) => c.bump))
@@ -409,6 +416,7 @@ export function parseAllChangeFiles(): ParsedChanges {
       let nextVersion = getNextVersion(currentVersion, bump, parsed.prereleaseConfig)
 
       releases.push({
+        packageDirName,
         packageName,
         currentVersion,
         nextVersion,
@@ -429,25 +437,25 @@ export function parseAllChangeFiles(): ParsedChanges {
  * Formats validation errors for display
  */
 export function formatValidationErrors(errors: ValidationError[]): string {
-  let errorsByPackage: Record<string, ValidationError[]> = {}
+  let errorsByPackageDirName: Record<string, ValidationError[]> = {}
   for (let error of errors) {
-    if (!errorsByPackage[error.package]) {
-      errorsByPackage[error.package] = []
+    if (!errorsByPackageDirName[error.packageDirName]) {
+      errorsByPackageDirName[error.packageDirName] = []
     }
-    errorsByPackage[error.package].push(error)
+    errorsByPackageDirName[error.packageDirName].push(error)
   }
 
   let lines: string[] = []
 
-  for (let [packageName, packageErrors] of Object.entries(errorsByPackage)) {
-    lines.push(`📦 ${packageName}:`)
+  for (let [packageDirName, packageErrors] of Object.entries(errorsByPackageDirName)) {
+    lines.push(`📦 ${packageDirName}:`)
     for (let error of packageErrors) {
       lines.push(`   ${error.file}: ${error.error}`)
     }
     lines.push('')
   }
 
-  let packageCount = Object.keys(errorsByPackage).length
+  let packageCount = Object.keys(errorsByPackageDirName).length
   lines.push(
     `Found ${errors.length} error${errors.length === 1 ? '' : 's'} in ${packageCount} package${packageCount === 1 ? '' : 's'}`,
   )
@@ -601,14 +609,14 @@ type AllChangelogEntries = Record<string, ChangelogEntry>
 /**
  * Parses a package's CHANGELOG.md and returns all version entries
  */
-function parseChangelog(packageName: string): AllChangelogEntries | null {
-  let changelogFile = getPackageFile(packageName, 'CHANGELOG.md')
+function parseChangelog(packageDirName: string): AllChangelogEntries | null {
+  let changelogPath = getPackageFile(packageDirName, 'CHANGELOG.md')
 
-  if (!fileExists(changelogFile)) {
+  if (!fileExists(changelogPath)) {
     return null
   }
 
-  let changelog = readFile(changelogFile)
+  let changelog = readFile(changelogPath)
   let parser = /^## ([a-z\d\.\-]+)(?: \(([^)]+)\))?$/gim
 
   let result: AllChangelogEntries = {}
@@ -629,11 +637,22 @@ function parseChangelog(packageName: string): AllChangelogEntries | null {
 }
 
 /**
- * Gets a specific version's entry from a package's CHANGELOG.md
+ * Gets a specific version's entry from a package's CHANGELOG.md.
+ * Accepts an npm package name (e.g., "@remix-run/static-middleware" or "remix").
  */
-export function getChangelogEntry(packageName: string, version: string): ChangelogEntry | null {
-  let allEntries = parseChangelog(packageName)
+export function getChangelogEntry({
+  packageName,
+  version,
+}: {
+  packageName: string
+  version: string
+}): ChangelogEntry | null {
+  let dirName = packageNameToDirectoryName(packageName)
+  if (dirName === null) {
+    return null
+  }
 
+  let allEntries = parseChangelog(dirName)
   if (allEntries !== null) {
     return allEntries[version] ?? null
   }

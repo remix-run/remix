@@ -44,7 +44,7 @@ function main() {
   console.log()
 
   for (let release of releases) {
-    console.log(colorize(`${release.packageName}/CHANGELOG.md:`, colors.gray))
+    console.log(colorize(`${release.packageDirName}/CHANGELOG.md:`, colors.gray))
     console.log()
     console.log(generateChangelogContent(release))
   }

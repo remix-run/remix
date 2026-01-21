@@ -9,17 +9,62 @@ export const packagesDir = path.relative(
   path.resolve(__dirname, '..', '..', 'packages'),
 )
 
-export function getAllPackageNames(): string[] {
+export function getAllPackageDirNames(): string[] {
   return fs.readdirSync(packagesDir).filter((name) => {
-    let dir = getPackageDir(name)
-    return fs.existsSync(dir) && fs.statSync(dir).isDirectory()
+    let packagePath = getPackagePath(name)
+    return fs.existsSync(packagePath) && fs.statSync(packagePath).isDirectory()
   })
 }
 
-export function getPackageDir(packageName: string): string {
-  return path.resolve(packagesDir, packageName)
+export function getPackagePath(packageDirName: string): string {
+  return path.resolve(packagesDir, packageDirName)
 }
 
-export function getPackageFile(packageName: string, filename: string): string {
-  return path.join(getPackageDir(packageName), filename)
+export function getPackageFile(packageDirName: string, filename: string): string {
+  return path.join(getPackagePath(packageDirName), filename)
+}
+
+/**
+ * Builds a mapping from npm package names to directory names by reading
+ * all package.json files in the packages directory.
+ */
+let getNpmPackageNameToDirectoryMap = (() => {
+  let map: Map<string, string> | null = null
+
+  return function getNpmPackageNameToDirectoryMap(): Map<string, string> {
+    if (map !== null) {
+      return map
+    }
+
+    map = new Map()
+    let dirNames = getAllPackageDirNames()
+
+    for (let dirName of dirNames) {
+      let packageJsonPath = getPackageFile(dirName, 'package.json')
+      if (fs.existsSync(packageJsonPath)) {
+        try {
+          let packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
+          if (typeof packageJson.name === 'string') {
+            map.set(packageJson.name, dirName)
+          }
+        } catch {
+          // Skip invalid package.json files
+        }
+      }
+    }
+
+    return map
+  }
+})()
+
+/**
+ * Converts an npm package name to the directory name in the packages folder.
+ * Returns null if no mapping is found.
+ *
+ * Examples:
+ *   "@remix-run/static-middleware" -> "static-middleware"
+ *   "remix" -> "remix"
+ */
+export function packageNameToDirectoryName(packageName: string): string | null {
+  return getNpmPackageNameToDirectoryMap().get(packageName) ?? null
 }
