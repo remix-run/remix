@@ -269,7 +269,7 @@ function toRegExp(tokens: Array<Token>, separator: '.' | '/' | ''): RegExp {
 
     if (token.type === ':') {
       result += `(?<v${token.nameIndex}>`
-      result += separator ? `[^${separator}]+` : `.+`
+      result += separator ? `[^${separator}]+?` : `.+?`
       result += `)`
       continue
     }
