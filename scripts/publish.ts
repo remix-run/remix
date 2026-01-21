@@ -83,10 +83,14 @@ function getRemixVersion(): string {
  */
 async function isVersionPublished(packageName: string, version: string): Promise<boolean> {
   return new Promise((resolve) => {
-    cp.exec(`npm view ${packageName}@${version} version`, { encoding: 'utf-8' }, (_error, stdout) => {
-      // If we get output that matches the version, it exists
-      resolve(stdout.trim() === version)
-    })
+    cp.exec(
+      `npm view ${packageName}@${version} version`,
+      { encoding: 'utf-8' },
+      (_error, stdout) => {
+        // If we get output that matches the version, it exists
+        resolve(stdout.trim() === version)
+      },
+    )
   })
 }
 
@@ -291,7 +295,9 @@ async function main() {
       console.log()
     }
 
-    console.log('🔍 Dry run complete. No packages published, no git tags or GitHub releases created.')
+    console.log(
+      '🔍 Dry run complete. No packages published, no git tags or GitHub releases created.',
+    )
     return
   }
 
