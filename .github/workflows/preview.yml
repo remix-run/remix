@@ -1,0 +1,47 @@
+# Create "installable" PR preview branches
+#
+#   pnpm install "remix-run/remix#pr/12345&path:packages/remix"
+
+name: Create PR Preview
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup git
+        run: |
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+
+      - name: Build installable branch
+        run: pnpm run setup-installable-branch pr/${{ github.event.pull_request.number }}
+
+      # - name: Push changes
+      #   run: |
+      #     git push --set-upstream origin pr/${{ github.event.pull_request.number }}
+      #     echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
