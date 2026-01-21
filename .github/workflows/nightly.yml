@@ -8,7 +8,7 @@
 # Can also be dispatched manually with base/installable branches to provide
 # `experimental` branches from PRs or otherwise
 
-name: 💿 Nightly/Installable Branch
+name: Create nightly/installable branch
 
 on:
   schedule:

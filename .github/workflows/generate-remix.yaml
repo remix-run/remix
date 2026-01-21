@@ -4,7 +4,7 @@
 
 # Note: Does not currently run on PRs from forked repos.
 
-name: 💿 Update Remix Package
+name: Update Remix package
 
 on:
   push:

@@ -1,4 +1,4 @@
-name: Changes Version PR
+name: Update "Version Packages" PR
 
 on:
   push:

@@ -1,3 +1,5 @@
+name: Type check, lint, validate change files
+
 on:
   push:
     branches:

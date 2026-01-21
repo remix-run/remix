@@ -9,7 +9,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   check:
-    name: Check
+    name: Check release readiness
     runs-on: ubuntu-latest
     outputs:
       has_change_files: ${{ steps.check.outputs.has_change_files }}
@@ -32,7 +32,7 @@ jobs:
           fi
 
   publish:
-    name: Publish to npm
+    name: Publish any unreleased packages
     needs: check
     if: needs.check.outputs.has_change_files == 'false'
     runs-on: ubuntu-latest
