@@ -1,16 +1,16 @@
 import * as fs from 'node:fs'
 import { parseAllChangeFiles, formatValidationErrors } from './utils/changes.ts'
 import { colors, colorize } from './utils/color.ts'
-import { getAllPackageNames, getPackageFile } from './utils/packages.ts'
+import { getAllPackageDirNames, getPackageFile } from './utils/packages.ts'
 
-function detectPackagesWithMissingChangelogs(): string[] {
-  let packageNames = getAllPackageNames()
+function getMissingChangelogPackageDirNames(): string[] {
+  let packageDirNames = getAllPackageDirNames()
   let missing: string[] = []
 
-  for (let packageName of packageNames) {
-    let changelogPath = getPackageFile(packageName, 'CHANGELOG.md')
+  for (let packageDirName of packageDirNames) {
+    let changelogPath = getPackageFile(packageDirName, 'CHANGELOG.md')
     if (!fs.existsSync(changelogPath)) {
-      missing.push(packageName)
+      missing.push(packageDirName)
     }
   }
 
@@ -26,13 +26,13 @@ function main() {
 
   // Validate all packages have changelogs
   console.log('Validating package changelogs...\n')
-  let packagesWithMissingChangelogs = detectPackagesWithMissingChangelogs()
+  let missingChangelogPackageDirNames = getMissingChangelogPackageDirNames()
 
-  if (packagesWithMissingChangelogs.length > 0) {
+  if (missingChangelogPackageDirNames.length > 0) {
     hasErrors = true
     console.error(colorize('Missing changelogs', colors.red) + '\n')
-    for (let packageName of packagesWithMissingChangelogs) {
-      console.error(`📦 ${packageName}: Missing CHANGELOG.md file`)
+    for (let packageDirName of missingChangelogPackageDirNames) {
+      console.error(`📦 ${packageDirName}: Missing CHANGELOG.md file`)
     }
     console.error()
   }

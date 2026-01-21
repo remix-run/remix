@@ -29,7 +29,7 @@ async function main() {
   if (!result.valid) {
     console.error('Validation errors found:')
     for (let error of result.errors) {
-      console.error(`  ${error.package}/${error.file}: ${error.error}`)
+      console.error(`  ${error.packageDirName}/${error.file}: ${error.error}`)
     }
     process.exit(1)
   }
@@ -120,10 +120,10 @@ async function main() {
     console.log(`\n✅ Created PR #${newPr.number}: ${newPr.html_url}`)
   }
 
-  // Set package labels
-  let packageNames = releases.map((r) => r.packageName)
-  console.log(`\nSetting labels: ${packageNames.map((p) => `pkg:${p}`).join(', ')}`)
-  await setPrPkgLabels(prNumber, packageNames)
+  // Set package labels (using directory names for cleaner labels)
+  let packageDirNames = releases.map((r) => r.packageDirName)
+  console.log(`\nSetting labels: ${packageDirNames.map((p) => `pkg:${p}`).join(', ')}`)
+  await setPrPkgLabels(prNumber, packageDirNames)
 }
 
 main().catch((error) => {

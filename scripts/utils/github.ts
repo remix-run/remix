@@ -37,7 +37,7 @@ export async function createRelease(
 
   let tagName = `${packageName}@${version}`
   let releaseName = `${packageName} v${version}`
-  let changes = getChangelogEntry(packageName, version)
+  let changes = getChangelogEntry({ packageName, version })
   let body = changes?.body ?? 'No changelog entry found for this version.'
 
   if (preview) {

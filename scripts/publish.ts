@@ -13,7 +13,9 @@
  *
  * Options:
  *   --skip-ci-check  Bypass the CI environment check
- *   --dry-run        Show what would be published without actually publishing
+ *   --dry-run        Show what would be published without actually publishing.
+ *                    Queries npm to determine unpublished packages and previews
+ *                    what the GitHub releases would look like.
  */
 import * as cp from 'node:child_process'
 import * as fs from 'node:fs'
@@ -22,7 +24,9 @@ import * as path from 'node:path'
 import { tagExists } from './utils/git.ts'
 import { createRelease } from './utils/github.ts'
 import { getRootDir, logAndExec } from './utils/process.ts'
-import { readRemixPrereleaseConfig } from './utils/changes.ts'
+import { readRemixPrereleaseConfig, getChangelogEntry } from './utils/changes.ts'
+import { getAllPackageDirNames, getPackageFile } from './utils/packages.ts'
+import { readJson, fileExists } from './utils/fs.ts'
 
 let rootDir = getRootDir()
 
@@ -72,6 +76,113 @@ function getRemixVersion(): string {
   let packageJsonPath = path.join(rootDir, 'packages', 'remix', 'package.json')
   let packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
   return packageJson.version
+}
+
+/**
+ * Check if a specific version of a package is published on npm.
+ */
+async function isVersionPublished(packageName: string, version: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    cp.exec(`npm view ${packageName}@${version} version`, { encoding: 'utf-8' }, (_error, stdout) => {
+      // If we get output that matches the version, it exists
+      resolve(stdout.trim() === version)
+    })
+  })
+}
+
+interface LocalPackage {
+  dirName: string
+  npmName: string
+  localVersion: string
+}
+
+/**
+ * Get all packages that have versions not yet published to npm.
+ */
+async function getUnpublishedPackages(): Promise<PublishedPackage[]> {
+  let packageDirNames = getAllPackageDirNames()
+
+  // Collect all local package info first
+  let localPackages: LocalPackage[] = []
+  for (let packageDirName of packageDirNames) {
+    let packageJsonPath = getPackageFile(packageDirName, 'package.json')
+
+    // Skip directories without a package.json
+    if (!fileExists(packageJsonPath)) {
+      continue
+    }
+
+    let packageJson = readJson(packageJsonPath)
+    localPackages.push({
+      dirName: packageDirName,
+      npmName: packageJson.name as string,
+      localVersion: packageJson.version as string,
+    })
+  }
+
+  // Query npm for all packages in parallel
+  let npmResults = await Promise.all(
+    localPackages.map(async (pkg) => ({
+      pkg,
+      isPublished: await isVersionPublished(pkg.npmName, pkg.localVersion),
+    })),
+  )
+
+  // Filter to unpublished packages
+  let unpublished: PublishedPackage[] = []
+  for (let { pkg, isPublished } of npmResults) {
+    if (!isPublished) {
+      unpublished.push({
+        packageName: pkg.npmName,
+        version: pkg.localVersion,
+        tag: `${pkg.npmName}@${pkg.localVersion}`,
+      })
+    }
+  }
+
+  return unpublished
+}
+
+interface ChangelogWarning {
+  packageName: string
+  version: string
+}
+
+/**
+ * Preview GitHub releases for packages that would be published.
+ * Returns warnings for packages with missing changelog entries.
+ */
+function previewGitHubReleases(packages: PublishedPackage[]): { warnings: ChangelogWarning[] } {
+  let warnings: ChangelogWarning[] = []
+
+  console.log('GitHub Release Preview')
+  console.log('═'.repeat(60))
+  console.log()
+
+  for (let pkg of packages) {
+    let tagName = `${pkg.packageName}@${pkg.version}`
+    let releaseName = `${pkg.packageName} v${pkg.version}`
+    let changes = getChangelogEntry({ packageName: pkg.packageName, version: pkg.version })
+    let body = changes?.body ?? 'No changelog entry found for this version.'
+
+    if (changes === null) {
+      warnings.push({ packageName: pkg.packageName, version: pkg.version })
+    }
+
+    console.log(`📦 ${releaseName}`)
+    console.log(`   Tag: ${tagName}`)
+    console.log()
+    console.log('   Release notes:')
+    console.log()
+    for (let line of body.split('\n')) {
+      console.log(`   ${line}`)
+    }
+    console.log()
+    console.log('─'.repeat(60))
+    console.log()
+  }
+
+  return { warnings }
 }
 
 async function main() {
@@ -141,11 +252,46 @@ async function main() {
     }
   }
 
-  // In dry run mode, we can't read the summary file since we didn't actually publish
+  // In dry run mode, query npm to determine what would be published
+  // and preview the GitHub releases. This is designed to be run against
+  // the contents of the "Version Packages" PR / `pnpm changes:version` output.
   if (dryRun) {
+    console.log('Checking npm for unpublished versions...\n')
+
+    let unpublished = await getUnpublishedPackages()
+
+    if (unpublished.length === 0) {
+      console.log('All package versions are already published to npm.')
+      console.log('\n🔍 Dry run complete.')
+      return
+    }
+
     console.log(
-      '🔍 Dry run complete. No packages published, no git tags or GitHub releases created.',
+      `${unpublished.length} package${unpublished.length === 1 ? '' : 's'} would be published:\n`,
     )
+    for (let pkg of unpublished) {
+      console.log(`  • ${pkg.packageName}@${pkg.version}`)
+    }
+    console.log()
+
+    let { warnings } = previewGitHubReleases(unpublished)
+
+    if (warnings.length > 0) {
+      console.log('⚠️  WARNINGS')
+      console.log('═'.repeat(60))
+      console.log()
+      console.log('The following packages have no changelog entry for their version:')
+      console.log()
+      for (let warning of warnings) {
+        console.log(`  • ${warning.packageName} v${warning.version}`)
+      }
+      console.log()
+      console.log('Their GitHub releases will show "No changelog entry found for this version."')
+      console.log('This may indicate a missing or malformed CHANGELOG.md entry.')
+      console.log()
+    }
+
+    console.log('🔍 Dry run complete. No packages published, no git tags or GitHub releases created.')
     return
   }
 

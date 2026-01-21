@@ -97,15 +97,15 @@ async function getRemixRunPackages() {
   console.log('🔍 Scanning packages...')
 
   // Get all packages except remix itself
-  let packageDirs = (await fs.readdir(packagesDir, { withFileTypes: true }))
+  let packageDirNames = (await fs.readdir(packagesDir, { withFileTypes: true }))
     .filter((dirent) => dirent.isDirectory() && dirent.name !== 'remix')
     .map((dirent) => dirent.name)
 
   let remixRunPackages: RemixRunPackage[] = []
 
   // Scan each package for its exports
-  for (let packageDir of packageDirs) {
-    let packageJsonPath = path.join(packagesDir, packageDir, 'package.json')
+  for (let packageDirName of packageDirNames) {
+    let packageJsonPath = path.join(packagesDir, packageDirName, 'package.json')
     let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
     let packageName = packageJson.name as string
 
@@ -148,7 +148,7 @@ async function getRemixRunPackages() {
       }
     }
 
-    let changesDir = path.join(packagesDir, packageDir, '.changes')
+    let changesDir = path.join(packagesDir, packageDirName, '.changes')
     try {
       let changeFiles = await fs.readdir(changesDir)
       for (let changeFile of changeFiles) {

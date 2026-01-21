@@ -110,9 +110,9 @@ async function updateGitignore() {
 async function updatePackageDependencies() {
   let packagesDir = path.join(process.cwd(), 'packages')
 
-  let packageDirs = await fsp.readdir(packagesDir, { withFileTypes: true })
+  let packageDirNames = await fsp.readdir(packagesDir, { withFileTypes: true })
 
-  for (let dir of packageDirs) {
+  for (let dir of packageDirNames) {
     if (!dir.isDirectory()) continue
 
     let packageJsonPath = path.join(packagesDir, dir.name, 'package.json')
@@ -134,9 +134,9 @@ async function updatePackageDependencies() {
     if (pkg.dependencies) {
       for (let name of Object.keys(pkg.dependencies)) {
         if (name.startsWith('@remix-run/')) {
-          let packageName = name.replace('@remix-run/', '')
+          let packageDirName = name.replace('@remix-run/', '')
           pkg.dependencies[name] =
-            `remix-run/remix#${installableBranch}&path:packages/${packageName}`
+            `remix-run/remix#${installableBranch}&path:packages/${packageDirName}`
         }
       }
     }
