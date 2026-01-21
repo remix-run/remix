@@ -246,6 +246,7 @@ export class PartPattern {
       if (prefix !== 'v' && prefix !== 'w') continue
       let type: ':' | '*' = prefix === 'v' ? ':' : '*'
       let span = reMatch.indices.groups[group]
+      if (span === undefined) continue
       match.push({
         type,
         name: this.paramNames[nameIndex],
