@@ -3,7 +3,7 @@ import * as Pathname from './pathname.ts'
 import * as Search from './search.ts'
 import { PartPattern } from '../part-pattern.ts'
 import { HrefError } from '../errors.ts'
-import type { Join, HrefArgs } from '../types/index.ts'
+import type { Join, HrefArgs, Params } from '../types/index.ts'
 
 type AST = {
   protocol: PartPattern
@@ -14,17 +14,17 @@ type AST = {
 }
 
 export namespace RoutePattern {
-  export type Match = {
+  export type Match<source extends string = string> = {
     pattern: RoutePattern
     url: URL
-    params: Record<string, string | undefined>
+    params: Params<source>
     meta: {
       hostname: PartPattern.Match
       pathname: PartPattern.Match
     }
   }
 }
-type Match = RoutePattern.Match
+type Match<source extends string> = RoutePattern.Match<source>
 
 export class RoutePattern<source extends string = string> {
   readonly ast: AST
@@ -141,7 +141,7 @@ export class RoutePattern<source extends string = string> {
     return result
   }
 
-  match(url: string | URL): Match | null {
+  match(url: string | URL): Match<source> | null {
     url = typeof url === 'string' ? new URL(url) : url
 
     let hostname: PartPattern.Match | null = null
@@ -188,7 +188,7 @@ export class RoutePattern<source extends string = string> {
       params[param.name] = param.value
     })
 
-    return { pattern: this, url, params, meta: { hostname: hostname ?? [], pathname } }
+    return { pattern: this, url, params: params as Params<source>, meta: { hostname: hostname ?? [], pathname } }
   }
 
   test(url: string | URL): boolean {
