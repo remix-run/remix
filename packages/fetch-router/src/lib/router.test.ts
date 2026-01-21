@@ -908,10 +908,10 @@ describe('custom matcher', () => {
     let matchAllCalls = 0
 
     // Create a custom matcher that tracks calls
-    class CustomMatcher extends ArrayMatcher<MatchData> {
-      *matchAll(url: string | URL) {
+    class CustomMatcher extends ArrayMatcher {
+      matchAll(url: string | URL) {
         matchAllCalls++
-        yield* super.matchAll(url)
+        return super.matchAll(url)
       }
     }
 
@@ -927,11 +927,11 @@ describe('custom matcher', () => {
   it('adds routes to the custom matcher', async () => {
     let addedPatterns: string[] = []
 
-    class CustomMatcher extends ArrayMatcher<MatchData> {
-      add<P extends string>(pattern: P | RoutePattern<P>, data: MatchData): void {
-        let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
-        addedPatterns.push(routePattern.source)
-        super.add(pattern, data)
+    class CustomMatcher extends ArrayMatcher {
+      add<P extends string>(pattern: P | RoutePattern<P>): void {
+        let routePattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
+        addedPatterns.push(routePattern.toString())
+        super.add(pattern)
       }
     }
 
@@ -940,6 +940,6 @@ describe('custom matcher', () => {
     router.get('/home', () => new Response('Home'))
     router.get('/about', () => new Response('About'))
 
-    assert.deepEqual(addedPatterns, ['/home', '/about'])
+    assert.deepEqual(addedPatterns, ['*://*/home', '*://*/about'])
   })
 })

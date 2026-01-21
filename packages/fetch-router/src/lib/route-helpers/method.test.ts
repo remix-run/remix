@@ -122,8 +122,8 @@ let composedRoutes = route({
     health: head('/api/health'),
     options: options('/api/settings'),
   },
-  patch: patch(new RoutePattern('/patch')),
-  put: put(new RoutePattern('/misc/put')),
+  patch: patch(RoutePattern.parse('/patch')),
+  put: put(RoutePattern.parse('/misc/put')),
 })
 
 type Tests = [
