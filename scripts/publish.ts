@@ -70,15 +70,6 @@ function readPublishSummary(): PublishedPackage[] {
 }
 
 /**
- * Read remix package version from package.json
- */
-function getRemixVersion(): string {
-  let packageJsonPath = path.join(rootDir, 'packages', 'remix', 'package.json')
-  let packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
-  return packageJson.version
-}
-
-/**
  * Check if a specific version of a package is published on npm.
  */
 async function isVersionPublished(packageName: string, version: string): Promise<boolean> {
@@ -223,36 +214,40 @@ async function main() {
   // Publish packages to npm
   console.log('Publishing packages to npm...\n')
 
+  let published: PublishedPackage[] = []
+
   if (remixPrereleaseTag) {
-    let commands = [
+    let publishCommands = [
       // Phase 1: Publish everything in `packages` except remix (with --report-summary so we know what was published)
       'pnpm publish --recursive --filter "./packages/*" --filter "!remix" --access public --no-git-checks --report-summary',
-      // Phase 2: Publish remix with prerelease tag (no --report-summary to preserve phase 1's file)
-      `pnpm publish --filter remix --tag ${remixPrereleaseTag} --access public --no-git-checks`,
+      // Phase 2: Publish remix with prerelease tag (with --report-summary so we know if remix was published)
+      `pnpm publish --filter remix --tag ${remixPrereleaseTag} --access public --no-git-checks --report-summary`,
     ]
 
     if (dryRun) {
       console.log('Would run:')
-      for (let command of commands) {
-        console.log(`  $ ${command}`)
+      for (let publishCommand of publishCommands) {
+        console.log(`  $ ${publishCommand}`)
       }
       console.log()
     } else {
-      for (let command of commands) {
-        logAndExec(command)
+      for (let publishCommand of publishCommands) {
+        logAndExec(publishCommand)
+        published.push(...readPublishSummary())
       }
     }
   } else {
     // Single-phase publish: everything as latest
-    let command =
+    let publishCommand =
       'pnpm publish --recursive --filter "./packages/*" --access public --no-git-checks --report-summary'
 
     if (dryRun) {
       console.log('Would run:')
-      console.log(`  $ ${command}`)
+      console.log(`  $ ${publishCommand}`)
       console.log()
     } else {
-      logAndExec(command)
+      logAndExec(publishCommand)
+      published.push(...readPublishSummary())
     }
   }
 
@@ -299,19 +294,6 @@ async function main() {
       '🔍 Dry run complete. No packages published, no git tags or GitHub releases created.',
     )
     return
-  }
-
-  // Read the summary file to find what was published
-  let published = readPublishSummary()
-
-  // If remix was published separately (prerelease mode), add it to the list
-  if (remixPrereleaseTag) {
-    let remixVersion = getRemixVersion()
-    published.push({
-      packageName: 'remix',
-      version: remixVersion,
-      tag: `remix@${remixVersion}`,
-    })
   }
 
   if (published.length === 0) {
