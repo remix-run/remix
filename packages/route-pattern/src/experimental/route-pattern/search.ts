@@ -104,7 +104,7 @@ export function join(a: Constraints, b: Constraints): Constraints {
   return result
 }
 
-export type HrefParams = Record<string, string | number | Array<string | number>>
+export type HrefParams = Record<string, string | number | null | undefined | Array<string | number | null | undefined>>
 
 export function toString(constraints: Constraints): string | undefined {
   if (constraints.size === 0) {
@@ -140,9 +140,11 @@ export function href(pattern: RoutePattern, params: HrefParams): string | undefi
   for (let [key, value] of Object.entries(params)) {
     if (Array.isArray(value)) {
       for (let v of value) {
-        urlSearchParams.append(key, String(v))
+        if (v != null) {
+          urlSearchParams.append(key, String(v))
+        }
       }
-    } else {
+    } else if (value != null) {
       urlSearchParams.append(key, String(value))
     }
   }
