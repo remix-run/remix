@@ -29,8 +29,19 @@ type Match = RoutePattern.Match
 export class RoutePattern<source extends string = string> {
   readonly ast: AST
 
+  readonly #isDefault: {
+    protocol: boolean
+    hostname: boolean
+    port: boolean
+  }
+
   private constructor(ast: AST) {
     this.ast = ast
+    this.#isDefault = {
+      protocol: isNamelessWildcard(ast.protocol),
+      hostname: isNamelessWildcard(ast.hostname),
+      port: ast.port === null,
+    }
   }
 
   static parse<source extends string>(source: source): RoutePattern<source> {
@@ -84,8 +95,8 @@ export class RoutePattern<source extends string = string> {
 
   join<other extends string>(other: RoutePattern<other>): RoutePattern<Join<source, other>> {
     return new RoutePattern({
-      protocol: isNamelessWildcard(other.ast.protocol) ? this.ast.protocol : other.ast.protocol,
-      hostname: isNamelessWildcard(other.ast.hostname) ? this.ast.hostname : other.ast.hostname,
+      protocol: other.#isDefault.protocol ? this.ast.protocol : other.ast.protocol,
+      hostname: other.#isDefault.hostname ? this.ast.hostname : other.ast.hostname,
       port: other.ast.port ?? this.ast.port,
       pathname: Pathname.join(this.ast.pathname, other.ast.pathname),
       search: Search.join(this.ast.search, other.ast.search),
@@ -97,19 +108,16 @@ export class RoutePattern<source extends string = string> {
     params ??= {}
     searchParams ??= {}
 
-    let isDefaultProtocol = isNamelessWildcard(this.ast.protocol)
-    let isDefaultHostname = isNamelessWildcard(this.ast.hostname)
-    let isDefaultPort = this.ast.port === null
 
     let result = ''
 
-    let needsOrigin = !isDefaultProtocol || !isDefaultHostname || !isDefaultPort
+    let needsOrigin = !this.#isDefault.protocol || !this.#isDefault.hostname || !this.#isDefault.port
     if (needsOrigin) {
       // protocol
-      let protocol = isDefaultProtocol ? 'https' : hrefOrThrow(this, 'protocol', params)
+      let protocol = this.#isDefault.protocol ? 'https' : hrefOrThrow(this, 'protocol', params)
 
       // hostname
-      if (isDefaultHostname) {
+      if (this.#isDefault.hostname) {
         throw new HrefError({
           type: 'missing-hostname',
           pattern: this,
@@ -118,7 +126,7 @@ export class RoutePattern<source extends string = string> {
       let hostname = hrefOrThrow(this, 'hostname', params)
 
       // port
-      let port = isDefaultPort ? '' : `:${this.ast.port}`
+      let port = this.#isDefault.port ? '' : `:${this.ast.port}`
       result += `${protocol}://${hostname}${port}`
     }
 
@@ -136,15 +144,21 @@ export class RoutePattern<source extends string = string> {
   match(url: string | URL): Match | null {
     url = typeof url === 'string' ? new URL(url) : url
 
-    // url.protocol: remove trailing colon
-    let protocol = this.ast.protocol.match(url.protocol.slice(0, -1))
-    if (protocol === null) return null
+    let hostname: PartPattern.Match | null = null
+    if (!this.#isDefault.protocol || !this.#isDefault.hostname || !this.#isDefault.port) {
+      // url.protocol: remove trailing colon
+      let protocol = this.ast.protocol.match(url.protocol.slice(0, -1))
+      if (protocol === null) return null
 
-    let hostname = this.ast.hostname.match(url.hostname)
-    if (hostname === null) return null
+      hostname = this.ast.hostname.match(url.hostname)
+      if (hostname === null) return null
 
-    // url.port: '' means no port
-    if ((url.port || null) !== this.ast.port) return null
+      // url.port: '' means no port
+      if ((url.port || null) !== this.ast.port) return null
+    }
+
+
+
 
     // url.pathname: remove leading slash
     let pathname = this.ast.pathname.match(url.pathname.slice(1))
@@ -159,7 +173,7 @@ export class RoutePattern<source extends string = string> {
       if (name === '*') return
       params[name] = undefined
     })
-    hostname.forEach((param) => {
+    hostname?.forEach((param) => {
       if (param.name === '*') return
       params[param.name] = param.value
     })
@@ -174,7 +188,7 @@ export class RoutePattern<source extends string = string> {
       params[param.name] = param.value
     })
 
-    return { pattern: this, url, params, meta: { hostname, pathname } }
+    return { pattern: this, url, params, meta: { hostname: hostname ?? [], pathname } }
   }
 
   test(url: string | URL): boolean {
