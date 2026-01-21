@@ -93,7 +93,8 @@ export class RoutePattern<source extends string = string> {
     return result
   }
 
-  join<other extends string>(other: RoutePattern<other>): RoutePattern<Join<source, other>> {
+  join<other extends string>(other: other | RoutePattern<other>): RoutePattern<Join<source, other>> {
+    other = typeof other === 'string' ? RoutePattern.parse(other) : other
     return new RoutePattern({
       protocol: other.#isDefault.protocol ? this.ast.protocol : other.ast.protocol,
       hostname: other.#isDefault.hostname ? this.ast.hostname : other.ast.hostname,
