@@ -366,5 +366,25 @@ describe('PartPattern', () => {
         { type: '*', name: 'path', value: 'd', begin: 6, end: 7 },
       ])
     })
+
+    test('optional parameter when present', () => {
+      assertMatch('api(/:version)', 'api/v1', [
+        { type: ':', name: 'version', value: 'v1', begin: 4, end: 6 },
+      ])
+    })
+
+    test('optional parameter when absent', () => {
+      assertMatch('api(/:version)', 'api', [])
+    })
+
+    test('nested optional parameters when partially present', () => {
+      assertMatch('api(/:major(/:minor))', 'api/v2', [
+        { type: ':', name: 'major', value: 'v2', begin: 4, end: 6 },
+      ])
+    })
+
+    test('nested optional parameters when all absent', () => {
+      assertMatch('api(/:major(/:minor))', 'api', [])
+    })
   })
 })
