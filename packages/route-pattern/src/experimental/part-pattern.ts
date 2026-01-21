@@ -246,6 +246,7 @@ export class PartPattern {
       if (prefix !== 'v' && prefix !== 'w') continue
       let type: ':' | '*' = prefix === 'v' ? ':' : '*'
       let span = reMatch.indices.groups[group]
+      if (span === undefined) continue
       match.push({
         type,
         name: this.paramNames[nameIndex],
@@ -268,7 +269,7 @@ function toRegExp(tokens: Array<Token>, separator: '.' | '/' | ''): RegExp {
 
     if (token.type === ':') {
       result += `(?<v${token.nameIndex}>`
-      result += separator ? `[^${separator}]+` : `.+`
+      result += separator ? `[^${separator}]+?` : `.+?`
       result += `)`
       continue
     }
