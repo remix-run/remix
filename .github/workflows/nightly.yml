@@ -3,10 +3,10 @@
 # Primarily used via the `schedule` trigger to update the `nightly` branch with a
 # fresh build from `main` that can be used via direct pnpm install:
 #
-#   pnpm i "remix-run/remix#nightly&path:packages/remix"
+#   pnpm install "remix-run/remix#nightly&path:packages/remix"
 #
 # Can also be dispatched manually with base/installable branches to provide
-# `experimental` branches from PRs or otherwise
+# `experimental` branches from PRs or otherwise.
 
 name: Create nightly/installable branch
 
@@ -57,5 +57,5 @@ jobs:
 
       - name: Push changes
         run: |
-          git push --set-upstream origin ${{ inputs.installableBranch || 'nightly' }}
-          echo "💿 pushed updates: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
+          git push --force --set-upstream origin ${{ inputs.installableBranch || 'nightly' }}
+          echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
