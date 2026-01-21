@@ -3,7 +3,7 @@
  * 1. Scanning all @remix-run/* packages in packages/ directory
  * 2. Creating source files that re-export from each package and sub-export
  * 3. Generating exports configuration in package.json
- * 4. Setting up peerDependencies for all referenced packages
+ * 4. Setting up dependencies for all referenced packages
  *
  * Run: node docs/generate-remix.ts
  */
@@ -56,30 +56,30 @@ lintRemixPackage(true)
 console.log('📦 Updating package.json...')
 let remixPackageJson = JSON.parse(await fs.readFile(remixPackageJsonPath, 'utf-8'))
 
-// Track existing exports and peerDependencies for comparison
+// Track existing exports and dependencies for comparison
 let existingInfo = {
   exports: new Set<string>(
     Object.keys(remixPackageJson.exports || {}).filter(
       (key) => key !== '.' && key !== './package.json',
     ),
   ),
-  peerDependencies: new Set<string>(Object.keys(remixPackageJson.peerDependencies || {})),
+  dependencies: new Set<string>(Object.keys(remixPackageJson.dependencies || {})),
 }
 
-// Build exports/publishConfig.exports/peerDependencies
+// Build exports/publishConfig.exports/dependencies
 let { exportsConfig, publishConfigExports } = getRemixExports()
-let peerDependencies = getRemixPeerDependencies()
+let remixDependencies = getRemixDependencies()
 
 // Update package.json
 remixPackageJson.exports = exportsConfig
 remixPackageJson.publishConfig.exports = publishConfigExports
-remixPackageJson.peerDependencies = peerDependencies
+remixPackageJson.dependencies = remixDependencies
 
 await fs.writeFile(remixPackageJsonPath, JSON.stringify(remixPackageJson, null, 2) + '\n', 'utf-8')
 
 // Generate change summary
 await outputExportsChanges()
-await outputPeerDependencyChanges()
+await outputDependencyChanges()
 
 //  Copy change files up to remix changes directory
 if (GENERATE_CHANGE_FILES) {
@@ -216,12 +216,12 @@ function getRemixExports() {
   return { exportsConfig, publishConfigExports }
 }
 
-function getRemixPeerDependencies() {
-  let peerDependencies: Record<string, string> = {}
+function getRemixDependencies() {
+  let dependencies: Record<string, string> = {}
   for (let packageInfo of remixRunPackages) {
-    peerDependencies[packageInfo.name] = 'workspace:^'
+    dependencies[packageInfo.name] = 'workspace:^'
   }
-  return peerDependencies
+  return dependencies
 }
 
 // Build exports change summary
@@ -288,52 +288,48 @@ async function outputExportsChanges() {
   }
 }
 
-// Build peerDependencies/publishConfig.peerDependencies change summary
-async function outputPeerDependencyChanges() {
-  let newPeerDepsSet = new Set<string>(Object.keys(peerDependencies))
-  let addedPeerDeps = Array.from(newPeerDepsSet).filter(
-    (key) => !existingInfo.peerDependencies.has(key),
-  )
-  let removedPeerDeps = Array.from(existingInfo.peerDependencies).filter(
-    (key) => !newPeerDepsSet.has(key),
-  )
+// Build dependencies change summary
+async function outputDependencyChanges() {
+  let newDepsSet = new Set<string>(Object.keys(remixDependencies))
+  let addedDeps = Array.from(newDepsSet).filter((key) => !existingInfo.dependencies.has(key))
+  let removedDeps = Array.from(existingInfo.dependencies).filter((key) => !newDepsSet.has(key))
 
-  if (addedPeerDeps.length === 0 && removedPeerDeps.length === 0) {
+  if (addedDeps.length === 0 && removedDeps.length === 0) {
     return
   }
 
-  let semverType = removedPeerDeps.length > 0 ? 'major' : 'minor'
+  let semverType = removedDeps.length > 0 ? 'major' : 'minor'
   let changeFile = path.join(
     `${remixDir}`,
     '.changes',
-    `${semverType}.update-peer-dependencies-${Date.now()}.md`,
+    `${semverType}.update-dependencies-${Date.now()}.md`,
   )
   let changes = ''
 
-  if (removedPeerDeps.length > 0) {
+  if (removedDeps.length > 0) {
     console.log()
-    console.log('⚠️ Removed peerDependencies:')
-    changes += 'Removed `peerDependencies`:\n'
-    for (let peerDep of removedPeerDeps) {
-      console.log(`   - ${peerDep}`)
-      changes += ` - \`${peerDep}\`\n`
+    console.log('⚠️ Removed dependencies:')
+    changes += 'Removed `dependencies`:\n'
+    for (let dep of removedDeps) {
+      console.log(`   - ${dep}`)
+      changes += ` - \`${dep}\`\n`
     }
   }
 
-  if (addedPeerDeps.length > 0) {
+  if (addedDeps.length > 0) {
     console.log()
-    console.log('✨ Added peerDependencies:')
-    changes += 'Added `peerDependencies`:\n'
-    for (let peerDep of addedPeerDeps) {
-      console.log(`   - ${peerDep}`)
-      changes += ` - \`${peerDep}\`\n`
+    console.log('✨ Added dependencies:')
+    changes += 'Added `dependencies`:\n'
+    for (let dep of addedDeps) {
+      console.log(`   - ${dep}`)
+      changes += ` - \`${dep}\`\n`
     }
   }
 
   if (GENERATE_CHANGE_FILES) {
     await fs.writeFile(changeFile, changes, 'utf-8')
     console.log()
-    console.log('✨ Created peerDependencies change file:')
+    console.log('✨ Created dependencies change file:')
     console.log(`   - ${path.relative(process.cwd(), changeFile)}`)
   }
 }

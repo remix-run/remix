@@ -17,13 +17,10 @@ import { logAndExec } from './utils/process.ts'
  *  - Checks out the new branch and resets it to the base (current) branch
  *  - Runs a build
  *  - Removes `dist/` from `.gitignore`
- *  - Moves all `@remix-run/*` peerDeps up to normal deps to get past any peerDep
- *    warnings on install
  *  - Updates all internal `@remix-run/*` deps to use the github format for the
  *    given installable branch
  *  - Copies all `publishConfig`'s down so we get `exports` from `dist/` instead of `src/`
  *  - Commits the changes
- *
  *
  * Then, after pushing, `pnpm install "remix-run/remix#nightly&path:packages/remix"`
  * sees the `remix` nested deps and they all point to github with similar URLs so
@@ -119,17 +116,6 @@ async function updatePackageDependencies() {
     let content = await fsp.readFile(packageJsonPath, 'utf-8')
     let pkg = JSON.parse(content)
 
-    // To avoid any peerDep warnings, move any `@remix-run/` peerDeps to deps
-    if (pkg.peerDependencies) {
-      for (let name of Object.keys(pkg.peerDependencies)) {
-        if (name.startsWith('@remix-run/')) {
-          if (!pkg.dependencies) pkg.dependencies = {}
-          pkg.dependencies[name] = pkg.peerDependencies[name]
-          delete pkg.peerDependencies[name]
-        }
-      }
-    }
-
     // Point all `@remix-run/` dependencies to this branch on github
     if (pkg.dependencies) {
       for (let name of Object.keys(pkg.dependencies)) {
@@ -143,10 +129,6 @@ async function updatePackageDependencies() {
 
     // Apply `publishConfig` overrides
     if (pkg.publishConfig) {
-      if (pkg.name === 'remix' && pkg.publishConfig.peerDependencies) {
-        // Delete these from the remix package if they exist
-        delete pkg.publishConfig.peerDependencies
-      }
       Object.assign(pkg, pkg.publishConfig)
       delete pkg.publishConfig
     }
