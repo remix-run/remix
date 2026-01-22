@@ -1,6 +1,5 @@
 import { bench, describe } from 'vitest'
 import { ArrayMatcher } from '../src'
-import { TrieMatcher } from '../src/lib/matchers/trie.ts'
 
 let routes = [
   '/',
@@ -109,7 +108,6 @@ let urls = [
 ]
 
 let matchers = [
-  { name: 'trie', matcher: new TrieMatcher() },
   { name: 'array', matcher: new ArrayMatcher() },
 ]
 
@@ -117,7 +115,7 @@ describe('setup', () => {
   for (let { name, matcher } of matchers) {
     bench(name, () => {
       for (let route of routes) {
-        matcher.add(route, {})
+        matcher.add(route)
       }
     })
   }

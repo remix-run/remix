@@ -1,6 +1,5 @@
 import { bench, describe } from 'vitest'
 import { ArrayMatcher } from '../src'
-import { TrieMatcher } from '../src/lib/matchers/trie.ts'
 
 function generateRoutes(): string[] {
   let routes: string[] = []
@@ -115,14 +114,13 @@ let urls = [
 ]
 
 let matchers = [
-  { name: 'trie', matcher: new TrieMatcher() },
   { name: 'array', matcher: new ArrayMatcher() },
 ]
 
 describe('setup', () => {
   for (let { name, matcher } of matchers) {
     bench(name, () => {
-      routes.forEach((route) => matcher.add(route, {}))
+      routes.forEach((route) => matcher.add(route))
     })
   }
 })
