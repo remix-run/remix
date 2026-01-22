@@ -56,15 +56,12 @@ lintRemixPackage(true)
 console.log('📦 Updating package.json...')
 let remixPackageJson = JSON.parse(await fs.readFile(remixPackageJsonPath, 'utf-8'))
 
-// Track existing exports and dependencies for comparison
-let existingInfo = {
-  exports: new Set<string>(
-    Object.keys(remixPackageJson.exports || {}).filter(
-      (key) => key !== '.' && key !== './package.json',
-    ),
+// Track existing exports for comparison
+let existingExports = new Set<string>(
+  Object.keys(remixPackageJson.exports || {}).filter(
+    (key) => key !== '.' && key !== './package.json',
   ),
-  dependencies: new Set<string>(Object.keys(remixPackageJson.dependencies || {})),
-}
+)
 
 // Build exports/publishConfig.exports/dependencies
 let { exportsConfig, publishConfigExports } = getRemixExports()
@@ -79,7 +76,6 @@ await fs.writeFile(remixPackageJsonPath, JSON.stringify(remixPackageJson, null, 
 
 // Generate change summary
 await outputExportsChanges()
-await outputDependencyChanges()
 
 //  Copy change files up to remix changes directory
 if (GENERATE_CHANGE_FILES) {
@@ -229,8 +225,8 @@ async function outputExportsChanges() {
   let newExportsSet = new Set<string>(
     Object.keys(exportsConfig).filter((key) => key !== '.' && key !== './package.json'),
   )
-  let addedExports = Array.from(newExportsSet).filter((key) => !existingInfo.exports.has(key))
-  let removedExports = Array.from(existingInfo.exports).filter((key) => !newExportsSet.has(key))
+  let addedExports = Array.from(newExportsSet).filter((key) => !existingExports.has(key))
+  let removedExports = Array.from(existingExports).filter((key) => !newExportsSet.has(key))
 
   if (addedExports.length === 0 && removedExports.length === 0) {
     return
@@ -284,52 +280,6 @@ async function outputExportsChanges() {
     await fs.writeFile(changeFile, changes, 'utf-8')
     console.log()
     console.log('✨ Created exports change file:')
-    console.log(`   - ${path.relative(process.cwd(), changeFile)}`)
-  }
-}
-
-// Build dependencies change summary
-async function outputDependencyChanges() {
-  let newDepsSet = new Set<string>(Object.keys(remixDependencies))
-  let addedDeps = Array.from(newDepsSet).filter((key) => !existingInfo.dependencies.has(key))
-  let removedDeps = Array.from(existingInfo.dependencies).filter((key) => !newDepsSet.has(key))
-
-  if (addedDeps.length === 0 && removedDeps.length === 0) {
-    return
-  }
-
-  let semverType = removedDeps.length > 0 ? 'major' : 'minor'
-  let changeFile = path.join(
-    `${remixDir}`,
-    '.changes',
-    `${semverType}.update-dependencies-${Date.now()}.md`,
-  )
-  let changes = ''
-
-  if (removedDeps.length > 0) {
-    console.log()
-    console.log('⚠️ Removed dependencies:')
-    changes += 'Removed `dependencies`:\n'
-    for (let dep of removedDeps) {
-      console.log(`   - ${dep}`)
-      changes += ` - \`${dep}\`\n`
-    }
-  }
-
-  if (addedDeps.length > 0) {
-    console.log()
-    console.log('✨ Added dependencies:')
-    changes += 'Added `dependencies`:\n'
-    for (let dep of addedDeps) {
-      console.log(`   - ${dep}`)
-      changes += ` - \`${dep}\`\n`
-    }
-  }
-
-  if (GENERATE_CHANGE_FILES) {
-    await fs.writeFile(changeFile, changes, 'utf-8')
-    console.log()
-    console.log('✨ Created dependencies change file:')
     console.log(`   - ${path.relative(process.cwd(), changeFile)}`)
   }
 }

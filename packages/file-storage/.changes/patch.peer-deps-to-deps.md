@@ -1,1 +1,1 @@
-Changed Remix peer dependencies to normal dependencies
+Changed `@remix-run/*` peer dependencies to regular dependencies
