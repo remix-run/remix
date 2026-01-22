@@ -1,4 +1,4 @@
-import { type Matcher, ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { ArrayMatcher, RoutePattern, type Matcher } from '@remix-run/route-pattern'
 
 import { type Middleware, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
@@ -54,7 +54,7 @@ export interface RouterOptions {
    *
    * @default `new ArrayMatcher()`
    */
-  matcher?: Matcher<MatchData>
+  matcher?: Matcher
   /**
    * Global middleware to run for all routes. This middleware runs on every request before any
    * routes are matched.
@@ -74,10 +74,6 @@ export interface Router {
    * @returns The response from the route that matched the request
    */
   fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>
-  /**
-   * The number of routes in the router.
-   */
-  readonly size: number
   /**
    * Add a route to the router.
    *
@@ -181,17 +177,19 @@ function noMatchHandler({ url }: RequestContext): Response {
  */
 export function createRouter(options?: RouterOptions): Router {
   let defaultHandler = options?.defaultHandler ?? noMatchHandler
-  let matcher = options?.matcher ?? new ArrayMatcher<MatchData>()
+  let matcher = options?.matcher ?? new ArrayMatcher()
   let globalMiddleware = options?.middleware
+  let routeData = new WeakMap<RoutePattern, Map<RequestMethod | 'ANY', MatchData>>()
 
   function dispatch(context: RequestContext): Promise<Response> {
     for (let match of matcher.matchAll(context.url)) {
-      let { handler, method, middleware } = match.data
-
-      if (method !== context.method && method !== 'ANY') {
-        // Request method does not match, continue to next match
-        continue
-      }
+      let methodMap = routeData.get(match.pattern)
+      if (!methodMap) continue
+      
+      let data = methodMap.get(context.method) ?? methodMap.get('ANY')
+      if (!data) continue
+      
+      let { handler, middleware } = data
 
       context.params = match.params
 
@@ -219,7 +217,16 @@ export function createRouter(options?: RouterOptions): Router {
       requestHandler = action as RequestHandler<any, any>
     }
 
-    matcher.add(route instanceof Route ? route.pattern : route, {
+    let pattern = route instanceof Route ? route.pattern : route
+    let parsedPattern = pattern instanceof RoutePattern ? pattern : RoutePattern.parse(pattern)
+    
+    let methodMap = routeData.get(parsedPattern)
+    if (!methodMap) {
+      methodMap = new Map()
+      routeData.set(parsedPattern, methodMap)
+      matcher.add(parsedPattern)
+    }
+    methodMap.set(method, {
       handler: requestHandler,
       method,
       middleware,
@@ -311,9 +318,6 @@ export function createRouter(options?: RouterOptions): Router {
       }
 
       return dispatch(context)
-    },
-    get size(): number {
-      return matcher.size
     },
     route: addRoute,
     map: mapRoutes,

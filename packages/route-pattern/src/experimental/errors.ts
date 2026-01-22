@@ -1,4 +1,5 @@
 import type { RoutePattern } from './route-pattern/route-pattern.ts'
+import type * as Search from './route-pattern/search.ts'
 
 type ParseErrorType = 'unmatched (' | 'unmatched )' | 'missing variable name' | 'dangling escape'
 
@@ -34,7 +35,7 @@ type HrefErrorDetails =
       type: 'missing-search-params'
       pattern: RoutePattern
       missingParams: string[]
-      searchParams: Record<string, string | number | Array<string | number>>
+      searchParams: Search.HrefParams
     }
   | {
       type: 'nameless-wildcard'
