@@ -1,5 +1,5 @@
 /**
- * PR Preview Script (test)
+ * PR Preview Script
  *
  * This script manages preview builds for pull requests by:
  * - Creating comments on PRs with installation instructions for preview builds
