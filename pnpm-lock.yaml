@@ -161,10 +161,11 @@ importers:
         version: 0.28.15(typescript@5.9.3)
 
   packages/async-context-middleware:
-    devDependencies:
+    dependencies:
       '@remix-run/fetch-router':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../fetch-router
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -310,16 +311,17 @@ importers:
         version: 0.25.12
 
   packages/compression-middleware:
-    devDependencies:
+    dependencies:
       '@remix-run/fetch-router':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../fetch-router
       '@remix-run/mime':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../mime
       '@remix-run/response':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../response
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -358,10 +360,10 @@ importers:
       '@remix-run/route-pattern':
         specifier: workspace:^
         version: link:../route-pattern
-    devDependencies:
       '@remix-run/session':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../session
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -497,13 +499,14 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/form-data-middleware:
-    devDependencies:
+    dependencies:
       '@remix-run/fetch-router':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../fetch-router
       '@remix-run/form-data-parser':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../form-data-parser
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -631,10 +634,11 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/logger-middleware:
-    devDependencies:
+    dependencies:
       '@remix-run/fetch-router':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../fetch-router
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -643,10 +647,11 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/method-override-middleware:
-    devDependencies:
+    dependencies:
       '@remix-run/fetch-router':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../fetch-router
+    devDependencies:
       '@remix-run/form-data-middleware':
         specifier: workspace:*
         version: link:../form-data-middleware
@@ -902,13 +907,13 @@ importers:
       '@remix-run/html-template':
         specifier: workspace:^
         version: link:../html-template
+      '@remix-run/mime':
+        specifier: workspace:^
+        version: link:../mime
     devDependencies:
       '@remix-run/lazy-file':
         specifier: workspace:*
         version: link:../lazy-file
-      '@remix-run/mime':
-        specifier: workspace:*
-        version: link:../mime
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -947,19 +952,20 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/session-middleware:
-    devDependencies:
+    dependencies:
       '@remix-run/cookie':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../cookie
       '@remix-run/fetch-router':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../fetch-router
+      '@remix-run/session':
+        specifier: workspace:^
+        version: link:../session
+    devDependencies:
       '@remix-run/headers':
         specifier: workspace:*
         version: link:../headers
-      '@remix-run/session':
-        specifier: workspace:*
-        version: link:../session
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -969,28 +975,28 @@ importers:
 
   packages/static-middleware:
     dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
       '@remix-run/fs':
         specifier: workspace:^
         version: link:../fs
       '@remix-run/html-template':
         specifier: workspace:^
         version: link:../html-template
+      '@remix-run/mime':
+        specifier: workspace:^
+        version: link:../mime
+      '@remix-run/response':
+        specifier: workspace:^
+        version: link:../response
     devDependencies:
-      '@remix-run/fetch-router':
-        specifier: workspace:*
-        version: link:../fetch-router
       '@remix-run/form-data-middleware':
         specifier: workspace:*
         version: link:../form-data-middleware
       '@remix-run/method-override-middleware':
         specifier: workspace:*
         version: link:../method-override-middleware
-      '@remix-run/mime':
-        specifier: workspace:*
-        version: link:../mime
-      '@remix-run/response':
-        specifier: workspace:*
-        version: link:../response
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4

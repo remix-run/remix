@@ -35,7 +35,7 @@
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
-  "peerDependencies": {
+  "dependencies": {
     "@remix-run/headers": "workspace:^"
   },
   "scripts": {
