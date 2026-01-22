@@ -7,6 +7,7 @@ import { createHtmlResponse } from '@remix-run/response/html'
 import { staticFiles } from '@remix-run/static-middleware'
 import * as frontmatter from 'front-matter'
 import { marked } from 'marked'
+import { handleChatRequest } from './lib/chat-handler.ts'
 
 // No types exist for the `frontmatter` package
 const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
@@ -21,6 +22,10 @@ const docFiles = await discoverMarkdownFiles(path.resolve(REPO_DIR, 'docs', 'api
 const routes = route({
   home: '/',
   api: '/api/*path',
+  chat: {
+    method: 'POST',
+    pattern: '/chat',
+  }
 })
 
 const router = createRouter({
@@ -42,6 +47,7 @@ router.map(routes, {
 
     return render(await renderMarkdownFile(docFile.path))
   },
+  chat: ({ request }) => handleChatRequest(request),
 })
 
 function Home() {
@@ -75,6 +81,7 @@ function Layout() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Remix API Documentation</title>
         <link href="/docs.css" rel="stylesheet" />
+        <link href="/chat.css" rel="stylesheet" />
       </head>
       <body>
         <div class="container">
@@ -86,6 +93,8 @@ function Layout() {
             <div class="content">{children}</div>
           </main>
         </div>
+        <ChatModal />
+        <script src="/chat-client.js"></script>
       </body>
     </html>
   )
@@ -133,6 +142,46 @@ function SideBarNavGroup() {
           </li>
         ))}
       </ul>
+    </div>
+  )
+}
+
+function ChatModal() {
+  return () => (
+    <div class="chat-modal" id="chatModal">
+      <div class="chat-container">
+        <div class="chat-header">
+          <h2>Remix AI Assistant</h2>
+          <button class="chat-close" id="chatClose" aria-label="Close chat">
+            ×
+          </button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-message assistant">
+            <div class="chat-message-role">Assistant</div>
+            <div class="chat-message-content">
+              Hi! I'm here to help you with Remix. Ask me anything about the framework, and I'll
+              search through the documentation, source code, and examples to find the answer.
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-container">
+          <form class="chat-input-form" id="chatForm">
+            <textarea
+              class="chat-input"
+              id="chatInput"
+              placeholder="Ask a question about Remix..."
+              rows={1}
+            ></textarea>
+            <button type="submit" class="chat-send-button" id="chatSend">
+              Send
+            </button>
+          </form>
+          <div class="chat-help-text">
+            Press <kbd>Cmd+K</kbd> or <kbd>Ctrl+K</kbd> to open chat, <kbd>Escape</kbd> to close
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
