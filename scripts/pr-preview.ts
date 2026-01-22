@@ -76,27 +76,29 @@ This preview build will be updated automatically as you push new commits.`
 
   // Only add a comment if one doesn't already exist
   let stickyComment = comments.find((comment) => comment.body?.includes(STICKY_MARKER))
-  if (!stickyComment) {
+  if (stickyComment) {
+    console.log('Preview comment already exists, skipping creation')
+  } else {
+    console.log('Adding preview comment to PR')
     await createPrComment(prNumber, commentBody)
   }
 
   // Delete cleanup comment if it exists
   let cleanupComment = comments.find((comment) => comment.body?.includes(CLEANUP_MARKER))
   if (cleanupComment) {
+    console.log('Deleting existing cleanup comment')
     await deletePrComment(cleanupComment.id)
   }
-
-  console.log(`Added preview comment to PR #${prNumber}`)
 }
 
 async function cleanup() {
+  console.log(`Deleted branch: ${branch}`)
   await logAndExec(`git push --delete origin ${branch}`)
 
   let commentBody = `\
 ${CLEANUP_MARKER}
 The preview branch (\`${branch}\`) has been deleted now that this PR is merged/closed.`
 
+  console.log('Adding cleanup comment to PR')
   await createPrComment(prNumber, commentBody)
-
-  console.log(`Deleted branch: ${branch}`)
 }
