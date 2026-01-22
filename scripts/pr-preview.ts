@@ -1,3 +1,19 @@
+/**
+ * PR Preview Script
+ *
+ * This script manages preview builds for pull requests by:
+ * - Creating comments on PRs with installation instructions for preview builds
+ * - Cleaning up preview branches when PRs are merged or closed
+ *
+ * Commands:
+ * - `comment <pr-number>`: Adds a comment to the specified PR with instructions
+ *   to install the preview build. Updates any existing preview comments.
+ * - `cleanup <pr-number>`: Deletes the preview branch from the remote repository
+ *   and adds a cleanup notification comment to the PR.
+ *
+ * Usage: `node pr-preview.ts <command> <pr-number>`
+ */
+
 import { parseArgs } from 'node:util'
 
 import { createPrComment, deletePrComment, getPrComments } from './utils/github.ts'
