@@ -3,6 +3,8 @@ import { parseArgs } from 'node:util'
 import { createPrComment, deletePrComment, getPrComments } from './utils/github.ts'
 import { logAndExec } from './utils/process.ts'
 
+const PREVIEW_COMMENT_MARKER = '<!-- pr-preview-comment -->'
+
 let { positionals } = parseArgs({
   allowPositionals: true,
   strict: true,
@@ -38,8 +40,6 @@ function printUsage() {
   console.error('  comment <branch>  - Add preview comment to PR')
   console.error('  cleanup <branch>  - Delete branch from origin')
 }
-
-const PREVIEW_COMMENT_MARKER = '<!-- pr-preview-comment -->'
 
 async function comment() {
   let commentBody = `${PREVIEW_COMMENT_MARKER}
