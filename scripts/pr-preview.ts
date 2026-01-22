@@ -19,7 +19,8 @@ import { parseArgs } from 'node:util'
 import { createPrComment, deletePrComment, getPrComments } from './utils/github.ts'
 import { logAndExec } from './utils/process.ts'
 
-const PREVIEW_COMMENT_MARKER = '<!-- pr-preview-comment -->'
+const STICKY_MARKER = '<!-- pr-preview-comment-sticky -->'
+const CLEANUP_MARKER = '<!-- pr-preview-comment-cleanup -->'
 
 let { positionals } = parseArgs({
   allowPositionals: true,
@@ -58,7 +59,8 @@ function printUsage() {
 }
 
 async function comment() {
-  let commentBody = `${PREVIEW_COMMENT_MARKER}
+  let commentBody = `\
+${STICKY_MARKER}
 ### Preview Build Available
 
 A preview build has been created for this PR. You can install it using:
@@ -71,14 +73,17 @@ This preview build will be updated automatically as you push new commits.`
 
   // Get existing comments
   let comments = await getPrComments(prNumber)
-  let priorComments = comments.filter((comment) => comment.body?.includes(PREVIEW_COMMENT_MARKER))
 
-  // Add new comment
-  await createPrComment(prNumber, commentBody)
+  // Only add a comment if one doesn't already exist
+  let stickyComment = comments.find((comment) => comment.body?.includes(STICKY_MARKER))
+  if (!stickyComment) {
+    await createPrComment(prNumber, commentBody)
+  }
 
-  // Delete any previous comments
-  for (let comment of priorComments) {
-    await deletePrComment(comment.id)
+  // Delete cleanup comment if it exists
+  let cleanupComment = comments.find((comment) => comment.body?.includes(CLEANUP_MARKER))
+  if (cleanupComment) {
+    await deletePrComment(cleanupComment.id)
   }
 
   console.log(`Added preview comment to PR #${prNumber}`)
@@ -87,8 +92,9 @@ This preview build will be updated automatically as you push new commits.`
 async function cleanup() {
   await logAndExec(`git push --delete origin ${branch}`)
 
-  let commentBody = `${PREVIEW_COMMENT_MARKER}
-The preview build branch has been deleted now that this PR is merged/closed.`
+  let commentBody = `\
+${CLEANUP_MARKER}
+The preview branch (\`${branch}\`) has been deleted now that this PR is merged/closed.`
 
   await createPrComment(prNumber, commentBody)
 
