@@ -659,10 +659,11 @@ describe('RoutePattern', () => {
     })
   })
 
-  describe('toString', () => {
+  describe('source', () => {
     it('returns the source pattern', () => {
       let pattern = new RoutePattern('users/:id?format=json')
-      assert.equal(pattern.toString(), 'users/:id?format=json')
+      assert.equal(pattern.source, 'users/:id?format=json')
+      assert.equal(pattern.toString(), 'users/:id?format=json') // toString delegates to source
     })
   })
 })

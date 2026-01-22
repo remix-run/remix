@@ -930,7 +930,7 @@ describe('custom matcher', () => {
     class CustomMatcher extends ArrayMatcher {
       add<P extends string>(pattern: P | RoutePattern<P>): void {
         let routePattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
-        addedPatterns.push(routePattern.toString())
+        addedPatterns.push(routePattern.source)
         super.add(pattern)
       }
     }
@@ -940,6 +940,6 @@ describe('custom matcher', () => {
     router.get('/home', () => new Response('Home'))
     router.get('/about', () => new Response('About'))
 
-    assert.deepEqual(addedPatterns, ['*://*/home', '*://*/about'])
+    assert.deepEqual(addedPatterns, ['/home', '/about'])
   })
 })

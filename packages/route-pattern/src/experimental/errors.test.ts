@@ -41,7 +41,7 @@ describe('HrefError', () => {
         dedent`
           HrefError: pattern requires hostname
 
-          Pattern: https://*:8080/api
+          Pattern: https://:8080/api
         `,
       )
     })
@@ -53,7 +53,7 @@ describe('HrefError', () => {
       let error = new HrefError({
         type: 'missing-params',
         pattern,
-        part: 'pathname',
+        partPattern: pattern.ast.pathname,
         params: {},
       })
       assert.equal(
@@ -74,7 +74,7 @@ describe('HrefError', () => {
       let error = new HrefError({
         type: 'missing-params',
         pattern,
-        part: 'pathname',
+        partPattern: pattern.ast.pathname,
         params: { a: 'x' },
       })
       assert.equal(
@@ -96,7 +96,7 @@ describe('HrefError', () => {
       let error = new HrefError({
         type: 'missing-params',
         pattern,
-        part: 'pathname',
+        partPattern: pattern.ast.pathname,
         params: { b: 'thing' },
       })
       assert.equal(

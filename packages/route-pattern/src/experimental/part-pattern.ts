@@ -33,20 +33,25 @@ export class PartPattern {
   readonly tokens: AST['tokens']
   readonly paramNames: AST['paramNames']
   readonly optionals: AST['optionals']
-  readonly separator: '.' | '/' | ''
+  readonly type: 'protocol' | 'hostname' | 'pathname'
 
   #variants: Array<Variant> | undefined
   #regexp: RegExp | undefined
 
-  constructor(ast: AST, options: { separator?: '.' | '/' } = {}) {
+  constructor(ast: AST, options: { type: 'protocol' | 'hostname' | 'pathname' }) {
     this.tokens = ast.tokens
     this.paramNames = ast.paramNames
     this.optionals = ast.optionals
-    this.separator = options.separator ?? ''
+    this.type = options.type
   }
 
-  static parse(source: string, options: { span?: Span; separator?: '.' | '/' } = {}): PartPattern {
+  get separator(): '.' | '/' | '' {
+    return separatorForType(this.type)
+  }
+
+  static parse(source: string, options: { span?: Span; type: 'protocol' | 'hostname' | 'pathname' }): PartPattern {
     let span = options.span ?? [0, source.length]
+    let separator = separatorForType(options.type)
 
     let ast: AST = {
       tokens: [],
@@ -111,7 +116,7 @@ export class PartPattern {
         continue
       }
 
-      if (char === options.separator) {
+      if (separator && char === separator) {
         ast.tokens.push({ type: 'separator' })
         i += 1
         continue
@@ -137,7 +142,7 @@ export class PartPattern {
       throw new ParseError('unmatched (', source, optionalStack.at(-1)!)
     }
 
-    return new PartPattern(ast, { separator: options.separator })
+    return new PartPattern(ast, { type: options.type })
   }
 
   get variants(): Array<Variant> {
@@ -148,7 +153,7 @@ export class PartPattern {
     return this.#variants
   }
 
-  toString(): string {
+  get source(): string {
     let result = ''
 
     for (let token of this.tokens) {
@@ -178,6 +183,10 @@ export class PartPattern {
     }
 
     return result
+  }
+
+  toString(): string {
+    return this.source
   }
 
   /**
@@ -297,6 +306,12 @@ function toRegExp(tokens: Array<Token>, separator: '.' | '/' | ''): RegExp {
     unreachable(token.type)
   }
   return new RegExp(`^${result}$`, 'd')
+}
+
+function separatorForType(type: 'protocol' | 'hostname' | 'pathname'): '.' | '/' | '' {
+  if (type === 'hostname') return '.'
+  if (type === 'pathname') return '/'
+  return ''
 }
 
 function escapeRegex(text: string): string {

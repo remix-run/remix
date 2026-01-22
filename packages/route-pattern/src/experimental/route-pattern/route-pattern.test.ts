@@ -22,16 +22,16 @@ describe('RoutePattern', () => {
       }
       assert.deepStrictEqual(
         {
-          protocol: pattern.ast.protocol?.toString(),
-          hostname: pattern.ast.hostname?.toString(),
+          protocol: pattern.ast.protocol?.source,
+          hostname: pattern.ast.hostname?.source,
           port: pattern.ast.port ?? null,
-          pathname: pattern.ast.pathname?.toString(),
+          pathname: pattern.ast.pathname?.source,
           search: pattern.ast.search,
         },
         {
           // explicitly set each prop so that we can omitted keys from `expected` to set them as defaults
-          protocol: expected.protocol ?? '*',
-          hostname: expected.hostname ?? '*',
+          protocol: expected.protocol,
+          hostname: expected.hostname,
           port: expected.port ?? null,
           pathname: expected.pathname ?? '',
           search: expectedSearch,
@@ -134,16 +134,16 @@ describe('RoutePattern', () => {
       assert.equal(RoutePattern.parse('http://example.com').protocol, 'http')
       assert.equal(RoutePattern.parse('https://example.com').protocol, 'https')
       assert.equal(RoutePattern.parse('*proto://example.com').protocol, '*proto')
-      assert.equal(RoutePattern.parse('/pathname').protocol, '*')
-      assert.equal(RoutePattern.parse('://example.com').protocol, '*')
+      assert.equal(RoutePattern.parse('/pathname').protocol, '')
+      assert.equal(RoutePattern.parse('://example.com').protocol, '')
     })
 
     test('hostname', () => {
       assert.equal(RoutePattern.parse('://example.com').hostname, 'example.com')
       assert.equal(RoutePattern.parse('://:host').hostname, ':host')
       assert.equal(RoutePattern.parse('://api.example.com').hostname, 'api.example.com')
-      assert.equal(RoutePattern.parse('/pathname').hostname, '*')
-      assert.equal(RoutePattern.parse('http://').hostname, '*')
+      assert.equal(RoutePattern.parse('/pathname').hostname, '')
+      assert.equal(RoutePattern.parse('http://').hostname, '')
     })
 
     test('port', () => {
@@ -183,85 +183,85 @@ describe('RoutePattern', () => {
     })
   })
 
-  describe('toString', () => {
-    function assertToString(source: string, expected?: string) {
-      assert.equal(RoutePattern.parse(source).toString(), expected ?? source)
+  describe('source', () => {
+    function assertSource(source: string, expected?: string) {
+      assert.equal(RoutePattern.parse(source).source, expected ?? source)
     }
 
     test('pathname only', () => {
-      assertToString('/posts/:id', '*://*/posts/:id')
-      assertToString('posts/:id', '*://*/posts/:id')
-      assertToString('/posts(/:id)', '*://*/posts(/:id)')
-      assertToString('/', '*://*/')
-      assertToString('', '*://*/')
+      assertSource('/posts/:id')
+      assertSource('posts/:id', '/posts/:id')
+      assertSource('/posts(/:id)')
+      assertSource('/', '/')
+      assertSource('', '/')
     })
 
     test('hostname only', () => {
-      assertToString('://example.com', '*://example.com/')
-      assertToString('://:host', '*://:host/')
+      assertSource('://example.com', '://example.com/')
+      assertSource('://:host', '://:host/')
     })
 
     test('port', () => {
-      assertToString('://example.com:8000', '*://example.com:8000/')
-      assertToString('://example.com:3000', '*://example.com:3000/')
-      assertToString('://:host:8080', '*://:host:8080/')
+      assertSource('://example.com:8000', '://example.com:8000/')
+      assertSource('://example.com:3000', '://example.com:3000/')
+      assertSource('://:host:8080', '://:host:8080/')
     })
 
     test('protocol', () => {
-      assertToString('http://', 'http://*/')
-      assertToString('https://', 'https://*/')
-      assertToString('*proto://', '*proto://*/')
+      assertSource('http://', 'http:///')
+      assertSource('https://', 'https:///')
+      assertSource('*proto://', '*proto:///')
     })
 
     test('protocol + hostname', () => {
-      assertToString('https://example.com', 'https://example.com/')
-      assertToString('http://example.com', 'http://example.com/')
-      assertToString('*proto://*host', '*proto://*host/')
+      assertSource('https://example.com', 'https://example.com/')
+      assertSource('http://example.com', 'http://example.com/')
+      assertSource('*proto://*host', '*proto://*host/')
     })
 
     test('protocol + hostname + pathname', () => {
-      assertToString('https://example.com/about')
-      assertToString('http://example.com/products/:id')
-      assertToString('*proto://*host/path')
+      assertSource('https://example.com/about')
+      assertSource('http://example.com/products/:id')
+      assertSource('*proto://*host/path')
     })
 
     test('protocol + hostname + port + pathname', () => {
-      assertToString('https://example.com:8000/about')
-      assertToString('http://localhost:3000/posts/:id')
-      assertToString('*proto://example.com:8000/path')
+      assertSource('https://example.com:8000/about')
+      assertSource('http://localhost:3000/posts/:id')
+      assertSource('*proto://example.com:8000/path')
     })
 
     test('search params', () => {
-      assertToString('?q', '*://*/?q')
-      assertToString('?q=', '*://*/?q=')
-      assertToString('?q=1', '*://*/?q=1')
-      assertToString('?q=1&q=2', '*://*/?q=1&q=2')
-      assertToString('/posts?filter', '*://*/posts?filter')
-      assertToString('/posts?sort=asc', '*://*/posts?sort=asc')
-      assertToString('/posts?tag=foo&tag=bar', '*://*/posts?tag=foo&tag=bar')
-      assertToString('https://example.com/posts?q=1')
+      assertSource('?q', '/?q')
+      assertSource('?q=', '/?q=')
+      assertSource('?q=1', '/?q=1')
+      assertSource('?q=1&q=2', '/?q=1&q=2')
+      assertSource('/posts?filter')
+      assertSource('/posts?sort=asc')
+      assertSource('/posts?tag=foo&tag=bar')
+      assertSource('https://example.com/posts?q=1')
     })
 
     test('complex patterns with optionals', () => {
-      assertToString('/posts(/:id)', '*://*/posts(/:id)')
-      assertToString('://(staging.)example.com', '*://(staging.)example.com/')
-      assertToString(
+      assertSource('/posts(/:id)')
+      assertSource('://(staging.)example.com', '://(staging.)example.com/')
+      assertSource(
         '://(staging.)example.com/api(/:version)',
-        '*://(staging.)example.com/api(/:version)',
+        '://(staging.)example.com/api(/:version)',
       )
-      assertToString(
+      assertSource(
         '://(staging.)example.com/api(/:version)/resources/:id(.json)',
-        '*://(staging.)example.com/api(/:version)/resources/:id(.json)',
+        '://(staging.)example.com/api(/:version)/resources/:id(.json)',
       )
-      assertToString('*proto://*host/path')
+      assertSource('*proto://*host/path')
     })
 
     test('full patterns', () => {
-      assertToString('https://api.example.com:8000/v1/:resource')
-      assertToString('*proto://example.com/base')
-      assertToString('http://old.com:3000/keep/this')
-      assertToString('users/:id?tab=profile', '*://*/users/:id?tab=profile')
-      assertToString('://example.com/path?q=1&q=2&filter', '*://example.com/path?q=1&q=2&filter')
+      assertSource('https://api.example.com:8000/v1/:resource')
+      assertSource('*proto://example.com/base')
+      assertSource('http://old.com:3000/keep/this')
+      assertSource('users/:id?tab=profile', '/users/:id?tab=profile')
+      assertSource('://example.com/path?q=1&q=2&filter')
     })
   })
 
