@@ -1,5 +1,4 @@
 import { request } from '@octokit/request'
-import type { RequestParameters, Endpoints } from '@octokit/types'
 
 import { getChangelogEntry } from './changes.ts'
 
@@ -22,20 +21,6 @@ export type CreateReleaseResult =
   | { status: 'created'; url: string }
   | { status: 'skipped'; reason: string }
   | { status: 'error'; error: string }
-
-async function makeRequest<T>(
-  route: keyof Endpoints,
-  opts: Omit<Endpoints[typeof route]['parameters'] & RequestParameters, 'owner' | 'repo'>,
-) {
-  console.log(`Making Github request: ${route}`)
-  let response = await request(route, {
-    ...auth(),
-    owner,
-    repo,
-    ...opts,
-  })
-  return response
-}
 
 /**
  * Creates a GitHub release for a package version.
@@ -70,7 +55,10 @@ export async function createRelease(
 
   // Check if release already exists
   try {
-    await makeRequest('GET /repos/{owner}/{repo}/releases/tags/{tag}', {
+    await request('GET /repos/{owner}/{repo}/releases/tags/{tag}', {
+      ...auth(),
+      owner,
+      repo,
       tag: tagName,
     })
     // Release exists, skip creation
@@ -84,7 +72,10 @@ export async function createRelease(
   }
 
   try {
-    let response = await makeRequest('POST /repos/{owner}/{repo}/releases', {
+    let response = await request('POST /repos/{owner}/{repo}/releases', {
+      ...auth(),
+      owner,
+      repo,
       tag_name: tagName,
       name: releaseName,
       body,
@@ -101,7 +92,10 @@ export async function createRelease(
  * Find an open PR from a specific branch to a base branch
  */
 export async function findOpenPr(head: string, base: string) {
-  let response = await makeRequest('GET /repos/{owner}/{repo}/pulls', {
+  let response = await request('GET /repos/{owner}/{repo}/pulls', {
+    ...auth(),
+    owner,
+    repo,
     state: 'open',
     head: `${owner}:${head}`,
     base,
@@ -119,7 +113,10 @@ export async function createPr(options: {
   head: string
   base: string
 }) {
-  let response = await makeRequest('POST /repos/{owner}/{repo}/pulls', {
+  let response = await request('POST /repos/{owner}/{repo}/pulls', {
+    ...auth(),
+    owner,
+    repo,
     title: options.title,
     body: options.body,
     head: options.head,
@@ -133,7 +130,10 @@ export async function createPr(options: {
  * Update an existing PR
  */
 export async function updatePr(prNumber: number, options: { title?: string; body?: string }) {
-  await makeRequest('PATCH /repos/{owner}/{repo}/pulls/{pull_number}', {
+  await request('PATCH /repos/{owner}/{repo}/pulls/{pull_number}', {
+    ...auth(),
+    owner,
+    repo,
     pull_number: prNumber,
     ...options,
   })
@@ -144,7 +144,10 @@ export async function updatePr(prNumber: number, options: { title?: string; body
  */
 export async function setPrPkgLabels(prNumber: number, packageNames: string[]) {
   // Get current labels
-  let response = await makeRequest('GET /repos/{owner}/{repo}/issues/{issue_number}/labels', {
+  let response = await request('GET /repos/{owner}/{repo}/issues/{issue_number}/labels', {
+    ...auth(),
+    owner,
+    repo,
     issue_number: prNumber,
   })
 
@@ -156,7 +159,10 @@ export async function setPrPkgLabels(prNumber: number, packageNames: string[]) {
   let newLabels = [...labelsToKeep, ...pkgLabels]
 
   // Set labels
-  await makeRequest('PUT /repos/{owner}/{repo}/issues/{issue_number}/labels', {
+  await request('PUT /repos/{owner}/{repo}/issues/{issue_number}/labels', {
+    ...auth(),
+    owner,
+    repo,
     issue_number: prNumber,
     labels: newLabels,
   })
@@ -167,13 +173,19 @@ export async function setPrPkgLabels(prNumber: number, packageNames: string[]) {
  */
 export async function closePr(prNumber: number, comment?: string) {
   if (comment) {
-    await makeRequest('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+    await request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+      ...auth(),
+      owner,
+      repo,
       issue_number: prNumber,
       body: comment,
     })
   }
 
-  await makeRequest('PATCH /repos/{owner}/{repo}/pulls/{pull_number}', {
+  await request('PATCH /repos/{owner}/{repo}/pulls/{pull_number}', {
+    ...auth(),
+    owner,
+    repo,
     pull_number: prNumber,
     state: 'closed',
   })
@@ -183,7 +195,10 @@ export async function closePr(prNumber: number, comment?: string) {
  * Get all comments on a PR
  */
 export async function getPrComments(prNumber: number) {
-  let response = await makeRequest('GET /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+  let response = await request('GET /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+    ...auth(),
+    owner,
+    repo,
     issue_number: prNumber,
   })
 
@@ -194,7 +209,10 @@ export async function getPrComments(prNumber: number) {
  * Create a comment on a PR
  */
 export async function createPrComment(prNumber: number, body: string) {
-  let response = await makeRequest('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+  let response = await request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+    ...auth(),
+    owner,
+    repo,
     issue_number: prNumber,
     body,
   })
@@ -206,7 +224,10 @@ export async function createPrComment(prNumber: number, body: string) {
  * Delete a comment on a PR
  */
 export async function deletePrComment(commentId: number) {
-  await makeRequest('DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+  await request('DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+    ...auth(),
+    owner,
+    repo,
     comment_id: commentId,
   })
 }

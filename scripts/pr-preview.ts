@@ -21,10 +21,13 @@ if (isNaN(prNumber) || prNumber <= 0) {
 }
 let branch = `preview/${prNumber}`
 
-if (command === 'comment') {
-  await addPreviewComment()
-} else if (command === 'cleanup') {
-  await cleanupBranch()
+let commands: Record<string, () => Promise<void>> = {
+  comment,
+  cleanup,
+}
+
+if (commands[command]) {
+  await commands[command]()
 } else {
   printUsage()
   throw new Error(`Unknown command: ${command}`)
@@ -36,8 +39,9 @@ function printUsage() {
   console.error('  cleanup <branch>  - Delete branch from origin')
 }
 
-async function addPreviewComment() {
-  let PREVIEW_COMMENT_MARKER = '<!-- pr-preview-comment -->'
+const PREVIEW_COMMENT_MARKER = '<!-- pr-preview-comment -->'
+
+async function comment() {
   let commentBody = `${PREVIEW_COMMENT_MARKER}
 ### Preview Build Available
 
@@ -51,22 +55,26 @@ This preview build will be updated automatically as you push new commits.`
 
   // Get existing comments
   let comments = await getPrComments(prNumber)
-
-  // Find previous preview comment
-  let previousComment = comments.find((comment) => comment.body?.includes(PREVIEW_COMMENT_MARKER))
+  let priorComments = comments.filter((comment) => comment.body?.includes(PREVIEW_COMMENT_MARKER))
 
   // Add new comment
   await createPrComment(prNumber, commentBody)
 
-  // Delete previous comment if it exists
-  if (previousComment) {
-    await deletePrComment(previousComment.id)
+  // Delete any previous comments
+  for (let comment of priorComments) {
+    await deletePrComment(comment.id)
   }
 
   console.log(`Added preview comment to PR #${prNumber}`)
 }
 
-async function cleanupBranch() {
+async function cleanup() {
   await logAndExec(`git push --delete origin ${branch}`)
+
+  let commentBody = `${PREVIEW_COMMENT_MARKER}
+The preview build branch has been deleted now that this PR is merged/closed.`
+
+  await createPrComment(prNumber, commentBody)
+
   console.log(`Deleted branch: ${branch}`)
 }

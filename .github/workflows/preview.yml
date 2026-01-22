@@ -6,14 +6,15 @@ name: PR Preview
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, closed]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  pr-preview:
-    if: github.repository == 'remix-run/remix'
+  create-preview:
+    if: github.repository == 'remix-run/remix' && github.event.pull_request.state == "open"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -50,3 +51,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pnpm run pr-preview comment ${{ github.event.pull_request.number }}
+
+  delete-preview:
+    if: github.repository == 'remix-run/remix' && github.event.pull_request.state == "closed"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cleanup preview branch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm run pr-preview cleanup ${{ github.event.pull_request.number }}
