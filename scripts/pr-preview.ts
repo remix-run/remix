@@ -97,7 +97,7 @@ async function cleanup() {
 
   let commentBody = `\
 ${CLEANUP_MARKER}
-The preview branch (\`${branch}\`) has been deleted now that this PR is merged/closed.`
+The preview branch \`${branch}\` has been deleted now that this PR is merged/closed.`
 
   console.log('Adding cleanup comment to PR')
   await createPrComment(prNumber, commentBody)
