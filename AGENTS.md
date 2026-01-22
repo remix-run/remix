@@ -49,9 +49,9 @@
   - For **v1.x+ packages**: Use standard semver - "major" for breaking changes, "minor" for new features, "patch" for bug fixes.
   - **Breaking changes are relative to main**: If you introduce a new API in a PR and then change it within the same PR before merging, that's not considered a breaking change.
   - _For the `remix` package only:_
-    - **Prelease mode**: An optional `.changes/prerelease.json` file denotes that the package is in prerelease mode and what the npm dist-tag is. **This is only supported for the `remix` package.**
+    - **Prerelease mode**: An optional `.changes/prerelease.json` file denotes that the package is in prerelease mode. The `channel` field (e.g. `"alpha"`, `"beta"`, `"rc"`) determines the version suffix, while the npm dist-tag is always `"next"`. **This is only supported for the `remix` package.**
     - **Bumping prerelease versions**: You can use normal change files. These will bump the prerelease counter (e.g. `3.0.0-alpha.1` → `3.0.0-alpha.2`). Changelog entries still get proper Major/Minor/Patch sections, but otherwise the bump type is ignored and only the prerelease counter is bumped.
-    - **Transitioning between prerelease tags** (e.g. `alpha` → `beta`): Update `prerelease.json` tag and add a change file. Version resets to new tag (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The bump type is for changelog categorization only—by convention, use `patch`.
+    - **Transitioning between prerelease channels** (e.g. `alpha` → `beta`): Update `prerelease.json` channel and add a change file. Version resets to new channel (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The bump type is for changelog categorization only—by convention, use `patch`.
     - **Graduating from prerelease to latest stable version**: Delete `prerelease.json` and add a change file. The prerelease suffix will be stripped (e.g. `3.0.0-rc.7` → `3.0.0`). The bump type is for changelog categorization only—by convention, use `major` for a major release announcement.
 - **Validating changes**: `pnpm changes:validate` checks that all change files follow the correct naming convention and format.
 - **Previewing releases**: `pnpm changes:preview` shows which packages will be released, what the CHANGELOG will look like, and the commit message.
