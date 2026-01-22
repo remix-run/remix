@@ -63,13 +63,9 @@ if (gitStatus) {
 }
 
 // Capture the current branch name
-let baseBranch = logAndExec('git branch --show-current', true).trim()
 let sha = logAndExec('git rev-parse --short HEAD ', true).trim()
 
-console.log(
-  `Preparing installable branch \`${installableBranch}\` from ` +
-    `base branch \`${baseBranch}\` at sha ${sha}`,
-)
+console.log(`Preparing installable branch \`${installableBranch}\` from sha ${sha}`)
 
 // Switch to new branch and reset to current commit on base branch
 logAndExec(`git checkout -B ${installableBranch}`)
@@ -81,7 +77,7 @@ await updateGitignore()
 await updatePackageDependencies()
 
 logAndExec('git add .')
-logAndExec(`git commit -a -m "installable build from ${baseBranch} at ${sha}"`)
+logAndExec(`git commit -a -m "installable build from ${sha}"`)
 
 console.log(
   [
