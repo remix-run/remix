@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   create-preview:
-    if: github.repository == 'remix-run/remix' && github.event.pull_request.state == "open"
+    if: github.repository == 'remix-run/remix' && github.event.pull_request.state == 'open'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -53,7 +53,7 @@ jobs:
         run: pnpm run pr-preview comment ${{ github.event.pull_request.number }}
 
   delete-preview:
-    if: github.repository == 'remix-run/remix' && github.event.pull_request.state == "closed"
+    if: github.repository == 'remix-run/remix' && github.event.pull_request.state == 'closed'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
