@@ -4,10 +4,11 @@ import * as Search from './search.ts'
 import { PartPattern } from '../part-pattern.ts'
 import { HrefError } from '../errors.ts'
 import type { Join, HrefArgs, Params } from '../types/index.ts'
+import type { Span } from '../span.ts'
 
 type AST = {
-  protocol: PartPattern
-  hostname: PartPattern
+  protocol: PartPattern | null
+  hostname: PartPattern | null
   port: string | null
   pathname: PartPattern
   search: Search.Constraints
@@ -29,45 +30,33 @@ type Match<source extends string> = RoutePattern.Match<source>
 export class RoutePattern<source extends string = string> {
   readonly ast: AST
 
-  readonly #isDefault: {
-    protocol: boolean
-    hostname: boolean
-    port: boolean
-  }
+  readonly #hasOrigin: boolean
 
   private constructor(ast: AST) {
     this.ast = ast
-    this.#isDefault = {
-      protocol: isNamelessWildcard(ast.protocol),
-      hostname: isNamelessWildcard(ast.hostname),
-      port: ast.port === null,
-    }
+    this.#hasOrigin = ast.protocol !== null || ast.hostname !== null || ast.port !== null
   }
 
   static parse<source extends string>(source: source): RoutePattern<source> {
     let spans = split(source)
 
     return new RoutePattern({
-      protocol: spans.protocol
-        ? PartPattern.parse(source, { span: spans.protocol })
-        : PartPattern.parse('*', { span: [0, 1] }),
-      hostname: spans.hostname
-        ? PartPattern.parse(source, { span: spans.hostname, separator: '.' })
-        : PartPattern.parse('*', { span: [0, 1] }),
+      protocol: parseOriginPart(source, spans.protocol, 'protocol'),
+      hostname: parseOriginPart(source, spans.hostname, 'hostname'),
       port: spans.port ? source.slice(...spans.port) : null,
       pathname: spans.pathname
-        ? PartPattern.parse(source, { span: spans.pathname, separator: '/' })
-        : PartPattern.parse('', { span: [0, 0] }),
+        ? PartPattern.parse(source, { span: spans.pathname, type: 'pathname' })
+        : PartPattern.parse('', { span: [0, 0], type: 'pathname' }),
       search: spans.search ? Search.parse(source.slice(...spans.search)) : new Map(),
     })
   }
 
   get protocol(): string {
-    return this.ast.protocol.toString()
+    return this.ast.protocol?.toString() ?? ''
   }
 
   get hostname(): string {
-    return this.ast.hostname.toString()
+    return this.ast.hostname?.toString() ?? ''
   }
 
   get port(): string {
@@ -82,10 +71,17 @@ export class RoutePattern<source extends string = string> {
     return Search.toString(this.ast.search) ?? ''
   }
 
-  toString(): string {
-    let port = this.port === '' ? '' : `:${this.port}`
+  get source(): string {
+    let result = ''
 
-    let result = `${this.protocol}://${this.hostname}${port}/${this.pathname}`
+    if (this.#hasOrigin) {
+      let protocol = this.protocol
+      let hostname = this.hostname
+      let port = this.port === '' ? '' : `:${this.port}`
+      result += `${protocol}://${hostname}${port}`
+    }
+
+    result += '/' + this.pathname
 
     let search = this.search
     if (search) result += `?${search}`
@@ -93,11 +89,15 @@ export class RoutePattern<source extends string = string> {
     return result
   }
 
+  toString(): string {
+    return this.source
+  }
+
   join<other extends string>(other: other | RoutePattern<other>): RoutePattern<Join<source, other>> {
     other = typeof other === 'string' ? RoutePattern.parse(other) : other
     return new RoutePattern({
-      protocol: other.#isDefault.protocol ? this.ast.protocol : other.ast.protocol,
-      hostname: other.#isDefault.hostname ? this.ast.hostname : other.ast.hostname,
+      protocol: other.ast.protocol ?? this.ast.protocol,
+      hostname: other.ast.hostname ?? this.ast.hostname,
       port: other.ast.port ?? this.ast.port,
       pathname: Pathname.join(this.ast.pathname, other.ast.pathname),
       search: Search.join(this.ast.search, other.ast.search),
@@ -109,30 +109,29 @@ export class RoutePattern<source extends string = string> {
     params ??= {}
     searchParams ??= {}
 
-
     let result = ''
 
-    let needsOrigin = !this.#isDefault.protocol || !this.#isDefault.hostname || !this.#isDefault.port
-    if (needsOrigin) {
+    if (this.#hasOrigin) {
       // protocol
-      let protocol = this.#isDefault.protocol ? 'https' : hrefOrThrow(this, 'protocol', params)
+      let protocol =
+        this.ast.protocol === null ? 'https' : hrefOrThrow(this.ast.protocol, params, this)
 
       // hostname
-      if (this.#isDefault.hostname) {
+      if (this.ast.hostname === null) {
         throw new HrefError({
           type: 'missing-hostname',
           pattern: this,
         })
       }
-      let hostname = hrefOrThrow(this, 'hostname', params)
+      let hostname = hrefOrThrow(this.ast.hostname, params, this)
 
       // port
-      let port = this.#isDefault.port ? '' : `:${this.ast.port}`
+      let port = this.ast.port === null ? '' : `:${this.ast.port}`
       result += `${protocol}://${hostname}${port}`
     }
 
     // pathname
-    let pathname = hrefOrThrow(this, 'pathname', params)
+    let pathname = hrefOrThrow(this.ast.pathname, params, this)
     result += '/' + pathname
 
     // search
@@ -146,20 +145,24 @@ export class RoutePattern<source extends string = string> {
     url = typeof url === 'string' ? new URL(url) : url
 
     let hostname: PartPattern.Match | null = null
-    if (!this.#isDefault.protocol || !this.#isDefault.hostname || !this.#isDefault.port) {
-      // url.protocol: remove trailing colon
-      let protocol = this.ast.protocol.match(url.protocol.slice(0, -1))
-      if (protocol === null) return null
+    if (this.#hasOrigin) {
+      // protocol: null matches any protocol (http or https)
+      if (this.ast.protocol !== null) {
+        let protocol = this.ast.protocol.match(url.protocol.slice(0, -1))
+        if (protocol === null) return null
+      }
 
-      hostname = this.ast.hostname.match(url.hostname)
-      if (hostname === null) return null
+      // hostname: null matches any hostname
+      if (this.ast.hostname !== null) {
+        hostname = this.ast.hostname.match(url.hostname)
+        if (hostname === null) return null
+      }
 
-      // url.port: '' means no port
-      if ((url.port || null) !== this.ast.port) return null
+      // port: null matches any port
+      if (this.ast.port !== null) {
+        if ((url.port || null) !== this.ast.port) return null
+      }
     }
-
-
-
 
     // url.pathname: remove leading slash
     let pathname = this.ast.pathname.match(url.pathname.slice(1))
@@ -170,7 +173,7 @@ export class RoutePattern<source extends string = string> {
     let params: Record<string, string | undefined> = {}
 
     // hostname params
-    this.ast.hostname.paramNames.forEach((name) => {
+    this.ast.hostname?.paramNames.forEach((name) => {
       if (name === '*') return
       params[name] = undefined
     })
@@ -197,6 +200,17 @@ export class RoutePattern<source extends string = string> {
   }
 }
 
+function parseOriginPart(
+  source: string,
+  span: [number, number] | null,
+  type: 'protocol' | 'hostname',
+): PartPattern | null {
+  if (!span) return null
+  let part = PartPattern.parse(source, { span, type })
+  if (isNamelessWildcard(part)) return null
+  return part
+}
+
 function isNamelessWildcard(part: PartPattern): boolean {
   if (part.tokens.length !== 1) return false
   let token = part.tokens[0]
@@ -206,16 +220,16 @@ function isNamelessWildcard(part: PartPattern): boolean {
 }
 
 function hrefOrThrow(
-  pattern: RoutePattern,
-  partName: 'protocol' | 'hostname' | 'pathname',
+  part: PartPattern,
   params: Record<string, string | number>,
+  pattern: RoutePattern,
 ): string {
-  let result = pattern.ast[partName].href(params)
+  let result = part.href(params)
   if (result === null) {
     throw new HrefError({
       type: 'missing-params',
       pattern,
-      part: partName,
+      partPattern: part,
       params,
     })
   }

@@ -77,5 +77,5 @@ export function join(a: PartPattern, b: PartPattern): PartPattern {
     optionals.set(tokenOffset + begin, tokenOffset + end)
   }
 
-  return new PartPattern({ tokens, paramNames, optionals }, { separator: '/' })
+  return new PartPattern({ tokens, paramNames, optionals }, { type: 'pathname' })
 }

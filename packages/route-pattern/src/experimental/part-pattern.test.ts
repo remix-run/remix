@@ -8,11 +8,17 @@ describe('PartPattern', () => {
   describe('parse', () => {
     type AST = ConstructorParameters<typeof PartPattern>[0]
     function assertParse(source: string, ast: AST) {
-      assert.deepStrictEqual(PartPattern.parse(source), new PartPattern(ast))
+      assert.deepStrictEqual(
+        PartPattern.parse(source, { type: 'pathname' }),
+        new PartPattern(ast, { type: 'pathname' }),
+      )
     }
 
     function assertParseError(source: string, type: ParseError['type'], index: number) {
-      assert.throws(() => PartPattern.parse(source), new ParseError(type, source, index))
+      assert.throws(
+        () => PartPattern.parse(source, { type: 'pathname' }),
+        new ParseError(type, source, index),
+      )
     }
 
     test('parses static text', () => {
@@ -97,7 +103,8 @@ describe('PartPattern', () => {
     test('parses combinations of text, variables, wildcards, optionals', () => {
       assertParse('api/(v:major(.:minor)/)run', {
         tokens: [
-          { type: 'text', text: 'api/' },
+          { type: 'text', text: 'api' },
+          { type: 'separator' },
           { type: '(' },
           { type: 'text', text: 'v' },
           { type: ':', nameIndex: 0 },
@@ -105,31 +112,36 @@ describe('PartPattern', () => {
           { type: 'text', text: '.' },
           { type: ':', nameIndex: 1 },
           { type: ')' },
-          { type: 'text', text: '/' },
+          { type: 'separator' },
           { type: ')' },
           { type: 'text', text: 'run' },
         ],
         paramNames: ['major', 'minor'],
         optionals: new Map([
-          [1, 9],
-          [4, 7],
+          [2, 10],
+          [5, 8],
         ]),
       })
 
       assertParse('*/node_modules/(*path/):package/dist/index.:ext', {
         tokens: [
           { type: '*', nameIndex: 0 },
-          { type: 'text', text: '/node_modules/' },
+          { type: 'separator' },
+          { type: 'text', text: 'node_modules' },
+          { type: 'separator' },
           { type: '(' },
           { type: '*', nameIndex: 1 },
-          { type: 'text', text: '/' },
+          { type: 'separator' },
           { type: ')' },
           { type: ':', nameIndex: 2 },
-          { type: 'text', text: '/dist/index.' },
+          { type: 'separator' },
+          { type: 'text', text: 'dist' },
+          { type: 'separator' },
+          { type: 'text', text: 'index.' },
           { type: ':', nameIndex: 3 },
         ],
         paramNames: ['*', 'path', 'package', 'ext'],
-        optionals: new Map([[2, 5]]),
+        optionals: new Map([[4, 7]]),
       })
     })
 
@@ -137,7 +149,7 @@ describe('PartPattern', () => {
       assertParse(':id/:id', {
         tokens: [
           { type: ':', nameIndex: 0 },
-          { type: 'text', text: '/' },
+          { type: 'separator' },
           { type: ':', nameIndex: 1 },
         ],
         paramNames: ['id', 'id'],
@@ -146,7 +158,7 @@ describe('PartPattern', () => {
       assertParse('*id/*id', {
         tokens: [
           { type: '*', nameIndex: 0 },
-          { type: 'text', text: '/' },
+          { type: 'separator' },
           { type: '*', nameIndex: 1 },
         ],
         paramNames: ['id', 'id'],
@@ -155,7 +167,7 @@ describe('PartPattern', () => {
       assertParse('*/*', {
         tokens: [
           { type: '*', nameIndex: 0 },
-          { type: 'text', text: '/' },
+          { type: 'separator' },
           { type: '*', nameIndex: 1 },
         ],
         paramNames: ['*', '*'],
@@ -164,17 +176,17 @@ describe('PartPattern', () => {
       assertParse(':a/*a/:b/*b/:b/*a/:a', {
         tokens: [
           { type: ':', nameIndex: 0 },
-          { type: 'text', text: '/' },
+          { type: 'separator' },
           { type: '*', nameIndex: 1 },
-          { type: 'text', text: '/' },
+          { type: 'separator' },
           { type: ':', nameIndex: 2 },
-          { type: 'text', text: '/' },
+          { type: 'separator' },
           { type: '*', nameIndex: 3 },
-          { type: 'text', text: '/' },
+          { type: 'separator' },
           { type: ':', nameIndex: 4 },
-          { type: 'text', text: '/' },
+          { type: 'separator' },
           { type: '*', nameIndex: 5 },
-          { type: 'text', text: '/' },
+          { type: 'separator' },
           { type: ':', nameIndex: 6 },
         ],
         paramNames: ['a', 'a', 'b', 'b', 'b', 'a', 'a'],
@@ -207,7 +219,7 @@ describe('PartPattern', () => {
 
   describe('variants', () => {
     function assertVariants(source: string, expected: Array<string>) {
-      let pattern = PartPattern.parse(source)
+      let pattern = PartPattern.parse(source, { type: 'pathname' })
       let actual = pattern.variants.map((variant) => variant.toString())
       assert.deepStrictEqual(actual, expected)
     }
@@ -228,14 +240,14 @@ describe('PartPattern', () => {
     })
   })
 
-  describe('toString', () => {
-    function assertToString(source: string) {
-      assert.equal(PartPattern.parse(source).toString(), source)
+  describe('source', () => {
+    function assertSource(source: string) {
+      assert.equal(PartPattern.parse(source, { type: 'pathname' }).source, source)
     }
 
-    test('stringifies combinations of text, variables, wildcards, optionals', () => {
-      assertToString('api/(v:major(.:minor)/)run')
-      assertToString('*/node_modules/(*path/):package/dist/index.:ext')
+    test('returns source representation of pattern', () => {
+      assertSource('api/(v:major(.:minor)/)run')
+      assertSource('*/node_modules/(*path/):package/dist/index.:ext')
     })
   })
 
@@ -245,12 +257,12 @@ describe('PartPattern', () => {
       params: Record<string, string | number> | undefined,
       expected: string,
     ) {
-      let result = PartPattern.parse(pattern).href(params ?? {})
+      let result = PartPattern.parse(pattern, { type: 'pathname' }).href(params ?? {})
       assert.equal(result, expected)
     }
 
     function assertHrefNull(pattern: string, params: Record<string, string | number> | undefined) {
-      let result = PartPattern.parse(pattern).href(params ?? {})
+      let result = PartPattern.parse(pattern, { type: 'pathname' }).href(params ?? {})
       assert.equal(result, null)
     }
 
@@ -323,7 +335,7 @@ describe('PartPattern', () => {
   describe('match', () => {
     type MatchParam = { type: ':' | '*'; name: string; value: string; begin: number; end: number }
     function assertMatch(pattern: string, part: string, expected: Array<MatchParam>) {
-      let result = PartPattern.parse(pattern).match(part)
+      let result = PartPattern.parse(pattern, { type: 'pathname' }).match(part)
       assert.deepStrictEqual(result, expected)
     }
 

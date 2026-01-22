@@ -1,4 +1,5 @@
 import type { RoutePattern } from './route-pattern/route-pattern.ts'
+import type { PartPattern } from './part-pattern.ts'
 import type * as Search from './route-pattern/search.ts'
 
 type ParseErrorType = 'unmatched (' | 'unmatched )' | 'missing variable name' | 'dangling escape'
@@ -28,7 +29,7 @@ type HrefErrorDetails =
   | {
       type: 'missing-params'
       pattern: RoutePattern
-      part: 'protocol' | 'hostname' | 'pathname'
+      partPattern: PartPattern
       params: Record<string, string | number>
     }
   | {
@@ -72,13 +73,13 @@ export class HrefError extends Error {
 
     if (details.type === 'missing-params') {
       let paramNames = Object.keys(details.params)
-      let partPattern = details.pattern.ast[details.part]
-      let variants = partPattern.variants.map((variant) => {
+      let variants = details.partPattern.variants.map((variant) => {
         let key = variant.toString()
         let missing = new Set(variant.requiredParams.filter((p) => !paramNames.includes(p)))
         return `  - ${key || '<empty>'} (missing: ${Array.from(missing).join(', ')})`
       })
-      let partTitle = details.part.charAt(0).toUpperCase() + details.part.slice(1)
+      let partTitle =
+        details.partPattern.type.charAt(0).toUpperCase() + details.partPattern.type.slice(1)
       return `missing params\n\nPattern: ${pattern}\nParams: ${JSON.stringify(details.params)}\n${partTitle} variants:\n${variants.join('\n')}`
     }
 
