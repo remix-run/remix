@@ -39,7 +39,7 @@ function printUsage() {
 async function addPreviewComment() {
   let PREVIEW_COMMENT_MARKER = '<!-- pr-preview-comment -->'
   let commentBody = `${PREVIEW_COMMENT_MARKER}
-## 📦 Preview Build Available
+**Preview Build Available**
 
 A preview build has been created for this PR. You can install it using:
 
@@ -54,7 +54,7 @@ This preview build will be updated automatically as you push new commits.`
   console.log('Got comments', comments)
 
   // Find previous preview comment
-  let previousComment = comments.find((comment) => comment.body?.includes(PREVIEW_COMMENT_MARKER))
+  let previousComment = comments.find((comment) => comment.body?.startsWith(PREVIEW_COMMENT_MARKER))
   console.log('Got previous comment', previousComment)
 
   // Add new comment
