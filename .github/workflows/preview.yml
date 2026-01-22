@@ -40,10 +40,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          pnpm run setup-installable-branch preview/${{ github.event.pull_request.number }}
-
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
+
+          pnpm run setup-installable-branch preview/${{ github.event.pull_request.number }}
+
           git push --force --set-upstream origin preview/${{ github.event.pull_request.number }}
           echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
