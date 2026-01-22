@@ -1,6 +1,6 @@
 # Create "installable" PR preview branches
 #
-#   pnpm install "remix-run/remix#pr/12345&path:packages/remix"
+#   pnpm install "remix-run/remix#preview/12345&path:packages/remix"
 
 name: PR Preview
 
@@ -39,11 +39,11 @@ jobs:
           git config --local user.name "Remix Run Bot"
 
       - name: Build installable branch
-        run: pnpm run setup-installable-branch pr/${{ github.event.pull_request.number }}
+        run: pnpm run setup-installable-branch preview/${{ github.event.pull_request.number }}
 
       - name: Push changes
         run: |
-          git push --force --set-upstream origin pr/${{ github.event.pull_request.number }}
+          git push --force --set-upstream origin preview/${{ github.event.pull_request.number }}
           echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
       - name: Comment on PR

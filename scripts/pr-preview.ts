@@ -19,7 +19,7 @@ if (isNaN(prNumber) || prNumber <= 0) {
   printUsage()
   throw new Error(`Invalid PR number: ${prNumberString}`)
 }
-let branch = `pr/${prNumber}`
+let branch = `preview/${prNumber}`
 
 if (command === 'comment') {
   await addPreviewComment()
@@ -39,7 +39,7 @@ function printUsage() {
 async function addPreviewComment() {
   let PREVIEW_COMMENT_MARKER = '<!-- pr-preview-comment -->'
   let commentBody = `${PREVIEW_COMMENT_MARKER}
-**Preview Build Available**
+### Preview Build Available
 
 A preview build has been created for this PR. You can install it using:
 
@@ -51,20 +51,16 @@ This preview build will be updated automatically as you push new commits.`
 
   // Get existing comments
   let comments = await getPrComments(prNumber)
-  console.log('Got comments', comments)
 
   // Find previous preview comment
-  let previousComment = comments.find((comment) => comment.body?.startsWith(PREVIEW_COMMENT_MARKER))
-  console.log('Got previous comment', previousComment)
+  let previousComment = comments.find((comment) => comment.body?.includes(PREVIEW_COMMENT_MARKER))
 
   // Add new comment
-  let commentData = await createPrComment(prNumber, commentBody)
-  console.log('Created new comment', commentData)
+  await createPrComment(prNumber, commentBody)
 
   // Delete previous comment if it exists
   if (previousComment) {
     await deletePrComment(previousComment.id)
-    console.log('Deleted previous comment', previousComment.id)
   }
 
   console.log(`Added preview comment to PR #${prNumber}`)
