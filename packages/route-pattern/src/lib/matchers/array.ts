@@ -1,62 +1,36 @@
-import type { Matcher, MatchResult } from '../matcher.ts'
-import { RoutePattern } from '../route-pattern.ts'
+import { RoutePattern } from "../route-pattern/index.ts"
+import type { Matcher } from "./matcher.ts"
+import * as Specificity from "../specificity.ts"
 
-/**
- * A simple array-based matcher that compiles route patterns to regular expressions.
- *
- * **Use RegExpMatcher when:**
- * - You have a single or handful of patterns
- * - Build time is critical (cold boot scenarios)
- * - Pattern set changes frequently (cheap to rebuild)
- * - Memory footprint needs to be minimal
- */
-export class ArrayMatcher<data = unknown> implements Matcher<data> {
-  #pairs: { pattern: RoutePattern; data: data }[] = []
-  #count = 0
+export class ArrayMatcher implements Matcher {
+  #patterns: Array<RoutePattern> = []
 
-  /**
-   * @param pattern The pattern to add
-   * @param data The data to associate with the pattern
-   */
-  add<source extends string>(pattern: source | RoutePattern<source>, data: data): void {
-    let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
-    this.#pairs.push({ pattern: routePattern, data })
-    this.#count++
+  add(pattern: string | RoutePattern): void {
+    pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
+    this.#patterns.push(pattern)
   }
 
-  /**
-   * @param url The URL to match
-   * @returns The match result, or `null` if no match was found
-   */
-  match(url: string | URL): MatchResult<data> | null {
-    if (typeof url === 'string') url = new URL(url)
-
-    for (let { pattern, data } of this.#pairs) {
+  match(url: string | URL, compareFn = Specificity.descending): RoutePattern.Match | null {
+    let bestMatch: RoutePattern.Match | null = null
+    for (let pattern of this.#patterns) {
       let match = pattern.match(url)
       if (match) {
-        return { data, params: match.params, url: match.url }
+        if (bestMatch === null || compareFn(match, bestMatch) < 0) {
+          bestMatch = match
+        }
       }
     }
-
-    return null
+    return bestMatch
   }
 
-  /**
-   * @param url The URL to match
-   * @returns A generator that yields all matches
-   */
-  *matchAll(url: string | URL): Generator<MatchResult<data>> {
-    if (typeof url === 'string') url = new URL(url)
-
-    for (let { pattern, data } of this.#pairs) {
+  matchAll(url: string | URL, compareFn = Specificity.descending): Array<RoutePattern.Match> {
+    let matches: Array<RoutePattern.Match> = []
+    for (let pattern of this.#patterns) {
       let match = pattern.match(url)
       if (match) {
-        yield { data, params: match.params, url: match.url }
+        matches.push(match)
       }
     }
-  }
-
-  get size(): number {
-    return this.#count
+    return matches.sort(compareFn)
   }
 }

@@ -1,50 +1,95 @@
-import type {
-  ParseResult,
-  Parse,
-  Token,
-  Variable,
-  Wildcard,
-  Text,
-  Separator,
-  Optional,
-} from './parse.ts'
+import { unreachable } from './errors.ts'
+import type { PartPattern } from './part-pattern.ts'
 
-// prettier-ignore
-export type Variant<T extends string> =
-  string extends T ? string :
-  VariantString<Parse<T>, HasLeadingSlash<T>>
+type Token = Extract<PartPattern.Token, { type: 'text' | ':' | '*' | 'separator' }>
 
-// Detect if the original pattern begins with a leading slash (and is not an origin URL)
-// prettier-ignore
-type HasLeadingSlash<T extends string> =
-  T extends `${string}://${string}` ? false :
-  T extends `/${string}` ? true :
-  false
+export class Variant {
+  /** Params use `nameIndex` to reference params in the PartPattern's `paramNames` */
+  tokens: Array<Token>
 
-// prettier-ignore
-type VariantString<T extends Partial<ParseResult>, L extends boolean> =
-  T extends { protocol: infer P extends Array<Token> } ?
-    `${PartVariantString<P>}${VariantString<Omit<T, 'protocol'>, false>}` :
-  T extends { hostname: infer H extends Array<Token>, port: infer P extends string } ?
-    `://${PartVariantString<H, '.'>}:${P}${VariantString<Omit<T, 'hostname' | 'port'>, false> extends '' ? '' : `/${VariantString<Omit<T, 'hostname' | 'port'>, false>}`}` :
-  T extends { hostname: infer H extends Array<Token> } ?
-    `://${PartVariantString<H, '.'>}${VariantString<Omit<T, 'hostname'>, false> extends '' ? '' : `/${VariantString<Omit<T, 'hostname'>, false>}`}` :
-  T extends { pathname: infer P extends Array<Token> } ?
-    `${L extends true ? '/' : ''}${PartVariantString<P, '/'>}${VariantString<Omit<T, 'pathname'>, false>}` :
-  T extends { search: infer S extends string } ?
-    `?${S}` :
-  ''
+  #partPattern: PartPattern
+  #requiredParams: Array<string> | undefined
 
-// prettier-ignore
-type PartVariantString<T extends Array<Token>, Sep extends string = '/'> =
-  T extends [infer L extends Token, ...infer R extends Array<Token>] ?
-    L extends Variable ? `:${L['name']}${PartVariantString<R, Sep>}` :
-    L extends Wildcard ? (
-      L extends { name: infer N extends string } ? `*${N}${PartVariantString<R, Sep>}` :
-      `*${PartVariantString<R, Sep>}`
-    ) :
-    L extends Text ? `${L['value']}${PartVariantString<R, Sep>}` :
-    L extends Separator ? `${Sep}${PartVariantString<R, Sep>}` :
-    L extends Optional ? `${PartVariantString<L['tokens'], Sep>}${PartVariantString<R, Sep>}` | PartVariantString<R, Sep> :
-    never :
-  ''
+  constructor(partPattern: PartPattern, tokens: Array<Token>) {
+    this.#partPattern = partPattern
+    this.tokens = tokens
+  }
+
+  get requiredParams(): Array<string> {
+    if (this.#requiredParams === undefined) {
+      this.#requiredParams = []
+      for (let token of this.tokens) {
+        if (token.type === ':' || token.type === '*') {
+          this.#requiredParams.push(this.#partPattern.paramNames[token.nameIndex])
+        }
+      }
+    }
+    return this.#requiredParams
+  }
+
+  static generate(pattern: PartPattern): Array<Variant> {
+    let result: Array<Variant> = []
+
+    let stack: Array<{ index: number; tokens: Array<Token> }> = [{ index: 0, tokens: [] }]
+
+    while (stack.length > 0) {
+      let { index, tokens } = stack.pop()!
+
+      if (index === pattern.tokens.length) {
+        result.push(new Variant(pattern, tokens))
+        continue
+      }
+
+      let token = pattern.tokens[index]
+
+      if (token.type === '(') {
+        stack.push(
+          { index: index + 1, tokens },
+          { index: pattern.optionals.get(index)! + 1, tokens: tokens.slice() },
+        )
+        continue
+      }
+
+      if (token.type === ')') {
+        stack.push({ index: index + 1, tokens })
+        continue
+      }
+
+      if (token.type === ':' || token.type === '*' || token.type === 'text' || token.type === 'separator') {
+        tokens.push(token)
+        stack.push({ index: index + 1, tokens })
+        continue
+      }
+      unreachable(token.type)
+    }
+
+    return result
+  }
+
+  toString(): string {
+    let result = ''
+
+    for (let token of this.tokens) {
+      if (token.type === 'text') {
+        result += token.text
+        continue
+      }
+
+      if (token.type === ':' || token.type === '*') {
+        let name = this.#partPattern.paramNames[token.nameIndex]
+        if (name === '*') name = ''
+        result += `{${token.type}${name}}`
+        continue
+      }
+
+      if (token.type === 'separator') {
+        result += this.#partPattern.separator
+        continue
+      }
+
+      unreachable(token.type)
+    }
+
+    return result
+  }
+}
