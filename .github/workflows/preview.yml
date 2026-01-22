@@ -47,4 +47,6 @@ jobs:
           echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
       - name: Comment on PR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: pnpm run pr-preview comment ${{ github.event.pull_request.number }}
