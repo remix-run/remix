@@ -1,5 +1,5 @@
 import { RoutePattern } from '@remix-run/route-pattern'
-import type { HrefBuilderArgs, Join, RouteMatch } from '@remix-run/route-pattern'
+import type { HrefArgs, Join } from '@remix-run/route-pattern'
 
 import type { RequestMethod } from './request-methods.ts'
 import type { Simplify } from './type-utils.ts'
@@ -34,7 +34,7 @@ export class Route<
    */
   constructor(method: method | 'ANY', pattern: pattern | RoutePattern<pattern>) {
     this.method = method
-    this.pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
+    this.pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
   }
 
   /**
@@ -43,7 +43,7 @@ export class Route<
    * @param args The parameters to use for building the href
    * @returns The built URL href
    */
-  href(...args: HrefBuilderArgs<pattern>): string {
+  href(...args: HrefArgs<pattern>): string {
     return this.pattern.href(...args)
   }
 
@@ -53,7 +53,7 @@ export class Route<
    * @param url The URL to match
    * @returns The match result, or `null` if the URL doesn't match
    */
-  match(url: string | URL): RouteMatch<pattern> | null {
+  match(url: string | URL): RoutePattern.Match<pattern> | null {
     return this.pattern.match(url)
   }
 }
@@ -88,10 +88,10 @@ export function createRoutes<base extends string, const defs extends RouteDefs>(
 export function createRoutes(baseOrDefs: any, defs?: RouteDefs): RouteMap {
   return typeof baseOrDefs === 'string' || baseOrDefs instanceof RoutePattern
     ? buildRouteMap(
-        typeof baseOrDefs === 'string' ? new RoutePattern(baseOrDefs) : baseOrDefs,
+        typeof baseOrDefs === 'string' ? RoutePattern.parse(baseOrDefs) : baseOrDefs,
         defs!,
       )
-    : buildRouteMap(new RoutePattern('/'), baseOrDefs)
+    : buildRouteMap(RoutePattern.parse('/'), baseOrDefs)
 }
 
 function buildRouteMap<base extends string, defs extends RouteDefs>(
