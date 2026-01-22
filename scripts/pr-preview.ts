@@ -27,18 +27,17 @@ let { positionals } = parseArgs({
   strict: true,
 })
 
-if (positionals.length !== 2) {
+if (positionals.length !== 3) {
   printUsage()
   process.exit(1)
 }
 
-let [command, prNumberString] = positionals
+let [command, prNumberString, branch] = positionals
 let prNumber = parseInt(prNumberString, 10)
 if (isNaN(prNumber) || prNumber <= 0) {
   printUsage()
   throw new Error(`Invalid PR number: ${prNumberString}`)
 }
-let branch = `preview/${prNumber}`
 
 let commands: Record<string, () => Promise<void>> = {
   comment,
@@ -54,8 +53,8 @@ if (commands[command]) {
 
 function printUsage() {
   console.error('Usage: node pr-preview.ts <command> <args>')
-  console.error('  comment <branch>  - Add preview comment to PR')
-  console.error('  cleanup <branch>  - Delete branch from origin')
+  console.error('  comment <pr-number> <preview-branch> - Add preview comment to PR')
+  console.error('  cleanup <pr-number> <preview-branch> - Delete branch from origin')
 }
 
 async function comment() {

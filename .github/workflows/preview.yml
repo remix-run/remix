@@ -43,16 +43,19 @@ jobs:
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
 
-          pnpm run setup-installable-branch preview/${{ github.event.pull_request.number }}
+          PREVIEW_BRANCH_NAME="preview/${{ github.event.pull_request.number }}"
+          pnpm run setup-installable-branch $PREVIEW_BRANCH_NAME
 
-          git push --force --set-upstream origin preview/${{ github.event.pull_request.number }}
-          echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
+          git push --force --set-upstream origin $PREVIEW_BRANCH_NAME
+          echo "pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
-          pnpm run pr-preview comment ${{ github.event.pull_request.number }}
+          pnpm run pr-preview comment ${{ github.event.pull_request.number }} $PREVIEW_BRANCH_NAME
 
       # Cleanup previews when PR's are closed
       - name: Cleanup preview branch
         if: github.event.pull_request.state == 'closed'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: pnpm run pr-preview cleanup ${{ github.event.pull_request.number }}
+        run: |
+          PREVIEW_BRANCH_NAME="preview/${{ github.event.pull_request.number }}"
+          pnpm run pr-preview cleanup ${{ github.event.pull_request.number }} $PREVIEW_BRANCH_NAME
