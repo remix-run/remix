@@ -219,7 +219,10 @@ describe('fetch proxy', () => {
     assert.equal(capturedRequest.keepalive, true)
     assert.equal(capturedRequest.mode, 'cors')
     assert.equal(capturedRequest.redirect, 'error')
-    assert.equal(capturedRequest.referrer, 'http://example.com/')
+    // Verify the proxy preserves the referrer from the original request.
+    // Note: The actual referrer value depends on platform-specific behavior in the Request API.
+    // On some platforms, cross-origin referrers may be rejected and fall back to "about:client".
+    assert.equal(capturedRequest.referrer, originalRequest.referrer)
     assert.equal(capturedRequest.referrerPolicy, 'no-referrer')
   })
 
