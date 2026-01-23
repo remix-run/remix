@@ -1,4 +1,5 @@
 import { ParseError, unreachable } from './errors.ts'
+import * as RE from './regexp.ts'
 import type { Span } from './span.ts'
 import { Variant } from './variant.ts'
 
@@ -33,16 +34,13 @@ export class PartPattern {
   readonly tokens: AST['tokens']
   readonly paramNames: AST['paramNames']
   readonly optionals: AST['optionals']
-  readonly type: 'protocol' | 'hostname' | 'pathname'
+  readonly type: 'hostname' | 'pathname'
   readonly ignoreCase: boolean
 
   #variants: Array<Variant> | undefined
   #regexp: RegExp | undefined
 
-  constructor(
-    ast: AST,
-    options: { type: 'protocol' | 'hostname' | 'pathname'; ignoreCase: boolean },
-  ) {
+  constructor(ast: AST, options: { type: 'hostname' | 'pathname'; ignoreCase: boolean }) {
     this.tokens = ast.tokens
     this.paramNames = ast.paramNames
     this.optionals = ast.optionals
@@ -50,13 +48,13 @@ export class PartPattern {
     this.ignoreCase = options.ignoreCase
   }
 
-  get separator(): '.' | '/' | '' {
+  get separator(): '.' | '/' {
     return separatorForType(this.type)
   }
 
   static parse(
     source: string,
-    options: { span?: Span; type: 'protocol' | 'hostname' | 'pathname'; ignoreCase: boolean },
+    options: { span?: Span; type: 'hostname' | 'pathname'; ignoreCase: boolean },
   ): PartPattern {
     let span = options.span ?? [0, source.length]
     let separator = separatorForType(options.type)
@@ -275,11 +273,11 @@ export class PartPattern {
   }
 }
 
-function toRegExp(tokens: Array<Token>, separator: '.' | '/' | '', ignoreCase: boolean): RegExp {
+function toRegExp(tokens: Array<Token>, separator: '.' | '/', ignoreCase: boolean): RegExp {
   let result = ''
   for (let token of tokens) {
     if (token.type === 'text') {
-      result += escapeRegex(token.text)
+      result += RE.escape(token.text)
       continue
     }
 
@@ -306,7 +304,7 @@ function toRegExp(tokens: Array<Token>, separator: '.' | '/' | '', ignoreCase: b
     }
 
     if (token.type === 'separator') {
-      result += escapeRegex(separator ?? '')
+      result += RE.escape(separator ?? '')
       continue
     }
 
@@ -315,12 +313,7 @@ function toRegExp(tokens: Array<Token>, separator: '.' | '/' | '', ignoreCase: b
   return new RegExp(`^${result}$`, ignoreCase ? 'di' : 'd')
 }
 
-function separatorForType(type: 'protocol' | 'hostname' | 'pathname'): '.' | '/' | '' {
+function separatorForType(type: 'hostname' | 'pathname'): '.' | '/' {
   if (type === 'hostname') return '.'
-  if (type === 'pathname') return '/'
-  return ''
-}
-
-function escapeRegex(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&')
+  return '/'
 }

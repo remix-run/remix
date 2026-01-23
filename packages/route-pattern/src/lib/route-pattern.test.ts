@@ -22,7 +22,7 @@ describe('RoutePattern', () => {
       }
       assert.deepStrictEqual(
         {
-          protocol: pattern.ast.protocol?.source,
+          protocol: pattern.ast.protocol,
           hostname: pattern.ast.hostname?.source,
           port: pattern.ast.port ?? null,
           pathname: pattern.ast.pathname?.source,
@@ -30,7 +30,7 @@ describe('RoutePattern', () => {
         },
         {
           // explicitly set each prop so that we can omitted keys from `expected` to set them as defaults
-          protocol: expected.protocol,
+          protocol: expected.protocol ?? null,
           hostname: expected.hostname,
           port: expected.port ?? null,
           pathname: expected.pathname ?? '',
@@ -127,13 +127,32 @@ describe('RoutePattern', () => {
       assertParse('?q=1&q=2', { search: { q: ['1', '2'] } })
       assertParse('?q&q=&q=1&q=2', { search: { q: ['1', '2'] } })
     })
+
+    test('throws on invalid protocol', () => {
+      assert.throws(() => RoutePattern.parse('ftp://example.com'), {
+        name: 'ParseError',
+        type: 'invalid protocol',
+      })
+      assert.throws(() => RoutePattern.parse('ws://example.com/path'), {
+        name: 'ParseError',
+        type: 'invalid protocol',
+      })
+      assert.throws(() => RoutePattern.parse('httpx://example.com'), {
+        name: 'ParseError',
+        type: 'invalid protocol',
+      })
+      assert.throws(() => RoutePattern.parse('http(s)x://example.com'), {
+        name: 'ParseError',
+        type: 'invalid protocol',
+      })
+    })
   })
 
   describe('part accessors', () => {
     test('protocol', () => {
       assert.equal(RoutePattern.parse('http://example.com').protocol, 'http')
       assert.equal(RoutePattern.parse('https://example.com').protocol, 'https')
-      assert.equal(RoutePattern.parse('*proto://example.com').protocol, '*proto')
+      assert.equal(RoutePattern.parse('http(s)://example.com').protocol, 'http(s)')
       assert.equal(RoutePattern.parse('/pathname').protocol, '')
       assert.equal(RoutePattern.parse('://example.com').protocol, '')
     })
@@ -210,25 +229,25 @@ describe('RoutePattern', () => {
     test('protocol', () => {
       assertSource('http://', 'http:///')
       assertSource('https://', 'https:///')
-      assertSource('*proto://', '*proto:///')
+      assertSource('http(s)://', 'http(s):///')
     })
 
     test('protocol + hostname', () => {
       assertSource('https://example.com', 'https://example.com/')
       assertSource('http://example.com', 'http://example.com/')
-      assertSource('*proto://*host', '*proto://*host/')
+      assertSource('http(s)://*host', 'http(s)://*host/')
     })
 
     test('protocol + hostname + pathname', () => {
       assertSource('https://example.com/about')
       assertSource('http://example.com/products/:id')
-      assertSource('*proto://*host/path')
+      assertSource('http(s)://*host/path')
     })
 
     test('protocol + hostname + port + pathname', () => {
       assertSource('https://example.com:8000/about')
       assertSource('http://localhost:3000/posts/:id')
-      assertSource('*proto://example.com:8000/path')
+      assertSource('http(s)://example.com:8000/path')
     })
 
     test('search params', () => {
@@ -253,12 +272,12 @@ describe('RoutePattern', () => {
         '://(staging.)example.com/api(/:version)/resources/:id(.json)',
         '://(staging.)example.com/api(/:version)/resources/:id(.json)',
       )
-      assertSource('*proto://*host/path')
+      assertSource('http(s)://*host/path')
     })
 
     test('full patterns', () => {
       assertSource('https://api.example.com:8000/v1/:resource')
-      assertSource('*proto://example.com/base')
+      assertSource('http(s)://example.com/base')
       assertSource('http://old.com:3000/keep/this')
       assertSource('users/:id?tab=profile', '/users/:id?tab=profile')
       assertSource('://example.com/path?q=1&q=2&filter')
@@ -274,18 +293,19 @@ describe('RoutePattern', () => {
     }
 
     test('protocol', () => {
-      assertJoin('http://', '*://', 'http://')
-      assertJoin('*://', '*://', '*://')
-      assertJoin('*://', 'http://', 'http://')
+      assertJoin('http://', '://', 'http://')
+      assertJoin('://', '://', '://')
+      assertJoin('://', 'http://', 'http://')
 
-      assertJoin('http://', '*proto://', '*proto://')
-      assertJoin('*proto://', 'http://', 'http://')
-      assertJoin('*proto://', '*other://', '*other://')
-      assertJoin('*://', '*proto://', '*proto://')
-
+      assertJoin('http://', '://example.com', 'http://example.com')
+      assertJoin('://example.com', 'http://', 'http://example.com')
+      
       assertJoin('http://', 'https://', 'https://')
       assertJoin('://example.com', 'https://', 'https://example.com')
       assertJoin('http://example.com', 'https://', 'https://example.com')
+      
+      assertJoin('http(s)://', 'https://', 'https://')
+      assertJoin('https://', 'http(s)://', 'http(s)://')
     })
 
     test('hostname', () => {
@@ -336,7 +356,7 @@ describe('RoutePattern', () => {
     })
 
     test('combos', () => {
-      assertJoin('http://example.com/a', '*proto://*host/b', '*proto://*host/a/b')
+      assertJoin('http://example.com/a', 'http(s)://*host/b', 'http(s)://*host/a/b')
       assertJoin('http://example.com:8000/a', 'https:///b', 'https://example.com:8000/a/b')
       assertJoin('http://example.com:8000/a', '://other.com/b', 'http://other.com:8000/a/b')
 
@@ -347,9 +367,9 @@ describe('RoutePattern', () => {
       )
 
       assertJoin(
-        '*proto://example.com/base',
-        '*proto://other.com/path',
-        '*proto://other.com/base/path',
+        'http(s)://example.com/base',
+        'http(s)://other.com/path',
+        'http(s)://other.com/base/path',
       )
 
       assertJoin(
@@ -408,7 +428,6 @@ describe('RoutePattern', () => {
       assertHref('posts/:id', { id: '123' }, '/posts/123')
       assertHref('/posts(/:id)', { id: '123' }, '/posts/123')
       assertHref('/posts(/:id)', undefined, '/posts')
-      assertHref('*://*/posts/:id', { id: '123' }, '/posts/123')
     })
 
     test('with origin - protocol defaults to https', () => {
@@ -424,7 +443,7 @@ describe('RoutePattern', () => {
     test('with origin - explicit protocol', () => {
       assertHref('http://example.com/path', undefined, 'http://example.com/path')
       assertHref('https://example.com/posts/:id', { id: '123' }, 'https://example.com/posts/123')
-      assertHref('*proto://example.com/path', { proto: 'ftp' }, 'ftp://example.com/path')
+      assertHref('http(s)://example.com/path', undefined, 'https://example.com/path')
     })
 
     test('with origin - port', () => {
@@ -435,13 +454,12 @@ describe('RoutePattern', () => {
 
     test('origin validation - hostname required when protocol specified', () => {
       assertHrefThrows('https://*/path', undefined, 'missing-hostname')
-      assertHrefThrows('*proto://*/path', { proto: 'https' }, 'missing-hostname')
       assertHrefThrows('http://*host/path', undefined, 'missing-params')
     })
 
     test('origin validation - hostname required when port specified', () => {
       assertHrefThrows('://:8080/path', undefined, 'missing-hostname')
-      assertHrefThrows('*://*:3000/path', undefined, 'missing-hostname')
+      assertHrefThrows('://*:3000/path', undefined, 'missing-hostname')
     })
 
     test('search params', () => {
