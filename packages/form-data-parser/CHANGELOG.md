@@ -38,6 +38,7 @@ This release updates to `multipart-parser` 0.10.0 and removes the restrictions o
 
 - `FileUpload` is now a normal subclass of `File` with all the same functionality (instead of just implementing the same interface)
 - Add `maxFiles` option to `parseFormData` to allow limiting the number of files uploaded in a single request
+- BREAKING CHANGE: the default limit of the number of files uploaded in a single request is capped from unlimited to 20 files
 
 ```ts
 let formData = await parseFormData(request, { maxFiles: 5 })
