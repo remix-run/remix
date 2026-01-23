@@ -2,7 +2,12 @@ import type { RoutePattern } from './route-pattern.ts'
 import type { PartPattern } from './part-pattern.ts'
 import type * as Search from './route-pattern/search.ts'
 
-type ParseErrorType = 'unmatched (' | 'unmatched )' | 'missing variable name' | 'dangling escape'
+type ParseErrorType =
+  | 'unmatched ('
+  | 'unmatched )'
+  | 'missing variable name'
+  | 'dangling escape'
+  | 'invalid protocol'
 
 export class ParseError extends Error {
   type: ParseErrorType
