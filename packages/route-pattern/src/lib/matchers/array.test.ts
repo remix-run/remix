@@ -8,8 +8,8 @@ describe('ArrayMatcher', () => {
   describe('match', () => {
     describe('static patterns', () => {
       it('matches exact static pattern', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('users')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('users', null)
 
         let match = matcher.match('https://example.com/users')
         assert.ok(match)
@@ -18,8 +18,8 @@ describe('ArrayMatcher', () => {
       })
 
       it('matches nested static patterns', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('api/v1/users')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('api/v1/users', null)
 
         let match = matcher.match('https://example.com/api/v1/users')
         assert.ok(match)
@@ -27,16 +27,16 @@ describe('ArrayMatcher', () => {
       })
 
       it('returns null for non-matching static pattern', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('users')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('users', null)
 
         let match = matcher.match('https://example.com/posts')
         assert.equal(match, null)
       })
 
       it('matches root pattern', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('', null)
 
         let match = matcher.match('https://example.com/')
         assert.ok(match)
@@ -46,8 +46,8 @@ describe('ArrayMatcher', () => {
 
     describe('variable patterns', () => {
       it('matches single variable', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('users/:id')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('users/:id', null)
 
         let match = matcher.match('https://example.com/users/123')
         assert.ok(match)
@@ -55,8 +55,8 @@ describe('ArrayMatcher', () => {
       })
 
       it('matches multiple variables', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('users/:userId/posts/:postId')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('users/:userId/posts/:postId', null)
 
         let match = matcher.match('https://example.com/users/123/posts/456')
         assert.ok(match)
@@ -64,8 +64,8 @@ describe('ArrayMatcher', () => {
       })
 
       it('matches variables with special characters', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('users/:id')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('users/:id', null)
 
         let match = matcher.match('https://example.com/users/user-123_test')
         assert.ok(match)
@@ -73,8 +73,8 @@ describe('ArrayMatcher', () => {
       })
 
       it('matches variables with URL encoding', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('search/:query')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('search/:query', null)
 
         let match = matcher.match('https://example.com/search/hello%20world')
         assert.ok(match)
@@ -84,8 +84,8 @@ describe('ArrayMatcher', () => {
 
     describe('wildcard patterns', () => {
       it('matches named wildcard', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('files/*path')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('files/*path', null)
 
         let match = matcher.match('https://example.com/files/docs/readme.txt')
         assert.ok(match)
@@ -93,8 +93,8 @@ describe('ArrayMatcher', () => {
       })
 
       it('matches unnamed wildcard', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('assets/*')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('assets/*', null)
 
         let match = matcher.match('https://example.com/assets/css/main.css')
         assert.ok(match)
@@ -102,8 +102,8 @@ describe('ArrayMatcher', () => {
       })
 
       it('matches wildcard with continuation', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('proxy/*url/status')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('proxy/*url/status', null)
 
         let match = matcher.match('https://example.com/proxy/api.example.com/v1/users/status')
         assert.ok(match)
@@ -113,8 +113,8 @@ describe('ArrayMatcher', () => {
 
     describe('complex patterns', () => {
       it('matches complex mixed pattern', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('api/v:version/users/:id/posts/*path')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('api/v:version/users/:id/posts/*path', null)
 
         let match = matcher.match('https://example.com/api/v2/users/123/posts/2024/01/hello-world')
         assert.ok(match)
@@ -126,11 +126,11 @@ describe('ArrayMatcher', () => {
       })
 
       it('handles multiple patterns with shared prefixes', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('api/users')
-        matcher.add('api/users/:id')
-        matcher.add('api/users/:id/posts')
-        matcher.add('api/posts')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('api/users', null)
+        matcher.add('api/users/:id', null)
+        matcher.add('api/users/:id/posts', null)
+        matcher.add('api/posts', null)
 
         let match1 = matcher.match('https://example.com/api/users')
         assert.ok(match1)
@@ -147,8 +147,8 @@ describe('ArrayMatcher', () => {
 
     describe('edge cases', () => {
       it('handles trailing slashes consistently', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('users')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('users', null)
 
         let match1 = matcher.match('https://example.com/users')
         assert.ok(match1)
@@ -159,8 +159,8 @@ describe('ArrayMatcher', () => {
       })
 
       it('returns null for partial matches', () => {
-        let matcher = new ArrayMatcher()
-        matcher.add('api/v1/users')
+        let matcher = new ArrayMatcher<null>()
+        matcher.add('api/v1/users', null)
 
         let match = matcher.match('https://example.com/api/v1')
         assert.equal(match, null)
@@ -170,9 +170,9 @@ describe('ArrayMatcher', () => {
 
   describe('matchAll', () => {
     it('returns all matching patterns', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('users/:id')
-      matcher.add('*path')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('users/:id', null)
+      matcher.add('*path', null)
 
       let matches = matcher.matchAll('https://example.com/users/123')
       assert.equal(matches.length, 2)
@@ -184,8 +184,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('returns empty array when no matches', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('users')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('users', null)
 
       let matches = matcher.matchAll('https://example.com/posts')
       assert.deepEqual(matches, [])
@@ -194,8 +194,8 @@ describe('ArrayMatcher', () => {
 
   describe('optional patterns', () => {
     it('matches optional when present', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('api(/:version)')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('api(/:version)', null)
 
       let match = matcher.match('https://example.com/api/v1')
       assert.ok(match)
@@ -203,8 +203,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('matches optional when absent', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('api(/:version)')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('api(/:version)', null)
 
       let match = matcher.match('https://example.com/api')
       assert.ok(match)
@@ -212,8 +212,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('matches nested optionals', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('api(/:major(/:minor))')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('api(/:major(/:minor))', null)
 
       // All present
       let match1 = matcher.match('https://example.com/api/v2/1')
@@ -232,8 +232,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('matches optional with wildcard', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('files(/*path)')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('files(/*path)', null)
 
       let match1 = matcher.match('https://example.com/files/docs/readme.txt')
       assert.ok(match1)
@@ -245,9 +245,9 @@ describe('ArrayMatcher', () => {
     })
 
     it('handles multiple optional patterns', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('api(/:version)')
-      matcher.add('api/:version')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('api(/:version)', null)
+      matcher.add('api/:version', null)
 
       // First pattern wins (order-dependent)
       let match = matcher.match('https://example.com/api/v1')
@@ -256,8 +256,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('matches complex optional patterns', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('users/:id(.:format)')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('users/:id(.:format)', null)
 
       let match1 = matcher.match('https://example.com/users/123.json')
       assert.ok(match1)
@@ -271,9 +271,9 @@ describe('ArrayMatcher', () => {
 
   describe('full URL patterns', () => {
     it('matches protocol patterns', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('https://example.com/api')
-      matcher.add('http://example.com/api')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('https://example.com/api', null)
+      matcher.add('http://example.com/api', null)
 
       let match1 = matcher.match('https://example.com/api')
       assert.ok(match1)
@@ -285,8 +285,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('matches any protocol patterns', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('://example.com/api')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('://example.com/api', null)
 
       let match1 = matcher.match('https://example.com/api')
       assert.ok(match1)
@@ -296,8 +296,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('matches hostname variables', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('https://:subdomain.example.com/api')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('https://:subdomain.example.com/api', null)
 
       let match = matcher.match('https://api.example.com/api')
       assert.ok(match)
@@ -305,8 +305,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('matches hostname wildcards', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('https://*host.example.com/api')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('https://*host.example.com/api', null)
 
       let match = matcher.match('https://api.v1.example.com/api')
       assert.ok(match)
@@ -314,9 +314,9 @@ describe('ArrayMatcher', () => {
     })
 
     it('matches port-specific patterns', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('://localhost:3000/api')
-      matcher.add('://localhost:8080/api')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('://localhost:3000/api', null)
+      matcher.add('://localhost:8080/api', null)
 
       let match1 = matcher.match('http://localhost:3000/api')
       assert.ok(match1)
@@ -326,9 +326,9 @@ describe('ArrayMatcher', () => {
     })
 
     it('prefers first matching pattern (order-dependent)', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('api/users')
-      matcher.add('https://example.com/api/users')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('api/users', null)
+      matcher.add('https://example.com/api/users', null)
 
       let match = matcher.match('https://example.com/api/users')
       assert.ok(match)
@@ -337,8 +337,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('supports protocol optionals like http(s)', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('http(s)://example.com/api')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('http(s)://example.com/api', null)
 
       let match1 = matcher.match('http://example.com/api')
       assert.ok(match1)
@@ -351,8 +351,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('supports protocol optionals with other URL components', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('http(s)://:subdomain.example.com/users/:id')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('http(s)://:subdomain.example.com/users/:id', null)
 
       let match1 = matcher.match('http://api.example.com/users/123')
       assert.ok(match1)
@@ -366,9 +366,9 @@ describe('ArrayMatcher', () => {
 
   describe('search constraint patterns', () => {
     it('matches patterns with search constraints', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('search?q=test')
-      matcher.add('search?q=other')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('search?q=test', null)
+      matcher.add('search?q=other', null)
 
       let match1 = matcher.match('https://example.com/search?q=test')
       assert.ok(match1)
@@ -378,8 +378,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('returns null when search constraints not met', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('search?q=test')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('search?q=test', null)
 
       let match1 = matcher.match('https://example.com/search?q=wrong')
       assert.equal(match1, null)
@@ -389,8 +389,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('matches bare search parameters', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('api?debug')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('api?debug', null)
 
       let match1 = matcher.match('https://example.com/api?debug')
       assert.ok(match1)
@@ -403,8 +403,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('matches required assignment parameters', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('search?q=')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('search?q=', null)
 
       let match1 = matcher.match('https://example.com/search?q=test')
       assert.ok(match1)
@@ -417,8 +417,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('matches multiple search constraints', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('api?format=json&version=v1')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('api?format=json&version=v1', null)
 
       let match1 = matcher.match('https://example.com/api?format=json&version=v1')
       assert.ok(match1)
@@ -431,16 +431,16 @@ describe('ArrayMatcher', () => {
     })
 
     it('matches with extra search parameters', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('search?q=test')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('search?q=test', null)
 
       let match = matcher.match('https://example.com/search?q=test&extra=value&utm_source=google')
       assert.ok(match)
     })
 
     it('combines pathname params with search constraints', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('users/:id?format=json')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('users/:id?format=json', null)
 
       let match = matcher.match('https://example.com/users/123?format=json')
       assert.ok(match)
@@ -448,8 +448,8 @@ describe('ArrayMatcher', () => {
     })
 
     it('combines full URL with search constraints', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('https://:subdomain.example.com/api/:version?format=json')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('https://:subdomain.example.com/api/:version?format=json', null)
 
       let match = matcher.match('https://api.example.com/api/v1?format=json')
       assert.ok(match)
@@ -460,16 +460,16 @@ describe('ArrayMatcher', () => {
     })
 
     it('handles URL-encoded search parameters', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('search?q=hello%20world')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('search?q=hello%20world', null)
 
       let match = matcher.match('https://example.com/search?q=hello%20world')
       assert.ok(match)
     })
 
     it('handles repeated search parameter values', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('search?tags=javascript')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('search?tags=javascript', null)
 
       let match = matcher.match('https://example.com/search?tags=javascript&tags=react')
       assert.ok(match)
@@ -478,11 +478,11 @@ describe('ArrayMatcher', () => {
 
   describe('comprehensive feature combinations', () => {
     it('handles complex precedence with search constraints', () => {
-      let matcher = new ArrayMatcher()
-      matcher.add('api/users')
-      matcher.add('api/users?format=json')
-      matcher.add('https://api.example.com/api/users')
-      matcher.add('https://api.example.com/api/users?format=xml')
+      let matcher = new ArrayMatcher<null>()
+      matcher.add('api/users', null)
+      matcher.add('api/users?format=json', null)
+      matcher.add('https://api.example.com/api/users', null)
+      matcher.add('https://api.example.com/api/users?format=xml', null)
 
       // First matching pattern wins (order-dependent)
       let match1 = matcher.match('https://api.example.com/api/users?format=xml')
@@ -500,10 +500,10 @@ describe('ArrayMatcher', () => {
 
   describe('performance characteristics', () => {
     it('handles deep nesting', () => {
-      let matcher = new ArrayMatcher()
+      let matcher = new ArrayMatcher<null>()
 
       let deepPattern = 'a/b/c/d/e/f/g/h/i/j/:id'
-      matcher.add(deepPattern)
+      matcher.add(deepPattern, null)
 
       let match = matcher.match('https://example.com/a/b/c/d/e/f/g/h/i/j/123')
       assert.ok(match)

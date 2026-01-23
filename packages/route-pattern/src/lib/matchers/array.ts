@@ -1,34 +1,37 @@
-import { RoutePattern } from "../route-pattern.ts"
-import type { Matcher } from "./matcher.ts"
-import * as Specificity from "../specificity.ts"
+import { RoutePattern } from '../route-pattern.ts'
+import type { Matcher } from './matcher.ts'
+import * as Specificity from '../specificity.ts'
 
-export class ArrayMatcher implements Matcher {
-  #patterns: Array<RoutePattern> = []
+export class ArrayMatcher<data> implements Matcher<data> {
+  #patterns: Array<{ pattern: RoutePattern; data: data }> = []
 
-  add(pattern: string | RoutePattern): void {
+  add(pattern: string | RoutePattern, data: data): void {
     pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
-    this.#patterns.push(pattern)
+    this.#patterns.push({ pattern, data })
   }
 
-  match(url: string | URL, compareFn = Specificity.descending): RoutePattern.Match | null {
-    let bestMatch: RoutePattern.Match | null = null
-    for (let pattern of this.#patterns) {
-      let match = pattern.match(url)
+  match(url: string | URL, compareFn = Specificity.descending): Matcher.Match<string, data> | null {
+    let bestMatch: Matcher.Match<string, data> | null = null
+    for (let entry of this.#patterns) {
+      let match = entry.pattern.match(url)
       if (match) {
         if (bestMatch === null || compareFn(match, bestMatch) < 0) {
-          bestMatch = match
+          bestMatch = { ...match, data: entry.data }
         }
       }
     }
     return bestMatch
   }
 
-  matchAll(url: string | URL, compareFn = Specificity.descending): Array<RoutePattern.Match> {
-    let matches: Array<RoutePattern.Match> = []
-    for (let pattern of this.#patterns) {
-      let match = pattern.match(url)
+  matchAll(
+    url: string | URL,
+    compareFn = Specificity.descending,
+  ): Array<Matcher.Match<string, data>> {
+    let matches: Array<Matcher.Match<string, data>> = []
+    for (let entry of this.#patterns) {
+      let match = entry.pattern.match(url)
       if (match) {
-        matches.push(match)
+        matches.push({ ...match, data: entry.data })
       }
     }
     return matches.sort(compareFn)

@@ -113,14 +113,12 @@ let urls = [
   'https://example.com/search?missing=params',
 ]
 
-let matchers = [
-  { name: 'array', matcher: new ArrayMatcher() },
-]
+let matchers = [{ name: 'array', matcher: new ArrayMatcher<null>() }]
 
 describe('setup', () => {
   for (let { name, matcher } of matchers) {
     bench(name, () => {
-      routes.forEach((route) => matcher.add(route))
+      routes.forEach((route) => matcher.add(route, null))
     })
   }
 })

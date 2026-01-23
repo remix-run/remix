@@ -107,15 +107,13 @@ let urls = [
   'https://example.com/test',
 ]
 
-let matchers = [
-  { name: 'array', matcher: new ArrayMatcher() },
-]
+let matchers = [{ name: 'array', matcher: new ArrayMatcher<null>() }]
 
 describe('setup', () => {
   for (let { name, matcher } of matchers) {
     bench(name, () => {
       for (let route of routes) {
-        matcher.add(route)
+        matcher.add(route, null)
       }
     })
   }
