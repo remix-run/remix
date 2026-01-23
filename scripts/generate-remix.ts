@@ -8,7 +8,6 @@
  * Run: node docs/generate-remix.ts
  */
 
-import cp from 'node:child_process'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
@@ -18,12 +17,9 @@ import { logAndExec } from './utils/process.ts'
 let __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 let packagesDir = path.resolve(__dirname, '../packages')
 let remixDir = path.join(packagesDir, 'remix')
+let remixChangesDir = path.join(remixDir, '.changes')
 let remixPackageJsonPath = path.join(remixDir, 'package.json')
 
-// Don't do anything with change files until we actually publish an initial Remix v3 alpha
-// release, since only then will we care to start documenting what changed.
-// And Maybe not even until our first stable release.
-const GENERATE_CHANGE_FILES = false
 const SOURCE_FOLDER = 'src'
 const SUB_EXPORT_FOLDER = 'lib'
 
@@ -44,19 +40,6 @@ type ExportEntry = {
 }
 
 let { remixRunPackages, allExports } = await getRemixRunPackages()
-
-// Ensure we have a passing linter before generating code
-lintRemixPackage(false)
-
-// Generate source files
-await generateRemixSourceFiles()
-
-// Run the linter against generated source code with --fix to ensure generated
-// code passes linting
-lintRemixPackage(true)
-
-// Update package.json
-console.log('📦 Updating package.json...')
 let remixPackageJson = JSON.parse(await fs.readFile(remixPackageJsonPath, 'utf-8'))
 
 // Track existing exports for comparison
@@ -66,37 +49,17 @@ let existingExports = new Set<string>(
   ),
 )
 
-// Build exports/publishConfig.exports/dependencies
-let { exportsConfig, publishConfigExports } = getRemixExports()
-let remixDependencies = getRemixDependencies()
+// Update remixPackageJson in place and output to disk
+await updateRemixPackage()
 
-// Update package.json
-remixPackageJson.exports = exportsConfig
-remixPackageJson.publishConfig.exports = publishConfigExports
-remixPackageJson.dependencies = remixDependencies
-
-await fs.writeFile(remixPackageJsonPath, JSON.stringify(remixPackageJson, null, 2) + '\n', 'utf-8')
-
-// Generate change summary
-await outputExportsChanges()
-
-// Update dependency changes
-await outputDependencyChanges()
-
-//  Copy change files up to remix changes directory
-if (GENERATE_CHANGE_FILES) {
-  await copySubPackageChangeFiles()
-}
+// Generate change files
+await outputExportsChangeFiles(remixPackageJson.exports)
+await outputDependencyChangeFiles()
+await copySubPackageChangeFiles()
 
 // Implementations
-
-function lintRemixPackage(fix: boolean) {
-  console.log('🔍 Running ESLint on remix package...')
-  cp.execSync(`npx eslint packages/remix/ --max-warnings=0 ${fix ? '--fix' : ''}`)
-}
-
 async function getRemixRunPackages() {
-  console.log('🔍 Scanning packages...')
+  console.log('Scanning packages...')
 
   // Get all packages except remix itself
   let packageDirNames = (await fs.readdir(packagesDir, { withFileTypes: true }))
@@ -161,7 +124,7 @@ async function getRemixRunPackages() {
         remixRunPackage.changeFiles.push(path.join(changesDir, changeFile))
       }
     } catch (e) {
-      // No .changes directory or can't read it, skip
+      // No changes directory or can't read it, skip
     }
   }
 
@@ -170,14 +133,18 @@ async function getRemixRunPackages() {
   allExports.sort((a, b) => a.exportPath.localeCompare(b.exportPath))
 
   console.log(
-    `📝 Found ${remixRunPackages.length} @remix-run packages with a total of ${allExports.length} exports.`,
+    `Found ${remixRunPackages.length} @remix-run packages with a total of ${allExports.length} exports.`,
   )
 
   return { remixRunPackages, allExports }
 }
 
-async function generateRemixSourceFiles() {
-  console.log('📄 Generating source files...')
+async function updateRemixPackage() {
+  // Ensure we have a passing linter before generating code
+  logAndExec(`npx eslint packages/remix/ --max-warnings=0`)
+
+  // Generate source files
+  console.log('Generating Remix source files...')
   for (let entry of allExports) {
     let sourceFilePath = path.join(remixDir, SOURCE_FOLDER, SUB_EXPORT_FOLDER, entry.sourceFile)
     // Create subdirectory if needed
@@ -189,13 +156,16 @@ async function generateRemixSourceFiles() {
     ].join('\n')
     await fs.writeFile(sourceFilePath, content, 'utf-8')
   }
-}
 
-function getRemixExports() {
-  let exportsConfig: Record<string, string> = {
+  // Run linter against generated code with --fix
+  logAndExec(`npx eslint packages/remix/ --max-warnings=0 --fix`)
+
+  // Update package.json
+  console.log('Updating Remix package.json...')
+  remixPackageJson.exports = {
     '.': './src/index.ts',
   }
-  let publishConfigExports: Record<string, any> = {
+  remixPackageJson.publishConfig.exports = {
     '.': {
       types: './dist/index.d.ts',
       default: './dist/index.js',
@@ -204,31 +174,31 @@ function getRemixExports() {
 
   for (let entry of allExports) {
     let exportPath = path.join(SOURCE_FOLDER, SUB_EXPORT_FOLDER, entry.sourceFile)
-    exportsConfig[entry.exportPath] = `./${exportPath}`
+    remixPackageJson.exports[entry.exportPath] = `./${exportPath}`
 
     let distFile = path.join(SUB_EXPORT_FOLDER, entry.sourceFile.replace(/\.ts$/, ''))
-    publishConfigExports[entry.exportPath] = {
+    remixPackageJson.publishConfig.exports[entry.exportPath] = {
       types: `./dist/${distFile}.d.ts`,
       default: `./dist/${distFile}.js`,
     }
   }
 
-  exportsConfig['./package.json'] = './package.json'
-  publishConfigExports['./package.json'] = './package.json'
+  remixPackageJson.exports['./package.json'] = './package.json'
+  remixPackageJson.publishConfig.exports['./package.json'] = './package.json'
 
-  return { exportsConfig, publishConfigExports }
-}
-
-function getRemixDependencies() {
-  let dependencies: Record<string, string> = {}
   for (let packageInfo of remixRunPackages) {
-    dependencies[packageInfo.name] = 'workspace:^'
+    remixPackageJson.dependencies[packageInfo.name] = 'workspace:^'
   }
-  return dependencies
+
+  await fs.writeFile(
+    remixPackageJsonPath,
+    JSON.stringify(remixPackageJson, null, 2) + '\n',
+    'utf-8',
+  )
 }
 
 // Build exports change summary
-async function outputExportsChanges() {
+async function outputExportsChangeFiles(exportsConfig: Record<string, string>) {
   let newExportsSet = new Set<string>(
     Object.keys(exportsConfig).filter((key) => key !== '.' && key !== './package.json'),
   )
@@ -240,16 +210,12 @@ async function outputExportsChanges() {
   }
 
   let semverType = removedExports.length > 0 ? 'major' : 'minor'
-  let changeFile = path.join(
-    `${remixDir}`,
-    '.changes',
-    `${semverType}.update-exports-${Date.now()}.md`,
-  )
+  let changeFile = path.join(remixChangesDir, `${semverType}.remix.update-exports-${Date.now()}.md`)
   let changes = ''
 
   if (removedExports.length > 0) {
     console.log()
-    console.log('⚠️ Removed package.json exports:')
+    console.log('Removed package.json exports:')
     changes += 'Removed `package.json` `exports`:\n'
     for (let exportPath of removedExports) {
       exportPath = exportPath.replace('./', '')
@@ -271,7 +237,7 @@ async function outputExportsChanges() {
 
   if (addedExports.length > 0) {
     console.log()
-    console.log('✨ Added package.json exports:')
+    console.log('Added package.json exports:')
     changes += 'Added `package.json` `exports`:\n'
     for (let exportPath of addedExports) {
       let entry = allExports.find((e) => e.exportPath === exportPath)
@@ -283,17 +249,15 @@ async function outputExportsChanges() {
     }
   }
 
-  if (GENERATE_CHANGE_FILES) {
-    await fs.writeFile(changeFile, changes, 'utf-8')
-    console.log()
-    console.log('✨ Created exports change file:')
-    console.log(`   - ${path.relative(process.cwd(), changeFile)}`)
-  }
+  await fs.writeFile(changeFile, changes, 'utf-8')
+  console.log()
+  console.log('Created exports change file:')
+  console.log(`   - ${path.relative(process.cwd(), changeFile)}`)
 }
 
 // Build dependencies change summary
-async function outputDependencyChanges() {
-  let changeFilePath = path.join(remixDir, '.changes', 'patch.update-remix-dependencies.md')
+async function outputDependencyChangeFiles() {
+  let changeFilePath = path.join(remixChangesDir, 'patch.remix.update-dependencies.md')
 
   // Get all `remix@` tags in the git repository
   let remixTags = logAndExec('git tag', true)
@@ -303,7 +267,7 @@ async function outputDependencyChanges() {
     .filter((tag) => tag.startsWith('remix@'))
 
   if (remixTags.length === 0) {
-    console.log('ℹ️  No previous remix releases found, skipping dependency change file')
+    console.log('No previous remix releases found, skipping dependency change file')
     return
   }
 
@@ -312,7 +276,7 @@ async function outputDependencyChanges() {
 
   // Grab the last tag in the sorted list - this is the most recent remix release
   let lastReleaseTag = remixTags[remixTags.length - 1]
-  console.log(`📌 Comparing dependencies against last release: ${lastReleaseTag}`)
+  console.log(`Comparing dependencies against last release: ${lastReleaseTag}`)
 
   // Checkout that tag in the repository
   logAndExec(`git checkout ${lastReleaseTag}`)
@@ -348,14 +312,22 @@ async function outputDependencyChanges() {
     return
   }
 
-  let contents = ['Updated dependencies:', ...lines.map((line) => ` - ${line}`)].join('\n')
+  let contents = ['Updated dependencies:', ...lines].join('\n')
 
   // Write change file
+  let exists = await fileExists(changeFilePath)
+  if (exists) {
+    let oldContents = await fs.readFile(changeFilePath, 'utf-8')
+    if (contents === oldContents) {
+      console.log('No changes to existing dependencies change file')
+      return
+    }
+  }
+
   await fs.writeFile(changeFilePath, contents, 'utf-8')
   console.log()
-  console.log('✨ Updated dependency change file:')
+  console.log(`${exists ? 'Updated' : 'Created'} dependencies change file:`)
   console.log(`   - ${path.relative(process.cwd(), changeFilePath)}`)
-  console.log(`   - ${contents.length - 1} dependency change(s)`)
 }
 
 async function copySubPackageChangeFiles() {
@@ -369,9 +341,8 @@ async function copySubPackageChangeFiles() {
 
         // Insert the sub-package name in the file so sorting will group changes by sub-package
         let destChangeFilePath = path.join(
-          remixDir,
-          '.changes',
-          `${changeType}.${packageShortName}--${changeFileName}`,
+          remixChangesDir,
+          `${changeType}.${packageShortName}.${changeFileName}`,
         )
 
         let exists = await fileExists(destChangeFilePath)
@@ -384,7 +355,7 @@ async function copySubPackageChangeFiles() {
 
     if (copiedFiles.length > 0) {
       console.log()
-      console.log('✨ Copied change files:')
+      console.log('Copied change files:')
       for (let file of copiedFiles) {
         console.log(`   - ${path.relative(process.cwd(), file)}`)
       }
