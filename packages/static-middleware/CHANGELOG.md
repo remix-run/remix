@@ -2,6 +2,12 @@
 
 This is the changelog for [`static-middleware`](https://github.com/remix-run/remix/tree/main/packages/static-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.2
+
+### Patch Changes
+
+- Changed `@remix-run/*` peer dependencies to regular dependencies
+
 ## v0.4.1
 
 ### Patch Changes

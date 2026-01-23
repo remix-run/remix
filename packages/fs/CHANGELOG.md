@@ -2,6 +2,12 @@
 
 This is the changelog for [`fs`](https://github.com/remix-run/remix/tree/main/packages/fs). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.1
+
+### Patch Changes
+
+- Changed `@remix-run/*` peer dependencies to regular dependencies
+
 ## v0.4.0
 
 ### Minor Changes

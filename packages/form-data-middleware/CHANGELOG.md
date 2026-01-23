@@ -2,6 +2,12 @@
 
 This is the changelog for [`form-data-middleware`](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.2
+
+### Patch Changes
+
+- Changed `@remix-run/*` peer dependencies to regular dependencies
+
 ## v0.1.1 (2025-12-06)
 
 - Explicitly set `context.formData` in all `POST` cases, even when the request body is invalid
