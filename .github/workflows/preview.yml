@@ -1,0 +1,61 @@
+# Create "installable" PR preview branches
+#
+#   pnpm install "remix-run/remix#preview/12345&path:packages/remix"
+
+name: PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Build previews when PR's are open
+      - name: Build preview branch
+        if: github.event.pull_request.state == 'open'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+
+          PREVIEW_BRANCH_NAME="preview/${{ github.event.pull_request.number }}"
+          pnpm run setup-installable-branch $PREVIEW_BRANCH_NAME
+
+          git push --force --set-upstream origin $PREVIEW_BRANCH_NAME
+          echo "pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
+
+          pnpm run pr-preview comment ${{ github.event.pull_request.number }} $PREVIEW_BRANCH_NAME
+
+      # Cleanup previews when PR's are closed
+      - name: Cleanup preview branch
+        if: github.event.pull_request.state == 'closed'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          PREVIEW_BRANCH_NAME="preview/${{ github.event.pull_request.number }}"
+          pnpm run pr-preview cleanup ${{ github.event.pull_request.number }} $PREVIEW_BRANCH_NAME
