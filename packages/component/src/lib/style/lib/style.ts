@@ -23,6 +23,7 @@ function camelToKebab(str: string): string {
 
 // Properties that should remain unitless (numeric values without px)
 const NUMERIC_CSS_PROPS = new Set([
+  'aspect-ratio',
   'z-index',
   'opacity',
   'flex-grow',

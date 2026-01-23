@@ -401,6 +401,7 @@ describe('processStyle', () => {
   it('preserves unitless numeric values for properties that should be unitless', () => {
     let result = processStyle(
       {
+        aspectRatio: 1.5,
         zIndex: 10,
         opacity: 0.5,
         flexGrow: 2,
@@ -412,12 +413,14 @@ describe('processStyle', () => {
 
     expect(result.selector).toMatch(/^rmx-/)
     // Unitless properties should remain unitless
+    expect(result.css).toContain('aspect-ratio: 1.5')
     expect(result.css).toContain('z-index: 10')
     expect(result.css).toContain('opacity: 0.5')
     expect(result.css).toContain('flex-grow: 2')
     expect(result.css).toContain('font-weight: 700')
     expect(result.css).toContain('order: 1')
     // Should not contain 'px' for these properties
+    expect(result.css).not.toContain('aspect-ratio: 1.5px')
     expect(result.css).not.toContain('z-index: 10px')
     expect(result.css).not.toContain('opacity: 0.5px')
   })
