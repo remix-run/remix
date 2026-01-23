@@ -4,7 +4,7 @@
  * This script uses pnpm publish with --report-summary, reads the summary file,
  * and creates Git tags + GitHub releases. When the remix package is in prerelease
  * mode (has .changes/prerelease.json), it publishes in two phases: all other
- * packages as "latest", then remix with its prerelease tag (e.g., "alpha").
+ * packages as "latest", then remix with the "next" tag.
  *
  * This script is designed for CI use. For previewing releases, use `pnpm changes:preview`.
  *
@@ -196,19 +196,16 @@ async function main() {
 
   // Check if remix is in prerelease mode
   let remixPrereleaseConfig = readRemixPrereleaseConfig()
-  let remixPrereleaseTag: string | null = null
+  let remixPrereleaseChannel: string | null = null
 
   if (remixPrereleaseConfig.exists) {
     if (!remixPrereleaseConfig.valid) {
       console.error('Error reading remix prerelease config:', remixPrereleaseConfig.error)
       process.exit(1)
     }
-    remixPrereleaseTag = remixPrereleaseConfig.config.tag
-    console.log(`Remix is in prerelease mode (tag: ${remixPrereleaseTag})`)
-    console.log(
-      'Publishing in two phases: other packages as "latest", then remix as',
-      `"${remixPrereleaseTag}"\n`,
-    )
+    remixPrereleaseChannel = remixPrereleaseConfig.config.channel
+    console.log(`Remix is in prerelease mode (channel: ${remixPrereleaseChannel})`)
+    console.log('Publishing in two phases: other packages as "latest", then remix as "next"\n')
   }
 
   // Publish packages to npm
@@ -216,12 +213,12 @@ async function main() {
 
   let published: PublishedPackage[] = []
 
-  if (remixPrereleaseTag) {
+  if (remixPrereleaseChannel) {
     let publishCommands = [
       // Phase 1: Publish everything in `packages` except remix (with --report-summary so we know what was published)
       'pnpm publish --recursive --filter "./packages/*" --filter "!remix" --access public --no-git-checks --report-summary',
-      // Phase 2: Publish remix with prerelease tag (with --report-summary so we know if remix was published)
-      `pnpm publish --filter remix --tag ${remixPrereleaseTag} --access public --no-git-checks --report-summary`,
+      // Phase 2: Publish remix with "next" tag (with --report-summary so we know if remix was published)
+      'pnpm publish --filter remix --tag next --access public --no-git-checks --report-summary',
     ]
 
     if (dryRun) {

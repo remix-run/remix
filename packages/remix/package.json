@@ -234,7 +234,7 @@
     "@types/node": "catalog:",
     "typescript": "catalog:"
   },
-  "peerDependencies": {
+  "dependencies": {
     "@remix-run/async-context-middleware": "workspace:^",
     "@remix-run/component": "workspace:^",
     "@remix-run/compression-middleware": "workspace:^",

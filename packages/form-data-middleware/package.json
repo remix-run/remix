@@ -37,7 +37,7 @@
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
-  "peerDependencies": {
+  "dependencies": {
     "@remix-run/fetch-router": "workspace:^",
     "@remix-run/form-data-parser": "workspace:^"
   },

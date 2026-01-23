@@ -40,7 +40,7 @@
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
-  "peerDependencies": {
+  "dependencies": {
     "@remix-run/fetch-router": "workspace:^",
     "@remix-run/fs": "workspace:^",
     "@remix-run/html-template": "workspace:^",

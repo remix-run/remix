@@ -15,7 +15,7 @@ type BumpType = (typeof bumpTypes)[number]
 // Prerelease configuration (from packages/remix/.changes/prerelease.json)
 // Only the remix package supports prerelease mode.
 export interface RemixPrereleaseConfig {
-  tag: string
+  channel: string
 }
 
 export type ParsedRemixPrereleaseConfig =
@@ -46,25 +46,25 @@ export function readRemixPrereleaseConfig(): ParsedRemixPrereleaseConfig {
     return {
       exists: true,
       valid: false,
-      error: 'prerelease.json must be an object with a "tag" field',
+      error: 'prerelease.json must be an object with a "channel" field',
     }
   }
 
   let obj = content as Record<string, unknown>
 
-  if (!('tag' in obj)) {
-    return { exists: true, valid: false, error: 'prerelease.json must have a "tag" field' }
+  if (!('channel' in obj)) {
+    return { exists: true, valid: false, error: 'prerelease.json must have a "channel" field' }
   }
 
-  if (typeof obj.tag !== 'string' || obj.tag.trim().length === 0) {
+  if (typeof obj.channel !== 'string' || obj.channel.trim().length === 0) {
     return {
       exists: true,
       valid: false,
-      error: 'prerelease.json "tag" must be a non-empty string',
+      error: 'prerelease.json "channel" must be a non-empty string',
     }
   }
 
-  return { exists: true, valid: true, config: { tag: obj.tag.trim() } }
+  return { exists: true, valid: true, config: { channel: obj.channel.trim() } }
 }
 
 /**
@@ -91,17 +91,17 @@ function getNextVersion(
 
   if (prereleaseConfig !== null) {
     // In prerelease mode
-    let targetTag = prereleaseConfig.tag
+    let targetChannel = prereleaseConfig.channel
 
-    if (currentPrereleaseId === targetTag) {
-      // Same tag - just bump the counter
-      let nextVersion = semver.inc(currentVersion, 'prerelease', targetTag)
+    if (currentPrereleaseId === targetChannel) {
+      // Same channel - just bump the counter
+      let nextVersion = semver.inc(currentVersion, 'prerelease', targetChannel)
       if (nextVersion == null) {
         throw new Error(`Invalid prerelease increment: ${currentVersion}`)
       }
       return nextVersion
     } else {
-      // Entering prerelease or transitioning to a new tag (e.g., stable → alpha, or alpha → beta)
+      // Entering prerelease or transitioning to a new channel (e.g., stable → alpha, or alpha → beta)
       // Apply the bump type to get the base version, then add prerelease suffix
       let baseVersion = isCurrentPrerelease
         ? currentVersion.replace(/-.*$/, '') // Strip existing prerelease suffix
@@ -111,7 +111,7 @@ function getNextVersion(
         throw new Error(`Invalid version increment: ${currentVersion} + ${bumpType}`)
       }
 
-      return `${baseVersion}-${targetTag}.0`
+      return `${baseVersion}-${targetChannel}.0`
     }
   } else {
     // Not in prerelease mode
@@ -229,14 +229,14 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
     // Config exists
     if (
       currentVersionPrereleaseId !== null &&
-      currentVersionPrereleaseId !== prereleaseConfig.tag
+      currentVersionPrereleaseId !== prereleaseConfig.channel
     ) {
-      // Tag mismatch (e.g., version is alpha but config says beta) - need change files to transition
+      // Channel mismatch (e.g., version is alpha but config says beta) - need change files to transition
       if (!hasChangeFiles) {
         errors.push({
           packageDirName,
           file: '.changes/prerelease.json',
-          error: `prerelease.json tag '${prereleaseConfig.tag}' doesn't match version's prerelease identifier '${currentVersionPrereleaseId}'. Add a change file to transition to ${prereleaseConfig.tag}.`,
+          error: `prerelease.json channel '${prereleaseConfig.channel}' doesn't match version's prerelease identifier '${currentVersionPrereleaseId}'. Add a change file to transition to ${prereleaseConfig.channel}.`,
         })
       }
     } else if (!isCurrentVersionPrerelease && !hasChangeFiles) {
@@ -253,7 +253,7 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
       errors.push({
         packageDirName,
         file: '.changes/',
-        error: `Version ${currentVersion} is a prerelease but no prerelease.json exists. Either add prerelease.json with { "tag": "${currentVersionPrereleaseId}" }, or add a change file to graduate to stable.`,
+        error: `Version ${currentVersion} is a prerelease but no prerelease.json exists. Either add prerelease.json with { "channel": "${currentVersionPrereleaseId}" }, or add a change file to graduate to stable.`,
       })
     }
   }
