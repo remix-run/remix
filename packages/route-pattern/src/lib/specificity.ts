@@ -1,6 +1,6 @@
 /* eslint-disable jsdoc/require-param */
 
-import type { RoutePattern } from './route-pattern/route-pattern.ts'
+import type { RoutePattern } from './route-pattern.ts'
 
 export function lessThan(a: RoutePattern.Match, b: RoutePattern.Match): boolean {
   return compare(a, b) === -1

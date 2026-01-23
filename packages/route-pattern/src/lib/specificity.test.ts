@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import test, { describe } from 'node:test'
 import * as Rank from './specificity.ts'
-import { RoutePattern } from './route-pattern/route-pattern.ts'
+import { RoutePattern } from './route-pattern.ts'
 
 describe('rank', () => {
   describe('compare', () => {

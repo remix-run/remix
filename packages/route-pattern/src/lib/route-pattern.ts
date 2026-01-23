@@ -1,10 +1,9 @@
-import { split } from './split.ts'
-import * as Pathname from './pathname.ts'
-import * as Search from './search.ts'
-import { PartPattern } from '../part-pattern.ts'
-import { HrefError } from '../errors.ts'
-import type { Join, HrefArgs, Params } from '../types/index.ts'
-import type { Span } from '../span.ts'
+import { split } from './route-pattern/split.ts'
+import * as Pathname from './route-pattern/pathname.ts'
+import * as Search from './route-pattern/search.ts'
+import { PartPattern } from './part-pattern.ts'
+import { HrefError } from './errors.ts'
+import type { Join, HrefArgs, Params } from './types/index.ts'
 
 type AST = {
   protocol: PartPattern | null
@@ -13,6 +12,7 @@ type AST = {
   pathname: PartPattern
   search: Search.Constraints
 }
+
 
 export namespace RoutePattern {
   export type Match<source extends string = string> = {

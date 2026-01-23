@@ -1,7 +1,7 @@
 /* eslint-disable jsdoc/require-param */
 /* eslint-disable jsdoc/require-returns */
 
-import type { RoutePattern } from './route-pattern.ts'
+import type { RoutePattern } from '../route-pattern.ts'
 import { HrefError } from '../errors.ts'
 
 /**

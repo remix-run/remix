@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict'
 import test, { describe } from 'node:test'
 import { RoutePattern } from './route-pattern.ts'
-import type * as Search from './search.ts'
-import { HrefError } from '../errors.ts'
+import type * as Search from './route-pattern/search.ts'
+import { HrefError } from './errors.ts'
 
 describe('RoutePattern', () => {
   describe('parse', () => {

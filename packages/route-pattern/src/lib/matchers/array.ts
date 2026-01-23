@@ -1,4 +1,4 @@
-import { RoutePattern } from "../route-pattern/index.ts"
+import { RoutePattern } from "../route-pattern.ts"
 import type { Matcher } from "./matcher.ts"
 import * as Specificity from "../specificity.ts"
 

@@ -1,4 +1,4 @@
-import type { RoutePattern } from '../route-pattern/index.ts'
+import type { RoutePattern } from '../route-pattern.ts'
 
 type CompareFn = (a: RoutePattern.Match, b: RoutePattern.Match) => number
 

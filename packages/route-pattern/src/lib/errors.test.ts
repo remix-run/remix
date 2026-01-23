@@ -4,7 +4,7 @@ import test, { describe } from 'node:test'
 import dedent from 'dedent'
 
 import { HrefError, ParseError } from './errors.ts'
-import { RoutePattern } from './route-pattern/route-pattern.ts'
+import { RoutePattern } from './route-pattern.ts'
 
 describe('ParseError', () => {
   test('exposes type, source, and index properties', () => {
