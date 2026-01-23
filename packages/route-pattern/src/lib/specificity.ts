@@ -16,8 +16,7 @@ export function equal(a: RoutePattern.Match, b: RoutePattern.Match): boolean {
 
 export let ascending = (a: RoutePattern.Match, b: RoutePattern.Match): number => compare(a, b)
 
-export let descending = (a: RoutePattern.Match, b: RoutePattern.Match): number =>
-  compare(a, b) * -1
+export let descending = (a: RoutePattern.Match, b: RoutePattern.Match): number => compare(a, b) * -1
 
 /**
  * Compare two matches by specificity.
@@ -127,10 +126,9 @@ function comparePathname(
   return 0
 }
 
-
 function compareSearch(
   a: RoutePattern['ast']['search'],
-  b: RoutePattern['ast']['search']
+  b: RoutePattern['ast']['search'],
 ): -1 | 0 | 1 {
   let aSpecificity = searchSpecificity(a)
   let bSpecificity = searchSpecificity(b)

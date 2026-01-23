@@ -4,7 +4,6 @@ import { describe, it } from 'node:test'
 import { ArrayMatcher } from './array.ts'
 
 describe('ArrayMatcher', () => {
-
   describe('match', () => {
     describe('static patterns', () => {
       it('matches exact static pattern', () => {

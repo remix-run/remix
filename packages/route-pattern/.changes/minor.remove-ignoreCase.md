@@ -3,7 +3,7 @@ BREAKING CHANGE: Remove `ignoreCase` option
 Browsers handle casing differently for different parts of the URL ([source](https://datatracker.ietf.org/doc/html/rfc3986#section-6.2.2.1)):
 
 | URL Part | Case Sensitivity |
-|----------|------------------|
+| -------- | ---------------- |
 | Protocol | case insensitive |
 | Host     | case insensitive |
 | Pathname | case sensitive   |

@@ -1,6 +1,6 @@
 Add getters to `RoutePattern`
 
-The `protocol`, `hostname`, `port`, `pathname`, and `search` getters display the normalized pattern parts as strings. 
+The `protocol`, `hostname`, `port`, `pathname`, and `search` getters display the normalized pattern parts as strings.
 
 ```ts
 let pattern = RoutePattern.parse('https://:tenant.example.com:3000/:lang/docs/*?version=:version')

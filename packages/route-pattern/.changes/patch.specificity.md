@@ -3,11 +3,11 @@ Add functions for comparing match specificity
 Specificity is our intuitive metric for finding the "best" match.
 
 ```ts
-import * as Specificity from "@remix-run/route-pattern/specificity"
+import * as Specificity from '@remix-run/route-pattern/specificity'
 
-Specificity.lessThan(a,b) // `true` when `a` is more specific than `b`. `false` otherwise
-Specificity.greaterThan(a,b)
-Specificity.equal(a,b)
+Specificity.lessThan(a, b) // `true` when `a` is more specific than `b`. `false` otherwise
+Specificity.greaterThan(a, b)
+Specificity.equal(a, b)
 
 matches.sort(Specificity.ascending)
 matches.sort(Specificity.descending)
@@ -17,7 +17,7 @@ Specificity compares patterns char-by-char where static matches beat variable ma
 
 ```typescript
 import { RoutePattern } from '@remix-run/route-pattern'
-import * as Specificity from "@remix-run/route-pattern/specificity"
+import * as Specificity from '@remix-run/route-pattern/specificity'
 import assert from 'node:assert'
 
 let url = 'https://example.com/posts/new'

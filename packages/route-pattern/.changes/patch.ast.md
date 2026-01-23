@@ -35,14 +35,14 @@ let part: PartPattern = {
     { type: 'text', text: 'posts' },
     { type: 'separator' },
     { type: ':', nameIndex: 0 },
-    { type: '(', },
+    { type: '(' },
     { type: 'separator' },
     { type: 'text', text: 'edit' },
-    { type: ')' }
+    { type: ')' },
   ],
   paramNames: ['id'],
-  optionals: new Map ([[3, 6]]), // token at index 3 '(' maps to token at index 6 ')'
-  separator: '/'
+  optionals: new Map([[3, 6]]), // token at index 3 '(' maps to token at index 6 ')'
+  separator: '/',
 }
 ```
 

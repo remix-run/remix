@@ -12,4 +12,3 @@ type Args = HrefBuilderArgs<Source>
 // after
 type Args = HrefArgs<Source>
 ```
-

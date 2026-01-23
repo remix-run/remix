@@ -1,4 +1,4 @@
-import type { OptionalParams, RequiredParams } from "./params"
+import type { OptionalParams, RequiredParams } from './params'
 import type * as Search from '../route-pattern/search.ts'
 
 type ParamValue = string | number

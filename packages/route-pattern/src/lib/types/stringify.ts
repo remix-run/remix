@@ -1,4 +1,4 @@
-import type { ParsedPattern, Token } from "./parse"
+import type { ParsedPattern, Token } from './parse'
 
 // prettier-ignore
 export type Stringify<T extends ParsedPattern> =

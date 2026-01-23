@@ -55,7 +55,12 @@ export class Variant {
         continue
       }
 
-      if (token.type === ':' || token.type === '*' || token.type === 'text' || token.type === 'separator') {
+      if (
+        token.type === ':' ||
+        token.type === '*' ||
+        token.type === 'text' ||
+        token.type === 'separator'
+      ) {
         tokens.push(token)
         stack.push({ index: index + 1, tokens })
         continue

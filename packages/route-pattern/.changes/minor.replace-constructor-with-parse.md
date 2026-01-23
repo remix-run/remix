@@ -1,11 +1,13 @@
 BREAKING CHANGE: Use `RoutePattern.parse()` instead of `new RoutePattern()`
 
 **Before:**
+
 ```typescript
 let pattern = new RoutePattern('/posts/:id')
 ```
 
 **After:**
+
 ```typescript
 let pattern = RoutePattern.parse('/posts/:id')
 ```
