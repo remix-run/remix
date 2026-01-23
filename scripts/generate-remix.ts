@@ -12,6 +12,8 @@ import cp from 'node:child_process'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
+import semverCompare from 'semver-compare'
+import { logAndExec } from './utils/process.ts'
 
 let __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 let packagesDir = path.resolve(__dirname, '../packages')
@@ -27,6 +29,7 @@ const SUB_EXPORT_FOLDER = 'lib'
 
 type RemixRunPackage = {
   name: string
+  version: string
   exports: ExportEntry[]
   changeFiles: string[]
 }
@@ -77,6 +80,9 @@ await fs.writeFile(remixPackageJsonPath, JSON.stringify(remixPackageJson, null, 
 // Generate change summary
 await outputExportsChanges()
 
+// Update dependency changes
+await outputDependencyChanges()
+
 //  Copy change files up to remix changes directory
 if (GENERATE_CHANGE_FILES) {
   await copySubPackageChangeFiles()
@@ -112,6 +118,7 @@ async function getRemixRunPackages() {
 
     let remixRunPackage: RemixRunPackage = {
       name: packageName,
+      version: packageJson.version,
       exports: [],
       changeFiles: [],
     }
@@ -282,6 +289,73 @@ async function outputExportsChanges() {
     console.log('✨ Created exports change file:')
     console.log(`   - ${path.relative(process.cwd(), changeFile)}`)
   }
+}
+
+// Build dependencies change summary
+async function outputDependencyChanges() {
+  let changeFilePath = path.join(remixDir, '.changes', 'patch.update-remix-dependencies.md')
+
+  // Get all `remix@` tags in the git repository
+  let remixTags = logAndExec('git tag', true)
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .filter((tag) => tag.startsWith('remix@'))
+
+  if (remixTags.length === 0) {
+    console.log('ℹ️  No previous remix releases found, skipping dependency change file')
+    return
+  }
+
+  // Sort by semver version ascending
+  remixTags.sort((a, b) => semverCompare(a.replace('remix@', ''), b.replace('remix@', '')))
+
+  // Grab the last tag in the sorted list - this is the most recent remix release
+  let lastReleaseTag = remixTags[remixTags.length - 1]
+  console.log(`📌 Comparing dependencies against last release: ${lastReleaseTag}`)
+
+  // Checkout that tag in the repository
+  logAndExec(`git checkout ${lastReleaseTag}`)
+
+  // Get all @remix-run package versions in that commit via getRemixRunPackages()
+  let { remixRunPackages: previousPackages } = await getRemixRunPackages()
+
+  // Go back to the branch we started at
+  logAndExec(`git checkout -`)
+
+  // Create change file
+  let lines = []
+
+  // Added/Updated
+  for (let pkg of remixRunPackages) {
+    let prevPkg = previousPackages.find((p) => p.name === pkg.name)
+
+    if (!prevPkg) {
+      lines.push(`- Added \`${pkg.name}@${pkg.version}\``)
+    } else if (prevPkg.version !== pkg.version) {
+      lines.push(`- Updated \`${pkg.name}@${prevPkg.version}\` → \`${pkg.name}@${pkg.version}\``)
+    }
+  }
+
+  // Removed
+  for (let pkg of previousPackages) {
+    if (!remixRunPackages.find((p) => p.name === pkg.name)) {
+      lines.push(`- Removed \`${pkg.name}@${pkg.version}\``)
+    }
+  }
+
+  if (lines.length === 0) {
+    return
+  }
+
+  let contents = ['Updated dependencies:', ...lines.map((line) => ` - ${line}`)].join('\n')
+
+  // Write change file
+  await fs.writeFile(changeFilePath, contents, 'utf-8')
+  console.log()
+  console.log('✨ Updated dependency change file:')
+  console.log(`   - ${path.relative(process.cwd(), changeFilePath)}`)
+  console.log(`   - ${contents.length - 1} dependency change(s)`)
 }
 
 async function copySubPackageChangeFiles() {
