@@ -1,4 +1,5 @@
 import { ParseError, unreachable } from './errors.ts'
+import * as RE from './regexp.ts'
 import type { Span } from './span.ts'
 import { Variant } from './variant.ts'
 
@@ -279,7 +280,7 @@ function toRegExp(tokens: Array<Token>, separator: '.' | '/' | '', ignoreCase: b
   let result = ''
   for (let token of tokens) {
     if (token.type === 'text') {
-      result += escapeRegex(token.text)
+      result += RE.escape(token.text)
       continue
     }
 
@@ -306,7 +307,7 @@ function toRegExp(tokens: Array<Token>, separator: '.' | '/' | '', ignoreCase: b
     }
 
     if (token.type === 'separator') {
-      result += escapeRegex(separator ?? '')
+      result += RE.escape(separator ?? '')
       continue
     }
 
@@ -319,8 +320,4 @@ function separatorForType(type: 'protocol' | 'hostname' | 'pathname'): '.' | '/'
   if (type === 'hostname') return '.'
   if (type === 'pathname') return '/'
   return ''
-}
-
-function escapeRegex(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&')
 }
