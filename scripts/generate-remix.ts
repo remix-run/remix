@@ -11,7 +11,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
-import semverCompare from 'semver-compare'
+import * as semver from 'semver'
 import { logAndExec } from './utils/process.ts'
 
 let __dirname = path.dirname(url.fileURLToPath(import.meta.url))
@@ -264,7 +264,7 @@ async function outputDependencyChangeFiles() {
     .trim()
     .split('\n')
     .filter(Boolean)
-    .filter((tag) => tag.startsWith('remix@'))
+    .filter((tag) => tag.startsWith('remix@') && semver.major(tag.replace('remix@', '')) >= 3)
 
   if (remixTags.length === 0) {
     console.log('No previous remix releases found, skipping dependency change file')
@@ -272,10 +272,13 @@ async function outputDependencyChangeFiles() {
   }
 
   // Sort by semver version ascending
-  remixTags.sort((a, b) => semverCompare(a.replace('remix@', ''), b.replace('remix@', '')))
+  remixTags.sort((a, b) => semver.compare(a.replace('remix@', ''), b.replace('remix@', '')))
 
-  // Grab the last tag in the sorted list - this is the most recent remix release
-  let lastReleaseTag = remixTags[remixTags.length - 1]
+  // Grab the latest stable release, or the latest prerelease if no stable exists
+  let lastReleaseTag =
+    remixTags.findLast((tag) => semver.prerelease(tag.replace(/^remix@/, '')) == null) ||
+    remixTags[remixTags.length - 1]
+
   console.log(`Comparing dependencies against last release: ${lastReleaseTag}`)
 
   // Checkout that tag in the repository

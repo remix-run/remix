@@ -9,18 +9,6 @@ catalogs:
     '@types/node':
       specifier: ^24.6.0
       version: 24.10.4
-    '@typescript/native-preview':
-      specifier: 7.0.0-dev.20251125.1
-      version: 7.0.0-dev.20251125.1
-    playwright:
-      specifier: ^1.53.1
-      version: 1.57.0
-    tsx:
-      specifier: ^4.20.6
-      version: 4.21.0
-    typescript:
-      specifier: ^5.9.3
-      version: 5.9.3
 
 importers:
 
@@ -1074,15 +1062,9 @@ importers:
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
-      '@types/semver-compare':
-        specifier: ^1.0.3
-        version: 1.0.3
       semver:
         specifier: ^7.6.3
         version: 7.6.3
-      semver-compare:
-        specifier: ^1.0.0
-        version: 1.0.0
 
 packages:
 
@@ -2237,9 +2219,6 @@ packages:
 
   '@types/react@19.2.7':
     resolution: {integrity: sha512-MWtvHrGZLFttgeEj28VXHxpmwYbor/ATPYbBfSFZEIRK0ecCFLl2Qo55z52Hss+UV9CRN7trSeq1zbgx7YDWWg==}
-
-  '@types/semver-compare@1.0.3':
-    resolution: {integrity: sha512-mVZkB2QjXmZhh+MrtwMlJ8BqUnmbiSkpd88uOWskfwB8yitBT0tBRAKt+41VRgZD9zr9Sc+Xs02qGgvzd1Rq/Q==}
 
   '@types/semver@7.5.8':
     resolution: {integrity: sha512-I8EUhyrgfLrcTkzV3TSsGyl1tSuPrEDzr0yd5m90UgNxQkyDXULk3b6MlQqTCpZpNtWe1K0hzclnZkTcLBe2UQ==}
@@ -4015,9 +3994,6 @@ packages:
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
 
-  semver-compare@1.0.0:
-    resolution: {integrity: sha512-YM3/ITh2MJ5MtzaM429anh+x2jiLVjqILF4m4oyQB18W7Ggea7BfqdH/wGMK7dDiMghv/6WG7znWMwUDzJiXow==}
-
   semver@6.3.1:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
@@ -5592,8 +5568,6 @@ snapshots:
   '@types/react@19.2.7':
     dependencies:
       csstype: 3.2.3
-
-  '@types/semver-compare@1.0.3': {}
 
   '@types/semver@7.5.8': {}
 
@@ -7628,8 +7602,6 @@ snapshots:
   safer-buffer@2.1.2: {}
 
   scheduler@0.27.0: {}
-
-  semver-compare@1.0.0: {}
 
   semver@6.3.1: {}
 
