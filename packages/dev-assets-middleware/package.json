@@ -1,0 +1,69 @@
+{
+  "name": "@remix-run/dev-assets-middleware",
+  "version": "0.0.0",
+  "description": "Development middleware for serving and transforming JavaScript/TypeScript source files",
+  "author": "Shopify Inc.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/dev-assets-middleware"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/dev-assets-middleware#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!e2e"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "devDependencies": {
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "esbuild": "^0.25.0",
+    "playwright": "catalog:",
+    "tsx": "catalog:"
+  },
+  "peerDependencies": {
+    "@remix-run/fetch-router": "workspace:^",
+    "esbuild": "^0.25.0"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "test:e2e": "node --disable-warning=ExperimentalWarning --test './e2e/*.playwright.ts'",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "fetch",
+    "router",
+    "middleware",
+    "assets",
+    "transform",
+    "esbuild",
+    "typescript"
+  ],
+  "dependencies": {
+    "es-module-lexer": "^2.0.0",
+    "magic-string": "^0.30.21"
+  }
+}

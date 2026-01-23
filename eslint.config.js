@@ -8,6 +8,7 @@ export default [
   {
     ignores: [
       '**/*.d.ts',
+      '**/build/**',
       '**/dist/**',
       '**/docs/**',
       '**/demos/bookstore/public/assets/**',

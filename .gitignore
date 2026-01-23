@@ -1,10 +1,14 @@
+build/
 dist/
 docs/api/
 docs/typedoc/
 node_modules/
+.pnpm-store/
 pnpm-publish-summary.json
 reference/
 .tmp/
+test-results/
+playwright-report/
 
 .env
 
