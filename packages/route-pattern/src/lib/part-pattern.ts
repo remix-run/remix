@@ -34,22 +34,30 @@ export class PartPattern {
   readonly paramNames: AST['paramNames']
   readonly optionals: AST['optionals']
   readonly type: 'protocol' | 'hostname' | 'pathname'
+  readonly ignoreCase: boolean
 
   #variants: Array<Variant> | undefined
   #regexp: RegExp | undefined
 
-  constructor(ast: AST, options: { type: 'protocol' | 'hostname' | 'pathname' }) {
+  constructor(
+    ast: AST,
+    options: { type: 'protocol' | 'hostname' | 'pathname'; ignoreCase: boolean },
+  ) {
     this.tokens = ast.tokens
     this.paramNames = ast.paramNames
     this.optionals = ast.optionals
     this.type = options.type
+    this.ignoreCase = options.ignoreCase
   }
 
   get separator(): '.' | '/' | '' {
     return separatorForType(this.type)
   }
 
-  static parse(source: string, options: { span?: Span; type: 'protocol' | 'hostname' | 'pathname' }): PartPattern {
+  static parse(
+    source: string,
+    options: { span?: Span; type: 'protocol' | 'hostname' | 'pathname'; ignoreCase: boolean },
+  ): PartPattern {
     let span = options.span ?? [0, source.length]
     let separator = separatorForType(options.type)
 
@@ -122,7 +130,6 @@ export class PartPattern {
         continue
       }
 
-
       // escaped char
       if (char === '\\') {
         if (i + 1 === span[1]) {
@@ -142,7 +149,7 @@ export class PartPattern {
       throw new ParseError('unmatched (', source, optionalStack.at(-1)!)
     }
 
-    return new PartPattern(ast, { type: options.type })
+    return new PartPattern(ast, { type: options.type, ignoreCase: options.ignoreCase })
   }
 
   get variants(): Array<Variant> {
@@ -244,7 +251,7 @@ export class PartPattern {
 
   match(part: string): Match | null {
     if (this.#regexp === undefined) {
-      this.#regexp = toRegExp(this.tokens, this.separator)
+      this.#regexp = toRegExp(this.tokens, this.separator, this.ignoreCase)
     }
     let reMatch = this.#regexp.exec(part)
     if (reMatch === null) return null
@@ -268,7 +275,7 @@ export class PartPattern {
   }
 }
 
-function toRegExp(tokens: Array<Token>, separator: '.' | '/' | ''): RegExp {
+function toRegExp(tokens: Array<Token>, separator: '.' | '/' | '', ignoreCase: boolean): RegExp {
   let result = ''
   for (let token of tokens) {
     if (token.type === 'text') {
@@ -305,7 +312,7 @@ function toRegExp(tokens: Array<Token>, separator: '.' | '/' | ''): RegExp {
 
     unreachable(token.type)
   }
-  return new RegExp(`^${result}$`, 'd')
+  return new RegExp(`^${result}$`, ignoreCase ? 'di' : 'd')
 }
 
 function separatorForType(type: 'protocol' | 'hostname' | 'pathname'): '.' | '/' | '' {

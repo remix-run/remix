@@ -9,14 +9,14 @@ describe('PartPattern', () => {
     type AST = ConstructorParameters<typeof PartPattern>[0]
     function assertParse(source: string, ast: AST) {
       assert.deepStrictEqual(
-        PartPattern.parse(source, { type: 'pathname' }),
-        new PartPattern(ast, { type: 'pathname' }),
+        PartPattern.parse(source, { type: 'pathname', ignoreCase: false }),
+        new PartPattern(ast, { type: 'pathname', ignoreCase: false }),
       )
     }
 
     function assertParseError(source: string, type: ParseError['type'], index: number) {
       assert.throws(
-        () => PartPattern.parse(source, { type: 'pathname' }),
+        () => PartPattern.parse(source, { type: 'pathname', ignoreCase: false }),
         new ParseError(type, source, index),
       )
     }
@@ -147,29 +147,17 @@ describe('PartPattern', () => {
 
     test('parses repeated param names', () => {
       assertParse(':id/:id', {
-        tokens: [
-          { type: ':', nameIndex: 0 },
-          { type: 'separator' },
-          { type: ':', nameIndex: 1 },
-        ],
+        tokens: [{ type: ':', nameIndex: 0 }, { type: 'separator' }, { type: ':', nameIndex: 1 }],
         paramNames: ['id', 'id'],
         optionals: new Map(),
       })
       assertParse('*id/*id', {
-        tokens: [
-          { type: '*', nameIndex: 0 },
-          { type: 'separator' },
-          { type: '*', nameIndex: 1 },
-        ],
+        tokens: [{ type: '*', nameIndex: 0 }, { type: 'separator' }, { type: '*', nameIndex: 1 }],
         paramNames: ['id', 'id'],
         optionals: new Map(),
       })
       assertParse('*/*', {
-        tokens: [
-          { type: '*', nameIndex: 0 },
-          { type: 'separator' },
-          { type: '*', nameIndex: 1 },
-        ],
+        tokens: [{ type: '*', nameIndex: 0 }, { type: 'separator' }, { type: '*', nameIndex: 1 }],
         paramNames: ['*', '*'],
         optionals: new Map(),
       })
@@ -219,7 +207,7 @@ describe('PartPattern', () => {
 
   describe('variants', () => {
     function assertVariants(source: string, expected: Array<string>) {
-      let pattern = PartPattern.parse(source, { type: 'pathname' })
+      let pattern = PartPattern.parse(source, { type: 'pathname', ignoreCase: false })
       let actual = pattern.variants.map((variant) => variant.toString())
       assert.deepStrictEqual(actual, expected)
     }
@@ -242,7 +230,10 @@ describe('PartPattern', () => {
 
   describe('source', () => {
     function assertSource(source: string) {
-      assert.equal(PartPattern.parse(source, { type: 'pathname' }).source, source)
+      assert.equal(
+        PartPattern.parse(source, { type: 'pathname', ignoreCase: false }).source,
+        source,
+      )
     }
 
     test('returns source representation of pattern', () => {
@@ -257,12 +248,16 @@ describe('PartPattern', () => {
       params: Record<string, string | number> | undefined,
       expected: string,
     ) {
-      let result = PartPattern.parse(pattern, { type: 'pathname' }).href(params ?? {})
+      let result = PartPattern.parse(pattern, { type: 'pathname', ignoreCase: false }).href(
+        params ?? {},
+      )
       assert.equal(result, expected)
     }
 
     function assertHrefNull(pattern: string, params: Record<string, string | number> | undefined) {
-      let result = PartPattern.parse(pattern, { type: 'pathname' }).href(params ?? {})
+      let result = PartPattern.parse(pattern, { type: 'pathname', ignoreCase: false }).href(
+        params ?? {},
+      )
       assert.equal(result, null)
     }
 
@@ -335,7 +330,7 @@ describe('PartPattern', () => {
   describe('match', () => {
     type MatchParam = { type: ':' | '*'; name: string; value: string; begin: number; end: number }
     function assertMatch(pattern: string, part: string, expected: Array<MatchParam>) {
-      let result = PartPattern.parse(pattern, { type: 'pathname' }).match(part)
+      let result = PartPattern.parse(pattern, { type: 'pathname', ignoreCase: false }).match(part)
       assert.deepStrictEqual(result, expected)
     }
 

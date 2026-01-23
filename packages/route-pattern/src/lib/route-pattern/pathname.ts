@@ -25,7 +25,7 @@ import { PartPattern } from '../part-pattern.ts'
  * join('(a/)', '(/b)') -> '(a)(/b)'
  * ```
  */
-export function join(a: PartPattern, b: PartPattern): PartPattern {
+export function join(a: PartPattern, b: PartPattern, ignoreCase: boolean): PartPattern {
   if (a.tokens.length === 0) return b
   if (b.tokens.length === 0) return a
 
@@ -33,7 +33,9 @@ export function join(a: PartPattern, b: PartPattern): PartPattern {
 
   // if `a` has a trailing separator (only optionals after it)
   // then omit the separator
-  let aLastNonOptionalIndex = a.tokens.findLastIndex((token) => token.type !== '(' && token.type !== ')')
+  let aLastNonOptionalIndex = a.tokens.findLastIndex(
+    (token) => token.type !== '(' && token.type !== ')',
+  )
   let aLastNonOptional = a.tokens[aLastNonOptionalIndex]
   let aHasTrailingSeparator = aLastNonOptional?.type === 'separator'
 
@@ -77,5 +79,5 @@ export function join(a: PartPattern, b: PartPattern): PartPattern {
     optionals.set(tokenOffset + begin, tokenOffset + end)
   }
 
-  return new PartPattern({ tokens, paramNames, optionals }, { type: 'pathname' })
+  return new PartPattern({ tokens, paramNames, optionals }, { type: 'pathname', ignoreCase })
 }

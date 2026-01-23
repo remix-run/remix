@@ -104,7 +104,10 @@ export function join(a: Constraints, b: Constraints): Constraints {
   return result
 }
 
-export type HrefParams = Record<string, string | number | null | undefined | Array<string | number | null | undefined>>
+export type HrefParams = Record<
+  string,
+  string | number | null | undefined | Array<string | number | null | undefined>
+>
 
 export function toString(constraints: Constraints): string | undefined {
   if (constraints.size === 0) {
@@ -178,14 +181,35 @@ export function href(pattern: RoutePattern, params: HrefParams): string | undefi
   return result || undefined
 }
 
-export function test(params: URLSearchParams, constraints: Constraints): boolean {
+export function test(
+  params: URLSearchParams,
+  constraints: Constraints,
+  ignoreCase: boolean,
+): boolean {
   for (let [name, constraint] of constraints) {
-    if (constraint === null) {
-      if (!params.has(name)) return false
-      continue
+    // Check if param exists (case-aware)
+    let hasParam: boolean
+    let values: Array<string>
+
+    if (ignoreCase) {
+      let nameLower = name.toLowerCase()
+      hasParam = false
+      values = []
+      for (let key of params.keys()) {
+        if (key.toLowerCase() === nameLower) {
+          hasParam = true
+          values.push(...params.getAll(key))
+        }
+      }
+    } else {
+      hasParam = params.has(name)
+      values = params.getAll(name)
     }
 
-    let values = params.getAll(name)
+    if (constraint === null) {
+      if (!hasParam) return false
+      continue
+    }
 
     if (constraint.size === 0) {
       if (values.every((value) => value === '')) return false
@@ -193,7 +217,12 @@ export function test(params: URLSearchParams, constraints: Constraints): boolean
     }
 
     for (let value of constraint) {
-      if (!values.includes(value)) return false
+      if (ignoreCase) {
+        let valueLower = value.toLowerCase()
+        if (!values.some((v) => v.toLowerCase() === valueLower)) return false
+      } else {
+        if (!values.includes(value)) return false
+      }
     }
   }
   return true

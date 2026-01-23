@@ -13,8 +13,11 @@ type AST = {
   search: Search.Constraints
 }
 
-
 export namespace RoutePattern {
+  export type Options = {
+    ignoreCase?: boolean
+  }
+
   export type Match<source extends string = string> = {
     pattern: RoutePattern
     url: URL
@@ -29,26 +32,35 @@ type Match<source extends string> = RoutePattern.Match<source>
 
 export class RoutePattern<source extends string = string> {
   readonly ast: AST
+  readonly ignoreCase: boolean
 
   readonly #hasOrigin: boolean
 
-  private constructor(ast: AST) {
+  private constructor(ast: AST, options: { ignoreCase: boolean }) {
     this.ast = ast
+    this.ignoreCase = options.ignoreCase
     this.#hasOrigin = ast.protocol !== null || ast.hostname !== null || ast.port !== null
   }
 
-  static parse<source extends string>(source: source): RoutePattern<source> {
+  static parse<source extends string>(
+    source: source,
+    options?: RoutePattern.Options,
+  ): RoutePattern<source> {
+    let ignoreCase = options?.ignoreCase ?? false
     let spans = split(source)
 
-    return new RoutePattern({
-      protocol: parseOriginPart(source, spans.protocol, 'protocol'),
-      hostname: parseOriginPart(source, spans.hostname, 'hostname'),
-      port: spans.port ? source.slice(...spans.port) : null,
-      pathname: spans.pathname
-        ? PartPattern.parse(source, { span: spans.pathname, type: 'pathname' })
-        : PartPattern.parse('', { span: [0, 0], type: 'pathname' }),
-      search: spans.search ? Search.parse(source.slice(...spans.search)) : new Map(),
-    })
+    return new RoutePattern(
+      {
+        protocol: parseOriginPart(source, { span: spans.protocol, type: 'protocol' }),
+        hostname: parseOriginPart(source, { span: spans.hostname, type: 'hostname' }),
+        port: spans.port ? source.slice(...spans.port) : null,
+        pathname: spans.pathname
+          ? PartPattern.parse(source, { span: spans.pathname, type: 'pathname', ignoreCase })
+          : PartPattern.parse('', { span: [0, 0], type: 'pathname', ignoreCase }),
+        search: spans.search ? Search.parse(source.slice(...spans.search)) : new Map(),
+      },
+      { ignoreCase },
+    )
   }
 
   get protocol(): string {
@@ -93,15 +105,23 @@ export class RoutePattern<source extends string = string> {
     return this.source
   }
 
-  join<other extends string>(other: other | RoutePattern<other>): RoutePattern<Join<source, other>> {
+  join<other extends string>(
+    other: other | RoutePattern<other>,
+    options?: RoutePattern.Options,
+  ): RoutePattern<Join<source, other>> {
     other = typeof other === 'string' ? RoutePattern.parse(other) : other
-    return new RoutePattern({
-      protocol: other.ast.protocol ?? this.ast.protocol,
-      hostname: other.ast.hostname ?? this.ast.hostname,
-      port: other.ast.port ?? this.ast.port,
-      pathname: Pathname.join(this.ast.pathname, other.ast.pathname),
-      search: Search.join(this.ast.search, other.ast.search),
-    })
+    let ignoreCase = options?.ignoreCase ?? (this.ignoreCase || other.ignoreCase)
+
+    return new RoutePattern(
+      {
+        protocol: other.ast.protocol ?? this.ast.protocol,
+        hostname: other.ast.hostname ?? this.ast.hostname,
+        port: other.ast.port ?? this.ast.port,
+        pathname: Pathname.join(this.ast.pathname, other.ast.pathname, ignoreCase),
+        search: Search.join(this.ast.search, other.ast.search),
+      },
+      { ignoreCase },
+    )
   }
 
   href(...args: HrefArgs<source>): string {
@@ -168,7 +188,7 @@ export class RoutePattern<source extends string = string> {
     let pathname = this.ast.pathname.match(url.pathname.slice(1))
     if (pathname === null) return null
 
-    if (!Search.test(url.searchParams, this.ast.search)) return null
+    if (!Search.test(url.searchParams, this.ast.search, this.ignoreCase)) return null
 
     let params: Record<string, string | undefined> = {}
 
@@ -192,7 +212,12 @@ export class RoutePattern<source extends string = string> {
       params[param.name] = param.value
     })
 
-    return { pattern: this, url, params: params as Params<source>, meta: { hostname: hostname ?? [], pathname } }
+    return {
+      pattern: this,
+      url,
+      params: params as Params<source>,
+      meta: { hostname: hostname ?? [], pathname },
+    }
   }
 
   test(url: string | URL): boolean {
@@ -202,11 +227,14 @@ export class RoutePattern<source extends string = string> {
 
 function parseOriginPart(
   source: string,
-  span: [number, number] | null,
-  type: 'protocol' | 'hostname',
+  options: { span: [number, number] | null; type: 'protocol' | 'hostname' },
 ): PartPattern | null {
-  if (!span) return null
-  let part = PartPattern.parse(source, { span, type })
+  if (!options.span) return null
+  let part = PartPattern.parse(source, {
+    span: options.span,
+    type: options.type,
+    ignoreCase: false,
+  })
   if (isNamelessWildcard(part)) return null
   return part
 }
