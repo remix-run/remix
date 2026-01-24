@@ -420,6 +420,34 @@ describe('RoutePattern', () => {
         })
       })
 
+      it('handles arabic in URLs', () => {
+        let pattern = new RoutePattern('users/:username')
+        assert.deepEqual(pattern.match('https://example.com/users/مهدي'), {
+          params: { username: 'مهدي' },
+        })
+      })
+
+      it('handles accents in URLs', () => {
+        let pattern = new RoutePattern('users/:username')
+        assert.deepEqual(pattern.match('https://example.com/users/sélim'), {
+          params: { username: 'sélim' },
+        })
+      })
+
+      it('handles emojis in URLs', () => {
+        let pattern = new RoutePattern('frameworks/:framework')
+        assert.deepEqual(pattern.match('https://example.com/frameworks/💿'), {
+          params: { framework: '💿' },
+        })
+      })
+
+      it('handles emojis in patterns', () => {
+        let pattern = new RoutePattern('frameworks/💿')
+        assert.deepEqual(pattern.match('https://example.com/frameworks/💿'), {
+          params: {},
+        })
+      })
+
       it('handles wildcards that look like paths', () => {
         let pattern = new RoutePattern('proxy/*url')
         assert.deepEqual(pattern.match('https://example.com/proxy/https://other.com/api')?.params, {
