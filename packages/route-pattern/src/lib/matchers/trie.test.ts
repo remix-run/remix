@@ -5,6 +5,59 @@ import { TrieMatcher } from './trie.ts'
 
 describe('TrieMatcher', () => {
   describe('match', () => {
+    describe('pathname-only patterns', () => {
+      it('matches static pathname pattern', () => {
+        let matcher = new TrieMatcher<null>()
+        matcher.add('users', null)
+
+        let match = matcher.match('https://example.com/users')
+        assert.ok(match)
+        assert.deepEqual(match.params, {})
+        assert.equal(match.url.pathname, '/users')
+      })
+
+      it('matches nested static pathname pattern', () => {
+        let matcher = new TrieMatcher<null>()
+        matcher.add('api/v1/users', null)
+
+        let match = matcher.match('https://example.com/api/v1/users')
+        assert.ok(match)
+        assert.deepEqual(match.params, {})
+      })
+
+      it('matches pathname pattern with variable', () => {
+        let matcher = new TrieMatcher<null>()
+        matcher.add('users/:id', null)
+
+        let match = matcher.match('https://example.com/users/123')
+        assert.ok(match)
+        assert.deepEqual(match.params, { id: '123' })
+      })
+
+      it('matches pathname pattern with wildcard', () => {
+        let matcher = new TrieMatcher<null>()
+        matcher.add('files/*path', null)
+
+        let match = matcher.match('https://example.com/files/docs/readme.txt')
+        assert.ok(match)
+        assert.deepEqual(match.params, { path: 'docs/readme.txt' })
+      })
+
+      it('matches across different hostnames', () => {
+        let matcher = new TrieMatcher<null>()
+        matcher.add('api/users', null)
+
+        let match1 = matcher.match('https://example.com/api/users')
+        assert.ok(match1)
+
+        let match2 = matcher.match('https://other.com/api/users')
+        assert.ok(match2)
+
+        let match3 = matcher.match('http://localhost/api/users')
+        assert.ok(match3)
+      })
+    })
+
     describe('static patterns', () => {
       it('matches exact static pattern with full URL', () => {
         let matcher = new TrieMatcher<null>()
@@ -23,6 +76,14 @@ describe('TrieMatcher', () => {
         let match = matcher.match('https://example.com/api/v1/users')
         assert.ok(match)
         assert.deepEqual(match.params, {})
+      })
+
+      it('does not match different hostname', () => {
+        let matcher = new TrieMatcher<null>()
+        matcher.add('://example.com/users', null)
+
+        let match = matcher.match('https://other.com/users')
+        assert.equal(match, null)
       })
     })
 
