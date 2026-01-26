@@ -23,6 +23,7 @@
     "./component": "./src/lib/component.ts",
     "./component/jsx-dev-runtime": "./src/lib/component/jsx-dev-runtime.ts",
     "./component/jsx-runtime": "./src/lib/component/jsx-runtime.ts",
+    "./component/server": "./src/lib/component/server.ts",
     "./compression-middleware": "./src/lib/compression-middleware.ts",
     "./cookie": "./src/lib/cookie.ts",
     "./fetch-proxy": "./src/lib/fetch-proxy.ts",
@@ -83,6 +84,10 @@
       "./component/jsx-runtime": {
         "types": "./dist/lib/component/jsx-runtime.d.ts",
         "default": "./dist/lib/component/jsx-runtime.js"
+      },
+      "./component/server": {
+        "types": "./dist/lib/component/server.d.ts",
+        "default": "./dist/lib/component/server.js"
       },
       "./compression-middleware": {
         "types": "./dist/lib/compression-middleware.d.ts",

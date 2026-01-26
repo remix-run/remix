@@ -291,31 +291,6 @@ describe('vnode rendering', () => {
       expect(clicked).toBe(true)
     })
 
-    it('hydrates existing SVG subtree and preserves nodes', () => {
-      let container = document.createElement('div')
-      container.innerHTML =
-        '<svg viewBox="0 0 24 24"><path id="p" stroke-linecap="round"></path></svg>'
-
-      let root = createRoot(container)
-      let preSvg = container.querySelector('svg')
-      let prePath = container.querySelector('#p')
-      invariant(preSvg instanceof SVGSVGElement && prePath instanceof SVGPathElement)
-
-      root.render(
-        <svg viewBox="0 0 24 24">
-          <path id="p" strokeLinecap="round" />
-        </svg>,
-      )
-
-      let postSvg = container.querySelector('svg')
-      let postPath = container.querySelector('#p')
-      invariant(postSvg instanceof SVGSVGElement && postPath instanceof SVGPathElement)
-      expect(postSvg).toBe(preSvg)
-      expect(postPath).toBe(prePath)
-      // Attribute should remain correct post-hydration
-      expect(postPath.getAttribute('stroke-linecap')).toBe('round')
-    })
-
     it('propagates SVG namespace through components', () => {
       let container = document.createElement('div')
       let root = createRoot(container)

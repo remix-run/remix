@@ -188,4 +188,35 @@ describe('createStyleManager', () => {
     document.body.removeChild(el)
     mgr.dispose()
   })
+
+  it('adopts server-rendered style tag', () => {
+    // Simulate server-rendered style tag
+    let serverStyle = document.createElement('style')
+    serverStyle.setAttribute('data-rmx-styles', '')
+    serverStyle.textContent = '@layer rmx { [data-css="rmx-server1"] { color: blue; } }'
+    document.head.appendChild(serverStyle)
+
+    // Create manager which should detect and adopt the server styles
+    let mgr = createStyleManager('rmx')
+
+    // Server-rendered selector should be recognized as existing (count: 1)
+    expect(mgr.has('rmx-server1')).toBe(true)
+
+    // Inserting the same selector should increment count from 1 to 2
+    mgr.insert('rmx-server1', '[data-css="rmx-server1"] { color: blue; }')
+    expect(mgr.has('rmx-server1')).toBe(true)
+
+    // First remove decrements count from 2 to 1, still exists
+    mgr.remove('rmx-server1')
+    expect(mgr.has('rmx-server1')).toBe(true)
+
+    // Second remove decrements count from 1 to 0, no longer tracked
+    // (rule stays in server style tag, but ruleMap entry is removed)
+    mgr.remove('rmx-server1')
+    expect(mgr.has('rmx-server1')).toBe(false)
+
+    // cleanup
+    document.head.removeChild(serverStyle)
+    mgr.dispose()
+  })
 })
