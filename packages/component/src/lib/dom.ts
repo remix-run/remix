@@ -117,6 +117,12 @@ export interface HostProps<eventTarget extends EventTarget> {
    * - Use falsy values to disable: `{ enter: false }`
    */
   animate?: AnimateProp
+  /**
+   * Set the innerHTML of the element directly.
+   * When provided, children are ignored.
+   * Use with caution as this can expose XSS vulnerabilities if the content is not sanitized.
+   */
+  innerHTML?: string
 }
 
 export type Trackable<T> = T

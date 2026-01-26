@@ -37,6 +37,78 @@ describe('vnode rendering', () => {
     it.todo('does not render acceptCharset')
   })
 
+  describe('innerHTML prop', () => {
+    it('sets innerHTML on element', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(<div innerHTML="<span>Hello</span>" />)
+      expect(container.innerHTML).toBe('<div><span>Hello</span></div>')
+    })
+
+    it('ignores children when innerHTML is set', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <div innerHTML="<span>From innerHTML</span>">
+          <p>Ignored child</p>
+        </div>,
+      )
+      expect(container.innerHTML).toBe('<div><span>From innerHTML</span></div>')
+    })
+
+    it('updates innerHTML on re-render', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(<div innerHTML="<span>First</span>" />)
+      expect(container.innerHTML).toBe('<div><span>First</span></div>')
+
+      let div = container.querySelector('div')
+      invariant(div)
+
+      root.render(<div innerHTML="<span>Second</span>" />)
+      expect(container.innerHTML).toBe('<div><span>Second</span></div>')
+      expect(container.querySelector('div')).toBe(div)
+    })
+
+    it('clears innerHTML when removed', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(<div innerHTML="<span>Hello</span>" />)
+      expect(container.innerHTML).toBe('<div><span>Hello</span></div>')
+
+      root.render(<div />)
+      expect(container.innerHTML).toBe('<div></div>')
+    })
+
+    it('switches from innerHTML to children', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(<div innerHTML="<span>From innerHTML</span>" />)
+      expect(container.innerHTML).toBe('<div><span>From innerHTML</span></div>')
+
+      root.render(
+        <div>
+          <p>From children</p>
+        </div>,
+      )
+      expect(container.innerHTML).toBe('<div><p>From children</p></div>')
+    })
+
+    it('switches from children to innerHTML', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <div>
+          <p>From children</p>
+        </div>,
+      )
+      expect(container.innerHTML).toBe('<div><p>From children</p></div>')
+
+      root.render(<div innerHTML="<span>From innerHTML</span>" />)
+      expect(container.innerHTML).toBe('<div><span>From innerHTML</span></div>')
+    })
+  })
+
   describe('css props', () => {
     it('adds data-css attribute and styles', async () => {
       let container = document.createElement('div')

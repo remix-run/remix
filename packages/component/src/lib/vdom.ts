@@ -394,7 +394,8 @@ export function toVNode(node: RemixNode): VNode {
   }
 
   if (isRemixElement(node)) {
-    let children = flatMapChildrenToVNodes(node)
+    // When innerHTML is set, ignore children
+    let children = node.props.innerHTML != null ? [] : flatMapChildrenToVNodes(node)
     return { type: node.type, key: node.key, props: node.props, _children: children }
   }
 
@@ -526,6 +527,17 @@ function diffHost(
   scheduler: Scheduler,
   vParent: VNode,
 ) {
+  // Handle innerHTML prop BEFORE diffChildren to avoid clearing children
+  if (next.props.innerHTML != null) {
+    // innerHTML is set, update it if changed
+    if (curr.props.innerHTML !== next.props.innerHTML) {
+      curr._dom.innerHTML = next.props.innerHTML
+    }
+  } else if (curr.props.innerHTML != null) {
+    // innerHTML was removed, clear it before adding children
+    curr._dom.innerHTML = ''
+  }
+
   diffChildren(curr._children, next._children, curr._dom, frame, scheduler, next)
   diffHostProps(curr.props, next.props, curr._dom)
 
@@ -771,7 +783,8 @@ function isFrameworkProp(name: string): boolean {
     name === 'css' ||
     name === 'setup' ||
     name === 'connect' ||
-    name === 'animate'
+    name === 'animate' ||
+    name === 'innerHTML'
   )
 }
 
@@ -915,18 +928,24 @@ function insert(
         // FIXME: hydrate css prop
         // correct hydration mismatches
         diffHostProps({}, node.props, cursor)
-        setupHostNode(node, cursor, domParent, frame, scheduler)
 
-        let childCursor = cursor.firstChild
-        // FIXME: this breaks other tests
-        // if (node._children.length > 1 && node._children.every(isTextNode)) {
-        //   // special case <span>Text {text}</span> comes as single node from server
-        //   return cursor.nextSibling
-        // }
-        let excess = diffChildren(null, node._children, cursor, frame, scheduler, node, childCursor)
-        if (excess) {
-          logHydrationMismatch('excess', excess)
+        // Handle innerHTML prop
+        if (node.props.innerHTML != null) {
+          cursor.innerHTML = node.props.innerHTML
+        } else {
+          let childCursor = cursor.firstChild
+          // FIXME: this breaks other tests
+          // if (node._children.length > 1 && node._children.every(isTextNode)) {
+          //   // special case <span>Text {text}</span> comes as single node from server
+          //   return cursor.nextSibling
+          // }
+          let excess = diffChildren(null, node._children, cursor, frame, scheduler, node, childCursor)
+          if (excess) {
+            logHydrationMismatch('excess', excess)
+          }
         }
+
+        setupHostNode(node, cursor, domParent, frame, scheduler)
         return cursor.nextSibling
       } else {
         logHydrationMismatch('tag', cursor.tagName.toLowerCase(), node.type)
@@ -938,7 +957,14 @@ function insert(
       ? document.createElementNS(SVG_NS, node.type)
       : document.createElement(node.type)
     diffHostProps({}, node.props, dom)
-    diffChildren(null, node._children, dom, frame, scheduler, node)
+
+    // Handle innerHTML prop
+    if (node.props.innerHTML != null) {
+      dom.innerHTML = node.props.innerHTML
+    } else {
+      diffChildren(null, node._children, dom, frame, scheduler, node)
+    }
+
     setupHostNode(node, dom, domParent, frame, scheduler)
     doInsert(dom)
     return cursor
