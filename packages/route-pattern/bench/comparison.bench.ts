@@ -12,6 +12,7 @@ import FindMyWay from 'find-my-way'
 import { match } from 'path-to-regexp'
 
 import { ArrayMatcher } from '../src'
+import { TrieMatcher } from '../src/lib/matchers/trie.ts'
 
 type Syntax = 'route-pattern' | 'find-my-way' | 'path-to-regexp'
 
@@ -29,6 +30,11 @@ const matchers: Array<{
     name: 'route-pattern/array',
     syntax: 'route-pattern',
     createMatcher: () => new ArrayMatcher(),
+  },
+  {
+    name: 'route-pattern/trie',
+    syntax: 'route-pattern',
+    createMatcher: () => new TrieMatcher(),
   },
   {
     /** https://github.com/delvedor/find-my-way */
