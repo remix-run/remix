@@ -2,6 +2,12 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
+## v0.7.1
+
+### Patch Changes
+
+- Changed `@remix-run/*` peer dependencies to regular dependencies
+
 ## v0.7.0 (2025-11-05)
 
 - Move `@remix-run/headers` to `peerDependencies`
