@@ -22,7 +22,7 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
   match(url: string | URL, compareFn = Specificity.descending): Matcher.Match<string, data> | null {
     url = typeof url === 'string' ? new URL(url) : url
     let matches = this.matchAll(url, compareFn)
-    return matches[0]
+    return matches[0] ?? null
   }
 
   matchAll(
@@ -56,7 +56,10 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
 
 type RoutePatternVariant = {
   protocol: 'http' | 'https'
-  hostname: { type: 'static'; value: string } | { type: 'dynamic'; value: PartPattern }
+  hostname:
+    | { type: 'static'; value: string }
+    | { type: 'dynamic'; value: PartPattern }
+    | { type: 'any' }
   port: string
   pathname: Variant
 }
@@ -70,7 +73,7 @@ function variants(pattern: RoutePattern): Array<RoutePatternVariant> {
 
   // prettier-ignore
   let hostnames =
-    pattern.ast.hostname === null ? [] :
+    pattern.ast.hostname === null ? [{ type: 'any' as const }] :
     pattern.ast.hostname.paramNames.length === 0 ?
       pattern.ast.hostname.variants.map((variant) => ({ type: 'static' as const, value: variant.toString() })) :
       [{ type: 'dynamic' as const, value: pattern.ast.hostname }]
@@ -97,12 +100,14 @@ type ProtocolNode<data> = {
 type HostnameNode<data> = {
   static: Map<string, PortNode<data>>
   dynamic: Array<{ part: PartPattern; portNode: PortNode<data> }>
+  any: PortNode<data>
 }
 
 function createHostnameNode<data>(): HostnameNode<data> {
   return {
     static: new Map(),
     dynamic: [],
+    any: new Map(),
   }
 }
 
@@ -154,7 +159,9 @@ export class Trie<data = unknown> {
 
       // hostname -> port
       let portNode: PortNode<data> | undefined = undefined
-      if (variant.hostname.type === 'static') {
+      if (variant.hostname.type === 'any') {
+        portNode = hostnameNode.any
+      } else if (variant.hostname.type === 'static') {
         portNode = hostnameNode.static.get(variant.hostname.value)
         if (portNode === undefined) {
           portNode = new Map()
@@ -229,6 +236,17 @@ export class Trie<data = unknown> {
     let protocol = url.protocol.slice(0, -1)
     if (protocol !== 'http' && protocol !== 'https') return []
     let hostNameNode = this.protocolNode[protocol]
+
+    // any hostname + port -> pathname
+    let anyHostname = hostNameNode.any.get(url.port)
+    if (anyHostname) {
+      origins.push({
+        hostnameMatch: [
+          { type: '*', name: '*', begin: 0, end: url.hostname.length, value: url.hostname },
+        ],
+        pathnameNode: anyHostname,
+      })
+    }
 
     // static hostname + port -> pathname
     let staticHostname = hostNameNode.static.get(url.hostname)
@@ -307,6 +325,7 @@ export class Trie<data = unknown> {
               params,
             })
           }
+          continue
         }
 
         let urlSegment = urlSegments[current.segmentIndex]
@@ -340,7 +359,7 @@ export class Trie<data = unknown> {
             }
             stack.push({
               segmentIndex: current.segmentIndex + 1,
-              pathnameNode: pathnameNode,
+              pathnameNode,
               charOffset: current.charOffset + match.index + match[0].length + 1,
               pathnameMatch,
             })
@@ -367,7 +386,7 @@ export class Trie<data = unknown> {
             }
             stack.push({
               segmentIndex: urlSegments.length,
-              pathnameNode: pathnameNode,
+              pathnameNode,
               charOffset: current.charOffset + remaining.length,
               pathnameMatch,
             })
