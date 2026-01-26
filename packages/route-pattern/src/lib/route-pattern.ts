@@ -36,33 +36,31 @@ export class RoutePattern<source extends string = string> {
   readonly ast: AST
   readonly ignoreCase: boolean
 
-  readonly #hasOrigin: boolean
-
-  private constructor(ast: AST, options: { ignoreCase: boolean }) {
-    this.ast = ast
-    this.ignoreCase = options.ignoreCase
-    this.#hasOrigin = ast.protocol !== null || ast.hostname !== null || ast.port !== null
-  }
-
-  static parse<source extends string>(
-    source: source,
-    options?: RoutePattern.Options,
-  ): RoutePattern<source> {
+  // The `join()` method bypasses the constructor and creates a new instance directly
+  // using `Object.create()`. This means that the constructor will only run for instances
+  // that are instantiated directly with a source string, not for all instances of `RoutePattern`.
+  // This also means that we cannot use JavaScript features like `#private` fields/methods and
+  // class field initializers that rely on the constructor being run.
+  constructor(source: source, options?: RoutePattern.Options) {
     let ignoreCase = options?.ignoreCase ?? false
     let spans = split(source)
 
-    return new RoutePattern(
-      {
-        protocol: Protocol.parse(source, spans.protocol),
-        hostname: Hostname.parse(source, spans.hostname),
-        port: spans.port ? source.slice(...spans.port) : null,
-        pathname: spans.pathname
-          ? PartPattern.parse(source, { span: spans.pathname, type: 'pathname', ignoreCase })
-          : PartPattern.parse('', { span: [0, 0], type: 'pathname', ignoreCase }),
-        search: spans.search ? Search.parse(source.slice(...spans.search)) : new Map(),
-      },
-      { ignoreCase },
-    )
+    this.ast = {
+      protocol: Protocol.parse(source, spans.protocol),
+      hostname: Hostname.parse(source, spans.hostname),
+      port: spans.port ? source.slice(...spans.port) : null,
+      pathname: spans.pathname
+        ? PartPattern.parse(source, { span: spans.pathname, type: 'pathname', ignoreCase })
+        : PartPattern.parse('', { span: [0, 0], type: 'pathname', ignoreCase }),
+      search: spans.search ? Search.parse(source.slice(...spans.search)) : new Map(),
+    }
+
+    this.ignoreCase = ignoreCase
+  }
+
+  // eslint-disable-next-line no-restricted-syntax
+  private get hasOrigin(): boolean {
+    return this.ast.protocol !== null || this.ast.hostname !== null || this.ast.port !== null
   }
 
   get protocol(): string {
@@ -88,7 +86,7 @@ export class RoutePattern<source extends string = string> {
   get source(): string {
     let result = ''
 
-    if (this.#hasOrigin) {
+    if (this.hasOrigin) {
       let protocol = this.protocol
       let hostname = this.hostname
       let port = this.port === '' ? '' : `:${this.port}`
@@ -111,19 +109,25 @@ export class RoutePattern<source extends string = string> {
     other: other | RoutePattern<other>,
     options?: RoutePattern.Options,
   ): RoutePattern<Join<source, other>> {
-    other = typeof other === 'string' ? RoutePattern.parse(other) : other
+    other = typeof other === 'string' ? new RoutePattern(other, options) : other
     let ignoreCase = options?.ignoreCase ?? (this.ignoreCase || other.ignoreCase)
 
-    return new RoutePattern(
-      {
-        protocol: other.ast.protocol ?? this.ast.protocol,
-        hostname: other.ast.hostname ?? this.ast.hostname,
-        port: other.ast.port ?? this.ast.port,
-        pathname: Pathname.join(this.ast.pathname, other.ast.pathname, ignoreCase),
-        search: Search.join(this.ast.search, other.ast.search),
+    return Object.create(RoutePattern.prototype, {
+      ast: {
+        enumerable: true,
+        value: {
+          protocol: other.ast.protocol ?? this.ast.protocol,
+          hostname: other.ast.hostname ?? this.ast.hostname,
+          port: other.ast.port ?? this.ast.port,
+          pathname: Pathname.join(this.ast.pathname, other.ast.pathname, ignoreCase),
+          search: Search.join(this.ast.search, other.ast.search),
+        },
       },
-      { ignoreCase },
-    )
+      ignoreCase: {
+        enumerable: true,
+        value: ignoreCase,
+      },
+    })
   }
 
   href(...args: HrefArgs<source>): string {
@@ -133,7 +137,7 @@ export class RoutePattern<source extends string = string> {
 
     let result = ''
 
-    if (this.#hasOrigin) {
+    if (this.hasOrigin) {
       // protocol: null defaults to 'https', 'http(s)' defaults to 'https'
       let protocol =
         this.ast.protocol === null || this.ast.protocol === 'http(s)' ? 'https' : this.ast.protocol
@@ -167,7 +171,7 @@ export class RoutePattern<source extends string = string> {
     url = typeof url === 'string' ? new URL(url) : url
 
     let hostname: PartPattern.Match | null = null
-    if (this.#hasOrigin) {
+    if (this.hasOrigin) {
       // protocol: null matches http or https, 'http(s)' matches http or https
       if (this.ast.protocol === 'http(s)') {
         if (url.protocol !== 'http:' && url.protocol !== 'https:') return null

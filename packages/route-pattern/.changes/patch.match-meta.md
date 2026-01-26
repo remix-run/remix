@@ -5,7 +5,7 @@ The `meta` property provides rich information about matched params (variables an
 ```ts
 import * as assert from 'node:assert/strict'
 
-let pattern = RoutePattern.parse('https://:tenant.example.com/:lang/docs/*')
+let pattern = new RoutePattern('https://:tenant.example.com/:lang/docs/*')
 let match = pattern.match('https://acme.example.com/en/docs/api/routes')
 
 assert.deepStrictEqual(match.params, { tenant: 'acme', lang: 'en' })

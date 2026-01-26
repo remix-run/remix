@@ -12,7 +12,7 @@ describe('RoutePattern', () => {
         search?: Record<string, Array<string> | null>
       },
     ) {
-      let pattern = RoutePattern.parse(source)
+      let pattern = new RoutePattern(source)
       let expectedSearch = new Map()
       if (expected.search) {
         for (let name in expected.search) {
@@ -129,19 +129,19 @@ describe('RoutePattern', () => {
     })
 
     test('throws on invalid protocol', () => {
-      assert.throws(() => RoutePattern.parse('ftp://example.com'), {
+      assert.throws(() => new RoutePattern('ftp://example.com'), {
         name: 'ParseError',
         type: 'invalid protocol',
       })
-      assert.throws(() => RoutePattern.parse('ws://example.com/path'), {
+      assert.throws(() => new RoutePattern('ws://example.com/path'), {
         name: 'ParseError',
         type: 'invalid protocol',
       })
-      assert.throws(() => RoutePattern.parse('httpx://example.com'), {
+      assert.throws(() => new RoutePattern('httpx://example.com'), {
         name: 'ParseError',
         type: 'invalid protocol',
       })
-      assert.throws(() => RoutePattern.parse('http(s)x://example.com'), {
+      assert.throws(() => new RoutePattern('http(s)x://example.com'), {
         name: 'ParseError',
         type: 'invalid protocol',
       })
@@ -150,50 +150,50 @@ describe('RoutePattern', () => {
 
   describe('part accessors', () => {
     test('protocol', () => {
-      assert.equal(RoutePattern.parse('http://example.com').protocol, 'http')
-      assert.equal(RoutePattern.parse('https://example.com').protocol, 'https')
-      assert.equal(RoutePattern.parse('http(s)://example.com').protocol, 'http(s)')
-      assert.equal(RoutePattern.parse('/pathname').protocol, '')
-      assert.equal(RoutePattern.parse('://example.com').protocol, '')
+      assert.equal(new RoutePattern('http://example.com').protocol, 'http')
+      assert.equal(new RoutePattern('https://example.com').protocol, 'https')
+      assert.equal(new RoutePattern('http(s)://example.com').protocol, 'http(s)')
+      assert.equal(new RoutePattern('/pathname').protocol, '')
+      assert.equal(new RoutePattern('://example.com').protocol, '')
     })
 
     test('hostname', () => {
-      assert.equal(RoutePattern.parse('://example.com').hostname, 'example.com')
-      assert.equal(RoutePattern.parse('://:host').hostname, ':host')
-      assert.equal(RoutePattern.parse('://api.example.com').hostname, 'api.example.com')
-      assert.equal(RoutePattern.parse('/pathname').hostname, '')
-      assert.equal(RoutePattern.parse('http://').hostname, '')
+      assert.equal(new RoutePattern('://example.com').hostname, 'example.com')
+      assert.equal(new RoutePattern('://:host').hostname, ':host')
+      assert.equal(new RoutePattern('://api.example.com').hostname, 'api.example.com')
+      assert.equal(new RoutePattern('/pathname').hostname, '')
+      assert.equal(new RoutePattern('http://').hostname, '')
     })
 
     test('port', () => {
-      assert.equal(RoutePattern.parse('://example.com:8000').port, '8000')
-      assert.equal(RoutePattern.parse('://example.com:3000').port, '3000')
-      assert.equal(RoutePattern.parse('://example.com').port, '')
-      assert.equal(RoutePattern.parse('/pathname').port, '')
+      assert.equal(new RoutePattern('://example.com:8000').port, '8000')
+      assert.equal(new RoutePattern('://example.com:3000').port, '3000')
+      assert.equal(new RoutePattern('://example.com').port, '')
+      assert.equal(new RoutePattern('/pathname').port, '')
     })
 
     test('pathname', () => {
-      assert.equal(RoutePattern.parse('/posts/:id').pathname, 'posts/:id')
-      assert.equal(RoutePattern.parse('posts/:id').pathname, 'posts/:id')
-      assert.equal(RoutePattern.parse('/posts(/:id)').pathname, 'posts(/:id)')
-      assert.equal(RoutePattern.parse('://example.com').pathname, '')
-      assert.equal(RoutePattern.parse('/').pathname, '')
-      assert.equal(RoutePattern.parse('').pathname, '')
+      assert.equal(new RoutePattern('/posts/:id').pathname, 'posts/:id')
+      assert.equal(new RoutePattern('posts/:id').pathname, 'posts/:id')
+      assert.equal(new RoutePattern('/posts(/:id)').pathname, 'posts(/:id)')
+      assert.equal(new RoutePattern('://example.com').pathname, '')
+      assert.equal(new RoutePattern('/').pathname, '')
+      assert.equal(new RoutePattern('').pathname, '')
     })
 
     test('search', () => {
-      assert.equal(RoutePattern.parse('?q').search, 'q')
-      assert.equal(RoutePattern.parse('?q=').search, 'q=')
-      assert.equal(RoutePattern.parse('?q=1').search, 'q=1')
-      assert.equal(RoutePattern.parse('?q=1&q=2').search, 'q=1&q=2')
-      assert.equal(RoutePattern.parse('/posts?filter').search, 'filter')
-      assert.equal(RoutePattern.parse('/posts?sort=asc').search, 'sort=asc')
-      assert.equal(RoutePattern.parse('/posts').search, '')
-      assert.equal(RoutePattern.parse('').search, '')
+      assert.equal(new RoutePattern('?q').search, 'q')
+      assert.equal(new RoutePattern('?q=').search, 'q=')
+      assert.equal(new RoutePattern('?q=1').search, 'q=1')
+      assert.equal(new RoutePattern('?q=1&q=2').search, 'q=1&q=2')
+      assert.equal(new RoutePattern('/posts?filter').search, 'filter')
+      assert.equal(new RoutePattern('/posts?sort=asc').search, 'sort=asc')
+      assert.equal(new RoutePattern('/posts').search, '')
+      assert.equal(new RoutePattern('').search, '')
     })
 
     test('all parts together', () => {
-      let pattern = RoutePattern.parse('https://api.example.com:8000/v1/:resource?filter=active')
+      let pattern = new RoutePattern('https://api.example.com:8000/v1/:resource?filter=active')
       assert.equal(pattern.protocol, 'https')
       assert.equal(pattern.hostname, 'api.example.com')
       assert.equal(pattern.port, '8000')
@@ -204,7 +204,7 @@ describe('RoutePattern', () => {
 
   describe('source', () => {
     function assertSource(source: string, expected?: string) {
-      assert.equal(RoutePattern.parse(source).source, expected ?? source)
+      assert.equal(new RoutePattern(source).source, expected ?? source)
     }
 
     test('pathname only', () => {
@@ -287,8 +287,8 @@ describe('RoutePattern', () => {
   describe('join', () => {
     function assertJoin(a: string, b: string, expected: string) {
       assert.deepStrictEqual(
-        RoutePattern.parse(a).join(RoutePattern.parse(b)),
-        RoutePattern.parse(expected),
+        new RoutePattern(a).join(new RoutePattern(b)),
+        new RoutePattern(expected),
       )
     }
 
@@ -398,7 +398,7 @@ describe('RoutePattern', () => {
       params: Record<string, string | number> | undefined,
       expected: string,
     ) {
-      assert.equal(RoutePattern.parse(pattern).href(params), expected)
+      assert.equal(new RoutePattern(pattern).href(params), expected)
     }
 
     function assertHrefWithSearch(
@@ -407,7 +407,7 @@ describe('RoutePattern', () => {
       searchParams: Search.HrefParams,
       expected: string,
     ) {
-      assert.equal(RoutePattern.parse(pattern).href(params, searchParams), expected)
+      assert.equal(new RoutePattern(pattern).href(params, searchParams), expected)
     }
 
     function assertHrefThrows(
@@ -416,7 +416,7 @@ describe('RoutePattern', () => {
       errorType: HrefError['details']['type'],
     ) {
       assert.throws(
-        () => RoutePattern.parse(pattern).href(params),
+        () => new RoutePattern(pattern).href(params),
         (error: unknown) => {
           return error instanceof HrefError && error.details.type === errorType
         },
@@ -512,7 +512,7 @@ describe('RoutePattern', () => {
         params?: Record<string, string | undefined>
       } | null,
     ) {
-      let match = RoutePattern.parse(pattern).match(url)
+      let match = new RoutePattern(pattern).match(url)
 
       if (expected === null) {
         assert.equal(match, null, `Expected pattern "${pattern}" to not match URL "${url}"`)
@@ -662,32 +662,32 @@ describe('RoutePattern', () => {
 
   describe('ignoreCase', () => {
     test('defaults to false (case-sensitive)', () => {
-      let pattern = RoutePattern.parse('/posts/:id')
+      let pattern = new RoutePattern('/posts/:id')
       assert.equal(pattern.ignoreCase, false)
     })
 
     test('can be set to true in parse options', () => {
-      let pattern = RoutePattern.parse('/posts/:id', { ignoreCase: true })
+      let pattern = new RoutePattern('/posts/:id', { ignoreCase: true })
       assert.equal(pattern.ignoreCase, true)
     })
 
     describe('pathname matching', () => {
       test('case-sensitive by default', () => {
-        let pattern = RoutePattern.parse('/Posts/:id')
+        let pattern = new RoutePattern('/Posts/:id')
         assert.equal(pattern.match('https://example.com/posts/123'), null)
         assert.equal(pattern.match('https://example.com/POSTS/123'), null)
         assert.notEqual(pattern.match('https://example.com/Posts/123'), null)
       })
 
       test('case-insensitive when enabled', () => {
-        let pattern = RoutePattern.parse('/Posts/:id', { ignoreCase: true })
+        let pattern = new RoutePattern('/Posts/:id', { ignoreCase: true })
         assert.notEqual(pattern.match('https://example.com/posts/123'), null)
         assert.notEqual(pattern.match('https://example.com/POSTS/123'), null)
         assert.notEqual(pattern.match('https://example.com/PoStS/123'), null)
       })
 
       test('case-insensitive matches return original casing in params', () => {
-        let pattern = RoutePattern.parse('/posts/:id', { ignoreCase: true })
+        let pattern = new RoutePattern('/posts/:id', { ignoreCase: true })
         let match = pattern.match('https://example.com/POSTS/ABC')
         assert.notEqual(match, null)
         assert.equal(match!.params.id, 'ABC')
@@ -696,35 +696,35 @@ describe('RoutePattern', () => {
 
     describe('search matching', () => {
       test('case-sensitive by default - param names', () => {
-        let pattern = RoutePattern.parse('?Sort')
+        let pattern = new RoutePattern('?Sort')
         assert.notEqual(pattern.match('https://example.com?Sort'), null)
         assert.equal(pattern.match('https://example.com?sort'), null)
         assert.equal(pattern.match('https://example.com?SORT'), null)
       })
 
       test('case-insensitive param names when enabled', () => {
-        let pattern = RoutePattern.parse('?Sort', { ignoreCase: true })
+        let pattern = new RoutePattern('?Sort', { ignoreCase: true })
         assert.notEqual(pattern.match('https://example.com?Sort'), null)
         assert.notEqual(pattern.match('https://example.com?sort'), null)
         assert.notEqual(pattern.match('https://example.com?SORT'), null)
       })
 
       test('case-sensitive by default - param values', () => {
-        let pattern = RoutePattern.parse('?sort=Asc')
+        let pattern = new RoutePattern('?sort=Asc')
         assert.notEqual(pattern.match('https://example.com?sort=Asc'), null)
         assert.equal(pattern.match('https://example.com?sort=asc'), null)
         assert.equal(pattern.match('https://example.com?sort=ASC'), null)
       })
 
       test('case-insensitive param values when enabled', () => {
-        let pattern = RoutePattern.parse('?sort=Asc', { ignoreCase: true })
+        let pattern = new RoutePattern('?sort=Asc', { ignoreCase: true })
         assert.notEqual(pattern.match('https://example.com?sort=Asc'), null)
         assert.notEqual(pattern.match('https://example.com?sort=asc'), null)
         assert.notEqual(pattern.match('https://example.com?sort=ASC'), null)
       })
 
       test('case-insensitive works with multiple search params', () => {
-        let pattern = RoutePattern.parse('?Sort=Asc&Filter=Active', { ignoreCase: true })
+        let pattern = new RoutePattern('?Sort=Asc&Filter=Active', { ignoreCase: true })
         assert.notEqual(pattern.match('https://example.com?sort=asc&filter=active'), null)
         assert.notEqual(pattern.match('https://example.com?SORT=ASC&FILTER=ACTIVE'), null)
       })
@@ -732,33 +732,33 @@ describe('RoutePattern', () => {
 
     describe('join', () => {
       test('uses union (true if either is true) by default', () => {
-        let a = RoutePattern.parse('/api', { ignoreCase: true })
-        let b = RoutePattern.parse('/posts', { ignoreCase: false })
+        let a = new RoutePattern('/api', { ignoreCase: true })
+        let b = new RoutePattern('/posts', { ignoreCase: false })
         assert.equal(a.join(b).ignoreCase, true)
 
-        let c = RoutePattern.parse('/api', { ignoreCase: false })
-        let d = RoutePattern.parse('/posts', { ignoreCase: true })
+        let c = new RoutePattern('/api', { ignoreCase: false })
+        let d = new RoutePattern('/posts', { ignoreCase: true })
         assert.equal(c.join(d).ignoreCase, true)
 
-        let e = RoutePattern.parse('/api', { ignoreCase: false })
-        let f = RoutePattern.parse('/posts', { ignoreCase: false })
+        let e = new RoutePattern('/api', { ignoreCase: false })
+        let f = new RoutePattern('/posts', { ignoreCase: false })
         assert.equal(e.join(f).ignoreCase, false)
 
-        let g = RoutePattern.parse('/api', { ignoreCase: true })
-        let h = RoutePattern.parse('/posts', { ignoreCase: true })
+        let g = new RoutePattern('/api', { ignoreCase: true })
+        let h = new RoutePattern('/posts', { ignoreCase: true })
         assert.equal(g.join(h).ignoreCase, true)
       })
 
       test('can override ignoreCase with options', () => {
-        let a = RoutePattern.parse('/api', { ignoreCase: false })
-        let b = RoutePattern.parse('/posts', { ignoreCase: false })
+        let a = new RoutePattern('/api', { ignoreCase: false })
+        let b = new RoutePattern('/posts', { ignoreCase: false })
         let joined = a.join(b, { ignoreCase: true })
         assert.equal(joined.ignoreCase, true)
       })
 
       test('joined pattern matches according to its ignoreCase setting', () => {
-        let a = RoutePattern.parse('/api', { ignoreCase: false })
-        let b = RoutePattern.parse('/posts', { ignoreCase: false })
+        let a = new RoutePattern('/api', { ignoreCase: false })
+        let b = new RoutePattern('/posts', { ignoreCase: false })
         let joined = a.join(b, { ignoreCase: true })
         assert.notEqual(joined.match('https://example.com/API/POSTS'), null)
       })

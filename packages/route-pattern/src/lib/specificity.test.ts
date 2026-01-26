@@ -7,8 +7,8 @@ describe('rank', () => {
   describe('compare', () => {
     function assertCompare(patterns: [string, string], url: URL | string, expected: -1 | 0 | 1) {
       url = typeof url === 'string' ? new URL(url) : url
-      let a = RoutePattern.parse(patterns[0])
-      let b = RoutePattern.parse(patterns[1])
+      let a = new RoutePattern(patterns[0])
+      let b = new RoutePattern(patterns[1])
       let matchA = a.match(url)
       let matchB = b.match(url)
 
@@ -189,7 +189,7 @@ describe('rank', () => {
     })
 
     test('throws when comparing matches for different URLs', () => {
-      let pattern = RoutePattern.parse('https://example.com/:path')
+      let pattern = new RoutePattern('https://example.com/:path')
       let match1 = pattern.match('https://example.com/foo')
       let match2 = pattern.match('https://example.com/bar')
 

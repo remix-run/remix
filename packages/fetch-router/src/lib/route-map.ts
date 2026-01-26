@@ -34,7 +34,7 @@ export class Route<
    */
   constructor(method: method | 'ANY', pattern: pattern | RoutePattern<pattern>) {
     this.method = method
-    this.pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
+    this.pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
   }
 
   /**
@@ -88,10 +88,10 @@ export function createRoutes<base extends string, const defs extends RouteDefs>(
 export function createRoutes(baseOrDefs: any, defs?: RouteDefs): RouteMap {
   return typeof baseOrDefs === 'string' || baseOrDefs instanceof RoutePattern
     ? buildRouteMap(
-        typeof baseOrDefs === 'string' ? RoutePattern.parse(baseOrDefs) : baseOrDefs,
+        typeof baseOrDefs === 'string' ? new RoutePattern(baseOrDefs) : baseOrDefs,
         defs!,
       )
-    : buildRouteMap(RoutePattern.parse('/'), baseOrDefs)
+    : buildRouteMap(new RoutePattern('/'), baseOrDefs)
 }
 
 function buildRouteMap<base extends string, defs extends RouteDefs>(

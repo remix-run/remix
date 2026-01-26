@@ -6,7 +6,7 @@ export class ArrayMatcher<data> implements Matcher<data> {
   #patterns: Array<{ pattern: RoutePattern; data: data }> = []
 
   add(pattern: string | RoutePattern, data: data): void {
-    pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
+    pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
     this.#patterns.push({ pattern, data })
   }
 

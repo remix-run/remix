@@ -22,8 +22,8 @@ import assert from 'node:assert'
 
 let url = 'https://example.com/posts/new'
 
-let pattern1 = RoutePattern.parse('/posts/:id')
-let pattern2 = RoutePattern.parse('/posts/new')
+let pattern1 = new RoutePattern('/posts/:id')
+let pattern2 = new RoutePattern('/posts/new')
 
 let match1 = pattern1.match(url)
 let match2 = pattern2.match(url)
@@ -38,10 +38,10 @@ import assert from 'node:assert'
 
 let url = 'https://app-api.example.com'
 
-let pattern1 = RoutePattern.parse('https://app-*.example.com')
+let pattern1 = new RoutePattern('https://app-*.example.com')
 let match1 = pattern1.match(url)
 
-let pattern2 = RoutePattern.parse('https://*-api.example.com')
+let pattern2 = new RoutePattern('https://*-api.example.com')
 let match2 = pattern2.match(url)
 
 assert(Specificity.lessThan(match1, match2))

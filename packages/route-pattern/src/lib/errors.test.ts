@@ -31,7 +31,7 @@ describe('ParseError', () => {
 describe('HrefError', () => {
   describe('missing-hostname', () => {
     test('shows error message with pattern', () => {
-      let pattern = RoutePattern.parse('https://*:8080/api')
+      let pattern = new RoutePattern('https://*:8080/api')
       let error = new HrefError({
         type: 'missing-hostname',
         pattern,
@@ -49,7 +49,7 @@ describe('HrefError', () => {
 
   describe('missing-params', () => {
     test('shows missing param for single variant', () => {
-      let pattern = RoutePattern.parse('https://example.com/:id')
+      let pattern = new RoutePattern('https://example.com/:id')
       let error = new HrefError({
         type: 'missing-params',
         pattern,
@@ -70,7 +70,7 @@ describe('HrefError', () => {
     })
 
     test('shows missing params across multiple variants', () => {
-      let pattern = RoutePattern.parse('https://example.com/:a/:b(/:c)')
+      let pattern = new RoutePattern('https://example.com/:a/:b(/:c)')
       let error = new HrefError({
         type: 'missing-params',
         pattern,
@@ -92,7 +92,7 @@ describe('HrefError', () => {
     })
 
     test('shows missing dependent params', () => {
-      let pattern = RoutePattern.parse('https://example.com/:a(:b)-:a(:c)')
+      let pattern = new RoutePattern('https://example.com/:a(:b)-:a(:c)')
       let error = new HrefError({
         type: 'missing-params',
         pattern,
@@ -118,7 +118,7 @@ describe('HrefError', () => {
 
   describe('missing-search-params', () => {
     test('shows single missing search param', () => {
-      let pattern = RoutePattern.parse('https://example.com/search?q=')
+      let pattern = new RoutePattern('https://example.com/search?q=')
       let error = new HrefError({
         type: 'missing-search-params',
         pattern,
@@ -137,7 +137,7 @@ describe('HrefError', () => {
     })
 
     test('shows multiple missing search params', () => {
-      let pattern = RoutePattern.parse('https://example.com/search?q=&sort=')
+      let pattern = new RoutePattern('https://example.com/search?q=&sort=')
       let error = new HrefError({
         type: 'missing-search-params',
         pattern,
@@ -158,7 +158,7 @@ describe('HrefError', () => {
 
   describe('nameless-wildcard', () => {
     test('shows error message with pattern', () => {
-      let pattern = RoutePattern.parse('https://example.com/api/*/users')
+      let pattern = new RoutePattern('https://example.com/api/*/users')
       let error = new HrefError({
         type: 'nameless-wildcard',
         pattern,

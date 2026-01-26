@@ -929,7 +929,7 @@ describe('custom matcher', () => {
 
     class CustomMatcher extends ArrayMatcher<MatchData> {
       add<P extends string>(pattern: P | RoutePattern<P>, data: MatchData): void {
-        let routePattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
+        let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
         addedPatterns.push(routePattern.source)
         super.add(pattern, data)
       }

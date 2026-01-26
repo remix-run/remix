@@ -15,7 +15,7 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
   }
 
   add(pattern: string | RoutePattern, data: data): void {
-    pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
+    pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
     this.trie.insert(pattern, data)
   }
 
