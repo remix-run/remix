@@ -31,7 +31,7 @@ export type {
 } from './lib/dom.ts'
 
 // Export types from vdom.ts
-export type { VirtualRoot, VirtualRootOptions } from './lib/vdom.ts'
+export type { VirtualRoot, VirtualRootEventMap, VirtualRootOptions } from './lib/vdom.ts'
 
 // Export types from component.ts
 export type { Handle } from './lib/component.ts'

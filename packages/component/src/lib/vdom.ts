@@ -1,6 +1,6 @@
-import { createContainer, type EventsContainer } from '@remix-run/interaction'
+import { createContainer, TypedEventTarget, type EventsContainer } from '@remix-run/interaction'
 import type { Component, ComponentHandle, FrameHandle } from './component.ts'
-import { createComponent, Catch, Fragment, Frame, createFrameHandle } from './component.ts'
+import { createComponent, Fragment, Frame, createFrameHandle } from './component.ts'
 import { invariant } from './invariant.ts'
 import { createDocumentState } from './document-state.ts'
 import { processStyle, createStyleManager, normalizeCssValue } from './style/index.ts'
@@ -23,7 +23,11 @@ import {
 
 let fixmeIdCounter = 0
 
-export type VirtualRoot = {
+export type VirtualRootEventMap = {
+  error: ErrorEvent
+}
+
+export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
   render: (element: RemixNode) => void
   remove: () => void
   flush: () => void
@@ -60,7 +64,6 @@ type VNodeType =
   | Function // component
   | typeof TEXT_NODE
   | typeof Fragment
-  | typeof Catch
   | typeof Frame
 
 export type VNode<T extends VNodeType = VNodeType> = {
@@ -88,11 +91,6 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _id?: string
   _content?: VNode
 
-  // Catch
-  _fallback?: ((error: unknown) => RemixNode) | RemixNode
-  _added?: VNode[]
-  _tripped?: boolean
-
   // Presence animation
   _animation?: Animation
   _exiting?: boolean
@@ -102,17 +100,6 @@ export type VNode<T extends VNodeType = VNodeType> = {
 type FragmentNode = VNode & {
   type: typeof Fragment
   _children: VNode[]
-}
-
-type CatchNode = VNode & {
-  type: typeof Catch
-  _children: VNode[] // so we can diff normally in happy path
-  _fallback: ((error: unknown) => RemixNode) | RemixNode
-}
-
-type CommittedCatchNode = CatchNode & {
-  _added: VNode[] // so we can remove arbitrarily (outside render)
-  _tripped: boolean // so we knew we should replace it on next render
 }
 
 type TextNode = VNode & {
@@ -153,7 +140,7 @@ type EmptyFn = () => void
 
 export type Scheduler = ReturnType<typeof createScheduler>
 
-export function createScheduler(doc: Document) {
+export function createScheduler(doc: Document, rootTarget: EventTarget) {
   let documentState = createDocumentState(doc)
   let scheduled = new Map<CommittedComponentNode, [ParentNode, Node | undefined]>()
   let tasks: EmptyFn[] = []
@@ -162,6 +149,10 @@ export function createScheduler(doc: Document) {
     enqueue(vnode: CommittedComponentNode, domParent: ParentNode, anchor?: Node): void
     enqueueTasks(newTasks: EmptyFn[]): void
     dequeue(): void
+  }
+
+  function dispatchError(error: unknown) {
+    rootTarget.dispatchEvent(new ErrorEvent('error', { error }))
   }
 
   function flush() {
@@ -194,8 +185,22 @@ export function createScheduler(doc: Document) {
         if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
         let handle = vnode._handle
         let curr = vnode._content
-        let vParent = vnode._parent
-        renderComponent(handle, curr, vnode, domParent, handle.frame, scheduler, vParent, anchor)
+        let vParent = vnode._parent!
+        try {
+          renderComponent(
+            handle,
+            curr,
+            vnode,
+            domParent,
+            handle.frame,
+            scheduler,
+            rootTarget,
+            vParent,
+            anchor,
+          )
+        } catch (error) {
+          dispatchError(error)
+        }
       }
     }
 
@@ -207,7 +212,11 @@ export function createScheduler(doc: Document) {
 
     if (tasks.length > 0) {
       for (let task of tasks) {
-        task()
+        try {
+          task()
+        } catch (error) {
+          dispatchError(error)
+        }
       }
       tasks = []
     }
@@ -273,25 +282,42 @@ export function createRangeRoot(
   [start, end]: [Node, Node],
   options: VirtualRootOptions = {},
 ): VirtualRoot {
-  let root: VNode | null = null
+  let vroot: VNode | null = null
   let frameStub = options.frame ?? createFrameHandle()
 
   let container = end.parentNode
   invariant(container, 'Expected parent node')
   invariant(end.parentNode === container, 'Boundaries must share parent')
 
-  let scheduler = options.scheduler ?? createScheduler(container.ownerDocument ?? document)
-
   let hydrationCursor = start.nextSibling
 
-  return {
+  let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
+  let scheduler =
+    options.scheduler ?? createScheduler(container.ownerDocument ?? document, eventTarget)
+
+  // Forward bubbling error events from DOM to root EventTarget
+  container.addEventListener('error', (event) => {
+    eventTarget.dispatchEvent(new ErrorEvent('error', { error: (event as ErrorEvent).error }))
+  })
+
+  return Object.assign(eventTarget, {
     render(element: RemixNode) {
       let vnode = toVNode(element)
       let vParent: VNode = { type: ROOT_VNODE, _svg: false }
       scheduler.enqueueTasks([
         () => {
-          diffVNodes(root, vnode, container, frameStub, scheduler, vParent, end, hydrationCursor)
-          root = vnode
+          diffVNodes(
+            vroot,
+            vnode,
+            container,
+            frameStub,
+            scheduler,
+            vParent,
+            eventTarget,
+            end,
+            hydrationCursor,
+          )
+          vroot = vnode
           hydrationCursor = null
         },
       ])
@@ -299,38 +325,47 @@ export function createRangeRoot(
     },
 
     remove() {
-      root = null
+      vroot = null
     },
 
     flush() {
       scheduler.dequeue()
     },
-  }
+  })
 }
 
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
-  let root: VNode | null = null
+  let vroot: VNode | null = null
   let frameStub = options.frame ?? createFrameHandle()
-  let scheduler = options.scheduler ?? createScheduler(container.ownerDocument ?? document)
   let hydrationCursor = container.innerHTML.trim() !== '' ? container.firstChild : undefined
 
-  return {
+  let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
+  let scheduler =
+    options.scheduler ?? createScheduler(container.ownerDocument ?? document, eventTarget)
+
+  // Forward bubbling error events from DOM to root EventTarget
+  container.addEventListener('error', (event) => {
+    eventTarget.dispatchEvent(new ErrorEvent('error', { error: (event as ErrorEvent).error }))
+  })
+
+  return Object.assign(eventTarget, {
     render(element: RemixNode) {
       let vnode = toVNode(element)
       let vParent: VNode = { type: ROOT_VNODE, _svg: false }
       scheduler.enqueueTasks([
         () => {
           diffVNodes(
-            root,
+            vroot,
             vnode,
             container,
             frameStub,
             scheduler,
             vParent,
+            eventTarget,
             undefined,
             hydrationCursor,
           )
-          root = vnode
+          vroot = vnode
           hydrationCursor = undefined
         },
       ])
@@ -338,13 +373,13 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
     },
 
     remove() {
-      root = null
+      vroot = null
     },
 
     flush() {
       scheduler.dequeue()
     },
-  }
+  })
 }
 
 function flatMapChildrenToVNodes(node: RemixElement): VNode[] {
@@ -384,15 +419,6 @@ export function toVNode(node: RemixNode): VNode {
     return { type: Fragment, key: node.key, _children: flatMapChildrenToVNodes(node) }
   }
 
-  if (node.type === Catch) {
-    return {
-      type: Catch,
-      key: node.key,
-      _fallback: node.props.fallback,
-      _children: flatMapChildrenToVNodes(node),
-    }
-  }
-
   if (isRemixElement(node)) {
     // When innerHTML is set, ignore children
     let children = node.props.innerHTML != null ? [] : flatMapChildrenToVNodes(node)
@@ -409,6 +435,7 @@ export function diffVNodes(
   frame: FrameHandle,
   scheduler: Scheduler,
   vParent: VNode,
+  rootTarget: EventTarget,
   anchor?: Node,
   rootCursor?: Node | null,
 ) {
@@ -417,12 +444,12 @@ export function diffVNodes(
 
   // new
   if (curr === null) {
-    insert(next, domParent, frame, scheduler, vParent, anchor, rootCursor)
+    insert(next, domParent, frame, scheduler, vParent, rootTarget, anchor, rootCursor)
     return
   }
 
   if (curr.type !== next.type) {
-    replace(curr, next, domParent, frame, scheduler, vParent, anchor)
+    replace(curr, next, domParent, frame, scheduler, vParent, rootTarget, anchor)
     return
   }
 
@@ -432,12 +459,12 @@ export function diffVNodes(
   }
 
   if (isCommittedHostNode(curr) && isHostNode(next)) {
-    diffHost(curr, next, domParent, frame, scheduler, vParent)
+    diffHost(curr, next, domParent, frame, scheduler, vParent, rootTarget)
     return
   }
 
   if (isCommittedComponentNode(curr) && isComponentNode(next)) {
-    diffComponent(curr, next, frame, scheduler, domParent, vParent)
+    diffComponent(curr, next, frame, scheduler, domParent, vParent, rootTarget)
     return
   }
 
@@ -449,14 +476,10 @@ export function diffVNodes(
       frame,
       scheduler,
       vParent,
+      rootTarget,
       undefined,
       anchor,
     )
-    return
-  }
-
-  if (isCatchNode(curr) && isCatchNode(next)) {
-    diffCatch(curr, next, domParent, frame, scheduler, vParent)
     return
   }
 
@@ -467,43 +490,6 @@ export function diffVNodes(
   invariant(false, 'Unexpected diff case')
 }
 
-function diffCatch(
-  curr: CatchNode,
-  next: CatchNode,
-  domParent: ParentNode,
-  frame: FrameHandle,
-  scheduler: Scheduler,
-  vParent: VNode,
-) {
-  if (curr._tripped) {
-    replace(curr, next, domParent, frame, scheduler, vParent)
-    return
-  }
-
-  let added = []
-  try {
-    for (let i = 0; i < curr._children.length; i++) {
-      let child = curr._children[i]
-      diffVNodes(child, next._children[i], domParent, frame, scheduler, vParent)
-      added.unshift(child)
-    }
-    curr._parent = vParent
-    curr._tripped = false
-    curr._added = added
-  } catch (e: unknown) {
-    for (let child of added) {
-      remove(child, domParent, scheduler)
-    }
-    let fallbackNode = getCatchFallback(next, e)
-    let anchor = findFirstDomAnchor(curr) || findNextSiblingDomAnchor(curr, vParent) || undefined
-    insert(fallbackNode, domParent, frame, scheduler, vParent, anchor)
-    curr._parent = vParent
-    curr._tripped = true
-    curr._added = [fallbackNode]
-    dispatchError(e)
-  }
-}
-
 function replace(
   curr: VNode,
   next: VNode,
@@ -511,11 +497,12 @@ function replace(
   frame: FrameHandle,
   scheduler: Scheduler,
   vParent: VNode,
+  rootTarget: EventTarget,
   anchor?: Node,
 ) {
   anchor =
     anchor || findFirstDomAnchor(curr) || findNextSiblingDomAnchor(curr, curr._parent) || undefined
-  insert(next, domParent, frame, scheduler, vParent, anchor)
+  insert(next, domParent, frame, scheduler, vParent, rootTarget, anchor)
   remove(curr, domParent, scheduler)
 }
 
@@ -526,6 +513,7 @@ function diffHost(
   frame: FrameHandle,
   scheduler: Scheduler,
   vParent: VNode,
+  rootTarget: EventTarget,
 ) {
   // Handle innerHTML prop BEFORE diffChildren to avoid clearing children
   if (next.props.innerHTML != null) {
@@ -538,7 +526,7 @@ function diffHost(
     curr._dom.innerHTML = ''
   }
 
-  diffChildren(curr._children, next._children, curr._dom, frame, scheduler, next)
+  diffChildren(curr._children, next._children, curr._dom, frame, scheduler, next, rootTarget)
   diffHostProps(curr.props, next.props, curr._dom)
 
   next._dom = curr._dom
@@ -554,9 +542,7 @@ function diffHost(
       scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
     } else {
       // Create new container
-      let eventsContainer = createContainer(curr._dom, {
-        onError: (error) => raise(error, next, domParent, frame, scheduler),
-      })
+      let eventsContainer = createContainer(curr._dom)
       scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
       next._events = eventsContainer
     }
@@ -585,14 +571,13 @@ function setupHostNode(
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
+  rootTarget: EventTarget,
 ): void {
   node._dom = dom
 
   let on = node.props.on
   if (on) {
-    let eventsContainer = createContainer(dom, {
-      onError: (error) => raise(error, node, domParent, frame, scheduler),
-    })
+    let eventsContainer = createContainer(dom)
     scheduler.enqueueTasks([() => eventsContainer.set(on)])
     node._events = eventsContainer
   }
@@ -763,10 +748,6 @@ function canUseProperty(
   return name in dom
 }
 
-function isCommittedCatchNode(node: VNode): node is CommittedCatchNode {
-  return isCatchNode(node) && node._added != undefined && node._tripped != null
-}
-
 function isComponentNode(node: VNode): node is ComponentNode {
   return typeof node.type === 'function' && node.type !== Frame
 }
@@ -885,6 +866,7 @@ function insert(
   frame: FrameHandle,
   scheduler: Scheduler,
   vParent: VNode,
+  rootTarget: EventTarget,
   anchor?: Node,
   cursor?: Node | null,
 ): Node | null | undefined {
@@ -919,7 +901,7 @@ function insert(
     // Check for matching exiting node that can be reclaimed
     let exitingNode = findMatchingExitingNode(node.type, node.key, domParent)
     if (exitingNode) {
-      reclaimExitingNode(exitingNode, node, domParent, frame, scheduler, vParent)
+      reclaimExitingNode(exitingNode, node, domParent, frame, scheduler, vParent, rootTarget)
       return cursor
     }
 
@@ -939,13 +921,22 @@ function insert(
           //   // special case <span>Text {text}</span> comes as single node from server
           //   return cursor.nextSibling
           // }
-          let excess = diffChildren(null, node._children, cursor, frame, scheduler, node, childCursor)
+          let excess = diffChildren(
+            null,
+            node._children,
+            cursor,
+            frame,
+            scheduler,
+            node,
+            rootTarget,
+            childCursor,
+          )
           if (excess) {
             logHydrationMismatch('excess', excess)
           }
         }
 
-        setupHostNode(node, cursor, domParent, frame, scheduler)
+        setupHostNode(node, cursor, domParent, frame, scheduler, rootTarget)
         return cursor.nextSibling
       } else {
         logHydrationMismatch('tag', cursor.tagName.toLowerCase(), node.type)
@@ -962,10 +953,10 @@ function insert(
     if (node.props.innerHTML != null) {
       dom.innerHTML = node.props.innerHTML
     } else {
-      diffChildren(null, node._children, dom, frame, scheduler, node)
+      diffChildren(null, node._children, dom, frame, scheduler, node, rootTarget)
     }
 
-    setupHostNode(node, dom, domParent, frame, scheduler)
+    setupHostNode(node, dom, domParent, frame, scheduler, rootTarget)
     doInsert(dom)
     return cursor
   }
@@ -973,48 +964,18 @@ function insert(
   if (isFragmentNode(node)) {
     // Insert fragment children in order before the same anchor
     for (let child of node._children) {
-      cursor = insert(child, domParent, frame, scheduler, vParent, anchor, cursor)
+      cursor = insert(child, domParent, frame, scheduler, vParent, rootTarget, anchor, cursor)
     }
     return cursor
   }
 
-  if (isCatchNode(node)) {
-    let added = []
-    try {
-      // insert like a fragment
-      for (let child of node._children) {
-        insert(child, domParent, frame, scheduler, node, anchor)
-        added.unshift(child)
-      }
-      node._parent = vParent
-      node._tripped = false
-      node._added = added
-    } catch (e: unknown) {
-      let fallback = getCatchFallback(node, e)
-      for (let child of added) {
-        remove(child, domParent, scheduler)
-      }
-      insert(fallback, domParent, frame, scheduler, node, anchor)
-      node._parent = vParent
-      node._tripped = true
-      node._added = [fallback]
-      dispatchError(e)
-    }
-
-    return
-  }
-
   if (isComponentNode(node)) {
-    diffComponent(null, node, frame, scheduler, domParent, vParent, anchor, cursor)
+    diffComponent(null, node, frame, scheduler, domParent, vParent, rootTarget, anchor, cursor)
     return cursor
   }
 
   if (node.type === Frame) {
     throw new Error('TODO: Frame insert not implemented')
-  }
-
-  if (node.type === Catch) {
-    throw new Error('TODO: Catch insert not implemented')
   }
 
   invariant(false, 'Unexpected node type')
@@ -1027,6 +988,7 @@ function renderComponent(
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
+  rootTarget: EventTarget,
   vParent?: VNode,
   anchor?: Node,
   cursor?: Node | null,
@@ -1034,7 +996,7 @@ function renderComponent(
   let [element, tasks] = handle.render(next.props)
   let content = toVNode(element)
 
-  diffVNodes(currContent, content, domParent, frame, scheduler, next, anchor, cursor)
+  diffVNodes(currContent, content, domParent, frame, scheduler, next, rootTarget, anchor, cursor)
   next._content = content
   next._handle = handle
   next._parent = vParent
@@ -1055,6 +1017,7 @@ function diffComponent(
   scheduler: Scheduler,
   domParent: ParentNode,
   vParent: VNode,
+  rootTarget: EventTarget,
   anchor?: Node,
   cursor?: Node | null,
 ) {
@@ -1063,20 +1026,39 @@ function diffComponent(
       id: `e${++fixmeIdCounter}`,
       frame,
       type: next.type,
-      raise: (error) => {
-        raise(error, next, domParent, frame, scheduler)
-      },
       getContext: (type) => {
         return findContextFromAncestry(vParent, type)
       },
     })
 
-    renderComponent(next._handle, null, next, domParent, frame, scheduler, vParent, anchor, cursor)
+    renderComponent(
+      next._handle,
+      null,
+      next,
+      domParent,
+      frame,
+      scheduler,
+      rootTarget,
+      vParent,
+      anchor,
+      cursor,
+    )
     return
   }
   next._handle = curr._handle
   let { _content, _handle } = curr
-  renderComponent(_handle, _content, next, domParent, frame, scheduler, vParent, anchor, cursor)
+  renderComponent(
+    _handle,
+    _content,
+    next,
+    domParent,
+    frame,
+    scheduler,
+    rootTarget,
+    vParent,
+    anchor,
+    cursor,
+  )
 }
 
 function findContextFromAncestry(node: VNode, type: Component): unknown {
@@ -1130,13 +1112,6 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler): void {
     cleanupDescendants(node._content, scheduler)
     let tasks = node._handle.remove()
     scheduler.enqueueTasks(tasks)
-    return
-  }
-
-  if (isCommittedCatchNode(node)) {
-    for (let child of node._added) {
-      cleanupDescendants(child, scheduler)
-    }
     return
   }
 }
@@ -1208,13 +1183,6 @@ function remove(node: VNode, domParent: ParentNode, scheduler: Scheduler) {
     scheduler.enqueueTasks(tasks)
     return
   }
-
-  if (isCommittedCatchNode(node)) {
-    for (let child of node._added) {
-      remove(child, domParent, scheduler)
-    }
-    return
-  }
 }
 
 // Actually remove a host node from DOM and clean up
@@ -1257,6 +1225,7 @@ function diffChildren(
   frame: FrameHandle,
   scheduler: Scheduler,
   vParent: VNode,
+  rootTarget: EventTarget,
   cursor?: Node | null,
   anchor?: Node,
 ) {
@@ -1264,7 +1233,7 @@ function diffChildren(
   // hydration cursors and creation logic remain centralized there.
   if (curr === null) {
     for (let node of next) {
-      cursor = insert(node, domParent, frame, scheduler, vParent, anchor, cursor)
+      cursor = insert(node, domParent, frame, scheduler, vParent, rootTarget, anchor, cursor)
     }
     vParent._children = next
     return cursor
@@ -1288,7 +1257,7 @@ function diffChildren(
   if (!hasKeys) {
     for (let i = 0; i < nextLength; i++) {
       let currentNode = i < currLength ? curr[i] : null
-      diffVNodes(currentNode, next[i], domParent, frame, scheduler, vParent, anchor, cursor)
+      diffVNodes(currentNode, next[i], domParent, frame, scheduler, vParent, rootTarget, anchor, cursor)
     }
 
     if (currLength > nextLength) {
@@ -1421,7 +1390,7 @@ function diffChildren(
     let idx = childVNode._index ?? -1
     let oldVNode = idx >= 0 ? oldChildren[idx] : null
 
-    diffVNodes(oldVNode, childVNode, domParent, frame, scheduler, vParent, anchor, cursor)
+    diffVNodes(oldVNode, childVNode, domParent, frame, scheduler, vParent, rootTarget, anchor, cursor)
 
     let shouldPlace = (childVNode._flags ?? 0) & INSERT_VNODE
     let firstDom = findFirstDomAnchor(childVNode)
@@ -1448,56 +1417,8 @@ function diffChildren(
   return
 }
 
-function dispatchError(error: unknown) {
-  // TODO: dispatch on root target
-  // console.error(error)
-}
-
-function getCatchFallback(vnode: CatchNode, error: unknown): VNode {
-  let content = typeof vnode._fallback === 'function' ? vnode._fallback(error) : vnode._fallback
-  return toVNode(content)
-}
-
-function raise(
-  error: unknown,
-  descendant: VNode,
-  domParent: ParentNode,
-  frame: FrameHandle,
-  scheduler: Scheduler,
-) {
-  let catchBoundary = findCatchBoundary(descendant)
-  if (catchBoundary) {
-    let content = getCatchFallback(catchBoundary, error)
-    let anchor =
-      findFirstDomAnchor(catchBoundary) ||
-      findNextSiblingDomAnchor(catchBoundary, catchBoundary._parent) ||
-      undefined
-    insert(content, domParent, frame, scheduler, catchBoundary, anchor)
-    for (let child of catchBoundary._added) {
-      remove(child, domParent, scheduler)
-    }
-    catchBoundary._tripped = true
-    catchBoundary._added = [content]
-  } else {
-    dispatchError(error)
-  }
-}
-
-function findCatchBoundary(vnode: VNode): CommittedCatchNode | null {
-  let current: VNode | undefined = vnode
-  while (current) {
-    if (isCommittedCatchNode(current)) return current
-    current = current._parent
-  }
-  return null
-}
-
 function isFragmentNode(node: VNode): node is FragmentNode {
   return node.type === Fragment
-}
-
-function isCatchNode(node: VNode): node is CatchNode {
-  return node.type === Catch
 }
 
 function isTextNode(node: VNode): node is TextNode {
@@ -1527,12 +1448,6 @@ function findFirstDomAnchor(node: VNode | null | undefined): Node | null {
   if (isCommittedComponentNode(node)) return findFirstDomAnchor(node._content)
   if (isFragmentNode(node)) {
     for (let child of node._children) {
-      let dom = findFirstDomAnchor(child)
-      if (dom) return dom
-    }
-  }
-  if (isCommittedCatchNode(node)) {
-    for (let child of node._added) {
       let dom = findFirstDomAnchor(child)
       if (dom) return dom
     }
@@ -1770,6 +1685,7 @@ function reclaimExitingNode(
   frame: FrameHandle,
   scheduler: Scheduler,
   vParent: VNode,
+  rootTarget: EventTarget,
 ): void {
   // Reverse the exit animation if it's still running
   let animation = exitingNode._animation
@@ -1803,6 +1719,7 @@ function reclaimExitingNode(
     frame,
     scheduler,
     newNode,
+    rootTarget,
   )
 
   // Update event listeners if needed
@@ -1812,9 +1729,7 @@ function reclaimExitingNode(
       let eventsContainer = newNode._events
       scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
     } else {
-      let eventsContainer = createContainer(exitingNode._dom, {
-        onError: (error) => raise(error, newNode, domParent, frame, scheduler),
-      })
+      let eventsContainer = createContainer(exitingNode._dom)
       scheduler.enqueueTasks([() => eventsContainer.set(nextOn)])
       newNode._events = eventsContainer
     }
