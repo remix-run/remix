@@ -586,7 +586,7 @@ export function generateChangelogContent(
  * Generates the commit message for all releases
  */
 export function generateCommitMessage(releases: PackageRelease[]): string {
-  let subject = 'Version Packages'
+  let subject = 'Release'
   let body = releases
     .map((r) => `- ${r.packageName}: ${r.currentVersion} -> ${r.nextVersion}`)
     .join('\n')
