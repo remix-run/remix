@@ -1257,7 +1257,17 @@ function diffChildren(
   if (!hasKeys) {
     for (let i = 0; i < nextLength; i++) {
       let currentNode = i < currLength ? curr[i] : null
-      diffVNodes(currentNode, next[i], domParent, frame, scheduler, vParent, rootTarget, anchor, cursor)
+      diffVNodes(
+        currentNode,
+        next[i],
+        domParent,
+        frame,
+        scheduler,
+        vParent,
+        rootTarget,
+        anchor,
+        cursor,
+      )
     }
 
     if (currLength > nextLength) {
@@ -1390,7 +1400,17 @@ function diffChildren(
     let idx = childVNode._index ?? -1
     let oldVNode = idx >= 0 ? oldChildren[idx] : null
 
-    diffVNodes(oldVNode, childVNode, domParent, frame, scheduler, vParent, rootTarget, anchor, cursor)
+    diffVNodes(
+      oldVNode,
+      childVNode,
+      domParent,
+      frame,
+      scheduler,
+      vParent,
+      rootTarget,
+      anchor,
+      cursor,
+    )
 
     let shouldPlace = (childVNode._flags ?? 0) & INSERT_VNODE
     let firstDom = findFirstDomAnchor(childVNode)

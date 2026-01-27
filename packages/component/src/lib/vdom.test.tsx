@@ -778,7 +778,6 @@ describe('vnode rendering', () => {
       root.flush()
       expect(container.innerHTML).toBe('<span>0</span><span>1</span><span>2</span>')
     })
-
   })
 
   it('runs update tasks after updates', () => {
@@ -1175,7 +1174,6 @@ describe('vnode rendering', () => {
       button.click()
       expect(clickCount).toBe(1)
     })
-
   })
 
   describe('context', () => {
