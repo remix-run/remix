@@ -1,5 +1,3 @@
-/* eslint-disable jsdoc/require-param */
-/* eslint-disable jsdoc/require-returns */
 import { PartPattern, type PartPatternToken } from './part-pattern.ts'
 
 /**
@@ -24,6 +22,11 @@ import { PartPattern, type PartPatternToken } from './part-pattern.ts'
  * join('(a)', '(/b)') -> '(a)(/b)'
  * join('(a/)', '(/b)') -> '(a)(/b)'
  * ```
+ *
+ * @param a the first pathname pattern
+ * @param b the second pathname pattern
+ * @param ignoreCase whether to ignore case when matching
+ * @returns the joined pathname pattern
  */
 export function join(a: PartPattern, b: PartPattern, ignoreCase: boolean): PartPattern {
   if (a.tokens.length === 0) return b

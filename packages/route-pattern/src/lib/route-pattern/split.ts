@@ -1,5 +1,3 @@
-/* eslint-disable jsdoc/require-returns */
-/* eslint-disable jsdoc/require-param */
 export type Span = [begin: number, end: number]
 
 export type SplitResult = {
@@ -16,6 +14,9 @@ export type SplitResult = {
  *
  * Delimiters are not included in the spans with the exception of the leading `/` for pathname.
  * Spans are [begin (inclusive), end (exclusive)].
+ *
+ * @param source the route pattern string to split
+ * @returns an object containing spans for each URL component
  */
 export function split(source: string): SplitResult {
   let result: SplitResult = {

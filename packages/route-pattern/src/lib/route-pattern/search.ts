@@ -1,6 +1,3 @@
-/* eslint-disable jsdoc/require-param */
-/* eslint-disable jsdoc/require-returns */
-
 import type { RoutePattern } from '../route-pattern.ts'
 import { HrefError } from '../errors.ts'
 
@@ -31,6 +28,9 @@ export type Constraints = Map<string, Set<string> | null>
  * parse('q=')      // -> Map([['q', new Set()]])
  * parse('q=x&q=y') // -> Map([['q', new Set(['x', 'y'])]])
  * ```
+ *
+ * @param source the search string to parse (without leading `?`)
+ * @returns the parsed search constraints
  */
 export function parse(source: string): Constraints {
   let constraints: Constraints = new Map()
@@ -78,6 +78,10 @@ export function parse(source: string): Constraints {
  * search('?a=1', '?b=2') -> '?a=1&b=2'
  * search('', '?a') -> '?a'
  * ```
+ *
+ * @param a the first search constraints
+ * @param b the second search constraints
+ * @returns the merged search constraints
  */
 export function join(a: Constraints, b: Constraints): Constraints {
   let result: Constraints = new Map()
@@ -109,6 +113,12 @@ export type HrefParams = Record<
   string | number | null | undefined | Array<string | number | null | undefined>
 >
 
+/**
+ * Convert search constraints to a query string.
+ *
+ * @param constraints the search constraints to convert
+ * @returns the query string (without leading `?`), or undefined if empty
+ */
 export function toString(constraints: Constraints): string | undefined {
   if (constraints.size === 0) {
     return undefined
@@ -132,6 +142,13 @@ export function toString(constraints: Constraints): string | undefined {
   return result || undefined
 }
 
+/**
+ * Generate a search query string from a pattern and params.
+ *
+ * @param pattern the route pattern containing search constraints
+ * @param params the search params to include in the href
+ * @returns the query string (without leading `?`), or undefined if empty
+ */
 export function href(pattern: RoutePattern, params: HrefParams): string | undefined {
   let constraints = pattern.ast.search
   if (constraints.size === 0 && Object.keys(params).length === 0) {
@@ -181,6 +198,14 @@ export function href(pattern: RoutePattern, params: HrefParams): string | undefi
   return result || undefined
 }
 
+/**
+ * Test if URL search params satisfy the given constraints.
+ *
+ * @param params the URL search params to test
+ * @param constraints the search constraints to check against
+ * @param ignoreCase whether to ignore case when matching param names and values
+ * @returns true if the params satisfy all constraints
+ */
 export function test(
   params: URLSearchParams,
   constraints: Constraints,
