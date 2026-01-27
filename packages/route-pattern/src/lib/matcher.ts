@@ -1,12 +1,10 @@
-import type { RoutePattern } from './route-pattern.ts'
+import type { RoutePattern, RoutePatternMatch } from './route-pattern.ts'
 
-export namespace Matcher {
-  export type Match<source extends string = string, data = unknown> = RoutePattern.Match<source> & {
-    data: data
-  }
+export type Match<source extends string = string, data = unknown> = RoutePatternMatch<source> & {
+  data: data
 }
 
-type CompareFn = (a: RoutePattern.Match, b: RoutePattern.Match) => number
+type CompareFn = (a: RoutePatternMatch, b: RoutePatternMatch) => number
 
 /**
  * A type for matching URLs against patterns.
@@ -26,12 +24,12 @@ export type Matcher<data = unknown> = {
    * @param url The URL to match
    * @returns The match result, or `null` if no match was found
    */
-  match(url: string | URL, compareFn?: CompareFn): Matcher.Match<string, data> | null
+  match(url: string | URL, compareFn?: CompareFn): Match<string, data> | null
   /**
    * Find all matches for a URL.
    *
    * @param url The URL to match
    * @returns All matches
    */
-  matchAll(url: string | URL, compareFn?: CompareFn): Array<Matcher.Match<string, data>>
+  matchAll(url: string | URL, compareFn?: CompareFn): Array<Match<string, data>>
 }

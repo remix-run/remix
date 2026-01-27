@@ -1,6 +1,6 @@
 /* eslint-disable jsdoc/require-param */
 /* eslint-disable jsdoc/require-returns */
-import { PartPattern } from './part-pattern.ts'
+import { PartPattern, type PartPatternToken } from './part-pattern.ts'
 
 /**
  * Joins two pathnames, adding slash between them if needed.
@@ -29,7 +29,7 @@ export function join(a: PartPattern, b: PartPattern, ignoreCase: boolean): PartP
   if (a.tokens.length === 0) return b
   if (b.tokens.length === 0) return a
 
-  let tokens: Array<PartPattern.Token> = []
+  let tokens: Array<PartPatternToken> = []
 
   // if `a` has a trailing separator (only optionals after it)
   // then omit the separator

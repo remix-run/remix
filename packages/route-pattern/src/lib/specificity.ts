@@ -1,22 +1,22 @@
 /* eslint-disable jsdoc/require-param */
 
-import type { RoutePattern } from './route-pattern.ts'
+import type { RoutePattern, RoutePatternMatch } from './route-pattern.ts'
 
-export function lessThan(a: RoutePattern.Match, b: RoutePattern.Match): boolean {
+export function lessThan(a: RoutePatternMatch, b: RoutePatternMatch): boolean {
   return compare(a, b) === -1
 }
 
-export function greaterThan(a: RoutePattern.Match, b: RoutePattern.Match): boolean {
+export function greaterThan(a: RoutePatternMatch, b: RoutePatternMatch): boolean {
   return compare(a, b) === 1
 }
 
-export function equal(a: RoutePattern.Match, b: RoutePattern.Match): boolean {
+export function equal(a: RoutePatternMatch, b: RoutePatternMatch): boolean {
   return compare(a, b) === 0
 }
 
-export let ascending = (a: RoutePattern.Match, b: RoutePattern.Match): number => compare(a, b)
+export let ascending = (a: RoutePatternMatch, b: RoutePatternMatch): number => compare(a, b)
 
-export let descending = (a: RoutePattern.Match, b: RoutePattern.Match): number => compare(a, b) * -1
+export let descending = (a: RoutePatternMatch, b: RoutePatternMatch): number => compare(a, b) * -1
 
 /**
  * Compare two matches by specificity.
@@ -24,7 +24,7 @@ export let descending = (a: RoutePattern.Match, b: RoutePattern.Match): number =
  *
  * @returns -1 if `a` is less specific, 1 if `a` is more specific, 0 if tied.
  */
-export function compare(a: RoutePattern.Match, b: RoutePattern.Match): -1 | 0 | 1 {
+export function compare(a: RoutePatternMatch, b: RoutePatternMatch): -1 | 0 | 1 {
   if (a.url.href !== b.url.href) {
     throw new Error(`Cannot compare matches for different URLs: ${a.url.href} vs ${b.url.href}`)
   }
@@ -46,8 +46,8 @@ export function compare(a: RoutePattern.Match, b: RoutePattern.Match): -1 | 0 | 
 
 function compareHostname(
   hostname: string,
-  a: RoutePattern.Match['meta']['hostname'],
-  b: RoutePattern.Match['meta']['hostname'],
+  a: RoutePatternMatch['meta']['hostname'],
+  b: RoutePatternMatch['meta']['hostname'],
 ): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
   if (a.length === 0 && b.length > 0) return 1
@@ -88,8 +88,8 @@ function compareHostname(
 }
 
 function comparePathname(
-  a: RoutePattern.Match['meta']['pathname'],
-  b: RoutePattern.Match['meta']['pathname'],
+  a: RoutePatternMatch['meta']['pathname'],
+  b: RoutePatternMatch['meta']['pathname'],
 ): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
   if (a.length === 0 && b.length > 0) return 1

@@ -1,5 +1,5 @@
 import { RoutePattern } from './route-pattern.ts'
-import type { Matcher } from './matcher.ts'
+import type { Match, Matcher } from './matcher.ts'
 import * as Specificity from './specificity.ts'
 
 export class ArrayMatcher<data> implements Matcher<data> {
@@ -10,8 +10,8 @@ export class ArrayMatcher<data> implements Matcher<data> {
     this.#patterns.push({ pattern, data })
   }
 
-  match(url: string | URL, compareFn = Specificity.descending): Matcher.Match<string, data> | null {
-    let bestMatch: Matcher.Match<string, data> | null = null
+  match(url: string | URL, compareFn = Specificity.descending): Match<string, data> | null {
+    let bestMatch: Match<string, data> | null = null
     for (let entry of this.#patterns) {
       let match = entry.pattern.match(url)
       if (match) {
@@ -23,11 +23,8 @@ export class ArrayMatcher<data> implements Matcher<data> {
     return bestMatch
   }
 
-  matchAll(
-    url: string | URL,
-    compareFn = Specificity.descending,
-  ): Array<Matcher.Match<string, data>> {
-    let matches: Array<Matcher.Match<string, data>> = []
+  matchAll(url: string | URL, compareFn = Specificity.descending): Array<Match<string, data>> {
+    let matches: Array<Match<string, data>> = []
     for (let entry of this.#patterns) {
       let match = entry.pattern.match(url)
       if (match) {

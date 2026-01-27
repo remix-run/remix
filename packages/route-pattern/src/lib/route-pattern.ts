@@ -4,7 +4,7 @@ import * as Pathname from './route-pattern/pathname.ts'
 import * as Search from './route-pattern/search.ts'
 import * as Protocol from './route-pattern/protocol.ts'
 import * as Hostname from './route-pattern/hostname.ts'
-import { PartPattern } from './route-pattern/part-pattern.ts'
+import { PartPattern, type PartPatternMatch } from './route-pattern/part-pattern.ts'
 import type { Join, HrefArgs, Params } from './types/index.ts'
 
 type AST = {
@@ -15,22 +15,19 @@ type AST = {
   search: Search.Constraints
 }
 
-export namespace RoutePattern {
-  export type Options = {
-    ignoreCase?: boolean
-  }
+export type RoutePatternOptions = {
+  ignoreCase?: boolean
+}
 
-  export type Match<source extends string = string> = {
-    pattern: RoutePattern
-    url: URL
-    params: Params<source>
-    meta: {
-      hostname: PartPattern.Match
-      pathname: PartPattern.Match
-    }
+export type RoutePatternMatch<source extends string = string> = {
+  pattern: RoutePattern
+  url: URL
+  params: Params<source>
+  meta: {
+    hostname: PartPatternMatch
+    pathname: PartPatternMatch
   }
 }
-type Match<source extends string> = RoutePattern.Match<source>
 
 export class RoutePattern<source extends string = string> {
   readonly ast: AST
@@ -41,7 +38,7 @@ export class RoutePattern<source extends string = string> {
   // that are instantiated directly with a source string, not for all instances of `RoutePattern`.
   // This also means that we cannot use JavaScript features like `#private` fields/methods and
   // class field initializers that rely on the constructor being run.
-  constructor(source: source, options?: RoutePattern.Options) {
+  constructor(source: source, options?: RoutePatternOptions) {
     let ignoreCase = options?.ignoreCase ?? false
     let spans = split(source)
 
@@ -107,7 +104,7 @@ export class RoutePattern<source extends string = string> {
 
   join<other extends string>(
     other: other | RoutePattern<other>,
-    options?: RoutePattern.Options,
+    options?: RoutePatternOptions,
   ): RoutePattern<Join<source, other>> {
     other = typeof other === 'string' ? new RoutePattern(other, options) : other
     let ignoreCase = options?.ignoreCase ?? (this.ignoreCase || other.ignoreCase)
@@ -167,10 +164,10 @@ export class RoutePattern<source extends string = string> {
     return result
   }
 
-  match(url: string | URL): Match<source> | null {
+  match(url: string | URL): RoutePatternMatch<source> | null {
     url = typeof url === 'string' ? new URL(url) : url
 
-    let hostname: PartPattern.Match | null = null
+    let hostname: PartPatternMatch | null = null
     if (this.hasOrigin) {
       // protocol: null matches http or https, 'http(s)' matches http or https
       if (this.ast.protocol === 'http(s)') {

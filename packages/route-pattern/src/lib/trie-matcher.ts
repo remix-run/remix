@@ -1,10 +1,10 @@
-import type { PartPattern } from './route-pattern/part-pattern.ts'
+import type { PartPattern, PartPatternMatch } from './route-pattern/part-pattern.ts'
 import { RoutePattern } from './route-pattern.ts'
 import type { Variant } from './variant.ts'
 import * as RE from './regexp.ts'
 import { unreachable } from './errors.ts'
 import * as Search from './route-pattern/search.ts'
-import type { Matcher } from './matcher.ts'
+import type { Match, Matcher } from './matcher.ts'
 import * as Specificity from './specificity.ts'
 
 export class TrieMatcher<data = unknown> implements Matcher<data> {
@@ -19,16 +19,13 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
     this.trie.insert(pattern, data)
   }
 
-  match(url: string | URL, compareFn = Specificity.descending): Matcher.Match<string, data> | null {
+  match(url: string | URL, compareFn = Specificity.descending): Match<string, data> | null {
     url = typeof url === 'string' ? new URL(url) : url
     let matches = this.matchAll(url, compareFn)
     return matches[0] ?? null
   }
 
-  matchAll(
-    url: string | URL,
-    compareFn = Specificity.descending,
-  ): Array<Matcher.Match<string, data>> {
+  matchAll(url: string | URL, compareFn = Specificity.descending): Array<Match<string, data>> {
     url = typeof url === 'string' ? new URL(url) : url
     let matches = this.trie.search(url)
     return matches
@@ -137,8 +134,8 @@ function createPathnameNode<data>(): PathnameNode<data> {
 type SearchResult<data> = Array<{
   pattern: RoutePattern
   data: data
-  hostname: PartPattern.Match
-  pathname: PartPattern.Match
+  hostname: PartPatternMatch
+  pathname: PartPatternMatch
   params: Record<string, string | undefined>
 }>
 
@@ -230,7 +227,7 @@ export class Trie<data = unknown> {
   }
 
   search(url: URL): SearchResult<data> {
-    let origins: Array<{ hostnameMatch: PartPattern.Match; pathnameNode: PathnameNode<data> }> = []
+    let origins: Array<{ hostnameMatch: PartPatternMatch; pathnameNode: PathnameNode<data> }> = []
 
     // protocol -> hostname
     let protocol = url.protocol.slice(0, -1)
@@ -294,7 +291,7 @@ export class Trie<data = unknown> {
             value &&
             Search.test(url.searchParams, value.pattern.ast.search, value.pattern.ignoreCase)
           ) {
-            let pathnameMatch: PartPattern.Match = []
+            let pathnameMatch: PartPatternMatch = []
             for (let i = 0; i < value.requiredParams.length; i++) {
               let name = value.requiredParams[i]
               let rest = current.pathnameMatch[i]

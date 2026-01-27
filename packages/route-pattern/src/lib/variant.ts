@@ -1,7 +1,7 @@
 import { unreachable } from './errors.ts'
-import type { PartPattern } from './route-pattern/part-pattern.ts'
+import type { PartPattern, PartPatternToken } from './route-pattern/part-pattern.ts'
 
-type Token = Extract<PartPattern.Token, { type: 'text' | ':' | '*' | 'separator' }>
+type Token = Extract<PartPatternToken, { type: 'text' | ':' | '*' | 'separator' }>
 
 export class Variant {
   /** Params use `nameIndex` to reference params in the PartPattern's `paramNames` */

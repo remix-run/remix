@@ -11,19 +11,15 @@ type MatchParam = {
   end: number
 }
 
-export namespace PartPattern {
-  export type Match = Array<MatchParam>
-  export type Token =
-    | { type: 'text'; text: string }
-    | { type: 'separator' }
-    | { type: '(' | ')' }
-    | { type: ':' | '*'; nameIndex: number }
-}
-type Match = PartPattern.Match
-type Token = PartPattern.Token
+export type PartPatternMatch = Array<MatchParam>
+export type PartPatternToken =
+  | { type: 'text'; text: string }
+  | { type: 'separator' }
+  | { type: '(' | ')' }
+  | { type: ':' | '*'; nameIndex: number }
 
 type AST = {
-  tokens: Array<Token>
+  tokens: Array<PartPatternToken>
   paramNames: Array<string>
   optionals: Map<number, number>
 }
@@ -247,13 +243,13 @@ export class PartPattern {
     return result
   }
 
-  match(part: string): Match | null {
+  match(part: string): PartPatternMatch | null {
     if (this.#regexp === undefined) {
       this.#regexp = toRegExp(this.tokens, this.separator, this.ignoreCase)
     }
     let reMatch = this.#regexp.exec(part)
     if (reMatch === null) return null
-    let match: Match = []
+    let match: PartPatternMatch = []
     for (let group in reMatch.indices?.groups) {
       let prefix = group[0]
       let nameIndex = parseInt(group.slice(1))
@@ -273,7 +269,11 @@ export class PartPattern {
   }
 }
 
-function toRegExp(tokens: Array<Token>, separator: '.' | '/', ignoreCase: boolean): RegExp {
+function toRegExp(
+  tokens: Array<PartPatternToken>,
+  separator: '.' | '/',
+  ignoreCase: boolean,
+): RegExp {
   let result = ''
   for (let token of tokens) {
     if (token.type === 'text') {
