@@ -1,4 +1,4 @@
-import { defineInteraction, type Interaction } from '@remix-run/interaction'
+import { defineInteraction, type Interaction } from 'remix/interaction'
 
 declare global {
   interface HTMLElementEventMap {

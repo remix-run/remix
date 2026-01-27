@@ -1,5 +1,5 @@
-import { spring, type Handle } from '@remix-run/component'
-import { pressDown, pressUp } from '@remix-run/interaction/press'
+import { spring, type Handle } from 'remix/component'
+import { pressDown, pressUp } from 'remix/interaction/press'
 
 export function Press(handle: Handle) {
   let pressed = false

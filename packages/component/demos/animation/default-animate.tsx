@@ -1,4 +1,4 @@
-import type { Handle } from '@remix-run/component'
+import type { Handle } from 'remix/component'
 
 let nextId = 1
 function createItem() {

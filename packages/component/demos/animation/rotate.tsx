@@ -1,4 +1,4 @@
-import { spring } from '@remix-run/component'
+import { spring } from 'remix/component'
 
 export function Rotate() {
   return () => (
