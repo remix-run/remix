@@ -1,5 +1,5 @@
 import { RoutePattern } from '@remix-run/route-pattern'
-import type { HrefArgs, Join } from '@remix-run/route-pattern'
+import type { HrefArgs, Join, RoutePatternMatch } from '@remix-run/route-pattern'
 
 import type { RequestMethod } from './request-methods.ts'
 import type { Simplify } from './type-utils.ts'
@@ -53,7 +53,7 @@ export class Route<
    * @param url The URL to match
    * @returns The match result, or `null` if the URL doesn't match
    */
-  match(url: string | URL): RoutePattern.Match<pattern> | null {
+  match(url: string | URL): RoutePatternMatch<pattern> | null {
     return this.pattern.match(url)
   }
 }
