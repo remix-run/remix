@@ -2,6 +2,24 @@
 
 This is the changelog for [`component`](https://github.com/remix-run/remix/tree/main/packages/component). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.0
+
+### Minor Changes
+
+- Add animation prop, spring, and tween utilities
+
+  - `animate` prop on host elements enables enter, exit, and layout (FLIP) animations
+  - `spring()` function creates spring-based animation iterators with configurable stiffness, damping, and mass
+  - `tween()` function creates time-based animation iterators with customizable duration and easing (including `easings` presets)
+
+- `VirtualRoot` now extends `EventTarget` and dispatches `error` events when errors occur during rendering or in event handlers. Listen for errors via `root.addEventListener('error', (e) => { ... })`.
+
+### Patch Changes
+
+- Change css processing to use data attribute instead of className
+
+- Add `aspect-ratio` to numeric CSS properties (no longer appends `px` to numeric values)
+
 ## v0.3.0
 
 ### Minor Changes

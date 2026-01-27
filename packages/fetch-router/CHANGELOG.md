@@ -2,6 +2,14 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## v0.16.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remove `Router.size` property
+
+  `Matcher`s no longer keep track of size, so `Router` cannot wrap `Matcher.size` anymore.
+
 ## v0.15.1
 
 ### Patch Changes
