@@ -935,12 +935,22 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      dedent:
+        specifier: ^1.7.1
+        version: 1.7.1
+
+  packages/route-pattern/bench:
+    dependencies:
+      '@remix-run/route-pattern':
+        specifier: workspace:^
+        version: link:..
       find-my-way:
         specifier: ^9.1.0
         version: 9.3.0
       path-to-regexp:
         specifier: ^8.2.0
         version: 8.3.0
+    devDependencies:
       vitest:
         specifier: 4.0.15
         version: 4.0.15(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2)
@@ -2808,6 +2818,14 @@ packages:
       supports-color: '*'
     peerDependenciesMeta:
       supports-color:
+        optional: true
+
+  dedent@1.7.1:
+    resolution: {integrity: sha512-9JmrhGZpOlEgOLdQgSm0zxFaYoQon408V1v49aqTWuXENVlnCuY9JBZcXZiCsZQWDjTm5Qf/nIvAy77mXDAjEg==}
+    peerDependencies:
+      babel-plugin-macros: ^3.1.0
+    peerDependenciesMeta:
+      babel-plugin-macros:
         optional: true
 
   deep-eql@5.0.2:
@@ -6291,6 +6309,8 @@ snapshots:
   debug@4.4.3:
     dependencies:
       ms: 2.1.3
+
+  dedent@1.7.1: {}
 
   deep-eql@5.0.2: {}
 

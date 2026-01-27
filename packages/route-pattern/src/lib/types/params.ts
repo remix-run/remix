@@ -1,5 +1,5 @@
 import type { Parse, Token, Optional, ParsedPattern } from './parse.ts'
-import type { Simplify } from './type-utils.ts'
+import type { Simplify } from './utils.ts'
 
 /**
  * The parameters that are parsed when a pattern matches a URL.

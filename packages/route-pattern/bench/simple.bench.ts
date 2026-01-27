@@ -1,6 +1,5 @@
 import { bench, describe } from 'vitest'
-import { ArrayMatcher } from '../src'
-import { TrieMatcher } from '../src/lib/matchers/trie.ts'
+import { ArrayMatcher } from '@remix-run/route-pattern'
 
 let routes = [
   '/',
@@ -108,16 +107,13 @@ let urls = [
   'https://example.com/test',
 ]
 
-let matchers = [
-  { name: 'trie', matcher: new TrieMatcher() },
-  { name: 'array', matcher: new ArrayMatcher() },
-]
+let matchers = [{ name: 'array', matcher: new ArrayMatcher<null>() }]
 
 describe('setup', () => {
   for (let { name, matcher } of matchers) {
     bench(name, () => {
       for (let route of routes) {
-        matcher.add(route, {})
+        matcher.add(route, null)
       }
     })
   }

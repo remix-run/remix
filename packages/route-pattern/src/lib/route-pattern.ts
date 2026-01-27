@@ -1,228 +1,248 @@
-import { formatHref, type HrefBuilderArgs } from './href.ts'
-import { join, type Join } from './join.ts'
-import type { Params } from './params.ts'
-import { parse, type Token, type ParseResult } from './parse.ts'
-import { parseSearch, type SearchConstraints } from './search-constraints.ts'
+import { HrefError } from './errors.ts'
+import { split } from './route-pattern/split.ts'
+import * as Pathname from './route-pattern/pathname.ts'
+import * as Search from './route-pattern/search.ts'
+import * as Protocol from './route-pattern/protocol.ts'
+import * as Hostname from './route-pattern/hostname.ts'
+import { PartPattern, type PartPatternMatch } from './route-pattern/part-pattern.ts'
+import type { Join, HrefArgs, Params } from './types/index.ts'
 
-export interface RoutePatternOptions {
-  /**
-   * Whether to ignore case when matching URL pathnames.
-   */
+type AST = {
+  protocol: 'http' | 'https' | 'http(s)' | null
+  hostname: PartPattern | null
+  port: string | null
+  pathname: PartPattern
+  search: Search.Constraints
+}
+
+export type RoutePatternOptions = {
   ignoreCase?: boolean
 }
 
-/**
- * A pattern for matching URLs.
- */
-export class RoutePattern<T extends string = string> {
-  /**
-   * The source string that was used to create this pattern.
-   */
-  readonly source: T
-  /**
-   * Whether to ignore case when matching URL pathnames.
-   */
+export type RoutePatternMatch<source extends string = string> = {
+  pattern: RoutePattern
+  url: URL
+  params: Params<source>
+  meta: {
+    hostname: PartPatternMatch
+    pathname: PartPatternMatch
+  }
+}
+
+export class RoutePattern<source extends string = string> {
+  readonly ast: AST
   readonly ignoreCase: boolean
 
-  #parsed: ParseResult
-  #compiled: CompileResult | undefined
+  // The `join()` method bypasses the constructor and creates a new instance directly
+  // using `Object.create()`. This means that the constructor will only run for instances
+  // that are instantiated directly with a source string, not for all instances of `RoutePattern`.
+  // This also means that we cannot use JavaScript features like `#private` fields/methods and
+  // class field initializers that rely on the constructor being run.
+  constructor(source: source, options?: RoutePatternOptions) {
+    let ignoreCase = options?.ignoreCase ?? false
+    let spans = split(source)
 
-  /**
-   * @param source The source pattern string or another `RoutePattern` to copy
-   * @param options Options for the pattern
-   */
-  constructor(source: T | RoutePattern<T>, options?: RoutePatternOptions) {
-    this.source = typeof source === 'string' ? source : source.source
-    this.ignoreCase = options?.ignoreCase === true
-    this.#parsed = parse(this.source)
+    this.ast = {
+      protocol: Protocol.parse(source, spans.protocol),
+      hostname: Hostname.parse(source, spans.hostname),
+      port: spans.port ? source.slice(...spans.port) : null,
+      pathname: spans.pathname
+        ? PartPattern.parse(source, { span: spans.pathname, type: 'pathname', ignoreCase })
+        : PartPattern.parse('', { span: [0, 0], type: 'pathname', ignoreCase }),
+      search: spans.search ? Search.parse(source.slice(...spans.search)) : new Map(),
+    }
+
+    this.ignoreCase = ignoreCase
   }
 
-  /**
-   * Generate a href (URL) for this pattern.
-   *
-   * @param args The parameters and optional search params
-   * @returns The href
-   */
-  href(...args: HrefBuilderArgs<T>): string {
-    return formatHref(this.#parsed, ...(args as any))
+  // eslint-disable-next-line no-restricted-syntax
+  private get hasOrigin(): boolean {
+    return this.ast.protocol !== null || this.ast.hostname !== null || this.ast.port !== null
   }
 
-  /**
-   * Join this pattern with another pattern. This is useful when building a pattern relative to a
-   * base pattern.
-   *
-   * Note: The returned pattern will use the same options as this pattern.
-   *
-   * @param input The pattern to join with
-   * @returns The joined pattern
-   */
-  join<P extends string>(input: P | RoutePattern<P>): RoutePattern<Join<T, P>> {
-    let parsedInput = parse(typeof input === 'string' ? input : input.source)
-    return new RoutePattern(join(this.#parsed, parsedInput) as Join<T, P>, {
-      ignoreCase: this.ignoreCase,
+  get protocol(): string {
+    return this.ast.protocol ?? ''
+  }
+
+  get hostname(): string {
+    return this.ast.hostname?.toString() ?? ''
+  }
+
+  get port(): string {
+    return this.ast.port ?? ''
+  }
+
+  get pathname(): string {
+    return this.ast.pathname.toString()
+  }
+
+  get search(): string {
+    return Search.toString(this.ast.search) ?? ''
+  }
+
+  get source(): string {
+    let result = ''
+
+    if (this.hasOrigin) {
+      let protocol = this.protocol
+      let hostname = this.hostname
+      let port = this.port === '' ? '' : `:${this.port}`
+      result += `${protocol}://${hostname}${port}`
+    }
+
+    result += '/' + this.pathname
+
+    let search = this.search
+    if (search) result += `?${search}`
+
+    return result
+  }
+
+  toString(): string {
+    return this.source
+  }
+
+  join<other extends string>(
+    other: other | RoutePattern<other>,
+    options?: RoutePatternOptions,
+  ): RoutePattern<Join<source, other>> {
+    other = typeof other === 'string' ? new RoutePattern(other, options) : other
+    let ignoreCase = options?.ignoreCase ?? (this.ignoreCase || other.ignoreCase)
+
+    return Object.create(RoutePattern.prototype, {
+      ast: {
+        enumerable: true,
+        value: {
+          protocol: other.ast.protocol ?? this.ast.protocol,
+          hostname: other.ast.hostname ?? this.ast.hostname,
+          port: other.ast.port ?? this.ast.port,
+          pathname: Pathname.join(this.ast.pathname, other.ast.pathname, ignoreCase),
+          search: Search.join(this.ast.search, other.ast.search),
+        },
+      },
+      ignoreCase: {
+        enumerable: true,
+        value: ignoreCase,
+      },
     })
   }
 
-  /**
-   * Match a URL against this pattern.
-   *
-   * @param url The URL to match
-   * @returns The match result, or `null` if the URL doesn't match
-   */
-  match(url: URL | string): RouteMatch<T> | null {
-    if (typeof url === 'string') url = new URL(url)
+  href(...args: HrefArgs<source>): string {
+    let [params, searchParams] = args
+    params ??= {}
+    searchParams ??= {}
 
-    let { matchOrigin, matcher, paramNames } = this.#compile()
+    let result = ''
 
-    let pathname = this.ignoreCase ? url.pathname.toLowerCase() : url.pathname
-    let match = matcher.exec(matchOrigin ? `${url.origin}${pathname}` : pathname)
-    if (match === null) return null
+    if (this.hasOrigin) {
+      // protocol: null defaults to 'https', 'http(s)' defaults to 'https'
+      let protocol =
+        this.ast.protocol === null || this.ast.protocol === 'http(s)' ? 'https' : this.ast.protocol
 
-    // Map positional capture groups to parameter names in source order
-    let params = {} as any
-    for (let i = 0; i < paramNames.length; i++) {
-      let paramName = paramNames[i]
-      params[paramName] = match[i + 1]
+      // hostname
+      if (this.ast.hostname === null) {
+        throw new HrefError({
+          type: 'missing-hostname',
+          pattern: this,
+        })
+      }
+      let hostname = hrefOrThrow(this.ast.hostname, params, this)
+
+      // port
+      let port = this.ast.port === null ? '' : `:${this.ast.port}`
+      result += `${protocol}://${hostname}${port}`
     }
 
-    if (
-      this.#parsed.searchConstraints != null &&
-      !matchSearch(url.search, this.#parsed.searchConstraints)
-    ) {
-      return null
+    // pathname
+    let pathname = hrefOrThrow(this.ast.pathname, params, this)
+    result += '/' + pathname
+
+    // search
+    let search = Search.href(this, searchParams)
+    if (search) result += `?${search}`
+
+    return result
+  }
+
+  match(url: string | URL): RoutePatternMatch<source> | null {
+    url = typeof url === 'string' ? new URL(url) : url
+
+    let hostname: PartPatternMatch | null = null
+    if (this.hasOrigin) {
+      // protocol: null matches http or https, 'http(s)' matches http or https
+      if (this.ast.protocol === 'http(s)') {
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+      } else if (this.ast.protocol !== null) {
+        let expectedProtocol = `${this.ast.protocol}:`
+        if (url.protocol !== expectedProtocol) return null
+      }
+
+      // hostname: null matches any hostname
+      if (this.ast.hostname !== null) {
+        hostname = this.ast.hostname.match(url.hostname)
+        if (hostname === null) return null
+      }
+
+      // port: null matches any port
+      if (this.ast.port !== null) {
+        if ((url.port || null) !== this.ast.port) return null
+      }
     }
 
-    return { url, params }
+    // url.pathname: remove leading slash
+    let pathname = this.ast.pathname.match(url.pathname.slice(1))
+    if (pathname === null) return null
+
+    if (!Search.test(url.searchParams, this.ast.search, this.ignoreCase)) return null
+
+    let params: Record<string, string | undefined> = {}
+
+    // hostname params
+    this.ast.hostname?.paramNames.forEach((name) => {
+      if (name === '*') return
+      params[name] = undefined
+    })
+    hostname?.forEach((param) => {
+      if (param.name === '*') return
+      params[param.name] = param.value
+    })
+
+    // pathname params
+    this.ast.pathname.paramNames.forEach((name) => {
+      if (name === '*') return
+      params[name] = undefined
+    })
+    pathname.forEach((param) => {
+      if (param.name === '*') return
+      params[param.name] = param.value
+    })
+
+    return {
+      pattern: this,
+      url,
+      params: params as Params<source>,
+      meta: { hostname: hostname ?? [], pathname },
+    }
   }
 
-  #compile(): CompileResult {
-    if (this.#compiled) return this.#compiled
-    this.#compiled = compilePattern(this.#parsed, this.ignoreCase)
-    return this.#compiled
-  }
-
-  /**
-   * Test if a URL matches this pattern.
-   *
-   * @param url The URL to test
-   * @returns `true` if the URL matches this pattern, `false` otherwise
-   */
-  test(url: URL | string): boolean {
+  test(url: string | URL): boolean {
     return this.match(url) !== null
   }
-
-  toString() {
-    return this.source
-  }
 }
 
-export interface RouteMatch<T extends string> {
-  /**
-   * The parameters that were extracted from the URL protocol, hostname, and/or pathname.
-   */
-  readonly params: Params<T>
-  /**
-   * The URL that was matched.
-   */
-  readonly url: URL
-}
-
-interface CompileResult {
-  matchOrigin: boolean
-  matcher: RegExp
-  paramNames: string[]
-}
-
-function compilePattern(parsed: ParseResult, ignoreCase: boolean): CompileResult {
-  let { protocol, hostname, port, pathname } = parsed
-
-  let matchOrigin = hostname !== undefined
-  let matcher: RegExp
-  let paramNames: string[] = []
-
-  if (matchOrigin) {
-    let protocolSource = protocol
-      ? tokensToRegExpSource(protocol, '', '.*', paramNames, true)
-      : '[^:]+'
-    let hostnameSource = hostname
-      ? tokensToRegExpSource(hostname, '.', '[^.]+?', paramNames, true)
-      : '[^/:]+'
-    let portSource = port !== undefined ? `:${regexpEscape(port)}` : '(?::[0-9]+)?'
-    let pathnameSource = pathname
-      ? tokensToRegExpSource(pathname, '/', '[^/]+?', paramNames, ignoreCase)
-      : ''
-
-    matcher = new RegExp(`^${protocolSource}://${hostnameSource}${portSource}/${pathnameSource}$`)
-  } else {
-    let pathnameSource = pathname
-      ? tokensToRegExpSource(pathname, '/', '[^/]+?', paramNames, ignoreCase)
-      : ''
-
-    matcher = new RegExp(`^/${pathnameSource}$`)
-  }
-
-  return { matchOrigin, matcher, paramNames }
-}
-
-function tokensToRegExpSource(
-  tokens: Token[],
-  sep: string,
-  paramRegExpSource: string,
-  paramNames: string[],
-  forceLowerCase: boolean,
+function hrefOrThrow(
+  part: PartPattern,
+  params: Record<string, string | number>,
+  pattern: RoutePattern,
 ): string {
-  let source = ''
-
-  for (let token of tokens) {
-    if (token.type === 'variable') {
-      paramNames.push(token.name)
-      source += `(${paramRegExpSource})`
-    } else if (token.type === 'wildcard') {
-      if (token.name) {
-        paramNames.push(token.name)
-        source += `(.*)`
-      } else {
-        source += `(?:.*)`
-      }
-    } else if (token.type === 'text') {
-      source += regexpEscape(forceLowerCase ? token.value.toLowerCase() : token.value)
-    } else if (token.type === 'separator') {
-      source += regexpEscape(sep)
-    } else if (token.type === 'optional') {
-      source += `(?:${tokensToRegExpSource(token.tokens, sep, paramRegExpSource, paramNames, forceLowerCase)})?`
-    }
+  let result = part.href(params)
+  if (result === null) {
+    throw new HrefError({
+      type: 'missing-params',
+      pattern,
+      partPattern: part,
+      params,
+    })
   }
-
-  return source
-}
-
-function regexpEscape(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function matchSearch(search: string, constraints: SearchConstraints): boolean {
-  let { namesWithoutAssignment, namesWithAssignment, valuesByKey } = parseSearch(search)
-
-  for (let [key, constraint] of constraints) {
-    let hasAssigned = namesWithAssignment.has(key),
-      hasBare = namesWithoutAssignment.has(key),
-      values = valuesByKey.get(key)
-
-    if (constraint.requiredValues && constraint.requiredValues.size > 0) {
-      if (!values) return false
-      for (let value of constraint.requiredValues) {
-        if (!values.has(value)) return false
-      }
-      continue
-    }
-
-    if (constraint.requireAssignment) {
-      if (!hasAssigned) return false
-      continue
-    }
-
-    if (!(hasAssigned || hasBare)) return false
-  }
-
-  return true
+  return result
 }
