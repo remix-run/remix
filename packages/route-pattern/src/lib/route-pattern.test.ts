@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict'
 import test, { describe } from 'node:test'
+
 import { RoutePattern } from './route-pattern.ts'
 import type * as Search from './route-pattern/search.ts'
 import { HrefError } from './errors.ts'
@@ -299,11 +300,11 @@ describe('RoutePattern', () => {
 
       assertJoin('http://', '://example.com', 'http://example.com')
       assertJoin('://example.com', 'http://', 'http://example.com')
-      
+
       assertJoin('http://', 'https://', 'https://')
       assertJoin('://example.com', 'https://', 'https://example.com')
       assertJoin('http://example.com', 'https://', 'https://example.com')
-      
+
       assertJoin('http(s)://', 'https://', 'https://')
       assertJoin('https://', 'http(s)://', 'http(s)://')
     })

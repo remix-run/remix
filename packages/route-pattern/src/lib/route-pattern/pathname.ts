@@ -1,6 +1,6 @@
 /* eslint-disable jsdoc/require-param */
 /* eslint-disable jsdoc/require-returns */
-import { PartPattern } from '../part-pattern.ts'
+import { PartPattern } from './part-pattern.ts'
 
 /**
  * Joins two pathnames, adding slash between them if needed.

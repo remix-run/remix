@@ -1,5 +1,5 @@
 import { unreachable } from './errors.ts'
-import type { PartPattern } from './part-pattern.ts'
+import type { PartPattern } from './route-pattern/part-pattern.ts'
 
 type Token = Extract<PartPattern.Token, { type: 'text' | ':' | '*' | 'separator' }>
 

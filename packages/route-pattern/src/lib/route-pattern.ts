@@ -1,10 +1,10 @@
+import { HrefError } from './errors.ts'
 import { split } from './route-pattern/split.ts'
 import * as Pathname from './route-pattern/pathname.ts'
 import * as Search from './route-pattern/search.ts'
 import * as Protocol from './route-pattern/protocol.ts'
 import * as Hostname from './route-pattern/hostname.ts'
-import { PartPattern } from './part-pattern.ts'
-import { HrefError } from './errors.ts'
+import { PartPattern } from './route-pattern/part-pattern.ts'
 import type { Join, HrefArgs, Params } from './types/index.ts'
 
 type AST = {

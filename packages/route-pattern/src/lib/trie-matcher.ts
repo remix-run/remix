@@ -1,4 +1,4 @@
-import type { PartPattern } from './part-pattern.ts'
+import type { PartPattern } from './route-pattern/part-pattern.ts'
 import { RoutePattern } from './route-pattern.ts'
 import type { Variant } from './variant.ts'
 import * as RE from './regexp.ts'

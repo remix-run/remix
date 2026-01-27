@@ -1,7 +1,7 @@
-import { ParseError, unreachable } from './errors.ts'
-import * as RE from './regexp.ts'
-import type { Span } from './route-pattern/split.ts'
-import { Variant } from './variant.ts'
+import { ParseError, unreachable } from '../errors.ts'
+import * as RE from '../regexp.ts'
+import { Variant } from '../variant.ts'
+import type { Span } from './split.ts'
 
 type MatchParam = {
   type: ':' | '*'

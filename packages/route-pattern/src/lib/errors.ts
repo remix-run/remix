@@ -1,5 +1,5 @@
 import type { RoutePattern } from './route-pattern.ts'
-import type { PartPattern } from './part-pattern.ts'
+import type { PartPattern } from './route-pattern/part-pattern.ts'
 import type * as Search from './route-pattern/search.ts'
 
 type ParseErrorType =
