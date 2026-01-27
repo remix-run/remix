@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict'
-import test, { describe } from 'node:test'
+import { describe, it } from 'node:test'
 
 import { ParseError } from '../errors.ts'
 import { PartPattern } from './part-pattern.ts'
@@ -8,7 +8,7 @@ describe('PartPattern', () => {
   describe('parse', () => {
     type AST = ConstructorParameters<typeof PartPattern>[0]
     function assertParse(source: string, ast: AST) {
-      assert.deepStrictEqual(
+      assert.deepEqual(
         PartPattern.parse(source, { type: 'pathname', ignoreCase: false }),
         new PartPattern(ast, { type: 'pathname', ignoreCase: false }),
       )
@@ -21,7 +21,7 @@ describe('PartPattern', () => {
       )
     }
 
-    test('parses static text', () => {
+    it('parses static text', () => {
       assertParse('abc', {
         tokens: [{ type: 'text', text: 'abc' }],
         paramNames: [],
@@ -29,7 +29,7 @@ describe('PartPattern', () => {
       })
     })
 
-    test('parses a variable', () => {
+    it('parses a variable', () => {
       assertParse(':abc', {
         tokens: [{ type: ':', nameIndex: 0 }],
         paramNames: ['abc'],
@@ -47,7 +47,7 @@ describe('PartPattern', () => {
       })
     })
 
-    test('parses a wildcard', () => {
+    it('parses a wildcard', () => {
       assertParse('*', {
         tokens: [{ type: '*', nameIndex: 0 }],
         paramNames: ['*'],
@@ -70,7 +70,7 @@ describe('PartPattern', () => {
       })
     })
 
-    test('parses an optional', () => {
+    it('parses an optional', () => {
       assertParse('aa(bb)cc', {
         tokens: [
           { type: 'text', text: 'aa' },
@@ -100,7 +100,7 @@ describe('PartPattern', () => {
       })
     })
 
-    test('parses combinations of text, variables, wildcards, optionals', () => {
+    it('parses combinations of text, variables, wildcards, optionals', () => {
       assertParse('api/(v:major(.:minor)/)run', {
         tokens: [
           { type: 'text', text: 'api' },
@@ -145,7 +145,7 @@ describe('PartPattern', () => {
       })
     })
 
-    test('parses repeated param names', () => {
+    it('parses repeated param names', () => {
       assertParse(':id/:id', {
         tokens: [{ type: ':', nameIndex: 0 }, { type: 'separator' }, { type: ':', nameIndex: 1 }],
         paramNames: ['id', 'id'],
@@ -182,17 +182,17 @@ describe('PartPattern', () => {
       })
     })
 
-    test("throws 'unmatched ('", () => {
+    it("throws 'unmatched ('", () => {
       assertParseError('(', 'unmatched (', 0)
       assertParseError('(()', 'unmatched (', 0)
       assertParseError('()(', 'unmatched (', 2)
     })
-    test("throws 'unmatched )'", () => {
+    it("throws 'unmatched )'", () => {
       assertParseError(')', 'unmatched )', 0)
       assertParseError(')()', 'unmatched )', 0)
       assertParseError('())', 'unmatched )', 2)
     })
-    test("throws 'missing variable name'", () => {
+    it("throws 'missing variable name'", () => {
       assertParseError(':', 'missing variable name', 0)
       assertParseError('a:', 'missing variable name', 1)
       assertParseError('(a:)', 'missing variable name', 2)
@@ -200,7 +200,7 @@ describe('PartPattern', () => {
       assertParseError(':123', 'missing variable name', 0)
       assertParseError('::', 'missing variable name', 0)
     })
-    test("throws 'dangling escape'", () => {
+    it("throws 'dangling escape'", () => {
       assertParseError('\\', 'dangling escape', 0)
     })
   })
@@ -209,10 +209,10 @@ describe('PartPattern', () => {
     function assertVariants(source: string, expected: Array<string>) {
       let pattern = PartPattern.parse(source, { type: 'pathname', ignoreCase: false })
       let actual = pattern.variants.map((variant) => variant.toString())
-      assert.deepStrictEqual(actual, expected)
+      assert.deepEqual(actual, expected)
     }
 
-    test('produces all possible combinations of optionals', () => {
+    it('produces all possible combinations of optionals', () => {
       assertVariants('a.:b.c', ['a.{:b}.c'])
       assertVariants('a(:b)*c', ['a{*c}', 'a{:b}{*c}'])
       assertVariants('a(:b)c(*d)e', ['ace', 'ac{*d}e', 'a{:b}ce', 'a{:b}c{*d}e'])
@@ -236,7 +236,7 @@ describe('PartPattern', () => {
       )
     }
 
-    test('returns source representation of pattern', () => {
+    it('returns source representation of pattern', () => {
       assertSource('api/(v:major(.:minor)/)run')
       assertSource('*/node_modules/(*path/):package/dist/index.:ext')
     })
@@ -261,45 +261,45 @@ describe('PartPattern', () => {
       assert.equal(result, null)
     }
 
-    test('text', () => {
+    it('generates href for static text', () => {
       assertHref('/posts', undefined, '/posts')
       assertHref('/posts', { extra: 'ignored', foo: 'bar' }, '/posts')
     })
 
-    test('optional text', () => {
+    it('generates href for optional text', () => {
       assertHref('hello(-world)', undefined, 'hello-world')
       assertHref('hello(-world)', { extra: 'ignored', foo: 'bar' }, 'hello-world')
     })
 
-    test('variable', () => {
+    it('generates href for variable', () => {
       assertHref('/posts/:id', { id: '123' }, '/posts/123')
       assertHref('/posts/:id', { id: 123 }, '/posts/123')
       assertHref('/posts/:id', { id: '123', extra: 'ignored', foo: 'bar' }, '/posts/123')
       assertHrefNull('/posts/:id', undefined)
     })
 
-    test('optional variable', () => {
+    it('generates href for optional variable', () => {
       assertHref('/posts(/:id)', undefined, '/posts')
       assertHref('/posts(/:id)', { id: '123' }, '/posts/123')
       assertHref('/posts(/:id)', { id: 123 }, '/posts/123')
       assertHref('/posts(/:id)', { id: '123', extra: 'ignored', foo: 'bar' }, '/posts/123')
     })
 
-    test('wildcard', () => {
+    it('generates href for wildcard', () => {
       assertHref('/files/*path', { path: 'a/b/c' }, '/files/a/b/c')
       assertHref('/files/*path', { path: 123 }, '/files/123')
       assertHref('/files/*path', { path: 'a/b/c', extra: 'ignored', foo: 'bar' }, '/files/a/b/c')
       assertHrefNull('/files/*path', undefined)
     })
 
-    test('optional wildcard', () => {
+    it('generates href for optional wildcard', () => {
       assertHref('/files/(*path)', undefined, '/files/')
       assertHref('/files/(*path)', { path: 'a/b/c' }, '/files/a/b/c')
       assertHref('/files/(*path)', { path: 123 }, '/files/123')
       assertHref('/files/(*path)', { path: 'a/b/c', extra: 'ignored', foo: 'bar' }, '/files/a/b/c')
     })
 
-    test('nested optionals', () => {
+    it('generates href for nested optionals', () => {
       assertHref(':a/(:b/(:c/))', { a: 'x', b: 'some', c: 'thing' }, 'x/some/thing/')
       assertHref(
         ':a/(:b/(:c/))',
@@ -310,7 +310,7 @@ describe('PartPattern', () => {
       assertHref(':a/(:b/(:c/))', { a: 'x', c: 'thing' }, 'x/')
     })
 
-    test('independent params', () => {
+    it('generates href for independent params', () => {
       assertHref('(:a)(:b)', { a: 'x', b: 'y' }, 'xy')
       assertHref('(:a)(:b)', { a: 'x' }, 'x')
       assertHref('(:a)(:b)', { b: 'y' }, 'y')
@@ -318,7 +318,7 @@ describe('PartPattern', () => {
       assertHref('(:a)(:b)', undefined, '')
     })
 
-    test('dependent params', () => {
+    it('generates href for dependent params', () => {
       assertHref(':a(:b)-:a(:c)', { a: 1, b: 2 }, '12-1')
       assertHref(':a(:b)-:a(:c)', { a: 1, c: 3 }, '1-13')
       assertHref(':a(:b)-:a(:c)', { a: 1, b: 2, c: 3 }, '12-13')
@@ -331,66 +331,66 @@ describe('PartPattern', () => {
     type MatchParam = { type: ':' | '*'; name: string; value: string; begin: number; end: number }
     function assertMatch(pattern: string, part: string, expected: Array<MatchParam>) {
       let result = PartPattern.parse(pattern, { type: 'pathname', ignoreCase: false }).match(part)
-      assert.deepStrictEqual(result, expected)
+      assert.deepEqual(result, expected)
     }
 
-    test('variable', () => {
+    it('matches variable', () => {
       assertMatch('posts/:id', 'posts/123', [
         { type: ':', name: 'id', value: '123', begin: 6, end: 9 },
       ])
     })
 
-    test('multiple variables', () => {
+    it('matches multiple variables', () => {
       assertMatch('posts/:id/comments/:commentId', 'posts/123/comments/456', [
         { type: ':', name: 'id', value: '123', begin: 6, end: 9 },
         { type: ':', name: 'commentId', value: '456', begin: 19, end: 22 },
       ])
     })
 
-    test('multiple variables with repeated names', () => {
+    it('matches multiple variables with repeated names', () => {
       assertMatch(':id/:id', '123/456', [
         { type: ':', name: 'id', value: '123', begin: 0, end: 3 },
         { type: ':', name: 'id', value: '456', begin: 4, end: 7 },
       ])
     })
 
-    test('wildcard', () => {
+    it('matches wildcard', () => {
       assertMatch('files/*path', 'files/a/b/c', [
         { type: '*', name: 'path', value: 'a/b/c', begin: 6, end: 11 },
       ])
     })
 
-    test('multiple wildcards', () => {
+    it('matches multiple wildcards', () => {
       assertMatch('*prefix/middle/*suffix', 'a/b/middle/c/d', [
         { type: '*', name: 'prefix', value: 'a/b', begin: 0, end: 3 },
         { type: '*', name: 'suffix', value: 'c/d', begin: 11, end: 14 },
       ])
     })
 
-    test('multiple wildcards with repeated names', () => {
+    it('matches multiple wildcards with repeated names', () => {
       assertMatch('*path/*path', 'a/b/c/d', [
         { type: '*', name: 'path', value: 'a/b/c', begin: 0, end: 5 },
         { type: '*', name: 'path', value: 'd', begin: 6, end: 7 },
       ])
     })
 
-    test('optional parameter when present', () => {
+    it('matches optional parameter when present', () => {
       assertMatch('api(/:version)', 'api/v1', [
         { type: ':', name: 'version', value: 'v1', begin: 4, end: 6 },
       ])
     })
 
-    test('optional parameter when absent', () => {
+    it('matches optional parameter when absent', () => {
       assertMatch('api(/:version)', 'api', [])
     })
 
-    test('nested optional parameters when partially present', () => {
+    it('matches nested optional parameters when partially present', () => {
       assertMatch('api(/:major(/:minor))', 'api/v2', [
         { type: ':', name: 'major', value: 'v2', begin: 4, end: 6 },
       ])
     })
 
-    test('nested optional parameters when all absent', () => {
+    it('matches nested optional parameters when all absent', () => {
       assertMatch('api(/:major(/:minor))', 'api', [])
     })
   })

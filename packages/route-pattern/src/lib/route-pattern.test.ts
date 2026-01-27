@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict'
-import test, { describe } from 'node:test'
+import { describe, it } from 'node:test'
 
 import { RoutePattern } from './route-pattern.ts'
 import type * as Search from './route-pattern/search.ts'
@@ -21,7 +21,7 @@ describe('RoutePattern', () => {
           expectedSearch.set(name, value ? new Set(expected.search[name]) : null)
         }
       }
-      assert.deepStrictEqual(
+      assert.deepEqual(
         {
           protocol: pattern.ast.protocol,
           hostname: pattern.ast.hostname?.source,
@@ -40,46 +40,46 @@ describe('RoutePattern', () => {
       )
     }
 
-    test('parses hostname', () => {
+    it('parses hostname', () => {
       assertParse('://example.com', { hostname: 'example.com' })
     })
 
-    test('parses port', () => {
+    it('parses port', () => {
       assertParse('://example.com:8000', { hostname: 'example.com', port: '8000' })
     })
 
-    test('parses pathname', () => {
+    it('parses pathname', () => {
       assertParse('products/:id', { pathname: 'products/:id' })
     })
 
-    test('parses search', () => {
+    it('parses search', () => {
       assertParse('?q', { search: { q: null } })
       assertParse('?q=', { search: { q: [] } })
       assertParse('?q=1', { search: { q: ['1'] } })
     })
 
-    test('parses protocol + hostname', () => {
+    it('parses protocol + hostname', () => {
       assertParse('https://example.com', {
         protocol: 'https',
         hostname: 'example.com',
       })
     })
 
-    test('parses protocol + pathname', () => {
+    it('parses protocol + pathname', () => {
       assertParse('http:///dir/file', {
         protocol: 'http',
         pathname: 'dir/file',
       })
     })
 
-    test('parses hostname + pathname', () => {
+    it('parses hostname + pathname', () => {
       assertParse('://example.com/about', {
         hostname: 'example.com',
         pathname: 'about',
       })
     })
 
-    test('parses protocol + hostname + pathname', () => {
+    it('parses protocol + hostname + pathname', () => {
       assertParse('https://example.com/about', {
         protocol: 'https',
         hostname: 'example.com',
@@ -87,7 +87,7 @@ describe('RoutePattern', () => {
       })
     })
 
-    test('parses protocol + hostname + search', () => {
+    it('parses protocol + hostname + search', () => {
       assertParse('https://example.com?q=1', {
         protocol: 'https',
         hostname: 'example.com',
@@ -95,7 +95,7 @@ describe('RoutePattern', () => {
       })
     })
 
-    test('parses protocol + pathname + search', () => {
+    it('parses protocol + pathname + search', () => {
       assertParse('http:///dir/file?q=1', {
         protocol: 'http',
         pathname: 'dir/file',
@@ -103,7 +103,7 @@ describe('RoutePattern', () => {
       })
     })
 
-    test('parses hostname + pathname + search', () => {
+    it('parses hostname + pathname + search', () => {
       assertParse('://example.com/about?q=1', {
         hostname: 'example.com',
         pathname: 'about',
@@ -111,7 +111,7 @@ describe('RoutePattern', () => {
       })
     })
 
-    test('parses protocol + hostname + pathname + search', () => {
+    it('parses protocol + hostname + pathname + search', () => {
       assertParse('https://example.com/about?q=1', {
         protocol: 'https',
         hostname: 'example.com',
@@ -120,7 +120,7 @@ describe('RoutePattern', () => {
       })
     })
 
-    test('parses search params into constraints grouped by param name', () => {
+    it('parses search params into constraints grouped by param name', () => {
       assertParse('?q&q', { search: { q: null } })
       assertParse('?q&q=', { search: { q: [] } })
       assertParse('?q&q=1', { search: { q: ['1'] } })
@@ -129,7 +129,7 @@ describe('RoutePattern', () => {
       assertParse('?q&q=&q=1&q=2', { search: { q: ['1', '2'] } })
     })
 
-    test('throws on invalid protocol', () => {
+    it('throws on invalid protocol', () => {
       assert.throws(() => new RoutePattern('ftp://example.com'), {
         name: 'ParseError',
         type: 'invalid protocol',
@@ -150,7 +150,7 @@ describe('RoutePattern', () => {
   })
 
   describe('part accessors', () => {
-    test('protocol', () => {
+    it('returns protocol', () => {
       assert.equal(new RoutePattern('http://example.com').protocol, 'http')
       assert.equal(new RoutePattern('https://example.com').protocol, 'https')
       assert.equal(new RoutePattern('http(s)://example.com').protocol, 'http(s)')
@@ -158,7 +158,7 @@ describe('RoutePattern', () => {
       assert.equal(new RoutePattern('://example.com').protocol, '')
     })
 
-    test('hostname', () => {
+    it('returns hostname', () => {
       assert.equal(new RoutePattern('://example.com').hostname, 'example.com')
       assert.equal(new RoutePattern('://:host').hostname, ':host')
       assert.equal(new RoutePattern('://api.example.com').hostname, 'api.example.com')
@@ -166,14 +166,14 @@ describe('RoutePattern', () => {
       assert.equal(new RoutePattern('http://').hostname, '')
     })
 
-    test('port', () => {
+    it('returns port', () => {
       assert.equal(new RoutePattern('://example.com:8000').port, '8000')
       assert.equal(new RoutePattern('://example.com:3000').port, '3000')
       assert.equal(new RoutePattern('://example.com').port, '')
       assert.equal(new RoutePattern('/pathname').port, '')
     })
 
-    test('pathname', () => {
+    it('returns pathname', () => {
       assert.equal(new RoutePattern('/posts/:id').pathname, 'posts/:id')
       assert.equal(new RoutePattern('posts/:id').pathname, 'posts/:id')
       assert.equal(new RoutePattern('/posts(/:id)').pathname, 'posts(/:id)')
@@ -182,7 +182,7 @@ describe('RoutePattern', () => {
       assert.equal(new RoutePattern('').pathname, '')
     })
 
-    test('search', () => {
+    it('returns search', () => {
       assert.equal(new RoutePattern('?q').search, 'q')
       assert.equal(new RoutePattern('?q=').search, 'q=')
       assert.equal(new RoutePattern('?q=1').search, 'q=1')
@@ -193,7 +193,7 @@ describe('RoutePattern', () => {
       assert.equal(new RoutePattern('').search, '')
     })
 
-    test('all parts together', () => {
+    it('returns all parts together', () => {
       let pattern = new RoutePattern('https://api.example.com:8000/v1/:resource?filter=active')
       assert.equal(pattern.protocol, 'https')
       assert.equal(pattern.hostname, 'api.example.com')
@@ -208,7 +208,7 @@ describe('RoutePattern', () => {
       assert.equal(new RoutePattern(source).source, expected ?? source)
     }
 
-    test('pathname only', () => {
+    it('reconstructs pathname only', () => {
       assertSource('/posts/:id')
       assertSource('posts/:id', '/posts/:id')
       assertSource('/posts(/:id)')
@@ -216,42 +216,42 @@ describe('RoutePattern', () => {
       assertSource('', '/')
     })
 
-    test('hostname only', () => {
+    it('reconstructs hostname only', () => {
       assertSource('://example.com', '://example.com/')
       assertSource('://:host', '://:host/')
     })
 
-    test('port', () => {
+    it('reconstructs port', () => {
       assertSource('://example.com:8000', '://example.com:8000/')
       assertSource('://example.com:3000', '://example.com:3000/')
       assertSource('://:host:8080', '://:host:8080/')
     })
 
-    test('protocol', () => {
+    it('reconstructs protocol', () => {
       assertSource('http://', 'http:///')
       assertSource('https://', 'https:///')
       assertSource('http(s)://', 'http(s):///')
     })
 
-    test('protocol + hostname', () => {
+    it('reconstructs protocol + hostname', () => {
       assertSource('https://example.com', 'https://example.com/')
       assertSource('http://example.com', 'http://example.com/')
       assertSource('http(s)://*host', 'http(s)://*host/')
     })
 
-    test('protocol + hostname + pathname', () => {
+    it('reconstructs protocol + hostname + pathname', () => {
       assertSource('https://example.com/about')
       assertSource('http://example.com/products/:id')
       assertSource('http(s)://*host/path')
     })
 
-    test('protocol + hostname + port + pathname', () => {
+    it('reconstructs protocol + hostname + port + pathname', () => {
       assertSource('https://example.com:8000/about')
       assertSource('http://localhost:3000/posts/:id')
       assertSource('http(s)://example.com:8000/path')
     })
 
-    test('search params', () => {
+    it('reconstructs search params', () => {
       assertSource('?q', '/?q')
       assertSource('?q=', '/?q=')
       assertSource('?q=1', '/?q=1')
@@ -262,7 +262,7 @@ describe('RoutePattern', () => {
       assertSource('https://example.com/posts?q=1')
     })
 
-    test('complex patterns with optionals', () => {
+    it('reconstructs complex patterns with optionals', () => {
       assertSource('/posts(/:id)')
       assertSource('://(staging.)example.com', '://(staging.)example.com/')
       assertSource(
@@ -276,7 +276,7 @@ describe('RoutePattern', () => {
       assertSource('http(s)://*host/path')
     })
 
-    test('full patterns', () => {
+    it('reconstructs full patterns', () => {
       assertSource('https://api.example.com:8000/v1/:resource')
       assertSource('http(s)://example.com/base')
       assertSource('http://old.com:3000/keep/this')
@@ -287,13 +287,13 @@ describe('RoutePattern', () => {
 
   describe('join', () => {
     function assertJoin(a: string, b: string, expected: string) {
-      assert.deepStrictEqual(
+      assert.deepEqual(
         new RoutePattern(a).join(new RoutePattern(b)),
         new RoutePattern(expected),
       )
     }
 
-    test('protocol', () => {
+    it('joins protocol', () => {
       assertJoin('http://', '://', 'http://')
       assertJoin('://', '://', '://')
       assertJoin('://', 'http://', 'http://')
@@ -309,7 +309,7 @@ describe('RoutePattern', () => {
       assertJoin('https://', 'http(s)://', 'http(s)://')
     })
 
-    test('hostname', () => {
+    it('joins hostname', () => {
       assertJoin('://example.com', '://*', '://example.com')
       assertJoin('://*', '://*', '://*')
       assertJoin('://*', '://example.com', '://example.com')
@@ -326,7 +326,7 @@ describe('RoutePattern', () => {
       assertJoin('/pathname', '://other.com', '://other.com/pathname')
     })
 
-    test('port', () => {
+    it('joins port', () => {
       assertJoin('://:8000', '://', '://:8000')
       assertJoin('://', '://:8000', '://:8000')
       assertJoin('://:8000', '://:3000', '://:3000')
@@ -334,7 +334,7 @@ describe('RoutePattern', () => {
       assertJoin('http://example.com:4321', '://example.com:8000', 'http://example.com:8000')
     })
 
-    test('pathname', () => {
+    it('joins pathname', () => {
       assertJoin('', '', '')
       assertJoin('', 'b', 'b')
       assertJoin('a', '', 'a')
@@ -350,13 +350,13 @@ describe('RoutePattern', () => {
       assertJoin('(a/)', '(/b)', '(a)(/b)')
     })
 
-    test('search', () => {
+    it('joins search', () => {
       assertJoin('path', '?a', 'path?a')
       assertJoin('?a', '?b=1', '?a&b=1')
       assertJoin('?a=1', '?b=2', '?a=1&b=2')
     })
 
-    test('combos', () => {
+    it('joins complex combinations', () => {
       assertJoin('http://example.com/a', 'http(s)://*host/b', 'http(s)://*host/a/b')
       assertJoin('http://example.com:8000/a', 'https:///b', 'https://example.com:8000/a/b')
       assertJoin('http://example.com:8000/a', '://other.com/b', 'http://other.com:8000/a/b')
@@ -424,14 +424,14 @@ describe('RoutePattern', () => {
       )
     }
 
-    test('pathname only', () => {
+    it('generates href for pathname only', () => {
       assertHref('/posts/:id', { id: '123' }, '/posts/123')
       assertHref('posts/:id', { id: '123' }, '/posts/123')
       assertHref('/posts(/:id)', { id: '123' }, '/posts/123')
       assertHref('/posts(/:id)', undefined, '/posts')
     })
 
-    test('with origin - protocol defaults to https', () => {
+    it('defaults protocol to https with origin', () => {
       assertHref('://example.com/path', undefined, 'https://example.com/path')
       assertHref('://:host/path', { host: 'example.com' }, 'https://example.com/path')
       assertHref(
@@ -441,29 +441,29 @@ describe('RoutePattern', () => {
       )
     })
 
-    test('with origin - explicit protocol', () => {
+    it('uses explicit protocol with origin', () => {
       assertHref('http://example.com/path', undefined, 'http://example.com/path')
       assertHref('https://example.com/posts/:id', { id: '123' }, 'https://example.com/posts/123')
       assertHref('http(s)://example.com/path', undefined, 'https://example.com/path')
     })
 
-    test('with origin - port', () => {
+    it('includes port with origin', () => {
       assertHref('://example.com:8080/path', undefined, 'https://example.com:8080/path')
       assertHref('http://example.com:3000/path', undefined, 'http://example.com:3000/path')
       assertHref('://:host:8080/path', { host: 'localhost' }, 'https://localhost:8080/path')
     })
 
-    test('origin validation - hostname required when protocol specified', () => {
+    it('throws when hostname required but missing for protocol', () => {
       assertHrefThrows('https://*/path', undefined, 'missing-hostname')
       assertHrefThrows('http://*host/path', undefined, 'missing-params')
     })
 
-    test('origin validation - hostname required when port specified', () => {
+    it('throws when hostname required but missing for port', () => {
       assertHrefThrows('://:8080/path', undefined, 'missing-hostname')
       assertHrefThrows('://*:3000/path', undefined, 'missing-hostname')
     })
 
-    test('search params', () => {
+    it('generates href with search params', () => {
       assertHref('/posts?filter', undefined, '/posts?filter=')
       assertHrefWithSearch('/posts?filter', undefined, { filter: 'active' }, '/posts?filter=active')
       assertHref('/posts?sort=asc', undefined, '/posts?sort=asc')
@@ -521,120 +521,120 @@ describe('RoutePattern', () => {
       }
 
       assert.notEqual(match, null, `Expected pattern "${pattern}" to match URL "${url}"`)
-      assert.deepStrictEqual(match?.params, expected.params ?? {})
+      assert.deepEqual(match?.params, expected.params ?? {})
     }
 
     describe('protocol', () => {
-      test('http', () => {
+      it('matches http', () => {
         assertMatch('http://example.com/path', 'http://example.com/path', {})
       })
 
-      test('https', () => {
+      it('matches https', () => {
         assertMatch('https://example.com/path', 'https://example.com/path', {})
       })
 
-      test('http(s)', () => {
+      it('matches http(s) optional', () => {
         assertMatch('http(s)://example.com/path', 'http://example.com/path', {})
         assertMatch('http(s)://example.com/path', 'https://example.com/path', {})
       })
     })
 
     describe('hostname', () => {
-      test('one variable', () => {
+      it('matches one variable', () => {
         assertMatch('://:host.com/path', 'https://example.com/path', {
           params: { host: 'example' },
         })
       })
 
-      test('multiple variables', () => {
+      it('matches multiple variables', () => {
         assertMatch('://:subdomain.:domain.com/path', 'https://api.example.com/path', {
           params: { subdomain: 'api', domain: 'example' },
         })
       })
 
-      test('multiple variables with repeated names', () => {
+      it('matches multiple variables with repeated names', () => {
         assertMatch('://:part.:part.com/path', 'https://api.example.com/path', {
           params: { part: 'example' },
         })
       })
 
-      test('unnamed wildcard does not appear in params', () => {
+      it('excludes unnamed wildcard from params', () => {
         assertMatch('://*.example.com/path', 'https://api.example.com/path', {})
       })
     })
 
     describe('port', () => {
-      test('matches', () => {
+      it('matches when port is equal', () => {
         assertMatch('://example.com:8080/path', 'https://example.com:8080/path', {})
       })
 
-      test('does not match', () => {
+      it('does not match when port differs', () => {
         assertMatch('://example.com:8080/path', 'https://example.com:3000/path', null)
       })
     })
 
     describe('pathname', () => {
-      test('one variable', () => {
+      it('matches one variable', () => {
         assertMatch('/posts/:id', 'https://example.com/posts/123', { params: { id: '123' } })
       })
 
-      test('multiple variables', () => {
+      it('matches multiple variables', () => {
         assertMatch('/users/:userId/posts/:postId', 'https://example.com/users/42/posts/123', {
           params: { userId: '42', postId: '123' },
         })
       })
 
-      test('multiple variables with repeated names', () => {
+      it('matches multiple variables with repeated names', () => {
         assertMatch('/:id/nested/:id', 'https://example.com/first/nested/second', {
           params: { id: 'second' },
         })
       })
 
-      test('unnamed wildcard does not appear in params', () => {
+      it('excludes unnamed wildcard from params', () => {
         assertMatch('/posts/*/comments', 'https://example.com/posts/123/comments', {})
       })
     })
 
     describe('search', () => {
-      test('bare parameter (presence only)', () => {
+      it('matches bare parameter for presence only', () => {
         assertMatch('?q', 'https://example.com?q', {})
       })
 
-      test('bare parameter matches when URL has value', () => {
+      it('matches bare parameter when URL has value', () => {
         assertMatch('?q', 'https://example.com?q=search', {})
       })
 
-      test('parameter with empty value requires non-empty value in URL', () => {
+      it('requires non-empty value when pattern has empty value', () => {
         assertMatch('?q=', 'https://example.com?q=search', {})
         assertMatch('?q=', 'https://example.com?q=', null)
         assertMatch('?q=', 'https://example.com?q', null)
       })
 
-      test('parameter with specific value', () => {
+      it('matches parameter with specific value', () => {
         assertMatch('?sort=asc', 'https://example.com?sort=asc', {})
       })
 
-      test('parameter with multiple values', () => {
+      it('matches parameter with multiple values', () => {
         assertMatch('?tag=foo&tag=bar', 'https://example.com?tag=foo&tag=bar', {})
       })
 
-      test('multiple parameters', () => {
+      it('matches multiple parameters', () => {
         assertMatch('?filter&sort=asc', 'https://example.com?filter=active&sort=asc', {})
       })
 
-      test('allows extra parameters with bare constraint', () => {
+      it('allows extra parameters with bare constraint', () => {
         assertMatch('?q', 'https://example.com?q=search&page=2&limit=10', {})
       })
 
-      test('allows extra parameters with empty value constraint', () => {
+      it('allows extra parameters with empty value constraint', () => {
         assertMatch('?filter=', 'https://example.com?filter=active&sort=asc&page=1', {})
       })
 
-      test('allows extra parameters with specific value', () => {
+      it('allows extra parameters with specific value', () => {
         assertMatch('?sort=asc', 'https://example.com?sort=asc&filter=active&page=2', {})
       })
 
-      test('allows extra parameters with multiple constraints', () => {
+      it('allows extra parameters with multiple constraints', () => {
         assertMatch(
           '?filter&sort=asc',
           'https://example.com?filter=active&sort=asc&page=1&limit=20',
@@ -642,19 +642,19 @@ describe('RoutePattern', () => {
         )
       })
 
-      test('allows extra values for constrained parameter', () => {
+      it('allows extra values for constrained parameter', () => {
         assertMatch('?tag=foo', 'https://example.com?tag=foo&tag=bar&tag=baz', {})
       })
 
-      test('does not match when required parameter missing', () => {
+      it('does not match when required parameter is missing', () => {
         assertMatch('?filter', 'https://example.com?sort=asc', null)
       })
 
-      test('does not match when required value missing', () => {
+      it('does not match when required value is missing', () => {
         assertMatch('?sort=asc', 'https://example.com?sort=desc', null)
       })
 
-      test('no search constraints matches any search params', () => {
+      it('matches any search params when no constraints specified', () => {
         assertMatch('/posts', 'https://example.com/posts?q=search&page=2', {})
         assertMatch('/posts', 'https://example.com/posts', {})
       })
@@ -662,32 +662,32 @@ describe('RoutePattern', () => {
   })
 
   describe('ignoreCase', () => {
-    test('defaults to false (case-sensitive)', () => {
+    it('defaults to false for case-sensitive matching', () => {
       let pattern = new RoutePattern('/posts/:id')
       assert.equal(pattern.ignoreCase, false)
     })
 
-    test('can be set to true in parse options', () => {
+    it('can be set to true in parse options', () => {
       let pattern = new RoutePattern('/posts/:id', { ignoreCase: true })
       assert.equal(pattern.ignoreCase, true)
     })
 
     describe('pathname matching', () => {
-      test('case-sensitive by default', () => {
+      it('is case-sensitive by default', () => {
         let pattern = new RoutePattern('/Posts/:id')
         assert.equal(pattern.match('https://example.com/posts/123'), null)
         assert.equal(pattern.match('https://example.com/POSTS/123'), null)
         assert.notEqual(pattern.match('https://example.com/Posts/123'), null)
       })
 
-      test('case-insensitive when enabled', () => {
+      it('is case-insensitive when enabled', () => {
         let pattern = new RoutePattern('/Posts/:id', { ignoreCase: true })
         assert.notEqual(pattern.match('https://example.com/posts/123'), null)
         assert.notEqual(pattern.match('https://example.com/POSTS/123'), null)
         assert.notEqual(pattern.match('https://example.com/PoStS/123'), null)
       })
 
-      test('case-insensitive matches return original casing in params', () => {
+      it('preserves original casing in params for case-insensitive matches', () => {
         let pattern = new RoutePattern('/posts/:id', { ignoreCase: true })
         let match = pattern.match('https://example.com/POSTS/ABC')
         assert.notEqual(match, null)
@@ -696,35 +696,35 @@ describe('RoutePattern', () => {
     })
 
     describe('search matching', () => {
-      test('case-sensitive by default - param names', () => {
+      it('is case-sensitive for param names by default', () => {
         let pattern = new RoutePattern('?Sort')
         assert.notEqual(pattern.match('https://example.com?Sort'), null)
         assert.equal(pattern.match('https://example.com?sort'), null)
         assert.equal(pattern.match('https://example.com?SORT'), null)
       })
 
-      test('case-insensitive param names when enabled', () => {
+      it('is case-insensitive for param names when enabled', () => {
         let pattern = new RoutePattern('?Sort', { ignoreCase: true })
         assert.notEqual(pattern.match('https://example.com?Sort'), null)
         assert.notEqual(pattern.match('https://example.com?sort'), null)
         assert.notEqual(pattern.match('https://example.com?SORT'), null)
       })
 
-      test('case-sensitive by default - param values', () => {
+      it('is case-sensitive for param values by default', () => {
         let pattern = new RoutePattern('?sort=Asc')
         assert.notEqual(pattern.match('https://example.com?sort=Asc'), null)
         assert.equal(pattern.match('https://example.com?sort=asc'), null)
         assert.equal(pattern.match('https://example.com?sort=ASC'), null)
       })
 
-      test('case-insensitive param values when enabled', () => {
+      it('is case-insensitive for param values when enabled', () => {
         let pattern = new RoutePattern('?sort=Asc', { ignoreCase: true })
         assert.notEqual(pattern.match('https://example.com?sort=Asc'), null)
         assert.notEqual(pattern.match('https://example.com?sort=asc'), null)
         assert.notEqual(pattern.match('https://example.com?sort=ASC'), null)
       })
 
-      test('case-insensitive works with multiple search params', () => {
+      it('applies case-insensitivity to multiple search params', () => {
         let pattern = new RoutePattern('?Sort=Asc&Filter=Active', { ignoreCase: true })
         assert.notEqual(pattern.match('https://example.com?sort=asc&filter=active'), null)
         assert.notEqual(pattern.match('https://example.com?SORT=ASC&FILTER=ACTIVE'), null)
@@ -732,7 +732,7 @@ describe('RoutePattern', () => {
     })
 
     describe('join', () => {
-      test('uses union (true if either is true) by default', () => {
+      it('uses union for ignoreCase (true if either is true)', () => {
         let a = new RoutePattern('/api', { ignoreCase: true })
         let b = new RoutePattern('/posts', { ignoreCase: false })
         assert.equal(a.join(b).ignoreCase, true)
@@ -750,14 +750,14 @@ describe('RoutePattern', () => {
         assert.equal(g.join(h).ignoreCase, true)
       })
 
-      test('can override ignoreCase with options', () => {
+      it('allows overriding ignoreCase with options', () => {
         let a = new RoutePattern('/api', { ignoreCase: false })
         let b = new RoutePattern('/posts', { ignoreCase: false })
         let joined = a.join(b, { ignoreCase: true })
         assert.equal(joined.ignoreCase, true)
       })
 
-      test('joined pattern matches according to its ignoreCase setting', () => {
+      it('matches joined pattern according to its ignoreCase setting', () => {
         let a = new RoutePattern('/api', { ignoreCase: false })
         let b = new RoutePattern('/posts', { ignoreCase: false })
         let joined = a.join(b, { ignoreCase: true })

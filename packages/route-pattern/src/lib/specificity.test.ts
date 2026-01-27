@@ -1,9 +1,10 @@
 import * as assert from 'node:assert/strict'
-import test, { describe } from 'node:test'
-import * as Rank from './specificity.ts'
-import { RoutePattern } from './route-pattern.ts'
+import { describe, it } from 'node:test'
 
-describe('rank', () => {
+import { RoutePattern } from './route-pattern.ts'
+import * as Specificity from './specificity.ts'
+
+describe('specificity', () => {
   describe('compare', () => {
     function assertCompare(patterns: [string, string], url: URL | string, expected: -1 | 0 | 1) {
       url = typeof url === 'string' ? new URL(url) : url
@@ -15,35 +16,35 @@ describe('rank', () => {
       assert.notEqual(matchA, null, `Pattern A "${patterns[0]}" should match URL "${url}"`)
       assert.notEqual(matchB, null, `Pattern B "${patterns[1]}" should match URL "${url}"`)
 
-      assert.equal(Rank.compare(matchA!, matchB!), expected)
+      assert.equal(Specificity.compare(matchA!, matchB!), expected)
     }
 
     describe('hostname', () => {
-      test('static vs variable', () => {
+      it('ranks static higher than variable', () => {
         assertCompare(['https://example.com', 'https://:subdomain.com'], 'https://example.com', 1)
       })
 
-      test('variable vs wildcard', () => {
+      it('ranks variable higher than wildcard', () => {
         assertCompare(['https://:subdomain.com', 'https://*.com'], 'https://example.com', 1)
       })
 
-      test('variable vs variable (same range = tie)', () => {
+      it('ties when variables have same range', () => {
         assertCompare(['https://:subdomain.com', 'https://:other.com'], 'https://example.com', 0)
       })
 
-      test('wildcard vs wildcard (same range = tie)', () => {
+      it('ties when wildcards have same range', () => {
         assertCompare(['https://*.com', 'https://*.com'], 'https://example.com', 0)
       })
 
-      test('variable with prefix and suffix', () => {
+      it('ranks variable with prefix/suffix higher than bare variable', () => {
         assertCompare(['https://e:sub.com', 'https://:subdomain.com'], 'https://example.com', 1)
       })
 
-      test('wildcard with prefix and suffix', () => {
+      it('ranks wildcard with prefix/suffix higher than bare wildcard', () => {
         assertCompare(['https://e*.com', 'https://*.com'], 'https://example.com', 1)
       })
 
-      test('tie on variables and wildcards, break tie eventually', () => {
+      it('breaks tie on variables and wildcards by subsequent characters', () => {
         assertCompare(
           ['https://a*.cd.:ef.*.com', 'https://*.cd.:ef.*.com'],
           'https://ab.cd.ef.gh.com',
@@ -51,21 +52,21 @@ describe('rank', () => {
         )
       })
 
-      test('rank segments right-to-left, but rank chars within segments left-to-right', () => {
+      it('ranks segments right-to-left but chars within segments left-to-right', () => {
         assertCompare(['https://a.*b-c.d', 'https://a.b-*c.d'], 'https://a.b-xxx.yyy-c.d', 1)
       })
 
-      test('back-to-back variables with static content between', () => {
+      it('ranks back-to-back variables with static content higher', () => {
         assertCompare(['https://:a-:b.com', 'https://:sub.com'], 'https://ab-cd.com', 1)
       })
 
-      test('back-to-back wildcards with static content between', () => {
+      it('ranks back-to-back wildcards with static content higher', () => {
         assertCompare(['https://*-*.com', 'https://*.com'], 'https://ab-cd.com', 1)
       })
     })
 
     describe('pathname', () => {
-      test('static vs variable', () => {
+      it('ranks static higher than variable', () => {
         assertCompare(
           ['https://example.com/posts/123', 'https://example.com/posts/:id'],
           'https://example.com/posts/123',
@@ -73,7 +74,7 @@ describe('rank', () => {
         )
       })
 
-      test('variable vs wildcard', () => {
+      it('ranks variable higher than wildcard', () => {
         assertCompare(
           ['https://example.com/posts/:id', 'https://example.com/posts/*'],
           'https://example.com/posts/123',
@@ -81,7 +82,7 @@ describe('rank', () => {
         )
       })
 
-      test('variable vs variable (same range = tie)', () => {
+      it('ties when variables have same range', () => {
         assertCompare(
           ['https://example.com/posts/:id', 'https://example.com/posts/:other'],
           'https://example.com/posts/123',
@@ -89,7 +90,7 @@ describe('rank', () => {
         )
       })
 
-      test('wildcard vs wildcard (same range = tie)', () => {
+      it('ties when wildcards have same range', () => {
         assertCompare(
           ['https://example.com/posts/*', 'https://example.com/posts/*'],
           'https://example.com/posts/123',
@@ -97,7 +98,7 @@ describe('rank', () => {
         )
       })
 
-      test('variable with prefix and suffix', () => {
+      it('ranks variable with prefix/suffix higher than bare variable', () => {
         assertCompare(
           ['https://example.com/posts-:id', 'https://example.com/:segment'],
           'https://example.com/posts-123',
@@ -105,7 +106,7 @@ describe('rank', () => {
         )
       })
 
-      test('wildcard with prefix and suffix', () => {
+      it('ranks wildcard with prefix/suffix higher than bare wildcard', () => {
         assertCompare(
           ['https://example.com/p*', 'https://example.com/*/:id'],
           'https://example.com/posts/123',
@@ -113,7 +114,7 @@ describe('rank', () => {
         )
       })
 
-      test('tie on variables and wildcards, break tie eventually', () => {
+      it('breaks tie on variables and wildcards by subsequent characters', () => {
         assertCompare(
           ['https://example.com/*/123/:id/7*', 'https://example.com/*/123/:id/*'],
           'https://example.com/posts/123/456/789',
@@ -121,7 +122,7 @@ describe('rank', () => {
         )
       })
 
-      test('back-to-back variables with static content between', () => {
+      it('ranks back-to-back variables with static content higher', () => {
         assertCompare(
           ['https://example.com/:a/:b', 'https://example.com/*'],
           'https://example.com/posts/123',
@@ -129,7 +130,7 @@ describe('rank', () => {
         )
       })
 
-      test('back-to-back wildcards with static content between', () => {
+      it('ranks back-to-back wildcards with static content higher', () => {
         assertCompare(
           ['https://example.com/*/*', 'https://example.com/*'],
           'https://example.com/posts/123',
@@ -139,7 +140,7 @@ describe('rank', () => {
     })
 
     describe('search', () => {
-      test('exact value > any value', () => {
+      it('ranks exact value higher than any value', () => {
         assertCompare(
           ['https://example.com/posts?q=hello', 'https://example.com/posts?q'],
           'https://example.com/posts?q=hello',
@@ -147,7 +148,7 @@ describe('rank', () => {
         )
       })
 
-      test('any value > key only', () => {
+      it('ranks any value higher than key only', () => {
         assertCompare(
           ['https://example.com/posts?q=', 'https://example.com/posts?q'],
           'https://example.com/posts?q=hello',
@@ -155,7 +156,7 @@ describe('rank', () => {
         )
       })
 
-      test('more constraints win', () => {
+      it('ranks more constraints higher', () => {
         assertCompare(
           ['https://example.com/posts?q=&a=', 'https://example.com/posts?q='],
           'https://example.com/posts?q=hello&a=1',
@@ -163,7 +164,7 @@ describe('rank', () => {
         )
       })
 
-      test('tie on different keys (same count)', () => {
+      it('ties on different keys with same count', () => {
         assertCompare(
           ['https://example.com/posts?q=', 'https://example.com/posts?a='],
           'https://example.com/posts?q=hello&a=1',
@@ -171,7 +172,7 @@ describe('rank', () => {
         )
       })
 
-      test('multiple exact values > single any value', () => {
+      it('ranks multiple exact values higher than single any value', () => {
         assertCompare(
           ['https://example.com/posts?q=hello&q=world', 'https://example.com/posts?q'],
           'https://example.com/posts?q=hello&q=world',
@@ -179,7 +180,7 @@ describe('rank', () => {
         )
       })
 
-      test('exact values count more than any values', () => {
+      it('ranks exact values higher than any values', () => {
         assertCompare(
           ['https://example.com/posts?q=hello&a=1', 'https://example.com/posts?q&a'],
           'https://example.com/posts?q=hello&a=1&b=2',
@@ -188,7 +189,7 @@ describe('rank', () => {
       })
     })
 
-    test('throws when comparing matches for different URLs', () => {
+    it('throws when comparing matches for different URLs', () => {
       let pattern = new RoutePattern('https://example.com/:path')
       let match1 = pattern.match('https://example.com/foo')
       let match2 = pattern.match('https://example.com/bar')
@@ -197,7 +198,7 @@ describe('rank', () => {
       assert.notEqual(match2, null)
 
       assert.throws(
-        () => Rank.compare(match1!, match2!),
+        () => Specificity.compare(match1!, match2!),
         /Cannot compare matches for different URLs/,
       )
     })

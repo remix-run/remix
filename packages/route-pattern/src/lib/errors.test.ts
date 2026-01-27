@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict'
-import test, { describe } from 'node:test'
+import { describe, it } from 'node:test'
 
 import dedent from 'dedent'
 
@@ -7,14 +7,14 @@ import { HrefError, ParseError } from './errors.ts'
 import { RoutePattern } from './route-pattern.ts'
 
 describe('ParseError', () => {
-  test('exposes type, source, and index properties', () => {
+  it('exposes type, source, and index properties', () => {
     let error = new ParseError('unmatched (', 'foo(bar', 3)
     assert.equal(error.type, 'unmatched (')
     assert.equal(error.source, 'foo(bar')
     assert.equal(error.index, 3)
   })
 
-  test('underlines the error indices', () => {
+  it('underlines the error indices', () => {
     let error = new ParseError('unmatched (', 'api/(v:major', 4)
     assert.equal(
       error.toString(),
@@ -30,7 +30,7 @@ describe('ParseError', () => {
 
 describe('HrefError', () => {
   describe('missing-hostname', () => {
-    test('shows error message with pattern', () => {
+    it('shows error message with pattern', () => {
       let pattern = new RoutePattern('https://*:8080/api')
       let error = new HrefError({
         type: 'missing-hostname',
@@ -48,7 +48,7 @@ describe('HrefError', () => {
   })
 
   describe('missing-params', () => {
-    test('shows missing param for single variant', () => {
+    it('shows missing param for single variant', () => {
       let pattern = new RoutePattern('https://example.com/:id')
       let error = new HrefError({
         type: 'missing-params',
@@ -69,7 +69,7 @@ describe('HrefError', () => {
       )
     })
 
-    test('shows missing params across multiple variants', () => {
+    it('shows missing params across multiple variants', () => {
       let pattern = new RoutePattern('https://example.com/:a/:b(/:c)')
       let error = new HrefError({
         type: 'missing-params',
@@ -91,7 +91,7 @@ describe('HrefError', () => {
       )
     })
 
-    test('shows missing dependent params', () => {
+    it('shows missing dependent params', () => {
       let pattern = new RoutePattern('https://example.com/:a(:b)-:a(:c)')
       let error = new HrefError({
         type: 'missing-params',
@@ -117,7 +117,7 @@ describe('HrefError', () => {
   })
 
   describe('missing-search-params', () => {
-    test('shows single missing search param', () => {
+    it('shows single missing search param', () => {
       let pattern = new RoutePattern('https://example.com/search?q=')
       let error = new HrefError({
         type: 'missing-search-params',
@@ -136,7 +136,7 @@ describe('HrefError', () => {
       )
     })
 
-    test('shows multiple missing search params', () => {
+    it('shows multiple missing search params', () => {
       let pattern = new RoutePattern('https://example.com/search?q=&sort=')
       let error = new HrefError({
         type: 'missing-search-params',
@@ -157,7 +157,7 @@ describe('HrefError', () => {
   })
 
   describe('nameless-wildcard', () => {
-    test('shows error message with pattern', () => {
+    it('shows error message with pattern', () => {
       let pattern = new RoutePattern('https://example.com/api/*/users')
       let error = new HrefError({
         type: 'nameless-wildcard',

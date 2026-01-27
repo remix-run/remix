@@ -8,11 +8,11 @@ import * as assert from 'node:assert/strict'
 let pattern = new RoutePattern('https://:tenant.example.com/:lang/docs/*')
 let match = pattern.match('https://acme.example.com/en/docs/api/routes')
 
-assert.deepStrictEqual(match.params, { tenant: 'acme', lang: 'en' })
-assert.deepStrictEqual(match.meta.hostname, [
+assert.deepEqual(match.params, { tenant: 'acme', lang: 'en' })
+assert.deepEqual(match.meta.hostname, [
   { type: ':', name: 'tenant', value: 'acme', begin: 0, end: 4 },
 ])
-assert.deepStrictEqual(match.meta.pathname, [
+assert.deepEqual(match.meta.pathname, [
   { type: ':', name: 'lang', value: 'en', begin: 0, end: 2 },
   { type: '*', name: '*', value: 'api/routes', begin: 8, end: 18 },
 ])
