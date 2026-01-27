@@ -1,4 +1,4 @@
-import type { Handle } from '@remix-run/component'
+import type { Handle } from 'remix/component'
 
 export function InterruptibleKeyframes(handle: Handle) {
   let box: HTMLDivElement

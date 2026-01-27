@@ -1,4 +1,4 @@
-import { defineInteraction, type Interaction } from '@remix-run/interaction'
+import { defineInteraction, type Interaction } from 'remix/interaction'
 
 /**
  * Dispatched when a pointer is released after dragging. Includes velocity

@@ -1,4 +1,4 @@
-import type { Handle, Props, RemixNode } from '@remix-run/component'
+import type { Handle, Props, RemixNode } from 'remix/component'
 
 let ease = 'cubic-bezier(0.26, 0.02, 0.23, 0.94)'
 

@@ -1,7 +1,7 @@
-import { createRoot, type Handle } from '@remix-run/component'
+import { createRoot, type Handle } from 'remix/component'
 
 import { dragRelease } from './drag-release.ts'
-import { spring, type SpringPreset } from '@remix-run/component'
+import { spring, type SpringPreset } from 'remix/component'
 
 interface TrailPoint {
   x: number

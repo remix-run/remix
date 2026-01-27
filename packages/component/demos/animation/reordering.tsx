@@ -1,5 +1,5 @@
-import { type Handle } from '@remix-run/component'
-import { spring } from '@remix-run/component'
+import { type Handle } from 'remix/component'
+import { spring } from 'remix/component'
 
 let initialOrder = ['#ff0088', '#dd00ee', '#9911ff', '#0d63f8']
 

@@ -1,4 +1,4 @@
-import type { Handle } from '@remix-run/component'
+import type { Handle } from 'remix/component'
 import { spring } from '../../src/lib/spring.ts'
 
 const STATES = {

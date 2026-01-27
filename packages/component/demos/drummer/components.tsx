@@ -1,4 +1,4 @@
-import type { Handle, RemixNode, Props } from '@remix-run/component'
+import type { Handle, RemixNode, Props } from 'remix/component'
 
 export function Layout() {
   return ({ children }: { children: RemixNode }) => (
