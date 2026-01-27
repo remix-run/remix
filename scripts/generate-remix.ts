@@ -55,7 +55,6 @@ await updateRemixPackage()
 // Generate change files
 await outputExportsChangeFiles(remixPackageJson.exports)
 await outputDependencyChangeFiles()
-await copySubPackageChangeFiles()
 
 // Implementations
 async function getRemixRunPackages() {
@@ -331,39 +330,6 @@ async function outputDependencyChangeFiles() {
   console.log()
   console.log(`${exists ? 'Updated' : 'Created'} dependencies change file:`)
   console.log(`   - ${path.relative(process.cwd(), changeFilePath)}`)
-}
-
-async function copySubPackageChangeFiles() {
-  if (remixRunPackages.some((pkg) => pkg.changeFiles.length > 0)) {
-    let copiedFiles: string[] = []
-    for (let packageInfo of remixRunPackages) {
-      for (let changeFile of packageInfo.changeFiles) {
-        let [changeType, ...rest] = path.basename(changeFile).split('.')
-        let changeFileName = rest.join('.')
-        let packageShortName = packageInfo.name.replace('@remix-run/', '')
-
-        // Insert the sub-package name in the file so sorting will group changes by sub-package
-        let destChangeFilePath = path.join(
-          remixChangesDir,
-          `${changeType}.${packageShortName}.${changeFileName}`,
-        )
-
-        let exists = await fileExists(destChangeFilePath)
-        if (!exists) {
-          await fs.copyFile(changeFile, destChangeFilePath)
-          copiedFiles.push(destChangeFilePath)
-        }
-      }
-    }
-
-    if (copiedFiles.length > 0) {
-      console.log()
-      console.log('Copied change files:')
-      for (let file of copiedFiles) {
-        console.log(`   - ${path.relative(process.cwd(), file)}`)
-      }
-    }
-  }
 }
 
 async function fileExists(filePath: string) {
