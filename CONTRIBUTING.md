@@ -128,7 +128,7 @@ Tags and GitHub releases are created automatically by the publish workflow after
 
 ### Prerelease Mode for `remix`
 
-The `remix` package supports prerelease mode via an optional `.changes/prerelease.json` file:
+The `remix` package supports prerelease mode via an optional `.changes/config.json` file:
 
 ```json
 {
@@ -146,7 +146,7 @@ While in prerelease mode, add change files as normal. The prerelease counter inc
 
 To transition between channels (e.g. `alpha` → `beta`):
 
-1. Update `.changes/prerelease.json` to the new channel
+1. Update `.changes/config.json` to the new channel
 2. Add a change file describing the transition
 
 Version resets to the new channel (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The bump type is for changelog categorization only—by convention, use `patch`.
@@ -155,7 +155,7 @@ Version resets to the new channel (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The
 
 To release the stable version:
 
-1. Delete `.changes/prerelease.json`
+1. Delete `.changes/config.json`
 2. Add a change file describing the stable release
 
 The prerelease suffix is stripped (e.g. `3.0.0-rc.7` → `3.0.0`). The bump type is for changelog categorization only—by convention, use `major` for a major release announcement.

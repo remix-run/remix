@@ -3,7 +3,7 @@
  *
  * This script uses pnpm publish with --report-summary, reads the summary file,
  * and creates Git tags + GitHub releases. When the remix package is in prerelease
- * mode (has .changes/prerelease.json), it publishes in two phases: all other
+ * mode (has .changes/config.json), it publishes in two phases: all other
  * packages as "latest", then remix with the "next" tag.
  *
  * This script is designed for CI use. For previewing releases, use `pnpm changes:preview`.
