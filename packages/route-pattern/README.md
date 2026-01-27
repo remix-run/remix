@@ -82,7 +82,7 @@ Match URLs against multiple patterns. Each pattern can have associated data (han
 ```ts
 import { ArrayMatcher as Matcher } from '@remix-run/route-pattern'
 
-// Any data type you want!      👇
+// Any data type you want!  👇
 let matcher = new Matcher<string>()
 
 matcher.add('/', 'home')
