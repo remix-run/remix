@@ -18,7 +18,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "postinstall": "test -n \"$CI\" || pnpm --filter @remix-run/component exec playwright install",
+    "postinstall": "test -n \"$CI\" || (pnpm --filter @remix-run/component exec playwright install && pnpm --filter @remix-run/dev-assets-middleware exec playwright install)",
     "build": "pnpm -r build",
     "changes:preview": "node ./scripts/changes-preview.ts",
     "changes:validate": "node ./scripts/changes-validate.ts",

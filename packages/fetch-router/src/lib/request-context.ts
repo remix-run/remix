@@ -8,6 +8,35 @@ import {
 } from './request-methods.ts'
 
 /**
+ * An entry in the assets manifest, representing a single entry point.
+ */
+export interface AssetEntry {
+  /**
+   * The URL to the entry point's main chunk.
+   */
+  href: string
+  /**
+   * All chunks needed for this entry (for module preloading).
+   * In dev mode, this is just `[href]`. In prod mode, this includes
+   * all statically imported chunks.
+   */
+  chunks: string[]
+}
+
+/**
+ * The assets API for resolving entry points to their URLs.
+ */
+export interface Assets {
+  /**
+   * Get the asset entry for a given entry point path.
+   *
+   * @param entryPath The path to the entry point (e.g., 'entry.tsx')
+   * @returns The asset entry with href and chunks, or `null` if not found
+   */
+  get(entryPath: string): AssetEntry | null
+}
+
+/**
  * A context object that contains information about the current request. Every request
  * handler or middleware in the lifecycle of a request receives the same context object.
  */
@@ -124,6 +153,29 @@ export class RequestContext<
   get sessionStarted(): boolean {
     return this.#session != null
   }
+
+  /**
+   * The assets API for resolving entry points to their URLs.
+   *
+   * Note: This is only available when using the `assets()` middleware.
+   */
+  get assets(): Assets {
+    if (this.#assets == null) {
+      console.warn(
+        'Assets middleware not configured. Use devAssets() from @remix-run/dev-assets-middleware.',
+      )
+
+      return { get: () => null }
+    }
+
+    return this.#assets
+  }
+
+  set assets(value: Assets) {
+    this.#assets = value
+  }
+
+  #assets?: Assets
 
   /**
    * Shared application-specific storage.

@@ -282,7 +282,42 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
     return contextValue
   }
 
-  return { render, remove, setScheduleUpdate, frame: config.frame, getContextValue }
+  function reset() {
+    getContent = null
+  }
+
+  return { render, remove, setScheduleUpdate, frame: config.frame, getContextValue, reset, handle }
+}
+
+// Track handle to component mapping for HMR
+let handleToComponent = new WeakMap<Handle<any>, ReturnType<typeof createComponent>>()
+
+export function registerComponent(
+  handle: Handle<any>,
+  comp: ReturnType<typeof createComponent>,
+) {
+  handleToComponent.set(handle, comp)
+}
+
+/**
+ * Requests a component to remount (clear setup and re-initialize).
+ *
+ * Flow:
+ * 1. Clear setup state (reset getContent)
+ * 2. Abort any pending tasks
+ * 3. Re-render with new state
+ *
+ * Useful for HMR when the setup scope changes and state needs to reset.
+ * @param handle The handle of the component to remount
+ */
+export function requestRemount(handle: Handle<any>): void {
+  let componentHandle = handleToComponent.get(handle)
+  if (!componentHandle) {
+    console.warn('requestRemount called with unknown handle')
+    return
+  }
+  componentHandle.reset()
+  handle.update()
 }
 
 export function Frame(handle: Handle<FrameHandle>) {

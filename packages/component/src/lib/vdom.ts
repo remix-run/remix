@@ -1,6 +1,13 @@
 import { createContainer, type EventsContainer } from '@remix-run/interaction'
 import type { Component, ComponentHandle, FrameHandle } from './component.ts'
-import { createComponent, Catch, Fragment, Frame, createFrameHandle } from './component.ts'
+import {
+  createComponent,
+  registerComponent,
+  Catch,
+  Fragment,
+  Frame,
+  createFrameHandle,
+} from './component.ts'
 import { invariant } from './invariant.ts'
 import { createDocumentState } from './document-state.ts'
 import { processStyle, createStyleManager, normalizeCssValue } from './style/index.ts'
@@ -937,7 +944,7 @@ function diffComponent(
   cursor?: Node | null,
 ) {
   if (curr === null) {
-    next._handle = createComponent({
+    let handle = createComponent({
       id: `e${++fixmeIdCounter}`,
       frame,
       type: next.type,
@@ -948,6 +955,9 @@ function diffComponent(
         return findContextFromAncestry(vParent, type)
       },
     })
+    next._handle = handle
+    // Register for HMR requestRemount support
+    registerComponent(handle.handle, handle)
 
     renderComponent(next._handle, null, next, domParent, frame, scheduler, vParent, anchor, cursor)
     return

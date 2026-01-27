@@ -4,6 +4,7 @@ export { createElement } from './lib/create-element.ts'
 
 export {
   Fragment,
+  requestRemount,
   // Catch,
   // Frame,
 } from './lib/component.ts'
