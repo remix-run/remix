@@ -167,38 +167,42 @@ describe('interaction', () => {
     })
 
     describe('error handling', () => {
-      it('calls onError when a listener throws synchronously', () => {
+      it('dispatches error event when a listener throws synchronously', () => {
         let target = new EventTarget()
         let mock = vi.fn()
         let error = new Error('test')
-        let container = createContainer(target, { onError: mock })
+        target.addEventListener('error', mock)
+        let container = createContainer(target)
         container.set({
           test: () => {
             throw error
           },
         })
         target.dispatchEvent(new Event('test'))
-        expect(mock).toHaveBeenCalledWith(error)
+        expect(mock).toHaveBeenCalledTimes(1)
+        expect((mock.mock.calls[0][0] as ErrorEvent).error).toBe(error)
       })
-    })
 
-    it('calls onError when a listener throws asynchronously', async () => {
-      let target = new EventTarget()
-      let mock = vi.fn()
-      let error = new Error('test')
-      createContainer(target, { onError: mock }).set({
-        async test() {
-          // ensure the error is thrown asynchronously (next microtask)
-          await Promise.resolve()
-          throw error
-        },
+      it('dispatches error event when a listener throws asynchronously', async () => {
+        let target = new EventTarget()
+        let mock = vi.fn()
+        let error = new Error('test')
+        target.addEventListener('error', mock)
+        createContainer(target).set({
+          async test() {
+            // ensure the error is thrown asynchronously (next microtask)
+            await Promise.resolve()
+            throw error
+          },
+        })
+        target.dispatchEvent(new Event('test'))
+        // let the listener's awaited microtask run and reject
+        await Promise.resolve()
+        // run the container's dispatchError handler
+        await Promise.resolve()
+        expect(mock).toHaveBeenCalledTimes(1)
+        expect((mock.mock.calls[0][0] as ErrorEvent).error).toBe(error)
       })
-      target.dispatchEvent(new Event('test'))
-      // let the listener's awaited microtask run and reject
-      await Promise.resolve()
-      // run the container's result.catch(onError) handler
-      await Promise.resolve()
-      expect(mock).toHaveBeenCalledWith(error)
     })
 
     describe('types', () => {

@@ -1,0 +1,1 @@
+BREAKING CHANGE: Removed `onError` option from `createContainer`. Errors thrown in event listeners now dispatch an `ErrorEvent` on the target element with `bubbles: true`, allowing them to propagate up the DOM tree. Also removed the `raise` method from the `Interaction` interface.

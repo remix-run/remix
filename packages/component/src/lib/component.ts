@@ -32,19 +32,6 @@ export interface Handle<C = Record<string, never>> {
   queueTask(task: Task): void
 
   /**
-   * Raises an error the closest Catch boundary. Useful when running outside
-   * of a framework-controlled scope (ie outside of rendering or events).
-   *
-   * @param error The raised error
-   *
-   * @example
-   * ```tsx
-   * handle.raise(new Error("Oops"))
-   * ```
-   */
-  raise(error: unknown): void
-
-  /**
    * The component's closest frame
    */
   frame: FrameHandle
@@ -154,17 +141,11 @@ export type { RemixNode } from './jsx.ts'
 
 // Handle is already exported as an interface above, no need to re-export
 
-export interface CatchProps {
-  children?: RemixNode
-  fallback?: RemixNode | ((error: Error) => RemixNode)
-}
-
 export interface FragmentProps {
   children?: RemixNode
 }
 
 export interface BuiltinElements {
-  Catch: CatchProps
   Fragment: FragmentProps
   Frame: FrameProps
 }
@@ -175,7 +156,6 @@ type ComponentConfig = {
   id: string
   type: Function
   frame: FrameHandle
-  raise: (error: unknown) => void
   getContext: (type: Component) => unknown
 }
 
@@ -215,7 +195,6 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
     queueTask: (task: Task) => {
       taskQueue.push(task)
     },
-    raise: config.raise,
     frame: config.frame,
     context: context,
     get signal() {
@@ -291,10 +270,6 @@ export function Frame(handle: Handle<FrameHandle>) {
 
 export function Fragment() {
   return (_: FragmentProps) => null // reconciler renders
-}
-
-export function Catch() {
-  return (_: CatchProps) => null // reconciler renders
 }
 
 export function createFrameHandle(
