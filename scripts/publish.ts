@@ -24,7 +24,7 @@ import * as path from 'node:path'
 import { tagExists } from './utils/git.ts'
 import { createRelease } from './utils/github.ts'
 import { getRootDir, logAndExec } from './utils/process.ts'
-import { readRemixPrereleaseConfig, getChangelogEntry } from './utils/changes.ts'
+import { readRemixReleaseConfig, getChangelogEntry } from './utils/changes.ts'
 import { getAllPackageDirNames, getPackageFile } from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
 
@@ -195,15 +195,15 @@ async function main() {
   }
 
   // Check if remix is in prerelease mode
-  let remixPrereleaseConfig = readRemixPrereleaseConfig()
+  let remixReleaseConfig = readRemixReleaseConfig()
   let remixPrereleaseChannel: string | null = null
 
-  if (remixPrereleaseConfig.exists) {
-    if (!remixPrereleaseConfig.valid) {
-      console.error('Error reading remix prerelease config:', remixPrereleaseConfig.error)
+  if (remixReleaseConfig.exists) {
+    if (!remixReleaseConfig.valid) {
+      console.error('Error reading remix prerelease config:', remixReleaseConfig.error)
       process.exit(1)
     }
-    remixPrereleaseChannel = remixPrereleaseConfig.config.channel
+    remixPrereleaseChannel = remixReleaseConfig.config.channel
     console.log(`Remix is in prerelease mode (channel: ${remixPrereleaseChannel})`)
     console.log('Publishing in two phases: other packages as "latest", then remix as "next"\n')
   }
