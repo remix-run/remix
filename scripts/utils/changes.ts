@@ -242,7 +242,14 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
 
   // Read all files in .changes directory
   let files = fs.readdirSync(changesDir)
-  let changeFileNames = files.filter((file) => file !== 'README.md' && file !== configFileName)
+  let changeFileNames = files.filter(
+    (file) =>
+      file !== 'README.md' &&
+      file !== configFileName &&
+      // Only remix supports skip.* files, so we can exclude unneeded change files
+      // from sub-packages
+      (packageDirName !== 'remix' || !file.startsWith('skip.')),
+  )
   let hasChangeFiles = changeFileNames.filter((f) => f.endsWith('.md')).length > 0
 
   // Validate config.json / version consistency
