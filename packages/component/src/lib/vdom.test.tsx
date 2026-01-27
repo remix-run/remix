@@ -38,15 +38,67 @@ describe('vnode rendering', () => {
   })
 
   describe('css props', () => {
-    it('adds class and styles', async () => {
+    it('adds data-css attribute and styles', async () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       root.render(<div css={{ color: 'rgb(255, 0, 0)' }}>Hello</div>)
       let div = container.querySelector('div')
       invariant(div instanceof HTMLDivElement)
-      expect(div.className).toMatch(/^rmx-/)
+      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
       document.body.appendChild(container)
       expect(getComputedStyle(div).color).toBe('rgb(255, 0, 0)')
+    })
+
+    it('css prop is isolated from className', async () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <div css={{ color: 'rgb(255, 0, 0)' }} className="custom-class">
+          Hello
+        </div>,
+      )
+      let div = container.querySelector('div')
+      invariant(div instanceof HTMLDivElement)
+      // className is completely separate from css prop
+      expect(div.className).toBe('custom-class')
+      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
+    })
+
+    it('css prop is isolated from class', async () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <div css={{ color: 'rgb(0, 255, 0)' }} class="another-class">
+          Hello
+        </div>,
+      )
+      let div = container.querySelector('div')
+      invariant(div instanceof HTMLDivElement)
+      // class is completely separate from css prop
+      expect(div.className).toBe('another-class')
+      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
+    })
+
+    it('className updates independently of css prop', async () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <div css={{ color: 'rgb(255, 0, 0)' }} className="first">
+          Hello
+        </div>,
+      )
+      let div = container.querySelector('div')
+      invariant(div instanceof HTMLDivElement)
+      expect(div.className).toBe('first')
+      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
+
+      root.render(
+        <div css={{ color: 'rgb(255, 0, 0)' }} className="second">
+          Hello
+        </div>,
+      )
+      expect(div.className).toBe('second')
+      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
     })
   })
 
