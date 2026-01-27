@@ -1,20 +1,74 @@
-# Create "installable" PR preview branches
+# Create "installable" preview branches
 #
+# Commits to `main` push builds to a `next` branch:
+#   pnpm install "remix-run/remix#next&path:packages/remix"
+#
+# Pull Requests create `preview/{number}` branches:
 #   pnpm install "remix-run/remix#preview/12345&path:packages/remix"
+#
+# Can also be dispatched manually with base/installable branches to provide
+# `experimental` branches from PRs or otherwise.
 
-name: PR Preview
+name: Preview Builds
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
+    inputs:
+      baseBranch:
+        description: Base Branch
+        required: true
+      installableBranch:
+        description: Installable Branch
+        required: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  preview:
-    if: github.repository == 'remix-run/remix'
+  ## Pushes to main or manually dispatched experimental previews
+  branch:
+    if: github.repository == 'remix-run/remix' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baseBranch || 'main' }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup git
+        run: |
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+
+      - name: Build installable branch
+        run: pnpm run setup-installable-branch ${{ inputs.installableBranch || 'next' }}
+
+      - name: Push changes
+        run: |
+          git push --force --set-upstream origin ${{ inputs.installableBranch || 'next' }}
+          echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
+
+  ## Pull Request Handling
+  pr-preview:
+    if: github.repository == 'remix-run/remix' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

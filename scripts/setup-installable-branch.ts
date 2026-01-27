@@ -5,9 +5,9 @@ import { logAndExec } from './utils/process.ts'
 
 /**
  * This script prepares a base branch (usually `main`) to be PNPM-installable
- * directly from GitHub via a new branch (usually `nightly`):
+ * directly from GitHub via a new branch (usually `next`):
  *
- *   pnpm install "remix-run/remix#nightly&path:packages/remix"
+ *   pnpm install "remix-run/remix#next&path:packages/remix"
  *
  * To do this, we can run a build, make some minor changes to the repo, and
  * commit the build + changes to the new branch. These changes would never be
@@ -22,7 +22,7 @@ import { logAndExec } from './utils/process.ts'
  *  - Copies all `publishConfig`'s down so we get `exports` from `dist/` instead of `src/`
  *  - Commits the changes
  *
- * Then, after pushing, `pnpm install "remix-run/remix#nightly&path:packages/remix"`
+ * Then, after pushing, `pnpm install "remix-run/remix#next&path:packages/remix"`
  * sees the `remix` nested deps and they all point to github with similar URLs so
  * they install as nested deps the same way.
  */
@@ -38,7 +38,7 @@ let { values, positionals } = util.parseArgs({
 })
 
 // Use first positional argument or fall back to --branch flag or default
-let installableBranch = positionals[0] || values.branch || 'nightly'
+let installableBranch = positionals[0] || values.branch || 'next'
 
 // Refuse to overwrite existing branches except for cron-driven workflow branches
 let allowedOverwrites = ['nightly']
