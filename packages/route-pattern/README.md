@@ -3,7 +3,7 @@
 Fast URL matching and href generation with type safe params.
 
 ```ts
-import { RoutePattern } from "@remix-run/route-pattern"
+import { RoutePattern } from '@remix-run/route-pattern'
 
 let blog = new RoutePattern('blog/:slug')
 blog.match('https://remix.run/blog/v3') // { params: { slug: 'v3' } }
@@ -12,6 +12,7 @@ blog.href({ slug: 'v3' }) // '/blog/v3'
 let api = new RoutePattern('api(/v:version)/*path')
 api.match('https://api.com/api/v2/users/profile') // { params: { version: '2', path: 'users/profile' } }
 api.href({ version: '2', path: 'users/profile' }) // '/api/v2/users/profile'
+api.href({ path: 'users/profile' }) // '/api/users/profile'
 
 let cdn = new RoutePattern('http(s)://:region.cdn.com/assets/*file.:ext')
 cdn.match('https://us-west.cdn.com/assets/images/logo.png') // { params: { region: 'us-west', file: 'images/logo', ext: 'png' } }
@@ -70,29 +71,28 @@ new RoutePattern('search?q=routing') // requires ?q=routing exactly
 
 ```ts
 new RoutePattern('blog/:slug') // omits protocol/hostname, matches any origin
-new RoutePattern('://example.com/api') // omits protocol, matches http and https  
+new RoutePattern('://example.com/api') // omits protocol, matches http and https
 new RoutePattern('search?q') // allows additional search params beyond ?q
 ```
-
 
 ## Matchers
 
 Match URLs against multiple patterns. Each pattern can have associated data (handlers, route IDs, metadata, etc.):
 
 ```ts
-import { ArrayMatcher as Matcher } from "@remix-run/route-pattern"
+import { ArrayMatcher as Matcher } from '@remix-run/route-pattern'
 
 // Any data type you want!      👇
-let router = new Matcher<string>()
+let matcher = new Matcher<string>()
 
-router.add('/', 'home')
-router.add('blog/:slug', 'blog-post')
-router.add('api(/v:version)/*path', 'api')
+matcher.add('/', 'home')
+matcher.add('blog/:slug', 'blog-post')
+matcher.add('api(/v:version)/*path', 'api')
 
-router.match('https://example.com/blog/v3')
+matcher.match('https://example.com/blog/v3')
 // { pattern: 'blog/:slug', params: { slug: 'v3' }, data: 'blog-post' }
 
-router.match('https://example.com/api/v2/users/profile')
+matcher.match('https://example.com/api/v2/users/profile')
 // { pattern: 'api(/v:version)/*path', params: { version: '2', path: 'users/profile' }, data: 'api' }
 ```
 
@@ -107,7 +107,7 @@ Both implement the `Matcher` API so you can swap them out easily:
 
 ```ts
 // import { ArrayMatcher as Matcher } from "@remix-run/route-pattern"
-import { TrieMatcher as Matcher } from "@remix-run/route-pattern"
+import { TrieMatcher as Matcher } from '@remix-run/route-pattern'
 ```
 
 ## Specificity
@@ -117,15 +117,15 @@ When multiple patterns match a URL, the most specific pattern wins.
 **Pathname specificity** (left-to-right):
 
 ```ts
-import { ArrayMatcher } from "@remix-run/route-pattern"
+import { ArrayMatcher } from '@remix-run/route-pattern'
 
-let router = new ArrayMatcher<string>()
-router.add('blog/hello', 'static')
-router.add('blog/:slug', 'variable')    
-router.add('blog/*path', 'wildcard')
-router.add('*path', 'catch-all')
+let matcher = new ArrayMatcher<string>()
+matcher.add('blog/hello', 'static')
+matcher.add('blog/:slug', 'variable')
+matcher.add('blog/*path', 'wildcard')
+matcher.add('*path', 'catch-all')
 
-router.match('https://example.com/blog/hello')
+matcher.match('https://example.com/blog/hello')
 // { pattern: 'blog/hello', params: {}, data: 'static' }
 // 'blog/hello' wins: static segments beat variables/wildcards at each position
 ```
