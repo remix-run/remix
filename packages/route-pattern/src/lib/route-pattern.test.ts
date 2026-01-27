@@ -287,10 +287,7 @@ describe('RoutePattern', () => {
 
   describe('join', () => {
     function assertJoin(a: string, b: string, expected: string) {
-      assert.deepEqual(
-        new RoutePattern(a).join(new RoutePattern(b)),
-        new RoutePattern(expected),
-      )
+      assert.deepEqual(new RoutePattern(a).join(new RoutePattern(b)), new RoutePattern(expected))
     }
 
     it('joins protocol', () => {
