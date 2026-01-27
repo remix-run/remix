@@ -24,6 +24,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./specificity": "./src/specificity.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -31,6 +32,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./specificity": {
+        "types": "./dist/specificity.d.ts",
+        "default": "./dist/specificity.js"
       },
       "./package.json": "./package.json"
     }
