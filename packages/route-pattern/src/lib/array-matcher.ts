@@ -1,6 +1,6 @@
-import { RoutePattern } from '../route-pattern.ts'
+import { RoutePattern } from './route-pattern.ts'
 import type { Matcher } from './matcher.ts'
-import * as Specificity from '../specificity.ts'
+import * as Specificity from './specificity.ts'
 
 export class ArrayMatcher<data> implements Matcher<data> {
   #patterns: Array<{ pattern: RoutePattern; data: data }> = []

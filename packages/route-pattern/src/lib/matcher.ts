@@ -1,4 +1,4 @@
-import type { RoutePattern } from '../route-pattern.ts'
+import type { RoutePattern } from './route-pattern.ts'
 
 export namespace Matcher {
   export type Match<source extends string = string, data = unknown> = RoutePattern.Match<source> & {

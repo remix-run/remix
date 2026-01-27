@@ -1,11 +1,11 @@
-import type { PartPattern } from '../part-pattern.ts'
-import { RoutePattern } from '../route-pattern.ts'
-import type { Variant } from '../variant.ts'
-import * as RE from '../regexp.ts'
-import { unreachable } from '../errors.ts'
-import * as Search from '../route-pattern/search.ts'
-import type { Matcher } from './matcher'
-import * as Specificity from '../specificity.ts'
+import type { PartPattern } from './part-pattern.ts'
+import { RoutePattern } from './route-pattern.ts'
+import type { Variant } from './variant.ts'
+import * as RE from './regexp.ts'
+import { unreachable } from './errors.ts'
+import * as Search from './route-pattern/search.ts'
+import type { Matcher } from './matcher.ts'
+import * as Specificity from './specificity.ts'
 
 export class TrieMatcher<data = unknown> implements Matcher<data> {
   trie: Trie<data>
