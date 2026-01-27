@@ -1,5 +1,5 @@
 import { PartPattern } from '../part-pattern.ts'
-import type { Span } from '../span.ts'
+import type { Span } from './split.ts'
 
 export function parse(source: string, span: Span | null): PartPattern | null {
   if (!span) return null

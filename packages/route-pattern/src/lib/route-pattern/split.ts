@@ -1,6 +1,6 @@
 /* eslint-disable jsdoc/require-returns */
 /* eslint-disable jsdoc/require-param */
-import type { Span } from '../span'
+export type Span = [begin: number, end: number]
 
 export type SplitResult = {
   protocol: Span | null
