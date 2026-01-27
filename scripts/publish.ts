@@ -197,6 +197,7 @@ async function main() {
   // Check if remix is in prerelease mode
   let remixReleaseConfig = readRemixReleaseConfig()
   let remixPrereleaseChannel: string | null = null
+  let includeRemixRelease = false
 
   if (remixReleaseConfig.exists) {
     if (!remixReleaseConfig.valid) {
@@ -204,6 +205,7 @@ async function main() {
       process.exit(1)
     }
     remixPrereleaseChannel = remixReleaseConfig.config.channel
+    includeRemixRelease = remixReleaseConfig.config.include
     console.log(`Remix is in prerelease mode (channel: ${remixPrereleaseChannel})`)
     console.log('Publishing in two phases: other packages as "latest", then remix as "next"\n')
   }
@@ -213,7 +215,7 @@ async function main() {
 
   let published: PublishedPackage[] = []
 
-  if (remixPrereleaseChannel) {
+  if (includeRemixRelease && remixPrereleaseChannel) {
     let publishCommands = [
       // Phase 1: Publish everything in `packages` except remix (with --report-summary so we know what was published)
       'pnpm publish --recursive --filter "./packages/*" --filter "!remix" --access public --no-git-checks --report-summary',
@@ -234,9 +236,13 @@ async function main() {
       }
     }
   } else {
-    // Single-phase publish: everything as latest
+    // Single-phase publish: everything as latest (including remix)
     let publishCommand =
       'pnpm publish --recursive --filter "./packages/*" --access public --no-git-checks --report-summary'
+
+    if (!includeRemixRelease) {
+      publishCommand += ' --filter "!remix"'
+    }
 
     if (dryRun) {
       console.log('Would run:')

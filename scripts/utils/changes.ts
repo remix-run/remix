@@ -8,6 +8,7 @@ import {
   packageNameToDirectoryName,
 } from './packages.ts'
 import { fileExists, readFile, readJson } from './fs.ts'
+import { colorize, colors } from './color.ts'
 
 const bumpTypes = ['major', 'minor', 'patch'] as const
 type BumpType = (typeof bumpTypes)[number]
@@ -429,12 +430,30 @@ type ParsedChanges =
  * Parses and validates all change files across all packages.
  * Returns releases if valid, or errors if invalid.
  */
-export function parseAllChangeFiles(): ParsedChanges {
+export function parseAllChangeFiles(ignoreRemixIncludeConfig = false): ParsedChanges {
   let packageDirNames = getAllPackageDirNames()
   let releases: PackageRelease[] = []
   let errors: ValidationError[] = []
 
   for (let packageDirName of packageDirNames) {
+    // Respect remix `include` config
+    if (packageDirName === 'remix' && !ignoreRemixIncludeConfig) {
+      let remixReleaseConfig = readRemixReleaseConfig()
+      if (remixReleaseConfig.exists) {
+        if (!remixReleaseConfig.valid) {
+          errors.push({
+            packageDirName,
+            file: configFilePath,
+            error: remixReleaseConfig.error,
+          })
+          continue
+        } else if (remixReleaseConfig.config.include == false) {
+          console.log('Skipping `remix` package due to release config `include: false`')
+          continue
+        }
+      }
+    }
+
     let parsed = parsePackageChanges(packageDirName)
 
     if (!parsed.valid) {

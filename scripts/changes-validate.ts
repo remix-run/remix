@@ -39,7 +39,8 @@ function main() {
 
   // Validate change files
   console.log('Validating change files...\n')
-  let result = parseAllChangeFiles()
+  // Always validate remix even if it's set to include:false
+  let result = parseAllChangeFiles(true)
 
   if (!result.valid) {
     hasErrors = true
