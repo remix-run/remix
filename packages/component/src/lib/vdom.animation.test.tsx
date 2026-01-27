@@ -313,11 +313,7 @@ describe('animate', () => {
       }
 
       function App() {
-        return () => (
-          <div>
-            {state ? <Circle key="filled" filled /> : <Circle key="outline" />}
-          </div>
-        )
+        return () => <div>{state ? <Circle key="filled" filled /> : <Circle key="outline" />}</div>
       }
 
       root.render(<App />)

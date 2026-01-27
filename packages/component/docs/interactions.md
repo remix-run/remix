@@ -17,7 +17,15 @@ import { arrowUp, arrowDown, arrowLeft, arrowRight, space } from '@remix-run/int
 Use them like any event type:
 
 ```tsx
-<button on={{ [press]() { doAction() } }}>Action</button>
+<button
+  on={{
+    [press]() {
+      doAction()
+    },
+  }}
+>
+  Action
+</button>
 ```
 
 ## When to Create Custom Interactions
@@ -56,10 +64,7 @@ export class DragReleaseEvent extends Event {
   velocityX: number
   velocityY: number
 
-  constructor(
-    type: typeof dragRelease,
-    init: { velocityX: number; velocityY: number },
-  ) {
+  constructor(type: typeof dragRelease, init: { velocityX: number; velocityY: number }) {
     super(type, { bubbles: true, cancelable: true })
     this.velocityX = init.velocityX
     this.velocityY = init.velocityY
@@ -92,9 +97,7 @@ function DragRelease(handle: Interaction) {
       isTracking = false
 
       // Dispatch the custom event
-      target.dispatchEvent(
-        new DragReleaseEvent(dragRelease, { velocityX, velocityY }),
-      )
+      target.dispatchEvent(new DragReleaseEvent(dragRelease, { velocityX, velocityY }))
     },
   })
 }

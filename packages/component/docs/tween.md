@@ -43,10 +43,10 @@ Built-in easing curves matching CSS timing functions:
 ```tsx
 import { easings } from '@remix-run/component'
 
-easings.linear    // { x1: 0, y1: 0, x2: 1, y2: 1 }
-easings.ease      // { x1: 0.25, y1: 0.1, x2: 0.25, y2: 1 }
-easings.easeIn    // { x1: 0.42, y1: 0, x2: 1, y2: 1 }
-easings.easeOut   // { x1: 0, y1: 0, x2: 0.58, y2: 1 }
+easings.linear // { x1: 0, y1: 0, x2: 1, y2: 1 }
+easings.ease // { x1: 0.25, y1: 0.1, x2: 0.25, y2: 1 }
+easings.easeIn // { x1: 0.42, y1: 0, x2: 1, y2: 1 }
+easings.easeOut // { x1: 0, y1: 0, x2: 0.58, y2: 1 }
 easings.easeInOut // { x1: 0.42, y1: 0, x2: 0.58, y2: 1 }
 ```
 
@@ -108,7 +108,15 @@ function AnimatedValue(handle: Handle) {
   return () => (
     <div>
       <div style={{ transform: `translateX(${value}px)` }}>Moving</div>
-      <button on={{ press() { animateTo(200) } }}>Animate</button>
+      <button
+        on={{
+          press() {
+            animateTo(200)
+          },
+        }}
+      >
+        Animate
+      </button>
     </div>
   )
 }
@@ -150,9 +158,9 @@ Creates a generator that interpolates between values over time.
 
 ```ts
 interface TweenOptions {
-  from: number      // Starting value
-  to: number        // Ending value
-  duration: number  // Duration in milliseconds
+  from: number // Starting value
+  to: number // Ending value
+  duration: number // Duration in milliseconds
   curve: BezierCurve // Easing curve
 }
 
@@ -170,13 +178,13 @@ interface BezierCurve {
 
 Object containing preset bezier curves:
 
-| Preset | Description |
-|--------|-------------|
-| `linear` | No easing, constant speed |
-| `ease` | Default CSS ease |
-| `easeIn` | Slow start, fast end |
-| `easeOut` | Fast start, slow end |
-| `easeInOut` | Slow start and end |
+| Preset      | Description               |
+| ----------- | ------------------------- |
+| `linear`    | No easing, constant speed |
+| `ease`      | Default CSS ease          |
+| `easeIn`    | Slow start, fast end      |
+| `easeOut`   | Fast start, slow end      |
+| `easeInOut` | Slow start and end        |
 
 ## When to Use
 
