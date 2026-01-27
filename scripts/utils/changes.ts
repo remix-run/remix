@@ -90,6 +90,15 @@ export function readRemixReleaseConfig(): ParsedRemixReleaseConfig {
 }
 
 /**
+ * Writes the remix package's .changes/config.json file
+ */
+export function writeRemixReleaseConfig(newConfig: RemixReleaseConfig) {
+  let remixPackagePath = getPackagePath('remix')
+  let releaseJsonPath = path.join(remixPackagePath, configFilePath)
+  fs.writeFileSync(releaseJsonPath, JSON.stringify(newConfig, null, 2) + '\n', 'utf-8')
+}
+
+/**
  * Extracts the prerelease identifier from a version string (e.g., "alpha" from "3.0.0-alpha.5")
  */
 function getPrereleaseIdentifier(version: string): string | null {

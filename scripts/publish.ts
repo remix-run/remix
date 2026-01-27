@@ -24,7 +24,11 @@ import * as path from 'node:path'
 import { tagExists } from './utils/git.ts'
 import { createRelease } from './utils/github.ts'
 import { getRootDir, logAndExec } from './utils/process.ts'
-import { readRemixReleaseConfig, getChangelogEntry } from './utils/changes.ts'
+import {
+  readRemixReleaseConfig,
+  getChangelogEntry,
+  writeRemixReleaseConfig,
+} from './utils/changes.ts'
 import { getAllPackageDirNames, getPackageFile } from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
 
@@ -359,6 +363,23 @@ async function main() {
     }
     console.error('\nYou may need to create these releases manually.')
     process.exit(1)
+  }
+
+  // If Remix was published, set the include flag back to false
+  if (
+    remixReleaseConfig.exists &&
+    remixReleaseConfig.valid &&
+    remixReleaseConfig.config.include &&
+    published.some((pkg) => pkg.packageName === 'remix')
+  ) {
+    console.log('\nUpdating remix release config to set include: false...')
+    writeRemixReleaseConfig({
+      channel: remixReleaseConfig.config.channel,
+      include: false,
+    })
+    logAndExec(`git add packages/remix/.changes/config.json`)
+    logAndExec(`git commit -m "chore: set remix release config include:false"`)
+    logAndExec('git push')
   }
 
   console.log('\n✅ Done.')
