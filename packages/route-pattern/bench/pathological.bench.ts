@@ -1,5 +1,5 @@
 import { bench, describe } from 'vitest'
-import { ArrayMatcher } from '../src'
+import { ArrayMatcher } from '@remix-run/route-pattern'
 
 function generateRoutes(): string[] {
   let routes: string[] = []

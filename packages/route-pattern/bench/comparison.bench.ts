@@ -10,9 +10,7 @@
 import { bench, describe } from 'vitest'
 import FindMyWay from 'find-my-way'
 import { match } from 'path-to-regexp'
-
-import { ArrayMatcher } from '../src'
-import { TrieMatcher } from '../src/lib/matchers/trie.ts'
+import { ArrayMatcher, TrieMatcher } from '@remix-run/route-pattern'
 
 type Syntax = 'route-pattern' | 'find-my-way' | 'path-to-regexp'
 

@@ -935,12 +935,19 @@ importers:
       dedent:
         specifier: ^1.7.1
         version: 1.7.1
+
+  packages/route-pattern/bench:
+    dependencies:
+      '@remix-run/route-pattern':
+        specifier: workspace:^
+        version: link:..
       find-my-way:
         specifier: ^9.1.0
         version: 9.3.0
       path-to-regexp:
         specifier: ^8.2.0
         version: 8.3.0
+    devDependencies:
       vitest:
         specifier: 4.0.15
         version: 4.0.15(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2)
