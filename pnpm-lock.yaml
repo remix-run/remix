@@ -56,12 +56,6 @@ importers:
 
   demos/bookstore:
     dependencies:
-      '@remix-run/dom':
-        specifier: jam
-        version: 0.0.0-experimental-remix-jam.6
-      '@remix-run/events':
-        specifier: jam
-        version: 0.0.0-experimental-remix-jam.5
       remix:
         specifier: workspace:*
         version: link:../../packages/remix

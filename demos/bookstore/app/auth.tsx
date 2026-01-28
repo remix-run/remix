@@ -25,11 +25,11 @@ export default {
 
         return render(
           <Document>
-            <div class="card" style="max-width: 500px; margin: 2rem auto;">
+            <div class="card" css={{ maxWidth: '500px', margin: '2rem auto' }}>
               <h1>Login</h1>
 
               {typeof error === 'string' ? (
-                <div class="alert alert-error" style="margin-bottom: 1.5rem;">
+                <div class="alert alert-error" css={{ marginBottom: '1.5rem' }}>
                   {error}
                 </div>
               ) : null}
@@ -56,19 +56,26 @@ export default {
                 </button>
               </form>
 
-              <p style="margin-top: 1.5rem;">
+              <p css={{ marginTop: '1.5rem' }}>
                 Don't have an account? <a href={routes.auth.register.index.href()}>Register here</a>
               </p>
               <p>
                 <a href={routes.auth.forgotPassword.index.href()}>Forgot password?</a>
               </p>
 
-              <div style="margin-top: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
-                <p style="font-size: 0.9rem;">
+              <div
+                css={{
+                  marginTop: '2rem',
+                  padding: '1rem',
+                  background: '#f8f9fa',
+                  borderRadius: '4px',
+                }}
+              >
+                <p css={{ fontSize: '0.9rem' }}>
                   <strong>Demo Accounts:</strong>
                 </p>
-                <p style="font-size: 0.9rem;">Admin: admin@bookstore.com / admin123</p>
-                <p style="font-size: 0.9rem;">Customer: customer@example.com / password123</p>
+                <p css={{ fontSize: '0.9rem' }}>Admin: admin@bookstore.com / admin123</p>
+                <p css={{ fontSize: '0.9rem' }}>Customer: customer@example.com / password123</p>
               </div>
             </div>
           </Document>,
@@ -97,7 +104,7 @@ export default {
       index() {
         return render(
           <Document>
-            <div class="card" style="max-width: 500px; margin: 2rem auto;">
+            <div class="card" css={{ maxWidth: '500px', margin: '2rem auto' }}>
               <h1>Register</h1>
               <form method="POST" action={routes.auth.register.action.href()}>
                 <div class="form-group">
@@ -126,7 +133,7 @@ export default {
                 </button>
               </form>
 
-              <p style="margin-top: 1.5rem;">
+              <p css={{ marginTop: '1.5rem' }}>
                 Already have an account? <a href={routes.auth.login.index.href()}>Login here</a>
               </p>
             </div>
@@ -143,7 +150,7 @@ export default {
         if (getUserByEmail(email)) {
           return render(
             <Document>
-              <div class="card" style="max-width: 500px; margin: 2rem auto;">
+              <div class="card" css={{ maxWidth: '500px', margin: '2rem auto' }}>
                 <div class="alert alert-error">An account with this email already exists.</div>
                 <p>
                   <a href={routes.auth.register.index.href()} class="btn">
@@ -152,7 +159,7 @@ export default {
                   <a
                     href={routes.auth.login.index.href()}
                     class="btn btn-secondary"
-                    style="margin-left: 0.5rem;"
+                    css={{ marginLeft: '0.5rem' }}
                   >
                     Login
                   </a>
@@ -180,7 +187,7 @@ export default {
       index() {
         return render(
           <Document>
-            <div class="card" style="max-width: 500px; margin: 2rem auto;">
+            <div class="card" css={{ maxWidth: '500px', margin: '2rem auto' }}>
               <h1>Forgot Password</h1>
               <p>Enter your email address and we'll send you a link to reset your password.</p>
 
@@ -195,7 +202,7 @@ export default {
                 </button>
               </form>
 
-              <p style="margin-top: 1.5rem;">
+              <p css={{ marginTop: '1.5rem' }}>
                 <a href={routes.auth.login.index.href()}>Back to Login</a>
               </p>
             </div>
@@ -209,15 +216,22 @@ export default {
 
         return render(
           <Document>
-            <div class="card" style="max-width: 500px; margin: 2rem auto;">
+            <div class="card" css={{ maxWidth: '500px', margin: '2rem auto' }}>
               <div class="alert alert-success">Password reset link sent! Check your email.</div>
 
               {token ? (
-                <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
-                  <p style="font-size: 0.9rem;">
+                <div
+                  css={{
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    background: '#f8f9fa',
+                    borderRadius: '4px',
+                  }}
+                >
+                  <p css={{ fontSize: '0.9rem' }}>
                     <strong>Demo Mode:</strong> Click the link below to reset your password
                   </p>
-                  <p style="margin-top: 0.5rem;">
+                  <p css={{ marginTop: '0.5rem' }}>
                     <a
                       href={routes.auth.resetPassword.index.href({ token })}
                       class="btn btn-secondary"
@@ -228,7 +242,7 @@ export default {
                 </div>
               ) : null}
 
-              <p style="margin-top: 1.5rem;">
+              <p css={{ marginTop: '1.5rem' }}>
                 <a href={routes.auth.login.index.href()} class="btn">
                   Back to Login
                 </a>
@@ -246,12 +260,12 @@ export default {
 
         return render(
           <Document>
-            <div class="card" style="max-width: 500px; margin: 2rem auto;">
+            <div class="card" css={{ maxWidth: '500px', margin: '2rem auto' }}>
               <h1>Reset Password</h1>
               <p>Enter your new password below.</p>
 
               {typeof error === 'string' ? (
-                <div class="alert alert-error" style="margin-bottom: 1.5rem;">
+                <div class="alert alert-error" css={{ marginBottom: '1.5rem' }}>
                   {error}
                 </div>
               ) : null}
@@ -306,7 +320,7 @@ export default {
 
         return render(
           <Document>
-            <div class="card" style="max-width: 500px; margin: 2rem auto;">
+            <div class="card" css={{ maxWidth: '500px', margin: '2rem auto' }}>
               <div class="alert alert-success">
                 Password reset successfully! You can now login with your new password.
               </div>

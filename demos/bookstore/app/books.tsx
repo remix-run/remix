@@ -1,11 +1,12 @@
 import type { Controller } from 'remix'
-import { Frame } from '@remix-run/dom'
 
 import { routes } from './routes.ts'
 import { getAllBooks, getBookBySlug, getBooksByGenre, getAvailableGenres } from './models/books.ts'
+import { BookCard } from './components/book-card.tsx'
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
+import { getCurrentCart } from './utils/context.ts'
 import { ImageCarousel } from './assets/image-carousel.tsx'
 
 export default {
@@ -14,13 +15,18 @@ export default {
     index() {
       let books = getAllBooks()
       let genres = getAvailableGenres()
+      let cart = getCurrentCart()
 
       return render(
         <Layout>
           <h1>Browse Books</h1>
 
-          <div class="card" style="margin-bottom: 2rem;">
-            <form action={routes.search.href()} method="GET" style="display: flex; gap: 0.5rem;">
+          <div class="card" css={{ marginBottom: '2rem' }}>
+            <form
+              action={routes.search.href()}
+              method="GET"
+              css={{ display: 'flex', gap: '0.5rem' }}
+            >
               <input
                 type="search"
                 name="q"
@@ -33,9 +39,9 @@ export default {
             </form>
           </div>
 
-          <div class="card" style="margin-bottom: 2rem;">
+          <div class="card" css={{ marginBottom: '2rem' }}>
             <h3>Browse by Genre</h3>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+            <div css={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
               {genres.map((genre) => (
                 <a href={routes.books.genre.href({ genre })} class="btn btn-secondary">
                   {genre}
@@ -45,12 +51,10 @@ export default {
           </div>
 
           <div class="grid">
-            {books.map((book) => (
-              <Frame
-                fallback={<div>Loading...</div>}
-                src={routes.fragments.bookCard.href({ slug: book.slug })}
-              />
-            ))}
+            {books.map((book) => {
+              let inCart = cart.items.some((item) => item.slug === book.slug)
+              return <BookCard book={book} inCart={inCart} />
+            })}
           </div>
         </Layout>,
       )
@@ -66,7 +70,7 @@ export default {
             <div class="card">
               <h1>Genre Not Found</h1>
               <p>No books found in the "{genre}" genre.</p>
-              <p style="margin-top: 1rem;">
+              <p css={{ marginTop: '1rem' }}>
                 <a href={routes.books.index.href()} class="btn">
                   Browse All Books
                 </a>
@@ -77,22 +81,22 @@ export default {
         )
       }
 
+      let cart = getCurrentCart()
+
       return render(
         <Layout>
           <h1>{genre.charAt(0).toUpperCase() + genre.slice(1)} Books</h1>
-          <p style="margin: 1rem 0;">
+          <p css={{ margin: '1rem 0' }}>
             <a href={routes.books.index.href()} class="btn btn-secondary">
               View All Books
             </a>
           </p>
 
-          <div class="grid" style="margin-top: 2rem;">
-            {books.map((book) => (
-              <Frame
-                fallback={<div>Loading...</div>}
-                src={routes.fragments.bookCard.href({ slug: book.slug })}
-              />
-            ))}
+          <div class="grid" css={{ marginTop: '2rem' }}>
+            {books.map((book) => {
+              let inCart = cart.items.some((item) => item.slug === book.slug)
+              return <BookCard book={book} inCart={inCart} />
+            })}
           </div>
         </Layout>,
       )
@@ -112,9 +116,12 @@ export default {
         )
       }
 
+      let cart = getCurrentCart()
+      let inCart = cart.items.some((item) => item.slug === book.slug)
+
       return render(
         <Layout>
-          <div style="display: grid; grid-template-columns: 300px 1fr; gap: 2rem;">
+          <div css={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' }}>
             <div
               css={{
                 height: '400px',
@@ -128,27 +135,34 @@ export default {
 
             <div class="card">
               <h1>{book.title}</h1>
-              <p class="author" style="font-size: 1.2rem; margin: 0.5rem 0;">
+              <p class="author" css={{ fontSize: '1.2rem', margin: '0.5rem 0' }}>
                 by {book.author}
               </p>
 
-              <p style="margin: 1rem 0;">
+              <p css={{ margin: '1rem 0' }}>
                 <span class="badge badge-info">{book.genre}</span>
                 <span
                   class={`badge ${book.inStock ? 'badge-success' : 'badge-warning'}`}
-                  style="margin-left: 0.5rem;"
+                  css={{ marginLeft: '0.5rem' }}
                 >
                   {book.inStock ? 'In Stock' : 'Out of Stock'}
                 </span>
               </p>
 
-              <p class="price" style="font-size: 2rem; margin: 1rem 0;">
+              <p class="price" css={{ fontSize: '2rem', margin: '1rem 0' }}>
                 ${book.price.toFixed(2)}
               </p>
 
-              <p style="margin: 1.5rem 0; line-height: 1.8;">{book.description}</p>
+              <p css={{ margin: '1.5rem 0', lineHeight: 1.8 }}>{book.description}</p>
 
-              <div style="margin: 1.5rem 0; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
+              <div
+                css={{
+                  margin: '1.5rem 0',
+                  padding: '1rem',
+                  background: '#f8f9fa',
+                  borderRadius: '4px',
+                }}
+              >
                 <p>
                   <strong>ISBN:</strong> {book.isbn}
                 </p>
@@ -158,24 +172,46 @@ export default {
               </div>
 
               {book.inStock ? (
-                <form method="POST" action={routes.cart.api.add.href()} style="margin-top: 2rem;">
-                  <input type="hidden" name="bookId" value={book.id} />
-                  <input type="hidden" name="slug" value={book.slug} />
-                  <button
-                    type="submit"
-                    class="btn"
-                    style="font-size: 1.1rem; padding: 0.75rem 1.5rem;"
+                inCart ? (
+                  <form
+                    method="POST"
+                    action={routes.cart.api.remove.href()}
+                    css={{ marginTop: '2rem' }}
                   >
-                    Add to Cart
-                  </button>
-                </form>
+                    <input type="hidden" name="_method" value="DELETE" />
+                    <input type="hidden" name="bookId" value={book.id} />
+                    <button
+                      type="submit"
+                      class="btn"
+                      css={{ fontSize: '1.1rem', padding: '0.75rem 1.5rem' }}
+                    >
+                      Remove from Cart
+                    </button>
+                  </form>
+                ) : (
+                  <form
+                    method="POST"
+                    action={routes.cart.api.add.href()}
+                    css={{ marginTop: '2rem' }}
+                  >
+                    <input type="hidden" name="bookId" value={book.id} />
+                    <input type="hidden" name="slug" value={book.slug} />
+                    <button
+                      type="submit"
+                      class="btn"
+                      css={{ fontSize: '1.1rem', padding: '0.75rem 1.5rem' }}
+                    >
+                      Add to Cart
+                    </button>
+                  </form>
+                )
               ) : (
-                <p style="color: #e74c3c; font-weight: 500;">
+                <p css={{ color: '#e74c3c', fontWeight: 500 }}>
                   This book is currently out of stock.
                 </p>
               )}
 
-              <p style="margin-top: 1.5rem;">
+              <p css={{ marginTop: '1.5rem' }}>
                 <a href={routes.books.index.href()} class="btn btn-secondary">
                   Back to Books
                 </a>
@@ -183,6 +219,7 @@ export default {
             </div>
           </div>
         </Layout>,
+        { headers: { 'Cache-Control': 'no-store' } },
       )
     },
   },

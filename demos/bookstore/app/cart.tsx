@@ -47,7 +47,7 @@ export default {
                           <RestfulForm
                             method="PUT"
                             action={routes.cart.api.update.href()}
-                            style="display: inline-flex; gap: 0.5rem; align-items: center;"
+                            css={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}
                           >
                             <input type="hidden" name="bookId" value={item.bookId} />
                             <input
@@ -55,12 +55,12 @@ export default {
                               name="quantity"
                               value={item.quantity}
                               min="1"
-                              style="width: 70px;"
+                              css={{ width: '70px' }}
                             />
                             <button
                               type="submit"
                               class="btn btn-secondary"
-                              style="font-size: 0.875rem; padding: 0.25rem 0.5rem;"
+                              css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
                             >
                               Update
                             </button>
@@ -71,13 +71,13 @@ export default {
                           <RestfulForm
                             method="DELETE"
                             action={routes.cart.api.remove.href()}
-                            style="display: inline;"
+                            css={{ display: 'inline' }}
                           >
                             <input type="hidden" name="bookId" value={item.bookId} />
                             <button
                               type="submit"
                               class="btn btn-danger"
-                              style="font-size: 0.875rem; padding: 0.25rem 0.5rem;"
+                              css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
                             >
                               Remove
                             </button>
@@ -88,16 +88,16 @@ export default {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={3} style="text-align: right; font-weight: bold;">
+                      <td colSpan={3} css={{ textAlign: 'right', fontWeight: 'bold' }}>
                         Total:
                       </td>
-                      <td style="font-weight: bold;">${total.toFixed(2)}</td>
+                      <td css={{ fontWeight: 'bold' }}>${total.toFixed(2)}</td>
                       <td></td>
                     </tr>
                   </tfoot>
                 </table>
 
-                <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                <div css={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
                   <a href={routes.books.index.href()} class="btn btn-secondary">
                     Continue Shopping
                   </a>
@@ -115,7 +115,7 @@ export default {
             ) : (
               <>
                 <p>Your cart is empty.</p>
-                <p style="margin-top: 1rem;">
+                <p css={{ marginTop: '1rem' }}>
                   <a href={routes.books.index.href()} class="btn">
                     Browse Books
                   </a>

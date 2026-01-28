@@ -17,7 +17,7 @@ export default {
       <Layout>
         <h1>Manage Users</h1>
 
-        <p style="margin-bottom: 1rem;">
+        <p css={{ marginBottom: '1rem' }}>
           <a href={routes.admin.index.href()} class="btn btn-secondary">
             Back to Dashboard
           </a>
@@ -49,7 +49,7 @@ export default {
                     <a
                       href={routes.admin.users.edit.href({ userId: u.id })}
                       class="btn btn-secondary"
-                      style="font-size: 0.875rem; padding: 0.25rem 0.5rem;"
+                      css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
                     >
                       Edit
                     </a>
@@ -57,12 +57,12 @@ export default {
                       <RestfulForm
                         method="DELETE"
                         action={routes.admin.users.destroy.href({ userId: u.id })}
-                        style="display: inline;"
+                        css={{ display: 'inline' }}
                       >
                         <button
                           type="submit"
                           class="btn btn-danger"
-                          style="font-size: 0.875rem; padding: 0.25rem 0.5rem;"
+                          css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
                         >
                           Delete
                         </button>
@@ -113,14 +113,14 @@ export default {
             <strong>Created:</strong> {targetUser.createdAt.toLocaleDateString()}
           </p>
 
-          <div style="margin-top: 2rem;">
+          <div css={{ marginTop: '2rem' }}>
             <a href={routes.admin.users.edit.href({ userId: targetUser.id })} class="btn">
               Edit
             </a>
             <a
               href={routes.admin.users.index.href()}
               class="btn btn-secondary"
-              style="margin-left: 0.5rem;"
+              css={{ marginLeft: '0.5rem' }}
             >
               Back to List
             </a>
@@ -181,7 +181,7 @@ export default {
             <a
               href={routes.admin.users.index.href()}
               class="btn btn-secondary"
-              style="margin-left: 0.5rem;"
+              css={{ marginLeft: '0.5rem' }}
             >
               Cancel
             </a>

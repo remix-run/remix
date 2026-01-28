@@ -1,20 +1,27 @@
 import type { BuildAction, Controller } from 'remix'
-import { Frame } from '@remix-run/dom'
 
 import { routes } from './routes.ts'
+import { BookCard } from './components/book-card.tsx'
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
-import { searchBooks } from './models/books.ts'
+import { getBookBySlug, searchBooks } from './models/books.ts'
 import { render } from './utils/render.ts'
+import { getCurrentCart } from './utils/context.ts'
 
 export let home: BuildAction<'GET', typeof routes.home> = {
   middleware: [loadAuth()],
   action() {
+    let cart = getCurrentCart()
+    let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
+    let featuredBooks = featuredSlugs
+      .map((slug) => getBookBySlug(slug))
+      .filter((book) => book != null)
+
     return render(
       <Layout>
         <div class="card">
           <h1>Welcome to the Bookstore</h1>
-          <p style="margin: 1rem 0;">
+          <p css={{ margin: '1rem 0' }}>
             Discover your next favorite book from our curated collection of fiction, non-fiction,
             and more.
           </p>
@@ -25,13 +32,15 @@ export let home: BuildAction<'GET', typeof routes.home> = {
           </p>
         </div>
 
-        <h2 style="margin: 2rem 0 1rem;">Featured Books</h2>
+        <h2 css={{ margin: '2rem 0 1rem' }}>Featured Books</h2>
         <div class="grid">
-          <Frame src={routes.fragments.bookCard.href({ slug: 'bbq' })} />
-          <Frame src={routes.fragments.bookCard.href({ slug: 'heavy-metal' })} />
-          <Frame src={routes.fragments.bookCard.href({ slug: 'three-ways' })} />
+          {featuredBooks.map((book) => {
+            let inCart = cart.items.some((item) => item.slug === book.slug)
+            return <BookCard book={book} inCart={inCart} />
+          })}
         </div>
       </Layout>,
+      { headers: { 'Cache-Control': 'no-store' } },
     )
   },
 }
@@ -43,15 +52,15 @@ export let about: BuildAction<'GET', typeof routes.about> = {
       <Layout>
         <div class="card">
           <h1>About Our Bookstore</h1>
-          <p style="margin: 1rem 0;">
+          <p css={{ margin: '1rem 0' }}>
             Welcome to our online bookstore, a demo application built to showcase the capabilities
             of
             <strong>fetch-router</strong> - a powerful, type-safe routing library for web
             applications.
           </p>
 
-          <h2 style="margin: 1.5rem 0 0.5rem;">What This Demo Shows</h2>
-          <ul style="margin-left: 2rem; line-height: 2;">
+          <h2 css={{ margin: '1.5rem 0 0.5rem' }}>What This Demo Shows</h2>
+          <ul css={{ marginLeft: '2rem', lineHeight: 2 }}>
             <li>
               <strong>Resource Routes:</strong> Full RESTful CRUD operations
             </li>
@@ -72,21 +81,21 @@ export let about: BuildAction<'GET', typeof routes.about> = {
             </li>
           </ul>
 
-          <h2 style="margin: 1.5rem 0 0.5rem;">Try It Out</h2>
-          <p style="margin: 1rem 0;">
+          <h2 css={{ margin: '1.5rem 0 0.5rem' }}>Try It Out</h2>
+          <p css={{ margin: '1rem 0' }}>
             Explore the site to see all these features in action. You can browse books, create an
             account, add items to your cart, and even access the admin panel (login as
             admin@bookstore.com / admin123).
           </p>
 
-          <p style="margin-top: 2rem;">
+          <p css={{ marginTop: '2rem' }}>
             <a href={routes.books.index.href()} class="btn">
               Explore Books
             </a>
             <a
               href={routes.auth.register.index.href()}
               class="btn btn-secondary"
-              style="margin-left: 1rem;"
+              css={{ marginLeft: '1rem' }}
             >
               Create Account
             </a>
@@ -105,7 +114,9 @@ export let contact: Controller<typeof routes.contact> = {
         <Layout>
           <div class="card">
             <h1>Contact Us</h1>
-            <p style="margin: 1rem 0;">Have a question or feedback? We'd love to hear from you!</p>
+            <p css={{ margin: '1rem 0' }}>
+              Have a question or feedback? We'd love to hear from you!
+            </p>
 
             <form method="POST" action={routes.contact.action.href()}>
               <div class="form-group">
@@ -156,13 +167,14 @@ export let search: BuildAction<'GET', typeof routes.search> = {
   action({ url }) {
     let query = url.searchParams.get('q') ?? ''
     let books = query ? searchBooks(query) : []
+    let cart = getCurrentCart()
 
     return render(
       <Layout>
         <h1>Search Results</h1>
 
-        <div class="card" style="margin-bottom: 2rem;">
-          <form action={routes.search.href()} method="GET" style="display: flex; gap: 0.5rem;">
+        <div class="card" css={{ marginBottom: '2rem' }}>
+          <form action={routes.search.href()} method="GET" css={{ display: 'flex', gap: '0.5rem' }}>
             <input
               type="search"
               name="q"
@@ -177,14 +189,17 @@ export let search: BuildAction<'GET', typeof routes.search> = {
         </div>
 
         {query ? (
-          <p style="margin-bottom: 1rem;">
+          <p css={{ marginBottom: '1rem' }}>
             Found {books.length} result(s) for "{query}"
           </p>
         ) : null}
 
         <div class="grid">
           {books.length > 0 ? (
-            books.map((book) => <Frame src={routes.fragments.bookCard.href({ slug: book.slug })} />)
+            books.map((book) => {
+              let inCart = cart.items.some((item) => item.slug === book.slug)
+              return <BookCard book={book} inCart={inCart} />
+            })
           ) : (
             <p>No books found matching your search.</p>
           )}

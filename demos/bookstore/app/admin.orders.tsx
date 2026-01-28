@@ -13,7 +13,7 @@ export default {
       <Layout>
         <h1>Manage Orders</h1>
 
-        <p style="margin-bottom: 1rem;">
+        <p css={{ marginBottom: '1rem' }}>
           <a href={routes.admin.index.href()} class="btn btn-secondary">
             Back to Dashboard
           </a>
@@ -45,7 +45,7 @@ export default {
                     <a
                       href={routes.admin.orders.show.href({ orderId: order.id })}
                       class="btn btn-secondary"
-                      style="font-size: 0.875rem; padding: 0.25rem 0.5rem;"
+                      css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
                     >
                       View
                     </a>
@@ -88,8 +88,8 @@ export default {
             <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
           </p>
 
-          <h2 style="margin-top: 2rem;">Items</h2>
-          <table style="margin-top: 1rem;">
+          <h2 css={{ marginTop: '2rem' }}>Items</h2>
+          <table css={{ marginTop: '1rem' }}>
             <thead>
               <tr>
                 <th>Book</th>
@@ -110,22 +110,22 @@ export default {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={3} style="text-align: right; font-weight: bold;">
+                <td colSpan={3} css={{ textAlign: 'right', fontWeight: 'bold' }}>
                   Total:
                 </td>
-                <td style="font-weight: bold;">${order.total.toFixed(2)}</td>
+                <td css={{ fontWeight: 'bold' }}>${order.total.toFixed(2)}</td>
               </tr>
             </tfoot>
           </table>
 
-          <h2 style="margin-top: 2rem;">Shipping Address</h2>
+          <h2 css={{ marginTop: '2rem' }}>Shipping Address</h2>
           <p>{order.shippingAddress.street}</p>
           <p>
             {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zip}
           </p>
         </div>
 
-        <p style="margin-top: 1.5rem;">
+        <p css={{ marginTop: '1.5rem' }}>
           <a href={routes.admin.orders.index.href()} class="btn btn-secondary">
             Back to Orders
           </a>

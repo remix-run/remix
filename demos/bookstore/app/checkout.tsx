@@ -22,7 +22,7 @@ export default {
             <div class="card">
               <h1>Checkout</h1>
               <p>Your cart is empty. Add some books before checking out.</p>
-              <p style="margin-top: 1rem;">
+              <p css={{ marginTop: '1rem' }}>
                 <a href={routes.books.index.href()} class="btn">
                   Browse Books
                 </a>
@@ -38,7 +38,7 @@ export default {
 
           <div class="card">
             <h2>Order Summary</h2>
-            <table style="margin-top: 1rem;">
+            <table css={{ marginTop: '1rem' }}>
               <thead>
                 <tr>
                   <th>Book</th>
@@ -59,16 +59,16 @@ export default {
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={3} style="text-align: right; font-weight: bold;">
+                  <td colSpan={3} css={{ textAlign: 'right', fontWeight: 'bold' }}>
                     Total:
                   </td>
-                  <td style="font-weight: bold;">${total.toFixed(2)}</td>
+                  <td css={{ fontWeight: 'bold' }}>${total.toFixed(2)}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
 
-          <div class="card" style="margin-top: 1.5rem;">
+          <div class="card" css={{ marginTop: '1.5rem' }}>
             <h2>Shipping Information</h2>
             <form method="POST" action={routes.checkout.action.href()}>
               <div class="form-group">
@@ -97,7 +97,7 @@ export default {
               <a
                 href={routes.cart.index.href()}
                 class="btn btn-secondary"
-                style="margin-left: 0.5rem;"
+                css={{ marginLeft: '0.5rem' }}
               >
                 Back to Cart
               </a>
@@ -161,7 +161,7 @@ export default {
       return render(
         <Layout>
           <div class="alert alert-success">
-            <h1 style="margin-bottom: 0.5rem;">Order Confirmed!</h1>
+            <h1 css={{ marginBottom: '0.5rem' }}>Order Confirmed!</h1>
             <p>Thank you for your purchase. Your order has been placed successfully.</p>
           </div>
 
@@ -177,19 +177,19 @@ export default {
               <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
             </p>
 
-            <p style="margin-top: 2rem;">
+            <p css={{ marginTop: '2rem' }}>
               We'll send you a confirmation email shortly. You can track your order status in your
               account.
             </p>
 
-            <div style="margin-top: 2rem;">
+            <div css={{ marginTop: '2rem' }}>
               <a href={routes.account.orders.show.href({ orderId: order.id })} class="btn">
                 View Order Details
               </a>
               <a
                 href={routes.books.index.href()}
                 class="btn btn-secondary"
-                style="margin-left: 0.5rem;"
+                css={{ marginLeft: '0.5rem' }}
               >
                 Continue Shopping
               </a>
