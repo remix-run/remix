@@ -1,7 +1,7 @@
 # Create "installable" preview branches
 #
-# Commits to `main` push builds to a `next` branch:
-#   pnpm install "remix-run/remix#next&path:packages/remix"
+# Commits to `main` push builds to a `preview` branch:
+#   pnpm install "remix-run/remix#preview&path:packages/remix"
 #
 # Pull Requests create `preview/{number}` branches:
 #   pnpm install "remix-run/remix#preview/12345&path:packages/remix"
@@ -59,11 +59,20 @@ jobs:
           git config --local user.name "Remix Run Bot"
 
       - name: Build installable branch
-        run: pnpm run setup-installable-branch ${{ inputs.installableBranch || 'next' }}
+        run: pnpm run setup-installable-branch ${{ inputs.installableBranch || 'preview' }}
 
-      - name: Push changes
+      ## Force push over the preview branch
+      - name: Push changes (preview)
+        if: github.event_name == 'push'
         run: |
-          git push --force --set-upstream origin ${{ inputs.installableBranch || 'next' }}
+          git push --force --set-upstream origin preview
+          echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
+
+      ## Don't force push for experimental releases in case of a branch name collision
+      - name: Push changes (experimental)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git push --set-upstream origin ${{ inputs.installableBranch  }}
           echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
   ## Pull Request Handling

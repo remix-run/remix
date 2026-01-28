@@ -37,21 +37,6 @@ if (!installableBranch) {
   throw new Error('Error: You must provide an installable branch name')
 }
 
-// Refuse to overwrite existing branches except for cron-driven workflow branches
-let allowedOverwrites = ['next']
-let remoteBranches = logAndExec('git branch -r', true)
-console.log('remote branches:', remoteBranches)
-
-if (
-  remoteBranches.includes(`origin/${installableBranch}`) &&
-  !allowedOverwrites.includes(installableBranch)
-) {
-  throw new Error(
-    `Error: Branch \`${installableBranch}\` already exists on origin. ` +
-      `Delete it first or use a different branch name.`,
-  )
-}
-
 // Error if git status is not clean
 let gitStatus = logAndExec('git status --porcelain', true)
 if (gitStatus) {
