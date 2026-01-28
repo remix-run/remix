@@ -25,7 +25,7 @@ import { tagExists } from './utils/git.ts'
 import { createRelease } from './utils/github.ts'
 import { getRootDir, logAndExec } from './utils/process.ts'
 import { readRemixPrereleaseConfig, getChangelogEntry } from './utils/changes.ts'
-import { getAllPackageDirNames, getPackageFile } from './utils/packages.ts'
+import { getAllPackageDirNames, getPackageFile, getGitTag } from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
 
 let rootDir = getRootDir()
@@ -38,15 +38,6 @@ interface PublishedPackage {
   packageName: string
   version: string
   tag: string
-}
-
-/**
- * Convert a package name to a git tag name.
- * Strips the @remix-run/ scope prefix for scoped packages.
- * e.g., "@remix-run/headers" -> "headers", "remix" -> "remix"
- */
-function packageNameToTagName(packageName: string): string {
-  return packageName.replace(/^@remix-run\//, '')
 }
 
 interface PublishSummary {
@@ -74,7 +65,7 @@ function readPublishSummary(): PublishedPackage[] {
   return summary.publishedPackages.map((pkg) => ({
     packageName: pkg.name,
     version: pkg.version,
-    tag: `${packageNameToTagName(pkg.name)}@${pkg.version}`,
+    tag: getGitTag(pkg.name, pkg.version),
   }))
 }
 
@@ -139,7 +130,7 @@ async function getUnpublishedPackages(): Promise<PublishedPackage[]> {
       unpublished.push({
         packageName: pkg.npmName,
         version: pkg.localVersion,
-        tag: `${packageNameToTagName(pkg.npmName)}@${pkg.localVersion}`,
+        tag: getGitTag(pkg.npmName, pkg.localVersion),
       })
     }
   }
@@ -164,7 +155,7 @@ function previewGitHubReleases(packages: PublishedPackage[]): { warnings: Change
   console.log()
 
   for (let pkg of packages) {
-    let tagName = `${packageNameToTagName(pkg.packageName)}@${pkg.version}`
+    let tagName = getGitTag(pkg.packageName, pkg.version)
     let releaseName = `${pkg.packageName} v${pkg.version}`
     let changes = getChangelogEntry({ packageName: pkg.packageName, version: pkg.version })
     let body = changes?.body ?? 'No changelog entry found for this version.'
