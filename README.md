@@ -70,13 +70,13 @@ npm install remix
 npm install @remix-run/fetch-router
 ```
 
-If you want to play around with the bleeding edge, we also build the latest `main` branch into a `preview` branch which can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
+If you want to play around with the bleeding edge, we also build the latest `main` branch into a `preview/main` branch which can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
 
 ```sh
-pnpm install "remix-run/remix#preview&path:packages/remix"
+pnpm install "remix-run/remix#preview/main&path:packages/remix"
 
 # Or, just install a single package
-pnpm install "remix-run/remix#preview&path:packages/@remix-run/fetch-router"
+pnpm install "remix-run/remix#preview/main&path:packages/@remix-run/fetch-router"
 ```
 
 ## Contributing

@@ -162,15 +162,15 @@ The prerelease suffix is stripped (e.g. `3.0.0-rc.7` → `3.0.0`). The bump type
 
 ## Preview builds
 
-We maintain installable builds of `main` in a `preview` branch as a way for folks to test out the latest `main` branch without needing to publish releases to npm and clutter up the npm registry and version history UI.
+We maintain installable builds of `main` in a `preview/main` branch as a way for folks to test out the latest `main` branch without needing to publish releases to npm and clutter up the npm registry and version history UI.
 
-This is managed via the [`preview` workflow](/.github/workflows/preview.yaml) which uses the [`setup-installable-branch.ts`](./scripts/setup-installable-branch.ts) script to build and commit the build and required `package.json` changes to the `preview` branch on every new commit to `main`.
+This is managed via the [`preview` workflow](/.github/workflows/preview.yaml) which uses the [`setup-installable-branch.ts`](./scripts/setup-installable-branch.ts) script to build and commit the build and required `package.json` changes to the `preview/main` branch on every new commit to `main`.
 
-The `preview` branch build can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
+The `preview/main` branch build can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
 
 ```sh
-pnpm install "remix-run/remix#preview&path:packages/remix"
+pnpm install "remix-run/remix#preview/main&path:packages/remix"
 
 # Or, just install a single package
-pnpm install "remix-run/remix#preview&path:packages/@remix-run/fetch-router"
+pnpm install "remix-run/remix#preview/main&path:packages/@remix-run/fetch-router"
 ```
