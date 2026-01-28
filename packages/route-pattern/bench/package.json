@@ -2,6 +2,9 @@
   "name": "route-pattern-bench",
   "private": true,
   "type": "module",
+  "scripts": {
+    "bench": "vitest bench --run"
+  },
   "dependencies": {
     "@remix-run/route-pattern": "workspace:^",
     "find-my-way": "^9.1.0",
