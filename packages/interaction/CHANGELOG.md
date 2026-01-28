@@ -2,6 +2,12 @@
 
 This is the changelog for [`interaction`](https://github.com/remix-run/remix/tree/main/packages/interaction). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Removed `onError` option from `createContainer`. Errors thrown in event listeners now dispatch an `ErrorEvent` on the target element with `bubbles: true`, allowing them to propagate up the DOM tree. Also removed the `raise` method from the `Interaction` interface.
+
 ## v0.4.0
 
 ### Minor Changes

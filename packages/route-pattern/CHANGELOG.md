@@ -2,6 +2,174 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.18.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remove `createHrefBuilder`, `type HrefBuilder`, `type HrefBuilderArg`
+
+  `createHrefBuilder` was the original design and implementation of href generation,
+  but with the new `RoutePattern.href` method it is now obsolete.
+
+  Use `HrefArgs` instead of `HrefBuilderArgs`:
+
+  ```ts
+  // before
+  type Args = HrefBuilderArgs<Source>
+
+  // after
+  type Args = HrefArgs<Source>
+  ```
+
+- BREAKING CHANGE: simplify protocol to only accept `http`, `https`, and `http(s)`
+
+  Previously, we allowed arbitrary `PartPattern` for protocol, but in reality the request/response server only directly receives `http` and `https` protocols (`ws` and `wss` are upgraded from `http` and `https` respectively).
+
+  That means params or arbitrary optionals are no longer allowed within the protocol and will result in a `ParseError`.
+
+### Patch Changes
+
+- Add `ast` property to `RoutePattern`
+
+  The AST is a read-only, "bare-metal" API designed for advanced use cases. For example, optimized matchers like `TrieMatcher` can't just delegate matching to `RoutePattern.match()` for each of their patterns and need direct access to the pattern AST.
+
+  ```ts
+  let ast: AST = pattern.ast
+
+  type AST = {
+    protocol: PartPattern
+    hostname: PartPattern
+    port: string | null
+    pathname: PartPattern
+    search: SearchConstraints
+  }
+  ```
+
+  ```ts
+  type PartPattern = {
+    tokens: Array<Token>
+    paramNames: Array<string>
+    /** Map of `(` token index to its corresponding `)` token index for optional segments */
+    optionals: Map<number, number>
+    separator: '.' | '/' | ''
+  }
+
+  type Token =
+    | { type: 'text'; text: string }
+    | { type: 'separator' }
+    | { type: '(' | ')' }
+    | { type: ':' | '*'; nameIndex: number } // nameIndex references paramNames array
+
+  // `posts/:id(/edit)`
+  let part: PartPattern = {
+    tokens: [
+      { type: 'text', text: 'posts' },
+      { type: 'separator' },
+      { type: ':', nameIndex: 0 },
+      { type: '(' },
+      { type: 'separator' },
+      { type: 'text', text: 'edit' },
+      { type: ')' },
+    ],
+    paramNames: ['id'],
+    optionals: new Map([[3, 6]]), // token at index 3 '(' maps to token at index 6 ')'
+    separator: '/',
+  }
+  ```
+
+  ```ts
+  type SearchConstraints = Map<string, Set<string> | null>
+
+  // - `null`: key must be present (matches ?q, ?q=, ?q=1)
+  // - Empty Set: key must be present with a value (matches ?q=1)
+  // - Non-empty Set: key must be present with all these values (matches ?q=x&q=y)
+  ```
+
+- Add getters to `RoutePattern`
+
+  The `protocol`, `hostname`, `port`, `pathname`, and `search` getters display the normalized pattern parts as strings.
+
+  ```ts
+  let pattern = new RoutePattern('https://:tenant.example.com:3000/:lang/docs/*?version=:version')
+
+  pattern.protocol // 'https'
+  pattern.hostname // ':tenant.example.com'
+  pattern.port // '3000'
+  pattern.pathname // ':lang/docs/*'
+  pattern.search // 'version=:version'
+  ```
+
+  Omitted parts return empty strings.
+
+- Add `meta` to match returned by `RoutePattern.match()`
+
+  The `meta` property provides rich information about matched params (variables and wildcards) in the hostname and pathname, analogous to RegExp groups/indices. This enables advanced use cases that need more than just the param values including match ranking.
+
+  ```ts
+  import * as assert from 'node:assert/strict'
+
+  let pattern = new RoutePattern('https://:tenant.example.com/:lang/docs/*')
+  let match = pattern.match('https://acme.example.com/en/docs/api/routes')
+
+  assert.deepEqual(match.params, { tenant: 'acme', lang: 'en' })
+  assert.deepEqual(match.meta.hostname, [
+    { type: ':', name: 'tenant', value: 'acme', begin: 0, end: 4 },
+  ])
+  assert.deepEqual(match.meta.pathname, [
+    { type: ':', name: 'lang', value: 'en', begin: 0, end: 2 },
+    { type: '*', name: '*', value: 'api/routes', begin: 8, end: 18 },
+  ])
+  ```
+
+- Add functions for comparing match specificity
+
+  Specificity is our intuitive metric for finding the "best" match.
+
+  ```ts
+  import * as Specificity from '@remix-run/route-pattern/specificity'
+
+  Specificity.lessThan(a, b) // `true` when `a` is more specific than `b`. `false` otherwise
+  Specificity.greaterThan(a, b)
+  Specificity.equal(a, b)
+
+  matches.sort(Specificity.ascending)
+  matches.sort(Specificity.descending)
+  ```
+
+  Specificity compares patterns char-by-char where static matches beat variable matches, which beat wildcard matches.
+
+  ```typescript
+  import { RoutePattern } from '@remix-run/route-pattern'
+  import * as Specificity from '@remix-run/route-pattern/specificity'
+  import * as assert from 'node:assert/strict'
+
+  let url = 'https://example.com/posts/new'
+
+  let pattern1 = new RoutePattern('/posts/:id')
+  let pattern2 = new RoutePattern('/posts/new')
+
+  let match1 = pattern1.match(url)
+  let match2 = pattern2.match(url)
+
+  assert.ok(Specificity.lessThan(match1, match2))
+  ```
+
+  **Hostname segments are compared right-to-left** (e.g., `example.com` compares `com` first, then `example`), though characters within a segment are still compared left-to-right:
+
+  ```typescript
+  import * as assert from 'node:assert/strict'
+
+  let url = 'https://app-api.example.com'
+
+  let pattern1 = new RoutePattern('https://app-*.example.com')
+  let match1 = pattern1.match(url)
+
+  let pattern2 = new RoutePattern('https://*-api.example.com')
+  let match2 = pattern2.match(url)
+
+  assert.ok(Specificity.lessThan(match1, match2))
+  ```
+
 ## v0.17.0
 
 ### Minor Changes
