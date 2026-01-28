@@ -104,7 +104,7 @@ No changes needed. This implementation achieves the goal perfectly.
 **Acceptance Criteria:**
 
 - [x] Create `src/lib/module-graph.ts` with graph data structure and operations
-- [x] Create `src/lib/import-rewriter.ts` with import parsing logic  
+- [x] Create `src/lib/import-rewriter.ts` with import parsing logic
 - [x] Update `assets.ts` to import and use these modules
 - [x] **CRITICAL:** Move tests to dedicated test files for new modules:
   - [x] Create `src/lib/module-graph.test.ts` (199 lines, 13 tests)
@@ -121,6 +121,7 @@ No changes needed. This implementation achieves the goal perfectly.
 - [x] Each file has a clear, single responsibility
 
 **Results:**
+
 - `assets.ts`: 1,438 → 1,271 lines (-167 lines, -12%)
 - `assets.test.ts`: 1,626 → 1,216 lines (-410 lines, -25%)
 - **NEW:** `module-graph.ts` + `module-graph.test.ts`: 343 lines total

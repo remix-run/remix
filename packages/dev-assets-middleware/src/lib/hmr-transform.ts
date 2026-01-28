@@ -51,7 +51,7 @@ interface ComponentInfo {
 // The HMR runtime module path.
 // This is served by the middleware at this URL.
 // Uses __@remix namespace for internal middleware URLs.
-export const HMR_RUNTIME_PATH = '/__@remix/hmr/runtime.js'
+export const HMR_RUNTIME_PATH = '/__@remix/hmr-runtime.ts'
 
 // HMR functions imported from the runtime module
 const HMR_IMPORTS = [

@@ -102,7 +102,7 @@ async function createTestContext() {
   })
 
   let router = createRouter({
-    middleware: [serveIndex, assetsMiddleware],
+    middleware: [assetsMiddleware, serveIndex],
   })
 
   let listener = createRequestListener(async (request) => {

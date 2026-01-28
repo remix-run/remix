@@ -5,12 +5,18 @@ import * as esbuild from 'esbuild'
 import { init as lexerInit, parse as parseImports } from 'es-module-lexer'
 import MagicString from 'magic-string'
 import type { Middleware, Assets, AssetEntry } from '@remix-run/fetch-router'
+import { fileURLToPath } from 'node:url'
 
 // HMR imports (conditional, only used if hmr: true)
-import { generateRuntimeModule } from './hmr-runtime.ts'
 import { transformComponent, maybeHasComponent, HMR_RUNTIME_PATH } from './hmr-transform.ts'
 import { createHmrEventSource, type HmrEventSource } from './hmr-sse.ts'
 import { createWatcher, type HmrWatcher } from './hmr-watcher.ts'
+
+// Path to the HMR runtime module source file
+let HMR_RUNTIME_MODULE_PATH = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../virtual/hmr-runtime.ts',
+)
 
 // Module graph imports
 import {
@@ -533,43 +539,6 @@ export function devAssets(options: DevAssetsOptions): Middleware {
     hmrWatcher.start()
   }
 
-  /**
-   * Intercept HTML responses to inject HMR runtime script.
-   *
-   * @param response The response from downstream middleware
-   * @returns The response, potentially modified to include HMR script
-   */
-  async function interceptHtmlResponse(response: Response): Promise<Response> {
-    if (!options.hmr) return response
-    if (!response.ok) return response
-
-    let contentType = response.headers.get('Content-Type')
-    if (!contentType?.includes('text/html')) return response
-
-    let html = await response.text()
-
-    // HMR runtime script - auto-connects and sets up requestRemount when loaded
-    let hmrScript = `<script type="module" src="${HMR_RUNTIME_PATH}"></script>`
-
-    // Insert before first <script> tag or before </head>
-    if (html.includes('<script')) {
-      html = html.replace('<script', hmrScript + '\n    <script')
-    } else if (html.includes('</head>')) {
-      html = html.replace('</head>', '  ' + hmrScript + '\n  </head>')
-    }
-
-    // Build new headers, removing Content-Length (will be recalculated)
-    let newHeaders = new Headers(response.headers)
-    newHeaders.delete('Content-Length')
-    newHeaders.set('Content-Type', 'text/html; charset=utf-8')
-    newHeaders.set('Cache-Control', 'no-cache')
-
-    return new Response(html, {
-      status: response.status,
-      headers: newHeaders,
-    })
-  }
-
   let middleware: Middleware & { dispose?: () => Promise<void> } = async (context, next) => {
     // Set the assets API on context so route handlers can access it
     context.assets = assetsApi
@@ -585,19 +554,57 @@ export function devAssets(options: DevAssetsOptions): Middleware {
     // Handle HMR endpoints (if HMR is enabled)
     if (options.hmr && hmrEventSource) {
       // SSE endpoint for pushing updates
-      if (pathname === '/__@remix/hmr') {
+      if (pathname === '/__@remix/hmr-events') {
         return hmrEventSource.connect()
       }
 
-      // Runtime module endpoint
+      // Runtime module endpoint - serve the runtime module via transformSource
       if (pathname === HMR_RUNTIME_PATH) {
-        let runtimeCode = generateRuntimeModule()
-        return new Response(runtimeCode, {
-          headers: {
-            'Content-Type': 'application/javascript; charset=utf-8',
-            'Cache-Control': 'no-cache',
-          },
-        })
+        try {
+          // Stat for ETag and transform cache key
+          let stat = await fsp.stat(HMR_RUNTIME_MODULE_PATH)
+          let etag = generateETag(stat.mtime, stat.size)
+
+          // Check if client has current version
+          if (matchesETag(ifNoneMatch, etag)) {
+            return new Response(null, {
+              status: 304,
+              headers: { ETag: etag },
+            })
+          }
+
+          // Load and transform the runtime module
+          let runtimeSource = await fsp.readFile(HMR_RUNTIME_MODULE_PATH, 'utf-8')
+
+          let transformed = await transformSource(
+            runtimeSource,
+            HMR_RUNTIME_MODULE_PATH,
+            HMR_RUNTIME_PATH,
+            root,
+            workspaceRoot,
+            workspaceAllowPatterns,
+            workspaceDenyPatterns,
+            caches,
+            esbuildConfig,
+            externalPatterns,
+            stat.mtimeMs,
+            false, // Don't apply HMR transform to the runtime itself
+          )
+
+          return new Response(transformed, {
+            headers: {
+              'Content-Type': 'application/javascript; charset=utf-8',
+              'Cache-Control': 'no-cache',
+              ETag: etag,
+            },
+          })
+        } catch (error) {
+          let message = error instanceof Error ? error.message : String(error)
+          return new Response(`HMR runtime error: ${message}`, {
+            status: 500,
+            headers: { 'Content-Type': 'text/plain' },
+          })
+        }
       }
     }
 
@@ -638,11 +645,11 @@ export function devAssets(options: DevAssetsOptions): Middleware {
       stat = await fsp.stat(filePath)
       // If it's a directory, not a file, let the router handle it
       if (stat.isDirectory()) {
-        return interceptHtmlResponse(await next())
+        return next()
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return interceptHtmlResponse(await next())
+        return next()
       }
       throw error
     }
@@ -930,7 +937,9 @@ async function transformSource(
   }
 
   // Apply HMR transform if enabled and file might contain components
-  if (hmrEnabled && maybeHasComponent(rewritten.code)) {
+  // Skip workspace files to avoid circular dependencies (runtime imports from @remix-run/component)
+  let isWorkspaceFile = sourceUrl.startsWith('/__@workspace/')
+  if (hmrEnabled && !isWorkspaceFile && maybeHasComponent(rewritten.code)) {
     try {
       let hmrResult = await transformComponent(rewritten.code, sourceUrl)
       rewritten.code = hmrResult.code

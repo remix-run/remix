@@ -96,7 +96,7 @@ async function startServer(
         allow: [/.*/], // Allow all files in app dir for tests
         workspace: {
           root: projectRoot,
-          allow: [/node_modules/],
+          allow: [/node_modules/, /^packages\//],
         },
       }),
     ],

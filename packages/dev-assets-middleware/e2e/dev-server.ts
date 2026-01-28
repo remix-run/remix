@@ -100,7 +100,7 @@ function startHttpServer(): Promise<void> {
           hmr: true,
           workspace: {
             root: path.join(packageDir, '../..'), // monorepo root
-            allow: [/node_modules/],
+            allow: [/node_modules/, /^packages\//],
           },
         }),
       ],
