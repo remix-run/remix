@@ -136,7 +136,7 @@ Core HMR infrastructure is complete and fully tested in dev-assets-middleware:
 **Recent fixes:**
 
 - Fixed EMFILE error by using chokidar's `ignored` function with allow patterns
-- Watcher now respects `allow` patterns, only watching relevant directories  
+- Watcher now respects `allow` patterns, only watching relevant directories
 - Correctly handles both path-based (`/^app\//`) and extension-based (`/\.tsx$/`) patterns
   - Uses `stats.isDirectory()` to allow directory traversal
   - Standard directories (node_modules, .git, dist, build) are always ignored first

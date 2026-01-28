@@ -292,10 +292,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
 // Track handle to component mapping for HMR
 let handleToComponent = new WeakMap<Handle<any>, ReturnType<typeof createComponent>>()
 
-export function registerComponent(
-  handle: Handle<any>,
-  comp: ReturnType<typeof createComponent>,
-) {
+export function registerComponent(handle: Handle<any>, comp: ReturnType<typeof createComponent>) {
   handleToComponent.set(handle, comp)
 }
 

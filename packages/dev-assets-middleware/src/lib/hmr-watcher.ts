@@ -107,13 +107,8 @@ export function createWatcher(options: WatcherOptions): HmrWatcher {
       // Build ignored function based on allow patterns
       let ignored = (filePath: string, stats?: { isDirectory(): boolean }): boolean => {
         // Always ignore common directories/files regardless of allow patterns
-        let standardIgnores = [
-          /\/node_modules\//,
-          /\/\.git\//,
-          /\/dist\//,
-          /\/build\//,
-        ]
-        
+        let standardIgnores = [/\/node_modules\//, /\/\.git\//, /\/dist\//, /\/build\//]
+
         for (let pattern of standardIgnores) {
           if (pattern.test(filePath)) {
             return true // Ignore
@@ -125,19 +120,19 @@ export function createWatcher(options: WatcherOptions): HmrWatcher {
           let relativePath = path.relative(root, filePath)
           // Normalize to forward slashes
           relativePath = relativePath.split(path.sep).join('/')
-          
+
           // Empty path means root directory - always allow traversing it
           if (relativePath === '') {
             return false
           }
-          
+
           // Always allow traversing directories - we need to walk into them
           // to find files that match. This solves the impedance mismatch
           // with file-extension-based patterns like /\.tsx$/
           if (stats?.isDirectory()) {
             return false
           }
-          
+
           // If stats is undefined, we can't tell if it's a directory.
           // Assume it's a directory if it has no file extension (heuristic)
           if (!stats) {
@@ -146,10 +141,10 @@ export function createWatcher(options: WatcherOptions): HmrWatcher {
               return false
             }
           }
-          
+
           // For files, check if they match any allow pattern
           let matches = allowPatterns.some((pattern) => pattern.test(relativePath))
-          
+
           // Ignore files that don't match any pattern
           return !matches
         }

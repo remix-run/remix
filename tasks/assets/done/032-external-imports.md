@@ -21,6 +21,7 @@ This enables import map support by allowing bare specifiers to be left unchanged
 2. **Added `external` to `SUPPORTED_ESBUILD_OPTIONS`** - The external option is now whitelisted and extracted from the esbuild config, but NOT passed to esbuild itself (since we always use `external: ['*']` internally to maintain unbundled dev).
 
 3. **Runtime filtering in import rewriting** - Created `isExternalSpecifier()` helper that checks if a specifier matches user-configured external patterns. This is called in two places:
+
    - Before collecting uncached specifiers for resolution
    - Before rewriting imports with MagicString
 
@@ -35,9 +36,9 @@ This enables import map support by allowing bare specifiers to be left unchanged
 export const esbuildConfig = {
   entryPoints: ['app/entry.tsx'],
   external: [
-    '@remix-run/component',        // Bare specifier for import maps
-    'https://unpkg.com/lodash',    // CDN URL (must be explicit)
-    /^https:\/\/unpkg\.com\//,     // Pattern for all unpkg URLs
+    '@remix-run/component', // Bare specifier for import maps
+    'https://unpkg.com/lodash', // CDN URL (must be explicit)
+    /^https:\/\/unpkg\.com\//, // Pattern for all unpkg URLs
   ],
   // ... other options
 }
@@ -48,14 +49,15 @@ export const esbuildConfig = {
 // </script>
 
 // In your code:
-import { createRoot } from '@remix-run/component'  // External: left unchanged for import map
-import { map } from 'https://unpkg.com/lodash'     // External: left unchanged (matches pattern)
-import { utils } from './utils.ts'                 // Not external: rewritten to /app/utils.ts
+import { createRoot } from '@remix-run/component' // External: left unchanged for import map
+import { map } from 'https://unpkg.com/lodash' // External: left unchanged (matches pattern)
+import { utils } from './utils.ts' // Not external: rewritten to /app/utils.ts
 ```
 
 **Files changed:**
 
 - `packages/dev-assets-middleware/src/lib/assets.ts`:
+
   - Added `external` to `SUPPORTED_ESBUILD_OPTIONS` constant
   - Added `isExternalSpecifier()` helper function
   - Updated `devAssets()` to extract external patterns from esbuildConfig

@@ -1,4 +1,3 @@
-
 /**
  * HMR Transform
  *
@@ -225,7 +224,12 @@ function createFunctionExpression(
     type: 'FunctionExpression',
     span: syntheticSpan(),
     ctxt: DUMMY_CTXT,
-    params: params.map((p: any) => ({ type: 'Parameter', span: syntheticSpan(), pat: p, decorators: [] })),
+    params: params.map((p: any) => ({
+      type: 'Parameter',
+      span: syntheticSpan(),
+      pat: p,
+      decorators: [],
+    })),
     decorators: [],
     body,
     async: false,
@@ -442,7 +446,10 @@ function extractRenderBodyFromBlock(
   if (!returnStmt || !returnStmt.argument) return null
 
   let returnedFunc = returnStmt.argument
-  if (returnedFunc.type !== 'ArrowFunctionExpression' && returnedFunc.type !== 'FunctionExpression') {
+  if (
+    returnedFunc.type !== 'ArrowFunctionExpression' &&
+    returnedFunc.type !== 'FunctionExpression'
+  ) {
     return null
   }
 

@@ -15,9 +15,7 @@ let browser: Browser
 let page: Page
 let server: http.Server
 let tmpDir: string
-
-let PORT = 44199
-let BASE_URL = `http://localhost:${PORT}`
+let baseUrl: string
 
 // Test fixture files - plain JS/TS without external dependencies
 let fixtureFiles = {
@@ -108,7 +106,8 @@ async function startServer(
   let server = http.createServer(listener)
 
   return new Promise((resolve) => {
-    server.listen(PORT, () => resolve(server))
+    // Use port 0 to let OS assign a random available port
+    server.listen(0, () => resolve(server))
   })
 }
 
@@ -120,6 +119,13 @@ describe('assets middleware e2e', () => {
 
     // Start server (projectRoot is the tmpDir, appDir is tmpDir/app)
     server = await startServer(path.join(tmpDir, 'app'), tmpDir, tmpDir)
+
+    // Get the actual port assigned by the OS
+    let address = server.address()
+    if (!address || typeof address === 'string') {
+      throw new Error('Failed to get server port')
+    }
+    baseUrl = `http://localhost:${address.port}`
 
     // Launch browser
     browser = await chromium.launch({ headless: true })
@@ -157,7 +163,7 @@ describe('assets middleware e2e', () => {
       }
     })
 
-    let response = await page.goto(BASE_URL)
+    let response = await page.goto(baseUrl)
     assert.ok(response?.ok(), `Expected OK response, got ${response?.status()}`)
 
     // Wait for app to render (with shorter timeout for faster failure)
@@ -182,7 +188,7 @@ describe('assets middleware e2e', () => {
   })
 
   it('counter increments when clicked', async () => {
-    await page.goto(BASE_URL)
+    await page.goto(baseUrl)
     await page.waitForSelector('#count')
 
     let initialCount = await page.textContent('#count')
@@ -199,7 +205,7 @@ describe('assets middleware e2e', () => {
   })
 
   it('serves transformed TypeScript', async () => {
-    let response = await page.goto(`${BASE_URL}/entry.ts`)
+    let response = await page.goto(`${baseUrl}/entry.ts`)
     assert.ok(response?.ok())
 
     let contentType = response?.headers()['content-type']
@@ -213,7 +219,7 @@ describe('assets middleware e2e', () => {
   })
 
   it('returns 404 for non-existent files', async () => {
-    let response = await page.goto(`${BASE_URL}/does-not-exist.tsx`)
+    let response = await page.goto(`${baseUrl}/does-not-exist.tsx`)
     assert.equal(response?.status(), 404)
   })
 })

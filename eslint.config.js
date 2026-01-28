@@ -22,6 +22,7 @@ export default [
       'node_modules/**',
       'reference/**',
       'packages/multipart-parser/demos/deno/**',
+      '**/e2e/fixtures/**',
     ],
   },
   {

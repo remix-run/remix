@@ -52,55 +52,68 @@ export function __hmr_clear_state(handle) {
 // HMR Registry
 // ---------------------------------------------------------------------------
 
-// Maps handles to their current render functions
-const renderRegistry = new WeakMap();
+// Nested map: semantic structure organized by URL, then component name
+// url → Map<name, { impl: componentFn, handles: Set<handle> }>
+const components = new Map();
 
-// Track handles by module URL and component name
-const handlesByModule = new Map();
-
-// Component function registry - stores current implementation for each component
-// This allows remounts to use the NEW code, not the old cached code
-// Key: 'moduleUrl::componentName' → Value: component function
-const componentRegistry = new Map();
+// Fast lookup from handle to its metadata
+// handle → { url, name, renderFn }
+const handleToComponent = new WeakMap();
 
 export function __hmr_register(moduleUrl, componentName, handle, renderFn) {
-  renderRegistry.set(handle, renderFn);
+  // Store handle metadata for fast lookup
+  handleToComponent.set(handle, { url: moduleUrl, name: componentName, renderFn: renderFn });
 
-  if (!handlesByModule.has(moduleUrl)) {
-    handlesByModule.set(moduleUrl, new Map());
+  // Ensure component entry exists in nested map
+  if (!components.has(moduleUrl)) {
+    components.set(moduleUrl, new Map());
   }
-  const moduleHandles = handlesByModule.get(moduleUrl);
-  if (!moduleHandles.has(componentName)) {
-    moduleHandles.set(componentName, new Set());
+  const moduleComponents = components.get(moduleUrl);
+  if (!moduleComponents.has(componentName)) {
+    moduleComponents.set(componentName, { impl: null, handles: new Set() });
   }
-  moduleHandles.get(componentName).add(handle);
+  
+  // Add handle to the component's handle set
+  moduleComponents.get(componentName).handles.add(handle);
 }
 
 export function __hmr_call(handle, ...args) {
-  const renderFn = renderRegistry.get(handle);
-  if (!renderFn) {
+  const metadata = handleToComponent.get(handle);
+  if (!metadata) {
     throw new Error('[HMR] No render function registered for handle');
   }
-  return renderFn(...args);
+  return metadata.renderFn(...args);
 }
 
 // Register a component function in the registry
 // Called by transforms: allows remount to use the current implementation
 export function __hmr_register_component(moduleUrl, componentName, componentFn) {
-  const key = moduleUrl + '::' + componentName;
-  componentRegistry.set(key, componentFn);
+  // Ensure component entry exists
+  if (!components.has(moduleUrl)) {
+    components.set(moduleUrl, new Map());
+  }
+  const moduleComponents = components.get(moduleUrl);
+  if (!moduleComponents.has(componentName)) {
+    moduleComponents.set(componentName, { impl: null, handles: new Set() });
+  }
+  
+  // Store the implementation
+  moduleComponents.get(componentName).impl = componentFn;
 }
 
 // Get the current component function from the registry
 // Called by the delegating wrapper that Remix holds
 export function __hmr_get_component(moduleUrl, componentName) {
-  const key = moduleUrl + '::' + componentName;
-  return componentRegistry.get(key);
+  const moduleComponents = components.get(moduleUrl);
+  if (!moduleComponents) return undefined;
+  
+  const component = moduleComponents.get(componentName);
+  return component ? component.impl : undefined;
 }
 
 export function __hmr_update(moduleUrl, getNewModule) {
-  const moduleHandles = handlesByModule.get(moduleUrl);
-  if (!moduleHandles || moduleHandles.size === 0) {
+  const moduleComponents = components.get(moduleUrl);
+  if (!moduleComponents || moduleComponents.size === 0) {
     console.log('[HMR] No instances found for ' + moduleUrl);
     return Promise.resolve();
   }
@@ -111,16 +124,16 @@ export function __hmr_update(moduleUrl, getNewModule) {
     // NOTE: The module load itself calls __hmr_register_component with the impl.
     // We do NOT call it here - that would overwrite the impl with the wrapper!
 
-    moduleHandles.forEach(function(handles, componentName) {
+    moduleComponents.forEach(function(component, componentName) {
       const newComponentFn = newModule[componentName];
       if (!newComponentFn) {
         console.warn('[HMR] Component ' + componentName + ' not found in new module');
         return;
       }
 
-      console.log('[HMR] Updating ' + componentName + ' (' + handles.size + ' instance(s))');
+      console.log('[HMR] Updating ' + componentName + ' (' + component.handles.size + ' instance(s))');
 
-      handles.forEach(function(handle) {
+      component.handles.forEach(function(handle) {
         try {
           // This calls the wrapper, which delegates to __hmr_get_component,
           // which returns the impl that was registered when the module loaded.

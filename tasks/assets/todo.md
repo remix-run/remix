@@ -4,130 +4,112 @@ NOTE: Tasks that are in progress should be moved to `in-progress.md`.
 
 ## Features
 
-### HMR refactor and cleanup
+### Add HMR handle unregistration to prevent memory leaks
 
-Simplify the HMR and module graph implementation by removing unused features, improving code organization, and cleaning up data structures. Focus on "beautifully simple" - only what we need, no more.
+The HMR runtime currently tracks component handles in `Set<handle>` but never removes them when components unmount. This could cause memory leaks during development with dynamically mounted/unmounted components.
 
-**Philosophy:** Don't build for future features. Add complexity only when actually needed with evidence it provides value. Code should be easy to follow.
+**Current situation:**
 
-**Incremental approach:** Complete each step fully and verify before moving to the next. Each step should leave the codebase in a working, tested state.
+- `components` Map stores `{ impl, handles: Set<handle> }` with **strong references** to handles
+- When components call `__hmr_register(url, name, handle, renderFn)`, handles are added to the Set (line 77 in `hmr-runtime.ts`)
+- **No cleanup mechanism** when components unmount or handles are disposed
+- HMR iterates over `component.handles.forEach(...)` to propagate updates (requires strong refs, can't use WeakSet)
 
----
+**Why this matters:**
 
-**Step 1: Remove bidirectional module graph (`importedModules`)**
+- Unmounted component handles remain in memory indefinitely
+- Long dev sessions with component churn could accumulate stale handles
+- Testing scenarios with many mount/unmount cycles could leak
+- **However**: This is dev-only, and most components are long-lived during dev sessions, so impact is likely minor in practice
 
-Currently tracking both `importers` (who imports me) and `importedModules` (who I import). The downward links (`importedModules`) aren't actually traversed - they're only used to maintain graph structure. Pre-emptive transforms aren't implemented yet.
+**Potential solution (requires investigation):**
 
-**Goal:** Remove `importedModules` entirely. Just track `importers` (upward links). Add downward links later when we actually implement a feature that needs them.
+Add cleanup API that `@remix-run/component` calls when disposing handles:
 
-**Acceptance Criteria:**
-- [ ] Remove `importedModules` from `ModuleNode` interface
-- [ ] Remove code that maintains `importedModules` relationships in `rewriteImports`
-- [ ] HMR still works (importers are sufficient for cache invalidation)
-- [ ] All existing unit tests pass
-- [ ] All existing E2E tests pass (HMR functionality unchanged)
-- [ ] Code is simpler (fewer Set operations, clearer intent)
-
-**Verification checkpoint:** Confirm this step is complete and working before proceeding to Step 2.
-
----
-
-**Step 2: Verify transform caching is elegant (audit only)**
-
-Transform caching is **critical** (compiling node_modules on the fly without caching would be too slow). This step is just an audit to ensure the current implementation is clean and not introducing unnecessary complexity.
-
-**Current approach:**
-- Cache lives on `ModuleNode.transformResult` 
-- Cache key is `lastModified` (file mtime)
-- Cache hit: return stored code, skip esbuild
-- Cache miss: run esbuild, store result + mtime
-
-**Goal:** Verify current implementation is elegant enough. Don't change unless there's a clear improvement.
-
-**Acceptance Criteria:**
-- [ ] Review transform caching code in `assets.ts`
-- [ ] Verify cache logic is centralized and easy to follow
-- [ ] Verify mtime-based invalidation is reliable
-- [ ] Document any concerns or potential improvements for future
-- [ ] **Decision:** Keep as-is OR make specific targeted improvements (document why)
-
-**Verification checkpoint:** Confirm audit is complete and any changes (if made) are tested before proceeding to Step 3.
-
----
-
-**Step 3: Split `assets.ts` into focused modules**
-
-`assets.ts` is 1,431 lines and does too much: module graph, transform caching, import rewriting, HMR integration, workspace resolution, ETag generation, and middleware orchestration.
-
-**Goal:** Extract into clearer boundaries while keeping the total number of files manageable.
-
-**Proposed structure:**
-- `module-graph.ts`: `ModuleNode`, `ModuleGraph`, operations (`createModuleNode`, `invalidateModule`, `getModuleByUrl`, `getModuleByFile`)
-- `import-rewriter.ts`: Import parsing (`extractImportSpecifiers`), resolution, `rewriteImports()` with MagicString
-- `assets.ts`: HTTP handling, middleware orchestration, calls into graph + rewriter
-
-**Acceptance Criteria:**
-- [ ] Create `src/lib/module-graph.ts` with graph data structure and operations
-- [ ] Create `src/lib/import-rewriter.ts` with import parsing and rewriting logic
-- [ ] Update `assets.ts` to import and use these modules
-- [ ] **CRITICAL:** Move tests to dedicated test files for new modules:
-  - [ ] Create `src/lib/module-graph.test.ts` for module graph tests
-  - [ ] Create `src/lib/import-rewriter.test.ts` for import rewriting tests
-  - [ ] Move relevant tests from `assets.test.ts` to appropriate new test files
-  - [ ] Keep only assets-specific/integration tests in `assets.test.ts`
-- [ ] **CRITICAL:** Verify no tests were lost in the refactor:
-  - [ ] Count total assertions/test cases before refactor
-  - [ ] Count total assertions/test cases after refactor
-  - [ ] Numbers must match (or increase if new tests added)
-  - [ ] Review git diff to ensure all test logic was moved, not deleted
-- [ ] All existing unit tests pass
-- [ ] All existing E2E tests pass
-- [ ] Main middleware file (`assets.ts`) is significantly smaller and easier to follow
-- [ ] Each file has a clear, single responsibility
-
-**Verification checkpoint:** Confirm split is complete, tests pass, and code is clearer before proceeding to Step 4.
-
----
-
-**Step 4: Simplify HMR runtime registries (3 → 2)**
-
-Currently using three separate data structures in the HMR runtime to track components and handles. Can simplify to two with better semantics.
-
-**Current (3 structures):**
 ```javascript
-const renderRegistry = new WeakMap()        // handle → renderFn
-const handlesByModule = new Map()            // url → name → Set<handle>
-const componentRegistry = new Map()          // "url::name" → componentFn
+export function __hmr_unregister(handle) {
+  const metadata = handleToComponent.get(handle)
+  if (metadata) {
+    const component = components.get(metadata.url)?.get(metadata.name)
+    component?.handles.delete(handle)
+    handleToComponent.delete(handle)
+  }
+}
 ```
 
-**Proposed (2 structures, no string concatenation keys):**
-```javascript
-// Nested map: semantic structure organized by URL, then name
-const components = new Map() // url → Map<name, { impl, handles: Set }>
+**Open questions requiring investigation:**
 
-// Fast lookup from handle
-const handleToComponent = new WeakMap() // handle → { url, name, renderFn }
+- Does `@remix-run/component` have lifecycle hooks for handle disposal?
+- Should this be called automatically or require explicit cleanup?
+- What's the impact on HMR behavior if handles are removed mid-update?
+- Is there a way to detect stale handles automatically (e.g., checking if handle is still mounted)?
+- Should we add periodic cleanup to remove handles that are no longer reachable?
+
+**Acceptance Criteria:**
+
+- [ ] Investigate `@remix-run/component` handle lifecycle and disposal mechanisms
+- [ ] Design cleanup API that integrates with component lifecycle
+- [ ] Implement `__hmr_unregister` function
+- [ ] Update `@remix-run/component` to call unregister when handles are disposed
+- [ ] Add tests for handle cleanup (verify handles are removed from registry)
+- [ ] Verify no memory leaks in long-running dev sessions with component churn
+- [ ] Document cleanup expectations for framework integrators
+
+**Note:** May require coordination with `@remix-run/component` package. Further investigation needed to determine the right integration points.
+
+### Add custom logger option
+
+The middleware currently uses `console.warn/log/error` for all logging, which creates noise during tests and doesn't integrate with application logging infrastructure.
+
+**Current problems:**
+
+- Security warnings (`Blocked: ...`) spam test output (22+ console calls in `assets.ts`)
+- No way to silence or redirect logs during tests
+- Can't integrate with application logging systems (winston, pino, etc.)
+- Debug logs controlled by environment variable (`DEBUG=assets`) rather than configuration
+
+**Examples of noisy output during tests:**
+
+```
+[dev-assets-middleware] Blocked: /__@workspace/packages/lib/index.ts
+  No allow pattern matched. Current patterns:
+    /node_modules/
+  Consider adding: workspace: { allow: [/packages\//] }
+```
+
+**Proposed solution:**
+
+Add optional `logger` configuration to `DevAssetsOptions`:
+
+```typescript
+interface Logger {
+  debug: (message: string, ...args: any[]) => void
+  info: (message: string, ...args: any[]) => void
+  warn: (message: string, ...args: any[]) => void
+  error: (message: string, ...args: any[]) => void
+}
+
+interface DevAssetsOptions {
+  // ... existing options
+  logger?: Logger  // Defaults to console
+}
 ```
 
 **Benefits:**
-- No string concatenation keys (`url + '::' + name`)
-- Semantic structure (components organized by URL, then name)
-- Easier to iterate over all components in a module (for HMR updates)
-- One less data structure
+
+- Tests can pass silent logger: `logger: { debug() {}, info() {}, warn() {}, error() {} }`
+- Production apps can use their logging infrastructure
+- Consistent logging interface
+- Better control over log levels
 
 **Acceptance Criteria:**
-- [ ] Update `hmr-runtime.ts` to use new two-structure approach
-- [ ] Update `__hmr_register` to use nested Map
-- [ ] Update `__hmr_call` to use WeakMap lookup
-- [ ] Update `__hmr_get_component` to use nested Map
-- [ ] Update `__hmr_register_component` to use nested Map
-- [ ] Update `performUpdate` to iterate nested Map (simpler than before)
-- [ ] All existing E2E tests pass (HMR functionality unchanged)
-- [ ] Code is clearer (no string key construction, semantic structure obvious)
 
-**Verification checkpoint:** Confirm registry refactor is complete and HMR works correctly. Task complete!
-
----
+- [ ] Add `Logger` interface to `DevAssetsOptions`
+- [ ] Replace all `console.*` calls with `logger.*` calls
+- [ ] Default logger uses `console` (no breaking changes)
+- [ ] Update E2E tests to use silent logger (cleaner test output)
+- [ ] Document logger option in README/JSDoc
+- [ ] All tests pass
 
 ### Refactor HMR runtime to real TypeScript module
 
@@ -138,12 +120,14 @@ Convert the HMR runtime from a generated string to a real TypeScript module that
 - HMR runtime is generated as a string (poor authoring experience)
 - Uses `window.__hmr_request_remount_impl` global to bridge to `@remix-run/component`
 - HTML injection required to bootstrap SSE connection
-- Entry points must wire up the global connection
+- Entry points must manually wire up the global with boilerplate: `(window as any).__hmr_request_remount_impl = requestRemount`
+- This boilerplate exists in: demo apps (`demos/assets-spike/app/entry.tsx`) and E2E fixtures (`packages/dev-assets-middleware/e2e/fixtures/app/entry.tsx`)
 - No TypeScript type checking or source maps for the runtime itself
 
 **Target architecture:**
 
 The HMR runtime should be a real `.ts` file that:
+
 - Imports `requestRemount` directly from `@remix-run/component` (no globals)
 - Gets transformed by the same pipeline as user code (import rewriting works automatically)
 - Establishes SSE connection as a side effect when first imported
@@ -156,32 +140,42 @@ The HMR runtime should be a real `.ts` file that:
 Each step is independently shippable with all tests passing:
 
 **Step 1: Convert to real TypeScript module (infrastructure)**
+
 - Create `src/lib/hmr-runtime.module.ts` with current string content
 - Update `assets.ts` to load and transform this file instead of generating string
 - Keep all existing behavior (globals, HTML injection)
 - Checkpoint: Better authoring, same behavior
 
 **Step 2: Add direct import (dual mode)**
+
 - Add `import { requestRemount } from '@remix-run/component'` to runtime
 - Runtime calls imported `requestRemount` directly
 - Entry points still set global (becomes dead code)
 - Checkpoint: Runtime is self-sufficient, no breaking changes
 
 **Step 3: Remove global from entry points**
-- Remove `window.__hmr_request_remount_impl = requestRemount` from entries
+
+- Remove `window.__hmr_request_remount_impl = requestRemount` boilerplate from all entry points:
+  - `demos/assets-spike/app/entry.tsx`
+  - `packages/dev-assets-middleware/e2e/fixtures/app/entry.tsx`
+  - Any other demo apps or examples
 - Remove global references from runtime
+- Remove the `requestRemount` import from entry points (no longer needed)
 - Checkpoint: No more globals, pure ESM
 
 **Step 4: Remove HTML injection**
+
 - Remove HTML injection logic (SSE bootstraps via module import)
 - Checkpoint: Pure module graph, no special handling
 
 **Step 5: Cleanup**
+
 - Delete `generateRuntimeModule()` function and any dead code
 
 **Acceptance Criteria:**
 
 **Step 1:**
+
 - [ ] Create `src/lib/hmr-runtime.module.ts` with current runtime logic
 - [ ] Update `assets.ts` to serve runtime via `transformSource()` instead of raw string
 - [ ] Runtime gets source maps (verify with `parseInlineSourceMap()`)
@@ -189,6 +183,7 @@ Each step is independently shippable with all tests passing:
 - [ ] All existing unit tests pass unchanged
 
 **Step 2:**
+
 - [ ] Runtime imports `requestRemount` from `@remix-run/component`
 - [ ] Import path gets correctly rewritten to `/__@workspace/...`
 - [ ] Runtime calls imported function instead of global
@@ -196,6 +191,7 @@ Each step is independently shippable with all tests passing:
 - [ ] All E2E and unit tests pass unchanged
 
 **Step 3:**
+
 - [ ] Remove global setup from demo entry (`demos/assets-spike/app/entry.tsx`)
 - [ ] Remove global setup from E2E fixture entry (`e2e/fixtures/app/entry.tsx`)
 - [ ] Remove global handling code from runtime
@@ -203,6 +199,7 @@ Each step is independently shippable with all tests passing:
 - [ ] Update E2E fixtures as needed
 
 **Step 4:**
+
 - [ ] Remove HTML injection logic from `assets.ts` (remove `interceptHtmlResponse` helper)
 - [ ] Remove HMR script tag injection
 - [ ] SSE connection still works (first component import triggers it)
@@ -210,11 +207,13 @@ Each step is independently shippable with all tests passing:
 - [ ] Demo app works without any HMR setup in entry point or HTML
 
 **Step 5:**
+
 - [ ] Delete `generateRuntimeModule()` from `hmr-runtime.ts`
 - [ ] Remove any other unused code related to old approach
 - [ ] All tests still pass
 
 **Final verification:**
+
 - [ ] Entry points have no HMR setup code (just normal component imports)
 - [ ] HTML has no HMR script tags (just normal `<script type="module">` for entry)
 - [ ] HMR runtime is fully typed TypeScript with source maps
