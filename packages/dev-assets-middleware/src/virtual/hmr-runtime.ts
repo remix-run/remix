@@ -34,28 +34,18 @@ interface HandleMetadata {
   renderFn: RenderFunction
 }
 
-// HMR message types
-interface HmrMessageConnected {
-  type: 'connected'
-}
-
-interface HmrMessageUpdate {
-  type: 'update'
-  files?: string[]
-  timestamp?: number
-}
-
-interface HmrMessageReload {
-  type: 'reload'
-}
-
-// Base message type for runtime parsing
-interface HmrMessageBase {
-  type: string
-  [key: string]: unknown
-}
-
-type HmrMessage = HmrMessageConnected | HmrMessageUpdate | HmrMessageReload
+type HmrMessage =
+  | {
+      type: 'connected'
+    }
+  | {
+      type: 'update'
+      files: string[]
+      timestamp: number
+    }
+  | {
+      type: 'reload'
+    }
 
 // Extend window interface for HMR connection status
 declare global {
@@ -251,28 +241,76 @@ export function __hmr_request_remount(handle: Handle): void {
   requestRemount(handle)
 }
 
-function handleHmrMessage(message: HmrMessageBase): void {
+function parseHmrMessage(data: string): HmrMessage | null {
+  try {
+    let message = JSON.parse(data) as unknown
+
+    // Validate that parsed data is an object with a type property
+    if (
+      typeof message !== 'object' ||
+      message === null ||
+      !('type' in message) ||
+      typeof message.type !== 'string'
+    ) {
+      console.error('[HMR] Invalid message format: missing or invalid type field')
+      return null
+    }
+
+    // Validate message type-specific fields
+    switch (message.type) {
+      case 'connected':
+        return { type: 'connected' }
+
+      case 'update': {
+        if (
+          !('files' in message) ||
+          !Array.isArray(message.files) ||
+          !message.files.every((f) => typeof f === 'string')
+        ) {
+          console.error('[HMR] Invalid update message: files must be string array')
+          return null
+        }
+
+        if (!('timestamp' in message) || typeof message.timestamp !== 'number') {
+          console.error('[HMR] Invalid update message: timestamp must be a number')
+          return null
+        }
+
+        return {
+          type: 'update',
+          files: message.files,
+          timestamp: message.timestamp,
+        }
+      }
+
+      case 'reload':
+        return { type: 'reload' }
+
+      default:
+        console.warn('[HMR] Unknown message type:', message.type)
+        return null
+    }
+  } catch (error) {
+    console.error('[HMR] Failed to parse message JSON:', error)
+    return null
+  }
+}
+
+function handleHmrMessage(message: HmrMessage): void {
   switch (message.type) {
     case 'connected':
       console.log('[HMR] Server connection established')
       break
 
-    case 'update': {
-      let updateMessage = message as HmrMessageUpdate
-      if (updateMessage.files && updateMessage.timestamp) {
-        console.log('[HMR] Received update for:', updateMessage.files)
-        performUpdate(updateMessage.files, updateMessage.timestamp)
-      }
+    case 'update':
+      console.log('[HMR] Received update for:', message.files)
+      performUpdate(message.files, message.timestamp)
       break
-    }
 
     case 'reload':
       console.log('[HMR] Full reload requested')
       window.location.reload()
       break
-
-    default:
-      console.log('[HMR] Unknown message type:', message.type)
   }
 }
 
@@ -319,11 +357,9 @@ window.__hmr_connected = false
   }
 
   eventSource.onmessage = function (event) {
-    try {
-      let message = JSON.parse(event.data) as HmrMessageBase
+    let message = parseHmrMessage(event.data)
+    if (message) {
       handleHmrMessage(message)
-    } catch (error) {
-      console.error('[HMR] Failed to parse message:', error)
     }
   }
 
