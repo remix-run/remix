@@ -58,21 +58,20 @@ jobs:
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
 
-      - name: Build installable branch
-        run: pnpm run setup-installable-branch ${{ inputs.installableBranch || 'preview' }}
-
       ## Force push over the preview branch
-      - name: Push changes (preview)
+      - name: Build/push branch (preview)
         if: github.event_name == 'push'
         run: |
+          pnpm run setup-installable-branch preview
           git push --force --set-upstream origin preview
           echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
       ## Don't force push for experimental releases in case of a branch name collision
-      - name: Push changes (experimental)
+      - name: Build/push branch (experimental)
         if: github.event_name == 'workflow_dispatch'
         run: |
-          git push --set-upstream origin ${{ inputs.installableBranch  }}
+          pnpm run setup-installable-branch ${{ inputs.installableBranch }}
+          git push --set-upstream origin ${{ inputs.installableBranch }}
           echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
   ## Pull Request Handling
