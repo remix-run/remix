@@ -74,7 +74,17 @@ jobs:
         if: github.event_name == 'push'
         run: |
           pnpm run setup-installable-branch preview
+
+          echo ""
+          set -x
+          git status
+          git fetch origin
+          git branch --all
+          
           git push --force --set-upstream origin preview
+
+          set +x
+          
           echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
       # Build and force push over the PR preview/* branch + comment on the PR
