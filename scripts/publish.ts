@@ -25,7 +25,12 @@ import { tagExists } from './utils/git.ts'
 import { createRelease } from './utils/github.ts'
 import { getRootDir, logAndExec } from './utils/process.ts'
 import { readChangesConfig, getChangelogEntry } from './utils/changes.ts'
-import { getAllPackageDirNames, getPackageFile, getGitTag } from './utils/packages.ts'
+import {
+  getAllPackageDirNames,
+  getPackageFile,
+  getGitTag,
+  getPackageShortName,
+} from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
 
 let rootDir = getRootDir()
@@ -156,7 +161,7 @@ function previewGitHubReleases(packages: PublishedPackage[]): { warnings: Change
 
   for (let pkg of packages) {
     let tagName = getGitTag(pkg.packageName, pkg.version)
-    let releaseName = `${pkg.packageName} v${pkg.version}`
+    let releaseName = `${getPackageShortName(pkg.packageName)} v${pkg.version}`
     let changes = getChangelogEntry({ packageName: pkg.packageName, version: pkg.version })
     let body = changes?.body ?? 'No changelog entry found for this version.'
 

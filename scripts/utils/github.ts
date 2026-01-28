@@ -1,7 +1,7 @@
 import { request } from '@octokit/request'
 
 import { getChangelogEntry } from './changes.ts'
-import { getGitTag } from './packages.ts'
+import { getGitTag, getPackageShortName } from './packages.ts'
 
 let owner = 'remix-run'
 let repo = 'remix'
@@ -37,7 +37,7 @@ export async function createRelease(
   let { preview = false } = options
 
   let tagName = getGitTag(packageName, version)
-  let releaseName = `${packageName} v${version}`
+  let releaseName = `${getPackageShortName(packageName)} v${version}`
   let changes = getChangelogEntry({ packageName, version })
   let body = changes?.body ?? 'No changelog entry found for this version.'
 

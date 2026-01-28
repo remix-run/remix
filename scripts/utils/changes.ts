@@ -9,6 +9,7 @@ import {
   getTransitiveDependents,
   getGitHubReleaseUrl,
   getPackageDependencies,
+  getGitTag,
 } from './packages.ts'
 import { fileExists, readFile, readJson } from './fs.ts'
 
@@ -703,7 +704,8 @@ function generateDependencyBumpsSection(
   lines.push('- Bumped `@remix-run/*` dependencies:')
 
   for (let dep of dependencyBumps) {
-    lines.push(`  - [\`${dep.packageName}@${dep.version}\`](${dep.releaseUrl})`)
+    let tag = getGitTag(dep.packageName, dep.version)
+    lines.push(`  - [\`${tag}\`](${dep.releaseUrl})`)
   }
 
   lines.push('')
@@ -749,7 +751,8 @@ export function generateChangelogContent(
       // Append to existing patch section (without heading)
       lines.push('- Bumped `@remix-run/*` dependencies:')
       for (let dep of release.dependencyBumps) {
-        lines.push(`  - [\`${dep.packageName}@${dep.version}\`](${dep.releaseUrl})`)
+        let tag = getGitTag(dep.packageName, dep.version)
+        lines.push(`  - [\`${tag}\`](${dep.releaseUrl})`)
       }
       lines.push('')
     } else {
