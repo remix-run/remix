@@ -16,32 +16,40 @@ export type PartPatternToken =
   | { type: 'text'; text: string }
   | { type: 'separator' }
   | { type: '(' | ')' }
-  | { type: ':' | '*'; nameIndex: number }
-
-type AST = {
-  tokens: Array<PartPatternToken>
-  paramNames: Array<string>
-  optionals: Map<number, number>
-}
+  | { type: ':' | '*'; name: string }
 
 const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
 export class PartPattern {
-  readonly tokens: AST['tokens']
-  readonly paramNames: AST['paramNames']
-  readonly optionals: AST['optionals']
+  readonly tokens: Array<PartPatternToken>
+  readonly optionals: Map<number, number>
   readonly type: 'hostname' | 'pathname'
   readonly ignoreCase: boolean
 
   #variants: Array<Variant> | undefined
   #regexp: RegExp | undefined
 
-  constructor(ast: AST, options: { type: 'hostname' | 'pathname'; ignoreCase: boolean }) {
-    this.tokens = ast.tokens
-    this.paramNames = ast.paramNames
-    this.optionals = ast.optionals
+  constructor(
+    args: {
+      tokens: Array<PartPatternToken>
+      optionals: Map<number, number>
+    },
+    options: { type: 'hostname' | 'pathname'; ignoreCase: boolean },
+  ) {
+    this.tokens = args.tokens
+    this.optionals = args.optionals
     this.type = options.type
     this.ignoreCase = options.ignoreCase
+  }
+
+  get params(): Array<Extract<PartPatternToken, { type: ':' | '*' }>> {
+    let result: Array<Extract<PartPatternToken, { type: ':' | '*' }>> = []
+    for (let token of this.tokens) {
+      if (token.type === ':' || token.type === '*') {
+        result.push(token)
+      }
+    }
+    return result
   }
 
   get separator(): '.' | '/' {
@@ -55,18 +63,15 @@ export class PartPattern {
     let span = options.span ?? [0, source.length]
     let separator = separatorForType(options.type)
 
-    let ast: AST = {
-      tokens: [],
-      paramNames: [],
-      optionals: new Map(),
-    }
+    let tokens: Array<PartPatternToken> = []
+    let optionals: Map<number, number> = new Map()
 
     let appendText = (text: string) => {
-      let currentToken = ast.tokens.at(-1)
+      let currentToken = tokens.at(-1)
       if (currentToken?.type === 'text') {
         currentToken.text += text
       } else {
-        ast.tokens.push({ type: 'text', text })
+        tokens.push({ type: 'text', text })
       }
     }
 
@@ -77,8 +82,8 @@ export class PartPattern {
 
       // optional begin
       if (char === '(') {
-        optionalStack.push(ast.tokens.length)
-        ast.tokens.push({ type: char })
+        optionalStack.push(tokens.length)
+        tokens.push({ type: char })
         i += 1
         continue
       }
@@ -89,8 +94,8 @@ export class PartPattern {
         if (begin === undefined) {
           throw new ParseError('unmatched )', source, i)
         }
-        ast.optionals.set(begin, ast.tokens.length)
-        ast.tokens.push({ type: char })
+        optionals.set(begin, tokens.length)
+        tokens.push({ type: char })
         i += 1
         continue
       }
@@ -102,8 +107,7 @@ export class PartPattern {
         if (!name) {
           throw new ParseError('missing variable name', source, i - 1)
         }
-        ast.tokens.push({ type: ':', nameIndex: ast.paramNames.length })
-        ast.paramNames.push(name)
+        tokens.push({ type: ':', name })
         i += name.length
         continue
       }
@@ -112,14 +116,13 @@ export class PartPattern {
       if (char === '*') {
         i += 1
         let name = IDENTIFIER_RE.exec(source.slice(i, span[1]))?.[0]
-        ast.tokens.push({ type: '*', nameIndex: ast.paramNames.length })
-        ast.paramNames.push(name ?? '*')
+        tokens.push({ type: '*', name: name ?? '*' })
         i += name?.length ?? 0
         continue
       }
 
       if (separator && char === separator) {
-        ast.tokens.push({ type: 'separator' })
+        tokens.push({ type: 'separator' })
         i += 1
         continue
       }
@@ -143,7 +146,10 @@ export class PartPattern {
       throw new ParseError('unmatched (', source, optionalStack.at(-1)!)
     }
 
-    return new PartPattern(ast, { type: options.type, ignoreCase: options.ignoreCase })
+    return new PartPattern(
+      { tokens, optionals },
+      { type: options.type, ignoreCase: options.ignoreCase },
+    )
   }
 
   get variants(): Array<Variant> {
@@ -169,8 +175,7 @@ export class PartPattern {
       }
 
       if (token.type === ':' || token.type === '*') {
-        let name = this.paramNames[token.nameIndex]
-        if (name === '*') name = ''
+        let name = token.name === '*' ? '' : token.name
         result += `${token.type}${name}`
         continue
       }
@@ -197,7 +202,7 @@ export class PartPattern {
   href(params: Record<string, string | number>): string | null {
     let best: Variant | undefined
     for (let variant of this.variants) {
-      let matches = variant.requiredParams.every((param) => params[param] !== undefined)
+      let matches = variant.params.every((param) => params[param.name] !== undefined)
       if (!matches) continue
 
       if (best === undefined) {
@@ -205,11 +210,11 @@ export class PartPattern {
         continue
       }
 
-      if (variant.requiredParams.length > best.requiredParams.length) {
+      if (variant.params.length > best.params.length) {
         best = variant
         continue
       }
-      if (variant.requiredParams.length === best.requiredParams.length) {
+      if (variant.params.length === best.params.length) {
         if (variant.tokens.length > best.tokens.length) {
           best = variant
           continue
@@ -230,8 +235,7 @@ export class PartPattern {
       }
 
       if (token.type === ':' || token.type === '*') {
-        let paramName = this.paramNames[token.nameIndex]
-        result += String(params[paramName])
+        result += String(params[token.name])
         continue
       }
       if (token.type === 'separator') {
@@ -250,19 +254,18 @@ export class PartPattern {
     let reMatch = this.#regexp.exec(part)
     if (reMatch === null) return null
     let match: PartPatternMatch = []
-    for (let group in reMatch.indices?.groups) {
-      let prefix = group[0]
-      let nameIndex = parseInt(group.slice(1))
-      if (prefix !== 'v' && prefix !== 'w') continue
-      let type: ':' | '*' = prefix === 'v' ? ':' : '*'
-      let span = reMatch.indices.groups[group]
+    let params = this.params
+    for (let i = 0; i < params.length; i++) {
+      let param = params[i]
+      let captureIndex = i + 1
+      let span = reMatch.indices?.[captureIndex]
       if (span === undefined) continue
       match.push({
-        type,
-        name: this.paramNames[nameIndex],
+        type: param.type,
+        name: param.name,
         begin: span[0],
         end: span[1],
-        value: reMatch.groups![group],
+        value: reMatch[captureIndex],
       })
     }
     return match
@@ -282,14 +285,12 @@ function toRegExp(
     }
 
     if (token.type === ':') {
-      result += `(?<v${token.nameIndex}>`
-      result += separator ? `[^${separator}]+?` : `.+?`
-      result += `)`
+      result += separator ? `([^${separator}]+?)` : `(.+?)`
       continue
     }
 
     if (token.type === '*') {
-      result += `(?<w${token.nameIndex}>.*)`
+      result += `(.*)`
       continue
     }
 

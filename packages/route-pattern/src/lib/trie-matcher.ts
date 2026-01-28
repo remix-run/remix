@@ -1,4 +1,8 @@
-import type { PartPattern, PartPatternMatch } from './route-pattern/part-pattern.ts'
+import type {
+  PartPattern,
+  PartPatternMatch,
+  PartPatternToken,
+} from './route-pattern/part-pattern.ts'
 import { RoutePattern } from './route-pattern.ts'
 import type { Variant } from './variant.ts'
 import * as RE from './regexp.ts'
@@ -6,6 +10,8 @@ import { unreachable } from './errors.ts'
 import * as Search from './route-pattern/search.ts'
 import type { Match, Matcher } from './matcher.ts'
 import * as Specificity from './specificity.ts'
+
+type Param = Extract<PartPatternToken, { type: ':' | '*' }>
 
 export class TrieMatcher<data = unknown> implements Matcher<data> {
   trie: Trie<data>
@@ -71,7 +77,7 @@ function variants(pattern: RoutePattern): Array<RoutePatternVariant> {
   // prettier-ignore
   let hostnames =
     pattern.ast.hostname === null ? [{ type: 'any' as const }] :
-    pattern.ast.hostname.paramNames.length === 0 ?
+    pattern.ast.hostname.params.length === 0 ?
       pattern.ast.hostname.variants.map((variant) => ({ type: 'static' as const, value: variant.toString() })) :
       [{ type: 'dynamic' as const, value: pattern.ast.hostname }]
 
@@ -117,8 +123,8 @@ type PathnameNode<data> = {
   value: {
     pattern: RoutePattern
     data: data
-    requiredParams: Array<string>
-    undefinedParams: Array<string>
+    requiredParams: Array<Param>
+    undefinedParams: Array<Param>
   } | null
 }
 
@@ -210,10 +216,13 @@ export class Trie<data = unknown> {
         unreachable(segment)
       }
 
-      let { requiredParams } = variant.pathname
-      let undefinedParams: Array<string> = []
-      for (let param of pattern.ast.pathname.paramNames) {
-        if (!requiredParams.includes(param) && !undefinedParams.includes(param)) {
+      let { params: requiredParams } = variant.pathname
+      let undefinedParams: Array<Param> = []
+      for (let param of pattern.ast.pathname.params) {
+        if (
+          !requiredParams.some((p) => p.name === param.name) &&
+          !undefinedParams.some((p) => p.name === param.name)
+        ) {
           undefinedParams.push(param)
         }
       }
@@ -274,7 +283,6 @@ export class Trie<data = unknown> {
         pathnameNode: PathnameNode<data>
         charOffset: number
         pathnameMatch: Array<{
-          type: ':' | '*'
           value: string
           begin: number
           end: number
@@ -293,17 +301,17 @@ export class Trie<data = unknown> {
           ) {
             let pathnameMatch: PartPatternMatch = []
             for (let i = 0; i < value.requiredParams.length; i++) {
-              let name = value.requiredParams[i]
+              let param = value.requiredParams[i]
               let rest = current.pathnameMatch[i]
               pathnameMatch.push({
                 ...rest,
-                name,
+                ...param,
               })
             }
 
             let params: Record<string, string | undefined> = {}
             for (let param of value.undefinedParams) {
-              params[param] = undefined
+              params[param.name] = undefined
             }
             for (let param of origin.hostnameMatch) {
               if (param.name === '*') continue
@@ -341,17 +349,13 @@ export class Trie<data = unknown> {
           let match = regexp.exec(urlSegment)
           if (match) {
             let pathnameMatch = current.pathnameMatch.slice()
-            for (let group in match.indices?.groups) {
-              let prefix = group[0]
-              if (prefix !== 'v' && prefix !== 'w') continue
-              let type: ':' | '*' = prefix === 'v' ? ':' : '*'
-              let span = match.indices.groups[group]
-              if (span === undefined) continue
+            for (let i = 1; i < match.indices!.length; i++) {
+              let span = match.indices![i]
+              if (span === undefined) unreachable()
               pathnameMatch.push({
-                type,
                 begin: current.charOffset + span[0],
                 end: current.charOffset + span[1],
-                value: match.groups![group],
+                value: match[i],
               })
             }
             stack.push({
@@ -368,17 +372,13 @@ export class Trie<data = unknown> {
           let match = regexp.exec(remaining)
           if (match) {
             let pathnameMatch = current.pathnameMatch.slice()
-            for (let group in match.indices?.groups) {
-              let prefix = group[0]
-              if (prefix !== 'v' && prefix !== 'w') continue
-              let type: ':' | '*' = prefix === 'v' ? ':' : '*'
-              let span = match.indices.groups[group]
+            for (let i = 1; i < match.indices!.length; i++) {
+              let span = match.indices![i]
               if (span === undefined) continue
               pathnameMatch.push({
-                type,
                 begin: current.charOffset + span[0],
                 end: current.charOffset + span[1],
-                value: match.groups![group],
+                value: match[i],
               })
             }
             stack.push({
@@ -439,14 +439,14 @@ function toSegments(variant: Variant): Array<Segment> {
 
     if (token.type === ':') {
       key += '{:}'
-      reSource += `(?<v${token.nameIndex}>[^/]+)`
+      reSource += `([^/]+)`
       if (type === 'static') type = 'variable'
       continue
     }
 
     if (token.type === '*') {
       key += '{*}'
-      reSource += `(?<w${token.nameIndex}>.*)`
+      reSource += `(.*)`
       type = 'wildcard'
       continue
     }

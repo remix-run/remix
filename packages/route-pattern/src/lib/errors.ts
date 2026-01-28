@@ -80,8 +80,10 @@ export class HrefError extends Error {
       let paramNames = Object.keys(details.params)
       let variants = details.partPattern.variants.map((variant) => {
         let key = variant.toString()
-        let missing = new Set(variant.requiredParams.filter((p) => !paramNames.includes(p)))
-        return `  - ${key || '<empty>'} (missing: ${Array.from(missing).join(', ')})`
+        let missing = Array.from(
+          new Set(variant.params.filter((p) => !paramNames.includes(p.name)).map((p) => p.name)),
+        )
+        return `  - ${key || '<empty>'} (missing: ${missing.join(', ')})`
       })
       let partTitle =
         details.partPattern.type.charAt(0).toUpperCase() + details.partPattern.type.slice(1)
