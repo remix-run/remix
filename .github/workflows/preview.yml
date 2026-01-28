@@ -9,14 +9,12 @@
 # Can also be dispatched manually with base/installable branches to provide
 # `experimental` branches from PRs or otherwise.
 
-name: Preview Builds
+name: Preview Build
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
   workflow_dispatch:
     inputs:
       baseBranch:
@@ -25,6 +23,8 @@ on:
       installableBranch:
         description: Installable Branch
         required: true
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,14 +32,25 @@ concurrency:
 
 jobs:
   ## Pushes to main or manually dispatched experimental previews
-  branch:
-    if: github.repository == 'remix-run/remix' && github.event_name != 'pull_request'
+  preview:
+    if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (push)
+        if: github.event_name == 'push'
+        uses: actions/checkout@v4
+
+      - name: Checkout (pull_request)
+        if: github.event_name == 'pull_request'
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.baseBranch || 'main' }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Checkout (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baseBranch }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -59,65 +70,36 @@ jobs:
           git config --local user.name "Remix Run Bot"
 
       ## Force push over the preview branch
-      - name: Build/push branch (preview)
+      - name: Build/push branch (push)
         if: github.event_name == 'push'
         run: |
           pnpm run setup-installable-branch preview
           git push --force --set-upstream origin preview
           echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
+      # Build previews when PR's are open
+      - name: Build/push branch (pull_request)
+        if: github.event_name == 'pull_request' && github.event.pull_request.state == 'open'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          pnpm run setup-installable-branch preview/${{ github.event.pull_request.number }}
+          git push --force --set-upstream origin preview/${{ github.event.pull_request.number }}
+          echo "pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
+          pnpm run pr-preview comment ${{ github.event.pull_request.number }} preview/${{ github.event.pull_request.number }}
+
       ## Don't force push for experimental releases in case of a branch name collision
-      - name: Build/push branch (experimental)
+      - name: Build/push branch (workflow_dispatch)
         if: github.event_name == 'workflow_dispatch'
         run: |
           pnpm run setup-installable-branch ${{ inputs.installableBranch }}
           git push --set-upstream origin ${{ inputs.installableBranch }}
           echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
-  ## Pull Request Handling
-  pr-preview:
-    if: github.repository == 'remix-run/remix' && github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Build previews when PR's are open
-      - name: Build preview branch
-        if: github.event.pull_request.state == 'open'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          git config --local user.email "hello@remix.run"
-          git config --local user.name "Remix Run Bot"
-
-          PREVIEW_BRANCH_NAME="preview/${{ github.event.pull_request.number }}"
-          pnpm run setup-installable-branch $PREVIEW_BRANCH_NAME
-
-          git push --force --set-upstream origin $PREVIEW_BRANCH_NAME
-          echo "pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
-
-          pnpm run pr-preview comment ${{ github.event.pull_request.number }} $PREVIEW_BRANCH_NAME
-
       # Cleanup previews when PR's are closed
       - name: Cleanup preview branch
-        if: github.event.pull_request.state == 'closed'
+        if: github.event_name == 'pull_request' && github.event.pull_request.state == 'closed'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          PREVIEW_BRANCH_NAME="preview/${{ github.event.pull_request.number }}"
-          pnpm run pr-preview cleanup ${{ github.event.pull_request.number }} $PREVIEW_BRANCH_NAME
+          pnpm run pr-preview cleanup ${{ github.event.pull_request.number }} preview/${{ github.event.pull_request.number }}
