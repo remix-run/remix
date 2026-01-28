@@ -40,6 +40,15 @@ interface PublishedPackage {
   tag: string
 }
 
+/**
+ * Convert a package name to a git tag name.
+ * Strips the @remix-run/ scope prefix for scoped packages.
+ * e.g., "@remix-run/headers" -> "headers", "remix" -> "remix"
+ */
+function packageNameToTagName(packageName: string): string {
+  return packageName.replace(/^@remix-run\//, '')
+}
+
 interface PublishSummary {
   publishedPackages: Array<{
     name: string
@@ -65,7 +74,7 @@ function readPublishSummary(): PublishedPackage[] {
   return summary.publishedPackages.map((pkg) => ({
     packageName: pkg.name,
     version: pkg.version,
-    tag: `${pkg.name}@${pkg.version}`,
+    tag: `${packageNameToTagName(pkg.name)}@${pkg.version}`,
   }))
 }
 
@@ -130,7 +139,7 @@ async function getUnpublishedPackages(): Promise<PublishedPackage[]> {
       unpublished.push({
         packageName: pkg.npmName,
         version: pkg.localVersion,
-        tag: `${pkg.npmName}@${pkg.localVersion}`,
+        tag: `${packageNameToTagName(pkg.npmName)}@${pkg.localVersion}`,
       })
     }
   }
@@ -155,7 +164,7 @@ function previewGitHubReleases(packages: PublishedPackage[]): { warnings: Change
   console.log()
 
   for (let pkg of packages) {
-    let tagName = `${pkg.packageName}@${pkg.version}`
+    let tagName = `${packageNameToTagName(pkg.packageName)}@${pkg.version}`
     let releaseName = `${pkg.packageName} v${pkg.version}`
     let changes = getChangelogEntry({ packageName: pkg.packageName, version: pkg.version })
     let body = changes?.body ?? 'No changelog entry found for this version.'
