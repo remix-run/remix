@@ -5,7 +5,7 @@ import { generateChangelogContent } from './changes.ts'
 let maxBodyLength = 60_000
 
 /**
- * Generates the PR body for a version PR
+ * Generates the PR body for a release PR
  */
 export function generatePrBody(releases: PackageRelease[]): string {
   let header = generateHeader()
@@ -29,7 +29,7 @@ export function generatePrBody(releases: PackageRelease[]): string {
 
 function generateHeader(): string {
   return [
-    'This PR is managed by the [`changes-version-pr`](https://github.com/remix-run/remix/blob/main/.github/workflows/changes-version-pr.yaml) workflow. ' +
+    'This PR is managed by the [`release-pr`](https://github.com/remix-run/remix/blob/main/.github/workflows/release-pr.yaml) workflow. ' +
       'Do not edit it manually. ' +
       'See [CONTRIBUTING.md](https://github.com/remix-run/remix/blob/main/CONTRIBUTING.md#releases) for more.',
   ].join('\n')

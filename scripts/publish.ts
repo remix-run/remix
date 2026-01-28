@@ -250,7 +250,7 @@ async function main() {
 
   // In dry run mode, query npm to determine what would be published
   // and preview the GitHub releases. This is designed to be run against
-  // the contents of the "Version Packages" PR / `pnpm changes:version` output.
+  // the contents of the "Release" PR / `pnpm changes:version` output.
   if (dryRun) {
     console.log('Checking npm for unpublished versions...\n')
 

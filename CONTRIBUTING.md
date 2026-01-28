@@ -94,11 +94,11 @@ pnpm changes:validate
 
 ## Releases
 
-Releases are automated via the [changes-version-pr workflow](/.github/workflows/changes-version-pr.yaml) and [publish workflow](/.github/workflows/publish.yaml).
+Releases are automated via the [release-pr workflow](/.github/workflows/release-pr.yaml) and [publish workflow](/.github/workflows/publish.yaml).
 
 1. **You push changes to `main`** with change files in `packages/*/.changes/`
 
-2. **A "Version Packages" PR is automatically opened** (or updated if one exists)
+2. **A "Release" PR is automatically opened** (or updated if one exists)
 
    The PR contains:
 
@@ -112,7 +112,7 @@ Releases are automated via the [changes-version-pr workflow](/.github/workflows/
 
 ### Manual Versioning
 
-The "Version Packages" PR simply automates the `pnpm changes:version` command. If needed, you can run this command manually. This will update the `package.json` versions, `CHANGELOG.md` files, and delete the change files. It will then commit the result.
+The "Release" PR simply automates the `pnpm changes:version` command. If needed, you can run this command manually. This will update the `package.json` versions, `CHANGELOG.md` files, and delete the change files. It will then commit the result.
 
 ```sh
 pnpm changes:version

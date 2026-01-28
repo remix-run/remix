@@ -6,6 +6,9 @@ import {
   getPackageFile,
   getPackagePath,
   packageNameToDirectoryName,
+  getTransitiveDependents,
+  getGitHubReleaseUrl,
+  getPackageDependencies,
 } from './packages.ts'
 import { fileExists, readFile, readJson } from './fs.ts'
 
@@ -373,6 +376,15 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
   return { valid: true, changes, prereleaseConfig }
 }
 
+/**
+ * Represents a dependency that was bumped, triggering this release.
+ */
+export interface DependencyBump {
+  packageName: string
+  version: string
+  releaseUrl: string
+}
+
 export interface PackageRelease {
   packageDirName: string
   packageName: string
@@ -380,6 +392,8 @@ export interface PackageRelease {
   nextVersion: string
   bump: BumpType
   changes: ChangeFile[]
+  /** Dependencies that were bumped, triggering this release (if any) */
+  dependencyBumps: DependencyBump[]
 }
 
 type ParsedChanges =
@@ -388,12 +402,33 @@ type ParsedChanges =
 
 /**
  * Parses and validates all change files across all packages.
+ * Also includes packages that need to be released due to dependency changes.
  * Returns releases if valid, or errors if invalid.
  */
 export function parseAllChangeFiles(): ParsedChanges {
   let packageDirNames = getAllPackageDirNames()
-  let releases: PackageRelease[] = []
   let errors: ValidationError[] = []
+
+  // Build maps for lookup
+  let dirNameToPackageName = new Map<string, string>()
+  let packageNameToDirName = new Map<string, string>()
+
+  // First pass: collect package info and validate change files
+  interface ParsedPackageInfo {
+    packageDirName: string
+    packageName: string
+    currentVersion: string
+    changes: ChangeFile[]
+    prereleaseConfig: RemixPrereleaseConfig | null
+  }
+  let parsedPackages: ParsedPackageInfo[] = []
+
+  // Read the remix prerelease config once (only remix supports prerelease mode)
+  let remixPrereleaseConfig = readRemixPrereleaseConfig()
+  let validRemixPrereleaseConfig: RemixPrereleaseConfig | null = null
+  if (remixPrereleaseConfig.exists && remixPrereleaseConfig.valid) {
+    validRemixPrereleaseConfig = remixPrereleaseConfig.config
+  }
 
   for (let packageDirName of packageDirNames) {
     let parsed = parsePackageChanges(packageDirName)
@@ -403,32 +438,126 @@ export function parseAllChangeFiles(): ParsedChanges {
       continue
     }
 
-    // Only create a release if there are changes
-    if (parsed.changes.length > 0) {
-      let packageJsonPath = getPackageFile(packageDirName, 'package.json')
-      let packageJson = readJson(packageJsonPath)
-      let packageName = packageJson.name as string
-      let currentVersion = packageJson.version as string
+    let packageJsonPath = getPackageFile(packageDirName, 'package.json')
+    let packageJson = readJson(packageJsonPath)
+    let packageName = packageJson.name as string
+    let currentVersion = packageJson.version as string
 
-      let bump = getHighestBump(parsed.changes.map((c) => c.bump))
-      if (bump == null) continue
+    dirNameToPackageName.set(packageDirName, packageName)
+    packageNameToDirName.set(packageName, packageDirName)
 
-      let nextVersion = getNextVersion(currentVersion, bump, parsed.prereleaseConfig)
-
-      releases.push({
-        packageDirName,
-        packageName,
-        currentVersion,
-        nextVersion,
-        bump,
-        changes: parsed.changes,
-      })
+    // For remix package, use the prerelease config even if there are no change files
+    // (to correctly bump prerelease counter for dependency-triggered releases)
+    let prereleaseConfig = parsed.prereleaseConfig
+    if (packageDirName === 'remix' && prereleaseConfig === null && validRemixPrereleaseConfig) {
+      prereleaseConfig = validRemixPrereleaseConfig
     }
+
+    parsedPackages.push({
+      packageDirName,
+      packageName,
+      currentVersion,
+      changes: parsed.changes,
+      prereleaseConfig,
+    })
   }
 
   if (errors.length > 0) {
     return { valid: false, errors }
   }
+
+  // Find packages with direct changes
+  let directlyChangedPackages = new Set<string>()
+  for (let pkg of parsedPackages) {
+    if (pkg.changes.length > 0) {
+      directlyChangedPackages.add(pkg.packageName)
+    }
+  }
+
+  // Find all packages that transitively depend on changed packages
+  let transitiveDependents = getTransitiveDependents(directlyChangedPackages)
+
+  // Determine all packages that will be released
+  let allReleasingPackages = new Set<string>([
+    ...directlyChangedPackages,
+    ...transitiveDependents.keys(),
+  ])
+
+  // Compute next versions for all releasing packages
+  // We need to do this in dependency order to correctly compute dependency bumps
+  let packageVersions = new Map<string, string>() // packageName -> nextVersion
+
+  // First, compute versions for directly changed packages
+  for (let pkg of parsedPackages) {
+    if (pkg.changes.length > 0) {
+      let bump = getHighestBump(pkg.changes.map((c) => c.bump))
+      if (bump == null) continue
+      let nextVersion = getNextVersion(pkg.currentVersion, bump, pkg.prereleaseConfig)
+      packageVersions.set(pkg.packageName, nextVersion)
+    }
+  }
+
+  // Then, compute versions for dependency-triggered releases
+  // We need to do this iteratively because a package's version depends on knowing
+  // which of its dependencies are being released
+  for (let pkg of parsedPackages) {
+    if (!directlyChangedPackages.has(pkg.packageName) && allReleasingPackages.has(pkg.packageName)) {
+      // This package is being released due to dependency changes
+      // Use the package's prerelease config if it has one (e.g., remix in prerelease mode)
+      let nextVersion = getNextVersion(pkg.currentVersion, 'patch', pkg.prereleaseConfig)
+      packageVersions.set(pkg.packageName, nextVersion)
+    }
+  }
+
+  // Now build the final releases with dependency bumps
+  let releases: PackageRelease[] = []
+
+  for (let pkg of parsedPackages) {
+    if (!allReleasingPackages.has(pkg.packageName)) {
+      continue
+    }
+
+    let nextVersion = packageVersions.get(pkg.packageName)
+    if (nextVersion == null) continue
+
+    // Compute dependency bumps: which of this package's direct dependencies are being released?
+    let dependencyBumps: DependencyBump[] = []
+    let deps = getPackageDependencies(pkg.packageName)
+
+    for (let depName of deps) {
+      if (allReleasingPackages.has(depName)) {
+        let depVersion = packageVersions.get(depName)
+        if (depVersion) {
+          dependencyBumps.push({
+            packageName: depName,
+            version: depVersion,
+            releaseUrl: getGitHubReleaseUrl(depName, depVersion),
+          })
+        }
+      }
+    }
+
+    // Sort dependency bumps alphabetically by package name
+    dependencyBumps.sort((a, b) => a.packageName.localeCompare(b.packageName))
+
+    let bump: BumpType = 'patch'
+    if (pkg.changes.length > 0) {
+      bump = getHighestBump(pkg.changes.map((c) => c.bump)) ?? 'patch'
+    }
+
+    releases.push({
+      packageDirName: pkg.packageDirName,
+      packageName: pkg.packageName,
+      currentVersion: pkg.currentVersion,
+      nextVersion,
+      bump,
+      changes: pkg.changes,
+      dependencyBumps,
+    })
+  }
+
+  // Sort by package name for consistency
+  releases.sort((a, b) => a.packageName.localeCompare(b.packageName))
 
   return { valid: true, releases }
 }
@@ -550,6 +679,33 @@ function generateBumpTypeSection(
 }
 
 /**
+ * Generates the dependency bumps section for a changelog entry
+ */
+function generateDependencyBumpsSection(
+  dependencyBumps: DependencyBump[],
+  subheadingLevel: number,
+): string | null {
+  if (dependencyBumps.length === 0) {
+    return null
+  }
+
+  let lines: string[] = []
+  let subheadingPrefix = '#'.repeat(subheadingLevel)
+
+  lines.push(`${subheadingPrefix} Patch Changes`)
+  lines.push('')
+  lines.push('- Bumped `@remix-run/*` dependencies:')
+
+  for (let dep of dependencyBumps) {
+    lines.push(`  - [\`${dep.packageName}@${dep.version}\`](${dep.releaseUrl})`)
+  }
+
+  lines.push('')
+
+  return lines.join('\n')
+}
+
+/**
  * Generates changelog content for a package release
  */
 export function generateChangelogContent(
@@ -579,6 +735,26 @@ export function generateChangelogContent(
     }
   }
 
+  // Add dependency bumps section if there are any
+  // Only add if there are no other patch changes (to avoid duplicate "Patch Changes" heading)
+  if (release.dependencyBumps.length > 0) {
+    let hasPatchChanges = release.changes.some((c) => c.bump === 'patch')
+    if (hasPatchChanges) {
+      // Append to existing patch section (without heading)
+      lines.push('- Bumped `@remix-run/*` dependencies:')
+      for (let dep of release.dependencyBumps) {
+        lines.push(`  - [\`${dep.packageName}@${dep.version}\`](${dep.releaseUrl})`)
+      }
+      lines.push('')
+    } else {
+      // Create new patch section with heading
+      let section = generateDependencyBumpsSection(release.dependencyBumps, subheadingLevel)
+      if (section) {
+        lines.push(section)
+      }
+    }
+  }
+
   return lines.join('\n')
 }
 
@@ -586,7 +762,7 @@ export function generateChangelogContent(
  * Generates the commit message for all releases
  */
 export function generateCommitMessage(releases: PackageRelease[]): string {
-  let subject = 'Version Packages'
+  let subject = 'Release'
   let body = releases
     .map((r) => `- ${r.packageName}: ${r.currentVersion} -> ${r.nextVersion}`)
     .join('\n')

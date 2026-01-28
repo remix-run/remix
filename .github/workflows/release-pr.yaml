@@ -1,4 +1,4 @@
-name: Update "Version Packages" PR
+name: Update "Release" PR
 
 on:
   push:
@@ -34,6 +34,6 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Update PR
-        run: node scripts/changes-version-pr.ts
+        run: node scripts/release-pr.ts
         env:
           GITHUB_TOKEN: ${{ secrets.GH_REMIX_PAT }}

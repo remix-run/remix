@@ -1,14 +1,14 @@
 /**
- * Opens or updates the version PR.
+ * Opens or updates the release PR.
  *
  * Usage:
- *   node scripts/changes-version-pr.ts [--preview]
+ *   node scripts/release-pr.ts [--preview]
  *
  * Environment:
  *   GITHUB_TOKEN - Required (unless --preview)
  */
 import { parseAllChangeFiles, generateCommitMessage } from './utils/changes.ts'
-import { generatePrBody } from './utils/version-pr.ts'
+import { generatePrBody } from './utils/release-pr.ts'
 import { logAndExec } from './utils/process.ts'
 import { findOpenPr, createPr, updatePr, setPrPkgLabels, closePr } from './utils/github.ts'
 
@@ -16,8 +16,8 @@ let args = process.argv.slice(2)
 let preview = args.includes('--preview')
 
 let baseBranch = 'main'
-let prBranch = 'changes-version-pr/main'
-let prTitle = 'Version Packages'
+let prBranch = 'release-pr/main'
+let prTitle = 'Release'
 
 async function main() {
   console.log(preview ? '🔍 PREVIEW MODE\n' : '')
