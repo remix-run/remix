@@ -77,7 +77,7 @@ jobs:
           git push --force --set-upstream origin preview/main
           echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
-      # Build and force push over the PR preview/{number} branch + comment on the PR
+      # Build and force push over the PR preview/pr-{number} branch + comment on the PR
       - name: Build/push branch (pull_request)
         if: github.event_name == 'pull_request' && github.event.pull_request.state == 'open'
         env:
@@ -97,7 +97,7 @@ jobs:
           git push --set-upstream origin ${{ inputs.installableBranch }}
           echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
-      # Cleanup PR preview/{number} branches when the PR is closed
+      # Cleanup PR preview/pr-{number} branches when the PR is closed
       - name: Cleanup preview branch
         if: github.event_name == 'pull_request' && github.event.pull_request.state == 'closed'
         env:
