@@ -62,7 +62,11 @@ export function readChangesConfig(packageDirName: string): ParsedChangesConfig {
         error: '.changes/config.json "prereleaseChannel" must be a non-empty string',
       }
     }
-    return { exists: true, valid: true, config: { prereleaseChannel: obj.prereleaseChannel.trim() } }
+    return {
+      exists: true,
+      valid: true,
+      config: { prereleaseChannel: obj.prereleaseChannel.trim() },
+    }
   }
 
   return { exists: true, valid: true, config: { prereleaseChannel: '' } }
