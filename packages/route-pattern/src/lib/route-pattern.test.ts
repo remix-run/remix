@@ -2,7 +2,6 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { RoutePattern } from './route-pattern.ts'
-import type * as Search from './route-pattern/search.ts'
 import { HrefError } from './errors.ts'
 
 describe('RoutePattern', () => {
@@ -391,114 +390,348 @@ describe('RoutePattern', () => {
   })
 
   describe('href', () => {
-    function assertHref(
-      pattern: string,
-      params: Record<string, string | number> | undefined,
-      expected: string,
-    ) {
-      assert.equal(new RoutePattern(pattern).href(params), expected)
+    function hrefError(type: HrefError['details']['type']) {
+      return (error: unknown) => error instanceof HrefError && error.details.type === type
     }
 
-    function assertHrefWithSearch(
-      pattern: string,
-      params: Record<string, string | number> | undefined,
-      searchParams: Search.HrefParams,
-      expected: string,
-    ) {
-      assert.equal(new RoutePattern(pattern).href(params, searchParams), expected)
-    }
+    describe('protocol', () => {
+      it('defaults omitted protocol (://) to https', () => {
+        let pattern = new RoutePattern('://example.com/path')
+        let result = pattern.href()
+        assert.equal(result, 'https://example.com/path')
+      })
 
-    function assertHrefThrows(
-      pattern: string,
-      params: Record<string, string | number> | undefined,
-      errorType: HrefError['details']['type'],
-    ) {
-      assert.throws(
-        () => new RoutePattern(pattern).href(params),
-        (error: unknown) => {
-          return error instanceof HrefError && error.details.type === errorType
-        },
-      )
-    }
+      it('defaults http(s) to https', () => {
+        let pattern = new RoutePattern('http(s)://example.com/path')
+        let result = pattern.href()
+        assert.equal(result, 'https://example.com/path')
+      })
 
-    it('generates href for pathname only', () => {
-      assertHref('/posts/:id', { id: '123' }, '/posts/123')
-      assertHref('posts/:id', { id: '123' }, '/posts/123')
-      assertHref('/posts(/:id)', { id: '123' }, '/posts/123')
-      assertHref('/posts(/:id)', undefined, '/posts')
+      it('supports explicit http', () => {
+        let pattern = new RoutePattern('http://example.com/path')
+        let result = pattern.href()
+        assert.equal(result, 'http://example.com/path')
+      })
+
+      it('supports explicit https', () => {
+        let pattern = new RoutePattern('https://example.com/path')
+        let result = pattern.href()
+        assert.equal(result, 'https://example.com/path')
+      })
     })
 
-    it('defaults protocol to https with origin', () => {
-      assertHref('://example.com/path', undefined, 'https://example.com/path')
-      assertHref('://:host/path', { host: 'example.com' }, 'https://example.com/path')
-      assertHref(
-        '://:host/posts/:id',
-        { host: 'example.com', id: '123' },
-        'https://example.com/posts/123',
-      )
+    describe('hostname', () => {
+      describe('when origin is present', () => {
+        it('throws when protocol specified', () => {
+          let pattern = new RoutePattern('https://*/path')
+          // @ts-expect-error - missing hostname
+          assert.throws(() => pattern.href(), hrefError('missing-hostname'))
+        })
+
+        it('throws when protocol with named wildcard missing param', () => {
+          let pattern = new RoutePattern('http://*host/path')
+          // @ts-expect-error - missing required param
+          assert.throws(() => pattern.href(), hrefError('missing-params'))
+        })
+
+        it('throws when port specified', () => {
+          let pattern = new RoutePattern('://:8080/path')
+          assert.throws(() => pattern.href(), hrefError('missing-hostname'))
+        })
+      })
+
+      it('supports static hostname', () => {
+        let pattern = new RoutePattern('://example.com/path')
+        let result = pattern.href()
+        assert.equal(result, 'https://example.com/path')
+      })
+
+      describe('with dynamic segment', () => {
+        it('works when provided', () => {
+          let pattern = new RoutePattern('://:host.com/path')
+          let result = pattern.href({ host: 'example' })
+          assert.equal(result, 'https://example.com/path')
+        })
+
+        it('throws when missing', () => {
+          let pattern = new RoutePattern('://:host/path')
+          // @ts-expect-error - missing required param
+          assert.throws(() => pattern.href(), hrefError('missing-params'))
+        })
+      })
+
+      it('supports multiple dynamic segments', () => {
+        let pattern = new RoutePattern('://:subdomain.:domain.com/path')
+        let result = pattern.href({ subdomain: 'api', domain: 'example' })
+        assert.equal(result, 'https://api.example.com/path')
+      })
+
+      it('supports named wildcard', () => {
+        let pattern = new RoutePattern('://*env.example.com/path')
+        let result = pattern.href({ env: 'staging' })
+        assert.equal(result, 'https://staging.example.com/path')
+      })
+
+      it('throws for unnamed wildcard', () => {
+        let pattern = new RoutePattern('://*.example.com/path')
+        // @ts-expect-error - missing required param
+        assert.throws(() => pattern.href(), hrefError('missing-params'))
+      })
+
+      it('includes optional with static content', () => {
+        let pattern = new RoutePattern('://(www.)example.com/path')
+        let result = pattern.href()
+        assert.equal(result, 'https://www.example.com/path')
+      })
     })
 
-    it('uses explicit protocol with origin', () => {
-      assertHref('http://example.com/path', undefined, 'http://example.com/path')
-      assertHref('https://example.com/posts/:id', { id: '123' }, 'https://example.com/posts/123')
-      assertHref('http(s)://example.com/path', undefined, 'https://example.com/path')
+    describe('port', () => {
+      it('supports static port', () => {
+        let pattern = new RoutePattern('://example.com:8080/path')
+        let result = pattern.href()
+        assert.equal(result, 'https://example.com:8080/path')
+      })
+
+      it('works with hostname params', () => {
+        let pattern = new RoutePattern('://:host:8080/path')
+        let result = pattern.href({ host: 'localhost' })
+        assert.equal(result, 'https://localhost:8080/path')
+      })
     })
 
-    it('includes port with origin', () => {
-      assertHref('://example.com:8080/path', undefined, 'https://example.com:8080/path')
-      assertHref('http://example.com:3000/path', undefined, 'http://example.com:3000/path')
-      assertHref('://:host:8080/path', { host: 'localhost' }, 'https://localhost:8080/path')
+    describe('pathname', () => {
+      it('supports static pathname', () => {
+        let pattern = new RoutePattern('/posts')
+        let result = pattern.href()
+        assert.equal(result, '/posts')
+      })
+
+      it('normalizes static pathname without leading slash', () => {
+        let pattern = new RoutePattern('posts')
+        let result = pattern.href()
+        assert.equal(result, '/posts')
+      })
+
+      describe('with dynamic segment', () => {
+        it('works when provided', () => {
+          let pattern = new RoutePattern('/posts/:id')
+          let result = pattern.href({ id: '123' })
+          assert.equal(result, '/posts/123')
+        })
+
+        it('throws when missing', () => {
+          let pattern = new RoutePattern('/posts/:id')
+          // @ts-expect-error - missing required param
+          assert.throws(() => pattern.href(), hrefError('missing-params'))
+        })
+      })
+
+      it('supports multiple dynamic segments', () => {
+        let pattern = new RoutePattern('/users/:userId/posts/:postId')
+        let result = pattern.href({ userId: '42', postId: '123' })
+        assert.equal(result, '/users/42/posts/123')
+      })
+
+      it('supports named wildcard', () => {
+        let pattern = new RoutePattern('/files/*path')
+        let result = pattern.href({ path: 'docs/readme.md' })
+        assert.equal(result, '/files/docs/readme.md')
+      })
+
+      it('throws for unnamed wildcard', () => {
+        let pattern = new RoutePattern('/files/*')
+        // @ts-expect-error - missing required param
+        assert.throws(() => pattern.href(), hrefError('missing-params'))
+      })
     })
 
-    it('throws when hostname required but missing for protocol', () => {
-      assertHrefThrows('https://*/path', undefined, 'missing-hostname')
-      assertHrefThrows('http://*host/path', undefined, 'missing-params')
+    describe('pattern with optionals', () => {
+      it('includes optional with static content', () => {
+        let pattern = new RoutePattern('/posts(/edit)')
+        let result = pattern.href()
+        assert.equal(result, '/posts/edit')
+      })
+
+      it('includes optional with variable when provided', () => {
+        let pattern = new RoutePattern('/posts(/:id)')
+        let result = pattern.href({ id: '123' })
+        assert.equal(result, '/posts/123')
+      })
+
+      it('omits optional with variable when omitted', () => {
+        let pattern = new RoutePattern('/posts(/:id)')
+        let result = pattern.href()
+        assert.equal(result, '/posts')
+      })
+
+      it('includes optional with wildcard when provided', () => {
+        let pattern = new RoutePattern('/files(/*path)')
+        let result = pattern.href({ path: 'docs/readme.md' })
+        assert.equal(result, '/files/docs/readme.md')
+      })
+
+      it('omits optional with wildcard when omitted', () => {
+        let pattern = new RoutePattern('/files(/*path)')
+        let result = pattern.href()
+        assert.equal(result, '/files')
+      })
+
+      it('omits optional with nameless wildcard', () => {
+        let pattern = new RoutePattern('/files(/*)')
+        let result = pattern.href()
+        assert.equal(result, '/files')
+      })
+
+      describe('with nested optionals', () => {
+        it('includes all when all provided', () => {
+          let pattern = new RoutePattern('/blog/:year(/:month(/:day))')
+          let result = pattern.href({ year: '2024', month: '01', day: '15' })
+          assert.equal(result, '/blog/2024/01/15')
+        })
+
+        it('includes only outer when inner omitted', () => {
+          let pattern = new RoutePattern('/blog/:year(/:month(/:day))')
+          let result = pattern.href({ year: '2024', month: '01' })
+          assert.equal(result, '/blog/2024/01')
+        })
+
+        it('omits both when only inner provided', () => {
+          let pattern = new RoutePattern('/blog/:year(/:month(/:day))')
+          let result = pattern.href({ year: '2024', day: '15' })
+          assert.equal(result, '/blog/2024')
+        })
+
+        it('omits both when neither provided', () => {
+          let pattern = new RoutePattern('/blog/:year(/:month(/:day))')
+          let result = pattern.href({ year: '2024' })
+          assert.equal(result, '/blog/2024')
+        })
+      })
+
+      describe('with multiple optionals', () => {
+        it('includes both when both provided', () => {
+          let pattern = new RoutePattern('/posts(/:id)(/:action)')
+          let result = pattern.href({ id: '123', action: 'edit' })
+          assert.equal(result, '/posts/123/edit')
+        })
+
+        it('includes only first when second omitted', () => {
+          let pattern = new RoutePattern('/posts(/:id)(/:action)')
+          let result = pattern.href({ id: '123' })
+          assert.equal(result, '/posts/123')
+        })
+
+        it('includes only second when first omitted', () => {
+          let pattern = new RoutePattern('/posts(/:id)(/:action)')
+          let result = pattern.href({ action: 'edit' })
+          assert.equal(result, '/posts/edit')
+        })
+
+        it('omits both when neither provided', () => {
+          let pattern = new RoutePattern('/posts(/:id)(/:action)')
+          let result = pattern.href()
+          assert.equal(result, '/posts')
+        })
+      })
     })
 
-    it('throws when hostname required but missing for port', () => {
-      assertHrefThrows('://:8080/path', undefined, 'missing-hostname')
-      assertHrefThrows('://*:3000/path', undefined, 'missing-hostname')
+    describe('search params', () => {
+      it('works with no constraints', () => {
+        let pattern = new RoutePattern('/posts')
+        let result = pattern.href(undefined, { category: ['books', 'electronics'] })
+        assert.equal(result, '/posts?category=books&category=electronics')
+      })
+
+      describe('with bare constraint (?q)', () => {
+        it('includes empty value without user param', () => {
+          let pattern = new RoutePattern('/posts?filter')
+          let result = pattern.href()
+          assert.equal(result, '/posts?filter=')
+        })
+
+        it('uses user param value', () => {
+          let pattern = new RoutePattern('/posts?filter')
+          let result = pattern.href(undefined, { filter: 'active' })
+          assert.equal(result, '/posts?filter=active')
+        })
+      })
+
+      describe('with empty-value constraint (?q=)', () => {
+        it('throws without user param', () => {
+          let pattern = new RoutePattern('/posts?filter=')
+          assert.throws(() => pattern.href(), hrefError('missing-search-params'))
+        })
+
+        it('uses user param value', () => {
+          let pattern = new RoutePattern('/posts?filter=')
+          let result = pattern.href(undefined, { filter: 'active' })
+          assert.equal(result, '/posts?filter=active')
+        })
+      })
+
+      describe('with specific-value constraint (?q=foo)', () => {
+        it('uses pattern value only', () => {
+          let pattern = new RoutePattern('/posts?sort=asc')
+          let result = pattern.href()
+          assert.equal(result, '/posts?sort=asc')
+        })
+
+        it('prepends user params', () => {
+          let pattern = new RoutePattern('/posts?sort=asc')
+          let result = pattern.href(undefined, { sort: 'desc' })
+          assert.equal(result, '/posts?sort=desc&sort=asc')
+        })
+
+        it('deduplicates when user matches pattern', () => {
+          let pattern = new RoutePattern('/posts?tag=featured')
+          let result = pattern.href(undefined, { tag: 'featured' })
+          assert.equal(result, '/posts?tag=featured')
+        })
+
+        it('deduplicates when user matches one of multiple pattern values', () => {
+          let pattern = new RoutePattern('/posts?tag=featured&tag=popular')
+          let result = pattern.href(undefined, { tag: 'featured' })
+          assert.equal(result, '/posts?tag=featured&tag=popular')
+        })
+
+        it('handles array values', () => {
+          let pattern = new RoutePattern('/posts?tag=featured&tag=popular')
+          let result = pattern.href(undefined, { tag: ['tutorial', 'beginner'] })
+          assert.equal(result, '/posts?tag=tutorial&tag=beginner&tag=featured&tag=popular')
+        })
+      })
+
+      it('supports additional user params', () => {
+        let pattern = new RoutePattern('/posts?sort=asc')
+        let result = pattern.href(undefined, { page: '2' })
+        assert.equal(result, '/posts?page=2&sort=asc')
+      })
     })
 
-    it('generates href with search params', () => {
-      assertHref('/posts?filter', undefined, '/posts?filter=')
-      assertHrefWithSearch('/posts?filter', undefined, { filter: 'active' }, '/posts?filter=active')
-      assertHref('/posts?sort=asc', undefined, '/posts?sort=asc')
-      assertHrefWithSearch(
-        '/posts?sort=asc',
-        undefined,
-        { sort: 'desc' },
-        '/posts?sort=desc&sort=asc',
-      )
-      assertHrefThrows('/posts?filter=', undefined, 'missing-search-params')
-      assertHrefWithSearch(
-        '/posts?filter=',
-        undefined,
-        { filter: 'active' },
-        '/posts?filter=active',
-      )
-      assertHrefWithSearch('/posts?sort=asc', undefined, { page: '2' }, '/posts?page=2&sort=asc')
-      assertHref('/posts?tag=foo&tag=bar', undefined, '/posts?tag=foo&tag=bar')
-      assertHrefWithSearch(
-        '/posts?tag=foo&tag=bar',
-        undefined,
-        { tag: ['baz', 'qux'] },
-        '/posts?tag=baz&tag=qux&tag=foo&tag=bar',
-      )
-      assertHrefWithSearch(
-        '/posts',
-        undefined,
-        { category: ['books', 'electronics'] },
-        '/posts?category=books&category=electronics',
-      )
-      // Deduplication: user provides same value as pattern
-      assertHrefWithSearch('/posts?tag=foo', undefined, { tag: 'foo' }, '/posts?tag=foo')
-      assertHrefWithSearch(
-        '/posts?tag=foo&tag=bar',
-        undefined,
-        { tag: 'foo' },
-        '/posts?tag=foo&tag=bar',
-      )
+    describe('format', () => {
+      it('returns relative URL for pathname only', () => {
+        let pattern = new RoutePattern('/posts/:id')
+        let result = pattern.href({ id: '123' })
+        assert.equal(result, '/posts/123')
+      })
+
+      it('returns absolute URL with protocol', () => {
+        let pattern = new RoutePattern('https://example.com/path')
+        let result = pattern.href()
+        assert.equal(result, 'https://example.com/path')
+      })
+
+      it('returns absolute URL with hostname', () => {
+        let pattern = new RoutePattern('://example.com/path')
+        let result = pattern.href()
+        assert.equal(result, 'https://example.com/path')
+      })
+
+      it('returns absolute URL with port', () => {
+        let pattern = new RoutePattern('://example.com:8080/path')
+        let result = pattern.href()
+        assert.equal(result, 'https://example.com:8080/path')
+      })
     })
   })
 
