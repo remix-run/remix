@@ -52,6 +52,7 @@
     "./response/html": "./src/lib/response/html.ts",
     "./response/redirect": "./src/lib/response/redirect.ts",
     "./route-pattern": "./src/lib/route-pattern.ts",
+    "./route-pattern/specificity": "./src/lib/route-pattern/specificity.ts",
     "./session": "./src/lib/session.ts",
     "./session-middleware": "./src/lib/session-middleware.ts",
     "./session/cookie-storage": "./src/lib/session/cookie-storage.ts",
@@ -198,6 +199,10 @@
       "./route-pattern": {
         "types": "./dist/lib/route-pattern.d.ts",
         "default": "./dist/lib/route-pattern.js"
+      },
+      "./route-pattern/specificity": {
+        "types": "./dist/lib/route-pattern/specificity.d.ts",
+        "default": "./dist/lib/route-pattern/specificity.js"
       },
       "./session": {
         "types": "./dist/lib/session.d.ts",
