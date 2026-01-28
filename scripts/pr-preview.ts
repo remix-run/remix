@@ -16,7 +16,7 @@
 
 import { parseArgs } from 'node:util'
 
-import { createPrComment, deletePrComment, getPrComments } from './utils/github.ts'
+import { createPrComment, deletePrComment, getPrComments, updatePrComment } from './utils/github.ts'
 import { logAndExec } from './utils/process.ts'
 
 const STICKY_MARKER = '<!-- pr-preview-comment-sticky -->'
@@ -76,7 +76,8 @@ This preview build will be updated automatically as you push new commits.`
   // Only add a comment if one doesn't already exist
   let stickyComment = comments.find((comment) => comment.body?.includes(STICKY_MARKER))
   if (stickyComment) {
-    console.log('Preview comment already exists, skipping creation')
+    console.log('Updating preview comment on PR')
+    await updatePrComment(stickyComment.id, commentBody)
   } else {
     console.log('Adding preview comment to PR')
     await createPrComment(prNumber, commentBody)

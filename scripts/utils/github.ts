@@ -222,6 +222,19 @@ export async function createPrComment(prNumber: number, body: string) {
 }
 
 /**
+ * Update a comment on a PR
+ */
+export async function updatePrComment(commentId: number, body: string) {
+  await request('PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+    ...auth(),
+    owner,
+    repo,
+    comment_id: commentId,
+    body,
+  })
+}
+
+/**
  * Delete a comment on a PR
  */
 export async function deletePrComment(commentId: number) {
