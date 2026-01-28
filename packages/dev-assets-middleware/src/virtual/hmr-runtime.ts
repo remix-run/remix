@@ -2,22 +2,82 @@
 // HMR Runtime Module (served by @remix-run/dev-assets-middleware)
 // =============================================================================
 
-import { requestRemount } from '@remix-run/component'
+import { requestRemount, type Handle } from '@remix-run/component'
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+// HMR state stored per handle
+interface HmrState {
+  __setupHash?: string
+  [key: string]: unknown
+}
+
+// Component function: (handle) => renderFn
+type ComponentFunction = (handle: Handle) => RenderFunction
+
+// Render function: (...args) => RemixNode
+// Uses rest parameters to allow flexible argument passing
+type RenderFunction = (...args: unknown[]) => unknown
+
+// Component registry entry
+interface ComponentEntry {
+  impl: ComponentFunction | null
+  handles: Set<Handle>
+}
+
+// Handle metadata for fast lookup
+interface HandleMetadata {
+  url: string
+  name: string
+  renderFn: RenderFunction
+}
+
+// HMR message types
+interface HmrMessageConnected {
+  type: 'connected'
+}
+
+interface HmrMessageUpdate {
+  type: 'update'
+  files?: string[]
+  timestamp?: number
+}
+
+interface HmrMessageReload {
+  type: 'reload'
+}
+
+// Base message type for runtime parsing
+interface HmrMessageBase {
+  type: string
+  [key: string]: unknown
+}
+
+type HmrMessage = HmrMessageConnected | HmrMessageUpdate | HmrMessageReload
+
+// Extend window interface for HMR connection status
+declare global {
+  interface Window {
+    __hmr_connected: boolean
+  }
+}
 
 // ---------------------------------------------------------------------------
 // HMR State Storage (WeakMap keeps handle clean)
 // ---------------------------------------------------------------------------
 
-let hmrState = new WeakMap<any, { __setupHash?: string; [key: string]: any }>()
+let hmrState = new WeakMap<Handle, HmrState>()
 
-export function __hmr_state(handle: any) {
+export function __hmr_state(handle: Handle): HmrState {
   if (!hmrState.has(handle)) {
     hmrState.set(handle, {})
   }
-  return hmrState.get(handle)
+  return hmrState.get(handle)!
 }
 
-export function __hmr_clear_state(handle: any) {
+export function __hmr_clear_state(handle: Handle): void {
   hmrState.delete(handle)
 }
 
@@ -27,18 +87,18 @@ export function __hmr_clear_state(handle: any) {
 
 // Nested map: semantic structure organized by URL, then component name
 // url → Map<name, { impl: componentFn, handles: Set<handle> }>
-let components = new Map<string, Map<string, { impl: any; handles: Set<any> }>>()
+let components = new Map<string, Map<string, ComponentEntry>>()
 
 // Fast lookup from handle to its metadata
 // handle → { url, name, renderFn }
-let handleToComponent = new WeakMap<any, { url: string; name: string; renderFn: any }>()
+let handleToComponent = new WeakMap<Handle, HandleMetadata>()
 
 export function __hmr_register(
   moduleUrl: string,
   componentName: string,
-  handle: any,
-  renderFn: any,
-) {
+  handle: Handle,
+  renderFn: RenderFunction,
+): void {
   // Store handle metadata for fast lookup
   handleToComponent.set(handle, { url: moduleUrl, name: componentName, renderFn: renderFn })
 
@@ -55,7 +115,7 @@ export function __hmr_register(
   moduleComponents.get(componentName)!.handles.add(handle)
 }
 
-export function __hmr_call(handle: any, ...args: any[]) {
+export function __hmr_call(handle: Handle, ...args: unknown[]): unknown {
   let metadata = handleToComponent.get(handle)
   if (!metadata) {
     throw new Error('[HMR] No render function registered for handle')
@@ -68,8 +128,8 @@ export function __hmr_call(handle: any, ...args: any[]) {
 export function __hmr_register_component(
   moduleUrl: string,
   componentName: string,
-  componentFn: any,
-) {
+  componentFn: ComponentFunction,
+): void {
   // Ensure component entry exists
   if (!components.has(moduleUrl)) {
     components.set(moduleUrl, new Map())
@@ -85,15 +145,21 @@ export function __hmr_register_component(
 
 // Get the current component function from the registry
 // Called by the delegating wrapper that Remix holds
-export function __hmr_get_component(moduleUrl: string, componentName: string) {
+export function __hmr_get_component(
+  moduleUrl: string,
+  componentName: string,
+): ComponentFunction | undefined {
   let moduleComponents = components.get(moduleUrl)
   if (!moduleComponents) return undefined
 
   let component = moduleComponents.get(componentName)
-  return component ? component.impl : undefined
+  return component ? (component.impl ?? undefined) : undefined
 }
 
-export function __hmr_update(moduleUrl: string, getNewModule: () => Promise<any>) {
+export function __hmr_update(
+  moduleUrl: string,
+  getNewModule: () => Promise<Record<string, ComponentFunction>>,
+): Promise<void> {
   let moduleComponents = components.get(moduleUrl)
   if (!moduleComponents || moduleComponents.size === 0) {
     console.log('[HMR] No instances found for ' + moduleUrl)
@@ -153,7 +219,12 @@ export function __hmr_update(moduleUrl: string, getNewModule: () => Promise<any>
  * @param setupFn Function to execute on first run
  * @returns True if remount is needed (setup changed), false otherwise
  */
-export function __hmr_setup(handle: any, state: any, hash: string, setupFn: () => void) {
+export function __hmr_setup(
+  handle: Handle,
+  state: HmrState,
+  hash: string,
+  setupFn: () => void,
+): boolean {
   if (state.__setupHash === undefined) {
     // First run - execute setup and store hash
     setupFn()
@@ -176,22 +247,24 @@ export function __hmr_setup(handle: any, state: any, hash: string, setupFn: () =
 
 let eventSource: EventSource | null = null
 
-export function __hmr_request_remount(handle: any) {
+export function __hmr_request_remount(handle: Handle): void {
   requestRemount(handle)
 }
 
-function handleHmrMessage(message: any) {
+function handleHmrMessage(message: HmrMessageBase): void {
   switch (message.type) {
     case 'connected':
       console.log('[HMR] Server connection established')
       break
 
-    case 'update':
-      if (message.files && message.files.length > 0) {
-        console.log('[HMR] Received update for:', message.files)
-        performUpdate(message.files, message.timestamp)
+    case 'update': {
+      let updateMessage = message as HmrMessageUpdate
+      if (updateMessage.files && updateMessage.timestamp) {
+        console.log('[HMR] Received update for:', updateMessage.files)
+        performUpdate(updateMessage.files, updateMessage.timestamp)
       }
       break
+    }
 
     case 'reload':
       console.log('[HMR] Full reload requested')
@@ -228,7 +301,7 @@ function performUpdate(files: string[], timestamp: number) {
 // Connection Status (for testing)
 // ---------------------------------------------------------------------------
 
-;(window as any).__hmr_connected = false
+window.__hmr_connected = false
 
 // ---------------------------------------------------------------------------
 // Auto-connect (side effect)
@@ -242,12 +315,12 @@ function performUpdate(files: string[], timestamp: number) {
 
   eventSource.onopen = function () {
     console.log('[HMR] Connected')
-    ;(window as any).__hmr_connected = true
+    window.__hmr_connected = true
   }
 
   eventSource.onmessage = function (event) {
     try {
-      let message = JSON.parse(event.data)
+      let message = JSON.parse(event.data) as HmrMessageBase
       handleHmrMessage(message)
     } catch (error) {
       console.error('[HMR] Failed to parse message:', error)
@@ -257,7 +330,7 @@ function performUpdate(files: string[], timestamp: number) {
   eventSource.onerror = function () {
     // EventSource automatically reconnects, just log it
     console.log('[HMR] Connection lost, reconnecting...')
-    ;(window as any).__hmr_connected = false
+    window.__hmr_connected = false
   }
 })()
 
