@@ -7,24 +7,16 @@
 pnpm bench
 
 # Specific benchmark
-pnpm bench comparison
+pnpm bench comparison.bench.json # full name
+pnpm bench comparison            # pattern match
 ```
 
 ## Compare performance across branches
 
 ```bash
-# On main branch - save baseline with git context in filename
-pnpm bench -- --outputFile=baseline-main-$(git rev-parse --short HEAD).json
+git checkout main
+pnpm bench comparison.bench.ts --outputJson=main.json
 
-# Switch to your branch
-git checkout my-feature
-
-# Compare
-pnpm bench -- --compare=baseline-main-*.json
-```
-
-Or compare specific benchmarks:
-
-```bash
-pnpm bench run comparison -- --compare=baseline-main-*.json
+git checkout feature-branch
+pnpm bench comparison.bench.ts --compare=main.json
 ```
