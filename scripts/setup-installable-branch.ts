@@ -27,22 +27,21 @@ import { logAndExec } from './utils/process.ts'
  * they install as nested deps the same way.
  */
 
-let { values, positionals } = util.parseArgs({
-  options: {
-    branch: {
-      type: 'string',
-      short: 'b',
-    },
-  },
+let { positionals } = util.parseArgs({
   allowPositionals: true,
 })
 
 // Use first positional argument or fall back to --branch flag or default
-let installableBranch = positionals[0] || values.branch || 'next'
+let installableBranch = positionals[0]
+if (!installableBranch) {
+  throw new Error('Error: You must provide an installable branch name')
+}
 
 // Refuse to overwrite existing branches except for cron-driven workflow branches
-let allowedOverwrites = ['nightly']
+let allowedOverwrites = ['next']
 let remoteBranches = logAndExec('git branch -r', true)
+console.log('remote branches:', remoteBranches)
+
 if (
   remoteBranches.includes(`origin/${installableBranch}`) &&
   !allowedOverwrites.includes(installableBranch)
