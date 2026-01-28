@@ -2,21 +2,29 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
-/**
- * Generates the content for compressible-mime-types.ts from mime-db
- * @returns {string} The generated TypeScript file content
- */
-export function generateCompressibleMimeTypesContent() {
+import { genericCompressibleMimeTypeRegex } from '../src/lib/is-compressible-mime-type.ts'
+
+interface MimeDbEntry {
+  source?: string
+  compressible?: boolean
+  extensions?: string[]
+}
+
+type MimeDb = Record<string, MimeDbEntry>
+
+// Generates the content for compressible-mime-types.ts from mime-db
+export function generateCompressibleMimeTypesContent(): string {
   let mimeDbPath = fileURLToPath(import.meta.resolve('mime-db/db.json'))
-  let mimeDb = JSON.parse(readFileSync(mimeDbPath, 'utf-8'))
+  let mimeDb: MimeDb = JSON.parse(readFileSync(mimeDbPath, 'utf-8'))
 
-  // Ignore MIME types that are experimental or vendor-specific
-  let ignoreMimeRegex = /[/](x-|vnd\.)/
-
-  let compressibleTypes = []
+  let compressibleTypes: string[] = []
 
   for (let [mimeType, entry] of Object.entries(mimeDb)) {
-    if (entry.compressible && !ignoreMimeRegex.test(mimeType)) {
+    if (
+      entry.compressible &&
+      // Skip types already handled by generic compressibility logic
+      !genericCompressibleMimeTypeRegex.test(mimeType)
+    ) {
       compressibleTypes.push(mimeType)
     }
   }
@@ -32,36 +40,42 @@ ${compressibleTypes.map((type) => `  '${type}',`).join('\n')}
 `
 }
 
-/**
- * Generates the content for mime-types.ts from mime-db
- * @returns {string} The generated TypeScript file content
- */
-export function generateMimeTypesContent() {
+// Generates the content for mime-types.ts from mime-db
+export function generateMimeTypesContent(): string {
   let mimeDbPath = fileURLToPath(import.meta.resolve('mime-db/db.json'))
-  let mimeDb = JSON.parse(readFileSync(mimeDbPath, 'utf-8'))
+  let mimeDb: MimeDb = JSON.parse(readFileSync(mimeDbPath, 'utf-8'))
 
-  // Ignore MIME types that are experimental or vendor-specific
-  let ignoreMimeRegex = /[/](x-|vnd\.)/
+  let isExperimentalOrVendor = (mimeType: string) => /[/](x-|vnd\.)/.test(mimeType)
 
-  let extensionMap = {}
+  let extensionMap: Record<string, string> = {}
 
   for (let [mimeType, entry] of Object.entries(mimeDb)) {
-    if (ignoreMimeRegex.test(mimeType)) continue
     if (!entry.extensions) continue
 
     for (let ext of entry.extensions) {
-      // Prefer compressible types, then source=iana, then first seen
+      // Prefer standard types, then compressible types, then source=iana, then first seen
       if (!extensionMap[ext]) {
         extensionMap[ext] = mimeType
       } else {
-        let existingEntry = mimeDb[extensionMap[ext]]
-        // Prefer compressible types
-        if (entry.compressible && !existingEntry.compressible) {
+        let existingMimeType = extensionMap[ext]
+        let existingEntry = mimeDb[existingMimeType]
+        let existingIsExperimental = isExperimentalOrVendor(existingMimeType)
+        let newIsExperimental = isExperimentalOrVendor(mimeType)
+
+        // Prefer standard types over experimental/vendor types
+        if (existingIsExperimental && !newIsExperimental) {
           extensionMap[ext] = mimeType
         }
-        // If both compressible or both not, prefer source=iana
-        else if (entry.compressible === existingEntry.compressible && entry.source === 'iana') {
-          extensionMap[ext] = mimeType
+        // If both are standard or both are experimental, apply secondary rules
+        else if (existingIsExperimental === newIsExperimental) {
+          // Prefer compressible types
+          if (entry.compressible && !existingEntry.compressible) {
+            extensionMap[ext] = mimeType
+          }
+          // If both compressible or both not, prefer source=iana
+          else if (entry.compressible === existingEntry.compressible && entry.source === 'iana') {
+            extensionMap[ext] = mimeType
+          }
         }
       }
     }
@@ -80,12 +94,8 @@ ${entries.join('\n')}
 `
 }
 
-/**
- * Formats a key for use as a property name in a JavaScript object.
- * @param {string} key - The key to format.
- * @returns {string} The formatted key.
- */
-function formatKey(key) {
+// Formats a key for use as a property name in a JavaScript object
+function formatKey(key: string): string {
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : `'${key}'`
 }
 

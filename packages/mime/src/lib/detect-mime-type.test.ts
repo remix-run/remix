@@ -57,9 +57,9 @@ describe('detectMimeType()', () => {
   })
 
   it('returns undefined for unknown extensions', () => {
-    assert.equal(detectMimeType('xyz'), undefined)
+    assert.equal(detectMimeType('notarealextension'), undefined)
     assert.equal(detectMimeType('.unknown'), undefined)
-    assert.equal(detectMimeType('file.xyz'), undefined)
+    assert.equal(detectMimeType('file.notarealextension'), undefined)
   })
 
   it('returns undefined for empty string', () => {
