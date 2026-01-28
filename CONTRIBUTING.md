@@ -128,15 +128,15 @@ Tags and GitHub releases are created automatically by the publish workflow after
 
 ### Prerelease Mode for `remix`
 
-The `remix` package supports prerelease mode via an optional `.changes/prerelease.json` file:
+The `remix` package supports prerelease mode via an optional `.changes/config.json` file:
 
 ```json
 {
-  "channel": "alpha"
+  "prereleaseChannel": "alpha"
 }
 ```
 
-The `channel` field determines the version suffix (e.g. `alpha`, `beta`, `rc`), while prereleases are always published to npm with the `next` tag. This is only supported for `remix` because it's the only package that needs to publish prereleases alongside an existing stable version on npm. All other packages in this monorepo are new and publish directly as `latest`.
+The `prereleaseChannel` field determines the version suffix (e.g. `alpha`, `beta`, `rc`), while prereleases are always published to npm with the `next` tag. This is only supported for `remix` because it's the only package that needs to publish prereleases alongside an existing stable version on npm. All other packages in this monorepo are new and publish directly as `latest`.
 
 #### Bumping `remix` prerelease versions
 
@@ -146,7 +146,7 @@ While in prerelease mode, add change files as normal. The prerelease counter inc
 
 To transition between channels (e.g. `alpha` → `beta`):
 
-1. Update `.changes/prerelease.json` to the new channel
+1. Update `prereleaseChannel` in `.changes/config.json` to the new channel
 2. Add a change file describing the transition
 
 Version resets to the new channel (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The bump type is for changelog categorization only—by convention, use `patch`.
@@ -155,7 +155,7 @@ Version resets to the new channel (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The
 
 To release the stable version:
 
-1. Delete `.changes/prerelease.json`
+1. Remove `prereleaseChannel` from `.changes/config.json` (or delete the file)
 2. Add a change file describing the stable release
 
 The prerelease suffix is stripped (e.g. `3.0.0-rc.7` → `3.0.0`). The bump type is for changelog categorization only—by convention, use `major` for a major release announcement.

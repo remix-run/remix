@@ -3,8 +3,8 @@
  *
  * This script uses pnpm publish with --report-summary, reads the summary file,
  * and creates Git tags + GitHub releases. When the remix package is in prerelease
- * mode (has .changes/prerelease.json), it publishes in two phases: all other
- * packages as "latest", then remix with the "next" tag.
+ * mode (has .changes/config.json with prereleaseChannel), it publishes in two phases:
+ * all other packages as "latest", then remix with the "next" tag.
  *
  * This script is designed for CI use. For previewing releases, use `pnpm changes:preview`.
  *
@@ -24,7 +24,7 @@ import * as path from 'node:path'
 import { tagExists } from './utils/git.ts'
 import { createRelease } from './utils/github.ts'
 import { getRootDir, logAndExec } from './utils/process.ts'
-import { readRemixPrereleaseConfig, getChangelogEntry } from './utils/changes.ts'
+import { readChangesConfig, getChangelogEntry } from './utils/changes.ts'
 import { getAllPackageDirNames, getPackageFile, getGitTag } from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
 
@@ -195,17 +195,19 @@ async function main() {
   }
 
   // Check if remix is in prerelease mode
-  let remixPrereleaseConfig = readRemixPrereleaseConfig()
+  let remixChangesConfig = readChangesConfig('remix')
   let remixPrereleaseChannel: string | null = null
 
-  if (remixPrereleaseConfig.exists) {
-    if (!remixPrereleaseConfig.valid) {
-      console.error('Error reading remix prerelease config:', remixPrereleaseConfig.error)
+  if (remixChangesConfig.exists) {
+    if (!remixChangesConfig.valid) {
+      console.error('Error reading remix changes config:', remixChangesConfig.error)
       process.exit(1)
     }
-    remixPrereleaseChannel = remixPrereleaseConfig.config.channel
-    console.log(`Remix is in prerelease mode (channel: ${remixPrereleaseChannel})`)
-    console.log('Publishing in two phases: other packages as "latest", then remix as "next"\n')
+    remixPrereleaseChannel = remixChangesConfig.config.prereleaseChannel || null
+    if (remixPrereleaseChannel) {
+      console.log(`Remix is in prerelease mode (channel: ${remixPrereleaseChannel})`)
+      console.log('Publishing in two phases: other packages as "latest", then remix as "next"\n')
+    }
   }
 
   // Publish packages to npm

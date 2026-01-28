@@ -15,59 +15,57 @@ import { fileExists, readFile, readJson } from './fs.ts'
 const bumpTypes = ['major', 'minor', 'patch'] as const
 type BumpType = (typeof bumpTypes)[number]
 
-// Prerelease configuration (from packages/remix/.changes/prerelease.json)
-// Only the remix package supports prerelease mode.
-export interface RemixPrereleaseConfig {
-  channel: string
+// Changes configuration (from packages/remix/.changes/config.json)
+// Only the remix package supports changes config.
+export interface ChangesConfig {
+  prereleaseChannel: string
 }
 
-export type ParsedRemixPrereleaseConfig =
+export type ParsedChangesConfig =
   | { exists: false }
-  | { exists: true; valid: true; config: RemixPrereleaseConfig }
+  | { exists: true; valid: true; config: ChangesConfig }
   | { exists: true; valid: false; error: string }
 
 /**
- * Reads and validates the remix package's prerelease.json.
- * Only remix supports prerelease mode - other packages publish as "latest".
+ * Reads and validates a package's .changes/config.json.
  */
-export function readRemixPrereleaseConfig(): ParsedRemixPrereleaseConfig {
-  let remixPackagePath = getPackagePath('remix')
-  let prereleaseJsonPath = path.join(remixPackagePath, '.changes', 'prerelease.json')
+export function readChangesConfig(packageDirName: string): ParsedChangesConfig {
+  let packagePath = getPackagePath(packageDirName)
+  let configJsonPath = path.join(packagePath, '.changes', 'config.json')
 
-  if (!fs.existsSync(prereleaseJsonPath)) {
+  if (!fs.existsSync(configJsonPath)) {
     return { exists: false }
   }
 
   let content: unknown
   try {
-    content = JSON.parse(fs.readFileSync(prereleaseJsonPath, 'utf-8'))
+    content = JSON.parse(fs.readFileSync(configJsonPath, 'utf-8'))
   } catch {
-    return { exists: true, valid: false, error: 'Invalid JSON in prerelease.json' }
+    return { exists: true, valid: false, error: 'Invalid JSON in .changes/config.json' }
   }
 
   if (typeof content !== 'object' || content === null) {
     return {
       exists: true,
       valid: false,
-      error: 'prerelease.json must be an object with a "channel" field',
+      error: '.changes/config.json must be an object',
     }
   }
 
   let obj = content as Record<string, unknown>
 
-  if (!('channel' in obj)) {
-    return { exists: true, valid: false, error: 'prerelease.json must have a "channel" field' }
-  }
-
-  if (typeof obj.channel !== 'string' || obj.channel.trim().length === 0) {
-    return {
-      exists: true,
-      valid: false,
-      error: 'prerelease.json "channel" must be a non-empty string',
+  if ('prereleaseChannel' in obj) {
+    if (typeof obj.prereleaseChannel !== 'string' || obj.prereleaseChannel.trim().length === 0) {
+      return {
+        exists: true,
+        valid: false,
+        error: '.changes/config.json "prereleaseChannel" must be a non-empty string',
+      }
     }
+    return { exists: true, valid: true, config: { prereleaseChannel: obj.prereleaseChannel.trim() } }
   }
 
-  return { exists: true, valid: true, config: { channel: obj.channel.trim() } }
+  return { exists: true, valid: true, config: { prereleaseChannel: '' } }
 }
 
 /**
@@ -82,19 +80,19 @@ function getPrereleaseIdentifier(version: string): string | null {
 }
 
 /**
- * Calculates the next version based on current version, bump type, and prerelease config.
+ * Calculates the next version based on current version, bump type, and changes config.
  */
 function getNextVersion(
   currentVersion: string,
   bumpType: BumpType,
-  prereleaseConfig: RemixPrereleaseConfig | null,
+  changesConfig: ChangesConfig | null,
 ): string {
   let currentPrereleaseId = getPrereleaseIdentifier(currentVersion)
   let isCurrentPrerelease = currentPrereleaseId !== null
 
-  if (prereleaseConfig !== null) {
+  if (changesConfig !== null && changesConfig.prereleaseChannel) {
     // In prerelease mode
-    let targetChannel = prereleaseConfig.channel
+    let targetChannel = changesConfig.prereleaseChannel
 
     if (currentPrereleaseId === targetChannel) {
       // Same channel - just bump the counter
@@ -146,7 +144,7 @@ interface ValidationError {
 }
 
 type ParsedPackageChanges =
-  | { valid: true; changes: ChangeFile[]; prereleaseConfig: RemixPrereleaseConfig | null }
+  | { valid: true; changes: ChangeFile[]; changesConfig: ChangesConfig | null }
   | { valid: false; errors: ValidationError[] }
 
 /**
@@ -192,31 +190,31 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
   let currentVersionPrereleaseId = getPrereleaseIdentifier(currentVersion)
   let isCurrentVersionPrerelease = currentVersionPrereleaseId !== null
 
-  // Handle prerelease.json - only supported for remix package
-  let prereleaseConfig: RemixPrereleaseConfig | null = null
-  let prereleaseJsonPath = path.join(changesDir, 'prerelease.json')
+  // Handle .changes/config.json - only supported for remix package
+  let changesConfig: ChangesConfig | null = null
+  let configJsonPath = path.join(changesDir, 'config.json')
 
   if (packageDirName === 'remix') {
-    // For remix, read and validate the prerelease config
-    let parsedRemixPrereleaseConfig = readRemixPrereleaseConfig()
-    if (parsedRemixPrereleaseConfig.exists) {
-      if (!parsedRemixPrereleaseConfig.valid) {
+    // For remix, read and validate the changes config
+    let parsedChangesConfig = readChangesConfig(packageDirName)
+    if (parsedChangesConfig.exists) {
+      if (!parsedChangesConfig.valid) {
         errors.push({
           packageDirName,
-          file: '.changes/prerelease.json',
-          error: parsedRemixPrereleaseConfig.error,
+          file: '.changes/config.json',
+          error: parsedChangesConfig.error,
         })
         return { valid: false, errors }
       }
-      prereleaseConfig = parsedRemixPrereleaseConfig.config
+      changesConfig = parsedChangesConfig.config
     }
   } else {
-    // For non-remix packages, error if prerelease.json exists
-    if (fs.existsSync(prereleaseJsonPath)) {
+    // For non-remix packages, error if config.json exists
+    if (fs.existsSync(configJsonPath)) {
       errors.push({
         packageDirName,
-        file: '.changes/prerelease.json',
-        error: 'prerelease.json is only supported for the "remix" package. Remove this file.',
+        file: '.changes/config.json',
+        error: '.changes/config.json is only supported for the "remix" package. Remove this file.',
       })
       return { valid: false, errors }
     }
@@ -224,39 +222,40 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
 
   // Read all files in .changes directory
   let files = fs.readdirSync(changesDir)
-  let changeFileNames = files.filter((file) => file !== 'README.md' && file !== 'prerelease.json')
+  let changeFileNames = files.filter((file) => file !== 'README.md' && file !== 'config.json')
   let hasChangeFiles = changeFileNames.filter((f) => f.endsWith('.md')).length > 0
 
-  // Validate prerelease.json / version consistency
-  if (prereleaseConfig !== null) {
-    // Config exists
+  // Validate changes config / version consistency
+  let configPrereleaseChannel = changesConfig?.prereleaseChannel ?? null
+  if (configPrereleaseChannel) {
+    // Config has prerelease channel
     if (
       currentVersionPrereleaseId !== null &&
-      currentVersionPrereleaseId !== prereleaseConfig.channel
+      currentVersionPrereleaseId !== configPrereleaseChannel
     ) {
       // Channel mismatch (e.g., version is alpha but config says beta) - need change files to transition
       if (!hasChangeFiles) {
         errors.push({
           packageDirName,
-          file: '.changes/prerelease.json',
-          error: `prerelease.json channel '${prereleaseConfig.channel}' doesn't match version's prerelease identifier '${currentVersionPrereleaseId}'. Add a change file to transition to ${prereleaseConfig.channel}.`,
+          file: '.changes/config.json',
+          error: `prereleaseChannel '${configPrereleaseChannel}' doesn't match version's prerelease identifier '${currentVersionPrereleaseId}'. Add a change file to transition to ${configPrereleaseChannel}.`,
         })
       }
     } else if (!isCurrentVersionPrerelease && !hasChangeFiles) {
       // Config says prerelease but version is stable AND no change files - need change files to enter prerelease
       errors.push({
         packageDirName,
-        file: '.changes/prerelease.json',
-        error: `prerelease.json exists but version ${currentVersion} is stable. Add a change file to enter prerelease mode, or delete prerelease.json if this package should not be in prerelease.`,
+        file: '.changes/config.json',
+        error: `prereleaseChannel exists but version ${currentVersion} is stable. Add a change file to enter prerelease mode, or remove prereleaseChannel if this package should not be in prerelease.`,
       })
     }
   } else {
-    // No config - validate version is stable (unless graduating with change files)
+    // No prerelease channel - validate version is stable (unless graduating with change files)
     if (isCurrentVersionPrerelease && !hasChangeFiles) {
       errors.push({
         packageDirName,
         file: '.changes/',
-        error: `Version ${currentVersion} is a prerelease but no prerelease.json exists. Either add prerelease.json with { "channel": "${currentVersionPrereleaseId}" }, or add a change file to graduate to stable.`,
+        error: `Version ${currentVersion} is a prerelease but no prereleaseChannel exists. Either add .changes/config.json with { "prereleaseChannel": "${currentVersionPrereleaseId}" }, or add a change file to graduate to stable.`,
       })
     }
   }
@@ -330,7 +329,7 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
 
     // Validate breaking change prefix matches the correct bump type (only for stable releases)
     // In prerelease mode, breaking changes don't need special handling since we're just bumping counter
-    if (prereleaseConfig === null) {
+    if (!configPrereleaseChannel) {
       let isBreakingChange = hasBreakingChangePrefix(content)
 
       if (isBreakingChange) {
@@ -357,12 +356,12 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
   }
 
   // Validate entering prerelease requires a major bump
-  if (prereleaseConfig !== null && !isCurrentVersionPrerelease && changes.length > 0) {
+  if (configPrereleaseChannel && !isCurrentVersionPrerelease && changes.length > 0) {
     let hasMajorBump = changes.some((c) => c.bump === 'major')
     if (!hasMajorBump) {
       errors.push({
         packageDirName,
-        file: '.changes/prerelease.json',
+        file: '.changes/config.json',
         error:
           'Entering prerelease mode requires a major version bump. Add a change file with "major." prefix (e.g. "major.release-v2-alpha.md").',
       })
@@ -373,7 +372,7 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
     return { valid: false, errors }
   }
 
-  return { valid: true, changes, prereleaseConfig }
+  return { valid: true, changes, changesConfig }
 }
 
 /**
@@ -419,15 +418,15 @@ export function parseAllChangeFiles(): ParsedChanges {
     packageName: string
     currentVersion: string
     changes: ChangeFile[]
-    prereleaseConfig: RemixPrereleaseConfig | null
+    changesConfig: ChangesConfig | null
   }
   let parsedPackages: ParsedPackageInfo[] = []
 
-  // Read the remix prerelease config once (only remix supports prerelease mode)
-  let remixPrereleaseConfig = readRemixPrereleaseConfig()
-  let validRemixPrereleaseConfig: RemixPrereleaseConfig | null = null
-  if (remixPrereleaseConfig.exists && remixPrereleaseConfig.valid) {
-    validRemixPrereleaseConfig = remixPrereleaseConfig.config
+  // Read the remix changes config once (only remix supports changes config)
+  let remixChangesConfig = readChangesConfig('remix')
+  let validRemixChangesConfig: ChangesConfig | null = null
+  if (remixChangesConfig.exists && remixChangesConfig.valid) {
+    validRemixChangesConfig = remixChangesConfig.config
   }
 
   for (let packageDirName of packageDirNames) {
@@ -446,11 +445,11 @@ export function parseAllChangeFiles(): ParsedChanges {
     dirNameToPackageName.set(packageDirName, packageName)
     packageNameToDirName.set(packageName, packageDirName)
 
-    // For remix package, use the prerelease config even if there are no change files
+    // For remix package, use the changes config even if there are no change files
     // (to correctly bump prerelease counter for dependency-triggered releases)
-    let prereleaseConfig = parsed.prereleaseConfig
-    if (packageDirName === 'remix' && prereleaseConfig === null && validRemixPrereleaseConfig) {
-      prereleaseConfig = validRemixPrereleaseConfig
+    let changesConfig = parsed.changesConfig
+    if (packageDirName === 'remix' && changesConfig === null && validRemixChangesConfig) {
+      changesConfig = validRemixChangesConfig
     }
 
     parsedPackages.push({
@@ -458,7 +457,7 @@ export function parseAllChangeFiles(): ParsedChanges {
       packageName,
       currentVersion,
       changes: parsed.changes,
-      prereleaseConfig,
+      changesConfig,
     })
   }
 
@@ -492,7 +491,7 @@ export function parseAllChangeFiles(): ParsedChanges {
     if (pkg.changes.length > 0) {
       let bump = getHighestBump(pkg.changes.map((c) => c.bump))
       if (bump == null) continue
-      let nextVersion = getNextVersion(pkg.currentVersion, bump, pkg.prereleaseConfig)
+      let nextVersion = getNextVersion(pkg.currentVersion, bump, pkg.changesConfig)
       packageVersions.set(pkg.packageName, nextVersion)
     }
   }
@@ -506,8 +505,8 @@ export function parseAllChangeFiles(): ParsedChanges {
       allReleasingPackages.has(pkg.packageName)
     ) {
       // This package is being released due to dependency changes
-      // Use the package's prerelease config if it has one (e.g., remix in prerelease mode)
-      let nextVersion = getNextVersion(pkg.currentVersion, 'patch', pkg.prereleaseConfig)
+      // Use the package's changes config if it has one (e.g., remix in prerelease mode)
+      let nextVersion = getNextVersion(pkg.currentVersion, 'patch', pkg.changesConfig)
       packageVersions.set(pkg.packageName, nextVersion)
     }
   }
