@@ -501,7 +501,10 @@ export function parseAllChangeFiles(): ParsedChanges {
   // We need to do this iteratively because a package's version depends on knowing
   // which of its dependencies are being released
   for (let pkg of parsedPackages) {
-    if (!directlyChangedPackages.has(pkg.packageName) && allReleasingPackages.has(pkg.packageName)) {
+    if (
+      !directlyChangedPackages.has(pkg.packageName) &&
+      allReleasingPackages.has(pkg.packageName)
+    ) {
       // This package is being released due to dependency changes
       // Use the package's prerelease config if it has one (e.g., remix in prerelease mode)
       let nextVersion = getNextVersion(pkg.currentVersion, 'patch', pkg.prereleaseConfig)

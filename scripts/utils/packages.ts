@@ -195,9 +195,7 @@ export function buildReverseDependencyGraph(): Map<string, Set<string>> {
  * Gets all packages that transitively depend on any of the given packages.
  * Returns a map from dependent package name to the set of changed packages it depends on.
  */
-export function getTransitiveDependents(
-  changedPackages: Set<string>,
-): Map<string, Set<string>> {
+export function getTransitiveDependents(changedPackages: Set<string>): Map<string, Set<string>> {
   let reverseGraph = buildReverseDependencyGraph()
   let result = new Map<string, Set<string>>()
 
