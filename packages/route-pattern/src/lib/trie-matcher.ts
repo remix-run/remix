@@ -4,7 +4,8 @@ import type {
   PartPatternToken,
 } from './route-pattern/part-pattern.ts'
 import { RoutePattern } from './route-pattern.ts'
-import { Variant } from './trie-matcher/variant.ts'
+import type { PartPatternVariant } from './trie-matcher/variant.ts'
+import * as Variant from './trie-matcher/variant.ts'
 import * as RE from './regexp.ts'
 import { unreachable } from './errors.ts'
 import * as Search from './route-pattern/search.ts'
@@ -55,44 +56,6 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
       })
       .sort(compareFn)
   }
-}
-
-type RoutePatternVariant = {
-  protocol: 'http' | 'https'
-  hostname:
-    | { type: 'static'; value: string }
-    | { type: 'dynamic'; value: PartPattern }
-    | { type: 'any' }
-  port: string
-  pathname: Variant
-}
-
-function variants(pattern: RoutePattern): Array<RoutePatternVariant> {
-  // prettier-ignore
-  let protocols =
-    pattern.ast.protocol === null ? ['http', 'https'] as const :
-    pattern.ast.protocol === 'http(s)' ? ['http', 'https'] as const :
-    [pattern.ast.protocol]
-
-  // prettier-ignore
-  let hostnames =
-    pattern.ast.hostname === null ? [{ type: 'any' as const }] :
-    pattern.ast.hostname.params.length === 0 ?
-      Variant.generate(pattern.ast.hostname).map((variant) => ({ type: 'static' as const, value: variant.toString() })) :
-      [{ type: 'dynamic' as const, value: pattern.ast.hostname }]
-
-  let pathnames = Variant.generate(pattern.ast.pathname)
-
-  let result: Array<RoutePatternVariant> = []
-  for (let protocol of protocols) {
-    for (let hostname of hostnames) {
-      for (let pathname of pathnames) {
-        result.push({ protocol, hostname, port: pattern.ast.port ?? '', pathname })
-      }
-    }
-  }
-
-  return result
 }
 
 type ProtocolNode<data> = {
@@ -156,7 +119,7 @@ export class Trie<data = unknown> {
   }
 
   insert(pattern: RoutePattern, data: data): void {
-    for (let variant of variants(pattern)) {
+    for (let variant of Variant.generate(pattern)) {
       // protocol -> hostname
       let hostnameNode = this.protocolNode[variant.protocol]
 
@@ -401,7 +364,7 @@ type Segment =
   | { type: 'variable'; key: string; regexp: RegExp }
   | { type: 'wildcard'; key: string; regexp: RegExp }
 
-function toSegments(variant: Variant): Array<Segment> {
+function toSegments(variant: PartPatternVariant): Array<Segment> {
   let result: Array<Segment> = []
 
   let key = ''

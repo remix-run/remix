@@ -1,11 +1,49 @@
 import { unreachable } from '../errors.ts'
 import type { PartPattern, PartPatternToken } from '../route-pattern/part-pattern.ts'
+import type { RoutePattern } from '../route-pattern.ts'
+
+type Variant = {
+  protocol: 'http' | 'https'
+  hostname:
+    | { type: 'static'; value: string }
+    | { type: 'dynamic'; value: PartPattern }
+    | { type: 'any' }
+  port: string
+  pathname: PartPatternVariant
+}
+
+export function generate(pattern: RoutePattern): Array<Variant> {
+  // prettier-ignore
+  let protocols =
+    pattern.ast.protocol === null ? ['http', 'https'] as const :
+    pattern.ast.protocol === 'http(s)' ? ['http', 'https'] as const :
+    [pattern.ast.protocol]
+
+  // prettier-ignore
+  let hostnames =
+    pattern.ast.hostname === null ? [{ type: 'any' as const }] :
+    pattern.ast.hostname.params.length === 0 ?
+      PartPatternVariant.generate(pattern.ast.hostname).map((variant) => ({ type: 'static' as const, value: variant.toString() })) :
+      [{ type: 'dynamic' as const, value: pattern.ast.hostname }]
+
+  let pathnames = PartPatternVariant.generate(pattern.ast.pathname)
+
+  let result: Array<Variant> = []
+  for (let protocol of protocols) {
+    for (let hostname of hostnames) {
+      for (let pathname of pathnames) {
+        result.push({ protocol, hostname, port: pattern.ast.port ?? '', pathname })
+      }
+    }
+  }
+
+  return result
+}
 
 type Token = Extract<PartPatternToken, { type: 'text' | ':' | '*' | 'separator' }>
-
 type Param = Extract<PartPatternToken, { type: ':' | '*' }>
 
-export class Variant {
+export class PartPatternVariant {
   tokens: Array<Token>
 
   #partPattern: PartPattern
@@ -28,8 +66,8 @@ export class Variant {
     return this.#params
   }
 
-  static generate(pattern: PartPattern): Array<Variant> {
-    let result: Array<Variant> = []
+  static generate(pattern: PartPattern): Array<PartPatternVariant> {
+    let result: Array<PartPatternVariant> = []
 
     let stack: Array<{ index: number; tokens: Array<Token> }> = [{ index: 0, tokens: [] }]
 
@@ -37,7 +75,7 @@ export class Variant {
       let { index, tokens } = stack.pop()!
 
       if (index === pattern.tokens.length) {
-        result.push(new Variant(pattern, tokens))
+        result.push(new PartPatternVariant(pattern, tokens))
         continue
       }
 

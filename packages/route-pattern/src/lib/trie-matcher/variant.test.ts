@@ -2,13 +2,13 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { PartPattern } from '../route-pattern/part-pattern.ts'
-import { Variant } from './variant.ts'
+import { PartPatternVariant } from './variant.ts'
 
 describe('Variant', () => {
   describe('generate', () => {
     function assertVariants(source: string, expected: Array<string>) {
       let pattern = PartPattern.parse(source, { type: 'pathname', ignoreCase: false })
-      let actual = Variant.generate(pattern).map((variant) => variant.toString())
+      let actual = PartPatternVariant.generate(pattern).map((variant) => variant.toString())
       assert.deepEqual(actual, expected)
     }
 
