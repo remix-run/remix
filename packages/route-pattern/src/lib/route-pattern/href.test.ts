@@ -8,7 +8,7 @@ import { RoutePattern } from '../route-pattern.ts'
 
 describe('HrefError', () => {
   describe('missing-hostname', () => {
-    it('shows error message with pattern', () => {
+    it('shows pattern', () => {
       let pattern = new RoutePattern('https://*:8080/api')
       let error = new HrefError({
         type: 'missing-hostname',
@@ -26,69 +26,22 @@ describe('HrefError', () => {
   })
 
   describe('missing-params', () => {
-    it('shows missing param for single variant', () => {
-      let pattern = new RoutePattern('https://example.com/:id')
+    it('shows missing param, pattern, and params', () => {
+      let pattern = new RoutePattern('https://example.com/:collection/:id')
       let error = new HrefError({
         type: 'missing-params',
         pattern,
         partPattern: pattern.ast.pathname,
+        missingParams: ['collection', 'id'],
         params: {},
       })
       assert.equal(
         error.toString(),
         dedent`
-          HrefError: missing params
+          HrefError: missing param(s): 'collection', 'id'
 
-          Pattern: https://example.com/:id
+          Pattern: https://example.com/:collection/:id
           Params: {}
-          Pathname variants:
-            - {:id} (missing: id)
-        `,
-      )
-    })
-
-    it('shows missing params across multiple variants', () => {
-      let pattern = new RoutePattern('https://example.com/:a/:b(/:c)')
-      let error = new HrefError({
-        type: 'missing-params',
-        pattern,
-        partPattern: pattern.ast.pathname,
-        params: { a: 'x' },
-      })
-      assert.equal(
-        error.toString(),
-        dedent`
-          HrefError: missing params
-
-          Pattern: https://example.com/:a/:b(/:c)
-          Params: {"a":"x"}
-          Pathname variants:
-            - {:a}/{:b} (missing: b)
-            - {:a}/{:b}/{:c} (missing: b, c)
-        `,
-      )
-    })
-
-    it('shows missing dependent params', () => {
-      let pattern = new RoutePattern('https://example.com/:a(:b)-:a(:c)')
-      let error = new HrefError({
-        type: 'missing-params',
-        pattern,
-        partPattern: pattern.ast.pathname,
-        params: { b: 'thing' },
-      })
-      assert.equal(
-        error.toString(),
-        dedent`
-          HrefError: missing params
-
-          Pattern: https://example.com/:a(:b)-:a(:c)
-          Params: {"b":"thing"}
-          Pathname variants:
-            - {:a}-{:a} (missing: a)
-            - {:a}-{:a}{:c} (missing: a, c)
-            - {:a}{:b}-{:a} (missing: a)
-            - {:a}{:b}-{:a}{:c} (missing: a, c)
         `,
       )
     })
@@ -106,7 +59,7 @@ describe('HrefError', () => {
       assert.equal(
         error.toString(),
         dedent`
-          HrefError: missing required search param(s) 'q'
+          HrefError: missing required search param(s): 'q'
 
           Pattern: https://example.com/search?q=
           Search params: {}
@@ -125,7 +78,7 @@ describe('HrefError', () => {
       assert.equal(
         error.toString(),
         dedent`
-          HrefError: missing required search param(s) 'q, sort'
+          HrefError: missing required search param(s): 'q', 'sort'
 
           Pattern: https://example.com/search?q=&sort=
           Search params: {"page":1}

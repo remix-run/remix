@@ -21,11 +21,14 @@ type ParamsArg<source extends string> =
 /**
  * Generate a partial href from a part pattern and params.
  *
+ * @param pattern The route pattern containing the part pattern.
  * @param partPattern The part pattern to generate an href for.
  * @param params The parameters to substitute into the pattern.
  * @returns The href (URL) for the given params, or null if no variant matches.
  */
-export function part(partPattern: PartPattern, params: Params): string | null {
+export function part(pattern: RoutePattern, partPattern: PartPattern, params: Params): string {
+  let missingParams: Array<string> = []
+
   let stack: Array<{ begin?: number; href: string }> = [{ href: '' }]
   let i = 0
   while (i < partPattern.tokens.length) {
@@ -54,7 +57,15 @@ export function part(partPattern: PartPattern, params: Params): string | null {
     if (token.type === ':' || token.type === '*') {
       let value = params[token.name]
       if (value === undefined) {
-        if (stack.length <= 1) return null // todo: error
+        if (stack.length <= 1) {
+          if (token.name === '*') {
+            throw new HrefError({
+              type: 'nameless-wildcard',
+              pattern,
+            })
+          }
+          missingParams.push(token.name)
+        }
         let frame = stack.pop()!
         i = partPattern.optionals.get(frame.begin!)! + 1
         continue
@@ -64,6 +75,15 @@ export function part(partPattern: PartPattern, params: Params): string | null {
       continue
     }
     unreachable(token.type)
+  }
+  if (missingParams.length > 0) {
+    throw new HrefError({
+      type: 'missing-params',
+      pattern,
+      partPattern,
+      missingParams,
+      params,
+    })
   }
   if (stack.length !== 1) unreachable()
   return stack[0].href
@@ -139,12 +159,13 @@ type HrefErrorDetails =
       type: 'missing-params'
       pattern: RoutePattern
       partPattern: PartPattern
+      missingParams: Array<string>
       params: Record<string, string | number>
     }
   | {
       type: 'missing-search-params'
       pattern: RoutePattern
-      missingParams: string[]
+      missingParams: Array<string>
       searchParams: SearchParams
     }
   | {
@@ -175,23 +196,14 @@ export class HrefError extends Error {
     }
 
     if (details.type === 'missing-search-params') {
-      let params = details.missingParams.join(', ')
+      let params = details.missingParams.map((p) => `'${p}'`).join(', ')
       let searchParamsStr = JSON.stringify(details.searchParams)
-      return `missing required search param(s) '${params}'\n\nPattern: ${pattern}\nSearch params: ${searchParamsStr}`
+      return `missing required search param(s): ${params}\n\nPattern: ${pattern}\nSearch params: ${searchParamsStr}`
     }
 
     if (details.type === 'missing-params') {
-      let paramNames = Object.keys(details.params)
-      let variants = details.partPattern.variants.map((variant) => {
-        let key = variant.toString()
-        let missing = Array.from(
-          new Set(variant.params.filter((p) => !paramNames.includes(p.name)).map((p) => p.name)),
-        )
-        return `  - ${key || '<empty>'} (missing: ${missing.join(', ')})`
-      })
-      let partTitle =
-        details.partPattern.type.charAt(0).toUpperCase() + details.partPattern.type.slice(1)
-      return `missing params\n\nPattern: ${pattern}\nParams: ${JSON.stringify(details.params)}\n${partTitle} variants:\n${variants.join('\n')}`
+      let params = details.missingParams.map((p) => `'${p}'`).join(', ')
+      return `missing param(s): ${params}\n\nPattern: ${pattern}\nParams: ${JSON.stringify(details.params)}`
     }
 
     unreachable(details)
