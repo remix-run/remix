@@ -465,7 +465,7 @@ function isExternalSpecifier(specifier: string, externalPatterns: (string | RegE
  * - Access control via `allow`/`deny` patterns (paths and extensions)
  *
  * @param options Configuration options
- * @returns The dev assets middleware
+ * @returns The dev assets middleware with optional dispose method for cleanup
  *
  * @example
  * import { createRouter } from '@remix-run/fetch-router'
@@ -483,7 +483,12 @@ function isExternalSpecifier(specifier: string, externalPatterns: (string | RegE
  *   ],
  * })
  */
-export function devAssets(options: DevAssetsOptions): Middleware {
+/**
+ * Middleware returned by devAssets() - includes dispose method for cleanup
+ */
+export type DevAssetsMiddleware = Middleware & { dispose: () => Promise<void> }
+
+export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
   // Ensure root is an absolute path, default to cwd
   let root = path.resolve(options.root ?? process.cwd())
 
@@ -584,7 +589,7 @@ export function devAssets(options: DevAssetsOptions): Middleware {
     hmrWatcher.start()
   }
 
-  let middleware: Middleware & { dispose?: () => Promise<void> } = async (context, next) => {
+  let middleware: Middleware = async (context, next) => {
     // Set the assets API on context so route handlers can access it
     context.assets = assetsApi
 
@@ -766,14 +771,17 @@ export function devAssets(options: DevAssetsOptions): Middleware {
     }
   }
 
-  // Add dispose method for cleaning up resources (primarily the HMR watcher)
-  middleware.dispose = async () => {
+  // Add dispose method for cleaning up resources (HMR watcher and SSE connections)
+  ;(middleware as DevAssetsMiddleware).dispose = async () => {
+    if (hmrEventSource) {
+      hmrEventSource.close()
+    }
     if (hmrWatcher) {
       await hmrWatcher.stop()
     }
   }
 
-  return middleware
+  return middleware as DevAssetsMiddleware
 }
 
 // Handle requests for workspace files via /__@workspace/ URLs.

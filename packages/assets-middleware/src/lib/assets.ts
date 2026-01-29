@@ -124,6 +124,11 @@ function collectTransitiveChunks(
 }
 
 /**
+ * Middleware returned by assets() - standard middleware without dispose
+ */
+export type AssetsMiddleware = Middleware & { dispose?: never }
+
+/**
  * Creates middleware that provides asset resolution from an esbuild metafile.
  *
  * Makes `context.assets` available to route handlers for resolving entry points
@@ -150,7 +155,7 @@ function collectTransitiveChunks(
  *   // entry.chunks = ['/build/entry-ABC123.js', ...]
  * })
  */
-export function assets(manifest: AssetManifest): Middleware {
+export function assets(manifest: AssetManifest): AssetsMiddleware {
   let assetsApi = createAssets(manifest)
   return (context, next) => {
     context.assets = assetsApi

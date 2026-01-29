@@ -8,56 +8,111 @@ NOTE: Tasks that are in progress should be moved to `in-progress.md`.
 
 ### Add HMR handle unregistration to prevent memory leaks
 
-The HMR runtime currently tracks component handles in `Set<handle>` but never removes them when components unmount. This could cause memory leaks during development with dynamically mounted/unmounted components.
+**Status:** 🚫 **BLOCKED** - Waiting on component library investigation
 
-**Current situation:**
+**Blocker:** Conditional rendering in the component library doesn't call component `remove()` or abort `handle.signal`. Need to investigate and fix component library behavior before implementing HMR cleanup.
 
-- `components` Map stores `{ impl, handles: Set<handle> }` with **strong references** to handles
-- When components call `__hmr_register(url, name, handle, renderFn)`, handles are added to the Set (line 77 in `hmr-runtime.ts`)
-- **No cleanup mechanism** when components unmount or handles are disposed
-- HMR iterates over `component.handles.forEach(...)` to propagate updates (requires strong refs, can't use WeakSet)
+**Problem:**
 
-**Why this matters:**
+The HMR runtime currently tracks component handles in `Set<handle>` but never removes them when components unmount. This causes:
 
-- Unmounted component handles remain in memory indefinitely
-- Long dev sessions with component churn could accumulate stale handles
-- Testing scenarios with many mount/unmount cycles could leak
-- **However**: This is dev-only, and most components are long-lived during dev sessions, so impact is likely minor in practice
+1. **Memory leaks** - unmounted handles remain in memory indefinitely
+2. **Stale HMR updates** - HMR may try to interact with unmounted component handles
 
-**Potential solution (requires investigation):**
+**Solution approach validated:**
 
-Add cleanup API that `@remix-run/component` calls when disposing handles:
+✅ Hook into existing AbortSignal mechanism - listen for `handle.signal` abort event in `__hmr_register` to clean up when component unmounts. No new component API needed!
 
-```javascript
-export function __hmr_unregister(handle) {
-  const metadata = handleToComponent.get(handle)
-  if (metadata) {
-    const component = components.get(metadata.url)?.get(metadata.name)
-    component?.handles.delete(handle)
-    handleToComponent.delete(handle)
+**Investigation complete - Key findings:**
+
+1. **Signal mechanism works correctly:**
+
+   - Components receive `Handle` with `signal` property (AbortSignal)
+   - Signal is aborted when component's `remove()` function is called
+   - Each instance gets unique handle with own signal
+
+2. **Component library bug discovered:**
+
+   - Conditional rendering (`{show && <Component />}`) removes component from DOM
+   - BUT does NOT call component's `remove()` function or abort `handle.signal`
+   - Component remains "alive" in framework, just not rendered
+   - Test gap: No test exists for parent conditionally rendering child component
+   - Root rendering `root.render(null)` DOES abort signal correctly
+
+3. **Empirical evidence:**
+   - Created Toggle component that conditionally renders Counter: `{showCounter && <Counter />}`
+   - Toggled Counter off - confirmed removed from DOM (`visible: false`)
+   - Both Counter instances showed `signal.aborted: false`
+   - Expected: signal should be `true` for unmounted instance
+
+**HMR cleanup implementation ready:**
+
+The implementation is straightforward once component library is fixed:
+
+```typescript
+// In __hmr_register, after adding handle to Set:
+handle.signal.addEventListener('abort', function () {
+  // Remove handle from handles Set
+  componentEntry.handles.delete(handle)
+
+  // Clean up state storage
+  __hmr_clear_state(handle)
+
+  // Clean up metadata
+  handleToComponent.delete(handle)
+
+  // Clean up empty entries
+  if (componentEntry.handles.size === 0) {
+    moduleComponents.delete(componentName)
+    if (moduleComponents.size === 0) {
+      components.delete(moduleUrl)
+    }
   }
-}
+})
 ```
 
-**Open questions requiring investigation:**
+**Testing strategy (CRITICAL):**
 
-- Does `@remix-run/component` have lifecycle hooks for handle disposal?
-- Should this be called automatically or require explicit cleanup?
-- What's the impact on HMR behavior if handles are removed mid-update?
-- Is there a way to detect stale handles automatically (e.g., checking if handle is still mounted)?
-- Should we add periodic cleanup to remove handles that are no longer reachable?
+The test MUST be written to verify it can actually fail:
 
-**Acceptance Criteria:**
+1. **Write the test first** - Create e2e test that unmounts a component, triggers HMR update, and checks for errors
+2. **Verify test FAILS without cleanup** - Comment out the cleanup listener code, run test, confirm it fails
+3. **Verify test PASSES with cleanup** - Restore cleanup listener code, run test, confirm it passes
 
-- [ ] Investigate `@remix-run/component` handle lifecycle and disposal mechanisms
-- [ ] Design cleanup API that integrates with component lifecycle
-- [ ] Implement `__hmr_unregister` function
-- [ ] Update `@remix-run/component` to call unregister when handles are disposed
-- [ ] Add tests for handle cleanup (verify handles are removed from registry)
-- [ ] Verify no memory leaks in long-running dev sessions with component churn
-- [ ] Document cleanup expectations for framework integrators
+**Why this is critical:**
 
-**Note:** May require coordination with `@remix-run/component` package. Further investigation needed to determine the right integration points.
+During investigation, we created a test using conditional rendering (`{show && <Counter />}`) to unmount a component. The test passed even when cleanup was disabled! This revealed that conditional rendering doesn't abort the signal, making it a bad test scenario.
+
+**What the test should catch:**
+
+Without cleanup, HMR attempts to call `handle.update()` on unmounted components. This should either:
+
+- Produce console errors (component tries to interact with removed DOM nodes)
+- Throw exceptions (accessing properties on disconnected handles)
+- Show HMR trying to update non-existent instances
+
+The test must verify that these errors/behaviors DON'T happen when cleanup is enabled.
+
+**Next steps:**
+
+1. **Fix component library:** Ensure conditional rendering calls `remove()` and aborts signal
+2. **Add component test:** Test that `{show && <Component />}` toggle aborts child signal
+3. **Return to this task:** Implement HMR cleanup (code above)
+4. **Add e2e test:** Verify HMR doesn't update unmounted components
+
+**Files to modify when unblocked:**
+
+- `packages/dev-assets-middleware/src/virtual/hmr-runtime.ts` - add cleanup listener in `__hmr_register`
+- `packages/dev-assets-middleware/e2e/hmr.playwright.ts` - add test for conditional unmount scenario
+
+**Current HMR bookkeeping (for reference):**
+
+- `components` Map: `url → Map<name, { impl, handles: Set<handle> }>`
+- `handleToComponent` WeakMap: `handle → { url, name, renderFn }`
+- `componentState` WeakMap: `handle → ComponentState`
+- `setupHashes` WeakMap: `handle → hash`
+
+---
 
 ### Add custom logger option
 

@@ -34,6 +34,8 @@ export interface HmrEventSource {
   sendReload(): void
   /** Get the number of connected clients */
   getClientCount(): number
+  /** Close all active SSE connections */
+  close(): void
 }
 
 let encoder = new TextEncoder()
@@ -120,6 +122,18 @@ export function createHmrEventSource(debug: boolean = false): HmrEventSource {
 
     getClientCount() {
       return clients.size
+    },
+
+    close() {
+      log(`Closing ${clients.size} SSE connection(s)`)
+      for (let [, client] of clients) {
+        try {
+          client.controller.close()
+        } catch {
+          // Ignore errors if already closed
+        }
+      }
+      clients.clear()
     },
   }
 }

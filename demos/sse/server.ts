@@ -19,3 +19,12 @@ let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 server.listen(port, () => {
   console.log(`Server-Sent Events demo is running on http://localhost:${port}`)
 })
+
+function shutdown() {
+  server.close(() => {
+    process.exit(0)
+  })
+}
+
+process.on('SIGINT', shutdown)
+process.on('SIGTERM', shutdown)

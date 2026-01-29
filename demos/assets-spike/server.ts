@@ -1,7 +1,7 @@
 import * as http from 'node:http'
 import * as fs from 'node:fs'
 import { createRequestListener } from '@remix-run/node-fetch-server'
-import { createRouter, type Middleware } from '@remix-run/fetch-router'
+import { createRouter } from '@remix-run/fetch-router'
 import { staticFiles } from '@remix-run/static-middleware'
 import { esbuildConfig } from './esbuild.config.ts'
 
@@ -13,7 +13,7 @@ let isDev = process.env.NODE_ENV === 'development'
  * In development: Uses devAssets for on-the-fly TypeScript/JSX transformation
  * In production: Uses prodAssets with a pre-built manifest
  */
-async function getAssetsMiddleware(): Promise<Middleware> {
+async function getAssetsMiddleware() {
   if (isDev) {
     // Dynamic import to avoid bundling heavy dev deps in production
     let { devAssets } = await import('@remix-run/dev-assets-middleware')
@@ -125,7 +125,8 @@ async function main() {
 
   let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
-  function shutdown() {
+  async function shutdown() {
+    await assetsMiddleware.dispose?.()
     server.close(() => {
       process.exit(0)
     })
