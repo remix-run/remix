@@ -472,10 +472,10 @@ describe('RoutePattern', () => {
         assert.equal(result, 'https://staging.example.com/path')
       })
 
-      it('throws for unnamed wildcard', () => {
+      it('throws for nameless wildcard', () => {
         let pattern = new RoutePattern('://*.example.com/path')
         // @ts-expect-error - missing required param
-        assert.throws(() => pattern.href(), hrefError('missing-params'))
+        assert.throws(() => pattern.href(), hrefError('nameless-wildcard'))
       })
 
       it('includes optional with static content', () => {
@@ -559,7 +559,7 @@ describe('RoutePattern', () => {
       it('throws for unnamed wildcard', () => {
         let pattern = new RoutePattern('/files/*')
         // @ts-expect-error - missing required param
-        assert.throws(() => pattern.href(), hrefError('missing-params'))
+        assert.throws(() => pattern.href(), hrefError('nameless-wildcard'))
       })
 
       it('supports repeated params', () => {
@@ -818,7 +818,7 @@ describe('RoutePattern', () => {
         })
       })
 
-      it('excludes unnamed wildcard from params', () => {
+      it('excludes nameless wildcard from params', () => {
         assertMatch('://*.example.com/path', 'https://api.example.com/path', {})
       })
     })
@@ -850,7 +850,7 @@ describe('RoutePattern', () => {
         })
       })
 
-      it('excludes unnamed wildcard from params', () => {
+      it('excludes nameless wildcard from params', () => {
         assertMatch('/posts/*/comments', 'https://example.com/posts/123/comments', {})
       })
     })

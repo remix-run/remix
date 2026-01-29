@@ -146,7 +146,7 @@ export class RoutePattern<source extends string = string> {
           pattern: this,
         })
       }
-      let hostname = hrefOrThrow(this.ast.hostname, params, this)
+      let hostname = Href.part(this, this.ast.hostname, params)
 
       // port
       let port = this.ast.port === null ? '' : `:${this.ast.port}`
@@ -154,7 +154,7 @@ export class RoutePattern<source extends string = string> {
     }
 
     // pathname
-    let pathname = hrefOrThrow(this.ast.pathname, params, this)
+    let pathname = Href.part(this, this.ast.pathname, params)
     result += '/' + pathname
 
     // search
@@ -228,21 +228,4 @@ export class RoutePattern<source extends string = string> {
   test(url: string | URL): boolean {
     return this.match(url) !== null
   }
-}
-
-function hrefOrThrow(
-  part: PartPattern,
-  params: Record<string, string | number>,
-  pattern: RoutePattern,
-): string {
-  let result = Href.part(part, params)
-  if (result === null) {
-    throw new Href.HrefError({
-      type: 'missing-params',
-      pattern,
-      partPattern: part,
-      params,
-    })
-  }
-  return result
 }
