@@ -3,7 +3,7 @@ BREAKING CHANGE: Change how params are represented within `RoutePattern.ast`
 Previously, `RoutePattern.ast.{hostname,pathname}.tokens` had param tokens like:
 
 ```ts
-type ParamToken = { type: ':', '*', nameIndex: number }
+type ParamToken = { type: ':'; '*'; nameIndex: number }
 ```
 
 where the `nameIndex` was used to access the param name from `paramNames`:
@@ -22,14 +22,14 @@ for (let token of pathname.tokens) {
 This has now been simplified so that param tokens contain their own name:
 
 ```ts
-type ParamToken = { type: ':' | '*', name: string }
+type ParamToken = { type: ':' | '*'; name: string }
 
 let { pathname } = pattern.ast
 
 for (let token of pathname.tokens) {
-   if (token.type === ':' || token.type === '*') {
-      console.log('name: ', token.name)
-   }
+  if (token.type === ':' || token.type === '*') {
+    console.log('name: ', token.name)
+  }
 }
 ```
 
