@@ -1,0 +1,1 @@
+{"version":3,"file":"fs.d.ts","sourceRoot":"","sources":["../../../src/lib/session-storage/fs.ts"],"names":[],"mappings":"AAKA,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,uBAAuB,CAAA;AAE3D,MAAM,WAAW,uBAAuB;IACtC;;;OAGG;IACH,aAAa,CAAC,EAAE,OAAO,CAAA;CACxB;AAED;;;;;;;;;;GAUG;AACH,wBAAgB,sBAAsB,CACpC,SAAS,EAAE,MAAM,EACjB,OAAO,CAAC,EAAE,uBAAuB,GAChC,cAAc,CAyEhB"}

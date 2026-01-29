@@ -1,0 +1,1 @@
+{"version":3,"file":"protocol.d.ts","sourceRoot":"","sources":["../../../src/lib/route-pattern/protocol.ts"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,qBAAqB,CAAA;AACvD,OAAO,KAAK,EAAE,IAAI,EAAE,MAAM,YAAY,CAAA;AAEtC,wBAAgB,KAAK,CAAC,MAAM,EAAE,MAAM,EAAE,IAAI,EAAE,IAAI,GAAG,IAAI,GAAG,YAAY,CAAC,KAAK,CAAC,CAAC,UAAU,CAAC,CAOxF"}
