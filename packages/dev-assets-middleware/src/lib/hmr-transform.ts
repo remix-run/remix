@@ -841,6 +841,16 @@ export async function transformComponent(
   // Extract input source map if present (from esbuild inline maps)
   let inputSourceMap = extractInlineSourceMap(source)
 
+  // Parse input source map to preserve sourcesContent
+  let parsedInputMap: any = null
+  if (inputSourceMap) {
+    try {
+      parsedInputMap = JSON.parse(inputSourceMap)
+    } catch {
+      parsedInputMap = null
+    }
+  }
+
   // Print the transformed AST with source map support
   try {
     let result = await swc.print(transformedAst, {
@@ -850,6 +860,15 @@ export async function transformComponent(
         target: 'es2022',
       },
     })
+
+    // Fix the source map to preserve original sourcesContent from esbuild
+    // SWC's source map chaining replaces sourcesContent with the intermediate code,
+    // but we want to preserve the original TypeScript source
+    if (result.map && parsedInputMap?.sourcesContent) {
+      let outputMap = JSON.parse(result.map)
+      outputMap.sourcesContent = parsedInputMap.sourcesContent
+      result.map = JSON.stringify(outputMap)
+    }
 
     return {
       code: result.code,

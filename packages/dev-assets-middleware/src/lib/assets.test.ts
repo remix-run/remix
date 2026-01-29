@@ -8,6 +8,7 @@ import * as os from 'node:os'
 
 import {
   parseInlineSourceMap,
+  fixSourceMapPaths,
   generateETag,
   matchesETag,
   createDevAssets,
@@ -80,6 +81,144 @@ describe('parseInlineSourceMap', () => {
 
     assert.ok(parsed)
     assert.equal(parsed.sources[0], '/__@workspace/node_modules/@remix-run/component/src/index.ts')
+  })
+})
+
+describe('fixSourceMapPaths', () => {
+  it('fixes filesystem-relative paths to URL paths for app files', () => {
+    // Simulate esbuild output with filesystem-relative path
+    let sourceMap = {
+      version: 3,
+      sources: ['../components/Counter.tsx'],
+      mappings: 'AAAA',
+      sourcesContent: ['export function Counter() {}'],
+    }
+    let base64 = Buffer.from(JSON.stringify(sourceMap)).toString('base64')
+    let code = `export function Counter() {}\n//# sourceMappingURL=data:application/json;base64,${base64}`
+
+    // Fix the paths
+    let fixed = fixSourceMapPaths(code, '/assets/components/Counter.tsx')
+
+    // Verify the source map was fixed
+    let parsed = parseInlineSourceMap(fixed)
+    assert.ok(parsed)
+    assert.deepEqual(parsed.sources, ['/assets/components/Counter.tsx'])
+    assert.deepEqual(parsed.sourcesContent, ['export function Counter() {}'])
+  })
+
+  it('fixes filesystem-relative paths to URL paths for HMR runtime', () => {
+    // Simulate esbuild output with filesystem-relative path
+    let sourceMap = {
+      version: 3,
+      sources: ['../../virtual/hmr-runtime.ts'],
+      mappings: 'AAAA',
+      sourcesContent: ['export function __hmr_register() {}'],
+    }
+    let base64 = Buffer.from(JSON.stringify(sourceMap)).toString('base64')
+    let code = `export function __hmr_register() {}\n//# sourceMappingURL=data:application/json;base64,${base64}`
+
+    // Fix the paths
+    let fixed = fixSourceMapPaths(code, '/__@remix/hmr-runtime.ts')
+
+    // Verify the source map was fixed
+    let parsed = parseInlineSourceMap(fixed)
+    assert.ok(parsed)
+    assert.deepEqual(parsed.sources, ['/__@remix/hmr-runtime.ts'])
+    assert.deepEqual(parsed.sourcesContent, ['export function __hmr_register() {}'])
+  })
+
+  it('fixes filesystem-relative paths to URL paths for workspace files', () => {
+    // Simulate esbuild output with filesystem-relative path
+    let sourceMap = {
+      version: 3,
+      sources: ['../../packages/component/src/index.ts'],
+      mappings: 'AAAA',
+      sourcesContent: ['export function createRoot() {}'],
+    }
+    let base64 = Buffer.from(JSON.stringify(sourceMap)).toString('base64')
+    let code = `export function createRoot() {}\n//# sourceMappingURL=data:application/json;base64,${base64}`
+
+    // Fix the paths
+    let fixed = fixSourceMapPaths(code, '/__@workspace/packages/component/src/index.ts')
+
+    // Verify the source map was fixed
+    let parsed = parseInlineSourceMap(fixed)
+    assert.ok(parsed)
+    assert.deepEqual(parsed.sources, ['/__@workspace/packages/component/src/index.ts'])
+    assert.deepEqual(parsed.sourcesContent, ['export function createRoot() {}'])
+  })
+
+  it('preserves sourcesContent when fixing paths', () => {
+    let sourceMap = {
+      version: 3,
+      sources: ['../App.tsx'],
+      mappings: 'AAAA',
+      sourcesContent: ['export function App() { return <div>Hello</div> }'],
+    }
+    let base64 = Buffer.from(JSON.stringify(sourceMap)).toString('base64')
+    let code = `export function App() {}\n//# sourceMappingURL=data:application/json;base64,${base64}`
+
+    // Fix the paths
+    let fixed = fixSourceMapPaths(code, '/assets/App.tsx')
+
+    let parsed = parseInlineSourceMap(fixed)
+    assert.ok(parsed)
+    assert.ok(parsed.sourcesContent)
+    assert.equal(parsed.sourcesContent[0], 'export function App() { return <div>Hello</div> }')
+  })
+
+  it('preserves mappings when fixing paths', () => {
+    let sourceMap = {
+      version: 3,
+      sources: ['../App.tsx'],
+      mappings: 'AAAA,CAAC,CAAC,CAAC',
+      sourcesContent: ['export function App() {}'],
+    }
+    let base64 = Buffer.from(JSON.stringify(sourceMap)).toString('base64')
+    let code = `export function App() {}\n//# sourceMappingURL=data:application/json;base64,${base64}`
+
+    // Fix the paths
+    let fixed = fixSourceMapPaths(code, '/assets/App.tsx')
+
+    let parsed = parseInlineSourceMap(fixed)
+    assert.ok(parsed)
+    assert.equal(parsed.mappings, 'AAAA,CAAC,CAAC,CAAC')
+  })
+
+  it('handles code without source map gracefully', () => {
+    let code = 'export function App() {}'
+    let fixed = fixSourceMapPaths(code, '/assets/App.tsx')
+    assert.equal(fixed, code)
+  })
+
+  it('handles malformed source map gracefully', () => {
+    let code =
+      'export function App() {}\n//# sourceMappingURL=data:application/json;base64,not-valid!!!'
+    let fixed = fixSourceMapPaths(code, '/assets/App.tsx')
+    // Should return original code when parsing fails
+    assert.equal(fixed, code)
+  })
+
+  it('replaces multiple sources with single sourceUrl', () => {
+    // Edge case: if esbuild somehow generates multiple sources, replace all with the single URL
+    let sourceMap = {
+      version: 3,
+      sources: ['../App.tsx', '../utils.ts'],
+      mappings: 'AAAA',
+      sourcesContent: ['export function App() {}', 'export const x = 1'],
+    }
+    let base64 = Buffer.from(JSON.stringify(sourceMap)).toString('base64')
+    let code = `export function App() {}\n//# sourceMappingURL=data:application/json;base64,${base64}`
+
+    // Fix the paths
+    let fixed = fixSourceMapPaths(code, '/assets/App.tsx')
+
+    let parsed = parseInlineSourceMap(fixed)
+    assert.ok(parsed)
+    // Should have single source URL
+    assert.deepEqual(parsed.sources, ['/assets/App.tsx'])
+    // sourcesContent should be preserved as-is
+    assert.deepEqual(parsed.sourcesContent, ['export function App() {}', 'export const x = 1'])
   })
 })
 
