@@ -142,16 +142,17 @@ export type Scheduler = ReturnType<typeof createScheduler>
 
 export function createScheduler(doc: Document, rootTarget: EventTarget) {
   let documentState = createDocumentState(doc)
-  let scheduled = new Map<CommittedComponentNode, [ParentNode, Node | undefined]>()
+  let scheduled = new Map<CommittedComponentNode, ParentNode>()
   let tasks: EmptyFn[] = []
   let flushScheduled = false
   let scheduler: {
-    enqueue(vnode: CommittedComponentNode, domParent: ParentNode, anchor?: Node): void
+    enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void
     enqueueTasks(newTasks: EmptyFn[]): void
     dequeue(): void
   }
 
   function dispatchError(error: unknown) {
+    console.error(error)
     rootTarget.dispatchEvent(new ErrorEvent('error', { error }))
   }
 
@@ -167,7 +168,7 @@ export function createScheduler(doc: Document, rootTarget: EventTarget) {
     // Mark layout elements within updating components as pending BEFORE capture
     // This ensures we only capture/apply for elements whose components are updating
     if (batch.size > 0) {
-      for (let [, [domParent]] of batch) {
+      for (let [, domParent] of batch) {
         markLayoutSubtreePending(domParent)
       }
     }
@@ -181,11 +182,16 @@ export function createScheduler(doc: Document, rootTarget: EventTarget) {
       let vnodes = Array.from(batch)
       let noScheduledAncestor = new Set<VNode>()
 
-      for (let [vnode, [domParent, anchor]] of vnodes) {
+      for (let [vnode, domParent] of vnodes) {
         if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
         let handle = vnode._handle
         let curr = vnode._content
         let vParent = vnode._parent!
+        // Calculate anchor at render time from current vdom position (never stale).
+        // Needed for fragment self-updates that add children - without this, new children
+        // would be appended after siblings. The keyed diff has placement logic, but unkeyed
+        // diff relies on anchor for correct positioning.
+        let anchor = findNextSiblingDomAnchor(vnode, vParent) || undefined
         try {
           renderComponent(
             handle,
@@ -230,7 +236,7 @@ export function createScheduler(doc: Document, rootTarget: EventTarget) {
 
   function ancestorIsScheduled(
     vnode: VNode,
-    batch: Map<CommittedComponentNode, [ParentNode, Node | undefined]>,
+    batch: Map<CommittedComponentNode, ParentNode>,
     safe: Set<VNode>,
   ): boolean {
     let path: VNode[] = []
@@ -258,8 +264,8 @@ export function createScheduler(doc: Document, rootTarget: EventTarget) {
   }
 
   scheduler = {
-    enqueue(vnode: CommittedComponentNode, domParent: ParentNode, anchor?: Node): void {
-      scheduled.set(vnode, [domParent, anchor])
+    enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void {
+      scheduled.set(vnode, domParent)
       scheduleFlush()
     },
 
@@ -458,7 +464,7 @@ export function diffVNodes(
   }
 
   if (isCommittedHostNode(curr) && isHostNode(next)) {
-    diffHost(curr, next, domParent, frame, scheduler, vParent, rootTarget)
+    diffHost(curr, next, frame, scheduler, vParent, rootTarget)
     return rootCursor
   }
 
@@ -499,8 +505,8 @@ function replace(
   rootTarget: EventTarget,
   anchor?: Node,
 ) {
-  anchor =
-    anchor || findFirstDomAnchor(curr) || findNextSiblingDomAnchor(curr, curr._parent) || undefined
+  // Use curr's DOM position (most accurate), fall back to anchor if curr has no DOM
+  anchor = findFirstDomAnchor(curr) || anchor
   insert(next, domParent, frame, scheduler, vParent, rootTarget, anchor)
   remove(curr, domParent, scheduler)
 }
@@ -508,7 +514,6 @@ function replace(
 function diffHost(
   curr: CommittedHostNode,
   next: HostNode,
-  domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
   vParent: VNode,
@@ -1065,7 +1070,7 @@ function renderComponent(
   let committed = next as CommittedComponentNode
 
   handle.setScheduleUpdate(() => {
-    scheduler.enqueue(committed, domParent, anchor)
+    scheduler.enqueue(committed, domParent)
   })
 
   scheduler.enqueueTasks(tasks)
