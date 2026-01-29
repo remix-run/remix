@@ -3,12 +3,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@remix-run/component": "workspace:^",
-    "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/interaction": "workspace:^",
-    "@remix-run/node-fetch-server": "workspace:^",
-    "@remix-run/static-middleware": "workspace:^",
-    "motion": "^12.28.1"
+    "motion": "^12.28.1",
+    "remix": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "catalog:",

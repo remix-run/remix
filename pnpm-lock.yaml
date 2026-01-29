@@ -284,24 +284,12 @@ importers:
 
   packages/component/demos:
     dependencies:
-      '@remix-run/component':
-        specifier: workspace:^
-        version: link:..
-      '@remix-run/fetch-router':
-        specifier: workspace:^
-        version: link:../../fetch-router
-      '@remix-run/interaction':
-        specifier: workspace:^
-        version: link:../../interaction
-      '@remix-run/node-fetch-server':
-        specifier: workspace:^
-        version: link:../../node-fetch-server
-      '@remix-run/static-middleware':
-        specifier: workspace:^
-        version: link:../../static-middleware
       motion:
         specifier: ^12.28.1
         version: 12.28.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      remix:
+        specifier: workspace:^
+        version: link:../../remix
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

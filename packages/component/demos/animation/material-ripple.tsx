@@ -1,5 +1,5 @@
-import type { Handle } from '@remix-run/component'
-import { pressDown, pressUp, pressCancel } from '@remix-run/interaction/press'
+import type { Handle } from 'remix/component'
+import { pressDown, pressUp, pressCancel } from 'remix/interaction/press'
 
 type Ripple = {
   id: number

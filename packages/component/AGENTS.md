@@ -292,12 +292,12 @@ function GoodExample(handle: Handle) {
 }
 ```
 
-**❌ Anti-pattern: Don't call `handle.update()` before async work in a task:**
+**Pattern: Use `handle.update(task)` when you need to show loading state before async work:**
 
-The task's signal is aborted when the component re-renders. If you call `handle.update()` before your async work completes, the re-render will abort the signal you're using for the async operation:
+The task's signal is aborted when the component re-renders. If you call `handle.update()` before your async work completes, the re-render will abort the signal you're using for the async operation. When you need to update state (like showing a loading indicator) before starting async work, move the async work into a new task via `handle.update(task)`:
 
 ```tsx
-// ❌ Avoid: Calling handle.update() before async work
+// ❌ Avoid: Calling handle.update() before async work in the same task
 function BadAsyncExample(handle: Handle) {
   let data: string[] = []
   let loading = false
@@ -307,7 +307,6 @@ function BadAsyncExample(handle: Handle) {
     handle.update() // This triggers a re-render, which aborts signal!
 
     let response = await fetch('/api/data', { signal }) // AbortError: signal is aborted
-    if (signal.aborted) return
 
     data = await response.json()
     loading = false
@@ -317,23 +316,32 @@ function BadAsyncExample(handle: Handle) {
   return () => <div>{loading ? 'Loading...' : data.join(', ')}</div>
 }
 
-// ✅ Prefer: Set initial state in setup, only call handle.update() after async work
+// ✅ Prefer: Move async work into a new task via handle.update(task)
 function GoodAsyncExample(handle: Handle) {
   let data: string[] = []
-  let loading = true // Start in loading state
+  let loading = false
 
-  handle.queueTask(async (signal) => {
-    let response = await fetch('/api/data', { signal })
-    if (signal.aborted) return
+  handle.queueTask(() => {
+    loading = true
+    handle.update(async (signal) => {
+      // This task gets a fresh signal that won't be aborted by the update above
+      let response = await fetch('/api/data', { signal })
 
-    data = await response.json()
-    loading = false
-    handle.update() // Safe - async work is complete
+      data = await response.json()
+      loading = false
+      handle.update()
+    })
   })
 
   return () => <div>{loading ? 'Loading...' : data.join(', ')}</div>
 }
 ```
+
+The key insight is that `handle.update(task)` queues a new task that runs after the update completes, with its own fresh signal. This allows you to:
+
+1. Update state to show loading UI
+2. Trigger a re-render with `handle.update(task)`
+3. Perform async work in the task with a signal that won't be aborted by that re-render
 
 **Signals in events and tasks are how you manage interruptions and disconnects:**
 

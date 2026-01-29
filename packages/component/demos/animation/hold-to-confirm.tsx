@@ -1,6 +1,6 @@
-import { defineInteraction, type Interaction } from '@remix-run/interaction'
-import { pressDown, pressUp, pressCancel } from '@remix-run/interaction/press'
-import { spring, type Handle } from '@remix-run/component'
+import { defineInteraction, type Interaction } from 'remix/interaction'
+import { pressDown, pressUp, pressCancel } from 'remix/interaction/press'
+import { spring, type Handle } from 'remix/component'
 
 // Demo
 let buttonAnimation = {

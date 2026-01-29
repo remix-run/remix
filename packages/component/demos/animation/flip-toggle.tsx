@@ -1,4 +1,4 @@
-import { type Handle } from '@remix-run/component'
+import { type Handle } from 'remix/component'
 
 export function FlipToggle(handle: Handle) {
   let isOn = false

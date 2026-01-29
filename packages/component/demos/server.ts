@@ -2,9 +2,9 @@ import * as fs from 'node:fs'
 import * as http from 'node:http'
 import * as path from 'node:path'
 
-import { createRouter, route } from '@remix-run/fetch-router'
-import { createRequestListener } from '@remix-run/node-fetch-server'
-import { staticFiles } from '@remix-run/static-middleware'
+import { createRouter, route } from 'remix/fetch-router'
+import { createRequestListener } from 'remix/node-fetch-server'
+import { staticFiles } from 'remix/static-middleware'
 
 let demosDir = path.resolve(import.meta.dirname)
 

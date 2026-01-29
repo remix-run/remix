@@ -1,5 +1,5 @@
-import { type Handle } from '@remix-run/component'
-import { spring } from '@remix-run/component'
+import { type Handle } from 'remix/component'
+import { spring } from 'remix/component'
 
 export function RollingSquare(handle: Handle) {
   let toggled = false

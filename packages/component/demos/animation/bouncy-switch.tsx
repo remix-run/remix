@@ -1,5 +1,5 @@
-import { type Handle } from '@remix-run/component'
-import { spring } from '@remix-run/component'
+import { type Handle } from 'remix/component'
+import { spring } from 'remix/component'
 
 let bounceEasing = `linear(0, 0.258 12%, 0.424 18.3%, 0.633 24.4%, 0.999 33.3%, 0.783 39.8%, 0.733 42.5%, 0.716 45.1%, 0.731 47.6%, 0.777 50.2%, 0.999 57.7%, 0.906 61.7%, 0.883 63.5%, 0.876 65.2%, 0.901 68.7%, 0.999 74.5%, 0.964 77.4%, 0.953 80.1%, 0.961 82.6%, 1 88.2%, 0.99 91.9%, 1)`
 

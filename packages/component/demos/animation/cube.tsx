@@ -1,4 +1,4 @@
-import type { Handle } from '@remix-run/component'
+import type { Handle } from 'remix/component'
 
 export function Cube(handle: Handle) {
   let cube: HTMLDivElement

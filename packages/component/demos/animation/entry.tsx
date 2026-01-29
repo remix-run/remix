@@ -1,4 +1,4 @@
-import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
+import { createRoot, type Handle, type RemixNode } from 'remix/component'
 import { DefaultAnimate } from './default-animate.tsx'
 import { EnterAnimation } from './enter.tsx'
 import { ExitAnimation } from './exit.tsx'
