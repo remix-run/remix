@@ -613,13 +613,12 @@ function generateHmrComponent(
     // let __s = __hmr_state(param)
     createLetDeclaration('__s', createCallExpression('__hmr_state', [paramRef])),
 
-    // if (__hmr_setup(param, __s, hash, setupFn)) { __hmr_request_remount(param); return () => null }
+    // if (__hmr_setup(param, hash, setupFn)) { __hmr_request_remount(param); return () => null }
     {
       type: 'IfStatement',
       span: syntheticSpan(),
       test: createCallExpression('__hmr_setup', [
         paramRef,
-        createIdentifier('__s'),
         createStringLiteral(setupHash),
         setupFn,
       ]),

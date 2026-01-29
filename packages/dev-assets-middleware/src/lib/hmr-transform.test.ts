@@ -74,7 +74,7 @@ export function Counter(handle) {
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {
+  if (__hmr_setup(handle, 'HASH', () => {
     __s.count = 0
   })) {
     __hmr_request_remount(handle)
@@ -105,7 +105,7 @@ export function App(handle) {
 ${HMR_IMPORT}
 function App__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {
+  if (__hmr_setup(handle, 'HASH', () => {
   })) {
     __hmr_request_remount(handle)
     return () => null
@@ -141,7 +141,7 @@ export function Counter(handle) {
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {
+  if (__hmr_setup(handle, 'HASH', () => {
     __s.count = 0
     __s.name = 'test'
     __s.active = true
@@ -176,7 +176,7 @@ export function Static(handle) {
 ${HMR_IMPORT}
 function Static__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {})) {
+  if (__hmr_setup(handle, 'HASH', () => {})) {
     __hmr_request_remount(handle)
     return () => null
   }
@@ -210,7 +210,7 @@ ${HMR_IMPORT}
 import { helper } from './utils.js'
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {
+  if (__hmr_setup(handle, 'HASH', () => {
     __s.count = helper()
   })) {
     __hmr_request_remount(handle)
@@ -278,8 +278,8 @@ export function Counter(handle) {
     let { code: result1 } = await transformComponent(input1, '/app/Counter.js')
     let { code: result2 } = await transformComponent(input2, '/app/Counter.js')
 
-    let hashMatch1 = result1.match(/__hmr_setup\(handle, __s, '([^']+)'/)
-    let hashMatch2 = result2.match(/__hmr_setup\(handle, __s, '([^']+)'/)
+    let hashMatch1 = result1.match(/__hmr_setup\(handle, '([^']+)'/)
+    let hashMatch2 = result2.match(/__hmr_setup\(handle, '([^']+)'/)
 
     assert.ok(hashMatch1, 'should have hash in result1')
     assert.ok(hashMatch2, 'should have hash in result2')
@@ -315,7 +315,7 @@ function Internal(handle) {
 ${HMR_IMPORT}
 function Internal__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {
+  if (__hmr_setup(handle, 'HASH', () => {
     __s.value = 42
   })) {
     __hmr_request_remount(handle)
@@ -357,7 +357,6 @@ function Counter__impl({ signal, params }) {
         signal: signal,
         params: params,
       },
-      __s,
       'HASH',
       () => {
         __s.count = 0
@@ -414,7 +413,7 @@ export function Counter(handle) {
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {
+  if (__hmr_setup(handle, 'HASH', () => {
     __s.count = 0
   })) {
     __hmr_request_remount(handle)
@@ -451,7 +450,7 @@ export const Counter = function(handle) {
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {
+  if (__hmr_setup(handle, 'HASH', () => {
     __s.count = 0
   })) {
     __hmr_request_remount(handle)
@@ -484,7 +483,7 @@ export const Counter = (handle) => {
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {
+  if (__hmr_setup(handle, 'HASH', () => {
     __s.count = 0
   })) {
     __hmr_request_remount(handle)
@@ -513,7 +512,7 @@ export const Counter = (handle) => () => <div>Hello</div>
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {
+  if (__hmr_setup(handle, 'HASH', () => {
   })) {
     __hmr_request_remount(handle)
     return () => null
@@ -544,7 +543,7 @@ let Counter = (handle) => {
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {
+  if (__hmr_setup(handle, 'HASH', () => {
     __s.count = 0
   })) {
     __hmr_request_remount(handle)
@@ -581,7 +580,7 @@ export function Footer(handle) {
 ${HMR_IMPORT}
 function Header__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {
+  if (__hmr_setup(handle, 'HASH', () => {
     __s.title = 'My App'
   })) {
     __hmr_request_remount(handle)
@@ -597,7 +596,7 @@ export function Header(handle) {
 }
 function Footer__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, __s, 'HASH', () => {
+  if (__hmr_setup(handle, 'HASH', () => {
     __s.year = 2024
   })) {
     __hmr_request_remount(handle)

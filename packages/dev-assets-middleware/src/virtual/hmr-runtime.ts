@@ -8,9 +8,9 @@ import { requestRemount, type Handle } from '@remix-run/component'
 // Types
 // ---------------------------------------------------------------------------
 
-// HMR state stored per handle
-interface HmrState {
-  __setupHash?: string
+// Component state stored per handle
+// Uses null-prototype object to prevent prototype pollution (e.g., __proto__, constructor)
+interface ComponentState {
   [key: string]: unknown
 }
 
@@ -55,20 +55,29 @@ declare global {
 }
 
 // ---------------------------------------------------------------------------
-// HMR State Storage (WeakMap keeps handle clean)
+// Component State Storage
 // ---------------------------------------------------------------------------
+// Component state persists across HMR updates, allowing the new component
+// function to access old state values (preserving counters, form inputs, etc.)
+// Uses null-prototype objects to prevent prototype pollution
 
-let hmrState = new WeakMap<Handle, HmrState>()
+let componentState = new WeakMap<Handle, ComponentState>()
 
-export function __hmr_state(handle: Handle): HmrState {
-  if (!hmrState.has(handle)) {
-    hmrState.set(handle, {})
+// Separate storage for HMR infrastructure (setup hash tracking)
+let setupHashes = new WeakMap<Handle, string>()
+
+export function __hmr_state(handle: Handle): ComponentState {
+  if (!componentState.has(handle)) {
+    // Use null-prototype object to prevent prototype pollution
+    // Properties like __proto__, constructor, etc. become safe regular properties
+    componentState.set(handle, Object.create(null))
   }
-  return hmrState.get(handle)!
+  return componentState.get(handle)!
 }
 
 export function __hmr_clear_state(handle: Handle): void {
-  hmrState.delete(handle)
+  componentState.delete(handle)
+  setupHashes.delete(handle)
 }
 
 // ---------------------------------------------------------------------------
@@ -204,24 +213,19 @@ export function __hmr_update(
  * 2. Return a noop render function
  *
  * @param handle The component handle
- * @param state The HMR state object for this handle
  * @param hash Hash of the setup scope code
  * @param setupFn Function to execute on first run
  * @returns True if remount is needed (setup changed), false otherwise
  */
-export function __hmr_setup(
-  handle: Handle,
-  state: HmrState,
-  hash: string,
-  setupFn: () => void,
-): boolean {
-  if (state.__setupHash === undefined) {
+export function __hmr_setup(handle: Handle, hash: string, setupFn: () => void): boolean {
+  let currentHash = setupHashes.get(handle)
+  if (currentHash === undefined) {
     // First run - execute setup and store hash
     setupFn()
-    state.__setupHash = hash
+    setupHashes.set(handle, hash)
     return false
   }
-  if (state.__setupHash !== hash) {
+  if (currentHash !== hash) {
     // Hash changed - clear state and signal remount needed
     console.warn('[HMR] Setup scope changed, component will remount')
     __hmr_clear_state(handle)
