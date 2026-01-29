@@ -1,23 +1,22 @@
-import { type Remix, hydrated } from '@remix-run/dom'
-import { press } from '@remix-run/events/press'
+import { type Handle, hydrationRoot } from 'remix/component'
 
 import { routes } from '../routes.ts'
 
-export const ImageCarousel = hydrated(
+export const ImageCarousel = hydrationRoot(
   routes.assets.href({ path: 'image-carousel.js#ImageCarousel' }),
-  function (this: Remix.Handle, { startIndex = 0 }: { startIndex?: number } = {}) {
-    let index = startIndex
+  function ImageCarousel(handle: Handle, setup?: { startIndex?: number }) {
+    let index = setup?.startIndex ?? 0
 
     let goPrev = (total: number) => {
       if (index <= 0) return
       index = index - 1
-      this.update()
+      handle.update()
     }
 
     let goNext = (total: number) => {
       if (index >= total - 1) return
       index = index + 1
-      this.update()
+      handle.update()
     }
 
     return ({ images }: { images: string[] }) => {
@@ -28,7 +27,7 @@ export const ImageCarousel = hydrated(
 
       return (
         <div
-          style={{
+          css={{
             position: 'relative',
             width: '100%',
             height: '100%',
@@ -37,19 +36,21 @@ export const ImageCarousel = hydrated(
           }}
         >
           <div
-            style={{
+            css={{
               display: 'flex',
               height: '100%',
               width: '100%',
-              transform: `translateX(-${index * 100}%)`,
               transition: 'transform 350ms cubic-bezier(0.22, 1, 0.36, 1)',
               willChange: 'transform',
+            }}
+            style={{
+              transform: `translateX(-${index * 100}%)`,
             }}
           >
             {images.map((src, i) => (
               <div
                 key={src + i}
-                style={{
+                css={{
                   minWidth: '100%',
                   height: '100%',
                   position: 'relative',
@@ -58,7 +59,7 @@ export const ImageCarousel = hydrated(
                 <img
                   src={src}
                   alt={`Image ${i + 1} of ${total}`}
-                  style={{
+                  css={{
                     width: '100%',
                     height: '100%',
                     objectFit: 'cover',
@@ -75,8 +76,8 @@ export const ImageCarousel = hydrated(
           <button
             aria-label="Previous image"
             disabled={index === 0}
-            on={press(() => goPrev(total))}
-            style={{
+            on={{ click: () => goPrev(total) }}
+            css={{
               position: 'absolute',
               top: '50%',
               left: '8px',
@@ -93,10 +94,9 @@ export const ImageCarousel = hydrated(
               cursor: 'pointer',
               outline: 'none',
               transition: 'background-color 150ms ease, opacity 150ms ease',
+            }}
+            style={{
               opacity: index === 0 ? 0.4 : 0.9,
-              // '&:hover': {
-              //   backgroundColor: 'rgba(0,0,0,0.25)',
-              // },
             }}
           >
             <span css={{ fontSize: '22px', lineHeight: '1' }}>{'‹'}</span>
@@ -105,8 +105,8 @@ export const ImageCarousel = hydrated(
           <button
             aria-label="Next image"
             disabled={index === total - 1}
-            on={press(() => goNext(total))}
-            style={{
+            on={{ click: () => goNext(total) }}
+            css={{
               position: 'absolute',
               top: '50%',
               right: '8px',
@@ -123,13 +123,12 @@ export const ImageCarousel = hydrated(
               cursor: 'pointer',
               outline: 'none',
               transition: 'background-color 150ms ease, opacity 150ms ease',
+            }}
+            style={{
               opacity: index === total - 1 ? 0.4 : 0.9,
-              // '&:hover': {
-              //   backgroundColor: 'rgba(0,0,0,0.25)',
-              // },
             }}
           >
-            <span style={{ fontSize: '22px', lineHeight: '1' }}>{'›'}</span>
+            <span css={{ fontSize: '22px', lineHeight: '1' }}>{'›'}</span>
           </button>
         </div>
       )

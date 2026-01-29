@@ -15,14 +15,14 @@ export default {
       <Layout>
         <h1>Manage Books</h1>
 
-        <p style="margin-bottom: 1rem;">
+        <p css={{ marginBottom: '1rem' }}>
           <a href={routes.admin.books.new.href()} class="btn">
             Add New Book
           </a>
           <a
             href={routes.admin.index.href()}
             class="btn btn-secondary"
-            style="margin-left: 0.5rem;"
+            css={{ marginLeft: '0.5rem' }}
           >
             Back to Dashboard
           </a>
@@ -56,19 +56,19 @@ export default {
                     <a
                       href={routes.admin.books.edit.href({ bookId: book.id })}
                       class="btn btn-secondary"
-                      style="font-size: 0.875rem; padding: 0.25rem 0.5rem;"
+                      css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
                     >
                       Edit
                     </a>
                     <RestfulForm
                       method="DELETE"
                       action={routes.admin.books.destroy.href({ bookId: book.id })}
-                      style={{ display: 'inline' }}
+                      css={{ display: 'inline' }}
                     >
                       <button
                         type="submit"
                         class="btn btn-danger"
-                        style={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
+                        css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
                       >
                         Delete
                       </button>
@@ -133,14 +133,14 @@ export default {
             </span>
           </p>
 
-          <div style="margin-top: 2rem;">
+          <div css={{ marginTop: '2rem' }}>
             <a href={routes.admin.books.edit.href({ bookId: book.id })} class="btn">
               Edit
             </a>
             <a
               href={routes.admin.books.index.href()}
               class="btn btn-secondary"
-              style="margin-left: 0.5rem;"
+              css={{ marginLeft: '0.5rem' }}
             >
               Back to List
             </a>
@@ -212,7 +212,7 @@ export default {
             <div class="form-group">
               <label for="cover">Book Cover Image</label>
               <input type="file" id="cover" name="cover" accept="image/*" />
-              <small style="color: #666;">Optional. Upload a cover image for this book.</small>
+              <small css={{ color: '#666' }}>Optional. Upload a cover image for this book.</small>
             </div>
 
             <button type="submit" class="btn">
@@ -221,7 +221,7 @@ export default {
             <a
               href={routes.admin.books.index.href()}
               class="btn btn-secondary"
-              style="margin-left: 0.5rem;"
+              css={{ marginLeft: '0.5rem' }}
             >
               Cancel
             </a>
@@ -343,17 +343,17 @@ export default {
             <div class="form-group">
               <label for="cover">Book Cover Image</label>
               {book.coverUrl !== '/images/placeholder.jpg' && (
-                <div style="margin-bottom: 0.5rem;">
+                <div css={{ marginBottom: '0.5rem' }}>
                   <img
                     src={book.coverUrl}
                     alt={book.title}
-                    style="max-width: 200px; height: auto; border-radius: 4px;"
+                    css={{ maxWidth: '200px', height: 'auto', borderRadius: '4px' }}
                   />
-                  <p style="font-size: 0.875rem; color: #666;">Current cover image</p>
+                  <p css={{ fontSize: '0.875rem', color: '#666' }}>Current cover image</p>
                 </div>
               )}
               <input type="file" id="cover" name="cover" accept="image/*" />
-              <small style="color: #666;">
+              <small css={{ color: '#666' }}>
                 Optional. Upload a new cover image to replace the current one.
               </small>
             </div>
@@ -364,7 +364,7 @@ export default {
             <a
               href={routes.admin.books.index.href()}
               class="btn btn-secondary"
-              style="margin-left: 0.5rem;"
+              css={{ marginLeft: '0.5rem' }}
             >
               Cancel
             </a>

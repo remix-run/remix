@@ -1,9 +1,8 @@
-import type { Remix } from '@remix-run/dom'
-import { renderToStream } from '@remix-run/dom/server'
+import type { RemixNode } from 'remix/component'
+import { renderToString } from 'remix/component/server'
 import { createHtmlResponse } from 'remix'
 
-import { resolveFrame } from './frame.tsx'
-
-export function render(element: Remix.RemixElement, init?: ResponseInit) {
-  return createHtmlResponse(renderToStream(element, { resolveFrame }), init)
+export async function render(node: RemixNode, init?: ResponseInit) {
+  let html = await renderToString(node)
+  return createHtmlResponse(html, init)
 }
