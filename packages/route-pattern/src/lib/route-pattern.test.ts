@@ -519,6 +519,18 @@ describe('RoutePattern', () => {
           assert.equal(result, '/posts/123')
         })
 
+        it('works with number params', () => {
+          let pattern = new RoutePattern('/posts/:id')
+          let result = pattern.href({ id: 123 })
+          assert.equal(result, '/posts/123')
+        })
+
+        it('ignores unrelated params', () => {
+          let pattern = new RoutePattern('/posts/:id')
+          let result = pattern.href({ id: '123', page: '2', sort: 'desc' })
+          assert.equal(result, '/posts/123')
+        })
+
         it('throws when missing', () => {
           let pattern = new RoutePattern('/posts/:id')
           // @ts-expect-error - missing required param
@@ -538,10 +550,22 @@ describe('RoutePattern', () => {
         assert.equal(result, '/files/docs/readme.md')
       })
 
+      it('supports wildcard with number param', () => {
+        let pattern = new RoutePattern('/files/*path')
+        let result = pattern.href({ path: 123 })
+        assert.equal(result, '/files/123')
+      })
+
       it('throws for unnamed wildcard', () => {
         let pattern = new RoutePattern('/files/*')
         // @ts-expect-error - missing required param
         assert.throws(() => pattern.href(), hrefError('missing-params'))
+      })
+
+      it('supports repeated params', () => {
+        let pattern = new RoutePattern('/:lang/users/:userId/:lang/posts/:postId')
+        let result = pattern.href({ lang: 'en', userId: '42', postId: '123' })
+        assert.equal(result, '/en/users/42/en/posts/123')
       })
     })
 
@@ -632,6 +656,12 @@ describe('RoutePattern', () => {
           let result = pattern.href()
           assert.equal(result, '/posts')
         })
+      })
+
+      it('handles optional locale and page on home route', () => {
+        let pattern = new RoutePattern('(/:locale)(/:page)')
+        let result = pattern.href()
+        assert.equal(result, '/')
       })
     })
 
