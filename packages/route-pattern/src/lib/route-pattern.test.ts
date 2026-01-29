@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { RoutePattern } from './route-pattern.ts'
-import { HrefError } from './errors.ts'
+import * as Href from './route-pattern/href.ts'
 
 describe('RoutePattern', () => {
   describe('parse', () => {
@@ -390,8 +390,8 @@ describe('RoutePattern', () => {
   })
 
   describe('href', () => {
-    function hrefError(type: HrefError['details']['type']) {
-      return (error: unknown) => error instanceof HrefError && error.details.type === type
+    function hrefError(type: Href.HrefError['details']['type']) {
+      return (error: unknown) => error instanceof Href.HrefError && error.details.type === type
     }
 
     describe('protocol', () => {

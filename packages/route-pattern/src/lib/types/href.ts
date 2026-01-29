@@ -1,13 +1,13 @@
 import type { OptionalParams, RequiredParams } from './params'
-import type * as Search from '../route-pattern/search.ts'
+import type * as Href from '../route-pattern/href.ts'
 
 type ParamValue = string | number
 
 // prettier-ignore
 export type HrefArgs<source extends string> =
   [RequiredParams<source>] extends [never] ?
-    [] | [null | undefined | Record<string, any>] | [null | undefined | Record<string, any>, Search.HrefParams] :
-    [HrefParams<source>, Search.HrefParams] | [HrefParams<source>]
+    [] | [null | undefined | Record<string, any>] | [null | undefined | Record<string, any>, Href.SearchParams] :
+    [HrefParams<source>, Href.SearchParams] | [HrefParams<source>]
 
 // prettier-ignore
 type HrefParams<source extends string> =
