@@ -17,7 +17,6 @@ import authController from './auth.tsx'
 import booksController from './books.tsx'
 import cartController from './cart.tsx'
 import checkoutController from './checkout.tsx'
-import fragmentsController from './fragments.tsx'
 import * as marketingController from './marketing.tsx'
 import { uploadsAction } from './uploads.tsx'
 
@@ -48,8 +47,6 @@ router.map(routes.home, marketingController.home)
 router.map(routes.about, marketingController.about)
 router.map(routes.contact, marketingController.contact)
 router.map(routes.search, marketingController.search)
-
-router.map(routes.fragments, fragmentsController)
 
 router.map(routes.books, booksController)
 router.map(routes.auth, authController)

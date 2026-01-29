@@ -438,34 +438,33 @@ export function diffVNodes(
   rootTarget: EventTarget,
   anchor?: Node,
   rootCursor?: Node | null,
-) {
+): Node | null | undefined {
   next._parent = vParent // set parent for initial render context lookups
   next._svg = getSvgContext(vParent, next.type)
 
   // new
   if (curr === null) {
-    insert(next, domParent, frame, scheduler, vParent, rootTarget, anchor, rootCursor)
-    return
+    return insert(next, domParent, frame, scheduler, vParent, rootTarget, anchor, rootCursor)
   }
 
   if (curr.type !== next.type) {
     replace(curr, next, domParent, frame, scheduler, vParent, rootTarget, anchor)
-    return
+    return rootCursor
   }
 
   if (isCommittedTextNode(curr) && isTextNode(next)) {
-    diffText(curr, next, scheduler, vParent)
-    return
+    diffText(curr, next, vParent)
+    return rootCursor
   }
 
   if (isCommittedHostNode(curr) && isHostNode(next)) {
     diffHost(curr, next, domParent, frame, scheduler, vParent, rootTarget)
-    return
+    return rootCursor
   }
 
   if (isCommittedComponentNode(curr) && isComponentNode(next)) {
     diffComponent(curr, next, frame, scheduler, domParent, vParent, rootTarget)
-    return
+    return rootCursor
   }
 
   if (isFragmentNode(curr) && isFragmentNode(next)) {
@@ -480,7 +479,7 @@ export function diffVNodes(
       undefined,
       anchor,
     )
-    return
+    return rootCursor
   }
 
   if (curr.type === Frame && next.type === Frame) {
@@ -565,14 +564,7 @@ function diffHost(
   return
 }
 
-function setupHostNode(
-  node: HostNode,
-  dom: Element,
-  domParent: ParentNode,
-  frame: FrameHandle,
-  scheduler: Scheduler,
-  rootTarget: EventTarget,
-): void {
+function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void {
   node._dom = dom
 
   let on = node.props.on
@@ -848,7 +840,7 @@ function camelToKebab(input: string): string {
     .toLowerCase()
 }
 
-function diffText(curr: CommittedTextNode, next: TextNode, scheduler: Scheduler, vParent: VNode) {
+function diffText(curr: CommittedTextNode, next: TextNode, vParent: VNode) {
   if (curr._text !== next._text) {
     curr._dom.textContent = next._text
   }
@@ -873,7 +865,18 @@ function insert(
   node._parent = vParent // set parent for initial render context lookups
   node._svg = getSvgContext(vParent, node.type)
 
+  // Stop hydration if cursor has reached the anchor (end boundary)
+  // Check BEFORE skipComments to prevent escaping range root markers
+  if (cursor && anchor && cursor === anchor) {
+    cursor = null
+  }
+
   cursor = skipComments(cursor ?? null)
+
+  // Also check after skipComments in case we skipped past the anchor
+  if (cursor && anchor && cursor === anchor) {
+    cursor = null
+  }
 
   let doInsert = anchor
     ? (dom: Node) => domParent.insertBefore(dom, anchor)
@@ -881,13 +884,22 @@ function insert(
 
   if (isTextNode(node)) {
     if (cursor instanceof Text) {
-      node._dom = cursor
       node._parent = vParent
-      // correct hydration mismatch
+      // Handle text node consolidation: server renders adjacent text as single node
+      // e.g., <span>Hello {world}</span> → server: "Hello world", client: ["Hello ", "world"]
       if (cursor.data !== node._text) {
+        if (cursor.data.startsWith(node._text) && node._text.length < cursor.data.length) {
+          // Consolidation case: split the text node at the boundary
+          // cursor becomes the first part (node._text), remainder is returned for next vnode
+          let remainder = cursor.splitText(node._text.length)
+          node._dom = cursor
+          return remainder
+        }
+        // Genuine mismatch - correct it
         logHydrationMismatch('text mismatch', cursor.data, node._text)
         cursor.data = node._text
       }
+      node._dom = cursor
       return cursor.nextSibling
     }
     let dom = document.createTextNode(node._text)
@@ -906,7 +918,10 @@ function insert(
     }
 
     if (cursor instanceof Element) {
-      if (cursor.tagName.toLowerCase() === node.type) {
+      // SVG elements have case-sensitive tag names (e.g. linearGradient, clipPath)
+      // HTML elements are case-insensitive, so we lowercase for comparison
+      let cursorTag = node._svg ? cursor.tagName : cursor.tagName.toLowerCase()
+      if (cursorTag === node.type) {
         // FIXME: hydrate css prop
         // correct hydration mismatches
         diffHostProps({}, node.props, cursor)
@@ -921,7 +936,8 @@ function insert(
           //   // special case <span>Text {text}</span> comes as single node from server
           //   return cursor.nextSibling
           // }
-          let excess = diffChildren(
+          // Ignore excess nodes - browser extensions may inject content
+          diffChildren(
             null,
             node._children,
             cursor,
@@ -931,16 +947,42 @@ function insert(
             rootTarget,
             childCursor,
           )
-          if (excess) {
-            logHydrationMismatch('excess', excess)
-          }
         }
 
-        setupHostNode(node, cursor, domParent, frame, scheduler, rootTarget)
+        setupHostNode(node, cursor, scheduler)
         return cursor.nextSibling
       } else {
-        logHydrationMismatch('tag', cursor.tagName.toLowerCase(), node.type)
-        cursor.remove()
+        // Type mismatch - try single-advance retry to handle browser extension injections
+        // at the start of containers. Skip this node and try the next sibling once.
+        let nextSibling = skipComments(cursor.nextSibling)
+        if (nextSibling instanceof Element) {
+          let nextTag = node._svg ? nextSibling.tagName : nextSibling.tagName.toLowerCase()
+          if (nextTag === node.type) {
+            // Found a match after skipping - adopt it and leave skipped node in place
+            diffHostProps({}, node.props, nextSibling)
+
+            if (node.props.innerHTML != null) {
+              nextSibling.innerHTML = node.props.innerHTML
+            } else {
+              let childCursor = nextSibling.firstChild
+              diffChildren(
+                null,
+                node._children,
+                nextSibling,
+                frame,
+                scheduler,
+                node,
+                rootTarget,
+                childCursor,
+              )
+            }
+
+            setupHostNode(node, nextSibling, scheduler)
+            return nextSibling.nextSibling
+          }
+        }
+        // Retry failed - log mismatch and create new element (don't remove mismatched nodes)
+        logHydrationMismatch('tag', cursorTag, node.type)
         cursor = undefined // stop hydration for this tree
       }
     }
@@ -956,7 +998,7 @@ function insert(
       diffChildren(null, node._children, dom, frame, scheduler, node, rootTarget)
     }
 
-    setupHostNode(node, dom, domParent, frame, scheduler, rootTarget)
+    setupHostNode(node, dom, scheduler)
     doInsert(dom)
     return cursor
   }
@@ -970,8 +1012,17 @@ function insert(
   }
 
   if (isComponentNode(node)) {
-    diffComponent(null, node, frame, scheduler, domParent, vParent, rootTarget, anchor, cursor)
-    return cursor
+    return diffComponent(
+      null,
+      node,
+      frame,
+      scheduler,
+      domParent,
+      vParent,
+      rootTarget,
+      anchor,
+      cursor,
+    )
   }
 
   if (node.type === Frame) {
@@ -992,11 +1043,21 @@ function renderComponent(
   vParent?: VNode,
   anchor?: Node,
   cursor?: Node | null,
-) {
+): Node | null | undefined {
   let [element, tasks] = handle.render(next.props)
   let content = toVNode(element)
 
-  diffVNodes(currContent, content, domParent, frame, scheduler, next, rootTarget, anchor, cursor)
+  let newCursor = diffVNodes(
+    currContent,
+    content,
+    domParent,
+    frame,
+    scheduler,
+    next,
+    rootTarget,
+    anchor,
+    cursor,
+  )
   next._content = content
   next._handle = handle
   next._parent = vParent
@@ -1008,6 +1069,8 @@ function renderComponent(
   })
 
   scheduler.enqueueTasks(tasks)
+
+  return newCursor
 }
 
 function diffComponent(
@@ -1020,7 +1083,7 @@ function diffComponent(
   rootTarget: EventTarget,
   anchor?: Node,
   cursor?: Node | null,
-) {
+): Node | null | undefined {
   if (curr === null) {
     next._handle = createComponent({
       id: `e${++fixmeIdCounter}`,
@@ -1031,7 +1094,7 @@ function diffComponent(
       },
     })
 
-    renderComponent(
+    return renderComponent(
       next._handle,
       null,
       next,
@@ -1043,11 +1106,10 @@ function diffComponent(
       anchor,
       cursor,
     )
-    return
   }
   next._handle = curr._handle
   let { _content, _handle } = curr
-  renderComponent(
+  return renderComponent(
     _handle,
     _content,
     next,
@@ -1155,7 +1217,7 @@ function remove(node: VNode, domParent: ParentNode, scheduler: Scheduler) {
       }
 
       // Enter animation finished or doesn't exist - play exit animation
-      playExitAnimation(node, presenceConfig.exit, domParent, scheduler, () => {
+      playExitAnimation(node, presenceConfig.exit, domParent, () => {
         performHostNodeRemoval(node, domParent, scheduler)
       })
       return
@@ -1632,7 +1694,6 @@ function playExitAnimation(
   node: CommittedHostNode,
   config: PresenceConfig | PresenceKeyframeConfig,
   domParent: ParentNode,
-  scheduler: Scheduler,
   onComplete: () => void,
 ): void {
   let dom = node._dom as HTMLElement
@@ -1758,4 +1819,13 @@ function reclaimExitingNode(
     scheduler.enqueueTasks([() => eventsContainer.dispose()])
     newNode._events = undefined
   }
+}
+
+/**
+ * Reset the global style state. For testing only - not exported from index.ts.
+ */
+export function resetStyleState() {
+  styleCache.clear()
+  styleManager.dispose()
+  styleManager = createStyleManager()
 }
