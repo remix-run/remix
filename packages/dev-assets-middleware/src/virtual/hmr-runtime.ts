@@ -47,13 +47,6 @@ type HmrMessage =
       type: 'reload'
     }
 
-// Extend window interface for HMR connection status
-declare global {
-  interface Window {
-    __hmr_connected: boolean
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Component State Storage
 // ---------------------------------------------------------------------------
@@ -111,7 +104,28 @@ export function __hmr_register(
   }
 
   // Add handle to the component's handle set
-  moduleComponents.get(componentName)!.handles.add(handle)
+  let componentEntry = moduleComponents.get(componentName)!
+  componentEntry.handles.add(handle)
+
+  // Listen for component unmount to clean up tracking
+  handle.signal.addEventListener('abort', function () {
+    // Remove handle from the component's handle set
+    componentEntry.handles.delete(handle)
+
+    // Clean up state storage
+    __hmr_clear_state(handle)
+
+    // Clean up handle metadata
+    handleToComponent.delete(handle)
+
+    // Clean up empty entries to prevent memory leaks
+    if (componentEntry.handles.size === 0) {
+      moduleComponents.delete(componentName)
+      if (moduleComponents.size === 0) {
+        components.delete(moduleUrl)
+      }
+    }
+  })
 }
 
 export function __hmr_call(handle: Handle, ...args: unknown[]): unknown {
@@ -340,10 +354,24 @@ function performUpdate(files: string[], timestamp: number) {
 }
 
 // ---------------------------------------------------------------------------
-// Connection Status (for testing)
+// Testing API
 // ---------------------------------------------------------------------------
 
-window.__hmr_connected = false
+let isConnected = false
+
+// Get connection status (for testing)
+export function __hmr_get_connection_status(): boolean {
+  return isConnected
+}
+
+// Get tracked handle count for a specific component (for testing)
+export function __hmr_get_tracked_handle_count(moduleUrl: string, componentName: string): number {
+  let moduleComponents = components.get(moduleUrl)
+  if (!moduleComponents) return 0
+  let component = moduleComponents.get(componentName)
+  if (!component) return 0
+  return component.handles.size
+}
 
 // ---------------------------------------------------------------------------
 // Auto-connect (side effect)
@@ -357,7 +385,7 @@ window.__hmr_connected = false
 
   eventSource.onopen = function () {
     console.log('[HMR] Connected')
-    window.__hmr_connected = true
+    isConnected = true
   }
 
   eventSource.onmessage = function (event) {
@@ -370,7 +398,7 @@ window.__hmr_connected = false
   eventSource.onerror = function () {
     // EventSource automatically reconnects, just log it
     console.log('[HMR] Connection lost, reconnecting...')
-    window.__hmr_connected = false
+    isConnected = false
   }
 })()
 

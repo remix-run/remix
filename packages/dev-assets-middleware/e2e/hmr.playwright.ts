@@ -170,15 +170,43 @@ async function cleanupTestContext(
 }
 
 /**
+ * Get the number of tracked handles for a component from the browser
+ *
+ * @param page The Playwright page instance
+ * @param moduleUrl The module URL (e.g., '/app/ConditionalChild.tsx')
+ * @param componentName The component name (e.g., 'ConditionalChild')
+ * @returns The number of tracked handles for the component
+ */
+async function getTrackedHandleCount(
+  page: Page,
+  moduleUrl: string,
+  componentName: string,
+): Promise<number> {
+  return page.evaluate(
+    async ({ moduleUrl, componentName }) => {
+      // @ts-expect-error - Runtime module not typed in test context
+      let { __hmr_get_tracked_handle_count } = await import('/__@remix/hmr-runtime.ts')
+      return __hmr_get_tracked_handle_count(moduleUrl, componentName)
+    },
+    { moduleUrl, componentName },
+  )
+}
+
+/**
  * Wait for HMR SSE connection to be established.
  * This ensures the browser is ready to receive HMR updates before modifying files.
  *
  * @param page The Playwright page instance
  */
 async function waitForHmrConnection(page: Page) {
-  await page.waitForFunction(() => (window as any).__hmr_connected === true, {
-    timeout: 5000,
-  })
+  await page.waitForFunction(
+    async () => {
+      // @ts-expect-error - Runtime module not typed in test context
+      let { __hmr_get_connection_status } = await import('/__@remix/hmr-runtime.ts')
+      return __hmr_get_connection_status()
+    },
+    { timeout: 5000 },
+  )
 }
 
 describe('HMR E2E', () => {
@@ -357,6 +385,73 @@ describe('HMR E2E', () => {
 
       count = await page.textContent('[data-testid="count"]')
       assert.equal(count, 'Final: 1')
+    })
+  })
+
+  describe('Conditional Rendering Cleanup', () => {
+    it('cleans up HMR registry when components unmount', async () => {
+      // Update the middleware to serve conditional HTML for root path
+      let originalPublicDir = testContext!.publicDir
+
+      // Temporarily copy conditional HTML as index.html
+      let conditionalHtml = await fsp.readFile(
+        path.join(originalPublicDir, 'index-conditional.html'),
+        'utf-8',
+      )
+      let originalHtml = await fsp.readFile(path.join(originalPublicDir, 'index.html'), 'utf-8')
+      await fsp.writeFile(path.join(originalPublicDir, 'index.html'), conditionalHtml)
+
+      try {
+        await page.goto(testContext!.baseUrl)
+        await waitForHmrConnection(page)
+
+        // Wait for app to load
+        await page.waitForSelector('[data-testid="toggle-button"]', { timeout: 5000 })
+
+        // Verify child is visible
+        let childVisible = await page.isVisible('[data-testid="conditional-child"]')
+        assert.equal(childVisible, true, 'Child should initially be visible')
+
+        // Check HMR is tracking the component
+        let trackedHandlesBefore = await getTrackedHandleCount(
+          page,
+          '/app/ConditionalChild.tsx',
+          'ConditionalChild',
+        )
+        assert.equal(trackedHandlesBefore, 1, 'HMR should track 1 handle initially')
+
+        // Hide the child component
+        await page.click('[data-testid="toggle-button"]')
+
+        // Wait for child to be removed from DOM
+        await page.waitForSelector('[data-testid="conditional-child"]', {
+          state: 'detached',
+          timeout: 5000,
+        })
+
+        // Verify child is no longer in DOM
+        childVisible = await page.isVisible('[data-testid="conditional-child"]')
+        assert.equal(childVisible, false, 'Child should be hidden after toggle')
+
+        // Check HMR registry state after unmount
+        let trackedHandlesAfter = await getTrackedHandleCount(
+          page,
+          '/app/ConditionalChild.tsx',
+          'ConditionalChild',
+        )
+
+        // THIS IS THE KEY ASSERTION
+        // Without cleanup: trackedHandlesAfter = 1 (FAILS ❌)
+        // With cleanup: trackedHandlesAfter = 0 (PASSES ✅)
+        assert.equal(
+          trackedHandlesAfter,
+          0,
+          'HMR should not track handles after component is unmounted',
+        )
+      } finally {
+        // Restore original HTML
+        await fsp.writeFile(path.join(originalPublicDir, 'index.html'), originalHtml)
+      }
     })
   })
 

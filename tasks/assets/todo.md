@@ -6,114 +6,6 @@ NOTE: Tasks that are in progress should be moved to `in-progress.md`.
 
 ---
 
-### Add HMR handle unregistration to prevent memory leaks
-
-**Status:** 🚫 **BLOCKED** - Waiting on component library investigation
-
-**Blocker:** Conditional rendering in the component library doesn't call component `remove()` or abort `handle.signal`. Need to investigate and fix component library behavior before implementing HMR cleanup.
-
-**Problem:**
-
-The HMR runtime currently tracks component handles in `Set<handle>` but never removes them when components unmount. This causes:
-
-1. **Memory leaks** - unmounted handles remain in memory indefinitely
-2. **Stale HMR updates** - HMR may try to interact with unmounted component handles
-
-**Solution approach validated:**
-
-✅ Hook into existing AbortSignal mechanism - listen for `handle.signal` abort event in `__hmr_register` to clean up when component unmounts. No new component API needed!
-
-**Investigation complete - Key findings:**
-
-1. **Signal mechanism works correctly:**
-
-   - Components receive `Handle` with `signal` property (AbortSignal)
-   - Signal is aborted when component's `remove()` function is called
-   - Each instance gets unique handle with own signal
-
-2. **Component library bug discovered:**
-
-   - Conditional rendering (`{show && <Component />}`) removes component from DOM
-   - BUT does NOT call component's `remove()` function or abort `handle.signal`
-   - Component remains "alive" in framework, just not rendered
-   - Test gap: No test exists for parent conditionally rendering child component
-   - Root rendering `root.render(null)` DOES abort signal correctly
-
-3. **Empirical evidence:**
-   - Created Toggle component that conditionally renders Counter: `{showCounter && <Counter />}`
-   - Toggled Counter off - confirmed removed from DOM (`visible: false`)
-   - Both Counter instances showed `signal.aborted: false`
-   - Expected: signal should be `true` for unmounted instance
-
-**HMR cleanup implementation ready:**
-
-The implementation is straightforward once component library is fixed:
-
-```typescript
-// In __hmr_register, after adding handle to Set:
-handle.signal.addEventListener('abort', function () {
-  // Remove handle from handles Set
-  componentEntry.handles.delete(handle)
-
-  // Clean up state storage
-  __hmr_clear_state(handle)
-
-  // Clean up metadata
-  handleToComponent.delete(handle)
-
-  // Clean up empty entries
-  if (componentEntry.handles.size === 0) {
-    moduleComponents.delete(componentName)
-    if (moduleComponents.size === 0) {
-      components.delete(moduleUrl)
-    }
-  }
-})
-```
-
-**Testing strategy (CRITICAL):**
-
-The test MUST be written to verify it can actually fail:
-
-1. **Write the test first** - Create e2e test that unmounts a component, triggers HMR update, and checks for errors
-2. **Verify test FAILS without cleanup** - Comment out the cleanup listener code, run test, confirm it fails
-3. **Verify test PASSES with cleanup** - Restore cleanup listener code, run test, confirm it passes
-
-**Why this is critical:**
-
-During investigation, we created a test using conditional rendering (`{show && <Counter />}`) to unmount a component. The test passed even when cleanup was disabled! This revealed that conditional rendering doesn't abort the signal, making it a bad test scenario.
-
-**What the test should catch:**
-
-Without cleanup, HMR attempts to call `handle.update()` on unmounted components. This should either:
-
-- Produce console errors (component tries to interact with removed DOM nodes)
-- Throw exceptions (accessing properties on disconnected handles)
-- Show HMR trying to update non-existent instances
-
-The test must verify that these errors/behaviors DON'T happen when cleanup is enabled.
-
-**Next steps:**
-
-1. **Fix component library:** Ensure conditional rendering calls `remove()` and aborts signal
-2. **Add component test:** Test that `{show && <Component />}` toggle aborts child signal
-3. **Return to this task:** Implement HMR cleanup (code above)
-4. **Add e2e test:** Verify HMR doesn't update unmounted components
-
-**Files to modify when unblocked:**
-
-- `packages/dev-assets-middleware/src/virtual/hmr-runtime.ts` - add cleanup listener in `__hmr_register`
-- `packages/dev-assets-middleware/e2e/hmr.playwright.ts` - add test for conditional unmount scenario
-
-**Current HMR bookkeeping (for reference):**
-
-- `components` Map: `url → Map<name, { impl, handles: Set<handle> }>`
-- `handleToComponent` WeakMap: `handle → { url, name, renderFn }`
-- `componentState` WeakMap: `handle → ComponentState`
-- `setupHashes` WeakMap: `handle → hash`
-
----
-
 ### Add custom logger option
 
 The middleware currently uses `console.warn/log/error` for all logging, which creates noise during tests and doesn't integrate with application logging infrastructure.
@@ -223,6 +115,60 @@ Improve the file watcher configuration to be more explicit, performant, and main
 - Consider whether middleware config should change (explore alignment between serving patterns and watching patterns)
 - Document the relationship between `allow`/`deny` patterns and what gets watched
 - Consider adding a `watch` option to `DevAssetsOptions` for explicit watcher config (if needed)
+
+---
+
+### Investigate HMR remount cleanup behavior
+
+During the implementation of HMR memory leak fixes, we discovered that `requestRemount()` doesn't properly clean up resources from the old setup scope when the setup hash changes during HMR.
+
+**Current behavior:**
+
+When a component's setup scope changes during HMR:
+
+- The same `Handle` is reused
+- `handle.signal` is never aborted
+- Old setup scope resources (timers, event listeners, AbortController subscriptions) leak
+
+**Expected behavior:**
+
+A true remount (like changing a component's `key` prop) should:
+
+- Abort the old signal to trigger cleanup
+- Create a completely fresh component instance with a new handle
+- Allow the old instance to be garbage collected
+
+**The architectural challenge:**
+
+The VDOM owns component lifecycle, but `requestRemount()` tries to fake a remount at the component level. To do this properly requires:
+
+1. A VDOM-level remounting API that can:
+
+   - Fully remove the old component instance (trigger cleanup)
+   - Create a brand new instance in the same position
+   - Return the new handle
+
+2. Update HMR runtime to track handle replacements when remounts occur
+
+3. Ensure the semantics match what would happen with a real key change
+
+**Questions to explore:**
+
+- Should `requestRemount()` return a new handle?
+- Should the VDOM expose a dedicated remounting API?
+- How does this interact with the component tree and scheduling?
+- What's the performance impact of creating new handles during HMR?
+- Alternatively, can we make the signal refresh transparent without breaking handle stability? Or is handle stability more important?
+
+**Acceptance Criteria:**
+
+- [ ] Document the expected lifecycle semantics for HMR remounts
+- [ ] Investigate VDOM changes needed to support true remounting
+- [ ] Create failing tests that demonstrate resource leaks during remount
+- [ ] Implement fix that properly cleans up old setup scope resources
+- [ ] Verify handle semantics match true remount behavior (e.g., key change)
+- [ ] All existing HMR tests still pass
+- [ ] New tests pass showing cleanup works during remount
 
 ---
 
