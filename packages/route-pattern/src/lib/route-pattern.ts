@@ -4,7 +4,7 @@ import * as Search from './route-pattern/search.ts'
 import * as Protocol from './route-pattern/protocol.ts'
 import * as Hostname from './route-pattern/hostname.ts'
 import { PartPattern, type PartPatternMatch } from './route-pattern/part-pattern.ts'
-import type { Join, HrefArgs, Params } from './types/index.ts'
+import type { Join, Params } from './types/index.ts'
 import * as Href from './route-pattern/href.ts'
 
 type AST = {
@@ -127,7 +127,7 @@ export class RoutePattern<source extends string = string> {
     })
   }
 
-  href(...args: HrefArgs<source>): string {
+  href(...args: Href.Args<source>): string {
     let [params, searchParams] = args
     params ??= {}
     searchParams ??= {}

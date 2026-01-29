@@ -1,8 +1,22 @@
 import { unreachable } from '../errors.ts'
 import type { RoutePattern } from '../route-pattern.ts'
+import type { OptionalParams, RequiredParams } from '../types/params.ts'
 import type { PartPattern } from './part-pattern.ts'
 
-type Params = Record<string, string | number>
+type ParamValue = string | number
+type Params = Record<string, ParamValue>
+
+// prettier-ignore
+export type Args<source extends string> =
+  [RequiredParams<source>] extends [never] ?
+    [] | [null | undefined | Record<string, any>] | [null | undefined | Record<string, any>, SearchParams] :
+    [ParamsArg<source>, SearchParams] | [ParamsArg<source>]
+
+// prettier-ignore
+type ParamsArg<source extends string> =
+  & Record<RequiredParams<source>, ParamValue>
+  & Partial<Record<OptionalParams<source>, ParamValue | null | undefined>>
+  & Record<string, unknown>
 
 /**
  * Generate a partial href from a part pattern and params.

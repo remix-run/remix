@@ -105,11 +105,6 @@ export function join(a: Constraints, b: Constraints): Constraints {
   return result
 }
 
-export type HrefParams = Record<
-  string,
-  string | number | null | undefined | Array<string | number | null | undefined>
->
-
 /**
  * Convert search constraints to a query string.
  *
