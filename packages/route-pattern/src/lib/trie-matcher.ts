@@ -4,7 +4,7 @@ import type {
   PartPatternToken,
 } from './route-pattern/part-pattern.ts'
 import { RoutePattern } from './route-pattern.ts'
-import type { Variant } from './variant.ts'
+import { Variant } from './trie-matcher/variant.ts'
 import * as RE from './regexp.ts'
 import { unreachable } from './errors.ts'
 import * as Search from './route-pattern/search.ts'
@@ -78,10 +78,10 @@ function variants(pattern: RoutePattern): Array<RoutePatternVariant> {
   let hostnames =
     pattern.ast.hostname === null ? [{ type: 'any' as const }] :
     pattern.ast.hostname.params.length === 0 ?
-      pattern.ast.hostname.variants.map((variant) => ({ type: 'static' as const, value: variant.toString() })) :
+      Variant.generate(pattern.ast.hostname).map((variant) => ({ type: 'static' as const, value: variant.toString() })) :
       [{ type: 'dynamic' as const, value: pattern.ast.hostname }]
 
-  let pathnames = pattern.ast.pathname.variants
+  let pathnames = Variant.generate(pattern.ast.pathname)
 
   let result: Array<RoutePatternVariant> = []
   for (let protocol of protocols) {

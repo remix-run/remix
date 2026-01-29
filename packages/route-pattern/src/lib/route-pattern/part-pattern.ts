@@ -1,6 +1,5 @@
 import { ParseError, unreachable } from '../errors.ts'
 import * as RE from '../regexp.ts'
-import { Variant } from '../variant.ts'
 import type { Span } from './split.ts'
 
 type MatchParam = {
@@ -26,7 +25,6 @@ export class PartPattern {
   readonly type: 'hostname' | 'pathname'
   readonly ignoreCase: boolean
 
-  #variants: Array<Variant> | undefined
   #regexp: RegExp | undefined
 
   constructor(
@@ -150,14 +148,6 @@ export class PartPattern {
       { tokens, optionals },
       { type: options.type, ignoreCase: options.ignoreCase },
     )
-  }
-
-  get variants(): Array<Variant> {
-    if (this.#variants === undefined) {
-      this.#variants = Variant.generate(this)
-    }
-
-    return this.#variants
   }
 
   get source(): string {
