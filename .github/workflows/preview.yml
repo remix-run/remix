@@ -27,7 +27,10 @@ on:
     types: [opened, synchronize, reopened, closed]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Include `event_name` here because when a pull_request is merged (closed), the 
+  # `github.ref` goes back to `ref/heads/main` which will conflict with the run on 
+  # `main` from the merged PR
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
