@@ -3,28 +3,29 @@ import type { PartPattern, PartPatternToken } from './route-pattern/part-pattern
 
 type Token = Extract<PartPatternToken, { type: 'text' | ':' | '*' | 'separator' }>
 
+type Param = Extract<PartPatternToken, { type: ':' | '*' }>
+
 export class Variant {
-  /** Params use `nameIndex` to reference params in the PartPattern's `paramNames` */
   tokens: Array<Token>
 
   #partPattern: PartPattern
-  #requiredParams: Array<string> | undefined
+  #params: Array<Param> | undefined
 
   constructor(partPattern: PartPattern, tokens: Array<Token>) {
     this.#partPattern = partPattern
     this.tokens = tokens
   }
 
-  get requiredParams(): Array<string> {
-    if (this.#requiredParams === undefined) {
-      this.#requiredParams = []
+  get params(): Array<Param> {
+    if (this.#params === undefined) {
+      this.#params = []
       for (let token of this.tokens) {
         if (token.type === ':' || token.type === '*') {
-          this.#requiredParams.push(this.#partPattern.paramNames[token.nameIndex])
+          this.#params.push(token)
         }
       }
     }
-    return this.#requiredParams
+    return this.#params
   }
 
   static generate(pattern: PartPattern): Array<Variant> {
@@ -81,8 +82,7 @@ export class Variant {
       }
 
       if (token.type === ':' || token.type === '*') {
-        let name = this.#partPattern.paramNames[token.nameIndex]
-        if (name === '*') name = ''
+        let name = token.name === '*' ? '' : token.name
         result += `{${token.type}${name}}`
         continue
       }

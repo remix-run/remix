@@ -24,48 +24,40 @@ describe('PartPattern', () => {
     it('parses static text', () => {
       assertParse('abc', {
         tokens: [{ type: 'text', text: 'abc' }],
-        paramNames: [],
         optionals: new Map(),
       })
     })
 
     it('parses a variable', () => {
       assertParse(':abc', {
-        tokens: [{ type: ':', nameIndex: 0 }],
-        paramNames: ['abc'],
+        tokens: [{ type: ':', name: 'abc' }],
         optionals: new Map(),
       })
       assertParse(':_hello_WORLD', {
-        tokens: [{ type: ':', nameIndex: 0 }],
-        paramNames: ['_hello_WORLD'],
+        tokens: [{ type: ':', name: '_hello_WORLD' }],
         optionals: new Map(),
       })
       assertParse(':$_hello_WORLD$123$', {
-        tokens: [{ type: ':', nameIndex: 0 }],
-        paramNames: ['$_hello_WORLD$123$'],
+        tokens: [{ type: ':', name: '$_hello_WORLD$123$' }],
         optionals: new Map(),
       })
     })
 
     it('parses a wildcard', () => {
       assertParse('*', {
-        tokens: [{ type: '*', nameIndex: 0 }],
-        paramNames: ['*'],
+        tokens: [{ type: '*', name: '*' }],
         optionals: new Map(),
       })
       assertParse('*abc', {
-        tokens: [{ type: '*', nameIndex: 0 }],
-        paramNames: ['abc'],
+        tokens: [{ type: '*', name: 'abc' }],
         optionals: new Map(),
       })
       assertParse('*_hello_WORLD', {
-        tokens: [{ type: '*', nameIndex: 0 }],
-        paramNames: ['_hello_WORLD'],
+        tokens: [{ type: '*', name: '_hello_WORLD' }],
         optionals: new Map(),
       })
       assertParse('*$_hello_WORLD$123$', {
-        tokens: [{ type: '*', nameIndex: 0 }],
-        paramNames: ['$_hello_WORLD$123$'],
+        tokens: [{ type: '*', name: '$_hello_WORLD$123$' }],
         optionals: new Map(),
       })
     })
@@ -79,7 +71,6 @@ describe('PartPattern', () => {
           { type: ')' },
           { type: 'text', text: 'cc' },
         ],
-        paramNames: [],
         optionals: new Map([[1, 3]]),
       })
       assertParse('(aa(bb)cc)', {
@@ -92,7 +83,6 @@ describe('PartPattern', () => {
           { type: 'text', text: 'cc' },
           { type: ')' },
         ],
-        paramNames: [],
         optionals: new Map([
           [0, 6],
           [2, 4],
@@ -107,16 +97,15 @@ describe('PartPattern', () => {
           { type: 'separator' },
           { type: '(' },
           { type: 'text', text: 'v' },
-          { type: ':', nameIndex: 0 },
+          { type: ':', name: 'major' },
           { type: '(' },
           { type: 'text', text: '.' },
-          { type: ':', nameIndex: 1 },
+          { type: ':', name: 'minor' },
           { type: ')' },
           { type: 'separator' },
           { type: ')' },
           { type: 'text', text: 'run' },
         ],
-        paramNames: ['major', 'minor'],
         optionals: new Map([
           [2, 10],
           [5, 8],
@@ -125,59 +114,54 @@ describe('PartPattern', () => {
 
       assertParse('*/node_modules/(*path/):package/dist/index.:ext', {
         tokens: [
-          { type: '*', nameIndex: 0 },
+          { type: '*', name: '*' },
           { type: 'separator' },
           { type: 'text', text: 'node_modules' },
           { type: 'separator' },
           { type: '(' },
-          { type: '*', nameIndex: 1 },
+          { type: '*', name: 'path' },
           { type: 'separator' },
           { type: ')' },
-          { type: ':', nameIndex: 2 },
+          { type: ':', name: 'package' },
           { type: 'separator' },
           { type: 'text', text: 'dist' },
           { type: 'separator' },
           { type: 'text', text: 'index.' },
-          { type: ':', nameIndex: 3 },
+          { type: ':', name: 'ext' },
         ],
-        paramNames: ['*', 'path', 'package', 'ext'],
         optionals: new Map([[4, 7]]),
       })
     })
 
     it('parses repeated param names', () => {
       assertParse(':id/:id', {
-        tokens: [{ type: ':', nameIndex: 0 }, { type: 'separator' }, { type: ':', nameIndex: 1 }],
-        paramNames: ['id', 'id'],
+        tokens: [{ type: ':', name: 'id' }, { type: 'separator' }, { type: ':', name: 'id' }],
         optionals: new Map(),
       })
       assertParse('*id/*id', {
-        tokens: [{ type: '*', nameIndex: 0 }, { type: 'separator' }, { type: '*', nameIndex: 1 }],
-        paramNames: ['id', 'id'],
+        tokens: [{ type: '*', name: 'id' }, { type: 'separator' }, { type: '*', name: 'id' }],
         optionals: new Map(),
       })
       assertParse('*/*', {
-        tokens: [{ type: '*', nameIndex: 0 }, { type: 'separator' }, { type: '*', nameIndex: 1 }],
-        paramNames: ['*', '*'],
+        tokens: [{ type: '*', name: '*' }, { type: 'separator' }, { type: '*', name: '*' }],
         optionals: new Map(),
       })
       assertParse(':a/*a/:b/*b/:b/*a/:a', {
         tokens: [
-          { type: ':', nameIndex: 0 },
+          { type: ':', name: 'a' },
           { type: 'separator' },
-          { type: '*', nameIndex: 1 },
+          { type: '*', name: 'a' },
           { type: 'separator' },
-          { type: ':', nameIndex: 2 },
+          { type: ':', name: 'b' },
           { type: 'separator' },
-          { type: '*', nameIndex: 3 },
+          { type: '*', name: 'b' },
           { type: 'separator' },
-          { type: ':', nameIndex: 4 },
+          { type: ':', name: 'b' },
           { type: 'separator' },
-          { type: '*', nameIndex: 5 },
+          { type: '*', name: 'a' },
           { type: 'separator' },
-          { type: ':', nameIndex: 6 },
+          { type: ':', name: 'a' },
         ],
-        paramNames: ['a', 'a', 'b', 'b', 'b', 'a', 'a'],
         optionals: new Map(),
       })
     })

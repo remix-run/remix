@@ -60,14 +60,8 @@ export function join(a: PartPattern, b: PartPattern, ignoreCase: boolean): PartP
   let tokenOffset = tokens.length
 
   b.tokens.forEach((token) => {
-    if (token.type === ':' || token.type === '*') {
-      tokens.push({ ...token, nameIndex: token.nameIndex + a.paramNames.length })
-    } else {
-      tokens.push(token)
-    }
+    tokens.push(token)
   })
-
-  let paramNames = [...a.paramNames, ...b.paramNames]
 
   let optionals = new Map()
   for (let [begin, end] of a.optionals) {
@@ -82,5 +76,5 @@ export function join(a: PartPattern, b: PartPattern, ignoreCase: boolean): PartP
     optionals.set(tokenOffset + begin, tokenOffset + end)
   }
 
-  return new PartPattern({ tokens, paramNames, optionals }, { type: 'pathname', ignoreCase })
+  return new PartPattern({ tokens, optionals }, { type: 'pathname', ignoreCase })
 }
