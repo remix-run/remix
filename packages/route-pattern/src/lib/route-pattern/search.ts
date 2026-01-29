@@ -1,6 +1,3 @@
-import type { RoutePattern } from '../route-pattern.ts'
-import { HrefError } from '../errors.ts'
-
 /**
  * - `null`: key must be present
  * - Empty `Set`: key must be present with a value
@@ -108,11 +105,6 @@ export function join(a: Constraints, b: Constraints): Constraints {
   return result
 }
 
-export type HrefParams = Record<
-  string,
-  string | number | null | undefined | Array<string | number | null | undefined>
->
-
 /**
  * Convert search constraints to a query string.
  *
@@ -139,62 +131,6 @@ export function toString(constraints: Constraints): string | undefined {
   }
 
   let result = parts.join('&')
-  return result || undefined
-}
-
-/**
- * Generate a search query string from a pattern and params.
- *
- * @param pattern the route pattern containing search constraints
- * @param params the search params to include in the href
- * @returns the query string (without leading `?`), or undefined if empty
- */
-export function href(pattern: RoutePattern, params: HrefParams): string | undefined {
-  let constraints = pattern.ast.search
-  if (constraints.size === 0 && Object.keys(params).length === 0) {
-    return undefined
-  }
-
-  let urlSearchParams = new URLSearchParams()
-
-  for (let [key, value] of Object.entries(params)) {
-    if (Array.isArray(value)) {
-      for (let v of value) {
-        if (v != null) {
-          urlSearchParams.append(key, String(v))
-        }
-      }
-    } else if (value != null) {
-      urlSearchParams.append(key, String(value))
-    }
-  }
-
-  let missingParams: Array<string> = []
-  for (let [key, constraint] of constraints) {
-    if (constraint === null) {
-      if (key in params) continue
-      urlSearchParams.append(key, '')
-    } else if (constraint.size === 0) {
-      if (key in params) continue
-      missingParams.push(key)
-    } else {
-      for (let value of constraint) {
-        if (urlSearchParams.getAll(key).includes(value)) continue
-        urlSearchParams.append(key, value)
-      }
-    }
-  }
-
-  if (missingParams.length > 0) {
-    throw new HrefError({
-      type: 'missing-search-params',
-      pattern,
-      missingParams,
-      searchParams: params,
-    })
-  }
-
-  let result = urlSearchParams.toString()
   return result || undefined
 }
 

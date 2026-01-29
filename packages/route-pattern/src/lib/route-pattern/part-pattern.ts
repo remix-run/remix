@@ -195,58 +195,6 @@ export class PartPattern {
     return this.source
   }
 
-  /**
-   * @param params The parameters to substitute into the pattern.
-   * @returns The href (URL) for the given params, or null if no variant matches.
-   */
-  href(params: Record<string, string | number>): string | null {
-    let best: Variant | undefined
-    for (let variant of this.variants) {
-      let matches = variant.params.every((param) => params[param.name] !== undefined)
-      if (!matches) continue
-
-      if (best === undefined) {
-        best = variant
-        continue
-      }
-
-      if (variant.params.length > best.params.length) {
-        best = variant
-        continue
-      }
-      if (variant.params.length === best.params.length) {
-        if (variant.tokens.length > best.tokens.length) {
-          best = variant
-          continue
-        }
-      }
-    }
-
-    // todo: I can't think of any case where there would end up being a tie
-    // but the logic doesn't explicitly rule it out.
-    // need to figure out if its possible and how to handle it.
-    if (!best) return null
-
-    let result = ''
-    for (let token of best.tokens) {
-      if (token.type === 'text') {
-        result += token.text
-        continue
-      }
-
-      if (token.type === ':' || token.type === '*') {
-        result += String(params[token.name])
-        continue
-      }
-      if (token.type === 'separator') {
-        result += this.separator
-        continue
-      }
-      unreachable(token.type)
-    }
-    return result
-  }
-
   match(part: string): PartPatternMatch | null {
     if (this.#regexp === undefined) {
       this.#regexp = toRegExp(this.tokens, this.separator, this.ignoreCase)

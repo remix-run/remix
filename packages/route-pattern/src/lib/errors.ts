@@ -1,7 +1,3 @@
-import type { RoutePattern } from './route-pattern.ts'
-import type { PartPattern } from './route-pattern/part-pattern.ts'
-import type * as Search from './route-pattern/search.ts'
-
 type ParseErrorType =
   | 'unmatched ('
   | 'unmatched )'
@@ -23,74 +19,6 @@ export class ParseError extends Error {
     this.type = type
     this.source = source
     this.index = index
-  }
-}
-
-type HrefErrorDetails =
-  | {
-      type: 'missing-hostname'
-      pattern: RoutePattern
-    }
-  | {
-      type: 'missing-params'
-      pattern: RoutePattern
-      partPattern: PartPattern
-      params: Record<string, string | number>
-    }
-  | {
-      type: 'missing-search-params'
-      pattern: RoutePattern
-      missingParams: string[]
-      searchParams: Search.HrefParams
-    }
-  | {
-      type: 'nameless-wildcard'
-      pattern: RoutePattern
-    }
-
-export class HrefError extends Error {
-  details: HrefErrorDetails
-
-  constructor(details: HrefErrorDetails) {
-    let message = HrefError.message(details)
-
-    super(message)
-    this.name = 'HrefError'
-    this.details = details
-  }
-
-  static message(details: HrefErrorDetails): string {
-    let pattern = details.pattern.toString()
-
-    if (details.type === 'missing-hostname') {
-      return `pattern requires hostname\n\nPattern: ${pattern}`
-    }
-
-    if (details.type === 'nameless-wildcard') {
-      return `pattern contains nameless wildcard\n\nPattern: ${pattern}`
-    }
-
-    if (details.type === 'missing-search-params') {
-      let params = details.missingParams.join(', ')
-      let searchParamsStr = JSON.stringify(details.searchParams)
-      return `missing required search param(s) '${params}'\n\nPattern: ${pattern}\nSearch params: ${searchParamsStr}`
-    }
-
-    if (details.type === 'missing-params') {
-      let paramNames = Object.keys(details.params)
-      let variants = details.partPattern.variants.map((variant) => {
-        let key = variant.toString()
-        let missing = Array.from(
-          new Set(variant.params.filter((p) => !paramNames.includes(p.name)).map((p) => p.name)),
-        )
-        return `  - ${key || '<empty>'} (missing: ${missing.join(', ')})`
-      })
-      let partTitle =
-        details.partPattern.type.charAt(0).toUpperCase() + details.partPattern.type.slice(1)
-      return `missing params\n\nPattern: ${pattern}\nParams: ${JSON.stringify(details.params)}\n${partTitle} variants:\n${variants.join('\n')}`
-    }
-
-    unreachable(details)
   }
 }
 

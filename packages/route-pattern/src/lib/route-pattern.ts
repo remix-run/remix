@@ -1,11 +1,11 @@
-import { HrefError } from './errors.ts'
 import { split } from './route-pattern/split.ts'
 import * as Pathname from './route-pattern/pathname.ts'
 import * as Search from './route-pattern/search.ts'
 import * as Protocol from './route-pattern/protocol.ts'
 import * as Hostname from './route-pattern/hostname.ts'
 import { PartPattern, type PartPatternMatch } from './route-pattern/part-pattern.ts'
-import type { Join, HrefArgs, Params } from './types/index.ts'
+import type { Join, Params } from './types/index.ts'
+import * as Href from './route-pattern/href.ts'
 
 type AST = {
   protocol: 'http' | 'https' | 'http(s)' | null
@@ -127,7 +127,7 @@ export class RoutePattern<source extends string = string> {
     })
   }
 
-  href(...args: HrefArgs<source>): string {
+  href(...args: Href.Args<source>): string {
     let [params, searchParams] = args
     params ??= {}
     searchParams ??= {}
@@ -141,7 +141,7 @@ export class RoutePattern<source extends string = string> {
 
       // hostname
       if (this.ast.hostname === null) {
-        throw new HrefError({
+        throw new Href.HrefError({
           type: 'missing-hostname',
           pattern: this,
         })
@@ -158,7 +158,7 @@ export class RoutePattern<source extends string = string> {
     result += '/' + pathname
 
     // search
-    let search = Search.href(this, searchParams)
+    let search = Href.search(this, searchParams)
     if (search) result += `?${search}`
 
     return result
@@ -235,9 +235,9 @@ function hrefOrThrow(
   params: Record<string, string | number>,
   pattern: RoutePattern,
 ): string {
-  let result = part.href(params)
+  let result = Href.part(part, params)
   if (result === null) {
-    throw new HrefError({
+    throw new Href.HrefError({
       type: 'missing-params',
       pattern,
       partPattern: part,
