@@ -584,4 +584,64 @@ describe('HMR E2E', () => {
       assert.equal(year, '© 2024')
     })
   })
+
+  describe('HMR Remount Cleanup', () => {
+    it('triggers cleanup listeners when setup scope changes during remount', async () => {
+      // Update the middleware to serve timer HTML for root path
+      let originalPublicDir = testContext!.publicDir
+
+      // Temporarily copy timer HTML as index.html
+      let timerHtml = await fsp.readFile(path.join(originalPublicDir, 'index-timer.html'), 'utf-8')
+      let originalHtml = await fsp.readFile(path.join(originalPublicDir, 'index.html'), 'utf-8')
+      await fsp.writeFile(path.join(originalPublicDir, 'index.html'), timerHtml)
+
+      try {
+        await page.goto(testContext!.baseUrl)
+        await waitForHmrConnection(page)
+
+        // Wait for timer to load
+        await page.waitForSelector('[data-testid="timer"]', { timeout: 5000 })
+
+        // Initialize cleanup counter
+        await page.evaluate(() => {
+          ;(globalThis as any).__timer_cleanup_count = 0
+        })
+
+        // Verify cleanup hasn't been called yet
+        let cleanupCountBefore = await page.evaluate(() => {
+          return (globalThis as any).__timer_cleanup_count || 0
+        })
+        assert.equal(cleanupCountBefore, 0, 'Cleanup should not have been called yet')
+
+        // Modify the setup scope to trigger remount
+        let timerPath = path.join(testContext!.appDir, 'Timer.tsx')
+        let content = await fsp.readFile(timerPath, 'utf-8')
+        // Change the variable name to trigger setup hash change
+        let modified = content
+          .replace('let interval =', 'let timer =')
+          .replace('clearInterval(interval)', 'clearInterval(timer)')
+        await fsp.writeFile(timerPath, modified)
+
+        // Wait a bit for HMR to process the change
+        await new Promise((r) => setTimeout(r, 1000))
+
+        // Verify cleanup was called during remount
+        let cleanupCountAfter = await page.evaluate(() => {
+          return (globalThis as any).__timer_cleanup_count || 0
+        })
+
+        // THIS IS THE KEY ASSERTION
+        // Without the fix: cleanupCountAfter = 0 (FAILS ❌)
+        // With the fix: cleanupCountAfter = 1 (PASSES ✅)
+        assert.equal(
+          cleanupCountAfter,
+          1,
+          'Cleanup listener should have been called once during remount',
+        )
+      } finally {
+        // Restore original HTML
+        await fsp.writeFile(path.join(originalPublicDir, 'index.html'), originalHtml)
+      }
+    })
+  })
 })

@@ -641,6 +641,260 @@ export const PI = 3.14159
     assert.ok(code.includes('export function formatDate(date)'), 'formatDate should pass through')
     assert.ok(code.includes('export const PI = 3.14159'), 'PI should pass through')
   })
+
+  it('transforms component with addEventListener in setup', async () => {
+    let input = `
+export function Timer(handle) {
+  let interval = setInterval(() => handle.update(), 1000)
+  
+  handle.signal.addEventListener('abort', () => {
+    clearInterval(interval)
+  })
+  
+  return () => <div>Tick</div>
+}
+`
+
+    let expected = `
+${HMR_IMPORT}
+function Timer__impl(handle) {
+  let __s = __hmr_state(handle)
+  if (__hmr_setup(handle, 'HASH', () => {
+    __s.interval = setInterval(() => handle.update(), 1000)
+    handle.signal.addEventListener('abort', () => {
+      clearInterval(__s.interval)
+    })
+  })) {
+    __hmr_request_remount(handle)
+    return () => null
+  }
+  __hmr_register('/app/Timer.js', 'Timer', handle, () => (<div>Tick</div>))
+  return () => __hmr_call(handle)
+}
+__hmr_register_component('/app/Timer.js', 'Timer', Timer__impl)
+export function Timer(handle) {
+  let impl = __hmr_get_component('/app/Timer.js', 'Timer')
+  return impl(handle)
+}
+`
+
+    let { code } = await transformComponent(input, '/app/Timer.js')
+    await expectCodeEqual(code, expected)
+  })
+
+  it('transforms component with function calls in setup', async () => {
+    let input = `
+export function Logger(handle) {
+  let name = 'test'
+  
+  console.log('Component mounted:', name)
+  handle.on(window, { resize: () => handle.update() })
+  
+  return () => <div>{name}</div>
+}
+`
+
+    let expected = `
+${HMR_IMPORT}
+function Logger__impl(handle) {
+  let __s = __hmr_state(handle)
+  if (__hmr_setup(handle, 'HASH', () => {
+    __s.name = 'test'
+    console.log('Component mounted:', __s.name)
+    handle.on(window, {
+      resize: () => handle.update(),
+    })
+  })) {
+    __hmr_request_remount(handle)
+    return () => null
+  }
+  __hmr_register('/app/Logger.js', 'Logger', handle, () => (<div>{__s.name}</div>))
+  return () => __hmr_call(handle)
+}
+__hmr_register_component('/app/Logger.js', 'Logger', Logger__impl)
+export function Logger(handle) {
+  let impl = __hmr_get_component('/app/Logger.js', 'Logger')
+  return impl(handle)
+}
+`
+
+    let { code } = await transformComponent(input, '/app/Logger.js')
+    await expectCodeEqual(code, expected)
+  })
+
+  it('transforms component with conditional statements in setup', async () => {
+    let input = `
+export function Conditional(handle) {
+  let value = 0
+  
+  if (value > 0) {
+    console.log('positive')
+  }
+  
+  return () => <div>{value}</div>
+}
+`
+
+    let expected = `
+${HMR_IMPORT}
+function Conditional__impl(handle) {
+  let __s = __hmr_state(handle)
+  if (__hmr_setup(handle, 'HASH', () => {
+    __s.value = 0
+    if (__s.value > 0) {
+      console.log('positive')
+    }
+  })) {
+    __hmr_request_remount(handle)
+    return () => null
+  }
+  __hmr_register('/app/Conditional.js', 'Conditional', handle, () => (<div>{__s.value}</div>))
+  return () => __hmr_call(handle)
+}
+__hmr_register_component('/app/Conditional.js', 'Conditional', Conditional__impl)
+export function Conditional(handle) {
+  let impl = __hmr_get_component('/app/Conditional.js', 'Conditional')
+  return impl(handle)
+}
+`
+
+    let { code } = await transformComponent(input, '/app/Conditional.js')
+    await expectCodeEqual(code, expected)
+  })
+
+  it('generates different hashes when non-variable setup statements change', async () => {
+    let input1 = `
+export function Timer(handle) {
+  let interval = setInterval(() => handle.update(), 1000)
+  return () => <div>Tick</div>
+}
+`
+
+    let input2 = `
+export function Timer(handle) {
+  let interval = setInterval(() => handle.update(), 2000)
+  return () => <div>Tick</div>
+}
+`
+
+    let { code: result1 } = await transformComponent(input1, '/app/Timer.js')
+    let { code: result2 } = await transformComponent(input2, '/app/Timer.js')
+
+    let hashMatch1 = result1.match(/__hmr_setup\(handle, '([^']+)'/)
+    let hashMatch2 = result2.match(/__hmr_setup\(handle, '([^']+)'/)
+
+    assert.ok(hashMatch1, 'should have hash in result1')
+    assert.ok(hashMatch2, 'should have hash in result2')
+    assert.notEqual(hashMatch1![1], hashMatch2![1], 'hashes should differ when setup code changes')
+  })
+
+  it('generates different hashes when addEventListener is added', async () => {
+    let input1 = `
+export function Timer(handle) {
+  let interval = setInterval(() => handle.update(), 1000)
+  return () => <div>Tick</div>
+}
+`
+
+    let input2 = `
+export function Timer(handle) {
+  let interval = setInterval(() => handle.update(), 1000)
+  
+  handle.signal.addEventListener('abort', () => {
+    clearInterval(interval)
+  })
+  
+  return () => <div>Tick</div>
+}
+`
+
+    let { code: result1 } = await transformComponent(input1, '/app/Timer.js')
+    let { code: result2 } = await transformComponent(input2, '/app/Timer.js')
+
+    let hashMatch1 = result1.match(/__hmr_setup\(handle, '([^']+)'/)
+    let hashMatch2 = result2.match(/__hmr_setup\(handle, '([^']+)'/)
+
+    assert.ok(hashMatch1, 'should have hash in result1')
+    assert.ok(hashMatch2, 'should have hash in result2')
+    assert.notEqual(
+      hashMatch1![1],
+      hashMatch2![1],
+      'hashes should differ when cleanup listener is added',
+    )
+  })
+
+  it('transforms component with multiple variable declarations in single statement', async () => {
+    let input = `
+export function Multi(handle) {
+  let a = 1, b = 2, c = 3
+  
+  return () => <div>{a + b + c}</div>
+}
+`
+
+    let expected = `
+${HMR_IMPORT}
+function Multi__impl(handle) {
+  let __s = __hmr_state(handle)
+  if (__hmr_setup(handle, 'HASH', () => {
+    __s.a = 1
+    __s.b = 2
+    __s.c = 3
+  })) {
+    __hmr_request_remount(handle)
+    return () => null
+  }
+  __hmr_register('/app/Multi.js', 'Multi', handle, () => (<div>{__s.a + __s.b + __s.c}</div>))
+  return () => __hmr_call(handle)
+}
+__hmr_register_component('/app/Multi.js', 'Multi', Multi__impl)
+export function Multi(handle) {
+  let impl = __hmr_get_component('/app/Multi.js', 'Multi')
+  return impl(handle)
+}
+`
+
+    let { code } = await transformComponent(input, '/app/Multi.js')
+    await expectCodeEqual(code, expected)
+  })
+
+  it('transforms component with expression statements in setup', async () => {
+    let input = `
+export function Effects(handle) {
+  let count = 0
+  
+  handle.queueTask(() => console.log('mounted'))
+  Math.random()
+  
+  return () => <div>{count}</div>
+}
+`
+
+    let expected = `
+${HMR_IMPORT}
+function Effects__impl(handle) {
+  let __s = __hmr_state(handle)
+  if (__hmr_setup(handle, 'HASH', () => {
+    __s.count = 0
+    handle.queueTask(() => console.log('mounted'))
+    Math.random()
+  })) {
+    __hmr_request_remount(handle)
+    return () => null
+  }
+  __hmr_register('/app/Effects.js', 'Effects', handle, () => (<div>{__s.count}</div>))
+  return () => __hmr_call(handle)
+}
+__hmr_register_component('/app/Effects.js', 'Effects', Effects__impl)
+export function Effects(handle) {
+  let impl = __hmr_get_component('/app/Effects.js', 'Effects')
+  return impl(handle)
+}
+`
+
+    let { code } = await transformComponent(input, '/app/Effects.js')
+    await expectCodeEqual(code, expected)
+  })
 })
 
 // =============================================================================

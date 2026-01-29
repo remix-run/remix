@@ -6,6 +6,119 @@ NOTE: Tasks that are in progress should be moved to `in-progress.md`.
 
 ---
 
+### Architectural: New Handle on Remount
+
+**Context:**
+
+HMR currently works great when only the render function changes - state is preserved, updates are instant. The issue is specifically with **setup scope remounting** when the setup hash changes.
+
+**Current architecture:**
+
+When `requestRemount()` is called during HMR (setup scope changes), we:
+
+1. Abort the old signal and create a new one
+2. Clear the render function
+3. Call `handle.update()` to re-render
+
+This **reuses the same Handle object** but mutates its signal. While this works for cleanup, it breaks the mental model:
+
+- Handle object stays the same, but signal changes
+- In the abort listener, `handle.signal.aborted` is false again (new signal)
+- The DOM element is not recreated from scratch, so behavior could potentially differ from a full remount.
+- Not intuitive: a handle should be 1:1 with a component instance lifecycle
+
+**Target architecture:**
+
+Remounting should behave like changing a `key` prop in Remix components - full teardown and recreation:
+
+1. **Mark component as stale** when setup scope changes
+2. **Schedule re-render from root** (like a state change)
+3. **Reconciler creates brand new Handle** during diff (not reused)
+4. **Full disconnect/reconnect** with fresh DOM and new lifecycle
+5. **Handle is truly 1:1** with component instance
+
+Example - changing key forces full remount:
+
+```tsx
+// In Remix component system
+<Component key={v1} />  // Instance 1, Handle 1
+<Component key={v2} />  // Instance 2, Handle 2 (fresh!)
+```
+
+**Why this is better:**
+
+- **Clearer mental model**: Handle = component instance lifetime
+- **No mutation**: Old handle stays aborted, new handle is fresh
+- **Safer**: No edge cases where code assumes signal state
+- **Consistent**: Works like key changes, which developers understand
+
+**Implementation approach:**
+
+This should be treated as **rebuilding setup scope remounting behavior from scratch**, not modifying the existing implementation in place. The current render-only HMR works great - we're specifically addressing the setup scope change scenario.
+
+**CRITICAL: Test environment must work**
+
+Before beginning implementation, verify you can run all tests for both packages:
+
+```bash
+# Component package tests
+cd packages/component && pnpm test
+
+# Dev assets middleware tests (including e2e browser tests)
+cd packages/dev-assets-middleware && pnpm test
+# or, scoped to just unit or browser tests
+cd packages/dev-assets-middleware && pnpm test:unit
+cd packages/dev-assets-middleware && pnpm test:e2e
+```
+
+**If at any point during development you cannot run these tests due to permissions issues, DO NOT PROCEED.** A broken test loop means you cannot validate changes. Stop and report the issue - don't try to work around it or continue without tests.
+
+**Important: Upfront design needed**
+
+Before implementing, spend time understanding and documenting:
+
+- How setup scope hashing should work with new handles
+- How HMR bookkeeping (tracking, state storage) coordinates with handle lifecycle
+- The complete flow from "setup hash changed" → "new handle mounted"
+- What from the current implementation can be kept vs. rebuilt
+- The HMR transform is likely fine (hashing, storing), but validate this
+
+Previous attempts stalled by trying to retrofit the new model into existing code, causing cascading timing issues. Build the mental model first, then implement in testable layers.
+
+**Suggested layers (not prescriptive):**
+
+Consider building up in stages with tests at each layer:
+
+1. Core remount tracking mechanism
+2. Reconciler integration (creating new handles)
+3. HMR runtime coordination (hash tracking, bookkeeping)
+4. Integration and e2e verification
+
+**Known traps from previous attempt:**
+
+1. **Scheduler queuing old components**: Old component nodes stayed in scheduler's queue after removal, causing infinite "render called after component was removed" loops.
+
+2. **Setup hash loss during remount**: When creating new handle, setup hash was lost, causing `__hmr_setup` to run as "first run" repeatedly. This happened because hash was stored per-handle (WeakMap), and creating a new handle lost the hash. Attempted solution was transferring hash via pending map keyed by component identity (`moduleUrl:componentName`), but timing issues persisted.
+
+3. **Timing issues with handle.update()**: Calling `handle.update()` on old handle during remount caused race conditions.
+
+4. **Retrofitting vs. rebuilding**: Trying to change architecture in place while keeping existing behavior caused cascading issues.
+
+**Acceptance Criteria:**
+
+- [ ] **Mental model documented**: Clear description of setup hash tracking, bookkeeping, and remount flow before implementation
+- [ ] **Validation of existing parts**: Confirm what from current HMR (transform, hashing) can be kept
+- [ ] `requestRemount` triggers full teardown/recreation (like key change)
+- [ ] New Handle created with fresh signal (1:1 Handle:instance)
+- [ ] Old Handle stays aborted (no mutation back to earlier state)
+- [ ] Setup hash correctly tracked across remounts (no "first run" loops)
+- [ ] No infinite loops or "render after removed" warnings
+- [ ] No scheduler issues with old components
+- [ ] All tests pass (unit + integration + e2e)
+- [ ] Demo app HMR works with setup scope changes
+
+---
+
 ### Add custom logger option
 
 The middleware currently uses `console.warn/log/error` for all logging, which creates noise during tests and doesn't integrate with application logging infrastructure.
@@ -115,60 +228,6 @@ Improve the file watcher configuration to be more explicit, performant, and main
 - Consider whether middleware config should change (explore alignment between serving patterns and watching patterns)
 - Document the relationship between `allow`/`deny` patterns and what gets watched
 - Consider adding a `watch` option to `DevAssetsOptions` for explicit watcher config (if needed)
-
----
-
-### Investigate HMR remount cleanup behavior
-
-During the implementation of HMR memory leak fixes, we discovered that `requestRemount()` doesn't properly clean up resources from the old setup scope when the setup hash changes during HMR.
-
-**Current behavior:**
-
-When a component's setup scope changes during HMR:
-
-- The same `Handle` is reused
-- `handle.signal` is never aborted
-- Old setup scope resources (timers, event listeners, AbortController subscriptions) leak
-
-**Expected behavior:**
-
-A true remount (like changing a component's `key` prop) should:
-
-- Abort the old signal to trigger cleanup
-- Create a completely fresh component instance with a new handle
-- Allow the old instance to be garbage collected
-
-**The architectural challenge:**
-
-The VDOM owns component lifecycle, but `requestRemount()` tries to fake a remount at the component level. To do this properly requires:
-
-1. A VDOM-level remounting API that can:
-
-   - Fully remove the old component instance (trigger cleanup)
-   - Create a brand new instance in the same position
-   - Return the new handle
-
-2. Update HMR runtime to track handle replacements when remounts occur
-
-3. Ensure the semantics match what would happen with a real key change
-
-**Questions to explore:**
-
-- Should `requestRemount()` return a new handle?
-- Should the VDOM expose a dedicated remounting API?
-- How does this interact with the component tree and scheduling?
-- What's the performance impact of creating new handles during HMR?
-- Alternatively, can we make the signal refresh transparent without breaking handle stability? Or is handle stability more important?
-
-**Acceptance Criteria:**
-
-- [ ] Document the expected lifecycle semantics for HMR remounts
-- [ ] Investigate VDOM changes needed to support true remounting
-- [ ] Create failing tests that demonstrate resource leaks during remount
-- [ ] Implement fix that properly cleans up old setup scope resources
-- [ ] Verify handle semantics match true remount behavior (e.g., key change)
-- [ ] All existing HMR tests still pass
-- [ ] New tests pass showing cleanup works during remount
 
 ---
 

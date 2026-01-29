@@ -109,6 +109,16 @@ export function __hmr_register(
 
   // Listen for component unmount to clean up tracking
   handle.signal.addEventListener('abort', function () {
+    // Check if this is a remount (new signal created) or actual removal
+    // During remount: old signal aborted, new signal created, handle.signal.aborted = false
+    // During removal: current signal aborted, no new signal, handle.signal.aborted = true
+    if (!handle.signal.aborted) {
+      // New signal exists - this is a remount, not a removal
+      // Don't clean up HMR tracking, component is still mounted
+      return
+    }
+
+    // Component was actually removed, clean up HMR tracking
     // Remove handle from the component's handle set
     componentEntry.handles.delete(handle)
 
@@ -233,8 +243,17 @@ export function __hmr_update(
  */
 export function __hmr_setup(handle: Handle, hash: string, setupFn: () => void): boolean {
   let currentHash = setupHashes.get(handle)
+  console.log(
+    '[HMR] __hmr_setup called for handle:',
+    handle.id,
+    'currentHash:',
+    currentHash,
+    'newHash:',
+    hash,
+  )
   if (currentHash === undefined) {
     // First run - execute setup and store hash
+    console.log('[HMR] First run, calling setupFn and storing hash')
     setupFn()
     setupHashes.set(handle, hash)
     return false
@@ -243,9 +262,11 @@ export function __hmr_setup(handle: Handle, hash: string, setupFn: () => void): 
     // Hash changed - clear state and signal remount needed
     console.warn('[HMR] Setup scope changed, component will remount')
     __hmr_clear_state(handle)
+    console.log('[HMR] Returning true to signal remount')
     return true
   }
   // Hash matches - skip setup
+  console.log('[HMR] Hash matches, skipping setup')
   return false
 }
 

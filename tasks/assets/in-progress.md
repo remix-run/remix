@@ -1,5 +1,3 @@
-# Assets Middleware - In Progress
+# In Progress Tasks
 
-## Features
-
----
+(No tasks currently in progress)

@@ -500,15 +500,32 @@ function extractSetupVars(body: BlockStatement): SetupVar[] {
   return setupVars
 }
 
-// Compute a hash string for setup variables (for change detection)
-function computeSetupHash(setupVars: SetupVar[], source: string, baseOffset: number): string {
-  // Create a string representation of setup code for hashing
-  let setupParts = setupVars.map((v) => {
-    // All expressions from variable declarations have spans
-    let initSpan = (v.init as { span: Span }).span
-    let initStart = initSpan.start - baseOffset
-    let initEnd = initSpan.end - baseOffset
-    return `${v.name} = ${source.slice(initStart, initEnd)}`
+// Extract ALL setup statements (everything before the return statement)
+function extractSetupStatements(body: BlockStatement): Statement[] {
+  let setupStatements: Statement[] = []
+
+  for (let stmt of body.stmts) {
+    if (stmt.type === 'ReturnStatement') {
+      break // Stop at return statement
+    }
+    setupStatements.push(stmt)
+  }
+
+  return setupStatements
+}
+
+// Compute a hash string for setup statements (for change detection)
+function computeSetupHash(
+  setupStatements: Statement[],
+  source: string,
+  baseOffset: number,
+): string {
+  // Create a string representation of ALL setup code for hashing
+  let setupParts = setupStatements.map((stmt) => {
+    let span = (stmt as { span: Span }).span
+    let start = span.start - baseOffset
+    let end = span.end - baseOffset
+    return source.slice(start, end)
   })
   return simpleHash(setupParts.join('\n').replace(/\s+/g, ' '))
 }
@@ -563,11 +580,87 @@ function transformExpression(expr: Expression, setupVarNames: Set<string>): Expr
   return transform(expr)
 }
 
+// Transform a statement, replacing variable references with __s.varName
+function transformStatement(stmt: Statement, setupVarNames: Set<string>): Statement {
+  // Transform variable declarations to assignment expressions
+  if (stmt.type === 'VariableDeclaration' && stmt.kind === 'let') {
+    let assignments: Statement[] = []
+    for (let decl of stmt.declarations) {
+      if (decl.id.type === 'Identifier' && decl.init) {
+        // Convert `let varName = value` to `__s.varName = value`
+        let transformedInit = transformExpression(decl.init, setupVarNames)
+        assignments.push(
+          createExpressionStatement({
+            type: 'AssignmentExpression',
+            span: stmt.span,
+            operator: '=',
+            left: createMemberExpression('__s', decl.id.value),
+            right: transformedInit,
+          }),
+        )
+      }
+    }
+    // If we have a single assignment, return it; otherwise wrap in block if needed
+    if (assignments.length === 0) return stmt // No transformable declarations
+    if (assignments.length === 1) return assignments[0]
+    // Multiple declarations - return them all (caller will handle)
+    return {
+      type: 'BlockStatement',
+      span: stmt.span,
+      stmts: assignments,
+    } as BlockStatement
+  }
+
+  // For other statements, recursively transform using the expression transformer
+  function transform<T>(node: T): T {
+    if (node === null || node === undefined) return node
+    if (typeof node !== 'object') return node
+
+    // Handle arrays
+    if (Array.isArray(node)) {
+      return node.map(transform) as T
+    }
+
+    let obj = node as Record<string, unknown>
+
+    // Transform identifiers
+    if (obj.type === 'Identifier' && typeof obj.value === 'string') {
+      let id = obj as unknown as Identifier
+      if (setupVarNames.has(id.value)) {
+        return createMemberExpression('__s', id.value) as unknown as T
+      }
+    }
+
+    // Don't transform identifiers that are property names in member expressions
+    if (obj.type === 'MemberExpression') {
+      let memberExpr = obj as unknown as MemberExpression
+      return {
+        ...memberExpr,
+        object: transform(memberExpr.object as Expression),
+        property:
+          memberExpr.property.type === 'Computed'
+            ? transform(memberExpr.property)
+            : memberExpr.property,
+      } as unknown as T
+    }
+
+    // Recursively transform properties
+    let result: Record<string, unknown> = {}
+    for (let key of Object.keys(obj)) {
+      result[key] = transform(obj[key])
+    }
+    return result as T
+  }
+
+  return transform(stmt)
+}
+
 // Generate the transformed module items for a component
 function generateHmrComponent(
   component: ComponentInfo,
   moduleUrl: string,
   setupVars: SetupVar[],
+  setupStatements: Statement[],
   setupHash: string,
   isExported: boolean,
 ): ModuleItem[] {
@@ -594,19 +687,20 @@ function generateHmrComponent(
   let varNames = new Set(setupVars.map((v) => v.name))
   let transformedRenderBody = transformExpression(renderBody, varNames)
 
-  // Build setup function body: __s.varName = initExpr
-  let setupStatements: Statement[] = setupVars.map((v) =>
-    createExpressionStatement({
-      type: 'AssignmentExpression',
-      span: syntheticSpan(),
-      operator: '=',
-      left: createMemberExpression('__s', v.name),
-      right: v.init,
-    }),
-  )
+  // Transform ALL setup statements to use __s.varName
+  let transformedSetupStatements: Statement[] = []
+  for (let stmt of setupStatements) {
+    let transformed = transformStatement(stmt, varNames)
+    // If we got a BlockStatement back (multiple declarations), flatten it
+    if (transformed.type === 'BlockStatement') {
+      transformedSetupStatements.push(...(transformed as BlockStatement).stmts)
+    } else {
+      transformedSetupStatements.push(transformed)
+    }
+  }
 
-  // Create the setup arrow function with a block body
-  let setupFn = createArrowFunction(createBlockStatement(setupStatements))
+  // Create the setup arrow function with a block body containing ALL setup code
+  let setupFn = createArrowFunction(createBlockStatement(transformedSetupStatements))
 
   // Build __impl function body
   let implBody: Statement[] = [
@@ -813,8 +907,16 @@ export async function transformComponent(
     // If we found a component, transform it
     if (component) {
       let setupVars = extractSetupVars(component.body)
-      let setupHash = computeSetupHash(setupVars, source, baseOffset)
-      let hmrItems = generateHmrComponent(component, moduleUrl, setupVars, setupHash, isExported)
+      let setupStatements = extractSetupStatements(component.body)
+      let setupHash = computeSetupHash(setupStatements, source, baseOffset)
+      let hmrItems = generateHmrComponent(
+        component,
+        moduleUrl,
+        setupVars,
+        setupStatements,
+        setupHash,
+        isExported,
+      )
       newBody.push(...hmrItems)
       transformed = true
       hasTransformations = true

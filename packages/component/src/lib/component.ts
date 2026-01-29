@@ -282,11 +282,26 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
     return contextValue
   }
 
-  function reset() {
+  function remount() {
+    // Store old controller for cleanup
+    let oldCtrl = connectedCtrl
+    // Create fresh signal for new lifecycle FIRST (so render() sees non-aborted signal)
+    connectedCtrl = new AbortController()
+    // Clear render function to force setup re-run
     getContent = null
+    // Then abort old signal to trigger cleanup listeners
+    if (oldCtrl) oldCtrl.abort()
   }
 
-  return { render, remove, setScheduleUpdate, frame: config.frame, getContextValue, reset, handle }
+  return {
+    render,
+    remove,
+    setScheduleUpdate,
+    frame: config.frame,
+    getContextValue,
+    remount,
+    handle,
+  }
 }
 
 // Track handle to component mapping for HMR
@@ -313,7 +328,7 @@ export function requestRemount(handle: Handle<any>): void {
     console.warn('requestRemount called with unknown handle')
     return
   }
-  componentHandle.reset()
+  componentHandle.remount()
   handle.update()
 }
 

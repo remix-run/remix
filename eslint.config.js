@@ -11,6 +11,7 @@ export default [
       '**/build/**',
       '**/dist/**',
       '**/docs/**',
+      '**/.tmp/**',
       '**/demos/bookstore/public/assets/**',
       '**/demos/sse/public/assets/**',
       '**/coverage/**',
