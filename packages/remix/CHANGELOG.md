@@ -2,6 +2,19 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-alpha.3
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`compression-middleware@0.1.3`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.3)
+  - [`file-storage@0.13.3`](https://github.com/remix-run/remix/releases/tag/file-storage@0.13.3)
+  - [`fs@0.4.2`](https://github.com/remix-run/remix/releases/tag/fs@0.4.2)
+  - [`lazy-file@5.0.2`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.2)
+  - [`mime@0.4.0`](https://github.com/remix-run/remix/releases/tag/mime@0.4.0)
+  - [`response@0.3.2`](https://github.com/remix-run/remix/releases/tag/response@0.3.2)
+  - [`static-middleware@0.4.4`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.4)
+
 ## v3.0.0-alpha.2
 
 ### Minor Changes
