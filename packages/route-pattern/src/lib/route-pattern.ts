@@ -198,9 +198,9 @@ export class RoutePattern<source extends string = string> {
     let params: Record<string, string | undefined> = {}
 
     // hostname params
-    this.ast.hostname?.paramNames.forEach((name) => {
-      if (name === '*') return
-      params[name] = undefined
+    this.ast.hostname?.params.forEach((param) => {
+      if (param.name === '*') return
+      params[param.name] = undefined
     })
     hostname?.forEach((param) => {
       if (param.name === '*') return
@@ -208,9 +208,9 @@ export class RoutePattern<source extends string = string> {
     })
 
     // pathname params
-    this.ast.pathname.paramNames.forEach((name) => {
-      if (name === '*') return
-      params[name] = undefined
+    this.ast.pathname.params.forEach((param) => {
+      if (param.name === '*') return
+      params[param.name] = undefined
     })
     pathname.forEach((param) => {
       if (param.name === '*') return

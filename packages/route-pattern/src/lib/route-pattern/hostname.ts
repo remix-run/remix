@@ -16,6 +16,5 @@ function isNamelessWildcard(part: PartPattern): boolean {
   if (part.tokens.length !== 1) return false
   let token = part.tokens[0]
   if (token.type !== '*') return false
-  let name = part.paramNames[token.nameIndex]
-  return name === '*'
+  return token.name === '*'
 }
