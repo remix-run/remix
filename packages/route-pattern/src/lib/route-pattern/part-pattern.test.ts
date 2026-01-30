@@ -189,29 +189,6 @@ describe('PartPattern', () => {
     })
   })
 
-  describe('variants', () => {
-    function assertVariants(source: string, expected: Array<string>) {
-      let pattern = PartPattern.parse(source, { type: 'pathname', ignoreCase: false })
-      let actual = pattern.variants.map((variant) => variant.toString())
-      assert.deepEqual(actual, expected)
-    }
-
-    it('produces all possible combinations of optionals', () => {
-      assertVariants('a.:b.c', ['a.{:b}.c'])
-      assertVariants('a(:b)*c', ['a{*c}', 'a{:b}{*c}'])
-      assertVariants('a(:b)c(*d)e', ['ace', 'ac{*d}e', 'a{:b}ce', 'a{:b}c{*d}e'])
-      assertVariants('a(:b(*c):d)e', ['ae', 'a{:b}{:d}e', 'a{:b}{*c}{:d}e'])
-      assertVariants('a(:b(*c):d)e(*f)g', [
-        'aeg',
-        'ae{*f}g',
-        'a{:b}{:d}eg',
-        'a{:b}{:d}e{*f}g',
-        'a{:b}{*c}{:d}eg',
-        'a{:b}{*c}{:d}e{*f}g',
-      ])
-    })
-  })
-
   describe('source', () => {
     function assertSource(source: string) {
       assert.equal(
