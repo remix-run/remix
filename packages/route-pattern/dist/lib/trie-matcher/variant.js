@@ -1,0 +1,143 @@
+import { unreachable } from "../unreachable.js";
+import * as RE from "../regexp.js";
+export function generate(pattern) {
+    // prettier-ignore
+    let protocols = pattern.ast.protocol === null ? ['http', 'https'] :
+        pattern.ast.protocol === 'http(s)' ? ['http', 'https'] :
+            [pattern.ast.protocol];
+    // prettier-ignore
+    let hostnames = pattern.ast.hostname === null ? [{ type: 'any' }] :
+        pattern.ast.hostname.params.length === 0 ?
+            PartPatternVariant.generate(pattern.ast.hostname).map((variant) => ({ type: 'static', value: variant.toString('.') })) :
+            [{ type: 'dynamic', value: pattern.ast.hostname }];
+    let pathnames = PartPatternVariant.generate(pattern.ast.pathname);
+    let result = [];
+    for (let protocol of protocols) {
+        for (let hostname of hostnames) {
+            for (let pathname of pathnames) {
+                result.push({ protocol, hostname, port: pattern.ast.port ?? '', pathname });
+            }
+        }
+    }
+    return result;
+}
+export class PartPatternVariant {
+    tokens;
+    constructor(tokens) {
+        this.tokens = tokens;
+    }
+    static generate(pattern) {
+        let result = [];
+        let stack = [{ index: 0, tokens: [] }];
+        while (stack.length > 0) {
+            let { index, tokens } = stack.pop();
+            if (index === pattern.tokens.length) {
+                result.push(new PartPatternVariant(tokens));
+                continue;
+            }
+            let token = pattern.tokens[index];
+            if (token.type === '(') {
+                stack.push({ index: index + 1, tokens }, { index: pattern.optionals.get(index) + 1, tokens: tokens.slice() });
+                continue;
+            }
+            if (token.type === ')') {
+                stack.push({ index: index + 1, tokens });
+                continue;
+            }
+            if (token.type === ':' ||
+                token.type === '*' ||
+                token.type === 'text' ||
+                token.type === 'separator') {
+                tokens.push(token);
+                stack.push({ index: index + 1, tokens });
+                continue;
+            }
+            unreachable(token.type);
+        }
+        return result;
+    }
+    params() {
+        let result = [];
+        for (let token of this.tokens) {
+            if (token.type === ':' || token.type === '*') {
+                result.push(token);
+            }
+        }
+        return result;
+    }
+    toString(separator) {
+        let result = '';
+        for (let token of this.tokens) {
+            if (token.type === 'text') {
+                result += token.text;
+                continue;
+            }
+            if (token.type === ':' || token.type === '*') {
+                let name = token.name === '*' ? '' : token.name;
+                result += `{${token.type}${name}}`;
+                continue;
+            }
+            if (token.type === 'separator') {
+                result += separator;
+                continue;
+            }
+            unreachable(token.type);
+        }
+        return result;
+    }
+    segments() {
+        let result = [];
+        let key = '';
+        let reSource = '';
+        let type = 'static';
+        for (let token of this.tokens) {
+            if (token.type === 'separator') {
+                if (type === 'static') {
+                    result.push({ type: 'static', key });
+                    key = '';
+                    reSource = '';
+                    continue;
+                }
+                if (type === 'variable') {
+                    result.push({ type: 'variable', key, regexp: new RegExp(reSource, 'd') });
+                    key = '';
+                    reSource = '';
+                    type = 'static';
+                    continue;
+                }
+                if (type === 'wildcard') {
+                    key += '/';
+                    reSource += RE.escape('/');
+                    continue;
+                }
+                unreachable(type);
+            }
+            if (token.type === 'text') {
+                key += token.text;
+                reSource += RE.escape(token.text);
+                continue;
+            }
+            if (token.type === ':') {
+                key += '{:}';
+                reSource += `([^/]+)`;
+                if (type === 'static')
+                    type = 'variable';
+                continue;
+            }
+            if (token.type === '*') {
+                key += '{*}';
+                reSource += `(.*)`;
+                type = 'wildcard';
+                continue;
+            }
+            unreachable(token.type);
+        }
+        if (type === 'static') {
+            result.push({ type: 'static', key });
+        }
+        if (type === 'variable' || type === 'wildcard') {
+            result.push({ type, key, regexp: new RegExp(reSource, 'd') });
+        }
+        return result;
+    }
+}
