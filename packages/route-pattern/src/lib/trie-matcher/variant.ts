@@ -1,4 +1,4 @@
-import { unreachable } from '../errors.ts'
+import { unreachable } from '../unreachable.ts'
 import type { PartPattern, PartPatternToken } from '../route-pattern/part-pattern.ts'
 import type { RoutePattern } from '../route-pattern.ts'
 import * as RE from '../regexp.ts'

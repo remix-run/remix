@@ -1,10 +1,9 @@
 import { split } from './route-pattern/split.ts'
 import * as Pathname from './route-pattern/pathname.ts'
 import * as Search from './route-pattern/search.ts'
-import * as Protocol from './route-pattern/protocol.ts'
-import * as Hostname from './route-pattern/hostname.ts'
 import { PartPattern, type PartPatternMatch } from './route-pattern/part-pattern.ts'
 import type { Join, Params } from './types/index.ts'
+import * as Parse from './route-pattern/parse.ts'
 import * as Href from './route-pattern/href.ts'
 
 type AST = {
@@ -43,13 +42,13 @@ export class RoutePattern<source extends string = string> {
     let spans = split(source)
 
     this.ast = {
-      protocol: Protocol.parse(source, spans.protocol),
-      hostname: Hostname.parse(source, spans.hostname),
+      protocol: Parse.protocol(source, spans.protocol),
+      hostname: Parse.hostname(source, spans.hostname),
       port: spans.port ? source.slice(...spans.port) : null,
       pathname: spans.pathname
         ? PartPattern.parse(source, { span: spans.pathname, type: 'pathname', ignoreCase })
         : PartPattern.parse('', { span: [0, 0], type: 'pathname', ignoreCase }),
-      search: spans.search ? Search.parse(source.slice(...spans.search)) : new Map(),
+      search: spans.search ? Parse.search(source.slice(...spans.search)) : new Map(),
     }
 
     this.ignoreCase = ignoreCase

@@ -1,4 +1,4 @@
-import { unreachable } from '../errors.ts'
+import { unreachable } from '../unreachable.ts'
 import type { RoutePattern } from '../route-pattern.ts'
 import type { OptionalParams, RequiredParams } from '../types/params.ts'
 import type { PartPattern } from './part-pattern.ts'
