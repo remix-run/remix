@@ -5,7 +5,7 @@ import type {
 } from './route-pattern/part-pattern.ts'
 import { RoutePattern } from './route-pattern.ts'
 import * as Variant from './trie-matcher/variant.ts'
-import { unreachable } from './errors.ts'
+import { unreachable } from './unreachable.ts'
 import * as Search from './route-pattern/search.ts'
 import type { Match, Matcher } from './matcher.ts'
 import * as Specificity from './specificity.ts'
