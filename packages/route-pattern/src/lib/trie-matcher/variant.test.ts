@@ -8,7 +8,9 @@ describe('Variant', () => {
   describe('generate', () => {
     function assertVariants(source: string, expected: Array<string>) {
       let pattern = PartPattern.parse(source, { type: 'pathname', ignoreCase: false })
-      let actual = PartPatternVariant.generate(pattern).map((variant) => variant.toString())
+      let actual = PartPatternVariant.generate(pattern).map((variant) =>
+        variant.toString(pattern.separator),
+      )
       assert.deepEqual(actual, expected)
     }
 

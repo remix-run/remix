@@ -1,6 +1,7 @@
 import { unreachable } from '../errors.ts'
 import type { PartPattern, PartPatternToken } from '../route-pattern/part-pattern.ts'
 import type { RoutePattern } from '../route-pattern.ts'
+import * as RE from '../regexp.ts'
 
 type Variant = {
   protocol: 'http' | 'https'
@@ -11,6 +12,11 @@ type Variant = {
   port: string
   pathname: PartPatternVariant
 }
+
+type Segment =
+  | { type: 'static'; key: string }
+  | { type: 'variable'; key: string; regexp: RegExp }
+  | { type: 'wildcard'; key: string; regexp: RegExp }
 
 export function generate(pattern: RoutePattern): Array<Variant> {
   // prettier-ignore
@@ -23,7 +29,7 @@ export function generate(pattern: RoutePattern): Array<Variant> {
   let hostnames =
     pattern.ast.hostname === null ? [{ type: 'any' as const }] :
     pattern.ast.hostname.params.length === 0 ?
-      PartPatternVariant.generate(pattern.ast.hostname).map((variant) => ({ type: 'static' as const, value: variant.toString() })) :
+      PartPatternVariant.generate(pattern.ast.hostname).map((variant) => ({ type: 'static' as const, value: variant.toString('.') })) :
       [{ type: 'dynamic' as const, value: pattern.ast.hostname }]
 
   let pathnames = PartPatternVariant.generate(pattern.ast.pathname)
@@ -46,24 +52,8 @@ type Param = Extract<PartPatternToken, { type: ':' | '*' }>
 export class PartPatternVariant {
   tokens: Array<Token>
 
-  #partPattern: PartPattern
-  #params: Array<Param> | undefined
-
-  constructor(partPattern: PartPattern, tokens: Array<Token>) {
-    this.#partPattern = partPattern
+  constructor(tokens: Array<Token>) {
     this.tokens = tokens
-  }
-
-  get params(): Array<Param> {
-    if (this.#params === undefined) {
-      this.#params = []
-      for (let token of this.tokens) {
-        if (token.type === ':' || token.type === '*') {
-          this.#params.push(token)
-        }
-      }
-    }
-    return this.#params
   }
 
   static generate(pattern: PartPattern): Array<PartPatternVariant> {
@@ -75,7 +65,7 @@ export class PartPatternVariant {
       let { index, tokens } = stack.pop()!
 
       if (index === pattern.tokens.length) {
-        result.push(new PartPatternVariant(pattern, tokens))
+        result.push(new PartPatternVariant(tokens))
         continue
       }
 
@@ -110,7 +100,17 @@ export class PartPatternVariant {
     return result
   }
 
-  toString(): string {
+  params(): Array<Param> {
+    let result = []
+    for (let token of this.tokens) {
+      if (token.type === ':' || token.type === '*') {
+        result.push(token)
+      }
+    }
+    return result
+  }
+
+  toString(separator: string): string {
     let result = ''
 
     for (let token of this.tokens) {
@@ -126,13 +126,75 @@ export class PartPatternVariant {
       }
 
       if (token.type === 'separator') {
-        result += this.#partPattern.separator
+        result += separator
         continue
       }
 
       unreachable(token.type)
     }
 
+    return result
+  }
+
+  segments(): Array<Segment> {
+    let result: Array<Segment> = []
+
+    let key = ''
+    let reSource = ''
+    let type: 'static' | 'variable' | 'wildcard' = 'static'
+
+    for (let token of this.tokens) {
+      if (token.type === 'separator') {
+        if (type === 'static') {
+          result.push({ type: 'static', key })
+          key = ''
+          reSource = ''
+          continue
+        }
+        if (type === 'variable') {
+          result.push({ type: 'variable', key, regexp: new RegExp(reSource, 'd') })
+          key = ''
+          reSource = ''
+          type = 'static'
+          continue
+        }
+        if (type === 'wildcard') {
+          key += '/'
+          reSource += RE.escape('/')
+          continue
+        }
+        unreachable(type)
+      }
+
+      if (token.type === 'text') {
+        key += token.text
+        reSource += RE.escape(token.text)
+        continue
+      }
+
+      if (token.type === ':') {
+        key += '{:}'
+        reSource += `([^/]+)`
+        if (type === 'static') type = 'variable'
+        continue
+      }
+
+      if (token.type === '*') {
+        key += '{*}'
+        reSource += `(.*)`
+        type = 'wildcard'
+        continue
+      }
+
+      unreachable(token.type)
+    }
+
+    if (type === 'static') {
+      result.push({ type: 'static', key })
+    }
+    if (type === 'variable' || type === 'wildcard') {
+      result.push({ type, key, regexp: new RegExp(reSource, 'd') })
+    }
     return result
   }
 }
