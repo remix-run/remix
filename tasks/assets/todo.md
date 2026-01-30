@@ -56,6 +56,559 @@ Example - changing key forces full remount:
 
 This should be treated as **rebuilding setup scope remounting behavior from scratch**, not modifying the existing implementation in place. The current render-only HMR works great - we're specifically addressing the setup scope change scenario.
 
+---
+
+**Investigation: How React-Refresh Achieves Remounting**
+
+Investigation of React-Refresh and vite-plugin-react.
+
+**Key Finding: React Never Mutates Fiber Objects During Remount**
+
+React-Refresh's remounting works by making the **reconciler** create a new Fiber (React's equivalent of our Handle). The runtime never directly remounts - it marks components as stale and lets the reconciler discover them.
+
+**React-Refresh Architecture:**
+
+1. **Component Registration & Families**
+
+   - Every component function is registered with unique ID (filename + export)
+   - Components grouped into "families" - a family = all instances of same component type
+   - Family tracks: `current` (latest implementation) + signature metadata
+
+2. **Signature Tracking (Hook Order Detection)**
+
+   - Babel injects code to track which hooks are called and in what order
+   - Example: `useState{[foo, setFoo](0)}\nuseEffect{}`
+   - Runtime collects signatures during execution (not at transform time)
+
+3. **Update Decision: Re-render vs Remount**
+
+   - When HMR update arrives, React compares signatures
+   - `canPreserveStateBetween(prevType, nextType)` checks:
+     - Both function components (not classes)?
+     - Hook signatures match (same hooks, same order)?
+   - If YES → `updatedFamilies` (preserve state, just re-render)
+   - If NO → `staleFamilies` (remount required)
+
+4. **The Remount Process**
+   - For components in `staleFamilies`:
+   - React's reconciler has `resolveFamily(type)` that returns the family if stale
+   - During reconciliation, if family returned, React treats it as **type change**
+   - **Same code path as changing a component's `key` prop**
+   - Old Fiber unmounted (effects cleanup, refs cleared)
+   - **Brand new Fiber created** with fresh state
+   - **Critical: No mutation of existing Fiber objects**
+
+**React's Delegating Pattern:**
+
+React-Refresh doesn't use wrapper functions. Instead:
+
+- The Babel transform registers the actual component function
+- When HMR updates, the family's `current` pointer is updated
+- Reconciler checks `resolveFamily(type)` to detect staleness
+- If stale, reconciler creates new Fiber automatically
+
+**Mapping to Remix Component Model:**
+
+Our current approach differs:
+
+- We use a **delegating wrapper** that calls `__hmr_get_component()`
+- The wrapper's identity never changes, but `impl` changes
+- We call `requestRemount()` which mutates the Handle's signal
+- The reconciler sees "same type (wrapper)" and reuses the Handle
+
+**Critical Pattern from React-Refresh: Inversion of Control**
+
+React-Refresh doesn't reach into React, and React doesn't import HMR code. Instead:
+
+- React's reconciler has a **hook point**: calls `resolveFamily(type)` during reconciliation
+- React-Refresh provides the handler: `setRefreshHandler(resolveFamily)`
+- During reconciliation, React calls the handler: "Has this type changed?"
+- React-Refresh answers based on staleness without React knowing about HMR
+
+**The Handler Pattern in React:**
+
+```js
+// In React-Refresh runtime:
+function resolveFamily(type) {
+  // Only check updated types to keep lookups fast
+  return updatedFamiliesByType.get(type)
+}
+
+// React-Refresh registers with React via DevTools global hook:
+helpers.setRefreshHandler(resolveFamily)
+
+// In React reconciler (conceptually):
+function beginWork(current, workInProgress) {
+  let family = resolveFamily?.(workInProgress.type)
+  if (family) {
+    // Type changed, create new fiber
+  }
+}
+```
+
+**Proposed Remix Approach:**
+
+Mirror React's inversion of control: **HMR registers a handler with the reconciler**
+
+**The Minimal Integration: Just One Hook**
+
+```ts
+// In reconciler (vdom.ts): Single hook point for staleness checking
+// Reconciler doesn't know about HMR - just provides extension point
+type ComponentStalenessCheck = (type: Function) => boolean
+
+let componentStalenessCheck: ComponentStalenessCheck | null = null
+
+export function setComponentStalenessCheck(check: ComponentStalenessCheck) {
+  componentStalenessCheck = check
+}
+
+function reconcileComponent(curr, next, ...) {
+  // Check if external handler says component is stale
+  // (HMR will provide this handler, but reconciler doesn't import HMR)
+  if (curr && componentStalenessCheck?.(curr.type)) {
+    // Component is stale - treat as type change
+    // Same code path as key change
+    remove(curr, ...)
+    // Create new handle for next
+    next._handle = createComponent(...)
+    return
+  }
+  // Normal case: reuse handle
+  next._handle = curr._handle
+  ...
+}
+
+// In HMR runtime: Register handler on initialization
+import { setComponentStalenessCheck } from '@remix-run/component/dev'
+
+// Staleness is scoped to current update batch via microtask cleanup
+let stalenessForCurrentUpdate = new Set<Function>()
+
+// Register our staleness checker - this is the ONLY integration point
+setComponentStalenessCheck((componentFn) => stalenessForCurrentUpdate.has(componentFn))
+
+// Public API: requestRemount (semantics unchanged, implementation different)
+export function requestRemount(handle: Handle) {
+  // 1. Get wrapper function for this handle
+  let wrapper = handleToWrapper.get(handle)
+  if (!wrapper) return
+
+  // 2. Mark component as stale for this update batch
+  stalenessForCurrentUpdate.add(wrapper)
+
+  // 3. Clear state
+  __hmr_clear_state(handle)
+
+  // 4. Trigger reconciliation using existing API
+  // "Something changed, please reconcile"
+  // Reconciler will check staleness and create new handle
+  handle.update()
+
+  // 5. Schedule cleanup after update completes
+  // Microtask runs AFTER flush() processes all updates
+  queueMicrotask(() => {
+    stalenessForCurrentUpdate.delete(wrapper)
+  })
+}
+
+// Track handle → wrapper mapping
+let handleToWrapper = new WeakMap<Handle, Function>()
+
+// Called from transformed code to register wrapper
+export function __hmr_register(url, name, handle, renderFn, wrapper) {
+  // Store wrapper for staleness checking
+  handleToWrapper.set(handle, wrapper)
+
+  // ... rest of existing registration logic
+}
+
+// Internal: Called from transformed component code
+export function __hmr_setup(handle, hash, setupFn): boolean {
+  let wrapper = handleToWrapper.get(handle)
+  if (!wrapper) return false
+
+  let currentHash = setupHashes.get(wrapper)
+  if (currentHash === undefined) {
+    setupFn()
+    setupHashes.set(wrapper, hash)
+    return false
+  }
+  if (currentHash !== hash) {
+    // Setup changed - request remount
+    setupHashes.set(wrapper, hash) // Update hash
+    requestRemount(handle)
+    return true // Signal component to return early
+  }
+  return false
+}
+```
+
+**Key Benefits of This Pattern:**
+
+1. ✅ **Minimal API surface**: Just one hook point (`setComponentStalenessCheck`)
+2. ✅ **Reconciler doesn't import HMR**: Only exports the hook registration function
+3. ✅ **HMR is a layer on top**: Registers itself with reconciler via the hook
+4. ✅ **Reuses existing primitives**: Uses `handle.update()` to trigger reconciliation
+5. ✅ **No circular dependencies**: Clean one-way dependency (HMR → Component)
+6. ✅ **Testable in isolation**: Can test reconciler without HMR, test HMR without full reconciler
+7. ✅ **Extensible**: Other tools could register staleness checks (not just HMR)
+8. ✅ **Natural batching**: Updates batch automatically with existing update mechanism
+9. ✅ **Microtask cleanup**: Staleness scoped to update batch, auto-clears after reconciliation
+
+**Implementation Layers:**
+
+1. **Reconciler Hook Point** (new - in `@remix-run/component`)
+
+   - Export `setComponentStalenessCheck(fn)` via `@remix-run/component/dev` subpath
+   - Store check function in module-level variable
+   - Call check before reusing Handle: `if (check?.(curr.type)) { /* create new */ }`
+   - No imports from HMR - just provides extension mechanism
+   - **Dev-only export** - not in mainline package exports, signals internal/dev use
+   - Add to `package.json` exports: `"./dev": "./src/dev.ts"`
+   - **That's it! This is the only change to component package.**
+
+2. **Staleness Tracking** (new - in HMR runtime)
+
+   - Use `Set<Function>` for staleness (scoped to current update batch)
+   - Register with reconciler: `setComponentStalenessCheck((fn) => stalenessForCurrentUpdate.has(fn))`
+   - Track handle → wrapper mapping: `WeakMap<Handle, Function>`
+   - Transform passes wrapper to `__hmr_register` for tracking
+   - `requestRemount()` marks stale + calls `handle.update()` + schedules microtask cleanup
+
+3. **Update Flow** (existing mechanism, no changes needed!)
+
+   - `handle.update()` schedules reconciliation (already exists)
+   - Reconciler checks staleness during reconciliation
+   - Creates new Handle if stale (follows key-change code path)
+   - Natural batching with existing update mechanism
+
+4. **Hash Persistence** (solve previous trap #2)
+
+   **Problem**: Hash currently stored per-Handle (WeakMap). New Handle loses hash → "first run" loop.
+
+   **Solution**: Store hash by wrapper function (not Handle)
+
+   ```ts
+   // Current (wrong): WeakMap<Handle, string>
+   // New (correct): WeakMap<Function, string> - keyed by wrapper
+   let setupHashes = new WeakMap<Function, string>()
+
+   // In __hmr_setup:
+   export function __hmr_setup(handle, hash, setupFn) {
+     let wrapper = handleToWrapper.get(handle)
+     let currentHash = setupHashes.get(wrapper)
+     if (currentHash === undefined) {
+       setupFn()
+       setupHashes.set(wrapper, hash)
+       return false
+     }
+     if (currentHash !== hash) {
+       setupHashes.set(wrapper, hash) // Update for next check
+       requestRemount(handle)
+       return true
+     }
+     return false
+   }
+   ```
+
+   Wrapper function is stable across remounts, so hash persists correctly.
+
+5. **Staleness Cleanup** (new - microtask pattern)
+
+   **Challenge**: Staleness must persist for all instances in update batch, but clear before next app update.
+
+   **Solution**: Microtask-based cleanup leveraging existing scheduler
+
+   ```ts
+   function requestRemount(handle) {
+     let wrapper = handleToWrapper.get(handle)
+     stalenessForCurrentUpdate.add(wrapper)
+
+     handle.update() // Schedules flush microtask (or reuses existing)
+
+     // Cleanup runs AFTER flush completes
+     queueMicrotask(() => {
+       stalenessForCurrentUpdate.delete(wrapper)
+     })
+   }
+   ```
+
+   **How it works**:
+
+   - `handle.update()` schedules a flush microtask (if not already scheduled)
+   - All updates in same tick share the same flush
+   - Flush microtask runs first (reconciliation checks staleness)
+   - Cleanup microtask runs next (clears staleness)
+   - Future app updates won't see stale state
+
+**Why This Avoids Previous Traps:**
+
+1. ✅ **No scheduler issues**: Old Handle properly removed before new one created
+2. ✅ **No hash loss**: Hash tracked by identity, not Handle reference
+3. ✅ **No timing issues**: Reconciler decides when to create new Handle
+4. ✅ **No retrofitting**: Clean rebuild using existing key-change logic
+
+**What Can Be Kept:**
+
+- ✅ HMR transform (hashing, delegation pattern)
+- ✅ Component registration (`__hmr_register`)
+- ✅ State storage (`__hmr_state`)
+- ✅ Setup hash tracking (just move storage key)
+
+**What Needs Changing:**
+
+- ❌ `requestRemount()` currently mutates Handle (should mark stale + trigger update instead)
+- ❌ Hash storage keyed only by Handle (needs to be keyed by wrapper function)
+- ❌ Reconciler blindly reuses Handle (needs staleness check hook point)
+- ❌ HMR transform doesn't pass wrapper to `__hmr_register` (needs wrapper for tracking)
+
+**Architectural Flow (Inversion of Control):**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  HMR Runtime (Layer on Top)                                 │
+│  - Registers with reconciler via setComponentStalenessCheck │
+│  - Tracks stale components in Set (scoped to update batch)  │
+│  - requestRemount: marks stale + update + microtask cleanup │
+└─────────────────────────────────────────────────────────────┘
+                     ↓ (registers check function)
+┌─────────────────────────────────────────────────────────────┐
+│  Component Reconciler (Core Layer)                          │
+│  - Exports setComponentStalenessCheck() hook point          │
+│  - Calls check before reusing Handle                        │
+│  - Creates new Handle if check returns true                 │
+│  - No knowledge of HMR internals                            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**The Complete Flow:**
+
+```
+1. Setup hash changes in component
+   ↓
+2. __hmr_setup() detects change
+   ↓
+3. Calls requestRemount(handle)
+   ↓
+4. Mark component as stale (WeakSet.add)
+   ↓
+5. Call handle.update() (trigger reconciliation)
+   ↓
+6. Reconciler runs, reaches component
+   ↓
+7. Calls staleness check: isStale(curr.type)?
+   ↓
+8. Check returns true (component in stale set)
+   ↓
+9. Reconciler follows key-change path
+   ↓
+10. Removes old Handle, creates new Handle
+   ↓
+Result: Brand new Handle with fresh lifecycle!
+```
+
+**Key Insight: Minimal Integration**
+
+The beauty of this approach is its simplicity:
+
+- **One hook point**: `setComponentStalenessCheck()` in component package
+- **Dev-only export**: `@remix-run/component/dev` keeps it out of mainline API
+- **No new APIs on Handle**: Reuse existing `handle.update()` for triggering
+- **No HMR coupling**: Component package has zero knowledge of HMR
+- **Clean semantics**: Mark stale + update = remount emerges naturally
+
+**Implementation Detail:**
+
+```ts
+// packages/component/src/lib/refresh.ts (internal file, not exported)
+type ComponentStalenessCheck = (type: Function) => boolean
+let stalenessCheck: ComponentStalenessCheck | null = null
+
+// Internal setter (used by dev.ts)
+export function setComponentStalenessCheck(check: ComponentStalenessCheck) {
+  stalenessCheck = check
+}
+
+// Internal checker (used by vdom.ts)
+export function checkComponentStaleness(type: Function): boolean {
+  return stalenessCheck?.(type) ?? false
+}
+```
+
+```ts
+// packages/component/src/dev.ts (public dev API)
+import { setComponentStalenessCheck } from './lib/refresh.ts'
+
+// Re-export only the setter - this is the ONLY public API
+export { setComponentStalenessCheck }
+```
+
+```ts
+// packages/component/src/lib/vdom.ts
+import { checkComponentStaleness } from './refresh.ts'
+
+function reconcileComponentNode(curr, next, ...) {
+  if (curr._handle) {
+    // Check if component is stale before reusing
+    if (checkComponentStaleness(curr.type)) {
+      // Component is stale - treat as new component
+      remove(curr, ...)
+      next._handle = createComponent(...)
+      // Continue with new handle...
+    } else {
+      // Normal case: reuse existing handle
+      next._handle = curr._handle
+      // ...
+    }
+  }
+}
+```
+
+This way:
+
+- `@remix-run/component/dev` only exports `setComponentStalenessCheck` (public API)
+- Internal `refresh.ts` contains the setter and checker
+- `vdom.ts` uses the checker directly from internal file
+- Consumers can't access `checkComponentStaleness`
+- HMR manages staleness lifecycle (add + microtask cleanup)
+
+The weirdness of calling `handle.update()` on a handle that will be replaced is actually elegant:
+
+- You're not asking the handle to update itself
+- You're triggering the reconciliation process
+- During reconciliation, staleness is discovered
+- Result: handle gets replaced, not updated
+
+---
+
+**Implementation Details & Current Code Structure:**
+
+**Current File Locations:**
+
+- `requestRemount()`: `packages/component/src/lib/component.ts` (exported function)
+- `registerComponent()`: `packages/component/src/lib/component.ts` (exported function)
+- Component reconciliation: `packages/component/src/lib/vdom.ts` (in `reconcileComponentNode` function)
+- HMR runtime: `packages/dev-assets-middleware/src/virtual/hmr-runtime.ts`
+- HMR transform: `packages/dev-assets-middleware/src/lib/hmr-transform.ts`
+
+**Where to Add Staleness Check:**
+
+In `vdom.ts`, find the `reconcileComponentNode` function. It currently has logic like:
+
+```ts
+if (curr._handle) {
+  // Reuse existing handle
+  next._handle = curr._handle
+  // ...
+} else {
+  // Create new handle
+  next._handle = createComponent(...)
+}
+```
+
+Add the staleness check BEFORE reusing the handle:
+
+```ts
+if (curr._handle) {
+  // NEW: Check if component is stale before reusing
+  if (checkComponentStaleness(curr.type)) {
+    // Component is stale - treat as new component
+    // Follow the same path as when key changes
+    remove(curr, ...)
+    next._handle = createComponent(...)
+    // Continue with new handle (same as key change path)...
+  } else {
+    // Normal case: reuse existing handle
+    next._handle = curr._handle
+    // ...
+  }
+}
+```
+
+**Component Type Reference:**
+
+In the wrapper pattern:
+
+- `curr.type` is the **wrapper function** (stable identity)
+- The wrapper calls `__hmr_get_component()` to get the impl
+- Staleness check should use `curr.type` (the wrapper)
+- This works because the wrapper identity never changes
+
+**Package.json Exports:**
+
+Add to `packages/component/package.json`:
+
+```json
+{
+  "exports": {
+    ".": "./src/index.ts",
+    "./dev": "./src/dev.ts"
+  }
+}
+```
+
+**HMR Transform Changes:**
+
+The transform must pass the wrapper function to `__hmr_register` for tracking:
+
+```ts
+// Current transform generates:
+function Counter__impl(handle) {
+  // ... impl
+}
+__hmr_register_component(url, 'Counter', Counter__impl)
+
+function Counter(handle) {
+  let impl = __hmr_get_component(url, 'Counter')
+  return impl(handle)
+}
+
+// NEW: Pass wrapper as 5th parameter
+function Counter__impl(handle) {
+  // ... impl
+}
+__hmr_register_component(url, 'Counter', Counter__impl)
+
+function Counter(handle) {
+  let impl = __hmr_get_component(url, 'Counter')
+  return impl(handle)
+}
+
+// Inside impl, register wrapper:
+__hmr_register(url, 'Counter', handle, renderFn, Counter)
+//                                              ^^^^^^^ wrapper reference
+```
+
+The wrapper can reference itself by name, so the transform just passes `Counter` as the 5th parameter.
+
+---
+
+**Common Implementation Questions:**
+
+**Q: Why store hash by wrapper function instead of Handle?**
+A: Handles are recreated on remount, so WeakMap<Handle, hash> loses the hash. Wrapper function identity is stable across remounts, so WeakMap<Function, hash> preserves the hash.
+
+**Q: How does the microtask cleanup prevent staleness from persisting?**
+A: The scheduler batches updates in a flush microtask. When we call `handle.update()`, it schedules (or reuses) this flush. We then queue our cleanup microtask, which runs AFTER the flush completes. This ensures all instances are reconciled while staleness is still set, then staleness clears before any future app updates.
+
+**Q: What if multiple components remount in the same tick?**
+A: All `requestRemount()` calls add to the same `stalenessForCurrentUpdate` set and share the same flush microtask. Each queues its own cleanup microtask, but they all delete from the same set (deletion is idempotent). After the flush, all cleanup microtasks run and the set is empty.
+
+**Q: Why call `handle.update()` on a stale handle?**
+A: We're not asking the handle to update itself - we're triggering the reconciliation process. During reconciliation, staleness is discovered and the handle is replaced. It's semantically "something changed, reconcile", not "update yourself".
+
+**Q: What if staleness check returns true but handle creation fails?**
+A: The cleanup microtask still runs and clears staleness, so it won't retry. The error propagates normally through the reconciler - same as any component mount error.
+
+**Q: Do we need to handle component unmount specially?**
+A: No. When a component unmounts, the wrapper function becomes unreachable and GC handles cleanup. The WeakMap entries are automatically removed.
+
+**Q: What if a component is marked stale but never updates?**
+A: The cleanup microtask still runs and removes it from the staleness set. If the component truly never updates, staleness is cleared anyway (defensive cleanup).
+
+---
+
 **CRITICAL: Test environment must work**
 
 Before beginning implementation, verify you can run all tests for both packages:
@@ -85,14 +638,63 @@ Before implementing, spend time understanding and documenting:
 
 Previous attempts stalled by trying to retrofit the new model into existing code, causing cascading timing issues. Build the mental model first, then implement in testable layers.
 
-**Suggested layers (not prescriptive):**
+**Implementation Strategy:**
 
-Consider building up in stages with tests at each layer:
+**CRITICAL: Test the refresh mechanism in isolation first**
 
-1. Core remount tracking mechanism
-2. Reconciler integration (creating new handles)
-3. HMR runtime coordination (hash tracking, bookkeeping)
-4. Integration and e2e verification
+Before touching the HMR layer, implement and test the core refresh flow:
+
+1. **Add refresh hook to reconciler** (`packages/component/src/lib/refresh.ts` + `dev.ts`)
+2. **Add staleness check to reconciler** (`vdom.ts` - the `if (checkComponentStaleness(curr.type))` branch)
+3. **Write unit tests** (`packages/component/src/lib/component.test.tsx` or new test file):
+
+   - Test that you can manually mark a component as stale and trigger remount
+   - Verify new Handle is created (different object identity)
+   - Verify new DOM element is created (different element reference)
+   - Verify old Handle is properly removed/aborted
+   - Test with multiple instances of same component
+   - Test staleness clears after reconciliation
+   - Example test pattern:
+
+   ```ts
+   test('component remounts when marked stale', () => {
+     let stalenessSet = new Set<Function>()
+     setComponentStalenessCheck((fn) => stalenessSet.has(fn))
+
+     let MyComponent = (handle) => {
+       return <div>Hello</div>
+     }
+     let handle1 = mount(MyComponent)
+     let domElement1 = handle1.frame.firstChild // Capture DOM reference
+
+     // Mark as stale and trigger update
+     stalenessSet.add(MyComponent)
+     handle1.update()
+
+     // Wait for microtask
+     await Promise.resolve()
+
+     // Verify new handle and new DOM were created
+     let handle2 = getCurrentHandle()
+     let domElement2 = handle2.frame.firstChild
+
+     assert(handle1 !== handle2, 'Should create new handle')
+     assert(domElement1 !== domElement2, 'Should create new DOM element')
+     assert(!document.contains(domElement1), 'Old DOM should be removed')
+     assert(document.contains(domElement2), 'New DOM should be in document')
+     assert(stalenessSet.size === 0, 'Should clear staleness')
+   })
+   ```
+
+Only after these tests pass should you move to HMR integration.
+
+**Then build HMR layer on top:**
+
+4. HMR runtime changes (wrapper tracking, hash storage, requestRemount)
+5. HMR transform changes (pass wrapper to \_\_hmr_register)
+6. Integration and e2e verification
+
+This ensures the core assumption (remount without identity change) works before adding HMR complexity.
 
 **Known traps from previous attempt:**
 
@@ -106,10 +708,12 @@ Consider building up in stages with tests at each layer:
 
 **Acceptance Criteria:**
 
-- [ ] **Mental model documented**: Clear description of setup hash tracking, bookkeeping, and remount flow before implementation
-- [ ] **Validation of existing parts**: Confirm what from current HMR (transform, hashing) can be kept
+- [x] **Mental model documented**: Clear description of setup hash tracking, bookkeeping, and remount flow before implementation (see Investigation section above)
+- [x] **Validation of existing parts**: Confirm what from current HMR (transform, hashing) can be kept (see Investigation section above)
+- [ ] **Refresh mechanism tests pass**: Unit tests verify staleness check triggers remount correctly (test in isolation before HMR)
 - [ ] `requestRemount` triggers full teardown/recreation (like key change)
 - [ ] New Handle created with fresh signal (1:1 Handle:instance)
+- [ ] New DOM element created (no reuse of old DOM nodes)
 - [ ] Old Handle stays aborted (no mutation back to earlier state)
 - [ ] Setup hash correctly tracked across remounts (no "first run" loops)
 - [ ] No infinite loops or "render after removed" warnings
