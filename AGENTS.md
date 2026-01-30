@@ -18,6 +18,15 @@
 - **Philosophy**: Web standards-first, runtime-agnostic (Node.js, Bun, Deno, Cloudflare Workers). Use Web Streams API, Uint8Array, Web Crypto API, Blob/File instead of Node.js APIs
 - **Tests run from source** (no build required), using Node.js test runner
 
+## File Structure
+
+- Main entrypoint in `src/index.ts`
+- Implementation in `src/lib/`
+- Helpers in a sibling directory named the same as the file they are used in
+  - For example: `src/lib/route-pattern.ts` has helpers in `src/lib/route-pattern/`
+- Benchmarks in their own subpackage
+  - For example: `packages/route-pattern/bench/`
+
 ## Code Style
 
 - **Imports**: Always use `import type { X }` for types (separate from value imports); use `export type { X }` for type exports; include `.ts` extensions
@@ -32,6 +41,7 @@
 
 ## Test Structure
 
+- Use `import * from 'node:assert/strict'` and `import { describe, it } from 'node:test'`
 - **No loops or conditionals in test suites**: Do not use `for` loops or conditional statements (`if`, `switch`, etc.) to generate test cases within `describe()` blocks. This breaks the Node.js test runner's ability to run individual tests via IDE features (like clicking test icons in the sidebar).
 
 ## Demos
