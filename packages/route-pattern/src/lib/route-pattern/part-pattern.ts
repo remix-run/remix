@@ -1,4 +1,5 @@
-import { ParseError, unreachable } from '../errors.ts'
+import { ParseError } from './parse.ts'
+import { unreachable } from '../errors.ts'
 import * as RE from '../regexp.ts'
 import type { Span } from './split.ts'
 

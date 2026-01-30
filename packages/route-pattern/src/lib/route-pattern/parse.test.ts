@@ -3,8 +3,7 @@ import { describe, it } from 'node:test'
 
 import dedent from 'dedent'
 
-import { ParseError } from './errors.ts'
-import { RoutePattern } from './route-pattern.ts'
+import { ParseError } from './parse.ts'
 
 describe('ParseError', () => {
   it('exposes type, source, and index properties', () => {

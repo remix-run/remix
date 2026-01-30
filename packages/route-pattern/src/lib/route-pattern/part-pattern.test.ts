@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { ParseError } from '../errors.ts'
+import { ParseError } from './parse.ts'
 import { PartPattern } from './part-pattern.ts'
 
 describe('PartPattern', () => {

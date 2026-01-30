@@ -12,59 +12,6 @@
 export type Constraints = Map<string, Set<string> | null>
 
 /**
- * Parse a search string into search constraints.
- *
- * Search constraints define what query params must be present:
- * - `null`: param must be present (e.g., `?q`, `?q=`, `?q=1`)
- * - Empty `Set`: param must be present with a value (e.g., `?q=1`)
- * - Non-empty `Set`: param must be present with all these values (e.g., `?q=x&q=y`)
- *
- * Examples:
- * ```ts
- * parse('q')       // -> Map([['q', null]])
- * parse('q=')      // -> Map([['q', new Set()]])
- * parse('q=x&q=y') // -> Map([['q', new Set(['x', 'y'])]])
- * ```
- *
- * @param source the search string to parse (without leading `?`)
- * @returns the parsed search constraints
- */
-export function parse(source: string): Constraints {
-  let constraints: Constraints = new Map()
-
-  for (let param of source.split('&')) {
-    if (param === '') continue
-    let equalIndex = param.indexOf('=')
-
-    // `?q`
-    if (equalIndex === -1) {
-      let name = decodeURIComponent(param)
-      if (!constraints.get(name)) {
-        constraints.set(name, null)
-      }
-      continue
-    }
-
-    let name = decodeURIComponent(param.slice(0, equalIndex))
-    let value = decodeURIComponent(param.slice(equalIndex + 1))
-
-    // `?q=`
-    if (value.length === 0) {
-      if (!constraints.get(name)) {
-        constraints.set(name, new Set())
-      }
-      continue
-    }
-
-    // `?q=1`
-    let constraint = constraints.get(name)
-    constraints.set(name, constraint ? constraint.add(value) : new Set([value]))
-  }
-
-  return constraints
-}
-
-/**
  * Joins two search patterns, merging params and their constraints.
  *
  * Conceptually:
