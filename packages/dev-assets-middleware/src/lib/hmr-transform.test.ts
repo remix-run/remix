@@ -12,7 +12,6 @@ let HMR_IMPORT = `import {
   __hmr_setup,
   __hmr_register,
   __hmr_call,
-  __hmr_request_remount,
   __hmr_register_component,
   __hmr_get_component,
 } from '${HMR_RUNTIME_PATH}'`
@@ -74,13 +73,22 @@ export function Counter(handle) {
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.count = 0
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Counter.js',
+      'Counter',
+      'HASH',
+      (__s) => {
+        __s.count = 0
+      },
+      Counter,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Counter.js', 'Counter', handle, () => (<div>Count: {__s.count}</div>))
+  __hmr_register('/app/Counter.js', 'Counter', handle, () => (<div>Count: {__s.count}</div>), Counter)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Counter.js', 'Counter', Counter__impl)
@@ -105,12 +113,20 @@ export function App(handle) {
 ${HMR_IMPORT}
 function App__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/App.js',
+      'App',
+      'HASH',
+      (__s) => {},
+      App,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/App.js', 'App', handle, (props) => (<div>{props.name}</div>))
+  __hmr_register('/app/App.js', 'App', handle, (props) => (<div>{props.name}</div>), App)
   return (props) => __hmr_call(handle, props)
 }
 __hmr_register_component('/app/App.js', 'App', App__impl)
@@ -141,17 +157,26 @@ export function Counter(handle) {
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.count = 0
-    __s.name = 'test'
-    __s.active = true
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Counter.js',
+      'Counter',
+      'HASH',
+      (__s) => {
+        __s.count = 0
+        __s.name = 'test'
+        __s.active = true
+      },
+      Counter,
+    )
+  ) {
     return () => null
   }
   __hmr_register('/app/Counter.js', 'Counter', handle, () => (
     <div>{__s.name}: {__s.count} ({__s.active ? 'yes' : 'no'})</div>
-  ))
+  ), Counter)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Counter.js', 'Counter', Counter__impl)
@@ -176,11 +201,20 @@ export function Static(handle) {
 ${HMR_IMPORT}
 function Static__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {})) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Static.js',
+      'Static',
+      'HASH',
+      (__s) => {},
+      Static,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Static.js', 'Static', handle, () => (<div>Hello</div>))
+  __hmr_register('/app/Static.js', 'Static', handle, () => (<div>Hello</div>), Static)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Static.js', 'Static', Static__impl)
@@ -210,13 +244,22 @@ ${HMR_IMPORT}
 import { helper } from './utils.js'
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.count = helper()
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Counter.js',
+      'Counter',
+      'HASH',
+      (__s) => {
+        __s.count = helper()
+      },
+      Counter,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Counter.js', 'Counter', handle, () => (<div>{__s.count}</div>))
+  __hmr_register('/app/Counter.js', 'Counter', handle, () => (<div>{__s.count}</div>), Counter)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Counter.js', 'Counter', Counter__impl)
@@ -278,8 +321,8 @@ export function Counter(handle) {
     let { code: result1 } = await transformComponent(input1, '/app/Counter.js')
     let { code: result2 } = await transformComponent(input2, '/app/Counter.js')
 
-    let hashMatch1 = result1.match(/__hmr_setup\(handle, '([^']+)'/)
-    let hashMatch2 = result2.match(/__hmr_setup\(handle, '([^']+)'/)
+    let hashMatch1 = result1.match(/__hmr_setup\(handle, __s, '[^']+', '[^']+', '([^']+)'/)
+    let hashMatch2 = result2.match(/__hmr_setup\(handle, __s, '[^']+', '[^']+', '([^']+)'/)
 
     assert.ok(hashMatch1, 'should have hash in result1')
     assert.ok(hashMatch2, 'should have hash in result2')
@@ -315,13 +358,22 @@ function Internal(handle) {
 ${HMR_IMPORT}
 function Internal__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.value = 42
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Internal.js',
+      'Internal',
+      'HASH',
+      (__s) => {
+        __s.value = 42
+      },
+      Internal,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Internal.js', 'Internal', handle, () => (<span>{__s.value}</span>))
+  __hmr_register('/app/Internal.js', 'Internal', handle, () => (<span>{__s.value}</span>), Internal)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Internal.js', 'Internal', Internal__impl)
@@ -357,16 +409,16 @@ function Counter__impl({ signal, params }) {
         signal: signal,
         params: params,
       },
+      __s,
+      '/app/Counter.js',
+      'Counter',
       'HASH',
-      () => {
+      (__s) => {
         __s.count = 0
       },
+      Counter,
     )
   ) {
-    __hmr_request_remount({
-      signal: signal,
-      params: params,
-    })
     return () => null
   }
   __hmr_register(
@@ -377,8 +429,9 @@ function Counter__impl({ signal, params }) {
       params: params,
     },
     () => <div>{__s.count}</div>,
+    Counter,
   )
-    return () =>
+  return () =>
     __hmr_call({
       signal: signal,
       params: params,
@@ -413,15 +466,24 @@ export function Counter(handle) {
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.count = 0
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Counter.js',
+      'Counter',
+      'HASH',
+      (__s) => {
+        __s.count = 0
+      },
+      Counter,
+    )
+  ) {
     return () => null
   }
   __hmr_register('/app/Counter.js', 'Counter', handle, function() {
     return <div>{__s.count}</div>
-  })
+  }, Counter)
   return function() {
     return __hmr_call(handle)
   }
@@ -450,13 +512,22 @@ export const Counter = function(handle) {
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.count = 0
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Counter.js',
+      'Counter',
+      'HASH',
+      (__s) => {
+        __s.count = 0
+      },
+      Counter,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Counter.js', 'Counter', handle, () => (<div>{__s.count}</div>))
+  __hmr_register('/app/Counter.js', 'Counter', handle, () => (<div>{__s.count}</div>), Counter)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Counter.js', 'Counter', Counter__impl)
@@ -483,13 +554,22 @@ export const Counter = (handle) => {
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.count = 0
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Counter.js',
+      'Counter',
+      'HASH',
+      (__s) => {
+        __s.count = 0
+      },
+      Counter,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Counter.js', 'Counter', handle, () => (<div>{__s.count}</div>))
+  __hmr_register('/app/Counter.js', 'Counter', handle, () => (<div>{__s.count}</div>), Counter)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Counter.js', 'Counter', Counter__impl)
@@ -512,12 +592,20 @@ export const Counter = (handle) => () => <div>Hello</div>
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Counter.js',
+      'Counter',
+      'HASH',
+      (__s) => {},
+      Counter,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Counter.js', 'Counter', handle, () => (<div>Hello</div>))
+  __hmr_register('/app/Counter.js', 'Counter', handle, () => (<div>Hello</div>), Counter)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Counter.js', 'Counter', Counter__impl)
@@ -543,13 +631,22 @@ let Counter = (handle) => {
 ${HMR_IMPORT}
 function Counter__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.count = 0
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Counter.js',
+      'Counter',
+      'HASH',
+      (__s) => {
+        __s.count = 0
+      },
+      Counter,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Counter.js', 'Counter', handle, () => (<div>{__s.count}</div>))
+  __hmr_register('/app/Counter.js', 'Counter', handle, () => (<div>{__s.count}</div>), Counter)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Counter.js', 'Counter', Counter__impl)
@@ -580,13 +677,22 @@ export function Footer(handle) {
 ${HMR_IMPORT}
 function Header__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.title = 'My App'
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/components.js',
+      'Header',
+      'HASH',
+      (__s) => {
+        __s.title = 'My App'
+      },
+      Header,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/components.js', 'Header', handle, () => (<header>{__s.title}</header>))
+  __hmr_register('/app/components.js', 'Header', handle, () => (<header>{__s.title}</header>), Header)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/components.js', 'Header', Header__impl)
@@ -596,13 +702,22 @@ export function Header(handle) {
 }
 function Footer__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.year = 2024
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/components.js',
+      'Footer',
+      'HASH',
+      (__s) => {
+        __s.year = 2024
+      },
+      Footer,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/components.js', 'Footer', handle, () => (<footer>© {__s.year}</footer>))
+  __hmr_register('/app/components.js', 'Footer', handle, () => (<footer>© {__s.year}</footer>), Footer)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/components.js', 'Footer', Footer__impl)
@@ -659,16 +774,25 @@ export function Timer(handle) {
 ${HMR_IMPORT}
 function Timer__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.interval = setInterval(() => handle.update(), 1000)
-    handle.signal.addEventListener('abort', () => {
-      clearInterval(__s.interval)
-    })
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Timer.js',
+      'Timer',
+      'HASH',
+      (__s) => {
+        __s.interval = setInterval(() => handle.update(), 1000)
+        handle.signal.addEventListener('abort', () => {
+          clearInterval(__s.interval)
+        })
+      },
+      Timer,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Timer.js', 'Timer', handle, () => (<div>Tick</div>))
+  __hmr_register('/app/Timer.js', 'Timer', handle, () => (<div>Tick</div>), Timer)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Timer.js', 'Timer', Timer__impl)
@@ -698,17 +822,26 @@ export function Logger(handle) {
 ${HMR_IMPORT}
 function Logger__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.name = 'test'
-    console.log('Component mounted:', __s.name)
-    handle.on(window, {
-      resize: () => handle.update(),
-    })
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Logger.js',
+      'Logger',
+      'HASH',
+      (__s) => {
+        __s.name = 'test'
+        console.log('Component mounted:', __s.name)
+        handle.on(window, {
+          resize: () => handle.update(),
+        })
+      },
+      Logger,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Logger.js', 'Logger', handle, () => (<div>{__s.name}</div>))
+  __hmr_register('/app/Logger.js', 'Logger', handle, () => (<div>{__s.name}</div>), Logger)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Logger.js', 'Logger', Logger__impl)
@@ -739,16 +872,25 @@ export function Conditional(handle) {
 ${HMR_IMPORT}
 function Conditional__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.value = 0
-    if (__s.value > 0) {
-      console.log('positive')
-    }
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Conditional.js',
+      'Conditional',
+      'HASH',
+      (__s) => {
+        __s.value = 0
+        if (__s.value > 0) {
+          console.log('positive')
+        }
+      },
+      Conditional,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Conditional.js', 'Conditional', handle, () => (<div>{__s.value}</div>))
+  __hmr_register('/app/Conditional.js', 'Conditional', handle, () => (<div>{__s.value}</div>), Conditional)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Conditional.js', 'Conditional', Conditional__impl)
@@ -780,8 +922,8 @@ export function Timer(handle) {
     let { code: result1 } = await transformComponent(input1, '/app/Timer.js')
     let { code: result2 } = await transformComponent(input2, '/app/Timer.js')
 
-    let hashMatch1 = result1.match(/__hmr_setup\(handle, '([^']+)'/)
-    let hashMatch2 = result2.match(/__hmr_setup\(handle, '([^']+)'/)
+    let hashMatch1 = result1.match(/__hmr_setup\(handle, __s, '[^']+', '[^']+', '([^']+)'/)
+    let hashMatch2 = result2.match(/__hmr_setup\(handle, __s, '[^']+', '[^']+', '([^']+)'/)
 
     assert.ok(hashMatch1, 'should have hash in result1')
     assert.ok(hashMatch2, 'should have hash in result2')
@@ -811,8 +953,8 @@ export function Timer(handle) {
     let { code: result1 } = await transformComponent(input1, '/app/Timer.js')
     let { code: result2 } = await transformComponent(input2, '/app/Timer.js')
 
-    let hashMatch1 = result1.match(/__hmr_setup\(handle, '([^']+)'/)
-    let hashMatch2 = result2.match(/__hmr_setup\(handle, '([^']+)'/)
+    let hashMatch1 = result1.match(/__hmr_setup\(handle, __s, '[^']+', '[^']+', '([^']+)'/)
+    let hashMatch2 = result2.match(/__hmr_setup\(handle, __s, '[^']+', '[^']+', '([^']+)'/)
 
     assert.ok(hashMatch1, 'should have hash in result1')
     assert.ok(hashMatch2, 'should have hash in result2')
@@ -836,15 +978,24 @@ export function Multi(handle) {
 ${HMR_IMPORT}
 function Multi__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.a = 1
-    __s.b = 2
-    __s.c = 3
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Multi.js',
+      'Multi',
+      'HASH',
+      (__s) => {
+        __s.a = 1
+        __s.b = 2
+        __s.c = 3
+      },
+      Multi,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Multi.js', 'Multi', handle, () => (<div>{__s.a + __s.b + __s.c}</div>))
+  __hmr_register('/app/Multi.js', 'Multi', handle, () => (<div>{__s.a + __s.b + __s.c}</div>), Multi)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Multi.js', 'Multi', Multi__impl)
@@ -874,15 +1025,24 @@ export function Effects(handle) {
 ${HMR_IMPORT}
 function Effects__impl(handle) {
   let __s = __hmr_state(handle)
-  if (__hmr_setup(handle, 'HASH', () => {
-    __s.count = 0
-    handle.queueTask(() => console.log('mounted'))
-    Math.random()
-  })) {
-    __hmr_request_remount(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Effects.js',
+      'Effects',
+      'HASH',
+      (__s) => {
+        __s.count = 0
+        handle.queueTask(() => console.log('mounted'))
+        Math.random()
+      },
+      Effects,
+    )
+  ) {
     return () => null
   }
-  __hmr_register('/app/Effects.js', 'Effects', handle, () => (<div>{__s.count}</div>))
+  __hmr_register('/app/Effects.js', 'Effects', handle, () => (<div>{__s.count}</div>), Effects)
   return () => __hmr_call(handle)
 }
 __hmr_register_component('/app/Effects.js', 'Effects', Effects__impl)

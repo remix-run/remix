@@ -22,6 +22,7 @@
     ".": "./src/index.ts",
     "./jsx-runtime": "./src/jsx-runtime.ts",
     "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
+    "./dev": "./src/dev.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -37,6 +38,10 @@
       "./jsx-dev-runtime": {
         "types": "./dist/jsx-dev-runtime.d.ts",
         "default": "./dist/jsx-dev-runtime.js"
+      },
+      "./dev": {
+        "types": "./dist/dev.d.ts",
+        "default": "./dist/dev.js"
       },
       "./package.json": "./package.json"
     }

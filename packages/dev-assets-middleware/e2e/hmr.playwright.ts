@@ -221,6 +221,11 @@ describe('HMR E2E', () => {
 
     // Create new page for each test
     page = await browser.newPage()
+
+    // Capture browser console logs for debugging
+    page.on('console', (msg) => {
+      console.log(`[browser:${msg.type()}]`, msg.text())
+    })
   })
 
   afterEach(async () => {

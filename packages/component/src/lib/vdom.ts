@@ -12,6 +12,7 @@ import { invariant } from './invariant.ts'
 import { createDocumentState } from './document-state.ts'
 import { processStyle, createStyleManager, normalizeCssValue } from './style/index.ts'
 import type { ElementProps, RemixElement, RemixNode } from './jsx.ts'
+import { checkComponentStaleness } from './refresh.ts'
 
 let fixmeIdCounter = 0
 
@@ -19,6 +20,7 @@ export type VirtualRoot = {
   render: (element: RemixNode) => void
   remove: () => void
   flush: () => void
+  reconcile: () => void
 }
 
 export type VirtualRootOptions = {
@@ -244,6 +246,7 @@ export function createRangeRoot(
   options: VirtualRootOptions = {},
 ): VirtualRoot {
   let root: VNode | null = null
+  let lastElement: RemixNode = null
   let frameStub = options.frame ?? createFrameHandle()
 
   let container = end.parentNode
@@ -254,8 +257,9 @@ export function createRangeRoot(
 
   let hydrationCursor = start.nextSibling
 
-  return {
+  let virtualRoot: VirtualRoot = {
     render(element: RemixNode) {
+      lastElement = element // Store for reconciliation
       let vnode = toVNode(element)
       let vParent: VNode = { type: ROOT_VNODE, _svg: false }
       scheduler.enqueueTasks([
@@ -263,6 +267,22 @@ export function createRangeRoot(
           diffVNodes(root, vnode, container, frameStub, scheduler, vParent, end, hydrationCursor)
           root = vnode
           hydrationCursor = null
+        },
+      ])
+      scheduler.dequeue()
+    },
+
+    reconcile() {
+      // Re-run diffVNodes with a FRESH VNode tree converted from lastElement
+      // This is critical: we need fresh VNode objects so the reconciler actually diffs them
+      // Using (root, root) would skip diffing since they're the same object
+      if (!root || !lastElement) return
+      let freshVNode = toVNode(lastElement)
+      let vParent: VNode = { type: ROOT_VNODE, _svg: false }
+      scheduler.enqueueTasks([
+        () => {
+          diffVNodes(root, freshVNode, container, frameStub, scheduler, vParent, end, undefined)
+          root = freshVNode
         },
       ])
       scheduler.dequeue()
@@ -276,16 +296,26 @@ export function createRangeRoot(
       scheduler.dequeue()
     },
   }
+
+  // Auto-register root for HMR if dev API is available
+  // This allows HMR to trigger reconciliation when components are marked stale
+  if (typeof globalThis.__remixDevRegisterRoot === 'function') {
+    globalThis.__remixDevRegisterRoot(virtualRoot)
+  }
+
+  return virtualRoot
 }
 
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
   let root: VNode | null = null
+  let lastElement: RemixNode = null
   let frameStub = options.frame ?? createFrameHandle()
   let scheduler = options.scheduler ?? createScheduler(container.ownerDocument ?? document)
   let hydrationCursor = container.innerHTML.trim() !== '' ? container.firstChild : undefined
 
-  return {
+  let virtualRoot: VirtualRoot = {
     render(element: RemixNode) {
+      lastElement = element // Store for reconciliation
       let vnode = toVNode(element)
       let vParent: VNode = { type: ROOT_VNODE, _svg: false }
       scheduler.enqueueTasks([
@@ -307,6 +337,31 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       scheduler.dequeue()
     },
 
+    reconcile() {
+      // Re-run diffVNodes with a FRESH VNode tree converted from lastElement
+      // This is critical: we need fresh VNode objects so the reconciler actually diffs them
+      // Using (root, root) would skip diffing since they're the same object
+      if (!root || !lastElement) return
+      let freshVNode = toVNode(lastElement)
+      let vParent: VNode = { type: ROOT_VNODE, _svg: false }
+      scheduler.enqueueTasks([
+        () => {
+          diffVNodes(
+            root,
+            freshVNode,
+            container,
+            frameStub,
+            scheduler,
+            vParent,
+            undefined,
+            undefined,
+          )
+          root = freshVNode
+        },
+      ])
+      scheduler.dequeue()
+    },
+
     remove() {
       root = null
     },
@@ -315,6 +370,14 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       scheduler.dequeue()
     },
   }
+
+  // Auto-register root for HMR if dev API is available
+  // This allows HMR to trigger reconciliation when components are marked stale
+  if (typeof globalThis.__remixDevRegisterRoot === 'function') {
+    globalThis.__remixDevRegisterRoot(virtualRoot)
+  }
+
+  return virtualRoot
 }
 
 function flatMapChildrenToVNodes(node: RemixElement): VNode[] {
@@ -962,6 +1025,36 @@ function diffComponent(
     renderComponent(next._handle, null, next, domParent, frame, scheduler, vParent, anchor, cursor)
     return
   }
+
+  // Check if component is stale (e.g., marked for remount by HMR)
+  if (checkComponentStaleness(curr.type)) {
+    // Component is stale - treat as type change (same as key change)
+    // Remove old component completely (DOM + handle)
+    remove(curr._content, domParent, scheduler)
+    let tasks = curr._handle.remove()
+    scheduler.enqueueTasks(tasks)
+
+    // Create brand new handle for fresh lifecycle
+    let handle = createComponent({
+      id: `e${++fixmeIdCounter}`,
+      frame,
+      type: next.type,
+      raise: (error) => {
+        raise(error, next, domParent, frame, scheduler)
+      },
+      getContext: (type) => {
+        return findContextFromAncestry(vParent, type)
+      },
+    })
+    next._handle = handle
+    // Register for HMR requestRemount support
+    registerComponent(handle.handle, handle)
+
+    renderComponent(next._handle, null, next, domParent, frame, scheduler, vParent, anchor, cursor)
+    return
+  }
+
+  // Normal case: reuse existing handle
   next._handle = curr._handle
   let { _content, _handle } = curr
   renderComponent(_handle, _content, next, domParent, frame, scheduler, vParent, anchor, cursor)

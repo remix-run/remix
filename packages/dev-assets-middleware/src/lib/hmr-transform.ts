@@ -59,7 +59,6 @@ const HMR_IMPORTS = [
   '__hmr_setup',
   '__hmr_register',
   '__hmr_call',
-  '__hmr_request_remount',
   '__hmr_register_component',
   '__hmr_get_component',
 ]
@@ -520,14 +519,19 @@ function computeSetupHash(
   source: string,
   baseOffset: number,
 ): string {
-  // Create a string representation of ALL setup code for hashing
+  // Extract code from each statement using spans adjusted by baseOffset
+  // baseOffset compensates for SWC's span accumulation (spans accumulate across parse calls)
+  // NOTE: This does NOT work correctly when source has leading comments (e.g., "// filename")
+  // In that case, baseOffset over-compensates and extracts wrong code
   let setupParts = setupStatements.map((stmt) => {
-    let span = (stmt as { span: Span }).span
+    let span = stmt.span
     let start = span.start - baseOffset
     let end = span.end - baseOffset
-    return source.slice(start, end)
+    return source.slice(start, end).trim()
   })
-  return simpleHash(setupParts.join('\n').replace(/\s+/g, ' '))
+
+  let setupCode = setupParts.join('\n').replace(/\s+/g, ' ')
+  return simpleHash(setupCode)
 }
 
 // Deep clone and transform an expression, replacing identifier references
@@ -700,29 +704,37 @@ function generateHmrComponent(
   }
 
   // Create the setup arrow function with a block body containing ALL setup code
-  let setupFn = createArrowFunction(createBlockStatement(transformedSetupStatements))
+  // setupFn accepts __s as parameter: (__s) => { __s.varName = value; ... }
+  let setupFn = createArrowFunction(createBlockStatement(transformedSetupStatements), [
+    createIdentifier('__s'),
+  ])
 
   // Build __impl function body
   let implBody: Statement[] = [
     // let __s = __hmr_state(param)
     createLetDeclaration('__s', createCallExpression('__hmr_state', [paramRef])),
 
-    // if (__hmr_setup(param, hash, setupFn)) { __hmr_request_remount(param); return () => null }
+    // if (__hmr_setup(param, __s, moduleUrl, componentName, hash, setupFn, wrapper)) return () => null
+    // Pass moduleUrl and componentName for stable hash key across HMR updates
+    // (remount happens automatically via staleness mechanism in __hmr_setup)
     {
       type: 'IfStatement',
       span: syntheticSpan(),
       test: createCallExpression('__hmr_setup', [
         paramRef,
+        createIdentifier('__s'),
+        createStringLiteral(moduleUrl),
+        createStringLiteral(name),
         createStringLiteral(setupHash),
-        setupFn,
+        setupFn as any,
+        createIdentifier(name), // Pass wrapper function reference
       ]),
       consequent: createBlockStatement([
-        createExpressionStatement(createCallExpression('__hmr_request_remount', [paramRef])),
         createReturnStatement(createArrowFunction({ type: 'NullLiteral', span: syntheticSpan() })),
       ]),
     },
 
-    // __hmr_register(moduleUrl, name, param, (renderParams...) => renderBody)
+    // __hmr_register(moduleUrl, name, param, (renderParams...) => renderBody, wrapper)
     // Preserve the original function style (arrow vs regular)
     createExpressionStatement(
       createCallExpression('__hmr_register', [
@@ -735,6 +747,7 @@ function generateHmrComponent(
               createBlockStatement([createReturnStatement(transformedRenderBody)]),
               component.renderParams,
             ),
+        createIdentifier(name), // Pass wrapper function reference
       ]),
     ),
 
@@ -874,9 +887,21 @@ export async function transformComponent(
   }
 
   // Calculate base offset for span adjustment
-  let firstNonWhitespace = source.search(/\S/)
-  if (firstNonWhitespace === -1) firstNonWhitespace = 0
-  let baseOffset = ast.span.start - firstNonWhitespace
+  // Use the first module item's position in source as the baseline, which skips leading comments
+  let firstModuleItemStart = 0
+  if (ast.body.length > 0) {
+    // Find where the first module item actually appears in source
+    let firstItem = ast.body[0]
+    // For imports/exports, search for "import" or "export" keyword
+    if (firstItem.type === 'ImportDeclaration') {
+      firstModuleItemStart = source.indexOf('import')
+    } else if (firstItem.type === 'ExportDeclaration') {
+      firstModuleItemStart = source.indexOf('export')
+    } else if (firstItem.type === 'FunctionDeclaration') {
+      firstModuleItemStart = source.indexOf('function')
+    }
+  }
+  let baseOffset = ast.span.start - firstModuleItemStart
 
   // Transform module items
   let newBody: ModuleItem[] = []
@@ -906,20 +931,25 @@ export async function transformComponent(
 
     // If we found a component, transform it
     if (component) {
-      let setupVars = extractSetupVars(component.body)
-      let setupStatements = extractSetupStatements(component.body)
-      let setupHash = computeSetupHash(setupStatements, source, baseOffset)
-      let hmrItems = generateHmrComponent(
-        component,
-        moduleUrl,
-        setupVars,
-        setupStatements,
-        setupHash,
-        isExported,
-      )
-      newBody.push(...hmrItems)
-      transformed = true
-      hasTransformations = true
+      try {
+        let setupVars = extractSetupVars(component.body)
+        let setupStatements = extractSetupStatements(component.body)
+        let setupHash = computeSetupHash(setupStatements, source, baseOffset)
+        let hmrItems = generateHmrComponent(
+          component,
+          moduleUrl,
+          setupVars,
+          setupStatements,
+          setupHash,
+          isExported,
+        )
+        newBody.push(...hmrItems)
+        transformed = true
+        hasTransformations = true
+      } catch (error) {
+        console.error('Error transforming component:', error)
+        throw error
+      }
     }
 
     if (!transformed) {

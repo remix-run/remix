@@ -2,7 +2,18 @@
 // HMR Runtime Module (served by @remix-run/dev-assets-middleware)
 // =============================================================================
 
-import { requestRemount, type Handle } from '@remix-run/component'
+import { type Handle, type VirtualRoot } from '@remix-run/component'
+import {
+  setComponentStalenessCheck,
+  requestReconciliation,
+  registerRoot,
+} from '@remix-run/component/dev'
+
+// Global type augmentation for HMR root registration and reconciliation
+declare global {
+  var __remixDevRegisterRoot: ((root: VirtualRoot) => void) | undefined
+  var __remixDevRequestReconciliation: (() => void) | undefined
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,6 +59,34 @@ type HmrMessage =
     }
 
 // ---------------------------------------------------------------------------
+// Refresh Infrastructure (Staleness Tracking)
+// ---------------------------------------------------------------------------
+// Staleness tracking for component remounting - integrated with reconciler
+// Components are marked stale when setup scope changes, triggering full remount
+// Track by stable key (moduleUrl:componentName) instead of function identity
+
+let stalenessForCurrentUpdate = new Set<string>()
+
+// Track handle → wrapper mapping for staleness checking
+let handleToWrapper = new WeakMap<Handle, Function>()
+
+// Map component functions to their stable keys for staleness checking
+let componentToKey = new WeakMap<Function, string>()
+
+// Register staleness checker with the component reconciler
+setComponentStalenessCheck((componentFn) => {
+  // Look up the stable key for this component function
+  let key = componentToKey.get(componentFn)
+  if (!key) return false
+  return stalenessForCurrentUpdate.has(key)
+})
+
+// Register global hooks for HMR
+// These avoid module instance issues by going through globals
+globalThis.__remixDevRegisterRoot = registerRoot
+globalThis.__remixDevRequestReconciliation = requestReconciliation
+
+// ---------------------------------------------------------------------------
 // Component State Storage
 // ---------------------------------------------------------------------------
 // Component state persists across HMR updates, allowing the new component
@@ -56,8 +95,9 @@ type HmrMessage =
 
 let componentState = new WeakMap<Handle, ComponentState>()
 
-// Separate storage for HMR infrastructure (setup hash tracking)
-let setupHashes = new WeakMap<Handle, string>()
+// Store setup hash by moduleUrl:componentName (stable across HMR updates and remounts)
+// Cannot use WeakMap because the key is a string
+let setupHashes = new Map<string, string>()
 
 export function __hmr_state(handle: Handle): ComponentState {
   if (!componentState.has(handle)) {
@@ -70,7 +110,8 @@ export function __hmr_state(handle: Handle): ComponentState {
 
 export function __hmr_clear_state(handle: Handle): void {
   componentState.delete(handle)
-  setupHashes.delete(handle)
+  // Note: setup hash is keyed by wrapper function, not handle, so it persists across remounts
+  // We don't delete it here - it's managed by __hmr_setup when hash changes
 }
 
 // ---------------------------------------------------------------------------
@@ -90,7 +131,13 @@ export function __hmr_register(
   componentName: string,
   handle: Handle,
   renderFn: RenderFunction,
+  wrapper?: Function,
 ): void {
+  // Store wrapper function for staleness checking (if provided)
+  if (wrapper) {
+    handleToWrapper.set(handle, wrapper)
+  }
+
   // Store handle metadata for fast lookup
   handleToComponent.set(handle, { url: moduleUrl, name: componentName, renderFn: renderFn })
 
@@ -129,7 +176,11 @@ export function __hmr_register(
     handleToComponent.delete(handle)
 
     // Clean up empty entries to prevent memory leaks
-    if (componentEntry.handles.size === 0) {
+    // BUT: Don't delete if component is marked as stale (being remounted)
+    let stableKey = `${moduleUrl}:${componentName}`
+    let isBeingRemounted = stalenessForCurrentUpdate.has(stableKey)
+    
+    if (componentEntry.handles.size === 0 && !isBeingRemounted) {
       moduleComponents.delete(componentName)
       if (moduleComponents.size === 0) {
         components.delete(moduleUrl)
@@ -164,6 +215,10 @@ export function __hmr_register_component(
 
   // Store the implementation
   moduleComponents.get(componentName)!.impl = componentFn
+  
+  // Register the component function → key mapping for staleness checking
+  let stableKey = `${moduleUrl}:${componentName}`
+  componentToKey.set(componentFn, stableKey)
 }
 
 // Get the current component function from the registry
@@ -185,11 +240,8 @@ export function __hmr_update(
 ): Promise<void> {
   let moduleComponents = components.get(moduleUrl)
   if (!moduleComponents || moduleComponents.size === 0) {
-    console.log('[HMR] No instances found for ' + moduleUrl)
     return Promise.resolve()
   }
-
-  console.log('[HMR] Updating ' + moduleUrl + '...')
 
   return getNewModule().then(function (newModule) {
     // NOTE: The module load itself calls __hmr_register_component with the impl.
@@ -202,23 +254,31 @@ export function __hmr_update(
         return
       }
 
-      console.log(
-        '[HMR] Updating ' + componentName + ' (' + component.handles.size + ' instance(s))',
-      )
-
       component.handles.forEach(function (handle) {
         try {
-          // This calls the wrapper, which delegates to __hmr_get_component,
-          // which returns the impl that was registered when the module loaded.
+          // Call the wrapper with the existing handle to detect hash changes
+          // This will mark components as stale if their setup scope changed
           newComponentFn(handle)
-          handle.update()
         } catch (error) {
           console.error('[HMR] Error updating ' + componentName + ':', error)
         }
       })
     })
 
-    console.log('[HMR] Update complete for ' + moduleUrl)
+    // After calling all components (which marks stale ones), trigger reconciliation
+    // This will cause the reconciler to check staleness and remount stale components
+    // Use global to avoid module instance issues
+    if (globalThis.__remixDevRequestReconciliation) {
+      globalThis.__remixDevRequestReconciliation()
+    } else {
+      console.error('[HMR] __remixDevRequestReconciliation not available!')
+    }
+
+    // Clear staleness after all updates are done and reconciliation has run
+    // Use microtask to ensure this happens after the flush microtask
+    queueMicrotask(() => {
+      stalenessForCurrentUpdate.clear()
+    })
   })
 }
 
@@ -230,43 +290,73 @@ export function __hmr_update(
  * Check if setup should run based on hash comparison.
  * - First run: execute setup, store hash, return false (continue)
  * - Hash matches: skip setup, return false (continue)
- * - Hash changed: clear state, return true (signal remount needed)
+ * - Hash changed: mark stale and trigger remount, return true
  *
- * When this returns true, the caller should:
- * 1. Call requestRemount(handle)
- * 2. Return a noop render function
+ * When this returns true, the caller should return a noop render function.
+ * The remount will be triggered automatically via staleness + update mechanism.
  *
  * @param handle The component handle
+ * @param state The component state object (__s)
+ * @param moduleUrl The module URL (e.g., '/app/Counter.tsx')
+ * @param componentName The component name (e.g., 'Counter')
  * @param hash Hash of the setup scope code
- * @param setupFn Function to execute on first run
+ * @param setupFn Function to execute on first run, accepts state as parameter
+ * @param wrapper The wrapper function for this component
  * @returns True if remount is needed (setup changed), false otherwise
  */
-export function __hmr_setup(handle: Handle, hash: string, setupFn: () => void): boolean {
-  let currentHash = setupHashes.get(handle)
-  console.log(
-    '[HMR] __hmr_setup called for handle:',
-    handle.id,
-    'currentHash:',
-    currentHash,
-    'newHash:',
-    hash,
-  )
+export function __hmr_setup(
+  handle: Handle,
+  state: ComponentState,
+  moduleUrl: string,
+  componentName: string,
+  hash: string,
+  setupFn: (state: ComponentState) => void,
+  wrapper: Function,
+): boolean {
+  // Store wrapper for future lookups (e.g., during remount)
+  handleToWrapper.set(handle, wrapper)
+
+  // Use moduleUrl:componentName as stable key across HMR updates
+  let hashKey = `${moduleUrl}:${componentName}`
+  
+  // Register the wrapper function → key mapping for staleness checking
+  // This is the function the reconciler sees (the delegating wrapper)
+  componentToKey.set(wrapper, hashKey)
+  let currentHash = setupHashes.get(hashKey)
+
   if (currentHash === undefined) {
     // First run - execute setup and store hash
-    console.log('[HMR] First run, calling setupFn and storing hash')
-    setupFn()
-    setupHashes.set(handle, hash)
+    setupFn(state)
+    setupHashes.set(hashKey, hash)
     return false
   }
+
   if (currentHash !== hash) {
-    // Hash changed - clear state and signal remount needed
-    console.warn('[HMR] Setup scope changed, component will remount')
-    __hmr_clear_state(handle)
-    console.log('[HMR] Returning true to signal remount')
-    return true
+    // Hash mismatch - need to determine if this is old handle or new handle after remount
+    // Strategy: Check if state is empty
+    // - Old handle: State exists (has values) → clear state, mark stale, trigger remount
+    // - New handle: State empty (just created) → run setup with new hash, continue normally
+    let stateIsEmpty = Object.keys(state).length === 0
+
+    if (stateIsEmpty) {
+      // State is empty = this is the NEW handle created after remount
+      // Run setup with the new hash and update stored hash
+      setupFn(state)
+      setupHashes.set(hashKey, hash)
+      return false
+    } else {
+      // State exists = this is the OLD handle detecting the hash change
+      // Clear state, mark stale, and trigger remount (DON'T update hash yet)
+      __hmr_clear_state(handle)
+
+      // Mark component as stale for this update batch using stable key
+      // Staleness will be cleared by __hmr_update after all updates complete
+      stalenessForCurrentUpdate.add(hashKey)
+      return true
+    }
   }
+
   // Hash matches - skip setup
-  console.log('[HMR] Hash matches, skipping setup')
   return false
 }
 
@@ -275,10 +365,6 @@ export function __hmr_setup(handle: Handle, hash: string, setupFn: () => void): 
 // ---------------------------------------------------------------------------
 
 let eventSource: EventSource | null = null
-
-export function __hmr_request_remount(handle: Handle): void {
-  requestRemount(handle)
-}
 
 function parseHmrMessage(data: string): HmrMessage | null {
   try {
@@ -338,16 +424,13 @@ function parseHmrMessage(data: string): HmrMessage | null {
 function handleHmrMessage(message: HmrMessage): void {
   switch (message.type) {
     case 'connected':
-      console.log('[HMR] Server connection established')
       break
 
     case 'update':
-      console.log('[HMR] Received update for:', message.files)
       performUpdate(message.files, message.timestamp)
       break
 
     case 'reload':
-      console.log('[HMR] Full reload requested')
       window.location.reload()
       break
   }
@@ -357,21 +440,14 @@ function performUpdate(files: string[], timestamp: number) {
   // Re-import each affected component with cache-busting timestamp
   let updates = files.map(function (file) {
     let importUrl = file + '?t=' + timestamp
-    console.log('[HMR] Re-importing ' + importUrl)
-
     return __hmr_update(file, function () {
       return import(importUrl)
     })
   })
 
-  Promise.all(updates)
-    .then(function () {
-      console.log('[HMR] All updates complete')
-    })
-    .catch(function (error) {
-      console.error('[HMR] Update failed:', error)
-      console.log('[HMR] Consider a full page reload')
-    })
+  Promise.all(updates).catch(function (error) {
+    console.error('[HMR] Update failed:', error)
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -400,12 +476,9 @@ export function __hmr_get_tracked_handle_count(moduleUrl: string, componentName:
 // We connect automatically when this module is imported.
 ;(function connect() {
   let sseUrl = window.location.origin + '/__@remix/hmr-events'
-  console.log('[HMR] Connecting to ' + sseUrl)
-
   eventSource = new EventSource(sseUrl)
 
   eventSource.onopen = function () {
-    console.log('[HMR] Connected')
     isConnected = true
   }
 
@@ -417,10 +490,7 @@ export function __hmr_get_tracked_handle_count(moduleUrl: string, componentName:
   }
 
   eventSource.onerror = function () {
-    // EventSource automatically reconnects, just log it
-    console.log('[HMR] Connection lost, reconnecting...')
+    // EventSource automatically reconnects
     isConnected = false
   }
 })()
-
-console.log('[HMR] Runtime loaded')
