@@ -1,4 +1,7 @@
+import type { RoutePattern } from '../route-pattern.ts'
 import { PartPattern, type PartPatternToken } from './part-pattern.ts'
+
+type Pathname = RoutePattern['ast']['pathname']
 
 /**
  * Joins two pathnames, adding slash between them if needed.
@@ -28,7 +31,7 @@ import { PartPattern, type PartPatternToken } from './part-pattern.ts'
  * @param ignoreCase whether to ignore case when matching
  * @returns the joined pathname pattern
  */
-export function join(a: PartPattern, b: PartPattern, ignoreCase: boolean): PartPattern {
+export function pathname(a: Pathname, b: Pathname, ignoreCase: boolean): Pathname {
   if (a.tokens.length === 0) return b
   if (b.tokens.length === 0) return a
 
@@ -77,4 +80,47 @@ export function join(a: PartPattern, b: PartPattern, ignoreCase: boolean): PartP
   }
 
   return new PartPattern({ tokens, optionals }, { type: 'pathname', ignoreCase })
+}
+
+type Search = RoutePattern['ast']['search']
+
+/**
+ * Joins two search patterns, merging params and their constraints.
+ *
+ * Conceptually:
+ *
+ * ```ts
+ * search('?a', '?b') -> '?a&b'
+ * search('?a=1', '?a=2') -> '?a=1&a=2'
+ * search('?a=1', '?b=2') -> '?a=1&b=2'
+ * search('', '?a') -> '?a'
+ * ```
+ *
+ * @param a the first search constraints
+ * @param b the second search constraints
+ * @returns the merged search constraints
+ */
+export function search(a: Search, b: Search): Search {
+  let result: Search = new Map()
+
+  for (let [name, constraint] of a) {
+    result.set(name, constraint === null ? null : new Set(constraint))
+  }
+
+  for (let [name, constraint] of b) {
+    let current = result.get(name)
+
+    if (current === null || current === undefined) {
+      result.set(name, constraint === null ? null : new Set(constraint))
+      continue
+    }
+
+    if (constraint !== null) {
+      for (let value of constraint) {
+        current.add(value)
+      }
+    }
+  }
+
+  return result
 }

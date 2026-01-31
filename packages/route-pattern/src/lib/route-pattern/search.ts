@@ -12,47 +12,6 @@
 export type Constraints = Map<string, Set<string> | null>
 
 /**
- * Joins two search patterns, merging params and their constraints.
- *
- * Conceptually:
- *
- * ```ts
- * search('?a', '?b') -> '?a&b'
- * search('?a=1', '?a=2') -> '?a=1&a=2'
- * search('?a=1', '?b=2') -> '?a=1&b=2'
- * search('', '?a') -> '?a'
- * ```
- *
- * @param a the first search constraints
- * @param b the second search constraints
- * @returns the merged search constraints
- */
-export function join(a: Constraints, b: Constraints): Constraints {
-  let result: Constraints = new Map()
-
-  for (let [name, constraint] of a) {
-    result.set(name, constraint === null ? null : new Set(constraint))
-  }
-
-  for (let [name, constraint] of b) {
-    let current = result.get(name)
-
-    if (current === null || current === undefined) {
-      result.set(name, constraint === null ? null : new Set(constraint))
-      continue
-    }
-
-    if (constraint !== null) {
-      for (let value of constraint) {
-        current.add(value)
-      }
-    }
-  }
-
-  return result
-}
-
-/**
  * Convert search constraints to a query string.
  *
  * @param constraints the search constraints to convert
