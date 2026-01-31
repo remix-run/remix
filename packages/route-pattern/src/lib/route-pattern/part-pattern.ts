@@ -2,6 +2,8 @@ import { ParseError } from './parse.ts'
 import { unreachable } from '../unreachable.ts'
 import * as RE from '../regexp.ts'
 import type { Span } from './split.ts'
+import { HrefError, type HrefParams } from './href.ts'
+import type { RoutePattern } from '../route-pattern.ts'
 
 type MatchParam = {
   type: ':' | '*'
@@ -26,6 +28,7 @@ export class PartPattern {
   readonly type: 'hostname' | 'pathname'
   readonly ignoreCase: boolean
 
+  // todo: params cache
   #regexp: RegExp | undefined
 
   constructor(
@@ -151,9 +154,109 @@ export class PartPattern {
     )
   }
 
+  get source(): string {
+    let result = ''
+    for (let token of this.tokens) {
+      if (token.type === '(' || token.type === ')') {
+        result += token.type
+        continue
+      }
+
+      if (token.type === 'text') {
+        result += token.text
+        continue
+      }
+
+      if (token.type === ':' || token.type === '*') {
+        let name = token.name === '*' ? '' : token.name
+        result += `${token.type}${name}`
+        continue
+      }
+
+      if (token.type === 'separator') {
+        result += this.separator
+        continue
+      }
+
+      unreachable(token.type)
+    }
+
+    return result
+  }
+
+  /**
+   * Generate a partial href from a part pattern and params.
+   *
+   * @param pattern The route pattern containing the part pattern.
+   * @param params The parameters to substitute into the pattern.
+   * @returns The partial href for the given params
+   */
+  href(pattern: RoutePattern, params: HrefParams): string {
+    let missingParams: Array<string> = []
+
+    let stack: Array<{ begin?: number; href: string }> = [{ href: '' }]
+    let i = 0
+    while (i < this.tokens.length) {
+      let token = this.tokens[i]
+      if (token.type === 'text') {
+        stack[stack.length - 1].href += token.text
+        i += 1
+        continue
+      }
+      if (token.type === 'separator') {
+        stack[stack.length - 1].href += this.separator
+        i += 1
+        continue
+      }
+      if (token.type === '(') {
+        stack.push({ begin: i, href: '' })
+        i += 1
+        continue
+      }
+      if (token.type === ')') {
+        let frame = stack.pop()!
+        stack[stack.length - 1].href += frame.href
+        i += 1
+        continue
+      }
+      if (token.type === ':' || token.type === '*') {
+        let value = params[token.name]
+        if (value === undefined) {
+          if (stack.length <= 1) {
+            if (token.name === '*') {
+              throw new HrefError({
+                type: 'nameless-wildcard',
+                pattern,
+              })
+            }
+            missingParams.push(token.name)
+          }
+          let frame = stack.pop()!
+          i = this.optionals.get(frame.begin!)! + 1
+          continue
+        }
+        stack[stack.length - 1].href += typeof value === 'string' ? value : String(value)
+        i += 1
+        continue
+      }
+      unreachable(token.type)
+    }
+    if (missingParams.length > 0) {
+      throw new HrefError({
+        type: 'missing-params',
+        pattern,
+        partPattern: this,
+        missingParams,
+        params,
+      })
+    }
+    if (stack.length !== 1) unreachable()
+    return stack[0].href
+  }
+
   match(part: string): PartPatternMatch | null {
     if (this.#regexp === undefined) {
-      this.#regexp = toRegExp(this.tokens, this.separator, this.ignoreCase)
+      this.#regexp = this.#toRegExp()
     }
     let reMatch = this.#regexp.exec(part)
     if (reMatch === null) return null
@@ -174,48 +277,44 @@ export class PartPattern {
     }
     return match
   }
-}
 
-function toRegExp(
-  tokens: Array<PartPatternToken>,
-  separator: '.' | '/',
-  ignoreCase: boolean,
-): RegExp {
-  let result = ''
-  for (let token of tokens) {
-    if (token.type === 'text') {
-      result += RE.escape(token.text)
-      continue
+  #toRegExp(): RegExp {
+    let result = ''
+    for (let token of this.tokens) {
+      if (token.type === 'text') {
+        result += RE.escape(token.text)
+        continue
+      }
+
+      if (token.type === ':') {
+        result += this.separator ? `([^${this.separator}]+?)` : `(.+?)`
+        continue
+      }
+
+      if (token.type === '*') {
+        result += `(.*)`
+        continue
+      }
+
+      if (token.type === '(') {
+        result += '(?:'
+        continue
+      }
+
+      if (token.type === ')') {
+        result += ')?'
+        continue
+      }
+
+      if (token.type === 'separator') {
+        result += RE.escape(this.separator ?? '')
+        continue
+      }
+
+      unreachable(token.type)
     }
-
-    if (token.type === ':') {
-      result += separator ? `([^${separator}]+?)` : `(.+?)`
-      continue
-    }
-
-    if (token.type === '*') {
-      result += `(.*)`
-      continue
-    }
-
-    if (token.type === '(') {
-      result += '(?:'
-      continue
-    }
-
-    if (token.type === ')') {
-      result += ')?'
-      continue
-    }
-
-    if (token.type === 'separator') {
-      result += RE.escape(separator ?? '')
-      continue
-    }
-
-    unreachable(token.type)
+    return new RegExp(`^${result}$`, this.ignoreCase ? 'di' : 'd')
   }
-  return new RegExp(`^${result}$`, ignoreCase ? 'di' : 'd')
 }
 
 function separatorForType(type: 'hostname' | 'pathname'): '.' | '/' {

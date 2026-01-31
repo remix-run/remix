@@ -6,9 +6,9 @@ import type {
 import { RoutePattern } from './route-pattern.ts'
 import * as Variant from './trie-matcher/variant.ts'
 import { unreachable } from './unreachable.ts'
-import * as Search from './route-pattern/search.ts'
 import type { Match, Matcher } from './matcher.ts'
 import * as Specificity from './specificity.ts'
+import { matchSearch } from './route-pattern/match.ts'
 
 type Param = Extract<PartPatternToken, { type: ':' | '*' }>
 
@@ -258,7 +258,7 @@ export class Trie<data = unknown> {
           let { value } = current.pathnameNode
           if (
             value &&
-            Search.test(url.searchParams, value.pattern.ast.search, value.pattern.ignoreCase)
+            matchSearch(url.searchParams, value.pattern.ast.search, value.pattern.ignoreCase)
           ) {
             let pathnameMatch: PartPatternMatch = []
             for (let i = 0; i < value.requiredParams.length; i++) {

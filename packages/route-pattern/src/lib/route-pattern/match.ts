@@ -1,15 +1,4 @@
-/**
- * - `null`: key must be present
- * - Empty `Set`: key must be present with a value
- * - Non-empty `Set`: key must be present with all these values
- *
- * ```ts
- * new Map([['q', null]])                // -> ?q, ?q=, ?q=1
- * new Map([['q', new Set()]])           // -> ?q=1
- * new Map([['q', new Set(['x', 'y'])]]) // -> ?q=x&q=y
- * ```
- */
-export type Constraints = Map<string, Set<string> | null>
+import type { RoutePattern } from '../route-pattern'
 
 /**
  * Test if URL search params satisfy the given constraints.
@@ -19,9 +8,9 @@ export type Constraints = Map<string, Set<string> | null>
  * @param ignoreCase whether to ignore case when matching param names and values
  * @returns true if the params satisfy all constraints
  */
-export function test(
+export function matchSearch(
   params: URLSearchParams,
-  constraints: Constraints,
+  constraints: RoutePattern['ast']['search'],
   ignoreCase: boolean,
 ): boolean {
   for (let [name, constraint] of constraints) {

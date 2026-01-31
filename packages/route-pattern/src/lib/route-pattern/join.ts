@@ -31,7 +31,7 @@ type Pathname = RoutePattern['ast']['pathname']
  * @param ignoreCase whether to ignore case when matching
  * @returns the joined pathname pattern
  */
-export function pathname(a: Pathname, b: Pathname, ignoreCase: boolean): Pathname {
+export function joinPathname(a: Pathname, b: Pathname, ignoreCase: boolean): Pathname {
   if (a.tokens.length === 0) return b
   if (b.tokens.length === 0) return a
 
@@ -100,7 +100,7 @@ type Search = RoutePattern['ast']['search']
  * @param b the second search constraints
  * @returns the merged search constraints
  */
-export function search(a: Search, b: Search): Search {
+export function joinSearch(a: Search, b: Search): Search {
   let result: Search = new Map()
 
   for (let [name, constraint] of a) {
