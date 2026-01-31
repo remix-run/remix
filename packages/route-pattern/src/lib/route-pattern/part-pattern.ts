@@ -151,41 +151,6 @@ export class PartPattern {
     )
   }
 
-  get source(): string {
-    let result = ''
-
-    for (let token of this.tokens) {
-      if (token.type === '(' || token.type === ')') {
-        result += token.type
-        continue
-      }
-
-      if (token.type === 'text') {
-        result += token.text
-        continue
-      }
-
-      if (token.type === ':' || token.type === '*') {
-        let name = token.name === '*' ? '' : token.name
-        result += `${token.type}${name}`
-        continue
-      }
-
-      if (token.type === 'separator') {
-        result += this.separator
-        continue
-      }
-
-      unreachable(token.type)
-    }
-
-    return result
-  }
-
-  toString(): string {
-    return this.source
-  }
-
   match(part: string): PartPatternMatch | null {
     if (this.#regexp === undefined) {
       this.#regexp = toRegExp(this.tokens, this.separator, this.ignoreCase)
