@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 
 import { RoutePattern } from './route-pattern.ts'
 import * as Href from './route-pattern/href.ts'
+import * as Source from './route-pattern/source.ts'
 
 describe('RoutePattern', () => {
   describe('parse', () => {
@@ -23,9 +24,9 @@ describe('RoutePattern', () => {
       assert.deepEqual(
         {
           protocol: pattern.ast.protocol,
-          hostname: pattern.ast.hostname?.source,
+          hostname: pattern.ast.hostname ? Source.part(pattern.ast.hostname) : undefined,
           port: pattern.ast.port ?? null,
-          pathname: pattern.ast.pathname?.source,
+          pathname: pattern.ast.pathname ? Source.part(pattern.ast.pathname) : null,
           search: pattern.ast.search,
         },
         {

@@ -3,6 +3,7 @@ import * as Search from './route-pattern/search.ts'
 import { PartPattern, type PartPatternMatch } from './route-pattern/part-pattern.ts'
 import type { Join as JoinResult, Params } from './types/index.ts'
 import * as Parse from './route-pattern/parse.ts'
+import * as Source from './route-pattern/source.ts'
 import * as Href from './route-pattern/href.ts'
 import * as Join from './route-pattern/join.ts'
 
@@ -64,7 +65,8 @@ export class RoutePattern<source extends string = string> {
   }
 
   get hostname(): string {
-    return this.ast.hostname?.toString() ?? ''
+    if (this.ast.hostname === null) return ''
+    return Source.part(this.ast.hostname)
   }
 
   get port(): string {
@@ -72,11 +74,11 @@ export class RoutePattern<source extends string = string> {
   }
 
   get pathname(): string {
-    return this.ast.pathname.toString()
+    return Source.part(this.ast.pathname)
   }
 
   get search(): string {
-    return Search.toString(this.ast.search) ?? ''
+    return Source.search(this.ast.search) ?? ''
   }
 
   get source(): string {
