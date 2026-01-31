@@ -2,6 +2,23 @@
 
 This is the changelog for [`component`](https://github.com/remix-run/remix/tree/main/packages/component). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- Add client-side hydration support with `hydrate` and `hydrationRoot` exports.
+
+  The `hydrationRoot()` function marks components as hydration boundaries for selective hydration.
+  The `hydrate()` function finds and hydrates all marked components in the document, preserving server-rendered HTML while enabling interactivity. Also exports `createRangeRoot` and `createScheduler` utilities.
+
+- Add `@remix-run/component/server` export with `renderToString` for server-side rendering of components to HTML strings.
+
+### Patch Changes
+
+- Fix updates for nested component-to-element replacements
+
+  The scheduler no longer stores anchors (which could become stale), leftover implementation detail from earlier code.
+
 ## v0.4.0
 
 ### Minor Changes

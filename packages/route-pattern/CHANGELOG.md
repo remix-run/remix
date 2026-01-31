@@ -2,6 +2,88 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.19.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Change how params are represented within `RoutePattern.ast`
+
+  Previously, `RoutePattern.ast.{hostname,pathname}.tokens` had param tokens like:
+
+  ```ts
+  type ParamToken = { type: ':'; '*'; nameIndex: number }
+  ```
+
+  where the `nameIndex` was used to access the param name from `paramNames`:
+
+  ```ts
+  let { pathname } = pattern.ast
+
+  for (let token of pathname.tokens) {
+    if (token.type === ':' || token.type === '*') {
+      let paramName = pathname.paramNames[token.nameIndex]
+      console.log('name: ', paramName)
+    }
+  }
+  ```
+
+  This has now been simplified so that param tokens contain their own name:
+
+  ```ts
+  type ParamToken = { type: ':' | '*'; name: string }
+
+  let { pathname } = pattern.ast
+
+  for (let token of pathname.tokens) {
+    if (token.type === ':' || token.type === '*') {
+      console.log('name: ', token.name)
+    }
+  }
+  ```
+
+  If you want to iterate over _just_ the params, there's a new `.params` getter:
+
+  ```ts
+  let { pathname } = pattern.ast
+
+  for (let param of pathname.params) {
+    console.log('type: ', param.type)
+    console.log('name: ', param.name)
+  }
+  ```
+
+### Patch Changes
+
+- Previously, `href` was throwing an `HrefError` with `missing-params` type when a nameless wildcard was encountered outside of an optional.
+  But that was misleading since nameless optionals aren't something the user should be passing in values for.
+  Instead, `href` now throws an `HrefError` with the correct `nameless-wildcard` type for this case.
+
+  Error messages have also been improved for many of the `HrefError` types.
+  Notably, the variants shown in `missing-params` were confusing since they leaked internal formatting for params.
+  That has been removed and the resulting error message is now shorter and simpler.
+
+- Previously, including extra params in `RoutePattern.href` resulted in a type error:
+
+  ```ts
+  let pattern = new RoutePattern('/posts/:id')
+  pattern.href({ id: 1, extra: 'stuff' })
+  //                     ^^^^^
+  // 'extra' does not exist in type 'HrefParams<"/posts/:id">'
+  ```
+
+  Now, extra params are allowed and autocomplete for inferred params still works:
+
+  ```ts
+  let pattern = new RoutePattern('/posts/:id')
+  pattern.href({ id: 1, extra: 'stuff' }) // no type error
+
+  pattern.href({})
+  //             ^ autocomplete suggests `id`
+  ```
+
+- `ArrayMatcher.match` (optimized for small apps) got ~1.06x faster for our small app benchmark.
+  `TrieMatcher.match` (optimized for large apps) got ~1.17x faster across the board.
+
 ## v0.18.0
 
 ### Minor Changes
