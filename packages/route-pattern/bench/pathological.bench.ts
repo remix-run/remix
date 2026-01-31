@@ -1,5 +1,5 @@
 import { bench, describe } from 'vitest'
-import { ArrayMatcher } from '@remix-run/route-pattern'
+import { ArrayMatcher, TrieMatcher } from '@remix-run/route-pattern'
 
 function generateRoutes(): string[] {
   let routes: string[] = []
@@ -113,20 +113,28 @@ let urls = [
   'https://example.com/search?missing=params',
 ]
 
-let matchers = [{ name: 'array', matcher: new ArrayMatcher<null>() }]
-
 describe('setup', () => {
-  for (let { name, matcher } of matchers) {
-    bench(name, () => {
-      routes.forEach((route) => matcher.add(route, null))
-    })
-  }
+  bench('array', () => {
+    let matcher = new ArrayMatcher<null>()
+    routes.forEach((route) => matcher.add(route, null))
+  })
+
+  bench('trie', () => {
+    let matcher = new TrieMatcher<null>()
+    routes.forEach((route) => matcher.add(route, null))
+  })
 })
 
 describe('match', () => {
-  for (let { name, matcher } of matchers) {
-    bench(name, () => {
-      urls.forEach((url) => matcher.match(url))
-    })
-  }
+  let arrayMatcher = new ArrayMatcher<null>()
+  routes.forEach((route) => arrayMatcher.add(route, null))
+  bench('array', () => {
+    urls.forEach((url) => arrayMatcher.match(url))
+  })
+
+  let trieMatcher = new TrieMatcher<null>()
+  routes.forEach((route) => trieMatcher.add(route, null))
+  bench('trie', () => {
+    urls.forEach((url) => trieMatcher.match(url))
+  })
 })
