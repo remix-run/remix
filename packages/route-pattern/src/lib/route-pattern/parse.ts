@@ -2,7 +2,7 @@ import { PartPattern } from './part-pattern.ts'
 import type { Span } from './split.ts'
 import type { RoutePattern } from '../route-pattern.ts'
 
-export function protocol(source: string, span: Span | null): RoutePattern['ast']['protocol'] {
+export function parseProtocol(source: string, span: Span | null): RoutePattern['ast']['protocol'] {
   if (!span) return null
   let protocol = source.slice(...span)
   if (protocol === '' || protocol === 'http' || protocol === 'https' || protocol === 'http(s)') {
@@ -11,7 +11,7 @@ export function protocol(source: string, span: Span | null): RoutePattern['ast']
   throw new ParseError('invalid protocol', source, span[0])
 }
 
-export function hostname(
+export function parseHostname(
   source: string,
   span: Span | null,
 ): RoutePattern['ast']['hostname'] | null {
@@ -50,7 +50,7 @@ function isNamelessWildcard(part: PartPattern): boolean {
  * @param source the search string to parse (without leading `?`)
  * @returns the parsed search constraints
  */
-export function search(source: string): RoutePattern['ast']['search'] {
+export function parseSearch(source: string): RoutePattern['ast']['search'] {
   let constraints: RoutePattern['ast']['search'] = new Map()
 
   for (let param of source.split('&')) {

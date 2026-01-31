@@ -1,18 +1,29 @@
 import { split } from './route-pattern/split.ts'
-import * as Search from './route-pattern/search.ts'
 import { PartPattern, type PartPatternMatch } from './route-pattern/part-pattern.ts'
-import type { Join as JoinResult, Params } from './types/index.ts'
-import * as Parse from './route-pattern/parse.ts'
-import * as Source from './route-pattern/source.ts'
-import * as Href from './route-pattern/href.ts'
-import * as Join from './route-pattern/join.ts'
+import type { Join, Params } from './types/index.ts'
+import { parseHostname, parseProtocol, parseSearch } from './route-pattern/parse.ts'
+import { serializeSearch } from './route-pattern/serialize.ts'
+import { joinPathname, joinSearch } from './route-pattern/join.ts'
+import { HrefError, hrefSearch, type HrefArgs } from './route-pattern/href.ts'
+import { matchSearch } from './route-pattern/match.ts'
 
 type AST = {
   protocol: 'http' | 'https' | 'http(s)' | null
   hostname: PartPattern | null
   port: string | null
   pathname: PartPattern
-  search: Search.Constraints
+  /**
+   * - `null`: key must be present
+   * - Empty `Set`: key must be present with a value
+   * - Non-empty `Set`: key must be present with all these values
+   *
+   * ```ts
+   * new Map([['q', null]])                // -> ?q, ?q=, ?q=1
+   * new Map([['q', new Set()]])           // -> ?q=1
+   * new Map([['q', new Set(['x', 'y'])]]) // -> ?q=x&q=y
+   * ```
+   */
+  search: Map<string, Set<string> | null>
 }
 
 export type RoutePatternOptions = {
@@ -43,13 +54,13 @@ export class RoutePattern<source extends string = string> {
     let spans = split(source)
 
     this.ast = {
-      protocol: Parse.protocol(source, spans.protocol),
-      hostname: Parse.hostname(source, spans.hostname),
+      protocol: parseProtocol(source, spans.protocol),
+      hostname: parseHostname(source, spans.hostname),
       port: spans.port ? source.slice(...spans.port) : null,
       pathname: spans.pathname
         ? PartPattern.parse(source, { span: spans.pathname, type: 'pathname', ignoreCase })
         : PartPattern.parse('', { span: [0, 0], type: 'pathname', ignoreCase }),
-      search: spans.search ? Parse.search(source.slice(...spans.search)) : new Map(),
+      search: spans.search ? parseSearch(source.slice(...spans.search)) : new Map(),
     }
 
     this.ignoreCase = ignoreCase
@@ -65,8 +76,7 @@ export class RoutePattern<source extends string = string> {
   }
 
   get hostname(): string {
-    if (this.ast.hostname === null) return ''
-    return Source.part(this.ast.hostname)
+    return this.ast.hostname?.source ?? ''
   }
 
   get port(): string {
@@ -74,11 +84,11 @@ export class RoutePattern<source extends string = string> {
   }
 
   get pathname(): string {
-    return Source.part(this.ast.pathname)
+    return this.ast.pathname.source
   }
 
   get search(): string {
-    return Source.search(this.ast.search) ?? ''
+    return serializeSearch(this.ast.search) ?? ''
   }
 
   get source(): string {
@@ -106,7 +116,7 @@ export class RoutePattern<source extends string = string> {
   join<other extends string>(
     other: other | RoutePattern<other>,
     options?: RoutePatternOptions,
-  ): RoutePattern<JoinResult<source, other>> {
+  ): RoutePattern<Join<source, other>> {
     other = typeof other === 'string' ? new RoutePattern(other, options) : other
     let ignoreCase = options?.ignoreCase ?? (this.ignoreCase || other.ignoreCase)
 
@@ -117,8 +127,8 @@ export class RoutePattern<source extends string = string> {
           protocol: other.ast.protocol ?? this.ast.protocol,
           hostname: other.ast.hostname ?? this.ast.hostname,
           port: other.ast.port ?? this.ast.port,
-          pathname: Join.pathname(this.ast.pathname, other.ast.pathname, ignoreCase),
-          search: Join.search(this.ast.search, other.ast.search),
+          pathname: joinPathname(this.ast.pathname, other.ast.pathname, ignoreCase),
+          search: joinSearch(this.ast.search, other.ast.search),
         },
       },
       ignoreCase: {
@@ -128,7 +138,7 @@ export class RoutePattern<source extends string = string> {
     })
   }
 
-  href(...args: Href.Args<source>): string {
+  href(...args: HrefArgs<source>): string {
     let [params, searchParams] = args
     params ??= {}
     searchParams ??= {}
@@ -142,12 +152,12 @@ export class RoutePattern<source extends string = string> {
 
       // hostname
       if (this.ast.hostname === null) {
-        throw new Href.HrefError({
+        throw new HrefError({
           type: 'missing-hostname',
           pattern: this,
         })
       }
-      let hostname = Href.part(this, this.ast.hostname, params)
+      let hostname = this.ast.hostname.href(this, params)
 
       // port
       let port = this.ast.port === null ? '' : `:${this.ast.port}`
@@ -155,11 +165,11 @@ export class RoutePattern<source extends string = string> {
     }
 
     // pathname
-    let pathname = Href.part(this, this.ast.pathname, params)
+    let pathname = this.ast.pathname.href(this, params)
     result += '/' + pathname
 
     // search
-    let search = Href.search(this, searchParams)
+    let search = hrefSearch(this, searchParams)
     if (search) result += `?${search}`
 
     return result
@@ -194,7 +204,7 @@ export class RoutePattern<source extends string = string> {
     let pathname = this.ast.pathname.match(url.pathname.slice(1))
     if (pathname === null) return null
 
-    if (!Search.test(url.searchParams, this.ast.search, this.ignoreCase)) return null
+    if (!matchSearch(url.searchParams, this.ast.search, this.ignoreCase)) return null
 
     let params: Record<string, string | undefined> = {}
 
