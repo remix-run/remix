@@ -1,10 +1,10 @@
 import { split } from './route-pattern/split.ts'
-import * as Pathname from './route-pattern/pathname.ts'
 import * as Search from './route-pattern/search.ts'
 import { PartPattern, type PartPatternMatch } from './route-pattern/part-pattern.ts'
-import type { Join, Params } from './types/index.ts'
+import type { Join as JoinResult, Params } from './types/index.ts'
 import * as Parse from './route-pattern/parse.ts'
 import * as Href from './route-pattern/href.ts'
+import * as Join from './route-pattern/join.ts'
 
 type AST = {
   protocol: 'http' | 'https' | 'http(s)' | null
@@ -104,7 +104,7 @@ export class RoutePattern<source extends string = string> {
   join<other extends string>(
     other: other | RoutePattern<other>,
     options?: RoutePatternOptions,
-  ): RoutePattern<Join<source, other>> {
+  ): RoutePattern<JoinResult<source, other>> {
     other = typeof other === 'string' ? new RoutePattern(other, options) : other
     let ignoreCase = options?.ignoreCase ?? (this.ignoreCase || other.ignoreCase)
 
@@ -115,8 +115,8 @@ export class RoutePattern<source extends string = string> {
           protocol: other.ast.protocol ?? this.ast.protocol,
           hostname: other.ast.hostname ?? this.ast.hostname,
           port: other.ast.port ?? this.ast.port,
-          pathname: Pathname.join(this.ast.pathname, other.ast.pathname, ignoreCase),
-          search: Search.join(this.ast.search, other.ast.search),
+          pathname: Join.pathname(this.ast.pathname, other.ast.pathname, ignoreCase),
+          search: Join.search(this.ast.search, other.ast.search),
         },
       },
       ignoreCase: {
