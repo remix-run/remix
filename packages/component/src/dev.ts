@@ -8,39 +8,16 @@
  * @module @remix-run/component/dev
  */
 
-import { setComponentStalenessCheck } from './lib/refresh.ts'
-import type { VirtualRoot } from './lib/vdom.ts'
+import { setComponentStalenessCheck, reconcileAllRoots } from './lib/refresh.ts'
 
 export { setComponentStalenessCheck }
-
-// Root registry for HMR reconciliation
-// Track roots in an array for iteration
-let rootsArray: VirtualRoot[] = []
-
-/**
- * Register a root for HMR reconciliation.
- * When components are marked stale, call `requestReconciliation()` to
- * trigger reconciliation on all registered roots.
- *
- * @param root The root to register
- * @returns Cleanup function to unregister the root
- */
-export function registerRoot(root: VirtualRoot): () => void {
-  rootsArray.push(root)
-  return () => {
-    let index = rootsArray.indexOf(root)
-    if (index !== -1) {
-      rootsArray.splice(index, 1)
-    }
-  }
-}
 
 /**
  * Trigger reconciliation on all registered roots.
  * This is called by HMR after marking components as stale.
+ *
+ * Roots are automatically registered when created and unregistered when removed.
  */
 export function requestReconciliation(): void {
-  rootsArray.forEach((root) => {
-    root.reconcile()
-  })
+  reconcileAllRoots()
 }

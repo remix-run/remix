@@ -419,16 +419,16 @@ The beauty of this approach is its simplicity:
 ```ts
 // packages/component/src/lib/refresh.ts (internal file, not exported)
 type ComponentStalenessCheck = (type: Function) => boolean
-let stalenessCheck: ComponentStalenessCheck | null = null
+let componentStalenessCheck: ComponentStalenessCheck | null = null
 
 // Internal setter (used by dev.ts)
 export function setComponentStalenessCheck(check: ComponentStalenessCheck) {
-  stalenessCheck = check
+  componentStalenessCheck = check
 }
 
 // Internal checker (used by vdom.ts)
 export function checkComponentStaleness(type: Function): boolean {
-  return stalenessCheck?.(type) ?? false
+  return componentStalenessCheck?.(type) ?? false
 }
 ```
 
@@ -1408,3 +1408,425 @@ Deleted temporary test files:
 - `packages/dev-assets-middleware/manual-browser-test.html`
 - `packages/dev-assets-middleware/e2e/fixtures/public/manual-test.html`
 - `packages/dev-assets-middleware/e2e/fixtures/app/ManualCounter.tsx`
+
+---
+
+### Session 4: Verification & Testing Complete (2026-01-30)
+
+**Objective:** Verify all tests pass after the Session 3 implementation, particularly the dev-assets-middleware e2e tests.
+
+**Test Results:**
+
+✅ **All E2E Tests Passing (15/15):**
+
+Running `pnpm --filter @remix-run/dev-assets-middleware run test:e2e`:
+
+- ✅ Assets Middleware E2E (4 tests)
+
+  - loads the app without console errors
+  - counter increments when clicked
+  - serves transformed TypeScript
+  - returns 404 for non-existent files
+
+- ✅ Basic HMR (5 tests)
+
+  - renders the counter initially
+  - preserves state when render body changes
+  - remounts when setup scope changes
+  - propagates changes from imported modules
+  - handles multiple rapid changes
+
+- ✅ Conditional Rendering Cleanup (1 test)
+
+  - cleans up HMR registry when components unmount
+
+- ✅ Multi-Component Modules (4 tests)
+
+  - renders both components from the same module
+  - updates Header without affecting Footer state
+  - updates Footer without affecting Header state
+  - remounts Header when its setup scope changes
+
+- ✅ HMR Remount Cleanup (1 test)
+  - triggers cleanup listeners when setup scope changes during remount
+
+✅ **Component Package Tests (155 passed, 2 skipped, 22 todo):**
+
+Running `pnpm --filter @remix-run/component run test`:
+
+- All refresh mechanism tests passing (5 tests)
+- All VDOM tests passing (107 tests)
+- All component tests passing (8 tests)
+- All other tests passing
+
+✅ **Dev-Assets-Middleware Unit Tests (137 passed):**
+
+Running `pnpm --filter @remix-run/dev-assets-middleware run test:unit`:
+
+- All transform tests passing
+- All HMR transform tests passing
+- All module graph tests passing
+- All middleware tests passing
+
+**Verification of Acceptance Criteria:**
+
+From the original task requirements:
+
+- ✅ **Refresh mechanism tests pass**: 5 unit tests verify staleness check triggers remount correctly
+- ✅ `requestRemount` triggers full teardown/recreation: Verified in e2e tests (remounts when setup scope changes)
+- ✅ New Handle created with fresh signal (1:1 Handle:instance): Verified in refresh unit tests
+- ✅ New DOM element created (no reuse of old DOM nodes): Verified in refresh unit tests
+- ✅ Old Handle stays aborted (no mutation back to earlier state): Verified in refresh unit tests
+- ✅ Setup hash correctly tracked across remounts (no "first run" loops): Verified in e2e tests
+- ✅ No infinite loops or "render after removed" warnings: All e2e tests pass without errors
+- ✅ No scheduler issues with old components: All e2e tests pass
+- ✅ All tests pass (unit + integration + e2e): **CONFIRMED**
+- ✅ Demo app HMR works with setup scope changes: Verified in Session 3 manual testing
+
+**Summary:**
+
+The "New Handle on Remount" architectural work is **COMPLETE** and fully tested:
+
+1. **Architecture implemented**: Staleness-based remounting using inversion of control pattern
+2. **Core mechanism working**: Components remount with brand new Handles when setup scope changes
+3. **Hash persistence fixed**: Setup hashes survive remounts via stable string keys
+4. **Registry cleanup fixed**: Components don't disappear during remount
+5. **All tests passing**: 307 total tests (155 component + 137 unit + 15 e2e)
+
+**Key Architectural Achievements:**
+
+1. **Minimal API surface**: Single hook point (`setComponentStalenessCheck`) in component package
+2. **Clean separation**: HMR layer on top, reconciler doesn't know about HMR
+3. **Stable keys**: Uses `moduleUrl:componentName` for tracking across HMR updates
+4. **State-based detection**: Uses empty state to distinguish old vs new handles
+5. **Root reconciliation**: Triggers remount from root instead of individual handles
+6. **Auto-registration**: Roots register automatically via global hook
+
+**Files Modified:**
+
+**Component Package:**
+
+- `packages/component/src/lib/refresh.ts` - New staleness infrastructure
+- `packages/component/src/dev.ts` - Public dev API + root registration
+- `packages/component/src/lib/vdom.ts` - Staleness check before reusing handle
+- `packages/component/package.json` - Added `./dev` export
+
+**Dev Assets Middleware:**
+
+- `packages/dev-assets-middleware/src/virtual/hmr-runtime.ts` - Complete rewrite of remount mechanism
+- `packages/dev-assets-middleware/src/lib/hmr-transform.ts` - Updated `__hmr_setup` call signature + baseOffset fix
+
+**Test Status:**
+
+- All unit tests passing
+- All e2e tests passing
+- All component tests passing
+- No linter errors
+- Manual demo app testing successful
+
+**Next Steps:**
+
+The "New Handle on Remount" work is complete. Possible follow-up tasks (if needed):
+
+1. Consider adding more edge case tests (though current coverage is comprehensive)
+2. Document the architecture in developer docs (if desired)
+3. Move on to other HMR features or assets work
+
+---
+
+### Session 4 (continued): Static Checks Fixed (2026-01-30)
+
+**Fixed all linting and type errors:**
+
+✅ **TypeScript Errors Fixed:**
+
+- Added `Handle` type import to `refresh.test.tsx`
+- Added `@ts-expect-error` comments for intentional runtime checks in tests
+- Added global type declaration for `__remixDevRegisterRoot` in `vdom.ts`
+- Changed `var` to `let` in global declarations (per project style guide)
+
+✅ **JSDoc Errors Fixed:**
+
+- Added missing `@param` and `@returns` tags to `refresh.ts` functions
+- Removed hyphens from JSDoc param descriptions (per project linting rules)
+
+✅ **Formatting Fixed:**
+
+- Ran `pnpm run format` to fix all Prettier issues
+
+**Final Static Check Results:**
+
+✅ `pnpm run lint` - PASSING (0 errors, 0 warnings)
+✅ `pnpm run format:check` - PASSING (all files formatted correctly)
+✅ `pnpm --filter @remix-run/component run typecheck` - PASSING
+✅ `pnpm --filter @remix-run/dev-assets-middleware run typecheck` - PASSING
+✅ All tests passing (155 component + 152 dev-assets-middleware = 307 total)
+
+**Summary:**
+
+The codebase is now in a clean state with:
+
+- All tests passing
+- All TypeScript checks passing
+- All linting passing
+- All formatting correct
+
+Ready for code review and feedback.
+
+---
+
+### Session 4 (continued): Removed Global Coupling (2026-01-30)
+
+**Problem Identified:**
+
+The root registration mechanism was using `globalThis.__remixDevRegisterRoot` to communicate between the core component code and HMR runtime. This broke the clean separation achieved with the staleness check pattern.
+
+**Root Cause:**
+
+- `vdom.ts` (core) checked for `globalThis.__remixDevRegisterRoot` and called it directly
+- `hmr-runtime.ts` set `globalThis.__remixDevRegisterRoot = registerRoot`
+- This created coupling via globals instead of following the proper layered architecture
+
+**Solution Implemented:**
+
+Mirrored the staleness check pattern to follow clean architecture:
+
+1. **Added internal APIs in `refresh.ts`:**
+
+   - `setRootRegistrationCallback(callback)` - internal setter
+   - `notifyRootCreated(root)` - internal notifier called by vdom.ts
+   - Added `RootRegistrationCallback` type
+
+2. **Exported setter from `dev.ts`:**
+
+   - Added `setRootRegistrationCallback` to public dev API
+   - Now follows: `vdom.ts` → `refresh.ts` (internal) → `dev.ts` (public) → `hmr-runtime.ts`
+
+3. **Updated `vdom.ts`:**
+
+   - Removed `globalThis.__remixDevRegisterRoot` check
+   - Replaced with `notifyRootCreated(virtualRoot)` call
+   - Applied to both `createRangeRoot` and `createRoot`
+   - Removed global type declaration
+
+4. **Updated `hmr-runtime.ts`:**
+   - Imported `setRootRegistrationCallback` from `@remix-run/component/dev`
+   - Called `setRootRegistrationCallback(registerRoot)` at module initialization
+   - Removed global declaration for `__remixDevRegisterRoot`
+   - Removed `globalThis.__remixDevRequestReconciliation` usage (replaced with direct `requestReconciliation()` call)
+
+**Architecture Now Consistent:**
+
+Both dev integration points follow the same clean pattern:
+
+**Staleness Check:**
+
+- `vdom.ts` → `checkComponentStaleness()` (internal) → `dev.ts` exports `setComponentStalenessCheck` → `hmr-runtime.ts` registers
+
+**Root Registration:**
+
+- `vdom.ts` → `notifyRootCreated()` (internal) → `dev.ts` exports `setRootRegistrationCallback` → `hmr-runtime.ts` registers
+
+**Benefits:**
+
+- ✅ No global coupling between core and HMR
+- ✅ Clean layered architecture (internal → public API → consumer)
+- ✅ Type-safe communication
+- ✅ Consistent patterns across all dev integration points
+- ✅ Core component code has zero knowledge of HMR specifics
+
+**Verification:**
+
+- ✅ All 155 component tests passing
+- ✅ All 152 dev-assets-middleware tests passing (including 15 e2e HMR tests)
+- ✅ TypeScript checks passing
+- ✅ Linting passing
+- ✅ Formatting passing
+- ✅ No `globalThis.__remix*` references remaining in codebase
+
+**Files Modified:**
+
+- `packages/component/src/lib/refresh.ts` - Added root registration callback APIs
+- `packages/component/src/dev.ts` - Exported `setRootRegistrationCallback`
+- `packages/component/src/lib/vdom.ts` - Removed global, added `notifyRootCreated()` calls
+- `packages/dev-assets-middleware/src/virtual/hmr-runtime.ts` - Registered callback via public API, removed globals
+
+---
+
+### Session 4 (continued): React-Style Root Registry (2026-01-30)
+
+**Problem Identified:**
+
+The previous refactoring still leaked implementation details to HMR:
+
+- Root registry was in `dev.ts` (consumed by HMR)
+- HMR managed the component package's roots via `registerRoot()` callback
+- `VirtualRoot` objects were exposed outside the component core
+- `setRootRegistrationCallback` existed only so HMR could build its own root registry
+
+**How React Does It:**
+
+From the React-Refresh reference code:
+
+- React internally tracks all Fiber roots in `ReactFiberReconciler.ts`
+- Roots auto-register themselves when created
+- The refresh runtime never sees root objects
+- It just calls `scheduleRoot()` and React's internal scheduler handles the rest
+- The root registry is completely private to React
+
+**Solution Implemented:**
+
+Moved root registry into component package, following React's architecture:
+
+1. **Root registry now private in `refresh.ts`:**
+
+   ```ts
+   // Private root registry - dev tools never access this directly
+   let roots: VirtualRoot[] = []
+   ```
+
+2. **Roots auto-register/unregister:**
+
+   - `registerRoot(root)` - internal function called by vdom.ts
+   - `unregisterRoot(root)` - internal function called by root.remove()
+   - `reconcileAllRoots()` - internal function that iterates private registry
+
+3. **Dev API simplified:**
+
+   - Removed `registerRoot()` export (was public, now internal)
+   - Removed `setRootRegistrationCallback()` (no longer needed)
+   - Only exports `requestReconciliation()` which calls internal `reconcileAllRoots()`
+
+4. **HMR never sees roots:**
+   - Just calls `requestReconciliation()`
+   - Component package internally handles reconciliation of all registered roots
+   - No root objects exposed to dev tools
+
+**Architecture Comparison:**
+
+**Before (leaked details):**
+
+```
+vdom.ts creates root
+  → notifyRootCreated(root)
+  → callback passes root to dev.ts
+  → dev.ts stores root in array
+  → HMR calls requestReconciliation()
+  → dev.ts iterates roots and calls root.reconcile()
+```
+
+**After (private registry):**
+
+```
+vdom.ts creates root
+  → internally calls registerRoot(root)
+  → root stored in private registry (refresh.ts)
+
+HMR needs reconciliation:
+  → calls requestReconciliation() (from dev.ts)
+  → dev.ts calls internal reconcileAllRoots()
+  → internal code iterates private registry and reconciles
+```
+
+**Benefits:**
+
+- ✅ Root registry is private to component package
+- ✅ Dev tools never see `VirtualRoot` objects
+- ✅ Simpler public API (just `requestReconciliation`)
+- ✅ Matches React-Refresh architecture
+- ✅ No implementation details leaked to HMR
+- ✅ Auto-registration/unregistration (no manual lifecycle management)
+
+**Files Modified:**
+
+- `packages/component/src/lib/refresh.ts`:
+  - Moved root registry from dev.ts to here (private)
+  - Added internal `registerRoot()`, `unregisterRoot()`, `reconcileAllRoots()`
+  - Removed `setRootRegistrationCallback`, `notifyRootCreated`, `RootRegistrationCallback`
+- `packages/component/src/dev.ts`:
+  - Removed all root registry code (now internal)
+  - Removed `registerRoot` export
+  - Removed `setRootRegistrationCallback` export
+  - `requestReconciliation()` now just calls internal `reconcileAllRoots()`
+- `packages/component/src/lib/vdom.ts`:
+  - Both `createRangeRoot` and `createRoot` call `registerRoot(virtualRoot)` after creation
+  - Both call `unregisterRoot(virtualRoot)` in their `remove()` methods
+  - Removed `notifyRootCreated` import
+- `packages/dev-assets-middleware/src/virtual/hmr-runtime.ts`:
+  - Removed `setRootRegistrationCallback` import
+  - Removed `registerRoot` import
+  - Removed `VirtualRoot` type import (HMR never sees roots now)
+  - Just imports and calls `requestReconciliation()`
+
+**Verification:**
+
+- ✅ All 155 component tests passing
+- ✅ All 15 e2e HMR tests passing
+- ✅ TypeScript checks passing
+- ✅ Linting passing
+- ✅ Formatting passing
+- ✅ Zero leakage of root objects to HMR
+- ✅ Matches React-Refresh architecture
+
+---
+
+### Session 4 (continued): Performance Optimization - Export Staleness Check Directly (2026-01-30)
+
+**Problem Identified:**
+
+The staleness check happens in a hot code path (reconciler's `diffComponent` function). Even in production where no staleness check is registered, we were wrapping it in a function and tracking it with a boolean, creating unnecessary indirection.
+
+**Solution Implemented:**
+
+Export the staleness check function directly - simpler and just as fast:
+
+1. **Export function directly from `refresh.ts`:**
+
+   ```ts
+   // Performance optimization: export directly so hot code paths can check existence
+   // Null when no check is registered (production), function when HMR is active
+   export let componentStalenessCheck: ComponentStalenessCheck | null = null
+
+   export function setComponentStalenessCheck(check: ComponentStalenessCheck) {
+     componentStalenessCheck = check
+   }
+   ```
+
+2. **Use optional chaining in hot path (`vdom.ts`):**
+
+   ```ts
+   // Before (wrapper function + separate tracking):
+   if (hasStalenessCheck && checkComponentStaleness(curr.type)) {
+
+   // After (direct check with optional chaining):
+   if (componentStalenessCheck?.(curr.type)) {
+   ```
+
+**Benefits:**
+
+- ✅ Zero overhead in production (no HMR, `componentStalenessCheck` is null)
+- ✅ Simpler - no double tracking with boolean + function
+- ✅ Direct null check is extremely fast
+- ✅ Eliminates wrapper function entirely
+
+**Performance Impact:**
+
+In production (no HMR):
+
+- Before: Wrapper function call → check if callback exists → return false
+- After: Optional chaining check → null, short-circuits immediately
+
+In development (HMR active):
+
+- Same as before (function exists, gets called)
+
+**Verification:**
+
+- ✅ All 155 component tests passing
+- ✅ All 15 e2e HMR tests passing (HMR still works correctly)
+- ✅ TypeScript, linting all passing
+
+**Files Modified:**
+
+- `packages/component/src/lib/refresh.ts` - Export `componentStalenessCheck` directly, removed `hasStalenessCheck` boolean and `checkComponentStaleness` wrapper
+- `packages/component/src/lib/vdom.ts` - Import and use `componentStalenessCheck` directly with optional chaining in `diffComponent`

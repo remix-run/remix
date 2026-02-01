@@ -2,18 +2,8 @@
 // HMR Runtime Module (served by @remix-run/dev-assets-middleware)
 // =============================================================================
 
-import { type Handle, type VirtualRoot } from '@remix-run/component'
-import {
-  setComponentStalenessCheck,
-  requestReconciliation,
-  registerRoot,
-} from '@remix-run/component/dev'
-
-// Global type augmentation for HMR root registration and reconciliation
-declare global {
-  var __remixDevRegisterRoot: ((root: VirtualRoot) => void) | undefined
-  var __remixDevRequestReconciliation: (() => void) | undefined
-}
+import { type Handle } from '@remix-run/component'
+import { setComponentStalenessCheck, requestReconciliation } from '@remix-run/component/dev'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -80,11 +70,6 @@ setComponentStalenessCheck((componentFn) => {
   if (!key) return false
   return stalenessForCurrentUpdate.has(key)
 })
-
-// Register global hooks for HMR
-// These avoid module instance issues by going through globals
-globalThis.__remixDevRegisterRoot = registerRoot
-globalThis.__remixDevRequestReconciliation = requestReconciliation
 
 // ---------------------------------------------------------------------------
 // Component State Storage
@@ -179,7 +164,7 @@ export function __hmr_register(
     // BUT: Don't delete if component is marked as stale (being remounted)
     let stableKey = `${moduleUrl}:${componentName}`
     let isBeingRemounted = stalenessForCurrentUpdate.has(stableKey)
-    
+
     if (componentEntry.handles.size === 0 && !isBeingRemounted) {
       moduleComponents.delete(componentName)
       if (moduleComponents.size === 0) {
@@ -215,7 +200,7 @@ export function __hmr_register_component(
 
   // Store the implementation
   moduleComponents.get(componentName)!.impl = componentFn
-  
+
   // Register the component function → key mapping for staleness checking
   let stableKey = `${moduleUrl}:${componentName}`
   componentToKey.set(componentFn, stableKey)
@@ -267,12 +252,7 @@ export function __hmr_update(
 
     // After calling all components (which marks stale ones), trigger reconciliation
     // This will cause the reconciler to check staleness and remount stale components
-    // Use global to avoid module instance issues
-    if (globalThis.__remixDevRequestReconciliation) {
-      globalThis.__remixDevRequestReconciliation()
-    } else {
-      console.error('[HMR] __remixDevRequestReconciliation not available!')
-    }
+    requestReconciliation()
 
     // Clear staleness after all updates are done and reconciliation has run
     // Use microtask to ensure this happens after the flush microtask
@@ -318,7 +298,7 @@ export function __hmr_setup(
 
   // Use moduleUrl:componentName as stable key across HMR updates
   let hashKey = `${moduleUrl}:${componentName}`
-  
+
   // Register the wrapper function → key mapping for staleness checking
   // This is the function the reconciler sees (the delegating wrapper)
   componentToKey.set(wrapper, hashKey)

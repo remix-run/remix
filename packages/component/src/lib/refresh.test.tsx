@@ -1,15 +1,16 @@
 import { test } from 'vitest'
 import { setComponentStalenessCheck } from './refresh.ts'
 import { createRoot } from './vdom.ts'
+import type { Handle } from './component.ts'
 
 test('component remounts when marked stale', async () => {
   let stalenessSet = new Set<Function>()
   setComponentStalenessCheck((fn) => stalenessSet.has(fn))
 
-  let setupCount = 0
+  let setupCount: number = 0
   let renderCount = 0
 
-  function MyComponent(handle) {
+  function MyComponent() {
     setupCount++
     return () => {
       renderCount++
@@ -39,6 +40,7 @@ test('component remounts when marked stale', async () => {
   root.flush()
 
   // Verify remount happened (setup ran again, render count reset)
+  // @ts-expect-error - This may have been mutated
   if (setupCount !== 2) throw new Error(`Expected setupCount to be 2, got ${setupCount}`)
   // Note: renderCount is 2 because it's a module-level variable, but in real HMR
   // the module would be reloaded. The important part is setup ran again.
@@ -70,7 +72,7 @@ test('component with signal abort listener works correctly on remount', async ()
   let abortCallbackCount = 0
   let signals: AbortSignal[] = []
 
-  function MyComponent(handle) {
+  function MyComponent(handle: Handle) {
     signals.push(handle.signal)
     handle.signal.addEventListener('abort', () => {
       abortCallbackCount++
@@ -94,6 +96,7 @@ test('component with signal abort listener works correctly on remount', async ()
   root.flush()
 
   // Verify we have two different signals
+  // @ts-expect-error - This may have been mutated
   if (signals.length !== 2) throw new Error(`Expected 2 signals, got ${signals.length}`)
   if (signals[0] === signals[1]) {
     throw new Error('Expected different signal instances, got same reference')
@@ -133,7 +136,7 @@ test('multiple instances of same component all remount when marked stale', async
 
   let setupCounts = new Map<number, number>()
 
-  function Counter(handle) {
+  function Counter() {
     let id = Math.random()
     setupCounts.set(id, (setupCounts.get(id) || 0) + 1)
     return () => <div data-id={id}>Count: {setupCounts.get(id)}</div>
@@ -195,7 +198,7 @@ test('staleness is scoped to current update batch', async () => {
 
   let setupCount = 0
 
-  function MyComponent(handle) {
+  function MyComponent() {
     setupCount++
     return () => <div>Hello</div>
   }
@@ -213,6 +216,7 @@ test('staleness is scoped to current update batch', async () => {
   root.render(<MyComponent />)
   root.flush()
 
+  // @ts-expect-error - This may have been mutated
   if (setupCount !== 2) throw new Error(`Expected setupCount to be 2, got ${setupCount}`)
 
   // Staleness should be cleared - verify by manually removing from set
@@ -238,7 +242,7 @@ test('component not marked stale continues to reuse handle normally', async () =
   let setupCount = 0
   let renderCount = 0
 
-  function MyComponent(handle) {
+  function MyComponent() {
     setupCount++
     return () => {
       renderCount++
@@ -264,6 +268,7 @@ test('component not marked stale continues to reuse handle normally', async () =
   if (setupCount !== 1) {
     throw new Error(`Expected setupCount to still be 1 (no remount), got ${setupCount}`)
   }
+  // @ts-expect-error - This may have been mutated
   if (renderCount !== 2) throw new Error(`Expected renderCount to be 2, got ${renderCount}`)
 
   let secondDiv = container.querySelector('div')

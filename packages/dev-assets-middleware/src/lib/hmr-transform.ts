@@ -2,9 +2,12 @@
  * HMR Transform
  *
  * This transform converts Remix components to support HMR by:
- * 1. Hoisting setup variables to a stable state object
+ * 1. Hoisting setup variables to a stable state object (__s)
  * 2. Generating a hash of the setup code to detect changes
  * 3. Creating a delegating wrapper pattern for hot-swapping
+ *
+ * The state object (__s) persists across HMR updates, allowing setup variables
+ * to maintain their values when only the render function changes.
  *
  * Runs on JS (post-esbuild), not TypeScript source.
  * Detects components via: PascalCase function that returns a function expression.
@@ -35,6 +38,9 @@ import type {
   ObjectPattern,
   ObjectExpression,
   ImportDeclaration,
+  ObjectPatternProperty,
+  AssignmentPatternProperty,
+  KeyValuePatternProperty,
 } from '@swc/types'
 
 // Unified component info extracted from any function form
@@ -68,6 +74,9 @@ export interface TransformResult {
   map?: string
 }
 
+// Hash prefix for generated setup hashes
+const HASH_PREFIX = 'h'
+
 // Simple hash function for the setup code
 function simpleHash(str: string): string {
   let hash = 0
@@ -75,7 +84,7 @@ function simpleHash(str: string): string {
     let char = str.charCodeAt(i)
     hash = ((hash << 5) - hash + char) | 0
   }
-  return 'h' + Math.abs(hash).toString(36)
+  return HASH_PREFIX + Math.abs(hash).toString(36)
 }
 
 // Check if a name is PascalCase (starts with uppercase)
@@ -85,11 +94,28 @@ function isPascalCase(name: string): boolean {
 
 // Dummy context value for synthetic nodes.
 // SWC uses ctxt for hygiene/scoping. 0 is safe for synthetic nodes.
-let DUMMY_CTXT = 0
+const DUMMY_CTXT = 0
 
 // Create a synthetic span (for generated code)
 function syntheticSpan(): Span {
   return { start: 0, end: 0, ctxt: DUMMY_CTXT }
+}
+
+// Extract identifier name from an ObjectPatternProperty
+// Handles both AssignmentPatternProperty ({ signal }) and KeyValuePatternProperty ({ signal: s })
+function getPatternPropertyKey(prop: ObjectPatternProperty): string | null {
+  if (prop.type === 'AssignmentPatternProperty') {
+    // { signal } or { signal = value }
+    return prop.key.value
+  }
+  if (prop.type === 'KeyValuePatternProperty') {
+    // { signal: s } - we want the key (left side)
+    if (prop.key.type === 'Identifier') {
+      return prop.key.value
+    }
+  }
+  // RestElement or other unsupported patterns
+  return null
 }
 
 // Create an identifier AST node
@@ -104,28 +130,34 @@ function createIdentifier(name: string, span: Span = syntheticSpan()): Identifie
 }
 
 // Convert a Pattern to an Expression (for passing params through function calls)
+// This is needed to convert destructuring patterns like {signal, params} into
+// object expressions that can be passed as arguments
 function patternToExpression(pattern: Pattern): Expression {
   if (pattern.type === 'Identifier') {
     return pattern as any as Expression
   }
-  // For ObjectPattern and other complex patterns, reconstruct as object expression
+
   if (pattern.type === 'ObjectPattern') {
     return {
       type: 'ObjectExpression',
       span: pattern.span,
-      properties: pattern.properties.map((prop: any) => {
-        if (prop.type === 'KeyValuePatternProperty') {
+      properties: pattern.properties
+        .map((prop) => {
+          let keyName = getPatternPropertyKey(prop)
+          if (!keyName) return null
+
+          let key = createIdentifier(keyName)
           return {
-            type: 'KeyValueProperty',
-            key: prop.key,
-            value: prop.key, // Use key as value (shorthand-like reconstruction)
+            type: 'KeyValueProperty' as const,
+            key,
+            value: key, // Shorthand-style: key becomes the value
           }
-        }
-        return prop
-      }),
+        })
+        .filter((prop): prop is NonNullable<typeof prop> => prop !== null),
     } as any
   }
-  // Fallback: return as-is and hope it works
+
+  // Fallback for other pattern types (array patterns, rest patterns, etc.)
   return pattern as any
 }
 
@@ -258,31 +290,20 @@ function createBlockStatement(stmts: Statement[]): BlockStatement {
 // Convert an ObjectPattern (like { signal, params }) to an ObjectExpression.
 // This is needed when we want to pass destructured params to HMR functions.
 function convertObjectPatternToExpression(pattern: ObjectPattern): ObjectExpression {
-  let properties = pattern.properties.map((prop: any) => {
-    if (prop.type === 'AssignmentPatternProperty') {
-      // { signal } becomes { signal: signal } - use shorthand property
+  let properties = pattern.properties
+    .map((prop) => {
+      // Both AssignmentPatternProperty ({ signal }) and KeyValuePatternProperty ({ signal: s })
+      // become { signal: signal } for passing through to HMR functions
+      let keyName = getPatternPropertyKey(prop)
+      if (!keyName) return null
+
       return {
         type: 'KeyValueProperty' as const,
-        key: createIdentifier(prop.key.value),
-        value: createIdentifier(prop.key.value),
+        key: createIdentifier(keyName),
+        value: createIdentifier(keyName),
       }
-    } else if (prop.type === 'KeyValuePatternProperty') {
-      // { signal: s } - use the key as shorthand
-      if (prop.key.type === 'Identifier') {
-        return {
-          type: 'KeyValueProperty' as const,
-          key: createIdentifier(prop.key.value),
-          value: createIdentifier(prop.key.value),
-        }
-      }
-    }
-    // Fallback - shouldn't happen for typical patterns
-    return {
-      type: 'KeyValueProperty' as const,
-      key: createIdentifier('unknown'),
-      value: createIdentifier('unknown'),
-    }
-  })
+    })
+    .filter((prop): prop is NonNullable<typeof prop> => prop !== null)
 
   return {
     type: 'ObjectExpression',
@@ -442,7 +463,7 @@ function extractRenderBodyFromBlock(
   body: BlockStatement,
 ): { body: Expression; params: Pattern[]; isArrow: boolean } | null {
   let returnStmt = body.stmts.find((s: any): s is ReturnStatement => s.type === 'ReturnStatement')
-  if (!returnStmt || !returnStmt.argument) return null
+  if (!returnStmt?.argument) return null
 
   let returnedFunc = returnStmt.argument
   if (
@@ -452,6 +473,7 @@ function extractRenderBodyFromBlock(
     return null
   }
 
+  // Arrow function - body can be expression or block
   if (returnedFunc.type === 'ArrowFunctionExpression') {
     let arrowFunc = returnedFunc as ArrowFunctionExpression
     return {
@@ -461,12 +483,13 @@ function extractRenderBodyFromBlock(
     }
   }
 
-  // FunctionExpression - find return statement in its body
+  // Regular function expression - find its return statement
   let funcExpr = returnedFunc as FunctionExpression
   let innerReturn = funcExpr.body?.stmts.find(
     (s: any): s is ReturnStatement => s.type === 'ReturnStatement',
   )
   if (!innerReturn?.argument) return null
+
   return {
     body: innerReturn.argument,
     params: funcExpr.params.map((p: any) => p.pat),
@@ -519,79 +542,73 @@ function computeSetupHash(
   source: string,
   baseOffset: number,
 ): string {
-  // Extract code from each statement using spans adjusted by baseOffset
-  // baseOffset compensates for SWC's span accumulation (spans accumulate across parse calls)
-  // NOTE: This does NOT work correctly when source has leading comments (e.g., "// filename")
-  // In that case, baseOffset over-compensates and extracts wrong code
+  // Extract the source text for each setup statement using SWC spans
+  // Normalize whitespace so formatting changes don't trigger remounts
   let setupParts = setupStatements.map((stmt) => {
-    let span = stmt.span
-    let start = span.start - baseOffset
-    let end = span.end - baseOffset
+    let start = stmt.span.start - baseOffset
+    let end = stmt.span.end - baseOffset
     return source.slice(start, end).trim()
   })
 
-  let setupCode = setupParts.join('\n').replace(/\s+/g, ' ')
-  return simpleHash(setupCode)
+  let normalizedSetupCode = setupParts.join('\n').replace(/\s+/g, ' ')
+  return simpleHash(normalizedSetupCode)
 }
 
-// Deep clone and transform an expression, replacing identifier references
-// with __s.identifier for setup variables.
-function transformExpression(expr: Expression, setupVarNames: Set<string>): Expression {
-  // Helper to recursively transform
-  function transform<T>(node: T): T {
-    if (node === null || node === undefined) return node
-    if (typeof node !== 'object') return node
+// Transform AST nodes to replace setup variable references with __s.varName
+function transformAstNode<T>(node: T, setupVarNames: Set<string>): T {
+  if (node === null || node === undefined) return node
+  if (typeof node !== 'object') return node
 
-    // Handle arrays
-    if (Array.isArray(node)) {
-      return node.map(transform) as T
-    }
-
-    // Cast to any for property access
-    let obj = node as Record<string, unknown>
-
-    // Check if this is an identifier that should be transformed
-    if (obj.type === 'Identifier' && typeof obj.value === 'string') {
-      let id = obj as unknown as Identifier
-      if (setupVarNames.has(id.value)) {
-        // Replace with __s.identifier (member expression)
-        return createMemberExpression('__s', id.value) as unknown as T
-      }
-    }
-
-    // Don't transform identifiers that are property names in member expressions
-    if (obj.type === 'MemberExpression') {
-      let memberExpr = obj as unknown as MemberExpression
-      return {
-        ...memberExpr,
-        object: transform(memberExpr.object as Expression),
-        // Only transform computed properties, not identifier properties
-        property:
-          memberExpr.property.type === 'Computed'
-            ? transform(memberExpr.property)
-            : memberExpr.property,
-      } as unknown as T
-    }
-
-    // Recursively transform object properties
-    let result: Record<string, unknown> = {}
-    for (let key of Object.keys(obj)) {
-      result[key] = transform(obj[key])
-    }
-    return result as T
+  // Handle arrays
+  if (Array.isArray(node)) {
+    return node.map((item) => transformAstNode(item, setupVarNames)) as T
   }
 
-  return transform(expr)
+  let obj = node as Record<string, unknown>
+
+  // Transform identifiers to member expressions for setup variables
+  if (obj.type === 'Identifier' && typeof obj.value === 'string') {
+    let id = obj as unknown as Identifier
+    if (setupVarNames.has(id.value)) {
+      return createMemberExpression('__s', id.value) as unknown as T
+    }
+  }
+
+  // Special handling for member expressions - don't transform property names
+  if (obj.type === 'MemberExpression') {
+    let memberExpr = obj as unknown as MemberExpression
+    return {
+      ...memberExpr,
+      object: transformAstNode(memberExpr.object as Expression, setupVarNames),
+      // Only transform computed properties, not dot-notation identifiers
+      property:
+        memberExpr.property.type === 'Computed'
+          ? transformAstNode(memberExpr.property, setupVarNames)
+          : memberExpr.property,
+    } as unknown as T
+  }
+
+  // Recursively transform all object properties
+  let result: Record<string, unknown> = {}
+  for (let key of Object.keys(obj)) {
+    result[key] = transformAstNode(obj[key], setupVarNames)
+  }
+  return result as T
+}
+
+// Transform an expression, replacing setup variable references with __s.varName
+function transformExpression(expr: Expression, setupVarNames: Set<string>): Expression {
+  return transformAstNode(expr, setupVarNames)
 }
 
 // Transform a statement, replacing variable references with __s.varName
 function transformStatement(stmt: Statement, setupVarNames: Set<string>): Statement {
-  // Transform variable declarations to assignment expressions
+  // Special case: Transform variable declarations to assignment expressions
+  // Converts `let count = 0` to `__s.count = 0`
   if (stmt.type === 'VariableDeclaration' && stmt.kind === 'let') {
     let assignments: Statement[] = []
     for (let decl of stmt.declarations) {
       if (decl.id.type === 'Identifier' && decl.init) {
-        // Convert `let varName = value` to `__s.varName = value`
         let transformedInit = transformExpression(decl.init, setupVarNames)
         assignments.push(
           createExpressionStatement({
@@ -604,10 +621,11 @@ function transformStatement(stmt: Statement, setupVarNames: Set<string>): Statem
         )
       }
     }
-    // If we have a single assignment, return it; otherwise wrap in block if needed
-    if (assignments.length === 0) return stmt // No transformable declarations
+
+    if (assignments.length === 0) return stmt
     if (assignments.length === 1) return assignments[0]
-    // Multiple declarations - return them all (caller will handle)
+
+    // Multiple declarations in one statement - return them all as a block
     return {
       type: 'BlockStatement',
       span: stmt.span,
@@ -615,48 +633,8 @@ function transformStatement(stmt: Statement, setupVarNames: Set<string>): Statem
     } as BlockStatement
   }
 
-  // For other statements, recursively transform using the expression transformer
-  function transform<T>(node: T): T {
-    if (node === null || node === undefined) return node
-    if (typeof node !== 'object') return node
-
-    // Handle arrays
-    if (Array.isArray(node)) {
-      return node.map(transform) as T
-    }
-
-    let obj = node as Record<string, unknown>
-
-    // Transform identifiers
-    if (obj.type === 'Identifier' && typeof obj.value === 'string') {
-      let id = obj as unknown as Identifier
-      if (setupVarNames.has(id.value)) {
-        return createMemberExpression('__s', id.value) as unknown as T
-      }
-    }
-
-    // Don't transform identifiers that are property names in member expressions
-    if (obj.type === 'MemberExpression') {
-      let memberExpr = obj as unknown as MemberExpression
-      return {
-        ...memberExpr,
-        object: transform(memberExpr.object as Expression),
-        property:
-          memberExpr.property.type === 'Computed'
-            ? transform(memberExpr.property)
-            : memberExpr.property,
-      } as unknown as T
-    }
-
-    // Recursively transform properties
-    let result: Record<string, unknown> = {}
-    for (let key of Object.keys(obj)) {
-      result[key] = transform(obj[key])
-    }
-    return result as T
-  }
-
-  return transform(stmt)
+  // For all other statements, recursively transform using the shared AST transformer
+  return transformAstNode(stmt, setupVarNames)
 }
 
 // Generate the transformed module items for a component
@@ -788,24 +766,8 @@ function generateHmrComponent(
     ]),
   )
 
-  // Create the wrapper function
-  let wrapperBody: Statement[] = [
-    createLetDeclaration(
-      'impl',
-      createCallExpression('__hmr_get_component', [
-        createStringLiteral(moduleUrl),
-        createStringLiteral(name),
-      ]),
-    ),
-    createReturnStatement(createCallExpression('impl', [paramRef])),
-  ]
-
-  let wrapperFunc = createFunctionDeclaration(
-    name,
-    [paramPattern],
-    createBlockStatement(wrapperBody),
-    span, // Preserve original span for source mapping
-  )
+  // Create the wrapper function that delegates to the latest implementation
+  let wrapperFunc = createWrapperFunction(name, paramPattern, paramRef, moduleUrl, span)
 
   // Build the module items
   let items: ModuleItem[] = [implFunc, registerCall]
@@ -821,6 +783,31 @@ function generateHmrComponent(
   }
 
   return items
+}
+
+// Create the wrapper function that delegates to the current component implementation
+function createWrapperFunction(
+  name: string,
+  paramPattern: Pattern,
+  paramRef: Expression,
+  moduleUrl: string,
+  span: Span,
+): FunctionDeclaration {
+  return createFunctionDeclaration(
+    name,
+    [paramPattern],
+    createBlockStatement([
+      createLetDeclaration(
+        'impl',
+        createCallExpression('__hmr_get_component', [
+          createStringLiteral(moduleUrl),
+          createStringLiteral(name),
+        ]),
+      ),
+      createReturnStatement(createCallExpression('impl', [paramRef])),
+    ]),
+    span, // Preserve original span for source mapping
+  )
 }
 
 // Create an import declaration for HMR runtime functions
@@ -887,21 +874,25 @@ export async function transformComponent(
   }
 
   // Calculate base offset for span adjustment
-  // Use the first module item's position in source as the baseline, which skips leading comments
-  let firstModuleItemStart = 0
+  // SWC spans are absolute byte positions, but we need relative positions within the source
+  // This offset accounts for any leading content (like comments) before the first code
+  let baseOffset = 0
   if (ast.body.length > 0) {
-    // Find where the first module item actually appears in source
     let firstItem = ast.body[0]
-    // For imports/exports, search for "import" or "export" keyword
-    if (firstItem.type === 'ImportDeclaration') {
-      firstModuleItemStart = source.indexOf('import')
-    } else if (firstItem.type === 'ExportDeclaration') {
-      firstModuleItemStart = source.indexOf('export')
-    } else if (firstItem.type === 'FunctionDeclaration') {
-      firstModuleItemStart = source.indexOf('function')
+    let keyword =
+      firstItem.type === 'ImportDeclaration'
+        ? 'import'
+        : firstItem.type === 'ExportDeclaration'
+          ? 'export'
+          : firstItem.type === 'FunctionDeclaration'
+            ? 'function'
+            : null
+
+    if (keyword) {
+      let firstCodePosition = source.indexOf(keyword)
+      baseOffset = ast.span.start - firstCodePosition
     }
   }
-  let baseOffset = ast.span.start - firstModuleItemStart
 
   // Transform module items
   let newBody: ModuleItem[] = []
@@ -925,31 +916,26 @@ export async function transformComponent(
       }
     } else if (item.type === 'FunctionDeclaration') {
       component = extractComponentFromFunctionDecl(item)
-    } else if ((item as any).type === 'VariableDeclaration') {
-      component = extractComponentFromVarDecl(item as any)
+    } else if (item.type === 'VariableDeclaration') {
+      component = extractComponentFromVarDecl(item as VariableDeclaration)
     }
 
     // If we found a component, transform it
     if (component) {
-      try {
-        let setupVars = extractSetupVars(component.body)
-        let setupStatements = extractSetupStatements(component.body)
-        let setupHash = computeSetupHash(setupStatements, source, baseOffset)
-        let hmrItems = generateHmrComponent(
-          component,
-          moduleUrl,
-          setupVars,
-          setupStatements,
-          setupHash,
-          isExported,
-        )
-        newBody.push(...hmrItems)
-        transformed = true
-        hasTransformations = true
-      } catch (error) {
-        console.error('Error transforming component:', error)
-        throw error
-      }
+      let setupVars = extractSetupVars(component.body)
+      let setupStatements = extractSetupStatements(component.body)
+      let setupHash = computeSetupHash(setupStatements, source, baseOffset)
+      let hmrItems = generateHmrComponent(
+        component,
+        moduleUrl,
+        setupVars,
+        setupStatements,
+        setupHash,
+        isExported,
+      )
+      newBody.push(...hmrItems)
+      transformed = true
+      hasTransformations = true
     }
 
     if (!transformed) {
@@ -1014,7 +1000,7 @@ export async function transformComponent(
 }
 
 /**
- * Quick smoke check if source might contain a component.
+ * Quick check to see if source might contain a component.
  * Just checks for PascalCase declarations - the real detection happens in AST parsing.
  *
  * @param source The source code to check

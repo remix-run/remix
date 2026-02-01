@@ -12,7 +12,7 @@ import { invariant } from './invariant.ts'
 import { createDocumentState } from './document-state.ts'
 import { processStyle, createStyleManager, normalizeCssValue } from './style/index.ts'
 import type { ElementProps, RemixElement, RemixNode } from './jsx.ts'
-import { checkComponentStaleness } from './refresh.ts'
+import { componentStalenessCheck, registerRoot, unregisterRoot } from './refresh.ts'
 
 let fixmeIdCounter = 0
 
@@ -289,6 +289,7 @@ export function createRangeRoot(
     },
 
     remove() {
+      unregisterRoot(virtualRoot)
       root = null
     },
 
@@ -297,11 +298,8 @@ export function createRangeRoot(
     },
   }
 
-  // Auto-register root for HMR if dev API is available
-  // This allows HMR to trigger reconciliation when components are marked stale
-  if (typeof globalThis.__remixDevRegisterRoot === 'function') {
-    globalThis.__remixDevRegisterRoot(virtualRoot)
-  }
+  // Auto-register root for dev tools (e.g., HMR reconciliation)
+  registerRoot(virtualRoot)
 
   return virtualRoot
 }
@@ -363,6 +361,7 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
     },
 
     remove() {
+      unregisterRoot(virtualRoot)
       root = null
     },
 
@@ -371,11 +370,8 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
     },
   }
 
-  // Auto-register root for HMR if dev API is available
-  // This allows HMR to trigger reconciliation when components are marked stale
-  if (typeof globalThis.__remixDevRegisterRoot === 'function') {
-    globalThis.__remixDevRegisterRoot(virtualRoot)
-  }
+  // Auto-register root for dev tools (e.g., HMR reconciliation)
+  registerRoot(virtualRoot)
 
   return virtualRoot
 }
@@ -1027,7 +1023,8 @@ function diffComponent(
   }
 
   // Check if component is stale (e.g., marked for remount by HMR)
-  if (checkComponentStaleness(curr.type)) {
+  // Short-circuit if no staleness check is registered (performance optimization for production)
+  if (componentStalenessCheck?.(curr.type)) {
     // Component is stale - treat as type change (same as key change)
     // Remove old component completely (DOM + handle)
     remove(curr._content, domParent, scheduler)
