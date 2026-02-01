@@ -95,8 +95,8 @@ describe('TrieMatcher', () => {
         let match = matcher.match('https://example.com/users/123')
         assert.ok(match)
         assert.deepEqual(match.params, { id: '123' })
-        assert.equal(match.meta.pathname.length, 1)
-        assert.deepEqual(match.meta.pathname[0], {
+        assert.equal(match.paramsMeta.pathname.length, 1)
+        assert.deepEqual(match.paramsMeta.pathname[0], {
           name: 'id',
           type: ':',
           value: '123',
@@ -112,15 +112,15 @@ describe('TrieMatcher', () => {
         let match = matcher.match('https://example.com/api/v2/users/456')
         assert.ok(match)
         assert.deepEqual(match.params, { version: '2', id: '456' })
-        assert.equal(match.meta.pathname.length, 2)
-        assert.deepEqual(match.meta.pathname[0], {
+        assert.equal(match.paramsMeta.pathname.length, 2)
+        assert.deepEqual(match.paramsMeta.pathname[0], {
           name: 'version',
           type: ':',
           value: '2',
           begin: 5,
           end: 6,
         })
-        assert.deepEqual(match.meta.pathname[1], {
+        assert.deepEqual(match.paramsMeta.pathname[1], {
           name: 'id',
           type: ':',
           value: '456',
@@ -138,8 +138,8 @@ describe('TrieMatcher', () => {
         let match = matcher.match('https://example.com/files/docs/readme.txt')
         assert.ok(match)
         assert.deepEqual(match.params, { path: 'docs/readme.txt' })
-        assert.equal(match.meta.pathname.length, 1)
-        assert.deepEqual(match.meta.pathname[0], {
+        assert.equal(match.paramsMeta.pathname.length, 1)
+        assert.deepEqual(match.paramsMeta.pathname[0], {
           name: 'path',
           type: '*',
           value: 'docs/readme.txt',
