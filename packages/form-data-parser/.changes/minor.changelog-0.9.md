@@ -1,0 +1,1 @@
+Mention breaking change regarding the default value of `maxFiles` in 0.9.0
