@@ -3,9 +3,9 @@ BREAKING CHANGE: Rename match `meta` to `paramsMeta`
 For `RoutePattern.match` and `type RoutePatternMatch`:
 
 ```ts
-import { RoutePattern, type RoutePatternMatch } from "@remix-run/route-pattern"
+import { RoutePattern, type RoutePatternMatch } from '@remix-run/route-pattern'
 
-let pattern = new RoutePattern("...")
+let pattern = new RoutePattern('...')
 let match = pattern.match(url)
 
 // BEFORE
@@ -20,7 +20,7 @@ match.paramsMeta
 For `Matcher.match` and `type Match`:
 
 ```ts
-import { Matcher, type Match } from "@remix-run/route-pattern"
+import { Matcher, type Match } from '@remix-run/route-pattern'
 
 let matcher: Matcher = new ArrayMatcher() // Or TrieMatcher
 
