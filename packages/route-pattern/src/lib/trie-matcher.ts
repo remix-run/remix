@@ -48,7 +48,7 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
           pattern: match.pattern,
           url,
           params: match.params,
-          meta: { hostname: match.hostname, pathname: match.pathname },
+          paramsMeta: { hostname: match.hostname, pathname: match.pathname },
           data: match.data,
         }
       })

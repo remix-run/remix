@@ -34,7 +34,12 @@ export type RoutePatternMatch<source extends string = string> = {
   pattern: RoutePattern
   url: URL
   params: Params<source>
-  meta: {
+
+  /**
+   * Rich information about matched params (variables and wildcards) in the hostname and pathname,
+   * analogous to RegExp groups/indices.
+   */
+  paramsMeta: {
     hostname: PartPatternMatch
     pathname: PartPatternMatch
   }
@@ -232,7 +237,7 @@ export class RoutePattern<source extends string = string> {
       pattern: this,
       url,
       params: params as Params<source>,
-      meta: { hostname: hostname ?? [], pathname },
+      paramsMeta: { hostname: hostname ?? [], pathname },
     }
   }
 

@@ -65,11 +65,11 @@ export function compare(a: RoutePatternMatch, b: RoutePatternMatch): -1 | 0 | 1 
   }
 
   // Hostname comparison
-  let hostnameResult = compareHostname(a.url.hostname, a.meta.hostname, b.meta.hostname)
+  let hostnameResult = compareHostname(a.url.hostname, a.paramsMeta.hostname, b.paramsMeta.hostname)
   if (hostnameResult !== 0) return hostnameResult
 
   // Pathname comparison
-  let pathnameResult = comparePathname(a.meta.pathname, b.meta.pathname)
+  let pathnameResult = comparePathname(a.paramsMeta.pathname, b.paramsMeta.pathname)
   if (pathnameResult !== 0) return pathnameResult
 
   // Search comparison
@@ -81,8 +81,8 @@ export function compare(a: RoutePatternMatch, b: RoutePatternMatch): -1 | 0 | 1 
 
 function compareHostname(
   hostname: string,
-  a: RoutePatternMatch['meta']['hostname'],
-  b: RoutePatternMatch['meta']['hostname'],
+  a: RoutePatternMatch['paramsMeta']['hostname'],
+  b: RoutePatternMatch['paramsMeta']['hostname'],
 ): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
   if (a.length === 0 && b.length > 0) return 1
@@ -123,8 +123,8 @@ function compareHostname(
 }
 
 function comparePathname(
-  a: RoutePatternMatch['meta']['pathname'],
-  b: RoutePatternMatch['meta']['pathname'],
+  a: RoutePatternMatch['paramsMeta']['pathname'],
+  b: RoutePatternMatch['paramsMeta']['pathname'],
 ): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
   if (a.length === 0 && b.length > 0) return 1
