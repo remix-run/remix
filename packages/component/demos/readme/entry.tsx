@@ -1,5 +1,5 @@
-import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
-import { TypedEventTarget } from '@remix-run/interaction'
+import { createRoot, type Handle, type RemixNode } from 'remix/component'
+import { TypedEventTarget } from 'remix/interaction'
 
 // ============================================================================
 // Getting Started - Basic App Example

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
 
-import { generateCompressibleMimeTypesContent, generateMimeTypesContent } from './codegen.js'
+import { generateCompressibleMimeTypesContent, generateMimeTypesContent } from './codegen.ts'
 
 describe('generated files', () => {
   // Normalize line endings for cross-platform compatibility

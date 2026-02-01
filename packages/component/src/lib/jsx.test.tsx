@@ -96,4 +96,154 @@ describe('jsx', () => {
       let good = <Counter setup={10} label="Count" />
     })
   })
+
+  describe('animate', () => {
+    it('accepts true for individual animation types', () => {
+      let element = <div animate={{ enter: true }}>Hello</div>
+      let element2 = <div animate={{ enter: true, exit: true, layout: true }}>Hello</div>
+    })
+
+    it('accepts enter-only config', () => {
+      let element = (
+        <div
+          animate={{
+            enter: { opacity: 0, duration: 200 },
+          }}
+        >
+          Enter only
+        </div>
+      )
+    })
+
+    it('accepts exit-only config', () => {
+      let element = (
+        <div
+          animate={{
+            exit: { opacity: 0, duration: 150 },
+          }}
+        >
+          Exit only
+        </div>
+      )
+    })
+
+    it('accepts shorthand config with single keyframe', () => {
+      let element = (
+        <div
+          animate={{
+            enter: { opacity: 0, transform: 'scale(0.85)', duration: 200, easing: 'ease-out' },
+            exit: { opacity: 0, duration: 150 },
+          }}
+        >
+          Shorthand config
+        </div>
+      )
+    })
+
+    it('accepts full keyframes config', () => {
+      let element = (
+        <div
+          animate={{
+            enter: {
+              keyframes: [
+                { opacity: 0, transform: 'scale(0.8)' },
+                { opacity: 1, transform: 'scale(1.05)', offset: 0.7 },
+                { opacity: 1, transform: 'scale(1)' },
+              ],
+              duration: 300,
+              easing: 'ease-out',
+              // @ts-expect-error - keyframes defined so only config here
+              opacity: 0,
+            },
+            exit: {
+              opacity: 0,
+              transform: 'scale(0.9)',
+              duration: 150,
+            },
+          }}
+        >
+          Full keyframes
+        </div>
+      )
+    })
+
+    it('accepts delay option', () => {
+      let element = (
+        <div
+          animate={{
+            enter: { opacity: 0, duration: 200, delay: 100 },
+            exit: { opacity: 0, duration: 150, delay: 50 },
+          }}
+        >
+          With delay
+        </div>
+      )
+    })
+
+    it('accepts composite option', () => {
+      let element = (
+        <div
+          animate={{
+            enter: { opacity: 0, duration: 200, composite: 'add' },
+            exit: { opacity: 0, duration: 150, composite: 'replace' },
+          }}
+        >
+          With composite
+        </div>
+      )
+    })
+
+    it('accepts per-keyframe easing and offset', () => {
+      let element = (
+        <div
+          animate={{
+            enter: {
+              keyframes: [
+                { opacity: 0, easing: 'ease-in' },
+                { opacity: 0.5, offset: 0.3, easing: 'linear' },
+                { opacity: 1, offset: 1 },
+              ],
+              duration: 300,
+            },
+          }}
+        >
+          Per-keyframe options
+        </div>
+      )
+    })
+
+    it('rejects invalid animate values', () => {
+      // @ts-expect-error - animate must be true or PresenceProp
+      let bad1 = <div animate={false}>Bad</div>
+      // @ts-expect-error - animate must be true or PresenceProp
+      let bad2 = <div animate="fade">Bad</div>
+      // @ts-expect-error - duration is required in animate config
+      let bad3 = <div animate={{ enter: { opacity: 0 } }}>Bad</div>
+      // @ts-expect-error - keyframes requires an array
+      let bad4 = <div animate={{ enter: { keyframes: { opacity: 0 }, duration: 200 } }}>Bad</div>
+    })
+
+    it('accepts various animatable style properties', () => {
+      let element = (
+        <div
+          animate={{
+            enter: {
+              opacity: 0,
+              transform: 'translateY(-10px)',
+              filter: 'blur(4px)',
+              clipPath: 'inset(0 0 100% 0)',
+              backgroundColor: 'transparent',
+              color: 'red',
+              scale: 0.9,
+              rotate: '5deg',
+              translate: '0 -10px',
+              duration: 200,
+            },
+          }}
+        >
+          Various properties
+        </div>
+      )
+    })
+  })
 })

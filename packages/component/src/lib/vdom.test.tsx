@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from './vdom.ts'
 import { invariant } from './invariant.ts'
-import { Catch } from './component.ts'
 import type { Dispatched } from '@remix-run/interaction'
 import type { Assert, Equal } from './test/utils.ts'
 import type { Handle, RemixNode } from './component.ts'
@@ -37,16 +36,140 @@ describe('vnode rendering', () => {
     it.todo('does not render acceptCharset')
   })
 
+  describe('innerHTML prop', () => {
+    it('sets innerHTML on element', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(<div innerHTML="<span>Hello</span>" />)
+      expect(container.innerHTML).toBe('<div><span>Hello</span></div>')
+    })
+
+    it('ignores children when innerHTML is set', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <div innerHTML="<span>From innerHTML</span>">
+          <p>Ignored child</p>
+        </div>,
+      )
+      expect(container.innerHTML).toBe('<div><span>From innerHTML</span></div>')
+    })
+
+    it('updates innerHTML on re-render', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(<div innerHTML="<span>First</span>" />)
+      expect(container.innerHTML).toBe('<div><span>First</span></div>')
+
+      let div = container.querySelector('div')
+      invariant(div)
+
+      root.render(<div innerHTML="<span>Second</span>" />)
+      expect(container.innerHTML).toBe('<div><span>Second</span></div>')
+      expect(container.querySelector('div')).toBe(div)
+    })
+
+    it('clears innerHTML when removed', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(<div innerHTML="<span>Hello</span>" />)
+      expect(container.innerHTML).toBe('<div><span>Hello</span></div>')
+
+      root.render(<div />)
+      expect(container.innerHTML).toBe('<div></div>')
+    })
+
+    it('switches from innerHTML to children', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(<div innerHTML="<span>From innerHTML</span>" />)
+      expect(container.innerHTML).toBe('<div><span>From innerHTML</span></div>')
+
+      root.render(
+        <div>
+          <p>From children</p>
+        </div>,
+      )
+      expect(container.innerHTML).toBe('<div><p>From children</p></div>')
+    })
+
+    it('switches from children to innerHTML', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <div>
+          <p>From children</p>
+        </div>,
+      )
+      expect(container.innerHTML).toBe('<div><p>From children</p></div>')
+
+      root.render(<div innerHTML="<span>From innerHTML</span>" />)
+      expect(container.innerHTML).toBe('<div><span>From innerHTML</span></div>')
+    })
+  })
+
   describe('css props', () => {
-    it('adds class and styles', async () => {
+    it('adds data-css attribute and styles', async () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       root.render(<div css={{ color: 'rgb(255, 0, 0)' }}>Hello</div>)
       let div = container.querySelector('div')
       invariant(div instanceof HTMLDivElement)
-      expect(div.className).toMatch(/^rmx-/)
+      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
       document.body.appendChild(container)
       expect(getComputedStyle(div).color).toBe('rgb(255, 0, 0)')
+    })
+
+    it('css prop is isolated from className', async () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <div css={{ color: 'rgb(255, 0, 0)' }} className="custom-class">
+          Hello
+        </div>,
+      )
+      let div = container.querySelector('div')
+      invariant(div instanceof HTMLDivElement)
+      // className is completely separate from css prop
+      expect(div.className).toBe('custom-class')
+      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
+    })
+
+    it('css prop is isolated from class', async () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <div css={{ color: 'rgb(0, 255, 0)' }} class="another-class">
+          Hello
+        </div>,
+      )
+      let div = container.querySelector('div')
+      invariant(div instanceof HTMLDivElement)
+      // class is completely separate from css prop
+      expect(div.className).toBe('another-class')
+      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
+    })
+
+    it('className updates independently of css prop', async () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <div css={{ color: 'rgb(255, 0, 0)' }} className="first">
+          Hello
+        </div>,
+      )
+      let div = container.querySelector('div')
+      invariant(div instanceof HTMLDivElement)
+      expect(div.className).toBe('first')
+      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
+
+      root.render(
+        <div css={{ color: 'rgb(255, 0, 0)' }} className="second">
+          Hello
+        </div>,
+      )
+      expect(div.className).toBe('second')
+      expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
     })
   })
 
@@ -166,31 +289,6 @@ describe('vnode rendering', () => {
       invariant(circle instanceof SVGCircleElement)
       circle.dispatchEvent(new MouseEvent('click', { bubbles: true }))
       expect(clicked).toBe(true)
-    })
-
-    it('hydrates existing SVG subtree and preserves nodes', () => {
-      let container = document.createElement('div')
-      container.innerHTML =
-        '<svg viewBox="0 0 24 24"><path id="p" stroke-linecap="round"></path></svg>'
-
-      let root = createRoot(container)
-      let preSvg = container.querySelector('svg')
-      let prePath = container.querySelector('#p')
-      invariant(preSvg instanceof SVGSVGElement && prePath instanceof SVGPathElement)
-
-      root.render(
-        <svg viewBox="0 0 24 24">
-          <path id="p" strokeLinecap="round" />
-        </svg>,
-      )
-
-      let postSvg = container.querySelector('svg')
-      let postPath = container.querySelector('#p')
-      invariant(postSvg instanceof SVGSVGElement && postPath instanceof SVGPathElement)
-      expect(postSvg).toBe(preSvg)
-      expect(postPath).toBe(prePath)
-      // Attribute should remain correct post-hydration
-      expect(postPath.getAttribute('stroke-linecap')).toBe('round')
     })
 
     it('propagates SVG namespace through components', () => {
@@ -655,28 +753,6 @@ describe('vnode rendering', () => {
       root.flush()
       expect(container.innerHTML).toBe('<span>0</span><span>1</span><span>2</span>')
     })
-
-    it('raises errors to catch boundary', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-      let capturedRaise: Handle['raise'] = () => {}
-
-      function App(handle: Handle) {
-        capturedRaise = handle.raise
-        return () => <div>App</div>
-      }
-
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <App />
-        </Catch>,
-      )
-
-      expect(container.innerHTML).toBe('<div>App</div>')
-      capturedRaise(new Error('Test'))
-      root.flush()
-      expect(container.innerHTML).toBe('<div>Error</div>')
-    })
   })
 
   it('runs update tasks after updates', () => {
@@ -982,304 +1058,6 @@ describe('vnode rendering', () => {
     })
   })
 
-  describe('Catch', () => {
-    it('renders as a fragment', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <div>Hello, world!</div>
-        </Catch>,
-      )
-      expect(container.innerHTML).toBe('<div>Hello, world!</div>')
-    })
-
-    it('removes', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <div>Hello, world!</div>
-        </Catch>,
-      )
-      expect(container.innerHTML).toBe('<div>Hello, world!</div>')
-      root.render(<div />)
-      expect(container.innerHTML).toBe('<div></div>')
-    })
-
-    it('renders when descendant throws', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-      function Throws(): () => null {
-        throw new Error('Test')
-      }
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <Throws />
-        </Catch>,
-      )
-      expect(container.innerHTML).toBe('<div>Error</div>')
-    })
-
-    it('removes in progress nodes', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-      function Throws(): () => null {
-        throw new Error('Test')
-      }
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <h1>orphan</h1>
-          <Throws />
-          <h2>orphan</h2>
-        </Catch>,
-      )
-      expect(container.innerHTML).toBe('<div>Error</div>')
-    })
-
-    it('renders fallback from deeply thrown errors', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-      function Throws(): () => null {
-        throw new Error('Test')
-      }
-
-      function App() {
-        return () => (
-          <div>
-            <h1>App</h1>
-            <Throws />
-          </div>
-        )
-      }
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <App />
-        </Catch>,
-      )
-      expect(container.innerHTML).toBe('<div>Error</div>')
-    })
-
-    it('is cleared by a parent update', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-
-      let count = 0
-      function MaybeThrow() {
-        count++
-        if (count === 1) {
-          throw new Error('Test')
-        }
-        return () => <div>All good</div>
-      }
-
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <MaybeThrow />
-        </Catch>,
-      )
-      expect(container.innerHTML).toBe('<div>Error</div>')
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <MaybeThrow />
-        </Catch>,
-      )
-      expect(container.innerHTML).toBe('<div>All good</div>')
-    })
-
-    it('retains nodes on happy path updates', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <div>Hello, world!</div>
-        </Catch>,
-      )
-      expect(container.innerHTML).toBe('<div>Hello, world!</div>')
-      let div = container.querySelector('div')
-      invariant(div)
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <div>Goodbye, world!</div>
-        </Catch>,
-      )
-      expect(container.innerHTML).toBe('<div>Goodbye, world!</div>')
-      expect(container.querySelector('div')).toBe(div)
-    })
-
-    it('preserves siblings when Catch trips and resets on parent re-render', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-
-      function ThrowsOnce(): () => null {
-        throw new Error('boom')
-      }
-
-      root.render(
-        <div>
-          <span id="left">A</span>
-          <Catch fallback={<b id="fb">E</b>}>
-            <ThrowsOnce />
-          </Catch>
-          <span id="right">B</span>
-        </div>,
-      )
-      expect(container.innerHTML).toBe(
-        '<div><span id="left">A</span><b id="fb">E</b><span id="right">B</span></div>',
-      )
-
-      let left = container.querySelector('#left')
-      let right = container.querySelector('#right')
-      invariant(left instanceof HTMLSpanElement && right instanceof HTMLSpanElement)
-
-      function Ok() {
-        return () => <div id="ok">OK</div>
-      }
-      root.render(
-        <div>
-          <span id="left">A</span>
-          <Catch fallback={<b id="fb">E</b>}>
-            <Ok />
-          </Catch>
-          <span id="right">B</span>
-        </div>,
-      )
-      expect(container.innerHTML).toBe(
-        '<div><span id="left">A</span><div id="ok">OK</div><span id="right">B</span></div>',
-      )
-      expect(container.querySelector('#left')).toBe(left)
-      expect(container.querySelector('#right')).toBe(right)
-    })
-
-    it('uses nearest Catch on event errors (nested boundaries)', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-
-      function App() {
-        return () => (
-          <Catch fallback={<div id="outer">Outer</div>}>
-            <div>
-              <Catch fallback={<div id="inner">Inner</div>}>
-                <button
-                  id="btn"
-                  on={{
-                    click: () => {
-                      throw new Error('oops')
-                    },
-                  }}
-                >
-                  Click
-                </button>
-              </Catch>
-            </div>
-          </Catch>
-        )
-      }
-
-      root.render(<App />)
-      expect(container.innerHTML).toBe('<div><button id="btn">Click</button></div>')
-      root.flush()
-      let button = container.querySelector('#btn')
-      invariant(button instanceof HTMLButtonElement)
-
-      button.click()
-      root.flush()
-
-      // Only the inner boundary should trip
-      expect(container.innerHTML).toBe('<div><div id="inner">Inner</div></div>')
-    })
-
-    it('preserves siblings when Catch trips and resets on parent re-render from events', () => {
-      let container = document.createElement('div')
-      document.body.appendChild(container)
-      let root = createRoot(container)
-
-      root.render(
-        <div>
-          <span>left</span>
-          <Catch fallback={<b>Error</b>}>
-            <button
-              on={{
-                click: () => {
-                  throw new Error('oops')
-                },
-              }}
-            >
-              Click
-            </button>
-          </Catch>
-          <aside>right</aside>
-        </div>,
-      )
-
-      expect(container.innerHTML).toBe(
-        '<div><span>left</span><button>Click</button><aside>right</aside></div>',
-      )
-
-      root.flush() // flush for events to attach
-      let button = container.querySelector('button')
-      invariant(button)
-      button.click()
-      expect(container.innerHTML).toBe(
-        '<div><span>left</span><b>Error</b><aside>right</aside></div>',
-      )
-
-      let left = container.querySelector('span')
-      let right = container.querySelector('aside')
-      invariant(left && right)
-
-      root.render(
-        <div>
-          <span>left</span>
-          <Catch fallback={<b id="fb">E</b>}>
-            <button>Click</button>
-          </Catch>
-          <aside>right</aside>
-        </div>,
-      )
-      expect(container.innerHTML).toBe(
-        '<div><span>left</span><button>Click</button><aside>right</aside></div>',
-      )
-      expect(container.querySelector('span')).toBe(left)
-      expect(container.querySelector('aside')).toBe(right)
-    })
-
-    it('clears after an event error', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <button
-            on={{
-              click: () => {
-                throw new Error('oops')
-              },
-            }}
-          >
-            Click
-          </button>
-        </Catch>,
-      )
-      root.flush()
-
-      let button = container.querySelector('button')
-      invariant(button)
-
-      button.click()
-      root.flush()
-      expect(container.innerHTML).toBe('<div>Error</div>')
-
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <button>Click</button>
-        </Catch>,
-      )
-      root.flush()
-      expect(container.innerHTML).toBe('<button>Click</button>')
-    })
-  })
-
   describe('events integration', () => {
     it('attaches events', () => {
       let container = document.createElement('div')
@@ -1370,35 +1148,6 @@ describe('vnode rendering', () => {
 
       button.click()
       expect(clickCount).toBe(1)
-    })
-
-    it('renders catch fallback with event errors', () => {
-      let container = document.createElement('div')
-      let root = createRoot(container)
-
-      let clicked = false
-      root.render(
-        <Catch fallback={<div>Error</div>}>
-          <button
-            on={{
-              click: () => {
-                clicked = true
-                throw new Error('Test')
-              },
-            }}
-          >
-            Click me
-          </button>
-        </Catch>,
-      )
-      expect(container.innerHTML).toBe('<button>Click me</button>')
-      root.flush()
-      let button = container.querySelector('button')
-      invariant(button)
-      button.click()
-      root.flush()
-      expect(clicked).toBe(true)
-      expect(container.innerHTML).toBe('<div>Error</div>')
     })
   })
 
@@ -1831,6 +1580,286 @@ describe('vnode rendering', () => {
       capturedUpdate()
       root.flush()
       expect(container.innerHTML).toBe('<main><div>A</div><p>C</p></main>')
+    })
+
+    it('updates correctly when replaced component self-updates from component to element', () => {
+      // This tests the stale anchor bug: when component A is replaced by B,
+      // the anchor for B is captured from A's DOM. If B then self-updates
+      // to change its content type, the stale anchor must not be used.
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function Loading() {
+        return () => <div>Loading...</div>
+      }
+
+      let loaded = false
+      let capturedUpdate = () => {}
+
+      function PageB(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        return () => (loaded ? <div>Loaded!</div> : <Loading />)
+      }
+
+      function PageA() {
+        return () => <div>Page A</div>
+      }
+
+      let Page: typeof PageA | typeof PageB = PageA
+
+      function App(handle: Handle) {
+        return () => (
+          <main>
+            <nav>Nav</nav>
+            <Page />
+          </main>
+        )
+      }
+
+      root.render(<App />)
+      expect(container.innerHTML).toBe('<main><nav>Nav</nav><div>Page A</div></main>')
+
+      // Switch to PageB (captures anchor from PageA's div)
+      Page = PageB
+      root.render(<App />)
+      expect(container.innerHTML).toBe('<main><nav>Nav</nav><div>Loading...</div></main>')
+
+      // PageB self-updates: Loading -> div (must not use stale PageA anchor)
+      loaded = true
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><nav>Nav</nav><div>Loaded!</div></main>')
+    })
+
+    it('updates correctly when component switches from element to component via self-update', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function Loading() {
+        return () => <span>Loading...</span>
+      }
+
+      let showLoading = false
+      let capturedUpdate = () => {}
+
+      function A(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        return () => (showLoading ? <Loading /> : <div>Content</div>)
+      }
+
+      root.render(
+        <main>
+          <A />
+          <p>Footer</p>
+        </main>,
+      )
+      expect(container.innerHTML).toBe('<main><div>Content</div><p>Footer</p></main>')
+
+      showLoading = true
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><span>Loading...</span><p>Footer</p></main>')
+
+      showLoading = false
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><div>Content</div><p>Footer</p></main>')
+    })
+
+    it('updates correctly with deeply nested component type changes', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function Inner() {
+        return () => <span>Inner</span>
+      }
+
+      function Middle() {
+        return () => <Inner />
+      }
+
+      let useNested = true
+      let capturedUpdate = () => {}
+
+      function Outer(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        return () => (useNested ? <Middle /> : <div>Direct</div>)
+      }
+
+      root.render(
+        <main>
+          <Outer />
+          <footer>Footer</footer>
+        </main>,
+      )
+      expect(container.innerHTML).toBe('<main><span>Inner</span><footer>Footer</footer></main>')
+
+      useNested = false
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><div>Direct</div><footer>Footer</footer></main>')
+
+      useNested = true
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><span>Inner</span><footer>Footer</footer></main>')
+    })
+
+    it('updates correctly when multiple components are replaced and self-update', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function LoadingA() {
+        return () => <span>Loading A...</span>
+      }
+
+      function LoadingB() {
+        return () => <span>Loading B...</span>
+      }
+
+      let loadedA = false
+      let loadedB = false
+      let capturedUpdateA = () => {}
+      let capturedUpdateB = () => {}
+
+      function CompA(handle: Handle) {
+        capturedUpdateA = () => handle.update()
+        return () => (loadedA ? <div>A Done</div> : <LoadingA />)
+      }
+
+      function CompB(handle: Handle) {
+        capturedUpdateB = () => handle.update()
+        return () => (loadedB ? <div>B Done</div> : <LoadingB />)
+      }
+
+      root.render(
+        <main>
+          <CompA />
+          <CompB />
+        </main>,
+      )
+      expect(container.innerHTML).toBe(
+        '<main><span>Loading A...</span><span>Loading B...</span></main>',
+      )
+
+      // Update A first
+      loadedA = true
+      capturedUpdateA()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><div>A Done</div><span>Loading B...</span></main>')
+
+      // Then update B
+      loadedB = true
+      capturedUpdateB()
+      root.flush()
+      expect(container.innerHTML).toBe('<main><div>A Done</div><div>B Done</div></main>')
+    })
+
+    it('maintains DOM order when replaced component self-updates with same element type', () => {
+      // Tests that anchor calculation works for same-type updates (element->element)
+      // after a component replacement. The anchor should be the next sibling, not the
+      // component's own content.
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      let count = 0
+      let capturedUpdate = () => {}
+
+      function PageB(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        return () => <div>Count: {count}</div>
+      }
+
+      function PageA() {
+        return () => <div>Page A</div>
+      }
+
+      let Page: typeof PageA | typeof PageB = PageA
+
+      function App(handle: Handle) {
+        return () => (
+          <main>
+            <nav>Nav</nav>
+            <Page />
+            <footer>Footer</footer>
+          </main>
+        )
+      }
+
+      root.render(<App />)
+      expect(container.innerHTML).toBe(
+        '<main><nav>Nav</nav><div>Page A</div><footer>Footer</footer></main>',
+      )
+
+      // Replace PageA with PageB (anchor is captured from PageA's div)
+      Page = PageB
+      root.render(<App />)
+      expect(container.innerHTML).toBe(
+        '<main><nav>Nav</nav><div>Count: 0</div><footer>Footer</footer></main>',
+      )
+
+      // PageB self-updates: same element type (div->div), should maintain position
+      count = 1
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe(
+        '<main><nav>Nav</nav><div>Count: 1</div><footer>Footer</footer></main>',
+      )
+
+      // Another self-update
+      count = 2
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe(
+        '<main><nav>Nav</nav><div>Count: 2</div><footer>Footer</footer></main>',
+      )
+    })
+
+    it('maintains DOM order when fragment component adds children via self-update with siblings', () => {
+      // Critical test: a component renders a fragment, has siblings after it,
+      // and grows the fragment via self-update. Without proper anchor calculation,
+      // new children would be appended after the siblings.
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      let items = [0]
+      let capturedUpdate = () => {}
+
+      function List(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        // No keys - uses index-based diff
+        return () => (
+          <>
+            {items.map((i) => (
+              <span>{i}</span>
+            ))}
+          </>
+        )
+      }
+
+      root.render(
+        <main>
+          <List />
+          <footer>Footer</footer>
+        </main>,
+      )
+      expect(container.innerHTML).toBe('<main><span>0</span><footer>Footer</footer></main>')
+
+      // Add more items - new spans must appear BEFORE footer
+      items = [0, 1]
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe(
+        '<main><span>0</span><span>1</span><footer>Footer</footer></main>',
+      )
+
+      // Add even more
+      items = [0, 1, 2]
+      capturedUpdate()
+      root.flush()
+      expect(container.innerHTML).toBe(
+        '<main><span>0</span><span>1</span><span>2</span><footer>Footer</footer></main>',
+      )
     })
   })
 })

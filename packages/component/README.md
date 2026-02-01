@@ -605,6 +605,11 @@ function List(handle: Handle) {
 }
 ```
 
+## Wrapping Components
+
+- use `Props<'div'>`
+- use `RemixNode` not JSX.Element, etc.
+
 ## Future
 
 This package is a work in progress. Future features (demo'd at Remix Jam) include:
@@ -612,6 +617,5 @@ This package is a work in progress. Future features (demo'd at Remix Jam) includ
 - Server Rendering
 - Selective Hydration
 - `<Frame>` for streamable, reloadable partial server UI
-- `<Catch>`
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

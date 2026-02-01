@@ -1,6 +1,7 @@
 import { request } from '@octokit/request'
 
 import { getChangelogEntry } from './changes.ts'
+import { getGitTag, getPackageShortName } from './packages.ts'
 
 let owner = 'remix-run'
 let repo = 'remix'
@@ -35,8 +36,8 @@ export async function createRelease(
 ): Promise<CreateReleaseResult> {
   let { preview = false } = options
 
-  let tagName = `${packageName}@${version}`
-  let releaseName = `${packageName} v${version}`
+  let tagName = getGitTag(packageName, version)
+  let releaseName = `${getPackageShortName(packageName)} v${version}`
   let changes = getChangelogEntry({ packageName, version })
   let body = changes?.body ?? 'No changelog entry found for this version.'
 
@@ -188,5 +189,59 @@ export async function closePr(prNumber: number, comment?: string) {
     repo,
     pull_number: prNumber,
     state: 'closed',
+  })
+}
+
+/**
+ * Get all comments on a PR
+ */
+export async function getPrComments(prNumber: number) {
+  let response = await request('GET /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+    ...auth(),
+    owner,
+    repo,
+    issue_number: prNumber,
+  })
+
+  return response.data
+}
+
+/**
+ * Create a comment on a PR
+ */
+export async function createPrComment(prNumber: number, body: string) {
+  let response = await request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+    ...auth(),
+    owner,
+    repo,
+    issue_number: prNumber,
+    body,
+  })
+
+  return response.data
+}
+
+/**
+ * Update a comment on a PR
+ */
+export async function updatePrComment(commentId: number, body: string) {
+  await request('PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+    ...auth(),
+    owner,
+    repo,
+    comment_id: commentId,
+    body,
+  })
+}
+
+/**
+ * Delete a comment on a PR
+ */
+export async function deletePrComment(commentId: number) {
+  await request('DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+    ...auth(),
+    owner,
+    repo,
+    comment_id: commentId,
   })
 }

@@ -1,4 +1,4 @@
-import { createRoot, type Handle } from '@remix-run/component'
+import { createRoot, type Handle } from 'remix/component'
 
 function App(handle: Handle) {
   let count = 0

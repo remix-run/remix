@@ -292,6 +292,57 @@ function GoodExample(handle: Handle) {
 }
 ```
 
+**Pattern: Use `handle.update(task)` when you need to show loading state before async work:**
+
+The task's signal is aborted when the component re-renders. If you call `handle.update()` before your async work completes, the re-render will abort the signal you're using for the async operation. When you need to update state (like showing a loading indicator) before starting async work, move the async work into a new task via `handle.update(task)`:
+
+```tsx
+// ❌ Avoid: Calling handle.update() before async work in the same task
+function BadAsyncExample(handle: Handle) {
+  let data: string[] = []
+  let loading = false
+
+  handle.queueTask(async (signal) => {
+    loading = true
+    handle.update() // This triggers a re-render, which aborts signal!
+
+    let response = await fetch('/api/data', { signal }) // AbortError: signal is aborted
+
+    data = await response.json()
+    loading = false
+    handle.update()
+  })
+
+  return () => <div>{loading ? 'Loading...' : data.join(', ')}</div>
+}
+
+// ✅ Prefer: Move async work into a new task via handle.update(task)
+function GoodAsyncExample(handle: Handle) {
+  let data: string[] = []
+  let loading = false
+
+  handle.queueTask(() => {
+    loading = true
+    handle.update(async (signal) => {
+      // This task gets a fresh signal that won't be aborted by the update above
+      let response = await fetch('/api/data', { signal })
+
+      data = await response.json()
+      loading = false
+      handle.update()
+    })
+  })
+
+  return () => <div>{loading ? 'Loading...' : data.join(', ')}</div>
+}
+```
+
+The key insight is that `handle.update(task)` queues a new task that runs after the update completes, with its own fresh signal. This allows you to:
+
+1. Update state to show loading UI
+2. Trigger a re-render with `handle.update(task)`
+3. Perform async work in the task with a signal that won't be aborted by that re-render
+
 **Signals in events and tasks are how you manage interruptions and disconnects:**
 
 Both event handlers and `queueTask` receive `AbortSignal` parameters that are automatically aborted when:

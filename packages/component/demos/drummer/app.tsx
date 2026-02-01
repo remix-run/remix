@@ -1,6 +1,6 @@
-import { arrowDown, arrowUp, space } from '@remix-run/interaction/keys'
-import { press } from '@remix-run/interaction/press'
-import { type Handle } from '@remix-run/component'
+import { arrowDown, arrowUp, space } from 'remix/interaction/keys'
+import { press } from 'remix/interaction/press'
+import { type Handle } from 'remix/component'
 import { Drummer } from './drummer.ts'
 import { tempo } from './tempo-interaction.ts'
 import {

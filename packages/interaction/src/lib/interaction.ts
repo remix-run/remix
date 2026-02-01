@@ -49,12 +49,8 @@ export interface Interaction {
    */
   readonly signal: AbortSignal
   /**
-   * Error handler from the parent container.
-   */
-  readonly raise: (error: unknown) => void
-  /**
    * Create a container on a target with listeners. Automatically passes
-   * through signal and onError from the parent container.
+   * through signal from the parent container.
    */
   on<target extends EventTarget>(target: target, listeners: EventListeners<target>): void
 }
@@ -124,10 +120,6 @@ export type ContainerOptions = {
    * An optional abort signal to dispose the container when the signal is aborted
    */
   signal?: AbortSignal
-  /**
-   * An optional error handler called when a listener throws an error
-   */
-  onError?: (error: unknown) => void
 }
 
 /**
@@ -149,15 +141,8 @@ export type ContainerOptions = {
  * })
  * ```
  *
- * ### With error handling:
- *
- * ```ts
- * let container = createContainer(button, {
- *   onError(error) {
- *     console.error('Listener error:', error)
- *   },
- * })
- * ```
+ * Errors thrown in listeners are dispatched as `ErrorEvent` on the target
+ * element with `bubbles: true`, allowing them to propagate up the DOM tree.
  *
  * @param target The event target to wrap (DOM element, window, document, or any EventTarget)
  * @param options Optional configuration for the container
@@ -168,7 +153,7 @@ export function createContainer<target extends EventTarget>(
   options?: ContainerOptions,
 ): EventsContainer<target> {
   let disposed = false
-  let { signal, onError = defaultOnError } = options ?? {}
+  let { signal } = options ?? {}
 
   let bindings: Partial<{ [K in EventType<target>]: Binding<ListenerFor<target, K>>[] }> = {}
 
@@ -230,7 +215,7 @@ export function createContainer<target extends EventTarget>(
           if (!existing) {
             bindings[type] = descriptors.map((d) => {
               let { listener, ...options } = d
-              return createBinding(target, type, listener, options, onError)
+              return createBinding(target, type, listener, options)
             })
             return
           }
@@ -253,7 +238,7 @@ export function createContainer<target extends EventTarget>(
             for (let i = existing.length; i < descriptors.length; i++) {
               let d = descriptors[i]
               let { listener, ...options } = d
-              existing.push(createBinding(target, type, listener, options, onError))
+              existing.push(createBinding(target, type, listener, options))
             }
           }
 
@@ -351,26 +336,17 @@ type TypedEventListener<eventMap> = {
 let interactions = new Map<string, InteractionSetup>()
 let initializedTargets = new WeakMap<EventTarget, Map<Function, number>>()
 
-function defaultOnError(error: unknown) {
-  throw error
-}
-
 class InteractionHandle implements Interaction {
   readonly target: EventTarget
   readonly signal: AbortSignal
-  readonly raise: (error: unknown) => void
 
-  constructor(target: EventTarget, signal: AbortSignal, onError: (error: unknown) => void) {
+  constructor(target: EventTarget, signal: AbortSignal) {
     this.target = target
     this.signal = signal
-    this.raise = onError
   }
 
   on<target extends EventTarget>(target: target, listeners: EventListeners<target>): void {
-    let container = createContainer(target, {
-      signal: this.signal,
-      onError: this.raise,
-    })
+    let container = createContainer(target, { signal: this.signal })
     container.set(listeners)
   }
 }
@@ -407,6 +383,10 @@ type SignaledListener<event extends Event> = (
   signal: AbortSignal,
 ) => void | Promise<void>
 
+function dispatchError(target: EventTarget, error: unknown) {
+  target.dispatchEvent(new ErrorEvent('error', { error, bubbles: true }))
+}
+
 /**
  * Encapsulates a binding between an event type and a listener.
  *
@@ -418,7 +398,6 @@ type SignaledListener<event extends Event> = (
  * @param type The event type to listen for
  * @param listener The listener function to call
  * @param options The event listener options
- * @param onError The error handler for listener errors
  * @returns The binding object for managing the listener
  */
 function createBinding<target extends EventTarget, k extends EventType<target>>(
@@ -426,7 +405,6 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
   type: k,
   listener: ListenerFor<target, k>,
   options: AddEventListenerOptions,
-  onError: (error: unknown) => void,
 ): Binding<ListenerFor<target, k>> {
   let reentry: AbortController | null = null
   let interactionController: AbortController | null = null
@@ -450,10 +428,10 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
       // TODO: figure out if we can remove this cast
       let result = listener(event as any, reentry?.signal as AbortSignal)
       if (result instanceof Promise) {
-        result.catch(onError)
+        result.catch((error) => dispatchError(target, error))
       }
     } catch (error) {
-      onError(error)
+      dispatchError(target, error)
     }
   }
 
@@ -503,7 +481,7 @@ function createBinding<target extends EventTarget, k extends EventType<target>>(
     if (count === 0) {
       // Only create AbortController for interactions that need cleanup coordination
       interactionController = new AbortController()
-      let interactionContext = new InteractionHandle(target, interactionController.signal, onError)
+      let interactionContext = new InteractionHandle(target, interactionController.signal)
       interaction(interactionContext)
     }
     refCounts.set(interaction, count + 1)

@@ -87,12 +87,6 @@ importers:
 
   demos/bookstore:
     dependencies:
-      '@remix-run/dom':
-        specifier: jam
-        version: 0.0.0-experimental-remix-jam.6
-      '@remix-run/events':
-        specifier: jam
-        version: 0.0.0-experimental-remix-jam.5
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
@@ -204,10 +198,11 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/async-context-middleware:
-    devDependencies:
+    dependencies:
       '@remix-run/fetch-router':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../fetch-router
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -326,21 +321,12 @@ importers:
 
   packages/component/demos:
     dependencies:
-      '@remix-run/component':
+      motion:
+        specifier: ^12.28.1
+        version: 12.28.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      remix:
         specifier: workspace:^
-        version: link:..
-      '@remix-run/fetch-router':
-        specifier: workspace:^
-        version: link:../../fetch-router
-      '@remix-run/interaction':
-        specifier: workspace:^
-        version: link:../../interaction
-      '@remix-run/node-fetch-server':
-        specifier: workspace:^
-        version: link:../../node-fetch-server
-      '@remix-run/static-middleware':
-        specifier: workspace:^
-        version: link:../../static-middleware
+        version: link:../../remix
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -353,16 +339,17 @@ importers:
         version: 0.25.12
 
   packages/compression-middleware:
-    devDependencies:
+    dependencies:
       '@remix-run/fetch-router':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../fetch-router
       '@remix-run/mime':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../mime
       '@remix-run/response':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../response
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -447,10 +434,10 @@ importers:
       '@remix-run/route-pattern':
         specifier: workspace:^
         version: link:../route-pattern
-    devDependencies:
       '@remix-run/session':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../session
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -586,13 +573,14 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/form-data-middleware:
-    devDependencies:
+    dependencies:
       '@remix-run/fetch-router':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../fetch-router
       '@remix-run/form-data-parser':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../form-data-parser
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -720,10 +708,11 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/logger-middleware:
-    devDependencies:
+    dependencies:
       '@remix-run/fetch-router':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../fetch-router
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -732,10 +721,11 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/method-override-middleware:
-    devDependencies:
+    dependencies:
       '@remix-run/fetch-router':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../fetch-router
+    devDependencies:
       '@remix-run/form-data-middleware':
         specifier: workspace:*
         version: link:../form-data-middleware
@@ -991,13 +981,13 @@ importers:
       '@remix-run/html-template':
         specifier: workspace:^
         version: link:../html-template
+      '@remix-run/mime':
+        specifier: workspace:^
+        version: link:../mime
     devDependencies:
       '@remix-run/lazy-file':
         specifier: workspace:*
         version: link:../lazy-file
-      '@remix-run/mime':
-        specifier: workspace:*
-        version: link:../mime
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1016,12 +1006,22 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      dedent:
+        specifier: ^1.7.1
+        version: 1.7.1
+
+  packages/route-pattern/bench:
+    dependencies:
+      '@remix-run/route-pattern':
+        specifier: workspace:^
+        version: link:..
       find-my-way:
         specifier: ^9.1.0
         version: 9.3.0
       path-to-regexp:
         specifier: ^8.2.0
         version: 8.3.0
+    devDependencies:
       vitest:
         specifier: 4.0.15
         version: 4.0.15(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2)
@@ -1036,19 +1036,20 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/session-middleware:
-    devDependencies:
+    dependencies:
       '@remix-run/cookie':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../cookie
       '@remix-run/fetch-router':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../fetch-router
+      '@remix-run/session':
+        specifier: workspace:^
+        version: link:../session
+    devDependencies:
       '@remix-run/headers':
         specifier: workspace:*
         version: link:../headers
-      '@remix-run/session':
-        specifier: workspace:*
-        version: link:../session
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1058,28 +1059,28 @@ importers:
 
   packages/static-middleware:
     dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
       '@remix-run/fs':
         specifier: workspace:^
         version: link:../fs
       '@remix-run/html-template':
         specifier: workspace:^
         version: link:../html-template
+      '@remix-run/mime':
+        specifier: workspace:^
+        version: link:../mime
+      '@remix-run/response':
+        specifier: workspace:^
+        version: link:../response
     devDependencies:
-      '@remix-run/fetch-router':
-        specifier: workspace:*
-        version: link:../fetch-router
       '@remix-run/form-data-middleware':
         specifier: workspace:*
         version: link:../form-data-middleware
       '@remix-run/method-override-middleware':
         specifier: workspace:*
         version: link:../method-override-middleware
-      '@remix-run/mime':
-        specifier: workspace:*
-        version: link:../mime
-      '@remix-run/response':
-        specifier: workspace:*
-        version: link:../response
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -2966,6 +2967,14 @@ packages:
       supports-color:
         optional: true
 
+  dedent@1.7.1:
+    resolution: {integrity: sha512-9JmrhGZpOlEgOLdQgSm0zxFaYoQon408V1v49aqTWuXENVlnCuY9JBZcXZiCsZQWDjTm5Qf/nIvAy77mXDAjEg==}
+    peerDependencies:
+      babel-plugin-macros: ^3.1.0
+    peerDependenciesMeta:
+      babel-plugin-macros:
+        optional: true
+
   deep-eql@5.0.2:
     resolution: {integrity: sha512-h5k/5U50IJJFpzfL6nO9jaaumfjO/f2NjK/oYB2Djzm4p9L+3T9qWpZqZ2hAbLPuuYq9wrU08WQyBTL5GbPk5Q==}
     engines: {node: '>=6'}
@@ -3297,6 +3306,20 @@ packages:
   forwarded@0.2.0:
     resolution: {integrity: sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==}
     engines: {node: '>= 0.6'}
+
+  framer-motion@12.28.1:
+    resolution: {integrity: sha512-72GkO7DS4FfcSjf26wx0v+rzkW8Fhn4Djh04aDbuEg7NYG8X8MhJZc6/5weG/YeEgIP+fCo8FS2y1HnXH8k8fQ==}
+    peerDependencies:
+      '@emotion/is-prop-valid': '*'
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@emotion/is-prop-valid':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
 
   fresh@0.5.2:
     resolution: {integrity: sha512-zJ2mQYM18rEFOudeV4GShTGIQ7RbzA7ozbU9I/XBpm7kqgMywgmylMwXHxZJmkVoYkna9d2pVXVXPdYTP9ej8Q==}
@@ -3803,6 +3826,26 @@ packages:
     resolution: {integrity: sha512-+NsyUUAZDmo6YVHzL/stxSu3t9YS1iljliy3BSDrXJ/dkn1KYdmtZODGGjLcc9XLgVVpH4KshHB8XmZgMhaBXg==}
     engines: {node: '>=10'}
     hasBin: true
+
+  motion-dom@12.28.1:
+    resolution: {integrity: sha512-xqgID69syDvXwFJnUd5bW6ajGUAr/qevRoUe/EqpsXUbVIopyWrAOiwQOhpgVQD+B7Ra60zTdj5gVkmwncebMg==}
+
+  motion-utils@12.27.2:
+    resolution: {integrity: sha512-B55gcoL85Mcdt2IEStY5EEAsrMSVE2sI14xQ/uAdPL+mfQxhKKFaEag9JmfxedJOR4vZpBGoPeC/Gm13I/4g5Q==}
+
+  motion@12.28.1:
+    resolution: {integrity: sha512-qGq5+6r4IMivHbT2EUhCwxz2NgFBuba3sWDrxcHt06+nYqKMevYJiVh/N90nMRof+vIUpiq8C22ZeOXwkWWiZg==}
+    peerDependencies:
+      '@emotion/is-prop-valid': '*'
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@emotion/is-prop-valid':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
 
   mrmime@2.0.0:
     resolution: {integrity: sha512-eu38+hdgojoyq63s+yTpN4XMBdt5l8HhMhc4VKLO9KM5caLIBvUm4thi7fFaxyTmCKeNnXZ5pAlBwCUnhA09uw==}
@@ -6475,6 +6518,8 @@ snapshots:
     dependencies:
       ms: 2.1.3
 
+  dedent@1.7.1: {}
+
   deep-eql@5.0.2: {}
 
   deep-extend@0.6.0: {}
@@ -6997,6 +7042,15 @@ snapshots:
 
   forwarded@0.2.0: {}
 
+  framer-motion@12.28.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+    dependencies:
+      motion-dom: 12.28.1
+      motion-utils: 12.27.2
+      tslib: 2.7.0
+    optionalDependencies:
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+
   fresh@0.5.2: {}
 
   front-matter@4.0.2:
@@ -7464,6 +7518,20 @@ snapshots:
       rimraf: 5.0.10
 
   mkdirp@3.0.1: {}
+
+  motion-dom@12.28.1:
+    dependencies:
+      motion-utils: 12.27.2
+
+  motion-utils@12.27.2: {}
+
+  motion@12.28.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+    dependencies:
+      framer-motion: 12.28.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      tslib: 2.7.0
+    optionalDependencies:
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
 
   mrmime@2.0.0: {}
 

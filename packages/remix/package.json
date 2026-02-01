@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "3.0.0-alpha.0",
+  "version": "3.0.0-alpha.2",
   "description": "Remix Web Framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -23,6 +23,7 @@
     "./component": "./src/lib/component.ts",
     "./component/jsx-dev-runtime": "./src/lib/component/jsx-dev-runtime.ts",
     "./component/jsx-runtime": "./src/lib/component/jsx-runtime.ts",
+    "./component/server": "./src/lib/component/server.ts",
     "./compression-middleware": "./src/lib/compression-middleware.ts",
     "./cookie": "./src/lib/cookie.ts",
     "./fetch-proxy": "./src/lib/fetch-proxy.ts",
@@ -52,6 +53,7 @@
     "./response/html": "./src/lib/response/html.ts",
     "./response/redirect": "./src/lib/response/redirect.ts",
     "./route-pattern": "./src/lib/route-pattern.ts",
+    "./route-pattern/specificity": "./src/lib/route-pattern/specificity.ts",
     "./session": "./src/lib/session.ts",
     "./session-middleware": "./src/lib/session-middleware.ts",
     "./session/cookie-storage": "./src/lib/session/cookie-storage.ts",
@@ -82,6 +84,10 @@
       "./component/jsx-runtime": {
         "types": "./dist/lib/component/jsx-runtime.d.ts",
         "default": "./dist/lib/component/jsx-runtime.js"
+      },
+      "./component/server": {
+        "types": "./dist/lib/component/server.d.ts",
+        "default": "./dist/lib/component/server.js"
       },
       "./compression-middleware": {
         "types": "./dist/lib/compression-middleware.d.ts",
@@ -199,6 +205,10 @@
         "types": "./dist/lib/route-pattern.d.ts",
         "default": "./dist/lib/route-pattern.js"
       },
+      "./route-pattern/specificity": {
+        "types": "./dist/lib/route-pattern/specificity.d.ts",
+        "default": "./dist/lib/route-pattern/specificity.js"
+      },
       "./session": {
         "types": "./dist/lib/session.d.ts",
         "default": "./dist/lib/session.js"
@@ -234,7 +244,7 @@
     "@types/node": "catalog:",
     "typescript": "catalog:"
   },
-  "peerDependencies": {
+  "dependencies": {
     "@remix-run/async-context-middleware": "workspace:^",
     "@remix-run/component": "workspace:^",
     "@remix-run/compression-middleware": "workspace:^",

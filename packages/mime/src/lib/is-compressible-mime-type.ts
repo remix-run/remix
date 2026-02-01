@@ -5,7 +5,7 @@ import { customCompressibleByMimeType } from './define-mime-type.ts'
  * Checks if a MIME type is known to be compressible.
  *
  * Returns true for:
- * - Compressible MIME types from mime-db, except for types starting with `x-` (experimental) or `vnd.` (vendor-specific).
+ * - Compressible MIME types from mime-db
  * - Any text/* type
  * - Types with +json, +text, or +xml suffix
  * - MIME types explicitly registered as compressible via `defineMimeType()`
@@ -31,8 +31,9 @@ export function isCompressibleMimeType(mimeType: string): boolean {
     return true
   }
 
-  return genericCompressibleRegex.test(type)
+  return genericCompressibleMimeTypeRegex.test(type)
 }
 
 // Check for text/*, or anything with +json, +text, or +xml suffix
-const genericCompressibleRegex = /^text\/|\+(?:json|text|xml)$/i
+// Exported for use in codegen to filter redundant entries from compressible-mime-types.ts.
+export const genericCompressibleMimeTypeRegex = /^text\/|\+(?:json|text|xml)$/i

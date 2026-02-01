@@ -6,65 +6,71 @@ import {
   getPackageFile,
   getPackagePath,
   packageNameToDirectoryName,
+  getTransitiveDependents,
+  getGitHubReleaseUrl,
+  getPackageDependencies,
+  getGitTag,
 } from './packages.ts'
 import { fileExists, readFile, readJson } from './fs.ts'
 
 const bumpTypes = ['major', 'minor', 'patch'] as const
 type BumpType = (typeof bumpTypes)[number]
 
-// Prerelease configuration (from packages/remix/.changes/prerelease.json)
-// Only the remix package supports prerelease mode.
-export interface RemixPrereleaseConfig {
-  tag: string
+// Changes configuration (from packages/remix/.changes/config.json)
+// Only the remix package supports changes config.
+export interface ChangesConfig {
+  prereleaseChannel: string
 }
 
-export type ParsedRemixPrereleaseConfig =
+export type ParsedChangesConfig =
   | { exists: false }
-  | { exists: true; valid: true; config: RemixPrereleaseConfig }
+  | { exists: true; valid: true; config: ChangesConfig }
   | { exists: true; valid: false; error: string }
 
 /**
- * Reads and validates the remix package's prerelease.json.
- * Only remix supports prerelease mode - other packages publish as "latest".
+ * Reads and validates a package's .changes/config.json.
  */
-export function readRemixPrereleaseConfig(): ParsedRemixPrereleaseConfig {
-  let remixPackagePath = getPackagePath('remix')
-  let prereleaseJsonPath = path.join(remixPackagePath, '.changes', 'prerelease.json')
+export function readChangesConfig(packageDirName: string): ParsedChangesConfig {
+  let packagePath = getPackagePath(packageDirName)
+  let configJsonPath = path.join(packagePath, '.changes', 'config.json')
 
-  if (!fs.existsSync(prereleaseJsonPath)) {
+  if (!fs.existsSync(configJsonPath)) {
     return { exists: false }
   }
 
   let content: unknown
   try {
-    content = JSON.parse(fs.readFileSync(prereleaseJsonPath, 'utf-8'))
+    content = JSON.parse(fs.readFileSync(configJsonPath, 'utf-8'))
   } catch {
-    return { exists: true, valid: false, error: 'Invalid JSON in prerelease.json' }
+    return { exists: true, valid: false, error: 'Invalid JSON in .changes/config.json' }
   }
 
   if (typeof content !== 'object' || content === null) {
     return {
       exists: true,
       valid: false,
-      error: 'prerelease.json must be an object with a "tag" field',
+      error: '.changes/config.json must be an object',
     }
   }
 
   let obj = content as Record<string, unknown>
 
-  if (!('tag' in obj)) {
-    return { exists: true, valid: false, error: 'prerelease.json must have a "tag" field' }
-  }
-
-  if (typeof obj.tag !== 'string' || obj.tag.trim().length === 0) {
+  if ('prereleaseChannel' in obj) {
+    if (typeof obj.prereleaseChannel !== 'string' || obj.prereleaseChannel.trim().length === 0) {
+      return {
+        exists: true,
+        valid: false,
+        error: '.changes/config.json "prereleaseChannel" must be a non-empty string',
+      }
+    }
     return {
       exists: true,
-      valid: false,
-      error: 'prerelease.json "tag" must be a non-empty string',
+      valid: true,
+      config: { prereleaseChannel: obj.prereleaseChannel.trim() },
     }
   }
 
-  return { exists: true, valid: true, config: { tag: obj.tag.trim() } }
+  return { exists: true, valid: true, config: { prereleaseChannel: '' } }
 }
 
 /**
@@ -79,29 +85,29 @@ function getPrereleaseIdentifier(version: string): string | null {
 }
 
 /**
- * Calculates the next version based on current version, bump type, and prerelease config.
+ * Calculates the next version based on current version, bump type, and changes config.
  */
 function getNextVersion(
   currentVersion: string,
   bumpType: BumpType,
-  prereleaseConfig: RemixPrereleaseConfig | null,
+  changesConfig: ChangesConfig | null,
 ): string {
   let currentPrereleaseId = getPrereleaseIdentifier(currentVersion)
   let isCurrentPrerelease = currentPrereleaseId !== null
 
-  if (prereleaseConfig !== null) {
+  if (changesConfig !== null && changesConfig.prereleaseChannel) {
     // In prerelease mode
-    let targetTag = prereleaseConfig.tag
+    let targetChannel = changesConfig.prereleaseChannel
 
-    if (currentPrereleaseId === targetTag) {
-      // Same tag - just bump the counter
-      let nextVersion = semver.inc(currentVersion, 'prerelease', targetTag)
+    if (currentPrereleaseId === targetChannel) {
+      // Same channel - just bump the counter
+      let nextVersion = semver.inc(currentVersion, 'prerelease', targetChannel)
       if (nextVersion == null) {
         throw new Error(`Invalid prerelease increment: ${currentVersion}`)
       }
       return nextVersion
     } else {
-      // Entering prerelease or transitioning to a new tag (e.g., stable → alpha, or alpha → beta)
+      // Entering prerelease or transitioning to a new channel (e.g., stable → alpha, or alpha → beta)
       // Apply the bump type to get the base version, then add prerelease suffix
       let baseVersion = isCurrentPrerelease
         ? currentVersion.replace(/-.*$/, '') // Strip existing prerelease suffix
@@ -111,7 +117,7 @@ function getNextVersion(
         throw new Error(`Invalid version increment: ${currentVersion} + ${bumpType}`)
       }
 
-      return `${baseVersion}-${targetTag}.0`
+      return `${baseVersion}-${targetChannel}.0`
     }
   } else {
     // Not in prerelease mode
@@ -143,7 +149,7 @@ interface ValidationError {
 }
 
 type ParsedPackageChanges =
-  | { valid: true; changes: ChangeFile[]; prereleaseConfig: RemixPrereleaseConfig | null }
+  | { valid: true; changes: ChangeFile[]; changesConfig: ChangesConfig | null }
   | { valid: false; errors: ValidationError[] }
 
 /**
@@ -189,31 +195,31 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
   let currentVersionPrereleaseId = getPrereleaseIdentifier(currentVersion)
   let isCurrentVersionPrerelease = currentVersionPrereleaseId !== null
 
-  // Handle prerelease.json - only supported for remix package
-  let prereleaseConfig: RemixPrereleaseConfig | null = null
-  let prereleaseJsonPath = path.join(changesDir, 'prerelease.json')
+  // Handle .changes/config.json - only supported for remix package
+  let changesConfig: ChangesConfig | null = null
+  let configJsonPath = path.join(changesDir, 'config.json')
 
   if (packageDirName === 'remix') {
-    // For remix, read and validate the prerelease config
-    let parsedRemixPrereleaseConfig = readRemixPrereleaseConfig()
-    if (parsedRemixPrereleaseConfig.exists) {
-      if (!parsedRemixPrereleaseConfig.valid) {
+    // For remix, read and validate the changes config
+    let parsedChangesConfig = readChangesConfig(packageDirName)
+    if (parsedChangesConfig.exists) {
+      if (!parsedChangesConfig.valid) {
         errors.push({
           packageDirName,
-          file: '.changes/prerelease.json',
-          error: parsedRemixPrereleaseConfig.error,
+          file: '.changes/config.json',
+          error: parsedChangesConfig.error,
         })
         return { valid: false, errors }
       }
-      prereleaseConfig = parsedRemixPrereleaseConfig.config
+      changesConfig = parsedChangesConfig.config
     }
   } else {
-    // For non-remix packages, error if prerelease.json exists
-    if (fs.existsSync(prereleaseJsonPath)) {
+    // For non-remix packages, error if config.json exists
+    if (fs.existsSync(configJsonPath)) {
       errors.push({
         packageDirName,
-        file: '.changes/prerelease.json',
-        error: 'prerelease.json is only supported for the "remix" package. Remove this file.',
+        file: '.changes/config.json',
+        error: '.changes/config.json is only supported for the "remix" package. Remove this file.',
       })
       return { valid: false, errors }
     }
@@ -221,39 +227,40 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
 
   // Read all files in .changes directory
   let files = fs.readdirSync(changesDir)
-  let changeFileNames = files.filter((file) => file !== 'README.md' && file !== 'prerelease.json')
+  let changeFileNames = files.filter((file) => file !== 'README.md' && file !== 'config.json')
   let hasChangeFiles = changeFileNames.filter((f) => f.endsWith('.md')).length > 0
 
-  // Validate prerelease.json / version consistency
-  if (prereleaseConfig !== null) {
-    // Config exists
+  // Validate changes config / version consistency
+  let configPrereleaseChannel = changesConfig?.prereleaseChannel ?? null
+  if (configPrereleaseChannel) {
+    // Config has prerelease channel
     if (
       currentVersionPrereleaseId !== null &&
-      currentVersionPrereleaseId !== prereleaseConfig.tag
+      currentVersionPrereleaseId !== configPrereleaseChannel
     ) {
-      // Tag mismatch (e.g., version is alpha but config says beta) - need change files to transition
+      // Channel mismatch (e.g., version is alpha but config says beta) - need change files to transition
       if (!hasChangeFiles) {
         errors.push({
           packageDirName,
-          file: '.changes/prerelease.json',
-          error: `prerelease.json tag '${prereleaseConfig.tag}' doesn't match version's prerelease identifier '${currentVersionPrereleaseId}'. Add a change file to transition to ${prereleaseConfig.tag}.`,
+          file: '.changes/config.json',
+          error: `prereleaseChannel '${configPrereleaseChannel}' doesn't match version's prerelease identifier '${currentVersionPrereleaseId}'. Add a change file to transition to ${configPrereleaseChannel}.`,
         })
       }
     } else if (!isCurrentVersionPrerelease && !hasChangeFiles) {
       // Config says prerelease but version is stable AND no change files - need change files to enter prerelease
       errors.push({
         packageDirName,
-        file: '.changes/prerelease.json',
-        error: `prerelease.json exists but version ${currentVersion} is stable. Add a change file to enter prerelease mode, or delete prerelease.json if this package should not be in prerelease.`,
+        file: '.changes/config.json',
+        error: `prereleaseChannel exists but version ${currentVersion} is stable. Add a change file to enter prerelease mode, or remove prereleaseChannel if this package should not be in prerelease.`,
       })
     }
   } else {
-    // No config - validate version is stable (unless graduating with change files)
+    // No prerelease channel - validate version is stable (unless graduating with change files)
     if (isCurrentVersionPrerelease && !hasChangeFiles) {
       errors.push({
         packageDirName,
         file: '.changes/',
-        error: `Version ${currentVersion} is a prerelease but no prerelease.json exists. Either add prerelease.json with { "tag": "${currentVersionPrereleaseId}" }, or add a change file to graduate to stable.`,
+        error: `Version ${currentVersion} is a prerelease but no prereleaseChannel exists. Either add .changes/config.json with { "prereleaseChannel": "${currentVersionPrereleaseId}" }, or add a change file to graduate to stable.`,
       })
     }
   }
@@ -327,7 +334,7 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
 
     // Validate breaking change prefix matches the correct bump type (only for stable releases)
     // In prerelease mode, breaking changes don't need special handling since we're just bumping counter
-    if (prereleaseConfig === null) {
+    if (!configPrereleaseChannel) {
       let isBreakingChange = hasBreakingChangePrefix(content)
 
       if (isBreakingChange) {
@@ -354,12 +361,12 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
   }
 
   // Validate entering prerelease requires a major bump
-  if (prereleaseConfig !== null && !isCurrentVersionPrerelease && changes.length > 0) {
+  if (configPrereleaseChannel && !isCurrentVersionPrerelease && changes.length > 0) {
     let hasMajorBump = changes.some((c) => c.bump === 'major')
     if (!hasMajorBump) {
       errors.push({
         packageDirName,
-        file: '.changes/prerelease.json',
+        file: '.changes/config.json',
         error:
           'Entering prerelease mode requires a major version bump. Add a change file with "major." prefix (e.g. "major.release-v2-alpha.md").',
       })
@@ -370,7 +377,16 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
     return { valid: false, errors }
   }
 
-  return { valid: true, changes, prereleaseConfig }
+  return { valid: true, changes, changesConfig }
+}
+
+/**
+ * Represents a dependency that was bumped, triggering this release.
+ */
+export interface DependencyBump {
+  packageName: string
+  version: string
+  releaseUrl: string
 }
 
 export interface PackageRelease {
@@ -380,6 +396,8 @@ export interface PackageRelease {
   nextVersion: string
   bump: BumpType
   changes: ChangeFile[]
+  /** Dependencies that were bumped, triggering this release (if any) */
+  dependencyBumps: DependencyBump[]
 }
 
 type ParsedChanges =
@@ -388,12 +406,33 @@ type ParsedChanges =
 
 /**
  * Parses and validates all change files across all packages.
+ * Also includes packages that need to be released due to dependency changes.
  * Returns releases if valid, or errors if invalid.
  */
 export function parseAllChangeFiles(): ParsedChanges {
   let packageDirNames = getAllPackageDirNames()
-  let releases: PackageRelease[] = []
   let errors: ValidationError[] = []
+
+  // Build maps for lookup
+  let dirNameToPackageName = new Map<string, string>()
+  let packageNameToDirName = new Map<string, string>()
+
+  // First pass: collect package info and validate change files
+  interface ParsedPackageInfo {
+    packageDirName: string
+    packageName: string
+    currentVersion: string
+    changes: ChangeFile[]
+    changesConfig: ChangesConfig | null
+  }
+  let parsedPackages: ParsedPackageInfo[] = []
+
+  // Read the remix changes config once (only remix supports changes config)
+  let remixChangesConfig = readChangesConfig('remix')
+  let validRemixChangesConfig: ChangesConfig | null = null
+  if (remixChangesConfig.exists && remixChangesConfig.valid) {
+    validRemixChangesConfig = remixChangesConfig.config
+  }
 
   for (let packageDirName of packageDirNames) {
     let parsed = parsePackageChanges(packageDirName)
@@ -403,32 +442,129 @@ export function parseAllChangeFiles(): ParsedChanges {
       continue
     }
 
-    // Only create a release if there are changes
-    if (parsed.changes.length > 0) {
-      let packageJsonPath = getPackageFile(packageDirName, 'package.json')
-      let packageJson = readJson(packageJsonPath)
-      let packageName = packageJson.name as string
-      let currentVersion = packageJson.version as string
+    let packageJsonPath = getPackageFile(packageDirName, 'package.json')
+    let packageJson = readJson(packageJsonPath)
+    let packageName = packageJson.name as string
+    let currentVersion = packageJson.version as string
 
-      let bump = getHighestBump(parsed.changes.map((c) => c.bump))
-      if (bump == null) continue
+    dirNameToPackageName.set(packageDirName, packageName)
+    packageNameToDirName.set(packageName, packageDirName)
 
-      let nextVersion = getNextVersion(currentVersion, bump, parsed.prereleaseConfig)
-
-      releases.push({
-        packageDirName,
-        packageName,
-        currentVersion,
-        nextVersion,
-        bump,
-        changes: parsed.changes,
-      })
+    // For remix package, use the changes config even if there are no change files
+    // (to correctly bump prerelease counter for dependency-triggered releases)
+    let changesConfig = parsed.changesConfig
+    if (packageDirName === 'remix' && changesConfig === null && validRemixChangesConfig) {
+      changesConfig = validRemixChangesConfig
     }
+
+    parsedPackages.push({
+      packageDirName,
+      packageName,
+      currentVersion,
+      changes: parsed.changes,
+      changesConfig,
+    })
   }
 
   if (errors.length > 0) {
     return { valid: false, errors }
   }
+
+  // Find packages with direct changes
+  let directlyChangedPackages = new Set<string>()
+  for (let pkg of parsedPackages) {
+    if (pkg.changes.length > 0) {
+      directlyChangedPackages.add(pkg.packageName)
+    }
+  }
+
+  // Find all packages that transitively depend on changed packages
+  let transitiveDependents = getTransitiveDependents(directlyChangedPackages)
+
+  // Determine all packages that will be released
+  let allReleasingPackages = new Set<string>([
+    ...directlyChangedPackages,
+    ...transitiveDependents.keys(),
+  ])
+
+  // Compute next versions for all releasing packages
+  // We need to do this in dependency order to correctly compute dependency bumps
+  let packageVersions = new Map<string, string>() // packageName -> nextVersion
+
+  // First, compute versions for directly changed packages
+  for (let pkg of parsedPackages) {
+    if (pkg.changes.length > 0) {
+      let bump = getHighestBump(pkg.changes.map((c) => c.bump))
+      if (bump == null) continue
+      let nextVersion = getNextVersion(pkg.currentVersion, bump, pkg.changesConfig)
+      packageVersions.set(pkg.packageName, nextVersion)
+    }
+  }
+
+  // Then, compute versions for dependency-triggered releases
+  // We need to do this iteratively because a package's version depends on knowing
+  // which of its dependencies are being released
+  for (let pkg of parsedPackages) {
+    if (
+      !directlyChangedPackages.has(pkg.packageName) &&
+      allReleasingPackages.has(pkg.packageName)
+    ) {
+      // This package is being released due to dependency changes
+      // Use the package's changes config if it has one (e.g., remix in prerelease mode)
+      let nextVersion = getNextVersion(pkg.currentVersion, 'patch', pkg.changesConfig)
+      packageVersions.set(pkg.packageName, nextVersion)
+    }
+  }
+
+  // Now build the final releases with dependency bumps
+  let releases: PackageRelease[] = []
+
+  for (let pkg of parsedPackages) {
+    if (!allReleasingPackages.has(pkg.packageName)) {
+      continue
+    }
+
+    let nextVersion = packageVersions.get(pkg.packageName)
+    if (nextVersion == null) continue
+
+    // Compute dependency bumps: which of this package's direct dependencies are being released?
+    let dependencyBumps: DependencyBump[] = []
+    let deps = getPackageDependencies(pkg.packageName)
+
+    for (let depName of deps) {
+      if (allReleasingPackages.has(depName)) {
+        let depVersion = packageVersions.get(depName)
+        if (depVersion) {
+          dependencyBumps.push({
+            packageName: depName,
+            version: depVersion,
+            releaseUrl: getGitHubReleaseUrl(depName, depVersion),
+          })
+        }
+      }
+    }
+
+    // Sort dependency bumps alphabetically by package name
+    dependencyBumps.sort((a, b) => a.packageName.localeCompare(b.packageName))
+
+    let bump: BumpType = 'patch'
+    if (pkg.changes.length > 0) {
+      bump = getHighestBump(pkg.changes.map((c) => c.bump)) ?? 'patch'
+    }
+
+    releases.push({
+      packageDirName: pkg.packageDirName,
+      packageName: pkg.packageName,
+      currentVersion: pkg.currentVersion,
+      nextVersion,
+      bump,
+      changes: pkg.changes,
+      dependencyBumps,
+    })
+  }
+
+  // Sort by package name for consistency
+  releases.sort((a, b) => a.packageName.localeCompare(b.packageName))
 
   return { valid: true, releases }
 }
@@ -550,6 +686,34 @@ function generateBumpTypeSection(
 }
 
 /**
+ * Generates the dependency bumps section for a changelog entry
+ */
+function generateDependencyBumpsSection(
+  dependencyBumps: DependencyBump[],
+  subheadingLevel: number,
+): string | null {
+  if (dependencyBumps.length === 0) {
+    return null
+  }
+
+  let lines: string[] = []
+  let subheadingPrefix = '#'.repeat(subheadingLevel)
+
+  lines.push(`${subheadingPrefix} Patch Changes`)
+  lines.push('')
+  lines.push('- Bumped `@remix-run/*` dependencies:')
+
+  for (let dep of dependencyBumps) {
+    let tag = getGitTag(dep.packageName, dep.version)
+    lines.push(`  - [\`${tag}\`](${dep.releaseUrl})`)
+  }
+
+  lines.push('')
+
+  return lines.join('\n')
+}
+
+/**
  * Generates changelog content for a package release
  */
 export function generateChangelogContent(
@@ -579,6 +743,27 @@ export function generateChangelogContent(
     }
   }
 
+  // Add dependency bumps section if there are any
+  // Only add if there are no other patch changes (to avoid duplicate "Patch Changes" heading)
+  if (release.dependencyBumps.length > 0) {
+    let hasPatchChanges = release.changes.some((c) => c.bump === 'patch')
+    if (hasPatchChanges) {
+      // Append to existing patch section (without heading)
+      lines.push('- Bumped `@remix-run/*` dependencies:')
+      for (let dep of release.dependencyBumps) {
+        let tag = getGitTag(dep.packageName, dep.version)
+        lines.push(`  - [\`${tag}\`](${dep.releaseUrl})`)
+      }
+      lines.push('')
+    } else {
+      // Create new patch section with heading
+      let section = generateDependencyBumpsSection(release.dependencyBumps, subheadingLevel)
+      if (section) {
+        lines.push(section)
+      }
+    }
+  }
+
   return lines.join('\n')
 }
 
@@ -586,7 +771,7 @@ export function generateChangelogContent(
  * Generates the commit message for all releases
  */
 export function generateCommitMessage(releases: PackageRelease[]): string {
-  let subject = 'Version Packages'
+  let subject = 'Release'
   let body = releases
     .map((r) => `- ${r.packageName}: ${r.currentVersion} -> ${r.nextVersion}`)
     .join('\n')

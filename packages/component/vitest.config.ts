@@ -14,6 +14,7 @@ export default defineConfig({
           headless: true,
         },
       ],
+      screenshotFailures: false,
     },
     include: ['src/**/*.test.{ts,tsx}'],
   },

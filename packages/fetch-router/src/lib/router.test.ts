@@ -909,9 +909,9 @@ describe('custom matcher', () => {
 
     // Create a custom matcher that tracks calls
     class CustomMatcher extends ArrayMatcher<MatchData> {
-      *matchAll(url: string | URL) {
+      matchAll(url: string | URL) {
         matchAllCalls++
-        yield* super.matchAll(url)
+        return super.matchAll(url)
       }
     }
 

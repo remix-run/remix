@@ -94,11 +94,11 @@ pnpm changes:validate
 
 ## Releases
 
-Releases are automated via the [changes-version-pr workflow](/.github/workflows/changes-version-pr.yaml) and [publish workflow](/.github/workflows/publish.yaml).
+Releases are automated via the [release-pr workflow](/.github/workflows/release-pr.yaml) and [publish workflow](/.github/workflows/publish.yaml).
 
 1. **You push changes to `main`** with change files in `packages/*/.changes/`
 
-2. **A "Version Packages" PR is automatically opened** (or updated if one exists)
+2. **A "Release" PR is automatically opened** (or updated if one exists)
 
    The PR contains:
 
@@ -112,7 +112,7 @@ Releases are automated via the [changes-version-pr workflow](/.github/workflows/
 
 ### Manual Versioning
 
-The "Version Packages" PR simply automates the `pnpm changes:version` command. If needed, you can run this command manually. This will update the `package.json` versions, `CHANGELOG.md` files, and delete the change files. It will then commit the result.
+The "Release" PR simply automates the `pnpm changes:version` command. If needed, you can run this command manually. This will update the `package.json` versions, `CHANGELOG.md` files, and delete the change files. It will then commit the result.
 
 ```sh
 pnpm changes:version
@@ -128,49 +128,49 @@ Tags and GitHub releases are created automatically by the publish workflow after
 
 ### Prerelease Mode for `remix`
 
-The `remix` package supports prerelease mode via an optional `.changes/prerelease.json` file:
+The `remix` package supports prerelease mode via an optional `.changes/config.json` file:
 
 ```json
 {
-  "tag": "alpha"
+  "prereleaseChannel": "alpha"
 }
 ```
 
-This is only supported for `remix` because it's the only package that needs to publish prereleases alongside an existing stable version on npm. All other packages in this monorepo are new and publish directly as `latest`.
+The `prereleaseChannel` field determines the version suffix (e.g. `alpha`, `beta`, `rc`), while prereleases are always published to npm with the `next` tag. This is only supported for `remix` because it's the only package that needs to publish prereleases alongside an existing stable version on npm. All other packages in this monorepo are new and publish directly as `latest`.
 
 #### Bumping `remix` prerelease versions
 
 While in prerelease mode, add change files as normal. The prerelease counter increments (e.g. `3.0.0-alpha.1` → `3.0.0-alpha.2`). Changelog entries still get proper "Major Changes" / "Minor Changes" / "Patch Changes" sections, but the bump type is otherwise ignored—only the prerelease counter is bumped.
 
-#### Transitioning between `remix` prerelease tags
+#### Transitioning between `remix` prerelease channels
 
-To transition between tags (e.g. `alpha` → `beta`):
+To transition between channels (e.g. `alpha` → `beta`):
 
-1. Update `.changes/prerelease.json` to the new tag
+1. Update `prereleaseChannel` in `.changes/config.json` to the new channel
 2. Add a change file describing the transition
 
-Version resets to the new tag (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The bump type is for changelog categorization only—by convention, use `patch`.
+Version resets to the new channel (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The bump type is for changelog categorization only—by convention, use `patch`.
 
 #### Graduating `remix` to stable
 
 To release the stable version:
 
-1. Delete `.changes/prerelease.json`
+1. Remove `prereleaseChannel` from `.changes/config.json` (or delete the file)
 2. Add a change file describing the stable release
 
 The prerelease suffix is stripped (e.g. `3.0.0-rc.7` → `3.0.0`). The bump type is for changelog categorization only—by convention, use `major` for a major release announcement.
 
-## Nightly Builds
+## Preview builds
 
-We also maintain installable nightly builds in a `nightly` branch as a way for folks to test out the latest `main` branch without needing to publish nightly releases to npm and clutter up the npm registry and version history UI.
+We maintain installable builds of `main` in a `preview/main` branch as a way for folks to test out the latest `main` branch without needing to publish releases to npm and clutter up the npm registry and version history UI.
 
-This is managed via the [`nightly` workflow](/.github/workflows/nightly.yaml) which uses the [`setup-installable-branch.ts`](./scripts/setup-installable-branch.ts) script to build and commit the build and required `package.json` changes to the `nightly` branch.
+This is managed via the [`preview` workflow](/.github/workflows/preview.yaml) which uses the [`setup-installable-branch.ts`](./scripts/setup-installable-branch.ts) script to build and commit the build and required `package.json` changes to the `preview/main` branch on every new commit to `main`.
 
-The nightly build can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
+The `preview/main` branch build can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
 
 ```sh
-pnpm install "remix-run/remix#nightly&path:packages/remix"
+pnpm install "remix-run/remix#preview/main&path:packages/remix"
 
 # Or, just install a single package
-pnpm install "remix-run/remix#nightly&path:packages/@remix-run/fetch-router"
+pnpm install "remix-run/remix#preview/main&path:packages/@remix-run/fetch-router"
 ```

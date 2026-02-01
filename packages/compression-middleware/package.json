@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/compression-middleware",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Middleware for compressing HTTP responses",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -38,7 +38,7 @@
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
-  "peerDependencies": {
+  "dependencies": {
     "@remix-run/fetch-router": "workspace:^",
     "@remix-run/mime": "workspace:^",
     "@remix-run/response": "workspace:^"

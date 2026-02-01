@@ -75,10 +75,6 @@ export interface Router {
    */
   fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>
   /**
-   * The number of routes in the router.
-   */
-  readonly size: number
-  /**
    * Add a route to the router.
    *
    * @param method The request method to match
@@ -311,9 +307,6 @@ export function createRouter(options?: RouterOptions): Router {
       }
 
       return dispatch(context)
-    },
-    get size(): number {
-      return matcher.size
     },
     route: addRoute,
     map: mapRoutes,

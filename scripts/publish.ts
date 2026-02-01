@@ -3,8 +3,8 @@
  *
  * This script uses pnpm publish with --report-summary, reads the summary file,
  * and creates Git tags + GitHub releases. When the remix package is in prerelease
- * mode (has .changes/prerelease.json), it publishes in two phases: all other
- * packages as "latest", then remix with its prerelease tag (e.g., "alpha").
+ * mode (has .changes/config.json with prereleaseChannel), it publishes in two phases:
+ * all other packages as "latest", then remix with the "next" tag.
  *
  * This script is designed for CI use. For previewing releases, use `pnpm changes:preview`.
  *
@@ -24,8 +24,13 @@ import * as path from 'node:path'
 import { tagExists } from './utils/git.ts'
 import { createRelease } from './utils/github.ts'
 import { getRootDir, logAndExec } from './utils/process.ts'
-import { readRemixPrereleaseConfig, getChangelogEntry } from './utils/changes.ts'
-import { getAllPackageDirNames, getPackageFile } from './utils/packages.ts'
+import { readChangesConfig, getChangelogEntry } from './utils/changes.ts'
+import {
+  getAllPackageDirNames,
+  getPackageFile,
+  getGitTag,
+  getPackageShortName,
+} from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
 
 let rootDir = getRootDir()
@@ -65,7 +70,7 @@ function readPublishSummary(): PublishedPackage[] {
   return summary.publishedPackages.map((pkg) => ({
     packageName: pkg.name,
     version: pkg.version,
-    tag: `${pkg.name}@${pkg.version}`,
+    tag: getGitTag(pkg.name, pkg.version),
   }))
 }
 
@@ -130,7 +135,7 @@ async function getUnpublishedPackages(): Promise<PublishedPackage[]> {
       unpublished.push({
         packageName: pkg.npmName,
         version: pkg.localVersion,
-        tag: `${pkg.npmName}@${pkg.localVersion}`,
+        tag: getGitTag(pkg.npmName, pkg.localVersion),
       })
     }
   }
@@ -155,8 +160,8 @@ function previewGitHubReleases(packages: PublishedPackage[]): { warnings: Change
   console.log()
 
   for (let pkg of packages) {
-    let tagName = `${pkg.packageName}@${pkg.version}`
-    let releaseName = `${pkg.packageName} v${pkg.version}`
+    let tagName = getGitTag(pkg.packageName, pkg.version)
+    let releaseName = `${getPackageShortName(pkg.packageName)} v${pkg.version}`
     let changes = getChangelogEntry({ packageName: pkg.packageName, version: pkg.version })
     let body = changes?.body ?? 'No changelog entry found for this version.'
 
@@ -195,20 +200,19 @@ async function main() {
   }
 
   // Check if remix is in prerelease mode
-  let remixPrereleaseConfig = readRemixPrereleaseConfig()
-  let remixPrereleaseTag: string | null = null
+  let remixChangesConfig = readChangesConfig('remix')
+  let remixPrereleaseChannel: string | null = null
 
-  if (remixPrereleaseConfig.exists) {
-    if (!remixPrereleaseConfig.valid) {
-      console.error('Error reading remix prerelease config:', remixPrereleaseConfig.error)
+  if (remixChangesConfig.exists) {
+    if (!remixChangesConfig.valid) {
+      console.error('Error reading remix changes config:', remixChangesConfig.error)
       process.exit(1)
     }
-    remixPrereleaseTag = remixPrereleaseConfig.config.tag
-    console.log(`Remix is in prerelease mode (tag: ${remixPrereleaseTag})`)
-    console.log(
-      'Publishing in two phases: other packages as "latest", then remix as',
-      `"${remixPrereleaseTag}"\n`,
-    )
+    remixPrereleaseChannel = remixChangesConfig.config.prereleaseChannel || null
+    if (remixPrereleaseChannel) {
+      console.log(`Remix is in prerelease mode (channel: ${remixPrereleaseChannel})`)
+      console.log('Publishing in two phases: other packages as "latest", then remix as "next"\n')
+    }
   }
 
   // Publish packages to npm
@@ -216,12 +220,12 @@ async function main() {
 
   let published: PublishedPackage[] = []
 
-  if (remixPrereleaseTag) {
+  if (remixPrereleaseChannel) {
     let publishCommands = [
       // Phase 1: Publish everything in `packages` except remix (with --report-summary so we know what was published)
       'pnpm publish --recursive --filter "./packages/*" --filter "!remix" --access public --no-git-checks --report-summary',
-      // Phase 2: Publish remix with prerelease tag (with --report-summary so we know if remix was published)
-      `pnpm publish --filter remix --tag ${remixPrereleaseTag} --access public --no-git-checks --report-summary`,
+      // Phase 2: Publish remix with "next" tag (with --report-summary so we know if remix was published)
+      'pnpm publish --filter remix --tag next --access public --no-git-checks --report-summary',
     ]
 
     if (dryRun) {
@@ -253,7 +257,7 @@ async function main() {
 
   // In dry run mode, query npm to determine what would be published
   // and preview the GitHub releases. This is designed to be run against
-  // the contents of the "Version Packages" PR / `pnpm changes:version` output.
+  // the contents of the "Release" PR / `pnpm changes:version` output.
   if (dryRun) {
     console.log('Checking npm for unpublished versions...\n')
 

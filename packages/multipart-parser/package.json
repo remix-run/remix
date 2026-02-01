@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/multipart-parser",
-  "version": "0.14.1",
+  "version": "0.14.2",
   "description": "A fast, efficient parser for multipart streams in any JavaScript environment",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
@@ -36,7 +36,7 @@
       "./package.json": "./package.json"
     }
   },
-  "peerDependencies": {
+  "dependencies": {
     "@remix-run/headers": "workspace:^"
   },
   "devDependencies": {

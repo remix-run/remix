@@ -1,26 +1,16 @@
-import { createFrame } from '@remix-run/dom'
+import { hydrate } from 'remix/component'
 
-createFrame(document, {
-  async loadModule(moduleUrl, name) {
+let root = hydrate({
+  async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
-    if (!mod) {
-      throw new Error(`Unknown module: ${moduleUrl}#${name}`)
-    }
-
-    let Component = mod[name]
+    let Component = mod[exportName]
     if (!Component) {
-      throw new Error(`Unknown component: ${moduleUrl}#${name}`)
+      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
     }
-
     return Component
   },
+})
 
-  async resolveFrame(frameUrl) {
-    let res = await fetch(frameUrl)
-    if (res.ok) {
-      return res.text()
-    }
-
-    throw new Error(`Failed to fetch ${frameUrl}`)
-  },
+root.addEventListener('error', (event) => {
+  console.error('Hydration error:', event.error)
 })

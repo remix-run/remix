@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/file-storage",
-  "version": "0.13.1",
+  "version": "0.13.2",
   "description": "Key/value storage for JavaScript File objects",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
@@ -41,7 +41,7 @@
       "./package.json": "./package.json"
     }
   },
-  "peerDependencies": {
+  "dependencies": {
     "@remix-run/fs": "workspace:^",
     "@remix-run/lazy-file": "workspace:^"
   },

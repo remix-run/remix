@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/component",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Web components for Remix",
   "author": "Ryan Florence <rpflorence@gmail.com>",
   "license": "MIT",
@@ -20,6 +20,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./server": "./src/server.ts",
     "./jsx-runtime": "./src/jsx-runtime.ts",
     "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
     "./dev": "./src/dev.ts",
@@ -30,6 +31,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./server": {
+        "types": "./dist/server.d.ts",
+        "default": "./dist/server.js"
       },
       "./jsx-runtime": {
         "types": "./dist/jsx-runtime.d.ts",
