@@ -6,6 +6,58 @@ NOTE: Tasks that are in progress should be moved to `in-progress.md`.
 
 ---
 
+### Add default deny patterns for security
+
+Automatically deny serving common sensitive files, even if they match `allow` patterns. This provides a safety net to prevent accidental exposure of secrets.
+
+**Problem:**
+
+Currently, users must explicitly configure `deny` patterns to block sensitive files. If someone writes `allow: ['**']` or forgets to exclude secrets, they could accidentally expose:
+
+- Environment variables (`.env` files)
+- Private keys and certificates
+- Other sensitive configuration
+
+**Proposed solution:**
+
+Add a `DEFAULT_DENY` list that's always applied, regardless of `allow` patterns:
+
+```typescript
+const DEFAULT_DENY = [
+  '**/.env',
+  '**/.env.*',
+  '**/*.pem',
+  '**/*.key',
+  '**/*.crt',
+  // Additional patterns as needed
+]
+
+// In isPathAllowed():
+// 1. Check DEFAULT_DENY first (always block)
+// 2. Check user deny patterns
+// 3. Check allow patterns
+```
+
+**Benefits:**
+
+- **Safety by default** - Common secrets are blocked even with permissive `allow` patterns
+- **Defense in depth** - Even if users misconfigure, sensitive files stay protected
+- **Clear messaging** - Can log helpful warnings when default denies are triggered
+- **Still overridable** - Users can explicitly add patterns to `allow` if absolutely needed (though we should warn)
+
+**Acceptance Criteria:**
+
+- [ ] Add `DEFAULT_DENY` constant with common sensitive file patterns
+- [ ] Apply default deny before user-configured deny patterns
+- [ ] Default deny takes precedence over allow patterns
+- [ ] Log a clear warning when default deny blocks a file (helps debugging)
+- [ ] Document the default deny list in README/JSDoc
+- [ ] Add tests verifying default deny works even with `allow: ['**']`
+- [ ] Update examples to show users don't need to specify these patterns
+- [ ] All tests pass
+
+---
+
 ### Add custom logger option
 
 The middleware currently uses `console.warn/log/error` for all logging, which creates noise during tests and doesn't integrate with application logging infrastructure.
@@ -59,62 +111,6 @@ interface DevAssetsOptions {
 - [ ] Update E2E tests to use silent logger (cleaner test output)
 - [ ] Document logger option in README/JSDoc
 - [ ] All tests pass
-
----
-
-### Polish HMR watcher configuration
-
-Improve the file watcher configuration to be more explicit, performant, and maintainable. The current approach works but has accumulated complexity around pattern matching, directory traversal, and the relationship between middleware config and watcher behavior.
-
-**Current issues:**
-
-1. **Implicit pattern mapping** - Middleware `allow` patterns (designed for "what to serve") are repurposed for "what to watch". These aren't quite the same concern - you might want to watch more (to detect deletions) or less (to avoid EMFILE).
-
-2. **Directory traversal heuristics** - The `stats?.isDirectory()` check with "no extension = directory" fallback works but feels fragile. We're guessing when chokidar doesn't give us stats.
-
-3. **Hard-coded standard ignores** - `node_modules`, `.git`, `dist`, `build` are manually listed. Should these be configurable? Derived from `.gitignore`?
-
-4. **Allow vs ignore mental model** - Middleware thinks in "allow these files", but chokidar thinks in "ignore these paths". The inversion in the `ignored` function works but isn't intuitive.
-
-5. **No visibility** - Hard to know if watcher is configured well (how many files, what's ignored, performance impact).
-
-6. **Extensions list is separate** - Watcher has its own `extensions` array that's independent from what middleware can handle. Could get out of sync.
-
-**Open questions to explore:**
-
-- Should watcher config be explicit rather than derived from middleware patterns?
-- Could we use a positive "watch these paths" approach instead of "watch root, ignore most things"?
-- Should we measure and log: files watched, startup time, memory usage?
-- How should `.gitignore` integration work, if at all?
-- Should standard ignores be configurable?
-- Can we eliminate the directory detection heuristic?
-- Should watching be more conservative (only what you need) or liberal (catch everything)?
-
-**Note:** This may lead to changes in the middleware's `allow`/`deny` config if we need to align concepts better. This is TBD and should be explored as part of this task.
-
-**Why this isn't blocking:**
-
-- HMR works correctly
-- Performance is acceptable (< 100ms startup in typical projects)
-- Complexity is isolated to `hmr-watcher.ts`
-- Can improve iteratively
-
-**Acceptance Criteria:**
-
-- [ ] **Correctness**: Watches the right files (no false positives watching unnecessary files, no false negatives missing files that should trigger HMR)
-- [ ] **Performance**: Measure and document startup time, file count watched, and memory usage
-- [ ] **Usability**: Clear API with good defaults, easy to configure for common cases (monorepo, specific directories, etc.)
-- [ ] **Debuggability**: Log or expose metrics about what's being watched (file count, patterns matched, etc.)
-- [ ] **Maintainability**: Reduce heuristics, clearer separation of concerns between middleware config and watcher config
-- [ ] **Testability**: Unit tests for filtering logic (can test without actually watching filesystem)
-- [ ] All existing E2E tests still pass
-- [ ] Demo app works in both standalone and monorepo setups
-
-**Implementation notes:**
-
-- Consider whether middleware config should change (explore alignment between serving patterns and watching patterns)
-- Document the relationship between `allow`/`deny` patterns and what gets watched
-- Consider adding a `watch` option to `DevAssetsOptions` for explicit watcher config (if needed)
 
 ---
 

@@ -20,7 +20,7 @@ import { staticFiles } from '@remix-run/static-middleware'
 let router = createRouter({
   middleware: [
     devAssets({
-      allow: [/^app\//], // Only serve files from app/ directory
+      allow: ['app/**'], // Only serve files from app/ directory
     }),
     staticFiles('./public'),
   ],
@@ -29,7 +29,7 @@ let router = createRouter({
 
 ### How It Works
 
-1. **Source files** (`.ts`, `.tsx`, `.js`, `.jsx`) are transformed with esbuild
+1. **Source files** are transformed with esbuild
 2. **Imports are rewritten** - bare specifiers become `/__@workspace/...` URLs
 3. **Files outside app root** are served from `/__@workspace/...` paths (when configured)
 4. **Secure by default** - Only explicitly allowed files are served
@@ -65,8 +65,8 @@ export let App = component(function App() {
 ```ts
 devAssets({
   root: '.', // Root directory (defaults to cwd)
-  allow: [/^app\//], // Required - allowed paths to serve
-  deny: [/\.env/], // Optional - block specific patterns
+  allow: ['app/**'], // Required - allowed paths to serve
+  deny: ['**/.env*'], // Optional - block specific patterns
 })
 ```
 
@@ -74,13 +74,13 @@ devAssets({
 
 Files outside the app root (like `node_modules` or workspace packages) are served via `/__@workspace/` URLs. Configure the `workspace` option to enable this:
 
-```ts
+````ts
 devAssets({
-  allow: [/^app\//],
+  allow: ['app/**'],
   workspace: {
     root: '../..',  // e.g., monorepo root
-    allow: [/node_modules/, /^packages\//],
-    deny: [/\/test\//],  // Additional deny patterns for workspace
+    allow: ['**/node_modules/**', 'packages/**'],
+    deny: ['**/test/**'],  // Additional deny patterns for workspace
   },
 })
 
@@ -90,12 +90,24 @@ devAssets({
 - **ESM native** - Leverages browser's native ES modules
 - **esbuild powered** - Fast TypeScript and JSX transforms
 - **Consistent resolution** - Uses esbuild's resolver for dev/prod parity
+- **Hot Module Replacement (HMR)** - Optional component-level HMR with state preservation
+
+### HMR Configuration
+
+Enable HMR by setting `hmr: true` in the config:
+
+```ts
+devAssets({
+  allow: ['app/**'],
+  hmr: true,  // Enable HMR
+})
+````
 
 ## Limitations
 
 - **ESM only** - CommonJS packages are not supported (yet)
 - **No CSS imports** - Use CSS-in-JS or `<link>` tags
-- **No HMR** - Hot module replacement will be added separately
+- **App-only HMR** - Workspace packages are not watched
 
 ## Related Packages
 
@@ -105,4 +117,3 @@ devAssets({
 ## License
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)
-```

@@ -20,12 +20,12 @@ async function getAssetsMiddleware() {
     // Use project root so paths match esbuild's entry points (e.g., 'app/entry.tsx')
     return devAssets({
       hmr: true,
-      allow: [/^app\//],
+      allow: ['app/**'],
       workspace: {
         // Root is the monorepo root (two levels up from demos/assets)
         root: '../..',
         // Allow serving from node_modules and workspace packages
-        allow: [/node_modules/, /^packages\//],
+        allow: ['**/node_modules/**', 'packages/**'],
       },
       // Use shared esbuild config for dev/prod parity
       esbuildConfig,

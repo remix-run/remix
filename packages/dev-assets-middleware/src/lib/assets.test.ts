@@ -566,7 +566,7 @@ describe('allow/deny security', () => {
     it('allows requests matching allow patterns', async () => {
       setupDirs()
       try {
-        let middleware = devAssets({ root: tempDir, allow: [/^app\//] })
+        let middleware = devAssets({ root: tempDir, allow: ['app/**'] })
         let request = new Request('http://localhost/app/entry.ts')
         let context: any = {
           request,
@@ -587,7 +587,7 @@ describe('allow/deny security', () => {
     it('blocks requests not matching allow patterns', async () => {
       setupDirs()
       try {
-        let middleware = devAssets({ root: tempDir, allow: [/^app\//] })
+        let middleware = devAssets({ root: tempDir, allow: ['app/**'] })
         let request = new Request('http://localhost/server.ts')
         let context: any = {
           request,
@@ -611,8 +611,8 @@ describe('allow/deny security', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/.*/], // Allow everything
-          deny: [/^secret\.ts$/], // But deny secret.ts
+          allow: ['**'], // Allow everything
+          deny: ['secret.ts'], // But deny secret.ts
         })
         let request = new Request('http://localhost/secret.ts')
         let context: any = {
@@ -634,8 +634,8 @@ describe('allow/deny security', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/.*/], // Allow everything
-          deny: [/^server\.ts$/], // Except server.ts
+          allow: ['**'], // Allow everything
+          deny: ['server.ts'], // Except server.ts
         })
         let request = new Request('http://localhost/server.ts')
         let context: any = {
@@ -657,7 +657,7 @@ describe('allow/deny security', () => {
     it('blocks workspace requests when not configured', async () => {
       setupDirs()
       try {
-        let middleware = devAssets({ allow: [/^app\//] })
+        let middleware = devAssets({ allow: ['app/**'] })
         let request = new Request('http://localhost/__@workspace/node_modules/pkg/index.js')
         let context: any = {
           request,
@@ -678,10 +678,10 @@ describe('allow/deny security', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
           workspace: {
             root: workspaceDir,
-            allow: [/node_modules/],
+            allow: ['**/node_modules/**'],
           },
         })
         let request = new Request('http://localhost/__@workspace/node_modules/pkg/index.js')
@@ -705,10 +705,10 @@ describe('allow/deny security', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
           workspace: {
             root: workspaceDir,
-            allow: [/node_modules/], // Only allow node_modules
+            allow: ['**/node_modules/**'], // Only allow node_modules
           },
         })
         let request = new Request('http://localhost/__@workspace/packages/lib/index.ts')
@@ -731,11 +731,11 @@ describe('allow/deny security', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
-          deny: [/\.env/], // Top-level deny
+          allow: ['app/**'],
+          deny: ['**/.env*'], // Top-level deny
           workspace: {
             root: workspaceDir,
-            allow: [/.*/], // Allow everything in workspace
+            allow: ['**'], // Allow everything in workspace
           },
         })
         let request = new Request('http://localhost/__@workspace/.env')
@@ -760,12 +760,12 @@ describe('allow/deny security', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
-          deny: [/\.env/], // Global deny
+          allow: ['app/**'],
+          deny: ['**/.env*'], // Global deny
           workspace: {
             root: workspaceDir,
-            allow: [/.*/],
-            deny: [/test\.ts/], // Additional workspace deny
+            allow: ['**'],
+            deny: ['**/test.ts'], // Additional workspace deny
           },
         })
 
@@ -831,7 +831,7 @@ describe('esbuild config support', () => {
 
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
           esbuildConfig: {
             plugins: [
               {
@@ -879,7 +879,7 @@ describe('esbuild config support', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
           esbuildConfig: {
             // User tries to configure these, but they should be overridden
             // Cast to any to bypass type check for testing override behavior
@@ -922,7 +922,7 @@ describe('esbuild config support', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
           esbuildConfig: {
             sourcemap: false,
           },
@@ -952,7 +952,7 @@ describe('esbuild config support', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
           esbuildConfig: {
             sourcemap: 'external' as any,
           },
@@ -987,7 +987,7 @@ describe('esbuild config support', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
           esbuildConfig: {
             entryPoints: ['app/entry.tsx'],
           },
@@ -1025,7 +1025,7 @@ describe('esbuild config support', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
         })
 
         let request = new Request('http://localhost/')
@@ -1056,7 +1056,7 @@ describe('esbuild config support', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
           esbuildConfig: {
             external: ['https://unpkg.com/@remix-run/component'],
           },
@@ -1110,7 +1110,7 @@ root.render(<div>Hello</div>)`,
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
           esbuildConfig: {
             external: ['@remix-run/component'],
           },
@@ -1166,7 +1166,7 @@ export function createApp() {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
           esbuildConfig: {
             external: [/^@external\//] as any,
           },
@@ -1222,7 +1222,7 @@ export { foo, bar, helper }`,
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
           esbuildConfig: {
             external: ['@external/package'],
           },
@@ -1291,7 +1291,7 @@ describe('module graph integration', () => {
       try {
         let middleware = devAssets({
           root: tempDir,
-          allow: [/^app\//],
+          allow: ['app/**'],
         })
 
         // Create a file

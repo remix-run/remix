@@ -4,6 +4,7 @@ import * as fsp from 'node:fs/promises'
 import * as esbuild from 'esbuild'
 import { init as lexerInit, parse as parseImports } from 'es-module-lexer'
 import MagicString from 'magic-string'
+import picomatch from 'picomatch'
 import type { Middleware, Assets, AssetEntry } from '@remix-run/fetch-router'
 import { fileURLToPath } from 'node:url'
 
@@ -222,24 +223,18 @@ export interface DevAssetsWorkspaceOptions {
   root: string
 
   /**
-   * Array of regex patterns that allow files to be served via `/__@workspace/` URLs.
+   * Array of glob patterns that allow files to be served via `/__@workspace/` URLs.
    * Paths are tested as posix-style paths relative to `root`.
-   *
-   * @example
-   * allow: [/node_modules/, /^packages\//]
    */
-  allow: RegExp[]
+  allow: string[]
 
   /**
-   * Array of regex patterns that block files from being served via `/__@workspace/`.
+   * Array of glob patterns that block files from being served via `/__@workspace/`.
    * Takes precedence over `allow`. Paths are tested as posix-style paths relative to `root`.
    *
    * These patterns are combined with the top-level `deny` patterns.
-   *
-   * @example
-   * deny: [/\/test\//, /\.spec\.ts$/]
    */
-  deny?: RegExp[]
+  deny?: string[]
 }
 
 /**
@@ -270,24 +265,18 @@ export interface DevAssetsOptions {
   hmr?: boolean
 
   /**
-   * Array of regex patterns that allow files to be served from the app root.
+   * Array of glob patterns that allow files to be served from the app root.
    * Paths are tested as posix-style paths relative to `root`.
-   *
-   * @example
-   * allow: [/^app\//]  // Only serve files under app/
    */
-  allow: RegExp[]
+  allow: string[]
 
   /**
-   * Array of regex patterns that block files from being served.
+   * Array of glob patterns that block files from being served.
    * Takes precedence over `allow`. Paths are tested as posix-style paths relative to `root`.
    *
    * These patterns are inherited by the workspace configuration.
-   *
-   * @example
-   * deny: [/\.env($|\.)/, /\.(pem|key|crt)$/]  // Block secrets
    */
-  deny?: RegExp[]
+  deny?: string[]
 
   /**
    * Workspace access configuration for `/__@workspace/` URLs.
@@ -421,10 +410,11 @@ function toPosixPath(p: string): string {
   return p.split(path.sep).join('/')
 }
 
-// Check if a posix path matches any pattern in the list
-function matchesPatterns(posixPath: string, patterns: RegExp[]): boolean {
+// Check if a posix path matches any glob pattern in the list
+function matchesPatterns(posixPath: string, patterns: string[]): boolean {
   for (let pattern of patterns) {
-    if (pattern.test(posixPath)) {
+    let matcher = picomatch(pattern, { dot: true })
+    if (matcher(posixPath)) {
       return true
     }
   }
@@ -432,7 +422,7 @@ function matchesPatterns(posixPath: string, patterns: RegExp[]): boolean {
 }
 
 // Check if a path is allowed to be served
-function isPathAllowed(posixPath: string, allow: RegExp[], deny: RegExp[]): boolean {
+function isPathAllowed(posixPath: string, allow: string[], deny: string[]): boolean {
   // Deny takes precedence
   if (deny.length > 0 && matchesPatterns(posixPath, deny)) {
     return false
@@ -540,11 +530,12 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
     // Create SSE event source for pushing updates to browsers
     hmrEventSource = createHmrEventSource(DEBUG)
 
-    // Create file watcher
+    // Create file watcher - only watch app root, not workspace
+    // Workspace packages should have their own dev servers for HMR
     hmrWatcher = createWatcher({
       root,
-      extensions: ['.js', '.jsx', '.ts', '.tsx'],
       allowPatterns: appAllowPatterns,
+      denyPatterns: appDenyPatterns,
     })
 
     // Wire file watcher to module graph + SSE notifications
@@ -723,7 +714,7 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
       console.warn(`[dev-assets-middleware] Blocked: ${pathname}`)
       if (appAllowPatterns.length === 0) {
         console.warn(`  No allow patterns configured. Add to config:`)
-        console.warn(`  allow: [/^app\\//]`)
+        console.warn(`  allow: ['app/**']`)
       } else if (matchesPatterns(posixPath, appDenyPatterns)) {
         console.warn(`  Matched deny pattern`)
       } else {
@@ -731,7 +722,8 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
         for (let pattern of appAllowPatterns) {
           console.warn(`    ${pattern}`)
         }
-        console.warn(`  Consider adding: allow: [/${posixPath.split('/')[0] || posixPath}\\//]`)
+        let firstDir = posixPath.split('/')[0] || posixPath
+        console.warn(`  Consider adding: allow: ['${firstDir}/**']`)
       }
       return new Response('Forbidden', {
         status: 403,
@@ -807,8 +799,8 @@ async function handleWorkspaceRequest(
   pathname: string,
   root: string,
   workspaceRoot: string,
-  allowPatterns: RegExp[],
-  denyPatterns: RegExp[],
+  allowPatterns: string[],
+  denyPatterns: string[],
   caches: Caches,
   ifNoneMatch: string | null,
   esbuildConfig: DevAssetsEsbuildConfig | undefined,
@@ -823,7 +815,7 @@ async function handleWorkspaceRequest(
     console.warn(`[dev-assets-middleware] Blocked: ${pathname}`)
     if (allowPatterns.length === 0) {
       console.warn(`  No workspace.allow patterns configured. Add to config:`)
-      console.warn(`  workspace: { allow: [/node_modules/] }`)
+      console.warn(`  workspace: { allow: ['**/node_modules/**'] }`)
     } else if (matchesPatterns(posixPath, denyPatterns)) {
       console.warn(`  Matched deny pattern`)
     } else {
@@ -831,7 +823,8 @@ async function handleWorkspaceRequest(
       for (let pattern of allowPatterns) {
         console.warn(`    ${pattern}`)
       }
-      console.warn(`  Consider adding: workspace: { allow: [/${posixPath.split('/')[0]}\\//] }`)
+      let firstDir = posixPath.split('/')[0]
+      console.warn(`  Consider adding: workspace: { allow: ['${firstDir}/**'] }`)
     }
     return new Response(`Forbidden: ${posixPath}`, {
       status: 403,
@@ -917,8 +910,8 @@ async function transformSource(
   sourceUrl: string,
   root: string,
   workspaceRoot: string | null,
-  allowPatterns: RegExp[],
-  denyPatterns: RegExp[],
+  allowPatterns: string[],
+  denyPatterns: string[],
   caches: Caches,
   esbuildConfig: DevAssetsEsbuildConfig | undefined,
   externalPatterns: (string | RegExp)[],
@@ -1063,8 +1056,8 @@ async function rewriteImports(
   importerPath: string,
   root: string,
   workspaceRoot: string | null,
-  allowPatterns: RegExp[],
-  denyPatterns: RegExp[],
+  allowPatterns: string[],
+  denyPatterns: string[],
   caches: Caches,
   externalPatterns: (string | RegExp)[],
   importerNode: ModuleNode,
@@ -1240,8 +1233,8 @@ async function batchResolveSpecifiers(
   importerDir: string,
   root: string,
   workspaceRoot: string | null,
-  allowPatterns: RegExp[],
-  denyPatterns: RegExp[],
+  allowPatterns: string[],
+  denyPatterns: string[],
   caches: Caches,
   externalPatterns: (string | RegExp)[],
 ): Promise<void> {
@@ -1313,8 +1306,8 @@ function resolvedPathToUrl(
   absolutePath: string,
   root: string,
   workspaceRoot: string | null,
-  allowPatterns: RegExp[],
-  denyPatterns: RegExp[],
+  allowPatterns: string[],
+  denyPatterns: string[],
 ): string {
   // Resolve symlinks and normalize paths for comparison
   // This handles cases like macOS where /var -> /private/var

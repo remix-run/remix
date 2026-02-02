@@ -37,6 +37,7 @@
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",
     "@types/node": "catalog:",
+    "@types/picomatch": "^3.0.2",
     "@typescript/native-preview": "catalog:",
     "esbuild": "^0.25.0",
     "playwright": "catalog:",
@@ -71,6 +72,7 @@
     "@swc/types": "^0.1.17",
     "chokidar": "^4.0.3",
     "es-module-lexer": "^2.0.0",
-    "magic-string": "^0.30.21"
+    "magic-string": "^0.30.21",
+    "picomatch": "^4.0.2"
   }
 }

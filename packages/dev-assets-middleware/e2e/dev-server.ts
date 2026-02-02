@@ -96,11 +96,11 @@ function startHttpServer(): Promise<void> {
         serveIndex,
         devAssets({
           root: publicDir,
-          allow: [/^assets\//],
+          allow: ['assets/**'],
           hmr: true,
           workspace: {
             root: path.join(packageDir, '../..'), // monorepo root
-            allow: [/node_modules/, /^packages\//],
+            allow: ['**/node_modules/**', 'packages/**'],
           },
         }),
       ],

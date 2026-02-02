@@ -390,6 +390,9 @@ importers:
       magic-string:
         specifier: ^0.30.21
         version: 0.30.21
+      picomatch:
+        specifier: ^4.0.2
+        version: 4.0.3
     devDependencies:
       '@remix-run/component':
         specifier: workspace:^
@@ -403,6 +406,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
+      '@types/picomatch':
+        specifier: ^3.0.2
+        version: 3.0.2
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
@@ -2376,6 +2382,9 @@ packages:
 
   '@types/node@24.10.4':
     resolution: {integrity: sha512-vnDVpYPMzs4wunl27jHrfmwojOGKya0xyM3sH+UE5iv5uPS6vX7UIoh6m+vQc5LGBq52HBKPIn/zcSZVzeDEZg==}
+
+  '@types/picomatch@3.0.2':
+    resolution: {integrity: sha512-n0i8TD3UDB7paoMMxA3Y65vUncFJXjcUf7lQY7YyKGl6031FNjfsLs6pdLFCy2GNFxItPJG8GvvpbZc2skH7WA==}
 
   '@types/qs@6.9.15':
     resolution: {integrity: sha512-uXHQKES6DQKKCLh441Xv/dwxOq1TVS3JPUMlEqoEglvlhR6Mxnlew/Xq/LRVHpLyk7iK3zODe1qYHIMltO7XGg==}
@@ -5830,6 +5839,8 @@ snapshots:
   '@types/node@24.10.4':
     dependencies:
       undici-types: 7.16.0
+
+  '@types/picomatch@3.0.2': {}
 
   '@types/qs@6.9.15': {}
 

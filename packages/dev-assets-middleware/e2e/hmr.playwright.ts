@@ -93,11 +93,11 @@ async function createTestContext() {
 
   let assetsMiddleware: Middleware & { dispose?: () => Promise<void> } = devAssets({
     root: fixturesDir,
-    allow: [/^app\//],
+    allow: ['app/**'],
     hmr: true,
     workspace: {
       root: path.join(packageDir, '../..'), // monorepo root
-      allow: [/node_modules/, /^packages\//],
+      allow: ['**/node_modules/**', 'packages/**'],
     },
   })
 
