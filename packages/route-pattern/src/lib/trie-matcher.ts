@@ -72,12 +72,12 @@ type PathnameNode<data> = {
   static: Map<string, PathnameNode<data>>
   variable: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
   wildcard: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
-  value: {
+  values: Array<{
     pattern: RoutePattern
     data: data
     requiredParams: Array<Param>
     undefinedParams: Array<Param>
-  } | null
+  }>
 }
 
 function createPathnameNode<data>(): PathnameNode<data> {
@@ -85,7 +85,7 @@ function createPathnameNode<data>(): PathnameNode<data> {
     static: new Map(),
     variable: new Map(),
     wildcard: new Map(),
-    value: null,
+    values: [],
   }
 }
 
@@ -178,12 +178,12 @@ export class Trie<data = unknown> {
           undefinedParams.push(param)
         }
       }
-      pathnameNode.value = {
+      pathnameNode.values.push({
         pattern,
         data,
         requiredParams,
         undefinedParams,
-      }
+      })
     }
   }
 
@@ -246,11 +246,13 @@ export class Trie<data = unknown> {
         let current = stack.pop()!
 
         if (current.segmentIndex === urlSegments.length) {
-          let { value } = current.pathnameNode
-          if (
-            value &&
-            matchSearch(url.searchParams, value.pattern.ast.search, value.pattern.ignoreCase)
-          ) {
+          for (let value of current.pathnameNode.values) {
+            if (
+              !matchSearch(url.searchParams, value.pattern.ast.search, value.pattern.ignoreCase)
+            ) {
+              continue
+            }
+
             let pathnameMatch: PartPatternMatch = []
             for (let i = 0; i < value.requiredParams.length; i++) {
               let param = value.requiredParams[i]
