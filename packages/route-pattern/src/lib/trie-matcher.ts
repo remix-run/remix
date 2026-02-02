@@ -35,15 +35,6 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
     let matches = this.trie.search(url)
     return matches
       .map((match) => {
-        let params: Record<string, string | undefined> = {}
-        for (let param of match.hostname) {
-          if (param.name === '*') continue
-          params[param.name] = param.value
-        }
-        for (let param of match.pathname) {
-          if (param.name === '*') continue
-          params[param.name] = param.value
-        }
         return {
           pattern: match.pattern,
           url,
@@ -271,9 +262,18 @@ export class Trie<data = unknown> {
             }
 
             let params: Record<string, string | undefined> = {}
-            for (let param of value.undefinedParams) {
-              params[param.name] = undefined
+            // Start with all params from the original pattern set to undefined
+            for (let param of value.pattern.ast.hostname?.params ?? []) {
+              if (param.name !== '*') {
+                params[param.name] = undefined
+              }
             }
+            for (let param of value.pattern.ast.pathname.params) {
+              if (param.name !== '*') {
+                params[param.name] = undefined
+              }
+            }
+            // Then overwrite with actual matched values
             for (let param of origin.hostnameMatch) {
               if (param.name === '*') continue
               params[param.name] = param.value

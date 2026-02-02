@@ -149,6 +149,158 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
           assert.equal(match, null)
         })
       })
+
+      describe('hostname', () => {
+        it('matches any hostname when hostname is omitted', () => {
+          let matcher = createMatcher()
+          matcher.add('users', null)
+
+          let match1 = matcher.match('https://example.com/users')
+          assert.ok(match1)
+
+          let match2 = matcher.match('https://other.com/users')
+          assert.ok(match2)
+
+          let match3 = matcher.match('http://localhost/users')
+          assert.ok(match3)
+        })
+
+        it('matches exact static hostname', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/users', null)
+
+          let match = matcher.match('https://example.com/users')
+          assert.ok(match)
+          assert.deepEqual(match.params, {})
+        })
+
+        it('returns null when static hostname does not match', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/users', null)
+
+          let match = matcher.match('https://other.com/users')
+          assert.equal(match, null)
+        })
+
+        it('matches variable segment in hostname', () => {
+          let matcher = createMatcher()
+          matcher.add('://:subdomain.example.com/api', null)
+
+          let match = matcher.match('https://api.example.com/api')
+          assert.ok(match)
+          assert.deepEqual(match.params, { subdomain: 'api' })
+        })
+
+        it('matches multiple variables in hostname', () => {
+          let matcher = createMatcher()
+          matcher.add('://:subdomain.:env.example.com/api', null)
+
+          let match = matcher.match('https://api.prod.example.com/api')
+          assert.ok(match)
+          assert.deepEqual(match.params, { subdomain: 'api', env: 'prod' })
+        })
+
+        it('matches wildcard segment in hostname', () => {
+          let matcher = createMatcher()
+          matcher.add('://*host.example.com/api', null)
+
+          let match = matcher.match('https://api.v1.example.com/api')
+          assert.ok(match)
+          assert.deepEqual(match.params, { host: 'api.v1' })
+        })
+
+        it('excludes unnamed wildcard from params', () => {
+          let matcher = createMatcher()
+          matcher.add('://*.example.com/api', null)
+
+          let match = matcher.match('https://api.v1.example.com/api')
+          assert.ok(match)
+          assert.deepEqual(match.params, {})
+        })
+
+        it('matches optional hostname segments when present', () => {
+          let matcher = createMatcher()
+          matcher.add('://api(:version).example.com/users', null)
+
+          let match = matcher.match('https://apiv2.example.com/users')
+          assert.ok(match)
+          assert.deepEqual(match.params, { version: 'v2' })
+        })
+
+        it('matches optional hostname segments when absent', () => {
+          let matcher = createMatcher()
+          matcher.add('://api(:version).example.com/users', null)
+
+          let match = matcher.match('https://api.example.com/users')
+          assert.ok(match)
+          assert.deepEqual(match.params, { version: undefined })
+        })
+
+        it('matches nested optionals in hostname', () => {
+          let matcher = createMatcher()
+          matcher.add('://api(:v(:num)).example.com/users', null)
+
+          let matchAll = matcher.match('https://apiv2.example.com/users')
+          assert.ok(matchAll)
+          assert.deepEqual(matchAll.params, { v: 'v', num: '2' })
+
+          let matchPartial = matcher.match('https://apiv.example.com/users')
+          assert.ok(matchPartial)
+          assert.deepEqual(matchPartial.params, { v: 'v', num: undefined })
+
+          let matchNone = matcher.match('https://api.example.com/users')
+          assert.ok(matchNone)
+          assert.deepEqual(matchNone.params, { v: undefined, num: undefined })
+        })
+
+        it('matches multiple optionals in hostname', () => {
+          let matcher = createMatcher()
+          matcher.add('://:sub-(:version).example(:tld).com/api', null)
+
+          let match = matcher.match('https://api-v2.exampledev.com/api')
+          assert.ok(match)
+          assert.deepEqual(match.params, { sub: 'api', version: 'v2', tld: 'dev' })
+        })
+
+        it('matches mixed static/variable/wildcard segments', () => {
+          let matcher = createMatcher()
+          matcher.add('://*prefix.:env.example.com/api', null)
+
+          let match = matcher.match('https://api.v1.prod.example.com/api')
+          assert.ok(match)
+          assert.deepEqual(match.params, { prefix: 'api.v1', env: 'prod' })
+        })
+
+        it('prefers static over variable hostname', () => {
+          let matcher = createMatcher()
+          matcher.add('://:subdomain.example.com/api', null)
+          matcher.add('://api.example.com/api', null)
+
+          let match = matcher.match('https://api.example.com/api')
+          assert.ok(match)
+          assert.equal(match.pattern.source, '://api.example.com/api')
+        })
+
+        it('prefers variable over wildcard hostname', () => {
+          let matcher = createMatcher()
+          matcher.add('://*host.example.com/api', null)
+          matcher.add('://:subdomain.example.com/api', null)
+
+          let match = matcher.match('https://api.example.com/api')
+          assert.ok(match)
+          assert.equal(match.pattern.source, '://:subdomain.example.com/api')
+        })
+
+        it('prefers longer static prefix in hostname', () => {
+          let matcher = createMatcher()
+          matcher.add('://:subdomain.com/api', null)
+          matcher.add('://:subdomain.example.com/api', null)
+
+          let match = matcher.match('https://api.example.com/api')
+          assert.ok(match)
+          assert.equal(match.pattern.source, '://:subdomain.example.com/api')
+        })
+      })
     })
 
     describe('matchAll', () => {
