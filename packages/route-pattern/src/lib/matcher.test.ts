@@ -3,10 +3,15 @@ import { describe, it } from 'node:test'
 
 import type { Matcher } from './matcher.ts'
 import * as Specificity from './specificity.ts'
+import { ArrayMatcher } from './array-matcher.ts'
+import { TrieMatcher } from './trie-matcher.ts'
 
 type CreateMatcher = () => Matcher<null>
 
-export function testMatcher(name: string, createMatcher: CreateMatcher): void {
+test('ArrayMatcher', () => new ArrayMatcher<null>())
+test('TrieMatcher', () => new TrieMatcher<null>())
+
+function test(name: string, createMatcher: CreateMatcher): void {
   describe(name, () => {
     describe('match', () => {
       describe('protocol', () => {
