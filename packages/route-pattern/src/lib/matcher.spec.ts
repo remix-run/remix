@@ -62,7 +62,7 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
     // - no search constraints (matches any query params)
     // - bare parameter (?q) - presence check
     // - bare parameter accepts any value (?q matches ?q=foo)
-    // - empty value (?q=) - requires non-empty value
+    // - any value (?q=) - requires non-empty value
     // - specific value (?q=test) - exact match
     // - multiple constraints (?q=test&format=json)
     // - constraint order independence (?a=1&b=2 matches ?b=2&a=1)
@@ -562,6 +562,142 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
           let match = matcher.match('http://example.com/api/v1/users')
           assert.ok(match)
           assert.equal(match.pattern.source, '://example.com/api/v1/:id')
+        })
+      })
+
+      describe('search', () => {
+        it('matches any query params when no search constraints', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/search', null)
+
+          assert.ok(matcher.match('http://example.com/search'))
+          assert.ok(matcher.match('http://example.com/search?q=test'))
+          assert.ok(matcher.match('http://example.com/search?q=test&lang=en'))
+        })
+
+        it('matches bare parameter for presence check', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/search?q', null)
+
+          let match = matcher.match('http://example.com/search?q')
+          assert.ok(match)
+        })
+
+        it('matches bare parameter with any value', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/search?q', null)
+
+          assert.ok(matcher.match('http://example.com/search?q=test'))
+          assert.ok(matcher.match('http://example.com/search?q=hello'))
+        })
+
+        it('matches any value constraint with non-empty value', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/search?q=', null)
+
+          let match = matcher.match('http://example.com/search?q=test')
+          assert.ok(match)
+        })
+
+        it('returns null when any value constraint has empty value', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/search?q=', null)
+
+          assert.equal(matcher.match('http://example.com/search?q='), null)
+          assert.equal(matcher.match('http://example.com/search?q'), null)
+        })
+
+        it('matches specific value with exact match', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/api?format=json', null)
+
+          let match = matcher.match('http://example.com/api?format=json')
+          assert.ok(match)
+        })
+
+        it('returns null when specific value does not match', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/api?format=json', null)
+
+          assert.equal(matcher.match('http://example.com/api?format=xml'), null)
+        })
+
+        it('matches multiple constraints', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/search?q=&lang=en', null)
+
+          let match = matcher.match('http://example.com/search?q=test&lang=en')
+          assert.ok(match)
+        })
+
+        it('matches constraints regardless of order', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/api?format=json&version=v1', null)
+
+          let match = matcher.match('http://example.com/api?version=v1&format=json')
+          assert.ok(match)
+        })
+
+        it('allows extra params beyond constraints', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/search?q', null)
+
+          let match = matcher.match('http://example.com/search?q=test&lang=en&page=2')
+          assert.ok(match)
+        })
+
+        it('preserves URL encoding in search parameter values', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/search?q=hello%20world', null)
+
+          let match = matcher.match('http://example.com/search?q=hello%20world')
+          assert.ok(match)
+        })
+
+        it('matches repeated parameter values', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/filter?tags', null)
+
+          let match = matcher.match('http://example.com/filter?tags=a&tags=b')
+          assert.ok(match)
+        })
+
+        it('returns null when constraint is not met', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/api?auth', null)
+
+          assert.equal(matcher.match('http://example.com/api'), null)
+          assert.equal(matcher.match('http://example.com/api?other=value'), null)
+        })
+
+        it('prefers more constraints over fewer', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/search?q', null)
+          matcher.add('://example.com/search?q&lang', null)
+
+          let match = matcher.match('http://example.com/search?q=test&lang=en')
+          assert.ok(match)
+          assert.equal(match.pattern.source, '://example.com/search?q&lang')
+        })
+
+        it('prefers exact value over any value', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/api?format', null)
+          matcher.add('://example.com/api?format=json', null)
+
+          let match = matcher.match('http://example.com/api?format=json')
+          assert.ok(match)
+          assert.equal(match.pattern.source, '://example.com/api?format=json')
+        })
+
+        it('prefers any value over bare presence', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/search?q', null)
+          matcher.add('://example.com/search?q=', null)
+
+          let match = matcher.match('http://example.com/search?q=test')
+          assert.ok(match)
+          assert.equal(match.pattern.source, '://example.com/search?q=')
         })
       })
     })
