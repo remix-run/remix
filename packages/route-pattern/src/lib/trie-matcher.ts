@@ -35,15 +35,6 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
     let matches = this.trie.search(url)
     return matches
       .map((match) => {
-        let params: Record<string, string | undefined> = {}
-        for (let param of match.hostname) {
-          if (param.name === '*') continue
-          params[param.name] = param.value
-        }
-        for (let param of match.pathname) {
-          if (param.name === '*') continue
-          params[param.name] = param.value
-        }
         return {
           pattern: match.pattern,
           url,
@@ -81,12 +72,12 @@ type PathnameNode<data> = {
   static: Map<string, PathnameNode<data>>
   variable: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
   wildcard: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
-  value: {
+  values: Array<{
     pattern: RoutePattern
     data: data
     requiredParams: Array<Param>
     undefinedParams: Array<Param>
-  } | null
+  }>
 }
 
 function createPathnameNode<data>(): PathnameNode<data> {
@@ -94,7 +85,7 @@ function createPathnameNode<data>(): PathnameNode<data> {
     static: new Map(),
     variable: new Map(),
     wildcard: new Map(),
-    value: null,
+    values: [],
   }
 }
 
@@ -187,12 +178,12 @@ export class Trie<data = unknown> {
           undefinedParams.push(param)
         }
       }
-      pathnameNode.value = {
+      pathnameNode.values.push({
         pattern,
         data,
         requiredParams,
         undefinedParams,
-      }
+      })
     }
   }
 
@@ -255,11 +246,13 @@ export class Trie<data = unknown> {
         let current = stack.pop()!
 
         if (current.segmentIndex === urlSegments.length) {
-          let { value } = current.pathnameNode
-          if (
-            value &&
-            matchSearch(url.searchParams, value.pattern.ast.search, value.pattern.ignoreCase)
-          ) {
+          for (let value of current.pathnameNode.values) {
+            if (
+              !matchSearch(url.searchParams, value.pattern.ast.search, value.pattern.ignoreCase)
+            ) {
+              continue
+            }
+
             let pathnameMatch: PartPatternMatch = []
             for (let i = 0; i < value.requiredParams.length; i++) {
               let param = value.requiredParams[i]
@@ -271,9 +264,18 @@ export class Trie<data = unknown> {
             }
 
             let params: Record<string, string | undefined> = {}
-            for (let param of value.undefinedParams) {
-              params[param.name] = undefined
+            // Start with all params from the original pattern set to undefined
+            for (let param of value.pattern.ast.hostname?.params ?? []) {
+              if (param.name !== '*') {
+                params[param.name] = undefined
+              }
             }
+            for (let param of value.pattern.ast.pathname.params) {
+              if (param.name !== '*') {
+                params[param.name] = undefined
+              }
+            }
+            // Then overwrite with actual matched values
             for (let param of origin.hostnameMatch) {
               if (param.name === '*') continue
               params[param.name] = param.value
