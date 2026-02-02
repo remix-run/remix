@@ -2,26 +2,12 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import type { Matcher } from './matcher.ts'
+import * as Specificity from './specificity.ts'
 
 type CreateMatcher = () => Matcher<null>
 
 export function testMatcher(name: string, createMatcher: CreateMatcher): void {
   describe(name, () => {
-    // todo: ignoreCase...
-
-    // Feature combinations
-    // - protocol + hostname + pathname
-    // - protocol + hostname + pathname + search
-    // - hostname variables + pathname variables
-    // - hostname variables + port
-    // - pathname variables + search constraints
-    // - optionals across multiple URL parts
-
-    // Custom compareFn
-    // - match() uses custom compareFn to select best
-    // - matchAll() uses custom compareFn to sort results
-    // - ascending vs descending order
-
     describe('match', () => {
       describe('protocol', () => {
         it('matches any protocol when protocol is omitted', () => {
@@ -864,6 +850,56 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
             '/users(/:id)',
             '/*path',
           ],
+        )
+      })
+    })
+
+    describe('custom compareFn', () => {
+      it('uses custom compareFn for match() to select best', () => {
+        let matcher = createMatcher()
+        matcher.add('://example.com/*path', null)
+        matcher.add('://example.com/users/:id', null)
+        matcher.add('://example.com/users/123', null)
+
+        // Default behavior: static wins
+        let defaultMatch = matcher.match('http://example.com/users/123')
+        assert.ok(defaultMatch)
+        assert.equal(defaultMatch.pattern.source, '://example.com/users/123')
+
+        // Custom: prefer least specific (reverse of default)
+        let customMatch = matcher.match('http://example.com/users/123', Specificity.ascending)
+        assert.ok(customMatch)
+        assert.equal(customMatch.pattern.source, '://example.com/*path')
+      })
+
+      it('uses custom compareFn for matchAll() to sort results', () => {
+        let matcher = createMatcher()
+        matcher.add('://example.com/*path', null)
+        matcher.add('://example.com/users/:id', null)
+        matcher.add('://example.com/users/123', null)
+
+        // Custom: sort by pattern source alphabetically
+        let matches = matcher.matchAll('http://example.com/users/123', (a, b) => {
+          return a.pattern.source.localeCompare(b.pattern.source)
+        })
+
+        assert.deepEqual(
+          matches.map((m) => m.pattern.source),
+          ['://example.com/*path', '://example.com/users/:id', '://example.com/users/123'],
+        )
+      })
+
+      it('supports ascending specificity order', () => {
+        let matcher = createMatcher()
+        matcher.add('://example.com/*path', null)
+        matcher.add('://example.com/users/:id', null)
+        matcher.add('://example.com/users/123', null)
+
+        let matches = matcher.matchAll('http://example.com/users/123', Specificity.ascending)
+
+        assert.deepEqual(
+          matches.map((m) => m.pattern.source),
+          ['://example.com/*path', '://example.com/users/:id', '://example.com/users/123'],
         )
       })
     })
