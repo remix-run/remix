@@ -5,6 +5,7 @@ Previously, `paramsMeta` did not distinguish between a fully static hostname and
 Now, `paramsMeta` returns a nameless wildcard match for the entire hostname when the hostname is omitted.
 
 Example:
+
 ```ts
 const pattern = new RoutePattern('/users/:id')
 const match = pattern.match('http://example.com/users/123')

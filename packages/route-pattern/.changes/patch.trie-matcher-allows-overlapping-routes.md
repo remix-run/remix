@@ -3,8 +3,8 @@
 For example:
 
 ```ts
-let pattern1 = new RoutePattern("://api.example.com/users/:id")
-let pattern2 = new RoutePattern("://api.example.com/users(/:id)")
+let pattern1 = new RoutePattern('://api.example.com/users/:id')
+let pattern2 = new RoutePattern('://api.example.com/users(/:id)')
 
 matcher.add(pattern1)
 matcher.add(pattern2)
