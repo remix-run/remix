@@ -301,6 +301,55 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
           assert.equal(match.pattern.source, '://:subdomain.example.com/api')
         })
       })
+
+      describe('port', () => {
+        it('matches omitted port in URL when port is omitted in pattern', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/users', null)
+
+          assert.ok(matcher.match('http://example.com/users'))
+          assert.ok(matcher.match('https://example.com/users'))
+        })
+
+        it('matches explicit port', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com:8080/users', null)
+
+          let match = matcher.match('http://example.com:8080/users')
+          assert.ok(match)
+          assert.deepEqual(match.params, {})
+        })
+
+        it('returns null when explicit port does not match', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com:8080/users', null)
+
+          assert.equal(matcher.match('http://example.com:3000/users'), null)
+        })
+
+        it('returns null when pattern has explicit port but URL omits port', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com:8080/users', null)
+
+          assert.equal(matcher.match('http://example.com/users'), null)
+        })
+
+        it('returns null when pattern omits port but URL has explicit port', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/users', null)
+
+          assert.equal(matcher.match('http://example.com:8080/users'), null)
+        })
+
+        it('matches port with hostname variables', () => {
+          let matcher = createMatcher()
+          matcher.add('://:subdomain.example.com:8080/api', null)
+
+          let match = matcher.match('https://api.example.com:8080/api')
+          assert.ok(match)
+          assert.deepEqual(match.params, { subdomain: 'api' })
+        })
+      })
     })
 
     describe('matchAll', () => {

@@ -199,10 +199,9 @@ export class RoutePattern<source extends string = string> {
         if (hostname === null) return null
       }
 
-      // port: null matches any port
-      if (this.ast.port !== null) {
-        if ((url.port || null) !== this.ast.port) return null
-      }
+      // port: null matches empty port
+      if (this.ast.port === null && url.port !== '') return null
+      if (this.ast.port !== null && url.port !== this.ast.port) return null
     }
 
     // url.pathname: remove leading slash
