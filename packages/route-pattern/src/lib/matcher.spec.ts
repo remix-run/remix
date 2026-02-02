@@ -9,21 +9,6 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
   describe(name, () => {
     // todo: ignoreCase...
 
-    // Specificity ordering via match()
-    // - returns most specific match when multiple patterns match
-    // - static beats variable
-    // - variable beats wildcard
-    // - longer static prefix beats shorter
-    // - hostname specificity beats pathname specificity
-    // - search constraints increase specificity
-    // - returns null when no patterns match
-
-    // Specificity ordering via matchAll()
-    // - returns all matches sorted by specificity (most to least)
-    // - returns empty array when no matches
-    // - includes patterns with same specificity
-    // - order within same specificity depends on implementation
-
     // Feature combinations
     // - protocol + hostname + pathname
     // - protocol + hostname + pathname + search
@@ -744,10 +729,143 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
           assert.equal(match.paramsMeta.pathname[0].value, 'v1')
         })
       })
+
+      describe('specificity', () => {
+        it('prefers static over variable', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/:segment', null)
+          matcher.add('://example.com/users', null)
+
+          let match = matcher.match('http://example.com/users')
+          assert.ok(match)
+          assert.equal(match.pattern.source, '://example.com/users')
+        })
+
+        it('prefers variable over wildcard', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/*path', null)
+          matcher.add('://example.com/:id', null)
+
+          let match = matcher.match('http://example.com/123')
+          assert.ok(match)
+          assert.equal(match.pattern.source, '://example.com/:id')
+        })
+
+        it('prefers longer static prefix over shorter', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/:id', null)
+          matcher.add('://example.com/api/:id', null)
+
+          let match = matcher.match('http://example.com/api/users')
+          assert.ok(match)
+          assert.equal(match.pattern.source, '://example.com/api/:id')
+        })
+
+        it('prefers hostname specificity over pathname specificity', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/*path', null)
+          matcher.add('://:subdomain.example.com/users', null)
+
+          let match = matcher.match('http://api.example.com/users')
+          assert.ok(match)
+          assert.equal(match.pattern.source, '://:subdomain.example.com/users')
+        })
+
+        it('increases specificity with search constraints', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/search', null)
+          matcher.add('://example.com/search?q', null)
+
+          let match = matcher.match('http://example.com/search?q=test')
+          assert.ok(match)
+          assert.equal(match.pattern.source, '://example.com/search?q')
+        })
+
+        it('returns null when no patterns match', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/users', null)
+          matcher.add('://example.com/posts', null)
+
+          assert.equal(matcher.match('http://example.com/comments'), null)
+        })
+      })
     })
 
     describe('matchAll', () => {
-      // TODO: implement matchAll tests
+      it('returns all matches sorted by specificity', () => {
+        let matcher = createMatcher()
+        matcher.add('://example.com/*path', null)
+        matcher.add('://example.com/users/:id', null)
+        matcher.add('://example.com/users/new', null)
+
+        let matches = matcher.matchAll('http://example.com/users/new')
+        assert.deepEqual(
+          matches.map((m) => m.pattern.source),
+          ['://example.com/users/new', '://example.com/users/:id', '://example.com/*path'],
+        )
+      })
+
+      it('returns empty array when no matches', () => {
+        let matcher = createMatcher()
+        matcher.add('://example.com/users', null)
+        matcher.add('://example.com/posts', null)
+
+        let matches = matcher.matchAll('http://example.com/comments')
+        assert.deepEqual(matches, [])
+      })
+
+      it('includes patterns with same specificity', () => {
+        let matcher = createMatcher()
+        matcher.add('://example.com/users/:id', null)
+        matcher.add('://example.com/posts/:id', null)
+
+        let matches = matcher.matchAll('http://example.com/users/123')
+        assert.deepEqual(
+          matches.map((m) => m.pattern.source),
+          ['://example.com/users/:id'],
+        )
+
+        let matches2 = matcher.matchAll('http://example.com/posts/456')
+        assert.deepEqual(
+          matches2.map((m) => m.pattern.source),
+          ['://example.com/posts/:id'],
+        )
+      })
+
+      it('orders complex specificity scenarios consistently', () => {
+        let matcher = createMatcher()
+        // Add patterns in random order to ensure ordering is by specificity, not insertion order
+        matcher.add('/*path', null)
+        matcher.add('://api.example.com/users/:id', null)
+        matcher.add('://:subdomain.example.com/*path', null)
+        matcher.add('://api.example.com/*path', null)
+        matcher.add('/users/:id', null)
+        matcher.add('://api.example.com/users/123', null)
+        matcher.add('://:subdomain.example.com/users/:id', null)
+        matcher.add('://api.example.com/:resource/:id', null)
+        matcher.add('://api.example.com/users(/:id)', null)
+        matcher.add('/users(/:id)', null)
+        matcher.add('://api(.:region).example.com/users/:id', null)
+
+        let matches = matcher.matchAll('http://api.example.com/users/123')
+
+        assert.deepEqual(
+          matches.map((m) => m.pattern.source),
+          [
+            '://api.example.com/users/123',
+            '://api.example.com/users/:id',
+            '://api.example.com/users(/:id)',
+            '://api(.:region).example.com/users/:id',
+            '://api.example.com/:resource/:id',
+            '://api.example.com/*path',
+            '://:subdomain.example.com/users/:id',
+            '://:subdomain.example.com/*path',
+            '/users/:id',
+            '/users(/:id)',
+            '/*path',
+          ],
+        )
+      })
     })
   })
 }
