@@ -12,6 +12,9 @@ catalogs:
     '@typescript/native-preview':
       specifier: 7.0.0-dev.20251125.1
       version: 7.0.0-dev.20251125.1
+    esbuild:
+      specifier: ^0.25.0
+      version: 0.25.12
     playwright:
       specifier: ^1.53.1
       version: 1.57.0
@@ -54,7 +57,7 @@ importers:
         specifier: ^8.40.0
         version: 8.50.0(eslint@9.39.2)(typescript@5.9.3)
 
-  demos/assets-spike:
+  demos/assets:
     dependencies:
       '@remix-run/assets-middleware':
         specifier: workspace:*
@@ -79,7 +82,7 @@ importers:
         specifier: 'catalog:'
         version: 24.10.4
       esbuild:
-        specifier: ^0.25.0
+        specifier: 'catalog:'
         version: 0.25.12
       tsx:
         specifier: 'catalog:'

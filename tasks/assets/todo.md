@@ -163,19 +163,53 @@ ETags are currently based on source file mtime/size. But the transformed output 
 
 If transform logic changes but source files don't, the browser can serve stale cached transforms with outdated import paths (e.g., old URL patterns after renaming).
 
-**Ideas to explore:**
+**The solution:**
 
-- **Lockfile** - Changes when deps update. Could use mtime or content hash.
-- **Middleware package (monorepo only)** - Auto-detect if we're in the Remix monorepo and factor in changes to `packages/dev-assets-middleware/`. This handles active middleware development.
+Hash the final transformed output and use that as the ETag. This is simpler than trying to track all inputs - we just care if the output is the same.
 
-Note: Directory mtime behavior varies by OS (may only update on add/remove, not content changes). May need to hash file list + mtimes, or find most recent file mtime recursively.
+**Two caching layers:**
+
+1. **Server-side cache (in-memory):**
+
+   - Uses `lastModified` (file mtime) to know when to re-transform
+   - Avoids re-transforming unchanged files (performance optimization)
+   - Lost on server restart (acceptable in dev)
+
+2. **Browser cache (persistent):**
+   - Uses hash-based ETag as cache validator
+   - Persists between server restarts
+   - Automatically invalidates when transform output changes (even if source didn't)
+
+**Key insight:** The module graph already stores the final, fully transformed output (after esbuild, import rewriting, HMR transform, and source map inlining). Nothing is applied after retrieval from cache. So we can hash the cached result once per transform.
+
+**Implementation:**
+
+1. Add `hash` field to `moduleNode.transformResult`: `{ code, map, hash }`
+2. After all transforms complete, hash the final code string
+3. Use Web Crypto API for fast, web-standard hashing (avoid Node deps)
+4. Replace `generateETag(mtime, size)` with `generateETag(hash)`
+5. Keep mtime checking for server-side cache invalidation
+
+**Flow:**
+
+1. Request arrives with `If-None-Match: W/"hash123"`
+2. Server checks: `stat(file).mtimeMs === moduleNode.lastModified`?
+   - **Yes** → use cached `{ code, map, hash }`
+   - **No** → transform, hash output, cache `{ code, map, hash, lastModified }`
+3. Server responds with `ETag: W/"hashXYZ"`
+4. Browser compares hash - if match, uses cached version
 
 **Acceptance Criteria:**
 
-- [ ] ETag invalidates when project dependencies change
-- [ ] ETag invalidates when middleware package changes (when developing in monorepo)
-- [ ] Solution is computed once at init, not per-request
-- [ ] Unit tests for ETag generation with different scenarios
+- [ ] `ModuleNode.transformResult` includes `hash` field
+- [ ] Hash computed once per transform (not per request)
+- [ ] Hash computed from final transformed code string
+- [ ] Uses Web Crypto API (web-standard, fast)
+- [ ] `generateETag()` uses hash instead of mtime/size
+- [ ] Server still uses mtime for cache invalidation (don't re-transform unchanged files)
+- [ ] ETags automatically invalidate when transform output changes
+- [ ] Unit tests verify hash-based ETags work correctly
+- [ ] Unit tests verify server-side mtime caching still works
 
 ---
 

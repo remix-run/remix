@@ -22,7 +22,7 @@ async function getAssetsMiddleware() {
       hmr: true,
       allow: [/^app\//],
       workspace: {
-        // Root is the monorepo root (two levels up from demos/assets-spike)
+        // Root is the monorepo root (two levels up from demos/assets)
         root: '../..',
         // Allow serving from node_modules and workspace packages
         allow: [/node_modules/, /^packages\//],
@@ -82,7 +82,7 @@ async function main() {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Assets Middleware Spike</title>
+    <title>Assets Middleware Demo</title>
     ${preloads}
     <style>
       body {
@@ -99,7 +99,7 @@ async function main() {
     </style>
   </head>
   <body>
-    <h1>Assets Middleware Spike</h1>
+    <h1>Assets Middleware Demo</h1>
     <p>Mode: <strong>${isDev ? 'Development' : 'Production'}</strong></p>
     <p>${isDev ? 'TypeScript/JSX files are transformed on-the-fly.' : 'Serving pre-built and minified assets.'}</p>
     <div id="app"></div>
@@ -136,7 +136,7 @@ async function main() {
   process.on('SIGTERM', shutdown)
 
   server.listen(port, () => {
-    console.log(`Assets spike demo is running on http://localhost:${port}`)
+    console.log(`Assets demo is running on http://localhost:${port}`)
     console.log(`Mode: ${isDev ? 'development' : 'production'}`)
   })
 }

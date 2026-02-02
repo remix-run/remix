@@ -1,5 +1,5 @@
 /**
- * Build script for the assets-spike demo.
+ * Build script for the assets demo.
  *
  * Bundles the entry point with esbuild, outputting hashed filenames
  * and a metafile for use with @remix-run/assets-middleware.
