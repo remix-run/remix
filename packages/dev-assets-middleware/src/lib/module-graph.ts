@@ -17,8 +17,8 @@ export interface ModuleNode {
   importers: Set<ModuleNode>
   /** Modules that this module imports (for cache invalidation and HMR) */
   importedModules: Set<ModuleNode>
-  /** Cached transform result (code + source map) */
-  transformResult?: { code: string; map: string | null }
+  /** Cached transform result (code + source map + hash for ETag) */
+  transformResult?: { code: string; map: string | null; hash: string }
   /** Last modified time in milliseconds (for cache invalidation) */
   lastModified?: number
   /** Whether this module is a component (HMR boundary) */

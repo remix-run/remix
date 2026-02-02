@@ -100,11 +100,20 @@ export function fixSourceMapPaths(code: string, sourceUrl: string): string {
   }
 }
 
-// Generate ETag from file stats (exported for testing)
-export function generateETag(mtime: Date, size: number): string {
-  // Use mtime (ms) and size to create a simple but effective ETag
-  // Format: W/"mtime-size" (weak ETag since transforms may vary)
-  return `W/"${mtime.getTime().toString(36)}-${size.toString(36)}"`
+export async function hashCode(code: string): Promise<string> {
+  let encoder = new TextEncoder()
+  let data = encoder.encode(code)
+  let hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  let hashArray = Array.from(new Uint8Array(hashBuffer))
+  // Convert to base36 for shorter ETag
+  return hashArray
+    .map((b) => b.toString(36))
+    .join('')
+    .slice(0, 16) // Use first 16 chars for reasonable collision resistance
+}
+
+export function generateETag(hash: string): string {
+  return `W/"${hash}"`
 }
 
 // Check if request's If-None-Match header matches ETag (exported for testing)
@@ -611,19 +620,11 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
       // Runtime module endpoint - serve the runtime module via transformSource
       if (pathname === HMR_RUNTIME_PATH) {
         try {
-          // Stat for ETag and transform cache key
+          // Stat for mtime (used for server-side cache invalidation)
           let stat = await fsp.stat(HMR_RUNTIME_MODULE_PATH)
-          let etag = generateETag(stat.mtime, stat.size)
-
-          // Check if client has current version
-          if (matchesETag(ifNoneMatch, etag)) {
-            return new Response(null, {
-              status: 304,
-              headers: { ETag: etag },
-            })
-          }
 
           // Load and transform the runtime module
+          // transformSource will use mtime to check cache and compute hash
           let runtimeSource = await fsp.readFile(HMR_RUNTIME_MODULE_PATH, 'utf-8')
 
           let transformed = await transformSource(
@@ -640,6 +641,19 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
             stat.mtimeMs,
             false, // Don't apply HMR transform to the runtime itself
           )
+
+          // Get hash from transform result for ETag
+          let moduleNode = getModuleByUrl(caches.moduleGraph, HMR_RUNTIME_PATH)
+          let hash = moduleNode?.transformResult?.hash ?? ''
+          let etag = generateETag(hash)
+
+          // Check if client has current version (after transform to use cached hash)
+          if (matchesETag(ifNoneMatch, etag)) {
+            return new Response(null, {
+              status: 304,
+              headers: { ETag: etag },
+            })
+          }
 
           return new Response(transformed, {
             headers: {
@@ -725,18 +739,8 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
       })
     }
 
-    // Generate ETag from the stat we already have
-    let etag = generateETag(stat.mtime, stat.size)
-
-    // Check if client has current version
-    if (matchesETag(ifNoneMatch, etag)) {
-      return new Response(null, {
-        status: 304,
-        headers: { ETag: etag },
-      })
-    }
-
     // Read and transform the file
+    // transformSource will use stat.mtimeMs for server-side cache invalidation
     try {
       let source = await fsp.readFile(filePath, 'utf-8')
       let transformed = await transformSource(
@@ -753,6 +757,19 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
         stat.mtimeMs,
         options.hmr ?? false,
       )
+
+      // Get hash from transform result for ETag
+      let moduleNode = getModuleByUrl(caches.moduleGraph, pathname)
+      let hash = moduleNode?.transformResult?.hash ?? ''
+      let etag = generateETag(hash)
+
+      // Check if client has current version (after transform to use cached hash)
+      if (matchesETag(ifNoneMatch, etag)) {
+        return new Response(null, {
+          status: 304,
+          headers: { ETag: etag },
+        })
+      }
 
       return new Response(transformed, {
         headers: {
@@ -826,17 +843,8 @@ async function handleWorkspaceRequest(
   let filePath = path.join(workspaceRoot, ...posixPath.split('/'))
 
   try {
-    // Stat for ETag
+    // Stat for mtime (used for server-side cache invalidation)
     let stat = await fsp.stat(filePath)
-    let etag = generateETag(stat.mtime, stat.size)
-
-    // Check if client has current version
-    if (matchesETag(ifNoneMatch, etag)) {
-      return new Response(null, {
-        status: 304,
-        headers: { ETag: etag },
-      })
-    }
 
     let source = await fsp.readFile(filePath, 'utf-8')
 
@@ -854,6 +862,7 @@ async function handleWorkspaceRequest(
     }
 
     // Transform the file (rewrite its imports too)
+    // transformSource will use stat.mtimeMs for server-side cache invalidation
     let transformed = await transformSource(
       source,
       filePath,
@@ -868,6 +877,19 @@ async function handleWorkspaceRequest(
       stat.mtimeMs,
       hmrEnabled,
     )
+
+    // Get hash from transform result for ETag
+    let moduleNode = getModuleByUrl(caches.moduleGraph, pathname)
+    let hash = moduleNode?.transformResult?.hash ?? ''
+    let etag = generateETag(hash)
+
+    // Check if client has current version (after transform to use cached hash)
+    if (matchesETag(ifNoneMatch, etag)) {
+      return new Response(null, {
+        status: 304,
+        headers: { ETag: etag },
+      })
+    }
 
     return new Response(transformed, {
       headers: {
@@ -1016,10 +1038,15 @@ async function transformSource(
   // This ensures browser dev tools organize the Sources panel tree by URL structure
   rewritten.code = fixSourceMapPaths(rewritten.code, sourceUrl)
 
-  // Cache the transform result
+  // Hash the final transformed code for ETag generation
+  // This ensures ETags invalidate when transform output changes (e.g., after esbuild upgrade)
+  let hash = await hashCode(rewritten.code)
+
+  // Cache the transform result with hash
   moduleNode.transformResult = {
     code: rewritten.code,
     map: rewritten.map,
+    hash,
   }
   if (fileMtime !== undefined) {
     moduleNode.lastModified = fileMtime

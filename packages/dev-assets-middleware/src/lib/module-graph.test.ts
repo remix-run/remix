@@ -106,7 +106,7 @@ describe('module graph', () => {
       let graph = createModuleGraph()
       let node = ensureModuleNode(graph, '/app/entry.tsx', '/abs/path/entry.tsx')
 
-      node.transformResult = { code: 'test code', map: null }
+      node.transformResult = { code: 'test code', map: null, hash: 'testhash123' }
       node.lastModified = 123456
 
       invalidateModule(node)
@@ -125,9 +125,9 @@ describe('module graph', () => {
       utilsNode.importers.add(entryNode)
 
       // Set transform results
-      entryNode.transformResult = { code: 'entry code', map: null }
+      entryNode.transformResult = { code: 'entry code', map: null, hash: 'entryhash' }
       entryNode.lastModified = 111
-      utilsNode.transformResult = { code: 'utils code', map: null }
+      utilsNode.transformResult = { code: 'utils code', map: null, hash: 'utilshash' }
       utilsNode.lastModified = 222
 
       // Invalidate utils
@@ -152,9 +152,9 @@ describe('module graph', () => {
       nodeA.importers.add(nodeB)
 
       // Set transform results
-      nodeA.transformResult = { code: 'a code', map: null }
+      nodeA.transformResult = { code: 'a code', map: null, hash: 'ahash' }
       nodeA.lastModified = 111
-      nodeB.transformResult = { code: 'b code', map: null }
+      nodeB.transformResult = { code: 'b code', map: null, hash: 'bhash' }
       nodeB.lastModified = 222
 
       // Invalidate A - should not loop infinitely
@@ -180,11 +180,11 @@ describe('module graph', () => {
       helperNode.importers.add(utilsNode)
 
       // Set transform results
-      entryNode.transformResult = { code: 'entry code', map: null }
+      entryNode.transformResult = { code: 'entry code', map: null, hash: 'entryhash' }
       entryNode.lastModified = 111
-      utilsNode.transformResult = { code: 'utils code', map: null }
+      utilsNode.transformResult = { code: 'utils code', map: null, hash: 'utilshash' }
       utilsNode.lastModified = 222
-      helperNode.transformResult = { code: 'helper code', map: null }
+      helperNode.transformResult = { code: 'helper code', map: null, hash: 'helperhash' }
       helperNode.lastModified = 333
 
       // Invalidate helper (leaf node)

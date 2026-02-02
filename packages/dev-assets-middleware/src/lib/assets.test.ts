@@ -9,13 +9,12 @@ import * as os from 'node:os'
 import {
   parseInlineSourceMap,
   fixSourceMapPaths,
+  hashCode,
   generateETag,
   matchesETag,
   createDevAssets,
   devAssets,
 } from './assets.ts'
-
-import { createModuleGraph, ensureModuleNode } from './module-graph.ts'
 
 describe('parseInlineSourceMap', () => {
   it('parses valid inline source map', () => {
@@ -222,43 +221,62 @@ describe('fixSourceMapPaths', () => {
   })
 })
 
-describe('generateETag', () => {
-  it('generates weak ETag from mtime and size', () => {
-    let mtime = new Date('2024-01-15T10:30:00Z')
-    let size = 1234
+describe('hashCode', () => {
+  it('generates consistent hash for same code', async () => {
+    let code = 'export function test() { return 42; }'
 
-    let etag = generateETag(mtime, size)
+    let hash1 = await hashCode(code)
+    let hash2 = await hashCode(code)
+
+    assert.equal(hash1, hash2)
+  })
+
+  it('generates different hashes for different code', async () => {
+    let code1 = 'export function test() { return 42; }'
+    let code2 = 'export function test() { return 43; }'
+
+    let hash1 = await hashCode(code1)
+    let hash2 = await hashCode(code2)
+
+    assert.notEqual(hash1, hash2)
+  })
+
+  it('generates hash with reasonable length', async () => {
+    let code = 'export function test() { return 42; }'
+
+    let hash = await hashCode(code)
+
+    // Should be exactly 16 chars (as specified in implementation)
+    assert.equal(hash.length, 16)
+  })
+})
+
+describe('generateETag', () => {
+  it('generates weak ETag from hash', () => {
+    let hash = 'abc123def456'
+
+    let etag = generateETag(hash)
 
     assert.ok(etag.startsWith('W/"'), 'ETag should be weak (W/ prefix)')
     assert.ok(etag.endsWith('"'), 'ETag should end with quote')
+    assert.ok(etag.includes(hash), 'ETag should contain the hash')
   })
 
-  it('generates different ETags for different mtimes', () => {
-    let mtime1 = new Date('2024-01-15T10:30:00Z')
-    let mtime2 = new Date('2024-01-15T10:30:01Z')
-    let size = 1234
+  it('generates different ETags for different hashes', () => {
+    let hash1 = 'abc123def456'
+    let hash2 = 'xyz789ghi012'
 
-    let etag1 = generateETag(mtime1, size)
-    let etag2 = generateETag(mtime2, size)
+    let etag1 = generateETag(hash1)
+    let etag2 = generateETag(hash2)
 
     assert.notEqual(etag1, etag2)
   })
 
-  it('generates different ETags for different sizes', () => {
-    let mtime = new Date('2024-01-15T10:30:00Z')
+  it('generates same ETag for same hash', () => {
+    let hash = 'abc123def456'
 
-    let etag1 = generateETag(mtime, 1234)
-    let etag2 = generateETag(mtime, 5678)
-
-    assert.notEqual(etag1, etag2)
-  })
-
-  it('generates same ETag for same mtime and size', () => {
-    let mtime = new Date('2024-01-15T10:30:00Z')
-    let size = 1234
-
-    let etag1 = generateETag(mtime, size)
-    let etag2 = generateETag(mtime, size)
+    let etag1 = generateETag(hash)
+    let etag2 = generateETag(hash)
 
     assert.equal(etag1, etag2)
   })
