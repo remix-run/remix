@@ -2,6 +2,9 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { TrieMatcher } from './trie-matcher.ts'
+import { testMatcher } from './matcher.spec.ts'
+
+testMatcher('trie', () => new TrieMatcher<null>())
 
 describe('TrieMatcher', () => {
   describe('match', () => {

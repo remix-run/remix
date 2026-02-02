@@ -2,6 +2,9 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { ArrayMatcher } from './array-matcher.ts'
+import { testMatcher } from './matcher.spec.ts'
+
+testMatcher('array', () => new ArrayMatcher<null>())
 
 describe('ArrayMatcher', () => {
   describe('match', () => {
