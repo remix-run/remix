@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import router from './router.tsx'
 import { parse } from 'node-html-parser'
+import { router } from './router.tsx'
 
 let outputDir = path.resolve(process.cwd(), 'site')
 console.log(`Clearing output directory: ${outputDir}`)
