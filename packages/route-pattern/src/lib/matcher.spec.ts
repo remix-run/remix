@@ -73,7 +73,15 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
     // - specificity: more constraints > fewer constraints
     // - specificity: exact value > any value > bare presence
 
-    // todo: paramsMeta
+    // paramsMeta
+    // - empty arrays when no params
+    // - hostname params with metadata
+    // - pathname params with metadata
+    // - params from both hostname and pathname
+    // - wildcard params included
+    // - unnamed wildcards included with name "*"
+    // - undefined optional params excluded from metadata
+    // - only matched optional params included in metadata
 
     // Specificity ordering via match()
     // - returns most specific match when multiple patterns match
@@ -698,6 +706,102 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
           let match = matcher.match('http://example.com/search?q=test')
           assert.ok(match)
           assert.equal(match.pattern.source, '://example.com/search?q=')
+        })
+      })
+
+      describe('paramsMeta', () => {
+        it('returns empty arrays when no params', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/users', null)
+
+          let match = matcher.match('http://example.com/users')
+          assert.ok(match)
+          assert.deepEqual(match.paramsMeta.hostname, [])
+          assert.deepEqual(match.paramsMeta.pathname, [])
+        })
+
+        it('includes hostname params with metadata', () => {
+          let matcher = createMatcher()
+          matcher.add('://:subdomain.example.com/api', null)
+
+          let match = matcher.match('https://api.example.com/api')
+          assert.ok(match)
+          assert.equal(match.paramsMeta.hostname.length, 1)
+          assert.equal(match.paramsMeta.hostname[0].name, 'subdomain')
+          assert.equal(match.paramsMeta.hostname[0].type, ':')
+          assert.equal(match.paramsMeta.hostname[0].value, 'api')
+          assert.deepEqual(match.paramsMeta.pathname, [])
+        })
+
+        it('includes pathname params with metadata', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/users/:id', null)
+
+          let match = matcher.match('http://example.com/users/123')
+          assert.ok(match)
+          assert.deepEqual(match.paramsMeta.hostname, [])
+          assert.equal(match.paramsMeta.pathname.length, 1)
+          assert.equal(match.paramsMeta.pathname[0].name, 'id')
+          assert.equal(match.paramsMeta.pathname[0].type, ':')
+          assert.equal(match.paramsMeta.pathname[0].value, '123')
+        })
+
+        it('includes params from both hostname and pathname', () => {
+          let matcher = createMatcher()
+          matcher.add('://:subdomain.example.com/users/:id', null)
+
+          let match = matcher.match('https://api.example.com/users/123')
+          assert.ok(match)
+          assert.equal(match.paramsMeta.hostname.length, 1)
+          assert.equal(match.paramsMeta.hostname[0].name, 'subdomain')
+          assert.equal(match.paramsMeta.hostname[0].value, 'api')
+          assert.equal(match.paramsMeta.pathname.length, 1)
+          assert.equal(match.paramsMeta.pathname[0].name, 'id')
+          assert.equal(match.paramsMeta.pathname[0].value, '123')
+        })
+
+        it('includes wildcard params in metadata', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/files/*path', null)
+
+          let match = matcher.match('http://example.com/files/docs/readme.md')
+          assert.ok(match)
+          assert.equal(match.paramsMeta.pathname.length, 1)
+          assert.equal(match.paramsMeta.pathname[0].name, 'path')
+          assert.equal(match.paramsMeta.pathname[0].type, '*')
+          assert.equal(match.paramsMeta.pathname[0].value, 'docs/readme.md')
+        })
+
+        it('includes unnamed wildcards in metadata with name "*"', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/files/*/download', null)
+
+          let match = matcher.match('http://example.com/files/docs/download')
+          assert.ok(match)
+          assert.equal(match.paramsMeta.pathname.length, 1)
+          assert.equal(match.paramsMeta.pathname[0].name, '*')
+          assert.equal(match.paramsMeta.pathname[0].type, '*')
+          assert.equal(match.paramsMeta.pathname[0].value, 'docs')
+        })
+
+        it('excludes undefined optional params from metadata', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/posts(/:lang)', null)
+
+          let match = matcher.match('http://example.com/posts')
+          assert.ok(match)
+          assert.deepEqual(match.paramsMeta.pathname, [])
+        })
+
+        it('includes only matched optional params in metadata', () => {
+          let matcher = createMatcher()
+          matcher.add('://example.com/docs(/:version(/:page))', null)
+
+          let match = matcher.match('http://example.com/docs/v1')
+          assert.ok(match)
+          assert.equal(match.paramsMeta.pathname.length, 1)
+          assert.equal(match.paramsMeta.pathname[0].name, 'version')
+          assert.equal(match.paramsMeta.pathname[0].value, 'v1')
         })
       })
     })
