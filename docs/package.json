@@ -3,16 +3,11 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@remix-run/dom": "jam",
-    "@remix-run/fetch-router": "workspace:*",
-    "@remix-run/html-template": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*",
-    "@remix-run/response": "workspace:*",
-    "@remix-run/static-middleware": "workspace:*",
     "front-matter": "^4.0.2",
     "marked": "^14.1.3",
     "node-html-parser": "^7.0.2",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "remix": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

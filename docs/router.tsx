@@ -1,10 +1,10 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { type Remix } from '@remix-run/dom'
-import { renderToStream } from '@remix-run/dom/server'
-import { createRouter, route } from '@remix-run/fetch-router'
-import { createHtmlResponse } from '@remix-run/response/html'
-import { staticFiles } from '@remix-run/static-middleware'
+import { type RemixNode } from 'remix/component'
+import { renderToString } from 'remix/component/server'
+import { createRouter, route } from 'remix/fetch-router'
+import { createHtmlResponse } from 'remix/response/html'
+import { staticFiles } from 'remix/static-middleware'
 import * as frontmatter from 'front-matter'
 import { marked } from 'marked'
 
@@ -23,24 +23,32 @@ const routes = route({
   api: '/api/*path',
 })
 
-const router = createRouter({
+export const router = createRouter({
   middleware: [staticFiles(path.resolve(REPO_DIR, 'docs', 'public'))],
 })
 
-const render = (node: Remix.RemixNode, init?: ResponseInit) =>
-  createHtmlResponse(renderToStream(<Layout docFiles={docFiles}>{node}</Layout>), init)
+async function render(node: RemixNode, init?: ResponseInit) {
+  let html = await renderToString(<Layout docFiles={docFiles}>{node}</Layout>)
+  return createHtmlResponse(html, init)
+}
 
 router.map(routes, {
-  home: () => render(<Home />),
+  home: async () => {
+    let response = await render(<Home />)
+    return response
+  },
   async api({ url, params }) {
-    // Find the matching doc file
     let docFile = docFiles.find((file) => file.urlPath === params.path)
 
-    if (!docFile) {
-      return render(<NotFound url={url} />, { status: 404 })
+    let response: Response
+
+    if (docFile) {
+      response = await render(await renderMarkdownFile(docFile.path))
+    } else {
+      response = await render(<NotFound url={url} />, { status: 404 })
     }
 
-    return render(await renderMarkdownFile(docFile.path))
+    return response
   },
 })
 
@@ -68,7 +76,7 @@ function NotFound() {
 }
 
 function Layout() {
-  return ({ docFiles, children }: { docFiles: DocFile[]; children: Remix.RemixNode }) => (
+  return ({ docFiles, children }: { docFiles: DocFile[]; children: RemixNode | RemixNode[] }) => (
     <html lang="en">
       <head>
         <meta charSet="UTF-8" />
@@ -194,5 +202,3 @@ async function renderMarkdownFile(filePath: string): Promise<string> {
     `
   }
 }
-
-export default router
