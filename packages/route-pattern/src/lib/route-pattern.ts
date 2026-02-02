@@ -204,6 +204,11 @@ export class RoutePattern<source extends string = string> {
       if (this.ast.port !== null && url.port !== this.ast.port) return null
     }
 
+    if (this.ast.hostname === null) {
+      // Pathname-only pattern - treat hostname as wildcard match
+      hostname = [{ type: '*', name: '*', begin: 0, end: url.hostname.length, value: url.hostname }]
+    }
+
     // url.pathname: remove leading slash
     let pathname = this.ast.pathname.match(url.pathname.slice(1))
     if (pathname === null) return null

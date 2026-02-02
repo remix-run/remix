@@ -646,6 +646,20 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
           assert.deepEqual(match.paramsMeta.pathname, [])
         })
 
+        it('includes wildcard hostname metadata for pathname-only patterns', () => {
+          let matcher = createMatcher()
+          matcher.add('/users/:id', null)
+
+          let match = matcher.match('http://example.com/users/123')
+          assert.ok(match)
+          assert.deepEqual(match.paramsMeta.hostname, [
+            { type: '*', name: '*', begin: 0, end: 11, value: 'example.com' },
+          ])
+          assert.deepEqual(match.paramsMeta.pathname, [
+            { type: ':', name: 'id', begin: 6, end: 9, value: '123' },
+          ])
+        })
+
         it('includes hostname params with metadata', () => {
           let matcher = createMatcher()
           matcher.add('://:subdomain.example.com/api', null)
