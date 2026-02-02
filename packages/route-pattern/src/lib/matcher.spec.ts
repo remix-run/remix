@@ -22,7 +22,7 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
     // - multiple variables in hostname
     // - wildcard segment (*host.example.com)
     // - unnamed wildcard (*) excluded from params
-    // - optional hostname segments (api(:version).example.com)
+    // - optional hostname segments (api(-:version).example.com)
     // - nested optionals
     // - multiple optionals
     // - mixed static/variable/wildcard segments
@@ -222,16 +222,16 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
 
         it('matches optional hostname segments when present', () => {
           let matcher = createMatcher()
-          matcher.add('://api(:version).example.com/users', null)
+          matcher.add('://api(-:version).example.com/users', null)
 
-          let match = matcher.match('https://apiv2.example.com/users')
+          let match = matcher.match('https://api-v2.example.com/users')
           assert.ok(match)
           assert.deepEqual(match.params, { version: 'v2' })
         })
 
         it('matches optional hostname segments when absent', () => {
           let matcher = createMatcher()
-          matcher.add('://api(:version).example.com/users', null)
+          matcher.add('://api(-:version).example.com/users', null)
 
           let match = matcher.match('https://api.example.com/users')
           assert.ok(match)
@@ -240,26 +240,26 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
 
         it('matches nested optionals in hostname', () => {
           let matcher = createMatcher()
-          matcher.add('://api(:v(:num)).example.com/users', null)
+          matcher.add('://api(.:region(-:zone)).example.com/users', null)
 
-          let matchAll = matcher.match('https://apiv2.example.com/users')
+          let matchAll = matcher.match('https://api.us-east1.example.com/users')
           assert.ok(matchAll)
-          assert.deepEqual(matchAll.params, { v: 'v', num: '2' })
+          assert.deepEqual(matchAll.params, { region: 'us', zone: 'east1' })
 
-          let matchPartial = matcher.match('https://apiv.example.com/users')
+          let matchPartial = matcher.match('https://api.us.example.com/users')
           assert.ok(matchPartial)
-          assert.deepEqual(matchPartial.params, { v: 'v', num: undefined })
+          assert.deepEqual(matchPartial.params, { region: 'us', zone: undefined })
 
           let matchNone = matcher.match('https://api.example.com/users')
           assert.ok(matchNone)
-          assert.deepEqual(matchNone.params, { v: undefined, num: undefined })
+          assert.deepEqual(matchNone.params, { region: undefined, zone: undefined })
         })
 
         it('matches multiple optionals in hostname', () => {
           let matcher = createMatcher()
-          matcher.add('://:sub-(:version).example(:tld).com/api', null)
+          matcher.add('://:sub(-:version).example(.:tld).com/api', null)
 
-          let match = matcher.match('https://api-v2.exampledev.com/api')
+          let match = matcher.match('https://api-v2.example.dev.com/api')
           assert.ok(match)
           assert.deepEqual(match.params, { sub: 'api', version: 'v2', tld: 'dev' })
         })
@@ -522,9 +522,14 @@ export function testMatcher(name: string, createMatcher: CreateMatcher): void {
 
         it('matches deep nesting', () => {
           let matcher = createMatcher()
-          matcher.add('://example.com/a/b/c/d/e/f/g', null)
+          matcher.add(
+            '://example.com/products/electronics/computers/laptops/gaming/accessories/keyboards',
+            null,
+          )
 
-          let match = matcher.match('http://example.com/a/b/c/d/e/f/g')
+          let match = matcher.match(
+            'http://example.com/products/electronics/computers/laptops/gaming/accessories/keyboards',
+          )
           assert.ok(match)
           assert.deepEqual(match.params, {})
         })
