@@ -208,7 +208,7 @@ function getShikiExtension(apiName: string): MarkedExtension {
             transformers: [
               // Insert cross-links to known Remix APIs
               {
-                span(node, line, col) {
+                span(node) {
                   if (node.children.length !== 1) {
                     console.warn('Expected one child node in span:', node)
                     return
