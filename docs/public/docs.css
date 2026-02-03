@@ -190,6 +190,10 @@ body {
   background-color: #fafafa !important;
 }
 
+.shiki a {
+  color: inherit;
+}
+
 /* Shiki Code Highlighting Dark Mode */
 @media (prefers-color-scheme: dark) {
   .shiki,

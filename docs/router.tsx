@@ -18,6 +18,10 @@ const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
 const REPO_DIR = path.resolve(process.cwd(), '..')
 
 const docFiles = await discoverMarkdownFiles(path.resolve(REPO_DIR, 'docs', 'api'))
+const docFilesLookup = new Map<string, DocFile>()
+for (let file of docFiles) {
+  docFilesLookup.set(file.name, file)
+}
 
 const routes = route({
   home: '/',
@@ -188,37 +192,86 @@ async function discoverMarkdownFiles(baseDir: string): Promise<DocFile[]> {
   }
 }
 
-const shikiExtension: MarkedExtension = {
-  async: true,
-  async walkTokens(token) {
-    if (token.type === 'code') {
-      try {
-        token.text = await codeToHtml(token.text, {
-          lang: token.lang || 'typescript',
-          themes: {
-            light: 'github-light',
-            // See Shiki styles in docs.css for activation
-            dark: 'github-dark',
-          },
-        })
-      } catch (error) {
-        console.error(`Shiki highlighting failed for token: ${JSON.stringify(token)}`)
-        console.error(error)
+function getShikiExtension(apiName: string): MarkedExtension {
+  return {
+    async: true,
+    async walkTokens(token) {
+      if (token.type === 'code') {
+        try {
+          token.text = await codeToHtml(token.text, {
+            lang: token.lang || 'typescript',
+            themes: {
+              light: 'github-light',
+              // See Shiki styles in docs.css for activation
+              dark: 'github-dark',
+            },
+            transformers: [
+              // Insert cross-links to known Remix APIs
+              {
+                span(node, line, col) {
+                  if (node.children.length !== 1) {
+                    console.warn('Expected one child node in span:', node)
+                    return
+                  }
+
+                  let value = 'value' in node.children[0] ? node.children[0].value : ''
+                  let symbol = value?.trim()
+
+                  if (symbol !== apiName && docFilesLookup.has(symbol)) {
+                    let docFile = docFilesLookup.get(symbol)!
+
+                    // Spacer elements to preserve whitespace outside the inserted <a> elements
+                    const spacer = (num: number) => [
+                      {
+                        type: 'text',
+                        value: ' '.repeat(num),
+                      } as const,
+                    ]
+
+                    let leadingSpaces = value.length - value.trimStart().length
+                    let trailingSpaces = value.length - value.trimEnd().length
+
+                    node.children = [
+                      ...(leadingSpaces ? spacer(leadingSpaces) : []),
+                      {
+                        type: 'element',
+                        tagName: 'a',
+                        properties: {
+                          href: routes.api.href({ path: docFile.urlPath }),
+                        },
+                        children: [
+                          {
+                            type: 'text',
+                            value: symbol,
+                          },
+                        ],
+                      },
+                      ...(trailingSpaces ? spacer(trailingSpaces) : []),
+                    ]
+                  }
+                },
+              },
+            ],
+          })
+        } catch (error) {
+          console.error(`Shiki highlighting failed for token: ${JSON.stringify(token)}`)
+          console.error(error)
+        }
       }
-    }
-  },
-  renderer: {
-    code(code) {
-      return code.text
     },
-  },
+    renderer: {
+      code(code) {
+        return code.text
+      },
+    },
+  }
 }
 
 async function renderMarkdownFile(filePath: string): Promise<string> {
   try {
     let markdown = fs.readFileSync(filePath, 'utf-8')
-    let { body } = parseFrontmatter(markdown)
-    let marked = new Marked(shikiExtension)
+    let { attributes, body } = parseFrontmatter(markdown)
+    let marked = new Marked(getShikiExtension(attributes.title || ''))
     let htmlContent = await marked.parse(body)
     return htmlContent
   } catch (error) {
