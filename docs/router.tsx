@@ -195,7 +195,11 @@ const shikiExtension: MarkedExtension = {
       try {
         token.text = await codeToHtml(token.text, {
           lang: token.lang || 'typescript',
-          theme: 'github-dark',
+          themes: {
+            light: 'github-light',
+            // See Shiki styles in docs.css for activation
+            dark: 'github-dark',
+          },
         })
       } catch (error) {
         console.error(`Shiki highlighting failed for token: ${JSON.stringify(token)}`)
