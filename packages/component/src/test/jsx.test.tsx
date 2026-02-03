@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import type { Assert, Equal } from './test/utils'
+import type { Assert, Equal } from './utils'
 import type { Dispatched } from '@remix-run/interaction'
-import type { Handle } from './component'
+import type { Handle } from '../lib/component'
 
 describe('jsx', () => {
   it('creates an element', () => {

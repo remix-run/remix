@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import type { Handle } from './component.ts'
-import { hydrationRoot, isHydratedComponent } from './hydration-root.ts'
+import type { Handle } from '../lib/component.ts'
+import { hydrationRoot, isHydratedComponent } from '../lib/hydration-root.ts'
 
 describe('hydrationRoot', () => {
   describe('types', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 
-import { processStyle } from './style.ts'
+import { processStyle } from '../lib/style/lib/style.ts'
 
 function createElement(tag = 'div'): HTMLElement {
   let element = document.createElement(tag)

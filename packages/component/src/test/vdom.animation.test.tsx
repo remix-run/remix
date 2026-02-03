@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { createRoot } from './vdom.ts'
+import { createRoot } from '../lib/vdom.ts'
 
 describe('animate', () => {
   let container: HTMLDivElement

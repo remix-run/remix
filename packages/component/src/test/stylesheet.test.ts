@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createStyleManager } from './stylesheet.ts'
+import { createStyleManager } from '../lib/style/lib/stylesheet.ts'
 
 describe('createStyleManager', () => {
   it('inserts a rule once and increments count on repeat', () => {

@@ -6,7 +6,7 @@ import {
   markLayoutSubtreePending,
   captureLayoutSnapshots,
   applyLayoutAnimations,
-} from './layout-animation.ts'
+} from '../lib/layout-animation.ts'
 
 // --- WAAPI Mock ---
 

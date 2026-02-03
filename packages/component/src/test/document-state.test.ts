@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { createDocumentState } from './document-state.ts'
+import { createDocumentState } from '../lib/document-state.ts'
 
 describe('document-state', () => {
   let container: HTMLDivElement
