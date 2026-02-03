@@ -55,13 +55,14 @@ type DocumentedInterface = {
   description: string
   properties: ParameterOrProperty[] | undefined
   methods: Method[] | undefined
+  signature: string
 }
 
 type DocumentedInterfaceFunction = Omit<DocumentedFunction, 'type'> & {
   type: 'interface-function'
 }
 
-// Documented interface API
+// Documented type API
 type DocumentedType = {
   type: 'type'
   path: string
@@ -464,11 +465,39 @@ function getDocumentedClass(
   }
 }
 
+function getChildrenSignature(node: typedoc.DeclarationReflection): string {
+  let childrenSignature = ''
+  node.traverse((c) => {
+    if (c.isTypeParameter()) {
+      return
+    }
+    if (c.kind === typedoc.ReflectionKind.Property) {
+      let childSignature = c.toString().replace(/^Property /, '')
+      if (c.flags.isOptional) {
+        childSignature = childSignature.replace(/: /, '?: ')
+      }
+      childrenSignature += `  ${childSignature}\n`
+    } else if (c.kind === typedoc.ReflectionKind.Method && c.isDeclaration()) {
+      let method = getApiMethod(c.name, c.getAllSignatures()[0])
+      invariant(method, `Failed to get method for type/interface: ${c.getFriendlyFullName()}`)
+      childrenSignature += `  ${method.signature}\n`
+    }
+  })
+  return childrenSignature
+}
+
 function getDocumentedInterface(
   fullName: string,
   node: typedoc.DeclarationReflection,
 ): DocumentedInterface {
   let { properties, methods } = getApiPropertiesAndMethods(fullName, node)
+
+  let signature = node.toString().replace(/^Interface/, 'interface')
+  let childrenSignature = getChildrenSignature(node)
+  if (childrenSignature) {
+    signature += ` {\n${childrenSignature}\n}`
+  }
+
   return {
     type: 'interface',
     path: getApiFilePath(fullName),
@@ -478,6 +507,7 @@ function getDocumentedInterface(
     description: getApiDescription(node.comment!),
     properties,
     methods,
+    signature,
   }
 }
 
@@ -503,19 +533,7 @@ function getDocumentedType(fullName: string, node: typedoc.DeclarationReflection
     .toString()
     .replace(/^TypeAlias/, 'type')
     .replace(new RegExp(`(${name}(<.*>)?): `), `$1 = `)
-
-  let childrenSignature = ''
-  node.traverse((c) => {
-    if (c.isTypeParameter()) {
-      return
-    }
-    let childSignature = c.toString().replace(/^Property /, '')
-    if (c.flags.isOptional) {
-      childSignature = childSignature.replace(/: /, '?: ')
-    }
-    childrenSignature += `  ${childSignature}\n`
-  })
-
+  let childrenSignature = getChildrenSignature(node)
   if (childrenSignature) {
     signature += ` = {\n${childrenSignature}\n}`
   }
@@ -888,6 +906,7 @@ async function getInterfaceMarkdown(comment: DocumentedInterface): Promise<strin
     source(comment),
     summary(comment),
     aliases(comment),
+    h2('Signature', await pre(comment.signature)),
     comment.properties && comment.properties.length > 0
       ? h2(
           'Properties',
