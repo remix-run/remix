@@ -6,7 +6,8 @@ import { createRouter, route } from 'remix/fetch-router'
 import { createHtmlResponse } from 'remix/response/html'
 import { staticFiles } from 'remix/static-middleware'
 import * as frontmatter from 'front-matter'
-import { marked } from 'marked'
+import { Marked, type MarkedExtension } from 'marked'
+import { codeToHtml } from 'shiki'
 
 // No types exist for the `frontmatter` package
 const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
@@ -187,10 +188,33 @@ async function discoverMarkdownFiles(baseDir: string): Promise<DocFile[]> {
   }
 }
 
+const shikiExtension: MarkedExtension = {
+  async: true,
+  async walkTokens(token) {
+    if (token.type === 'code') {
+      try {
+        token.text = await codeToHtml(token.text, {
+          lang: token.lang || 'typescript',
+          theme: 'github-dark',
+        })
+      } catch (error) {
+        console.error(`Shiki highlighting failed for token: ${JSON.stringify(token)}`)
+        console.error(error)
+      }
+    }
+  },
+  renderer: {
+    code(code) {
+      return code.text
+    },
+  },
+}
+
 async function renderMarkdownFile(filePath: string): Promise<string> {
   try {
     let markdown = fs.readFileSync(filePath, 'utf-8')
     let { body } = parseFrontmatter(markdown)
+    let marked = new Marked(shikiExtension)
     let htmlContent = await marked.parse(body)
     return htmlContent
   } catch (error) {
