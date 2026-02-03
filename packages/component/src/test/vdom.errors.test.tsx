@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createRoot } from './vdom.ts'
-import type { Handle } from './component.ts'
+import { createRoot } from '../lib/vdom.ts'
+import type { Handle } from '../lib/component.ts'
 
 describe('vdom error handling', () => {
   describe('setup errors', () => {

@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import type { Handle, RemixNode } from './component.ts'
+import type { Handle, RemixNode } from '../lib/component.ts'
 
-import { renderToStream, renderToString } from './stream.ts'
-import { hydrationRoot } from './hydration-root.ts'
-import { drain, readChunks, withResolvers } from './test/utils.ts'
-import { Frame } from './component.ts'
-import { invariant } from './invariant.ts'
+import { renderToStream, renderToString } from '../lib/stream.ts'
+import { hydrationRoot } from '../lib/hydration-root.ts'
+import { drain, readChunks, withResolvers } from './utils.ts'
+import { Frame } from '../lib/component.ts'
+import { invariant } from '../lib/invariant.ts'
 
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
 

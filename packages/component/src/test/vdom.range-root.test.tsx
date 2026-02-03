@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import type { Handle } from './component.ts'
-import { createRangeRoot } from './vdom.ts'
-import { invariant } from './invariant.ts'
+import type { Handle } from '../lib/component.ts'
+import { createRangeRoot } from '../lib/vdom.ts'
+import { invariant } from '../lib/invariant.ts'
 
 describe('createRangeRoot', () => {
   describe('basic rendering', () => {

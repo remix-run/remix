@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { Handle } from './component.ts'
-import { renderToStream } from './stream.ts'
-import { hydrationRoot } from './hydration-root.ts'
-import { hydrate } from './hydrate-client.ts'
-import { drain } from './test/utils.ts'
+import type { Handle } from '../lib/component.ts'
+import { renderToStream } from '../lib/stream.ts'
+import { hydrationRoot } from '../lib/hydration-root.ts'
+import { hydrate } from '../lib/hydrate-client.ts'
+import { drain } from './utils.ts'
 
 describe('hydrate', () => {
   let container: HTMLDivElement

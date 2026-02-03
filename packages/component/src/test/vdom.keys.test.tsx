@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { createRoot } from './vdom.ts'
-import { invariant } from './invariant.ts'
+import { createRoot } from '../lib/vdom.ts'
+import { invariant } from '../lib/invariant.ts'
+import { Fragment } from '../lib/component.ts'
 
-describe('vnode rendering (keys extra)', () => {
+describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {
     it('appends keyed component before non-keyed sibling', () => {
       let container = document.createElement('div')
@@ -48,9 +49,7 @@ describe('vnode rendering (keys extra)', () => {
       cards = [...cards, { id: '3', title: 'Card 3' }]
       root.render(<Column cards={cards} isAddingCard={true} />)
 
-      // BUG: The new card appears AFTER the form instead of before it
-      // Expected: Card 1 | Card 2 | Card 3 | Form
-      // Actual:   Card 1 | Card 2 | Form | Card 3
+      // Regression: The new card must appear BEFORE the form.
       expect(col.innerHTML).toBe(
         '<div data-id="1">Card 1</div><div data-id="2">Card 2</div><div data-id="3">Card 3</div><div id="form">Form</div>',
       )
@@ -420,6 +419,49 @@ describe('vnode rendering (keys extra)', () => {
       )
 
       expect(container.textContent).toBe('sym*one*obj*two*')
+    })
+
+    it('reorders keyed fragments correctly (moves entire DOM range)', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      // Each keyed item renders multiple DOM nodes via fragment
+      root.render(
+        <div>
+          {['a', 'b', 'c'].map((id) => (
+            <Fragment key={id}>
+              <span>{id}</span>
+              <button>{id}-btn</button>
+            </Fragment>
+          ))}
+        </div>,
+      )
+
+      expect(container.innerHTML).toBe(
+        '<div><span>a</span><button>a-btn</button><span>b</span><button>b-btn</button><span>c</span><button>c-btn</button></div>',
+      )
+
+      // Reverse order - entire fragment ranges should move together
+      root.render(
+        <div>
+          {['c', 'b', 'a'].map((id) => (
+            <Fragment key={id}>
+              <span>{id}</span>
+              <button>{id}-btn</button>
+            </Fragment>
+          ))}
+        </div>,
+      )
+
+      expect(container.innerHTML).toBe(
+        '<div><span>c</span><button>c-btn</button><span>b</span><button>b-btn</button><span>a</span><button>a-btn</button></div>',
+      )
+
+      // Verify DOM nodes were reused, not recreated
+      let spans = container.querySelectorAll('span')
+      let buttons = container.querySelectorAll('button')
+      expect(spans.length).toBe(3)
+      expect(buttons.length).toBe(3)
     })
 
     it('handles keys in fragments without breaking updates', () => {
