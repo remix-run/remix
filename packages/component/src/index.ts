@@ -34,7 +34,7 @@ export type {
 export type { VirtualRoot, VirtualRootEventMap, VirtualRootOptions, Scheduler } from './lib/vdom.ts'
 
 // Export types from component.ts
-export type { Handle } from './lib/component.ts'
+export type { Context, FrameHandle, Handle, Task } from './lib/component.ts'
 
 export { spring, type SpringIterator, type SpringPreset, type SpringOptions } from './lib/spring.ts'
 
