@@ -134,6 +134,7 @@ router.get(routes.time, async (context: any) => {
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>Server time</title>
+          <script async type="module" src="/assets/entry.js" />
         </head>
         <body
           css={{
@@ -171,8 +172,6 @@ router.get(routes.time, async (context: any) => {
                 fallback={<div css={{ color: '#9aa8e8' }}>Loading server time…</div>}
               />
             </div>
-
-            <script type="module" src="/assets/entry.js" />
           </div>
         </body>
       </html>
@@ -263,7 +262,7 @@ router.get(routes.frames.time, async () => {
             {now.toLocaleTimeString()}
           </div>
         </div>
-        <ReloadTime time={now.toISOString()} />
+        <ReloadTime />
       </div>
     </div>,
     { onError: console.error },

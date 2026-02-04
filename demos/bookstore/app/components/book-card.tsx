@@ -8,7 +8,7 @@ export interface BookCardProps {
 }
 
 export function BookCard() {
-  return ({ book, inCart }: BookCardProps) => (
+  return ({ book }: BookCardProps) => (
     <div class="book-card">
       <img src={book.coverUrl} alt={book.title} />
       <div class="book-card-body">

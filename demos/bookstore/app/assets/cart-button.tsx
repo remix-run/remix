@@ -2,55 +2,41 @@ import { type Handle, hydrationRoot } from 'remix/component'
 
 import { routes } from '../routes.ts'
 
-export const CartButton = hydrationRoot(
-  routes.assets.href({ path: 'cart-button.js#CartButton' }),
-  function CartButton(handle: Handle) {
-    let pending = false
+let moduleUrl = routes.assets.href({ path: 'cart-button.js#CartButton' })
 
-    return ({ inCart, id, slug }: { inCart: boolean; id: string; slug: string }) => {
-      console.log('CartButton', inCart, id, slug)
-      return (
-        <button
-          type="button"
-          on={{
-            async click(_event, signal) {
-              if (pending) return
-              pending = true
-              handle.update()
+export const CartButton = hydrationRoot(moduleUrl, (handle: Handle) => {
+  let pending = false
 
-              try {
-                let formData = new FormData()
-                formData.set('bookId', id)
-                formData.set('slug', slug)
+  return ({ inCart, id, slug }: { inCart: boolean; id: string; slug: string }) => {
+    return (
+      <button
+        type="button"
+        on={{
+          async click(_event, signal) {
+            pending = true
+            handle.update()
 
-                let response = await fetch(routes.api.cartToggle.href(), {
-                  method: 'POST',
-                  body: formData,
-                  signal,
-                })
+            let formData = new FormData()
+            formData.set('bookId', id)
+            formData.set('slug', slug)
 
-                if (!response.ok) {
-                  console.error(
-                    '[CartButton] API request failed:',
-                    response.status,
-                    response.statusText,
-                  )
-                  return
-                }
+            await fetch(routes.api.cartToggle.href(), {
+              method: 'POST',
+              body: formData,
+              signal,
+            })
 
-                await new Promise((resolve) => setTimeout(resolve, 1000))
-                await handle.frame.reload()
-              } finally {
-                pending = false
-                handle.update()
-              }
-            },
-          }}
-          class="btn"
-        >
-          {pending ? 'Saving...' : inCart ? 'Remove from Cart' : 'Add to Cart'}
-        </button>
-      )
-    }
-  },
-)
+            await handle.frame.reload()
+            await new Promise((resolve) => setTimeout(resolve, 500))
+            if (signal.aborted) return
+            pending = false
+            handle.update()
+          },
+        }}
+        class="btn"
+      >
+        {pending ? 'Saving...' : inCart ? 'Remove from Cart' : 'Add to Cart'}
+      </button>
+    )
+  }
+})
