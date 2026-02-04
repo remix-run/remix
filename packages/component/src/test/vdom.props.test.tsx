@@ -168,5 +168,44 @@ describe('vnode rendering', () => {
       expect(div.className).toBe('second')
       expect(div.getAttribute('data-css')).toMatch(/^rmx-/)
     })
+
+    it('removes nested selector rules when they become undefined', async () => {
+      let container = document.createElement('div')
+      document.body.appendChild(container)
+      let root = createRoot(container)
+
+      root.render(
+        <div
+          css={{
+            // Base styling for the child comes from the parent.
+            '& span': { color: 'rgb(0, 0, 255)' },
+            // More-specific nested selector is conditionally removed.
+            '& span.special': { color: 'rgb(255, 0, 0)' },
+          }}
+        >
+          <span className="special">Test</span>
+        </div>,
+      )
+
+      let child = container.querySelector('span')
+      invariant(child)
+
+      // More-specific nested selector should win.
+      expect(getComputedStyle(child).color).toBe('rgb(255, 0, 0)')
+
+      root.render(
+        <div
+          css={{
+            '& span': { color: 'rgb(0, 0, 255)' },
+            '& span.special': undefined,
+          }}
+        >
+          <span className="special">Test</span>
+        </div>,
+      )
+
+      // Once the more-specific selector becomes undefined, the child should fall back to the base rule.
+      expect(getComputedStyle(child).color).toBe('rgb(0, 0, 255)')
+    })
   })
 })
