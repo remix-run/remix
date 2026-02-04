@@ -163,6 +163,9 @@ importers:
         specifier: workspace:*
         version: link:../packages/remix
     devDependencies:
+      '@types/hast':
+        specifier: ^3.0.4
+        version: 3.0.4
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4

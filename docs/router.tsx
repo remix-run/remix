@@ -8,6 +8,7 @@ import { staticFiles } from 'remix/static-middleware'
 import * as frontmatter from 'front-matter'
 import { Marked, type MarkedExtension } from 'marked'
 import { codeToHtml } from 'shiki'
+import type { Element } from 'hast'
 
 // No types exist for the `frontmatter` package
 const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
@@ -209,46 +210,28 @@ function getShikiExtension(apiName: string): MarkedExtension {
               // Insert cross-links to known Remix APIs
               {
                 span(node) {
-                  if (node.children.length !== 1) {
-                    console.warn('Expected one child node in span:', node)
-                    return
-                  }
+                  // We only enhance single-symbol spans
+                  if (node.children.length !== 1) return
 
-                  let value = 'value' in node.children[0] ? node.children[0].value : ''
-                  let symbol = value?.trim()
+                  let symbol = 'value' in node.children[0] ? node.children[0].value : ''
+                  // Capture leading/trailing spaces for later
+                  let leadingSpaces = symbol.length - symbol.trimStart().length
+                  let trailingSpaces = symbol.length - symbol.trimEnd().length
+                  symbol = symbol?.trim()
 
-                  if (symbol !== apiName && docFilesLookup.has(symbol)) {
-                    let docFile = docFilesLookup.get(symbol)!
+                  // Don't link to the current page
+                  if (symbol === apiName) return
 
-                    // Spacer elements to preserve whitespace outside the inserted <a> elements
-                    const spacer = (num: number) => [
-                      {
-                        type: 'text',
-                        value: ' '.repeat(num),
-                      } as const,
-                    ]
+                  // We don't know about this symbol
+                  if (!docFilesLookup.has(symbol)) return
 
-                    let leadingSpaces = value.length - value.trimStart().length
-                    let trailingSpaces = value.length - value.trimEnd().length
-
-                    node.children = [
-                      ...(leadingSpaces ? spacer(leadingSpaces) : []),
-                      {
-                        type: 'element',
-                        tagName: 'a',
-                        properties: {
-                          href: routes.api.href({ path: docFile.urlPath }),
-                        },
-                        children: [
-                          {
-                            type: 'text',
-                            value: symbol,
-                          },
-                        ],
-                      },
-                      ...(trailingSpaces ? spacer(trailingSpaces) : []),
-                    ]
-                  }
+                  node.children = [
+                    ...(leadingSpaces ? spacer(leadingSpaces) : []),
+                    link(symbol, {
+                      href: routes.api.href({ path: docFilesLookup.get(symbol)!.urlPath }),
+                    }),
+                    ...(trailingSpaces ? spacer(trailingSpaces) : []),
+                  ]
                 },
               },
             ],
@@ -264,6 +247,30 @@ function getShikiExtension(apiName: string): MarkedExtension {
         return code.text
       },
     },
+  }
+
+  // Spacer elements to preserve whitespace outside the inserted <a> elements
+  function spacer(num: number) {
+    return [
+      {
+        type: 'text',
+        value: ' '.repeat(num),
+      } as const,
+    ]
+  }
+
+  function link(text: string, attrs: { href: string }): Element {
+    return {
+      type: 'element',
+      tagName: 'a',
+      properties: attrs,
+      children: [
+        {
+          type: 'text',
+          value: text,
+        },
+      ],
+    }
   }
 }
 
