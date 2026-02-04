@@ -10,6 +10,7 @@
     "remix": "workspace:*"
   },
   "devDependencies": {
+    "@types/hast": "^3.0.4",
     "@types/node": "catalog:",
     "shiki": "^3.22.0",
     "typedoc": "^0.28.15"
