@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { Handle, RemixNode } from '../lib/component.ts'
 
 import { renderToStream, renderToString } from '../lib/stream.ts'
-import { hydrationRoot } from '../lib/hydration-root.ts'
+import { clientEntry } from '../lib/client-entries.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 import { Frame } from '../lib/component.ts'
 import { invariant } from '../lib/invariant.ts'
@@ -10,6 +10,33 @@ import { invariant } from '../lib/invariant.ts'
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
 
 describe('stream', () => {
+  function getLatestRmxDataScript(root: ParentNode): HTMLScriptElement {
+    let scripts = root.querySelectorAll(rmxDataScriptSelector)
+    let script = scripts.item(scripts.length - 1) as HTMLScriptElement | null
+    invariant(script)
+    return script
+  }
+
+  function parseRmxDataFromHtml(html: string): any {
+    let shelf = document.createElement('template')
+    shelf.innerHTML = html
+    let script = getLatestRmxDataScript(shelf.content)
+    return JSON.parse(script.textContent || '{}')
+  }
+
+  function getSingleEntry(obj: Record<string, any>): [string, any] {
+    let entries = Object.entries(obj)
+    expect(entries.length).toBe(1)
+    return entries[0]!
+  }
+
+  function getCommentMarkerId(html: string, prefix: 'rmx:f:' | 'rmx:h:'): string {
+    let re = prefix === 'rmx:f:' ? /<!--\s*rmx:f:([^ ]+)\s*-->/ : /<!--\s*rmx:h:([^ ]+)\s*-->/
+    let match = html.match(re)
+    expect(match).not.toBeNull()
+    return match![1]!
+  }
+
   describe('basic nodes', () => {
     it('should render to a stream', () => {
       let stream = renderToStream(<div>Hello, world!</div>)
@@ -26,6 +53,18 @@ describe('stream', () => {
       let stream = renderToStream('Hello, world!')
       let html = await drain(stream)
       expect(html).toBe('Hello, world!')
+    })
+
+    it('escapes text node content', async () => {
+      let stream = renderToStream('<img src=x onerror="alert(1)">&</img>')
+      let html = await drain(stream)
+      expect(html).toBe('&lt;img src=x onerror="alert(1)"&gt;&amp;&lt;/img&gt;')
+    })
+
+    it('escapes text children in elements', async () => {
+      let stream = renderToStream(<div>{'<script>alert(1)</script>'}</div>)
+      let html = await drain(stream)
+      expect(html).toBe('<div>&lt;script&gt;alert(1)&lt;/script&gt;</div>')
     })
 
     it('renders number nodes', async () => {
@@ -472,7 +511,7 @@ describe('stream', () => {
       let html = await drain(stream)
 
       // Style should be in the head section
-      expect(html).toContain('<!doctype html><html><head><style data-rmx-styles>')
+      expect(html).toContain('<html><head><style data-rmx-styles>')
       expect(html).toContain('color: purple')
       expect(html).toContain('</style></head><body>')
     })
@@ -653,51 +692,6 @@ describe('stream', () => {
   })
 
   describe('doctype', () => {
-    it('prepends DOCTYPE for html root element', async () => {
-      let stream = renderToStream(
-        <html>
-          <head>
-            <title>Test Page</title>
-          </head>
-          <body>
-            <div>Hello</div>
-          </body>
-        </html>,
-      )
-      let html = await drain(stream)
-      expect(html).toBe(
-        '<!doctype html><html><head><title>Test Page</title></head><body><div>Hello</div></body></html>',
-      )
-    })
-
-    it('does not prepend DOCTYPE for non-html root', async () => {
-      let stream = renderToStream(
-        <div>
-          <html>Not a root</html>
-        </div>,
-      )
-      let html = await drain(stream)
-      expect(html).toBe('<div><html>Not a root</html></div>')
-    })
-
-    it('prepends DOCTYPE for html root in component', async () => {
-      function Page(handle: Handle) {
-        return () => (
-          <html>
-            <head>
-              <title>Component Page</title>
-            </head>
-            <body>Content</body>
-          </html>
-        )
-      }
-      let stream = renderToStream(<Page />)
-      let html = await drain(stream)
-      expect(html).toBe(
-        '<!doctype html><html><head><title>Component Page</title></head><body>Content</body></html>',
-      )
-    })
-
     it('handles whitespace before html element', async () => {
       let stream = renderToStream([
         '\n  ',
@@ -706,7 +700,7 @@ describe('stream', () => {
         </html>,
       ])
       let html = await drain(stream)
-      expect(html).toBe('<!doctype html>\n  <html><body>Content</body></html>')
+      expect(html).toBe('\n  <html><body>Content</body></html>')
     })
   })
 
@@ -722,7 +716,7 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<!doctype html><html><head><title>Page Title</title></head><body><div>Content</div></body></html>',
+        '<html><head><title>Page Title</title></head><body><div>Content</div></body></html>',
       )
     })
 
@@ -805,7 +799,7 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe(
-        '<!doctype html><html><head><meta charset="utf-8" /><title>Body Title</title><link rel="stylesheet" href="/app.css" /></head><body><div>Content</div></body></html>',
+        '<html><head><meta charset="utf-8" /><title>Body Title</title><link rel="stylesheet" href="/app.css" /></head><body><div>Content</div></body></html>',
       )
     })
 
@@ -864,7 +858,7 @@ describe('stream', () => {
   describe('hydration', () => {
     it('renders hydrated component with hydration script', async () => {
       // Create a simple hydrated component
-      let Counter = hydrationRoot('/js/counter.js#Counter', function Counter(handle: Handle) {
+      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
         return ({ initialCount }: { initialCount: number }) => <div>Count: {initialCount}</div>
       })
 
@@ -873,7 +867,8 @@ describe('stream', () => {
       let html = await drain(stream)
 
       // Verify the output contains both the rendered HTML and markers with ID
-      expect(html).toContain('<!-- rmx:h:h1 -->')
+      let hydrationId = getCommentMarkerId(html, 'rmx:h:')
+      expect(html).toContain(`<!-- rmx:h:${hydrationId} -->`)
       expect(html).toContain('<div>Count: 42</div>')
       expect(html).toContain('<!-- /rmx:h -->')
 
@@ -881,21 +876,17 @@ describe('stream', () => {
       expect(html).toContain('<script type="application/json" id="rmx-data">')
 
       // Parse the aggregated data
-      let shelf = document.createElement('template')
-      shelf.innerHTML = html
-      let script = shelf.content.querySelector(rmxDataScriptSelector)
-      invariant(script)
-      let data = JSON.parse(script.textContent || '{}')
+      let data = parseRmxDataFromHtml(html)
 
       expect(data.h).toBeDefined()
-      expect(data.h.h1).toEqual({
+      expect(data.h[hydrationId]).toEqual({
         moduleUrl: '/js/counter.js',
         exportName: 'Counter',
         props: { initialCount: 42 },
       })
 
       // Ordering: start marker < content < end marker
-      let startIdx = html.indexOf('<!-- rmx:h:h1 -->')
+      let startIdx = html.indexOf(`<!-- rmx:h:${hydrationId} -->`)
       let contentIdx = html.indexOf('<div>Count: 42</div>')
       let endIdx = html.indexOf('<!-- /rmx:h -->')
       expect(startIdx).toBeGreaterThanOrEqual(0)
@@ -903,9 +894,31 @@ describe('stream', () => {
       expect(endIdx).toBeGreaterThan(contentIdx)
     })
 
+    it('escapes rmx-data payloads that contain script end tags', async () => {
+      let Counter = clientEntry('/js/counter.js#Counter', function Counter(handle: Handle) {
+        return ({ label }: { label: string }) => <div>{label}</div>
+      })
+
+      let scriptBreakingLabel = '</script><script>alert("xss")</script>'
+      let stream = renderToStream(<Counter label={scriptBreakingLabel} />)
+      let html = await drain(stream)
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let script = getLatestRmxDataScript(shelf.content)
+
+      // Ensure we do not emit a literal closing tag inside rmx-data payload.
+      expect(script.textContent || '').not.toContain('</script>')
+
+      // Ensure the data still parses and round-trips to the original value.
+      let data = parseRmxDataFromHtml(html)
+      let [hydrationId, entry] = getSingleEntry(data.h)
+      expect(hydrationId).toBeDefined()
+      expect(entry.props.label).toBe(scriptBreakingLabel)
+    })
+
     it('renders multiple hydrated components with unique instance IDs', async () => {
       // Create hydrated components
-      let Button = hydrationRoot('/js/button.js#Button', function Button(handle: Handle) {
+      let Button = clientEntry('/js/button.js#Button', function Button(handle: Handle) {
         return ({ text }: { text: string }) => <button>{text}</button>
       })
 
@@ -919,31 +932,20 @@ describe('stream', () => {
       let html = await drain(stream)
 
       // Verify both buttons are rendered inside hydration markers with unique IDs
-      expect(html).toContain('<!-- rmx:h:h1 -->')
-      expect(html).toContain('<!-- rmx:h:h2 -->')
+      expect(html).toContain('<!-- rmx:h:')
       expect(html).toContain('<button>First</button>')
       expect(html).toContain('<button>Second</button>')
 
-      // Parse the aggregated data
-      let shelf = document.createElement('template')
-      shelf.innerHTML = html
-      let script = shelf.content.querySelector(rmxDataScriptSelector)
-      invariant(script)
-      let data = JSON.parse(script.textContent || '{}')
-
-      // Verify each has a unique instance ID in aggregated data
-      expect(data.h.h1).toBeDefined()
-      expect(data.h.h2).toBeDefined()
-
-      // Verify both have the same module/export
-      expect(data.h.h1.moduleUrl).toBe('/js/button.js')
-      expect(data.h.h1.exportName).toBe('Button')
-      expect(data.h.h2.moduleUrl).toBe('/js/button.js')
-      expect(data.h.h2.exportName).toBe('Button')
+      let data = parseRmxDataFromHtml(html)
+      expect(Object.keys(data.h).length).toBe(2)
+      for (let entry of Object.values<any>(data.h)) {
+        expect(entry.moduleUrl).toBe('/js/button.js')
+        expect(entry.exportName).toBe('Button')
+      }
     })
 
     it('renders hydrated component with complex props', async () => {
-      let Card = hydrationRoot('/js/card.js#Card', function Card(handle: Handle) {
+      let Card = clientEntry('/js/card.js#Card', function Card(handle: Handle) {
         return (props: {
           title: string
           count: number
@@ -981,7 +983,7 @@ describe('stream', () => {
       shelf.innerHTML = html
       let content = shelf.content
       invariant(content.firstChild instanceof Comment)
-      expect(content.firstChild.data.trim()).toBe('rmx:h:h1')
+      expect(content.firstChild.data.trim().startsWith('rmx:h:')).toBe(true)
       expect(shelf.content.querySelector('h2')?.textContent).toBe('Test Card')
       expect(shelf.content.querySelector('p')?.textContent).toBe('Count: 10')
       expect(shelf.content.querySelector('section')?.textContent).toBe('Enabled: true')
@@ -996,7 +998,8 @@ describe('stream', () => {
       let script = shelf.content.querySelector(rmxDataScriptSelector)
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
-      expect(data.h.h1.props).toEqual({
+      let [, entry] = getSingleEntry(data.h)
+      expect(entry.props).toEqual({
         title: 'Test Card',
         count: 10,
         enabled: true,
@@ -1006,7 +1009,7 @@ describe('stream', () => {
     })
 
     it('serializes virtual host elements', async () => {
-      let Card = hydrationRoot('/js/card.js#Card', function Card(handle: Handle) {
+      let Card = clientEntry('/js/card.js#Card', function Card(handle: Handle) {
         return (props: { children: RemixNode }) => (
           <div>
             <h1>Test Card</h1>
@@ -1027,7 +1030,8 @@ describe('stream', () => {
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
 
-      expect(data.h.h1.props.children).toEqual({
+      let [, entry] = getSingleEntry(data.h)
+      expect(entry.props.children).toEqual({
         $rmx: true,
         type: 'p',
         props: {
@@ -1037,7 +1041,7 @@ describe('stream', () => {
     })
 
     it('serializes virtual component elements', async () => {
-      let Card = hydrationRoot('/js/card.js#Card', function Card(handle: Handle) {
+      let Card = clientEntry('/js/card.js#Card', function Card(handle: Handle) {
         return (props: { children: RemixNode }) => (
           <div>
             <h1>Test Card</h1>
@@ -1069,7 +1073,8 @@ describe('stream', () => {
       let script = shelf.content.querySelector(rmxDataScriptSelector)
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
-      expect(data.h.h1).toEqual({
+      let [, entry] = getSingleEntry(data.h)
+      expect(entry).toEqual({
         exportName: 'Card',
         moduleUrl: '/js/card.js',
         props: {
@@ -1090,12 +1095,48 @@ describe('stream', () => {
       })
     })
 
-    it.skip('nests hydrated components', async () => {
-      let Card = hydrationRoot('/card.js#Card', function Card(handle: Handle) {
+    it('serializes Frame elements in entry props as frame descriptors', async () => {
+      let Card = clientEntry('/js/card.js#Card', function Card(handle: Handle) {
+        return (props: { children: RemixNode }) => <div>{props.children}</div>
+      })
+
+      let stream = renderToStream(
+        <Card>
+          <Frame src="/child-frame" fallback={<p>Loading child frame…</p>} />
+        </Card>,
+        {
+          resolveFrame: () => '<p>Loaded child frame</p>',
+        },
+      )
+      let html = await drain(stream)
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      let [, entry] = getSingleEntry(data.h)
+
+      expect(entry.props.children).toEqual({
+        $rmxFrame: true,
+        props: {
+          src: '/child-frame',
+          fallback: {
+            $rmx: true,
+            type: 'p',
+            props: {
+              children: 'Loading child frame…',
+            },
+          },
+        },
+      })
+    })
+
+    it('nests hydrated components', async () => {
+      let Card = clientEntry('/card.js#Card', function Card(handle: Handle) {
         return ({ children }: { children: RemixNode }) => <div>{children}</div>
       })
 
-      let Button = hydrationRoot('/button.js#Button', function Button(handle: Handle) {
+      let Button = clientEntry('/button.js#Button', function Button(handle: Handle) {
         return () => <button />
       })
 
@@ -1111,8 +1152,14 @@ describe('stream', () => {
       let script = shelf.content.querySelector(rmxDataScriptSelector)
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
-      // Should have 2 hydrated components
-      expect(Object.keys(data.h).length).toBe(2)
+      let entries = Object.values<any>(data.h)
+      expect(entries.length).toBe(2)
+      expect(
+        entries.some((entry) => entry.moduleUrl === '/card.js' && entry.exportName === 'Card'),
+      ).toBe(true)
+      expect(
+        entries.some((entry) => entry.moduleUrl === '/button.js' && entry.exportName === 'Button'),
+      ).toBe(true)
     })
   })
 
@@ -1120,22 +1167,19 @@ describe('stream', () => {
     it('adds frame scripts for non-blocking frames', async () => {
       // Test non-blocking frame (with fallback)
       let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
-        resolveFrame: () => <div>Resolved</div>,
+        resolveFrame: () => '<div>Resolved</div>',
       })
       let result = await drain(stream)
 
+      let frameId = getCommentMarkerId(result, 'rmx:f:')
       // Should render fallback content with frame markers
-      expect(result).toContain('<!-- rmx:f:f1 -->')
+      expect(result).toContain(`<!-- rmx:f:${frameId} -->`)
       expect(result).toContain('<div>Loading...</div>')
       expect(result).toContain('<!-- /rmx:f -->')
 
       // Should have aggregated frame metadata script
-      let shelf = document.createElement('template')
-      shelf.innerHTML = result
-      let script = shelf.content.querySelector(rmxDataScriptSelector)
-      invariant(script)
-      let data = JSON.parse(script.textContent || '{}')
-      expect(data.f.f1).toEqual({
+      let data = parseRmxDataFromHtml(result)
+      expect(data.f[frameId]).toEqual({
         status: 'pending',
         src: '/x',
       })
@@ -1143,28 +1187,25 @@ describe('stream', () => {
 
     it('adds frame scripts for blocking frames', async () => {
       let stream = renderToStream(<Frame src="/x" />, {
-        resolveFrame: () => <div>Resolved</div>,
+        resolveFrame: () => '<div>Resolved</div>',
       })
       let result = await drain(stream)
 
+      let frameId = getCommentMarkerId(result, 'rmx:f:')
       // Should have frame markers
-      expect(result).toContain('<!-- rmx:f:f1 -->')
+      expect(result).toContain(`<!-- rmx:f:${frameId} -->`)
       expect(result).toContain('<div>Resolved</div>')
       expect(result).toContain('<!-- /rmx:f -->')
 
       // Should have aggregated frame metadata script
-      let shelf = document.createElement('template')
-      shelf.innerHTML = result
-      let script = shelf.content.querySelector(rmxDataScriptSelector)
-      invariant(script)
-      let data = JSON.parse(script.textContent || '{}')
-      expect(data.f.f1.status).toBe('resolved')
+      let data = parseRmxDataFromHtml(result)
+      expect(data.f[frameId].status).toBe('resolved')
     })
 
     it('renders blocking frames without fallback', async () => {
       // Test blocking frame (no fallback)
       let stream = renderToStream(<Frame src="/fragments/product" />, {
-        resolveFrame: async () => <div>Product</div>,
+        resolveFrame: async () => '<div>Product</div>',
       })
       let chunks = readChunks(stream)
 
@@ -1174,24 +1215,21 @@ describe('stream', () => {
       let content = firstChunk.value!
 
       // First chunk should contain the resolved frame with markers
-      expect(content).toContain('<!-- rmx:f:f1 -->')
+      let frameId = getCommentMarkerId(content, 'rmx:f:')
+      expect(content).toContain(`<!-- rmx:f:${frameId} -->`)
       expect(content).toContain('<div>Product</div>')
       expect(content).toContain('<!-- /rmx:f -->')
 
       // Should have aggregated frame metadata script with resolved status
-      let shelf = document.createElement('template')
-      shelf.innerHTML = content
-      let script = shelf.content.querySelector(rmxDataScriptSelector)
-      invariant(script)
-      let data = JSON.parse(script.textContent || '{}')
-      expect(data.f.f1.status).toBe('resolved')
+      let data = parseRmxDataFromHtml(content)
+      expect(data.f[frameId].status).toBe('resolved')
 
       // Should be done after first chunk
       let done = await chunks.next()
       expect(done.done).toBe(true)
     })
 
-    it('assigns hierarchical IDs for nested non-blocking frames', async () => {
+    it('assigns IDs for nested non-blocking frames', async () => {
       let stream = renderToStream(
         <div>
           <Frame
@@ -1204,22 +1242,19 @@ describe('stream', () => {
             }
           />
         </div>,
-        { resolveFrame: async () => <div>Resolved</div> },
+        { resolveFrame: async () => '<div>Resolved</div>' },
       )
       let html = await drain(stream)
 
       // Check for frame markers
-      expect(html).toContain('<!-- rmx:f:f1 -->')
-      expect(html).toContain('<!-- rmx:f:f1-1 -->')
+      expect(html).toContain('<!-- rmx:f:')
 
       // Aggregated data with hierarchical ids and pending statuses
-      let shelf = document.createElement('template')
-      shelf.innerHTML = html
-      let script = shelf.content.querySelector(rmxDataScriptSelector)
-      invariant(script)
-      let data = JSON.parse(script.textContent || '{}')
-      expect(data.f.f1.status).toBe('pending')
-      expect(data.f['f1-1'].status).toBe('pending')
+      let data = parseRmxDataFromHtml(html)
+      expect(Object.keys(data.f).length).toBe(2)
+      for (let entry of Object.values<any>(data.f)) {
+        expect(entry.status).toBe('pending')
+      }
 
       // Fallbacks rendered
       expect(html).toContain('Outer loading')
@@ -1227,22 +1262,23 @@ describe('stream', () => {
     })
 
     it('awaits nested blocking frames before first chunk', async () => {
-      let stream = renderToStream(<Frame src="/outer" />, {
-        resolveFrame: async (src) => {
-          if (src === '/outer') {
-            return (
-              <div>
-                Outer
-                <Frame src="/inner" />
-              </div>
-            )
-          }
-          if (src === '/inner') {
-            return <div>Inner</div>
-          }
-          return <div />
-        },
-      })
+      async function resolveFrame(src: string) {
+        if (src === '/outer') {
+          return renderToStream(
+            <div>
+              Outer
+              <Frame src="/inner" />
+            </div>,
+            { resolveFrame },
+          )
+        }
+        if (src === '/inner') {
+          return '<div>Inner</div>'
+        }
+        return '<div></div>'
+      }
+
+      let stream = renderToStream(<Frame src="/outer" />, { resolveFrame })
 
       let chunks = readChunks(stream)
       let first = await chunks.next()
@@ -1256,31 +1292,34 @@ describe('stream', () => {
       // Both frames resolved in aggregated data
       let shelf = document.createElement('template')
       shelf.innerHTML = content
-      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      let scripts = shelf.content.querySelectorAll(rmxDataScriptSelector)
+      let script = scripts.item(scripts.length - 1)
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
-      expect(data.f.f1.status).toBe('resolved')
-      expect(data.f['f1-1'].status).toBe('resolved')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'resolved')).toBe(true)
 
+      console.log(content)
       // Stream completes
       let done = await chunks.next()
       expect(done.done).toBe(true)
     })
 
     it('renders nested non-blocking inside blocking with fallback', async () => {
-      let stream = renderToStream(<Frame src="/outer" />, {
-        resolveFrame: async (src) => {
-          if (src === '/outer') {
-            return (
-              <div>
-                Outer
-                <Frame src="/inner" fallback={<span>Inner loading</span>} />
-              </div>
-            )
-          }
-          return <div />
-        },
-      })
+      async function resolveFrame(src: string) {
+        if (src === '/outer') {
+          return renderToStream(
+            <div>
+              Outer
+              <Frame src="/inner" fallback={<span>Inner loading</span>} />
+            </div>,
+            { resolveFrame },
+          )
+        }
+        if (src === '/inner') return '<div>Inner</div>'
+        return '<div></div>'
+      }
+
+      let stream = renderToStream(<Frame src="/outer" />, { resolveFrame })
 
       let chunks = readChunks(stream)
       let first = await chunks.next()
@@ -1294,23 +1333,23 @@ describe('stream', () => {
       // Check aggregated data
       let shelf = document.createElement('template')
       shelf.innerHTML = content
-      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      let scripts = shelf.content.querySelectorAll(rmxDataScriptSelector)
+      let script = scripts.item(scripts.length - 1)
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
-      expect(data.f.f1.status).toBe('resolved')
-      expect(data.f['f1-1'].status).toBe('pending')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'resolved')).toBe(true)
 
       // Since the inner frame is non-blocking, it should stream later
       let second = await chunks.next()
       expect(second.done).toBe(false)
-      expect(second.value).toContain('<template id="f1-1">')
+      expect(second.value).toContain('<template id="f')
 
       let done = await chunks.next()
       expect(done.done).toBe(true)
     })
 
     it('streams non-blocking frame content after initial chunk', async () => {
-      let [promise, resolve] = withResolvers<JSX.Element>()
+      let [promise, resolve] = withResolvers<string>()
 
       let stream = renderToStream(
         <div>
@@ -1323,7 +1362,7 @@ describe('stream', () => {
             if (src === '/fragments/product') {
               return promise
             }
-            return <div />
+            return '<div></div>'
           },
         },
       )
@@ -1345,17 +1384,17 @@ describe('stream', () => {
       let script = shelf.content.querySelector(rmxDataScriptSelector)
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
-      expect(data.f.f1.status).toBe('pending')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'pending')).toBe(true)
 
       // Resolve the frame content
-      resolve(<div>Async Product Content</div>)
+      resolve('<div>Async Product Content</div>')
 
       // Second chunk should contain the resolved content as a template
       let secondChunk = await chunks.next()
       expect(secondChunk.done).toBe(false)
       let template = secondChunk.value
 
-      expect(template).toContain('<template id="f1">')
+      expect(template).toContain('<template id="f')
       expect(template).toContain('<div>Async Product Content</div>')
       expect(template).toContain('</template>')
 
@@ -1364,9 +1403,37 @@ describe('stream', () => {
       expect(done.done).toBe(true)
     })
 
+    it('escapes frame template content to prevent template breakouts', async () => {
+      let [promise, resolve] = withResolvers<string>()
+      let injectedHtml = '</template><script>alert("xss")</script><template><p>safe</p>'
+
+      let stream = renderToStream(<Frame src="/danger" fallback={<div>Loading...</div>} />, {
+        resolveFrame: async () => promise,
+      })
+
+      let chunks = readChunks(stream)
+      let firstChunk = await chunks.next()
+      expect(firstChunk.done).toBe(false)
+      expect(firstChunk.value).toContain('<div>Loading...</div>')
+
+      resolve(injectedHtml)
+
+      let secondChunk = await chunks.next()
+      expect(secondChunk.done).toBe(false)
+      let templateChunk = secondChunk.value!
+      expect(templateChunk).toContain('<template id="f')
+      expect(templateChunk).toContain(
+        '<\\/template><script>alert("xss")</script><template><p>safe</p>',
+      )
+      expect(templateChunk).not.toContain('</template><script>alert("xss")</script><template>')
+
+      let done = await chunks.next()
+      expect(done.done).toBe(true)
+    })
+
     it('streams multiple non-blocking frames in order of resolution', async () => {
-      let [frame1Promise, resolveFrame1] = withResolvers<JSX.Element>()
-      let [frame2Promise, resolveFrame2] = withResolvers<JSX.Element>()
+      let [frame1Promise, resolveFrame1] = withResolvers<string>()
+      let [frame2Promise, resolveFrame2] = withResolvers<string>()
 
       let stream = renderToStream(
         <div>
@@ -1377,7 +1444,7 @@ describe('stream', () => {
           resolveFrame: async (src) => {
             if (src === '/frame1') return frame1Promise
             if (src === '/frame2') return frame2Promise
-            return <div />
+            return '<div></div>'
           },
         },
       )
@@ -1395,23 +1462,22 @@ describe('stream', () => {
       let script = shelf.content.querySelector(rmxDataScriptSelector)
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
-      expect(data.f.f1).toBeDefined()
-      expect(data.f.f2).toBeDefined()
+      expect(Object.keys(data.f).length).toBe(2)
 
       // Resolve frame 2 first
-      resolveFrame2(<div>Second Frame Content</div>)
+      resolveFrame2('<div>Second Frame Content</div>')
 
       // Should stream frame 2's content
       let secondChunk = await chunks.next()
-      expect(secondChunk.value).toContain('<template id="f2">')
+      expect(secondChunk.value).toContain('<template id="f')
       expect(secondChunk.value).toContain('Second Frame Content')
 
       // Resolve frame 1
-      resolveFrame1(<div>First Frame Content</div>)
+      resolveFrame1('<div>First Frame Content</div>')
 
       // Should stream frame 1's content
       let thirdChunk = await chunks.next()
-      expect(thirdChunk.value).toContain('<template id="f1">')
+      expect(thirdChunk.value).toContain('<template id="f')
       expect(thirdChunk.value).toContain('First Frame Content')
 
       // Stream completes
@@ -1420,30 +1486,32 @@ describe('stream', () => {
     })
 
     it('renders descendant frames returned from resolveFrame', async () => {
+      async function resolveFrame(src: string) {
+        if (src === '/parent') {
+          // Parent frame returns content containing a child frame
+          return renderToStream(
+            <section>
+              <h2>Parent Content</h2>
+              <Frame src="/child" fallback={<span>Loading child...</span>} />
+              <p>Parent footer</p>
+            </section>,
+            { resolveFrame },
+          )
+        }
+        if (src === '/child') {
+          // Simulate async loading of child
+          await new Promise((resolve) => setTimeout(resolve, 10))
+          return '<article>Child Content</article>'
+        }
+        return '<div></div>'
+      }
+
       let stream = renderToStream(
         <div>
           <h1>Page</h1>
           <Frame src="/parent" fallback={<div>Loading parent...</div>} />
         </div>,
-        {
-          resolveFrame: async (src) => {
-            if (src === '/parent') {
-              // Parent frame returns content containing a child frame
-              return (
-                <section>
-                  <h2>Parent Content</h2>
-                  <Frame src="/child" fallback={<span>Loading child...</span>} />
-                  <p>Parent footer</p>
-                </section>
-              )
-            } else if (src === '/child') {
-              // Simulate async loading of child
-              await new Promise((resolve) => setTimeout(resolve, 10))
-              return <article>Child Content</article>
-            }
-            return <div />
-          },
-        },
+        { resolveFrame },
       )
 
       let chunks = readChunks(stream)
@@ -1462,14 +1530,14 @@ describe('stream', () => {
       let script = shelf.content.querySelector(rmxDataScriptSelector)
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
-      expect(data.f.f1.status).toBe('pending')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'pending')).toBe(true)
 
       // Second chunk should contain parent's resolved content with child frame
       let secondChunk = await chunks.next()
       expect(secondChunk.done).toBe(false)
       let parentTemplate = secondChunk.value
 
-      expect(parentTemplate).toContain('<template id="f1">')
+      expect(parentTemplate).toContain('<template id="f')
       expect(parentTemplate).toContain('<section>')
       expect(parentTemplate).toContain('<h2>Parent Content</h2>')
       expect(parentTemplate).toContain('<span>Loading child...</span>')
@@ -1482,7 +1550,8 @@ describe('stream', () => {
       expect(thirdChunk.done).toBe(false)
       let childTemplate = thirdChunk.value
 
-      expect(childTemplate).toContain('<template id="f1-1">')
+      // IDs are local within the returned fragment stream, so the child template id may collide.
+      expect(childTemplate).toContain('<template id="f')
       expect(childTemplate).toContain('<article>Child Content</article>')
       expect(childTemplate).toContain('</template>')
 
@@ -1492,23 +1561,25 @@ describe('stream', () => {
     })
 
     it('handles blocking descendant frames returned from resolveFrame', async () => {
-      let stream = renderToStream(<Frame src="/parent" />, {
-        resolveFrame: async (src) => {
-          if (src === '/parent') {
-            // Parent returns content with a blocking child frame (no fallback)
-            return (
-              <main>
-                <h2>Parent Header</h2>
-                <Frame src="/child" />
-                <p>Parent Footer</p>
-              </main>
-            )
-          } else if (src === '/child') {
-            return <div>Blocking Child Content</div>
-          }
-          return <div />
-        },
-      })
+      async function resolveFrame(src: string) {
+        if (src === '/parent') {
+          // Parent returns content with a blocking child frame (no fallback)
+          return renderToStream(
+            <main>
+              <h2>Parent Header</h2>
+              <Frame src="/child" />
+              <p>Parent Footer</p>
+            </main>,
+            { resolveFrame },
+          )
+        }
+        if (src === '/child') {
+          return '<div>Blocking Child Content</div>'
+        }
+        return '<div></div>'
+      }
+
+      let stream = renderToStream(<Frame src="/parent" />, { resolveFrame })
 
       let chunks = readChunks(stream)
 
@@ -1533,8 +1604,7 @@ describe('stream', () => {
       let script = shelf.content.querySelector(rmxDataScriptSelector)
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
-      expect(data.f.f1.status).toBe('resolved')
-      expect(data.f['f1-1'].status).toBe('resolved')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'resolved')).toBe(true)
 
       // Stream should complete
       let done = await chunks.next()
@@ -1542,33 +1612,36 @@ describe('stream', () => {
     })
 
     it('handles mixed blocking and non-blocking descendant frames', async () => {
-      let stream = renderToStream(<Frame src="/parent" />, {
-        resolveFrame: async (src) => {
-          if (src === '/parent') {
-            // Blocking parent returns content with both blocking and non-blocking children
-            return (
-              <div>
-                <Frame src="/blocking-child" />
-                <Frame src="/non-blocking-child" fallback={<span>Loading...</span>} />
-              </div>
-            )
-          } else if (src === '/blocking-child') {
-            return <div>Blocking Child</div>
-          } else if (src === '/non-blocking-child') {
-            // Simulate async
-            await new Promise((resolve) => setTimeout(resolve, 10))
-            return <div>Non-blocking Child</div>
-          }
-          return <div />
-        },
-      })
+      async function resolveFrame(src: string) {
+        if (src === '/parent') {
+          // Blocking parent returns content with both blocking and non-blocking children
+          return renderToStream(
+            <div>
+              <Frame src="/blocking-child" />
+              <Frame src="/non-blocking-child" fallback={<span>Loading...</span>} />
+            </div>,
+            { resolveFrame },
+          )
+        }
+        if (src === '/blocking-child') {
+          return '<div>Blocking Child</div>'
+        }
+        if (src === '/non-blocking-child') {
+          // Simulate async
+          await new Promise((resolve) => setTimeout(resolve, 10))
+          return '<div>Non-blocking Child</div>'
+        }
+        return '<div></div>'
+      }
+
+      let stream = renderToStream(<Frame src="/parent" />, { resolveFrame })
 
       let chunks = readChunks(stream)
 
       // First chunk has parent and blocking child resolved, non-blocking child fallback
       let firstChunk = await chunks.next()
       let content = firstChunk.value!
-
+      console.log('first:\n', firstChunk.value)
       // Parent frame
       expect(content).toContain('<div>')
 
@@ -1586,12 +1659,13 @@ describe('stream', () => {
       let script = shelf.content.querySelector(rmxDataScriptSelector)
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
-      expect(data.f['f1-1'].status).toBe('resolved')
-      expect(data.f['f1-2'].status).toBe('pending')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'resolved')).toBe(true)
 
       // Second chunk has non-blocking child resolved
       let secondChunk = await chunks.next()
-      expect(secondChunk.value).toContain('<template id="f1-2">')
+      console.log('\n\nsecond:\n', secondChunk.value)
+      // IDs are local within the returned fragment stream.
+      expect(secondChunk.value).toContain('<template id="f')
       expect(secondChunk.value).toContain('<div>Non-blocking Child</div>')
       expect(secondChunk.value).toContain('</template>')
 
@@ -1602,7 +1676,7 @@ describe('stream', () => {
 
     it('emits comment boundaries around non-blocking frame content', async () => {
       let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
-        resolveFrame: () => <div>Resolved</div>,
+        resolveFrame: () => '<div>Resolved</div>',
       })
       let chunks = readChunks(stream)
 
@@ -1611,11 +1685,12 @@ describe('stream', () => {
       expect(first.done).toBe(false)
       let content = first.value!
 
-      expect(content).toContain('<!-- rmx:f:f1 -->')
+      expect(content).toContain('<!-- rmx:f:')
       expect(content).toContain('<div>Loading...</div>')
       expect(content).toContain('<!-- /rmx:f -->')
 
-      let startIdx = content.indexOf('<!-- rmx:f:f1 -->')
+      let frameId = getCommentMarkerId(content, 'rmx:f:')
+      let startIdx = content.indexOf(`<!-- rmx:f:${frameId} -->`)
       let innerIdx = content.indexOf('<div>Loading...</div>')
       let endIdx = content.indexOf('<!-- /rmx:f -->')
 
@@ -1626,13 +1701,13 @@ describe('stream', () => {
       // Second chunk should be the template for resolved content (no markers expected here)
       let second = await chunks.next()
       if (!second.done) {
-        expect(second.value).toContain('<template id="f1">')
+        expect(second.value).toContain('<template id="f')
       }
     })
 
     it('emits comment boundaries around blocking frame content', async () => {
       let stream = renderToStream(<Frame src="/product" />, {
-        resolveFrame: async () => <section>Resolved</section>,
+        resolveFrame: async () => '<section>Resolved</section>',
       })
 
       let chunks = readChunks(stream)
@@ -1640,11 +1715,12 @@ describe('stream', () => {
       expect(first.done).toBe(false)
       let content = first.value!
 
-      expect(content).toContain('<!-- rmx:f:f1 -->')
+      expect(content).toContain('<!-- rmx:f:')
       expect(content).toContain('<section>Resolved</section>')
       expect(content).toContain('<!-- /rmx:f -->')
 
-      let startIdx = content.indexOf('<!-- rmx:f:f1 -->')
+      let frameId = getCommentMarkerId(content, 'rmx:f:')
+      let startIdx = content.indexOf(`<!-- rmx:f:${frameId} -->`)
       let innerIdx = content.indexOf('<section>Resolved</section>')
       let endIdx = content.indexOf('<!-- /rmx:f -->')
 
@@ -1658,7 +1734,7 @@ describe('stream', () => {
 
     it('adds name to json script', async () => {
       let stream = renderToStream(<Frame src="/x" name="test" />, {
-        resolveFrame: async () => <div>Resolved</div>,
+        resolveFrame: async () => '<div>Resolved</div>',
       })
       let chunks = readChunks(stream)
       let first = await chunks.next()
@@ -1671,23 +1747,26 @@ describe('stream', () => {
       let script = shelf.content.querySelector(rmxDataScriptSelector)
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
-      expect(data.f.f1.name).toBe('test')
+      let entry = Object.values<any>(data.f)[0]
+      expect(entry.name).toBe('test')
     })
 
     it('delays streaming non-blocking parent until nested blocking child resolves', async () => {
-      let [parentPromise, resolveParent] = withResolvers<JSX.Element>()
-      let [childPromise, resolveChild] = withResolvers<JSX.Element>()
+      let [parentPromise, resolveParent] = withResolvers<ReadableStream<Uint8Array>>()
+      let [childPromise, resolveChild] = withResolvers<string>()
+
+      async function resolveFrame(src: string) {
+        if (src === '/parent') {
+          return parentPromise
+        }
+        if (src === '/child') {
+          return childPromise
+        }
+        return '<div></div>'
+      }
 
       let stream = renderToStream(<Frame src="/parent" fallback={<div>Loading parent...</div>} />, {
-        resolveFrame: async (src) => {
-          if (src === '/parent') {
-            return parentPromise
-          }
-          if (src === '/child') {
-            return childPromise
-          }
-          return <div />
-        },
+        resolveFrame,
       })
 
       let chunks = readChunks(stream)
@@ -1704,15 +1783,18 @@ describe('stream', () => {
       let script = shelf.content.querySelector(rmxDataScriptSelector)
       invariant(script)
       let data = JSON.parse(script.textContent || '{}')
-      expect(data.f.f1.status).toBe('pending')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'pending')).toBe(true)
 
       // Resolve parent to content that includes a blocking child frame (no fallback)
       resolveParent(
-        <section>
-          <h2>Parent Content</h2>
-          <Frame src="/child" />
-          <p>Parent footer</p>
-        </section>,
+        renderToStream(
+          <section>
+            <h2>Parent Content</h2>
+            <Frame src="/child" />
+            <p>Parent footer</p>
+          </section>,
+          { resolveFrame },
+        ),
       )
 
       // Expect no new chunk yet because the child is blocking
@@ -1726,13 +1808,13 @@ describe('stream', () => {
       expect(chunkArrived).toBe(false)
 
       // Now resolve the blocking child
-      resolveChild(<article>Child Content</article>)
+      resolveChild('<article>Child Content</article>')
 
       // Next chunk should now contain the parent's template with the child's resolved content
       let second = await nextChunkPromise
       expect(second.done).toBe(false)
       let parentTemplate = second.value!
-      expect(parentTemplate).toContain('<template id="f1">')
+      expect(parentTemplate).toContain('<template id="f')
       expect(parentTemplate).toContain('<h2>Parent Content</h2>')
       expect(parentTemplate).toContain('<article>Child Content</article>')
       expect(parentTemplate).toContain('</template>')

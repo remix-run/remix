@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
 import { Fragment } from '../lib/component.ts'
@@ -367,6 +367,7 @@ describe('vnode rendering (keys)', () => {
     it('handles duplicate keys (last one wins)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
+      let warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
       function List() {
         return ({ labels }: { labels: string[] }) => (
@@ -380,15 +381,23 @@ describe('vnode rendering (keys)', () => {
         )
       }
 
-      root.render(<List labels={['first', 'second']} />)
-      expect(container.textContent).toBe('firstsecond')
+      try {
+        root.render(<List labels={['first', 'second']} />)
+        expect(container.textContent).toBe('firstsecond')
 
-      root.render(<List labels={['only']} />)
-      expect(container.textContent).toBe('only')
+        root.render(<List labels={['only']} />)
+        expect(container.textContent).toBe('only')
 
-      let items = Array.from(container.querySelectorAll('li'))
-      expect(items.length).toBe(1)
-      expect(items[0].getAttribute('data-index')).toBe('0')
+        let items = Array.from(container.querySelectorAll('li'))
+        expect(items.length).toBe(1)
+        expect(items[0].getAttribute('data-index')).toBe('0')
+        expect(warnSpy).toHaveBeenCalledTimes(1)
+        let warning = String(warnSpy.mock.calls[0]?.[0] ?? '')
+        expect(warning).toContain('Duplicate keys detected in siblings')
+        expect(warning).toContain('"dup"')
+      } finally {
+        warnSpy.mockRestore()
+      }
     })
 
     it('allows any type to be a key', () => {

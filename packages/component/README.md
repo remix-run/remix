@@ -70,6 +70,32 @@ function Counter(handle: Handle) {
 }
 ```
 
+You can also name frames and reload adjacent ones:
+
+```tsx
+<Frame name="cart-summary" src="/cart-summary" />
+<Frame src="/cart-row" />
+```
+
+```tsx
+function CartRow(handle: Handle) {
+  return () => (
+    <button
+      on={{
+        async click() {
+          await handle.frames.get('cart-summary')?.reload()
+          await handle.frame.reload()
+        },
+      }}
+    >
+      Save
+    </button>
+  )
+}
+```
+
+When a frame reloads, its server HTML is re-fetched and diffed into the page. Client entries inside the frame receive updated props from the server while preserving their local state.
+
 ## Components
 
 All components return a render function. The setup function runs **once** when the component is first created, and the returned render function runs on the first render and **every update** afterward:
@@ -334,6 +360,8 @@ Components receive a `Handle` as their first argument with the following API:
 - **`handle.signal`** - An `AbortSignal` that's aborted when the component is disconnected. Useful for cleanup.
 - **`handle.id`** - Stable identifier per component instance.
 - **`handle.context`** - Context API for ancestor/descendant communication.
+- **`handle.frame`** - The component's closest frame. Call `handle.frame.reload()` to refresh the frame's server content.
+- **`handle.frames.get(name)`** - Look up named frames in the current runtime tree for adjacent frame reloads.
 
 ### `handle.update(task?)`
 
