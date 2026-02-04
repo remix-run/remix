@@ -19,11 +19,7 @@ export default {
       let cart = getCurrentCart()
       let inCart = cart.items.some((item) => item.bookId === book.id)
 
-      let stream = renderToStream(<CartButton inCart={inCart} id={book.id} slug={book.slug} />, {
-        onError(error) {
-          console.error(error)
-        },
-      })
+      let stream = renderToStream(<CartButton inCart={inCart} id={book.id} slug={book.slug} />)
 
       return new Response(stream, {
         headers: {

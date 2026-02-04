@@ -14,7 +14,6 @@ export const CartButton = hydrationRoot(
           type="button"
           on={{
             async click(_event, signal) {
-              console.log('click', pending)
               if (pending) return
               pending = true
               handle.update()

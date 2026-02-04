@@ -1,12 +1,17 @@
 import type { RemixNode } from 'remix/component'
 import { renderToStream } from 'remix/component/server'
 import { getContext } from 'remix/async-context-middleware'
+import type { Router } from 'remix/fetch-router'
+
+import { routerStorageKey } from './router-storage.ts'
 
 export async function render(node: RemixNode, init?: ResponseInit) {
-  let request = getContext().request
+  let context = getContext()
+  let request = context.request
+  let router = context.storage.get(routerStorageKey)
 
   let stream = renderToStream(node, {
-    resolveFrame: (src) => resolveFrameViaFetch(request, src),
+    resolveFrame: (src) => resolveFrameViaRouter(router, request, src),
     onError(error) {
       console.error(error)
     },
@@ -20,22 +25,17 @@ export async function render(node: RemixNode, init?: ResponseInit) {
   return new Response(stream, { ...init, headers })
 }
 
-async function resolveFrameViaFetch(request: Request, src: string) {
+async function resolveFrameViaRouter(router: Router, request: Request, src: string) {
   let url = new URL(src, request.url)
 
-  // This is a server-internal fetch to get HTML. Avoid compression so the bytes
-  // remain plain HTML text for `resolveFrame`.
   let headers = new Headers()
   headers.set('accept', 'text/html')
   headers.set('accept-encoding', 'identity')
 
-  // Forward cookies so the frame request has access to the session
   let cookie = request.headers.get('cookie')
-  if (cookie) {
-    headers.set('cookie', cookie)
-  }
+  if (cookie) headers.set('cookie', cookie)
 
-  let res = await fetch(
+  let res = await router.fetch(
     new Request(url, {
       method: 'GET',
       headers,
