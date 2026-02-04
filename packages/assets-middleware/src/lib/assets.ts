@@ -1,3 +1,5 @@
+import { relative, isAbsolute } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { Middleware, Assets, AssetEntry } from '@remix-run/fetch-router'
 
 /**
@@ -68,9 +70,30 @@ function createAssets(manifest: AssetManifest): Assets {
   let chunksCache = new Map<string, string[]>()
 
   return {
+    /**
+     * Resolves an entry point path to its built asset information.
+     *
+     * Accepts multiple path formats:
+     * - `file://` URLs: `file:///path/to/project/app/entry.tsx`
+     * - Absolute paths: `/path/to/project/app/entry.tsx`
+     * - Relative paths (to project root): `app/entry.tsx` or `./app/entry.tsx`
+     *
+     * All formats are normalized to match the entry points in the asset manifest.
+     *
+     * @param entryPath Entry point path in any supported format
+     * @returns Asset information (href and chunks) or null if not found
+     */
     get(entryPath: string): AssetEntry | null {
+      // Convert file:// URLs to file paths
+      let pathToNormalize = entryPath.startsWith('file://') ? fileURLToPath(entryPath) : entryPath
+
+      // Convert absolute paths to relative (from cwd)
+      pathToNormalize = isAbsolute(pathToNormalize)
+        ? relative(process.cwd(), pathToNormalize)
+        : pathToNormalize
+
       // Normalize the entry path (remove leading ./ or /)
-      let normalizedPath = entryPath.replace(/^(\.\/|\/)+/, '')
+      let normalizedPath = pathToNormalize.replace(/^(\.\/|\/)+/, '')
 
       // Look up the output file for this entry point
       let outputPath = entryToOutput.get(normalizedPath)

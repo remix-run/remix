@@ -7,7 +7,7 @@ import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
 import { getCurrentCart } from './utils/context.ts'
-import { ImageCarousel } from './assets/image-carousel.tsx'
+import { ImageCarousel } from './components/image-carousel.tsx'
 
 export default {
   middleware: [loadAuth()],

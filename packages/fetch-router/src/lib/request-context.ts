@@ -28,10 +28,17 @@ export interface AssetEntry {
  */
 export interface Assets {
   /**
-   * Get the asset entry for a given entry point path.
+   * Resolves an entry point path to its built asset information.
    *
-   * @param entryPath The path to the entry point (e.g., 'entry.tsx')
-   * @returns The asset entry with href and chunks, or `null` if not found
+   * Accepts multiple path formats:
+   * - `file://` URLs: `file:///path/to/project/app/entry.tsx`
+   * - Absolute paths: `/path/to/project/app/entry.tsx`
+   * - Relative paths (to project root): `app/entry.tsx` or `./app/entry.tsx`
+   *
+   * All formats are normalized to match the entry points in the asset manifest.
+   *
+   * @param entryPath Entry point path in any supported format
+   * @returns Asset information (href and chunks) or null if not found
    */
   get(entryPath: string): AssetEntry | null
 }

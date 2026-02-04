@@ -9,6 +9,7 @@
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "esbuild": "catalog:",
+    "glob": "^11.0.0",
     "tsx": "catalog:"
   },
   "scripts": {

@@ -8,7 +8,7 @@ import { logger } from 'remix/logger-middleware'
 import { methodOverride } from 'remix/method-override-middleware'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
-import { esbuildConfig } from '../esbuild.config.ts'
+import { getEsbuildConfig } from '../esbuild.config.ts'
 
 import { routes } from './routes.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
@@ -57,7 +57,7 @@ if (process.env.NODE_ENV === 'development') {
       root: '../..',
       allow: ['**/node_modules/**', 'packages/**'],
     },
-    esbuildConfig,
+    esbuildConfig: await getEsbuildConfig(),
   })
   middleware.push(assetsMiddleware)
   disposeAssetsMiddleware = assetsMiddleware.dispose

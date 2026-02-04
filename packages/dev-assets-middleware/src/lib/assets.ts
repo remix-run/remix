@@ -147,7 +147,7 @@ export function matchesETag(ifNoneMatch: string | null, etag: string): boolean {
  */
 const SUPPORTED_ESBUILD_OPTIONS = [
   // Entry points and target
-  'entryPoints', // Restricts assets.get() in dev, used as-is in prod
+  'entryPoints', // Ignored in dev (no restrictions), used as-is in prod
   'target', // Browser compatibility
   // JSX configuration
   'jsx',
@@ -297,7 +297,7 @@ export interface DevAssetsOptions {
    * type for the complete list of supported options.
    *
    * **Key supported options:**
-   * - `entryPoints` - Restricts `assets.get()` in dev, used as-is in prod
+   * - `entryPoints` - Ignored in dev (no restrictions), used as-is in prod
    * - `target` - Browser compatibility (e.g., 'es2022', 'es2020')
    * - `jsx*` - JSX transform settings (jsx, jsxImportSource, etc.)
    * - `tsconfig`, `tsconfigRaw` - TypeScript configuration
@@ -323,7 +323,7 @@ export interface DevAssetsOptions {
    * @example
    * // Shared config used by both dev and prod
    * let esbuildConfig = {
-   *   entryPoints: ['app/entry.tsx'],
+   *   entryPoints: ['app/entry.tsx'], // Only used in prod
    *   target: 'es2022',
    *   plugins: [mdxPlugin()],
    *   external: ['@remix-run/component'], // For import maps or CDNs
@@ -347,9 +347,9 @@ export type { Assets, AssetEntry } from '@remix-run/fetch-router'
  * In dev mode:
  * - `href` returns the source path as a URL (e.g., '/app/entry.tsx')
  * - `chunks` returns `[href]` since there's no code splitting in dev
+ * - No validation - any path returns a result (404s happen naturally when browser requests the file)
  *
  * @param root The root directory where source files are served from
- * @param entryPoints Optional list of entry points to restrict access to
  * @returns An assets object for resolving entry paths to URLs
  *
  * @example
@@ -358,32 +358,22 @@ export type { Assets, AssetEntry } from '@remix-run/fetch-router'
  * // entry?.href = '/app/entry.tsx'
  * // entry?.chunks = ['/app/entry.tsx']
  */
-export function createDevAssets(root: string, entryPoints?: string[]): Assets {
+export function createDevAssets(root: string): Assets {
   // Ensure root is an absolute path
   let absoluteRoot = path.resolve(root)
 
-  // Normalize entry points if provided (remove leading slashes for consistent comparison)
-  let normalizedEntryPoints = entryPoints?.map((ep) => ep.replace(/^\/+/, ''))
-
   return {
     get(entryPath: string): AssetEntry | null {
-      // Normalize the entry path (remove leading slashes, handle both formats)
-      let normalizedPath = entryPath.replace(/^\/+/, '')
+      // Convert file:// URLs to file paths
+      let pathToNormalize = entryPath.startsWith('file://') ? fileURLToPath(entryPath) : entryPath
 
-      // If entry points are specified, check if this path is allowed
-      if (normalizedEntryPoints && !normalizedEntryPoints.includes(normalizedPath)) {
-        return null
-      }
+      // Convert absolute paths to relative (from root)
+      pathToNormalize = path.isAbsolute(pathToNormalize)
+        ? path.relative(absoluteRoot, pathToNormalize)
+        : pathToNormalize
 
-      // Build the absolute file path
-      let filePath = path.join(absoluteRoot, normalizedPath)
-
-      // Return null if file doesn't exist
-      if (!fs.existsSync(filePath)) {
-        return null
-      }
-
-      // In dev mode, the URL is just the source path with a leading slash
+      // Normalize the entry path (remove leading slashes)
+      let normalizedPath = pathToNormalize.replace(/^\/+/, '')
       let href = '/' + normalizedPath
 
       return {
@@ -503,7 +493,6 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
 
   // Extract esbuild config
   let esbuildConfig = options.esbuildConfig
-  let entryPoints = esbuildConfig?.entryPoints as string[] | undefined
 
   // Extract external patterns from esbuild config
   // Normalize to array of strings/regexes - esbuild accepts string | RegExp | (string | RegExp)[]
@@ -519,8 +508,8 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
     moduleGraph: createModuleGraph(),
   }
 
-  // Create the assets API for dev mode with optional entry points restriction
-  let assetsApi = createDevAssets(root, entryPoints)
+  // Create the assets API for dev mode (no restrictions in dev)
+  let assetsApi = createDevAssets(root)
 
   // Set up HMR if enabled
   let hmrEventSource: HmrEventSource | null = null

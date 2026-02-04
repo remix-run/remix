@@ -1,8 +1,8 @@
 /**
  * Build script for the bookstore demo.
  *
- * Bundles the asset entry points with esbuild, outputting hashed filenames
- * and a metafile for use with @remix-run/assets-middleware.
+ * Auto-discovers hydration roots and bundles them with esbuild, outputting
+ * hashed filenames and a metafile for use with @remix-run/assets-middleware.
  *
  * Usage:
  *   pnpm run build
@@ -11,7 +11,7 @@
 import * as esbuild from 'esbuild'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { esbuildConfig } from './esbuild.config.ts'
+import { getEsbuildConfig } from './esbuild.config.ts'
 
 let outdir = './build'
 
@@ -20,8 +20,16 @@ async function build() {
   await fs.rm(outdir, { recursive: true, force: true })
   await fs.mkdir(outdir, { recursive: true })
 
+  let config = await getEsbuildConfig()
+
+  console.log('Entry points:')
+  for (let entryPoint of config.entryPoints!) {
+    console.log(`  ${entryPoint}`)
+  }
+  console.log('')
+
   // Bundle with esbuild using shared config
-  let result = await esbuild.build(esbuildConfig)
+  let result = await esbuild.build(config)
 
   // Write the metafile for use by assets-middleware
   let metafilePath = path.join(outdir, 'metafile.json')

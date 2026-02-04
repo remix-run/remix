@@ -37,6 +37,40 @@ export function createVNode(type: ElementType, props: ElementProps, key?: Key): 
 export interface RenderToStreamOptions {
   onError?: (error: unknown) => void
   resolveFrame?: (src: string) => Promise<RemixElement> | RemixElement
+  /**
+   * Resolves hydration root URLs on the server to their final public URLs.
+   *
+   * This is called during server-side rendering for each `hydrationRoot` component
+   * to transform the module URL (e.g., from `import.meta.url` which is a `file://` URL
+   * on the server) into the public URL that the browser can fetch.
+   *
+   * By default, URLs are passed through unchanged. Provide a resolver when you need to:
+   * - Map server file paths to build output URLs (e.g., with content hashes)
+   * - Transform `file://` URLs from `import.meta.url` to public asset paths
+   *
+   * @param hydrationRoot The hydration root specifier from `hydrationRoot()`'s first argument
+   * @param metadata.exportName The export name (from hash or function name)
+   * @returns The resolved public URL for the browser to fetch
+   *
+   * @example
+   * ```tsx
+   * renderToString(node, {
+   *   resolveHydrationRootUrl(url, { exportName }) {
+   *     // Map file:// URLs to build outputs using asset manifest
+   *     if (url.startsWith('file://')) {
+   *       let entry = assets.get(url)
+   *       if (!entry) {
+   *         throw new Error(`Asset not found: ${url}`)
+   *       }
+   *       return entry.href
+   *     }
+   *     // Pass through already-resolved URLs
+   *     return url
+   *   }
+   * })
+   * ```
+   */
+  resolveHydrationRootUrl?: (url: string, metadata: { exportName: string }) => string
 }
 
 interface HydrationData {
@@ -59,6 +93,7 @@ interface RenderContext {
   parentVNode?: VNode
   styleCache: Map<string, { selector: string; css: string }>
   resolveFrame: (src: string) => Promise<RemixElement> | RemixElement
+  resolveHydrationRootUrl: (url: string, metadata: { exportName: string }) => string
   idsByPath: Map<string, number>
   pendingFrames: Array<{ frameId: string; promise: Promise<RemixElement> }>
   hydrationData: Map<string, HydrationData>
@@ -129,6 +164,7 @@ export function renderToStream(
     insideSvg: false,
     onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
+    resolveHydrationRootUrl: options?.resolveHydrationRootUrl ?? defaultResolveHydrationRootUrl,
     styleCache: new Map(),
     pendingFrames: [],
     hydrationData: new Map(),
@@ -162,6 +198,10 @@ export function renderToStream(
 
 function defaultResolveFrame(): never {
   throw new Error('No resolveFrame provided')
+}
+
+function defaultResolveHydrationRootUrl(url: string): string {
+  return url
 }
 
 function isRemixElement(node: unknown): node is RemixElement {
@@ -488,7 +528,7 @@ function buildHydratedComponentSegment(
   // Store hydration data in context for aggregation
   let replacer = createHydrationPropsReplacer(context, id)
   context.hydrationData.set(instanceId, {
-    moduleUrl: type.$moduleUrl,
+    moduleUrl: context.resolveHydrationRootUrl(type.$moduleUrl, { exportName: type.$exportName }),
     exportName: type.$exportName,
     props: JSON.parse(JSON.stringify(props, replacer)),
   })
@@ -774,12 +814,16 @@ async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
   return html
 }
 
-export async function renderToString(node: RemixNode): Promise<string> {
+export async function renderToString(
+  node: RemixNode,
+  options?: RenderToStreamOptions,
+): Promise<string> {
   return drain(
     renderToStream(node, {
       onError(error) {
         throw error
       },
+      ...options,
     }),
   )
 }
