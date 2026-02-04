@@ -164,9 +164,12 @@ export function createFrame(root: FrameRoot, init?: Partial<FrameInit>): Frame {
 }
 
 function mergeRmxDataFromDocument(into: RmxData, doc: Document): void {
-  let script = doc.getElementById('rmx-data')
-  if (!(script instanceof HTMLScriptElement)) return
-  mergeRmxData(into, parseRmxDataScript(script))
+  let scripts = Array.from(doc.querySelectorAll('script#rmx-data'))
+  for (let script of scripts) {
+    if (!(script instanceof HTMLScriptElement)) continue
+    mergeRmxData(into, parseRmxDataScript(script))
+    script.remove()
+  }
 }
 
 function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): void {

@@ -29,6 +29,12 @@ async function resolveFrameViaFetch(request: Request, src: string) {
   headers.set('accept', 'text/html')
   headers.set('accept-encoding', 'identity')
 
+  // Forward cookies so the frame request has access to the session
+  let cookie = request.headers.get('cookie')
+  if (cookie) {
+    headers.set('cookie', cookie)
+  }
+
   let res = await fetch(
     new Request(url, {
       method: 'GET',

@@ -20,14 +20,7 @@ export function BookCard() {
             View Details
           </a>
 
-          <Frame
-            src={routes.fragments.cartButton.href({ bookId: book.id })}
-            fallback={
-              <button type="button" class="btn" disabled style={{ opacity: 0.6 }}>
-                {inCart ? 'Remove from Cart' : 'Add to Cart'}
-              </button>
-            }
-          />
+          <Frame src={routes.fragments.cartButton.href({ bookId: book.id })} />
         </div>
       </div>
     </div>

@@ -18,6 +18,7 @@ export default {
       let cart = getCurrentCart()
       let total = getCartTotal(cart)
       let user = getCurrentUserSafely()
+      console.log('cart page', cart)
 
       return render(
         <Layout>

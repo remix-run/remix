@@ -235,6 +235,79 @@ describe('createFrame', () => {
     expect(nav.textContent).toBe('Loaded')
   })
 
+  it('merges hydration data across multiple rmx-data scripts', async () => {
+    function A(handle: Handle) {
+      let clicked = false
+      return () => (
+        <button
+          id="a"
+          on={{
+            click() {
+              clicked = true
+              handle.update()
+            },
+          }}
+        >
+          {clicked ? 'A!' : 'A'}
+        </button>
+      )
+    }
+
+    function B(handle: Handle) {
+      let clicked = false
+      return () => (
+        <button
+          id="b"
+          on={{
+            click() {
+              clicked = true
+              handle.update()
+            },
+          }}
+        >
+          {clicked ? 'B!' : 'B'}
+        </button>
+      )
+    }
+
+    document.body.innerHTML = `
+      <!-- rmx:h:h1 --><button id="a">A</button><!-- /rmx:h -->
+      <!-- rmx:h:h2 --><button id="b">B</button><!-- /rmx:h -->
+      <script type="application/json" id="rmx-data">
+        {"h":{"h1":{"moduleUrl":"/a.js","exportName":"A","props":{}}}}
+      </script>
+      <script type="application/json" id="rmx-data">
+        {"h":{"h2":{"moduleUrl":"/b.js","exportName":"B","props":{}}}}
+      </script>
+    `
+
+    let loadModule = vi.fn().mockImplementation((moduleUrl: string, exportName: string) => {
+      if (moduleUrl === '/a.js' && exportName === 'A') return A
+      if (moduleUrl === '/b.js' && exportName === 'B') return B
+      throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
+    })
+
+    let frame = createFrame(document, { loadModule })
+    await frame.ready()
+
+    expect(loadModule).toHaveBeenCalledTimes(2)
+
+    let a = document.getElementById('a')
+    let b = document.getElementById('b')
+    invariant(a instanceof HTMLButtonElement)
+    invariant(b instanceof HTMLButtonElement)
+
+    expect(a.textContent).toBe('A')
+    expect(b.textContent).toBe('B')
+
+    a.click()
+    b.click()
+    frame.flush()
+
+    expect(a.textContent).toBe('A!')
+    expect(b.textContent).toBe('B!')
+  })
+
   it('reloads a frame region', async () => {
     let renderCount = 0
 

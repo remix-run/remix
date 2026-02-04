@@ -19,7 +19,8 @@ import cartController from './cart.tsx'
 import checkoutController from './checkout.tsx'
 import * as marketingController from './marketing.tsx'
 import { uploadsAction } from './uploads.tsx'
-import { cartButtonFragment, toggleCart } from './fragments/cart-button.tsx'
+import fragmentsController from './fragments/cart-button.tsx'
+import { toggleCart } from './fragments/cart-button.tsx'
 
 let middleware = []
 
@@ -43,7 +44,7 @@ middleware.push(asyncContext())
 export let router = createRouter({ middleware })
 
 router.get(routes.uploads, uploadsAction)
-router.get(routes.fragments.cartButton, cartButtonFragment)
+router.map(routes.fragments, fragmentsController)
 router.post(routes.api.cartToggle, toggleCart)
 
 router.map(routes.home, marketingController.home)

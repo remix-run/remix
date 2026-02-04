@@ -1,31 +1,39 @@
+import type { Controller } from 'remix'
 import { renderToStream } from 'remix/component/server'
 
+import type { routes } from '../routes.ts'
 import { CartButton } from '../assets/cart-button.tsx'
 import { getBookById } from '../models/books.ts'
 import { addToCart, removeFromCart } from '../models/cart.ts'
+import { loadAuth } from '../middleware/auth.ts'
 import { getCurrentCart } from '../utils/context.ts'
-export async function cartButtonFragment({ params }: any) {
-  let bookId = params.bookId ?? ''
-  let book = getBookById(bookId)
-  if (!book) return new Response('Book not found', { status: 404 })
 
-  let cart = getCurrentCart()
-  let inCart = cart.items.some((item) => item.bookId === book.id)
+export default {
+  middleware: [loadAuth()],
+  actions: {
+    cartButton({ params }: any) {
+      let bookId = params.bookId ?? ''
+      let book = getBookById(bookId)
+      if (!book) return new Response('Book not found', { status: 404 })
 
-  console.log('cartButtonFragment', inCart, book.id, book.slug)
-  let stream = renderToStream(<CartButton inCart={inCart} id={book.id} slug={book.slug} />, {
-    onError(error) {
-      console.error(error)
+      let cart = getCurrentCart()
+      let inCart = cart.items.some((item) => item.bookId === book.id)
+
+      let stream = renderToStream(<CartButton inCart={inCart} id={book.id} slug={book.slug} />, {
+        onError(error) {
+          console.error(error)
+        },
+      })
+
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store',
+        },
+      })
     },
-  })
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store',
-    },
-  })
-}
+  },
+} satisfies Controller<typeof routes.fragments>
 
 export async function toggleCart({ session, formData }: any) {
   let bookId = formData.get('bookId')?.toString() ?? ''

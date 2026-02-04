@@ -174,19 +174,7 @@ export default {
 
               {book.inStock ? (
                 <div css={{ marginTop: '2rem' }}>
-                  <Frame
-                    src={routes.fragments.cartButton.href({ bookId: book.id })}
-                    fallback={
-                      <button
-                        type="button"
-                        class="btn"
-                        disabled
-                        css={{ fontSize: '1.1rem', padding: '0.75rem 1.5rem', opacity: 0.6 }}
-                      >
-                        {inCart ? 'Remove from Cart' : 'Add to Cart'}
-                      </button>
-                    }
-                  />
+                  <Frame src={routes.fragments.cartButton.href({ bookId: book.id })} />
                 </div>
               ) : (
                 <p css={{ color: '#e74c3c', fontWeight: 500 }}>
