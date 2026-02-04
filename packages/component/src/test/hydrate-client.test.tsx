@@ -195,7 +195,7 @@ describe('hydrate', () => {
     await root.ready
 
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Could not find markers for hydration root: h1'),
+      expect.stringContaining('Could not find markers for hydration root: h'),
     )
 
     warnSpy.mockRestore()
@@ -218,7 +218,7 @@ describe('hydrate', () => {
     await root.ready
 
     expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to load module for h1'),
+      expect.stringContaining('Failed to load module for h'),
       expect.any(Error),
     )
 

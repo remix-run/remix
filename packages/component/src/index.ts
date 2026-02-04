@@ -2,11 +2,7 @@ export { createRoot, createRangeRoot, createScheduler } from './lib/vdom.ts'
 
 export { createElement } from './lib/create-element.ts'
 
-export {
-  Fragment,
-  // Catch,
-  // Frame,
-} from './lib/component.ts'
+export { Fragment, Frame } from './lib/component.ts'
 
 // Export types from jsx.ts
 export type {

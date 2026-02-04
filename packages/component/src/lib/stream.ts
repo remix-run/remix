@@ -36,7 +36,9 @@ export function createVNode(type: ElementType, props: ElementProps, key?: Key): 
 
 export interface RenderToStreamOptions {
   onError?: (error: unknown) => void
-  resolveFrame?: (src: string) => Promise<RemixElement> | RemixElement
+  resolveFrame?: (
+    src: string,
+  ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
 }
 
 interface HydrationData {
@@ -58,11 +60,18 @@ interface RenderContext {
   onError: (error: unknown) => void
   parentVNode?: VNode
   styleCache: Map<string, { selector: string; css: string }>
-  resolveFrame: (src: string) => Promise<RemixElement> | RemixElement
-  idsByPath: Map<string, number>
-  pendingFrames: Array<{ frameId: string; promise: Promise<RemixElement> }>
+  resolveFrame: (
+    src: string,
+  ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
+  pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
   hydrationData: Map<string, HydrationData>
   frameData: Map<string, FrameData>
+  blockingFrameTails: ReadableStream<Uint8Array>[]
+}
+
+interface ResolvedFrameHtml {
+  html: string
+  tail?: ReadableStream<Uint8Array>
 }
 
 type Segment =
@@ -124,7 +133,6 @@ export function renderToStream(
 
   let context: RenderContext = {
     headElements: [],
-    idsByPath: new Map(),
     insideHead: false,
     insideSvg: false,
     onError,
@@ -133,12 +141,12 @@ export function renderToStream(
     pendingFrames: [],
     hydrationData: new Map(),
     frameData: new Map(),
+    blockingFrameTails: [],
   }
 
   return new ReadableStream({
     async start(controller) {
       try {
-        context.idsByPath.clear()
         let root = buildSegment(node, context, '')
         await resolveBlocking(root)
         let html = serializeSegment(root)
@@ -146,10 +154,21 @@ export function renderToStream(
         let bytes = encoder.encode(finalHtml)
         controller.enqueue(bytes)
 
+        // If we have any tails from blocking frame streams, stream them now.
+        // These contain nested non-blocking frame templates (or other follow-up chunks)
+        // that must come after the initial document chunk.
+        let tailPromise =
+          context.blockingFrameTails.length > 0
+            ? streamByteStreams(context.blockingFrameTails, controller, context.onError)
+            : Promise.resolve()
+
         // If we have pending non-blocking frames, stream them as they resolve
-        if (context.pendingFrames.length > 0) {
-          await streamPendingFrames(context, controller, encoder)
-        }
+        let pendingPromise =
+          context.pendingFrames.length > 0
+            ? streamPendingFrames(context, controller, encoder)
+            : Promise.resolve()
+
+        await Promise.all([tailPromise, pendingPromise])
 
         controller.close()
       } catch (error) {
@@ -162,6 +181,68 @@ export function renderToStream(
 
 function defaultResolveFrame(): never {
   throw new Error('No resolveFrame provided')
+}
+
+function randomId(prefix: string): string {
+  return prefix + crypto.randomUUID().slice(0, 8)
+}
+
+async function splitFirstChunk(
+  stream: ReadableStream<Uint8Array>,
+): Promise<{ first: Uint8Array; tail: ReadableStream<Uint8Array> }> {
+  let reader = stream.getReader()
+
+  let { value, done } = await reader.read()
+  if (done || !value) {
+    reader.releaseLock()
+    return {
+      first: new Uint8Array(),
+      tail: new ReadableStream({
+        start(controller) {
+          controller.close()
+        },
+      }),
+    }
+  }
+
+  let released = false
+  function release() {
+    if (released) return
+    released = true
+    try {
+      reader.releaseLock()
+    } catch {
+      // ignore
+    }
+  }
+
+  let tail = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      let next = await reader.read()
+      if (next.done) {
+        controller.close()
+        release()
+        return
+      }
+      controller.enqueue(next.value)
+    },
+    cancel(reason) {
+      release()
+      return reader.cancel(reason)
+    },
+  })
+
+  return { first: value, tail }
+}
+
+async function resolveFrameHtml(
+  input: string | ReadableStream<Uint8Array>,
+): Promise<ResolvedFrameHtml> {
+  if (typeof input === 'string') return { html: input }
+
+  let decoder = new TextDecoder()
+  let { first, tail } = await splitFirstChunk(input)
+  return { html: decoder.decode(first), tail }
 }
 
 function isRemixElement(node: unknown): node is RemixElement {
@@ -238,10 +319,7 @@ function buildSegment(node: RemixNode, context: RenderContext, framePath: string
 }
 
 function buildFrameSegment(props: any, context: RenderContext, framePath: string): Segment {
-  let nextIndex = (context.idsByPath.get(framePath) ?? 0) + 1
-  context.idsByPath.set(framePath, nextIndex)
-  let id = framePath ? `${framePath}-${nextIndex}` : `${nextIndex}`
-  let frameId = `f${id}`
+  let frameId = randomId('f')
 
   // Store frame data in context for aggregation
   context.frameData.set(frameId, {
@@ -258,12 +336,18 @@ function buildFrameSegment(props: any, context: RenderContext, framePath: string
 
   let nonBlocking = !!props.fallback
   if (nonBlocking) {
-    seg.content = buildSegment(props.fallback, context, id)
-    let framePromise = Promise.resolve(context.resolveFrame(props.src))
+    seg.content = buildSegment(props.fallback, context, framePath)
+    let framePromise = Promise.resolve(context.resolveFrame(props.src)).then(async (resolved) => {
+      return resolveFrameHtml(resolved)
+    })
     context.pendingFrames.push({ frameId, promise: framePromise })
   } else {
-    seg.pending = Promise.resolve(context.resolveFrame(props.src)).then((resolved) => {
-      seg.content = buildSegment(resolved, context, id)
+    seg.pending = Promise.resolve(context.resolveFrame(props.src)).then(async (resolved) => {
+      let { html, tail } = await resolveFrameHtml(resolved)
+      seg.content = staticSeg(html)
+      if (tail) {
+        context.blockingFrameTails.push(tail)
+      }
     })
   }
 
@@ -479,14 +563,11 @@ function buildHydratedComponentSegment(
   context: RenderContext,
   framePath: string,
 ): Segment {
-  let nextIndex = (context.idsByPath.get(framePath) ?? 0) + 1
-  context.idsByPath.set(framePath, nextIndex)
-  let id = framePath ? `${framePath}.${nextIndex}` : `${nextIndex}`
-  let instanceId = `h${id}`
-  let rendered = buildComponentSegment(type, props, context, instanceId, id)
+  let instanceId = randomId('h')
+  let rendered = buildComponentSegment(type, props, context, instanceId, framePath)
 
   // Store hydration data in context for aggregation
-  let replacer = createHydrationPropsReplacer(context, id)
+  let replacer = createHydrationPropsReplacer(context, framePath)
   context.hydrationData.set(instanceId, {
     moduleUrl: type.$moduleUrl,
     exportName: type.$exportName,
@@ -632,10 +713,6 @@ function finalizeHtml(html: string, context: RenderContext): string {
     }
   }
 
-  if (hasHtmlRoot) {
-    html = '<!doctype html>' + html
-  }
-
   return html
 }
 
@@ -741,23 +818,45 @@ async function streamPendingFrames(
       batch.map(async ({ frameId, promise }) => {
         processedFrames.add(frameId)
         try {
-          let resolvedContent = await promise
-          // Derive hierarchical path from the frame id (strip the 'f' prefix)
-          let framePath = frameId.startsWith('f') ? frameId.slice(1) : frameId
-          let contentSegment = buildSegment(resolvedContent, context, framePath)
-          // Ensure any blocking descendants are fully resolved before streaming
-          await resolveBlocking(contentSegment)
-          let contentHtml = serializeSegment(contentSegment)
+          let { html, tail } = await promise
 
-          // Stream as a template element
-          let templateHtml = `<template id="${frameId}">${contentHtml}</template>`
+          // Stream as a template element (first chunk only)
+          let templateHtml = `<template id="${frameId}">${html}</template>`
           controller.enqueue(encoder.encode(templateHtml))
+
+          // Forward any additional chunks from a stream-valued resolveFrame result.
+          if (tail) {
+            await streamByteStreams([tail], controller, context.onError)
+          }
         } catch (error) {
           context.onError(error)
         }
       }),
     )
   }
+}
+
+async function streamByteStreams(
+  streams: ReadableStream<Uint8Array>[],
+  controller: ReadableStreamDefaultController,
+  onError: (error: unknown) => void,
+): Promise<void> {
+  await Promise.all(
+    streams.map(async (stream) => {
+      let reader = stream.getReader()
+      try {
+        while (true) {
+          let { done, value } = await reader.read()
+          if (done) break
+          controller.enqueue(value)
+        }
+      } catch (error) {
+        onError(error)
+      } finally {
+        reader.releaseLock()
+      }
+    }),
+  )
 }
 
 async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
