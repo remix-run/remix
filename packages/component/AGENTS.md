@@ -785,6 +785,21 @@ function ProgressBar(handle: Handle) {
 }
 ```
 
+For dynamic styling on nested selectors you can use css properties:
+
+```tsx
+<div
+  css={{
+    // static hover styles
+    '&:hover': { background: 'var(--bg)' },
+  }}
+  style={{
+    // dynamic property
+    '--bg': pending ? undefined : 'rgba(255,255,255,0.1)',
+  }}
+/>
+```
+
 **Use the `css` prop for:**
 
 - Static styles that don't change
