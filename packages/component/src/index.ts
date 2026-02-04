@@ -38,11 +38,6 @@ export { tween, easings, type TweenOptions, type BezierCurve } from './lib/tween
 
 export { hydrationRoot } from './lib/hydration-root.ts'
 
-export {
-  hydrate,
-  type HydrationRootOptions,
-  type HydrationRootEventMap,
-  type HydrationRoot,
-  type HydrateOptions,
-  type HydrateResult,
-} from './lib/hydrate-client.ts'
+export { createFrame } from './lib/frame.ts'
+
+export type { Frame as ClientFrame, FrameInit } from './lib/frame.ts'

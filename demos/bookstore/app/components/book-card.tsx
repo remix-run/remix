@@ -1,6 +1,6 @@
 import { routes } from '../routes.ts'
-import { CartButton } from '../assets/cart-button.tsx'
 import type { Book } from '../models/books.ts'
+import { Frame } from 'remix/component'
 
 export interface BookCardProps {
   book: Book
@@ -20,7 +20,14 @@ export function BookCard() {
             View Details
           </a>
 
-          <CartButton inCart={inCart} id={book.id} slug={book.slug} />
+          <Frame
+            src={routes.fragments.cartButton.href({ bookId: book.id })}
+            fallback={
+              <button type="button" class="btn" disabled style={{ opacity: 0.6 }}>
+                {inCart ? 'Remove from Cart' : 'Add to Cart'}
+              </button>
+            }
+          />
         </div>
       </div>
     </div>

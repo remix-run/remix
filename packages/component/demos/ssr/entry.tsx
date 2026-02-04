@@ -1,4 +1,4 @@
-import { hydrationRoot, hydrate, type Handle } from 'remix/component'
+import { hydrationRoot, createFrame, type Handle } from 'remix/component'
 import { renderToString } from 'remix/component/server'
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -88,7 +88,7 @@ async function main() {
   document.write(html)
   document.close()
 
-  let root = hydrate({
+  let frame = createFrame(document, {
     loadModule(moduleUrl, exportName) {
       let mod = modules[moduleUrl]
       if (!mod) throw new Error(`Module not found: ${moduleUrl}`)
@@ -98,11 +98,7 @@ async function main() {
     },
   })
 
-  root.addEventListener('error', (event) => {
-    console.error('Component error:', event.error)
-  })
-
-  await root.ready
+  await frame.ready()
 
   console.log('Hydration complete!')
 }

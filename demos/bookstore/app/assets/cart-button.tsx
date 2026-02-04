@@ -8,28 +8,47 @@ export const CartButton = hydrationRoot(
     let pending = false
 
     return ({ inCart, id, slug }: { inCart: boolean; id: string; slug: string }) => {
-      let route = inCart ? routes.cart.api.remove : routes.cart.api.add
-      let method = route.method.toUpperCase()
-
+      console.log('CartButton', inCart, id, slug)
       return (
-        <form
-          method="POST"
-          action={route.href()}
+        <button
+          type="button"
           on={{
-            submit: () => {
-              // Show pending state, let browser submit normally
+            async click(_event, signal) {
+              if (pending) return
               pending = true
               handle.update()
+
+              try {
+                let formData = new FormData()
+                formData.set('bookId', id)
+                formData.set('slug', slug)
+
+                let response = await fetch(routes.api.cartToggle.href(), {
+                  method: 'POST',
+                  body: formData,
+                  signal,
+                })
+
+                if (!response.ok) {
+                  console.error(
+                    '[CartButton] API request failed:',
+                    response.status,
+                    response.statusText,
+                  )
+                  return
+                }
+
+                await handle.frame.reload()
+              } finally {
+                pending = false
+                handle.update()
+              }
             },
           }}
+          class="btn"
         >
-          {method !== 'POST' && <input type="hidden" name="_method" value={method} />}
-          <input type="hidden" name="bookId" value={id} />
-          <input type="hidden" name="slug" value={slug} />
-          <button type="submit" class="btn" style={{ opacity: pending ? 0.5 : 1 }}>
-            {inCart ? 'Remove from Cart' : 'Add to Cart'}
-          </button>
-        </form>
+          {pending ? 'Saving...' : inCart ? 'Remove from Cart' : 'Add to Cart'}
+        </button>
       )
     }
   },

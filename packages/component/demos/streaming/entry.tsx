@@ -1,4 +1,4 @@
-import { Frame, hydrationRoot, hydrate, type Handle } from 'remix/component'
+import { Frame, createFrame } from 'remix/component'
 import { renderToStream } from 'remix/component/server'
 
 function App() {
@@ -52,12 +52,19 @@ async function fakeDocumentLoad() {
 
   let reader = stream.getReader()
   let decoder = new TextDecoder()
+  let adopted = false
 
   document.open()
   while (true) {
     let { done, value } = await reader.read()
     if (done) break
     document.write(decoder.decode(value, { stream: true }))
+
+    if (!adopted) {
+      adopted = true
+      let frame = createFrame(document)
+      frame.ready().catch((error) => console.error(error))
+    }
   }
 
   // Flush any remaining decoder state

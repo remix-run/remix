@@ -3,6 +3,12 @@ import { del, get, post, put, route, form, resources } from 'remix'
 export let routes = route({
   assets: '/assets/*path',
   uploads: '/uploads/*key',
+  fragments: route('fragments', {
+    cartButton: get('/cart-button/:bookId'),
+  }),
+  api: route('api', {
+    cartToggle: post('/cart/toggle'),
+  }),
 
   // Simple static routes
   home: '/',
