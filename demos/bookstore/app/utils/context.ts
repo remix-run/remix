@@ -1,3 +1,4 @@
+import type { Assets } from 'remix/fetch-router'
 import { createStorageKey } from 'remix'
 import { getContext } from 'remix/async-context-middleware'
 
@@ -38,4 +39,15 @@ export function setCurrentUser(user: User): void {
  */
 export function getCurrentCart(): Cart {
   return getCart(getContext().session.get('cart'))
+}
+
+/**
+ * Get the assets API from the context.
+ */
+export function getAssets(): Assets {
+  let assets = getContext().assets
+  if (!assets) {
+    throw new Error('Assets not available in context')
+  }
+  return assets
 }

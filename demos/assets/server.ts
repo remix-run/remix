@@ -126,6 +126,7 @@ async function main() {
   let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
   async function shutdown() {
+    // Clean up assets first (closes HMR connections)
     await assetsMiddleware.dispose?.()
     server.close(() => {
       process.exit(0)

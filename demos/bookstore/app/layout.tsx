@@ -1,21 +1,56 @@
 import type { RemixNode } from 'remix/component'
 
+import { esbuildConfig } from '../esbuild.config.ts'
 import { routes } from './routes.ts'
-import { getCurrentUserSafely } from './utils/context.ts'
+import { getCurrentUserSafely, getAssets } from './utils/context.ts'
+
+const isDev = process.env.NODE_ENV === 'development'
 
 export function Document() {
-  return ({ title = 'Bookstore', children }: { title?: string; children?: RemixNode }) => (
-    <html lang="en">
-      <head>
-        <meta charSet="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{title}</title>
-        <script type="module" async src={routes.assets.href({ path: 'entry.js' })} />
-        <link rel="stylesheet" href="/app.css" />
-      </head>
-      <body>{children}</body>
-    </html>
-  )
+  return ({ title = 'Bookstore', children }: { title?: string; children?: RemixNode }) => {
+    let assets = getAssets()
+    let entry = assets.get('app/assets/entry.tsx')
+    if (!entry) {
+      throw new Error('Entry point not found')
+    }
+
+    // Generate import map for production (maps source paths to built hashed paths)
+    // This allows hydrationRoot to use source paths that work in both dev and prod
+    let importMapScript = ''
+    if (!isDev) {
+      let imports: Record<string, string> = {}
+
+      // Map each entry point from esbuild config to its built path
+      for (let entryPath of esbuildConfig.entryPoints) {
+        let asset = assets.get(entryPath)
+        if (asset) {
+          imports[`/${entryPath}`] = asset.href
+        }
+      }
+
+      importMapScript = `<script type="importmap">${JSON.stringify({ imports }, null, 2)}</script>\n        `
+    }
+
+    // Generate modulepreload links for all chunks
+    let preloads = entry.chunks
+      .map((chunk) => `<link rel="modulepreload" href="${chunk}" />`)
+      .join('\n        ')
+
+    return (
+      <html lang="en">
+        <head>
+          <meta charSet="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>{title}</title>
+          {importMapScript}
+          {preloads}
+          <script type="module" async src={entry.href} />
+          <link rel="stylesheet" href="/app.css" />
+        </head>
+        <body>{children}</body>
+      </html>
+    )
+  }
 }
 
 export function Layout() {

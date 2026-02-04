@@ -1,9 +1,7 @@
 import { type Handle, hydrationRoot } from 'remix/component'
 
-import { routes } from '../routes.ts'
-
 export const ImageCarousel = hydrationRoot(
-  routes.assets.href({ path: 'image-carousel.js#ImageCarousel' }),
+  '/app/assets/image-carousel.tsx#ImageCarousel',
   function ImageCarousel(handle: Handle, setup?: { startIndex?: number }) {
     let index = setup?.startIndex ?? 0
 

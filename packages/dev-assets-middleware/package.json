@@ -46,7 +46,7 @@
   },
   "peerDependencies": {
     "@remix-run/fetch-router": "workspace:^",
-    "esbuild": "^0.25.0"
+    "esbuild": "catalog:"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",

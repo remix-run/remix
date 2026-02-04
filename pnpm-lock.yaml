@@ -101,7 +101,7 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       esbuild:
-        specifier: ^0.25.10
+        specifier: 'catalog:'
         version: 0.25.12
       tsx:
         specifier: 'catalog:'
@@ -899,6 +899,9 @@ importers:
 
   packages/remix:
     dependencies:
+      '@remix-run/assets-middleware':
+        specifier: workspace:^
+        version: link:../assets-middleware
       '@remix-run/async-context-middleware':
         specifier: workspace:^
         version: link:../async-context-middleware
@@ -911,6 +914,9 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:^
         version: link:../cookie
+      '@remix-run/dev-assets-middleware':
+        specifier: workspace:^
+        version: link:../dev-assets-middleware
       '@remix-run/fetch-proxy':
         specifier: workspace:^
         version: link:../fetch-proxy
@@ -974,6 +980,9 @@ importers:
       '@remix-run/tar-parser':
         specifier: workspace:^
         version: link:../tar-parser
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.25.12
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

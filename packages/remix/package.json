@@ -19,13 +19,16 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./assets-middleware": "./src/lib/assets-middleware.ts",
     "./async-context-middleware": "./src/lib/async-context-middleware.ts",
     "./component": "./src/lib/component.ts",
+    "./component/dev": "./src/lib/component/dev.ts",
     "./component/jsx-dev-runtime": "./src/lib/component/jsx-dev-runtime.ts",
     "./component/jsx-runtime": "./src/lib/component/jsx-runtime.ts",
     "./component/server": "./src/lib/component/server.ts",
     "./compression-middleware": "./src/lib/compression-middleware.ts",
     "./cookie": "./src/lib/cookie.ts",
+    "./dev-assets-middleware": "./src/lib/dev-assets-middleware.ts",
     "./fetch-proxy": "./src/lib/fetch-proxy.ts",
     "./fetch-router": "./src/lib/fetch-router.ts",
     "./file-storage": "./src/lib/file-storage.ts",
@@ -69,6 +72,10 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./assets-middleware": {
+        "types": "./dist/lib/assets-middleware.d.ts",
+        "default": "./dist/lib/assets-middleware.js"
+      },
       "./async-context-middleware": {
         "types": "./dist/lib/async-context-middleware.d.ts",
         "default": "./dist/lib/async-context-middleware.js"
@@ -76,6 +83,10 @@
       "./component": {
         "types": "./dist/lib/component.d.ts",
         "default": "./dist/lib/component.js"
+      },
+      "./component/dev": {
+        "types": "./dist/lib/component/dev.d.ts",
+        "default": "./dist/lib/component/dev.js"
       },
       "./component/jsx-dev-runtime": {
         "types": "./dist/lib/component/jsx-dev-runtime.d.ts",
@@ -96,6 +107,10 @@
       "./cookie": {
         "types": "./dist/lib/cookie.d.ts",
         "default": "./dist/lib/cookie.js"
+      },
+      "./dev-assets-middleware": {
+        "types": "./dist/lib/dev-assets-middleware.d.ts",
+        "default": "./dist/lib/dev-assets-middleware.js"
       },
       "./fetch-proxy": {
         "types": "./dist/lib/fetch-proxy.d.ts",
@@ -269,7 +284,17 @@
     "@remix-run/session": "workspace:^",
     "@remix-run/session-middleware": "workspace:^",
     "@remix-run/static-middleware": "workspace:^",
-    "@remix-run/tar-parser": "workspace:^"
+    "@remix-run/tar-parser": "workspace:^",
+    "@remix-run/assets-middleware": "workspace:^",
+    "@remix-run/dev-assets-middleware": "workspace:^"
+  },
+  "peerDependencies": {
+    "esbuild": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "esbuild": {
+      "optional": true
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

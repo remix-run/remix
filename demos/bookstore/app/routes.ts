@@ -1,7 +1,6 @@
 import { del, get, post, put, route, form, resources } from 'remix'
 
 export let routes = route({
-  assets: '/assets/*path',
   uploads: '/uploads/*key',
 
   // Simple static routes

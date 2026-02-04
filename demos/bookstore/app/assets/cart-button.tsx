@@ -3,7 +3,7 @@ import { type Handle, hydrationRoot } from 'remix/component'
 import { routes } from '../routes.ts'
 
 export const CartButton = hydrationRoot(
-  routes.assets.href({ path: 'cart-button.js#CartButton' }),
+  '/app/assets/cart-button.tsx#CartButton',
   function CartButton(handle: Handle) {
     let pending = false
 
