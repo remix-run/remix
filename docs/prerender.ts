@@ -1,9 +1,20 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import * as util from 'node:util'
 import { parse } from 'node-html-parser'
 import { router } from './router.tsx'
 
-let outputDir = path.resolve(process.cwd(), 'site')
+let { values: cliArgs } = util.parseArgs({
+  options: {
+    dir: {
+      type: 'string',
+      short: 'd',
+      default: 'docs',
+    },
+  },
+})
+
+let outputDir = path.resolve(process.cwd(), cliArgs.dir)
 console.log(`Clearing output directory: ${outputDir}`)
 await fs.rm(outputDir, { recursive: true, force: true })
 

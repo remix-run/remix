@@ -10,6 +10,6 @@
     "checkJs": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "@remix-run/dom"
+    "jsxImportSource": "remix/component"
   }
 }
