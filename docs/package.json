@@ -18,7 +18,7 @@
   "scripts": {
     "docs": "node generate.ts",
     "prerender": "tsx prerender.ts",
-    "prerender:serve": "npx http-server site",
+    "prerender:serve": "npx http-server -p 3000 site",
     "serve": "tsx server.ts"
   }
 }
