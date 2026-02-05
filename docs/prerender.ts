@@ -9,7 +9,7 @@ let { values: cliArgs } = util.parseArgs({
     dir: {
       type: 'string',
       short: 'd',
-      default: 'docs',
+      default: 'site',
     },
   },
 })
