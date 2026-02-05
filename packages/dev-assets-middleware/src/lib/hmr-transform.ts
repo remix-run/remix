@@ -126,6 +126,7 @@ function createIdentifier(name: string, span: Span = syntheticSpan()): Identifie
     ctxt: DUMMY_CTXT,
     value: name,
     optional: false,
+    typeAnnotation: null as any,
   } as Identifier
 }
 
@@ -180,10 +181,11 @@ function createCallExpression(callee: string, args: Expression[]): CallExpressio
     callee: createIdentifier(callee),
     arguments: args.map(
       (expression): Argument => ({
-        spread: undefined,
+        spread: null as any,
         expression,
       }),
     ),
+    typeArguments: null as any,
   } as CallExpression
 }
 
@@ -250,11 +252,13 @@ function createArrowFunction(
 function createFunctionExpression(
   body: BlockStatement,
   params: Pattern[] = [],
+  identifier?: Identifier,
 ): FunctionExpression {
   return {
     type: 'FunctionExpression',
     span: syntheticSpan(),
     ctxt: DUMMY_CTXT,
+    identifier: identifier as any,
     params: params.map((p: any) => ({
       type: 'Parameter',
       span: syntheticSpan(),
@@ -265,6 +269,8 @@ function createFunctionExpression(
     body,
     async: false,
     generator: false,
+    typeParameters: null as any,
+    returnType: null as any,
   } as any as FunctionExpression
 }
 
@@ -362,6 +368,61 @@ function extractComponentFromFunctionDecl(func: FunctionDeclaration): ComponentI
 //   const Counter = function(handle) { ... return () => ... }
 //   const Counter = (handle) => { ... return () => ... }
 //   const Counter = (handle) => () => ...
+function extractComponentFromHydrationRoot(decl: VariableDeclaration): ComponentInfo | null {
+  // Only handle single declarator
+  if (decl.declarations.length !== 1) return null
+
+  let declarator = decl.declarations[0]
+  if (declarator.id.type !== 'Identifier') return null
+  if (!isPascalCase(declarator.id.value)) return null
+  if (!declarator.init) return null
+
+  let init = declarator.init
+  let name = declarator.id.value
+
+  // Check if this is a hydrationRoot call: const X = hydrationRoot(url, component)
+  if (init.type !== 'CallExpression') return null
+  let callExpr = init as CallExpression
+
+  // Check if callee is 'hydrationRoot'
+  if (callExpr.callee.type !== 'Identifier') return null
+  if ((callExpr.callee as Identifier).value !== 'hydrationRoot') return null
+
+  // Get the second argument (the component function)
+  if (callExpr.arguments.length < 2) return null
+  let secondArg = callExpr.arguments[1]
+
+  // Handle both Argument and ExprOrSpread types
+  let componentFunc: Expression
+  if ('spread' in secondArg && secondArg.spread) return null
+  if ('spread' in secondArg) {
+    componentFunc = secondArg.expression
+  } else {
+    componentFunc = secondArg as any as Expression
+  }
+
+  // Extract component info from the function expression
+  if (componentFunc.type === 'FunctionExpression') {
+    let funcExpr = componentFunc as FunctionExpression
+    if (!funcExpr.body) return null
+
+    let renderInfo = extractRenderBodyFromBlock(funcExpr.body)
+    if (!renderInfo) return null
+
+    return {
+      name,
+      params: funcExpr.params.map((p: any) => p.pat),
+      body: funcExpr.body,
+      renderBody: renderInfo.body,
+      renderParams: renderInfo.params,
+      renderIsArrow: renderInfo.isArrow,
+      span: declarator.span,
+    }
+  }
+
+  return null
+}
+
 function extractComponentFromVarDecl(decl: VariableDeclaration): ComponentInfo | null {
   // Only handle single declarator
   if (decl.declarations.length !== 1) return null
@@ -785,6 +846,100 @@ function generateHmrComponent(
   return items
 }
 
+// Generate HMR infrastructure for a hydrationRoot component
+async function generateHmrHydrationRootComponent(
+  component: ComponentInfo,
+  moduleUrl: string,
+  setupVars: SetupVar[],
+  setupStatements: Statement[],
+  setupHash: string,
+  isExported: boolean,
+  originalItem: ModuleItem,
+): Promise<ModuleItem[]> {
+  let { name, params } = component
+  let implName = `${name}__impl`
+
+  // Generate the same impl function and registration as regular components
+  let regularItems = generateHmrComponent(
+    component,
+    moduleUrl,
+    setupVars,
+    setupStatements,
+    setupHash,
+    false, // not exported - we'll export the hydrationRoot call instead
+  )
+
+  // For hydrationRoot, we need to recreate the impl function with ALL parameters
+  // Regular components only have one param (handle), but hydrationRoot can have multiple (handle, setup, etc.)
+  let regularImplFunc = regularItems[0] as FunctionDeclaration
+
+  // Create new impl func with all params from component
+  let implFunc: FunctionDeclaration = {
+    ...regularImplFunc,
+    params: params.map((pat) => ({
+      type: 'Parameter',
+      span: syntheticSpan(),
+      pat,
+      decorators: [],
+    })),
+  } as FunctionDeclaration
+
+  let registerCall = regularItems[1] // __hmr_register_component(...)
+
+  // Build parameter list for wrapper function
+  let paramList = params
+    .map((p, i) => {
+      if (p.type === 'Identifier') return p.value
+      if (p.type === 'ObjectPattern') return `param${i}`
+      return `param${i}`
+    })
+    .join(', ')
+
+  // Parse a new hydrationRoot call with wrapper function
+  let wrapperTemplate = isExported
+    ? `export const ${name} = hydrationRoot(URL_PLACEHOLDER, function ${name}(${paramList}) {
+      let impl = __hmr_get_component('${moduleUrl}', '${name}')
+      return impl(${paramList})
+    })`
+    : `const ${name} = hydrationRoot(URL_PLACEHOLDER, function ${name}(${paramList}) {
+      let impl = __hmr_get_component('${moduleUrl}', '${name}')
+      return impl(${paramList})
+    })`
+
+  // Parse the template to get a proper AST node
+  let wrapperAst = (await swc.parse(wrapperTemplate, {
+    syntax: 'ecmascript',
+    jsx: true,
+  })) as Module
+
+  let wrapperDecl = wrapperAst.body[0]
+
+  // Extract the URL expression from the original hydrationRoot call
+  let originalDecl: VariableDeclaration
+  if (originalItem.type === 'ExportDeclaration') {
+    originalDecl = (originalItem as any).declaration
+  } else {
+    originalDecl = originalItem as VariableDeclaration
+  }
+
+  let originalCall = originalDecl.declarations[0].init as CallExpression
+  let urlArg = originalCall.arguments[0]
+
+  // Replace URL_PLACEHOLDER in parsed wrapper with actual URL expression
+  let wrapperVarDecl: VariableDeclaration
+  if (wrapperDecl.type === 'ExportDeclaration') {
+    wrapperVarDecl = (wrapperDecl as any).declaration
+  } else {
+    wrapperVarDecl = wrapperDecl as VariableDeclaration
+  }
+
+  let wrapperCall = wrapperVarDecl.declarations[0].init as CallExpression
+  wrapperCall.arguments[0] = urlArg // Use original URL expression
+
+  return [implFunc, registerCall, wrapperDecl]
+}
+
+// Clone a variable declaration and modify its hydrationRoot call to use the wrapper
 // Create the wrapper function that delegates to the current component implementation
 function createWrapperFunction(
   name: string,
@@ -904,6 +1059,7 @@ export async function transformComponent(
     // Try to extract component from various patterns
     let component: ComponentInfo | null = null
     let isExported = false
+    let isHydrationRoot = false
 
     if (item.type === 'ExportDeclaration') {
       isExported = true
@@ -912,12 +1068,24 @@ export async function transformComponent(
       if (decl.type === 'FunctionDeclaration') {
         component = extractComponentFromFunctionDecl(decl)
       } else if (decl.type === 'VariableDeclaration') {
-        component = extractComponentFromVarDecl(decl)
+        // Try hydrationRoot first, then fall back to regular variable declaration
+        component = extractComponentFromHydrationRoot(decl)
+        if (component) {
+          isHydrationRoot = true
+        } else {
+          component = extractComponentFromVarDecl(decl)
+        }
       }
     } else if (item.type === 'FunctionDeclaration') {
       component = extractComponentFromFunctionDecl(item)
     } else if (item.type === 'VariableDeclaration') {
-      component = extractComponentFromVarDecl(item as VariableDeclaration)
+      // Try hydrationRoot first, then fall back to regular variable declaration
+      component = extractComponentFromHydrationRoot(item as VariableDeclaration)
+      if (component) {
+        isHydrationRoot = true
+      } else {
+        component = extractComponentFromVarDecl(item as VariableDeclaration)
+      }
     }
 
     // If we found a component, transform it
@@ -925,15 +1093,29 @@ export async function transformComponent(
       let setupVars = extractSetupVars(component.body)
       let setupStatements = extractSetupStatements(component.body)
       let setupHash = computeSetupHash(setupStatements, source, baseOffset)
-      let hmrItems = generateHmrComponent(
-        component,
-        moduleUrl,
-        setupVars,
-        setupStatements,
-        setupHash,
-        isExported,
-      )
-      newBody.push(...hmrItems)
+
+      if (isHydrationRoot) {
+        let hmrItems = await generateHmrHydrationRootComponent(
+          component,
+          moduleUrl,
+          setupVars,
+          setupStatements,
+          setupHash,
+          isExported,
+          item,
+        )
+        newBody.push(...hmrItems)
+      } else {
+        let hmrItems = generateHmrComponent(
+          component,
+          moduleUrl,
+          setupVars,
+          setupStatements,
+          setupHash,
+          isExported,
+        )
+        newBody.push(...hmrItems)
+      }
       transformed = true
       hasTransformations = true
     }
@@ -972,8 +1154,8 @@ export async function transformComponent(
   // Print the transformed AST with source map support
   try {
     let result = await swc.print(transformedAst, {
-      sourceMaps: true,
-      inputSourceMap,
+      sourceMaps: inputSourceMap ? true : false,
+      inputSourceMap: inputSourceMap ?? undefined,
       jsc: {
         target: 'es2022',
       },
@@ -1007,6 +1189,6 @@ export async function transformComponent(
  * @returns True if source may contain a component
  */
 export function maybeHasComponent(source: string): boolean {
-  // function Foo, const Foo =, let Foo =, export function Foo, export const Foo =
-  return /\b(?:function\s+[A-Z]|(?:const|let)\s+[A-Z][a-zA-Z0-9]*\s*=)/.test(source)
+  // function Foo, const Foo =, let Foo =, export function Foo, export const Foo =, hydrationRoot
+  return /\b(?:function\s+[A-Z]|(?:const|let)\s+[A-Z][a-zA-Z0-9]*\s*=|hydrationRoot)/.test(source)
 }

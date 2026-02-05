@@ -1100,4 +1100,192 @@ describe('maybeHasComponent', () => {
     `
     assert.equal(maybeHasComponent(code), true)
   })
+
+  it('detects hydrationRoot components', () => {
+    assert.equal(
+      maybeHasComponent('const Carousel = hydrationRoot(url, function Carousel(handle) { })'),
+      true,
+    )
+    assert.equal(maybeHasComponent('export const Carousel = hydrationRoot('), true)
+  })
+})
+
+// =============================================================================
+// hydrationRoot Tests
+// =============================================================================
+
+describe('transformComponent - hydrationRoot', () => {
+  it('transforms hydrationRoot component', async () => {
+    let input = `
+import { hydrationRoot } from 'remix/component'
+
+export const Carousel = hydrationRoot(
+  import.meta.url + '#Carousel',
+  function Carousel(handle, setup) {
+    let index = setup?.startIndex ?? 0
+    
+    return (props) => <div>{index}</div>
+  }
+)
+`
+
+    let expected = `
+${HMR_IMPORT}
+import { hydrationRoot } from 'remix/component'
+function Carousel__impl(handle, setup) {
+  let __s = __hmr_state(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Carousel.js',
+      'Carousel',
+      'HASH',
+      (__s) => {
+        __s.index = setup?.startIndex ?? 0
+      },
+      Carousel,
+    )
+  ) {
+    return () => null
+  }
+  __hmr_register('/app/Carousel.js', 'Carousel', handle, (props) => (<div>{__s.index}</div>), Carousel)
+  return (props) => __hmr_call(handle, props)
+}
+__hmr_register_component('/app/Carousel.js', 'Carousel', Carousel__impl)
+export const Carousel = hydrationRoot(
+  import.meta.url + '#Carousel',
+  function Carousel(handle, setup) {
+    let impl = __hmr_get_component('/app/Carousel.js', 'Carousel')
+    return impl(handle, setup)
+  }
+)
+`
+
+    let { code } = await transformComponent(input, '/app/Carousel.js')
+    await expectCodeEqual(code, expected)
+  })
+
+  it('transforms hydrationRoot component with no setup variables', async () => {
+    let input = `
+import { hydrationRoot } from 'remix/component'
+
+export const Static = hydrationRoot(
+  import.meta.url + '#Static',
+  function Static(handle) {
+    return () => <div>Hello</div>
+  }
+)
+`
+
+    let expected = `
+${HMR_IMPORT}
+import { hydrationRoot } from 'remix/component'
+function Static__impl(handle) {
+  let __s = __hmr_state(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Static.js',
+      'Static',
+      'HASH',
+      (__s) => {},
+      Static,
+    )
+  ) {
+    return () => null
+  }
+  __hmr_register('/app/Static.js', 'Static', handle, () => (<div>Hello</div>), Static)
+  return () => __hmr_call(handle)
+}
+__hmr_register_component('/app/Static.js', 'Static', Static__impl)
+export const Static = hydrationRoot(
+  import.meta.url + '#Static',
+  function Static(handle) {
+    let impl = __hmr_get_component('/app/Static.js', 'Static')
+    return impl(handle)
+  }
+)
+`
+
+    let { code } = await transformComponent(input, '/app/Static.js')
+    await expectCodeEqual(code, expected)
+  })
+
+  it('transforms hydrationRoot component with multiple setup variables', async () => {
+    let input = `
+import { hydrationRoot } from 'remix/component'
+
+export const Counter = hydrationRoot(
+  import.meta.url + '#Counter',
+  function Counter(handle) {
+    let count = 0
+    let step = 1
+    
+    let increment = () => {
+      count += step
+      handle.update()
+    }
+    
+    return () => <button on={{ click: increment }}>{count}</button>
+  }
+)
+`
+
+    let expected = `
+${HMR_IMPORT}
+import { hydrationRoot } from 'remix/component'
+function Counter__impl(handle) {
+  let __s = __hmr_state(handle)
+  if (
+    __hmr_setup(
+      handle,
+      __s,
+      '/app/Counter.js',
+      'Counter',
+      'HASH',
+      (__s) => {
+        __s.count = 0
+        __s.step = 1
+        __s.increment = () => {
+          __s.count += __s.step
+          handle.update()
+        }
+      },
+      Counter,
+    )
+  ) {
+    return () => null
+  }
+  __hmr_register(
+    '/app/Counter.js',
+    'Counter',
+    handle,
+    () => (
+      <button
+        on={{
+          click: __s.increment,
+        }}
+      >
+        {__s.count}
+      </button>
+    ),
+    Counter,
+  )
+  return () => __hmr_call(handle)
+}
+__hmr_register_component('/app/Counter.js', 'Counter', Counter__impl)
+export const Counter = hydrationRoot(
+  import.meta.url + '#Counter',
+  function Counter(handle) {
+    let impl = __hmr_get_component('/app/Counter.js', 'Counter')
+    return impl(handle)
+  }
+)
+`
+
+    let { code } = await transformComponent(input, '/app/Counter.js')
+    await expectCodeEqual(code, expected)
+  })
 })
