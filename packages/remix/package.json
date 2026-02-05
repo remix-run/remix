@@ -28,6 +28,7 @@
     "./cookie": "./src/lib/cookie.ts",
     "./fetch-proxy": "./src/lib/fetch-proxy.ts",
     "./fetch-router": "./src/lib/fetch-router.ts",
+    "./fetch-router/routes": "./src/lib/fetch-router/routes.ts",
     "./file-storage": "./src/lib/file-storage.ts",
     "./file-storage/fs": "./src/lib/file-storage/fs.ts",
     "./file-storage/memory": "./src/lib/file-storage/memory.ts",
@@ -104,6 +105,10 @@
       "./fetch-router": {
         "types": "./dist/lib/fetch-router.d.ts",
         "default": "./dist/lib/fetch-router.js"
+      },
+      "./fetch-router/routes": {
+        "types": "./dist/lib/fetch-router/routes.d.ts",
+        "default": "./dist/lib/fetch-router/routes.js"
       },
       "./file-storage": {
         "types": "./dist/lib/file-storage.d.ts",

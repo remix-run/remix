@@ -21,6 +21,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./routes": "./src/routes.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -28,6 +29,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./routes": {
+        "types": "./dist/routes.d.ts",
+        "default": "./dist/routes.js"
       },
       "./package.json": "./package.json"
     }

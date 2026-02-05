@@ -146,15 +146,8 @@ async function updateRemixPackage() {
 
   // Update package.json
   console.log('Updating Remix package.json...')
-  remixPackageJson.exports = {
-    '.': './src/index.ts',
-  }
-  remixPackageJson.publishConfig.exports = {
-    '.': {
-      types: './dist/index.d.ts',
-      default: './dist/index.js',
-    },
-  }
+  remixPackageJson.exports = {}
+  remixPackageJson.publishConfig.exports = {}
 
   for (let entry of allExports) {
     let exportPath = path.join(SOURCE_FOLDER, SUB_EXPORT_FOLDER, entry.sourceFile)
