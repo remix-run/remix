@@ -11,6 +11,11 @@ type CompareFn = (a: RoutePatternMatch, b: RoutePatternMatch) => number
  */
 export type Matcher<data = unknown> = {
   /**
+   * When `true`, pathname matching is case-insensitive for all patterns in this matcher. Hostname is always case-insensitive; search remains case-sensitive.
+   */
+  readonly ignoreCase: boolean
+
+  /**
    * Add a pattern to the matcher.
    *
    * @param pattern The pattern to add
@@ -25,6 +30,7 @@ export type Matcher<data = unknown> = {
    * @returns The match result, or `null` if no match was found
    */
   match(url: string | URL, compareFn?: CompareFn): Match<string, data> | null
+
   /**
    * Find all matches for a URL.
    *

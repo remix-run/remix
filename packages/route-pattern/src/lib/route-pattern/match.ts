@@ -1,37 +1,19 @@
-import type { RoutePattern } from '../route-pattern'
+import type { RoutePattern } from '../route-pattern.ts'
 
 /**
- * Test if URL search params satisfy the given constraints.
+ * Test if URL search params satisfy the given constraints. Matching is case-sensitive.
  *
- * @param params the URL search params to test
- * @param constraints the search constraints to check against
- * @param ignoreCase whether to ignore case when matching param names and values
- * @returns true if the params satisfy all constraints
+ * @param params The URL search params to test
+ * @param constraints The search constraints to check against
+ * @returns `true` if the params satisfy all constraints
  */
 export function matchSearch(
   params: URLSearchParams,
   constraints: RoutePattern['ast']['search'],
-  ignoreCase: boolean,
 ): boolean {
   for (let [name, constraint] of constraints) {
-    // Check if param exists (case-aware)
-    let hasParam: boolean
-    let values: Array<string>
-
-    if (ignoreCase) {
-      let nameLower = name.toLowerCase()
-      hasParam = false
-      values = []
-      for (let key of params.keys()) {
-        if (key.toLowerCase() === nameLower) {
-          hasParam = true
-          values.push(...params.getAll(key))
-        }
-      }
-    } else {
-      hasParam = params.has(name)
-      values = params.getAll(name)
-    }
+    let hasParam = params.has(name)
+    let values = params.getAll(name)
 
     if (constraint === null) {
       if (!hasParam) return false
@@ -44,12 +26,7 @@ export function matchSearch(
     }
 
     for (let value of constraint) {
-      if (ignoreCase) {
-        let valueLower = value.toLowerCase()
-        if (!values.some((v) => v.toLowerCase() === valueLower)) return false
-      } else {
-        if (!values.includes(value)) return false
-      }
+      if (!values.includes(value)) return false
     }
   }
   return true

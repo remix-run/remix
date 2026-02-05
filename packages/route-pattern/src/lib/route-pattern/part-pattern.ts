@@ -26,21 +26,19 @@ export class PartPattern {
   readonly tokens: Array<PartPatternToken>
   readonly optionals: Map<number, number>
   readonly type: 'hostname' | 'pathname'
-  readonly ignoreCase: boolean
 
-  #regexp: RegExp | undefined
+  #regexp: { caseSensitive: RegExp; caseInsensitive: RegExp } | undefined
 
   constructor(
     args: {
       tokens: Array<PartPatternToken>
       optionals: Map<number, number>
     },
-    options: { type: 'hostname' | 'pathname'; ignoreCase: boolean },
+    options: { type: 'hostname' | 'pathname' },
   ) {
     this.tokens = args.tokens
     this.optionals = args.optionals
     this.type = options.type
-    this.ignoreCase = options.ignoreCase
   }
 
   get params(): Array<Extract<PartPatternToken, { type: ':' | '*' }>> {
@@ -59,7 +57,7 @@ export class PartPattern {
 
   static parse(
     source: string,
-    options: { span?: Span; type: 'hostname' | 'pathname'; ignoreCase: boolean },
+    options: { span?: Span; type: 'hostname' | 'pathname' },
   ): PartPattern {
     let span = options.span ?? [0, source.length]
     let separator = separatorForType(options.type)
@@ -147,10 +145,7 @@ export class PartPattern {
       throw new ParseError('unmatched (', source, optionalStack.at(-1)!)
     }
 
-    return new PartPattern(
-      { tokens, optionals },
-      { type: options.type, ignoreCase: options.ignoreCase },
-    )
+    return new PartPattern({ tokens, optionals }, { type: options.type })
   }
 
   get source(): string {
@@ -253,11 +248,13 @@ export class PartPattern {
     return stack[0].href
   }
 
-  match(part: string): PartPatternMatch | null {
+  match(part: string, options?: { ignoreCase?: boolean }): PartPatternMatch | null {
+    let ignoreCase = options?.ignoreCase ?? false
     if (this.#regexp === undefined) {
       this.#regexp = this.#toRegExp()
     }
-    let reMatch = this.#regexp.exec(part)
+    let regexp = ignoreCase ? this.#regexp.caseInsensitive : this.#regexp.caseSensitive
+    let reMatch = regexp.exec(part)
     if (reMatch === null) return null
     let match: PartPatternMatch = []
     let params = this.params
@@ -277,7 +274,8 @@ export class PartPattern {
     return match
   }
 
-  #toRegExp(): RegExp {
+  #toRegExp(): { caseSensitive: RegExp; caseInsensitive: RegExp } {
+    if (this.#regexp !== undefined) return this.#regexp
     let result = ''
     for (let token of this.tokens) {
       if (token.type === 'text') {
@@ -312,7 +310,12 @@ export class PartPattern {
 
       unreachable(token.type)
     }
-    return new RegExp(`^${result}$`, this.ignoreCase ? 'di' : 'd')
+    let source = `^${result}$`
+    this.#regexp = {
+      caseSensitive: new RegExp(source, 'd'),
+      caseInsensitive: new RegExp(source, 'di'),
+    }
+    return this.#regexp
   }
 }
 

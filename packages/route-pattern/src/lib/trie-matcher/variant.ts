@@ -136,23 +136,25 @@ export class PartPatternVariant {
     return result
   }
 
-  segments(): Array<Segment> {
+  segments(options?: { ignoreCase?: boolean }): Array<Segment> {
+    let ignoreCase = options?.ignoreCase ?? false
     let result: Array<Segment> = []
 
     let key = ''
     let reSource = ''
+    let reFlags = ignoreCase ? 'di' : 'd'
     let type: 'static' | 'variable' | 'wildcard' = 'static'
 
     for (let token of this.tokens) {
       if (token.type === 'separator') {
         if (type === 'static') {
-          result.push({ type: 'static', key })
+          result.push({ type: 'static', key: ignoreCase ? key.toLowerCase() : key })
           key = ''
           reSource = ''
           continue
         }
         if (type === 'variable') {
-          result.push({ type: 'variable', key, regexp: new RegExp(reSource, 'd') })
+          result.push({ type: 'variable', key, regexp: new RegExp(reSource, reFlags) })
           key = ''
           reSource = ''
           type = 'static'
@@ -190,10 +192,10 @@ export class PartPatternVariant {
     }
 
     if (type === 'static') {
-      result.push({ type: 'static', key })
+      result.push({ type: 'static', key: ignoreCase ? key.toLowerCase() : key })
     }
     if (type === 'variable' || type === 'wildcard') {
-      result.push({ type, key, regexp: new RegExp(reSource, 'd') })
+      result.push({ type, key, regexp: new RegExp(reSource, reFlags) })
     }
     return result
   }

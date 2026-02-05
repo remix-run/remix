@@ -16,11 +16,7 @@ export function parseHostname(
   span: Span | null,
 ): RoutePattern['ast']['hostname'] | null {
   if (!span) return null
-  let part = PartPattern.parse(source, {
-    span,
-    type: 'hostname',
-    ignoreCase: false,
-  })
+  let part = PartPattern.parse(source, { span, type: 'hostname' })
   if (isNamelessWildcard(part)) return null
   return part
 }

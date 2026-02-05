@@ -922,107 +922,32 @@ describe('RoutePattern', () => {
   })
 
   describe('ignoreCase', () => {
-    it('defaults to false for case-sensitive matching', () => {
+    it('pathname is case-sensitive by default', () => {
+      let pattern = new RoutePattern('/Posts/:id')
+      assert.equal(pattern.match('https://example.com/posts/123'), null)
+      assert.equal(pattern.match('https://example.com/POSTS/123'), null)
+      assert.notEqual(pattern.match('https://example.com/Posts/123'), null)
+    })
+
+    it('pathname is case-insensitive when match(url, { ignoreCase: true })', () => {
+      let pattern = new RoutePattern('/Posts/:id')
+      assert.notEqual(pattern.match('https://example.com/posts/123', { ignoreCase: true }), null)
+      assert.notEqual(pattern.match('https://example.com/POSTS/123', { ignoreCase: true }), null)
+      assert.notEqual(pattern.match('https://example.com/PoStS/123', { ignoreCase: true }), null)
+    })
+
+    it('preserves original casing in params for case-insensitive pathname match', () => {
       let pattern = new RoutePattern('/posts/:id')
-      assert.equal(pattern.ignoreCase, false)
+      let match = pattern.match('https://example.com/POSTS/ABC', { ignoreCase: true })
+      assert.notEqual(match, null)
+      assert.equal(match!.params.id, 'ABC')
     })
 
-    it('can be set to true in parse options', () => {
-      let pattern = new RoutePattern('/posts/:id', { ignoreCase: true })
-      assert.equal(pattern.ignoreCase, true)
-    })
-
-    describe('pathname matching', () => {
-      it('is case-sensitive by default', () => {
-        let pattern = new RoutePattern('/Posts/:id')
-        assert.equal(pattern.match('https://example.com/posts/123'), null)
-        assert.equal(pattern.match('https://example.com/POSTS/123'), null)
-        assert.notEqual(pattern.match('https://example.com/Posts/123'), null)
-      })
-
-      it('is case-insensitive when enabled', () => {
-        let pattern = new RoutePattern('/Posts/:id', { ignoreCase: true })
-        assert.notEqual(pattern.match('https://example.com/posts/123'), null)
-        assert.notEqual(pattern.match('https://example.com/POSTS/123'), null)
-        assert.notEqual(pattern.match('https://example.com/PoStS/123'), null)
-      })
-
-      it('preserves original casing in params for case-insensitive matches', () => {
-        let pattern = new RoutePattern('/posts/:id', { ignoreCase: true })
-        let match = pattern.match('https://example.com/POSTS/ABC')
-        assert.notEqual(match, null)
-        assert.equal(match!.params.id, 'ABC')
-      })
-    })
-
-    describe('search matching', () => {
-      it('is case-sensitive for param names by default', () => {
-        let pattern = new RoutePattern('?Sort')
-        assert.notEqual(pattern.match('https://example.com?Sort'), null)
-        assert.equal(pattern.match('https://example.com?sort'), null)
-        assert.equal(pattern.match('https://example.com?SORT'), null)
-      })
-
-      it('is case-insensitive for param names when enabled', () => {
-        let pattern = new RoutePattern('?Sort', { ignoreCase: true })
-        assert.notEqual(pattern.match('https://example.com?Sort'), null)
-        assert.notEqual(pattern.match('https://example.com?sort'), null)
-        assert.notEqual(pattern.match('https://example.com?SORT'), null)
-      })
-
-      it('is case-sensitive for param values by default', () => {
-        let pattern = new RoutePattern('?sort=Asc')
-        assert.notEqual(pattern.match('https://example.com?sort=Asc'), null)
-        assert.equal(pattern.match('https://example.com?sort=asc'), null)
-        assert.equal(pattern.match('https://example.com?sort=ASC'), null)
-      })
-
-      it('is case-insensitive for param values when enabled', () => {
-        let pattern = new RoutePattern('?sort=Asc', { ignoreCase: true })
-        assert.notEqual(pattern.match('https://example.com?sort=Asc'), null)
-        assert.notEqual(pattern.match('https://example.com?sort=asc'), null)
-        assert.notEqual(pattern.match('https://example.com?sort=ASC'), null)
-      })
-
-      it('applies case-insensitivity to multiple search params', () => {
-        let pattern = new RoutePattern('?Sort=Asc&Filter=Active', { ignoreCase: true })
-        assert.notEqual(pattern.match('https://example.com?sort=asc&filter=active'), null)
-        assert.notEqual(pattern.match('https://example.com?SORT=ASC&FILTER=ACTIVE'), null)
-      })
-    })
-
-    describe('join', () => {
-      it('uses union for ignoreCase (true if either is true)', () => {
-        let a = new RoutePattern('/api', { ignoreCase: true })
-        let b = new RoutePattern('/posts', { ignoreCase: false })
-        assert.equal(a.join(b).ignoreCase, true)
-
-        let c = new RoutePattern('/api', { ignoreCase: false })
-        let d = new RoutePattern('/posts', { ignoreCase: true })
-        assert.equal(c.join(d).ignoreCase, true)
-
-        let e = new RoutePattern('/api', { ignoreCase: false })
-        let f = new RoutePattern('/posts', { ignoreCase: false })
-        assert.equal(e.join(f).ignoreCase, false)
-
-        let g = new RoutePattern('/api', { ignoreCase: true })
-        let h = new RoutePattern('/posts', { ignoreCase: true })
-        assert.equal(g.join(h).ignoreCase, true)
-      })
-
-      it('allows overriding ignoreCase with options', () => {
-        let a = new RoutePattern('/api', { ignoreCase: false })
-        let b = new RoutePattern('/posts', { ignoreCase: false })
-        let joined = a.join(b, { ignoreCase: true })
-        assert.equal(joined.ignoreCase, true)
-      })
-
-      it('matches joined pattern according to its ignoreCase setting', () => {
-        let a = new RoutePattern('/api', { ignoreCase: false })
-        let b = new RoutePattern('/posts', { ignoreCase: false })
-        let joined = a.join(b, { ignoreCase: true })
-        assert.notEqual(joined.match('https://example.com/API/POSTS'), null)
-      })
+    it('search is always case-sensitive', () => {
+      let pattern = new RoutePattern('?Sort')
+      assert.notEqual(pattern.match('https://example.com?Sort'), null)
+      assert.equal(pattern.match('https://example.com?sort'), null)
+      assert.equal(pattern.match('https://example.com?sort', { ignoreCase: true }), null)
     })
   })
 })
