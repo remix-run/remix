@@ -1,4 +1,4 @@
-import type { Controller } from 'remix'
+import type { Controller } from 'remix/fetch-router'
 
 import { routes } from './routes.ts'
 import { getAllBooks, getBookBySlug, getBooksByGenre, getAvailableGenres } from './models/books.ts'
