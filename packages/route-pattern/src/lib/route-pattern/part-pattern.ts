@@ -28,7 +28,6 @@ export class PartPattern {
   readonly type: 'hostname' | 'pathname'
   readonly ignoreCase: boolean
 
-  // todo: params cache
   #regexp: RegExp | undefined
 
   constructor(
