@@ -132,7 +132,7 @@ let { values: cliArgs } = util.parseArgs({
     websiteDocsPath: {
       type: 'string',
       short: 'w',
-      default: '',
+      default: '/api',
     },
   },
 })
