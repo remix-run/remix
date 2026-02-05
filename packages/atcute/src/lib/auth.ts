@@ -5,13 +5,13 @@ import type { OAuthClient, OAuthSession } from '@atcute/oauth-node-client'
 import {
   requireAuthClient,
   type AuthMethod,
+  type Profile,
   type RestoredContext,
 } from '@remix-run/auth-middleware'
 
 const TYPE = 'atcute'
 
-type AtProfile = {
-  type: typeof TYPE
+type AtProfile = Profile<typeof TYPE> & {
   did: string
   bsky: AppBskyActorGetProfile.$output | null
 }

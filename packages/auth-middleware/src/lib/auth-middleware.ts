@@ -21,9 +21,11 @@ export const STOARGE_KEY = 'user'
 export function createAuth<Methods extends AuthMethod<string, any, any, any, any>[]>(
   methods: Methods,
 ) {
-  let methodsByType = new Map(methods.map((method) => [method.type, method]))
+  let methodsByType = new Map<string, AuthMethod<string, any, any, any, any>>(
+    methods.map((method) => [method.type, method]),
+  )
 
-  let load: Middleware = async ({ session }, next) => {
+  let load: Middleware = async ({ request, session }, next) => {
     let promises: Record<string, Promise<any> | undefined> = {}
     let cache =
       <F extends (...otherKeys: string[]) => Promise<any>>(k: string, f: F) =>
@@ -36,17 +38,31 @@ export function createAuth<Methods extends AuthMethod<string, any, any, any, any
     let userSession = (session.get(STOARGE_KEY) ?? null) as User<any> | null
 
     let methodContext = cache('context', async (type, userId) => {
-      return methodsByType.get(type)?.restore(userId)
+      return methodsByType.get(type)?.restore(userId, request)
     })
 
     let requestContext: RestoredContext<inferAuthType<Methods>> | null = userSession
       ? await methodContext(userSession.type, userSession.id)
       : null
 
+    if (requestContext?.userId == null) {
+      for (let method of methods) {
+        let ctx = (await methodContext(method.type)) as RestoredContext<
+          inferAuthType<Methods>
+        > | null
+        if (ctx?.userId != null) {
+          requestContext = ctx
+          break
+        }
+      }
+    }
+
     let user: User<any> | null =
       requestContext?.userId && userSession?.id && requestContext.userId === userSession.id
         ? userSession
-        : null
+        : requestContext?.userId != null
+          ? { type: requestContext.type, id: requestContext.userId }
+          : null
 
     if (!user && userSession) {
       session.unset(STOARGE_KEY)

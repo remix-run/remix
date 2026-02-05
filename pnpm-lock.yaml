@@ -54,6 +54,37 @@ importers:
         specifier: ^8.40.0
         version: 8.50.0(eslint@9.39.2)(typescript@5.9.3)
 
+  demos/auth:
+    dependencies:
+      '@atcute/identity-resolver':
+        specifier: ^1.2.2
+        version: 1.2.2(@atcute/identity@1.1.3)
+      '@atcute/identity-resolver-node':
+        specifier: ^1.0.3
+        version: 1.0.3(@atcute/identity-resolver@1.2.2(@atcute/identity@1.1.3))(@atcute/identity@1.1.3)
+      '@atcute/lexicons':
+        specifier: ^1.2.7
+        version: 1.2.7
+      '@atcute/oauth-node-client':
+        specifier: ^1.1.0
+        version: 1.1.0
+      '@remix-run/atcute':
+        specifier: 'workspace:'
+        version: link:../../packages/atcute
+      '@remix-run/auth-middleware':
+        specifier: 'workspace:'
+        version: link:../../packages/auth-middleware
+      remix:
+        specifier: 'workspace:'
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   demos/bookstore:
     dependencies:
       '@remix-run/dom':
@@ -136,9 +167,6 @@ importers:
       remix:
         specifier: 'workspace:'
         version: link:../../packages/remix
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
     devDependencies:
       '@atcute/lex-cli':
         specifier: ^2.5.3
@@ -4887,9 +4915,6 @@ packages:
   zod@3.22.3:
     resolution: {integrity: sha512-EjIevzuJRiRPbVH4mGc8nApb/lVLKVpmUhAaR5R5doKGfAnGJ6Gr3CViAVjP+4FWSxCsybeWQdcgCtbX+7oZug==}
 
-  zod@4.3.6:
-    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
-
 snapshots:
 
   '@ark/attest@0.49.0(typescript@5.9.3)':
@@ -8788,5 +8813,3 @@ snapshots:
       youch-core: 0.3.3
 
   zod@3.22.3: {}
-
-  zod@4.3.6: {}

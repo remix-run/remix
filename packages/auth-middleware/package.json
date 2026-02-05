@@ -20,6 +20,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./basic": "./src/basic.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -27,6 +28,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./basic": {
+        "types": "./dist/basic.d.ts",
+        "default": "./dist/basic.js"
       },
       "./package.json": "./package.json"
     }

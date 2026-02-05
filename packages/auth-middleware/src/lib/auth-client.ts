@@ -41,7 +41,7 @@ export interface AuthMethod<
 > {
   type: T
   profile: (userId: string, context: C) => P | Promise<P>
-  restore: (userId?: string) => C | Promise<C>
+  restore: (userId: string | undefined, request: Request) => C | Promise<C>
   authorize: (args: AA, context: C) => null | URL | Promise<null | URL>
   callback: (args: CA, context: C) => null | User<T> | Promise<null | User<T>>
 }
