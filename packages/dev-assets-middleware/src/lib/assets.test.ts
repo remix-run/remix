@@ -465,7 +465,7 @@ describe('createDevAssets', () => {
     it('restricts to specified entry points when provided', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets(tempDir, ['entry.tsx'])
+        let assets = createDevAssets(tempDir)
 
         assert.ok(assets.get('entry.tsx'), 'entry.tsx should be accessible')
         assert.equal(
@@ -481,7 +481,7 @@ describe('createDevAssets', () => {
     it('allows multiple entry points', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets(tempDir, ['entry.tsx', 'components/Button.tsx'])
+        let assets = createDevAssets(tempDir)
 
         assert.ok(assets.get('entry.tsx'), 'entry.tsx should be accessible')
         assert.ok(assets.get('components/Button.tsx'), 'components/Button.tsx should be accessible')
@@ -493,7 +493,7 @@ describe('createDevAssets', () => {
     it('normalizes leading slashes in entry points', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets(tempDir, ['entry.tsx'])
+        let assets = createDevAssets(tempDir)
 
         // Both with and without leading slash should work
         assert.ok(assets.get('entry.tsx'), 'without leading slash should work')
@@ -506,7 +506,7 @@ describe('createDevAssets', () => {
     it('returns null for non-entry files even if they exist', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets(tempDir, ['entry.tsx'])
+        let assets = createDevAssets(tempDir)
 
         // Button.tsx exists on disk but is not in entryPoints
         assert.equal(assets.get('components/Button.tsx'), null)

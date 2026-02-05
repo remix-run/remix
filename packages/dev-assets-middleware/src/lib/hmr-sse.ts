@@ -34,6 +34,10 @@ export interface HmrEventSource {
   sendReload(): void
   /** Get the number of connected clients */
   getClientCount(): number
+  /** Check if there are pending HMR updates */
+  hasPendingUpdates(): boolean
+  /** Wait for all pending updates to complete */
+  waitForPendingUpdates(): Promise<void>
   /** Close all active SSE connections */
   close(): void
 }
@@ -52,6 +56,8 @@ let clientIdCounter = 0
  */
 export function createHmrEventSource(debug: boolean = false): HmrEventSource {
   let clients = new Map<number, SseClient>()
+  let pendingUpdates = new Map<number, NodeJS.Timeout>()
+  let updateIdCounter = 0
 
   function log(...args: unknown[]) {
     if (debug) {
@@ -113,6 +119,18 @@ export function createHmrEventSource(debug: boolean = false): HmrEventSource {
 
       log(`Sending update to ${clients.size} client(s): ${files.join(', ')}`)
       broadcast({ type: 'update', files, timestamp })
+
+      // Track this update as pending
+      // The browser will fetch the updated modules after receiving the SSE message,
+      // which typically completes within 500ms. We track for 1s to be safe.
+      let updateId = ++updateIdCounter
+      let timeout = setTimeout(() => {
+        pendingUpdates.delete(updateId)
+        log(`Update ${updateId} completed`)
+      }, 1000)
+
+      pendingUpdates.set(updateId, timeout)
+      log(`Tracking update ${updateId} (${pendingUpdates.size} pending)`)
     },
 
     sendReload() {
@@ -122,6 +140,39 @@ export function createHmrEventSource(debug: boolean = false): HmrEventSource {
 
     getClientCount() {
       return clients.size
+    },
+
+    hasPendingUpdates() {
+      return pendingUpdates.size > 0
+    },
+
+    async waitForPendingUpdates() {
+      if (pendingUpdates.size === 0) {
+        return
+      }
+
+      log(`Waiting for ${pendingUpdates.size} pending update(s) to complete...`)
+
+      // Wait for all pending updates with a maximum timeout
+      // We use the longest pending timeout + 200ms buffer
+      let maxWait = 1200 // 1s update timeout + 200ms buffer
+
+      await new Promise<void>((resolve) => {
+        let waitTimeout = setTimeout(() => {
+          log('Pending updates timeout reached, proceeding with disposal')
+          resolve()
+        }, maxWait)
+
+        // Poll every 50ms to check if updates are complete
+        let pollInterval = setInterval(() => {
+          if (pendingUpdates.size === 0) {
+            clearTimeout(waitTimeout)
+            clearInterval(pollInterval)
+            log('All pending updates completed')
+            resolve()
+          }
+        }, 50)
+      })
     },
 
     close() {
@@ -134,6 +185,12 @@ export function createHmrEventSource(debug: boolean = false): HmrEventSource {
         }
       }
       clients.clear()
+
+      // Clear all pending update timeouts
+      for (let [, timeout] of pendingUpdates) {
+        clearTimeout(timeout)
+      }
+      pendingUpdates.clear()
     },
   }
 }

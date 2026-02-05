@@ -25,5 +25,6 @@ packages:
   - packages/static-middleware/demos/*
   - packages/tar-parser/bench
   - scripts
+  - hmr-loader-prototype
 
 shellEmulator: true

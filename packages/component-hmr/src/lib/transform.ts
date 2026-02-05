@@ -15,7 +15,7 @@
  * Uses SWC's AST transformation and codegen for proper source map support.
  */
 
-import swc from '@swc/core'
+import * as swc from '@swc/core'
 import type {
   Module,
   ModuleItem,
@@ -1008,6 +1008,10 @@ export async function transformComponent(
   source: string,
   moduleUrl: string,
 ): Promise<TransformResult> {
+  // Strip query string and hash from module URL for stable registry keys
+  // e.g., "file:///path/to/file.js?t=123#hash" -> "file:///path/to/file.js"
+  let cleanUrl = moduleUrl.split('?')[0].split('#')[0]
+
   // Quick check for potential components
   if (!maybeHasComponent(source)) {
     return { code: source }
@@ -1097,7 +1101,7 @@ export async function transformComponent(
       if (isHydrationRoot) {
         let hmrItems = await generateHmrHydrationRootComponent(
           component,
-          moduleUrl,
+          cleanUrl,
           setupVars,
           setupStatements,
           setupHash,
@@ -1108,7 +1112,7 @@ export async function transformComponent(
       } else {
         let hmrItems = generateHmrComponent(
           component,
-          moduleUrl,
+          cleanUrl,
           setupVars,
           setupStatements,
           setupHash,

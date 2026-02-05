@@ -1,0 +1,16 @@
+{
+  "name": "hmr-loader-prototype",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "remix-watch server.js",
+    "dev:old": "node supervisor.js"
+  },
+  "dependencies": {
+    "@remix-run/watch": "workspace:*",
+    "@remix-run/component": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

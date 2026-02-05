@@ -2,7 +2,11 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import * as prettier from 'prettier'
 
-import { transformComponent, maybeHasComponent, HMR_RUNTIME_PATH } from './hmr-transform.ts'
+import {
+  transformComponent,
+  maybeHasComponent,
+  HMR_RUNTIME_PATH,
+} from '@remix-run/component-hmr/transform'
 
 /**
  * The HMR import that gets prepended to all transformed files.

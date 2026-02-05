@@ -9,7 +9,11 @@ import type { Middleware, Assets, AssetEntry } from '@remix-run/fetch-router'
 import { fileURLToPath } from 'node:url'
 
 // HMR imports (conditional, only used if hmr: true)
-import { transformComponent, maybeHasComponent, HMR_RUNTIME_PATH } from './hmr-transform.ts'
+import {
+  transformComponent,
+  maybeHasComponent,
+  HMR_RUNTIME_PATH,
+} from '@remix-run/component-hmr/transform'
 import { createHmrEventSource, type HmrEventSource } from './hmr-sse.ts'
 import { createWatcher, type HmrWatcher } from './hmr-watcher.ts'
 
@@ -571,6 +575,15 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
         if (affectedUrls.length > 0) {
           hmrEventSource!.sendUpdate(affectedUrls, event.timestamp)
         }
+      } else {
+        // Module not in graph yet (e.g., after server restart)
+        // Check if this file would be served by the middleware
+        let posixPath = event.relativePath
+        if (isPathAllowed(posixPath, appAllowPatterns, appDenyPatterns)) {
+          // This is a file we'd serve - send a full page reload
+          // The server has likely been restarted by tsx, so a reload is appropriate
+          hmrEventSource!.sendReload()
+        }
       }
     })
 
@@ -771,6 +784,12 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
 
   // Add dispose method for cleaning up resources (HMR watcher and SSE connections)
   ;(middleware as DevAssetsMiddleware).dispose = async () => {
+    // Wait for any pending HMR updates to complete before disposing
+    // This prevents watch commands from killing the middleware while updates are in flight
+    if (hmrEventSource && hmrEventSource.hasPendingUpdates()) {
+      await hmrEventSource.waitForPendingUpdates()
+    }
+
     if (hmrEventSource) {
       hmrEventSource.close()
     }
