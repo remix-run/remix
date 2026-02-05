@@ -32,7 +32,13 @@ export function session(sessionCookie: Cookie, sessionStorage: SessionStorage): 
 
     let setCookieValue = await sessionStorage.save(session)
     if (setCookieValue != null) {
-      response.headers.append('Set-Cookie', await sessionCookie.serialize(setCookieValue))
+      let headers = new Headers(response.headers)
+      headers.append('Set-Cookie', await sessionCookie.serialize(setCookieValue))
+      response = new Response(response.body, {
+        headers,
+        status: response.status,
+        statusText: response.statusText,
+      })
     }
 
     return response

@@ -1,0 +1,28 @@
+{
+  "name": "statusphere",
+  "private": true,
+  "type": "module",
+  "author": "Jacob Ebey <jacob.ebey@live.com>",
+  "scripts": {
+    "start": "node app/server.ts",
+    "dev": "node --watch app/server.ts",
+    "gen": "lex-cli generate"
+  },
+  "dependencies": {
+    "@atcute/atproto": "^3.1.10",
+    "@atcute/client": "^4.2.1",
+    "@atcute/identity-resolver": "^1.2.2",
+    "@atcute/identity-resolver-node": "^1.0.3",
+    "@atcute/lexicons": "^1.2.7",
+    "@atcute/oauth-node-client": "^1.1.0",
+    "@atcute/tid": "^1.1.1",
+    "@remix-run/atcute": "workspace:",
+    "@remix-run/auth-middleware": "workspace:",
+    "remix": "workspace:"
+  },
+  "devDependencies": {
+    "@atcute/lex-cli": "^2.5.3",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  }
+}
