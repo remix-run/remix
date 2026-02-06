@@ -2,7 +2,8 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { type RemixNode } from 'remix/component'
 import { renderToString } from 'remix/component/server'
-import { createRouter, route } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
+import { route } from 'remix/fetch-router/routes'
 import { createHtmlResponse } from 'remix/response/html'
 import { staticFiles } from 'remix/static-middleware'
 import * as frontmatter from 'front-matter'
@@ -33,11 +34,6 @@ export const router = createRouter({
   middleware: [staticFiles(path.resolve(REPO_DIR, 'docs', 'public'))],
 })
 
-async function render(node: RemixNode, init?: ResponseInit) {
-  let html = await renderToString(<Layout docFiles={docFiles}>{node}</Layout>)
-  return createHtmlResponse(html, init)
-}
-
 router.map(routes, {
   home: async () => {
     let response = await render(<Home />)
@@ -57,6 +53,11 @@ router.map(routes, {
     return response
   },
 })
+
+async function render(node: RemixNode, init?: ResponseInit) {
+  let html = await renderToString(<Layout docFiles={docFiles}>{node}</Layout>)
+  return createHtmlResponse(html, init)
+}
 
 function Home() {
   return () => {
