@@ -7,7 +7,7 @@ import { PartPatternVariant } from './variant.ts'
 describe('Variant', () => {
   describe('generate', () => {
     function assertVariants(source: string, expected: Array<string>) {
-      let pattern = PartPattern.parse(source, { type: 'pathname', ignoreCase: false })
+      let pattern = PartPattern.parse(source, { type: 'pathname' })
       let actual = PartPatternVariant.generate(pattern).map((variant) =>
         variant.toString(pattern.separator),
       )

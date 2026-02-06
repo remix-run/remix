@@ -13,10 +13,16 @@ import { matchSearch } from './route-pattern/match.ts'
 type Param = Extract<PartPatternToken, { type: ':' | '*' }>
 
 export class TrieMatcher<data = unknown> implements Matcher<data> {
+  readonly ignoreCase: boolean
   trie: Trie<data>
 
-  constructor() {
-    this.trie = new Trie()
+  /**
+   * @param options Constructor options
+   * @param options.ignoreCase When `true`, pathname matching is case-insensitive for all patterns. Defaults to `false`.
+   */
+  constructor(options?: { ignoreCase?: boolean }) {
+    this.ignoreCase = options?.ignoreCase ?? false
+    this.trie = new Trie({ ignoreCase: this.ignoreCase })
   }
 
   add(pattern: string | RoutePattern, data: data): void {
@@ -98,9 +104,11 @@ type SearchResult<data> = Array<{
 }>
 
 export class Trie<data = unknown> {
+  #ignoreCase: boolean
   protocolNode: ProtocolNode<data>
 
-  constructor() {
+  constructor(options?: { ignoreCase?: boolean }) {
+    this.#ignoreCase = options?.ignoreCase ?? false
     this.protocolNode = {
       http: createHostnameNode(),
       https: createHostnameNode(),
@@ -117,10 +125,11 @@ export class Trie<data = unknown> {
       if (variant.hostname.type === 'any') {
         portNode = hostnameNode.any
       } else if (variant.hostname.type === 'static') {
-        portNode = hostnameNode.static.get(variant.hostname.value)
+        let key = variant.hostname.value.toLowerCase()
+        portNode = hostnameNode.static.get(key)
         if (portNode === undefined) {
           portNode = new Map()
-          hostnameNode.static.set(variant.hostname.value, portNode)
+          hostnameNode.static.set(key, portNode)
         }
       } else {
         portNode = new Map()
@@ -136,7 +145,7 @@ export class Trie<data = unknown> {
 
       // pathname segments
       let pathnameNode = pathnameRoot
-      let segments = variant.pathname.segments()
+      let segments = variant.pathname.segments({ ignoreCase: this.#ignoreCase })
       for (let segment of segments) {
         if (segment.type === 'static') {
           let next = pathnameNode.static.get(segment.key)
@@ -206,8 +215,8 @@ export class Trie<data = unknown> {
       })
     }
 
-    // static hostname + port -> pathname
-    let staticHostname = hostNameNode.static.get(url.hostname)
+    // static hostname + port -> pathname (hostname case-insensitive)
+    let staticHostname = hostNameNode.static.get(url.hostname.toLowerCase())
     if (staticHostname) {
       let pathnameNode = staticHostname.get(url.port)
       if (pathnameNode) {
@@ -216,7 +225,7 @@ export class Trie<data = unknown> {
     }
     // dynamic hostname + port -> pathname
     hostNameNode.dynamic.forEach(({ part, portNode }) => {
-      let match = part.match(url.hostname)
+      let match = part.match(url.hostname, { ignoreCase: true })
       if (match) {
         let pathnameNode = portNode.get(url.port)
         if (pathnameNode) {
@@ -247,9 +256,7 @@ export class Trie<data = unknown> {
 
         if (current.segmentIndex === urlSegments.length) {
           for (let value of current.pathnameNode.values) {
-            if (
-              !matchSearch(url.searchParams, value.pattern.ast.search, value.pattern.ignoreCase)
-            ) {
+            if (!matchSearch(url.searchParams, value.pattern.ast.search)) {
               continue
             }
 
@@ -297,8 +304,8 @@ export class Trie<data = unknown> {
         }
 
         let urlSegment = urlSegments[current.segmentIndex]
-
-        let nextStatic = current.pathnameNode.static.get(urlSegment)
+        let staticKey = this.#ignoreCase ? urlSegment.toLowerCase() : urlSegment
+        let nextStatic = current.pathnameNode.static.get(staticKey)
         if (nextStatic) {
           stack.push({
             segmentIndex: current.segmentIndex + 1,

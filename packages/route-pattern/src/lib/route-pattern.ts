@@ -26,10 +26,6 @@ type AST = {
   search: Map<string, Set<string> | null>
 }
 
-export type RoutePatternOptions = {
-  ignoreCase?: boolean
-}
-
 export type RoutePatternMatch<source extends string = string> = {
   pattern: RoutePattern
   url: URL
@@ -47,15 +43,13 @@ export type RoutePatternMatch<source extends string = string> = {
 
 export class RoutePattern<source extends string = string> {
   readonly ast: AST
-  readonly ignoreCase: boolean
 
   // The `join()` method bypasses the constructor and creates a new instance directly
   // using `Object.create()`. This means that the constructor will only run for instances
   // that are instantiated directly with a source string, not for all instances of `RoutePattern`.
   // This also means that we cannot use JavaScript features like `#private` fields/methods and
   // class field initializers that rely on the constructor being run.
-  constructor(source: source, options?: RoutePatternOptions) {
-    let ignoreCase = options?.ignoreCase ?? false
+  constructor(source: source) {
     let spans = split(source)
 
     this.ast = {
@@ -63,12 +57,10 @@ export class RoutePattern<source extends string = string> {
       hostname: parseHostname(source, spans.hostname),
       port: spans.port ? source.slice(...spans.port) : null,
       pathname: spans.pathname
-        ? PartPattern.parse(source, { span: spans.pathname, type: 'pathname', ignoreCase })
-        : PartPattern.parse('', { span: [0, 0], type: 'pathname', ignoreCase }),
+        ? PartPattern.parse(source, { span: spans.pathname, type: 'pathname' })
+        : PartPattern.parse('', { span: [0, 0], type: 'pathname' }),
       search: spans.search ? parseSearch(source.slice(...spans.search)) : new Map(),
     }
-
-    this.ignoreCase = ignoreCase
   }
 
   // eslint-disable-next-line no-restricted-syntax
@@ -120,10 +112,8 @@ export class RoutePattern<source extends string = string> {
 
   join<other extends string>(
     other: other | RoutePattern<other>,
-    options?: RoutePatternOptions,
   ): RoutePattern<Join<source, other>> {
-    other = typeof other === 'string' ? new RoutePattern(other, options) : other
-    let ignoreCase = options?.ignoreCase ?? (this.ignoreCase || other.ignoreCase)
+    other = typeof other === 'string' ? new RoutePattern(other) : other
 
     return Object.create(RoutePattern.prototype, {
       ast: {
@@ -132,13 +122,9 @@ export class RoutePattern<source extends string = string> {
           protocol: other.ast.protocol ?? this.ast.protocol,
           hostname: other.ast.hostname ?? this.ast.hostname,
           port: other.ast.port ?? this.ast.port,
-          pathname: joinPathname(this.ast.pathname, other.ast.pathname, ignoreCase),
+          pathname: joinPathname(this.ast.pathname, other.ast.pathname),
           search: joinSearch(this.ast.search, other.ast.search),
         },
-      },
-      ignoreCase: {
-        enumerable: true,
-        value: ignoreCase,
       },
     })
   }
@@ -180,7 +166,15 @@ export class RoutePattern<source extends string = string> {
     return result
   }
 
-  match(url: string | URL): RoutePatternMatch<source> | null {
+  /**
+   * Match a URL against this pattern.
+   *
+   * @param url The URL to match
+   * @param options Match options
+   * @param options.ignoreCase When `true`, pathname matching is case-insensitive. Defaults to `false`. Hostname is always case-insensitive; search remains case-sensitive.
+   * @returns The match result, or `null` if no match
+   */
+  match(url: string | URL, options?: { ignoreCase?: boolean }): RoutePatternMatch<source> | null {
     url = typeof url === 'string' ? new URL(url) : url
 
     let hostname: PartPatternMatch | null = null
@@ -195,7 +189,7 @@ export class RoutePattern<source extends string = string> {
 
       // hostname: null matches any hostname
       if (this.ast.hostname !== null) {
-        hostname = this.ast.hostname.match(url.hostname)
+        hostname = this.ast.hostname.match(url.hostname, { ignoreCase: true })
         if (hostname === null) return null
       }
 
@@ -210,10 +204,10 @@ export class RoutePattern<source extends string = string> {
     }
 
     // url.pathname: remove leading slash
-    let pathname = this.ast.pathname.match(url.pathname.slice(1))
+    let pathname = this.ast.pathname.match(url.pathname.slice(1), options)
     if (pathname === null) return null
 
-    if (!matchSearch(url.searchParams, this.ast.search, this.ignoreCase)) return null
+    if (!matchSearch(url.searchParams, this.ast.search)) return null
 
     let params: Record<string, string | undefined> = {}
 

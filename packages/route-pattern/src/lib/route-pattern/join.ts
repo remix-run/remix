@@ -28,10 +28,9 @@ type Pathname = RoutePattern['ast']['pathname']
  *
  * @param a the first pathname pattern
  * @param b the second pathname pattern
- * @param ignoreCase whether to ignore case when matching
  * @returns the joined pathname pattern
  */
-export function joinPathname(a: Pathname, b: Pathname, ignoreCase: boolean): Pathname {
+export function joinPathname(a: Pathname, b: Pathname): Pathname {
   if (a.tokens.length === 0) return b
   if (b.tokens.length === 0) return a
 
@@ -79,7 +78,7 @@ export function joinPathname(a: Pathname, b: Pathname, ignoreCase: boolean): Pat
     optionals.set(tokenOffset + begin, tokenOffset + end)
   }
 
-  return new PartPattern({ tokens, optionals }, { type: 'pathname', ignoreCase })
+  return new PartPattern({ tokens, optionals }, { type: 'pathname' })
 }
 
 type Search = RoutePattern['ast']['search']
