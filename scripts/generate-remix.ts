@@ -21,7 +21,6 @@ let remixChangesDir = path.join(remixDir, '.changes')
 let remixPackageJsonPath = path.join(remixDir, 'package.json')
 
 const SOURCE_FOLDER = 'src'
-const SUB_EXPORT_FOLDER = 'lib'
 
 type RemixRunPackage = {
   name: string
@@ -30,7 +29,7 @@ type RemixRunPackage = {
 }
 
 type ExportEntry = {
-  // The source file path relative to src/lib: `headers.ts`, `headers/cookie-storage.ts`
+  // The source file path relative to src: `headers.ts`, `headers/cookie-storage.ts`
   sourceFile: string
   // The export path in package.json exports: `./headers`, `./headers/cookie-storage`1
   exportPath: string
@@ -127,10 +126,15 @@ async function updateRemixPackage() {
   // Ensure we have a passing linter before generating code
   logAndExec(`npx eslint packages/remix/ --max-warnings=0`)
 
-  // Generate source files
+  // Clear existing source files
+  let sourceFolderPath = path.join(remixDir, SOURCE_FOLDER)
+  await fs.rm(sourceFolderPath, { recursive: true, force: true })
+  await fs.mkdir(sourceFolderPath, { recursive: true })
+
+  // Generate fresh source files
   console.log('Generating Remix source files...')
   for (let entry of allExports) {
-    let sourceFilePath = path.join(remixDir, SOURCE_FOLDER, SUB_EXPORT_FOLDER, entry.sourceFile)
+    let sourceFilePath = path.join(remixDir, SOURCE_FOLDER, entry.sourceFile)
     // Create subdirectory if needed
     let sourceFileDir = path.dirname(sourceFilePath)
     await fs.mkdir(sourceFileDir, { recursive: true })
@@ -150,10 +154,10 @@ async function updateRemixPackage() {
   remixPackageJson.publishConfig.exports = {}
 
   for (let entry of allExports) {
-    let exportPath = path.join(SOURCE_FOLDER, SUB_EXPORT_FOLDER, entry.sourceFile)
+    let exportPath = path.join(SOURCE_FOLDER, entry.sourceFile)
     remixPackageJson.exports[entry.exportPath] = `./${exportPath}`
 
-    let distFile = path.join(SUB_EXPORT_FOLDER, entry.sourceFile.replace(/\.ts$/, ''))
+    let distFile = path.join(entry.sourceFile.replace(/\.ts$/, ''))
     remixPackageJson.publishConfig.exports[entry.exportPath] = {
       types: `./dist/${distFile}.d.ts`,
       default: `./dist/${distFile}.js`,
@@ -201,7 +205,7 @@ async function outputExportsChangeFiles(exportsConfig: Record<string, string>) {
       changes += ` - \`${exportName}\`\n`
 
       // Remove re-export file
-      let srcFile = path.join(remixDir, SOURCE_FOLDER, SUB_EXPORT_FOLDER, exportPath + '.ts')
+      let srcFile = path.join(remixDir, SOURCE_FOLDER, exportPath + '.ts')
       try {
         await fs.unlink(srcFile)
       } catch (e) {
