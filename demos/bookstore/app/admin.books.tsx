@@ -1,5 +1,5 @@
-import type { Controller } from 'remix'
-import { redirect } from 'remix'
+import type { Controller } from 'remix/fetch-router'
+import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
 import { getAllBooks, getBookById, createBook, updateBook, deleteBook } from './models/books.ts'

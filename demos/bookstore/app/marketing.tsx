@@ -1,4 +1,4 @@
-import type { BuildAction, Controller } from 'remix'
+import type { BuildAction, Controller } from 'remix/fetch-router'
 
 import { routes } from './routes.ts'
 import { BookCard } from './components/book-card.tsx'

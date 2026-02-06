@@ -1,4 +1,4 @@
-import { createRouter } from 'remix'
+import { createRouter } from 'remix/fetch-router'
 import { asyncContext } from 'remix/async-context-middleware'
 import { compression } from 'remix/compression-middleware'
 import { formData } from 'remix/form-data-middleware'

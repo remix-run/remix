@@ -1,4 +1,4 @@
-import type { Controller } from 'remix'
+import type { Controller } from 'remix/fetch-router'
 
 import { routes } from './routes.ts'
 import { Layout } from './layout.tsx'
