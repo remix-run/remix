@@ -7,7 +7,7 @@ import { logAndExec } from './utils/process.ts'
  * This script prepares a base branch (usually `main`) to be PNPM-installable
  * directly from GitHub via a new branch (usually `preview/main`):
  *
- *   pnpm install "remix-run/remix#preview/main&path:packages/remix"
+ *   pnpm install "remix@remix-run/remix#preview/main&path:packages/remix"
  *
  * To do this, we can run a build, make some minor changes to the repo, and
  * commit the build + changes to the new branch. These changes would never be
@@ -22,7 +22,7 @@ import { logAndExec } from './utils/process.ts'
  *  - Copies all `publishConfig`'s down so we get `exports` from `dist/` instead of `src/`
  *  - Commits the changes
  *
- * Then, after pushing, `pnpm install "remix-run/remix#preview/main&path:packages/remix"`
+ * Then, after pushing, `pnpm install "remix@remix-run/remix#preview/main&path:packages/remix"`
  * sees the `remix` nested deps and they all point to github with similar URLs so
  * they install as nested deps the same way.
  */
@@ -67,7 +67,7 @@ console.log(
     '',
     `You can now push the \`${installableBranch}\` branch to GitHub and install via:`,
     '',
-    `  pnpm install "remix-run/remix#${installableBranch}&path:packages/remix"`,
+    `  pnpm install "remix@remix-run/remix#${installableBranch}&path:packages/remix"`,
   ].join('\n'),
 )
 
