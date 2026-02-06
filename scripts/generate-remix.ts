@@ -52,7 +52,6 @@ await updateRemixPackage()
 
 // Generate change files
 await outputExportsChangeFiles(remixPackageJson.exports)
-await outputDependencyChangeFiles()
 
 // Implementations
 async function getRemixRunPackages() {
@@ -234,95 +233,4 @@ async function outputExportsChangeFiles(exportsConfig: Record<string, string>) {
   console.log()
   console.log('Created exports change file:')
   console.log(`   - ${path.relative(process.cwd(), changeFile)}`)
-}
-
-// Build dependencies change summary
-async function outputDependencyChangeFiles() {
-  let changeFilePath = path.join(remixChangesDir, 'patch.remix.update-dependencies.md')
-
-  // Get all `remix@` tags in the git repository
-  let remixTags = logAndExec('git tag', true)
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .filter((tag) => tag.startsWith('remix@') && semver.major(tag.replace('remix@', '')) >= 3)
-
-  if (remixTags.length === 0) {
-    console.log('No previous remix releases found, skipping dependency change file')
-    return
-  }
-
-  // Sort by semver version ascending
-  remixTags.sort((a, b) => semver.compare(a.replace('remix@', ''), b.replace('remix@', '')))
-
-  // Grab the latest stable release, or the latest prerelease if no stable exists
-  let lastReleaseTag =
-    remixTags.findLast((tag) => semver.prerelease(tag.replace(/^remix@/, '')) == null) ||
-    remixTags[remixTags.length - 1]
-
-  console.log(`Comparing dependencies against last release: ${lastReleaseTag}`)
-
-  // Checkout that tag in the repository
-  logAndExec(`git checkout ${lastReleaseTag}`)
-
-  // Get all @remix-run package versions in that commit via getRemixRunPackages()
-  let { remixRunPackages: previousPackages } = await getRemixRunPackages()
-
-  // Go back to the branch we started at
-  logAndExec(`git checkout -`)
-
-  // Create change file
-  let lines = []
-
-  // Added/Updated
-  for (let pkg of remixRunPackages) {
-    let prevPkg = previousPackages.find((p) => p.name === pkg.name)
-
-    if (!prevPkg) {
-      lines.push(`- Added \`${pkg.name}@${pkg.version}\``)
-    } else if (prevPkg.version !== pkg.version) {
-      lines.push(`- Updated \`${pkg.name}@${prevPkg.version}\` → \`${pkg.name}@${pkg.version}\``)
-    }
-  }
-
-  // Removed
-  for (let pkg of previousPackages) {
-    if (!remixRunPackages.find((p) => p.name === pkg.name)) {
-      lines.push(`- Removed \`${pkg.name}@${pkg.version}\``)
-    }
-  }
-
-  if (lines.length === 0) {
-    return
-  }
-
-  let contents = ['Updated dependencies:', ...lines].join('\n')
-
-  // Write change file
-  let exists = await fileExists(changeFilePath)
-  if (exists) {
-    let oldContents = await fs.readFile(changeFilePath, 'utf-8')
-    if (contents === oldContents) {
-      console.log('No changes to existing dependencies change file')
-      return
-    }
-  }
-
-  await fs.writeFile(changeFilePath, contents, 'utf-8')
-  console.log()
-  console.log(`${exists ? 'Updated' : 'Created'} dependencies change file:`)
-  console.log(`   - ${path.relative(process.cwd(), changeFilePath)}`)
-}
-
-async function fileExists(filePath: string) {
-  try {
-    // Throws if the file doesn't exist.  This feels weird using try/catch for control flow
-    // but `fs.exists` is deprecated and `fs.stat` recommends `fs.access`:
-    //   https://nodejs.org/api/fs.html#fsexistspath-callback
-    //   https://nodejs.org/api/fs.html#fsstatpath-options-callback
-    await fs.access(filePath, fs.constants.F_OK)
-    return true
-  } catch (e) {
-    return false
-  }
 }
