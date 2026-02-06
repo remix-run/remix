@@ -147,9 +147,9 @@ function collectTransitiveChunks(
 }
 
 /**
- * Middleware returned by assets() - standard middleware without dispose
+ * Middleware returned by assets().
  */
-export type AssetsMiddleware = Middleware & { dispose?: never }
+export type AssetsMiddleware = Middleware
 
 /**
  * Creates middleware that provides asset resolution from an esbuild metafile.

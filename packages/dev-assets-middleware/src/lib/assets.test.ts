@@ -5,6 +5,7 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
+import { pathToFileURL } from 'node:url'
 
 import {
   parseInlineSourceMap,
@@ -105,25 +106,25 @@ describe('fixSourceMapPaths', () => {
     assert.deepEqual(parsed.sourcesContent, ['export function Counter() {}'])
   })
 
-  it('fixes filesystem-relative paths to URL paths for HMR runtime', () => {
+  it('fixes filesystem-relative paths to URL paths for virtual modules', () => {
     // Simulate esbuild output with filesystem-relative path
     let sourceMap = {
       version: 3,
-      sources: ['../../virtual/hmr-runtime.ts'],
+      sources: ['../../virtual/some-module.ts'],
       mappings: 'AAAA',
-      sourcesContent: ['export function __hmr_register() {}'],
+      sourcesContent: ['export function init() {}'],
     }
     let base64 = Buffer.from(JSON.stringify(sourceMap)).toString('base64')
-    let code = `export function __hmr_register() {}\n//# sourceMappingURL=data:application/json;base64,${base64}`
+    let code = `export function init() {}\n//# sourceMappingURL=data:application/json;base64,${base64}`
 
     // Fix the paths
-    let fixed = fixSourceMapPaths(code, '/__@remix/hmr-runtime.ts')
+    let fixed = fixSourceMapPaths(code, '/__virtual/some-module.ts')
 
     // Verify the source map was fixed
     let parsed = parseInlineSourceMap(fixed)
     assert.ok(parsed)
-    assert.deepEqual(parsed.sources, ['/__@remix/hmr-runtime.ts'])
-    assert.deepEqual(parsed.sourcesContent, ['export function __hmr_register() {}'])
+    assert.deepEqual(parsed.sources, ['/__virtual/some-module.ts'])
+    assert.deepEqual(parsed.sourcesContent, ['export function init() {}'])
   })
 
   it('fixes filesystem-relative paths to URL paths for workspace files', () => {
@@ -393,6 +394,39 @@ describe('createDevAssets', () => {
 
         assert.ok(entry, 'entry should not be null')
         assert.equal(entry.href, '/entry.tsx')
+      } finally {
+        cleanupTempDir()
+      }
+    })
+
+    it('resolves file:// URLs to root-relative href (e.g. hydration roots)', () => {
+      setupTempDir()
+      try {
+        let assets = createDevAssets(tempDir)
+        let absolutePath = path.join(tempDir, 'entry.tsx')
+        let fileUrl = pathToFileURL(absolutePath).href
+
+        let entry = assets.get(fileUrl)
+
+        assert.ok(entry, 'entry should not be null for file:// URL under root')
+        assert.equal(entry.href, '/entry.tsx')
+        assert.deepEqual(entry.chunks, ['/entry.tsx'])
+      } finally {
+        cleanupTempDir()
+      }
+    })
+
+    it('resolves file:// URL for nested path (e.g. app/components/cart-button.tsx)', () => {
+      setupTempDir()
+      try {
+        let assets = createDevAssets(tempDir)
+        let absolutePath = path.join(tempDir, 'components', 'Button.tsx')
+        let fileUrl = pathToFileURL(absolutePath).href
+
+        let entry = assets.get(fileUrl)
+
+        assert.ok(entry, 'entry should not be null for file:// URL under root')
+        assert.equal(entry.href, '/components/Button.tsx')
       } finally {
         cleanupTempDir()
       }
@@ -982,7 +1016,7 @@ describe('esbuild config support', () => {
   })
 
   describe('entryPoints integration', () => {
-    it('restricts assets.get() when entryPoints provided', async () => {
+    it('does not restrict assets.get() by entryPoints in dev (all files resolvable on-demand)', async () => {
       setupTempDir()
       try {
         let middleware = devAssets({
@@ -1003,18 +1037,11 @@ describe('esbuild config support', () => {
 
         await middleware(context, async () => new Response('next'))
 
-        // assets.get should be available on context
         assert.ok(context.assets, 'assets should be set on context')
-
-        // Should allow entry.tsx
         assert.ok(context.assets.get('app/entry.tsx'), 'entry.tsx should be accessible')
-
-        // Should block other.tsx (not in entryPoints)
-        assert.equal(
-          context.assets.get('app/other.tsx'),
-          null,
-          'other.tsx should not be accessible',
-        )
+        // In dev, entryPoints in esbuild config are for production builds only;
+        // assets.get() can resolve any file under root (e.g. hydration roots).
+        assert.ok(context.assets.get('app/other.tsx'), 'other.tsx should be accessible in dev')
       } finally {
         cleanupTempDir()
       }

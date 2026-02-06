@@ -4,7 +4,7 @@ import { createRequestListener } from 'remix/node-fetch-server'
 let isDev = process.env.NODE_ENV === 'development'
 
 async function main() {
-  let { router, disposeAssetsMiddleware } = await import('./app/router.ts')
+  let { router } = await import('./app/router.ts')
 
   let server = http.createServer(
     createRequestListener(async (request) => {
@@ -19,9 +19,7 @@ async function main() {
 
   let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
-  async function shutdown() {
-    // Clean up assets first (closes HMR connections)
-    await disposeAssetsMiddleware?.()
+  function shutdown() {
     server.close(() => {
       process.exit(0)
     })

@@ -74,15 +74,16 @@ devAssets({
 
 Files outside the app root (like `node_modules` or workspace packages) are served via `/__@workspace/` URLs. Configure the `workspace` option to enable this:
 
-````ts
+```ts
 devAssets({
   allow: ['app/**'],
   workspace: {
-    root: '../..',  // e.g., monorepo root
+    root: '../..', // e.g., monorepo root
     allow: ['**/node_modules/**', 'packages/**'],
-    deny: ['**/test/**'],  // Additional deny patterns for workspace
+    deny: ['**/test/**'], // Additional deny patterns for workspace
   },
 })
+```
 
 ## Features
 
@@ -90,24 +91,11 @@ devAssets({
 - **ESM native** - Leverages browser's native ES modules
 - **esbuild powered** - Fast TypeScript and JSX transforms
 - **Consistent resolution** - Uses esbuild's resolver for dev/prod parity
-- **Hot Module Replacement (HMR)** - Optional component-level HMR with state preservation
-
-### HMR Configuration
-
-Enable HMR by setting `hmr: true` in the config:
-
-```ts
-devAssets({
-  allow: ['app/**'],
-  hmr: true,  // Enable HMR
-})
-````
 
 ## Limitations
 
-- **ESM only** - CommonJS packages are not supported (yet)
-- **No CSS imports** - Use CSS-in-JS or `<link>` tags
-- **App-only HMR** - Workspace packages are not watched
+- **ESM only** - CommonJS packages are not supported
+- **No CSS imports** - Use `<link>` tags or the `css` prop on Remix components
 
 ## Related Packages
 

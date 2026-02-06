@@ -1,11 +1,8 @@
 /**
- * Module graph for tracking import relationships and caching transforms.
+ * Module graph for transform caching.
  *
- * The graph is built incrementally as files are served during development.
- * It tracks:
- * - Import relationships (who imports whom) for HMR propagation
- * - Transform caching (esbuild output + source maps)
- * - File change timestamps for cache busting
+ * Built incrementally as files are served. Maps URL/file to nodes that hold
+ * cached transform result and last-modified time for cache invalidation.
  */
 
 export interface ModuleNode {
@@ -13,23 +10,14 @@ export interface ModuleNode {
   url: string
   /** Absolute file path on disk */
   file: string
-  /** Modules that import this module (for cache invalidation and HMR) */
-  importers: Set<ModuleNode>
-  /** Modules that this module imports (for cache invalidation and HMR) */
-  importedModules: Set<ModuleNode>
   /** Cached transform result (code + source map + hash for ETag) */
   transformResult?: { code: string; map: string | null; hash: string }
   /** Last modified time in milliseconds (for cache invalidation) */
   lastModified?: number
-  /** Whether this module is a component (HMR boundary) */
-  isComponent?: boolean
-  /** Timestamp from file change event (for browser cache busting via query params) */
-  changeTimestamp?: number
 }
 
 /**
- * Module graph for tracking import relationships and caching transforms.
- * Built incrementally as files are served.
+ * Module graph for transform caching. Built incrementally as files are served.
  */
 export interface ModuleGraph {
   /** Map from URL to module node */
@@ -82,12 +70,7 @@ export function ensureModuleNode(graph: ModuleGraph, url: string, file: string):
   }
 
   // Create new node
-  let node: ModuleNode = {
-    url,
-    file,
-    importers: new Set(),
-    importedModules: new Set(),
-  }
+  let node: ModuleNode = { url, file }
 
   graph.urlToModule.set(url, node)
   if (file) {
@@ -106,39 +89,4 @@ export function ensureModuleNode(graph: ModuleGraph, url: string, file: string):
  */
 export function getModuleByUrl(graph: ModuleGraph, url: string): ModuleNode | undefined {
   return graph.urlToModule.get(url)
-}
-
-/**
- * Gets a module node by its file path.
- *
- * @param graph The module graph to search
- * @param file The absolute file path to look up
- * @returns The module node, or undefined if not found
- */
-export function getModuleByFile(graph: ModuleGraph, file: string): ModuleNode | undefined {
-  return graph.fileToModule.get(file)
-}
-
-/**
- * Invalidates a module's transform cache and propagates to importers.
- * This is recursive: when a module is invalidated, all modules that import it are also invalidated.
- *
- * @param node The module node to invalidate
- * @param visited Set of already-visited nodes (for preventing infinite loops in circular dependencies)
- */
-export function invalidateModule(node: ModuleNode, visited = new Set<ModuleNode>()): void {
-  // Prevent infinite loops from circular dependencies
-  if (visited.has(node)) {
-    return
-  }
-  visited.add(node)
-
-  // Clear this module's cache
-  node.transformResult = undefined
-  node.lastModified = undefined
-
-  // Propagate to importers
-  for (let importer of node.importers) {
-    invalidateModule(importer, visited)
-  }
 }

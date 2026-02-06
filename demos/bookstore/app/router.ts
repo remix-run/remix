@@ -44,23 +44,20 @@ if (process.env.NODE_ENV === 'development') {
 
 middleware.push(compression())
 
-export let disposeAssetsMiddleware: (() => Promise<void>) | undefined
-
 // Assets middleware - dev, test, or prod
 if (process.env.NODE_ENV === 'development') {
-  // Development: use dev assets with HMR
+  // Development: use dev assets (on-the-fly transform)
   let { devAssets } = await import('remix/dev-assets-middleware')
-  let assetsMiddleware = devAssets({
-    hmr: true,
-    allow: ['app/**'],
-    workspace: {
-      root: '../..',
-      allow: ['**/node_modules/**', 'packages/**'],
-    },
-    esbuildConfig: await getEsbuildConfig(),
-  })
-  middleware.push(assetsMiddleware)
-  disposeAssetsMiddleware = assetsMiddleware.dispose
+  middleware.push(
+    devAssets({
+      allow: ['app/**'],
+      workspace: {
+        root: '../..',
+        allow: ['**/node_modules/**', 'packages/**'],
+      },
+      esbuildConfig: await getEsbuildConfig(),
+    }),
+  )
 } else if (process.env.NODE_ENV === 'test') {
   // Test: use mock assets middleware
   middleware.push(mockAssets())

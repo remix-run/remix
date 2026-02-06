@@ -8,26 +8,12 @@ import picomatch from 'picomatch'
 import type { Middleware, Assets, AssetEntry } from '@remix-run/fetch-router'
 import { fileURLToPath } from 'node:url'
 
-// HMR imports (conditional, only used if hmr: true)
-import { transformComponent, maybeHasComponent, HMR_RUNTIME_PATH } from './hmr-transform.ts'
-import { createHmrEventSource, type HmrEventSource } from './hmr-sse.ts'
-import { createWatcher, type HmrWatcher } from './hmr-watcher.ts'
-
-// Path to the HMR runtime module source file
-let HMR_RUNTIME_MODULE_PATH = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../virtual/hmr-runtime.ts',
-)
-
 // Module graph imports
 import {
-  type ModuleNode,
   type ModuleGraph,
   createModuleGraph,
   ensureModuleNode,
   getModuleByUrl,
-  getModuleByFile,
-  invalidateModule,
 } from './module-graph.ts'
 
 // Import parsing and analysis
@@ -252,19 +238,6 @@ export interface DevAssetsOptions {
   root?: string
 
   /**
-   * Enable Hot Module Replacement (HMR).
-   *
-   * When enabled, the middleware will:
-   * - Watch files for changes
-   * - Transform components with HMR support
-   * - Push updates to connected browsers via Server-Sent Events
-   * - Inject HMR runtime into HTML responses
-   *
-   * @default false
-   */
-  hmr?: boolean
-
-  /**
    * Array of glob patterns that allow files to be served from the app root.
    * Paths are tested as posix-style paths relative to `root`.
    */
@@ -347,9 +320,12 @@ export type { Assets, AssetEntry } from '@remix-run/fetch-router'
  * In dev mode:
  * - `href` returns the source path as a URL (e.g., '/app/entry.tsx')
  * - `chunks` returns `[href]` since there's no code splitting in dev
- * - No validation - any path returns a result (404s happen naturally when browser requests the file)
+ * - Entry paths are always treated as relative to root (leading slashes stripped, .. collapsed)
+ * - No file existence check - 404s happen when the browser requests the file
+ * - When `entryPoints` is provided, only those paths return a result; others return null
  *
  * @param root The root directory where source files are served from
+ * @param entryPoints Optional list of entry paths to restrict get() to (e.g. from esbuildConfig.entryPoints)
  * @returns An assets object for resolving entry paths to URLs
  *
  * @example
@@ -358,24 +334,48 @@ export type { Assets, AssetEntry } from '@remix-run/fetch-router'
  * // entry?.href = '/app/entry.tsx'
  * // entry?.chunks = ['/app/entry.tsx']
  */
-export function createDevAssets(root: string): Assets {
-  // Ensure root is an absolute path
+export function createDevAssets(root: string, entryPoints?: string[]): Assets {
   let absoluteRoot = path.resolve(root)
+
+  // Normalize entry path: resolve file:// and absolute paths relative to root, then posix-normalize
+  function normalizeEntryPath(entryPath: string): string {
+    let p: string
+    if (entryPath.startsWith('file://')) {
+      p = fileURLToPath(entryPath)
+      // file:// always yields absolute path; resolve relative to root
+      if (path.isAbsolute(p)) {
+        p = path.relative(absoluteRoot, p)
+      }
+    } else {
+      // Entry paths like '/app/entry.tsx' or 'app/entry.tsx': strip leading slashes first
+      // so we don't treat '/entry.tsx' as filesystem absolute
+      p = entryPath.replace(/^\/+/, '')
+      if (path.isAbsolute(p)) {
+        p = path.relative(absoluteRoot, p)
+      }
+    }
+    // Collapse .. and . segments (posix for URL consistency)
+    p = path.posix.normalize(p.replace(/\\/g, '/'))
+    return p
+  }
+
+  let allowedSet: Set<string> | null = null
+  if (entryPoints && entryPoints.length > 0) {
+    allowedSet = new Set(entryPoints.map((ep) => normalizeEntryPath(ep)))
+  }
 
   return {
     get(entryPath: string): AssetEntry | null {
-      // Convert file:// URLs to file paths
-      let pathToNormalize = entryPath.startsWith('file://') ? fileURLToPath(entryPath) : entryPath
-
-      // Convert absolute paths to relative (from root)
-      pathToNormalize = path.isAbsolute(pathToNormalize)
-        ? path.relative(absoluteRoot, pathToNormalize)
-        : pathToNormalize
-
-      // Normalize the entry path (remove leading slashes)
-      let normalizedPath = pathToNormalize.replace(/^\/+/, '')
+      let normalizedPath = normalizeEntryPath(entryPath)
+      if (allowedSet && !allowedSet.has(normalizedPath)) {
+        return null
+      }
+      // Check file exists (avoid returning entry for nonexistent paths)
+      let filePath = path.join(absoluteRoot, ...normalizedPath.split('/'))
+      if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+        return null
+      }
       let href = '/' + normalizedPath
-
       return {
         href,
         chunks: [href],
@@ -391,7 +391,7 @@ let DEBUG = process.env.DEBUG?.includes('assets')
 interface Caches {
   // Resolution cache: key is `${specifier}\0${importerDir}`, value is resolved URL
   resolution: Map<string, string>
-  // Module graph for transform caching and HMR
+  // Module graph for transform caching
   moduleGraph: ModuleGraph
 }
 
@@ -454,7 +454,7 @@ function isExternalSpecifier(specifier: string, externalPatterns: (string | RegE
  * - Access control via `allow`/`deny` patterns (paths and extensions)
  *
  * @param options Configuration options
- * @returns The dev assets middleware with optional dispose method for cleanup
+ * @returns The dev assets middleware
  *
  * @example
  * import { createRouter } from '@remix-run/fetch-router'
@@ -472,12 +472,7 @@ function isExternalSpecifier(specifier: string, externalPatterns: (string | RegE
  *   ],
  * })
  */
-/**
- * Middleware returned by devAssets() - includes dispose method for cleanup
- */
-export type DevAssetsMiddleware = Middleware & { dispose: () => Promise<void> }
-
-export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
+export function devAssets(options: DevAssetsOptions): Middleware {
   // Ensure root is an absolute path, default to cwd
   let root = path.resolve(options.root ?? process.cwd())
 
@@ -508,75 +503,10 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
     moduleGraph: createModuleGraph(),
   }
 
-  // Create the assets API for dev mode (no restrictions in dev)
+  // In dev we serve all files on-demand; do not restrict assets.get() by entry points.
+  // (Entry points in esbuild config are for production builds. Hydration roots need to
+  // resolve any component file via assets.get(), not just the main entry.)
   let assetsApi = createDevAssets(root)
-
-  // Set up HMR if enabled
-  let hmrEventSource: HmrEventSource | null = null
-  let hmrWatcher: HmrWatcher | null = null
-
-  if (options.hmr) {
-    // Create SSE event source for pushing updates to browsers
-    hmrEventSource = createHmrEventSource(DEBUG)
-
-    // Create file watcher - only watch app root, not workspace
-    // Workspace packages should have their own dev servers for HMR
-    hmrWatcher = createWatcher({
-      root,
-      allowPatterns: appAllowPatterns,
-      denyPatterns: appDenyPatterns,
-    })
-
-    // Wire file watcher to module graph + SSE notifications
-    hmrWatcher.onFileChange((event) => {
-      // Convert relative path to URL (add leading slash)
-      let url = '/' + event.relativePath
-
-      // Get the module node if it exists
-      let moduleNode = getModuleByUrl(caches.moduleGraph, url)
-
-      if (moduleNode) {
-        // Mark file as changed with event timestamp for cache busting
-        moduleNode.changeTimestamp = event.timestamp
-
-        // Invalidate the module's transform cache
-        invalidateModule(moduleNode)
-
-        // Find all affected components (walk up to component boundaries)
-        let affectedUrls: string[] = []
-        let visited = new Set<ModuleNode>()
-
-        function findAffectedComponents(node: ModuleNode) {
-          if (visited.has(node)) return
-          visited.add(node)
-
-          // If this is a component file, it's an HMR boundary - stop here
-          if (node.isComponent) {
-            affectedUrls.push(node.url)
-            return // Don't bubble further
-          }
-
-          // Mark non-component as changed so imports get cache-busting timestamps
-          node.changeTimestamp = event.timestamp
-
-          // Not a component - bubble up to all importers
-          for (let importer of node.importers) {
-            findAffectedComponents(importer)
-          }
-        }
-
-        findAffectedComponents(moduleNode)
-
-        // Send SSE update to connected browsers
-        if (affectedUrls.length > 0) {
-          hmrEventSource!.sendUpdate(affectedUrls, event.timestamp)
-        }
-      }
-    })
-
-    // Start watching
-    hmrWatcher.start()
-  }
 
   let middleware: Middleware = async (context, next) => {
     // Set the assets API on context so route handlers can access it
@@ -589,68 +519,6 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
 
     let { pathname } = context.url
     let ifNoneMatch = context.request.headers.get('If-None-Match')
-
-    // Handle HMR endpoints (if HMR is enabled)
-    if (options.hmr && hmrEventSource) {
-      // SSE endpoint for pushing updates
-      if (pathname === '/__@remix/hmr-events') {
-        return hmrEventSource.connect()
-      }
-
-      // Runtime module endpoint - serve the runtime module via transformSource
-      if (pathname === HMR_RUNTIME_PATH) {
-        try {
-          // Stat for mtime (used for server-side cache invalidation)
-          let stat = await fsp.stat(HMR_RUNTIME_MODULE_PATH)
-
-          // Load and transform the runtime module
-          // transformSource will use mtime to check cache and compute hash
-          let runtimeSource = await fsp.readFile(HMR_RUNTIME_MODULE_PATH, 'utf-8')
-
-          let transformed = await transformSource(
-            runtimeSource,
-            HMR_RUNTIME_MODULE_PATH,
-            HMR_RUNTIME_PATH,
-            root,
-            workspaceRoot,
-            workspaceAllowPatterns,
-            workspaceDenyPatterns,
-            caches,
-            esbuildConfig,
-            externalPatterns,
-            stat.mtimeMs,
-            false, // Don't apply HMR transform to the runtime itself
-          )
-
-          // Get hash from transform result for ETag
-          let moduleNode = getModuleByUrl(caches.moduleGraph, HMR_RUNTIME_PATH)
-          let hash = moduleNode?.transformResult?.hash ?? ''
-          let etag = generateETag(hash)
-
-          // Check if client has current version (after transform to use cached hash)
-          if (matchesETag(ifNoneMatch, etag)) {
-            return new Response(null, {
-              status: 304,
-              headers: { ETag: etag },
-            })
-          }
-
-          return new Response(transformed, {
-            headers: {
-              'Content-Type': 'application/javascript; charset=utf-8',
-              'Cache-Control': 'no-cache',
-              ETag: etag,
-            },
-          })
-        } catch (error) {
-          let message = error instanceof Error ? error.message : String(error)
-          return new Response(`HMR runtime error: ${message}`, {
-            status: 500,
-            headers: { 'Content-Type': 'text/plain' },
-          })
-        }
-      }
-    }
 
     // Handle /__@workspace/ requests
     if (pathname.startsWith('/__@workspace/')) {
@@ -673,7 +541,6 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
         ifNoneMatch,
         esbuildConfig,
         externalPatterns,
-        options.hmr ?? false,
       )
     }
 
@@ -736,7 +603,6 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
         esbuildConfig,
         externalPatterns,
         stat.mtimeMs,
-        options.hmr ?? false,
       )
 
       // Get hash from transform result for ETag
@@ -769,17 +635,7 @@ export function devAssets(options: DevAssetsOptions): DevAssetsMiddleware {
     }
   }
 
-  // Add dispose method for cleaning up resources (HMR watcher and SSE connections)
-  ;(middleware as DevAssetsMiddleware).dispose = async () => {
-    if (hmrEventSource) {
-      hmrEventSource.close()
-    }
-    if (hmrWatcher) {
-      await hmrWatcher.stop()
-    }
-  }
-
-  return middleware as DevAssetsMiddleware
+  return middleware
 }
 
 // Handle requests for workspace files via /__@workspace/ URLs.
@@ -794,7 +650,6 @@ async function handleWorkspaceRequest(
   ifNoneMatch: string | null,
   esbuildConfig: DevAssetsEsbuildConfig | undefined,
   externalPatterns: (string | RegExp)[],
-  hmrEnabled: boolean,
 ): Promise<Response> {
   // Strip /__@workspace/ prefix to get the posix path relative to workspaceRoot
   let posixPath = pathname.slice('/__@workspace/'.length)
@@ -857,7 +712,6 @@ async function handleWorkspaceRequest(
       esbuildConfig,
       externalPatterns,
       stat.mtimeMs,
-      hmrEnabled,
     )
 
     // Get hash from transform result for ETag
@@ -905,7 +759,6 @@ async function transformSource(
   esbuildConfig: DevAssetsEsbuildConfig | undefined,
   externalPatterns: (string | RegExp)[],
   fileMtime?: number,
-  hmrEnabled: boolean = false,
 ): Promise<string> {
   let startTime = performance.now()
 
@@ -985,29 +838,11 @@ async function transformSource(
     denyPatterns,
     caches,
     externalPatterns,
-    moduleNode,
   )
 
   if (DEBUG) {
     let elapsed = (performance.now() - startTime).toFixed(1)
     console.log(`[dev-assets-middleware] transform ${path.basename(filePath)} in ${elapsed}ms`)
-  }
-
-  // Apply HMR transform if enabled and file might contain components
-  // Skip workspace files to avoid circular dependencies (runtime imports from @remix-run/component)
-  let isWorkspaceFile = sourceUrl.startsWith('/__@workspace/')
-  if (hmrEnabled && !isWorkspaceFile && maybeHasComponent(rewritten.code)) {
-    try {
-      let hmrResult = await transformComponent(rewritten.code, sourceUrl)
-      rewritten.code = hmrResult.code
-      rewritten.map = hmrResult.map ?? null
-
-      // Mark as component (HMR boundary)
-      moduleNode.isComponent = true
-    } catch (error) {
-      // Log HMR transform errors but don't fail the request
-      console.error(`[HMR] Transform error for ${sourceUrl}:`, error)
-    }
   }
 
   // Append inline source map
@@ -1049,7 +884,6 @@ async function rewriteImports(
   denyPatterns: string[],
   caches: Caches,
   externalPatterns: (string | RegExp)[],
-  importerNode: ModuleNode,
 ): Promise<{ code: string; map: string | null }> {
   // Ensure lexer is initialized
   await lexerReady
@@ -1118,12 +952,6 @@ async function rewriteImports(
   let magicString = new MagicString(source)
   let hasChanges = false
 
-  // Clear old imported modules relationships (will rebuild)
-  for (let imported of importerNode.importedModules) {
-    imported.importers.delete(importerNode)
-  }
-  importerNode.importedModules.clear()
-
   for (let { specifier, start, end } of importInfos) {
     // Skip external imports (user-configured externals)
     if (isExternalSpecifier(specifier, externalPatterns)) {
@@ -1134,29 +962,8 @@ async function rewriteImports(
     let resolved = caches.resolution.get(cacheKey)
 
     if (resolved && resolved !== specifier) {
-      // Build module graph edge: importer -> imported
-      // resolved is the URL, we need to find or create the imported module node
-      // We don't know the file path yet (would need another lookup), but we can
-      // create a node with the URL and let it be populated when that file is requested
-      let importedNode = getModuleByUrl(caches.moduleGraph, resolved)
-      if (!importedNode) {
-        // Create a placeholder node - file will be set when the module is actually requested
-        importedNode = ensureModuleNode(caches.moduleGraph, resolved, '')
-      }
-
-      // Add cache-busting timestamp query param if module has changed
-      let finalUrl = resolved
-      if (importedNode.changeTimestamp) {
-        let separator = resolved.includes('?') ? '&' : '?'
-        finalUrl = `${resolved}${separator}t=${importedNode.changeTimestamp}`
-      }
-
-      magicString.overwrite(start, end, finalUrl)
+      magicString.overwrite(start, end, resolved)
       hasChanges = true
-
-      // Add bidirectional relationship
-      importerNode.importedModules.add(importedNode)
-      importedNode.importers.add(importerNode)
     }
   }
 
