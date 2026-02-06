@@ -29,7 +29,7 @@ type RemixRunPackage = {
 }
 
 type ExportEntry = {
-  // The source file path relative to src/lib: `headers.ts`, `headers/cookie-storage.ts`
+  // The source file path relative to src: `headers.ts`, `headers/cookie-storage.ts`
   sourceFile: string
   // The export path in package.json exports: `./headers`, `./headers/cookie-storage`1
   exportPath: string
@@ -126,7 +126,12 @@ async function updateRemixPackage() {
   // Ensure we have a passing linter before generating code
   logAndExec(`npx eslint packages/remix/ --max-warnings=0`)
 
-  // Generate source files
+  // Clear existing source files
+  let sourceFolderPath = path.join(remixDir, SOURCE_FOLDER)
+  await fs.rm(sourceFolderPath, { recursive: true, force: true })
+  await fs.mkdir(sourceFolderPath, { recursive: true })
+
+  // Generate fresh source files
   console.log('Generating Remix source files...')
   for (let entry of allExports) {
     let sourceFilePath = path.join(remixDir, SOURCE_FOLDER, entry.sourceFile)
