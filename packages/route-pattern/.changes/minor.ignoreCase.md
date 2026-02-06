@@ -3,6 +3,7 @@ BREAKING CHANGE: Remove `RoutePatternOptions` type and rework `ignoreCase`
 `RoutePattern.ignoreCase` field has been removed and `ignoreCase` now only applies to `pathname` (no longer applies to `search`)
 
 Case sensitivity is now determined only when matching.
+
 - `RoutePattern.match` now accept `ignoreCase` option
 - `Matcher` constructors now accept `ignoreCase` option
 
