@@ -65,7 +65,7 @@ ${STICKY_MARKER}
 A preview build has been created for this PR. You can install it using:
 
 \`\`\`sh
-pnpm install "remix-run/remix#${branch}&path:packages/remix"
+pnpm install "remix@remix-run/remix#${branch}&path:packages/remix"
 \`\`\`
 
 This preview build will be updated automatically as you push new commits.`
