@@ -288,14 +288,6 @@
     "@remix-run/assets-middleware": "workspace:^",
     "@remix-run/dev-assets-middleware": "workspace:^"
   },
-  "peerDependencies": {
-    "esbuild": "catalog:"
-  },
-  "peerDependenciesMeta": {
-    "esbuild": {
-      "optional": true
-    }
-  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",

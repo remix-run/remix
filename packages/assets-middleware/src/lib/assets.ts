@@ -87,13 +87,15 @@ function createAssets(manifest: AssetManifest): Assets {
       // Convert file:// URLs to file paths
       let pathToNormalize = entryPath.startsWith('file://') ? fileURLToPath(entryPath) : entryPath
 
-      // Convert absolute paths to relative (from cwd)
-      pathToNormalize = isAbsolute(pathToNormalize)
-        ? relative(process.cwd(), pathToNormalize)
-        : pathToNormalize
+      // Root-relative paths (e.g. /app/entry.tsx) — strip leading slash; don't treat as filesystem absolute
+      if (!entryPath.startsWith('file://') && pathToNormalize.startsWith('/')) {
+        pathToNormalize = pathToNormalize.replace(/^\/+/, '')
+      } else if (isAbsolute(pathToNormalize)) {
+        pathToNormalize = relative(process.cwd(), pathToNormalize)
+      }
 
-      // Normalize the entry path (remove leading ./ or /)
-      let normalizedPath = pathToNormalize.replace(/^(\.\/|\/)+/, '')
+      // Normalize the entry path (remove leading ./)
+      let normalizedPath = pathToNormalize.replace(/^(\.\/)+/, '')
 
       // Look up the output file for this entry point
       let outputPath = entryToOutput.get(normalizedPath)

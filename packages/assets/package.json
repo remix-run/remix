@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/dev-assets-middleware",
+  "name": "@remix-run/assets",
   "version": "0.0.0",
-  "description": "Development middleware for serving and transforming JavaScript/TypeScript source files",
+  "description": "Core transform, resolution, and dev handler for unbundled assets",
   "author": "Shopify Inc.",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/dev-assets-middleware"
+    "directory": "packages/assets"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/dev-assets-middleware#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/assets#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -33,19 +33,18 @@
     }
   },
   "devDependencies": {
-    "@remix-run/component": "workspace:^",
-    "@remix-run/fetch-router": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*",
     "@types/node": "catalog:",
     "@types/picomatch": "^3.0.2",
     "@typescript/native-preview": "catalog:",
-    "esbuild": "^0.25.0",
     "playwright": "catalog:",
     "prettier": "^3.4.2",
     "tsx": "catalog:"
   },
-  "peerDependencies": {
+  "dependencies": {
     "@remix-run/fetch-router": "workspace:^",
+    "es-module-lexer": "^2.0.0",
+    "magic-string": "^0.30.21",
+    "picomatch": "^4.0.2",
     "esbuild": "catalog:"
   },
   "scripts": {
@@ -58,15 +57,10 @@
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [
-    "fetch",
-    "router",
-    "middleware",
+    "remix",
     "assets",
     "transform",
     "esbuild",
-    "typescript"
-  ],
-  "dependencies": {
-    "@remix-run/assets": "workspace:*"
-  }
+    "unbundled"
+  ]
 }

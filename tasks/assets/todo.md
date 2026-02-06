@@ -2,6 +2,33 @@
 
 NOTE: Tasks that are in progress should be moved to `in-progress.md`.
 
+## Assets package and CLI
+
+---
+
+### Add assets CLI with build command and use in assets + bookstore demos
+
+**Dependencies:** Refactor dev-assets-middleware core to @remix-run/assets (above). This task assumes the assets package exists and exposes a programmatic build API.
+
+**Context:** The assets package should be usable as a standalone build tool (including for non-Remix users). Add a built-in CLI with a `build` command (e.g. `remix-assets build`) and a programmatic `build()` API. Then switch the assets and bookstore demos to use this build instead of calling esbuild directly.
+
+**Design: entries vs esbuild config.** We own the module graph, not esbuild—same as in dev. So **entries are a first-class build option** (e.g. `entryPoints: ['app/entry.tsx']`). We discover the full graph by walking from entries. **esbuild config** (target, jsx, tsconfig, plugins, loaders, define, external, etc.) is passed through for transforms. We run the same per-file esbuild build as dev—including plugins—so config can be shared between dev and prod. We do _not_ pass `entryPoints` to esbuild when we transform (we transform one file at a time); entries are only used by our build to decide which files to include. Options like `allow`/`deny` are dev-only (controlling what the dev server will serve dynamically). The build is static and driven entirely by the graph from entries.
+
+**Output structure.** Mirror dev for simplicity: output contains literal `__@workspace/` and `node_modules/` directories (same path structure as dev). Option to **disable hashing in filenames** so prod output matches dev URLs and you get true dev/prod parity; when hashing is enabled, filenames get content hashes for cache-forever.
+
+**Acceptance Criteria:**
+
+- [ ] Programmatic API: `build({ entryPoints, root, outDir, esbuildConfig?, hashFilenames?, workspace?, manifest?, ... })` in `@remix-run/assets`. No `allow`/`deny`—build is graph-driven from entries. `esbuildConfig` = same supported options as dev-assets-middleware (including plugins; we run per-file esbuild build like dev). We don't pass `entryPoints` into esbuild when transforming. `manifest` = opt-in path for manifest output (e.g. `'./build/assets-manifest.json'` or `false` to skip).
+- [ ] CLI: binary `remix-assets`, `build` subcommand accepting entry point(s) and options (e.g. `-o`, `--root`, `--esbuild-config`). No dedicated assets config file yet. `--esbuild-config` points at a file whose `export default` is either a config object or a function (async or sync) that returns the config. CLI calls the same programmatic API.
+- [ ] Build implements the two-pass approach: pass 1 transform all in parallel (in memory), pass 2 topological rewrite + hash + write; file hashes include rewritten import URLs (cache-forever contract when hashing enabled)
+- [ ] Output structure mirrors dev: literal `__@workspace/` and `node_modules/` directories in output; option (e.g. `hashFilenames: false`) to skip hashing so prod URLs match dev for parity
+- [ ] Manifest is opt-in: configurable whether to emit one and where (e.g. `manifest: false` or `manifest: './build/assets-manifest.json'`). When emitted, format is compatible with `@remix-run/assets-middleware` (same shape as current metafile-based manifest).
+- [ ] Assets demo supports both build modes: `pnpm build` (unbundled, assets build) and `pnpm build:bundled` (current esbuild-based). Prod serve works with either output (assets-middleware + appropriate manifest).
+- [ ] Bookstore demo supports both build modes: `pnpm build` (unbundled, assets build) and `pnpm build:bundled` (current esbuild-based). Prod serve works with either output (assets-middleware + appropriate manifest).
+- [ ] All tests and static checks pass; both demos work in dev (unchanged) and in prod (new build pipeline)
+
+---
+
 ## Features
 
 ---
@@ -55,6 +82,28 @@ const DEFAULT_DENY = [
 - [ ] Add tests verifying default deny works even with `allow: ['**']`
 - [ ] Update examples to show users don't need to specify these patterns
 - [ ] All tests pass
+
+---
+
+### Compose source maps for import rewrite (dev)
+
+**Not a blocker.** Improves devtools accuracy when import paths are rewritten.
+
+**The issue:**
+
+In dev we do two transforms in sequence: (1) esbuild turns TS into JS and emits a source map (esbuild output → original TS), then (2) we rewrite import specifiers in that JS (e.g. `'./utils'` → `'/app/utils.ts'`). The code we actually serve is the result of step 2, but we only attach the step 1 map. So the map describes the _intermediate_ code (after esbuild, before rewrite), not the _final_ code. Character positions can be wrong where we changed imports—e.g. "open in editor" or column highlights in devtools may be slightly off on or near rewritten import lines.
+
+**Success looks like:**
+
+- The inline source map we attach to the response maps the **final** served code (after import rewrite) back to the original TypeScript.
+- In devtools, clicking a line or viewing the source map shows correct file/line/column for the code the browser is actually running.
+- Composing is done by properly merging the rewrite map (final code → esbuild output) with the esbuild map (esbuild output → TS), e.g. using the `source-map` library or equivalent.
+
+**Acceptance criteria:**
+
+- [ ] When `rewriteImports` changes the code, we produce a single source map that maps final code → original TS (e.g. by composing MagicString’s map with the esbuild map).
+- [ ] When there are no rewrite changes, we still return the esbuild map as today.
+- [ ] Existing tests pass; optional: add a test that asserts a composed map’s mappings for a rewritten-import line point at the correct TS source.
 
 ---
 

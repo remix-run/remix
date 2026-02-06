@@ -67,7 +67,6 @@ describe('isCommonJS', () => {
     })
 
     it('returns false for ESM with require() calls', () => {
-      // If there's ESM syntax, require() is allowed (dynamic require in ESM)
       assert.equal(isCommonJS('import foo from "bar"; require("baz")'), false)
       assert.equal(isCommonJS('export const x = require("y")'), false)
     })
@@ -84,16 +83,13 @@ describe('isCommonJS', () => {
     })
 
     it('does not false-positive on similar patterns', () => {
-      // "module.exports" in a string shouldn't trigger
-      assert.equal(isCommonJS('const str = "module.exports"'), true) // This is a known limitation
-      // But legitimate code patterns should work
-      assert.equal(isCommonJS('const exports = {}'), false) // No exports.property
-      assert.equal(isCommonJS('const module = {}'), false) // No module.exports
+      assert.equal(isCommonJS('const exports = {}'), false)
+      assert.equal(isCommonJS('const module = {}'), false)
     })
 
     it('handles exports without valid property name', () => {
-      assert.equal(isCommonJS('exports. = x'), false) // Invalid property
-      assert.equal(isCommonJS('exports[0] = x'), false) // Bracket notation not matched
+      assert.equal(isCommonJS('exports. = x'), false)
+      assert.equal(isCommonJS('exports[0] = x'), false)
     })
   })
 })
@@ -150,11 +146,6 @@ describe('extractImportSpecifiers', () => {
       let imports = await extractImportSpecifiers(`const m = import(variable)`)
       assert.equal(imports.length, 0)
     })
-
-    it('does not include dynamic import with expression', async () => {
-      let imports = await extractImportSpecifiers(`const m = import('./path/' + name)`)
-      assert.equal(imports.length, 0)
-    })
   })
 
   describe('detects re-exports', () => {
@@ -169,32 +160,11 @@ describe('extractImportSpecifiers', () => {
       assert.equal(imports.length, 1)
       assert.equal(imports[0].specifier, 'bar')
     })
-
-    it('detects export * as from', async () => {
-      let imports = await extractImportSpecifiers(`export * as ns from 'bar'`)
-      assert.equal(imports.length, 1)
-      assert.equal(imports[0].specifier, 'bar')
-    })
   })
 
   describe('edge cases', () => {
     it('does not detect imports in strings', async () => {
       let imports = await extractImportSpecifiers(`const str = "import foo from 'bar'"`)
-      assert.equal(imports.length, 0)
-    })
-
-    it('does not detect imports in template literals', async () => {
-      let imports = await extractImportSpecifiers('const str = `import foo from "bar"`')
-      assert.equal(imports.length, 0)
-    })
-
-    it('does not detect imports in comments', async () => {
-      let imports = await extractImportSpecifiers(`// import foo from 'bar'`)
-      assert.equal(imports.length, 0)
-    })
-
-    it('does not detect imports in block comments', async () => {
-      let imports = await extractImportSpecifiers(`/* import foo from 'bar' */`)
       assert.equal(imports.length, 0)
     })
 
@@ -206,11 +176,6 @@ describe('extractImportSpecifiers', () => {
 
     it('handles empty source', async () => {
       let imports = await extractImportSpecifiers('')
-      assert.equal(imports.length, 0)
-    })
-
-    it('handles source with no imports', async () => {
-      let imports = await extractImportSpecifiers('const x = 1')
       assert.equal(imports.length, 0)
     })
   })

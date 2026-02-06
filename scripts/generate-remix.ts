@@ -174,59 +174,6 @@ async function updateRemixPackage() {
     remixPackageJson.dependencies[packageInfo.name] = 'workspace:^'
   }
 
-  // Collect external peer dependencies (excluding internal @remix-run/* packages)
-  let externalPeerDeps = new Map<string, string>()
-  for (let packageInfo of remixRunPackages) {
-    let packageJsonPath = path.join(
-      packagesDir,
-      packageInfo.name.replace('@remix-run/', ''),
-      'package.json',
-    )
-    let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
-    if (packageJson.peerDependencies) {
-      for (let [peerDep, version] of Object.entries(packageJson.peerDependencies)) {
-        let versionStr = version as string
-
-        // Skip internal @remix-run/* packages - those are regular dependencies
-        if (peerDep.startsWith('@remix-run/')) {
-          continue
-        }
-
-        // Validate external peer deps use catalog:
-        if (versionStr !== 'catalog:') {
-          throw new Error(
-            `Package ${packageInfo.name} has external peer dependency "${peerDep}" ` +
-              `with version "${versionStr}". External peer dependencies must use "catalog:" ` +
-              `to ensure consistent versions across the monorepo.`,
-          )
-        }
-
-        // Validate version consistency across packages
-        let existingVersion = externalPeerDeps.get(peerDep)
-        if (existingVersion && existingVersion !== versionStr) {
-          throw new Error(
-            `Peer dependency "${peerDep}" has inconsistent versions across packages: ` +
-              `"${existingVersion}" and "${versionStr}"`,
-          )
-        }
-
-        externalPeerDeps.set(peerDep, versionStr)
-      }
-    }
-  }
-
-  // Add external peer deps as optional peer dependencies
-  if (externalPeerDeps.size > 0) {
-    remixPackageJson.peerDependencies = remixPackageJson.peerDependencies || {}
-    remixPackageJson.peerDependenciesMeta = remixPackageJson.peerDependenciesMeta || {}
-    for (let [peerDep, version] of Array.from(externalPeerDeps.entries()).sort((a, b) =>
-      a[0].localeCompare(b[0]),
-    )) {
-      remixPackageJson.peerDependencies[peerDep] = version
-      remixPackageJson.peerDependenciesMeta[peerDep] = { optional: true }
-    }
-  }
-
   await fs.writeFile(
     remixPackageJsonPath,
     JSON.stringify(remixPackageJson, null, 2) + '\n',

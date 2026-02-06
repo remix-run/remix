@@ -38,20 +38,17 @@ describe('module graph', () => {
       let node2 = ensureModuleNode(graph, '/different/url.tsx', '/abs/path/entry.tsx')
 
       assert.equal(node1, node2)
-      // Should have 2 URL mappings to same node
       assert.equal(graph.urlToModule.size, 2)
       assert.equal(graph.fileToModule.size, 1)
     })
 
     it('updates file path for placeholder nodes', () => {
       let graph = createModuleGraph()
-      // Create placeholder node with empty file
       let node1 = ensureModuleNode(graph, '/app/entry.tsx', '')
 
       assert.equal(node1.file, '')
       assert.equal(graph.fileToModule.size, 0)
 
-      // Update with real file path
       let node2 = ensureModuleNode(graph, '/app/entry.tsx', '/abs/path/entry.tsx')
 
       assert.equal(node1, node2)
