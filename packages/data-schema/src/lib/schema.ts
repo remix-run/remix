@@ -178,7 +178,6 @@ export function fail(message: string, path: Issue['path']): StandardSchemaV1.Fai
  *
  * @returns A schema that produces `unknown`
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function any(): Schema<any, unknown> {
   return createSchema(function validate(value) {
     return { value }
