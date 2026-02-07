@@ -7,20 +7,16 @@ const CRLF = '\r\n'
  * This is needed because the native Headers class only accepts ISO-8859-1 characters.
  */
 function encodeNonAscii(value: string): string {
-  let result = ''
-  for (let i = 0; i < value.length; i++) {
-    let code = value.charCodeAt(i)
+  let encoder = new TextEncoder()
+  return [...value].reduce((result, char) => {
+    let code = char.charCodeAt(0)
     if (code > 127) {
       // Encode non-ASCII characters as UTF-8 percent-encoded bytes
-      let bytes = new TextEncoder().encode(value[i])
-      for (let byte of bytes) {
-        result += '%' + byte.toString(16).toUpperCase().padStart(2, '0')
-      }
-    } else {
-      result += value[i]
+      let bytes = encoder.encode(char)
+      return result + [...bytes].map(byte => '%' + byte.toString(16).toUpperCase().padStart(2, '0')).join('')
     }
-  }
-  return result
+    return result + char
+  }, '')
 }
 
 /**
