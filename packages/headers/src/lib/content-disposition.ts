@@ -58,7 +58,13 @@ export class ContentDisposition implements HeaderValue, ContentDispositionInit {
       if (decodedFilename) return decodedFilename
     }
 
-    return this.filename
+    // Decode percent-encoded UTF-8 in filename (handles non-ASCII characters
+    // that were encoded to pass through native Headers validation)
+    if (this.filename) {
+      return decodePercentEncodedUtf8(this.filename)
+    }
+
+    return undefined
   }
 
   /**
@@ -144,4 +150,40 @@ function percentDecode(value: string): string {
   return value.replace(/\+/g, ' ').replace(/%([0-9A-Fa-f]{2})/g, (_, hex) => {
     return String.fromCharCode(parseInt(hex, 16))
   })
+}
+
+/**
+ * Decodes percent-encoded UTF-8 bytes in a string back to Unicode characters.
+ * This handles filenames that were encoded to pass through native Headers validation.
+ * Only decodes if percent-encoding is present; returns original string otherwise.
+ */
+function decodePercentEncodedUtf8(value: string): string {
+  // Check if there are any percent-encoded sequences
+  if (!value.includes('%')) {
+    return value
+  }
+
+  try {
+    // Convert percent-encoded sequences to bytes
+    let bytes: number[] = []
+    let i = 0
+    while (i < value.length) {
+      if (value[i] === '%' && i + 2 < value.length) {
+        let hex = value.substring(i + 1, i + 3)
+        if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
+          bytes.push(parseInt(hex, 16))
+          i += 3
+          continue
+        }
+      }
+      bytes.push(value.charCodeAt(i))
+      i++
+    }
+
+    // Decode UTF-8 bytes
+    return new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(bytes))
+  } catch {
+    // If decoding fails, return the original value
+    return value
+  }
 }
