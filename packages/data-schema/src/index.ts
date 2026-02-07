@@ -26,6 +26,7 @@ export {
   undefined_,
   union,
   ValidationError,
+  variant,
 } from './lib/schema.ts'
 export type {
   Check,

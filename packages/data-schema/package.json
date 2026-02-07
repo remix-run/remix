@@ -24,7 +24,6 @@
     "./checks": "./src/checks.ts",
     "./coerce": "./src/coerce.ts",
     "./lazy": "./src/lazy.ts",
-    "./variant": "./src/variant.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -44,10 +43,6 @@
       "./lazy": {
         "types": "./dist/lazy.d.ts",
         "default": "./dist/lazy.js"
-      },
-      "./variant": {
-        "types": "./dist/variant.d.ts",
-        "default": "./dist/variant.js"
       },
       "./package.json": "./package.json"
     }

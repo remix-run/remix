@@ -1,8 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { variant } from './variant.ts'
-import { literal, number, object, string } from './schema.ts'
+import { literal, number, object, string, variant } from './schema.ts'
 import type { Issue, ValidationResult } from './schema.ts'
 
 function assertSuccess<output>(

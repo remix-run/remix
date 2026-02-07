@@ -9,10 +9,9 @@ Tiny, standards-aligned data validation for Remix and the wider TypeScript ecosy
 ## Quick start
 
 ```ts
-import { enum_, literal, number, object, string, parse } from '@remix-run/data-schema'
+import { enum_, literal, number, object, parse, string, variant } from '@remix-run/data-schema'
 import { email, maxLength, min, minLength } from '@remix-run/data-schema/checks'
 import * as coerce from '@remix-run/data-schema/coerce'
-import { variant } from '@remix-run/data-schema/variant'
 
 let User = object({
   id: string(),
@@ -227,8 +226,7 @@ let query = parse(Query, {
 Pick the right schema based on a discriminator property.
 
 ```ts
-import { literal, number, object, string } from '@remix-run/data-schema'
-import { variant } from '@remix-run/data-schema/variant'
+import { literal, number, object, string, variant } from '@remix-run/data-schema'
 
 let Event = variant('type', {
   created: object({ type: literal('created'), id: string() }),
