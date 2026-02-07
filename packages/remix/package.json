@@ -25,6 +25,10 @@
     "./component/server": "./src/component/server.ts",
     "./compression-middleware": "./src/compression-middleware.ts",
     "./cookie": "./src/cookie.ts",
+    "./data-schema": "./src/data-schema.ts",
+    "./data-schema/checks": "./src/data-schema/checks.ts",
+    "./data-schema/coerce": "./src/data-schema/coerce.ts",
+    "./data-schema/lazy": "./src/data-schema/lazy.ts",
     "./fetch-proxy": "./src/fetch-proxy.ts",
     "./fetch-router": "./src/fetch-router.ts",
     "./fetch-router/routes": "./src/fetch-router/routes.ts",
@@ -92,6 +96,22 @@
       "./cookie": {
         "types": "./dist/cookie.d.ts",
         "default": "./dist/cookie.js"
+      },
+      "./data-schema": {
+        "types": "./dist/data-schema.d.ts",
+        "default": "./dist/data-schema.js"
+      },
+      "./data-schema/checks": {
+        "types": "./dist/data-schema/checks.d.ts",
+        "default": "./dist/data-schema/checks.js"
+      },
+      "./data-schema/coerce": {
+        "types": "./dist/data-schema/coerce.d.ts",
+        "default": "./dist/data-schema/coerce.js"
+      },
+      "./data-schema/lazy": {
+        "types": "./dist/data-schema/lazy.d.ts",
+        "default": "./dist/data-schema/lazy.js"
       },
       "./fetch-proxy": {
         "types": "./dist/fetch-proxy.d.ts",
@@ -269,7 +289,8 @@
     "@remix-run/session": "workspace:^",
     "@remix-run/session-middleware": "workspace:^",
     "@remix-run/static-middleware": "workspace:^",
-    "@remix-run/tar-parser": "workspace:^"
+    "@remix-run/tar-parser": "workspace:^",
+    "@remix-run/data-schema": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

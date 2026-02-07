@@ -327,6 +327,19 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/data-schema:
+    dependencies:
+      '@standard-schema/spec':
+        specifier: ^1.1.0
+        version: 1.1.0
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   packages/fetch-proxy:
     dependencies:
       '@remix-run/headers':
@@ -813,6 +826,9 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:^
         version: link:../cookie
+      '@remix-run/data-schema':
+        specifier: workspace:^
+        version: link:../data-schema
       '@remix-run/fetch-proxy':
         specifier: workspace:^
         version: link:../fetch-proxy
