@@ -826,6 +826,9 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:^
         version: link:../cookie
+      '@remix-run/data-schema':
+        specifier: workspace:^
+        version: link:../data-schema
       '@remix-run/fetch-proxy':
         specifier: workspace:^
         version: link:../fetch-proxy
