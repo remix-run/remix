@@ -1,0 +1,77 @@
+import type { Handle, NoContext, RemixNode } from './component.ts';
+/**
+ * Serializable primitive types that can be passed as props to hydrated components
+ */
+export type SerializablePrimitive = string | number | boolean | null | undefined;
+/**
+ * Serializable object types that can be passed as props to hydrated components
+ */
+export type SerializableObject = {
+    [key: string]: SerializableValue;
+};
+/**
+ * Serializable array types that can be passed as props to hydrated components
+ */
+export type SerializableArray = SerializableValue[];
+/**
+ * All serializable values that can be passed as props to hydrated components.
+ * This includes primitives, objects, arrays, and Remix Elements.
+ */
+export type SerializableValue = SerializablePrimitive | SerializableObject | SerializableArray | RemixNode;
+/**
+ * Constraint that ensures all properties in an object are serializable.
+ */
+export type SerializableProps = {
+    [K in string]: SerializableValue;
+};
+/**
+ * Metadata added to hydrated components
+ */
+export type HydrationMetadata = {
+    $hydrated: true;
+    $moduleUrl: string;
+    $exportName: string;
+};
+/**
+ * A hydrated component preserves the exact function type with added metadata
+ */
+export type HydratedComponent<context = NoContext, setup = undefined, props = {}> = ((handle: Handle<context>, setup: setup) => (props: props) => RemixNode) & HydrationMetadata;
+/**
+ * Marks a component as a hydration root for client-side hydration.
+ *
+ * @param href Module URL with optional export name (format: "/js/module.js#ExportName")
+ * @param component Component function that will be hydrated on the client
+ * @returns The component augmented with hydration metadata
+ *
+ * @example
+ * ```tsx
+ * export const Counter = hydrationRoot(
+ *   '/js/counter.js#Counter',
+ *   (handle: Handle, setup: number) {
+ *     let count = setup
+ *
+ *     return ({ label }: { label: string }) => (
+ *       <button
+ *         type="button"
+ *         on={{
+ *           click: () => {
+ *             count++
+ *             handle.update()
+ *           },
+ *         }}
+ *       >
+ *         {label} {count}
+ *       </button>
+ *     )
+ *   }
+ * )
+ * ```
+ */
+export declare function hydrationRoot<context = NoContext, setup extends SerializableValue = undefined, props extends SerializableProps = {}>(href: string, component: (handle: Handle<context>, setup: setup) => (props: props) => RemixNode): HydratedComponent<context, setup, props>;
+/**
+ * Type guard to check if a component is hydrated
+ *
+ * @param component The component to check
+ * @returns True if the component has hydration metadata
+ */
+export declare function isHydratedComponent(component: unknown): component is HydratedComponent;
