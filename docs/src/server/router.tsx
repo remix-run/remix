@@ -4,29 +4,66 @@ import { renderToString } from 'remix/component/server'
 import { createRouter } from 'remix/fetch-router'
 import { createHtmlResponse } from 'remix/response/html'
 import { staticFiles } from 'remix/static-middleware'
-import { Home, Layout, NotFound } from './components.tsx'
+import { App, Home, NotFound, type AppContext } from './components.tsx'
 import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
 import { routes } from './routes.ts'
+import { createFileResponse } from 'remix/response/file'
+import { openLazyFile } from 'remix/fs'
 
 const REPO_DIR = path.resolve(process.cwd(), '..')
 const MD_DIR = path.resolve(REPO_DIR, 'docs', 'build', 'md')
 const PUBLIC_DIR = path.resolve(REPO_DIR, 'docs', 'public')
 
+const versions = [
+  { name: 'latest' },
+  { name: 'v3.1.0', version: 'v3.1.0' },
+  { name: 'v3.0.0', version: 'v3.0.0' },
+]
+
 const { docFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
 
-export const router = createRouter({ middleware: [staticFiles(PUBLIC_DIR)] })
+export const router = createRouter()
 
 router.map(routes, {
-  home: () => renderHtml(<Home />),
+  home: ({ params }) =>
+    renderHtml(
+      <App setup={{ docFiles, versions, version: params.version }}>
+        <Home />
+      </App>,
+    ),
   async api({ url, params }) {
-    let docFile = docFiles.find((file) => file.urlPath === params.path)
-    return docFile
-      ? await renderHtml(await renderMarkdownFile(docFile.path, docFilesLookup))
-      : await renderHtml(<NotFound url={url} />, { status: 404 })
+    let appContext: AppContext = {
+      docFiles,
+      versions,
+      slug: params.slug,
+      version: params.version,
+    }
+
+    let docFile = docFiles.find((file) => file.urlPath === params.slug)
+
+    if (!docFile) {
+      return await renderHtml(
+        <App setup={appContext}>
+          <NotFound url={url} />
+        </App>,
+        { status: 404 },
+      )
+    }
+
+    return await renderHtml(
+      <App setup={appContext}>
+        {await renderMarkdownFile(docFile.path, docFilesLookup, params.version)}
+      </App>,
+    )
+  },
+  assets: ({ request, params }) => {
+    // Replicate `staticFiles` middleware but allowing for a dynamic version param
+    let filePath = path.join(PUBLIC_DIR, params.asset)
+    let lazyFile = openLazyFile(filePath, { name: path.basename(PUBLIC_DIR, filePath) })
+    return createFileResponse(lazyFile, request)
   },
 })
 
 async function renderHtml(node: RemixNode, init?: ResponseInit) {
-  let html = await renderToString(<Layout docFiles={docFiles}>{node}</Layout>)
-  return createHtmlResponse(html, init)
+  return createHtmlResponse(await renderToString(node), init)
 }

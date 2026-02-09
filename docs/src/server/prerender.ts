@@ -44,30 +44,34 @@ async function crawl(
     return
   }
 
+  let response
+  try {
+    response = await router.fetch(new Request(`http://localhost${urlPath}`))
+    if (!response.ok) {
+      throw new Error(`Error fetching ${urlPath}: ${response.status} ${response.statusText}`)
+    }
+  } catch (error) {
+    console.error('Error fetching', urlPath)
+    throw error
+  }
+
+  let isHtmlFile = response.headers.get('Content-Type')?.includes('text/html')
+
   // Always put `index.html` files into directories - this leads to the best
   // support with and without trailing slashes on github pages:
   // https://github.com/slorber/trailing-slash-guide?tab=readme-ov-file#summary
-  let isResource = path.basename(urlPath).includes('.')
-  let outputPath = isResource
-    ? path.join(outputDir, urlPath)
-    : path.join(outputDir, urlPath, 'index.html')
+  let outputPath = isHtmlFile
+    ? path.join(outputDir, urlPath, 'index.html')
+    : path.join(outputDir, urlPath)
 
   console.log(
-    `${isResource ? ` - Asset` : `Crawling`} ` +
+    `${isHtmlFile ? `Crawled` : `  Asset`} ` +
       `${urlPath} -> ./${path.relative(process.cwd(), outputPath)}`,
   )
 
-  let response = await router.fetch(new Request(`http://localhost${urlPath}`))
-  if (!response.ok) {
-    throw new Error(`Error fetching ${urlPath}: ${response.status} ${response.statusText}`)
-  }
-
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
 
-  if (isResource) {
-    let content = await response.arrayBuffer()
-    await fs.writeFile(outputPath, new Uint8Array(content))
-  } else {
+  if (isHtmlFile) {
     let html = await response.text()
     await fs.writeFile(outputPath, html, 'utf-8')
 
@@ -79,6 +83,9 @@ async function crawl(
         .filter((href) => href && !isAbsoluteUrl(href) && !downloadedUrls.has(href))
         .map((href) => resolveRelativeLink(href!, urlPath)),
     )
+  } else {
+    let content = await response.arrayBuffer()
+    await fs.writeFile(outputPath, new Uint8Array(content))
   }
 
   downloadedUrls.add(urlPath)
