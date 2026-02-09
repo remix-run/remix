@@ -1,9 +1,13 @@
+import * as cp from 'node:child_process'
+import { existsSync } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
 import { parse } from 'node-html-parser'
+import * as semver from 'semver'
 import { type Router } from 'remix/fetch-router'
-import { router as docsRouter } from './router.tsx'
+import { createRouter } from './router.tsx'
+import type { AppContext } from './components.tsx'
 
 let { values: cliArgs } = util.parseArgs({
   options: {
@@ -12,16 +16,23 @@ let { values: cliArgs } = util.parseArgs({
       short: 'd',
       default: 'build/site',
     },
+    local: {
+      type: 'boolean',
+      short: 'l',
+    },
   },
 })
 
-await spider(docsRouter, cliArgs.dir)
+const outputDir = path.join(process.cwd(), cliArgs.dir)
+const docsRouter = cliArgs.local
+  ? createRouter()
+  : createRouter(await getVersionsToBuild(outputDir))
+
+await spider(docsRouter, outputDir)
 
 // Spider the website served by router, beginning at /
-async function spider(router: Router, outDir: string, urlQueue = ['/']) {
-  let outputDir = path.resolve(process.cwd(), outDir)
-  console.log(`Clearing output directory: ${outputDir}`)
-  await fs.rm(outputDir, { recursive: true, force: true })
+async function spider(router: Router, outputDir: string, urlQueue = ['/']) {
+  await fs.mkdir(outputDir, { recursive: true })
 
   // Track URLs we have already downloaded to avoid loops
   let downloadedUrls = new Set<string>()
@@ -103,4 +114,23 @@ function resolveRelativeLink(link: string, url: string): string {
   // Handle relative paths like '../' or 'page'
   let base = url.endsWith('/') ? url : path.dirname(url)
   return path.posix.join(base, link)
+}
+
+async function getVersionsToBuild(outputDir: string): Promise<AppContext['versions']> {
+  let versions = existsSync(outputDir)
+    ? (await fs.readdir(outputDir, { withFileTypes: true }))
+        .filter((entry) => entry.isDirectory() && entry.name.startsWith('v'))
+        .map((entry) => entry.name)
+    : []
+
+  const alreadyBuilt = new Set(versions)
+
+  return cp
+    .execSync('git tag', { encoding: 'utf-8' })
+    .trim()
+    .split('\n')
+    .filter((tag) => tag.startsWith('remix@3'))
+    .map((tag) => tag.replace('remix@', 'v'))
+    .filter((tag) => semver.valid(tag) && !semver.prerelease(tag) && !alreadyBuilt.has(tag))
+    .map((v) => ({ name: v, version: v }))
 }
