@@ -125,6 +125,123 @@ describe('staticFiles middleware', () => {
     })
   })
 
+  describe('basePath', () => {
+    it('serves file when path starts with basePath and strips prefix', async () => {
+      createTestFile('entry.js', 'console.log("entry")')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { basePath: '/assets' })],
+        action() {
+          return new Response('Fallback', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/assets/entry.js')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'console.log("entry")')
+    })
+
+    it('falls through when path does not start with basePath', async () => {
+      createTestFile('entry.js', 'content')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { basePath: '/assets' })],
+        action() {
+          return new Response('Fallback', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/entry.js')
+      assert.equal(response.status, 404)
+      assert.equal(await response.text(), 'Fallback')
+    })
+
+    it('serves nested path under basePath', async () => {
+      createTestFile('chunks/vendor.js', 'vendor code')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { basePath: '/assets' })],
+        action() {
+          return new Response('Fallback', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/assets/chunks/vendor.js')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'vendor code')
+    })
+
+    it('accepts basePath without leading slash (normalized for matching)', async () => {
+      createTestFile('entry.js', 'content')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { basePath: 'assets' })],
+        action() {
+          return new Response('Fallback', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/assets/entry.js')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'content')
+    })
+
+    it('falls through when path is exactly basePath (no trailing segment)', async () => {
+      createTestFile('entry.js', 'content')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { basePath: '/assets' })],
+        action() {
+          return new Response('Fallback', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/assets')
+      assert.equal(response.status, 404)
+      assert.equal(await response.text(), 'Fallback')
+    })
+
+    it('passes basePath-stripped path to filter (not full pathname)', async () => {
+      createTestFile('entry.js', 'allowed')
+      createTestFile('secret.js', 'denied')
+
+      let seenPaths: string[] = []
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [
+          staticFiles(tmpDir, {
+            basePath: '/assets',
+            filter: (path) => {
+              seenPaths.push(path)
+              return path === 'entry.js'
+            },
+          }),
+        ],
+        action() {
+          return new Response('Fallback', { status: 404 })
+        },
+      })
+
+      let allowed = await router.fetch('https://remix.run/assets/entry.js')
+      assert.equal(allowed.status, 200)
+      assert.equal(await allowed.text(), 'allowed')
+
+      let denied = await router.fetch('https://remix.run/assets/secret.js')
+      assert.equal(denied.status, 404)
+
+      assert.deepEqual(
+        seenPaths,
+        ['entry.js', 'secret.js'],
+        'filter receives path after basePath is stripped',
+      )
+    })
+  })
+
   it('supports etag by default', async () => {
     let lastModified = new Date('2025-01-01')
     createTestFile('test.txt', 'Hello, World!', lastModified)

@@ -1,6 +1,7 @@
 export {
   type AssetManifest,
   type AssetsMiddleware,
+  type AssetsMiddlewareOptions,
   type Assets,
   type AssetEntry,
   assets,

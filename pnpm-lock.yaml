@@ -59,6 +59,9 @@ importers:
 
   demos/assets:
     dependencies:
+      '@remix-run/assets':
+        specifier: workspace:*
+        version: link:../../packages/assets
       '@remix-run/assets-middleware':
         specifier: workspace:*
         version: link:../../packages/assets-middleware
@@ -924,6 +927,9 @@ importers:
 
   packages/remix:
     dependencies:
+      '@remix-run/assets':
+        specifier: workspace:^
+        version: link:../assets
       '@remix-run/assets-middleware':
         specifier: workspace:^
         version: link:../assets-middleware

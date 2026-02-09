@@ -1,6 +1,6 @@
 ## Refactor dev-assets-middleware core to @remix-run/assets package
 
-**Context:** The unbundled production build (and eventual CLI) need the same transform + resolution logic as dev-assets-middleware. That logic lives in a central package usable in isolation—by dev-assets-middleware, by the build tool, and by anyone not using Remix.
+**Context:** The unbundled production build needs the same transform + resolution logic as dev-assets-middleware. That logic lives in a central package usable in isolation—by dev-assets-middleware, by the build tool, and by anyone not using Remix.
 
 ### What was done
 

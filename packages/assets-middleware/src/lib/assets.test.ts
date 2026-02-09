@@ -38,6 +38,46 @@ describe('assets middleware', () => {
     assert.equal(result?.href, '/build/entry-ABC123.js')
   })
 
+  it('prepends baseUrl when provided (locally-scoped manifest)', () => {
+    let manifest: AssetManifest = {
+      outputs: {
+        'entry-ABC123.js': {
+          entryPoint: 'app/entry.tsx',
+          imports: [{ path: 'chunk-DEF456.js', kind: 'import-statement' }],
+        },
+        'chunk-DEF456.js': {},
+      },
+    }
+
+    let middleware = assets(manifest, { baseUrl: '/build/assets' })
+    let mockContext = { assets: null as any }
+    middleware(mockContext as any, async () => new Response())
+
+    let result = mockContext.assets.get('app/entry.tsx')
+    assert.notEqual(result, null)
+    assert.equal(result?.href, '/build/assets/entry-ABC123.js')
+    assert.deepEqual(result?.chunks, [
+      '/build/assets/entry-ABC123.js',
+      '/build/assets/chunk-DEF456.js',
+    ])
+  })
+
+  it('normalizes baseUrl with trailing slash (no double slash in href)', () => {
+    let manifest: AssetManifest = {
+      outputs: {
+        'entry.js': { entryPoint: 'app/entry.tsx' },
+      },
+    }
+
+    let middleware = assets(manifest, { baseUrl: '/assets/' })
+    let mockContext = { assets: null as any }
+    middleware(mockContext as any, async () => new Response())
+
+    let result = mockContext.assets.get('app/entry.tsx')
+    assert.notEqual(result, null)
+    assert.equal(result?.href, '/assets/entry.js')
+  })
+
   it('normalizes entry paths with leading slashes', () => {
     let manifest: AssetManifest = {
       outputs: {

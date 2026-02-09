@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@remix-run/assets": "workspace:*",
     "@remix-run/assets-middleware": "workspace:*",
     "@remix-run/dev-assets-middleware": "workspace:*",
     "@remix-run/component": "workspace:*",
@@ -18,6 +19,7 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server.ts",
     "build": "tsx build.ts",
+    "build:bundled": "tsx build.bundled.ts",
     "start": "NODE_ENV=production tsx server.ts"
   }
 }

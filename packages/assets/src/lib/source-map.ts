@@ -17,6 +17,24 @@ export function parseInlineSourceMap(code: string): {
 }
 
 /**
+ * Fix source map sources array to use a single URL (e.g. module URL) so browser dev tools
+ * organize the Sources panel correctly. Use when emitting maps (inline or external).
+ *
+ * @param mapJson Source map JSON string
+ * @param sourceUrl URL for the original source (e.g. /app/entry.tsx)
+ * @returns Fixed source map JSON string, or null if parsing fails
+ */
+export function fixSourceMapSources(mapJson: string, sourceUrl: string): string | null {
+  try {
+    let sourceMap = JSON.parse(mapJson)
+    sourceMap.sources = [sourceUrl]
+    return JSON.stringify(sourceMap)
+  } catch {
+    return null
+  }
+}
+
+/**
  * Fix source map paths to use URL-based paths instead of filesystem-relative paths.
  * In an unbundled dev setup, each source file is served at its own URL, and the source map
  * should reference that URL (not a filesystem path) so browser dev tools organize the
@@ -33,29 +51,16 @@ export function fixSourceMapPaths(code: string, sourceUrl: string): string {
   if (!match) return code
 
   try {
-    // Parse the source map
     let json = Buffer.from(match[1], 'base64').toString('utf-8')
-    let sourceMap = JSON.parse(json)
-
-    // Replace the sources array with the sourceUrl
-    // This ensures the browser dev tools organize files by their URL structure
-    sourceMap.sources = [sourceUrl]
-
-    // Keep sourcesContent as-is (contains the actual TypeScript source)
-    // Note: sourcesContent is already embedded by esbuild
-
-    // Re-encode the fixed source map
-    let fixedJson = JSON.stringify(sourceMap)
+    let fixedJson = fixSourceMapSources(json, sourceUrl)
+    if (fixedJson === null) return code
     let fixedBase64 = Buffer.from(fixedJson).toString('base64')
 
-    // Replace the source map in the code
-    // Use 'm' flag so $ matches end of line, not just end of string
     return code.replace(
       /\/\/# sourceMappingURL=data:application\/json;base64,.+$/m,
       `//# sourceMappingURL=data:application/json;base64,${fixedBase64}`,
     )
   } catch {
-    // If parsing fails, return original code
     return code
   }
 }

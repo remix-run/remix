@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { parseInlineSourceMap, fixSourceMapPaths } from './source-map.ts'
+import { parseInlineSourceMap, fixSourceMapPaths, fixSourceMapSources } from './source-map.ts'
 
 describe('parseInlineSourceMap', () => {
   it('parses valid inline source map', () => {
@@ -62,6 +62,27 @@ describe('parseInlineSourceMap', () => {
 
     assert.ok(parsed)
     assert.equal(parsed!.sources[0], '/__@workspace/node_modules/@remix-run/component/src/index.ts')
+  })
+})
+
+describe('fixSourceMapSources', () => {
+  it('replaces sources array with single sourceUrl', () => {
+    let mapJson = JSON.stringify({
+      version: 3,
+      sources: ['../App.tsx'],
+      mappings: 'AAAA',
+      sourcesContent: ['export function App() {}'],
+    })
+    let fixed = fixSourceMapSources(mapJson, '/app/App.tsx')
+    assert.ok(fixed !== null)
+    let parsed = JSON.parse(fixed)
+    assert.deepEqual(parsed.sources, ['/app/App.tsx'])
+    assert.equal(parsed.sourcesContent[0], 'export function App() {}')
+  })
+
+  it('returns null on parse failure', () => {
+    let invalid = 'not json'
+    assert.equal(fixSourceMapSources(invalid, '/app/entry.tsx'), null)
   })
 })
 

@@ -1,44 +1,28 @@
 /**
- * Build script for the assets demo.
- *
- * Bundles the entry point with esbuild, outputting hashed filenames
- * and a metafile for use with @remix-run/assets-middleware.
+ * Unbundled build for the assets demo.
+ * Uses @remix-run/assets to build the module graph (same output structure as dev).
  *
  * Usage:
  *   pnpm run build
  */
 
-import * as esbuild from 'esbuild'
-import * as fs from 'node:fs/promises'
-import * as path from 'node:path'
+import { build } from '@remix-run/assets'
 import { esbuildConfig } from './esbuild.config.ts'
 
-let outdir = './build'
-
-async function build() {
-  // Clean the build directory
-  await fs.rm(outdir, { recursive: true, force: true })
-  await fs.mkdir(outdir, { recursive: true })
-
-  // Bundle with esbuild using shared config
-  let result = await esbuild.build(esbuildConfig)
-
-  // Write the metafile for use by assets-middleware
-  let metafilePath = path.join(outdir, 'metafile.json')
-  await fs.writeFile(metafilePath, JSON.stringify(result.metafile, null, 2))
-
-  // Log the outputs
-  console.log('Build complete!')
-  console.log('')
-  console.log('Outputs:')
-  for (let output of Object.keys(result.metafile.outputs)) {
-    console.log(`  ${output}`)
-  }
-  console.log('')
-  console.log(`Metafile written to: ${metafilePath}`)
+async function main() {
+  await build({
+    entryPoints: ['app/entry.tsx'],
+    root: process.cwd(),
+    outDir: './build/assets',
+    esbuildConfig,
+    fileNames: '[dir]/[name]-[hash]',
+    manifest: './build/assets-manifest.json',
+    workspace: { root: '../..' },
+  })
+  console.log('Outputs written to ./build/assets')
 }
 
-build().catch((error) => {
+main().catch((error) => {
   console.error('Build failed:', error)
   process.exit(1)
 })

@@ -8,60 +8,52 @@ import { esbuildConfig } from './esbuild.config.ts'
 let isDev = process.env.NODE_ENV === 'development'
 
 /**
- * Get the assets middleware based on the environment.
+ * Get the middleware required for assets in the current environment.
  *
- * In development: Uses devAssets for on-the-fly TypeScript/JSX transformation
- * In production: Uses prodAssets with a pre-built manifest
+ * In development: devAssets only (on-the-fly TypeScript/JSX transformation).
+ * In production: assets middleware (manifest/entry resolution) plus staticFiles
+ * for serving the built asset output at /assets (so the app doesn't need to wire
+ * static serving separately; CDN setups would use only the assets middleware).
  */
 async function getAssetsMiddleware() {
   if (isDev) {
-    // Dynamic import to avoid bundling heavy dev deps in production
     let { devAssets } = await import('@remix-run/dev-assets-middleware')
-    // Use project root so paths match esbuild's entry points (e.g., 'app/entry.tsx')
-    return devAssets({
-      allow: ['app/**'],
-      workspace: {
-        // Root is the monorepo root (two levels up from demos/assets)
-        root: '../..',
-        // Allow serving from node_modules and workspace packages
-        allow: ['**/node_modules/**', 'packages/**'],
-      },
-      // Use shared esbuild config for dev/prod parity
-      esbuildConfig,
-    })
-  } else {
-    // Production mode: use pre-built assets with manifest
-    let { assets } = await import('@remix-run/assets-middleware')
-
-    // Load the manifest from the build
-    let metafilePath = './build/metafile.json'
-    if (!fs.existsSync(metafilePath)) {
-      throw new Error(
-        `Build manifest not found at ${metafilePath}. ` +
-          `Run "pnpm run build" before starting in production mode.`,
-      )
-    }
-
-    let manifest = JSON.parse(fs.readFileSync(metafilePath, 'utf-8'))
-    return assets(manifest)
+    return [
+      devAssets({
+        allow: ['app/**'],
+        workspace: {
+          root: '../..',
+          allow: ['**/node_modules/**', 'packages/**'],
+        },
+        esbuildConfig,
+      }),
+    ]
   }
+
+  let { assets } = await import('@remix-run/assets-middleware')
+  let manifestPath = './build/assets-manifest.json'
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(
+      `Build manifest not found at ${manifestPath}. Run "pnpm run build" or "pnpm run build:bundled" before starting in production mode.`,
+    )
+  }
+  let manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
+  return [
+    assets(manifest, {
+      baseUrl: '/assets',
+    }),
+    staticFiles('./build/assets', {
+      basePath: '/assets',
+      cacheControl: 'public, max-age=31536000, immutable',
+    }),
+  ]
 }
 
 async function main() {
   let assetsMiddleware = await getAssetsMiddleware()
 
   let router = createRouter({
-    middleware: [
-      assetsMiddleware,
-
-      // In production, serve built assets from build/ directory
-      // Using filter to only serve files under /build/ path
-      // TODO: Replace with basePath option once static-middleware supports it
-      ...(isDev ? [] : [staticFiles('.', { filter: (path) => path.startsWith('build/') })]),
-
-      // Serve static files (CSS, images, etc.)
-      staticFiles('./public'),
-    ],
+    middleware: [...assetsMiddleware, staticFiles('./public')],
   })
 
   // Home page - renders HTML with the entry script

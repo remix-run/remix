@@ -87,12 +87,30 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
       return moduleNode.transformResult.code
     }
 
-    // Use true (separate map) so we get outputFiles[1]; we append it inline ourselves and fix paths
+    // In dev only sourcemap on/off matters; we always inline and fix paths. sourceRoot/sourcesContent are prod-only.
     let sourcemap: boolean = esbuildConfig?.sourcemap !== false
     let userConfig: Partial<esbuild.BuildOptions> = {}
+    let devIgnoredKeys = new Set([
+      'entryPoints',
+      'external',
+      'sourcemap',
+      'sourceRoot',
+      'sourcesContent',
+      'minify',
+      'minifyWhitespace',
+      'minifyIdentifiers',
+      'minifySyntax',
+      'legalComments',
+      'banner',
+      'footer',
+      'ignoreAnnotations',
+      'dropLabels',
+      'lineLimit',
+      'inject',
+    ])
     if (esbuildConfig) {
       for (let key of SUPPORTED_ESBUILD_OPTIONS) {
-        if (key === 'entryPoints' || key === 'external') continue
+        if (devIgnoredKeys.has(key)) continue
         let value = esbuildConfig[key]
         if (value !== undefined) {
           ;(userConfig as Record<string, unknown>)[key] = value

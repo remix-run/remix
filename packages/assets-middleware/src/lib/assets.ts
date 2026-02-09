@@ -32,16 +32,42 @@ export interface AssetManifest {
 export type { Assets, AssetEntry } from '@remix-run/fetch-router'
 
 /**
+ * Options for the assets middleware.
+ * When manifest uses locally-scoped paths (relative to outDir), set baseUrl
+ * to the URL prefix where the build output is served (e.g. '/build/assets').
+ */
+export interface AssetsMiddlewareOptions {
+  /**
+   * URL prefix where built assets are served.
+   * Use with locally-scoped manifests (output paths relative to outDir).
+   * Omit when manifest uses root-relative paths (e.g. 'build/assets/entry.js').
+   */
+  baseUrl?: string
+}
+
+function outputPathToHref(outputPath: string, baseUrl: string | undefined): string {
+  let segment = outputPath.replace(/^\.?\//, '')
+  if (baseUrl != null && baseUrl !== '') {
+    let base = baseUrl.replace(/\/+$/, '')
+    return base ? base + '/' + segment : '/' + segment
+  }
+  return '/' + segment
+}
+
+/**
  * Creates an assets API from an esbuild metafile.
  *
- * - `href` returns the hashed output file path (e.g., '/entry-ABC123.js')
+ * - `href` returns the output file URL (with baseUrl prefix when provided)
  * - `chunks` includes all transitive static imports for modulepreload
  * - Dynamic imports are excluded from chunks (they load on-demand)
  *
  * @param manifest An esbuild metafile or compatible AssetManifest
+ * @param options Optional baseUrl for locally-scoped manifests
  * @returns An assets object for resolving entry paths to URLs
  */
-function createAssets(manifest: AssetManifest): Assets {
+function createAssets(manifest: AssetManifest, options?: AssetsMiddlewareOptions): Assets {
+  let baseUrl = options?.baseUrl
+
   // Build lookup tables from the manifest
   let entryToOutput = new Map<string, string>()
   let outputToImports = new Map<string, string[]>()
@@ -103,13 +129,12 @@ function createAssets(manifest: AssetManifest): Assets {
         return null
       }
 
-      // Convert output path to URL (ensure leading slash, strip any ./ prefix)
-      let href = '/' + outputPath.replace(/^\.?\//, '')
+      let href = outputPathToHref(outputPath, baseUrl)
 
       // Get all chunks (cached)
       let chunks = chunksCache.get(normalizedPath)
       if (!chunks) {
-        chunks = collectTransitiveChunks(outputPath, outputToImports)
+        chunks = collectTransitiveChunks(outputPath, outputToImports, baseUrl)
         chunksCache.set(normalizedPath, chunks)
       }
 
@@ -119,10 +144,11 @@ function createAssets(manifest: AssetManifest): Assets {
 }
 
 // Collect all transitive static imports for an output file.
-// Returns URLs (with leading slashes) for all chunks.
+// Returns URLs for all chunks (with baseUrl prefix when provided).
 function collectTransitiveChunks(
   outputPath: string,
   outputToImports: Map<string, string[]>,
+  baseUrl: string | undefined,
 ): string[] {
   let visited = new Set<string>()
   let chunks: string[] = []
@@ -130,12 +156,7 @@ function collectTransitiveChunks(
   function visit(path: string) {
     if (visited.has(path)) return
     visited.add(path)
-
-    // Add this chunk to the list (convert to URL)
-    let url = '/' + path.replace(/^\.?\//, '')
-    chunks.push(url)
-
-    // Recursively visit static imports
+    chunks.push(outputPathToHref(path, baseUrl))
     let imports = outputToImports.get(path)
     if (imports) {
       for (let imp of imports) {
@@ -160,28 +181,24 @@ export type AssetsMiddleware = Middleware
  * to their built output files and chunks.
  *
  * @param manifest An esbuild metafile or compatible AssetManifest
+ * @param options Optional baseUrl when manifest uses locally-scoped paths
  * @returns Middleware that sets `context.assets`
  *
  * @example
- * import { assets } from '@remix-run/assets-middleware'
- * import { staticFiles } from '@remix-run/static-middleware'
- * import manifest from './build/metafile.json' with { type: 'json' }
- *
- * let router = createRouter({
- *   middleware: [
- *     assets(manifest),
- *     staticFiles('./build'),
- *   ],
- * })
+ * // Locally-scoped manifest (build outputs to build/assets, paths like "entry-ABC123.js")
+ * assets(manifest, { baseUrl: '/build/assets' })
+ * staticFiles('.', { filter: (path) => path.startsWith('build/assets/') })
  *
  * router.get('/', ({ assets }) => {
  *   let entry = assets.get('app/entry.tsx')
- *   // entry.href = '/build/entry-ABC123.js'
- *   // entry.chunks = ['/build/entry-ABC123.js', ...]
+ *   // entry.href = '/build/assets/entry-ABC123.js'
  * })
  */
-export function assets(manifest: AssetManifest): AssetsMiddleware {
-  let assetsApi = createAssets(manifest)
+export function assets(
+  manifest: AssetManifest,
+  options?: AssetsMiddlewareOptions,
+): AssetsMiddleware {
+  let assetsApi = createAssets(manifest, options)
   return (context, next) => {
     context.assets = assetsApi
     return next()

@@ -19,6 +19,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./assets": "./src/lib/assets.ts",
     "./assets-middleware": "./src/lib/assets-middleware.ts",
     "./async-context-middleware": "./src/lib/async-context-middleware.ts",
     "./component": "./src/lib/component.ts",
@@ -71,6 +72,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./assets": {
+        "types": "./dist/lib/assets.d.ts",
+        "default": "./dist/lib/assets.js"
       },
       "./assets-middleware": {
         "types": "./dist/lib/assets-middleware.d.ts",
@@ -286,7 +291,8 @@
     "@remix-run/static-middleware": "workspace:^",
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/assets-middleware": "workspace:^",
-    "@remix-run/dev-assets-middleware": "workspace:^"
+    "@remix-run/dev-assets-middleware": "workspace:^",
+    "@remix-run/assets": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -4,8 +4,8 @@ import type * as esbuild from 'esbuild'
  * Explicit list of esbuild options supported in dev mode.
  *
  * This is the single source of truth for both the TypeScript type and runtime filtering.
- * Options not listed here are silently ignored to prevent build-specific options
- * (minify, splitting, outdir, etc.) from affecting dev behavior.
+ * Options not listed here are silently ignored. Build-only options (minify, etc.)
+ * are filtered out in dev so they don't affect dev behavior.
  */
 export const SUPPORTED_ESBUILD_OPTIONS = [
   // Entry points and target
@@ -37,13 +37,27 @@ export const SUPPORTED_ESBUILD_OPTIONS = [
   'keepNames',
   'drop',
   'charset',
+  // Minify (prod only; ignored in dev)
+  'minify',
+  'minifyWhitespace',
+  'minifyIdentifiers',
+  'minifySyntax',
+  // Legal comments, banner, footer (prod only; ignored in dev)
+  'legalComments',
+  'banner',
+  'footer',
+  // Optimization / output (prod only; ignored in dev)
+  'ignoreAnnotations',
+  'dropLabels',
+  'lineLimit',
   // Extensibility
   'plugins',
   'loader',
-  // Source maps
-  'sourcemap', // false stays false, other values → 'inline' in dev
-  'sourceRoot',
-  'sourcesContent',
+  'inject', // prod only; inlined into importers, not emitted as separate files
+  // Source maps: prod = full esbuild range; dev = on/off only (sourceRoot/sourcesContent ignored in dev)
+  'sourcemap',
+  'sourceRoot', // prod only; ignored in dev
+  'sourcesContent', // prod only; ignored in dev
   // Logging
   'logLevel',
   'logLimit',
@@ -77,4 +91,28 @@ export interface CreateDevAssetsHandlerOptions {
   deny?: string[]
   workspace?: DevAssetsWorkspaceOptions
   esbuildConfig?: DevAssetsEsbuildConfig
+}
+
+/**
+ * Options for the programmatic build API.
+ * No allow/deny—build is graph-driven from entryPoints.
+ */
+export interface BuildOptions {
+  /** Entry paths relative to root (e.g. ['app/entry.tsx']) */
+  entryPoints: string[]
+  /** Project root (default: process.cwd()) */
+  root?: string
+  /** Output directory (e.g. './build') */
+  outDir: string
+  /** Same supported options as dev (target, jsx, plugins, etc.) */
+  esbuildConfig?: DevAssetsEsbuildConfig
+  /**
+   * Output path template. Placeholders: [dir] (path dir of module), [name] (base name), [hash] (content hash).
+   * Extension .js is always appended. Default: '[name]-[hash]'.
+   */
+  fileNames?: string
+  /** Workspace root for /__@workspace/ output (optional). No allow/deny—build is graph-driven. */
+  workspace?: { root: string }
+  /** Path to emit manifest (AssetManifest) or false to skip (default: false) */
+  manifest?: string | false
 }

@@ -121,3 +121,85 @@ export async function resolveSpecifiers(
     }
   }
 }
+
+export interface ResolvedImport {
+  url: string
+  absolutePath: string
+}
+
+/**
+ * Resolve specifiers and return URL + absolute path for each (for graph discovery).
+ * Also fills the resolution cache for use by rewriteImports.
+ *
+ * @param specifiers Import specifiers to resolve
+ * @param importerDir Directory of the importing file
+ * @param ctx Resolve context
+ * @param resolutionCache Map to fill with specifier -> URL
+ * @param externalSpecifiers Specifiers to skip
+ * @param isExternal Function to check if a specifier is external
+ * @returns Array of { url, absolutePath } for each resolved import
+ */
+export async function resolveSpecifiersToPaths(
+  specifiers: string[],
+  importerDir: string,
+  ctx: ResolveContext,
+  resolutionCache: Map<string, string>,
+  externalSpecifiers: string[],
+  isExternal: (specifier: string) => boolean,
+): Promise<ResolvedImport[]> {
+  let toResolve = specifiers.filter((s) => !isExternal(s))
+  if (toResolve.length === 0) return []
+
+  let results: ResolvedImport[] = []
+
+  try {
+    let stdinContents = toResolve
+      .map((s, i) => `export * as _${i} from ${JSON.stringify(s)}`)
+      .join('\n')
+
+    let result = await esbuild.build({
+      stdin: {
+        contents: stdinContents,
+        resolveDir: importerDir,
+        loader: 'js',
+      },
+      write: false,
+      bundle: true,
+      metafile: true,
+      platform: 'browser',
+      format: 'esm',
+      logLevel: 'silent',
+      plugins: [
+        {
+          name: 'empty-loader',
+          setup(build) {
+            build.onLoad({ filter: /.*/ }, () => ({ contents: '', loader: 'js' }))
+          },
+        },
+      ],
+    })
+
+    let inputs = result.metafile?.inputs ?? {}
+    let stdinInputs = inputs['<stdin>']
+    if (!stdinInputs?.imports) return []
+
+    for (let i = 0; i < stdinInputs.imports.length; i++) {
+      let imp = stdinInputs.imports[i]
+      let specifier = toResolve[i]
+      if (!specifier || !imp.path) continue
+
+      let absolutePath = path.resolve(imp.path)
+      let resolvedUrl = resolvedPathToUrl(absolutePath, ctx)
+      let cacheKey = `${specifier}\0${importerDir}`
+      resolutionCache.set(cacheKey, resolvedUrl)
+      results.push({ url: resolvedUrl, absolutePath })
+    }
+  } catch {
+    for (let specifier of toResolve) {
+      let cacheKey = `${specifier}\0${importerDir}`
+      resolutionCache.set(cacheKey, specifier)
+    }
+  }
+
+  return results
+}

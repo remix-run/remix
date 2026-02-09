@@ -20,8 +20,12 @@ export type AcceptRangesFunction = (file: File) => boolean
 export interface StaticFilesOptions extends Omit<FileResponseOptions, 'acceptRanges'> {
   /**
    * Filter function to determine which files should be served.
+   * Receives the path used for file resolution. When `basePath` is set, this is
+   * the path after stripping the basePath prefix (e.g. request `/assets/entry.js`
+   * with `basePath: '/assets'` passes `'entry.js'`). Otherwise the pathname with
+   * leading slash removed.
    *
-   * @param path The relative path being requested
+   * @param path The relative path being requested (basePath-stripped when basePath is set)
    * @returns Whether to serve the file
    */
   filter?: (path: string) => boolean
@@ -68,6 +72,17 @@ export interface StaticFilesOptions extends Omit<FileResponseOptions, 'acceptRan
    * @default false
    */
   listFiles?: boolean
+
+  /**
+   * URL path prefix to mount this directory at.
+   * When set, only requests whose pathname starts with this prefix are served;
+   * the prefix is stripped before resolving the file under `root`.
+   *
+   * @example
+   * // Serve build/assets at /assets (request /assets/entry.js -> root/entry.js)
+   * staticFiles('./build/assets', { basePath: '/assets' })
+   */
+  basePath?: string
 }
 
 /**
@@ -84,7 +99,13 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
   // Ensure root is an absolute path
   root = path.resolve(root)
 
-  let { acceptRanges, filter, index: indexOption, listFiles, ...fileOptions } = options
+  let { acceptRanges, basePath, filter, index: indexOption, listFiles, ...fileOptions } = options
+
+  // Normalize basePath: leading slash, no trailing (e.g. "/assets")
+  let normalizedBasePath: string | undefined
+  if (basePath != null && basePath !== '') {
+    normalizedBasePath = '/' + basePath.replace(/^\/+|\/+$/g, '')
+  }
 
   // Normalize index option
   let index: string[]
@@ -101,7 +122,17 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
       return next()
     }
 
-    let relativePath = context.url.pathname.replace(/^\/+/, '')
+    let pathname = context.url.pathname
+    let relativePath: string
+
+    if (normalizedBasePath != null) {
+      if (!pathname.startsWith(normalizedBasePath + '/') && pathname !== normalizedBasePath) {
+        return next()
+      }
+      relativePath = pathname.slice(normalizedBasePath.length).replace(/^\/+/, '')
+    } else {
+      relativePath = pathname.replace(/^\/+/, '')
+    }
 
     if (filter && !filter(relativePath)) {
       return next()

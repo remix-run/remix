@@ -36,6 +36,50 @@ function mockAssets(): Middleware {
   }
 }
 
+/**
+ * Get the middleware required for assets in the current environment.
+ *
+ * In development: devAssets only (on-the-fly transform).
+ * In test: mock assets middleware.
+ * In production: assets middleware (manifest/entry resolution) plus staticFiles
+ * for serving the built asset output at /assets.
+ */
+async function getAssetsMiddleware(): Promise<Middleware[]> {
+  if (process.env.NODE_ENV === 'development') {
+    let { devAssets } = await import('remix/dev-assets-middleware')
+    return [
+      devAssets({
+        allow: ['app/**'],
+        workspace: {
+          root: '../..',
+          allow: ['**/node_modules/**', 'packages/**'],
+        },
+        esbuildConfig: await getEsbuildConfig(),
+      }),
+    ]
+  }
+  if (process.env.NODE_ENV === 'test') {
+    return [mockAssets()]
+  }
+  let { assets } = await import('remix/assets-middleware')
+  let manifestPath = './build/assets-manifest.json'
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(
+      `Build manifest not found at ${manifestPath}. Run "pnpm run build" or "pnpm run build:bundled" before starting in production mode.`,
+    )
+  }
+  let manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
+  return [
+    assets(manifest, {
+      baseUrl: '/assets',
+    }),
+    staticFiles('./build/assets', {
+      basePath: '/assets',
+      cacheControl: 'public, max-age=31536000, immutable',
+    }),
+  ]
+}
+
 let middleware = []
 
 if (process.env.NODE_ENV === 'development') {
@@ -43,40 +87,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 middleware.push(compression())
-
-// Assets middleware - dev, test, or prod
-if (process.env.NODE_ENV === 'development') {
-  // Development: use dev assets (on-the-fly transform)
-  let { devAssets } = await import('remix/dev-assets-middleware')
-  middleware.push(
-    devAssets({
-      allow: ['app/**'],
-      workspace: {
-        root: '../..',
-        allow: ['**/node_modules/**', 'packages/**'],
-      },
-      esbuildConfig: await getEsbuildConfig(),
-    }),
-  )
-} else if (process.env.NODE_ENV === 'test') {
-  // Test: use mock assets middleware
-  middleware.push(mockAssets())
-} else {
-  // Production (default): use pre-built assets with manifest
-  let { assets } = await import('remix/assets-middleware')
-  let metafilePath = './build/metafile.json'
-  if (!fs.existsSync(metafilePath)) {
-    throw new Error(
-      `Build manifest not found at ${metafilePath}. ` +
-        `Run "pnpm run build" before starting in production mode.`,
-    )
-  }
-  let manifest = JSON.parse(fs.readFileSync(metafilePath, 'utf-8'))
-  middleware.push(assets(manifest))
-
-  // Serve built assets from build/ directory
-  middleware.push(staticFiles('.', { filter: (path) => path.startsWith('build/') }))
-}
+middleware.push(...(await getAssetsMiddleware()))
 
 middleware.push(
   staticFiles('./public', {

@@ -10,4 +10,5 @@ export const esbuildConfig = {
   chunkNames: 'chunk-[hash]',
   metafile: true,
   minify: true,
+  sourcemap: 'external',
 } as const satisfies esbuild.BuildOptions
