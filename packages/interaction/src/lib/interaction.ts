@@ -264,9 +264,9 @@ export function createContainer<target extends EventTarget>(
  *
  * Add event listeners with async reentry protection and semantic Interactions. Shorthand for `createContainer` without options.
  *
- * ```ts
- * import { on } from 'remix/interaction'
- * import { longPress } from 'remix/interaction/press'
+ * @example
+ * import { on } from '@remix-run/interaction'
+ * import { longPress } from '@remix-run/interaction/press'
  *
  * let button = document.createElement('button')
  * let dispose = on(button, {
@@ -280,7 +280,6 @@ export function createContainer<target extends EventTarget>(
  *
  * // later
  * dispose()
- * ```
  *
  * @param target The event target to add listeners to
  * @param listeners The event listeners to add
