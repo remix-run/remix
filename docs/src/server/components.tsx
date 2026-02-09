@@ -28,7 +28,7 @@ export function NotFound() {
 
 export type AppContext = {
   docFiles: DocFile[]
-  versions: { name: string; version?: string }[]
+  versions: { name: string; version?: string; crawl: boolean }[]
   slug?: string
   version?: string
 }
@@ -45,6 +45,7 @@ export function Layout(handle: Handle) {
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        {version != null ? <meta name="robots" content="noindex"></meta> : null}
         <title>Remix API Documentation</title>
         <link href={routes.assets.href({ version, asset: 'docs.css' })} rel="stylesheet" />
       </head>
@@ -70,7 +71,12 @@ export function VersionDropdown(handle: Handle) {
       <ul>
         {...versions.map((version) => (
           <li>
-            <a href={routes.home.href({ version: version.version })}>{version.name}</a>
+            <a
+              href={routes.home.href({ version: version.version })}
+              rel={!version.crawl ? 'nofollow' : undefined}
+            >
+              {version.name}
+            </a>
           </li>
         ))}
       </ul>

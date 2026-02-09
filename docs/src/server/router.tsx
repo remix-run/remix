@@ -14,11 +14,24 @@ const REPO_DIR = path.resolve(process.cwd(), '..')
 const MD_DIR = path.resolve(REPO_DIR, 'docs', 'build', 'md')
 const PUBLIC_DIR = path.resolve(REPO_DIR, 'docs', 'public')
 
-const versions = [
-  { name: 'latest' },
-  { name: 'v3.1.0', version: 'v3.1.0' },
-  { name: 'v3.0.0', version: 'v3.0.0' },
+const versions: AppContext['versions'] = [{ name: 'latest', crawl: true }]
+
+// Normally, we'll only prerender new HTML docs for the latest version
+// VERSION=v3.1.0 pnpm run prerender
+if (process.env.VERSION) {
+  versions.push({ name: process.env.VERSION, version: process.env.VERSION, crawl: true })
+}
+
+// Then we also need to include links in the nav for prior versions
+// This will eventually be auto-generated based on the existing pre-rendered
+// HTML folders on disk
+let oldVersions: AppContext['versions'] = [
+  { name: 'v3.0.2', version: 'v3.0.2', crawl: false },
+  { name: 'v3.0.1', version: 'v3.0.1', crawl: false },
+  { name: 'v3.0.0', version: 'v3.0.0', crawl: false },
 ]
+
+versions.push(...oldVersions)
 
 const { docFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
 
