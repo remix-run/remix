@@ -16,10 +16,12 @@
     "typedoc": "^0.28.15"
   },
   "scripts": {
-    "docs": "node generate.ts",
-    "prerender": "tsx server/prerender.ts",
-    "prerender:serve": "npx http-server -p 3000 site",
-    "serve": "tsx server/server.ts",
+    "dev": "tsx --watch src/server/index.ts",
+    "docs": "node src/generate/index.ts",
+    "docs:debug": "DEBUG=1 node src/generate/index.ts",
+    "prerender": "tsx src/server/prerender.ts",
+    "prerender:serve": "npx http-server -p 3000 build/site",
+    "serve": "tsx src/server/index.ts",
     "typecheck": "tsgo --noEmit"
   }
 }
