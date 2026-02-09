@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bench": "vitest bench --run"
+    "bench": "vitest bench --run",
+    "bench:types": "node bench.types.ts"
   },
   "dependencies": {
     "@remix-run/route-pattern": "workspace:^",
@@ -11,6 +12,7 @@
     "path-to-regexp": "^8.2.0"
   },
   "devDependencies": {
+    "@ark/attest": "^0.56.0",
     "vitest": "4.0.15"
   }
 }
