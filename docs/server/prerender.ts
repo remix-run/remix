@@ -2,8 +2,8 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
 import { parse } from 'node-html-parser'
+import { type Router } from 'remix/fetch-router'
 import { router as docsRouter } from './router.tsx'
-import { Router } from 'remix/fetch-router'
 
 let { values: cliArgs } = util.parseArgs({
   options: {
