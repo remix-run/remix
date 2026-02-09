@@ -78,7 +78,7 @@ async function crawl(
     // Parse HTML files for other resources/links to add to queue
     urlQueue.push(
       ...parse(html)
-        .querySelectorAll('a,link')
+        .querySelectorAll('a:not([rel="nofollow"]),link')
         .map((link) => link.getAttribute('href'))
         .filter((href) => href && !isAbsoluteUrl(href) && !downloadedUrls.has(href))
         .map((href) => resolveRelativeLink(href!, urlPath)),
