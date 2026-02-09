@@ -28,7 +28,7 @@ export function NotFound() {
 
 export type AppContext = {
   docFiles: DocFile[]
-  versions: { name: string; version?: string; crawl: boolean }[]
+  versions: { name: string; version?: string }[]
   slug?: string
   version?: string
 }
@@ -69,18 +69,38 @@ export function VersionDropdown(handle: Handle) {
   return () => (
     <NavDropdown title="Version">
       <ul>
-        {...versions.map((version) => (
-          <li>
-            <a
-              href={routes.home.href({ version: version.version })}
-              rel={!version.crawl ? 'nofollow' : undefined}
-            >
-              {version.name}
-            </a>
-          </li>
+        {...versions.map((version, index) => (
+          <VersionLink version={version} latest={versions.length === 0 || index === 0} />
         ))}
       </ul>
     </NavDropdown>
+  )
+}
+
+function VersionLink() {
+  return ({
+    version,
+    latest,
+  }: {
+    version: { name: string; version?: string }
+    latest: boolean
+  }) => (
+    <li>
+      <a
+        href={routes.home.href({ version: !latest ? version.version : undefined })}
+        style={{ display: latest ? 'inline-block' : undefined }}
+      >
+        {latest ? 'latest' : version.name}
+        {latest ? (
+          <a
+            href={routes.home.href({ version: version.version })}
+            style={{ display: 'inline-block' }}
+          >
+            ({version.name})
+          </a>
+        ) : null}
+      </a>
+    </li>
   )
 }
 

@@ -137,6 +137,9 @@ importers:
       remix:
         specifier: workspace:*
         version: link:../packages/remix
+      semver:
+        specifier: ^7.7.3
+        version: 7.7.3
     devDependencies:
       '@types/hast':
         specifier: ^3.0.4
@@ -144,6 +147,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
+      '@types/semver':
+        specifier: ^7.5.8
+        version: 7.5.8
       shiki:
         specifier: ^3.22.0
         version: 3.22.0
@@ -5901,7 +5907,7 @@ snapshots:
       '@typescript-eslint/visitor-keys': 8.50.0
       debug: 4.4.3
       minimatch: 9.0.5
-      semver: 7.6.3
+      semver: 7.7.3
       tinyglobby: 0.2.15
       ts-api-utils: 2.1.0(typescript@5.9.3)
       typescript: 5.9.3

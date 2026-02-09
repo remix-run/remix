@@ -7,11 +7,13 @@
     "marked": "^17.0.1",
     "node-html-parser": "^7.0.2",
     "prettier": "^3.5.3",
-    "remix": "workspace:*"
+    "remix": "workspace:*",
+    "semver": "^7.7.3"
   },
   "devDependencies": {
     "@types/hast": "^3.0.4",
     "@types/node": "catalog:",
+    "@types/semver": "^7.5.8",
     "shiki": "^3.22.0",
     "typedoc": "^0.28.15"
   },
