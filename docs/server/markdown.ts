@@ -1,9 +1,9 @@
+import * as frontmatter from 'front-matter'
+import type { Element } from 'hast'
+import { Marked, type MarkedExtension } from 'marked'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import * as frontmatter from 'front-matter'
-import { Marked, type MarkedExtension } from 'marked'
 import { codeToHtml } from 'shiki'
-import type { Element } from 'hast'
 import { routes } from './routes.ts'
 
 // No types exist for the `frontmatter` package

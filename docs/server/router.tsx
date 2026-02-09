@@ -4,9 +4,9 @@ import { renderToString } from 'remix/component/server'
 import { createRouter } from 'remix/fetch-router'
 import { createHtmlResponse } from 'remix/response/html'
 import { staticFiles } from 'remix/static-middleware'
+import { Home, Layout, NotFound } from './components.tsx'
 import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
 import { routes } from './routes.ts'
-import { Home, NotFound, Layout } from './components.tsx'
 
 const REPO_DIR = path.resolve(process.cwd(), '..')
 const MD_DIR = path.resolve(REPO_DIR, 'docs', 'api')
