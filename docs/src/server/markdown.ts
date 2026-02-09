@@ -61,9 +61,31 @@ export async function discoverMarkdownFiles(
   }
 }
 
-export function getShikiExtension(
+export async function renderMarkdownFile(
+  filePath: string,
+  docFilesLookup: Map<string, DocFile>,
+  version?: string,
+): Promise<string> {
+  try {
+    let markdown = fs.readFileSync(filePath, 'utf-8')
+    let { attributes, body } = parseFrontmatter(markdown)
+    let marked = new Marked(getShikiExtension(attributes.title || '', docFilesLookup, version))
+    let htmlContent = await marked.parse(body)
+    return htmlContent
+  } catch (error) {
+    return `
+      <div class="error">
+        <h2>Error loading file</h2>
+        <p>Could not read file: ${filePath}</p>
+      </div>
+    `
+  }
+}
+
+function getShikiExtension(
   apiName: string,
   docFilesLookup: Map<string, DocFile>,
+  version?: string,
 ): MarkedExtension {
   return {
     async: true,
@@ -99,7 +121,7 @@ export function getShikiExtension(
                   node.children = [
                     ...(leadingSpaces ? spacer(leadingSpaces) : []),
                     link(symbol, {
-                      href: routes.api.href({ path: docFilesLookup.get(symbol)!.urlPath }),
+                      href: routes.api.href({ version, slug: docFilesLookup.get(symbol)!.urlPath }),
                     }),
                     ...(trailingSpaces ? spacer(trailingSpaces) : []),
                   ]
@@ -142,25 +164,5 @@ export function getShikiExtension(
         },
       ],
     }
-  }
-}
-
-export async function renderMarkdownFile(
-  filePath: string,
-  docFilesLookup: Map<string, DocFile>,
-): Promise<string> {
-  try {
-    let markdown = fs.readFileSync(filePath, 'utf-8')
-    let { attributes, body } = parseFrontmatter(markdown)
-    let marked = new Marked(getShikiExtension(attributes.title || '', docFilesLookup))
-    let htmlContent = await marked.parse(body)
-    return htmlContent
-  } catch (error) {
-    return `
-      <div class="error">
-        <h2>Error loading file</h2>
-        <p>Could not read file: ${filePath}</p>
-      </div>
-    `
   }
 }
