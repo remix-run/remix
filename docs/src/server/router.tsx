@@ -9,7 +9,7 @@ import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
 import { routes } from './routes.ts'
 
 const REPO_DIR = path.resolve(process.cwd(), '..')
-const MD_DIR = path.resolve(REPO_DIR, 'docs', 'api')
+const MD_DIR = path.resolve(REPO_DIR, 'docs', 'build', 'md')
 const PUBLIC_DIR = path.resolve(REPO_DIR, 'docs', 'public')
 
 const { docFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
