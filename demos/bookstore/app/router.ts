@@ -16,9 +16,12 @@ import accountController from './account.tsx'
 import authController from './auth.tsx'
 import booksController from './books.tsx'
 import cartController from './cart.tsx'
+import { toggleCart } from './cart.tsx'
 import checkoutController from './checkout.tsx'
 import * as marketingController from './marketing.tsx'
 import { uploadsAction } from './uploads.tsx'
+import fragmentsController from './fragments.tsx'
+import { routerStorageKey } from './utils/router-storage.ts'
 
 let middleware = []
 
@@ -41,7 +44,15 @@ middleware.push(asyncContext())
 
 export let router = createRouter({ middleware })
 
+// Make router available to render() for internal frame resolution (no network).
+middleware.unshift((context: any, next: any) => {
+  context.storage.set(routerStorageKey, router)
+  return next()
+})
+
 router.get(routes.uploads, uploadsAction)
+router.map(routes.fragments, fragmentsController)
+router.post(routes.api.cartToggle, toggleCart)
 
 router.map(routes.home, marketingController.home)
 router.map(routes.about, marketingController.about)

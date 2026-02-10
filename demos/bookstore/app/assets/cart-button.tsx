@@ -1,36 +1,40 @@
-import { type Handle, hydrationRoot } from 'remix/component'
+import { type Handle, clientEntry } from 'remix/component'
 
 import { routes } from '../routes.ts'
 
-export const CartButton = hydrationRoot(
-  routes.assets.href({ path: 'cart-button.js#CartButton' }),
-  function CartButton(handle: Handle) {
-    let pending = false
+let moduleUrl = routes.assets.href({ path: 'cart-button.js#CartButton' })
 
-    return ({ inCart, id, slug }: { inCart: boolean; id: string; slug: string }) => {
-      let route = inCart ? routes.cart.api.remove : routes.cart.api.add
-      let method = route.method.toUpperCase()
+export const CartButton = clientEntry(moduleUrl, (handle: Handle) => {
+  let pending = false
 
-      return (
-        <form
-          method="POST"
-          action={route.href()}
-          on={{
-            submit: () => {
-              // Show pending state, let browser submit normally
-              pending = true
-              handle.update()
-            },
-          }}
-        >
-          {method !== 'POST' && <input type="hidden" name="_method" value={method} />}
-          <input type="hidden" name="bookId" value={id} />
-          <input type="hidden" name="slug" value={slug} />
-          <button type="submit" class="btn" style={{ opacity: pending ? 0.5 : 1 }}>
-            {inCart ? 'Remove from Cart' : 'Add to Cart'}
-          </button>
-        </form>
-      )
-    }
-  },
-)
+  return ({ inCart, id, slug }: { inCart: boolean; id: string; slug: string }) => (
+    <button
+      type="button"
+      on={{
+        async click(_event, signal) {
+          pending = true
+          handle.update()
+
+          let formData = new FormData()
+          formData.set('bookId', id)
+          formData.set('slug', slug)
+
+          await fetch(routes.api.cartToggle.href(), {
+            method: 'POST',
+            body: formData,
+            signal,
+          })
+
+          await handle.frame.reload()
+          await new Promise((resolve) => setTimeout(resolve, 500))
+          if (signal.aborted) return
+          pending = false
+          handle.update()
+        },
+      }}
+      class="btn"
+    >
+      {pending ? 'Saving...' : inCart ? 'Remove from Cart' : 'Add to Cart'}
+    </button>
+  )
+})

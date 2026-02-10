@@ -1172,7 +1172,7 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
-  it('hydrates islands in blocking frame content without redefining virtual roots', async () => {
+  it('hydrates client entries in blocking frame content without redefining virtual roots', async () => {
     let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
       return () => (
         <button id="counter" type="button">
