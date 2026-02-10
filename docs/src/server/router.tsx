@@ -17,7 +17,7 @@ const REMIX_PKG = path.join(REPO_DIR, 'packages', 'remix')
 
 const { docFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
 
-export function createRouter(versions: AppContext['versions'] | undefined) {
+export function createRouter(versions?: AppContext['versions']) {
   versions ??= getDefaultVersions()
 
   const router = _createRouter()
