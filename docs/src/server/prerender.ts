@@ -132,7 +132,7 @@ async function getVersionsToBuild(
     .split('\n')
     .filter((tag) => tag.startsWith('remix@3'))
     .map((tag) => tag.replace('remix@', 'v'))
-    //.filter((tag) => semver.valid(tag) && !semver.prerelease(tag))
+    .filter((tag) => semver.valid(tag) && !semver.prerelease(tag))
     .sort((a, b) => semver.rcompare(a, b))
 
   if (remixVersions.length === 0) {
