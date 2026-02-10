@@ -8,13 +8,17 @@ const CRLF = '\r\n'
  */
 function encodeNonAscii(value: string): string {
   let encoder = new TextEncoder()
-  return [...value].reduce((result, char) => {
+
+  return Array.from(value).reduce((result, char) => {
     let code = char.charCodeAt(0)
+
     if (code > 127) {
-      // Encode non-ASCII characters as UTF-8 percent-encoded bytes
-      let bytes = encoder.encode(char)
-      return result + [...bytes].map(byte => '%' + byte.toString(16).toUpperCase().padStart(2, '0')).join('')
+      return encoder.encode(char).reduce(
+        (acc, byte) => acc + '%' + byte.toString(16).toUpperCase().padStart(2, '0'),
+        result
+      )
     }
+
     return result + char
   }, '')
 }
