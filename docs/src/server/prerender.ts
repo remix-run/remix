@@ -25,6 +25,12 @@ let { values: cliArgs } = util.parseArgs({
 
 const outputDir = path.join(process.cwd(), cliArgs.dir)
 const versions = await getVersionsToBuild(outputDir, cliArgs.all === true)
+if (versions) {
+  console.log('Prerendering versions:\n', JSON.stringify(versions, null, 2))
+} else {
+  console.log('No remix version tags found, defaulting to current version only')
+}
+
 const docsRouter = createRouter(versions)
 
 await spider(docsRouter, outputDir)
@@ -126,23 +132,22 @@ async function getVersionsToBuild(
     .split('\n')
     .filter((tag) => tag.startsWith('remix@3'))
     .map((tag) => tag.replace('remix@', 'v'))
-    .filter((tag) => semver.valid(tag) && !semver.prerelease(tag))
+    //.filter((tag) => semver.valid(tag) && !semver.prerelease(tag))
     .sort((a, b) => semver.rcompare(a, b))
 
-  // When --all is specified, crawl all Remix tags that don't currently have a
-  // set of docs on disk
-  if (all) {
+  if (remixVersions.length === 0) {
+    return undefined
+  } else if (all) {
+    // When --all is specified, crawl all Remix tags that don't currently have a
+    // set of docs on disk
     let versions = existsSync(outputDir)
       ? (await fs.readdir(outputDir, { withFileTypes: true }))
           .filter((entry) => entry.isDirectory() && entry.name.startsWith('v'))
           .map((entry) => entry.name)
       : []
-
     const alreadyBuilt = new Set(versions)
-
-    // Return Remix versions that do not have docs on disk
     return remixVersions.map((tag) => ({ version: tag, crawl: !alreadyBuilt.has(tag) }))
-  } else if (remixVersions.length > 0) {
+  } else {
     // Otherwise, just crawl the most recent tag
     return remixVersions.map((tag) => ({
       version: tag,

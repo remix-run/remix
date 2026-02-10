@@ -60,7 +60,7 @@ const pre = async (content: string, lang = 'ts') => {
 }
 
 function frontmatter(comment: DocumentedAPI) {
-  return ['---', `title: ${comment.name}`, `type: ${comment.type}`, '---'].join('\n')
+  return ['---', `title: ${comment.name}`, '---'].join('\n')
 }
 
 function name(comment: DocumentedAPI) {

@@ -116,7 +116,7 @@ function getDocumentedFunction(
   invariant(method, `Failed to get method for function: ${node.getFriendlyFullName()}`)
   return {
     type: 'function',
-    path: getApiFilePath(fullName),
+    path: getApiFilePath(fullName, 'function'),
     source: node.sources?.[0]?.url,
     aliases: getApiAliases(node.comment!),
     example: node.comment?.getTag('@example')?.content
@@ -170,7 +170,7 @@ function getDocumentedClass(
     example: node.comment?.getTag('@example')?.content
       ? replaceSubPackageImports(processApiComment(node.comment.getTag('@example')!.content))
       : undefined,
-    path: getApiFilePath(fullName),
+    path: getApiFilePath(fullName, 'class'),
     source: node.sources?.[0]?.url,
     name: getApiNameFromFullName(fullName),
     description: getApiDescription(node.comment!),
@@ -215,7 +215,7 @@ function getDocumentedInterface(
 
   return {
     type: 'interface',
-    path: getApiFilePath(fullName),
+    path: getApiFilePath(fullName, 'interface'),
     source: node.sources?.[0]?.url,
     name: getApiNameFromFullName(fullName),
     aliases: getApiAliases(node.comment!),
@@ -255,7 +255,7 @@ function getDocumentedType(fullName: string, node: typedoc.DeclarationReflection
 
   return {
     type: 'type',
-    path: getApiFilePath(fullName),
+    path: getApiFilePath(fullName, 'type'),
     source: node.sources?.[0]?.url,
     name,
     aliases: getApiAliases(node.comment!),
@@ -280,10 +280,10 @@ function getApiAliases(typedocComment: typedoc.Comment): string[] | undefined {
   })
 }
 
-function getApiFilePath(fullName: string): string {
+function getApiFilePath(fullName: string, type: DocumentedAPI['type']): string {
   let nameParts = fullName.split('.')
   let name = nameParts.pop()
-  return [...nameParts.map((s) => s.replace(/^@remix-run\//g, '')), `${name}.md`].join('/')
+  return [...nameParts.map((s) => s.replace(/^@remix-run\//g, '')), type, `${name}.md`].join('/')
 }
 
 function getApiDescription(typedocComment: typedoc.Comment): string {
@@ -466,7 +466,20 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
         target && target instanceof typedoc.Reflection,
         `Missing/invalid target for @link content: ${part.text}`,
       )
-      let path = getApiFilePath(target.getFriendlyFullName()).replace(/\.md$/, '')
+
+      // prettier-ignore
+      let type: DocumentedAPI['type'] | null =
+        target.kind === typedoc.ReflectionKind.Function ? 'function' :
+        target.kind === typedoc.ReflectionKind.Class ? 'class' :
+        target.kind === typedoc.ReflectionKind.TypeAlias ? 'type' :
+        target.kind === typedoc.ReflectionKind.TypeLiteral ? 'type' :
+        target.kind === typedoc.ReflectionKind.Interface ? 'interface' : null;
+
+      if (!type) {
+        throw new Error(`Unsupported @link target kind: ${typedoc.ReflectionKind[target.kind]}`)
+      }
+
+      let path = getApiFilePath(target.getFriendlyFullName(), type).replace(/\.md$/, '')
       let href = `${WEBSITE_DOCS_PATH}/${path}`
       text = `[\`${part.text}\`](${href})`
     }

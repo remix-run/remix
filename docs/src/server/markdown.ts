@@ -43,15 +43,13 @@ export async function discoverMarkdownFiles(
       } else if (entry.isFile() && entry.name.endsWith('.md')) {
         let relativePath = path.relative(baseDir, fullPath)
         let parts = relativePath.split(path.sep)
-        let packageName = parts.slice(0, parts.length - 1).join('/')
+        let packageName = parts.slice(0, parts.length - 2).join('/')
+        let type = parts[parts.length - 2]
         let urlPath = relativePath.replace(/\.md$/, '').replace(/\\/g, '/')
-
-        let markdown = fs.readFileSync(fullPath, 'utf-8')
-        let { attributes } = parseFrontmatter(markdown)
 
         files.push({
           path: fullPath,
-          type: attributes.type || 'unknown',
+          type: type || 'unknown',
           name: entry.name.replace(/\.md$/, ''),
           package: packageName,
           urlPath: urlPath,
