@@ -7,8 +7,8 @@ Create interactive UIs with Remix Component using a two-phase component model: s
 To start using Remix Component, create a root and render your top-level component:
 
 ```tsx
-import { createRoot } from '@remix-run/component'
-import type { Handle } from '@remix-run/component'
+import { createRoot } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 function App(handle: Handle) {
   return () => (
