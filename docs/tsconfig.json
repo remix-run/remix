@@ -1,12 +1,14 @@
 {
   "compilerOptions": {
-    "lib": ["ES2024"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "resolveJsonModule": true,
     "strict": true,
-    "allowJs": true,
-    "checkJs": true,
-    "noEmit": true
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "remix/component"
   }
 }

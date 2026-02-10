@@ -5,8 +5,8 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   line-height: 1.6;
   color: #333;
 }
@@ -32,11 +32,7 @@ body {
   color: #212529;
 }
 
-.package-group {
-  margin-bottom: 20px;
-}
-
-.package-name {
+.sidebar summary {
   font-weight: 600;
   color: #495057;
   margin-bottom: 8px;
@@ -183,4 +179,26 @@ body {
   text-align: center;
   padding: 40px;
   color: #6c757d;
+}
+
+/* Shiki Code Highlighting */
+.shiki {
+  background-color: #fafafa !important;
+}
+
+.shiki a {
+  color: inherit;
+}
+
+/* Shiki Code Highlighting Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .shiki,
+  .shiki span {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
+    /* Optional, if you also want font styles */
+    font-style: var(--shiki-dark-font-style) !important;
+    font-weight: var(--shiki-dark-font-weight) !important;
+    text-decoration: var(--shiki-dark-text-decoration) !important;
+  }
 }
