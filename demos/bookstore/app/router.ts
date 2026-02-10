@@ -8,7 +8,6 @@ import { logger } from 'remix/logger-middleware'
 import { methodOverride } from 'remix/method-override-middleware'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
-import { getEsbuildConfig } from '../esbuild.config.ts'
 
 import { routes } from './routes.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
@@ -50,11 +49,8 @@ async function getAssetsMiddleware(): Promise<Middleware[]> {
     return [
       devAssets({
         allow: ['app/**'],
-        workspace: {
-          root: '../..',
-          allow: ['**/node_modules/**', 'packages/**'],
-        },
-        esbuildConfig: await getEsbuildConfig(),
+        workspaceRoot: '../..',
+        workspaceAllow: ['**/node_modules/**', 'packages/**'],
       }),
     ]
   }

@@ -2,7 +2,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as fsp from 'node:fs/promises'
 import MagicString from 'magic-string'
-import type { BuildOptions } from './options.ts'
+import type { BuildOptions, InternalTransformConfig } from './options.ts'
 import type { ResolveContext } from './resolve.ts'
 import { resolvedPathToUrl, resolveSpecifiersToPaths } from './resolve.ts'
 import { transformFile } from './transform.ts'
@@ -24,7 +24,7 @@ import { toPosixPath } from './path-resolver.ts'
  * @param ctx Resolve context
  * @param externalSpecifiers Specifiers to skip
  * @param resolutionCache Cache to fill (specifier\0dir -> url)
- * @param esbuildConfig Config for transform
+ * @param transformConfig Config for transform
  * @returns Ordered URLs, path maps, and entry URLs
  */
 async function discoverGraph(
@@ -33,7 +33,7 @@ async function discoverGraph(
   ctx: ResolveContext,
   externalSpecifiers: string[],
   resolutionCache: Map<string, string>,
-  esbuildConfig: BuildOptions['esbuildConfig'],
+  transformConfig: InternalTransformConfig | undefined,
 ): Promise<{
   orderedUrls: string[]
   urlToAbsolutePath: Map<string, string>
@@ -90,7 +90,7 @@ async function discoverGraph(
 
     let code: string
     try {
-      let transformed = await transformFile(readPath, esbuildConfig)
+      let transformed = await transformFile(readPath, transformConfig)
       code = transformed.code
     } catch (err) {
       continue
@@ -219,13 +219,13 @@ function toRelativeImportSpecifier(fromOutPath: string, toOutPath: string): stri
  * @param options Build options (entryPoints, root, outDir, etc.)
  */
 export async function build(options: BuildOptions): Promise<void> {
-  let root = path.resolve(options.root ?? process.cwd())
+  let root = path.resolve(process.cwd(), options.root ?? '.')
   let outDir = path.resolve(root, options.outDir)
   let fileNames = options.fileNames ?? DEFAULT_FILE_NAMES
   let includeHash = fileNames.includes('[hash]')
   let manifestPath = options.manifest === false ? null : (options.manifest ?? null)
 
-  let workspaceRoot = options.workspace?.root ? path.resolve(root, options.workspace.root) : null
+  let workspaceRoot = options.workspaceRoot ? path.resolve(root, options.workspaceRoot) : null
   let ctx: ResolveContext = {
     root,
     workspaceRoot,
@@ -235,12 +235,27 @@ export async function build(options: BuildOptions): Promise<void> {
     workspaceDenyPatterns: [],
   }
 
-  let externalRaw = options.esbuildConfig?.external
+  let externalRaw = options.external
   let externalSpecifiers: string[] = Array.isArray(externalRaw)
     ? externalRaw
     : externalRaw
       ? [externalRaw]
       : []
+
+  let transformConfig: InternalTransformConfig | undefined = undefined
+  if (
+    options.minify !== undefined ||
+    options.sourcemap !== undefined ||
+    options.sourcesContent !== undefined ||
+    options.sourceRoot !== undefined
+  ) {
+    transformConfig = {
+      minify: options.minify,
+      sourcemap: options.sourcemap,
+      sourcesContent: options.sourcesContent,
+      sourceRoot: options.sourceRoot,
+    }
+  }
 
   let resolutionCache = new Map<string, string>()
 
@@ -250,35 +265,13 @@ export async function build(options: BuildOptions): Promise<void> {
     ctx,
     externalSpecifiers,
     resolutionCache,
-    options.esbuildConfig,
+    transformConfig,
   )
 
-  let esbuildConfig = options.esbuildConfig
-  let injectPaths = esbuildConfig?.inject
-  let esbuildConfigForTransform = esbuildConfig
-  if (injectPaths?.length) {
-    let resolvedInjectPaths = injectPaths.map((p) => {
-      let abs = path.isAbsolute(p) ? p : path.resolve(root, p)
-      try {
-        return fs.realpathSync(abs)
-      } catch {
-        return path.normalize(abs)
-      }
-    })
-    // Pass realpath'd inject list so esbuild's resolution matches (e.g. /var vs /private/var on macOS)
-    esbuildConfigForTransform = esbuildConfig && { ...esbuildConfig, inject: resolvedInjectPaths }
-  }
-
-  let sourcemap = esbuildConfig?.sourcemap
-  let sourceMapEnabled =
-    sourcemap === true ||
-    sourcemap === 'inline' ||
-    sourcemap === 'external' ||
-    sourcemap === 'linked' ||
-    sourcemap === 'both'
-  let sourceMapInline = sourceMapEnabled && (sourcemap === 'inline' || sourcemap === 'both')
-  let sourceMapExternal =
-    sourcemap === true || sourcemap === 'external' || sourcemap === 'linked' || sourcemap === 'both'
+  let sourcemap = options.sourcemap
+  let sourceMapEnabled = sourcemap === 'inline' || sourcemap === 'external'
+  let sourceMapInline = sourcemap === 'inline'
+  let sourceMapExternal = sourcemap === 'external'
 
   // Pass 1: transform all in parallel (in memory)
   let urlToTransformed = new Map<string, { code: string; map: string | null }>()
@@ -286,7 +279,7 @@ export async function build(options: BuildOptions): Promise<void> {
     orderedUrls.map(async (url) => {
       let absolutePath = urlToAbsolutePath.get(url)
       if (!absolutePath) return
-      let { code, map } = await transformFile(absolutePath, esbuildConfigForTransform)
+      let { code, map } = await transformFile(absolutePath, transformConfig)
       let rewritten = await rewriteImports(
         code,
         map ?? '{}',
@@ -321,7 +314,7 @@ export async function build(options: BuildOptions): Promise<void> {
     let code = transformed.code
     let contentHash: string | null = null
     if (includeHash) {
-      contentHash = await hashCode(code)
+      contentHash = await hashCode(code, url)
     }
     let outPath = urlToOutputPath(url, contentHash, fileNames)
     urlToOutPathMap.set(url, outPath)
@@ -346,7 +339,17 @@ export async function build(options: BuildOptions): Promise<void> {
     if (ms) urlToFinalCode.set(url, ms.toString())
   }
 
-  await fsp.rm(outDir, { recursive: true, force: true })
+  let emptyOutDir: boolean
+  if (options.emptyOutDir !== undefined) {
+    emptyOutDir = options.emptyOutDir
+  } else {
+    let rootNorm = path.normalize(root)
+    let outDirNorm = path.normalize(outDir)
+    emptyOutDir = outDirNorm === rootNorm || outDirNorm.startsWith(rootNorm + path.sep)
+  }
+  if (emptyOutDir) {
+    await fsp.rm(outDir, { recursive: true, force: true })
+  }
   await fsp.mkdir(outDir, { recursive: true })
 
   for (let url of orderedUrls) {

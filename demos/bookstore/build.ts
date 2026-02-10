@@ -21,12 +21,12 @@ async function main() {
 
   await build({
     entryPoints,
-    root: process.cwd(),
+    workspaceRoot: '../..',
     outDir: './build/assets',
-    esbuildConfig: config,
+    minify: true,
+    sourcemap: 'external',
     fileNames: '[dir]/[name]-[hash]',
     manifest: './build/assets-manifest.json',
-    workspace: { root: '../..' },
   })
   console.log('Outputs written to ./build/assets')
 }

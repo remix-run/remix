@@ -9,7 +9,7 @@ import {
 /**
  * Creates a middleware that serves and transforms source files for development.
  *
- * @param options Configuration options (root, allow, deny, workspace, esbuildConfig)
+ * @param options Configuration options (root, allow, deny, workspaceRoot, workspaceAllow, workspaceDeny, sourcemap, external)
  * @returns The dev assets middleware
  */
 export function devAssets(options: CreateDevAssetsHandlerOptions): Middleware {
@@ -20,14 +20,7 @@ export function devAssets(options: CreateDevAssetsHandlerOptions): Middleware {
   return async (context, next) => {
     context.assets = assetsApi
 
-    if (context.method !== 'GET' && context.method !== 'HEAD') {
-      return next()
-    }
-
-    let pathname = context.url.pathname
-    let headers = context.request.headers
-    let response = await handler.serve(pathname, headers)
-
+    let response = await handler.serve(context.request)
     if (response) {
       return response
     }

@@ -94,10 +94,8 @@ async function startServer(
       devAssets({
         root: appDir,
         allow: ['**'], // Allow all files in app dir for tests
-        workspace: {
-          root: projectRoot,
-          allow: ['**/node_modules/**', 'packages/**'],
-        },
+        workspaceRoot: projectRoot,
+        workspaceAllow: ['**/node_modules/**', 'packages/**'],
       }),
     ],
   })

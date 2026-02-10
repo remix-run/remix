@@ -205,6 +205,42 @@ export const main = helper`,
     }
   })
 
+  it('hash in file names includes path so same name+content in different dirs get different hashes', async () => {
+    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-hash-path-'))
+    try {
+      fs.mkdirSync(path.join(root, 'app'), { recursive: true })
+      fs.mkdirSync(path.join(root, 'lib'), { recursive: true })
+      let sameContent = `export const x = 1`
+      fs.writeFileSync(path.join(root, 'app', 'util.ts'), sameContent)
+      fs.writeFileSync(path.join(root, 'lib', 'util.ts'), sameContent)
+      fs.writeFileSync(
+        path.join(root, 'entry.ts'),
+        `import './app/util.ts'\nimport './lib/util.ts'\nexport {}`,
+      )
+
+      await build({
+        entryPoints: ['entry.ts'],
+        root,
+        outDir: './out',
+        fileNames: '[name]-[hash]',
+        manifest: false,
+      })
+
+      let outPath = path.join(root, 'out')
+      let files = await fsp.readdir(outPath)
+      let utilFiles = files.filter((f) => f.startsWith('util-') && f.endsWith('.js'))
+      assert.equal(utilFiles.length, 2, 'two util-*.js files (one per dir, different hashes)')
+      let hashes = utilFiles.map((f) => f.replace(/^util-|\.js$/g, ''))
+      assert.notEqual(
+        hashes[0],
+        hashes[1],
+        'hashes must differ when path differs (same name and content)',
+      )
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it('does not emit source maps by default', async () => {
     let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-no-sourcemap-'))
     try {
@@ -240,7 +276,7 @@ export const main = helper`,
         outDir: './out',
         fileNames: '[name]',
         manifest: false,
-        esbuildConfig: { sourcemap: 'external' },
+        sourcemap: 'external',
       })
 
       let outPath = path.join(root, 'out')
@@ -270,7 +306,7 @@ export const main = helper`,
         outDir: './out',
         fileNames: '[name]',
         manifest: false,
-        esbuildConfig: { sourcemap: 'inline' },
+        sourcemap: 'inline',
       })
 
       let outPath = path.join(root, 'out')
@@ -286,8 +322,8 @@ export const main = helper`,
     }
   })
 
-  it('with sourcemap: true emits .map files (same as external)', async () => {
-    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-sourcemap-true-'))
+  it('with sourcemap: "external" (alternate) emits .map files', async () => {
+    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-sourcemap-external-alt-'))
     try {
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
@@ -297,7 +333,7 @@ export const main = helper`,
         outDir: './out',
         fileNames: '[name]',
         manifest: false,
-        esbuildConfig: { sourcemap: true },
+        sourcemap: 'external',
       })
 
       let outPath = path.join(root, 'out')
@@ -311,64 +347,7 @@ export const main = helper`,
     }
   })
 
-  it('with sourcemap: "linked" emits .map files (same as external)', async () => {
-    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-sourcemap-linked-'))
-    try {
-      fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
-
-      await build({
-        entryPoints: ['entry.ts'],
-        root,
-        outDir: './out',
-        fileNames: '[name]',
-        manifest: false,
-        esbuildConfig: { sourcemap: 'linked' },
-      })
-
-      let outPath = path.join(root, 'out')
-      let files = await fsp.readdir(outPath)
-      assert.equal(files.length, 2)
-      assert.ok(files.includes('entry.js.map'))
-      let jsContent = await fsp.readFile(path.join(outPath, 'entry.js'), 'utf-8')
-      assert.ok(jsContent.includes('sourceMappingURL=entry.js.map'))
-    } finally {
-      fs.rmSync(root, { recursive: true, force: true })
-    }
-  })
-
-  it('with sourcemap: "both" emits inline map and .map file', async () => {
-    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-sourcemap-both-'))
-    try {
-      fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
-
-      await build({
-        entryPoints: ['entry.ts'],
-        root,
-        outDir: './out',
-        fileNames: '[name]',
-        manifest: false,
-        esbuildConfig: { sourcemap: 'both' },
-      })
-
-      let outPath = path.join(root, 'out')
-      let files = await fsp.readdir(outPath)
-      assert.equal(files.length, 2)
-      assert.ok(files.includes('entry.js'))
-      assert.ok(files.includes('entry.js.map'))
-      let jsContent = await fsp.readFile(path.join(outPath, 'entry.js'), 'utf-8')
-      assert.ok(
-        jsContent.includes('sourceMappingURL=data:application/json;base64,'),
-        'has inline map',
-      )
-      assert.ok(jsContent.includes('sourceMappingURL=entry.js.map'), 'has external map comment')
-      let mapContent = await fsp.readFile(path.join(outPath, 'entry.js.map'), 'utf-8')
-      assert.ok(JSON.parse(mapContent).sources)
-    } finally {
-      fs.rmSync(root, { recursive: true, force: true })
-    }
-  })
-
-  it('preserves sourceRoot from esbuildConfig in emitted map', async () => {
+  it('preserves sourceRoot in emitted map', async () => {
     let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-sourcemap-sourceroot-'))
     try {
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
@@ -379,7 +358,8 @@ export const main = helper`,
         outDir: './out',
         fileNames: '[name]',
         manifest: false,
-        esbuildConfig: { sourcemap: 'external', sourceRoot: 'https://example.com/sources/' },
+        sourcemap: 'external',
+        sourceRoot: 'https://example.com/sources/',
       })
 
       let mapContent = await fsp.readFile(path.join(root, 'out', 'entry.js.map'), 'utf-8')
@@ -391,41 +371,10 @@ export const main = helper`,
     }
   })
 
-  it('with inject (global) build succeeds and provides the global', async () => {
-    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-inject-'))
+  it('module graph and manifest include all deps (entry with multiple imports)', async () => {
+    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-manifest-deps-'))
     try {
-      let shimPath = path.join(root, 'shim.js')
-      fs.writeFileSync(shimPath, `export const __INJECTED__ = 'from-shim'`)
-      fs.writeFileSync(
-        path.join(root, 'entry.ts'),
-        `// Bare global - no import; inject provides it
-export const x = typeof __INJECTED__ !== 'undefined' ? __INJECTED__ : 'missing'`,
-      )
-
-      await build({
-        entryPoints: ['entry.ts'],
-        root,
-        outDir: './out',
-        fileNames: '[name]',
-        manifest: false,
-        esbuildConfig: { inject: [shimPath] },
-      })
-
-      let outPath = path.join(root, 'out')
-      let files = await fsp.readdir(outPath)
-      assert.ok(files.length >= 1, 'at least entry emitted')
-      let entryContent = await fsp.readFile(path.join(outPath, 'entry.js'), 'utf-8')
-      assert.ok(entryContent.includes('from-shim'), 'inject should provide the global')
-    } finally {
-      fs.rmSync(root, { recursive: true, force: true })
-    }
-  })
-
-  it('inject does not break module graph or manifest (external always *)', async () => {
-    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-inject-manifest-'))
-    try {
-      let shimPath = path.join(root, 'shim.js')
-      fs.writeFileSync(shimPath, `export const tag = 'shim'`)
+      fs.writeFileSync(path.join(root, 'shim.js'), `export const tag = 'shim'`)
       fs.writeFileSync(
         path.join(root, 'entry.ts'),
         `import { tag } from './shim.js'
@@ -440,7 +389,6 @@ export const out = tag + helper`,
         outDir: './out',
         fileNames: '[name]',
         manifest: './out/manifest.json',
-        esbuildConfig: { inject: [shimPath] },
       })
 
       let outPath = path.join(root, 'out')
@@ -476,6 +424,116 @@ export const out = tag + helper`,
       assert.ok(shimContent.includes('shim'), 'shim.js in build output with expected export')
     } finally {
       fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('empties outDir by default before writing', async () => {
+    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-empty-out-'))
+    try {
+      fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
+      let outPath = path.join(root, 'out')
+      await fsp.mkdir(outPath, { recursive: true })
+      fs.writeFileSync(path.join(outPath, 'leftover.txt'), 'should be removed')
+
+      await build({
+        entryPoints: ['entry.ts'],
+        root,
+        outDir: './out',
+        fileNames: '[name]',
+        manifest: false,
+      })
+
+      let files = await fsp.readdir(outPath)
+      assert.ok(files.includes('entry.js'), 'build output should exist')
+      assert.ok(!files.includes('leftover.txt'), 'outDir should be emptied by default')
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('when emptyOutDir: false preserves existing files not overwritten by build', async () => {
+    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-no-empty-'))
+    try {
+      fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
+      let outPath = path.join(root, 'out')
+      await fsp.mkdir(outPath, { recursive: true })
+      let preservedPath = path.join(outPath, 'preserved.txt')
+      fs.writeFileSync(preservedPath, 'must remain')
+
+      await build({
+        entryPoints: ['entry.ts'],
+        root,
+        outDir: './out',
+        fileNames: '[name]',
+        manifest: false,
+        emptyOutDir: false,
+      })
+
+      let files = await fsp.readdir(outPath)
+      assert.ok(files.includes('entry.js'), 'build output should exist')
+      assert.ok(files.includes('preserved.txt'), 'existing file should be preserved')
+      assert.equal(
+        await fsp.readFile(preservedPath, 'utf-8'),
+        'must remain',
+        'preserved file content unchanged',
+      )
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('when outDir is absolute but within root default emptyOutDir is true', async () => {
+    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-abs-in-'))
+    try {
+      fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
+      let outPath = path.join(root, 'out')
+      await fsp.mkdir(outPath, { recursive: true })
+      fs.writeFileSync(path.join(outPath, 'leftover.txt'), 'should be removed')
+
+      await build({
+        entryPoints: ['entry.ts'],
+        root,
+        outDir: outPath,
+        fileNames: '[name]',
+        manifest: false,
+      })
+
+      let files = await fsp.readdir(outPath)
+      assert.ok(files.includes('entry.js'), 'build output should exist')
+      assert.ok(!files.includes('leftover.txt'), 'outDir within root should be emptied by default')
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('when outDir is outside root default emptyOutDir is false (do not wipe external dir)', async () => {
+    let parent = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-parent-'))
+    try {
+      let root = path.join(parent, 'project')
+      let outDir = path.join(parent, 'output')
+      await fsp.mkdir(root, { recursive: true })
+      await fsp.mkdir(outDir, { recursive: true })
+      fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
+      let externalPath = path.join(outDir, 'external-file.txt')
+      fs.writeFileSync(externalPath, 'do not remove')
+
+      await build({
+        entryPoints: ['entry.ts'],
+        root,
+        outDir: path.relative(root, outDir),
+        fileNames: '[name]',
+        manifest: false,
+      })
+
+      let files = await fsp.readdir(outDir)
+      assert.ok(files.includes('entry.js'), 'build output should exist')
+      assert.ok(
+        files.includes('external-file.txt'),
+        'external dir should not be emptied by default',
+      )
+      assert.equal(await fsp.readFile(externalPath, 'utf-8'), 'do not remove')
+    } finally {
+      fs.rmSync(parent, { recursive: true, force: true })
     }
   })
 })

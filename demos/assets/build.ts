@@ -7,17 +7,16 @@
  */
 
 import { build } from '@remix-run/assets'
-import { esbuildConfig } from './esbuild.config.ts'
 
 async function main() {
   await build({
     entryPoints: ['app/entry.tsx'],
-    root: process.cwd(),
+    workspaceRoot: '../..',
     outDir: './build/assets',
-    esbuildConfig,
+    minify: true,
+    sourcemap: 'external',
     fileNames: '[dir]/[name]-[hash]',
     manifest: './build/assets-manifest.json',
-    workspace: { root: '../..' },
   })
   console.log('Outputs written to ./build/assets')
 }

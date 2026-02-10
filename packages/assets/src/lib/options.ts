@@ -74,23 +74,23 @@ export type DevAssetsEsbuildConfig = Pick<
 >
 
 /**
- * Options for workspace access via `/__@workspace/` URLs.
- */
-export interface DevAssetsWorkspaceOptions {
-  root: string
-  allow: string[]
-  deny?: string[]
-}
-
-/**
  * Options for createDevAssetsHandler.
  */
 export interface CreateDevAssetsHandlerOptions {
+  /** Project root. Default: process.cwd(). Use "." for cwd. */
   root?: string
   allow: string[]
   deny?: string[]
-  workspace?: DevAssetsWorkspaceOptions
-  esbuildConfig?: DevAssetsEsbuildConfig
+  /** Workspace root for /__@workspace/ URLs. When set, workspace allow/deny default to top-level allow/deny. */
+  workspaceRoot?: string
+  /** Allow patterns for workspace paths. Defaults to allow when workspaceRoot is set. */
+  workspaceAllow?: string[]
+  /** Deny patterns for workspace paths. Defaults to deny when workspaceRoot is set. */
+  workspaceDeny?: string[]
+  /** Enable source maps (inline). Default: true. */
+  sourcemap?: boolean
+  /** Import specifiers to leave unchanged (e.g. CDN URLs, bare specifiers for import maps). */
+  external?: string | string[]
 }
 
 /**
@@ -100,19 +100,44 @@ export interface CreateDevAssetsHandlerOptions {
 export interface BuildOptions {
   /** Entry paths relative to root (e.g. ['app/entry.tsx']) */
   entryPoints: string[]
-  /** Project root (default: process.cwd()) */
+  /** Project root. Default: process.cwd(). Use "." for cwd. */
   root?: string
   /** Output directory (e.g. './build') */
   outDir: string
-  /** Same supported options as dev (target, jsx, plugins, etc.) */
-  esbuildConfig?: DevAssetsEsbuildConfig
+  /** Empty outDir before writing. Default: true when outDir is within root, false otherwise. Set explicitly to preserve or clear. */
+  emptyOutDir?: boolean
+  /** Minify output. Default: false. */
+  minify?: boolean
+  /** Emit source maps: 'inline' (embed in output) or 'external' (.map files). Omit for no source maps. */
+  sourcemap?: BuildSourcemapMode
+  /** Include sources content in source maps. Default: true. */
+  sourcesContent?: boolean
+  /** Source root URL for emitted source maps (prod only). */
+  sourceRoot?: string
+  /** Import specifiers to leave unchanged (e.g. CDN URLs, bare specifiers for import maps). */
+  external?: string | string[]
   /**
-   * Output path template. Placeholders: [dir] (path dir of module), [name] (base name), [hash] (content hash).
+   * Output path template. Placeholders: [dir] (path dir of module), [name] (base name), [hash] (content hash including module path so same name+content in different dirs get different hashes).
    * Extension .js is always appended. Default: '[name]-[hash]'.
    */
   fileNames?: string
   /** Workspace root for /__@workspace/ output (optional). No allow/deny—build is graph-driven. */
-  workspace?: { root: string }
+  workspaceRoot?: string
   /** Path to emit manifest (AssetManifest) or false to skip (default: false) */
   manifest?: string | false
+}
+
+/** Source map mode supported by build (and passed to transform). */
+export type BuildSourcemapMode = 'inline' | 'external'
+
+/**
+ * Internal config built from public options and passed to transform.
+ * Only includes options we explicitly support; do not pass through to esbuild blindly.
+ * @internal
+ */
+export type InternalTransformConfig = {
+  minify?: boolean
+  sourcemap?: BuildSourcemapMode
+  sourcesContent?: boolean
+  sourceRoot?: string
 }

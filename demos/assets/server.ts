@@ -3,7 +3,6 @@ import * as fs from 'node:fs'
 import { createRequestListener } from '@remix-run/node-fetch-server'
 import { createRouter } from '@remix-run/fetch-router'
 import { staticFiles } from '@remix-run/static-middleware'
-import { esbuildConfig } from './esbuild.config.ts'
 
 let isDev = process.env.NODE_ENV === 'development'
 
@@ -21,11 +20,8 @@ async function getAssetsMiddleware() {
     return [
       devAssets({
         allow: ['app/**'],
-        workspace: {
-          root: '../..',
-          allow: ['**/node_modules/**', 'packages/**'],
-        },
-        esbuildConfig,
+        workspaceRoot: '../..',
+        workspaceAllow: ['**/node_modules/**', 'packages/**'],
       }),
     ]
   }

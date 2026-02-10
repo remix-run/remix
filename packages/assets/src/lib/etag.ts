@@ -1,6 +1,7 @@
-export async function hashCode(code: string): Promise<string> {
+export async function hashCode(code: string, pathSalt?: string): Promise<string> {
+  let input = pathSalt !== undefined ? pathSalt + '\0' + code : code
   let encoder = new TextEncoder()
-  let data = encoder.encode(code)
+  let data = encoder.encode(input)
   let hashBuffer = await crypto.subtle.digest('SHA-256', data)
   let hashArray = Array.from(new Uint8Array(hashBuffer))
   // Convert to base36 for shorter ETag

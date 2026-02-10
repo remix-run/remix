@@ -1,4 +1,3 @@
-import type { PluginBuild } from 'esbuild'
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import * as fs from 'node:fs'
@@ -37,7 +36,7 @@ describe('allow/deny security', () => {
       setupDirs()
       try {
         let handler = createDevAssetsHandler({ root: tempDir, allow: [] })
-        let response = await handler.serve('/app/entry.ts', new Headers())
+        let response = await handler.serve(new Request('http://localhost/app/entry.ts'))
 
         assert.equal(response, null, 'handler should not serve when no allow patterns')
       } finally {
@@ -49,7 +48,7 @@ describe('allow/deny security', () => {
       setupDirs()
       try {
         let handler = createDevAssetsHandler({ root: tempDir, allow: ['app/**'] })
-        let response = await handler.serve('/app/entry.ts', new Headers())
+        let response = await handler.serve(new Request('http://localhost/app/entry.ts'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -63,7 +62,7 @@ describe('allow/deny security', () => {
       setupDirs()
       try {
         let handler = createDevAssetsHandler({ root: tempDir, allow: ['app/**'] })
-        let response = await handler.serve('/server.ts', new Headers())
+        let response = await handler.serve(new Request('http://localhost/server.ts'))
 
         assert.equal(response, null, 'handler should not serve path outside allow')
       } finally {
@@ -81,7 +80,7 @@ describe('allow/deny security', () => {
           allow: ['**'],
           deny: ['secret.ts'],
         })
-        let response = await handler.serve('/secret.ts', new Headers())
+        let response = await handler.serve(new Request('http://localhost/secret.ts'))
 
         assert.equal(response, null, 'handler should not serve path matching deny')
       } finally {
@@ -97,7 +96,7 @@ describe('allow/deny security', () => {
           allow: ['**'],
           deny: ['server.ts'],
         })
-        let response = await handler.serve('/server.ts', new Headers())
+        let response = await handler.serve(new Request('http://localhost/server.ts'))
 
         assert.equal(response, null, 'handler should not serve path matching deny')
       } finally {
@@ -114,7 +113,9 @@ describe('allow/deny security', () => {
           root: tempDir,
           allow: ['app/**'],
         })
-        let response = await handler.serve('/__@workspace/node_modules/pkg/index.js', new Headers())
+        let response = await handler.serve(
+          new Request('http://localhost/__@workspace/node_modules/pkg/index.js'),
+        )
 
         assert.ok(response)
         assert.equal(response!.status, 403)
@@ -123,18 +124,18 @@ describe('allow/deny security', () => {
       }
     })
 
-    it('allows workspace requests matching allow patterns', async () => {
+    it('allows workspace requests matching workspaceAllow patterns', async () => {
       setupDirs()
       try {
         let handler = createDevAssetsHandler({
           root: tempDir,
           allow: ['app/**'],
-          workspace: {
-            root: workspaceDir,
-            allow: ['**/node_modules/**'],
-          },
+          workspaceRoot: workspaceDir,
+          workspaceAllow: ['**/node_modules/**'],
         })
-        let response = await handler.serve('/__@workspace/node_modules/pkg/index.js', new Headers())
+        let response = await handler.serve(
+          new Request('http://localhost/__@workspace/node_modules/pkg/index.js'),
+        )
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -143,18 +144,18 @@ describe('allow/deny security', () => {
       }
     })
 
-    it('blocks workspace requests not matching allow patterns', async () => {
+    it('blocks workspace requests not matching workspaceAllow patterns', async () => {
       setupDirs()
       try {
         let handler = createDevAssetsHandler({
           root: tempDir,
           allow: ['app/**'],
-          workspace: {
-            root: workspaceDir,
-            allow: ['**/node_modules/**'],
-          },
+          workspaceRoot: workspaceDir,
+          workspaceAllow: ['**/node_modules/**'],
         })
-        let response = await handler.serve('/__@workspace/packages/lib/index.ts', new Headers())
+        let response = await handler.serve(
+          new Request('http://localhost/__@workspace/packages/lib/index.ts'),
+        )
 
         assert.ok(response)
         assert.equal(response!.status, 403)
@@ -163,19 +164,17 @@ describe('allow/deny security', () => {
       }
     })
 
-    it('inherits top-level deny patterns', async () => {
+    it('workspaceDeny defaults to top-level deny', async () => {
       setupDirs()
       try {
         let handler = createDevAssetsHandler({
           root: tempDir,
           allow: ['app/**'],
           deny: ['**/.env*'],
-          workspace: {
-            root: workspaceDir,
-            allow: ['**'],
-          },
+          workspaceRoot: workspaceDir,
+          workspaceAllow: ['**'],
         })
-        let response = await handler.serve('/__@workspace/.env', new Headers())
+        let response = await handler.serve(new Request('http://localhost/__@workspace/.env'))
 
         assert.ok(response)
         assert.equal(response!.status, 403)
@@ -184,7 +183,7 @@ describe('allow/deny security', () => {
       }
     })
 
-    it('combines workspace deny with inherited deny', async () => {
+    it('workspaceDeny overrides default and can add workspace-specific rules', async () => {
       setupDirs()
       fs.writeFileSync(path.join(workspaceDir, 'test.ts'), 'export {}')
 
@@ -193,18 +192,16 @@ describe('allow/deny security', () => {
           root: tempDir,
           allow: ['app/**'],
           deny: ['**/.env*'],
-          workspace: {
-            root: workspaceDir,
-            allow: ['**'],
-            deny: ['**/test.ts'],
-          },
+          workspaceRoot: workspaceDir,
+          workspaceAllow: ['**'],
+          workspaceDeny: ['**/.env*', '**/test.ts'],
         })
 
-        let response1 = await handler.serve('/__@workspace/test.ts', new Headers())
+        let response1 = await handler.serve(new Request('http://localhost/__@workspace/test.ts'))
         assert.ok(response1)
         assert.equal(response1!.status, 403, 'Should block workspace-specific deny pattern')
 
-        let response2 = await handler.serve('/__@workspace/.env', new Headers())
+        let response2 = await handler.serve(new Request('http://localhost/__@workspace/.env'))
         assert.ok(response2)
         assert.equal(response2!.status, 403, 'Should block inherited deny pattern')
       } finally {
@@ -237,42 +234,22 @@ describe('esbuild config support', () => {
     if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true })
   }
 
-  describe('plugin support', () => {
-    it('allows custom plugins for non-standard file types', async () => {
+  describe('default behavior', () => {
+    it('serves standard file types without custom config', async () => {
       setupTempDir()
-      fs.writeFileSync(path.join(tempDir, 'app', 'config.data'), '{"key": "value"}')
+      fs.writeFileSync(path.join(tempDir, 'app', 'simple.ts'), 'export const x = 1')
 
       try {
         let handler = createDevAssetsHandler({
           root: tempDir,
           allow: ['app/**'],
-          esbuildConfig: {
-            plugins: [
-              {
-                name: 'data-loader',
-                setup(build: PluginBuild) {
-                  build.onLoad({ filter: /\.data$/ }, async (args) => {
-                    let text = await fsp.readFile(args.path, 'utf-8')
-                    return {
-                      contents: `export default ${text}`,
-                      loader: 'js',
-                    }
-                  })
-                },
-              },
-            ],
-          },
         })
 
-        let response = await handler.serve('/app/config.data', new Headers())
-
+        let response = await handler.serve(new Request('http://localhost/app/simple.ts'))
         assert.ok(response)
         assert.equal(response!.status, 200)
         let text = await response!.text()
-        assert.ok(
-          text.includes('export') || text.includes('default'),
-          `Expected export in: ${text.slice(0, 200)}`,
-        )
+        assert.ok(text.includes('x') || text.includes('export'))
       } finally {
         cleanupTempDir()
       }
@@ -280,20 +257,15 @@ describe('esbuild config support', () => {
   })
 
   describe('config override behavior', () => {
-    it('maintains unbundled dev model even with user config', async () => {
+    it('serves ESM (import/from, not CommonJS)', async () => {
       setupTempDir()
       try {
         let handler = createDevAssetsHandler({
           root: tempDir,
           allow: ['app/**'],
-          esbuildConfig: {
-            bundle: true,
-            write: true,
-            format: 'cjs',
-          } as Parameters<typeof createDevAssetsHandler>[0]['esbuildConfig'],
         })
 
-        let response = await handler.serve('/app/with-import.tsx', new Headers())
+        let response = await handler.serve(new Request('http://localhost/app/with-import.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -316,10 +288,10 @@ describe('esbuild config support', () => {
         let handler = createDevAssetsHandler({
           root: tempDir,
           allow: ['app/**'],
-          esbuildConfig: { sourcemap: false },
+          sourcemap: false,
         })
 
-        let response = await handler.serve('/app/entry.tsx', new Headers())
+        let response = await handler.serve(new Request('http://localhost/app/entry.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -330,16 +302,16 @@ describe('esbuild config support', () => {
       }
     })
 
-    it('coerces other sourcemap values to inline', async () => {
+    it('includes inline source map when sourcemap: true (default)', async () => {
       setupTempDir()
       try {
         let handler = createDevAssetsHandler({
           root: tempDir,
           allow: ['app/**'],
-          esbuildConfig: { sourcemap: 'external' as unknown as boolean },
+          sourcemap: true,
         })
 
-        let response = await handler.serve('/app/entry.tsx', new Headers())
+        let response = await handler.serve(new Request('http://localhost/app/entry.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -361,9 +333,7 @@ describe('esbuild config support', () => {
         let handler = createDevAssetsHandler({
           root: tempDir,
           allow: ['app/**'],
-          esbuildConfig: {
-            external: ['https://unpkg.com/@remix-run/component'],
-          },
+          external: ['https://unpkg.com/@remix-run/component'],
         })
 
         await fsp.writeFile(
@@ -380,7 +350,7 @@ root.render(<div>Hello</div>)`,
           'export function helper() { return "helper" }',
         )
 
-        let response = await handler.serve('/app/entry.tsx', new Headers())
+        let response = await handler.serve(new Request('http://localhost/app/entry.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -401,7 +371,7 @@ root.render(<div>Hello</div>)`,
         let handler = createDevAssetsHandler({
           root: tempDir,
           allow: ['app/**'],
-          esbuildConfig: { external: ['@remix-run/component'] },
+          external: ['@remix-run/component'],
         })
 
         await fsp.writeFile(
@@ -421,7 +391,7 @@ export function createApp() {
           'export function helper() { return "helper" }',
         )
 
-        let response = await handler.serve('/app/entry.tsx', new Headers())
+        let response = await handler.serve(new Request('http://localhost/app/entry.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -442,7 +412,7 @@ export function createApp() {
         let handler = createDevAssetsHandler({
           root: tempDir,
           allow: ['app/**'],
-          esbuildConfig: { external: ['@external/package', '@external/another'] },
+          external: ['@external/package', '@external/another'],
         })
 
         await fsp.writeFile(
@@ -458,7 +428,7 @@ export { foo, bar, helper }`,
           'export function helper() { return "helper" }',
         )
 
-        let response = await handler.serve('/app/entry.tsx', new Headers())
+        let response = await handler.serve(new Request('http://localhost/app/entry.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -483,7 +453,7 @@ export { foo, bar, helper }`,
         let handler = createDevAssetsHandler({
           root: tempDir,
           allow: ['app/**'],
-          esbuildConfig: { external: ['@external/package'] },
+          external: ['@external/package'],
         })
 
         await fsp.writeFile(
@@ -500,7 +470,7 @@ export { foo, dynamicExternal, helper, dynamicHelper }`,
           'export function helper() { return "helper" }',
         )
 
-        let response = await handler.serve('/app/entry.tsx', new Headers())
+        let response = await handler.serve(new Request('http://localhost/app/entry.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -549,13 +519,13 @@ export function main() {
           'export function helper() { return "v1" }',
         )
 
-        let response1 = await handler.serve('/app/entry.tsx', new Headers())
+        let response1 = await handler.serve(new Request('http://localhost/app/entry.tsx'))
         assert.ok(response1)
         assert.equal(response1!.status, 200)
         let code1 = await response1!.text()
         assert.ok(code1.includes('main'))
 
-        let response2 = await handler.serve('/app/entry.tsx', new Headers())
+        let response2 = await handler.serve(new Request('http://localhost/app/entry.tsx'))
         assert.ok(response2)
         assert.equal(response2!.status, 200)
         let code2 = await response2!.text()
@@ -570,7 +540,7 @@ export function main() {
 }`,
         )
 
-        let response3 = await handler.serve('/app/entry.tsx', new Headers())
+        let response3 = await handler.serve(new Request('http://localhost/app/entry.tsx'))
         assert.ok(response3)
         assert.equal(response3!.status, 200)
         let code3 = await response3!.text()

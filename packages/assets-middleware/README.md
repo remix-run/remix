@@ -2,7 +2,7 @@
 
 Middleware for serving pre-built assets with manifest-based resolution.
 
-This is the production counterpart to `@remix-run/dev-assets-middleware`. While the dev middleware transforms source files on-the-fly, this package uses a pre-built manifest (from esbuild's metafile) to resolve entry points to their hashed output files and all required chunks.
+This is the production counterpart to `@remix-run/dev-assets-middleware`. While the dev middleware transforms source files on-the-fly, this package uses a pre-built manifest from `@remix-run/assets` to resolve entry points to their hashed output files and all required chunks.
 
 ## Installation
 
@@ -16,7 +16,7 @@ npm install @remix-run/assets-middleware
 import { createRouter } from '@remix-run/fetch-router'
 import { assets } from '@remix-run/assets-middleware'
 import { staticFiles } from '@remix-run/static-middleware'
-import manifest from './build/metafile.json' with { type: 'json' }
+import manifest from './build/assets-manifest.json' with { type: 'json' }
 
 let router = createRouter({
   middleware: [assets(manifest), staticFiles('./build')],
@@ -33,30 +33,15 @@ router.get('/', ({ assets }) => {
 
 ### `assets(manifest)`
 
-Creates middleware that provides asset resolution from an esbuild metafile.
+Creates middleware that provides asset resolution from an assets manifest.
 
-- `manifest` - An esbuild metafile (or the `AssetManifest` subset)
+- `manifest` - An assets manifest from `@remix-run/assets`
 - Returns middleware that sets `context.assets`
-
-### `AssetManifest`
-
-A subset of esbuild's metafile format containing only the information needed for asset resolution:
-
-```ts
-interface AssetManifest {
-  outputs: {
-    [outputPath: string]: {
-      entryPoint?: string
-      imports?: Array<{ path: string; kind: string }>
-    }
-  }
-}
-```
 
 ## How it works
 
-1. At build time, esbuild generates a metafile with information about all outputs
-2. `assets()` processes this metafile to build lookup tables:
+1. At build time, `@remix-run/assets` generates an assets manifest with information about all outputs
+2. `assets()` processes this manifest to build lookup tables:
    - Entry point path → output file path
    - Output file → all transitive static imports (chunks)
 3. `context.assets.get('app/entry.tsx')` returns:

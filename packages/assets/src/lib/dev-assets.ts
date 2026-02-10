@@ -13,7 +13,7 @@ import type { Assets, AssetEntry } from '@remix-run/fetch-router'
  * - When `entryPoints` is provided, only those paths return a result; others return null
  *
  * @param root The root directory where source files are served from
- * @param entryPoints Optional list of entry paths to restrict get() to (e.g. from esbuildConfig.entryPoints)
+ * @param entryPoints Optional list of entry paths to restrict get() to (e.g. from build entryPoints)
  * @returns An assets object for resolving entry paths to URLs
  */
 export function createDevAssets(root: string, entryPoints?: string[]): Assets {

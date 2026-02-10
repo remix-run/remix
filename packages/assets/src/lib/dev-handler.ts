@@ -7,8 +7,7 @@ import { createModuleGraph, ensureModuleNode, getModuleByUrl } from './module-gr
 import { isCommonJS } from './import-rewriter.ts'
 import { fixSourceMapPaths } from './source-map.ts'
 import { hashCode, generateETag, matchesETag } from './etag.ts'
-import type { CreateDevAssetsHandlerOptions, DevAssetsEsbuildConfig } from './options.ts'
-import { SUPPORTED_ESBUILD_OPTIONS } from './options.ts'
+import type { CreateDevAssetsHandlerOptions } from './options.ts'
 import { toPosixPath, isPathAllowed, createDevPathResolver } from './path-resolver.ts'
 import type { ResolveContext } from './resolve.ts'
 import { rewriteImports } from './rewrite.ts'
@@ -23,26 +22,25 @@ interface Caches {
 /**
  * Creates a stateful dev handler that serves and transforms source files.
  * Owns the module graph and caches. Expose a simple integration surface:
- * serve(pathname, headers) → Promise<Response | null>. Returns null when the
- * request is not for this handler (e.g. path not allowed, or not GET/HEAD).
+ * serve(request) → Promise<Response | null>. Returns null when the request
+ * is not for this handler (e.g. not GET/HEAD, path not allowed).
  *
  * When HMR is re-added, file watching and HMR (SSE, invalidation) will live
  * in this API too—not in the middleware.
  *
- * @param options Handler options (root, allow, deny, workspace, esbuildConfig).
- * @returns Object with serve(pathname, headers) for request handling.
+ * @param options Handler options (root, allow, deny, workspaceRoot, workspaceAllow, workspaceDeny, sourcemap, external).
+ * @returns Object with serve(request) for request handling.
  */
 export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): {
-  serve(pathname: string, headers: Headers): Promise<Response | null>
+  serve(request: Request): Promise<Response | null>
 } {
-  let root = path.resolve(options.root ?? process.cwd())
+  let root = path.resolve(process.cwd(), options.root ?? '.')
   let appAllow = options.allow ?? []
   let appDeny = options.deny ?? []
-  let workspaceRoot = options.workspace?.root ? path.resolve(options.workspace.root) : null
-  let workspaceAllow = options.workspace?.allow ?? []
-  let workspaceDeny = [...appDeny, ...(options.workspace?.deny ?? [])]
-  let esbuildConfig = options.esbuildConfig
-  let externalRaw = esbuildConfig?.external
+  let workspaceRoot = options.workspaceRoot ? path.resolve(options.workspaceRoot) : null
+  let workspaceAllow = options.workspaceAllow ?? appAllow
+  let workspaceDeny = options.workspaceDeny ?? appDeny
+  let externalRaw = options.external
   let externalSpecifiers: string[] = Array.isArray(externalRaw)
     ? externalRaw
     : externalRaw
@@ -87,39 +85,10 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
       return moduleNode.transformResult.code
     }
 
-    // In dev only sourcemap on/off matters; we always inline and fix paths. sourceRoot/sourcesContent are prod-only.
-    let sourcemap: boolean = esbuildConfig?.sourcemap !== false
-    let userConfig: Partial<esbuild.BuildOptions> = {}
-    let devIgnoredKeys = new Set([
-      'entryPoints',
-      'external',
-      'sourcemap',
-      'sourceRoot',
-      'sourcesContent',
-      'minify',
-      'minifyWhitespace',
-      'minifyIdentifiers',
-      'minifySyntax',
-      'legalComments',
-      'banner',
-      'footer',
-      'ignoreAnnotations',
-      'dropLabels',
-      'lineLimit',
-      'inject',
-    ])
-    if (esbuildConfig) {
-      for (let key of SUPPORTED_ESBUILD_OPTIONS) {
-        if (devIgnoredKeys.has(key)) continue
-        let value = esbuildConfig[key]
-        if (value !== undefined) {
-          ;(userConfig as Record<string, unknown>)[key] = value
-        }
-      }
-    }
+    // In dev only sourcemap on/off matters; we always inline and fix paths.
+    let sourcemap: boolean = options.sourcemap !== false
 
     let result = await esbuild.build({
-      ...userConfig,
       entryPoints: [filePath],
       bundle: true,
       external: ['*'],
@@ -245,8 +214,12 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
   }
 
   return {
-    async serve(pathname: string, headers: Headers): Promise<Response | null> {
-      let ifNoneMatch = headers.get('If-None-Match')
+    async serve(request: Request): Promise<Response | null> {
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return null
+      }
+      let pathname = new URL(request.url).pathname
+      let ifNoneMatch = request.headers.get('If-None-Match')
 
       if (pathname.startsWith('/__@workspace/')) {
         return handleWorkspaceRequest(pathname, ifNoneMatch)

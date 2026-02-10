@@ -39,18 +39,18 @@ export type DevPathResolution =
  * Creates a function that resolves a request pathname to an absolute file path and kind (app vs workspace).
  * Returns null if the path is not allowed or not found.
  *
- * @param options Handler options for root, allow, deny, workspace.
+ * @param options Handler options for root, allow, deny, workspaceRoot, workspaceAllow, workspaceDeny.
  * @returns Resolver function (pathname) => { kind, filePath } or null.
  */
 export function createDevPathResolver(
   options: CreateDevAssetsHandlerOptions,
 ): (pathname: string) => DevPathResolution | null {
-  let root = path.resolve(options.root ?? process.cwd())
+  let root = path.resolve(process.cwd(), options.root ?? '.')
   let appAllow = options.allow ?? []
   let appDeny = options.deny ?? []
-  let workspaceRoot = options.workspace?.root ? path.resolve(options.workspace.root) : null
-  let workspaceAllow = options.workspace?.allow ?? []
-  let workspaceDeny = [...appDeny, ...(options.workspace?.deny ?? [])]
+  let workspaceRoot = options.workspaceRoot ? path.resolve(options.workspaceRoot) : null
+  let workspaceAllow = options.workspaceAllow ?? appAllow
+  let workspaceDeny = options.workspaceDeny ?? appDeny
 
   return function resolvePathname(pathname: string): DevPathResolution | null {
     if (pathname.startsWith('/__@workspace/')) {

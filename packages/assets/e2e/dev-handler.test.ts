@@ -42,24 +42,18 @@ function startServer(appDir: string, projectRoot: string): Promise<http.Server> 
   let handler = createDevAssetsHandler({
     root: appDir,
     allow: ['**'],
-    workspace: {
-      root: projectRoot,
-      allow: ['**'],
-    },
+    workspaceRoot: projectRoot,
+    workspaceAllow: ['**'],
   })
 
   let server = http.createServer(async (req, res) => {
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-      res.writeHead(405)
-      res.end()
-      return
-    }
-    let pathname = new URL(req.url ?? '/', 'http://localhost').pathname
+    let url = new URL(req.url ?? '/', 'http://localhost')
     let headers = new Headers()
     for (let [key, value] of Object.entries(req.headers)) {
       if (value) headers.set(key, Array.isArray(value) ? value.join(', ') : value)
     }
-    let response = await handler.serve(pathname, headers)
+    let request = new Request(url.toString(), { method: req.method, headers })
+    let response = await handler.serve(request)
     if (response) {
       res.writeHead(response.status, Object.fromEntries(response.headers.entries()))
       if (response.body) {

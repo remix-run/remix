@@ -1,41 +1,44 @@
 import * as path from 'node:path'
 import * as esbuild from 'esbuild'
-import { SUPPORTED_ESBUILD_OPTIONS, type DevAssetsEsbuildConfig } from './options.ts'
+import type { InternalTransformConfig } from './options.ts'
+
+/** Supported sourcemap values we pass to esbuild (only these). */
+const SUPPORTED_SOURCEMAP = new Set(['inline', 'external'] as const)
 
 export interface TransformFileOptions {
-  /** Override external list (e.g. when using inject so injected modules are inlined). */
+  /** Override external list. */
   external?: string[]
 }
 
 /**
  * Transform a single file with esbuild (TypeScript/JSX to ESM).
  * Does not rewrite imports; use resolveSpecifiers + rewriteImports for that.
+ * Only options we explicitly support are passed to esbuild (no leaking of unsupported features).
  *
  * @param filePath Absolute path to the file to transform
- * @param esbuildConfig Optional esbuild config (only supported options are applied)
- * @param options Optional overrides (e.g. external when using inject)
+ * @param config Internal transform config (minify, sourcemap, sourcesContent, sourceRoot)
+ * @param options Optional overrides (e.g. external)
  * @returns Transformed code and optional source map
  */
 export async function transformFile(
   filePath: string,
-  esbuildConfig?: DevAssetsEsbuildConfig,
+  config?: InternalTransformConfig,
   options?: TransformFileOptions,
 ): Promise<{ code: string; map: string | null }> {
   let userConfig: Partial<esbuild.BuildOptions> = {}
-  if (esbuildConfig) {
-    for (let key of SUPPORTED_ESBUILD_OPTIONS) {
-      if (key === 'entryPoints' || key === 'external') continue
-      let value = esbuildConfig[key]
-      if (value !== undefined) {
-        ;(userConfig as Record<string, unknown>)[key] = value
-      }
+  if (config) {
+    if (typeof config.minify === 'boolean') userConfig.minify = config.minify
+    if (config.sourcemap !== undefined && SUPPORTED_SOURCEMAP.has(config.sourcemap)) {
+      userConfig.sourcemap = config.sourcemap
     }
+    if (typeof config.sourcesContent === 'boolean')
+      userConfig.sourcesContent = config.sourcesContent
+    if (typeof config.sourceRoot === 'string') userConfig.sourceRoot = config.sourceRoot
   }
 
-  // When 'inline' or 'both', we need the map in outputFiles[1] to fix paths and then inline ourselves
-  let sourcemap = userConfig.sourcemap
-  if (sourcemap === 'inline' || sourcemap === 'both') {
-    ;(userConfig as Record<string, unknown>).sourcemap = 'external'
+  // When 'inline', we need the map in outputFiles[1] to fix paths and then inline ourselves
+  if (userConfig.sourcemap === 'inline') {
+    userConfig.sourcemap = 'external'
   }
 
   // esbuild requires an output path for external source maps; we use a virtual path and write: false

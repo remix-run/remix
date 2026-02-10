@@ -5,7 +5,7 @@ Core package for unbundled asset handling.
 ## Installation
 
 ```sh
-npm install @remix-run/assets esbuild
+npm install @remix-run/assets
 ```
 
 ## Usage
@@ -18,16 +18,17 @@ import { createDevAssetsHandler } from '@remix-run/assets'
 let handler = createDevAssetsHandler({
   root: '.',
   allow: ['app/**'],
-  workspace: { root: '..', allow: ['**/node_modules/**'] },
+  workspaceRoot: '..',
+  workspaceAllow: ['**/node_modules/**'],
 })
 
 // In your request handler:
-let response = await handler.serve(request.url.pathname, request.headers)
+let response = await handler.serve(request)
 if (response) return response
-// else: next()
+// ...
 ```
 
-### Production build (JS API)
+### Production build
 
 ```ts
 import { build } from '@remix-run/assets'
@@ -36,9 +37,8 @@ await build({
   entryPoints: ['app/entry.tsx'],
   root: '.',
   outDir: './build/assets',
-  esbuildConfig: {
-    /** Your esbuild config */
-  },
+  minify: true,
+  sourcemap: 'external',
   fileNames: '[dir]/[name]-[hash]',
   manifest: './build/assets-manifest.json',
 })
@@ -47,9 +47,8 @@ await build({
 ## API
 
 - **build(options)** – Programmatic production build: discovers module graph from entry points, transforms and writes 1:1 output, optional manifest.
-- **createDevAssetsHandler(options)** – Stateful handler; owns module graph and caches. Returns `{ serve(pathname, headers) => Promise<Response | null> }`.
+- **createDevAssetsHandler(options)** – Stateful handler; owns module graph and caches. Returns `{ serve(request) => Promise<Response | null> }`.
 - **createDevAssets(root, entryPoints?)** – Dev-mode assets API (`get(entryPath)` → `{ href, chunks }`). Used by the middleware to set `context.assets`.
-- **Types:** `BuildOptions`, `CreateDevAssetsHandlerOptions`, `DevAssetsWorkspaceOptions`, `DevAssetsEsbuildConfig`.
 
 ## Related Packages
 
