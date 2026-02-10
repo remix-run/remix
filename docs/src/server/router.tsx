@@ -17,13 +17,15 @@ const REMIX_PKG = path.join(REPO_DIR, 'packages', 'remix')
 
 const { docFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
 
-export function createRouter(versions = getDefaultVersions()) {
+export function createRouter(versions: AppContext['versions'] | undefined) {
+  versions ??= getDefaultVersions()
+
   const router = _createRouter()
 
   router.map(routes, {
     home: ({ params }) =>
       renderHtml(
-        <App setup={{ docFiles, versions, version: params.version }}>
+        <App setup={{ docFiles, versions, activeVersion: params.version }}>
           <Home />
         </App>,
       ),
@@ -32,7 +34,7 @@ export function createRouter(versions = getDefaultVersions()) {
         docFiles,
         versions,
         slug: params.slug,
-        version: params.version,
+        activeVersion: params.version,
       }
 
       let docFile = docFiles.find((file) => file.urlPath === params.slug)
@@ -70,5 +72,5 @@ async function renderHtml(node: RemixNode, init?: ResponseInit) {
 function getDefaultVersions(): AppContext['versions'] {
   let remixPkgJson = path.join(REMIX_PKG, 'package.json')
   let { version } = JSON.parse(fs.readFileSync(remixPkgJson, 'utf-8'))
-  return [{ name: version, version }]
+  return [{ version, crawl: true }]
 }
