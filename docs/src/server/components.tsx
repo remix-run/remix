@@ -28,9 +28,9 @@ export function NotFound() {
 
 export type AppContext = {
   docFiles: DocFile[]
-  versions: { name: string; version?: string }[]
+  versions: { version: string; crawl: boolean }[]
   slug?: string
-  version?: string
+  activeVersion?: string
 }
 
 export function App(handle: Handle<AppContext>, setup: AppContext) {
@@ -39,15 +39,18 @@ export function App(handle: Handle<AppContext>, setup: AppContext) {
 }
 
 export function Layout(handle: Handle) {
-  let { version } = handle.context.get(App)
+  let { activeVersion } = handle.context.get(App)
   return ({ children }: { children: RemixNode | RemixNode[] }) => (
     <html lang="en">
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        {version != null ? <meta name="robots" content="noindex"></meta> : null}
+        {activeVersion != null ? <meta name="robots" content="noindex"></meta> : null}
         <title>Remix API Documentation</title>
-        <link href={routes.assets.href({ version, asset: 'docs.css' })} rel="stylesheet" />
+        <link
+          href={routes.assets.href({ version: activeVersion, asset: 'docs.css' })}
+          rel="stylesheet"
+        />
       </head>
       <body>
         <div class="container">
@@ -65,47 +68,72 @@ export function Layout(handle: Handle) {
 }
 
 export function VersionDropdown(handle: Handle) {
-  let { versions } = handle.context.get(App)
+  let { versions, activeVersion } = handle.context.get(App)
+  let latestVersion = versions[0]?.version
+
+  // When we're displaying an active version, only include versions up until
+  // that version in the nav
+  let navVersions = versions
+  if (activeVersion) {
+    let idx = versions.findIndex((v) => v.version === activeVersion)
+    if (idx >= 0) {
+      navVersions = versions.slice(idx)
+    }
+  }
+
   return () => (
     <NavDropdown title="Version">
       <ul>
-        {...versions.map((version, index) => (
-          <VersionLink version={version} latest={versions.length === 0 || index === 0} />
+        {...navVersions.map((version, index) => (
+          <VersionLink
+            version={version}
+            latest={versions.length === 0 || version.version === latestVersion}
+          />
         ))}
       </ul>
     </NavDropdown>
   )
 }
 
-function VersionLink() {
+function VersionLink(handle: Handle) {
+  let { activeVersion } = handle.context.get(App)
   return ({
     version,
     latest,
   }: {
-    version: { name: string; version?: string }
+    version: { version: string; crawl: boolean }
     latest: boolean
-  }) => (
-    <li>
-      <a
-        href={routes.home.href({ version: !latest ? version.version : undefined })}
-        style={{ display: latest ? 'inline-block' : undefined }}
-      >
-        {latest ? 'latest' : version.name}
-        {latest ? (
-          <a
-            href={routes.home.href({ version: version.version })}
-            style={{ display: 'inline-block' }}
-          >
-            ({version.name})
-          </a>
+  }) => {
+    let includeLatestLink = latest && !activeVersion
+    return (
+      <li>
+        <a
+          href={routes.home.href({
+            version: !includeLatestLink ? version.version : undefined,
+          })}
+          style={{ display: latest ? 'inline-block' : undefined }}
+          rel={version.crawl ? undefined : 'nofollow'}
+        >
+          {version.version}
+        </a>
+
+        {includeLatestLink ? (
+          <>
+            {/* Indicate latest only on root (latest) sites */}
+            <span>(latest)</span>
+            {/* Include a hidden link so that we generate a versioned output for the latest version */}
+            <a href={routes.home.href({ version: version.version })} style={{ display: 'none' }}>
+              {version.version}
+            </a>
+          </>
         ) : null}
-      </a>
-    </li>
-  )
+      </li>
+    )
+  }
 }
 
 export function Nav(handle: Handle) {
-  let { docFiles, version } = handle.context.get(App)
+  let { docFiles, activeVersion: version } = handle.context.get(App)
   return () => {
     let packageGroups = new Map<string, DocFile[]>()
 
