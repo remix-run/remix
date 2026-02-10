@@ -81,23 +81,30 @@ const WEBSITE_DOCS_PATH = '/api'
 // Convert a typedoc reflection for a given node into a documentable instance
 export function getDocumentedAPI(fullName: string, node: typedoc.Reflection): DocumentedAPI {
   try {
+    let api: DocumentedAPI | undefined
     if (node.isSignature()) {
       if (node.parent.kind === typedoc.ReflectionKind.Function) {
-        return getDocumentedFunction(fullName, node)
+        api = getDocumentedFunction(fullName, node)
       } else if (node.parent.kind === typedoc.ReflectionKind.Interface) {
-        return getDocumentedInterfaceFunction(fullName, node)
+        api = getDocumentedInterfaceFunction(fullName, node)
       }
     } else if (node.isDeclaration()) {
       if (node.kind === typedoc.ReflectionKind.Class) {
-        return getDocumentedClass(fullName, node)
+        api = getDocumentedClass(fullName, node)
       } else if (node.kind === typedoc.ReflectionKind.Interface) {
-        return getDocumentedInterface(fullName, node)
+        api = getDocumentedInterface(fullName, node)
       } else if (node.kind === typedoc.ReflectionKind.TypeAlias) {
-        return getDocumentedType(fullName, node)
+        api = getDocumentedType(fullName, node)
       }
     }
 
-    throw new Error(`Unsupported documented API kind: ${typedoc.ReflectionKind[node.kind]}`)
+    if (!api) {
+      throw new Error(`Unsupported documented API kind: ${typedoc.ReflectionKind[node.kind]}`)
+    }
+
+    warnOnInvalidImportSyntax(api)
+
+    return api
   } catch (e) {
     throw new Error(
       `Error normalizing comment for ${node.getFriendlyFullName()}: ${(e as Error).message}`,
@@ -485,4 +492,14 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
     }
     return acc + text
   }, '')
+}
+
+function warnOnInvalidImportSyntax(api: DocumentedAPI) {
+  let str = JSON.stringify(api)
+  if (str.includes("from '@remix-run/") || str.includes('from "@remix-run/')) {
+    warn(
+      `Potential invalid import syntax in ${api.name} JSDoc. Prefer importing ` +
+        `from \`remix/*\` instead of \`@remix-run/*\`.`,
+    )
+  }
 }
