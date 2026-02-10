@@ -22,7 +22,7 @@ npm install @remix-run/fs
 ### Opening Lazy Files
 
 ```ts
-import { openLazyFile } from '@remix-run/fs'
+import { openLazyFile } from 'remix/fs'
 
 // Open a file from the filesystem
 let lazyFile = openLazyFile('./path/to/file.json')
@@ -41,7 +41,7 @@ let customLazyFile = openLazyFile('./image.jpg', {
 ### Writing Files
 
 ```ts
-import { openLazyFile, writeFile } from '@remix-run/fs'
+import { openLazyFile, writeFile } from 'remix/fs'
 
 // Read a file and write it elsewhere
 let lazyFile = openLazyFile('./source.txt')

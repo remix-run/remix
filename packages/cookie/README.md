@@ -19,7 +19,7 @@ npm install @remix-run/cookie
 ## Usage
 
 ```tsx
-import { createCookie } from '@remix-run/cookie'
+import { createCookie } from 'remix/cookie'
 
 let sessionCookie = createCookie('session', {
   httpOnly: true,
@@ -50,7 +50,7 @@ This library supports signing cookies, which is useful for ensuring the integrit
 Secret rotation is also supported, so you can easily rotate in new secrets without breaking existing cookies.
 
 ```tsx
-import { Cookie } from '@remix-run/cookie'
+import { Cookie } from 'remix/cookie'
 
 // Start with a single secret
 let sessionCookie = createCookie('session', {

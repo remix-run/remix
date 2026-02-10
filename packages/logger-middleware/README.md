@@ -13,8 +13,8 @@ npm install @remix-run/logger-middleware
 ## Usage
 
 ```ts
-import { createRouter } from '@remix-run/fetch-router'
-import { logger } from '@remix-run/logger-middleware'
+import { createRouter } from 'remix/fetch-router'
+import { logger } from 'remix/logger-middleware'
 
 let router = createRouter({
   middleware: [logger()],

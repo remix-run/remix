@@ -15,8 +15,8 @@ Use the `formData()` middleware at the router level to parse `FormData` from the
 `context.files` will also be available as a map of `File` objects keyed by the name of the form field.
 
 ```ts
-import { createRouter } from '@remix-run/fetch-router'
-import { formData } from '@remix-run/form-data-middleware'
+import { createRouter } from 'remix/fetch-router'
+import { formData } from 'remix/form-data-middleware'
 
 let router = createRouter({
   middleware: [formData()],
@@ -38,7 +38,7 @@ router.post('/users', async (context) => {
 You can use a custom upload handler to customize how file uploads are handled. The return value of the upload handler will be used as the value of the form field in the `FormData` object.
 
 ```ts
-import { formData } from '@remix-run/form-data-middleware'
+import { formData } from 'remix/form-data-middleware'
 import { writeFile } from 'node:fs/promises'
 
 let router = createRouter({

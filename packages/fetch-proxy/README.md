@@ -26,7 +26,7 @@ npm i @remix-run/fetch-proxy
 ## Usage
 
 ```ts
-import { createFetchProxy } from '@remix-run/fetch-proxy'
+import { createFetchProxy } from 'remix/fetch-proxy'
 
 // Create a proxy that sends all requests through to remix.run
 let proxy = createFetchProxy('https://remix.run')

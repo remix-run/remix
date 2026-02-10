@@ -15,8 +15,8 @@ npm install @remix-run/async-context-middleware
 Simply use the `asyncContext()` middleware at the router level to make the request context available to all functions in the same async execution context. Get access to the context using the `getContext()` function.
 
 ```ts
-import { createRouter } from '@remix-run/fetch-router'
-import { asyncContext, getContext } from '@remix-run/async-context-middleware'
+import { createRouter } from 'remix/fetch-router'
+import { asyncContext, getContext } from 'remix/async-context-middleware'
 
 let router = createRouter({
   middleware: [asyncContext()],

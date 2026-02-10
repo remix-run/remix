@@ -11,10 +11,10 @@ npm install @remix-run/session-middleware
 ## Usage
 
 ```ts
-import { createRouter } from '@remix-run/fetch-router'
-import { createCookie } from '@remix-run/cookie'
-import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
-import { session } from '@remix-run/session-middleware'
+import { createRouter } from 'remix/fetch-router'
+import { createCookie } from 'remix/cookie'
+import { createCookieSessionStorage } from 'remix/session/cookie-storage'
+import { session } from 'remix/session-middleware'
 
 let sessionCookie = createCookie('__session', {
   secrets: ['s3cr3t'], // session cookies must be signed!
@@ -48,7 +48,7 @@ Note: The session cookie must be signed for security. This prevents tampering wi
 A basic login/logout flow could look like this:
 
 ```ts
-import * as res from '@remix-run/fetch-router/response-helpers'
+import * as res from 'remix/fetch-router/response-helpers'
 
 router.get('/login', ({ session }) => {
   let error = session.get('error')

@@ -22,7 +22,7 @@ npm install @remix-run/interaction
 Use `on(target, listeners)` to add one or more listeners. Each listener receives `(event, signal)` where `signal` is aborted on reentry.
 
 ```ts
-import { on } from '@remix-run/interaction'
+import { on } from 'remix/interaction'
 
 let inputElement = document.createElement('input')
 
@@ -36,7 +36,7 @@ on(inputElement, {
 Listeners can be arrays. They run in order and preserve normal DOM semantics (including `stopImmediatePropagation`).
 
 ```ts
-import { on } from '@remix-run/interaction'
+import { on } from 'remix/interaction'
 
 on(inputElement, {
   input: [
@@ -64,8 +64,8 @@ on(inputElement, {
 Builtin interactions are higher‑level, semantic event types (e.g., `press`, `longPress`, arrow keys) exported as string constants. Consume them just like native events by using computed keys in your listener map. When you bind one, the necessary underlying host events are set up automatically.
 
 ```tsx
-import { on } from '@remix-run/interaction'
-import { press, longPress } from '@remix-run/interaction/press'
+import { on } from 'remix/interaction'
+import { press, longPress } from 'remix/interaction/press'
 
 on(listItem, {
   [press](event) {
@@ -118,7 +118,7 @@ on(inputElement, {
 All DOM [`AddEventListenerOptions`](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#options) are supported via descriptors:
 
 ```ts
-import { on } from '@remix-run/interaction'
+import { on } from 'remix/interaction'
 
 on(button, {
   click: {
@@ -141,7 +141,7 @@ on(button, {
 Use `createContainer` when you need to update listeners in place (e.g., in a component system). The container diffs and updates existing bindings without unnecessary `removeEventListener`/`addEventListener` churn.
 
 ```ts
-import { createContainer } from '@remix-run/interaction'
+import { createContainer } from 'remix/interaction'
 
 let container = createContainer(form)
 
@@ -173,7 +173,7 @@ container.set({
 `on` returns a dispose function. Containers expose `dispose()`. You can also pass an external `AbortSignal`.
 
 ```ts
-import { on, createContainer } from '@remix-run/interaction'
+import { on, createContainer } from 'remix/interaction'
 
 // Using the function returned from on()
 let dispose = on(button, { click: () => {} })
@@ -215,7 +215,7 @@ on(button, {
 Define semantic interactions that can dispatch custom events and be reused declaratively.
 
 ```ts
-import { defineInteraction, on, type Interaction } from '@remix-run/interaction'
+import { defineInteraction, on, type Interaction } from 'remix/interaction'
 
 // Provide type safety for consumers
 declare global {
@@ -257,7 +257,7 @@ Notes:
 Use `TypedEventTarget<eventMap>` to get type-safe `addEventListener` and integrate with this library's `on` helpers.
 
 ```ts
-import { TypedEventTarget, on } from '@remix-run/interaction'
+import { TypedEventTarget, on } from 'remix/interaction'
 
 interface DrummerEventMap {
   kick: DrummerEvent
