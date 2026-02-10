@@ -112,7 +112,7 @@ function VersionLink(handle: Handle) {
             version: !includeLatestLink ? version.version : undefined,
           })}
           style={{ display: latest ? 'inline-block' : undefined }}
-          rel={version.crawl ? undefined : 'nofollow'}
+          rel={!version.crawl ? 'nofollow' : undefined}
         >
           {version.version}
         </a>
@@ -122,7 +122,11 @@ function VersionLink(handle: Handle) {
             {/* Indicate latest only on root (latest) sites */}
             <span>(latest)</span>
             {/* Include a hidden link so that we generate a versioned output for the latest version */}
-            <a href={routes.home.href({ version: version.version })} style={{ display: 'none' }}>
+            <a
+              href={routes.home.href({ version: version.version })}
+              style={{ display: 'none' }}
+              rel={!version.crawl ? 'nofollow' : undefined}
+            >
               {version.version}
             </a>
           </>
@@ -132,16 +136,23 @@ function VersionLink(handle: Handle) {
   }
 }
 
+type ApiTypes = {
+  type: DocFile[]
+  interface: DocFile[]
+  function: DocFile[]
+  class: DocFile[]
+}
+
 export function Nav(handle: Handle) {
   let { docFiles, activeVersion: version } = handle.context.get(App)
   return () => {
-    let packageGroups = new Map<string, DocFile[]>()
+    let packageGroups = new Map<string, ApiTypes>()
 
     for (let file of docFiles) {
       if (!packageGroups.has(file.package)) {
-        packageGroups.set(file.package, [])
+        packageGroups.set(file.package, { type: [], interface: [], function: [], class: [] })
       }
-      packageGroups.get(file.package)!.push(file)
+      packageGroups.get(file.package)![file.type as keyof ApiTypes].push(file)
     }
 
     let sortedNavItems = Array.from(packageGroups.entries()).sort((a, b) => {
@@ -160,12 +171,10 @@ export function Nav(handle: Handle) {
     return sortedNavItems.map(([packageName, files]) => (
       <NavDropdown title={packageName}>
         <ul>
-          {files.map((file) => (
-            <li>
-              {/* TODO: Add back active formatting */}
-              <a href={routes.api.href({ version, slug: file.urlPath })}>{file.name}</a>
-            </li>
-          ))}
+          <NavDropdownSection title="Types" files={files} type="type" />
+          <NavDropdownSection title="Interfaces" files={files} type="interface" />
+          <NavDropdownSection title="Classes" files={files} type="class" />
+          <NavDropdownSection title="Functions" files={files} type="function" />
         </ul>
       </NavDropdown>
     ))
@@ -179,4 +188,25 @@ function NavDropdown() {
       {children}
     </details>
   )
+}
+
+function NavDropdownSection(handle: Handle) {
+  let { activeVersion: version } = handle.context.get(App)
+  return ({ title, files, type }: { title: string; files: ApiTypes; type: keyof ApiTypes }) => {
+    if (files[type].length === 0) {
+      return null
+    }
+
+    return (
+      <>
+        <p>{title}</p>
+        {...files[type].map((file) => (
+          <li>
+            {/* TODO: Add back active formatting */}
+            <a href={routes.api.href({ version, slug: file.urlPath })}>{file.name}</a>
+          </li>
+        ))}
+      </>
+    )
+  }
 }
