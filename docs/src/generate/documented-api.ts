@@ -120,7 +120,7 @@ function getDocumentedFunction(
     source: node.sources?.[0]?.url,
     aliases: getApiAliases(node.comment!),
     example: node.comment?.getTag('@example')?.content
-      ? replaceSubPackageImports(processApiComment(node.comment.getTag('@example')!.content))
+      ? processApiComment(node.comment.getTag('@example')!.content)
       : undefined,
     ...method,
   }
@@ -168,7 +168,7 @@ function getDocumentedClass(
     type: 'class',
     aliases: getApiAliases(node.comment!),
     example: node.comment?.getTag('@example')?.content
-      ? replaceSubPackageImports(processApiComment(node.comment.getTag('@example')!.content))
+      ? processApiComment(node.comment.getTag('@example')!.content)
       : undefined,
     path: getApiFilePath(fullName, 'class'),
     source: node.sources?.[0]?.url,
@@ -485,10 +485,4 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
     }
     return acc + text
   }, '')
-}
-
-// Replace imports in code examples to use root remix package
-function replaceSubPackageImports(content: string) {
-  let regex = /} from (['"])@remix-run\/([\w\/]+)(['"])/g
-  return content.replace(regex, '} from $1remix/$2$3')
 }
