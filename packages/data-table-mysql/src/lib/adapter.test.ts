@@ -86,6 +86,43 @@ describe('mysql adapter', () => {
     assert.deepEqual(lifecycle, ['getConnection', 'begin', 'commit', 'release'])
   })
 
+  it('applies transaction options when provided', async () => {
+    let lifecycle: string[] = []
+
+    let connection = {
+      async query(text: string) {
+        lifecycle.push(text)
+        return [{ affectedRows: 0, insertId: undefined }, []]
+      },
+      async beginTransaction() {
+        lifecycle.push('begin')
+      },
+      async commit() {
+        lifecycle.push('commit')
+      },
+      async rollback() {
+        lifecycle.push('rollback')
+      },
+    }
+
+    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+
+    await db.transaction(
+      async () => undefined,
+      {
+        isolationLevel: 'serializable',
+        readOnly: true,
+      },
+    )
+
+    assert.deepEqual(lifecycle, [
+      'set transaction isolation level serializable',
+      'set transaction read only',
+      'begin',
+      'commit',
+    ])
+  })
+
   it('compiles column-to-column comparisons from string references', async () => {
     let statements: Array<{ text: string; values: unknown[] }> = []
 

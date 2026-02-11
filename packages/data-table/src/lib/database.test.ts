@@ -821,6 +821,38 @@ describe('transactions and raw sql', () => {
     ])
   })
 
+  it('treats transaction options as best-effort adapter hints', async () => {
+    let adapter = new MemoryDatabaseAdapter({
+      accounts: [{ id: 1, email: 'founder@studio.test', status: 'active' }],
+      projects: [],
+      profiles: [],
+      tasks: [],
+      memberships: [],
+    })
+    let db = createDatabase(adapter)
+
+    await db.transaction(
+      async (transactionDatabase) => {
+        await transactionDatabase
+          .query(Accounts)
+          .insert({ id: 2, email: 'pm@studio.test', status: 'active' })
+      },
+      {
+        isolationLevel: 'serializable',
+        readOnly: true,
+      },
+    )
+
+    let rows = adapter.snapshot('accounts')
+    assert.equal(rows.length, 2)
+    assert.equal(rows[0].id, 1)
+    assert.equal(rows[0].email, 'founder@studio.test')
+    assert.equal(rows[1].id, 2)
+    assert.equal(rows[1].email, 'pm@studio.test')
+    assert.equal(rows[1].status, 'active')
+    assert.deepEqual(adapter.events, ['begin:tx_1', 'commit:tx_1'])
+  })
+
   it('routes raw sql through db.exec', async () => {
     let adapter = new MemoryDatabaseAdapter({
       accounts: [],
