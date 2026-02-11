@@ -79,7 +79,7 @@ describe('mysql adapter', () => {
 
     let db = createDatabase(createMysqlDatabaseAdapter(pool as never))
 
-    await db.transaction(async function (transactionDatabase) {
+    await db.transaction(async (transactionDatabase) => {
       await transactionDatabase.query(Accounts).insert({ id: 1, email: 'a@example.com' })
     })
 

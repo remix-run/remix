@@ -227,9 +227,7 @@ describe('memory adapter contract', () => {
 
     let rows = adapter.snapshot('accounts')
     assert.deepEqual(
-      rows.map(function mapRow(row) {
-        return row.id
-      }),
+      rows.map((row) => row.id),
       [1, 2, 4],
     )
     assert.deepEqual(adapter.events, [

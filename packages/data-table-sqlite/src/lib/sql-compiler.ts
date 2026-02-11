@@ -27,9 +27,7 @@ export function compileSqliteStatement(statement: AdapterStatement): CompiledSql
 
     if (statement.select !== '*') {
       selection = statement.select
-        .map(function mapColumn(column) {
-          return quotePath(column)
-        })
+        .map((column) => quotePath(column))
         .join(', ')
     }
 
@@ -91,9 +89,7 @@ export function compileSqliteStatement(statement: AdapterStatement): CompiledSql
         quoteIdentifier(statement.table.name) +
         ' set ' +
         columns
-          .map(function mapColumn(column) {
-            return quotePath(column) + ' = ' + pushValue(context, statement.changes[column])
-          })
+          .map((column) => quotePath(column) + ' = ' + pushValue(context, statement.changes[column]))
           .join(', ') +
         compileWhereClause(statement.where, context) +
         compileReturningClause(statement.returning),
@@ -144,15 +140,11 @@ function compileInsertStatement(
       quoteIdentifier(table.name) +
       ' (' +
       columns
-        .map(function mapColumn(column) {
-          return quotePath(column)
-        })
+        .map((column) => quotePath(column))
         .join(', ') +
       ') values (' +
       columns
-        .map(function mapColumn(column) {
-          return pushValue(context, values[column])
-        })
+        .map((column) => pushValue(context, values[column]))
         .join(', ') +
       ')' +
       compileReturningClause(returning),
@@ -192,24 +184,20 @@ function compileInsertManyStatement(
       quoteIdentifier(table.name) +
       ' (' +
       columns
-        .map(function mapColumn(column) {
-          return quotePath(column)
-        })
+        .map((column) => quotePath(column))
         .join(', ') +
       ') values ' +
       rows
-        .map(function mapRow(row) {
-          return (
+        .map((row) => (
             '(' +
             columns
-              .map(function mapColumn(column) {
+              .map((column) => {
                 let value = Object.prototype.hasOwnProperty.call(row, column) ? row[column] : null
                 return pushValue(context, value)
               })
               .join(', ') +
             ')'
-          )
-        })
+          ))
         .join(', ') +
       compileReturningClause(returning),
     values: context.values,
@@ -233,24 +221,18 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
     conflictClause =
       ' on conflict (' +
       conflictTarget
-        .map(function mapColumn(column: string) {
-          return quotePath(column)
-        })
+        .map((column: string) => quotePath(column))
         .join(', ') +
       ') do nothing'
   } else {
     conflictClause =
       ' on conflict (' +
       conflictTarget
-        .map(function mapColumn(column: string) {
-          return quotePath(column)
-        })
+        .map((column: string) => quotePath(column))
         .join(', ') +
       ') do update set ' +
       updateColumns
-        .map(function mapColumn(column) {
-          return quotePath(column) + ' = ' + pushValue(context, updateValues[column])
-        })
+        .map((column) => quotePath(column) + ' = ' + pushValue(context, updateValues[column]))
         .join(', ')
   }
 
@@ -260,15 +242,11 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
       quoteIdentifier(statement.table.name) +
       ' (' +
       insertColumns
-        .map(function mapColumn(column) {
-          return quotePath(column)
-        })
+        .map((column) => quotePath(column))
         .join(', ') +
       ') values (' +
       insertColumns
-        .map(function mapColumn(column) {
-          return pushValue(context, statement.values[column])
-        })
+        .map((column) => pushValue(context, statement.values[column]))
         .join(', ') +
       ')' +
       conflictClause +
@@ -301,9 +279,7 @@ function compileWhereClause(predicates: Predicate[], context: CompileContext): s
   return (
     ' where ' +
     predicates
-      .map(function mapPredicate(predicate) {
-        return '(' + compilePredicate(predicate, context) + ')'
-      })
+      .map((predicate) => '(' + compilePredicate(predicate, context) + ')')
       .join(' and ')
   )
 }
@@ -316,9 +292,7 @@ function compileGroupByClause(columns: string[]): string {
   return (
     ' group by ' +
     columns
-      .map(function mapColumn(column) {
-        return quotePath(column)
-      })
+      .map((column) => quotePath(column))
       .join(', ')
   )
 }
@@ -331,9 +305,7 @@ function compileHavingClause(predicates: Predicate[], context: CompileContext): 
   return (
     ' having ' +
     predicates
-      .map(function mapPredicate(predicate) {
-        return '(' + compilePredicate(predicate, context) + ')'
-      })
+      .map((predicate) => '(' + compilePredicate(predicate, context) + ')')
       .join(' and ')
   )
 }
@@ -346,9 +318,7 @@ function compileOrderByClause(orderBy: { column: string; direction: 'asc' | 'des
   return (
     ' order by ' +
     orderBy
-      .map(function mapClause(clause) {
-        return quotePath(clause.column) + ' ' + clause.direction.toUpperCase()
-      })
+      .map((clause) => quotePath(clause.column) + ' ' + clause.direction.toUpperCase())
       .join(', ')
   )
 }
@@ -381,9 +351,7 @@ function compileReturningClause(returning: '*' | string[] | undefined): string {
   return (
     ' returning ' +
     returning
-      .map(function mapColumn(column) {
-        return quotePath(column)
-      })
+      .map((column) => quotePath(column))
       .join(', ')
   )
 }
@@ -446,9 +414,7 @@ function compilePredicate(predicate: Predicate, context: CompileContext): string
         keyword +
         ' (' +
         values
-          .map(function mapValue(value) {
-            return pushValue(context, value)
-          })
+          .map((value) => pushValue(context, value))
           .join(', ') +
         ')'
       )
@@ -487,9 +453,7 @@ function compilePredicate(predicate: Predicate, context: CompileContext): string
     let joiner = predicate.operator === 'and' ? ' and ' : ' or '
 
     return predicate.predicates
-      .map(function mapChild(child) {
-        return '(' + compilePredicate(child, context) + ')'
-      })
+      .map((child) => '(' + compilePredicate(child, context) + ')')
       .join(joiner)
   }
 
@@ -534,7 +498,7 @@ function quotePath(path: string): string {
 
   return path
     .split('.')
-    .map(function mapSegment(segment) {
+    .map((segment) => {
       if (segment === '*') {
         return '*'
       }

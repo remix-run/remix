@@ -107,9 +107,7 @@ export class MemoryDatabaseAdapter implements DatabaseAdapter {
 
     if (statement.kind === 'update') {
       let tableRows = readRows(data, statement.table)
-      let matches = tableRows.filter(function filterRow(row) {
-        return matchesPredicateList(row, statement.where)
-      })
+      let matches = tableRows.filter((row) => matchesPredicateList(row, statement.where))
 
       for (let row of matches) {
         Object.assign(row, statement.changes)
@@ -145,11 +143,7 @@ export class MemoryDatabaseAdapter implements DatabaseAdapter {
     if (statement.kind === 'upsert') {
       let tableRows = readRows(data, statement.table)
       let conflictTarget = statement.conflictTarget ?? [...statement.table.primaryKey]
-      let existing = tableRows.find(function findRow(row) {
-        return conflictTarget.every(function matchesKey(key) {
-          return row[key] === statement.values[key]
-        })
-      })
+      let existing = tableRows.find((row) => conflictTarget.every((key) => row[key] === statement.values[key]))
 
       if (existing) {
         let updateValues = statement.update ?? statement.values
@@ -298,9 +292,7 @@ function applyWhere(
   rows: Record<string, unknown>[],
   predicates: Predicate[],
 ): Record<string, unknown>[] {
-  return rows.filter(function filterRow(row) {
-    return matchesPredicateList(row, predicates)
-  })
+  return rows.filter((row) => matchesPredicateList(row, predicates))
 }
 
 function matchesPredicateList(row: Record<string, unknown>, predicates: Predicate[]): boolean {
@@ -379,14 +371,10 @@ function matchesPredicate(row: Record<string, unknown>, predicate: Predicate): b
 
   if (predicate.type === 'logical') {
     if (predicate.operator === 'and') {
-      return predicate.predicates.every(function everyPredicate(child: Predicate) {
-        return matchesPredicate(row, child)
-      })
+      return predicate.predicates.every((child: Predicate) => matchesPredicate(row, child))
     }
 
-    return predicate.predicates.some(function somePredicate(child: Predicate) {
-      return matchesPredicate(row, child)
-    })
+    return predicate.predicates.some((child: Predicate) => matchesPredicate(row, child))
   }
 
   return false
@@ -461,7 +449,7 @@ function applyOrder(
     return [...rows]
   }
 
-  return [...rows].sort(function compare(left, right) {
+  return [...rows].sort((left, right) => {
     for (let clause of orderBy) {
       let direction = clause.direction === 'desc' ? -1 : 1
       let comparison = compareValues(readRowValue(left, clause.column), readRowValue(right, clause.column))
@@ -496,12 +484,10 @@ function projectRows(
   select: '*' | string[],
 ): Record<string, unknown>[] {
   if (select === '*') {
-    return rows.map(function clone(row) {
-      return { ...row }
-    })
+    return rows.map((row) => ({ ...row }))
   }
 
-  return rows.map(function project(row) {
+  return rows.map((row) => {
     let output: Record<string, unknown> = {}
 
     for (let key of select) {
@@ -561,9 +547,7 @@ function readRowsForStatement(
   let sourceRows = readRows(data, statement.table)
   let joinedRows =
     statement.joins.length === 0
-      ? sourceRows.map(function cloneSourceRow(row) {
-          return { ...row }
-        })
+      ? sourceRows.map((row) => ({ ...row }))
       : applyJoins(sourceRows, statement.table, statement.joins, data)
   let filteredRows = applyWhere(joinedRows, statement.where)
   let groupedRows = applyGroupBy(filteredRows, statement.groupBy)
@@ -576,9 +560,7 @@ function applyJoins(
   joins: JoinClause[],
   data: MemoryDatabaseSeed,
 ): Record<string, unknown>[] {
-  let currentRows = sourceRows.map(function mapSourceRow(row) {
-    return mergeTableData({}, sourceTable, row)
-  })
+  let currentRows = sourceRows.map((row) => mergeTableData({}, sourceTable, row))
 
   for (let join of joins) {
     let targetRows = readRows(data, join.table)
@@ -635,9 +617,7 @@ function applyGroupBy(rows: Record<string, unknown>[], groupBy: string[]): Recor
 
   for (let row of rows) {
     let key = JSON.stringify(
-      groupBy.map(function mapGroupColumn(column) {
-        return readRowValue(row, column)
-      }),
+      groupBy.map((column) => readRowValue(row, column)),
     )
 
     if (!seen.has(key)) {

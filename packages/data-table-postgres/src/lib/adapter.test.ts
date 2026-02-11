@@ -79,14 +79,12 @@ describe('postgres adapter', () => {
 
     let db = createDatabase(createPostgresDatabaseAdapter(client as never))
 
-    await db.transaction(async function (outerTransaction) {
+    await db.transaction(async (outerTransaction) => {
       await outerTransaction
-        .transaction(async function inner() {
+        .transaction(async () => {
           throw new Error('Abort nested transaction')
         })
-        .catch(function swallow() {
-          return undefined
-        })
+        .catch(() => undefined)
     })
 
     assert.deepEqual(statements, [
