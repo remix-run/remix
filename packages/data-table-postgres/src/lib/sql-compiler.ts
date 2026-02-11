@@ -24,9 +24,7 @@ export function compilePostgresStatement(statement: AdapterStatement): CompiledS
 
     if (statement.select !== '*') {
       selection = statement.select
-        .map(function mapColumn(column) {
-          return quotePath(column)
-        })
+        .map((column) => quotePath(column))
         .join(', ')
     }
 
@@ -84,9 +82,7 @@ export function compilePostgresStatement(statement: AdapterStatement): CompiledS
   if (statement.kind === 'update') {
     let changes = Object.keys(statement.changes)
     let assignments = changes
-      .map(function mapColumn(column) {
-        return quotePath(column) + ' = ' + pushValue(context, statement.changes[column])
-      })
+      .map((column) => quotePath(column) + ' = ' + pushValue(context, statement.changes[column]))
       .join(', ')
 
     return {
@@ -138,12 +134,8 @@ function compileInsertStatement(
     }
   }
 
-  let quotedColumns = columns.map(function mapColumn(column) {
-    return quotePath(column)
-  })
-  let placeholders = columns.map(function mapColumn(column) {
-    return pushValue(context, values[column])
-  })
+  let quotedColumns = columns.map((column) => quotePath(column))
+  let placeholders = columns.map((column) => pushValue(context, values[column]))
 
   return {
     text:
@@ -185,12 +177,10 @@ function compileInsertManyStatement(
     }
   }
 
-  let quotedColumns = columns.map(function mapColumn(column) {
-    return quotePath(column)
-  })
+  let quotedColumns = columns.map((column) => quotePath(column))
 
-  let valueSets = rows.map(function mapRow(row) {
-    let placeholders = columns.map(function mapColumn(column) {
+  let valueSets = rows.map((row) => {
+    let placeholders = columns.map((column) => {
       let value = Object.prototype.hasOwnProperty.call(row, column) ? row[column] : null
       return pushValue(context, value)
     })
@@ -219,12 +209,8 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
     throw new Error('upsert requires at least one value')
   }
 
-  let quotedInsertColumns = insertColumns.map(function mapColumn(column) {
-    return quotePath(column)
-  })
-  let insertPlaceholders = insertColumns.map(function mapColumn(column) {
-    return pushValue(context, statement.values[column])
-  })
+  let quotedInsertColumns = insertColumns.map((column) => quotePath(column))
+  let insertPlaceholders = insertColumns.map((column) => pushValue(context, statement.values[column]))
 
   let updateValues = statement.update ?? statement.values
   let updateColumns = Object.keys(updateValues)
@@ -234,24 +220,18 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
     onConflictClause =
       ' on conflict (' +
       conflictTarget
-        .map(function mapColumn(column: string) {
-          return quotePath(column)
-        })
+        .map((column: string) => quotePath(column))
         .join(', ') +
       ') do nothing'
   } else {
     onConflictClause =
       ' on conflict (' +
       conflictTarget
-        .map(function mapColumn(column: string) {
-          return quotePath(column)
-        })
+        .map((column: string) => quotePath(column))
         .join(', ') +
       ') do update set ' +
       updateColumns
-        .map(function mapColumn(column) {
-          return quotePath(column) + ' = ' + pushValue(context, updateValues[column])
-        })
+        .map((column) => quotePath(column) + ' = ' + pushValue(context, updateValues[column]))
         .join(', ')
   }
 
@@ -313,9 +293,7 @@ function compileWhereClause(predicates: Predicate[], context: CompileContext): s
   }
 
   let where = predicates
-    .map(function mapPredicate(predicate) {
-      return '(' + compilePredicate(predicate, context) + ')'
-    })
+    .map((predicate) => '(' + compilePredicate(predicate, context) + ')')
     .join(' and ')
 
   return ' where ' + where
@@ -329,9 +307,7 @@ function compileGroupByClause(columns: string[]): string {
   return (
     ' group by ' +
     columns
-      .map(function mapColumn(column) {
-        return quotePath(column)
-      })
+      .map((column) => quotePath(column))
       .join(', ')
   )
 }
@@ -342,9 +318,7 @@ function compileHavingClause(predicates: Predicate[], context: CompileContext): 
   }
 
   let having = predicates
-    .map(function mapPredicate(predicate) {
-      return '(' + compilePredicate(predicate, context) + ')'
-    })
+    .map((predicate) => '(' + compilePredicate(predicate, context) + ')')
     .join(' and ')
 
   return ' having ' + having
@@ -358,9 +332,7 @@ function compileOrderByClause(orderBy: { column: string; direction: 'asc' | 'des
   return (
     ' order by ' +
     orderBy
-      .map(function mapOrder(clause) {
-        return quotePath(clause.column) + ' ' + clause.direction.toUpperCase()
-      })
+      .map((clause) => quotePath(clause.column) + ' ' + clause.direction.toUpperCase())
       .join(', ')
   )
 }
@@ -393,9 +365,7 @@ function compileReturningClause(returning: '*' | string[] | undefined): string {
   return (
     ' returning ' +
     returning
-      .map(function mapColumn(column) {
-        return quotePath(column)
-      })
+      .map((column) => quotePath(column))
       .join(', ')
   )
 }
@@ -450,9 +420,7 @@ function compilePredicate(predicate: Predicate, context: CompileContext): string
         return predicate.operator === 'in' ? '1 = 0' : '1 = 1'
       }
 
-      let placeholders = values.map(function mapValue(value) {
-        return pushValue(context, value)
-      })
+      let placeholders = values.map((value) => pushValue(context, value))
       let keyword = predicate.operator === 'in' ? 'in' : 'not in'
 
       return column + ' ' + keyword + ' (' + placeholders.join(', ') + ')'
@@ -490,9 +458,7 @@ function compilePredicate(predicate: Predicate, context: CompileContext): string
 
     let childOperator = predicate.operator === 'and' ? ' and ' : ' or '
     let childPredicates = predicate.predicates
-      .map(function mapChild(child) {
-        return '(' + compilePredicate(child, context) + ')'
-      })
+      .map((child) => '(' + compilePredicate(child, context) + ')')
       .join(childOperator)
 
     return childPredicates
@@ -540,7 +506,7 @@ function quotePath(path: string): string {
   let segments = path.split('.')
 
   return segments
-    .map(function mapSegment(segment) {
+    .map((segment) => {
       if (segment === '*') {
         return '*'
       }

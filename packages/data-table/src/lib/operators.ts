@@ -244,9 +244,7 @@ export function normalizeWhereInput<column extends string>(
   }
 
   let keys = Object.keys(input) as column[]
-  let predicates = keys.map(function mapKey(column) {
-    return eq(column, input[column])
-  })
+  let predicates = keys.map((column) => eq(column, input[column]))
 
   return and(...predicates)
 }

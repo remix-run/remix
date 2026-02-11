@@ -213,9 +213,7 @@ function isRowsResult(result: unknown): result is MysqlQueryRows {
 }
 
 function normalizeRows(rows: MysqlQueryRows): Record<string, unknown>[] {
-  return rows.map(function mapRow(row) {
-    return { ...row }
-  })
+  return rows.map((row) => ({ ...row }))
 }
 
 function normalizeHeader(result: unknown): MysqlQueryResultHeader {
@@ -235,7 +233,7 @@ function normalizeHeader(result: unknown): MysqlQueryResultHeader {
 }
 
 function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
-  return rows.map(function mapRow(row) {
+  return rows.map((row) => {
     let count = row.count
 
     if (typeof count === 'string') {

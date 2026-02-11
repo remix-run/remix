@@ -439,9 +439,7 @@ export function getPrimaryKeyObject<table extends AnyTable>(
 }
 
 export function getCompositeKey(row: Record<string, unknown>, columns: readonly string[]): string {
-  let values = columns.map(function mapKey(column) {
-    return stableSerialize(row[column])
-  })
+  let values = columns.map((column) => stableSerialize(row[column]))
 
   return values.join('::')
 }

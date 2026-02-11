@@ -239,9 +239,7 @@ export class QueryBuilder<
     let predicate = normalizeWhereInput(input)
     let normalizedPredicate = normalizePredicateValues(
       predicate,
-      createPredicateColumnResolver([this.#table, ...this.#state.joins.map(function mapJoin(join) {
-        return join.table
-      })]),
+      createPredicateColumnResolver([this.#table, ...this.#state.joins.map((join) => join.table)]),
     )
 
     return this.#clone({
@@ -253,9 +251,7 @@ export class QueryBuilder<
     let predicate = normalizeWhereInput(input)
     let normalizedPredicate = normalizePredicateValues(
       predicate,
-      createPredicateColumnResolver([this.#table, ...this.#state.joins.map(function mapJoin(join) {
-        return join.table
-      })]),
+      createPredicateColumnResolver([this.#table, ...this.#state.joins.map((join) => join.table)]),
     )
 
     return this.#clone({
@@ -272,9 +268,7 @@ export class QueryBuilder<
       on,
       createPredicateColumnResolver([
         this.#table,
-        ...this.#state.joins.map(function mapJoin(join) {
-          return join.table
-        }),
+        ...this.#state.joins.map((join) => join.table),
         target,
       ]),
     ) as Predicate<columns | QueryColumnName<target>>
@@ -583,9 +577,7 @@ export class QueryBuilder<
       let table = this.#table
       let queryState = this.#state
 
-      return this.#database.transaction(async function runScopedUpdate(
-        transactionDatabase: Database,
-      ) {
+      return this.#database.transaction(async (transactionDatabase: Database) => {
         let primaryKeys = await loadPrimaryKeyRowsForScope(transactionDatabase, table, queryState)
         let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
@@ -671,9 +663,7 @@ export class QueryBuilder<
       let table = this.#table
       let queryState = this.#state
 
-      return this.#database.transaction(async function runScopedDelete(
-        transactionDatabase: Database,
-      ) {
+      return this.#database.transaction(async (transactionDatabase: Database) => {
         let primaryKeys = await loadPrimaryKeyRowsForScope(transactionDatabase, table, queryState)
         let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
@@ -961,7 +951,7 @@ export class QueryBuilder<
     let rows = await query.all()
     let primaryKeys = this.#table.primaryKey as string[]
 
-    return rows.map(function mapRow(row) {
+    return rows.map((row) => {
       let keyObject: Record<string, unknown> = {}
 
       for (let key of rowKeys(row as Record<string, unknown>, primaryKeys)) {
@@ -979,9 +969,7 @@ async function loadRelationsForRows(
   rows: Record<string, unknown>[],
   relationMap: RelationMapForTable<any>,
 ): Promise<Record<string, unknown>[]> {
-  let output = rows.map(function clone(row) {
-    return { ...row }
-  })
+  let output = rows.map((row) => ({ ...row }))
 
   let relationNames = Object.keys(relationMap)
 
@@ -1034,9 +1022,7 @@ async function loadDirectRelationValues(
   let sourceTuples = uniqueTuples(sourceRows, relation.sourceKey)
 
   if (sourceTuples.length === 0) {
-    return sourceRows.map(function mapEmpty() {
-      return relation.cardinality === 'many' ? [] : null
-    })
+    return sourceRows.map(() => relation.cardinality === 'many' ? [] : null)
   }
 
   let query = database.query(relation.targetTable)
@@ -1053,7 +1039,7 @@ async function loadDirectRelationValues(
   let relatedRows = (await query.all()) as unknown as Record<string, unknown>[]
   let grouped = groupRowsByTuple(relatedRows, relation.targetKey)
 
-  return sourceRows.map(function mapSourceRow(sourceRow) {
+  return sourceRows.map((sourceRow) => {
     let key = getCompositeKey(sourceRow, relation.sourceKey)
     let matches = grouped.get(key) ?? []
     let pagedMatches = applyPagination(matches, relation.modifiers.limit, relation.modifiers.offset)
@@ -1083,9 +1069,7 @@ async function loadHasManyThroughValues(
   let sourceTuples = uniqueTuples(sourceRows, throughRelation.sourceKey)
 
   if (sourceTuples.length === 0) {
-    return sourceRows.map(function empty() {
-      return []
-    })
+    return sourceRows.map(() => [])
   }
 
   let throughQuery = database.query(throughRelation.targetTable)
@@ -1104,9 +1088,7 @@ async function loadHasManyThroughValues(
   let throughRows = (await throughQuery.all()) as unknown as Record<string, unknown>[]
 
   if (throughRows.length === 0) {
-    return sourceRows.map(function empty() {
-      return []
-    })
+    return sourceRows.map(() => [])
   }
 
   let throughRowsBySource = groupRowsByTuple(throughRows, throughRelation.targetKey)
@@ -1129,9 +1111,7 @@ async function loadHasManyThroughValues(
   let throughTuples = uniqueTuples(pagedThroughRows, relation.through.throughSourceKey)
 
   if (throughTuples.length === 0) {
-    return sourceRows.map(function empty() {
-      return []
-    })
+    return sourceRows.map(() => [])
   }
 
   let targetQuery = database.query(relation.targetTable)
@@ -1150,7 +1130,7 @@ async function loadHasManyThroughValues(
   let relatedRows = (await targetQuery.all()) as unknown as Record<string, unknown>[]
   let targetRowsByThrough = groupRowsByTuple(relatedRows, relation.through.throughTargetKey)
 
-  return sourceRows.map(function mapSourceRow(sourceRow) {
+  return sourceRows.map((sourceRow) => {
     let sourceKey = getCompositeKey(sourceRow, throughRelation.sourceKey)
     let matchedThroughRows = pagedThroughRowsBySource.get(sourceKey) ?? []
     let outputRows: Record<string, unknown>[] = []
@@ -1218,9 +1198,7 @@ function normalizeRows(rows: AdapterResult['rows']): Record<string, unknown>[] {
     return []
   }
 
-  return rows.map(function mapRow(row) {
-    return { ...row }
-  })
+  return rows.map((row) => ({ ...row }))
 }
 
 function hasScopedWriteModifiers<table extends AnyTable>(state: QueryState<table>): boolean {
@@ -1316,7 +1294,7 @@ async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
   let rows = await query.all()
   let primaryKeys = table.primaryKey as string[]
 
-  return rows.map(function mapRow(row) {
+  return rows.map((row) => {
     let keyObject: Record<string, unknown> = {}
 
     for (let key of rowKeys(row as Record<string, unknown>, primaryKeys)) {
@@ -1552,9 +1530,7 @@ function normalizePredicateValues(
         )
       }
 
-      let parsedValues = predicate.value.map(function mapValue(value) {
-        return parsePredicateValue(column, value)
-      })
+      let parsedValues = predicate.value.map((value) => parsePredicateValue(column, value))
 
       return {
         ...predicate,
@@ -1585,9 +1561,7 @@ function normalizePredicateValues(
 
   return {
     ...predicate,
-    predicates: predicate.predicates.map(function mapPredicate(child) {
-      return normalizePredicateValues(child, resolveColumn)
-    }),
+    predicates: predicate.predicates.map((child) => normalizePredicateValues(child, resolveColumn)),
   }
 }
 
@@ -1617,9 +1591,7 @@ function uniqueTuples(rows: Record<string, unknown>[], columns: string[]): unkno
   let seen = new Set<string>()
 
   for (let row of rows) {
-    let tuple = columns.map(function mapColumn(column) {
-      return row[column]
-    })
+    let tuple = columns.map((column) => row[column])
     let key = tuple.map(stringifyForKey).join('::')
 
     if (!seen.has(key)) {
@@ -1639,16 +1611,12 @@ function buildLinkPredicate(targetColumns: string[], tuples: unknown[][]): Predi
   if (targetColumns.length === 1) {
     return inList(
       targetColumns[0],
-      tuples.map(function mapTuple(tuple) {
-        return tuple[0]
-      }),
+      tuples.map((tuple) => tuple[0]),
     )
   }
 
-  let tuplePredicates = tuples.map(function mapTuple(tuple) {
-    let comparisons = targetColumns.map(function mapColumn(column, index) {
-      return eq(column, tuple[index])
-    })
+  let tuplePredicates = tuples.map((tuple) => {
+    let comparisons = targetColumns.map((column, index) => eq(column, tuple[index]))
 
     return and(...comparisons)
   })
@@ -1747,14 +1715,12 @@ function buildPrimaryKeyPredicate<table extends AnyTable>(
     let key = table.primaryKey[0] as TableColumnName<table>
     return inList(
       key,
-      keyObjects.map(function mapKeyObject(objectValue) {
-        return objectValue[key]
-      }),
+      keyObjects.map((objectValue) => objectValue[key]),
     )
   }
 
-  let predicates = keyObjects.map(function mapKeyObject(objectValue) {
-    let comparisons = table.primaryKey.map(function mapKey(key) {
+  let predicates = keyObjects.map((objectValue) => {
+    let comparisons = table.primaryKey.map((key) => {
       let typedKey = key as TableColumnName<table>
       return eq(typedKey, objectValue[typedKey])
     })

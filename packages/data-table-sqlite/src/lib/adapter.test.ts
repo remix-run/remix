@@ -37,22 +37,20 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
 
     await db.query(Accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
 
-    await db.transaction(async function (outerTransaction) {
+    await db.transaction(async (outerTransaction) => {
       await outerTransaction
         .query(Accounts)
         .insert({ id: 2, email: 'b@example.com', status: 'active' })
 
       await outerTransaction
-        .transaction(async function (innerTransactionDatabase) {
+        .transaction(async (innerTransactionDatabase) => {
           await innerTransactionDatabase
             .query(Accounts)
             .insert({ id: 3, email: 'c@example.com', status: 'active' })
 
           throw new Error('rollback inner')
         })
-        .catch(function swallow() {
-          return undefined
-        })
+        .catch(() => undefined)
     })
 
     let rows = await db.query(Accounts).orderBy('id', 'asc').all()
@@ -60,9 +58,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
 
     assert.equal(count, 2)
     assert.deepEqual(
-      rows.map(function mapRow(row) {
-        return row.id
-      }),
+      rows.map((row) => row.id),
       [1, 2],
     )
 
