@@ -455,6 +455,117 @@ describe('writes and validation', () => {
       },
     )
   })
+
+  it('throws when read-only query modifiers are used with write terminals', async () => {
+    let adapter = new MemoryDatabaseAdapter({
+      accounts: [{ id: 1, email: 'a@studio.test', status: 'active' }],
+      projects: [{ id: 10, account_id: 1, name: 'Alpha', archived: false }],
+      profiles: [],
+      tasks: [],
+      memberships: [],
+    })
+    let db = createDatabase(adapter)
+
+    await assert.rejects(
+      async function () {
+        await db
+          .query(Accounts)
+          .join(Projects, eq('accounts.id', 'projects.account_id'))
+          .update({ status: 'inactive' })
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message.includes('update() does not support these query modifiers: join()')
+        )
+      },
+    )
+
+    await assert.rejects(
+      async function () {
+        await db.query(Accounts).groupBy('status').delete()
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message.includes('delete() does not support these query modifiers: groupBy()')
+        )
+      },
+    )
+
+    await assert.rejects(
+      async function () {
+        await db
+          .query(Accounts)
+          .with({ projects: AccountProjects })
+          .upsert({ id: 1, email: 'a@studio.test', status: 'active' })
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message.includes('upsert() does not support these query modifiers: with()')
+        )
+      },
+    )
+  })
+
+  it('throws when scoped query modifiers are used with insert-like terminals', async () => {
+    let adapter = new MemoryDatabaseAdapter({
+      accounts: [{ id: 1, email: 'a@studio.test', status: 'active' }],
+      projects: [],
+      profiles: [],
+      tasks: [],
+      memberships: [],
+    })
+    let db = createDatabase(adapter)
+
+    await assert.rejects(
+      async function () {
+        await db.query(Accounts).where({ id: 1 }).insert({
+          id: 2,
+          email: 'b@studio.test',
+          status: 'active',
+        })
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message.includes('insert() does not support these query modifiers: where()')
+        )
+      },
+    )
+
+    await assert.rejects(
+      async function () {
+        await db
+          .query(Accounts)
+          .orderBy('id', 'asc')
+          .insertMany([{ id: 3, email: 'c@studio.test', status: 'active' }])
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message.includes('insertMany() does not support these query modifiers: orderBy()')
+        )
+      },
+    )
+
+    await assert.rejects(
+      async function () {
+        await db.query(Accounts).limit(1).upsert({
+          id: 1,
+          email: 'a@studio.test',
+          status: 'inactive',
+        })
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message.includes('upsert() does not support these query modifiers: limit()')
+        )
+      },
+    )
+  })
 })
 
 describe('transactions and raw sql', () => {
