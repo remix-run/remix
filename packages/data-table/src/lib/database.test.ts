@@ -431,7 +431,7 @@ describe('writes and validation', () => {
     )
   })
 
-  it('scopes fallback update returning to ordered/limited rows', async () => {
+  it('throws for update returning when adapter has no RETURNING support', async () => {
     let adapter = new MemoryDatabaseAdapter(
       {
         accounts: [
@@ -447,30 +447,22 @@ describe('writes and validation', () => {
     )
     let db = createDatabase(adapter)
 
-    let result = await db
-      .query(Accounts)
-      .where({ status: 'active' })
-      .orderBy('id', 'asc')
-      .limit(1)
-      .update({ status: 'inactive' }, { returning: ['id', 'status'] })
-
-    assert.ok('rows' in result)
-    if ('rows' in result) {
-      assert.equal(result.rows.length, 1)
-      assert.equal(result.rows[0].id, 1)
-      assert.equal(result.rows[0].status, 'inactive')
-    }
-
-    let rows = adapter.snapshot('accounts')
-    assert.equal(rows.length, 2)
-    assert.equal(rows[0].id, 1)
-    assert.equal(rows[0].status, 'inactive')
-    assert.ok(rows[0].updated_at instanceof Date)
-    assert.equal(rows[1].id, 2)
-    assert.equal(rows[1].status, 'active')
+    await assert.rejects(
+      async () => {
+        await db
+          .query(Accounts)
+          .where({ status: 'active' })
+          .orderBy('id', 'asc')
+          .limit(1)
+          .update({ status: 'inactive' }, { returning: ['id', 'status'] })
+      },
+      (error: unknown) =>
+        error instanceof DataTableQueryError &&
+        error.message === 'update() returning is not supported by this adapter',
+    )
   })
 
-  it('scopes fallback delete returning to ordered/limited rows', async () => {
+  it('throws for delete returning when adapter has no RETURNING support', async () => {
     let adapter = new MemoryDatabaseAdapter(
       {
         accounts: [
@@ -487,26 +479,22 @@ describe('writes and validation', () => {
     )
     let db = createDatabase(adapter)
 
-    let result = await db
-      .query(Accounts)
-      .where({ status: 'active' })
-      .orderBy('id', 'asc')
-      .limit(1)
-      .delete({ returning: ['id'] })
-
-    assert.ok('rows' in result)
-    if ('rows' in result) {
-      assert.equal(result.rows.length, 1)
-      assert.equal(result.rows[0].id, 1)
-    }
-
-    assert.deepEqual(adapter.snapshot('accounts'), [
-      { id: 2, email: 'brad@studio.test', status: 'active' },
-      { id: 3, email: 'cara@studio.test', status: 'inactive' },
-    ])
+    await assert.rejects(
+      async () => {
+        await db
+          .query(Accounts)
+          .where({ status: 'active' })
+          .orderBy('id', 'asc')
+          .limit(1)
+          .delete({ returning: ['id'] })
+      },
+      (error: unknown) =>
+        error instanceof DataTableQueryError &&
+        error.message === 'delete() returning is not supported by this adapter',
+    )
   })
 
-  it('uses returning fallback queries when adapter has no RETURNING support', async () => {
+  it('throws for write returning when adapter has no RETURNING support', async () => {
     let adapter = new MemoryDatabaseAdapter(
       {
         accounts: [{ id: 1, email: 'founder@studio.test', status: 'active' }],
@@ -519,31 +507,53 @@ describe('writes and validation', () => {
     )
 
     let db = createDatabase(adapter)
-    let insertResult = await db.query(Accounts).insert(
-      {
-        id: 2,
-        email: 'finance@studio.test',
-        status: 'active',
+
+    await assert.rejects(
+      async () => {
+        await db.query(Accounts).insert(
+          {
+            id: 2,
+            email: 'finance@studio.test',
+            status: 'active',
+          },
+          { returning: ['id', 'email'] },
+        )
       },
-      { returning: ['id', 'email'] },
+      (error: unknown) =>
+        error instanceof DataTableQueryError &&
+        error.message === 'insert() returning is not supported by this adapter',
     )
 
-    assert.ok('row' in insertResult)
-    if ('row' in insertResult) {
-      assert.equal(insertResult.row?.id, 2)
-      assert.equal(insertResult.row?.email, 'finance@studio.test')
-    }
+    await assert.rejects(
+      async () => {
+        await db.query(Accounts).insertMany(
+          [
+            { id: 2, email: 'finance@studio.test', status: 'active' },
+            { id: 3, email: 'ops@studio.test', status: 'active' },
+          ],
+          { returning: ['id', 'email'] },
+        )
+      },
+      (error: unknown) =>
+        error instanceof DataTableQueryError &&
+        error.message === 'insertMany() returning is not supported by this adapter',
+    )
 
-    let updateResult = await db
-      .query(Accounts)
-      .where({ id: 2 })
-      .update({ status: 'inactive' }, { returning: ['id', 'status'] })
-
-    assert.ok('rows' in updateResult)
-    if ('rows' in updateResult) {
-      assert.equal(updateResult.rows.length, 1)
-      assert.equal(updateResult.rows[0].status, 'inactive')
-    }
+    await assert.rejects(
+      async () => {
+        await db.query(Accounts).upsert(
+          {
+            id: 1,
+            email: 'founder@studio.test',
+            status: 'inactive',
+          },
+          { returning: ['id', 'status'] },
+        )
+      },
+      (error: unknown) =>
+        error instanceof DataTableQueryError &&
+        error.message === 'upsert() returning is not supported by this adapter',
+    )
   })
 
   it('supports insertMany() and delete() returning with RETURNING adapters', async () => {

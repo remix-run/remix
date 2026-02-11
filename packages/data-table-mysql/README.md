@@ -36,39 +36,35 @@ Once connected, use `db.query(...)`, relation APIs, and transaction APIs from `r
 
 ### Capability Overrides For Testing
 
+Capability overrides are mainly for tests where you want to force or disable specific behavior checks.
+In production, keep the defaults so adapter capabilities match actual MySQL behavior.
+
 ```ts
 import { createMysqlDatabaseAdapter } from 'remix/data-table-mysql'
 
 let adapter = createMysqlDatabaseAdapter(pool, {
   capabilities: {
-    returning: true,
+    upsert: false,
   },
 })
 ```
 
-### `returning` Fallback Details (MySQL)
+### `returning` On MySQL
 
-Because MySQL does not natively support SQL `RETURNING`, `remix/data-table` uses follow-up reads for `returning` requests.
+MySQL does not natively support SQL `RETURNING`. In this adapter, `returning` on write operations throws `DataTableQueryError`.
 
-For composite primary keys, include all PK values when inserting/upserting with `returning` so rows can be re-identified safely.
+Use write metadata (`affectedRows`, `insertId`) on MySQL, or switch to an adapter with native `RETURNING` support when returned rows are required.
 
 ```ts
-import * as s from 'remix/data-schema'
-import { createTable } from 'remix/data-table'
+import { DataTableQueryError } from 'remix/data-table'
 
-let AuditEvents = createTable({
-  name: 'audit_events',
-  primaryKey: ['tenant_id', 'id'],
-  columns: {
-    tenant_id: s.number(),
-    id: s.number(),
-    message: s.string(),
-  },
-})
-
-await db
-  .query(AuditEvents)
-  .insert({ tenant_id: 42, id: 9001, message: 'created' }, { returning: ['tenant_id', 'id'] })
+try {
+  await db.query(Accounts).insert({ email: 'a@example.com', status: 'active' }, { returning: ['id'] })
+} catch (error) {
+  if (error instanceof DataTableQueryError) {
+    // insert() returning is not supported by this adapter
+  }
+}
 ```
 
 ## Related Packages
