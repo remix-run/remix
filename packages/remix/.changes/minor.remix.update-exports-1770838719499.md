@@ -1,0 +1,12 @@
+Added `package.json` `exports`:
+ - `remix/data-schema` to re-export APIs from `@remix-run/data-schema`
+ - `remix/data-schema/checks` to re-export APIs from `@remix-run/data-schema/checks`
+ - `remix/data-schema/coerce` to re-export APIs from `@remix-run/data-schema/coerce`
+ - `remix/data-schema/lazy` to re-export APIs from `@remix-run/data-schema/lazy`
+ - `remix/data-table` to re-export APIs from `@remix-run/data-table`
+ - `remix/data-table-mysql` to re-export APIs from `@remix-run/data-table-mysql`
+ - `remix/data-table-postgres` to re-export APIs from `@remix-run/data-table-postgres`
+ - `remix/data-table-sqlite` to re-export APIs from `@remix-run/data-table-sqlite`
+ - `remix/data-table/memory-adapter` to re-export APIs from `@remix-run/data-table/memory-adapter`
+ - `remix/data-table/operators` to re-export APIs from `@remix-run/data-table/operators`
+ - `remix/data-table/sql` to re-export APIs from `@remix-run/data-table/sql`
