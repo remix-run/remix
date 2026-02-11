@@ -61,6 +61,64 @@ describe('type safety', () => {
     rows[0].email
   })
 
+  it('supports typed alias select() and joined order/group columns', async () => {
+    let db = createDatabase(
+      new MemoryDatabaseAdapter({
+        accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
+        projects: [{ id: 100, account_id: 1, archived: false }],
+      }),
+    )
+
+    let rows = await db
+      .query(Accounts)
+      .join(Projects, eq('accounts.id', 'projects.account_id'))
+      .select({
+        accountId: 'accounts.id',
+        accountEmail: 'accounts.email',
+        projectId: 'projects.id',
+        projectArchived: 'projects.archived',
+      })
+      .orderBy('projects.id', 'asc')
+      .all()
+
+    assert.equal(rows.length, 1)
+    assert.deepEqual(rows[0], {
+      accountId: 1,
+      accountEmail: 'a@example.com',
+      projectId: 100,
+      projectArchived: false,
+    })
+
+    let groupedCount = await db
+      .query(Accounts)
+      .join(Projects, eq('accounts.id', 'projects.account_id'))
+      .groupBy('projects.account_id')
+      .having(eq('projects.account_id', 1))
+      .count()
+
+    assert.equal(groupedCount, 1)
+
+    type Row = (typeof rows)[number]
+    expectType<Equal<Row['accountId'], number>>()
+    expectType<Equal<Row['accountEmail'], string>>()
+    expectType<Equal<Row['projectId'], number>>()
+    expectType<Equal<Row['projectArchived'], boolean>>()
+
+    // @ts-expect-error alias select should not expose original source column names
+    rows[0].email
+
+    function verifyTypeErrors(): void {
+      // @ts-expect-error unknown joined column for orderBy
+      db.query(Accounts).join(Projects, eq('accounts.id', 'projects.account_id')).orderBy('projects.nope')
+      // @ts-expect-error unknown joined column for groupBy
+      db.query(Accounts).join(Projects, eq('accounts.id', 'projects.account_id')).groupBy('projects.nope')
+      // @ts-expect-error unknown source column in alias selection
+      db.query(Accounts).join(Projects, eq('accounts.id', 'projects.account_id')).select({ bad: 'projects.nope' })
+    }
+
+    void verifyTypeErrors
+  })
+
   it('enforces typed keys for where/having/join/relation filters while running real queries', async () => {
     let adapter = new MemoryDatabaseAdapter({
       accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],

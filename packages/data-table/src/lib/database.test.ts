@@ -309,6 +309,39 @@ describe('query builder', () => {
     }
   })
 
+  it('supports alias object selection across joined tables', async () => {
+    let adapter = new MemoryDatabaseAdapter({
+      accounts: [{ id: 1, email: 'amy@studio.test', status: 'active' }],
+      projects: [{ id: 100, account_id: 1, name: 'Campaign', archived: false }],
+      profiles: [],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createDatabase(adapter)
+
+    let rows = await db
+      .query(Accounts)
+      .join(Projects, eq('accounts.id', 'projects.account_id'))
+      .select({
+        accountId: 'accounts.id',
+        accountEmail: 'accounts.email',
+        projectId: 'projects.id',
+        projectName: 'projects.name',
+      })
+      .orderBy('projects.id', 'asc')
+      .all()
+
+    assert.deepEqual(rows, [
+      {
+        accountId: 1,
+        accountEmail: 'amy@studio.test',
+        projectId: 100,
+        projectName: 'Campaign',
+      },
+    ])
+  })
+
   it('supports count() and exists()', async () => {
     let adapter = new MemoryDatabaseAdapter({
       accounts: [

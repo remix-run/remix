@@ -11,6 +11,7 @@ import type {
   JoinClause,
   JoinType,
   ReturningSelection,
+  SelectColumn,
   SelectStatement,
   TransactionOptions,
   TransactionToken,
@@ -38,7 +39,7 @@ import { rawSql, isSqlStatement } from './sql.ts'
 import type { AdapterStatement } from './adapter.ts'
 
 type QueryState<table extends AnyTable> = {
-  select: '*' | string[]
+  select: '*' | SelectColumn[]
   distinct: boolean
   joins: JoinClause[]
   where: Predicate<string>[]
@@ -55,11 +56,38 @@ type QualifiedTableColumnName<table extends AnyTable> = `${table['name']}.${Tabl
 type QueryColumnName<table extends AnyTable> =
   | TableColumnName<table>
   | QualifiedTableColumnName<table>
-type SelectedColumns<table extends AnyTable> = TableColumnName<table> | '*'
-type SelectedRow<
-  table extends AnyTable,
-  selected extends SelectedColumns<table>,
-> = selected extends '*' ? TableRow<table> : Pick<TableRow<table>, selected>
+
+type QueryColumnTypeMap<table extends AnyTable> = {
+  [column in QueryColumnName<table>]: column extends TableColumnName<table>
+    ? TableRow<table>[column]
+    : column extends `${table['name']}.${infer name extends TableColumnName<table>}`
+      ? TableRow<table>[name]
+      : never
+}
+
+type MergeColumnTypeMaps<
+  left extends Record<string, unknown>,
+  right extends Record<string, unknown>,
+> = {
+  [column in Extract<keyof left | keyof right, string>]: column extends keyof right
+    ? column extends keyof left
+      ? left[column] | right[column]
+      : right[column]
+    : column extends keyof left
+      ? left[column]
+      : never
+}
+
+type QueryColumns<columnTypes extends Record<string, unknown>> = Extract<keyof columnTypes, string>
+
+type SelectedAliasRow<
+  columnTypes extends Record<string, unknown>,
+  selection extends Record<string, QueryColumns<columnTypes>>,
+> = {
+  [alias in keyof selection]: selection[alias] extends keyof columnTypes
+    ? columnTypes[selection[alias]]
+    : never
+}
 
 type SavepointCounter = {
   value: number
@@ -83,7 +111,9 @@ export type WriteRowResult<row> = WriteResult & {
 export type Database = {
   adapter: DatabaseAdapter
   now(): unknown
-  query<table extends AnyTable>(table: table): QueryBuilder<table, {}, QueryColumnName<table>, '*'>
+  query<table extends AnyTable>(
+    table: table,
+  ): QueryBuilder<table, {}, QueryColumnTypeMap<table>, TableRow<table>>
   exec(statement: string | SqlStatement, values?: unknown[]): Promise<AdapterResult>
   transaction<result>(
     callback: (database: Database) => Promise<result>,
@@ -119,7 +149,7 @@ class DatabaseRuntime implements Database {
 
   query<table extends AnyTable>(
     table: table,
-  ): QueryBuilder<table, {}, QueryColumnName<table>, '*'> {
+  ): QueryBuilder<table, {}, QueryColumnTypeMap<table>, TableRow<table>> {
     return new QueryBuilder(this, table, createInitialQueryState())
   }
 
@@ -210,8 +240,8 @@ export function createDatabase(
 export class QueryBuilder<
   table extends AnyTable,
   loaded extends Record<string, unknown> = {},
-  columns extends string = QueryColumnName<table>,
-  selected extends SelectedColumns<table> = '*',
+  columnTypes extends Record<string, unknown> = QueryColumnTypeMap<table>,
+  row extends Record<string, unknown> = TableRow<table>,
 > {
   #database: DatabaseRuntime
   #table: table
@@ -225,17 +255,41 @@ export class QueryBuilder<
 
   select<selection extends (keyof TableRow<table> & string)[]>(
     ...columns: selection
-  ): QueryBuilder<table, loaded, columns, selection[number]> {
+  ): QueryBuilder<table, loaded, columnTypes, Pick<TableRow<table>, selection[number]>>
+  select<selection extends Record<string, QueryColumns<columnTypes>>>(
+    selection: selection,
+  ): QueryBuilder<table, loaded, columnTypes, SelectedAliasRow<columnTypes, selection>>
+  select(
+    ...input: [Record<string, QueryColumns<columnTypes>>] | (keyof TableRow<table> & string)[]
+  ): QueryBuilder<table, loaded, columnTypes, any> {
+    if (
+      input.length === 1 &&
+      typeof input[0] === 'object' &&
+      input[0] !== null &&
+      !Array.isArray(input[0])
+    ) {
+      let selection = input[0] as Record<string, QueryColumns<columnTypes>>
+      let aliases = Object.keys(selection)
+      let select = aliases.map((alias) => ({
+        column: selection[alias],
+        alias,
+      }))
+
+      return this.#clone({ select }) as QueryBuilder<table, loaded, columnTypes, any>
+    }
+
+    let columns = input as (keyof TableRow<table> & string)[]
+
     return this.#clone({
-      select: [...columns],
-    }) as QueryBuilder<table, loaded, columns, selection[number]>
+      select: columns.map((column) => ({ column, alias: column })),
+    }) as QueryBuilder<table, loaded, columnTypes, any>
   }
 
-  distinct(value = true): QueryBuilder<table, loaded, columns, selected> {
+  distinct(value = true): QueryBuilder<table, loaded, columnTypes, row> {
     return this.#clone({ distinct: value })
   }
 
-  where(input: WhereInput<columns>): QueryBuilder<table, loaded, columns, selected> {
+  where(input: WhereInput<QueryColumns<columnTypes>>): QueryBuilder<table, loaded, columnTypes, row> {
     let predicate = normalizeWhereInput(input)
     let normalizedPredicate = normalizePredicateValues(
       predicate,
@@ -247,7 +301,7 @@ export class QueryBuilder<
     })
   }
 
-  having(input: WhereInput<columns>): QueryBuilder<table, loaded, columns, selected> {
+  having(input: WhereInput<QueryColumns<columnTypes>>): QueryBuilder<table, loaded, columnTypes, row> {
     let predicate = normalizeWhereInput(input)
     let normalizedPredicate = normalizePredicateValues(
       predicate,
@@ -261,9 +315,14 @@ export class QueryBuilder<
 
   join<target extends AnyTable>(
     target: target,
-    on: Predicate<columns | QueryColumnName<target>>,
+    on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
     type: JoinType = 'inner',
-  ): QueryBuilder<table, loaded, columns | QueryColumnName<target>, selected> {
+  ): QueryBuilder<
+    table,
+    loaded,
+    MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
+    row
+  > {
     let normalizedOn = normalizePredicateValues(
       on,
       createPredicateColumnResolver([
@@ -271,7 +330,7 @@ export class QueryBuilder<
         ...this.#state.joins.map((join) => join.table),
         target,
       ]),
-    ) as Predicate<columns | QueryColumnName<target>>
+    ) as Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>
 
     return new QueryBuilder(this.#database, this.#table, {
       select: cloneSelection(this.#state.select),
@@ -284,73 +343,91 @@ export class QueryBuilder<
       limit: this.#state.limit,
       offset: this.#state.offset,
       with: { ...this.#state.with },
-    })
+    }) as QueryBuilder<
+      table,
+      loaded,
+      MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
+      row
+    >
   }
 
   leftJoin<target extends AnyTable>(
     target: target,
-    on: Predicate<columns | QueryColumnName<target>>,
-  ): QueryBuilder<table, loaded, columns | QueryColumnName<target>, selected> {
+    on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
+  ): QueryBuilder<
+    table,
+    loaded,
+    MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
+    row
+  > {
     return this.join(target, on, 'left')
   }
 
   rightJoin<target extends AnyTable>(
     target: target,
-    on: Predicate<columns | QueryColumnName<target>>,
-  ): QueryBuilder<table, loaded, columns | QueryColumnName<target>, selected> {
+    on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
+  ): QueryBuilder<
+    table,
+    loaded,
+    MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
+    row
+  > {
     return this.join(target, on, 'right')
   }
 
   fullJoin<target extends AnyTable>(
     target: target,
-    on: Predicate<columns | QueryColumnName<target>>,
-  ): QueryBuilder<table, loaded, columns | QueryColumnName<target>, selected> {
+    on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
+  ): QueryBuilder<
+    table,
+    loaded,
+    MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
+    row
+  > {
     return this.join(target, on, 'full')
   }
 
   orderBy(
-    column: keyof TableRow<table> & string,
+    column: QueryColumns<columnTypes>,
     direction: OrderDirection = 'asc',
-  ): QueryBuilder<table, loaded, columns, selected> {
+  ): QueryBuilder<table, loaded, columnTypes, row> {
     return this.#clone({
       orderBy: [...this.#state.orderBy, { column, direction }],
     })
   }
 
-  groupBy(
-    ...columns: (keyof TableRow<table> & string)[]
-  ): QueryBuilder<table, loaded, columns, selected> {
+  groupBy(...columns: QueryColumns<columnTypes>[]): QueryBuilder<table, loaded, columnTypes, row> {
     return this.#clone({
       groupBy: [...this.#state.groupBy, ...columns],
     })
   }
 
-  limit(value: number): QueryBuilder<table, loaded, columns, selected> {
+  limit(value: number): QueryBuilder<table, loaded, columnTypes, row> {
     return this.#clone({ limit: value })
   }
 
-  offset(value: number): QueryBuilder<table, loaded, columns, selected> {
+  offset(value: number): QueryBuilder<table, loaded, columnTypes, row> {
     return this.#clone({ offset: value })
   }
 
   with<relations extends RelationMapForTable<table>>(
     relations: relations,
-  ): QueryBuilder<table, loaded & LoadedRelationMap<relations>, columns, selected> {
+  ): QueryBuilder<table, loaded & LoadedRelationMap<relations>, columnTypes, row> {
     return this.#clone({
       with: {
         ...this.#state.with,
         ...relations,
       },
-    }) as QueryBuilder<table, loaded & LoadedRelationMap<relations>, columns, selected>
+    }) as QueryBuilder<table, loaded & LoadedRelationMap<relations>, columnTypes, row>
   }
 
-  async all(): Promise<Array<SelectedRow<table, selected> & loaded>> {
+  async all(): Promise<Array<row & loaded>> {
     let statement = this.#toSelectStatement()
     let result = await this.#database.execute(statement)
     let rows = normalizeRows(result.rows)
 
     if (Object.keys(this.#state.with).length === 0) {
-      return rows as Array<SelectedRow<table, selected> & loaded>
+      return rows as Array<row & loaded>
     }
 
     let rowsWithRelations = await loadRelationsForRows(
@@ -359,17 +436,15 @@ export class QueryBuilder<
       rows,
       this.#state.with,
     )
-    return rowsWithRelations as Array<SelectedRow<table, selected> & loaded>
+    return rowsWithRelations as Array<row & loaded>
   }
 
-  async first(): Promise<(SelectedRow<table, selected> & loaded) | null> {
+  async first(): Promise<(row & loaded) | null> {
     let rows = await this.limit(1).all()
     return rows[0] ?? null
   }
 
-  async find(
-    value: PrimaryKeyInput<table>,
-  ): Promise<(SelectedRow<table, selected> & loaded) | null> {
+  async find(value: PrimaryKeyInput<table>): Promise<(row & loaded) | null> {
     let where = getPrimaryKeyObject(this.#table, value)
     return this.where(where).first()
   }
@@ -816,7 +891,7 @@ export class QueryBuilder<
     return {
       kind: 'select',
       table: this.#table,
-      select: this.#state.select === '*' ? '*' : [...this.#state.select],
+      select: cloneSelection(this.#state.select),
       distinct: this.#state.distinct,
       joins: [...this.#state.joins],
       where: [...this.#state.where],
@@ -828,7 +903,7 @@ export class QueryBuilder<
     }
   }
 
-  #clone(patch: Partial<QueryState<table>>): QueryBuilder<table, loaded, columns, selected> {
+  #clone(patch: Partial<QueryState<table>>): QueryBuilder<table, loaded, columnTypes, row> {
     return new QueryBuilder(this.#database, this.#table, {
       select: patch.select ?? cloneSelection(this.#state.select),
       distinct: patch.distinct ?? this.#state.distinct,
@@ -889,7 +964,9 @@ export class QueryBuilder<
       return []
     }
 
-    let query = this.#database.query(this.#table)
+    let query: QueryBuilder<table, {}, QueryColumnTypeMap<table>, any> = this.#database.query(
+      this.#table,
+    )
     let predicate = buildPrimaryKeyPredicate(this.#table, keyObjects)
 
     if (predicate) {
@@ -903,14 +980,16 @@ export class QueryBuilder<
   }
 
   async #selectCurrentRows(returning: ReturningInput<table>): Promise<TableRow<table>[]> {
-    let query = this.#database.query(this.#table)
+    let query: QueryBuilder<table, {}, QueryColumnTypeMap<table>, any> = this.#database.query(
+      this.#table,
+    )
 
     for (let predicate of this.#state.where) {
       query = query.where(predicate as Predicate<QueryColumnName<table>>)
     }
 
     for (let clause of this.#state.orderBy) {
-      query = query.orderBy(clause.column as keyof TableRow<table> & string, clause.direction)
+      query = query.orderBy(clause.column as QueryColumns<QueryColumnTypeMap<table>>, clause.direction)
     }
 
     if (this.#state.limit !== undefined) {
@@ -928,14 +1007,16 @@ export class QueryBuilder<
   }
 
   async #loadCurrentPrimaryKeyRows(): Promise<Record<string, unknown>[]> {
-    let query = this.#database.query(this.#table)
+    let query: QueryBuilder<table, {}, QueryColumnTypeMap<table>, any> = this.#database.query(
+      this.#table,
+    )
 
     for (let predicate of this.#state.where) {
       query = query.where(predicate as Predicate<QueryColumnName<table>>)
     }
 
     for (let clause of this.#state.orderBy) {
-      query = query.orderBy(clause.column as keyof TableRow<table> & string, clause.direction)
+      query = query.orderBy(clause.column as QueryColumns<QueryColumnTypeMap<table>>, clause.direction)
     }
 
     if (this.#state.limit !== undefined) {
@@ -1166,7 +1247,7 @@ function applyRelationModifiers<table extends AnyTable>(
   }
 
   for (let clause of relation.modifiers.orderBy) {
-    next = next.orderBy(clause.column as keyof TableRow<table> & string, clause.direction)
+    next = next.orderBy(clause.column as QueryColumns<QueryColumnTypeMap<table>>, clause.direction)
   }
 
   if (options.includePagination && relation.modifiers.limit !== undefined) {
@@ -1271,14 +1352,14 @@ async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
   table: table,
   state: QueryState<table>,
 ): Promise<Record<string, unknown>[]> {
-  let query = database.query(table)
+  let query: QueryBuilder<table, {}, QueryColumnTypeMap<table>, any> = database.query(table)
 
   for (let predicate of state.where) {
     query = query.where(predicate as Predicate<QueryColumnName<table>>)
   }
 
   for (let clause of state.orderBy) {
-    query = query.orderBy(clause.column as keyof TableRow<table> & string, clause.direction)
+    query = query.orderBy(clause.column as QueryColumns<QueryColumnTypeMap<table>>, clause.direction)
   }
 
   if (state.limit !== undefined) {
@@ -1318,12 +1399,12 @@ function createInitialQueryState<table extends AnyTable>(): QueryState<table> {
   }
 }
 
-function cloneSelection(selection: '*' | string[]): '*' | string[] {
+function cloneSelection(selection: '*' | SelectColumn[]): '*' | SelectColumn[] {
   if (selection === '*') {
     return '*'
   }
 
-  return [...selection]
+  return selection.map((column) => ({ ...column }))
 }
 
 function defaultNow(): Date {
@@ -1732,28 +1813,28 @@ function buildPrimaryKeyPredicate<table extends AnyTable>(
 }
 
 function applyReturningSelection<table extends AnyTable, selection extends ReturningInput<table>>(
-  query: QueryBuilder<table, {}, QueryColumnName<table>, '*'>,
+  query: QueryBuilder<table, {}, QueryColumnTypeMap<table>, TableRow<table>>,
   returning: selection,
 ): QueryBuilder<
   table,
   {},
-  QueryColumnName<table>,
-  selection extends '*' ? '*' : selection[number]
+  QueryColumnTypeMap<table>,
+  selection extends '*' ? TableRow<table> : Pick<TableRow<table>, selection[number]>
 > {
   if (returning === '*') {
     return query as QueryBuilder<
       table,
       {},
-      QueryColumnName<table>,
-      selection extends '*' ? '*' : selection[number]
+      QueryColumnTypeMap<table>,
+      selection extends '*' ? TableRow<table> : Pick<TableRow<table>, selection[number]>
     >
   }
 
   return query.select(...returning) as QueryBuilder<
     table,
     {},
-    QueryColumnName<table>,
-    selection extends '*' ? '*' : selection[number]
+    QueryColumnTypeMap<table>,
+    selection extends '*' ? TableRow<table> : Pick<TableRow<table>, selection[number]>
   >
 }
 

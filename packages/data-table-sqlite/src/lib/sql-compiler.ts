@@ -27,7 +27,7 @@ export function compileSqliteStatement(statement: AdapterStatement): CompiledSql
 
     if (statement.select !== '*') {
       selection = statement.select
-        .map((column) => quotePath(column))
+        .map((field) => quotePath(field.column) + ' as ' + quoteIdentifier(field.alias))
         .join(', ')
     }
 
