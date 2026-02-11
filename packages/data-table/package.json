@@ -20,32 +20,23 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
-    "./memory-adapter": "./src/memory-adapter.ts",
-    "./operators": "./src/operators.ts",
-    "./sql": "./src/sql.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./memory-adapter": {
+      "types": "./dist/memory-adapter.d.ts",
+      "default": "./dist/memory-adapter.js"
+    },
+    "./operators": {
+      "types": "./dist/operators.d.ts",
+      "default": "./dist/operators.js"
+    },
+    "./sql": {
+      "types": "./dist/sql.d.ts",
+      "default": "./dist/sql.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./memory-adapter": {
-        "types": "./dist/memory-adapter.d.ts",
-        "default": "./dist/memory-adapter.js"
-      },
-      "./operators": {
-        "types": "./dist/operators.d.ts",
-        "default": "./dist/operators.js"
-      },
-      "./sql": {
-        "types": "./dist/sql.d.ts",
-        "default": "./dist/sql.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/data-schema": "workspace:*",
@@ -53,7 +44,7 @@
     "@typescript/native-preview": "catalog:"
   },
   "dependencies": {
-    "@remix-run/data-schema": "workspace:^"
+    "@remix-run/data-schema": "remix-run/remix#preview/pr-11051&path:packages/data-schema"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
