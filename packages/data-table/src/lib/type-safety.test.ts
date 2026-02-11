@@ -97,15 +97,19 @@ describe('type safety', () => {
       assert.equal(joinStatement.where.length, 1)
     }
 
-    // @ts-expect-error unknown predicate key
-    db.query(Accounts).where({ not_a_column: 'active' })
-    // @ts-expect-error unknown predicate key
-    db.query(Accounts).having({ not_a_column: 'active' })
-    // @ts-expect-error join predicate key must be from source or target table
-    db.query(Accounts).join(Projects, eq('not_a_column', true))
-    // @ts-expect-error right-hand column reference must be from source or target table
-    db.query(Accounts).join(Projects, eq('accounts.id', 'projects.not_a_column'))
-    // @ts-expect-error relation predicate key must be from relation target table
-    AccountProjects.where({ not_a_column: true })
+    function verifyTypeErrors(): void {
+      // @ts-expect-error unknown predicate key
+      db.query(Accounts).where({ not_a_column: 'active' })
+      // @ts-expect-error unknown predicate key
+      db.query(Accounts).having({ not_a_column: 'active' })
+      // @ts-expect-error join predicate key must be from source or target table
+      db.query(Accounts).join(Projects, eq('not_a_column', true))
+      // @ts-expect-error right-hand column reference must be from source or target table
+      db.query(Accounts).join(Projects, eq('accounts.id', 'projects.not_a_column'))
+      // @ts-expect-error relation predicate key must be from relation target table
+      AccountProjects.where({ not_a_column: true })
+    }
+
+    void verifyTypeErrors
   })
 })
