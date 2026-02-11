@@ -423,7 +423,7 @@ function Component(handle: Handle) {
 
 Components receive a `Handle` as their first argument with the following API:
 
-- **`handle.update(task?)`** - Schedule an update. Optionally provide a task to run after the update.
+- **`handle.update()`** - Schedule an update and await completion to get an `AbortSignal`.
 - **`handle.queueTask(task)`** - Schedule a task to run after the next update. Useful for DOM operations that need to happen after rendering (e.g., moving focus, scrolling, measuring elements, etc.).
 - **`handle.on(target, listeners)`** - Listen to an event target with automatic cleanup when the component disconnects.
 - **`handle.signal`** - An `AbortSignal` that's aborted when the component is disconnected. Useful for cleanup.
@@ -432,9 +432,9 @@ Components receive a `Handle` as their first argument with the following API:
 - **`handle.frame`** - The component's closest frame. Call `handle.frame.reload()` to refresh the frame's server content.
 - **`handle.frames.get(name)`** - Look up named frames in the current runtime tree for adjacent frame reloads.
 
-### `handle.update(task?)`
+### `handle.update()`
 
-Schedule an update. Optionally provide a task to run after the update completes.
+Schedule an update and optionally await completion to coordinate post-update work.
 
 ```tsx
 function Counter(handle: Handle) {
@@ -455,7 +455,7 @@ function Counter(handle: Handle) {
 }
 ```
 
-You can pass a task to run after the update:
+You can await the update before doing DOM work:
 
 ```tsx
 function Player(handle: Handle) {
@@ -469,12 +469,11 @@ function Player(handle: Handle) {
         disabled={isPlaying}
         connect={(node) => (playButton = node)}
         on={{
-          click: () => {
+          async click() {
             isPlaying = true
-            handle.update(() => {
-              // Focus the enabled button after update completes
-              stopButton.focus()
-            })
+            await handle.update()
+            // Focus the enabled button after update completes
+            stopButton.focus()
           },
         }}
       >
@@ -484,12 +483,11 @@ function Player(handle: Handle) {
         disabled={!isPlaying}
         connect={(node) => (stopButton = node)}
         on={{
-          click: () => {
+          async click() {
             isPlaying = false
-            handle.update(() => {
-              // Focus the enabled button after update completes
-              playButton.focus()
-            })
+            await handle.update()
+            // Focus the enabled button after update completes
+            playButton.focus()
           },
         }}
       >

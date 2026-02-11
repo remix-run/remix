@@ -2,9 +2,10 @@
 
 The `Handle` object provides the component's interface to the framework.
 
-## `handle.update(task?)`
+## `handle.update()`
 
-Schedules a component update. Optionally accepts a task to run after the update completes.
+Schedules a component update and returns a promise that resolves with an `AbortSignal` after
+the update completes.
 
 ```tsx
 function Counter(handle: Handle) {
@@ -25,7 +26,7 @@ function Counter(handle: Handle) {
 }
 ```
 
-With a task:
+Waiting for the update:
 
 ```tsx
 function Player(handle: Handle) {
@@ -36,12 +37,10 @@ function Player(handle: Handle) {
     <button
       disabled={isPlaying}
       on={{
-        click() {
+        async click() {
           isPlaying = true
-          handle.update(() => {
-            // Task runs after update completes
-            stopButton.focus()
-          })
+          await handle.update()
+          stopButton.focus()
         },
       }}
     >
@@ -145,46 +144,26 @@ function GoodExample(handle: Handle) {
 }
 ```
 
-**Don't call `handle.update()` before async work in a task:**
-
-The task's signal is aborted when the component re-renders. If you call `handle.update()` before your async work completes, the re-render will abort the signal you're using for the async operation:
+**When showing loading state before async work, await `handle.update()` and use the returned signal:**
 
 ```tsx
-// ❌ Avoid: Calling handle.update() before async work
-function BadAsyncExample(handle: Handle) {
+function AsyncExample(handle: Handle) {
   let data: string[] = []
   let loading = false
 
-  handle.queueTask(async (signal) => {
+  async function load() {
     loading = true
-    handle.update() // This triggers a re-render, which aborts signal!
+    let signal = await handle.update()
 
-    let response = await fetch('/api/data', { signal }) // AbortError: signal is aborted
-    if (signal.aborted) return
-
-    data = await response.json()
-    loading = false
-    handle.update()
-  })
-
-  return () => <div>{loading ? 'Loading...' : data.join(', ')}</div>
-}
-
-// ✅ Prefer: Set initial state in setup, only call handle.update() after async work
-function GoodAsyncExample(handle: Handle) {
-  let data: string[] = []
-  let loading = true // Start in loading state
-
-  handle.queueTask(async (signal) => {
     let response = await fetch('/api/data', { signal })
     if (signal.aborted) return
 
     data = await response.json()
     loading = false
-    handle.update() // Safe - async work is complete
-  })
+    handle.update()
+  }
 
-  return () => <div>{loading ? 'Loading...' : data.join(', ')}</div>
+  return () => <button on={{ click: load }}>{loading ? 'Loading...' : 'Load data'}</button>
 }
 ```
 
