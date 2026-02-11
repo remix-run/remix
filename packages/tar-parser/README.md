@@ -27,7 +27,7 @@ npm install @remix-run/tar-parser
 The main parser interface is the `parseTar(archive, handler)` function:
 
 ```ts
-import { parseTar } from '@remix-run/tar-parser'
+import { parseTar } from 'remix/tar-parser'
 
 let response = await fetch('https://github.com/remix-run/remix/archive/refs/heads/main.tar.gz')
 

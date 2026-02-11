@@ -38,7 +38,7 @@ Here's a complete working example with a simple in-memory data store:
 
 ```ts
 import * as http from 'node:http'
-import { createRequestListener } from '@remix-run/node-fetch-server'
+import { createRequestListener } from 'remix/node-fetch-server'
 
 // Example: Simple in-memory user storage
 let users = new Map([
@@ -159,7 +159,7 @@ Configure custom hostnames for deployment on VPS or custom environments:
 
 ```ts
 import * as http from 'node:http'
-import { createRequestListener } from '@remix-run/node-fetch-server'
+import { createRequestListener } from 'remix/node-fetch-server'
 
 // Use a custom hostname (e.g., from environment variable)
 let hostname = process.env.HOST || 'api.example.com'
@@ -184,7 +184,7 @@ server.listen(3000)
 Get client connection details (IP address, port) for logging or security:
 
 ```ts
-import { type FetchHandler } from '@remix-run/node-fetch-server'
+import { type FetchHandler } from 'remix/node-fetch-server'
 
 let handler: FetchHandler = async (request, client) => {
   // Log client information
@@ -209,7 +209,7 @@ Use with Node.js HTTPS module for secure connections:
 ```ts
 import * as https from 'node:https'
 import * as fs from 'node:fs'
-import { createRequestListener } from '@remix-run/node-fetch-server'
+import { createRequestListener } from 'remix/node-fetch-server'
 
 let options = {
   key: fs.readFileSync('private-key.pem'),
@@ -231,7 +231,7 @@ For more control over request/response handling, use the low-level API:
 
 ```ts
 import * as http from 'node:http'
-import { createRequest, sendResponse } from '@remix-run/node-fetch-server'
+import { createRequest, sendResponse } from 'remix/node-fetch-server'
 
 let server = http.createServer(async (req, res) => {
   // Convert Node.js request to Fetch API Request
@@ -293,7 +293,7 @@ app.get('/users/:id', async (req, res) => {
 app.listen(3000)
 
 // node-fetch-server
-import { createRequestListener } from '@remix-run/node-fetch-server'
+import { createRequestListener } from 'remix/node-fetch-server'
 
 async function handler(request: Request) {
   let url = new URL(request.url)

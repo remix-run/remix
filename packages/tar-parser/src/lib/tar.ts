@@ -178,7 +178,7 @@ export type ParseTarOptions = ParseTarHeaderOptions
  * Parse a tar archive and call the given handler for each entry it contains.
  *
  * ```ts
- * import { parseTar } from '@remix-run/tar-parser';
+ * import { parseTar } from 'remix/tar-parser';
  *
  * await parseTar(archive, (entry) => {
  *  console.log(entry.name);

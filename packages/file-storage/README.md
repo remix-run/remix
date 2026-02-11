@@ -26,7 +26,7 @@ npm install @remix-run/file-storage
 ### File System
 
 ```ts
-import { createFsFileStorage } from '@remix-run/file-storage/fs'
+import { createFsFileStorage } from 'remix/file-storage/fs'
 
 let storage = createFsFileStorage('./user/files')
 

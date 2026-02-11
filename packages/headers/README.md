@@ -38,7 +38,7 @@ Parse, manipulate and stringify [`Accept` headers](https://developer.mozilla.org
 Implements `Map<mediaType, quality>`.
 
 ```ts
-import { Accept } from '@remix-run/headers'
+import { Accept } from 'remix/headers'
 
 // Parse from headers
 let accept = Accept.from(request.headers.get('accept'))
@@ -81,7 +81,7 @@ Parse, manipulate and stringify [`Accept-Encoding` headers](https://developer.mo
 Implements `Map<encoding, quality>`.
 
 ```ts
-import { AcceptEncoding } from '@remix-run/headers'
+import { AcceptEncoding } from 'remix/headers'
 
 // Parse from headers
 let acceptEncoding = AcceptEncoding.from(request.headers.get('accept-encoding'))
@@ -117,7 +117,7 @@ Parse, manipulate and stringify [`Accept-Language` headers](https://developer.mo
 Implements `Map<language, quality>`.
 
 ```ts
-import { AcceptLanguage } from '@remix-run/headers'
+import { AcceptLanguage } from 'remix/headers'
 
 // Parse from headers
 let acceptLanguage = AcceptLanguage.from(request.headers.get('accept-language'))
@@ -151,7 +151,7 @@ headers.set('Accept-Language', new AcceptLanguage({ 'en-US': 1, fr: 0.5 }))
 Parse, manipulate and stringify [`Cache-Control` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control).
 
 ```ts
-import { CacheControl } from '@remix-run/headers'
+import { CacheControl } from 'remix/headers'
 
 // Parse from headers
 let cacheControl = CacheControl.from(response.headers.get('cache-control'))
@@ -187,7 +187,7 @@ headers.set('Cache-Control', new CacheControl({ public: true, maxAge: 3600 }))
 Parse, manipulate and stringify [`Content-Disposition` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition).
 
 ```ts
-import { ContentDisposition } from '@remix-run/headers'
+import { ContentDisposition } from 'remix/headers'
 
 // Parse from headers
 let contentDisposition = ContentDisposition.from(response.headers.get('content-disposition'))
@@ -221,7 +221,7 @@ headers.set(
 Parse, manipulate and stringify [`Content-Range` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Range).
 
 ```ts
-import { ContentRange } from '@remix-run/headers'
+import { ContentRange } from 'remix/headers'
 
 // Parse from headers
 let contentRange = ContentRange.from(response.headers.get('content-range'))
@@ -253,7 +253,7 @@ headers.set('Content-Range', new ContentRange({ unit: 'bytes', start: 0, end: 49
 Parse, manipulate and stringify [`Content-Type` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type).
 
 ```ts
-import { ContentType } from '@remix-run/headers'
+import { ContentType } from 'remix/headers'
 
 // Parse from headers
 let contentType = ContentType.from(request.headers.get('content-type'))
@@ -285,7 +285,7 @@ Parse, manipulate and stringify [`Cookie` headers](https://developer.mozilla.org
 Implements `Map<name, value>`.
 
 ```ts
-import { Cookie } from '@remix-run/headers'
+import { Cookie } from 'remix/headers'
 
 // Parse from headers
 let cookie = Cookie.from(request.headers.get('cookie'))
@@ -328,7 +328,7 @@ Parse, manipulate and stringify [`If-Match` headers](https://developer.mozilla.o
 Implements `Set<etag>`.
 
 ```ts
-import { IfMatch } from '@remix-run/headers'
+import { IfMatch } from 'remix/headers'
 
 // Parse from headers
 let ifMatch = IfMatch.from(request.headers.get('if-match'))
@@ -365,7 +365,7 @@ Parse, manipulate and stringify [`If-None-Match` headers](https://developer.mozi
 Implements `Set<etag>`.
 
 ```ts
-import { IfNoneMatch } from '@remix-run/headers'
+import { IfNoneMatch } from 'remix/headers'
 
 // Parse from headers
 let ifNoneMatch = IfNoneMatch.from(request.headers.get('if-none-match'))
@@ -399,7 +399,7 @@ headers.set('If-None-Match', new IfNoneMatch(['"abc123"']))
 Parse, manipulate and stringify [`If-Range` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Range).
 
 ```ts
-import { IfRange } from '@remix-run/headers'
+import { IfRange } from 'remix/headers'
 
 // Parse from headers
 let ifRange = IfRange.from(request.headers.get('if-range'))
@@ -432,7 +432,7 @@ headers.set('If-Range', new IfRange('"abc123"'))
 Parse, manipulate and stringify [`Range` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Range).
 
 ```ts
-import { Range } from '@remix-run/headers'
+import { Range } from 'remix/headers'
 
 // Parse from headers
 let range = Range.from(request.headers.get('range'))
@@ -467,7 +467,7 @@ headers.set('Range', new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }]
 Parse, manipulate and stringify [`Set-Cookie` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie).
 
 ```ts
-import { SetCookie } from '@remix-run/headers'
+import { SetCookie } from 'remix/headers'
 
 // Parse from headers
 let setCookie = SetCookie.from(response.headers.get('set-cookie'))
@@ -512,7 +512,7 @@ Parse, manipulate and stringify [`Vary` headers](https://developer.mozilla.org/e
 Implements `Set<headerName>`.
 
 ```ts
-import { Vary } from '@remix-run/headers'
+import { Vary } from 'remix/headers'
 
 // Parse from headers
 let vary = Vary.from(response.headers.get('vary'))
@@ -544,7 +544,7 @@ headers.set('Vary', new Vary(['Accept-Encoding', 'Accept-Language']))
 Parse and stringify raw HTTP header strings.
 
 ```ts
-import { parse, stringify } from '@remix-run/headers'
+import { parse, stringify } from 'remix/headers'
 
 let headers = parse('Content-Type: text/html\r\nCache-Control: no-cache')
 headers.get('content-type') // 'text/html'

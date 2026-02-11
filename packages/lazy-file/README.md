@@ -44,7 +44,7 @@ npm install @remix-run/lazy-file
 The low-level API can be used to create a `LazyFile` that streams content from anywhere:
 
 ```ts
-import { type LazyContent, LazyFile } from '@remix-run/lazy-file'
+import { type LazyContent, LazyFile } from 'remix/lazy-file'
 
 let content: LazyContent = {
   // The total length of this file in bytes.
@@ -75,7 +75,7 @@ All file contents are read on-demand and nothing is ever buffered unless you exp
 Use `.stream()` to get a `ReadableStream` for `Response` and other streaming APIs:
 
 ```ts
-import { openLazyFile } from '@remix-run/fs'
+import { openLazyFile } from 'remix/fs'
 
 let lazyFile = openLazyFile('./large-video.mp4')
 

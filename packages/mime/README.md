@@ -17,7 +17,7 @@ npm install @remix-run/mime
 Detects the MIME type for a given file extension or filename.
 
 ```ts
-import { detectMimeType } from '@remix-run/mime'
+import { detectMimeType } from 'remix/mime'
 
 detectMimeType('txt') // 'text/plain'
 detectMimeType('.txt') // 'text/plain'
@@ -31,7 +31,7 @@ detectMimeType('unknown') // undefined
 Detects the Content-Type header value for a given file extension or filename, including `charset` for text-based types. See [`mimeTypeToContentType`](#mimetypetocontenttypemimetype) for charset logic.
 
 ```ts
-import { detectContentType } from '@remix-run/mime'
+import { detectContentType } from 'remix/mime'
 
 detectContentType('css') // 'text/css; charset=utf-8'
 detectContentType('.json') // 'application/json; charset=utf-8'
@@ -44,7 +44,7 @@ detectContentType('path/to/file.unknown') // undefined
 Checks if a MIME type is known to be compressible.
 
 ```ts
-import { isCompressibleMimeType } from '@remix-run/mime'
+import { isCompressibleMimeType } from 'remix/mime'
 
 isCompressibleMimeType('text/html') // true
 isCompressibleMimeType('application/json') // true
@@ -55,7 +55,7 @@ isCompressibleMimeType('video/mp4') // false
 For convenience, the function also accepts a full Content-Type header value:
 
 ```ts
-import { isCompressibleMimeType } from '@remix-run/mime'
+import { isCompressibleMimeType } from 'remix/mime'
 
 isCompressibleMimeType('text/html; charset=utf-8') // true
 isCompressibleMimeType('application/json; charset=utf-8') // true
@@ -68,7 +68,7 @@ isCompressibleMimeType('video/mp4; charset=utf-8') // false
 Converts a MIME type to a Content-Type header value, adding `; charset=utf-8` to text-based MIME types: `text/*` (except `text/xml` which has built-in encoding declarations), `application/json`, `application/javascript`, and all `+json` suffixed types. All other types are returned unchanged.
 
 ```ts
-import { mimeTypeToContentType } from '@remix-run/mime'
+import { mimeTypeToContentType } from 'remix/mime'
 
 mimeTypeToContentType('text/css') // 'text/css; charset=utf-8'
 mimeTypeToContentType('application/json') // 'application/json; charset=utf-8'
@@ -81,7 +81,7 @@ mimeTypeToContentType('image/png') // 'image/png'
 Registers or overrides a MIME type for one or more file extensions.
 
 ```ts
-import { defineMimeType } from '@remix-run/mime'
+import { defineMimeType } from 'remix/mime'
 
 defineMimeType({
   extensions: ['myformat'],

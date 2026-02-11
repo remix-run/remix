@@ -15,9 +15,9 @@ npm install @remix-run/method-override-middleware
 This middleware runs after [the `formData` middleware](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) and updates the request context's `context.method` with the value of the method override field. This is useful for simulating RESTful API request methods like PUT and DELETE using HTML forms.
 
 ```ts
-import { createRouter } from '@remix-run/fetch-router'
-import { formData } from '@remix-run/form-data-middleware'
-import { methodOverride } from '@remix-run/method-override-middleware'
+import { createRouter } from 'remix/fetch-router'
+import { formData } from 'remix/form-data-middleware'
+import { methodOverride } from 'remix/method-override-middleware'
 
 let router = createRouter({
   // methodOverride must come AFTER formData middleware

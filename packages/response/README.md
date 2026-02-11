@@ -23,10 +23,10 @@ npm install @remix-run/response
 This package provides no default export. Instead, import the specific helper you need:
 
 ```ts
-import { createFileResponse } from '@remix-run/response/file'
-import { createHtmlResponse } from '@remix-run/response/html'
-import { createRedirectResponse } from '@remix-run/response/redirect'
-import { compressResponse } from '@remix-run/response/compress'
+import { createFileResponse } from 'remix/response/file'
+import { createHtmlResponse } from 'remix/response/html'
+import { createRedirectResponse } from 'remix/response/redirect'
+import { compressResponse } from 'remix/response/compress'
 ```
 
 ### File Responses
@@ -34,8 +34,8 @@ import { compressResponse } from '@remix-run/response/compress'
 The `createFileResponse` helper creates a response for serving files with full HTTP semantics. It works with both native `File` objects and `LazyFile` from `@remix-run/lazy-file`:
 
 ```ts
-import { createFileResponse } from '@remix-run/response/file'
-import { openLazyFile } from '@remix-run/fs'
+import { createFileResponse } from 'remix/response/file'
+import { openLazyFile } from 'remix/fs'
 
 let lazyFile = openLazyFile('./public/image.jpg')
 let response = await createFileResponse(lazyFile, request, {
@@ -124,7 +124,7 @@ await createFileResponse(file, request, {
 The `createHtmlResponse` helper creates HTML responses with proper `Content-Type` and DOCTYPE handling:
 
 ```ts
-import { createHtmlResponse } from '@remix-run/response/html'
+import { createHtmlResponse } from 'remix/response/html'
 
 let response = createHtmlResponse('<h1>Hello, World!</h1>')
 // Content-Type: text/html; charset=UTF-8
@@ -134,8 +134,8 @@ let response = createHtmlResponse('<h1>Hello, World!</h1>')
 The helper automatically prepends `<!DOCTYPE html>` if not already present. It works with strings, `SafeHtml` [from `@remix-run/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template), Blobs/Files, ArrayBuffers, and ReadableStreams.
 
 ```ts
-import { html } from '@remix-run/html-template'
-import { createHtmlResponse } from '@remix-run/response/html'
+import { html } from 'remix/html-template'
+import { createHtmlResponse } from 'remix/response/html'
 
 let name = '<script>alert(1)</script>'
 let response = createHtmlResponse(html`<h1>Hello, ${name}!</h1>`)
@@ -150,7 +150,7 @@ The `createRedirectResponse` helper creates redirect responses. The main improve
 - Accepts a `ResponseInit` object as the second argument, allowing you to set additional headers and status code.
 
 ```ts
-import { createRedirectResponse } from '@remix-run/response/redirect'
+import { createRedirectResponse } from 'remix/response/redirect'
 
 // Default 302 redirect
 let response = createRedirectResponse('/login')
@@ -170,7 +170,7 @@ let response = createRedirectResponse('/dashboard', {
 The `compressResponse` helper compresses a `Response` based on the client's `Accept-Encoding` header:
 
 ```ts
-import { compressResponse } from '@remix-run/response/compress'
+import { compressResponse } from 'remix/response/compress'
 
 let response = new Response(JSON.stringify(data), {
   headers: { 'Content-Type': 'application/json' },

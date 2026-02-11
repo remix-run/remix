@@ -26,7 +26,7 @@ npm install @remix-run/html-template
 ## Usage
 
 ```ts
-import { html } from '@remix-run/html-template'
+import { html } from 'remix/html-template'
 
 let userInput = '<script>alert("XSS")</script>'
 let greeting = html`<h1>Hello ${userInput}!</h1>`
@@ -40,7 +40,7 @@ By default, all interpolated values are automatically escaped to prevent XSS att
 If you have trusted HTML that should not be escaped, use `html.raw`:
 
 ```ts
-import { html } from '@remix-run/html-template'
+import { html } from 'remix/html-template'
 
 let trustedIcon = '<svg>...</svg>'
 let button = html.raw`<button>${trustedIcon} Click me</button>`
@@ -56,7 +56,7 @@ console.log(String(button))
 SafeHtml values can be nested without double-escaping:
 
 ```ts
-import { html } from '@remix-run/html-template'
+import { html } from 'remix/html-template'
 
 let title = html`<h1>My Title</h1>`
 let content = html`<p>Some content with ${userInput}</p>`
@@ -76,7 +76,7 @@ let page = html`
 You can interpolate arrays of values, which will be flattened and joined:
 
 ```ts
-import { html } from '@remix-run/html-template'
+import { html } from 'remix/html-template'
 
 let items = ['Apple', 'Banana', 'Cherry']
 let list = html`
@@ -91,7 +91,7 @@ let list = html`
 Use `null` or `undefined` to render nothing:
 
 ```ts
-import { html } from '@remix-run/html-template'
+import { html } from 'remix/html-template'
 
 let showError = false
 let errorMessage = 'Something went wrong'

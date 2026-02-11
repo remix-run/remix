@@ -3,7 +3,7 @@
 Fast URL matching and href generation with type safe params.
 
 ```ts
-import { RoutePattern } from '@remix-run/route-pattern'
+import { RoutePattern } from 'remix/route-pattern'
 
 let blog = new RoutePattern('blog/:slug')
 blog.match('https://remix.run/blog/v3') // { params: { slug: 'v3' } }
@@ -80,7 +80,7 @@ new RoutePattern('search?q') // allows additional search params beyond ?q
 Match URLs against multiple patterns. Each pattern can have associated data (handlers, route IDs, metadata, etc.):
 
 ```ts
-import { ArrayMatcher as Matcher } from '@remix-run/route-pattern'
+import { ArrayMatcher as Matcher } from 'remix/route-pattern'
 
 // Any data type you want!  👇
 let matcher = new Matcher<string>()
@@ -106,8 +106,8 @@ Note: Performance depends on your specific patterns—benchmark both to verify w
 Both implement the `Matcher` API so you can swap them out easily:
 
 ```ts
-// import { ArrayMatcher as Matcher } from "@remix-run/route-pattern"
-import { TrieMatcher as Matcher } from '@remix-run/route-pattern'
+// import { ArrayMatcher as Matcher } from 'remix/route-pattern'
+import { TrieMatcher as Matcher } from 'remix/route-pattern'
 ```
 
 ## Specificity
@@ -117,7 +117,7 @@ When multiple patterns match a URL, the most specific pattern wins.
 **Pathname specificity** (left-to-right):
 
 ```ts
-import { ArrayMatcher } from '@remix-run/route-pattern'
+import { ArrayMatcher } from 'remix/route-pattern'
 
 let matcher = new ArrayMatcher<string>()
 matcher.add('blog/hello', 'static')
