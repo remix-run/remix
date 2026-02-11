@@ -600,12 +600,12 @@ function applyJoins(
         targetIndex += 1
       }
 
-      if (!matched && (join.type === 'left' || join.type === 'full')) {
+      if (!matched && join.type === 'left') {
         nextRows.push(mergeTableData(leftRow, join.table))
       }
     }
 
-    if (join.type === 'right' || join.type === 'full') {
+    if (join.type === 'right') {
       let targetIndex = 0
 
       while (targetIndex < targetRows.length) {

@@ -25,7 +25,7 @@ let Projects = createTable({
 })
 
 describe('memory adapter contract', () => {
-  it('supports join semantics across inner/left/right/full joins', async () => {
+  it('supports join semantics across inner/left/right joins', async () => {
     let adapter = new MemoryDatabaseAdapter({
       accounts: [
         { id: 1, email: 'a@example.com', status: 'active' },
@@ -88,23 +88,6 @@ describe('memory adapter contract', () => {
       },
     })
 
-    let full = await adapter.execute({
-      statement: {
-        kind: 'select',
-        table: Accounts,
-        select: [
-          { column: 'id', alias: 'id' },
-          { column: 'projects.account_id', alias: 'projects.account_id' },
-        ],
-        distinct: false,
-        joins: [{ type: 'full', table: Projects, on: eq('accounts.id', 'projects.account_id') }],
-        where: [],
-        groupBy: [],
-        having: [],
-        orderBy: [{ column: 'projects.account_id', direction: 'asc' }],
-      },
-    })
-
     assert.equal(inner.rows?.length, 1)
     assert.deepEqual(inner.rows?.[0], { id: 1, 'projects.account_id': 1 })
 
@@ -116,10 +99,6 @@ describe('memory adapter contract', () => {
     assert.deepEqual(right.rows?.[0], { id: 1, 'projects.account_id': 1 })
     assert.deepEqual(right.rows?.[1], { id: undefined, 'projects.account_id': 99 })
 
-    assert.equal(full.rows?.length, 3)
-    assert.deepEqual(full.rows?.[0], { id: 2, 'projects.account_id': undefined })
-    assert.deepEqual(full.rows?.[1], { id: 1, 'projects.account_id': 1 })
-    assert.deepEqual(full.rows?.[2], { id: undefined, 'projects.account_id': 99 })
   })
 
   it('applies joins, where, groupBy, and having in count/exists statements', async () => {

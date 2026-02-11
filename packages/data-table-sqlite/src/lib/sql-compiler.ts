@@ -487,10 +487,6 @@ function normalizeJoinType(type: string): string {
     return 'right'
   }
 
-  if (type === 'full') {
-    return 'full'
-  }
-
   return 'inner'
 }
 
@@ -516,8 +512,16 @@ function quotePath(path: string): string {
 }
 
 function pushValue(context: CompileContext, value: unknown): string {
-  context.values.push(value)
+  context.values.push(normalizeBoundValue(value))
   return '?'
+}
+
+function normalizeBoundValue(value: unknown): unknown {
+  if (typeof value === 'boolean') {
+    return value ? 1 : 0
+  }
+
+  return value
 }
 
 function collectColumns(rows: Record<string, unknown>[]): string[] {
