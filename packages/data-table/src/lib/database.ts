@@ -405,6 +405,17 @@ export class QueryBuilder<
     values: Partial<TableRow<table>>,
     options?: { returning?: ReturningInput<table>; touch?: boolean },
   ): Promise<WriteResult | WriteRowResult<TableRow<table>>> {
+    assertWriteState(
+      this.#state,
+      'insert',
+      {
+        where: false,
+        orderBy: false,
+        limit: false,
+        offset: false,
+      },
+    )
+
     let preparedValues = prepareInsertValues(
       this.#table,
       values,
@@ -459,6 +470,17 @@ export class QueryBuilder<
     values: Partial<TableRow<table>>[],
     options?: { returning?: ReturningInput<table>; touch?: boolean },
   ): Promise<WriteResult | WriteRowsResult<TableRow<table>>> {
+    assertWriteState(
+      this.#state,
+      'insertMany',
+      {
+        where: false,
+        orderBy: false,
+        limit: false,
+        offset: false,
+      },
+    )
+
     let preparedValues = values.map((value) =>
       prepareInsertValues(this.#table, value, this.#database.now(), options?.touch ?? true),
     )
@@ -509,6 +531,17 @@ export class QueryBuilder<
     changes: Partial<TableRow<table>>,
     options?: { returning?: ReturningInput<table>; touch?: boolean },
   ): Promise<WriteResult | WriteRowsResult<TableRow<table>>> {
+    assertWriteState(
+      this.#state,
+      'update',
+      {
+        where: true,
+        orderBy: true,
+        limit: true,
+        offset: true,
+      },
+    )
+
     let preparedChanges = prepareUpdateValues(
       this.#table,
       changes,
@@ -596,6 +629,17 @@ export class QueryBuilder<
   async delete(options?: {
     returning?: ReturningInput<table>
   }): Promise<WriteResult | WriteRowsResult<TableRow<table>>> {
+    assertWriteState(
+      this.#state,
+      'delete',
+      {
+        where: true,
+        orderBy: true,
+        limit: true,
+        offset: true,
+      },
+    )
+
     let returning = options?.returning
 
     if (hasScopedWriteModifiers(this.#state)) {
@@ -676,6 +720,17 @@ export class QueryBuilder<
       update?: Partial<TableRow<table>>
     },
   ): Promise<WriteResult | WriteRowResult<TableRow<table>>> {
+    assertWriteState(
+      this.#state,
+      'upsert',
+      {
+        where: false,
+        orderBy: false,
+        limit: false,
+        offset: false,
+      },
+    )
+
     if (!this.#database.adapter.capabilities.upsert) {
       throw new DataTableQueryError('Adapter does not support upsert')
     }
@@ -1112,6 +1167,67 @@ function normalizeRows(rows: AdapterResult['rows']): Record<string, unknown>[] {
 
 function hasScopedWriteModifiers<table extends AnyTable>(state: QueryState<table>): boolean {
   return state.orderBy.length > 0 || state.limit !== undefined || state.offset !== undefined
+}
+
+type WriteStatePolicy = {
+  where: boolean
+  orderBy: boolean
+  limit: boolean
+  offset: boolean
+}
+
+function assertWriteState<table extends AnyTable>(
+  state: QueryState<table>,
+  operation: 'insert' | 'insertMany' | 'update' | 'delete' | 'upsert',
+  policy: WriteStatePolicy,
+): void {
+  let unsupported: string[] = []
+
+  if (state.select !== '*') {
+    unsupported.push('select()')
+  }
+
+  if (state.distinct) {
+    unsupported.push('distinct()')
+  }
+
+  if (state.joins.length > 0) {
+    unsupported.push('join()')
+  }
+
+  if (state.groupBy.length > 0) {
+    unsupported.push('groupBy()')
+  }
+
+  if (state.having.length > 0) {
+    unsupported.push('having()')
+  }
+
+  if (Object.keys(state.with).length > 0) {
+    unsupported.push('with()')
+  }
+
+  if (!policy.where && state.where.length > 0) {
+    unsupported.push('where()')
+  }
+
+  if (!policy.orderBy && state.orderBy.length > 0) {
+    unsupported.push('orderBy()')
+  }
+
+  if (!policy.limit && state.limit !== undefined) {
+    unsupported.push('limit()')
+  }
+
+  if (!policy.offset && state.offset !== undefined) {
+    unsupported.push('offset()')
+  }
+
+  if (unsupported.length > 0) {
+    throw new DataTableQueryError(
+      operation + '() does not support these query modifiers: ' + unsupported.join(', '),
+    )
+  }
 }
 
 async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
