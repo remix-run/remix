@@ -96,6 +96,40 @@ describe('postgres adapter', () => {
     ])
   })
 
+  it('applies transaction options when provided', async () => {
+    let statements: string[] = []
+
+    let client = {
+      async query(text: string) {
+        statements.push(text)
+
+        return {
+          rows: [],
+          rowCount: 0,
+          command: 'SELECT',
+          oid: 0,
+          fields: [],
+        }
+      },
+    }
+
+    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+
+    await db.transaction(
+      async () => undefined,
+      {
+        isolationLevel: 'serializable',
+        readOnly: true,
+      },
+    )
+
+    assert.deepEqual(statements, [
+      'begin',
+      'set transaction isolation level serializable read only',
+      'commit',
+    ])
+  })
+
   it('compiles column-to-column comparisons from string references', async () => {
     let statements: Array<{ text: string; values: unknown[] | undefined }> = []
 

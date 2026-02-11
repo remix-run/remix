@@ -90,6 +90,33 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
     sqlite.close()
   })
 
+  it('accepts transaction options as best-effort hints', async () => {
+    let sqlite = new Database(':memory:')
+    sqlite.exec(
+      'create table accounts (id integer primary key, email text not null, status text not null)',
+    )
+
+    let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+
+    await db.transaction(
+      async (transactionDatabase) => {
+        await transactionDatabase
+          .query(Accounts)
+          .insert({ id: 1, email: 'a@example.com', status: 'active' })
+      },
+      {
+        isolationLevel: 'serializable',
+        readOnly: true,
+      },
+    )
+
+    let rows = await db.query(Accounts).all()
+
+    assert.equal(rows.length, 1)
+    assert.equal(rows[0].id, 1)
+    sqlite.close()
+  })
+
   it('supports column-to-column comparisons from string references', async () => {
     let sqlite = new Database(':memory:')
     sqlite.exec(
