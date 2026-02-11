@@ -13,7 +13,6 @@ export type SqliteDatabaseConnection = BetterSqliteDatabase
 
 export type SqliteDatabaseAdapterOptions = {
   capabilities?: {
-    ilike?: boolean
     returning?: boolean
     savepoints?: boolean
     upsert?: boolean
@@ -33,7 +32,6 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     this.capabilities = {
       returning: options?.capabilities?.returning ?? true,
       savepoints: options?.capabilities?.savepoints ?? true,
-      ilike: options?.capabilities?.ilike ?? true,
       upsert: options?.capabilities?.upsert ?? true,
     }
   }

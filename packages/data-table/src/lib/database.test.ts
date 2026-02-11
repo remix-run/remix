@@ -870,7 +870,6 @@ describe('adapter errors', () => {
       capabilities: {
         returning: true,
         savepoints: true,
-        ilike: true,
         upsert: true,
       },
       async execute() {
