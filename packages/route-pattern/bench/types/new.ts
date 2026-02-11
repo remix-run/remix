@@ -16,8 +16,8 @@ bench('new > complex route', () => {
 }).types([3, 'instantiations'])
 
 bench('new > mediarss', () => {
-  type Route = keyof typeof import('../routes/mediarss.ts').routes
-  let routes: { [route in Route]: RoutePattern<route> } = {} as any
+  type Routes = typeof import('../routes/mediarss.ts').routes
+  let routes: { [route in keyof Routes]: RoutePattern<Routes[route]> } = {} as any
 
   routes.feed
   routes.media
@@ -54,4 +54,4 @@ bench('new > mediarss', () => {
   routes.adminApiMediaStream
   routes.adminApiMediaUpload
   routes.adminApiArtwork
-}).types([64, 'instantiations'])
+}).types([128, 'instantiations'])

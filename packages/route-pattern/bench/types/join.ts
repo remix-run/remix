@@ -17,8 +17,8 @@ bench('Join', () => {
 
 bench('join > mediarss', () => {
   const other = '/comments/:commentId'
-  type Route = keyof typeof import('../routes/mediarss.ts').routes
-  let routes: { [route in Route]: RoutePattern<route> } = {} as any
+  type Routes = typeof import('../routes/mediarss.ts').routes
+  let routes: { [route in keyof Routes]: RoutePattern<Routes[route]> } = {} as any
 
   routes.feed.join(other)
   routes.media.join(other)
@@ -55,4 +55,4 @@ bench('join > mediarss', () => {
   routes.adminApiMediaStream.join(other)
   routes.adminApiMediaUpload.join(other)
   routes.adminApiArtwork.join(other)
-}).types([44665, 'instantiations'])
+}).types([81580, 'instantiations'])
