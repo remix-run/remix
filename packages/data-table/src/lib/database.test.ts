@@ -133,6 +133,136 @@ describe('query builder', () => {
     assert.equal(accounts[1].tasks[0].title, 'Collect Testimonials')
   })
 
+  it('applies hasMany relation limit/offset per parent row', async () => {
+    let adapter = new MemoryDatabaseAdapter({
+      accounts: [
+        { id: 1, email: 'amy@studio.test', status: 'active' },
+        { id: 2, email: 'brad@studio.test', status: 'active' },
+      ],
+      projects: [
+        { id: 100, account_id: 1, name: 'A-1', archived: false },
+        { id: 101, account_id: 1, name: 'A-2', archived: false },
+        { id: 200, account_id: 2, name: 'B-1', archived: false },
+        { id: 201, account_id: 2, name: 'B-2', archived: false },
+      ],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createDatabase(adapter)
+
+    let firstProjectPerAccount = await db
+      .query(Accounts)
+      .orderBy('id', 'asc')
+      .with({
+        projects: AccountProjects.orderBy('id', 'asc').limit(1),
+      })
+      .all()
+
+    assert.equal(firstProjectPerAccount[0].projects.length, 1)
+    assert.equal(firstProjectPerAccount[0].projects[0].id, 100)
+    assert.equal(firstProjectPerAccount[1].projects.length, 1)
+    assert.equal(firstProjectPerAccount[1].projects[0].id, 200)
+
+    let secondProjectPerAccount = await db
+      .query(Accounts)
+      .orderBy('id', 'asc')
+      .with({
+        projects: AccountProjects.orderBy('id', 'asc').offset(1).limit(1),
+      })
+      .all()
+
+    assert.equal(secondProjectPerAccount[0].projects.length, 1)
+    assert.equal(secondProjectPerAccount[0].projects[0].id, 101)
+    assert.equal(secondProjectPerAccount[1].projects.length, 1)
+    assert.equal(secondProjectPerAccount[1].projects[0].id, 201)
+  })
+
+  it('applies hasManyThrough relation pagination per parent row', async () => {
+    let adapter = new MemoryDatabaseAdapter({
+      accounts: [
+        { id: 1, email: 'amy@studio.test', status: 'active' },
+        { id: 2, email: 'brad@studio.test', status: 'active' },
+      ],
+      projects: [
+        { id: 100, account_id: 1, name: 'A-1', archived: false },
+        { id: 101, account_id: 1, name: 'A-2', archived: false },
+        { id: 200, account_id: 2, name: 'B-1', archived: false },
+        { id: 201, account_id: 2, name: 'B-2', archived: false },
+      ],
+      tasks: [
+        { id: 1000, project_id: 100, title: 'A-1 Task', state: 'open' },
+        { id: 1001, project_id: 101, title: 'A-2 Task', state: 'open' },
+        { id: 2000, project_id: 200, title: 'B-1 Task', state: 'open' },
+        { id: 2001, project_id: 201, title: 'B-2 Task', state: 'open' },
+      ],
+      memberships: [],
+    })
+
+    let db = createDatabase(adapter)
+
+    let firstTaskPerAccount = await db
+      .query(Accounts)
+      .orderBy('id', 'asc')
+      .with({
+        tasks: AccountTasks.orderBy('id', 'asc').limit(1),
+      })
+      .all()
+
+    assert.equal(firstTaskPerAccount[0].tasks.length, 1)
+    assert.equal(firstTaskPerAccount[0].tasks[0].id, 1000)
+    assert.equal(firstTaskPerAccount[1].tasks.length, 1)
+    assert.equal(firstTaskPerAccount[1].tasks[0].id, 2000)
+
+    let secondTaskPerAccount = await db
+      .query(Accounts)
+      .orderBy('id', 'asc')
+      .with({
+        tasks: AccountTasks.orderBy('id', 'asc').offset(1).limit(1),
+      })
+      .all()
+
+    assert.equal(secondTaskPerAccount[0].tasks.length, 1)
+    assert.equal(secondTaskPerAccount[0].tasks[0].id, 1001)
+    assert.equal(secondTaskPerAccount[1].tasks.length, 1)
+    assert.equal(secondTaskPerAccount[1].tasks[0].id, 2001)
+  })
+
+  it('applies hasManyThrough through-relation pagination per parent row', async () => {
+    let adapter = new MemoryDatabaseAdapter({
+      accounts: [
+        { id: 1, email: 'amy@studio.test', status: 'active' },
+        { id: 2, email: 'brad@studio.test', status: 'active' },
+      ],
+      projects: [
+        { id: 100, account_id: 1, name: 'A-1', archived: false },
+        { id: 101, account_id: 1, name: 'A-2', archived: false },
+        { id: 200, account_id: 2, name: 'B-1', archived: false },
+        { id: 201, account_id: 2, name: 'B-2', archived: false },
+      ],
+      tasks: [
+        { id: 1000, project_id: 100, title: 'A-1 Task', state: 'open' },
+        { id: 1001, project_id: 101, title: 'A-2 Task', state: 'open' },
+        { id: 2000, project_id: 200, title: 'B-1 Task', state: 'open' },
+        { id: 2001, project_id: 201, title: 'B-2 Task', state: 'open' },
+      ],
+      memberships: [],
+    })
+
+    let db = createDatabase(adapter)
+    let firstProjectPerAccount = AccountProjects.orderBy('id', 'asc').limit(1)
+    let tasksThroughFirstProject = Accounts.hasManyThrough(Tasks, {
+      through: firstProjectPerAccount,
+    }).orderBy('id', 'asc')
+
+    let accounts = await db.query(Accounts).orderBy('id', 'asc').with({ tasks: tasksThroughFirstProject }).all()
+
+    assert.equal(accounts[0].tasks.length, 1)
+    assert.equal(accounts[0].tasks[0].id, 1000)
+    assert.equal(accounts[1].tasks.length, 1)
+    assert.equal(accounts[1].tasks[0].id, 2000)
+  })
+
   it('supports composite primary keys in find()', async () => {
     let adapter = new MemoryDatabaseAdapter({
       accounts: [],
