@@ -696,6 +696,56 @@ describe('writes and validation', () => {
       },
     )
   })
+
+  it('validates filter values against column schemas at runtime', async () => {
+    let adapter = new MemoryDatabaseAdapter({
+      accounts: [{ id: 1, email: 'a@studio.test', status: 'active' }],
+      projects: [{ id: 100, account_id: 1, name: 'Alpha', archived: false }],
+      profiles: [],
+      tasks: [],
+      memberships: [],
+    })
+    let db = createDatabase(adapter)
+
+    await assert.rejects(
+      async function () {
+        await db.query(Accounts).where({ id: 'not-a-number' as never }).all()
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableValidationError &&
+          error.message.includes('Invalid filter value for column "id" in table "accounts"')
+        )
+      },
+    )
+
+    await assert.rejects(
+      async function () {
+        await db
+          .query(Accounts)
+          .join(Projects, eq('projects.archived', 'nope' as never))
+          .all()
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableValidationError &&
+          error.message.includes('Invalid filter value for column "archived" in table "projects"')
+        )
+      },
+    )
+
+    await assert.rejects(
+      async function () {
+        await db.query(Accounts).groupBy('status').having(eq('status', 123 as never)).count()
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableValidationError &&
+          error.message.includes('Invalid filter value for column "status" in table "accounts"')
+        )
+      },
+    )
+  })
 })
 
 describe('transactions and raw sql', () => {

@@ -237,15 +237,29 @@ export class QueryBuilder<
 
   where(input: WhereInput<columns>): QueryBuilder<table, loaded, columns, selected> {
     let predicate = normalizeWhereInput(input)
+    let normalizedPredicate = normalizePredicateValues(
+      predicate,
+      createPredicateColumnResolver([this.#table, ...this.#state.joins.map(function mapJoin(join) {
+        return join.table
+      })]),
+    )
+
     return this.#clone({
-      where: [...this.#state.where, predicate],
+      where: [...this.#state.where, normalizedPredicate],
     })
   }
 
   having(input: WhereInput<columns>): QueryBuilder<table, loaded, columns, selected> {
     let predicate = normalizeWhereInput(input)
+    let normalizedPredicate = normalizePredicateValues(
+      predicate,
+      createPredicateColumnResolver([this.#table, ...this.#state.joins.map(function mapJoin(join) {
+        return join.table
+      })]),
+    )
+
     return this.#clone({
-      having: [...this.#state.having, predicate],
+      having: [...this.#state.having, normalizedPredicate],
     })
   }
 
@@ -254,10 +268,21 @@ export class QueryBuilder<
     on: Predicate<columns | QueryColumnName<target>>,
     type: JoinType = 'inner',
   ): QueryBuilder<table, loaded, columns | QueryColumnName<target>, selected> {
+    let normalizedOn = normalizePredicateValues(
+      on,
+      createPredicateColumnResolver([
+        this.#table,
+        ...this.#state.joins.map(function mapJoin(join) {
+          return join.table
+        }),
+        target,
+      ]),
+    ) as Predicate<columns | QueryColumnName<target>>
+
     return new QueryBuilder(this.#database, this.#table, {
       select: cloneSelection(this.#state.select),
       distinct: this.#state.distinct,
-      joins: [...this.#state.joins, { type, table: target, on }],
+      joins: [...this.#state.joins, { type, table: target, on: normalizedOn }],
       where: [...this.#state.where],
       groupBy: [...this.#state.groupBy],
       having: [...this.#state.having],
@@ -1420,6 +1445,171 @@ function validatePartialRow<table extends AnyTable>(
   }
 
   return output
+}
+
+type ResolvedPredicateColumn = {
+  tableName: string
+  columnName: string
+  schema: unknown
+}
+
+function createPredicateColumnResolver(
+  tables: AnyTable[],
+): (column: string) => ResolvedPredicateColumn {
+  let qualifiedColumns = new Map<string, ResolvedPredicateColumn>()
+  let unqualifiedColumns = new Map<string, ResolvedPredicateColumn>()
+  let ambiguousColumns = new Set<string>()
+
+  for (let table of tables) {
+    for (let columnName in table.columns) {
+      if (!Object.prototype.hasOwnProperty.call(table.columns, columnName)) {
+        continue
+      }
+
+      let resolvedColumn: ResolvedPredicateColumn = {
+        tableName: table.name,
+        columnName,
+        schema: table.columns[columnName],
+      }
+
+      qualifiedColumns.set(table.name + '.' + columnName, resolvedColumn)
+
+      if (ambiguousColumns.has(columnName)) {
+        continue
+      }
+
+      if (unqualifiedColumns.has(columnName)) {
+        unqualifiedColumns.delete(columnName)
+        ambiguousColumns.add(columnName)
+        continue
+      }
+
+      unqualifiedColumns.set(columnName, resolvedColumn)
+    }
+  }
+
+  return function resolveColumn(column: string): ResolvedPredicateColumn {
+    let qualified = qualifiedColumns.get(column)
+
+    if (qualified) {
+      return qualified
+    }
+
+    if (column.includes('.')) {
+      throw new DataTableQueryError('Unknown predicate column "' + column + '"')
+    }
+
+    if (ambiguousColumns.has(column)) {
+      throw new DataTableQueryError(
+        'Ambiguous predicate column "' + column + '". Use a qualified column name',
+      )
+    }
+
+    let unqualified = unqualifiedColumns.get(column)
+
+    if (!unqualified) {
+      throw new DataTableQueryError('Unknown predicate column "' + column + '"')
+    }
+
+    return unqualified
+  }
+}
+
+function normalizePredicateValues(
+  predicate: Predicate,
+  resolveColumn: (column: string) => ResolvedPredicateColumn,
+): Predicate {
+  if (predicate.type === 'comparison') {
+    let column = resolveColumn(predicate.column)
+
+    if (predicate.valueType === 'column') {
+      resolveColumn(predicate.value)
+      return predicate
+    }
+
+    if (
+      (predicate.operator === 'eq' || predicate.operator === 'ne') &&
+      (predicate.value === null || predicate.value === undefined)
+    ) {
+      return predicate
+    }
+
+    if (predicate.operator === 'in' || predicate.operator === 'notIn') {
+      if (!Array.isArray(predicate.value)) {
+        throw new DataTableValidationError(
+          'Invalid filter value for column "' +
+            column.columnName +
+            '" in table "' +
+            column.tableName +
+            '"',
+          [{ message: 'Expected an array value for "' + predicate.operator + '" predicate' }],
+          {
+            metadata: {
+              table: column.tableName,
+              column: column.columnName,
+            },
+          },
+        )
+      }
+
+      let parsedValues = predicate.value.map(function mapValue(value) {
+        return parsePredicateValue(column, value)
+      })
+
+      return {
+        ...predicate,
+        value: parsedValues,
+      }
+    }
+
+    return {
+      ...predicate,
+      value: parsePredicateValue(column, predicate.value),
+    }
+  }
+
+  if (predicate.type === 'between') {
+    let column = resolveColumn(predicate.column)
+
+    return {
+      ...predicate,
+      lower: parsePredicateValue(column, predicate.lower),
+      upper: parsePredicateValue(column, predicate.upper),
+    }
+  }
+
+  if (predicate.type === 'null') {
+    resolveColumn(predicate.column)
+    return predicate
+  }
+
+  return {
+    ...predicate,
+    predicates: predicate.predicates.map(function mapPredicate(child) {
+      return normalizePredicateValues(child, resolveColumn)
+    }),
+  }
+}
+
+function parsePredicateValue(column: ResolvedPredicateColumn, value: unknown): unknown {
+  let result = parseSafe(column.schema as any, value) as
+    | { success: true; value: unknown }
+    | { success: false; issues: ReadonlyArray<unknown> }
+
+  if (!result.success) {
+    throw new DataTableValidationError(
+      'Invalid filter value for column "' + column.columnName + '" in table "' + column.tableName + '"',
+      result.issues,
+      {
+        metadata: {
+          table: column.tableName,
+          column: column.columnName,
+        },
+      },
+    )
+  }
+
+  return result.value
 }
 
 function uniqueTuples(rows: Record<string, unknown>[], columns: string[]): unknown[][] {
