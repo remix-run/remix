@@ -335,6 +335,22 @@ await db.transaction(async function (outerTransaction) {
 
 Nested transactions require adapter savepoint support.
 
+Transaction options are best-effort hints:
+
+```ts
+await db.transaction(
+  async function (transactionDatabase) {
+    await transactionDatabase.query(Accounts).where({ status: 'inactive' }).update({ status: 'active' })
+  },
+  {
+    isolationLevel: 'serializable',
+    readOnly: false,
+  },
+)
+```
+
+Adapters may honor some options and silently ignore others based on dialect/runtime support.
+
 ## Raw SQL Escape Hatch
 
 ```ts
