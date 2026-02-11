@@ -74,6 +74,14 @@ Both `parse` and `parseSafe` accept any [Standard Schema](https://standardschema
 You can also customize built-in validation messages with `errorMap`:
 
 ```ts
+import { object, parseSafe, string } from '@remix-run/data-schema'
+import { minLength } from '@remix-run/data-schema/checks'
+
+let User = object({
+  name: string(),
+  username: string().pipe(minLength(3)),
+})
+
 let result = parseSafe(User, input, {
   locale: 'es',
   errorMap(context) {
