@@ -1021,7 +1021,9 @@ async function loadDirectRelationValues(
     query = query.where(linkPredicate as Predicate<QueryColumnName<typeof relation.targetTable>>)
   }
 
-  query = applyRelationModifiers(query, relation)
+  query = applyRelationModifiers(query, relation, {
+    includePagination: false,
+  })
 
   let relatedRows = (await query.all()) as unknown as Record<string, unknown>[]
   let grouped = groupRowsByTuple(relatedRows, relation.targetKey)
@@ -1029,12 +1031,13 @@ async function loadDirectRelationValues(
   return sourceRows.map(function mapSourceRow(sourceRow) {
     let key = getCompositeKey(sourceRow, relation.sourceKey)
     let matches = grouped.get(key) ?? []
+    let pagedMatches = applyPagination(matches, relation.modifiers.limit, relation.modifiers.offset)
 
     if (relation.cardinality === 'many') {
-      return matches
+      return pagedMatches
     }
 
-    return matches[0] ?? null
+    return pagedMatches[0] ?? null
   })
 }
 
@@ -1069,7 +1072,9 @@ async function loadHasManyThroughValues(
     )
   }
 
-  throughQuery = applyRelationModifiers(throughQuery, throughRelation)
+  throughQuery = applyRelationModifiers(throughQuery, throughRelation, {
+    includePagination: false,
+  })
 
   let throughRows = (await throughQuery.all()) as unknown as Record<string, unknown>[]
 
@@ -1080,7 +1085,23 @@ async function loadHasManyThroughValues(
   }
 
   let throughRowsBySource = groupRowsByTuple(throughRows, throughRelation.targetKey)
-  let throughTuples = uniqueTuples(throughRows, relation.through.throughSourceKey)
+  let pagedThroughRowsBySource = new Map<string, Record<string, unknown>[]>()
+  let pagedThroughRows: Record<string, unknown>[] = []
+
+  for (let sourceRow of sourceRows) {
+    let sourceKey = getCompositeKey(sourceRow, throughRelation.sourceKey)
+    let matchedThroughRows = throughRowsBySource.get(sourceKey) ?? []
+    let pagedMatchedRows = applyPagination(
+      matchedThroughRows,
+      throughRelation.modifiers.limit,
+      throughRelation.modifiers.offset,
+    )
+
+    pagedThroughRowsBySource.set(sourceKey, pagedMatchedRows)
+    pagedThroughRows.push(...pagedMatchedRows)
+  }
+
+  let throughTuples = uniqueTuples(pagedThroughRows, relation.through.throughSourceKey)
 
   if (throughTuples.length === 0) {
     return sourceRows.map(function empty() {
@@ -1097,14 +1118,16 @@ async function loadHasManyThroughValues(
     )
   }
 
-  targetQuery = applyRelationModifiers(targetQuery, relation)
+  targetQuery = applyRelationModifiers(targetQuery, relation, {
+    includePagination: false,
+  })
 
   let relatedRows = (await targetQuery.all()) as unknown as Record<string, unknown>[]
   let targetRowsByThrough = groupRowsByTuple(relatedRows, relation.through.throughTargetKey)
 
   return sourceRows.map(function mapSourceRow(sourceRow) {
     let sourceKey = getCompositeKey(sourceRow, throughRelation.sourceKey)
-    let matchedThroughRows = throughRowsBySource.get(sourceKey) ?? []
+    let matchedThroughRows = pagedThroughRowsBySource.get(sourceKey) ?? []
     let outputRows: Record<string, unknown>[] = []
     let seen = new Set<string>()
 
@@ -1122,13 +1145,14 @@ async function loadHasManyThroughValues(
       }
     }
 
-    return outputRows
+    return applyPagination(outputRows, relation.modifiers.limit, relation.modifiers.offset)
   })
 }
 
 function applyRelationModifiers<table extends AnyTable>(
   query: QueryBuilder<table, {}>,
   relation: Relation<any, table, any, any>,
+  options: { includePagination: boolean },
 ): QueryBuilder<table, any> {
   let next = query
 
@@ -1140,11 +1164,11 @@ function applyRelationModifiers<table extends AnyTable>(
     next = next.orderBy(clause.column as keyof TableRow<table> & string, clause.direction)
   }
 
-  if (relation.modifiers.limit !== undefined) {
+  if (options.includePagination && relation.modifiers.limit !== undefined) {
     next = next.limit(relation.modifiers.limit)
   }
 
-  if (relation.modifiers.offset !== undefined) {
+  if (options.includePagination && relation.modifiers.offset !== undefined) {
     next = next.offset(relation.modifiers.offset)
   }
 
@@ -1153,6 +1177,15 @@ function applyRelationModifiers<table extends AnyTable>(
   }
 
   return next
+}
+
+function applyPagination<row>(
+  rows: row[],
+  limit: number | undefined,
+  offset: number | undefined,
+): row[] {
+  let offsetRows = offset === undefined ? rows : rows.slice(offset)
+  return limit === undefined ? offsetRows : offsetRows.slice(0, limit)
 }
 
 function normalizeRows(rows: AdapterResult['rows']): Record<string, unknown>[] {
