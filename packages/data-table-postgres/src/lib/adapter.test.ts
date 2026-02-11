@@ -1,0 +1,130 @@
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
+import { number, string } from '@remix-run/data-schema'
+import { createDatabase, createTable, eq, sql } from '@remix-run/data-table'
+
+import { createPostgresDatabaseAdapter } from './adapter.ts'
+
+let Accounts = createTable({
+  name: 'accounts',
+  columns: {
+    id: number(),
+    email: string(),
+  },
+})
+
+let Projects = createTable({
+  name: 'projects',
+  columns: {
+    id: number(),
+    account_id: number(),
+    name: string(),
+  },
+})
+
+describe('postgres adapter', () => {
+  it('converts raw sql placeholders and normalizes count rows', async () => {
+    let statements: Array<{ text: string; values: unknown[] | undefined }> = []
+
+    let client = {
+      async query(text: string, values?: unknown[]) {
+        statements.push({ text, values })
+
+        if (text.startsWith('select count(*)')) {
+          return {
+            rows: [{ count: '2' }],
+            rowCount: 1,
+            command: 'SELECT',
+            oid: 0,
+            fields: [],
+          }
+        }
+
+        return {
+          rows: [],
+          rowCount: 0,
+          command: 'SELECT',
+          oid: 0,
+          fields: [],
+        }
+      },
+    }
+
+    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+
+    let count = await db.query(Accounts).count()
+    await db.exec(sql`select * from accounts where id = ${42}`)
+
+    assert.equal(count, 2)
+    assert.equal(statements[1].text, 'select * from accounts where id = $1')
+    assert.deepEqual(statements[1].values, [42])
+  })
+
+  it('uses savepoints for nested transactions', async () => {
+    let statements: string[] = []
+
+    let client = {
+      async query(text: string) {
+        statements.push(text)
+
+        return {
+          rows: [],
+          rowCount: 0,
+          command: 'SELECT',
+          oid: 0,
+          fields: [],
+        }
+      },
+    }
+
+    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+
+    await db.transaction(async function (outerTransaction) {
+      await outerTransaction
+        .transaction(async function inner() {
+          throw new Error('Abort nested transaction')
+        })
+        .catch(function swallow() {
+          return undefined
+        })
+    })
+
+    assert.deepEqual(statements, [
+      'begin',
+      'savepoint "sp_0"',
+      'rollback to savepoint "sp_0"',
+      'release savepoint "sp_0"',
+      'commit',
+    ])
+  })
+
+  it('compiles column-to-column comparisons from string references', async () => {
+    let statements: Array<{ text: string; values: unknown[] | undefined }> = []
+
+    let client = {
+      async query(text: string, values?: unknown[]) {
+        statements.push({ text, values })
+
+        return {
+          rows: [{ count: '0' }],
+          rowCount: 1,
+          command: 'SELECT',
+          oid: 0,
+          fields: [],
+        }
+      },
+    }
+
+    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+
+    await db
+      .query(Accounts)
+      .join(Projects, eq('accounts.id', 'projects.account_id'))
+      .where(eq('accounts.email', 'ops@example.com'))
+      .count()
+
+    assert.match(statements[0].text, /"accounts"\."id"\s*=\s*"projects"\."account_id"/)
+    assert.match(statements[0].text, /"accounts"\."email"\s*=\s*\$1/)
+    assert.deepEqual(statements[0].values, ['ops@example.com'])
+  })
+})
