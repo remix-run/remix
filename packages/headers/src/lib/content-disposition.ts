@@ -141,7 +141,5 @@ function decodeFilenameSplat(value: string): string | null {
 }
 
 function percentDecode(value: string): string {
-  return value.replace(/\+/g, ' ').replace(/%([0-9A-Fa-f]{2})/g, (_, hex) => {
-    return String.fromCharCode(parseInt(hex, 16))
-  })
+  return value.replace(/\+/g, ' ').replace(/%([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
 }

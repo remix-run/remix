@@ -67,9 +67,7 @@ describe('session middleware', () => {
       ],
     })
 
-    router.map('/', () => {
-      return new Response('Home')
-    })
+    router.map('/', () => new Response('Home'))
 
     await assert.rejects(async () => {
       await router.fetch('https://remix.run')

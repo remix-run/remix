@@ -149,9 +149,7 @@ describe('router.fetch()', () => {
       ],
     })
 
-    router.get('/', () => {
-      return new Response('Home')
-    })
+    router.get('/', () => new Response('Home'))
 
     let response = await router.fetch('https://remix.run/nonexistent')
     assert.equal(response.status, 404)
@@ -168,9 +166,7 @@ describe('router.map() with single routes', () => {
 
     let router = createRouter()
 
-    router.map(routes.home, () => {
-      return new Response('Home')
-    })
+    router.map(routes.home, () => new Response('Home'))
 
     let response = await router.fetch('https://remix.run')
 

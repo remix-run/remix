@@ -75,9 +75,7 @@ router.get(routes.index, () => {
 })
 
 let server = http.createServer(
-  createRequestListener(async (request) => {
-    return await router.fetch(request)
-  }),
+  createRequestListener(async (request) => await router.fetch(request)),
 )
 
 server.listen(44100, () => {

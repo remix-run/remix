@@ -22,7 +22,7 @@
 
 - **Imports**: Always use `import type { X }` for types (separate from value imports); use `export type { X }` for type exports; include `.ts` extensions
 - **Variables**: Prefer `let` for locals, `const` only at module scope; never use `var`
-- **Functions**: Use regular function declarations/expressions by default. Only use arrow functions as callbacks (e.g., route handlers, array methods) where preserving lexical `this` is beneficial or the syntax is more concise
+- **Functions**: Use regular function declarations/expressions by default. For callback-based APIs (array methods, Promise callbacks, test callbacks, transaction callbacks, etc.), prefer arrow functions over `function` expressions. When an arrow callback only returns a single expression, use a concise body (`value => expression`) instead of braces/`return`
 - **Object methods**: When defining functions in object literals, use shorthand method syntax (`{ method() {} }`) instead of arrow functions (`{ method: () => {} }`)
 - **Classes**: Use native fields (omit `public`), `#private` for private members (no TypeScript accessibility modifiers)
 - **Formatting**: Prettier (printWidth: 100, no semicolons, single quotes, spaces not tabs)
