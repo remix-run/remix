@@ -373,7 +373,6 @@ function compileReturningClause(returning: '*' | string[] | undefined): string {
 function compilePredicate(predicate: Predicate, context: CompileContext): string {
   if (predicate.type === 'comparison') {
     let column = quotePath(predicate.column)
-    let comparisonValue = compileComparisonValue(predicate, context)
 
     if (predicate.operator === 'eq') {
       if (
@@ -383,6 +382,7 @@ function compilePredicate(predicate: Predicate, context: CompileContext): string
         return column + ' is null'
       }
 
+      let comparisonValue = compileComparisonValue(predicate, context)
       return column + ' = ' + comparisonValue
     }
 
@@ -394,22 +394,27 @@ function compilePredicate(predicate: Predicate, context: CompileContext): string
         return column + ' is not null'
       }
 
+      let comparisonValue = compileComparisonValue(predicate, context)
       return column + ' <> ' + comparisonValue
     }
 
     if (predicate.operator === 'gt') {
+      let comparisonValue = compileComparisonValue(predicate, context)
       return column + ' > ' + comparisonValue
     }
 
     if (predicate.operator === 'gte') {
+      let comparisonValue = compileComparisonValue(predicate, context)
       return column + ' >= ' + comparisonValue
     }
 
     if (predicate.operator === 'lt') {
+      let comparisonValue = compileComparisonValue(predicate, context)
       return column + ' < ' + comparisonValue
     }
 
     if (predicate.operator === 'lte') {
+      let comparisonValue = compileComparisonValue(predicate, context)
       return column + ' <= ' + comparisonValue
     }
 
@@ -427,10 +432,12 @@ function compilePredicate(predicate: Predicate, context: CompileContext): string
     }
 
     if (predicate.operator === 'like') {
+      let comparisonValue = compileComparisonValue(predicate, context)
       return column + ' like ' + comparisonValue
     }
 
     if (predicate.operator === 'ilike') {
+      let comparisonValue = compileComparisonValue(predicate, context)
       return column + ' ilike ' + comparisonValue
     }
   }

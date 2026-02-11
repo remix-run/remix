@@ -130,7 +130,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         .join(Projects, eq('accounts.id', 'projects.account_id'))
         .where(eq('projects.archived', false))
         .groupBy('accounts.id')
-        .having(eq('accounts.status', 'active'))
+        .having(eq('accounts.id', 1))
         .count()
 
       assert.equal(groupedCount, 1)

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { number, string } from '@remix-run/data-schema'
-import { createDatabase, createTable, eq, ilike } from '@remix-run/data-table'
+import { createDatabase, createTable, eq, ilike, inList } from '@remix-run/data-table'
 
 import { createMysqlDatabaseAdapter } from './adapter.ts'
 
@@ -147,5 +147,26 @@ describe('mysql adapter', () => {
     assert.match(statements[0].text, /`accounts`\.`id`\s*=\s*`projects`\.`account_id`/)
     assert.match(statements[0].text, /`accounts`\.`email`\s*=\s*\?/)
     assert.deepEqual(statements[0].values, ['ops@example.com'])
+  })
+
+  it('does not create dangling bind parameters for inList predicates', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+
+    let connection = {
+      async query(text: string, values: unknown[] = []) {
+        statements.push({ text, values })
+        return [[{ count: '0' }], []]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+
+    await db.query(Accounts).where(inList('id', [1, 3])).count()
+
+    assert.match(statements[0].text, /`id`\s+in\s+\(\?,\s*\?\)/)
+    assert.deepEqual(statements[0].values, [1, 3])
   })
 })
