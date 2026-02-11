@@ -128,7 +128,7 @@ export function createSqliteDatabaseAdapter(
 }
 
 function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
-  return rows.map(function mapRow(row) {
+  return rows.map((row) => {
     if (typeof row !== 'object' || row === null) {
       return {}
     }
@@ -138,7 +138,7 @@ function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
 }
 
 function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
-  return rows.map(function mapRow(row) {
+  return rows.map((row) => {
     let count = row.count
 
     if (typeof count === 'string') {

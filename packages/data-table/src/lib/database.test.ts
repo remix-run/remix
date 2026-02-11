@@ -759,22 +759,20 @@ describe('transactions and raw sql', () => {
     })
     let db = createDatabase(adapter)
 
-    await db.transaction(async function (outerTransaction) {
+    await db.transaction(async (outerTransaction) => {
       await outerTransaction
         .query(Accounts)
         .insert({ id: 2, email: 'pm@studio.test', status: 'active' })
 
       await outerTransaction
-        .transaction(async function (innerTransaction) {
+        .transaction(async (innerTransaction) => {
           await innerTransaction
             .query(Accounts)
             .insert({ id: 3, email: 'design@studio.test', status: 'active' })
 
           throw new Error('Abort inner transaction')
         })
-        .catch(function swallow() {
-          return undefined
-        })
+        .catch(() => undefined)
     })
 
     let rows = adapter.snapshot('accounts')
@@ -823,16 +821,14 @@ describe('transactions and raw sql', () => {
     let db = createDatabase(adapter)
 
     await db
-      .transaction(async function (transactionDatabase) {
+      .transaction(async (transactionDatabase) => {
         await transactionDatabase
           .query(Accounts)
           .insert({ id: 2, email: 'pm@studio.test', status: 'active' })
 
         throw new Error('Abort transaction')
       })
-      .catch(function swallow() {
-        return undefined
-      })
+      .catch(() => undefined)
 
     assert.deepEqual(adapter.snapshot('accounts'), [
       { id: 1, email: 'founder@studio.test', status: 'active' },
@@ -854,10 +850,8 @@ describe('transactions and raw sql', () => {
 
     await assert.rejects(
       async function () {
-        await db.transaction(async function (transactionDatabase) {
-          await transactionDatabase.transaction(async function noop() {
-            return undefined
-          })
+        await db.transaction(async (transactionDatabase) => {
+          await transactionDatabase.transaction(async () => undefined)
         })
       },
       function (error: unknown) {
