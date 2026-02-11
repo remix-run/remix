@@ -375,18 +375,6 @@ export class QueryBuilder<
     return this.join(target, on, 'right')
   }
 
-  fullJoin<target extends AnyTable>(
-    target: target,
-    on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
-  ): QueryBuilder<
-    table,
-    loaded,
-    MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
-    row
-  > {
-    return this.join(target, on, 'full')
-  }
-
   orderBy(
     column: QueryColumns<columnTypes>,
     direction: OrderDirection = 'asc',

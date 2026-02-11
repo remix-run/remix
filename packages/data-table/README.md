@@ -1,85 +1,45 @@
-# `@remix-run/data-table`
+# data-table
 
-A relational query toolkit for JavaScript runtimes that composes:
+`data-table` is a relational data toolkit for JavaScript runtimes. It gives you a single query API that works across PostgreSQL, MySQL, SQLite, and an in-memory adapter for tests.
 
-- typed tables (from `@remix-run/data-schema`)
-- typed relation loading (`hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`)
-- validated writes
-- a runtime-agnostic adapter interface
+If you want Drizzle/ActiveRecord-style ergonomics with explicit schemas, typed relations, and predictable runtime behavior across adapters, this package is designed for that.
 
-You write one query API and swap adapters for PostgreSQL, MySQL, SQLite, or memory.
+## Features
 
-## Install
+- **One API across databases**: same query builder and relation API across adapters
+- **Type-safe reads**: typed `select`, typed relation loading, typed predicate keys
+- **Validated writes and filters**: values are parsed with your `remix/data-schema` definitions
+- **Relation-first querying**: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`, nested eager loading
+- **Safe write behavior**: scoped `update`/`delete` with `orderBy`/`limit` execute safely in a transaction
+- **Escape hatch included**: execute raw SQL when needed with `db.exec(sql\`...\`)`
+
+## Installation
+
+Install the umbrella package and your SQL driver:
 
 ```sh
-pnpm add @remix-run/data-table @remix-run/data-schema
+pnpm add remix
+# and one or more drivers
+pnpm add pg
+# or
+pnpm add mysql2
+# or
+pnpm add better-sqlite3
 ```
 
-Then install one adapter:
+## Usage
 
-```sh
-pnpm add @remix-run/data-table-postgres pg
-# or
-pnpm add @remix-run/data-table-mysql mysql2
-# or
-pnpm add @remix-run/data-table-sqlite better-sqlite3
-```
+The core flow is:
 
-## Connect To A Database
-
-### PostgreSQL
+1. Define tables and relations once
+2. Create a database with an adapter
+3. Query and write using one consistent API
 
 ```ts
+import * as s from 'remix/data-schema'
 import { Pool } from 'pg'
-import { createDatabase } from '@remix-run/data-table'
-import { createPostgresDatabaseAdapter } from '@remix-run/data-table-postgres'
-
-let pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-})
-
-let db = createDatabase(createPostgresDatabaseAdapter(pool))
-```
-
-### MySQL
-
-```ts
-import { createPool } from 'mysql2/promise'
-import { createDatabase } from '@remix-run/data-table'
-import { createMysqlDatabaseAdapter } from '@remix-run/data-table-mysql'
-
-let pool = createPool(process.env.DATABASE_URL as string)
-let db = createDatabase(createMysqlDatabaseAdapter(pool))
-```
-
-### SQLite
-
-```ts
-import Database from 'better-sqlite3'
-import { createDatabase } from '@remix-run/data-table'
-import { createSqliteDatabaseAdapter } from '@remix-run/data-table-sqlite'
-
-let sqlite = new Database('app.db')
-let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
-```
-
-### Memory (tests, prototyping, adapter reference)
-
-```ts
-import { createDatabase, createMemoryDatabaseAdapter } from '@remix-run/data-table'
-
-let db = createDatabase(
-  createMemoryDatabaseAdapter({
-    accounts: [{ id: 1, email: 'owner@example.com', status: 'active' }],
-  }),
-)
-```
-
-## Define Tables And Relations
-
-```ts
-import * as s from '@remix-run/data-schema'
-import { createTable, timestamps } from '@remix-run/data-table'
+import { createDatabase, createTable, eq, timestamps } from 'remix/data-table'
+import { createPostgresDatabaseAdapter } from 'remix/data-table-postgres'
 
 let Accounts = createTable({
   name: 'accounts',
@@ -90,15 +50,6 @@ let Accounts = createTable({
     ...timestamps(),
   },
   timestamps: true,
-})
-
-let Profiles = createTable({
-  name: 'profiles',
-  columns: {
-    id: s.number(),
-    account_id: s.number(),
-    display_name: s.string(),
-  },
 })
 
 let Projects = createTable({
@@ -121,158 +72,89 @@ let Tasks = createTable({
   },
 })
 
-let Memberships = createTable({
-  name: 'memberships',
-  primaryKey: ['organization_id', 'account_id'],
-  columns: {
-    organization_id: s.number(),
-    account_id: s.number(),
-    role: s.string(),
-  },
-})
-
 let AccountProjects = Accounts.hasMany(Projects)
-let AccountProfile = Accounts.hasOne(Profiles)
-let ProjectAccount = Projects.belongsTo(Accounts)
 let ProjectTasks = Projects.hasMany(Tasks)
-let AccountTasks = Accounts.hasManyThrough(Tasks, { through: AccountProjects })
-```
 
-## Query Examples
+let pool = new Pool({ connectionString: process.env.DATABASE_URL })
+let db = createDatabase(createPostgresDatabaseAdapter(pool))
 
-### Basic reads
-
-```ts
-let all = await db.query(Accounts).all()
-let first = await db.query(Accounts).where({ status: 'active' }).first()
-let byId = await db.query(Accounts).find(1)
-let membership = await db.query(Memberships).find({
-  organization_id: 42,
-  account_id: 7,
-})
-```
-
-### Filtering and predicates
-
-```ts
-import { and, between, eq, ilike, inList, notNull, or } from '@remix-run/data-table'
-
-let rows = await db
-  .query(Accounts)
-  .where(
-    and(
-      ilike('email', '%@example.com'),
-      or(eq('status', 'active'), eq('status', 'trial')),
-      notNull('id'),
-      between('id', 1, 1000),
-      inList('status', ['active', 'trial']),
-    ),
-  )
-  .orderBy('id', 'desc')
-  .limit(25)
-  .offset(0)
-  .all()
-```
-
-### Select, distinct, joins, groupBy, having
-
-For relation traversal, prefer `.with(...)` and declared relations. `join(...)` is a lower-level API for adding join clauses directly.
-
-```ts
-import { eq } from '@remix-run/data-table'
-
-let rows = await db
-  .query(Accounts)
-  .select('id', 'email')
-  .distinct()
-  .join(Projects, eq('projects.archived', false))
-  .groupBy('id', 'email')
-  .having(eq('status', 'active'))
-  .all()
-```
-
-### Count and exists
-
-```ts
-let activeCount = await db.query(Accounts).where({ status: 'active' }).count()
-let hasArchived = await db.query(Projects).where({ archived: true }).exists()
-```
-
-### Eager loading relations
-
-```ts
 let accounts = await db
   .query(Accounts)
+  .where({ status: 'active' })
   .with({
-    profile: AccountProfile,
-    projects: AccountProjects.where({ archived: false }).orderBy('id', 'asc'),
-    tasks: AccountTasks.where({ state: 'open' }).orderBy('id', 'asc'),
-  })
-  .all()
-
-// Typed relation data
-let firstAccount = accounts[0]
-let projectCount = firstAccount.projects.length
-let maybeProfileName = firstAccount.profile?.display_name
-let firstTaskTitle = firstAccount.tasks[0]?.title
-```
-
-### Nested eager loading
-
-```ts
-let accounts = await db
-  .query(Accounts)
-  .with({
-    projects: AccountProjects.with({
+    projects: AccountProjects.where({ archived: false }).with({
       tasks: ProjectTasks.where({ state: 'open' }),
     }),
   })
   .all()
+
+await db
+  .query(Accounts)
+  .where(eq('accounts.id', 1))
+  .update({ status: 'inactive' }, { returning: ['id', 'status'] })
+
+// accounts[0].projects and accounts[0].projects[0].tasks are typed
 ```
 
-## Write Examples
+Why this matters in practice:
 
-### insert / insertMany
+- You can move between adapters without rewriting query code
+- Relation loading is explicit and typed, which makes refactors safer
+- Invalid write/filter values fail early with useful validation errors
+
+## Advanced Usage
+
+### Connect With Different Adapters
 
 ```ts
-let inserted = await db
-  .query(Accounts)
-  .insert({ id: 1, email: 'a@example.com', status: 'active' }, { returning: ['id', 'email'] })
+import { createDatabase } from 'remix/data-table'
+import { createMysqlDatabaseAdapter } from 'remix/data-table-mysql'
+import { createPool } from 'mysql2/promise'
 
-if ('row' in inserted) {
-  inserted.row?.id
-}
+let mysqlPool = createPool(process.env.DATABASE_URL as string)
+let db = createDatabase(createMysqlDatabaseAdapter(mysqlPool))
+```
 
-let batch = await db.query(Accounts).insertMany(
-  [
-    { id: 2, email: 'b@example.com', status: 'active' },
-    { id: 3, email: 'c@example.com', status: 'inactive' },
-  ],
-  { returning: ['id', 'status'] },
+```ts
+import Database from 'better-sqlite3'
+import { createDatabase } from 'remix/data-table'
+import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
+
+let sqlite = new Database('app.db')
+let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+```
+
+```ts
+import { createDatabase, createMemoryDatabaseAdapter } from 'remix/data-table'
+
+let db = createDatabase(
+  createMemoryDatabaseAdapter({
+    accounts: [{ id: 1, email: 'owner@example.com', status: 'active' }],
+  }),
 )
-
-if ('rows' in batch) {
-  batch.rows.length
-}
 ```
 
-### update / delete
+### Query Composition (Join, Select, Grouping)
 
 ```ts
-let updated = await db
-  .query(Accounts)
-  .where({ status: 'inactive' })
-  .update({ status: 'active' }, { returning: ['id', 'status'] })
+import { eq } from 'remix/data-table'
 
-let deleted = await db
+let rows = await db
   .query(Accounts)
-  .where({ id: 3 })
-  .delete({ returning: ['id'] })
+  .join(Projects, eq('accounts.id', 'projects.account_id'))
+  .where(eq('projects.archived', false))
+  .select({
+    accountId: 'accounts.id',
+    accountEmail: 'accounts.email',
+    projectName: 'projects.name',
+  })
+  .orderBy('projects.name', 'asc')
+  .all()
 ```
 
-### Scoped writes with order/limit/offset
+### Scoped Writes With `orderBy`/`limit`/`offset`
 
-When you combine `orderBy`/`limit`/`offset` with `update` or `delete`, data-table scopes the write to the selected primary keys first, then applies the write in a transaction.
+When you scope `update`/`delete` with ordering/limits, `data-table` first resolves the targeted primary keys and then applies the write inside a transaction.
 
 ```ts
 await db
@@ -283,114 +165,67 @@ await db
   .update({ status: 'active' })
 ```
 
-### upsert
+### Transactions
 
 ```ts
-let result = await db.query(Accounts).upsert(
-  { id: 1, email: 'a@example.com', status: 'inactive' },
-  {
-    conflictTarget: ['id'],
-    returning: ['id', 'status'],
-  },
-)
-
-if ('row' in result) {
-  result.row?.status
-}
-```
-
-### Runtime validation + timestamp behavior
-
-- Values are validated with the `@remix-run/data-schema` definitions from `createTable`.
-- With `timestamps: true`, writes populate `created_at` and `updated_at`.
-- You can disable timestamp touching per write with `{ touch: false }`.
-
-```ts
-await db
-  .query(Accounts)
-  .insert({ id: 10, email: 'ops@example.com', status: 'active' }, { touch: false })
-```
-
-## Transactions
-
-```ts
-await db.transaction(async function (outerTransaction) {
+await db.transaction(async (outerTransaction) => {
   await outerTransaction
     .query(Accounts)
     .insert({ id: 20, email: 'x@example.com', status: 'active' })
 
   await outerTransaction
-    .transaction(async function (innerTransaction) {
+    .transaction(async (innerTransaction) => {
       await innerTransaction
         .query(Accounts)
         .insert({ id: 21, email: 'y@example.com', status: 'active' })
 
       throw new Error('rollback inner only')
     })
-    .catch(function swallow() {
-      return undefined
-    })
+    .catch(() => undefined)
 })
 ```
 
-Nested transactions require adapter savepoint support.
+### Returning Behavior On Adapters Without Native `RETURNING`
 
-Transaction options are best-effort hints:
+Some adapters (for example MySQL) do not support SQL `RETURNING`. In those cases, `data-table` uses fallback reads.
+
+For composite primary keys, include all key columns in insert/upsert values when requesting `returning`, so rows can be re-identified safely.
 
 ```ts
-await db.transaction(
-  async function (transactionDatabase) {
-    await transactionDatabase.query(Accounts).where({ status: 'inactive' }).update({ status: 'active' })
+import * as s from 'remix/data-schema'
+import { createTable } from 'remix/data-table'
+
+let AuditEvents = createTable({
+  name: 'audit_events',
+  primaryKey: ['tenant_id', 'id'],
+  columns: {
+    tenant_id: s.number(),
+    id: s.number(),
+    message: s.string(),
   },
-  {
-    isolationLevel: 'serializable',
-    readOnly: false,
-  },
-)
+})
+
+await db
+  .query(AuditEvents)
+  .insert({ tenant_id: 42, id: 9001, message: 'created' }, { returning: ['tenant_id', 'id'] })
 ```
 
-Adapters may honor some options and silently ignore others based on dialect/runtime support.
-
-## Raw SQL Escape Hatch
+### Raw SQL Escape Hatch
 
 ```ts
-import { rawSql, sql } from '@remix-run/data-table'
+import { rawSql, sql } from 'remix/data-table'
 
 await db.exec(sql`select * from accounts where id = ${42}`)
 await db.exec(rawSql('update accounts set status = ? where id = ?', ['active', 42]))
 ```
 
-`sql` always uses `?` placeholders internally and adapters convert to dialect syntax (for example `$1` for PostgreSQL).
+## Related Packages
 
-## Error Types
+- [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Schema definitions and parsing used by `data-table`
+- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL adapter
+- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL adapter
+- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite adapter
 
-- `DataTableError` base class
-- `DataTableValidationError` for schema validation issues
-- `DataTableQueryError` for query capability/usage issues
-- `DataTableAdapterError` wraps adapter execution failures and includes metadata (dialect + statement kind)
-- `DataTableConstraintError` for constraint-related errors
+## License
 
-## Adapter Capabilities
-
-Adapters advertise capabilities:
-
-- `returning`
-- `savepoints`
-- `upsert`
-
-data-table uses these flags to:
-
-- choose native `RETURNING` vs fallback loading
-- allow/deny nested transactions
-- allow/deny `upsert()`
-
-## API Summary
-
-- `createTable({ name, columns, primaryKey, timestamps })`
-- `createDatabase(adapter, { now? })`
-- Relations: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`
-- Querying: `select`, `distinct`, `where`, `join`, `leftJoin`, `rightJoin`, `fullJoin`, `groupBy`, `having`, `orderBy`, `limit`, `offset`, `with`, `all`, `first`, `find`, `count`, `exists`
-- Writes: `insert`, `insertMany`, `update`, `delete`, `upsert`
-- Transactions: `db.transaction(async (tx) => ...)`
-- SQL escape hatch: `db.exec(sql(...))` and `db.exec(rawSql(...))`
-- Built-in test/reference adapter: `createMemoryDatabaseAdapter`, `MemoryDatabaseAdapter`
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

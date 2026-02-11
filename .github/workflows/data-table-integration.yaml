@@ -163,4 +163,6 @@ jobs:
         run: pnpm rebuild better-sqlite3
 
       - name: Run sqlite adapter tests
+        env:
+          DATA_TABLE_INTEGRATION: '1'
         run: pnpm --filter @remix-run/data-table-sqlite run test

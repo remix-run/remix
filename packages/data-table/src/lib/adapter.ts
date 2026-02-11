@@ -2,7 +2,7 @@ import type { OrderByClause, AnyTable } from './model.ts'
 import type { Predicate } from './operators.ts'
 import type { SqlStatement } from './sql.ts'
 
-export type JoinType = 'inner' | 'left' | 'right' | 'full'
+export type JoinType = 'inner' | 'left' | 'right'
 
 export type JoinClause = {
   type: JoinType

@@ -494,10 +494,6 @@ function normalizeJoinType(type: string): string {
     return 'right'
   }
 
-  if (type === 'full') {
-    return 'full'
-  }
-
   return 'inner'
 }
 
