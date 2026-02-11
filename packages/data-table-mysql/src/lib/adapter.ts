@@ -30,7 +30,6 @@ export type MysqlDatabasePool = {
 
 export type MysqlDatabaseAdapterOptions = {
   capabilities?: {
-    ilike?: boolean
     returning?: boolean
     savepoints?: boolean
     upsert?: boolean
@@ -57,7 +56,6 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     this.capabilities = {
       returning: options?.capabilities?.returning ?? false,
       savepoints: options?.capabilities?.savepoints ?? true,
-      ilike: options?.capabilities?.ilike ?? true,
       upsert: options?.capabilities?.upsert ?? true,
     }
   }

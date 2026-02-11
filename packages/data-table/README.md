@@ -360,14 +360,12 @@ Adapters advertise capabilities:
 
 - `returning`
 - `savepoints`
-- `ilike`
 - `upsert`
 
 data-table uses these flags to:
 
 - choose native `RETURNING` vs fallback loading
 - allow/deny nested transactions
-- compile `ilike` correctly by dialect
 - allow/deny `upsert()`
 
 ## API Summary
