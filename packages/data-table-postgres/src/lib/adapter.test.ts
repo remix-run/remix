@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { number, string } from '@remix-run/data-schema'
-import { createDatabase, createTable, eq, sql } from '@remix-run/data-table'
+import { createDatabase, createTable, eq, inList, sql } from '@remix-run/data-table'
 
 import { createPostgresDatabaseAdapter } from './adapter.ts'
 
@@ -158,5 +158,30 @@ describe('postgres adapter', () => {
     assert.match(statements[0].text, /"accounts"\."id"\s*=\s*"projects"\."account_id"/)
     assert.match(statements[0].text, /"accounts"\."email"\s*=\s*\$1/)
     assert.deepEqual(statements[0].values, ['ops@example.com'])
+  })
+
+  it('does not create dangling bind parameters for inList predicates', async () => {
+    let statements: Array<{ text: string; values: unknown[] | undefined }> = []
+
+    let client = {
+      async query(text: string, values?: unknown[]) {
+        statements.push({ text, values })
+
+        return {
+          rows: [{ count: '0' }],
+          rowCount: 1,
+          command: 'SELECT',
+          oid: 0,
+          fields: [],
+        }
+      },
+    }
+
+    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+
+    await db.query(Accounts).where(inList('id', [1, 3])).count()
+
+    assert.match(statements[0].text, /"id"\s+in\s+\(\$1,\s*\$2\)/)
+    assert.deepEqual(statements[0].values, [1, 3])
   })
 })
