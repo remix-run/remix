@@ -15,9 +15,13 @@ describe('compression()', () => {
       middleware: [compression()],
     })
 
-    router.get('/', () => new Response('Hello, World!', {
-        headers: { 'Content-Type': 'text/html' },
-      }))
+    router.get(
+      '/',
+      () =>
+        new Response('Hello, World!', {
+          headers: { 'Content-Type': 'text/html' },
+        }),
+    )
 
     let response = await router.fetch('https://remix.run/', {
       headers: { 'Accept-Encoding': 'gzip' },
@@ -36,9 +40,13 @@ describe('compression()', () => {
       middleware: [compression()],
     })
 
-    router.get('/image.png', () => new Response('fake image data', {
-        headers: { 'Content-Type': 'image/png' },
-      }))
+    router.get(
+      '/image.png',
+      () =>
+        new Response('fake image data', {
+          headers: { 'Content-Type': 'image/png' },
+        }),
+    )
 
     let response = await router.fetch('https://remix.run/image.png', {
       headers: { 'Accept-Encoding': 'gzip' },
@@ -54,9 +62,13 @@ describe('compression()', () => {
       middleware: [compression({ threshold: 10 })],
     })
 
-    router.get('/', () => new Response('Small', {
-        headers: { 'Content-Type': 'text/plain', 'Content-Length': '5' },
-      }))
+    router.get(
+      '/',
+      () =>
+        new Response('Small', {
+          headers: { 'Content-Type': 'text/plain', 'Content-Length': '5' },
+        }),
+    )
 
     let response = await router.fetch('https://remix.run/', {
       headers: { 'Accept-Encoding': 'gzip' },
@@ -71,11 +83,13 @@ describe('compression()', () => {
       middleware: [compression({ threshold: 1024 })],
     })
 
-    router.get('/', () => 
-      // Small response without Content-Length header
-       new Response('Small', {
-        headers: { 'Content-Type': 'text/plain' },
-      })
+    router.get(
+      '/',
+      () =>
+        // Small response without Content-Length header
+        new Response('Small', {
+          headers: { 'Content-Type': 'text/plain' },
+        }),
     )
 
     let response = await router.fetch('https://remix.run/', {
@@ -90,21 +104,28 @@ describe('compression()', () => {
     let router = createRouter({
       middleware: [
         compression({
-          filterMediaType: (mediaType) => 
+          filterMediaType: (mediaType) =>
             // Only compress JSON
-             mediaType.includes('json')
-          ,
+            mediaType.includes('json'),
         }),
       ],
     })
 
-    router.get('/data.json', () => new Response('{"data":"value"}', {
-        headers: { 'Content-Type': 'application/json' },
-      }))
+    router.get(
+      '/data.json',
+      () =>
+        new Response('{"data":"value"}', {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    )
 
-    router.get('/page.html', () => new Response('<html>test</html>', {
-        headers: { 'Content-Type': 'text/html' },
-      }))
+    router.get(
+      '/page.html',
+      () =>
+        new Response('<html>test</html>', {
+          headers: { 'Content-Type': 'text/html' },
+        }),
+    )
 
     let jsonResponse = await router.fetch('https://remix.run/data.json', {
       headers: { 'Accept-Encoding': 'gzip' },
@@ -124,21 +145,28 @@ describe('compression()', () => {
     let router = createRouter({
       middleware: [
         compression({
-          filterMediaType: (mediaType) => 
+          filterMediaType: (mediaType) =>
             // Only compress if it's compressible AND not HTML
-             isCompressibleMimeType(mediaType) && !mediaType.includes('html')
-          ,
+            isCompressibleMimeType(mediaType) && !mediaType.includes('html'),
         }),
       ],
     })
 
-    router.get('/data.json', () => new Response('{"data":"value"}', {
-        headers: { 'Content-Type': 'application/json' },
-      }))
+    router.get(
+      '/data.json',
+      () =>
+        new Response('{"data":"value"}', {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    )
 
-    router.get('/page.html', () => new Response('<html>test</html>', {
-        headers: { 'Content-Type': 'text/html' },
-      }))
+    router.get(
+      '/page.html',
+      () =>
+        new Response('<html>test</html>', {
+          headers: { 'Content-Type': 'text/html' },
+        }),
+    )
 
     let jsonResponse = await router.fetch('https://remix.run/data.json', {
       headers: { 'Accept-Encoding': 'gzip' },
@@ -167,13 +195,21 @@ describe('compression()', () => {
       ],
     })
 
-    router.get('/events', () => new Response('event: message\ndata: hello\n\n', {
-        headers: { 'Content-Type': 'text/event-stream' },
-      }))
+    router.get(
+      '/events',
+      () =>
+        new Response('event: message\ndata: hello\n\n', {
+          headers: { 'Content-Type': 'text/event-stream' },
+        }),
+    )
 
-    router.get('/data.json', () => new Response('{"data":"value"}', {
-        headers: { 'Content-Type': 'application/json' },
-      }))
+    router.get(
+      '/data.json',
+      () =>
+        new Response('{"data":"value"}', {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    )
 
     // SSE should use gzip (brotli excluded)
     let sseResponse = await router.fetch('https://remix.run/events', {
@@ -192,21 +228,28 @@ describe('compression()', () => {
     let router = createRouter({
       middleware: [
         compression({
-          encodings: (response) => 
+          encodings: (response) =>
             // Don't compress responses with X-No-Compress header
-             response.headers.has('X-No-Compress') ? [] : ['gzip']
-          ,
+            response.headers.has('X-No-Compress') ? [] : ['gzip'],
         }),
       ],
     })
 
-    router.get('/nocompress', () => new Response('not compressed', {
-        headers: { 'Content-Type': 'text/plain', 'X-No-Compress': 'true' },
-      }))
+    router.get(
+      '/nocompress',
+      () =>
+        new Response('not compressed', {
+          headers: { 'Content-Type': 'text/plain', 'X-No-Compress': 'true' },
+        }),
+    )
 
-    router.get('/compress', () => new Response('compressed', {
-        headers: { 'Content-Type': 'text/plain' },
-      }))
+    router.get(
+      '/compress',
+      () =>
+        new Response('compressed', {
+          headers: { 'Content-Type': 'text/plain' },
+        }),
+    )
 
     let noCompressResponse = await router.fetch('https://remix.run/nocompress', {
       headers: { 'Accept-Encoding': 'gzip' },

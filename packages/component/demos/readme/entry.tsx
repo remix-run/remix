@@ -81,24 +81,22 @@ function CounterWithSetup(handle: Handle, setup: number) {
 function CounterWithLabel(handle: Handle, setup: number) {
   let count = setup // use setup for initialization
 
-  return (props: { label?: string }) => 
+  return (props: { label?: string }) => (
     // props only contains render-time values
-     (
-      <div>
-        {props.label}: {count}
-        <button
-          on={{
-            click: () => {
-              count++
-              handle.update()
-            },
-          }}
-        >
-          +
-        </button>
-      </div>
-    )
-  
+    <div>
+      {props.label}: {count}
+      <button
+        on={{
+          click: () => {
+            count++
+            handle.update()
+          },
+        }}
+      >
+        +
+      </button>
+    </div>
+  )
 }
 
 // ============================================================================

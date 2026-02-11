@@ -41,12 +41,12 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
     let matches = this.trie.search(url)
     return matches
       .map((match) => ({
-          pattern: match.pattern,
-          url,
-          params: match.params,
-          paramsMeta: { hostname: match.hostname, pathname: match.pathname },
-          data: match.data,
-        }))
+        pattern: match.pattern,
+        url,
+        params: match.params,
+        paramsMeta: { hostname: match.hostname, pathname: match.pathname },
+        data: match.data,
+      }))
       .sort(compareFn)
   }
 }

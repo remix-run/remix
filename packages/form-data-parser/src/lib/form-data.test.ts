@@ -140,7 +140,10 @@ describe('parseFormData', () => {
       ].join('\r\n'),
     })
 
-    let formData = await parseFormData(request, async (upload) => new File([await upload.text()], 'example.txt', { type: 'text/plain' }))
+    let formData = await parseFormData(
+      request,
+      async (upload) => new File([await upload.text()], 'example.txt', { type: 'text/plain' }),
+    )
 
     let file = formData.get('file')
 

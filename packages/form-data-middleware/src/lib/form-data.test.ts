@@ -158,13 +158,13 @@ describe('formData middleware', () => {
       middleware: [formData({ suppressErrors: true })],
     })
 
-    router.post('/', (context) => 
+    router.post('/', (context) =>
       // Explicitly check that formData is defined and is a FormData instance
-       Response.json({
+      Response.json({
         isDefined: context.formData !== undefined,
         isFormData: context.formData instanceof FormData,
         isEmpty: context.formData.entries().next().done,
-      })
+      }),
     )
 
     let response = await router.fetch('https://remix.run/', {
