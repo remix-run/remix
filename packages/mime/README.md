@@ -1,13 +1,18 @@
-# @remix-run/mime
+# mime
 
-Utilities for working with MIME types.
+MIME type detection and content-type helpers for Remix. This package maps extensions to MIME types and provides utilities for charset and compressibility checks.
 
-Data used for these utilities is generated at build time from [mime-db](https://github.com/jshttp/mime-db).
+## Features
+
+- **MIME Detection** - Detect MIME types from extensions and filenames
+- **Content-Type Helpers** - Build `Content-Type` values with charset handling
+- **Compression Signals** - Check whether a media type is likely compressible
+- **Generated Data** - Built from [mime-db](https://github.com/jshttp/mime-db)
 
 ## Installation
 
-```bash
-npm install @remix-run/mime
+```sh
+npm i remix
 ```
 
 ## Usage

@@ -1,13 +1,17 @@
 # method-override-middleware
 
-Middleware for overriding HTTP request methods from form data for use with [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router).
+Method override middleware for Remix. It allows HTML forms to simulate `PUT`, `PATCH`, and `DELETE` requests using a hidden form field.
 
-Allows HTML forms (which only support GET and POST) to submit with other HTTP methods like PUT, PATCH, or DELETE by including a special form field.
+## Features
+
+- **Form Method Overrides** - Translate posted form fields into request methods
+- **HTML Form Friendly** - Supports REST-style routes from standard browser forms
+- **Configurable Field Name** - Choose a custom override field key
 
 ## Installation
 
 ```sh
-npm install @remix-run/method-override-middleware
+npm i remix
 ```
 
 ## Usage

@@ -1,19 +1,6 @@
 # node-fetch-server
 
-Build portable Node.js servers using web-standard Fetch API primitives
-
-`node-fetch-server` brings the simplicity and familiarity of the [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) to Node.js server development. Instead of dealing with Node's traditional `req`/`res` objects, you work with web-standard [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) objects—the same APIs you already use in the browser and modern JavaScript runtimes.
-
-## Why node-fetch-server?
-
-The Fetch API is already the standard for server development in:
-
-- [`Bun.serve`](https://bun.sh/docs/api/http#bun-serve)
-- [Cloudflare Workers](https://developers.cloudflare.com/workers/runtime-apis/handlers/fetch/)
-- [`Deno.serve`](https://docs.deno.com/api/deno/~/Deno.serve)
-- [Fastly Compute](https://js-compute-reference-docs.edgecompute.app/docs/)
-
-Now you can use the same pattern in Node.js!
+Build Node.js servers with web-standard Fetch API primitives. `node-fetch-server` converts Node's HTTP server interfaces into [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request)/[`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) flows that match modern runtimes.
 
 ## Features
 
@@ -27,7 +14,7 @@ Now you can use the same pattern in Node.js!
 ## Installation
 
 ```sh
-npm install @remix-run/node-fetch-server
+npm i remix
 ```
 
 ## Quick Start

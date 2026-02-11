@@ -1,13 +1,17 @@
 # async-context-middleware
 
-Middleware for storing request context in `AsyncLocalStorage` for use with [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router).
+Request-scoped async context middleware for Remix. It stores each request context in [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html#class-asynclocalstorage) so utilities can access it anywhere in the same async call stack.
 
-This middleware stores the request context in [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html#class-asynclocalstorage) (using `node:async_hooks`), making it available to all functions in the same async execution context.
+## Features
+
+- **Request Context Access** - Read request context from anywhere in the same async execution flow
+- **Simple Router Integration** - Add a single middleware at the router level
+- **Node Async Hooks** - Built on `node:async_hooks` `AsyncLocalStorage`
 
 ## Installation
 
 ```sh
-npm install @remix-run/async-context-middleware
+npm i remix
 ```
 
 ## Usage

@@ -12,7 +12,7 @@ Enhanced events and custom interactions for any [EventTarget](https://developer.
 ## Installation
 
 ```sh
-npm install @remix-run/interaction
+npm i remix
 ```
 
 ## Getting Started
