@@ -100,8 +100,7 @@ export function SharedLayout(handle: Handle) {
     shouldAnimate = true
   })
 
-  return () => {
-    return (
+  return () => (
       <div
         css={{
           display: 'flex',
@@ -140,7 +139,6 @@ export function SharedLayout(handle: Handle) {
         </button>
       </div>
     )
-  }
 }
 
 function Circle() {

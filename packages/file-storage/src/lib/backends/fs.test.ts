@@ -55,18 +55,14 @@ describe('fs file storage', () => {
     await storage.set('test-key', file)
 
     // Verify subdirectories exist
-    let subdirs = fs.readdirSync(tmpDir).filter((name) => {
-      return fs.statSync(path.join(tmpDir, name)).isDirectory()
-    })
+    let subdirs = fs.readdirSync(tmpDir).filter((name) => fs.statSync(path.join(tmpDir, name)).isDirectory())
     assert.ok(subdirs.length > 0)
 
     // Remove the file
     await storage.remove('test-key')
 
     // Verify no subdirectories remain
-    let subdirsAfter = fs.readdirSync(tmpDir).filter((name) => {
-      return fs.statSync(path.join(tmpDir, name)).isDirectory()
-    })
+    let subdirsAfter = fs.readdirSync(tmpDir).filter((name) => fs.statSync(path.join(tmpDir, name)).isDirectory())
     assert.equal(subdirsAfter.length, 0)
   })
 

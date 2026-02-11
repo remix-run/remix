@@ -1164,9 +1164,7 @@ describe('stream', () => {
     it('renders blocking frames without fallback', async () => {
       // Test blocking frame (no fallback)
       let stream = renderToStream(<Frame src="/fragments/product" />, {
-        resolveFrame: async () => {
-          return <div>Product</div>
-        },
+        resolveFrame: async () => <div>Product</div>,
       })
       let chunks = readChunks(stream)
 
