@@ -1,21 +1,19 @@
 # static-middleware
 
-Middleware for serving static files from the filesystem for use with [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router).
-
-Serves static files from a directory with support for ETags, range requests, and conditional requests.
+Static file serving middleware for Remix. Serves static files from a directory with support for ETags, range requests, and conditional requests.
 
 ## Features
 
-- [ETag support](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag) (weak and strong)
-- [Range request support](https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests) (HTTP 206 Partial Content)
-- [Conditional request support](https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests) (If-None-Match, If-Modified-Since)
+- [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag) support (weak and strong)
+- [Range requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests) support (HTTP 206 Partial Content)
+- [Conditional request](https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests) support (If-None-Match, If-Modified-Since)
 - Path traversal protection
-- Automatic fall through to next middleware/handler if file not found
+- Automatic fallback to next middleware/handler if file not found
 
 ## Installation
 
 ```sh
-npm install @remix-run/static-middleware
+npm i remix
 ```
 
 ## Usage

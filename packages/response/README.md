@@ -1,8 +1,6 @@
 # response
 
-Response helpers for the web Fetch API. `response` provides a collection of helper functions for creating common HTTP responses with proper headers and semantics.
-
-Basically, these are all the static response helpers we wish existed on the `Response` API, but don't (yet!).
+Response helper utilities for the web Fetch API. `response` provides focused helpers for common HTTP responses with correct headers and caching semantics.
 
 ## Features
 
@@ -15,7 +13,7 @@ Basically, these are all the static response helpers we wish existed on the `Res
 ## Installation
 
 ```sh
-npm install @remix-run/response
+npm i remix
 ```
 
 ## Usage

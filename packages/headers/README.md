@@ -1,13 +1,17 @@
 # headers
 
-Utilities for parsing, manipulating and stringifying HTTP header values.
+Typed utilities for parsing, manipulating, and serializing HTTP header values. `headers` provides focused classes for common HTTP headers.
 
-HTTP headers contain critical information—from content negotiation and caching directives to authentication tokens and file metadata. While the native `Headers` API provides a basic string-based interface, it leaves the complexities of parsing specific header formats entirely up to you.
+## Features
+
+- **Header-Specific Classes** - Purpose-built APIs for `Accept`, `Cache-Control`, `Content-Type`, and more
+- **Round-Trip Safety** - Parse from raw values and serialize back with `.toString()`
+- **Typed Operations** - Work with structured values instead of manual string parsing
 
 ## Installation
 
 ```sh
-npm install @remix-run/headers
+npm i remix
 ```
 
 ## Individual Header Utilities

@@ -1,11 +1,17 @@
 # session-middleware
 
-Middleware for managing sessions with [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) via securely signed cookies.
+Session middleware for Remix using signed cookies. It loads session state from incoming requests, exposes it on `context.session`, and persists updates automatically.
+
+## Features
+
+- **Session Lifecycle Handling** - Reads and saves session state per request
+- **Context Integration** - Exposes session APIs directly on request context
+- **Secure Cookie Support** - Designed for signed session cookies
 
 ## Installation
 
 ```sh
-npm install @remix-run/session-middleware
+npm i remix
 ```
 
 ## Usage

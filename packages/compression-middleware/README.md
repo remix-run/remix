@@ -1,13 +1,18 @@
 # compression-middleware
 
-Middleware for compressing HTTP responses for use with [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router).
+Response compression middleware for Remix. It negotiates `br`, `gzip`, and `deflate` from `Accept-Encoding` and applies sensible defaults for when compression is useful.
 
-Automatically compresses responses using `gzip`, `brotli`, or `deflate` based on the client's `Accept-Encoding` header, with intelligent defaults for media type filtering and threshold-based compression.
+## Features
+
+- **Encoding Negotiation** - Selects the best supported encoding from `Accept-Encoding`
+- **Compression Guards** - Skips already-compressed responses and range-enabled responses
+- **Size Thresholds** - Configurable minimum response size for compression
+- **MIME Filtering** - Compresses only content types likely to benefit
 
 ## Installation
 
 ```sh
-npm install @remix-run/compression-middleware
+npm i remix
 ```
 
 ## Usage

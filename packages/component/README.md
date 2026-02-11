@@ -1,6 +1,6 @@
-# Remix Component
+# component
 
-A minimal component system that leans on JavaScript and DOM primitives.
+A minimal component system for the web that leans on JavaScript and DOM primitives.
 
 ## Features
 
@@ -13,7 +13,7 @@ A minimal component system that leans on JavaScript and DOM primitives.
 ## Installation
 
 ```sh
-npm install @remix-run/component
+npm i remix
 ```
 
 ## Getting Started

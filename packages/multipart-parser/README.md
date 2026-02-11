@@ -1,16 +1,6 @@
 # multipart-parser
 
-`multipart-parser` is a fast, streaming multipart parser that works in **any JavaScript environment**, from serverless functions to traditional servers. Whether you're handling file uploads, parsing email attachments, or working with multipart API responses, `multipart-parser` has you covered.
-
-## Why multipart-parser?
-
-- **Universal JavaScript** - One library that works everywhere: Node.js, Bun, Deno, Cloudflare Workers, and browsers
-- **Blazing Fast** - Consistently outperforms popular alternatives like busboy in benchmarks
-- **Zero Dependencies** - Lightweight and secure with no external dependencies
-- **Memory Efficient** - Streaming architecture that `yield`s files as they are found in the stream
-- **Type Safe** - Written in TypeScript with comprehensive type definitions
-- **Standards Based** - Built on the web standard [Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) for maximum compatibility
-- **Production Ready** - Battle-tested error handling with specific error types for common scenarios
+Fast streaming multipart parsing for JavaScript. `multipart-parser` processes multipart bodies incrementally so large uploads can be handled without buffering the entire multipart payload in memory.
 
 ## Features
 
@@ -23,10 +13,8 @@
 
 ## Installation
 
-Install from [npm](https://www.npmjs.com/):
-
 ```sh
-npm install @remix-run/multipart-parser
+npm i remix
 ```
 
 ## Usage

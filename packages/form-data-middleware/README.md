@@ -1,11 +1,18 @@
 # form-data-middleware
 
-Middleware for parsing [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) from incoming request bodies for use with [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router).
+Form body parsing middleware for Remix. It parses incoming [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) and exposes `context.formData` and uploaded files on `context.files`.
+
+## Features
+
+- **Request Form Parsing** - Parses request body form data once per request
+- **File Access** - Exposes uploaded files as `context.files`
+- **Custom Upload Handling** - Supports pluggable upload handlers for file processing
+- **Error Control** - Optional suppression for malformed form data
 
 ## Installation
 
 ```sh
-npm install @remix-run/form-data-middleware
+npm i remix
 ```
 
 ## Usage

@@ -1,6 +1,6 @@
 # fetch-router
 
-A minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](../route-pattern). Ideal for building APIs, web services, and server-rendered applications across any JavaScript runtime.
+A minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). Ideal for building APIs, web services, and server-rendered applications.
 
 ## Features
 
@@ -11,16 +11,10 @@ A minimal, composable router built on the [web Fetch API](https://developer.mozi
 - **Flexible Middleware**: Apply middleware globally, per-route, or to entire route hierarchies
 - **Easy Testing**: Use standard `fetch()` to test your routes - no special test harness required
 
-## Goals
-
-- **Simplicity**: A router should be simple to understand and use. The entire API surface fits in your head.
-- **Composability**: Small routers combine to build large applications. Middleware and nested routers make organization natural.
-- **Standards-Based**: Built on web standards that work across runtimes. No proprietary APIs or Node.js-specific code.
-
 ## Installation
 
 ```sh
-npm install @remix-run/fetch-router
+npm i remix
 ```
 
 ## Usage

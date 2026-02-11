@@ -26,10 +26,8 @@ For attackers, this creates an attack vector where malicious actors can overwhel
 
 ## Installation
 
-Install from [npm](https://www.npmjs.com/):
-
 ```sh
-npm install @remix-run/form-data-parser
+npm i remix
 ```
 
 ## Usage

@@ -1,10 +1,6 @@
 # tar-parser
 
-`tar-parser` is a fast, efficient parser for [tar archives](<https://en.wikipedia.org/wiki/Tar_(computing)>).
-
-Tar archives are ubiquitous in software development, used for distributing packages, backing up files, and transferring data. Most existing JavaScript tar parsers are either Node.js-specific or don't handle streaming efficiently, forcing you to buffer entire archives in memory. This makes them unsuitable for serverless environments or processing large archives.
-
-`tar-parser` can be used in any JavaScript environment (not just Node.js) and processes archives as streams, making it ideal for modern web development across all runtimes.
+Streaming [tar archive](<https://en.wikipedia.org/wiki/Tar_(computing)>) parsing for JavaScript. `tar-parser` handles POSIX/GNU/PAX archives incrementally so large tar files can be processed without buffering the full payload.
 
 ## Features
 
@@ -16,10 +12,8 @@ Tar archives are ubiquitous in software development, used for distributing packa
 
 ## Installation
 
-Install from [npm](https://www.npmjs.com/):
-
 ```sh
-npm install @remix-run/tar-parser
+npm i remix
 ```
 
 ## Usage

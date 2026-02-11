@@ -1,13 +1,17 @@
 # logger-middleware
 
-Middleware for logging HTTP requests and responses for use with [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router).
+HTTP request/response logging middleware for Remix. It logs request metadata and response details with configurable output formats.
 
-Logs information about HTTP requests and responses with customizable formatting.
+## Features
+
+- **Request/Response Logging** - Logs method, path, status, and response metadata
+- **Token-Based Formatting** - Customize log output with built-in placeholders
+- **Structured Timing Data** - Includes request duration and timestamps
 
 ## Installation
 
 ```sh
-npm install @remix-run/logger-middleware
+npm i remix
 ```
 
 ## Usage
