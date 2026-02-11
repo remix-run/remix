@@ -30,6 +30,8 @@ export {
 } from './lib/schema.ts'
 export type {
   Check,
+  ErrorMap,
+  ErrorMapContext,
   InferInput,
   InferOutput,
   Issue,

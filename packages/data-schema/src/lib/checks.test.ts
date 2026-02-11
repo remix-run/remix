@@ -18,6 +18,16 @@ function assertFailure<output>(
 }
 
 describe('checks', () => {
+  it('exposes code and values for message mapping', () => {
+    let minLengthCheck = minLength(2)
+    let maxLengthCheck = maxLength(4)
+
+    assert.equal(minLengthCheck.code, 'string.min_length')
+    assert.deepEqual(minLengthCheck.values, { min: 2 })
+    assert.equal(maxLengthCheck.code, 'string.max_length')
+    assert.deepEqual(maxLengthCheck.values, { max: 4 })
+  })
+
   it('supports common string checks', () => {
     let schema = string().pipe(minLength(2), maxLength(4))
 

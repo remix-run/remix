@@ -11,6 +11,8 @@ export function minLength(length: number): Check<string> {
     check(value) {
       return value.length >= length
     },
+    code: 'string.min_length',
+    values: { min: length },
     message: 'Expected at least ' + String(length) + ' characters',
   }
 }
@@ -26,6 +28,8 @@ export function maxLength(length: number): Check<string> {
     check(value) {
       return value.length <= length
     },
+    code: 'string.max_length',
+    values: { max: length },
     message: 'Expected at most ' + String(length) + ' characters',
   }
 }
@@ -40,6 +44,7 @@ export function email(): Check<string> {
     check(value) {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
     },
+    code: 'string.email',
     message: 'Expected valid email',
   }
 }
@@ -59,6 +64,7 @@ export function url(): Check<string> {
         return false
       }
     },
+    code: 'string.url',
     message: 'Expected valid URL',
   }
 }
@@ -74,6 +80,8 @@ export function min(limit: number): Check<number> {
     check(value) {
       return value >= limit
     },
+    code: 'number.min',
+    values: { min: limit },
     message: 'Expected number greater than or equal to ' + String(limit),
   }
 }
@@ -89,6 +97,8 @@ export function max(limit: number): Check<number> {
     check(value) {
       return value <= limit
     },
+    code: 'number.max',
+    values: { max: limit },
     message: 'Expected number less than or equal to ' + String(limit),
   }
 }

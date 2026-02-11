@@ -20,7 +20,11 @@ export function coerceNumber(): Schema<unknown, number> {
       let trimmed = value.trim()
 
       if (trimmed.length === 0) {
-        return fail('Expected number', context.path)
+        return fail('Expected number', context.path, {
+          code: 'coerce.number',
+          input: value,
+          parseOptions: context.options,
+        })
       }
 
       let parsed = Number(trimmed)
@@ -30,7 +34,11 @@ export function coerceNumber(): Schema<unknown, number> {
       }
     }
 
-    return fail('Expected number', context.path)
+    return fail('Expected number', context.path, {
+      code: 'coerce.number',
+      input: value,
+      parseOptions: context.options,
+    })
   })
 }
 
@@ -61,7 +69,11 @@ export function coerceBoolean(): Schema<unknown, boolean> {
       }
     }
 
-    return fail('Expected boolean', context.path)
+    return fail('Expected boolean', context.path, {
+      code: 'coerce.boolean',
+      input: value,
+      parseOptions: context.options,
+    })
   })
 }
 
@@ -88,7 +100,11 @@ export function coerceDate(): Schema<unknown, Date> {
       }
     }
 
-    return fail('Expected date', context.path)
+    return fail('Expected date', context.path, {
+      code: 'coerce.date',
+      input: value,
+      parseOptions: context.options,
+    })
   })
 }
 
@@ -116,17 +132,29 @@ export function coerceBigint(): Schema<unknown, bigint> {
       let trimmed = value.trim()
 
       if (trimmed.length === 0) {
-        return fail('Expected bigint', context.path)
+        return fail('Expected bigint', context.path, {
+          code: 'coerce.bigint',
+          input: value,
+          parseOptions: context.options,
+        })
       }
 
       try {
         return { value: BigInt(trimmed) }
       } catch {
-        return fail('Expected bigint', context.path)
+        return fail('Expected bigint', context.path, {
+          code: 'coerce.bigint',
+          input: value,
+          parseOptions: context.options,
+        })
       }
     }
 
-    return fail('Expected bigint', context.path)
+    return fail('Expected bigint', context.path, {
+      code: 'coerce.bigint',
+      input: value,
+      parseOptions: context.options,
+    })
   })
 }
 
@@ -154,6 +182,10 @@ export function coerceString(): Schema<unknown, string> {
       return { value: String(value) }
     }
 
-    return fail('Expected string', context.path)
+    return fail('Expected string', context.path, {
+      code: 'coerce.string',
+      input: value,
+      parseOptions: context.options,
+    })
   })
 }

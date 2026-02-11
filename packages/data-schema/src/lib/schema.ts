@@ -21,12 +21,33 @@ export type ValidationResult<output> = StandardSchemaV1.Result<output>
 export type ValidationOptions = StandardSchemaV1.Options
 
 /**
+ * Context passed to `errorMap` to customize issue messages.
+ */
+export type ErrorMapContext = {
+  code: string
+  defaultMessage: string
+  path?: Issue['path']
+  values?: Record<string, unknown>
+  input: unknown
+  locale?: string
+}
+
+/**
+ * Function used to customize issue messages.
+ *
+ * Return `undefined` to use the default message.
+ */
+export type ErrorMap = (context: ErrorMapContext) => string | undefined
+
+/**
  * Options passed to `parse` and `parseSafe`.
  *
  * This mirrors `ValidationOptions`, but also supports a convenience `abortEarly` option at the top level.
  */
 export type ParseOptions = StandardSchemaV1.Options & {
   abortEarly?: boolean
+  errorMap?: ErrorMap
+  locale?: string
 }
 
 type SyncStandardSchemaProps<input, output> = Omit<
@@ -49,6 +70,8 @@ type SyncStandardSchema<input, output = input> = {
 export type Check<output> = {
   check: (value: output) => boolean
   message?: string
+  code?: string
+  values?: Record<string, unknown>
 }
 
 /**
@@ -98,6 +121,14 @@ type ValidationContext = {
   options?: ParseOptions
 }
 
+type IssueDescriptor = {
+  code: string
+  defaultMessage: string
+  input: unknown
+  path?: Issue['path']
+  values?: Record<string, unknown>
+}
+
 export function createSchema<input, output>(
   validator: (
     value: unknown,
@@ -129,7 +160,20 @@ export function createSchema<input, output>(
 
         for (let check of checks) {
           if (!check.check(result.value)) {
-            return { issues: [createIssue(check.message ?? 'Check failed', context.path)] }
+            if (!check.code) {
+              return { issues: [createIssue(check.message ?? 'Check failed', context.path)] }
+            }
+
+            return {
+              issues: [
+                createIssueFromContext(context, {
+                  code: check.code,
+                  defaultMessage: check.message ?? 'Check failed',
+                  input: result.value,
+                  values: check.values,
+                }),
+              ],
+            }
           }
         }
 
@@ -145,7 +189,19 @@ export function createSchema<input, output>(
         }
 
         if (!predicate(result.value)) {
-          return { issues: [createIssue(message ?? 'Refinement failed', context.path)] }
+          if (message !== undefined) {
+            return { issues: [createIssue(message, context.path)] }
+          }
+
+          return {
+            issues: [
+              createIssueFromContext(context, {
+                code: 'refine.failed',
+                defaultMessage: 'Refinement failed',
+                input: result.value,
+              }),
+            ],
+          }
         }
 
         return result
@@ -157,7 +213,9 @@ export function createSchema<input, output>(
 }
 
 function shouldAbortEarly(options?: ParseOptions): boolean {
-  let abortEarly = options?.abortEarly ?? options?.libraryOptions?.abortEarly
+  let libraryAbortEarly = (options?.libraryOptions as { abortEarly?: unknown } | undefined)
+    ?.abortEarly
+  let abortEarly = options?.abortEarly ?? libraryAbortEarly
   return Boolean(abortEarly)
 }
 
@@ -165,12 +223,83 @@ function withPath(path: NonNullable<Issue['path']>, key: PropertyKey): NonNullab
   return path.length === 0 ? [key] : [...path, key]
 }
 
+function getErrorMap(options?: ParseOptions): ErrorMap | undefined {
+  let libraryErrorMap = (options?.libraryOptions as { errorMap?: unknown } | undefined)?.errorMap
+
+  if (typeof options?.errorMap === 'function') {
+    return options.errorMap
+  }
+
+  if (typeof libraryErrorMap === 'function') {
+    return libraryErrorMap as ErrorMap
+  }
+}
+
+function getLocale(options?: ParseOptions): string | undefined {
+  let libraryLocale = (options?.libraryOptions as { locale?: unknown } | undefined)?.locale
+
+  if (typeof options?.locale === 'string') {
+    return options.locale
+  }
+
+  if (typeof libraryLocale === 'string') {
+    return libraryLocale
+  }
+}
+
+function resolveIssueMessage(options: ParseOptions | undefined, context: ErrorMapContext): string {
+  let errorMap = getErrorMap(options)
+
+  if (!errorMap) {
+    return context.defaultMessage
+  }
+
+  let message = errorMap(context)
+  return message ?? context.defaultMessage
+}
+
+function createIssueFromContext(context: ValidationContext, descriptor: IssueDescriptor): Issue {
+  let path = descriptor.path ?? context.path
+  let message = resolveIssueMessage(context.options, {
+    code: descriptor.code,
+    defaultMessage: descriptor.defaultMessage,
+    path,
+    values: descriptor.values,
+    input: descriptor.input,
+    locale: getLocale(context.options),
+  })
+
+  return createIssue(message, path)
+}
+
 export function createIssue(message: string, path: Issue['path']): Issue {
   return !path || path.length === 0 ? { message } : { message, path }
 }
 
-export function fail(message: string, path: Issue['path']): StandardSchemaV1.FailureResult {
-  return { issues: [createIssue(message, path)] }
+export function fail(
+  message: string,
+  path: Issue['path'],
+  options?: {
+    code?: string
+    values?: Record<string, unknown>
+    input?: unknown
+    parseOptions?: ParseOptions
+  },
+): StandardSchemaV1.FailureResult {
+  if (!options?.code) {
+    return { issues: [createIssue(message, path)] }
+  }
+
+  let resolvedMessage = resolveIssueMessage(options.parseOptions, {
+    code: options.code,
+    defaultMessage: message,
+    path,
+    values: options.values,
+    input: options.input,
+    locale: getLocale(options.parseOptions),
+  })
+
+  return { issues: [createIssue(resolvedMessage, path)] }
 }
 
 /**
@@ -195,7 +324,11 @@ export function array<input, output>(
 ): Schema<unknown, output[]> {
   return createSchema(function validate(value, context) {
     if (!Array.isArray(value)) {
-      return fail('Expected array', context.path)
+      return fail('Expected array', context.path, {
+        code: 'type.array',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     let abortEarly = shouldAbortEarly(context.options)
@@ -238,7 +371,11 @@ export function array<input, output>(
 export function bigint(): Schema<unknown, bigint> {
   return createSchema(function validate(value, context) {
     if (typeof value !== 'bigint') {
-      return fail('Expected bigint', context.path)
+      return fail('Expected bigint', context.path, {
+        code: 'type.bigint',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     return { value }
@@ -253,7 +390,11 @@ export function bigint(): Schema<unknown, bigint> {
 export function boolean(): Schema<unknown, boolean> {
   return createSchema(function validate(value, context) {
     if (typeof value !== 'boolean') {
-      return fail('Expected boolean', context.path)
+      return fail('Expected boolean', context.path, {
+        code: 'type.boolean',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     return { value }
@@ -299,7 +440,12 @@ export function enum_<const values extends readonly [unknown, ...unknown[]]>(
       }
     }
 
-    return fail('Expected one of: ' + values.map(String).join(', '), context.path)
+    return fail('Expected one of: ' + values.map(String).join(', '), context.path, {
+      code: 'enum.invalid_value',
+      input: value,
+      values: { values: [...values] },
+      parseOptions: context.options,
+    })
   })
 }
 
@@ -314,7 +460,12 @@ export function instanceof_<constructor extends abstract new (...args: any[]) =>
 ): Schema<unknown, InstanceType<constructor>> {
   return createSchema(function validate(value, context) {
     if (!(value instanceof constructor)) {
-      return fail('Expected instance of ' + constructor.name, context.path)
+      return fail('Expected instance of ' + constructor.name, context.path, {
+        code: 'instanceof.invalid_type',
+        input: value,
+        values: { constructorName: constructor.name },
+        parseOptions: context.options,
+      })
     }
 
     return { value: value as InstanceType<constructor> }
@@ -330,7 +481,12 @@ export function instanceof_<constructor extends abstract new (...args: any[]) =>
 export function literal<value>(literalValue: value): Schema<unknown, value> {
   return createSchema(function validate(value, context) {
     if (value !== literalValue) {
-      return fail('Expected literal value', context.path)
+      return fail('Expected literal value', context.path, {
+        code: 'literal.invalid_value',
+        input: value,
+        values: { expected: literalValue },
+        parseOptions: context.options,
+      })
     }
 
     return { value: literalValue }
@@ -350,7 +506,11 @@ export function map<keyInput, keyOutput, valueInput, valueOutput>(
 ): Schema<unknown, Map<keyOutput, valueOutput>> {
   return createSchema(function validate(value, context) {
     if (!(value instanceof Map)) {
-      return fail('Expected Map', context.path)
+      return fail('Expected Map', context.path, {
+        code: 'type.map',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     let abortEarly = shouldAbortEarly(context.options)
@@ -405,7 +565,11 @@ export function map<keyInput, keyOutput, valueInput, valueOutput>(
 export function null_(): Schema<unknown, null> {
   return createSchema(function validate(value, context) {
     if (value !== null) {
-      return fail('Expected null', context.path)
+      return fail('Expected null', context.path, {
+        code: 'type.null',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     return { value: null }
@@ -438,7 +602,11 @@ export function nullable<input, output>(
 export function number(): Schema<unknown, number> {
   return createSchema(function validate(value, context) {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
-      return fail('Expected number', context.path)
+      return fail('Expected number', context.path, {
+        code: 'type.number',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     return { value }
@@ -466,7 +634,11 @@ export function object<shape extends ObjectShape>(
 ): Schema<unknown, { [key in keyof shape]: InferOutput<shape[key]> }> {
   return createSchema(function validate(value, context) {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      return fail('Expected object', context.path)
+      return fail('Expected object', context.path, {
+        code: 'type.object',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     let abortEarly = shouldAbortEarly(context.options)
@@ -507,7 +679,13 @@ export function object<shape extends ObjectShape>(
         if (unknownKeys === 'passthrough') {
           outputValues[key] = input[key]
         } else {
-          let issue = createIssue('Unknown key', withPath(context.path, key))
+          let issue = createIssueFromContext(context, {
+            code: 'object.unknown_key',
+            defaultMessage: 'Unknown key',
+            input: input[key],
+            path: withPath(context.path, key),
+            values: { key },
+          })
 
           if (abortEarly) {
             return { issues: [issue] }
@@ -557,7 +735,11 @@ export function record<keyInput, keyOutput extends PropertyKey, valueInput, valu
 ): Schema<unknown, Record<keyOutput, valueOutput>> {
   return createSchema(function validate(value, context) {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      return fail('Expected object', context.path)
+      return fail('Expected object', context.path, {
+        code: 'type.object',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     let abortEarly = shouldAbortEarly(context.options)
@@ -620,7 +802,11 @@ export function set<valueInput, valueOutput>(
 ): Schema<unknown, Set<valueOutput>> {
   return createSchema(function validate(value, context) {
     if (!(value instanceof Set)) {
-      return fail('Expected Set', context.path)
+      return fail('Expected Set', context.path, {
+        code: 'type.set',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     let abortEarly = shouldAbortEarly(context.options)
@@ -663,7 +849,11 @@ export function set<valueInput, valueOutput>(
 export function string(): Schema<unknown, string> {
   return createSchema(function validate(value, context) {
     if (typeof value !== 'string') {
-      return fail('Expected string', context.path)
+      return fail('Expected string', context.path, {
+        code: 'type.string',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     return { value }
@@ -678,7 +868,11 @@ export function string(): Schema<unknown, string> {
 export function symbol(): Schema<unknown, symbol> {
   return createSchema(function validate(value, context) {
     if (typeof value !== 'symbol') {
-      return fail('Expected symbol', context.path)
+      return fail('Expected symbol', context.path, {
+        code: 'type.symbol',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     return { value }
@@ -696,7 +890,11 @@ export function tuple<items extends Schema<any, any>[]>(
 ): Schema<unknown, { [index in keyof items]: InferOutput<items[index]> }> {
   return createSchema(function validate(value, context) {
     if (!Array.isArray(value)) {
-      return fail('Expected array', context.path)
+      return fail('Expected array', context.path, {
+        code: 'type.array',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     let abortEarly = shouldAbortEarly(context.options)
@@ -704,7 +902,12 @@ export function tuple<items extends Schema<any, any>[]>(
     let outputValues: unknown[] = []
 
     if (value.length !== items.length) {
-      let issue = createIssue('Expected tuple length ' + String(items.length), context.path)
+      let issue = createIssueFromContext(context, {
+        code: 'tuple.length',
+        defaultMessage: 'Expected tuple length ' + String(items.length),
+        input: value,
+        values: { length: items.length },
+      })
 
       if (abortEarly) {
         return { issues: [issue] }
@@ -751,7 +954,11 @@ export function tuple<items extends Schema<any, any>[]>(
 export function undefined_(): Schema<unknown, undefined> {
   return createSchema(function validate(value, context) {
     if (value !== undefined) {
-      return fail('Expected undefined', context.path)
+      return fail('Expected undefined', context.path, {
+        code: 'type.undefined',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     return { value: undefined }
@@ -774,22 +981,41 @@ export function variant<
 >(discriminator: key, variants: variants): Schema<unknown, InferOutput<variants[keyof variants]>> {
   return createSchema(function validate(value, context) {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      return fail('Expected object', context.path)
+      return fail('Expected object', context.path, {
+        code: 'type.object',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     let input = value as Record<PropertyKey, unknown>
     let tag = input[discriminator]
 
     if (tag === undefined) {
-      return fail('Expected discriminator', [...context.path, discriminator])
+      return fail('Expected discriminator', [...context.path, discriminator], {
+        code: 'variant.missing_discriminator',
+        input: value,
+        values: { discriminator: String(discriminator) },
+        parseOptions: context.options,
+      })
     }
 
     if (typeof tag !== 'string' && typeof tag !== 'number' && typeof tag !== 'symbol') {
-      return fail('Unknown discriminator', [...context.path, discriminator])
+      return fail('Unknown discriminator', [...context.path, discriminator], {
+        code: 'variant.unknown_discriminator',
+        input: tag,
+        values: { discriminator: String(discriminator) },
+        parseOptions: context.options,
+      })
     }
 
     if (!Object.prototype.hasOwnProperty.call(variants, tag)) {
-      return fail('Unknown discriminator', [...context.path, discriminator])
+      return fail('Unknown discriminator', [...context.path, discriminator], {
+        code: 'variant.unknown_discriminator',
+        input: tag,
+        values: { discriminator: String(discriminator) },
+        parseOptions: context.options,
+      })
     }
 
     let schema = variants[tag as keyof variants]
@@ -810,7 +1036,11 @@ export function union<schemas extends Schema<any, any>[]>(
 ): Schema<unknown, InferOutput<schemas[number]>> {
   return createSchema(function validate(value, context) {
     if (schemas.length === 0) {
-      return fail('No union variant matched', context.path)
+      return fail('No union variant matched', context.path, {
+        code: 'union.no_variants',
+        input: value,
+        parseOptions: context.options,
+      })
     }
 
     let abortEarly = shouldAbortEarly(context.options)

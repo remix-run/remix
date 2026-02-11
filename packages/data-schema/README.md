@@ -71,6 +71,28 @@ if (!result.success) {
 
 Both `parse` and `parseSafe` accept any [Standard Schema](https://standardschema.dev/) v1 schema, not just data-schema's own schemas. You can pass a Zod, Valibot, or ArkType schema and they'll work.
 
+You can also customize built-in validation messages with `errorMap`:
+
+```ts
+let result = parseSafe(User, input, {
+  locale: 'es',
+  errorMap(context) {
+    if (context.code === 'type.string') {
+      return 'Se esperaba texto'
+    }
+
+    if (context.code === 'string.min_length') {
+      return (
+        'Debe tener al menos ' + String((context.values as { min: number }).min) + ' caracteres'
+      )
+    }
+  },
+})
+```
+
+`errorMap` receives `{ code, defaultMessage, path, values, input, locale }`.
+Return `undefined` to keep the default message.
+
 ## Primitives
 
 ```ts
