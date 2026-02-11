@@ -2,6 +2,7 @@ import type {
   AdapterExecuteRequest,
   AdapterResult,
   DatabaseAdapter,
+  JoinClause,
   TransactionToken,
 } from './adapter.ts'
 import type { AnyTable } from './model.ts'
@@ -52,8 +53,7 @@ export class MemoryDatabaseAdapter implements DatabaseAdapter {
     }
 
     if (statement.kind === 'select') {
-      let rows = readRows(data, statement.table)
-      let filtered = applyWhere(rows, statement.where)
+      let filtered = readRowsForStatement(data, statement)
       let sorted = applyOrder(filtered, statement.orderBy)
       let offsetRows = statement.offset === undefined ? sorted : sorted.slice(statement.offset)
       let limitRows =
@@ -64,14 +64,12 @@ export class MemoryDatabaseAdapter implements DatabaseAdapter {
     }
 
     if (statement.kind === 'count') {
-      let rows = readRows(data, statement.table)
-      let filtered = applyWhere(rows, statement.where)
+      let filtered = readRowsForStatement(data, statement)
       return { rows: [{ count: filtered.length }] }
     }
 
     if (statement.kind === 'exists') {
-      let rows = readRows(data, statement.table)
-      let filtered = applyWhere(rows, statement.where)
+      let filtered = readRowsForStatement(data, statement)
       return { rows: [{ exists: filtered.length > 0 }] }
     }
 
@@ -203,7 +201,12 @@ export class MemoryDatabaseAdapter implements DatabaseAdapter {
   }
 
   async rollbackTransaction(token: TransactionToken): Promise<void> {
-    this.#transactions.delete(token.id)
+    let deleted = this.#transactions.delete(token.id)
+
+    if (!deleted) {
+      throw new Error('Unknown transaction token: ' + token.id)
+    }
+
     this.events.push('rollback:' + token.id)
   }
 
@@ -400,8 +403,22 @@ function readRowValue(row: Record<string, unknown>, path: string): unknown {
     return row[path]
   }
 
+  if (rowHasQualifiedColumns(row)) {
+    return undefined
+  }
+
   let column = path.slice(dotIndex + 1)
   return row[column]
+}
+
+function rowHasQualifiedColumns(row: Record<string, unknown>): boolean {
+  for (let key of Object.keys(row)) {
+    if (key.includes('.')) {
+      return true
+    }
+  }
+
+  return false
 }
 
 function compareValues(left: unknown, right: unknown): number {
@@ -447,7 +464,7 @@ function applyOrder(
   return [...rows].sort(function compare(left, right) {
     for (let clause of orderBy) {
       let direction = clause.direction === 'desc' ? -1 : 1
-      let comparison = compareValues(left[clause.column], right[clause.column])
+      let comparison = compareValues(readRowValue(left, clause.column), readRowValue(right, clause.column))
 
       if (comparison !== 0) {
         return comparison * direction
@@ -527,4 +544,138 @@ function assignPrimaryKeyIfMissing(
 
 function cloneData(data: MemoryDatabaseSeed): MemoryDatabaseSeed {
   return structuredClone(data)
+}
+
+type ReadStatement = {
+  table: AnyTable
+  joins: JoinClause[]
+  where: Predicate[]
+  groupBy: string[]
+  having: Predicate[]
+}
+
+function readRowsForStatement(
+  data: MemoryDatabaseSeed,
+  statement: ReadStatement,
+): Record<string, unknown>[] {
+  let sourceRows = readRows(data, statement.table)
+  let joinedRows =
+    statement.joins.length === 0
+      ? sourceRows.map(function cloneSourceRow(row) {
+          return { ...row }
+        })
+      : applyJoins(sourceRows, statement.table, statement.joins, data)
+  let filteredRows = applyWhere(joinedRows, statement.where)
+  let groupedRows = applyGroupBy(filteredRows, statement.groupBy)
+  return applyWhere(groupedRows, statement.having)
+}
+
+function applyJoins(
+  sourceRows: Record<string, unknown>[],
+  sourceTable: AnyTable,
+  joins: JoinClause[],
+  data: MemoryDatabaseSeed,
+): Record<string, unknown>[] {
+  let currentRows = sourceRows.map(function mapSourceRow(row) {
+    return mergeTableData({}, sourceTable, row)
+  })
+
+  for (let join of joins) {
+    let targetRows = readRows(data, join.table)
+    let nextRows: Record<string, unknown>[] = []
+    let matchedTargetIndexes = new Set<number>()
+    let nullLeftRow = currentRows[0] ? createNullRow(currentRows[0]) : {}
+
+    for (let leftRow of currentRows) {
+      let matched = false
+      let targetIndex = 0
+
+      while (targetIndex < targetRows.length) {
+        let candidate = mergeTableData(leftRow, join.table, targetRows[targetIndex])
+
+        if (matchesPredicate(candidate, join.on)) {
+          matched = true
+          matchedTargetIndexes.add(targetIndex)
+          nextRows.push(candidate)
+        }
+
+        targetIndex += 1
+      }
+
+      if (!matched && (join.type === 'left' || join.type === 'full')) {
+        nextRows.push(mergeTableData(leftRow, join.table))
+      }
+    }
+
+    if (join.type === 'right' || join.type === 'full') {
+      let targetIndex = 0
+
+      while (targetIndex < targetRows.length) {
+        if (!matchedTargetIndexes.has(targetIndex)) {
+          nextRows.push(mergeTableData(nullLeftRow, join.table, targetRows[targetIndex]))
+        }
+
+        targetIndex += 1
+      }
+    }
+
+    currentRows = nextRows
+  }
+
+  return currentRows
+}
+
+function applyGroupBy(rows: Record<string, unknown>[], groupBy: string[]): Record<string, unknown>[] {
+  if (groupBy.length === 0) {
+    return rows
+  }
+
+  let output: Record<string, unknown>[] = []
+  let seen = new Set<string>()
+
+  for (let row of rows) {
+    let key = JSON.stringify(
+      groupBy.map(function mapGroupColumn(column) {
+        return readRowValue(row, column)
+      }),
+    )
+
+    if (!seen.has(key)) {
+      seen.add(key)
+      output.push(row)
+    }
+  }
+
+  return output
+}
+
+function mergeTableData(
+  base: Record<string, unknown>,
+  table: AnyTable,
+  row?: Record<string, unknown>,
+): Record<string, unknown> {
+  let output: Record<string, unknown> = { ...base }
+
+  for (let column of Object.keys(table.columns)) {
+    let value = row ? row[column] : undefined
+    let qualifiedColumn = table.name + '.' + column
+
+    output[qualifiedColumn] = value
+
+    if (!Object.prototype.hasOwnProperty.call(output, column)) {
+      output[column] = value
+    }
+  }
+
+  return output
+}
+
+function createNullRow(template: Record<string, unknown>): Record<string, unknown> {
+  let output: Record<string, unknown> = {}
+
+  for (let key of Object.keys(template)) {
+    output[key] = undefined
+  }
+
+  return output
 }
