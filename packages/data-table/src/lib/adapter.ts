@@ -122,7 +122,6 @@ export type AdapterResult = {
 export type AdapterCapabilities = {
   returning: boolean
   savepoints: boolean
-  ilike: boolean
   upsert: boolean
 }
 

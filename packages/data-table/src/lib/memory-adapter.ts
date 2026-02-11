@@ -37,7 +37,6 @@ export class MemoryDatabaseAdapter implements DatabaseAdapter {
     this.capabilities = {
       returning: options?.returning ?? true,
       savepoints: true,
-      ilike: true,
       upsert: options?.upsert ?? true,
     }
   }
