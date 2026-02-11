@@ -5,6 +5,9 @@ const CRLF = '\r\n'
 /**
  * Encodes non-ASCII characters in a string using percent-encoding.
  * This is needed because the native Headers class only accepts ISO-8859-1 characters.
+ *
+ * @param value - The string to encode
+ * @returns The encoded string with non-ASCII characters percent-encoded
  */
 function encodeNonAscii(value: string): string {
   let encoder = new TextEncoder()

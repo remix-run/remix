@@ -156,6 +156,9 @@ function percentDecode(value: string): string {
  * Decodes percent-encoded UTF-8 bytes in a string back to Unicode characters.
  * This handles filenames that were encoded to pass through native Headers validation.
  * Only decodes if percent-encoding is present; returns original string otherwise.
+ *
+ * @param value - The string to decode
+ * @returns The decoded string with percent-encoded UTF-8 bytes converted to Unicode
  */
 function decodePercentEncodedUtf8(value: string): string {
   // Check if there are any percent-encoded sequences
