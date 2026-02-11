@@ -41,7 +41,10 @@ describe('memory adapter contract', () => {
       statement: {
         kind: 'select',
         table: Accounts,
-        select: ['id', 'projects.account_id'],
+        select: [
+          { column: 'id', alias: 'id' },
+          { column: 'projects.account_id', alias: 'projects.account_id' },
+        ],
         distinct: false,
         joins: [{ type: 'inner', table: Projects, on: eq('accounts.id', 'projects.account_id') }],
         where: [],
@@ -55,7 +58,10 @@ describe('memory adapter contract', () => {
       statement: {
         kind: 'select',
         table: Accounts,
-        select: ['id', 'projects.account_id'],
+        select: [
+          { column: 'id', alias: 'id' },
+          { column: 'projects.account_id', alias: 'projects.account_id' },
+        ],
         distinct: false,
         joins: [{ type: 'left', table: Projects, on: eq('accounts.id', 'projects.account_id') }],
         where: [],
@@ -69,7 +75,10 @@ describe('memory adapter contract', () => {
       statement: {
         kind: 'select',
         table: Accounts,
-        select: ['id', 'projects.account_id'],
+        select: [
+          { column: 'id', alias: 'id' },
+          { column: 'projects.account_id', alias: 'projects.account_id' },
+        ],
         distinct: false,
         joins: [{ type: 'right', table: Projects, on: eq('accounts.id', 'projects.account_id') }],
         where: [],
@@ -83,7 +92,10 @@ describe('memory adapter contract', () => {
       statement: {
         kind: 'select',
         table: Accounts,
-        select: ['id', 'projects.account_id'],
+        select: [
+          { column: 'id', alias: 'id' },
+          { column: 'projects.account_id', alias: 'projects.account_id' },
+        ],
         distinct: false,
         joins: [{ type: 'full', table: Projects, on: eq('accounts.id', 'projects.account_id') }],
         where: [],
@@ -160,7 +172,10 @@ describe('memory adapter contract', () => {
       statement: {
         kind: 'select',
         table: Accounts,
-        select: ['accounts.id', 'projects.id'],
+        select: [
+          { column: 'accounts.id', alias: 'accounts.id' },
+          { column: 'projects.id', alias: 'projects.id' },
+        ],
         distinct: false,
         joins: [{ type: 'right', table: Projects, on: eq('accounts.id', 'projects.account_id') }],
         where: [eq('accounts.id', 10)],

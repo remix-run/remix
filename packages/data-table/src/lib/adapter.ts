@@ -10,12 +10,17 @@ export type JoinClause = {
   on: Predicate
 }
 
+export type SelectColumn = {
+  column: string
+  alias: string
+}
+
 export type ReturningSelection = '*' | string[]
 
 export type SelectStatement<table extends AnyTable = AnyTable> = {
   kind: 'select'
   table: table
-  select: '*' | string[]
+  select: '*' | SelectColumn[]
   distinct: boolean
   joins: JoinClause[]
   where: Predicate[]
