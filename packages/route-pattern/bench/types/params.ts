@@ -19,8 +19,8 @@ bench('params > complex route', () => {
 }).types([3804, 'instantiations'])
 
 bench('params > mediarss', () => {
-  type Route = keyof typeof import('../routes/mediarss.ts').routes
-  let routes: { [route in Route]: RoutePattern<route> } = {} as any
+  type Routes = typeof import('../routes/mediarss.ts').routes
+  let routes: { [route in keyof Routes]: RoutePattern<Routes[route]> } = {} as any
   let url: URL = {} as any
 
   routes.feed.match(url)?.params
@@ -58,4 +58,4 @@ bench('params > mediarss', () => {
   routes.adminApiMediaStream.match(url)?.params
   routes.adminApiMediaUpload.match(url)?.params
   routes.adminApiArtwork.match(url)?.params
-}).types([39534, 'instantiations'])
+}).types([74851, 'instantiations'])

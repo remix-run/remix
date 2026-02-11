@@ -17,8 +17,13 @@ bench('href > complex route', () => {
 }).types([4575, 'instantiations'])
 
 bench('href > mediarss', () => {
-  type Route = keyof typeof import('../routes/mediarss.ts').routes
-  let routes: { [route in Route]: RoutePattern<route> } = {} as any
+  type Routes = typeof import('../routes/mediarss.ts').routes
+  let routes: { [route in keyof Routes]: RoutePattern<Routes[route]> } = {} as any
+
+  // @ts-expect-error missing required params: 'token'
+  routes.feed.href()
+  // @ts-expect-error missing required params: 'token'
+  routes.feed.href({ extra: '123' })
 
   routes.feed.href({ token: '123' })
   routes.media.href({ token: '123', path: 'users' })
@@ -55,4 +60,4 @@ bench('href > mediarss', () => {
   routes.adminApiMediaStream.href({ path: 'users' })
   routes.adminApiMediaUpload.href()
   routes.adminApiArtwork.href({ path: 'users' })
-}).types([39583, 'instantiations'])
+}).types([79421, 'instantiations'])
