@@ -3,6 +3,7 @@ import type {
   AdapterResult,
   DatabaseAdapter,
   JoinClause,
+  SelectColumn,
   TransactionToken,
 } from './adapter.ts'
 import type { AnyTable } from './model.ts'
@@ -480,17 +481,33 @@ function distinct(rows: Record<string, unknown>[]): Record<string, unknown>[] {
 
 function projectRows(
   rows: Record<string, unknown>[],
-  select: '*' | string[],
+  select: '*' | string[] | SelectColumn[],
 ): Record<string, unknown>[] {
   if (select === '*') {
     return rows.map((row) => ({ ...row }))
   }
 
+  if (select.length > 0 && typeof select[0] === 'string') {
+    let columns = select as string[]
+
+    return rows.map((row) => {
+      let output: Record<string, unknown> = {}
+
+      for (let column of columns) {
+        output[column] = readRowValue(row, column)
+      }
+
+      return output
+    })
+  }
+
+  let fields = select as SelectColumn[]
+
   return rows.map((row) => {
     let output: Record<string, unknown> = {}
 
-    for (let key of select) {
-      output[key] = row[key]
+    for (let field of fields) {
+      output[field.alias] = readRowValue(row, field.column)
     }
 
     return output

@@ -24,7 +24,7 @@ export function compilePostgresStatement(statement: AdapterStatement): CompiledS
 
     if (statement.select !== '*') {
       selection = statement.select
-        .map((column) => quotePath(column))
+        .map((field) => quotePath(field.column) + ' as ' + quoteIdentifier(field.alias))
         .join(', ')
     }
 
