@@ -15,7 +15,7 @@ If you want Drizzle/ActiveRecord-style ergonomics with explicit schemas, typed r
 
 ## Installation
 
-Install the umbrella package and your SQL driver:
+Install Remix + your database driver of choice:
 
 ```sh
 pnpm add remix
@@ -106,23 +106,13 @@ Why this matters in practice:
 
 ### Connect With Different Adapters
 
-```ts
-import { createDatabase } from 'remix/data-table'
-import { createMysqlDatabaseAdapter } from 'remix/data-table-mysql'
-import { createPool } from 'mysql2/promise'
+`data-table` ships with support for the following databases:
 
-let mysqlPool = createPool(process.env.DATABASE_URL as string)
-let db = createDatabase(createMysqlDatabaseAdapter(mysqlPool))
-```
+- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL adapter
+- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL adapter
+- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite adapter
 
-```ts
-import Database from 'better-sqlite3'
-import { createDatabase } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
-
-let sqlite = new Database('app.db')
-let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
-```
+It also ships with an in-memory adapter useful in testing and development.
 
 ```ts
 import { createDatabase, createMemoryDatabaseAdapter } from 'remix/data-table'
@@ -168,46 +158,17 @@ await db
 ### Transactions
 
 ```ts
-await db.transaction(async (outerTransaction) => {
-  await outerTransaction
-    .query(Accounts)
-    .insert({ id: 20, email: 'x@example.com', status: 'active' })
+await db.transaction(async (outerTx) => {
+  await outerTx.query(Accounts).insert({ id: 20, email: 'x@example.com', status: 'active' })
 
-  await outerTransaction
-    .transaction(async (innerTransaction) => {
-      await innerTransaction
-        .query(Accounts)
-        .insert({ id: 21, email: 'y@example.com', status: 'active' })
+  await outerTx
+    .transaction(async (innerTx) => {
+      await innerTx.query(Accounts).insert({ id: 21, email: 'y@example.com', status: 'active' })
 
       throw new Error('rollback inner only')
     })
     .catch(() => undefined)
 })
-```
-
-### Returning Behavior On Adapters Without Native `RETURNING`
-
-Some adapters (for example MySQL) do not support SQL `RETURNING`. In those cases, `data-table` uses fallback reads.
-
-For composite primary keys, include all key columns in insert/upsert values when requesting `returning`, so rows can be re-identified safely.
-
-```ts
-import * as s from 'remix/data-schema'
-import { createTable } from 'remix/data-table'
-
-let AuditEvents = createTable({
-  name: 'audit_events',
-  primaryKey: ['tenant_id', 'id'],
-  columns: {
-    tenant_id: s.number(),
-    id: s.number(),
-    message: s.string(),
-  },
-})
-
-await db
-  .query(AuditEvents)
-  .insert({ tenant_id: 42, id: 9001, message: 'created' }, { returning: ['tenant_id', 'id'] })
 ```
 
 ### Raw SQL Escape Hatch

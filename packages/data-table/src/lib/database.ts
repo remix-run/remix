@@ -506,7 +506,9 @@ export class QueryBuilder<
     )
     let returning = options?.returning
 
-    if (returning && this.#database.adapter.capabilities.returning) {
+    assertReturningCapability(this.#database.adapter, 'insert', returning)
+
+    if (returning) {
       let statement: InsertStatement<table> = {
         kind: 'insert',
         table: this.#table,
@@ -536,16 +538,7 @@ export class QueryBuilder<
       insertId: result.insertId,
     }
 
-    if (!returning) {
-      return metadata
-    }
-
-    let row = await this.#loadInsertedRow(preparedValues, result.insertId, returning)
-
-    return {
-      ...metadata,
-      row,
-    }
+    return metadata
   }
 
   async insertMany(
@@ -568,7 +561,9 @@ export class QueryBuilder<
     )
     let returning = options?.returning
 
-    if (returning && this.#database.adapter.capabilities.returning) {
+    assertReturningCapability(this.#database.adapter, 'insertMany', returning)
+
+    if (returning) {
       let statement: InsertManyStatement<table> = {
         kind: 'insertMany',
         table: this.#table,
@@ -597,16 +592,7 @@ export class QueryBuilder<
       insertId: result.insertId,
     }
 
-    if (!returning) {
-      return metadata
-    }
-
-    let rows = await this.#loadInsertedRows(preparedValues, returning)
-
-    return {
-      ...metadata,
-      rows,
-    }
+    return metadata
   }
 
   async update(
@@ -631,6 +617,7 @@ export class QueryBuilder<
       options?.touch ?? true,
     )
     let returning = options?.returning
+    assertReturningCapability(this.#database.adapter, 'update', returning)
 
     if (Object.keys(preparedChanges).length === 0) {
       throw new DataTableQueryError('update() requires at least one change')
@@ -661,25 +648,6 @@ export class QueryBuilder<
 
         return transactionDatabase.query(table).where(primaryKeyPredicate).update(changes, options)
       })
-    }
-
-    if (returning && !this.#database.adapter.capabilities.returning) {
-      let primaryKeys = await this.#loadCurrentPrimaryKeyRows()
-      let statement: UpdateStatement<table> = {
-        kind: 'update',
-        table: this.#table,
-        changes: preparedChanges,
-        where: [...this.#state.where],
-      }
-
-      let result = await this.#database.execute(statement)
-      let rows = await this.#loadRowsByPrimaryKeys(primaryKeys, returning)
-
-      return {
-        affectedRows: result.affectedRows ?? 0,
-        insertId: result.insertId,
-        rows,
-      }
     }
 
     let statement: UpdateStatement<table> = {
@@ -721,6 +689,7 @@ export class QueryBuilder<
     )
 
     let returning = options?.returning
+    assertReturningCapability(this.#database.adapter, 'delete', returning)
 
     if (hasScopedWriteModifiers(this.#state)) {
       let table = this.#table
@@ -747,23 +716,6 @@ export class QueryBuilder<
 
         return transactionDatabase.query(table).where(primaryKeyPredicate).delete(options)
       })
-    }
-
-    if (returning && !this.#database.adapter.capabilities.returning) {
-      let rowsBeforeDelete = await this.#selectCurrentRows(returning)
-      let statement: DeleteStatement<table> = {
-        kind: 'delete',
-        table: this.#table,
-        where: [...this.#state.where],
-      }
-
-      let result = await this.#database.execute(statement)
-
-      return {
-        affectedRows: result.affectedRows ?? 0,
-        insertId: result.insertId,
-        rows: rowsBeforeDelete,
-      }
     }
 
     let statement: DeleteStatement<table> = {
@@ -828,8 +780,9 @@ export class QueryBuilder<
         )
       : undefined
     let returning = options?.returning
+    assertReturningCapability(this.#database.adapter, 'upsert', returning)
 
-    if (returning && this.#database.adapter.capabilities.returning) {
+    if (returning) {
       let statement: UpsertStatement<table> = {
         kind: 'upsert',
         table: this.#table,
@@ -863,16 +816,7 @@ export class QueryBuilder<
       insertId: result.insertId,
     }
 
-    if (!returning) {
-      return metadata
-    }
-
-    let row = await this.#loadInsertedRow(preparedValues, result.insertId, returning)
-
-    return {
-      ...metadata,
-      row,
-    }
+    return metadata
   }
 
   #toSelectStatement(): SelectStatement<table> {
@@ -906,130 +850,6 @@ export class QueryBuilder<
     })
   }
 
-  async #loadInsertedRow(
-    values: Record<string, unknown>,
-    insertId: unknown,
-    returning: ReturningInput<table>,
-  ): Promise<TableRow<table> | null> {
-    let keyObject = getInsertPrimaryKeyObject(this.#table, values, insertId)
-
-    if (!keyObject) {
-      throw new DataTableQueryError(
-        'Cannot load returning row without adapter RETURNING support unless primary key values are available',
-      )
-    }
-
-    let rows = await this.#loadRowsByPrimaryKeys([keyObject], returning)
-    return rows[0] ?? null
-  }
-
-  async #loadInsertedRows(
-    values: Record<string, unknown>[],
-    returning: ReturningInput<table>,
-  ): Promise<TableRow<table>[]> {
-    let keyObjects: Record<string, unknown>[] = []
-
-    for (let row of values) {
-      let keyObject = getInsertPrimaryKeyObject(this.#table, row, undefined)
-
-      if (!keyObject) {
-        throw new DataTableQueryError(
-          'insertMany returning fallback requires explicit primary key values when adapter RETURNING is unavailable',
-        )
-      }
-
-      keyObjects.push(keyObject)
-    }
-
-    return this.#loadRowsByPrimaryKeys(keyObjects, returning)
-  }
-
-  async #loadRowsByPrimaryKeys(
-    keyObjects: Record<string, unknown>[],
-    returning: ReturningInput<table>,
-  ): Promise<TableRow<table>[]> {
-    if (keyObjects.length === 0) {
-      return []
-    }
-
-    let query: QueryBuilder<table, {}, QueryColumnTypeMap<table>, any> = this.#database.query(
-      this.#table,
-    )
-    let predicate = buildPrimaryKeyPredicate(this.#table, keyObjects)
-
-    if (predicate) {
-      query = query.where(predicate)
-    }
-
-    query = applyReturningSelection(query, returning)
-    let rows = await query.all()
-
-    return rows as TableRow<table>[]
-  }
-
-  async #selectCurrentRows(returning: ReturningInput<table>): Promise<TableRow<table>[]> {
-    let query: QueryBuilder<table, {}, QueryColumnTypeMap<table>, any> = this.#database.query(
-      this.#table,
-    )
-
-    for (let predicate of this.#state.where) {
-      query = query.where(predicate as Predicate<QueryColumnName<table>>)
-    }
-
-    for (let clause of this.#state.orderBy) {
-      query = query.orderBy(clause.column as QueryColumns<QueryColumnTypeMap<table>>, clause.direction)
-    }
-
-    if (this.#state.limit !== undefined) {
-      query = query.limit(this.#state.limit)
-    }
-
-    if (this.#state.offset !== undefined) {
-      query = query.offset(this.#state.offset)
-    }
-
-    query = applyReturningSelection(query, returning)
-
-    let rows = await query.all()
-    return rows as TableRow<table>[]
-  }
-
-  async #loadCurrentPrimaryKeyRows(): Promise<Record<string, unknown>[]> {
-    let query: QueryBuilder<table, {}, QueryColumnTypeMap<table>, any> = this.#database.query(
-      this.#table,
-    )
-
-    for (let predicate of this.#state.where) {
-      query = query.where(predicate as Predicate<QueryColumnName<table>>)
-    }
-
-    for (let clause of this.#state.orderBy) {
-      query = query.orderBy(clause.column as QueryColumns<QueryColumnTypeMap<table>>, clause.direction)
-    }
-
-    if (this.#state.limit !== undefined) {
-      query = query.limit(this.#state.limit)
-    }
-
-    if (this.#state.offset !== undefined) {
-      query = query.offset(this.#state.offset)
-    }
-
-    query = query.select(...(this.#table.primaryKey as (keyof TableRow<table> & string)[]))
-
-    let rows = await query.all()
-    let primaryKeys = this.#table.primaryKey as string[]
-
-    return rows.map((row) => {
-      let keyObject: Record<string, unknown> = {}
-
-      for (let key of rowKeys(row as Record<string, unknown>, primaryKeys)) {
-        keyObject[key] = (row as Record<string, unknown>)[key]
-      }
-
-      return keyObject
-    })
-  }
 }
 
 async function loadRelationsForRows(
@@ -1748,30 +1568,6 @@ function normalizeReturningSelection<table extends AnyTable>(
   return [...returning]
 }
 
-function getInsertPrimaryKeyObject(
-  table: AnyTable,
-  values: Record<string, unknown>,
-  insertId: unknown,
-): Record<string, unknown> | null {
-  let keyObject: Record<string, unknown> = {}
-
-  for (let key of table.primaryKey) {
-    if (Object.prototype.hasOwnProperty.call(values, key)) {
-      keyObject[key] = values[key]
-      continue
-    }
-
-    if (table.primaryKey.length === 1 && insertId !== undefined) {
-      keyObject[key] = insertId
-      continue
-    }
-
-    return null
-  }
-
-  return keyObject
-}
-
 function buildPrimaryKeyPredicate<table extends AnyTable>(
   table: table,
   keyObjects: Record<string, unknown>[],
@@ -1800,32 +1596,6 @@ function buildPrimaryKeyPredicate<table extends AnyTable>(
   return or(...predicates)
 }
 
-function applyReturningSelection<table extends AnyTable, selection extends ReturningInput<table>>(
-  query: QueryBuilder<table, {}, QueryColumnTypeMap<table>, TableRow<table>>,
-  returning: selection,
-): QueryBuilder<
-  table,
-  {},
-  QueryColumnTypeMap<table>,
-  selection extends '*' ? TableRow<table> : Pick<TableRow<table>, selection[number]>
-> {
-  if (returning === '*') {
-    return query as QueryBuilder<
-      table,
-      {},
-      QueryColumnTypeMap<table>,
-      selection extends '*' ? TableRow<table> : Pick<TableRow<table>, selection[number]>
-    >
-  }
-
-  return query.select(...returning) as QueryBuilder<
-    table,
-    {},
-    QueryColumnTypeMap<table>,
-    selection extends '*' ? TableRow<table> : Pick<TableRow<table>, selection[number]>
-  >
-}
-
 function rowKeys(row: Record<string, unknown>, keys: string[]): string[] {
   let output: string[] = []
 
@@ -1836,4 +1606,14 @@ function rowKeys(row: Record<string, unknown>, keys: string[]): string[] {
   }
 
   return output
+}
+
+function assertReturningCapability<table extends AnyTable>(
+  adapter: DatabaseAdapter,
+  operation: 'insert' | 'insertMany' | 'update' | 'delete' | 'upsert',
+  returning: ReturningInput<table> | undefined,
+): void {
+  if (returning && !adapter.capabilities.returning) {
+    throw new DataTableQueryError(operation + '() returning is not supported by this adapter')
+  }
 }
