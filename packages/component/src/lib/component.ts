@@ -181,9 +181,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
     set: (value: C) => {
       contextValue = value
     },
-    get: (type: Component) => {
-      return config.getContext(type)
-    },
+    get: (type: Component) => config.getContext(type),
   }
 
   let handle: Handle<C> = {

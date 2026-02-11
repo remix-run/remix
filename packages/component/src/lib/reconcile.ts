@@ -494,9 +494,7 @@ function diffComponent(
       id: `e${++fixmeIdCounter}`,
       frame,
       type: next.type,
-      getContext: (type: Component) => {
-        return findContextFromAncestry(vParent, type)
-      },
+      getContext: (type: Component) => findContextFromAncestry(vParent, type),
     })
 
     return renderComponent(

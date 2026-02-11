@@ -35,8 +35,7 @@ export const MessageStream = hydrated(
       })
     })
 
-    return () => {
-      return (
+    return () => (
         <>
           <div
             css={{
@@ -110,6 +109,5 @@ export const MessageStream = hydrated(
           </div>
         </>
       )
-    }
   },
 )
