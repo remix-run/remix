@@ -236,6 +236,54 @@ function KeyboardTracker(handle: Handle) {
 }
 ```
 
+## `handle.frames.top`
+
+The root frame for the current runtime tree. This is useful when nested components need to reload the entire page/frame tree instead of only their nearest frame.
+
+```tsx
+function RefreshAllButton(handle: Handle) {
+  return () => (
+    <button
+      on={{
+        async click() {
+          await handle.frames.top.reload()
+        },
+      }}
+    >
+      Refresh everything
+    </button>
+  )
+}
+```
+
+## `handle.frames.get(name)`
+
+Look up a named frame in the current runtime tree. This is useful when one frame action should refresh adjacent frame content.
+
+Return value:
+
+- `FrameHandle` when a frame with that `name` is currently mounted
+- `undefined` when no such frame is mounted
+
+```tsx
+function CartRow(handle: Handle) {
+  return () => (
+    <button
+      on={{
+        async click() {
+          await handle.frames.get('cart-summary')?.reload()
+          await handle.frame.reload()
+        },
+      }}
+    >
+      Update Cart
+    </button>
+  )
+}
+```
+
+If multiple mounted frames share the same name, the most recently mounted frame is returned.
+
 ## `handle.id`
 
 Stable identifier per component instance. Useful for HTML APIs like `htmlFor`, `aria-owns`, etc.

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import type { Handle } from '../lib/component.ts'
 import { createRoot } from '../lib/vdom.ts'
 import { renderToString } from '../lib/stream.ts'
-import { hydrationRoot } from '../lib/hydration-root.ts'
+import { clientEntry } from '../lib/client-entries.ts'
 import { invariant } from '../lib/invariant.ts'
 
 describe('hydration', () => {
@@ -15,6 +15,9 @@ describe('hydration', () => {
 
   afterEach(() => {
     document.body.innerHTML = ''
+    for (let node of Array.from(document.head.childNodes)) {
+      document.head.removeChild(node)
+    }
   })
 
   describe('component edge cases', () => {
@@ -81,11 +84,11 @@ describe('hydration', () => {
     })
 
     it('hydrates nested hydration boundaries', async () => {
-      let Outer = hydrationRoot('/outer.js#Outer', function Outer(handle: Handle) {
+      let Outer = clientEntry('/outer.js#Outer', function Outer(handle: Handle) {
         return (props: { children: any }) => <div className="outer">{props.children}</div>
       })
 
-      let Inner = hydrationRoot('/inner.js#Inner', function Inner(handle: Handle) {
+      let Inner = clientEntry('/inner.js#Inner', function Inner(handle: Handle) {
         return () => <span className="inner">Inner content</span>
       })
 
@@ -409,6 +412,39 @@ describe('hydration', () => {
       expect(container.querySelector('.level-3')).toBe(level3)
       expect(container.querySelector('.level-4')).toBe(level4)
       expect(container.querySelector('span')).toBe(span)
+    })
+
+    it('hoists head-managed elements during hydration', () => {
+      container.innerHTML =
+        '<title>Hydrated title</title>' +
+        '<meta name="description" content="Hydrated description" />' +
+        '<script type="application/ld+json">{"@type":"Thing","name":"Hydrated"}</script>' +
+        '<div id="content">Body content</div>'
+
+      let existingTitle = container.querySelector('title')
+      let existingMeta = container.querySelector('meta[name="description"]')
+      let existingLdJson = container.querySelector('script[type="application/ld+json"]')
+      let existingContent = container.querySelector('#content')
+      invariant(existingTitle && existingMeta && existingLdJson && existingContent)
+
+      let root = createRoot(container)
+      root.render(
+        <>
+          <title>Hydrated title</title>
+          <meta name="description" content="Hydrated description" />
+          <script type="application/ld+json">{'{"@type":"Thing","name":"Hydrated"}'}</script>
+          <div id="content">Body content</div>
+        </>,
+      )
+      root.flush()
+
+      expect(document.head.querySelector('title')).toBe(existingTitle)
+      expect(document.head.querySelector('meta[name="description"]')).toBe(existingMeta)
+      expect(document.head.querySelector('script[type="application/ld+json"]')).toBe(existingLdJson)
+      expect(container.querySelector('title')).toBeNull()
+      expect(container.querySelector('meta[name="description"]')).toBeNull()
+      expect(container.querySelector('script[type="application/ld+json"]')).toBeNull()
+      expect(container.querySelector('#content')).toBe(existingContent)
     })
   })
 })

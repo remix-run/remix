@@ -13,6 +13,9 @@ describe('hydration', () => {
 
   afterEach(() => {
     document.body.innerHTML = ''
+    for (let node of Array.from(document.head.childNodes)) {
+      document.head.removeChild(node)
+    }
   })
 
   describe('special case props to HTML attributes', () => {
@@ -100,7 +103,8 @@ describe('hydration', () => {
       root.render(<meta httpEquiv="refresh" content="5" />)
       root.flush()
 
-      expect(container.querySelector('meta')).toBe(existingMeta)
+      expect(document.head.querySelector('meta')).toBe(existingMeta)
+      expect(container.querySelector('meta')).toBeNull()
       expect(existingMeta.getAttribute('http-equiv')).toBe('refresh')
     })
 

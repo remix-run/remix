@@ -1,9 +1,16 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
 import type { Handle } from '../lib/component.ts'
 
 describe('vnode rendering', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+    for (let node of Array.from(document.head.childNodes)) {
+      document.head.removeChild(node)
+    }
+  })
+
   describe('components', () => {
     it.todo('warns when render is called after component is removed')
 
@@ -82,6 +89,116 @@ describe('vnode rendering', () => {
       capturedUpdate()
       root.flush()
       expect(container.innerHTML).toBe('<span>0</span><span>1</span><span>2</span>')
+    })
+
+    it('hoists head-managed elements on client updates', () => {
+      let container = document.createElement('div')
+      document.body.appendChild(container)
+
+      let rerender = () => {}
+
+      function App(handle: Handle) {
+        let phase = 0
+        rerender = () => {
+          phase++
+          handle.update()
+        }
+
+        return () => {
+          if (phase === 0) {
+            return (
+              <>
+                <title>Page A</title>
+                <meta name="description" content="A" />
+                <script type="application/ld+json">{'{"name":"A"}'}</script>
+                <script type="text/javascript">window.__regular = "A"</script>
+                <div>Phase A</div>
+              </>
+            )
+          }
+
+          if (phase === 1) {
+            return (
+              <>
+                <title>Page B</title>
+                <meta name="description" content="B" />
+                <script type="application/ld+json">{'{"name":"B"}'}</script>
+                <div>Phase B</div>
+              </>
+            )
+          }
+
+          return <div>Phase C</div>
+        }
+      }
+
+      let root = createRoot(container)
+      root.render(<App />)
+      root.flush()
+
+      expect(document.head.querySelector('title')?.textContent).toBe('Page A')
+      expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
+        'A',
+      )
+      expect(document.head.querySelector('script[type="application/ld+json"]')?.textContent).toBe(
+        '{"name":"A"}',
+      )
+      expect(container.querySelector('script[type="text/javascript"]')).toBeTruthy()
+      expect(container.querySelector('title')).toBeNull()
+      expect(container.querySelector('meta[name="description"]')).toBeNull()
+      expect(container.querySelector('script[type="application/ld+json"]')).toBeNull()
+
+      rerender()
+      root.flush()
+
+      expect(document.head.querySelector('title')?.textContent).toBe('Page B')
+      expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
+        'B',
+      )
+      expect(document.head.querySelectorAll('meta[name="description"]')).toHaveLength(1)
+      expect(document.head.querySelector('script[type="application/ld+json"]')?.textContent).toBe(
+        '{"name":"B"}',
+      )
+      expect(container.innerHTML).toBe('<div>Phase B</div>')
+
+      rerender()
+      root.flush()
+
+      expect(document.head.querySelector('title')).toBeNull()
+      expect(document.head.querySelector('meta[name="description"]')).toBeNull()
+      expect(document.head.querySelector('script[type="application/ld+json"]')).toBeNull()
+      expect(container.innerHTML).toBe('<div>Phase C</div>')
+    })
+
+    it('dispose cleans up explicit head subtree', () => {
+      let container = document.createElement('div')
+      document.body.appendChild(container)
+
+      let root = createRoot(container)
+      root.render(
+        <>
+          <head>
+            <title>Dispose title</title>
+            <meta name="dispose-description" content="dispose" />
+            <script type="application/ld+json">{'{"dispose":true}'}</script>
+          </head>
+          <div>Content</div>
+        </>,
+      )
+      root.flush()
+
+      expect(document.head.querySelector('title')?.textContent).toBe('Dispose title')
+      expect(document.head.querySelector('meta[name="dispose-description"]')).toBeTruthy()
+      expect(document.head.querySelector('script[type="application/ld+json"]')?.textContent).toBe(
+        '{"dispose":true}',
+      )
+
+      root.dispose()
+
+      expect(document.head.querySelector('title')).toBeNull()
+      expect(document.head.querySelector('meta[name="dispose-description"]')).toBeNull()
+      expect(document.head.querySelector('script[type="application/ld+json"]')).toBeNull()
+      expect(container.innerHTML).toBe('')
     })
   })
 })

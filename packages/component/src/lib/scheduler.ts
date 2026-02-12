@@ -7,12 +7,18 @@ import {
 import type { CommittedComponentNode, VNode } from './vnode.ts'
 import { isCommittedComponentNode } from './vnode.ts'
 import { findNextSiblingDomAnchor, renderComponent } from './reconcile.ts'
+import { defaultStyleManager } from './diff-props.ts'
+import type { StyleManager } from './style/index.ts'
 
 type EmptyFn = () => void
 
 export type Scheduler = ReturnType<typeof createScheduler>
 
-export function createScheduler(doc: Document, rootTarget: EventTarget) {
+export function createScheduler(
+  doc: Document,
+  rootTarget: EventTarget,
+  styles: StyleManager = defaultStyleManager,
+) {
   let documentState = createDocumentState(doc)
   let scheduled = new Map<CommittedComponentNode, ParentNode>()
   let tasks: EmptyFn[] = []
@@ -72,6 +78,7 @@ export function createScheduler(doc: Document, rootTarget: EventTarget) {
             domParent,
             handle.frame,
             scheduler,
+            styles,
             rootTarget,
             vParent,
             anchor,

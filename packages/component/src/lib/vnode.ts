@@ -29,6 +29,12 @@ export type VNode<T extends VNodeType = VNodeType> = {
   // Range roots render between comment boundary markers
   _rangeStart?: Node
   _rangeEnd?: Node
+  _pendingHydrationComponentId?: string
+  _frameInstance?: unknown
+  _frameFallbackRoot?: { render: (element: RemixNode) => void; dispose: () => void }
+  _frameResolveToken?: number
+  _frameResolveController?: AbortController
+  _frameResolved?: boolean
 
   // Internal diffing fields
   _index?: number

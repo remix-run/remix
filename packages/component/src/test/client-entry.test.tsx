@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import type { Handle } from '../lib/component.ts'
-import { hydrationRoot, isHydratedComponent } from '../lib/hydration-root.ts'
+import { clientEntry, isEntry } from '../lib/client-entries.ts'
 
-describe('hydrationRoot', () => {
+describe('clientEntry', () => {
   describe('types', () => {
     it('keeps original types', () => {
       function Input(handle: Handle, props: { defaultValue?: string }) {
@@ -14,7 +14,7 @@ describe('hydrationRoot', () => {
         )
       }
 
-      let HydratedInput = hydrationRoot('/js/test.js#Input', Input)
+      let HydratedInput = clientEntry('/js/test.js#Input', Input)
 
       // @ts-expect-error - should require default render prop
       let el = <Input />
@@ -35,7 +35,7 @@ describe('hydrationRoot', () => {
       }
 
       // @ts-expect-error - should disallow non-serializable function prop
-      let HydratedInput = hydrationRoot('/js/test.js#Input', Input)
+      let HydratedInput = clientEntry('/js/test.js#Input', Input)
 
       function Input2(handle: Handle, props: { defaultValue?: string }) {
         let value = props.defaultValue ?? ''
@@ -47,23 +47,23 @@ describe('hydrationRoot', () => {
       }
 
       // @ts-expect-error - should disallow non-serializable function prop
-      let HydratedInput2 = hydrationRoot('/js/test.js#Input', Input2)
+      let HydratedInput2 = clientEntry('/js/test.js#Input', Input2)
 
       expect(true).toBe(true)
     })
   })
 
   describe('basic functionality', () => {
-    it('marks a component as hydrated', () => {
+    it('marks a component as an entry', () => {
       function TestComponent(handle: Handle, props: { count: number }) {
         return () => <div>Count: {props.count}</div>
       }
 
-      let HydratedComponent = hydrationRoot('/js/test.js#TestComponent', TestComponent)
+      let EntryComponent = clientEntry('/js/test.js#TestComponent', TestComponent)
 
-      expect(HydratedComponent.$hydrated).toBe(true)
-      expect(HydratedComponent.$moduleUrl).toBe('/js/test.js')
-      expect(HydratedComponent.$exportName).toBe('TestComponent')
+      expect(EntryComponent.$entry).toBe(true)
+      expect(EntryComponent.$moduleUrl).toBe('/js/test.js')
+      expect(EntryComponent.$exportName).toBe('TestComponent')
     })
 
     it('parses module URL and export name from href', () => {
@@ -71,10 +71,10 @@ describe('hydrationRoot', () => {
         return () => <div>Hello</div>
       }
 
-      let HydratedComponent = hydrationRoot('/js/components.js#MyComponent', MyComponent)
+      let EntryComponent = clientEntry('/js/components.js#MyComponent', MyComponent)
 
-      expect(HydratedComponent.$moduleUrl).toBe('/js/components.js')
-      expect(HydratedComponent.$exportName).toBe('MyComponent')
+      expect(EntryComponent.$moduleUrl).toBe('/js/components.js')
+      expect(EntryComponent.$exportName).toBe('MyComponent')
     })
 
     it('uses component name as fallback when no export name provided', () => {
@@ -82,10 +82,10 @@ describe('hydrationRoot', () => {
         return () => <div>Hello</div>
       }
 
-      let HydratedComponent = hydrationRoot('/js/components.js', NamedComponent)
+      let EntryComponent = clientEntry('/js/components.js', NamedComponent)
 
-      expect(HydratedComponent.$moduleUrl).toBe('/js/components.js')
-      expect(HydratedComponent.$exportName).toBe('NamedComponent')
+      expect(EntryComponent.$moduleUrl).toBe('/js/components.js')
+      expect(EntryComponent.$exportName).toBe('NamedComponent')
     })
 
     it('preserves the original component functionality', () => {
@@ -99,16 +99,16 @@ describe('hydrationRoot', () => {
         )
       }
 
-      let HydratedComponent = hydrationRoot('/js/test.js#TestComponent', TestComponent)
+      let EntryComponent = clientEntry('/js/test.js#TestComponent', TestComponent)
 
-      // The hydrated component should still be callable
-      expect(typeof HydratedComponent).toBe('function')
+      // The entry component should still be callable
+      expect(typeof EntryComponent).toBe('function')
 
       // Mock Handle for testing
       let mockHandle = {} as Handle
 
       // Should work the same as the original component
-      let renderFn = HydratedComponent(mockHandle, { initialCount: 5 })
+      let renderFn = EntryComponent(mockHandle, { initialCount: 5 })
       expect(typeof renderFn).toBe('function')
 
       if (typeof renderFn === 'function') {
@@ -132,8 +132,8 @@ describe('hydrationRoot', () => {
       }
 
       expect(() => {
-        hydrationRoot('', TestComponent)
-      }).toThrow('hydrationRoot() requires a module URL')
+        clientEntry('', TestComponent)
+      }).toThrow('clientEntry() requires a module URL')
     })
 
     it('throws error when no export name and component is anonymous', () => {
@@ -145,8 +145,8 @@ describe('hydrationRoot', () => {
       Object.defineProperty(anonymousComponent, 'name', { value: '' })
 
       expect(() => {
-        hydrationRoot('/js/test.js', anonymousComponent)
-      }).toThrow('hydrationRoot() requires either an export name in the href')
+        clientEntry('/js/test.js', anonymousComponent)
+      }).toThrow('clientEntry() requires either an export name in the href')
     })
 
     it('throws error when no export name and component name is empty', () => {
@@ -158,8 +158,8 @@ describe('hydrationRoot', () => {
       Object.defineProperty(TestComponent, 'name', { value: '' })
 
       expect(() => {
-        hydrationRoot('/js/test.js', TestComponent)
-      }).toThrow('hydrationRoot() requires either an export name in the href')
+        clientEntry('/js/test.js', TestComponent)
+      }).toThrow('clientEntry() requires either an export name in the href')
     })
   })
 
@@ -180,8 +180,8 @@ describe('hydrationRoot', () => {
         return () => <div>Valid</div>
       }
 
-      let HydratedComponent = hydrationRoot('/js/valid.js#ValidComponent', ValidComponent)
-      expect(HydratedComponent.$hydrated).toBe(true)
+      let EntryComponent = clientEntry('/js/valid.js#ValidComponent', ValidComponent)
+      expect(EntryComponent.$entry).toBe(true)
     })
 
     // Type-level rejection: non-serializable props should be disallowed
@@ -191,7 +191,7 @@ describe('hydrationRoot', () => {
       }
 
       // @ts-expect-error - non-serializable function prop should be rejected
-      let HydratedInvalid = hydrationRoot('/js/invalid.js#InvalidComponent', InvalidComponent)
+      let HydratedInvalid = clientEntry('/js/invalid.js#InvalidComponent', InvalidComponent)
       expect(true).toBe(true)
     })
 
@@ -202,8 +202,8 @@ describe('hydrationRoot', () => {
         return () => <div>Count: {count}</div>
       }
 
-      let HydratedCounter = hydrationRoot('/js/counter.js#Counter', Counter)
-      expect(HydratedCounter.$hydrated).toBe(true)
+      let EntryCounter = clientEntry('/js/counter.js#Counter', Counter)
+      expect(EntryCounter.$entry).toBe(true)
     })
 
     it('accepts null and undefined setup types', () => {
@@ -215,11 +215,11 @@ describe('hydrationRoot', () => {
         return () => <div>Undefined setup</div>
       }
 
-      let HydratedNull = hydrationRoot('/js/null.js#NullSetup', NullSetup)
-      let HydratedUndefined = hydrationRoot('/js/undefined.js#UndefinedSetup', UndefinedSetup)
+      let EntryNull = clientEntry('/js/null.js#NullSetup', NullSetup)
+      let EntryUndefined = clientEntry('/js/undefined.js#UndefinedSetup', UndefinedSetup)
 
-      expect(HydratedNull.$hydrated).toBe(true)
-      expect(HydratedUndefined.$hydrated).toBe(true)
+      expect(EntryNull.$entry).toBe(true)
+      expect(EntryUndefined.$entry).toBe(true)
     })
 
     it('accepts array setup types', () => {
@@ -227,19 +227,19 @@ describe('hydrationRoot', () => {
         return () => <div>{setup.join(', ')}</div>
       }
 
-      let HydratedArray = hydrationRoot('/js/array.js#ArraySetup', ArraySetup)
-      expect(HydratedArray.$hydrated).toBe(true)
+      let EntryArray = clientEntry('/js/array.js#ArraySetup', ArraySetup)
+      expect(EntryArray.$entry).toBe(true)
     })
   })
 
-  describe('isHydratedComponent type guard', () => {
-    it('returns true for hydrated components', () => {
+  describe('isEntry type guard', () => {
+    it('returns true for entry components', () => {
       function TestComponent() {
         return () => <div>Test</div>
       }
 
-      let HydratedComponent = hydrationRoot('/js/test.js#TestComponent', TestComponent)
-      expect(isHydratedComponent(HydratedComponent)).toBe(true)
+      let EntryComponent = clientEntry('/js/test.js#TestComponent', TestComponent)
+      expect(isEntry(EntryComponent)).toBe(true)
     })
 
     it('returns false for regular components', () => {
@@ -247,20 +247,20 @@ describe('hydrationRoot', () => {
         return () => <div>Regular</div>
       }
 
-      expect(isHydratedComponent(RegularComponent)).toBe(false)
+      expect(isEntry(RegularComponent)).toBe(false)
     })
 
     it('returns false for non-function values', () => {
-      expect(isHydratedComponent(null)).toBe(false)
-      expect(isHydratedComponent(undefined)).toBe(false)
-      expect(isHydratedComponent('string')).toBe(false)
-      expect(isHydratedComponent(123)).toBe(false)
-      expect(isHydratedComponent({})).toBe(false)
+      expect(isEntry(null)).toBe(false)
+      expect(isEntry(undefined)).toBe(false)
+      expect(isEntry('string')).toBe(false)
+      expect(isEntry(123)).toBe(false)
+      expect(isEntry({})).toBe(false)
     })
 
-    it('returns false for functions without hydration metadata', () => {
+    it('returns false for functions without entry metadata', () => {
       function normalFunction() {}
-      expect(isHydratedComponent(normalFunction)).toBe(false)
+      expect(isEntry(normalFunction)).toBe(false)
     })
   })
 
@@ -276,11 +276,11 @@ describe('hydrationRoot', () => {
         )
       }
 
-      let HydratedCounter = hydrationRoot('/js/counter.js#Counter', Counter)
+      let EntryCounter = clientEntry('/js/counter.js#Counter', Counter)
 
-      expect(HydratedCounter.$hydrated).toBe(true)
-      expect(HydratedCounter.$moduleUrl).toBe('/js/counter.js')
-      expect(HydratedCounter.$exportName).toBe('Counter')
+      expect(EntryCounter.$entry).toBe(true)
+      expect(EntryCounter.$moduleUrl).toBe('/js/counter.js')
+      expect(EntryCounter.$exportName).toBe('Counter')
     })
 
     it('handles simple components that return JSX directly', () => {
@@ -288,11 +288,11 @@ describe('hydrationRoot', () => {
         return () => <div>{props.message}</div>
       }
 
-      let HydratedSimple = hydrationRoot('/js/simple.js#SimpleComponent', SimpleComponent)
+      let EntrySimple = clientEntry('/js/simple.js#SimpleComponent', SimpleComponent)
 
-      expect(HydratedSimple.$hydrated).toBe(true)
-      expect(HydratedSimple.$moduleUrl).toBe('/js/simple.js')
-      expect(HydratedSimple.$exportName).toBe('SimpleComponent')
+      expect(EntrySimple.$entry).toBe(true)
+      expect(EntrySimple.$moduleUrl).toBe('/js/simple.js')
+      expect(EntrySimple.$exportName).toBe('SimpleComponent')
     })
   })
 })
