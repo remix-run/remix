@@ -30,8 +30,8 @@ import type {
   RelationMapForTable,
   Table,
   TableRow,
-} from './model.ts'
-import { getCompositeKey, getPrimaryKeyObject } from './model.ts'
+} from './table.ts'
+import { getCompositeKey, getPrimaryKeyObject } from './table.ts'
 import type { Predicate, WhereInput } from './operators.ts'
 import { and, eq, inList, normalizeWhereInput, or } from './operators.ts'
 import type { SqlStatement } from './sql.ts'

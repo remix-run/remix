@@ -6,7 +6,7 @@ import type { DatabaseAdapter } from './adapter.ts'
 import { createDatabase } from './database.ts'
 import { DataTableAdapterError, DataTableQueryError, DataTableValidationError } from './errors.ts'
 import { MemoryDatabaseAdapter } from './memory-adapter.ts'
-import { createTable, timestamps } from './model.ts'
+import { createTable, timestamps } from './table.ts'
 import { eq } from './operators.ts'
 import { sql } from './sql.ts'
 

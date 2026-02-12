@@ -2,7 +2,7 @@ import { after, before, describe } from 'node:test'
 import { createDatabase } from '@remix-run/data-table'
 import { Pool } from 'pg'
 
-import { runAdapterIntegrationContract } from '../../../data-table/test-support/adapter-integration-contract.ts'
+import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
 
 import { createPostgresDatabaseAdapter } from './adapter.ts'
 

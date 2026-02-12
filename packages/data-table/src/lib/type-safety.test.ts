@@ -4,7 +4,7 @@ import { boolean, number, string } from '@remix-run/data-schema'
 
 import { createDatabase } from './database.ts'
 import { MemoryDatabaseAdapter } from './memory-adapter.ts'
-import { createTable } from './model.ts'
+import { createTable } from './table.ts'
 import { eq } from './operators.ts'
 
 type Equal<left, right> =

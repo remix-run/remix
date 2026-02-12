@@ -1,4 +1,4 @@
-import type { OrderByClause, AnyTable } from './model.ts'
+import type { OrderByClause, AnyTable } from './table.ts'
 import type { Predicate } from './operators.ts'
 import type { SqlStatement } from './sql.ts'
 

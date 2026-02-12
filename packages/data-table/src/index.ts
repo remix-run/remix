@@ -37,8 +37,8 @@ export type {
   TableRow,
   TimestampConfig,
   TimestampOptions,
-} from './lib/model.ts'
-export { createTable, timestampSchema, timestamps } from './lib/model.ts'
+} from './lib/table.ts'
+export { createTable, timestampSchema, timestamps } from './lib/table.ts'
 
 export type { Predicate, WhereInput, WhereObject } from './lib/operators.ts'
 export {

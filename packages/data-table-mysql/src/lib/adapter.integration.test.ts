@@ -2,7 +2,7 @@ import { after, before, describe } from 'node:test'
 import { createDatabase } from '@remix-run/data-table'
 import { createPool, type Pool } from 'mysql2/promise'
 
-import { runAdapterIntegrationContract } from '../../../data-table/test-support/adapter-integration-contract.ts'
+import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
 
 import { createMysqlDatabaseAdapter } from './adapter.ts'
 

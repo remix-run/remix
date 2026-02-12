@@ -2,7 +2,7 @@ import { after, before, describe } from 'node:test'
 import BetterSqlite3, { type Database as BetterSqliteDatabase } from 'better-sqlite3'
 import { createDatabase } from '@remix-run/data-table'
 
-import { runAdapterIntegrationContract } from '../../../data-table/test-support/adapter-integration-contract.ts'
+import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
 
 import { createSqliteDatabaseAdapter } from './adapter.ts'
 

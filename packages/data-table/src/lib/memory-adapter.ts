@@ -6,7 +6,7 @@ import type {
   SelectColumn,
   TransactionToken,
 } from './adapter.ts'
-import type { AnyTable } from './model.ts'
+import type { AnyTable } from './table.ts'
 import type { Predicate } from './operators.ts'
 
 export type MemoryDatabaseSeed = Record<string, Record<string, unknown>[]>

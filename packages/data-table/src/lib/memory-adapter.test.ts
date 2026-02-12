@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { number, string, boolean } from '@remix-run/data-schema'
 
-import { createTable } from './model.ts'
+import { createTable } from './table.ts'
 import { eq } from './operators.ts'
 import { MemoryDatabaseAdapter } from './memory-adapter.ts'
 
