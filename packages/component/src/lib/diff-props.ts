@@ -147,10 +147,7 @@ function camelToKebab(input: string): string {
     .toLowerCase()
 }
 
-function clearRuntimePropertyOnRemoval(
-  dom: Element & Record<string, unknown>,
-  name: string,
-): void {
+function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, name: string): void {
   try {
     if (name === 'value' || name === 'defaultValue') {
       dom[name] = ''
