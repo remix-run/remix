@@ -1,39 +1,33 @@
 # data-table
 
-`data-table` is a relational data toolkit for JavaScript runtimes. It gives you a single query API that works across PostgreSQL, MySQL, and SQLite.
-
-If you want Drizzle/ActiveRecord-style ergonomics with explicit schemas, typed relations, and predictable runtime behavior across adapters, this package is designed for that.
+Relational query toolkit for JavaScript runtimes. `data-table` gives you one typed API for
+PostgreSQL, MySQL, and SQLite adapters.
 
 ## Features
 
-- **One API across databases**: same query builder and relation API across adapters
-- **Type-safe reads**: typed `select`, typed relation loading, typed predicate keys
-- **Validated writes and filters**: values are parsed with your `remix/data-schema` definitions
-- **Relation-first querying**: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`, nested eager loading
-- **Safe write behavior**: scoped `update`/`delete` with `orderBy`/`limit` execute safely in a transaction
-- **Escape hatch included**: execute raw SQL when needed with `db.exec(sql\`...\`)`
+- **One API Across Databases**: Same query and relation APIs across adapters
+- **Type-Safe Reads**: Typed `select`, relation loading, and predicate keys
+- **Validated Writes and Filters**: Values are parsed with your `remix/data-schema` definitions
+- **Relation-First Queries**: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`, and nested eager loading
+- **Safe Scoped Writes**: `update`/`delete` with `orderBy`/`limit` run safely in a transaction
+- **Raw SQL Escape Hatch**: Execute SQL directly with `db.exec(sql\`...\`)`
 
 ## Installation
 
-Install Remix + your database driver of choice:
+Install Remix and a database driver:
 
 ```sh
-pnpm add remix
-# and one or more drivers
-pnpm add pg
+npm i remix
+npm i pg
 # or
-pnpm add mysql2
+npm i mysql2
 # or
-pnpm add better-sqlite3
+npm i better-sqlite3
 ```
 
 ## Usage
 
-The core flow is:
-
-1. Define tables and relations once
-2. Create a database with an adapter
-3. Query and write using one consistent API
+Define your tables and relations once, then query through an adapter-backed database.
 
 ```ts
 import * as s from 'remix/data-schema'
@@ -96,15 +90,9 @@ await db
 // accounts[0].projects and accounts[0].projects[0].tasks are typed
 ```
 
-Why this matters in practice:
-
-- You can move between adapters without rewriting query code
-- Relation loading is explicit and typed, which makes refactors safer
-- Invalid write/filter values fail early with useful validation errors
-
 ## Advanced Usage
 
-### Connect With Different Adapters
+### Adapter Setup
 
 `data-table` ships with support for the following databases:
 
@@ -120,12 +108,14 @@ import { createDatabase } from 'remix/data-table'
 import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
 let sqlite = new Database(':memory:')
-sqlite.exec('create table accounts (id integer primary key, email text not null, status text not null)')
+sqlite.exec(
+  'create table accounts (id integer primary key, email text not null, status text not null)',
+)
 
 let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
 ```
 
-### Query Composition (Join, Select, Grouping)
+### Query Composition
 
 ```ts
 import { eq } from 'remix/data-table'
@@ -143,9 +133,10 @@ let rows = await db
   .all()
 ```
 
-### Scoped Writes With `orderBy`/`limit`/`offset`
+### Scoped Writes
 
-When you scope `update`/`delete` with ordering/limits, `data-table` first resolves the targeted primary keys and then applies the write inside a transaction.
+When you scope `update`/`delete` with ordering or limits, `data-table` first resolves target
+primary keys, then applies the write in a transaction.
 
 ```ts
 await db

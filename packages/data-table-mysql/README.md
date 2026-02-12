@@ -1,14 +1,13 @@
 # data-table-mysql
 
-`data-table-mysql` is the MySQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table).
-
-Use this when you want one relational query API across environments while running on MySQL (`mysql2`).
+MySQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table).
+Use this package when you want `data-table` APIs backed by `mysql2`.
 
 ## Features
 
-- **MySQL integration** via `mysql2`
-- **Works with `remix/data-table`** query, relation loading, writes, and transactions APIs
-- **Predictable capability defaults**:
+- **Native `mysql2` Integration**: Works with `mysql2/promise` connection pools
+- **Full `data-table` API Support**: Queries, relations, writes, and transactions
+- **MySQL Capabilities Enabled By Default**:
   - `returning: false`
   - `savepoints: true`
   - `upsert: true`
@@ -16,7 +15,7 @@ Use this when you want one relational query API across environments while runnin
 ## Installation
 
 ```sh
-pnpm add remix mysql2
+npm i remix mysql2
 ```
 
 ## Usage
@@ -30,14 +29,22 @@ let pool = createPool(process.env.DATABASE_URL as string)
 let db = createDatabase(createMysqlDatabaseAdapter(pool))
 ```
 
-Once connected, use `db.query(...)`, relation APIs, and transaction APIs from `remix/data-table`.
+Use `db.query(...)`, relation loading, and transactions from `remix/data-table`.
+
+## Adapter Capabilities
+
+`data-table-mysql` reports this capability set by default:
+
+- `returning: false`
+- `savepoints: true`
+- `upsert: true`
 
 ## Advanced Usage
 
 ### Capability Overrides For Testing
 
-Capability overrides are mainly for tests where you want to force or disable specific behavior checks.
-In production, keep the defaults so adapter capabilities match actual MySQL behavior.
+Capability overrides are mainly for tests where you want to force or disable specific behavior
+checks. In production, keep defaults so adapter behavior matches MySQL behavior.
 
 ```ts
 import { createMysqlDatabaseAdapter } from 'remix/data-table-mysql'
@@ -51,15 +58,19 @@ let adapter = createMysqlDatabaseAdapter(pool, {
 
 ### `returning` On MySQL
 
-MySQL does not natively support SQL `RETURNING`. In this adapter, `returning` on write operations throws `DataTableQueryError`.
+MySQL does not natively support SQL `RETURNING`. In this adapter, using `returning` on write
+operations throws `DataTableQueryError`.
 
-Use write metadata (`affectedRows`, `insertId`) on MySQL, or switch to an adapter with native `RETURNING` support when returned rows are required.
+Use write metadata (`affectedRows`, `insertId`) on MySQL, or switch adapters when returned rows
+are required.
 
 ```ts
 import { DataTableQueryError } from 'remix/data-table'
 
 try {
-  await db.query(Accounts).insert({ email: 'a@example.com', status: 'active' }, { returning: ['id'] })
+  await db
+    .query(Accounts)
+    .insert({ email: 'a@example.com', status: 'active' }, { returning: ['id'] })
 } catch (error) {
   if (error instanceof DataTableQueryError) {
     // insert() returning is not supported by this adapter

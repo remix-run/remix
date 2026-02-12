@@ -1,14 +1,13 @@
 # data-table-postgres
 
-`data-table-postgres` is the PostgreSQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table).
-
-Use this when you want the `data-table` query API on top of `pg` with native PostgreSQL behavior for `RETURNING`, savepoints, and upsert.
+PostgreSQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table).
+Use this package when you want `data-table` APIs backed by `pg`.
 
 ## Features
 
-- **Native PostgreSQL integration** via `pg`
-- **Works with `remix/data-table`** query, relations, writes, and transactions APIs
-- **Native capabilities enabled by default**:
+- **Native `pg` Integration**: Works with `Pool` and Postgres connection strings
+- **Full `data-table` API Support**: Queries, relations, writes, and transactions
+- **Postgres Capabilities Enabled By Default**:
   - `returning: true`
   - `savepoints: true`
   - `upsert: true`
@@ -16,7 +15,7 @@ Use this when you want the `data-table` query API on top of `pg` with native Pos
 ## Installation
 
 ```sh
-pnpm add remix pg
+npm i remix pg
 ```
 
 ## Usage
@@ -33,22 +32,27 @@ let pool = new Pool({
 let db = createDatabase(createPostgresDatabaseAdapter(pool))
 ```
 
-Once connected, use `db.query(...)`, relations, and transactions from `remix/data-table` exactly as documented in the core package.
+Use `db.query(...)`, relation loading, and transactions from `remix/data-table`.
+
+## Adapter Capabilities
+
+`data-table-postgres` reports this capability set by default:
+
+- `returning: true`
+- `savepoints: true`
+- `upsert: true`
 
 ## Advanced Usage
 
 ### Transaction Options
 
-Transaction options are passed through to the adapter as hints:
+Transaction options are passed through to the adapter as hints.
 
 ```ts
-await db.transaction(
-  async (transactionDatabase) => transactionDatabase.exec('select 1'),
-  {
-    isolationLevel: 'serializable',
-    readOnly: false,
-  },
-)
+await db.transaction(async (txDb) => txDb.exec('select 1'), {
+  isolationLevel: 'serializable',
+  readOnly: false,
+})
 ```
 
 ### Capability Overrides For Testing
