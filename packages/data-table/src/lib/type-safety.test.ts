@@ -1,11 +1,12 @@
 import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import { afterEach, describe, it } from 'node:test'
 import { boolean, number, string } from '@remix-run/data-schema'
 
 import { createDatabase } from './database.ts'
-import { MemoryDatabaseAdapter } from './memory-adapter.ts'
 import { createTable } from './table.ts'
 import { eq } from './operators.ts'
+import type { SqliteTestSeed } from '../../test/sqlite-test-database.ts'
+import { createSqliteTestAdapter } from '../../test/sqlite-test-database.ts'
 
 type Equal<left, right> =
   (<value>() => value extends left ? 1 : 2) extends <value>() => value extends right ? 1 : 2
@@ -34,10 +35,20 @@ let Projects = createTable({
 
 let AccountProjects = Accounts.hasMany(Projects)
 
+let cleanups = new Set<() => void>()
+
+afterEach(() => {
+  for (let cleanup of cleanups) {
+    cleanup()
+  }
+
+  cleanups.clear()
+})
+
 describe('type safety', () => {
   it('narrows select() result types while preserving relation types', async () => {
     let db = createDatabase(
-      new MemoryDatabaseAdapter({
+      createAdapter({
         accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
         projects: [{ id: 100, account_id: 1, archived: false }],
       }),
@@ -48,7 +59,7 @@ describe('type safety', () => {
     assert.equal(rows.length, 1)
     assert.equal(rows[0].id, 1)
     assert.equal(rows[0].projects.length, 1)
-    assert.equal(rows[0].projects[0].archived, false)
+    assert.equal(Boolean(rows[0].projects[0].archived), false)
     assert.deepEqual(Object.keys(rows[0]).sort(), ['id', 'projects'])
 
     type Row = (typeof rows)[number]
@@ -63,7 +74,7 @@ describe('type safety', () => {
 
   it('supports typed alias select() and joined order/group columns', async () => {
     let db = createDatabase(
-      new MemoryDatabaseAdapter({
+      createAdapter({
         accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
         projects: [{ id: 100, account_id: 1, archived: false }],
       }),
@@ -82,12 +93,10 @@ describe('type safety', () => {
       .all()
 
     assert.equal(rows.length, 1)
-    assert.deepEqual(rows[0], {
-      accountId: 1,
-      accountEmail: 'a@example.com',
-      projectId: 100,
-      projectArchived: false,
-    })
+    assert.equal(rows[0].accountId, 1)
+    assert.equal(rows[0].accountEmail, 'a@example.com')
+    assert.equal(rows[0].projectId, 100)
+    assert.equal(Boolean(rows[0].projectArchived), false)
 
     let groupedCount = await db
       .query(Accounts)
@@ -120,15 +129,16 @@ describe('type safety', () => {
   })
 
   it('enforces typed keys for where/having/join/relation filters while running real queries', async () => {
-    let adapter = new MemoryDatabaseAdapter({
-      accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
-      projects: [{ id: 100, account_id: 1, archived: false }],
-    })
-    let db = createDatabase(adapter)
+    let db = createDatabase(
+      createAdapter({
+        accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
+        projects: [{ id: 100, account_id: 1, archived: false }],
+      }),
+    )
 
     let filtered = await db.query(Accounts).where({ status: 'active' }).all()
-    await db.query(Accounts).groupBy('status').having({ status: 'active' }).count()
-    await db
+    let groupedCount = await db.query(Accounts).groupBy('status').having({ status: 'active' }).count()
+    let joined = await db
       .query(Accounts)
       .join(Projects, eq('accounts.id', 'projects.account_id'))
       .where(eq('projects.archived', false))
@@ -139,21 +149,9 @@ describe('type safety', () => {
       .all()
 
     assert.equal(filtered.length, 1)
+    assert.equal(groupedCount, 1)
+    assert.equal(joined.length, 1)
     assert.equal(withRelations[0].projects.length, 1)
-
-    let havingStatement = adapter.statements[1]?.statement
-    assert.equal(havingStatement?.kind, 'count')
-    if (havingStatement?.kind === 'count') {
-      assert.equal(havingStatement.having.length, 1)
-      assert.deepEqual(havingStatement.groupBy, ['status'])
-    }
-
-    let joinStatement = adapter.statements[2]?.statement
-    assert.equal(joinStatement?.kind, 'select')
-    if (joinStatement?.kind === 'select') {
-      assert.equal(joinStatement.joins.length, 1)
-      assert.equal(joinStatement.where.length, 1)
-    }
 
     function verifyTypeErrors(): void {
       // @ts-expect-error unknown predicate key
@@ -171,3 +169,9 @@ describe('type safety', () => {
     void verifyTypeErrors
   })
 })
+
+function createAdapter(seed: SqliteTestSeed = {}) {
+  let { adapter, close } = createSqliteTestAdapter(seed)
+  cleanups.add(close)
+  return adapter
+}

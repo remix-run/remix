@@ -1,6 +1,6 @@
 # data-table
 
-`data-table` is a relational data toolkit for JavaScript runtimes. It gives you a single query API that works across PostgreSQL, MySQL, SQLite, and an in-memory adapter for tests.
+`data-table` is a relational data toolkit for JavaScript runtimes. It gives you a single query API that works across PostgreSQL, MySQL, and SQLite.
 
 If you want Drizzle/ActiveRecord-style ergonomics with explicit schemas, typed relations, and predictable runtime behavior across adapters, this package is designed for that.
 
@@ -112,16 +112,17 @@ Why this matters in practice:
 - [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL adapter
 - [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite adapter
 
-It also ships with an in-memory adapter useful in testing and development.
+For tests, you can use a SQLite in-memory database.
 
 ```ts
-import { createDatabase, createMemoryDatabaseAdapter } from 'remix/data-table'
+import Database from 'better-sqlite3'
+import { createDatabase } from 'remix/data-table'
+import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
-let db = createDatabase(
-  createMemoryDatabaseAdapter({
-    accounts: [{ id: 1, email: 'owner@example.com', status: 'active' }],
-  }),
-)
+let sqlite = new Database(':memory:')
+sqlite.exec('create table accounts (id integer primary key, email text not null, status text not null)')
+
+let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
 ```
 
 ### Query Composition (Join, Select, Grouping)

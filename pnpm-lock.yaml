@@ -346,12 +346,18 @@ importers:
         specifier: workspace:^
         version: link:../data-schema
     devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      better-sqlite3:
+        specifier: ^12.4.1
+        version: 12.6.2
 
   packages/data-table-mysql:
     dependencies:

@@ -64,6 +64,3 @@ export { rawSql, sql } from './lib/sql.ts'
 
 export type { Database, WriteResult, WriteRowResult, WriteRowsResult } from './lib/database.ts'
 export { createDatabase, QueryBuilder } from './lib/database.ts'
-
-export type { MemoryAdapterOptions, MemoryDatabaseSeed } from './lib/memory-adapter.ts'
-export { createMemoryDatabaseAdapter, MemoryDatabaseAdapter } from './lib/memory-adapter.ts'

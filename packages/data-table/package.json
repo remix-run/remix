@@ -21,7 +21,6 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./memory-adapter": "./src/memory-adapter.ts",
     "./operators": "./src/operators.ts",
     "./sql": "./src/sql.ts",
     "./package.json": "./package.json"
@@ -31,10 +30,6 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      },
-      "./memory-adapter": {
-        "types": "./dist/memory-adapter.d.ts",
-        "default": "./dist/memory-adapter.js"
       },
       "./operators": {
         "types": "./dist/operators.d.ts",
@@ -49,8 +44,10 @@
   },
   "devDependencies": {
     "@remix-run/data-schema": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native-preview": "catalog:",
+    "better-sqlite3": "^12.4.1"
   },
   "dependencies": {
     "@remix-run/data-schema": "workspace:^"

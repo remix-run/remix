@@ -1,14 +1,15 @@
 import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import { afterEach, describe, it } from 'node:test'
 import { boolean, number, string } from '@remix-run/data-schema'
 
 import type { DatabaseAdapter } from './adapter.ts'
 import { createDatabase } from './database.ts'
 import { DataTableAdapterError, DataTableQueryError, DataTableValidationError } from './errors.ts'
-import { MemoryDatabaseAdapter } from './memory-adapter.ts'
 import { createTable, timestamps } from './table.ts'
 import { eq } from './operators.ts'
 import { sql } from './sql.ts'
+import type { SqliteTestAdapterOptions, SqliteTestSeed } from '../../test/sqlite-test-database.ts'
+import { createSqliteTestAdapter } from '../../test/sqlite-test-database.ts'
 
 let Accounts = createTable({
   name: 'accounts',
@@ -67,9 +68,19 @@ let AccountTasks = Accounts.hasManyThrough(Tasks, {
   through: AccountProjects,
 })
 
+let cleanups = new Set<() => void>()
+
+afterEach(() => {
+  for (let cleanup of cleanups) {
+    cleanup()
+  }
+
+  cleanups.clear()
+})
+
 describe('query builder', () => {
   it('is immutable and supports eager hasMany loading', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [
         { id: 1, email: 'amy@studio.test', status: 'active' },
         { id: 2, email: 'brad@studio.test', status: 'inactive' },
@@ -83,7 +94,7 @@ describe('query builder', () => {
       memberships: [],
     })
 
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
     let archivedExcludedProjects = AccountProjects.where({ archived: false }).orderBy('id', 'asc')
 
     let allAccountsQuery = db.query(Accounts)
@@ -102,7 +113,7 @@ describe('query builder', () => {
   })
 
   it('supports hasManyThrough loading', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [
         { id: 1, email: 'amy@studio.test', status: 'active' },
         { id: 2, email: 'brad@studio.test', status: 'active' },
@@ -121,7 +132,7 @@ describe('query builder', () => {
       memberships: [],
     })
 
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
     let openTasks = AccountTasks.where({ state: 'open' }).orderBy('id', 'asc')
 
     let accounts = await db.query(Accounts).orderBy('id', 'asc').with({ tasks: openTasks }).all()
@@ -134,7 +145,7 @@ describe('query builder', () => {
   })
 
   it('applies hasMany relation limit/offset per parent row', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [
         { id: 1, email: 'amy@studio.test', status: 'active' },
         { id: 2, email: 'brad@studio.test', status: 'active' },
@@ -149,7 +160,7 @@ describe('query builder', () => {
       memberships: [],
     })
 
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     let firstProjectPerAccount = await db
       .query(Accounts)
@@ -179,7 +190,7 @@ describe('query builder', () => {
   })
 
   it('applies hasManyThrough relation pagination per parent row', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [
         { id: 1, email: 'amy@studio.test', status: 'active' },
         { id: 2, email: 'brad@studio.test', status: 'active' },
@@ -199,7 +210,7 @@ describe('query builder', () => {
       memberships: [],
     })
 
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     let firstTaskPerAccount = await db
       .query(Accounts)
@@ -229,7 +240,7 @@ describe('query builder', () => {
   })
 
   it('applies hasManyThrough through-relation pagination per parent row', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [
         { id: 1, email: 'amy@studio.test', status: 'active' },
         { id: 2, email: 'brad@studio.test', status: 'active' },
@@ -249,7 +260,7 @@ describe('query builder', () => {
       memberships: [],
     })
 
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
     let firstProjectPerAccount = AccountProjects.orderBy('id', 'asc').limit(1)
     let tasksThroughFirstProject = Accounts.hasManyThrough(Tasks, {
       through: firstProjectPerAccount,
@@ -264,7 +275,7 @@ describe('query builder', () => {
   })
 
   it('supports composite primary keys in find()', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [],
       projects: [],
       tasks: [],
@@ -274,43 +285,42 @@ describe('query builder', () => {
       ],
     })
 
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
     let membership = await db.query(Memberships).find({ organization_id: 9, account_id: 2 })
 
     assert.ok(membership)
     assert.equal(membership.role, 'member')
   })
 
-  it('passes join/groupBy/having to adapter statements', async () => {
-    let adapter = new MemoryDatabaseAdapter({
-      accounts: [{ id: 1, email: 'amy@studio.test', status: 'active' }],
-      projects: [{ id: 100, account_id: 1, name: 'Campaign', archived: false }],
+  it('supports join/groupBy/having with count()', async () => {
+    let adapter = createAdapter({
+      accounts: [
+        { id: 1, email: 'amy@studio.test', status: 'active' },
+        { id: 2, email: 'brad@studio.test', status: 'inactive' },
+      ],
+      projects: [
+        { id: 100, account_id: 1, name: 'Campaign', archived: false },
+        { id: 101, account_id: 2, name: 'Legacy', archived: false },
+      ],
       profiles: [],
       tasks: [],
       memberships: [],
     })
 
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
-    await db
+    let count = await db
       .query(Accounts)
       .join(Projects, eq('archived', false))
       .groupBy('status')
       .having({ status: 'active' })
       .count()
 
-    let request = adapter.statements[0]
-    assert.equal(request.statement.kind, 'count')
-
-    if (request.statement.kind === 'count') {
-      assert.equal(request.statement.joins.length, 1)
-      assert.deepEqual(request.statement.groupBy, ['status'])
-      assert.equal(request.statement.having.length, 1)
-    }
+    assert.equal(count, 1)
   })
 
   it('supports alias object selection across joined tables', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [{ id: 1, email: 'amy@studio.test', status: 'active' }],
       projects: [{ id: 100, account_id: 1, name: 'Campaign', archived: false }],
       profiles: [],
@@ -318,7 +328,7 @@ describe('query builder', () => {
       memberships: [],
     })
 
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     let rows = await db
       .query(Accounts)
@@ -343,7 +353,7 @@ describe('query builder', () => {
   })
 
   it('supports count() and exists()', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [
         { id: 1, email: 'amy@studio.test', status: 'active' },
         { id: 2, email: 'brad@studio.test', status: 'inactive' },
@@ -353,7 +363,7 @@ describe('query builder', () => {
       tasks: [],
       memberships: [],
     })
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     let activeCount = await db.query(Accounts).where({ status: 'active' }).count()
     let hasInactive = await db.query(Accounts).where({ status: 'inactive' }).exists()
@@ -365,14 +375,14 @@ describe('query builder', () => {
   })
 
   it('supports eager loading for hasOne and belongsTo', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [{ id: 1, email: 'amy@studio.test', status: 'active' }],
       projects: [{ id: 100, account_id: 1, name: 'Campaign', archived: false }],
       profiles: [{ id: 10, account_id: 1, display_name: 'Amy' }],
       tasks: [],
       memberships: [],
     })
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     let accounts = await db.query(Accounts).with({ profile: AccountProfile }).all()
     let projects = await db.query(Projects).with({ account: ProjectAccount }).all()
@@ -386,13 +396,13 @@ describe('query builder', () => {
 
 describe('writes and validation', () => {
   it('validates values and applies timestamps', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [],
       projects: [],
       tasks: [],
       memberships: [],
     })
-    let createdAt = new Date('2026-01-15T10:00:00.000Z')
+    let createdAt = '2026-01-15T10:00:00.000Z'
     let db = createDatabase(adapter, {
       now() {
         return createdAt
@@ -415,7 +425,8 @@ describe('writes and validation', () => {
       assert.fail('Expected row in insert result')
     }
 
-    let savedAccount = adapter.snapshot('accounts')[0]
+    let savedAccount = await db.query(Accounts).find(10)
+    assert.ok(savedAccount)
     assert.deepEqual(savedAccount.created_at, createdAt)
     assert.deepEqual(savedAccount.updated_at, createdAt)
 
@@ -432,7 +443,7 @@ describe('writes and validation', () => {
   })
 
   it('throws for update returning when adapter has no RETURNING support', async () => {
-    let adapter = new MemoryDatabaseAdapter(
+    let adapter = createAdapter(
       {
         accounts: [
           { id: 1, email: 'amy@studio.test', status: 'active' },
@@ -445,7 +456,7 @@ describe('writes and validation', () => {
       },
       { returning: false },
     )
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     await assert.rejects(
       async () => {
@@ -463,7 +474,7 @@ describe('writes and validation', () => {
   })
 
   it('throws for delete returning when adapter has no RETURNING support', async () => {
-    let adapter = new MemoryDatabaseAdapter(
+    let adapter = createAdapter(
       {
         accounts: [
           { id: 1, email: 'amy@studio.test', status: 'active' },
@@ -477,7 +488,7 @@ describe('writes and validation', () => {
       },
       { returning: false },
     )
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     await assert.rejects(
       async () => {
@@ -495,7 +506,7 @@ describe('writes and validation', () => {
   })
 
   it('throws for write returning when adapter has no RETURNING support', async () => {
-    let adapter = new MemoryDatabaseAdapter(
+    let adapter = createAdapter(
       {
         accounts: [{ id: 1, email: 'founder@studio.test', status: 'active' }],
         projects: [],
@@ -506,7 +517,7 @@ describe('writes and validation', () => {
       { returning: false },
     )
 
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     await assert.rejects(
       async () => {
@@ -557,14 +568,14 @@ describe('writes and validation', () => {
   })
 
   it('supports insertMany() and delete() returning with RETURNING adapters', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [],
       projects: [],
       profiles: [],
       tasks: [],
       memberships: [],
     })
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     let inserted = await db.query(Accounts).insertMany(
       [
@@ -584,14 +595,14 @@ describe('writes and validation', () => {
   })
 
   it('supports upsert() and conflictTarget', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [{ id: 1, email: 'a@studio.test', status: 'active' }],
       projects: [],
       profiles: [],
       tasks: [],
       memberships: [],
     })
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     let result = await db.query(Accounts).upsert(
       { id: 1, email: 'a@studio.test', status: 'inactive' },
@@ -605,7 +616,7 @@ describe('writes and validation', () => {
   })
 
   it('throws for upsert() when adapter does not support it', async () => {
-    let adapter = new MemoryDatabaseAdapter(
+    let adapter = createAdapter(
       {
         accounts: [],
         projects: [],
@@ -615,7 +626,7 @@ describe('writes and validation', () => {
       },
       { upsert: false },
     )
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     await assert.rejects(
       async function () {
@@ -630,14 +641,14 @@ describe('writes and validation', () => {
   })
 
   it('throws when read-only query modifiers are used with write terminals', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [{ id: 1, email: 'a@studio.test', status: 'active' }],
       projects: [{ id: 10, account_id: 1, name: 'Alpha', archived: false }],
       profiles: [],
       tasks: [],
       memberships: [],
     })
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     await assert.rejects(
       async function () {
@@ -683,14 +694,14 @@ describe('writes and validation', () => {
   })
 
   it('throws when scoped query modifiers are used with insert-like terminals', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [{ id: 1, email: 'a@studio.test', status: 'active' }],
       projects: [],
       profiles: [],
       tasks: [],
       memberships: [],
     })
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     await assert.rejects(
       async function () {
@@ -741,14 +752,14 @@ describe('writes and validation', () => {
   })
 
   it('validates filter values against column schemas at runtime', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [{ id: 1, email: 'a@studio.test', status: 'active' }],
       projects: [{ id: 100, account_id: 1, name: 'Alpha', archived: false }],
       profiles: [],
       tasks: [],
       memberships: [],
     })
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     await assert.rejects(
       async function () {
@@ -793,14 +804,14 @@ describe('writes and validation', () => {
 
 describe('transactions and raw sql', () => {
   it('supports nested transactions using savepoints', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [{ id: 1, email: 'founder@studio.test', status: 'active' }],
       projects: [],
       profiles: [],
       tasks: [],
       memberships: [],
     })
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     await db.transaction(async (outerTransaction) => {
       await outerTransaction
@@ -818,28 +829,25 @@ describe('transactions and raw sql', () => {
         .catch(() => undefined)
     })
 
-    let rows = adapter.snapshot('accounts')
+    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
 
     assert.equal(rows.length, 2)
     assert.equal(rows[1].email, 'pm@studio.test')
-    assert.deepEqual(adapter.events, [
-      'begin:tx_1',
-      'savepoint:tx_1:sp_0',
-      'rollback-to-savepoint:tx_1:sp_0',
-      'release-savepoint:tx_1:sp_0',
-      'commit:tx_1',
-    ])
+    assert.deepEqual(
+      rows.map((row) => row.id),
+      [1, 2],
+    )
   })
 
   it('treats transaction options as best-effort adapter hints', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [{ id: 1, email: 'founder@studio.test', status: 'active' }],
       projects: [],
       profiles: [],
       tasks: [],
       memberships: [],
     })
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     await db.transaction(
       async (transactionDatabase) => {
@@ -853,47 +861,40 @@ describe('transactions and raw sql', () => {
       },
     )
 
-    let rows = adapter.snapshot('accounts')
+    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
     assert.equal(rows.length, 2)
     assert.equal(rows[0].id, 1)
     assert.equal(rows[0].email, 'founder@studio.test')
     assert.equal(rows[1].id, 2)
     assert.equal(rows[1].email, 'pm@studio.test')
     assert.equal(rows[1].status, 'active')
-    assert.deepEqual(adapter.events, ['begin:tx_1', 'commit:tx_1'])
   })
 
   it('routes raw sql through db.exec', async () => {
-    let adapter = new MemoryDatabaseAdapter({
-      accounts: [],
+    let adapter = createAdapter({
+      accounts: [{ id: 42, email: 'raw@studio.test', status: 'active' }],
       projects: [],
       profiles: [],
       tasks: [],
       memberships: [],
     })
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
-    await db.exec(sql`select * from accounts where id = ${42}`)
-
-    let request = adapter.statements[0]
-
-    assert.equal(request.statement.kind, 'raw')
-
-    if (request.statement.kind === 'raw') {
-      assert.equal(request.statement.sql.text, 'select * from accounts where id = ?')
-      assert.deepEqual(request.statement.sql.values, [42])
-    }
+    let result = await db.exec(sql`select * from accounts where id = ${42}`)
+    assert.ok(result.rows)
+    assert.equal(result.rows?.length, 1)
+    assert.equal(result.rows?.[0].id, 42)
   })
 
   it('rolls back outer transactions on errors', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [{ id: 1, email: 'founder@studio.test', status: 'active' }],
       projects: [],
       profiles: [],
       tasks: [],
       memberships: [],
     })
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     await db
       .transaction(async (transactionDatabase) => {
@@ -905,23 +906,23 @@ describe('transactions and raw sql', () => {
       })
       .catch(() => undefined)
 
-    assert.deepEqual(adapter.snapshot('accounts'), [
-      { id: 1, email: 'founder@studio.test', status: 'active' },
-    ])
-    assert.deepEqual(adapter.events, ['begin:tx_1', 'rollback:tx_1'])
+    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+    assert.deepEqual(
+      rows.map((row) => ({ id: row.id, email: row.email, status: row.status })),
+      [{ id: 1, email: 'founder@studio.test', status: 'active' }],
+    )
   })
 
   it('throws for nested transactions without savepoints', async () => {
-    let adapter = new MemoryDatabaseAdapter({
+    let adapter = createAdapter({
       accounts: [],
       projects: [],
       profiles: [],
       tasks: [],
       memberships: [],
-    })
-    adapter.capabilities.savepoints = false
+    }, { savepoints: false })
 
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     await assert.rejects(
       async function () {
@@ -961,7 +962,7 @@ describe('adapter errors', () => {
       async releaseSavepoint() {},
     }
 
-    let db = createDatabase(adapter)
+    let db = createTestDatabase(adapter)
 
     await assert.rejects(
       async function () {
@@ -982,3 +983,17 @@ describe('adapter errors', () => {
     )
   })
 })
+
+function createAdapter(seed: SqliteTestSeed = {}, options?: SqliteTestAdapterOptions): DatabaseAdapter {
+  let { adapter, close } = createSqliteTestAdapter(seed, options)
+  cleanups.add(close)
+  return adapter
+}
+
+function createTestDatabase(adapter: DatabaseAdapter) {
+  return createDatabase(adapter, {
+    now() {
+      return '2026-01-01T00:00:00.000Z'
+    },
+  })
+}
