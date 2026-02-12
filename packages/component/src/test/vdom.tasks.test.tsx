@@ -30,16 +30,16 @@ describe('vnode rendering', () => {
     expect(taskRan).toBe(true)
   })
 
-  it('runs task provided to render', () => {
+  it('handle.update() returns a promise that resolves with a signal', async () => {
     let container = document.createElement('div')
     let root = createRoot(container)
 
-    let taskRan = false
+    let capturedSignal: AbortSignal | undefined
     let capturedUpdate = () => {}
     function App(handle: Handle) {
       capturedUpdate = () => {
-        handle.update(() => {
-          taskRan = true
+        handle.update().then((signal) => {
+          capturedSignal = signal
         })
       }
 
@@ -48,11 +48,13 @@ describe('vnode rendering', () => {
 
     root.render(<App />)
     root.flush()
-    expect(taskRan).toBe(false)
+    expect(capturedSignal).toBe(undefined)
 
     capturedUpdate()
-    expect(taskRan).toBe(false)
+    expect(capturedSignal).toBe(undefined)
     root.flush()
-    expect(taskRan).toBe(true)
+    await Promise.resolve()
+    expect(capturedSignal).toBeInstanceOf(AbortSignal)
+    expect(capturedSignal?.aborted).toBe(false)
   })
 })

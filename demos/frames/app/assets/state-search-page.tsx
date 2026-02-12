@@ -13,9 +13,8 @@ export let StateSearchPage = clientEntry(moduleUrl, (handle: Handle, setup?: str
           async submit(event) {
             event.preventDefault()
             query = input.value.trim()
-            handle.update(() => {
-              input.select()
-            })
+            await handle.update()
+            input.select()
           },
         }}
         css={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}

@@ -344,7 +344,7 @@ function ResizeComponent(handle: Handle) {
 }
 
 // ============================================================================
-// handle.update(task) - Player
+// handle.update() - Player
 // ============================================================================
 function Player(handle: Handle) {
   let isPlaying = false
@@ -357,12 +357,11 @@ function Player(handle: Handle) {
         disabled={isPlaying}
         connect={(node) => (playButton = node)}
         on={{
-          click: () => {
+          async click() {
             isPlaying = true
-            handle.update(() => {
-              // Focus the enabled button after update completes
-              stopButton.focus()
-            })
+            await handle.update()
+            // Focus the enabled button after update completes
+            stopButton.focus()
           },
         }}
         css={{
@@ -376,12 +375,11 @@ function Player(handle: Handle) {
         disabled={!isPlaying}
         connect={(node) => (stopButton = node)}
         on={{
-          click: () => {
+          async click() {
             isPlaying = false
-            handle.update(() => {
-              // Focus the enabled button after update completes
-              playButton.focus()
-            })
+            await handle.update()
+            // Focus the enabled button after update completes
+            playButton.focus()
           },
         }}
         css={{
@@ -641,7 +639,7 @@ function DemoApp(handle: Handle) {
         <ResizeComponent />
       </Example>
 
-      <Example title="handle.update(task) - Player">
+      <Example title="handle.update() - Player">
         <Player />
       </Example>
 

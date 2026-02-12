@@ -18,11 +18,13 @@ export interface Handle<C = Record<string, never>> {
   context: Context<C>
 
   /**
-   * Schedules an update for the component to render again.
+   * Schedules an update for the component to render again. Returns a promise
+   * that resolves with an AbortSignal after the update completes. The signal
+   * is aborted when the component re-renders or is removed.
    *
-   * @param task A render task to run after the update completes
+   * @returns A promise that resolves with an AbortSignal after the update
    */
-  update(task?: Task): void
+  update(): Promise<AbortSignal>
 
   /**
    * Schedules a task to run after the next update.
@@ -193,7 +195,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
   }
 
   let getContent: null | ((props: ElementProps) => RemixNode) = null
-  let scheduleUpdate: (task?: Task) => void = () => {
+  let scheduleUpdate: () => void = () => {
     throw new Error('scheduleUpdate not implemented')
   }
 
@@ -206,10 +208,11 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
 
   let handle: Handle<C> = {
     id: config.id,
-    update: (task?: Task) => {
-      if (task) taskQueue.push(task)
-      scheduleUpdate()
-    },
+    update: () =>
+      new Promise((resolve) => {
+        taskQueue.push((signal) => resolve(signal))
+        scheduleUpdate()
+      }),
     queueTask: (task: Task) => {
       taskQueue.push(task)
     },
@@ -275,11 +278,12 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
   }
 
   function remove(): (() => void)[] {
-    if (connectedCtrl) connectedCtrl.abort()
+    connectedCtrl?.abort()
+    renderCtrl?.abort()
     return dequeueTasks()
   }
 
-  function setScheduleUpdate(_scheduleUpdate: (task?: Task) => void) {
+  function setScheduleUpdate(_scheduleUpdate: () => void) {
     scheduleUpdate = _scheduleUpdate
   }
 
