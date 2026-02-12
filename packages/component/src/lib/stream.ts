@@ -334,8 +334,8 @@ function buildFrameSegment(props: any, context: RenderContext, framePath: string
   let nonBlocking = !!props.fallback
   if (nonBlocking) {
     seg.content = buildSegment(props.fallback, context, framePath)
-    let framePromise = Promise.resolve(context.resolveFrame(props.src)).then(
-      async (resolved) => resolveFrameHtml(resolved),
+    let framePromise = Promise.resolve(context.resolveFrame(props.src)).then(async (resolved) =>
+      resolveFrameHtml(resolved),
     )
     context.pendingFrames.push({ frameId, promise: framePromise })
   } else {

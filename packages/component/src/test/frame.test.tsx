@@ -1836,7 +1836,9 @@ describe('run', () => {
 
     let clientResolveFrame = vi
       .fn()
-      .mockImplementation(async (src: string) => `<p data-client-resolve="${src}">client resolve ${src}</p>`)
+      .mockImplementation(
+        async (src: string) => `<p data-client-resolve="${src}">client resolve ${src}</p>`,
+      )
 
     let app = run(document, {
       loadModule(moduleUrl, exportName) {
