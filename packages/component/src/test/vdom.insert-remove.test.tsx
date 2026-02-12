@@ -83,18 +83,40 @@ describe('vnode rendering', () => {
       expect(container.innerHTML).toBe('<div></div>')
     })
 
-    it.skip('removes attributes', () => {
+    it('removes attributes', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       root.render(<input id="hello" value="world" />)
       let input = container.querySelector('input')
       expect(input).toBeInstanceOf(HTMLInputElement)
       expect((input as HTMLInputElement).value).toBe('world')
-      expect(container.innerHTML).toBe('<input id="hello">')
+      expect((input as HTMLInputElement).getAttribute('id')).toBe('hello')
       root.render(<input />)
       root.flush()
       expect((input as HTMLInputElement).value).toBe('')
-      expect(container.innerHTML).toBe('<input id="">') // FIXME: should be <input>
+      expect((input as HTMLInputElement).hasAttribute('id')).toBe(false)
+      expect((input as HTMLInputElement).hasAttribute('value')).toBe(false)
+    })
+
+    it('removes reflected attributes without leaving empty values', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <div id="hello" className="world">
+          content
+        </div>,
+      )
+
+      let div = container.querySelector('div')
+      expect(div).toBeInstanceOf(HTMLDivElement)
+      expect((div as HTMLDivElement).getAttribute('id')).toBe('hello')
+      expect((div as HTMLDivElement).getAttribute('class')).toBe('world')
+
+      root.render(<div>content</div>)
+      root.flush()
+
+      expect((div as HTMLDivElement).hasAttribute('id')).toBe(false)
+      expect((div as HTMLDivElement).hasAttribute('class')).toBe(false)
     })
 
     it('removes a fragment', () => {
