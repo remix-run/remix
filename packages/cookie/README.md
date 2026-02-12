@@ -1,8 +1,6 @@
 # cookie
 
-Simplify HTTP cookie management in JavaScript with type-safe, secure cookie handling. `@remix-run/cookie` provides a clean, intuitive API for creating, parsing, and serializing HTTP cookies with built-in support for signing, secret rotation, and comprehensive cookie attribute management.
-
-HTTP cookies are essential for web applications, from session management and user preferences to authentication tokens and tracking. While the standard cookie parsing libraries provide basic functionality, they often leave complex scenarios like secure signing, secret rotation, and type-safe value handling up to you.
+Type-safe cookie parsing and serialization for Remix. It supports secure signing, secret rotation, and complete cookie attribute control.
 
 ## Features
 
@@ -13,13 +11,13 @@ HTTP cookies are essential for web applications, from session management and use
 ## Installation
 
 ```sh
-npm install @remix-run/cookie
+npm i remix
 ```
 
 ## Usage
 
 ```tsx
-import { createCookie } from '@remix-run/cookie'
+import { createCookie } from 'remix/cookie'
 
 let sessionCookie = createCookie('session', {
   httpOnly: true,
@@ -50,7 +48,7 @@ This library supports signing cookies, which is useful for ensuring the integrit
 Secret rotation is also supported, so you can easily rotate in new secrets without breaking existing cookies.
 
 ```tsx
-import { Cookie } from '@remix-run/cookie'
+import { Cookie } from 'remix/cookie'
 
 // Start with a single secret
 let sessionCookie = createCookie('session', {

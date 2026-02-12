@@ -9,8 +9,8 @@ This guide provides a comprehensive overview of the Remix Component API, its run
 To start using Remix Component, create a root and render your top-level component:
 
 ```tsx
-import { createRoot } from '@remix-run/component'
-import type { Handle } from '@remix-run/component'
+import { createRoot } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 function App(handle: Handle) {
   return () => (
@@ -1420,7 +1420,7 @@ function ThemedContent(handle: Handle) {
 For better performance, use `TypedEventTarget` to avoid updating the entire subtree:
 
 ```tsx
-import { TypedEventTarget } from '@remix-run/interaction'
+import { TypedEventTarget } from 'remix/interaction'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
   #value: 'light' | 'dark' = 'light'
@@ -1525,7 +1525,7 @@ function Analytics(handle: Handle, setup: { apiKey: string }) {
 #### EventEmitters
 
 ```tsx
-import { TypedEventTarget } from '@remix-run/interaction'
+import { TypedEventTarget } from 'remix/interaction'
 
 class DataEvent extends Event {
   constructor(public value: string) {

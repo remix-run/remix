@@ -118,9 +118,7 @@ describe('formData middleware', () => {
       middleware: [formData()],
     })
 
-    router.post('/', (context) => {
-      return Response.json(context.formData)
-    })
+    router.post('/', (context) => Response.json(context.formData))
 
     await assert.rejects(async () => {
       await router.fetch('https://remix.run/', {
@@ -160,14 +158,14 @@ describe('formData middleware', () => {
       middleware: [formData({ suppressErrors: true })],
     })
 
-    router.post('/', (context) => {
+    router.post('/', (context) =>
       // Explicitly check that formData is defined and is a FormData instance
-      return Response.json({
+      Response.json({
         isDefined: context.formData !== undefined,
         isFormData: context.formData instanceof FormData,
         isEmpty: context.formData.entries().next().done,
-      })
-    })
+      }),
+    )
 
     let response = await router.fetch('https://remix.run/', {
       method: 'POST',
@@ -192,9 +190,7 @@ describe('formData middleware', () => {
       middleware: [formData({ uploadHandler })],
     })
 
-    router.post('/', () => {
-      return new Response('home')
-    })
+    router.post('/', () => new Response('home'))
 
     let boundary = '----WebKitFormBoundary1234567890'
     let response = await router.fetch('https://remix.run/', {

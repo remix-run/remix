@@ -5,7 +5,7 @@ A generator-based tween function for animating values over time with cubic bezie
 ## Basic Usage
 
 ```tsx
-import { tween, easings } from '@remix-run/component'
+import { tween, easings } from 'remix/component'
 
 let animation = tween({
   from: 0,
@@ -41,7 +41,7 @@ The generator uses cubic bezier curves to map linear time progress to eased valu
 Built-in easing curves matching CSS timing functions:
 
 ```tsx
-import { easings } from '@remix-run/component'
+import { easings } from 'remix/component'
 
 easings.linear // { x1: 0, y1: 0, x2: 1, y2: 1 }
 easings.ease // { x1: 0.25, y1: 0.1, x2: 0.25, y2: 1 }

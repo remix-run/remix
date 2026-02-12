@@ -10,9 +10,7 @@ import { createRequest, createRequestListener } from './request-listener.ts'
 describe('createRequestListener', () => {
   it('returns a request listener', async () => {
     await new Promise<void>((resolve) => {
-      let handler: FetchHandler = async () => {
-        return new Response('Hello, world!')
-      }
+      let handler: FetchHandler = async () => new Response('Hello, world!')
 
       let listener = createRequestListener(handler)
       assert.ok(listener)
@@ -37,8 +35,8 @@ describe('createRequestListener', () => {
 
   it('returns custom status, statusText, and header values (HTTP/1)', async () => {
     await new Promise<void>((resolve) => {
-      let handler: FetchHandler = async () => {
-        return new Response('Hello, world!', {
+      let handler: FetchHandler = async () =>
+        new Response('Hello, world!', {
           status: 201,
           statusText: 'Created!',
           headers: {
@@ -46,7 +44,6 @@ describe('createRequestListener', () => {
             'x-b': 'B',
           },
         })
-      }
 
       let listener = createRequestListener(handler)
       assert.ok(listener)
@@ -74,8 +71,8 @@ describe('createRequestListener', () => {
 
   it('returns custom status, statusText, and header values (HTTP/2)', async () => {
     await new Promise<void>((resolve) => {
-      let handler: FetchHandler = async () => {
-        return new Response('Hello, world!', {
+      let handler: FetchHandler = async () =>
+        new Response('Hello, world!', {
           status: 201,
           statusText: 'Created!',
           headers: {
@@ -83,7 +80,6 @@ describe('createRequestListener', () => {
             'x-b': 'B',
           },
         })
-      }
 
       let listener = createRequestListener(handler)
       assert.ok(listener)
@@ -278,9 +274,7 @@ describe('createRequestListener', () => {
 
   it('truncates the response body when the request method is HEAD', async () => {
     await new Promise<void>((resolve) => {
-      let handler: FetchHandler = async () => {
-        return new Response('Hello, world!')
-      }
+      let handler: FetchHandler = async () => new Response('Hello, world!')
 
       let listener = createRequestListener(handler)
       assert.ok(listener)

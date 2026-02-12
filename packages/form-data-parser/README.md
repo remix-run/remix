@@ -26,10 +26,8 @@ For attackers, this creates an attack vector where malicious actors can overwhel
 
 ## Installation
 
-Install from [npm](https://www.npmjs.com/):
-
 ```sh
-npm install @remix-run/form-data-parser
+npm i remix
 ```
 
 ## Usage
@@ -38,8 +36,8 @@ The `parseFormData` interface allows you to define an "upload handler" function 
 
 ```ts
 import * as fsp from 'node:fs/promises'
-import type { FileUpload } from '@remix-run/form-data-parser'
-import { parseFormData } from '@remix-run/form-data-parser'
+import type { FileUpload } from 'remix/form-data-parser'
+import { parseFormData } from 'remix/form-data-parser'
 
 // Define how to handle incoming file uploads
 async function uploadHandler(fileUpload: FileUpload) {
@@ -77,7 +75,7 @@ async function requestHandler(request: Request) {
 To limit the maximum size of files that are uploaded, or the maximum number of files that may be uploaded in a single request, use the `maxFileSize` and `maxFiles` options.
 
 ```ts
-import { MaxFilesExceededError, MaxFileSizeExceededError } from '@remix-run/form-data-parser'
+import { MaxFilesExceededError, MaxFileSizeExceededError } from 'remix/form-data-parser'
 
 const oneKb = 1024
 const oneMb = 1024 * oneKb
@@ -101,9 +99,9 @@ try {
 If you're looking for a more flexible storage solution for `File` objects that are uploaded, this library pairs really well with [the `file-storage` library](https://github.com/remix-run/remix/tree/main/packages/file-storage) for keeping files in various storage backends.
 
 ```ts
-import { LocalFileStorage } from '@remix-run/file-storage/local'
-import type { FileUpload } from '@remix-run/form-data-parser'
-import { parseFormData } from '@remix-run/form-data-parser'
+import { LocalFileStorage } from 'remix/file-storage/local'
+import type { FileUpload } from 'remix/form-data-parser'
+import { parseFormData } from 'remix/form-data-parser'
 
 // Set up storage for uploaded files
 const fileStorage = new LocalFileStorage('/uploads/user-avatars')

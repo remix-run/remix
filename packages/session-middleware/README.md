@@ -1,20 +1,26 @@
 # session-middleware
 
-Middleware for managing sessions with [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) via securely signed cookies.
+Session middleware for Remix using signed cookies. It loads session state from incoming requests, exposes it on `context.session`, and persists updates automatically.
+
+## Features
+
+- **Session Lifecycle Handling** - Reads and saves session state per request
+- **Context Integration** - Exposes session APIs directly on request context
+- **Secure Cookie Support** - Designed for signed session cookies
 
 ## Installation
 
 ```sh
-npm install @remix-run/session-middleware
+npm i remix
 ```
 
 ## Usage
 
 ```ts
-import { createRouter } from '@remix-run/fetch-router'
-import { createCookie } from '@remix-run/cookie'
-import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
-import { session } from '@remix-run/session-middleware'
+import { createRouter } from 'remix/fetch-router'
+import { createCookie } from 'remix/cookie'
+import { createCookieSessionStorage } from 'remix/session/cookie-storage'
+import { session } from 'remix/session-middleware'
 
 let sessionCookie = createCookie('__session', {
   secrets: ['s3cr3t'], // session cookies must be signed!
@@ -48,7 +54,7 @@ Note: The session cookie must be signed for security. This prevents tampering wi
 A basic login/logout flow could look like this:
 
 ```ts
-import * as res from '@remix-run/fetch-router/response-helpers'
+import * as res from 'remix/fetch-router/response-helpers'
 
 router.get('/login', ({ session }) => {
   let error = session.get('error')

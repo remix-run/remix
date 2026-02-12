@@ -925,9 +925,9 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       matcher.add('://example.com/users/123', null)
 
       // Custom: sort by pattern source alphabetically
-      let matches = matcher.matchAll('http://example.com/users/123', (a, b) => {
-        return a.pattern.source.localeCompare(b.pattern.source)
-      })
+      let matches = matcher.matchAll('http://example.com/users/123', (a, b) =>
+        a.pattern.source.localeCompare(b.pattern.source),
+      )
 
       assert.deepEqual(
         matches.map((m) => m.pattern.source),

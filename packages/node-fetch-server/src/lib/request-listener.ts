@@ -45,7 +45,7 @@ export interface RequestListenerOptions {
  *
  * ```ts
  * import * as http from 'node:http';
- * import { createRequestListener } from '@remix-run/node-fetch-server';
+ * import { createRequestListener } from 'remix/node-fetch-server';
  *
  * async function handler(request) {
  *   return new Response('Hello, world!');

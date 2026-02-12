@@ -1,6 +1,6 @@
-# Remix Component
+# component
 
-A minimal component system that leans on JavaScript and DOM primitives.
+A minimal component system for the web that leans on JavaScript and DOM primitives.
 
 ## Features
 
@@ -13,7 +13,7 @@ A minimal component system that leans on JavaScript and DOM primitives.
 ## Installation
 
 ```sh
-npm install @remix-run/component
+npm i remix
 ```
 
 ## Getting Started
@@ -21,7 +21,7 @@ npm install @remix-run/component
 Create a root and render a component:
 
 ```tsx
-import { createRoot } from '@remix-run/component'
+import { createRoot } from 'remix/component'
 
 function App(handle: Handle) {
   let count = 0
@@ -539,7 +539,7 @@ function Header(handle: Handle) {
 Setting context values does not automatically trigger updates. If a provider needs to render its own context values, call `handle.update()` after setting them. However, since providers often don't render context values themselves, calling `update()` can cause expensive updates of the entire subtree. Instead, make your context an [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) and have consumers subscribe to changes.
 
 ```tsx
-import { TypedEventTarget } from '@remix-run/interaction'
+import { TypedEventTarget } from 'remix/interaction'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
   #value: 'light' | 'dark' = 'light'
