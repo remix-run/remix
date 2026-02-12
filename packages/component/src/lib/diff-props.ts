@@ -147,6 +147,25 @@ function camelToKebab(input: string): string {
     .toLowerCase()
 }
 
+function clearRuntimePropertyOnRemoval(
+  dom: Element & Record<string, unknown>,
+  name: string,
+): void {
+  try {
+    if (name === 'value' || name === 'defaultValue') {
+      dom[name] = ''
+      return
+    }
+    if (name === 'checked' || name === 'defaultChecked' || name === 'selected') {
+      dom[name] = false
+      return
+    }
+    if (name === 'selectedIndex') {
+      dom[name] = -1
+    }
+  } catch {}
+}
+
 export function diffHostProps(curr: ElementProps, next: ElementProps, dom: Element) {
   let isSvg = dom.namespaceURI === SVG_NS
 
@@ -158,12 +177,9 @@ export function diffHostProps(curr: ElementProps, next: ElementProps, dom: Eleme
   for (let name in curr) {
     if (isFrameworkProp(name)) continue
     if (!(name in next) || next[name] == null) {
-      // Prefer property clearing when applicable (align with Preact)
+      // Clear runtime state for form-like props where removing the attribute is not enough.
       if (canUseProperty(dom, name, isSvg)) {
-        try {
-          dom[name] = ''
-          continue
-        } catch {}
+        clearRuntimePropertyOnRemoval(dom, name)
       }
 
       let { ns, attr } = normalizePropName(name, isSvg)
