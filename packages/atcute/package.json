@@ -1,0 +1,66 @@
+{
+  "name": "@remix-run/atcute",
+  "version": "0.0.0",
+  "description": "ATProto integration via atcute.",
+  "author": "Jacob Ebey <jacob.ebey@live.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/atcute"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/atcute#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "devDependencies": {
+    "@remix-run/auth-middleware": "workspace:*",
+    "@remix-run/cookie": "workspace:*",
+    "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/session": "workspace:*",
+    "@remix-run/session-middleware": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "dependencies": {
+    "@atcute/bluesky": "^3.2.17",
+    "@atcute/client": "^4.2.1",
+    "@atcute/lexicons": "^1.2.7",
+    "@atcute/oauth-node-client": "^1.1.0",
+    "@remix-run/fetch-router": "workspace:^"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "fetch",
+    "router",
+    "middleware",
+    "auth",
+    "atproto",
+    "atcute",
+    "async-local-storage"
+  ]
+}

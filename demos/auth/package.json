@@ -1,0 +1,23 @@
+{
+  "name": "auth-demo",
+  "private": true,
+  "type": "module",
+  "author": "Jacob Ebey <jacob.ebey@live.com>",
+  "scripts": {
+    "start": "node app/server.ts",
+    "dev": "node --watch app/server.ts"
+  },
+  "dependencies": {
+    "@atcute/identity-resolver": "^1.2.2",
+    "@atcute/identity-resolver-node": "^1.0.3",
+    "@atcute/lexicons": "^1.2.7",
+    "@atcute/oauth-node-client": "^1.1.0",
+    "@remix-run/atcute": "workspace:",
+    "@remix-run/auth-middleware": "workspace:",
+    "remix": "workspace:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  }
+}
