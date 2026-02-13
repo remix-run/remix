@@ -11,6 +11,7 @@ export async function loadTypeDoc(opts: {
   input?: string
   entryPoints?: string
   typedocDir?: string
+  gitRef?: string
 }) {
   // Load the full TypeDoc project and walk it to create a lookup map and
   // determine which APIs we want to generate documentation for
@@ -33,6 +34,7 @@ async function loadTypedocJson(opts: {
   input?: string
   entryPoints?: string
   typedocDir?: string
+  gitRef?: string
 }): Promise<typedoc.ProjectReflection> {
   if (opts.input) {
     info(`Loading TypeDoc JSON from: ${opts.input}`)
@@ -52,6 +54,7 @@ async function loadTypedocJson(opts: {
       entryPointStrategy: 'packages',
       packageOptions: {
         blockTags: [...typedoc.OptionDefaults.blockTags, '@alias'],
+        gitRevision: opts.gitRef,
       },
     })
     let reflection = await app.convert()

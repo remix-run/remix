@@ -27,8 +27,12 @@ let { values: cliArgs } = util.parseArgs({
     // Entrypoints to run typedoc against (mutually exclusive with `input`)
     entryPoints: {
       type: 'string',
-      short: 'i',
+      short: 'e',
       default: '../packages/*',
+    },
+    gitRef: {
+      type: 'string',
+      short: 'r',
     },
   },
 })
@@ -43,7 +47,7 @@ let { comments, apisToDocument } = await loadTypeDoc(
     ? // When input is specified, we're operating off an existing typedoc api.json file
       { input: cliArgs.input }
     : // Otherwise, we run typedoc and write the output to TYPEDOC_DIR
-      { entryPoints: cliArgs.entryPoints, typedocDir: TYPEDOC_DIR },
+      { entryPoints: cliArgs.entryPoints, typedocDir: TYPEDOC_DIR, gitRef: cliArgs.gitRef },
 )
 
 // Parse JSDocs into DocumentedAPI instances we can write out to markdown
