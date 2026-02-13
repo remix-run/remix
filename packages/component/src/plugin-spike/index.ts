@@ -9,7 +9,6 @@ import { propAliases } from './plugins/prop-aliases.ts'
 import { reflectedPropsPlugin } from './plugins/reflected-props.ts'
 import { styleProps } from './plugins/style-props.ts'
 import { svgProps } from './plugins/svg-props.ts'
-import type { Plugin } from './types.ts'
 
 export { createReconciler }
 export { interactions as interactionPlugin } from './plugins/interaction.ts'
