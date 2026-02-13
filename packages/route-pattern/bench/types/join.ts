@@ -11,48 +11,25 @@ bench('join', () => {
   pattern.join('/comments/:commentId')
 }).types([2445, 'instantiations'])
 
-bench('Join', () => {
-  type _ = Join<'/posts/:id', '/comments/:commentId'>
-}).types([2399, 'instantiations'])
+bench('join > mediarss', async () => {
+  let { patterns } = await import('../routes/mediarss.ts')
+  eagerlyEvaluateTypesForJoin(patterns)
+}).types([74069, 'instantiations'])
 
-bench('join > mediarss', () => {
-  const other = '/comments/:commentId'
-  type Routes = typeof import('../routes/mediarss.ts').routes
-  let routes: { [route in keyof Routes]: RoutePattern<Routes[route]> } = {} as any
+// NOTE: This benchmark brings type checking to a crawl.
+// Uncomment to run the benchmark, but keep it commented to avoid CI failures.
+//
+// bench('join > shopify', async () => {
+//   let { patterns } = await import('../routes/shopify.ts')
+//   // @ts-expect-error Type instantiation is excessively deep and possibly infinite. ts(2589)
+//   eagerlyEvaluateTypesForJoin(patterns)
+// }).types([5169925, 'instantiations'])
 
-  routes.feed.join(other)
-  routes.media.join(other)
-  routes.art.join(other)
-  // OAuth routes (public)
-  routes.oauthToken.join(other)
-  routes.oauthJwks.join(other)
-  routes.oauthRegister.join(other)
-  routes.oauthServerMetadata.join(other)
-  // MCP routes
-  routes.mcp.join(other)
-  routes.mcpProtectedResource.join(other)
-  routes.mcpWidget.join(other)
-  // Admin routes
-  routes.adminHealth.join(other)
-  routes.adminApiVersion.join(other)
-  routes.adminAuthorize.join(other)
-  routes.admin.join(other)
-  routes.adminCatchAll.join(other)
-  routes.adminApiFeeds.join(other)
-  routes.adminApiDirectories.join(other)
-  routes.adminApiBrowse.join(other)
-  routes.adminApiCreateDirectoryFeed.join(other)
-  routes.adminApiCreateCuratedFeed.join(other)
-  routes.adminApiFeed.join(other)
-  routes.adminApiFeedTokens.join(other)
-  routes.adminApiFeedItems.join(other)
-  routes.adminApiFeedArtwork.join(other)
-  routes.adminApiToken.join(other)
-  routes.adminApiMedia.join(other)
-  routes.adminApiMediaAssignments.join(other)
-  routes.adminApiMediaDetail.join(other)
-  routes.adminApiMediaMetadata.join(other)
-  routes.adminApiMediaStream.join(other)
-  routes.adminApiMediaUpload.join(other)
-  routes.adminApiArtwork.join(other)
-}).types([81580, 'instantiations'])
+function eagerlyEvaluateTypesForJoin<patterns extends ReadonlyArray<string>>(
+  // prettier-ignore
+  _: patterns & (
+    { [pattern in patterns[number]]: Join<patterns[number], string> } extends
+    { [pattern in patterns[number]]: string }
+    ? patterns : never
+  ),
+): void {}
