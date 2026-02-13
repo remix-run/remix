@@ -56,10 +56,16 @@ importers:
 
   demos/bookstore:
     dependencies:
+      better-sqlite3:
+        specifier: ^12.6.2
+        version: 12.6.2
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
     devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4

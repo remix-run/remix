@@ -12,9 +12,9 @@ import { ImageCarousel } from './assets/image-carousel.tsx'
 export default {
   middleware: [loadAuth()],
   actions: {
-    index() {
-      let books = getAllBooks()
-      let genres = getAvailableGenres()
+    async index() {
+      let books = await getAllBooks()
+      let genres = await getAvailableGenres()
       let cart = getCurrentCart()
 
       return render(
@@ -60,9 +60,9 @@ export default {
       )
     },
 
-    genre({ params }) {
+    async genre({ params }) {
       let genre = params.genre
-      let books = getBooksByGenre(genre)
+      let books = await getBooksByGenre(genre)
 
       if (books.length === 0) {
         return render(
@@ -102,8 +102,8 @@ export default {
       )
     },
 
-    show({ params }) {
-      let book = getBookBySlug(params.slug)
+    async show({ params }) {
+      let book = await getBookBySlug(params.slug)
 
       if (!book) {
         return render(
@@ -118,6 +118,7 @@ export default {
 
       let cart = getCurrentCart()
       let inCart = cart.items.some((item) => item.slug === book.slug)
+      let imageUrls = JSON.parse(book.image_urls) as string[]
 
       return render(
         <Layout>
@@ -130,7 +131,7 @@ export default {
                 overflow: 'hidden',
               }}
             >
-              <ImageCarousel images={book.imageUrls} />
+              <ImageCarousel images={imageUrls} />
             </div>
 
             <div class="card">
@@ -142,10 +143,10 @@ export default {
               <p css={{ margin: '1rem 0' }}>
                 <span class="badge badge-info">{book.genre}</span>
                 <span
-                  class={`badge ${book.inStock ? 'badge-success' : 'badge-warning'}`}
+                  class={`badge ${book.in_stock ? 'badge-success' : 'badge-warning'}`}
                   css={{ marginLeft: '0.5rem' }}
                 >
-                  {book.inStock ? 'In Stock' : 'Out of Stock'}
+                  {book.in_stock ? 'In Stock' : 'Out of Stock'}
                 </span>
               </p>
 
@@ -167,11 +168,11 @@ export default {
                   <strong>ISBN:</strong> {book.isbn}
                 </p>
                 <p>
-                  <strong>Published:</strong> {book.publishedYear}
+                  <strong>Published:</strong> {book.published_year}
                 </p>
               </div>
 
-              {book.inStock ? (
+              {book.in_stock ? (
                 inCart ? (
                   <form
                     method="POST"

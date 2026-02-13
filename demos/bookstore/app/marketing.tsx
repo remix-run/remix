@@ -10,12 +10,11 @@ import { getCurrentCart } from './utils/context.ts'
 
 export let home: BuildAction<'GET', typeof routes.home> = {
   middleware: [loadAuth()],
-  action() {
+  async action() {
     let cart = getCurrentCart()
     let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
-    let featuredBooks = featuredSlugs
-      .map((slug) => getBookBySlug(slug))
-      .filter((book) => book != null)
+    let featuredBookResults = await Promise.all(featuredSlugs.map((slug) => getBookBySlug(slug)))
+    let featuredBooks = featuredBookResults.filter((book) => book != null)
 
     return render(
       <Layout>
@@ -164,9 +163,9 @@ export let contact: Controller<typeof routes.contact> = {
 
 export let search: BuildAction<'GET', typeof routes.search> = {
   middleware: [loadAuth()],
-  action({ url }) {
+  async action({ url }) {
     let query = url.searchParams.get('q') ?? ''
-    let books = query ? searchBooks(query) : []
+    let books = query ? await searchBooks(query) : []
     let cart = getCurrentCart()
 
     return render(

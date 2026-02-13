@@ -10,7 +10,7 @@ export interface BookCardProps {
 export function BookCard() {
   return ({ book, inCart }: BookCardProps) => (
     <div class="book-card">
-      <img src={book.coverUrl} alt={book.title} />
+      <img src={book.cover_url} alt={book.title} />
       <div class="book-card-body">
         <h3>{book.title}</h3>
         <p class="author">by {book.author}</p>
