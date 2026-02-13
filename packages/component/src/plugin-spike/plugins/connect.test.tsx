@@ -10,28 +10,19 @@ describe('plugin-spike connect plugin', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {},
-        children: ['hello'],
-      }),
-    )
+    root.render(() => <div key="a">hello</div>)
     root.flush()
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {
-          connect() {
-            calls++
-          },
-        },
-        children: ['hello'],
-      }),
-    )
+    root.render(() => (
+      <div
+        key="a"
+        connect={() => {
+          calls++
+        }}
+      >
+        hello
+      </div>
+    ))
     root.flush()
 
     expect(calls).toBe(0)
@@ -45,36 +36,32 @@ describe('plugin-spike connect plugin', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {
-          connect(_node, signal) {
-            calls++
-            capturedSignal = signal
-          },
-        },
-        children: ['hello'],
-      }),
-    )
+    root.render(() => (
+      <div
+        key="a"
+        connect={(_node, signal) => {
+          calls++
+          capturedSignal = signal
+        }}
+      >
+        hello
+      </div>
+    ))
     root.flush()
     expect(calls).toBe(1)
     expect(capturedSignal?.aborted).toBe(false)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {
-          id: 'updated',
-          connect() {
-            calls++
-          },
-        },
-        children: ['hello'],
-      }),
-    )
+    root.render(() => (
+      <div
+        key="a"
+        id="updated"
+        connect={() => {
+          calls++
+        }}
+      >
+        hello
+      </div>
+    ))
     root.flush()
     expect(calls).toBe(1)
     expect(capturedSignal?.aborted).toBe(false)
@@ -94,20 +81,18 @@ describe('plugin-spike connect plugin', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {
-          presenceMs: 50,
-          connect(node, signal) {
-            firstNode = node
-            firstSignal = signal
-          },
-        },
-        children: ['hello'],
-      }),
-    )
+    root.render(() => (
+      <div
+        key="a"
+        {...({ presenceMs: 50 } as Record<string, unknown>)}
+        connect={(node, signal) => {
+          firstNode = node
+          firstSignal = signal
+        }}
+      >
+        hello
+      </div>
+    ))
     root.flush()
     expect(firstSignal?.aborted).toBe(false)
 
@@ -115,20 +100,18 @@ describe('plugin-spike connect plugin', () => {
     root.flush()
     expect(firstSignal?.aborted).toBe(true)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {
-          presenceMs: 50,
-          connect(node, signal) {
-            secondNode = node
-            secondSignal = signal
-          },
-        },
-        children: ['hello again'],
-      }),
-    )
+    root.render(() => (
+      <div
+        key="a"
+        {...({ presenceMs: 50 } as Record<string, unknown>)}
+        connect={(node, signal) => {
+          secondNode = node
+          secondSignal = signal
+        }}
+      >
+        hello again
+      </div>
+    ))
     root.flush()
 
     expect(secondNode).toBe(firstNode)

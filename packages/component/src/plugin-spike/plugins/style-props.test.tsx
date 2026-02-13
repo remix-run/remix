@@ -9,19 +9,15 @@ describe('plugin-spike style-props plugin', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {
-          style: {
-            color: 'rgb(255, 0, 0)',
-            backgroundColor: 'rgb(0, 0, 0)',
-          },
-        },
-        children: [],
-      }),
-    )
+    root.render(() => (
+      <div
+        key="a"
+        style={{
+          color: 'rgb(255, 0, 0)',
+          backgroundColor: 'rgb(0, 0, 0)',
+        }}
+      />
+    ))
     root.flush()
 
     let node = container.querySelector('div')
@@ -29,18 +25,14 @@ describe('plugin-spike style-props plugin', () => {
     expect(node.style.color).toBe('rgb(255, 0, 0)')
     expect(node.style.backgroundColor).toBe('rgb(0, 0, 0)')
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {
-          style: {
-            color: 'rgb(0, 0, 255)',
-          },
-        },
-        children: [],
-      }),
-    )
+    root.render(() => (
+      <div
+        key="a"
+        style={{
+          color: 'rgb(0, 0, 255)',
+        }}
+      />
+    ))
     root.flush()
     expect(node.style.color).toBe('rgb(0, 0, 255)')
     expect(node.style.backgroundColor).toBe('')

@@ -1,4 +1,5 @@
 import type { TypedEventTarget } from '@remix-run/interaction'
+import type { ElementType, RemixElement, RemixNode } from '../lib/jsx.ts'
 
 export type Task = (signal: AbortSignal) => void
 
@@ -7,14 +8,14 @@ export type HostChild = null | string | HostRenderNode
 export type Connect = (node: Element, signal: AbortSignal) => void
 
 export type HostInput = {
-  type: string
+  type: ElementType
   key: unknown
   props: Record<string, unknown>
   children: HostChild[]
 }
 
 export type HostTransformInput = {
-  type: string
+  type: ElementType
   props: Record<string, unknown>
 }
 
@@ -29,6 +30,7 @@ export type TextRenderNode = {
 }
 
 export type RenderNode = HostRenderNode | TextRenderNode
+export type SpikeRenderable = null | string | HostRenderNode | RemixElement | RemixNode
 
 export type FlushContext = {
   flushId: number
@@ -96,6 +98,13 @@ export type HostEventMap = {
 export type PluginHandle = TypedEventTarget<PluginEventMap>
 export type HostHandle = TypedEventTarget<HostEventMap> & {
   queueTask(task: HostTask): void
+  update(): Promise<AbortSignal>
+  signal: AbortSignal
+}
+export type Handle = {
+  update(): Promise<AbortSignal>
+  queueTask(task: Task): void
+  signal: AbortSignal
 }
 
 export type HostFactory = (hostHandle: HostHandle) => void | HostTransform
@@ -121,8 +130,9 @@ export type SpikeHandle = {
 export type RootState = {
   container: Element
   current: null | CommittedNode
-  render: null | ((handle: SpikeHandle) => null | HostRenderNode | string)
+  render: null | ((handle: SpikeHandle) => SpikeRenderable)
   handle: SpikeHandle
+  enqueue(): void
   renderController: null | AbortController
   pendingTasks: Task[]
   scheduled: boolean

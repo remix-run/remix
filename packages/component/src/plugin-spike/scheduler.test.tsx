@@ -11,22 +11,8 @@ describe('plugin-spike scheduler', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'root',
-        props: { 'data-value': 'a', connect() {} },
-        children: [],
-      }),
-    )
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'root',
-        props: { 'data-value': 'b', connect() {} },
-        children: [],
-      }),
-    )
+    root.render(() => <div key="root" data-value="a" connect={() => {}} />)
+    root.render(() => <div key="root" data-value="b" connect={() => {}} />)
 
     root.flush()
 

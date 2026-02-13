@@ -10,17 +10,15 @@ describe('plugin-spike css plugin', () => {
     document.body.append(container)
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'root',
-        props: {
-          css: { color: 'rgb(255, 0, 0)' },
-          connect() {},
-        },
-        children: ['hello'],
-      }),
-    )
+    root.render(() => (
+      <div
+        key="root"
+        css={{ color: 'rgb(255, 0, 0)' }}
+        connect={() => {}}
+      >
+        hello
+      </div>
+    ))
     root.flush()
 
     let element = container.querySelector('div')
@@ -40,17 +38,11 @@ describe('plugin-spike css plugin', () => {
     document.body.append(container)
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'root',
-        props: {
-          css: { color },
-          connect() {},
-        },
-        children: ['hello'],
-      }),
-    )
+    root.render(() => (
+      <div key="root" css={{ color }} connect={() => {}}>
+        hello
+      </div>
+    ))
     root.flush()
 
     let element = container.querySelector('div')
@@ -60,17 +52,11 @@ describe('plugin-spike css plugin', () => {
     expect(getComputedStyle(element).color).toBe('rgb(255, 0, 0)')
 
     color = 'rgb(0, 0, 255)'
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'root',
-        props: {
-          css: { color },
-          connect() {},
-        },
-        children: ['hello'],
-      }),
-    )
+    root.render(() => (
+      <div key="root" css={{ color }} connect={() => {}}>
+        hello
+      </div>
+    ))
     root.flush()
 
     element = container.querySelector('div')

@@ -24,14 +24,11 @@ describe('plugin-spike example presence plugin', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: { presenceMs: 50, connect() {} },
-        children: ['hello'],
-      }),
-    )
+    root.render(() => (
+      <div key="a" {...({ presenceMs: 50 } as Record<string, unknown>)} connect={() => {}}>
+        hello
+      </div>
+    ))
     root.flush()
 
     expect(animations).toHaveLength(1)
@@ -64,19 +61,17 @@ describe('plugin-spike example presence plugin', () => {
     let firstNode: null | Element = null
     let reclaimedNode: null | Element = null
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {
-          presenceMs: 50,
-          connect(node: Element) {
-            firstNode = node
-          },
-        },
-        children: ['hello'],
-      }),
-    )
+    root.render(() => (
+      <div
+        key="a"
+        {...({ presenceMs: 50 } as Record<string, unknown>)}
+        connect={(node: Element) => {
+          firstNode = node
+        }}
+      >
+        hello
+      </div>
+    ))
     root.flush()
     expect(animations).toHaveLength(1)
 
@@ -86,19 +81,17 @@ describe('plugin-spike example presence plugin', () => {
     let exitAnimation = animations[1]
     expect(container.children.length).toBe(1)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {
-          presenceMs: 50,
-          connect(node: Element) {
-            reclaimedNode = node
-          },
-        },
-        children: ['hello again'],
-      }),
-    )
+    root.render(() => (
+      <div
+        key="a"
+        {...({ presenceMs: 50 } as Record<string, unknown>)}
+        connect={(node: Element) => {
+          reclaimedNode = node
+        }}
+      >
+        hello again
+      </div>
+    ))
     root.flush()
     expect(exitAnimation.canceled).toBe(true)
     expect(animations).toHaveLength(3)

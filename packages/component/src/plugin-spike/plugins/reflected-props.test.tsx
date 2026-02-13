@@ -10,18 +10,9 @@ describe('plugin-spike reflected-props plugin', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'input',
-        key: 'a',
-        props: {
-          type: 'checkbox',
-          checked: true,
-          value: 'on',
-        },
-        children: [],
-      }),
-    )
+    root.render(() => (
+      <input key="a" type="checkbox" checked={true} value="on" />
+    ))
     root.flush()
 
     let node = container.querySelector('input')
@@ -29,17 +20,7 @@ describe('plugin-spike reflected-props plugin', () => {
     expect(node.checked).toBe(true)
     expect(node.value).toBe('on')
 
-    root.render((handle) =>
-      handle.host({
-        type: 'input',
-        key: 'a',
-        props: {
-          type: 'checkbox',
-          checked: false,
-        },
-        children: [],
-      }),
-    )
+    root.render(() => <input key="a" type="checkbox" checked={false} />)
     root.flush()
     expect(node.checked).toBe(false)
     expect(node.value).toBe('')

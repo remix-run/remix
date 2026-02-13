@@ -10,28 +10,27 @@ describe('plugin-spike interaction plugin', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'button',
-        key: 'button',
-        props: {
-          on:
-            mode === 'first'
-              ? {
-                  click() {
-                    events.push('first')
-                  },
-                }
-              : {
-                  click() {
-                    events.push('second')
-                  },
+    root.render(() => (
+      <button
+        key="button"
+        on={
+          mode === 'first'
+            ? {
+                click() {
+                  events.push('first')
                 },
-          connect() {},
-        },
-        children: ['click'],
-      }),
-    )
+              }
+            : {
+                click() {
+                  events.push('second')
+                },
+              }
+        }
+        connect={() => {}}
+      >
+        click
+      </button>
+    ))
     root.flush()
 
     let element = container.querySelector('button')
@@ -41,21 +40,19 @@ describe('plugin-spike interaction plugin', () => {
     expect(events).toEqual(['first'])
 
     mode = 'second'
-    root.render((handle) =>
-      handle.host({
-        type: 'button',
-        key: 'button',
-        props: {
-          on: {
-            click() {
-              events.push('second')
-            },
+    root.render(() => (
+      <button
+        key="button"
+        on={{
+          click() {
+            events.push('second')
           },
-          connect() {},
-        },
-        children: ['click'],
-      }),
-    )
+        }}
+        connect={() => {}}
+      >
+        click
+      </button>
+    ))
     root.flush()
 
     element = container.querySelector('button')

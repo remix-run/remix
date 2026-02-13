@@ -18,6 +18,7 @@ import type {
   TextRenderNode,
 } from './types.ts'
 import { TypedEventTarget } from '@remix-run/interaction'
+import type { RemixElement, RemixNode } from '../lib/jsx.ts'
 
 export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
   let removalRegistry: RemovalRegistry = new Map()
@@ -115,17 +116,41 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
   ): CommittedNode {
     let key = toKey(input.key)
 
-    if (current && current.kind === 'host' && current.type === input.type && current.key === key) {
+    if (current && current.kind === 'host' && current.key === key) {
       let transformedInput = applyTransforms(current, input)
+      if (typeof transformedInput.type !== 'string') {
+        throw new Error('node plugins must resolve host type to string')
+      }
+      if (current.type !== transformedInput.type) {
+        return mountHost(current, transformedInput, key, parent, root)
+      }
       patchHost(current, transformedInput, root)
       runHostTasks(current, root.renderController!.signal)
       return current
     }
 
-    let reclaimed = reclaimHost(parent, input.type, key)
+    return mountHost(current, input, key, parent, root)
+  }
+
+  function mountHost(
+    current: null | CommittedNode,
+    input: HostInput,
+    key: string,
+    parent: ParentNode,
+    root: RootState,
+  ): CommittedHostNode {
+    let probe = createDraftHostNode(parent, key)
+    initializeHostPlugins(probe, hostFactories, root)
+    let transformedInput = applyTransforms(probe, input)
+    if (typeof transformedInput.type !== 'string') {
+      throw new Error('node plugins must resolve host type to string')
+    }
+
+    let reclaimed = reclaimHost(parent, transformedInput.type, key)
     if (reclaimed) {
-      initializeHostPlugins(reclaimed, hostFactories)
-      let transformedInput = applyTransforms(reclaimed, input)
+      reclaimed.hostHandles = probe.hostHandles
+      reclaimed.transforms = probe.transforms
+      reclaimed.pendingTasks = probe.pendingTasks
       patchHost(reclaimed, transformedInput, root)
       if (current) {
         parent.insertBefore(reclaimed.dom, getAnchor(current))
@@ -138,22 +163,10 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
       return reclaimed
     }
 
-    let element = getDocument(parent).createElement(input.type)
-    let hostNode: CommittedHostNode = {
-      kind: 'host',
-      type: input.type,
-      key,
-      props: {},
-      dom: element,
-      children: [],
-      hostHandles: [],
-      transforms: [],
-      pendingTasks: [],
-      reclaimed: false,
-    }
-    initializeHostPlugins(hostNode, hostFactories)
-
-    let transformedInput = applyTransforms(hostNode, input)
+    let element = getDocument(parent).createElement(transformedInput.type)
+    let hostNode = probe
+    hostNode.type = transformedInput.type
+    hostNode.dom = element
     patchHost(hostNode, transformedInput, root)
 
     if (current) {
@@ -166,6 +179,21 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
     runHostTasks(hostNode, root.renderController!.signal)
 
     return hostNode
+  }
+
+  function createDraftHostNode(parent: ParentNode, key: string): CommittedHostNode {
+    return {
+      kind: 'host',
+      type: '',
+      key,
+      props: {},
+      dom: getDocument(parent).createElement('div'),
+      children: [],
+      hostHandles: [],
+      transforms: [],
+      pendingTasks: [],
+      reclaimed: false,
+    }
   }
 
   function patchHost(node: CommittedHostNode, input: HostInput, root: RootState) {
@@ -196,11 +224,30 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
   }
 
   function normalizeRenderNode(
-    value: null | string | HostRenderNode,
+    value: null | RemixNode | string | HostRenderNode,
   ): null | TextRenderNode | HostRenderNode {
     if (value == null) return null
+    if (typeof value === 'boolean') return null
+    if (typeof value === 'number' || typeof value === 'bigint') {
+      return { kind: 'text', value: String(value) }
+    }
+    if (Array.isArray(value)) {
+      let next = value[0] ?? null
+      return normalizeRenderNode(next as null | RemixNode | HostRenderNode | string)
+    }
     if (typeof value === 'string') {
       return { kind: 'text', value }
+    }
+    if (isRemixElement(value)) {
+      let rawChildren = (value.props ?? {}).children
+      let props = { ...((value.props ?? {}) as Record<string, unknown>) }
+      delete props.children
+      return createHost({
+        type: value.type,
+        key: value.key,
+        props,
+        children: toHostChildren(rawChildren),
+      })
     }
     return value
   }
@@ -270,18 +317,26 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
     return deferred.node
   }
 
-  function initializeHostPlugins(
-    node: CommittedHostNode,
-    factories: HostFactory[],
-  ) {
+  function initializeHostPlugins(node: CommittedHostNode, factories: HostFactory[], root: RootState) {
     node.hostHandles = []
     node.transforms = []
     node.pendingTasks = []
     for (let createHost of factories) {
       let hostTarget: TypedEventTarget<HostEventMap> = new TypedEventTarget()
+      let connected = new AbortController()
+      hostTarget.addEventListener('remove', () => connected.abort())
       let hostHandle: HostHandle = Object.assign(hostTarget, {
         queueTask(task: HostTask) {
           node.pendingTasks.push(task)
+        },
+        update() {
+          return new Promise<AbortSignal>((resolve) => {
+            root.pendingTasks.push((signal) => resolve(signal))
+            root.enqueue()
+          })
+        },
+        get signal() {
+          return connected.signal
         },
       })
       let transform = createHost(hostHandle)
@@ -298,10 +353,16 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
     for (let transform of node.transforms) {
       transformedInput = transform(transformedInput)
     }
+    let nextChildren = input.children
+    if ('children' in transformedInput.props) {
+      nextChildren = toHostChildren(transformedInput.props.children)
+      delete transformedInput.props.children
+    }
     return {
       ...input,
       type: transformedInput.type,
       props: transformedInput.props,
+      children: nextChildren,
     }
   }
 
@@ -326,8 +387,8 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
   }
 
   function runHostTasks(node: CommittedHostNode, signal: AbortSignal) {
-    let tasks = node.pendingTasks
-    node.pendingTasks = []
+    let tasks = node.pendingTasks.slice()
+    node.pendingTasks.length = 0
     for (let task of tasks) {
       task(node.dom, signal)
     }
@@ -350,4 +411,44 @@ function removalKey(type: string, key: string) {
 function getDocument(parent: ParentNode) {
   if (parent.ownerDocument) return parent.ownerDocument
   return parent as Document
+}
+
+function isRemixElement(value: unknown): value is RemixElement {
+  if (!value || typeof value !== 'object') return false
+  return (value as { $rmx?: boolean }).$rmx === true
+}
+
+function toHostChildren(children: unknown): HostChild[] {
+  if (children == null) return []
+  if (typeof children === 'boolean') return []
+  if (typeof children === 'string') return [children]
+  if (typeof children === 'number' || typeof children === 'bigint') {
+    return [String(children)]
+  }
+  if (Array.isArray(children)) {
+    let next: HostChild[] = []
+    for (let child of children) {
+      next.push(...toHostChildren(child))
+    }
+    return next
+  }
+  if (isRemixElement(children)) {
+    let props = { ...((children.props ?? {}) as Record<string, unknown>) }
+    delete props.children
+    return [
+      {
+        kind: 'host',
+        input: {
+          type: children.type,
+          key: children.key,
+          props,
+          children: toHostChildren((children.props ?? {}).children),
+        },
+      },
+    ]
+  }
+  if (typeof children === 'object' && 'kind' in (children as Record<string, unknown>)) {
+    return [children as HostRenderNode]
+  }
+  return []
 }

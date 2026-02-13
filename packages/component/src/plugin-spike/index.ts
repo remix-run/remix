@@ -2,6 +2,7 @@ import { createReconciler } from './root.ts'
 import { ariaProps } from './plugins/aria-props.ts'
 import { attributeProps } from './plugins/attribute-props.ts'
 import { css } from './plugins/css.ts'
+import { component } from './plugins/component.ts'
 import { documentState } from './plugins/document-state.ts'
 import { interactions } from './plugins/interaction.ts'
 import { presence } from './plugins/presence.ts'
@@ -21,12 +22,14 @@ export { reflectedPropsPlugin } from './plugins/reflected-props.ts'
 export { styleProps as stylePropsPlugin } from './plugins/style-props.ts'
 export { svgProps as svgPropsPlugin } from './plugins/svg-props.ts'
 export { attributeProps as attributePropsPlugin } from './plugins/attribute-props.ts'
+export { component as componentPlugin } from './plugins/component.ts'
 export { connect as connectPlugin } from './plugins/connect.ts'
 export { definePlugin } from './types.ts'
 
 export function createRecommendedReconciler() {
   return createReconciler([
     documentState,
+    component,
     interactions,
     css,
     presence,
@@ -47,6 +50,7 @@ export type {
   HostTransformInput,
   HostTransform,
   HostRenderNode,
+  Handle,
   SpikeHandle,
   Plugin as SpikePlugin,
   Task,

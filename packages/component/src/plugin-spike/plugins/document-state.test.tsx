@@ -11,14 +11,11 @@ describe('plugin-spike document state plugin', () => {
     document.body.append(container)
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'button',
-        key: `button-${revision}`,
-        props: { id: 'focus-target', connect() {} },
-        children: [`label-${revision}`],
-      }),
-    )
+    root.render(() => (
+      <button key={`button-${revision}`} id="focus-target" connect={() => {}}>
+        {`label-${revision}`}
+      </button>
+    ))
     root.flush()
 
     let firstButton = container.querySelector('#focus-target')
@@ -29,14 +26,11 @@ describe('plugin-spike document state plugin', () => {
     expect(document.activeElement).toBe(firstButton)
 
     revision = 2
-    root.render((handle) =>
-      handle.host({
-        type: 'button',
-        key: `button-${revision}`,
-        props: { id: 'focus-target', connect() {} },
-        children: [`label-${revision}`],
-      }),
-    )
+    root.render(() => (
+      <button key={`button-${revision}`} id="focus-target" connect={() => {}}>
+        {`label-${revision}`}
+      </button>
+    ))
     root.flush()
 
     let secondButton = container.querySelector('#focus-target')
@@ -54,14 +48,14 @@ describe('plugin-spike document state plugin', () => {
 
 function createIdPlugin(): Plugin {
   return () => (host) => (input) => {
-      let id = input.props.id
-      host.queueTask((node) => {
-        if (typeof id === 'string' && id.length > 0) {
-          node.setAttribute('id', id)
-        } else {
-          node.removeAttribute('id')
-        }
-      })
-      return input
-    }
+    let id = input.props.id
+    host.queueTask((node) => {
+      if (typeof id === 'string' && id.length > 0) {
+        node.setAttribute('id', id)
+      } else {
+        node.removeAttribute('id')
+      }
+    })
+    return input
+  }
 }

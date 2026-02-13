@@ -9,25 +9,19 @@ describe('plugin-spike reconciler', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'section',
-        key: 'root',
-        props: { id: 'a', connect() {} },
-        children: ['first'],
-      }),
-    )
+    root.render(() => (
+      <section key="root" id="a" connect={() => {}}>
+        first
+      </section>
+    ))
     root.flush()
     expect(container.innerHTML).toBe('<section>first</section>')
 
-    root.render((handle) =>
-      handle.host({
-        type: 'section',
-        key: 'root',
-        props: { id: 'b', connect() {} },
-        children: ['second'],
-      }),
-    )
+    root.render(() => (
+      <section key="root" id="b" connect={() => {}}>
+        second
+      </section>
+    ))
     root.flush()
     expect(container.innerHTML).toBe('<section>second</section>')
 
@@ -41,14 +35,11 @@ describe('plugin-spike reconciler', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'root',
-        props: { customState: 'first', connect() {} },
-        children: ['hello'],
-      }),
-    )
+    root.render(() => (
+      <div key="root" {...({ customState: 'first', connect() {} } as Record<string, unknown>)}>
+        hello
+      </div>
+    ))
     root.flush()
 
     let node = container.firstElementChild as HTMLDivElement

@@ -9,17 +9,9 @@ describe('plugin-spike aria-props plugin', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {
-          'aria-hidden': true,
-          'aria-colindex': 3,
-        },
-        children: [],
-      }),
-    )
+    root.render(() => (
+      <div key="a" aria-hidden={true} aria-colindex={3} />
+    ))
     root.flush()
 
     let node = container.querySelector('div')
@@ -27,16 +19,7 @@ describe('plugin-spike aria-props plugin', () => {
     expect(node.getAttribute('aria-hidden')).toBe('true')
     expect(node.getAttribute('aria-colindex')).toBe('3')
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {
-          'aria-hidden': false,
-        },
-        children: [],
-      }),
-    )
+    root.render(() => <div key="a" aria-hidden={false} />)
     root.flush()
     expect(node.hasAttribute('aria-hidden')).toBe(false)
     expect(node.hasAttribute('aria-colindex')).toBe(false)

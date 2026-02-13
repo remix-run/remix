@@ -9,19 +9,15 @@ describe('plugin-spike attribute-props plugin', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {
-          title: 'first',
-          hidden: true,
-          'data-id': '1',
-          objectValue: { ignored: true },
-        },
-        children: [],
-      }),
-    )
+    root.render(() => (
+      <div
+        key="a"
+        title="first"
+        hidden={true}
+        data-id="1"
+        {...({ objectValue: { ignored: true } } as Record<string, unknown>)}
+      />
+    ))
     root.flush()
 
     let node = container.querySelector('div')
@@ -31,14 +27,7 @@ describe('plugin-spike attribute-props plugin', () => {
     expect(node.getAttribute('data-id')).toBe('1')
     expect(node.hasAttribute('objectValue')).toBe(false)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'a',
-        props: {},
-        children: [],
-      }),
-    )
+    root.render(() => <div key="a" />)
     root.flush()
     expect(node.hasAttribute('title')).toBe(false)
     expect(node.hasAttribute('hidden')).toBe(false)

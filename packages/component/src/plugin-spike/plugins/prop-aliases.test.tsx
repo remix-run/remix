@@ -10,17 +10,11 @@ describe('plugin-spike prop-aliases plugin', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'label',
-        key: 'a',
-        props: {
-          className: 'field-label',
-          htmlFor: 'field-input',
-        },
-        children: ['name'],
-      }),
-    )
+    root.render(() => (
+      <label key="a" className="field-label" htmlFor="field-input">
+        name
+      </label>
+    ))
     root.flush()
 
     let node = container.querySelector('label')

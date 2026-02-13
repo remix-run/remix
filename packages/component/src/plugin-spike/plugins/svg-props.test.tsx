@@ -10,18 +10,9 @@ describe('plugin-spike svg-props plugin', () => {
     let root = reconciler.createRoot(container)
     let xlinkNamespace = 'http://www.w3.org/1999/xlink'
 
-    root.render((handle) =>
-      handle.host({
-        type: 'svg',
-        key: 'a',
-        props: {
-          viewBox: '0 0 10 10',
-          strokeWidth: 2,
-          xlinkHref: '#shape',
-        },
-        children: [],
-      }),
-    )
+    root.render(() => (
+      <svg key="a" viewBox="0 0 10 10" strokeWidth={2} xlinkHref="#shape" />
+    ))
     root.flush()
 
     let node = container.querySelector('svg')
@@ -30,14 +21,7 @@ describe('plugin-spike svg-props plugin', () => {
     expect(node.getAttribute('stroke-width')).toBe('2')
     expect(node.getAttributeNS(xlinkNamespace, 'href')).toBe('#shape')
 
-    root.render((handle) =>
-      handle.host({
-        type: 'svg',
-        key: 'a',
-        props: {},
-        children: [],
-      }),
-    )
+    root.render(() => <svg key="a" />)
     root.flush()
     expect(node.hasAttribute('stroke-width')).toBe(false)
     expect(node.getAttributeNS(xlinkNamespace, 'href')).toBeNull()

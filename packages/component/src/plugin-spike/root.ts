@@ -7,6 +7,7 @@ import type {
   Plugin,
   PreparedPlugin,
   RootState,
+  SpikeRenderable,
   SpikeHandle,
   Task,
 } from './types.ts'
@@ -26,6 +27,7 @@ export function createReconciler(plugins: Plugin[]) {
       container,
       current: null,
       render: null,
+      enqueue,
       renderController: null,
       pendingTasks: [],
       scheduled: false,
@@ -43,8 +45,12 @@ export function createReconciler(plugins: Plugin[]) {
     root.handle = handle
 
     return {
-      render(render: null | ((handle: SpikeHandle) => null | HostRenderNode | string)) {
-        root.render = render
+      render(render: null | SpikeRenderable | ((handle: SpikeHandle) => SpikeRenderable)) {
+        if (typeof render === 'function') {
+          root.render = render
+        } else {
+          root.render = () => render
+        }
         enqueue()
       },
       flush() {

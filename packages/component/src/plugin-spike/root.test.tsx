@@ -12,14 +12,7 @@ describe('plugin-spike plugins', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render((handle) =>
-      handle.host({
-        type: 'div',
-        key: 'root',
-        props: { connect() {} },
-        children: [],
-      }),
-    )
+    root.render(() => <div key="root" connect={() => {}} />)
     root.flush()
 
     expect(events).toEqual([

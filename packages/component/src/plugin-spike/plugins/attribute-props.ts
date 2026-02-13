@@ -9,6 +9,7 @@ export const attributeProps = definePlugin(() => (host) => {
     let next = new Map<string, AttributeValue>()
 
     for (let key in input.props) {
+      if (key === 'children') continue
       let value = input.props[key]
       let normalized = normalizeAttributeValue(value)
       if (normalized !== null) {
