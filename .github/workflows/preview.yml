@@ -1,10 +1,10 @@
 # Create "installable" preview branches
 #
 # Commits to `main` push builds to a `preview/main` branch:
-#   pnpm install "remix@remix-run/remix#preview/main&path:packages/remix"
+#   pnpm install "remix-run/remix#preview/main&path:packages/remix"
 #
 # Pull Requests create `preview/pr-{number}` branches:
-#   pnpm install "remix@remix-run/remix#preview/pr-12345&path:packages/remix"
+#   pnpm install "remix-run/remix#preview/pr-12345&path:packages/remix"
 #
 # Can also be dispatched manually with base/installable branches to provide
 # `experimental` branches from PRs or otherwise.

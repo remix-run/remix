@@ -169,8 +169,8 @@ This is managed via the [`preview` workflow](/.github/workflows/preview.yaml) wh
 The `preview/main` branch build can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
 
 ```sh
-pnpm install "remix@remix-run/remix#preview/main&path:packages/remix"
+pnpm install "remix-run/remix#preview/main&path:packages/remix"
 
 # Or, just install a single package
-pnpm install "@remix-run/fetch-router@remix-run/remix#preview/main&path:packages/fetch-router"
+pnpm install "remix-run/remix#preview/main&path:packages/@remix-run/fetch-router"
 ```
