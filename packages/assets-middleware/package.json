@@ -31,6 +31,9 @@
       "./package.json": "./package.json"
     }
   },
+  "dependencies": {
+    "@remix-run/assets": "workspace:*"
+  },
   "devDependencies": {
     "@remix-run/fetch-router": "workspace:*",
     "@types/node": "catalog:",

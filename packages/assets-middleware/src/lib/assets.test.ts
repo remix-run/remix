@@ -1,10 +1,94 @@
 import { describe, it } from 'node:test'
 import * as assert from 'node:assert/strict'
-import { assets, type AssetManifest } from './assets.ts'
+import type { AssetManifest } from '@remix-run/assets'
+import { assets } from './assets.ts'
+
+function toCurrentManifest(manifest: {
+  scripts?: AssetManifest['scripts']
+  files?: AssetManifest['files']
+  outputs?: Record<string, { entryPoint?: string; imports?: Array<{ path: string; kind: string }> }>
+}): AssetManifest {
+  return {
+    scripts: {
+      outputs: manifest.scripts?.outputs ?? manifest.outputs ?? {},
+    },
+    files: {
+      outputs: manifest.files?.outputs ?? {},
+    },
+  }
+}
 
 describe('assets middleware', () => {
+  it('resolves file asset variant from manifest.files.outputs', () => {
+    let manifest = {
+      files: {
+        outputs: {
+          'app/images/logo.png': {
+            variants: {
+              card: { path: 'assets/logo-card-abc123.png' },
+            },
+          },
+        },
+      },
+    }
+
+    let middleware = assets(toCurrentManifest(manifest))
+    let mockContext = { assets: null as any }
+    middleware(mockContext as any, async () => new Response())
+
+    let result = mockContext.assets.get('app/images/logo.png', 'card')
+    assert.notEqual(result, null)
+    assert.equal(result?.href, '/assets/logo-card-abc123.png')
+    assert.deepEqual(result?.chunks, ['/assets/logo-card-abc123.png'])
+  })
+
+  it('resolves file asset default variant when variant is omitted', () => {
+    let manifest = {
+      files: {
+        outputs: {
+          'app/images/logo.png': {
+            variants: {
+              optimized: { path: 'assets/logo-optimized-abc123.png' },
+              thumbnail: { path: 'assets/logo-thumbnail-def456.png' },
+            },
+            default: 'optimized',
+          },
+        },
+      },
+    }
+
+    let middleware = assets(toCurrentManifest(manifest))
+    let mockContext = { assets: null as any }
+    middleware(mockContext as any, async () => new Response())
+
+    let result = mockContext.assets.get('app/images/logo.png')
+    assert.notEqual(result, null)
+    assert.equal(result?.href, '/assets/logo-optimized-abc123.png')
+  })
+
+  it('returns null when variant is omitted for file that has no default variant', () => {
+    let manifest = {
+      files: {
+        outputs: {
+          'app/images/logo.png': {
+            variants: {
+              card: { path: 'assets/logo-card-abc123.png' },
+            },
+          },
+        },
+      },
+    }
+
+    let middleware = assets(toCurrentManifest(manifest))
+    let mockContext = { assets: null as any }
+    middleware(mockContext as any, async () => new Response())
+
+    let result = mockContext.assets.get('app/images/logo.png')
+    assert.equal(result, null)
+  })
+
   it('returns null for non-existent entry points', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry.js': {
           entryPoint: 'app/entry.tsx',
@@ -12,7 +96,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -21,7 +105,7 @@ describe('assets middleware', () => {
   })
 
   it('returns href for an entry point', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry-ABC123.js': {
           entryPoint: 'app/entry.tsx',
@@ -29,7 +113,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -39,7 +123,7 @@ describe('assets middleware', () => {
   })
 
   it('prepends baseUrl when provided (locally-scoped manifest)', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'entry-ABC123.js': {
           entryPoint: 'app/entry.tsx',
@@ -49,7 +133,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest, { baseUrl: '/build/assets' })
+    let middleware = assets(toCurrentManifest(manifest), { baseUrl: '/build/assets' })
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -63,13 +147,13 @@ describe('assets middleware', () => {
   })
 
   it('normalizes baseUrl with trailing slash (no double slash in href)', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'entry.js': { entryPoint: 'app/entry.tsx' },
       },
     }
 
-    let middleware = assets(manifest, { baseUrl: '/assets/' })
+    let middleware = assets(toCurrentManifest(manifest), { baseUrl: '/assets/' })
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -79,7 +163,7 @@ describe('assets middleware', () => {
   })
 
   it('normalizes entry paths with leading slashes', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry.js': {
           entryPoint: 'app/entry.tsx',
@@ -87,7 +171,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -97,7 +181,7 @@ describe('assets middleware', () => {
   })
 
   it('normalizes entry paths with leading ./', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry.js': {
           entryPoint: 'app/entry.tsx',
@@ -105,7 +189,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -115,7 +199,7 @@ describe('assets middleware', () => {
   })
 
   it('includes the entry in chunks', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry.js': {
           entryPoint: 'app/entry.tsx',
@@ -123,7 +207,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -133,7 +217,7 @@ describe('assets middleware', () => {
   })
 
   it('includes static imports in chunks', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry.js': {
           entryPoint: 'app/entry.tsx',
@@ -143,7 +227,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -153,7 +237,7 @@ describe('assets middleware', () => {
   })
 
   it('includes transitive static imports in chunks', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry.js': {
           entryPoint: 'app/entry.tsx',
@@ -169,7 +253,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -184,7 +268,7 @@ describe('assets middleware', () => {
   })
 
   it('excludes dynamic imports from chunks', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry.js': {
           entryPoint: 'app/entry.tsx',
@@ -198,7 +282,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -208,7 +292,7 @@ describe('assets middleware', () => {
   })
 
   it('handles circular imports without infinite loop', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry.js': {
           entryPoint: 'app/entry.tsx',
@@ -223,7 +307,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -233,7 +317,7 @@ describe('assets middleware', () => {
   })
 
   it('caches chunk resolution', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry.js': {
           entryPoint: 'app/entry.tsx',
@@ -243,7 +327,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -255,7 +339,7 @@ describe('assets middleware', () => {
   })
 
   it('handles multiple entry points', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/main.js': {
           entryPoint: 'app/main.tsx',
@@ -269,7 +353,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -281,7 +365,7 @@ describe('assets middleware', () => {
   })
 
   it('handles output paths with ./ prefix', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         './build/entry.js': {
           entryPoint: 'app/entry.tsx',
@@ -289,7 +373,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -299,7 +383,7 @@ describe('assets middleware', () => {
   })
 
   it('handles nested entry point paths', () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/routes/admin/dashboard.js': {
           entryPoint: 'app/routes/admin/dashboard.tsx',
@@ -307,7 +391,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
@@ -317,7 +401,7 @@ describe('assets middleware', () => {
   })
 
   it('sets assets on context and calls next', async () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry.js': {
           entryPoint: 'app/entry.tsx',
@@ -325,7 +409,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
 
     let nextCalled = false
@@ -339,7 +423,7 @@ describe('assets middleware', () => {
   })
 
   it('allows route handlers to access assets', async () => {
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry.js': {
           entryPoint: 'app/entry.tsx',
@@ -347,7 +431,7 @@ describe('assets middleware', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
 
     let capturedEntry: any = null
@@ -364,7 +448,7 @@ describe('assets middleware', () => {
 describe('realistic esbuild metafile', () => {
   it('works with a realistic esbuild output structure', () => {
     // This simulates a real esbuild metafile structure
-    let manifest: AssetManifest = {
+    let manifest = {
       outputs: {
         'build/entry-XYZABC.js': {
           entryPoint: 'app/entry.tsx',
@@ -387,7 +471,7 @@ describe('realistic esbuild metafile', () => {
       },
     }
 
-    let middleware = assets(manifest)
+    let middleware = assets(toCurrentManifest(manifest))
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 

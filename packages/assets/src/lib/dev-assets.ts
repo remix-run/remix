@@ -1,7 +1,21 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import type { Assets, AssetEntry } from '@remix-run/fetch-router'
+import {
+  compileFileRules,
+  findFileRule,
+  normalizeSourcePath,
+  selectVariant,
+  type AssetEntry,
+  type AssetsApi,
+  type FilesConfig,
+} from './files.ts'
+
+export interface CreateDevAssetsOptions<files extends FilesConfig = FilesConfig> {
+  root: string
+  scripts?: string[]
+  files?: files
+}
 
 /**
  * Creates an assets API for dev mode with 1:1 source-to-URL mapping.
@@ -10,14 +24,17 @@ import type { Assets, AssetEntry } from '@remix-run/fetch-router'
  * - `href` returns the source path as a URL (e.g., '/app/entry.tsx')
  * - `chunks` returns `[href]` since there's no code splitting in dev
  * - Entry paths are always treated as relative to root (leading slashes stripped, .. collapsed)
- * - When `entryPoints` is provided, only those paths return a result; others return null
+ * - When `scripts` is provided, only those paths return a result; others return null
  *
- * @param root The root directory where source files are served from
- * @param entryPoints Optional list of entry paths to restrict get() to (e.g. from build entryPoints)
+ * @param options The root/scripts/files options
  * @returns An assets object for resolving entry paths to URLs
  */
-export function createDevAssets(root: string, entryPoints?: string[]): Assets {
-  let absoluteRoot = path.resolve(root)
+export function createDevAssets<files extends FilesConfig = FilesConfig>(
+  options: CreateDevAssetsOptions<files>,
+): AssetsApi<files> {
+  let scripts = options.scripts
+  let absoluteRoot = path.resolve(options.root)
+  let compiledFileRules = compileFileRules(options.files)
 
   function normalizeEntryPath(entryPath: string): string {
     let p: string
@@ -33,24 +50,43 @@ export function createDevAssets(root: string, entryPoints?: string[]): Assets {
       }
     }
     p = path.posix.normalize(p.replace(/\\/g, '/'))
-    return p
+    return normalizeSourcePath(p)
+  }
+
+  function createDevFileHref(sourcePath: string, variant: string | undefined): string {
+    let encodedPath = sourcePath.split('/').map(encodeURIComponent).join('/')
+    let query = variant ? `@${encodeURIComponent(variant)}` : ''
+    return query ? `/__@files/${encodedPath}?${query}` : `/__@files/${encodedPath}`
   }
 
   let allowedSet: Set<string> | null = null
-  if (entryPoints && entryPoints.length > 0) {
-    allowedSet = new Set(entryPoints.map((ep) => normalizeEntryPath(ep)))
+  if (scripts && scripts.length > 0) {
+    allowedSet = new Set(scripts.map((entryPoint) => normalizeEntryPath(entryPoint)))
   }
 
   return {
-    get(entryPath: string): AssetEntry | null {
+    get(entryPath: string, variant?: string): AssetEntry | null {
       let normalizedPath = normalizeEntryPath(entryPath)
-      if (allowedSet && !allowedSet.has(normalizedPath)) {
-        return null
-      }
       let filePath = path.join(absoluteRoot, ...normalizedPath.split('/'))
       if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
         return null
       }
+
+      let matchingRule = findFileRule(normalizedPath, undefined, compiledFileRules)
+      if (matchingRule) {
+        if (matchingRule.variants) {
+          let selectedVariant = selectVariant(matchingRule, variant)
+          if (!selectedVariant) return null
+          let href = createDevFileHref(normalizedPath, selectedVariant)
+          return { href, chunks: [href] }
+        }
+        if (variant) return null
+        let href = createDevFileHref(normalizedPath, undefined)
+        return { href, chunks: [href] }
+      }
+
+      if (variant) return null
+      if (allowedSet && !allowedSet.has(normalizedPath)) return null
       let href = '/' + normalizedPath
       return { href, chunks: [href] }
     },

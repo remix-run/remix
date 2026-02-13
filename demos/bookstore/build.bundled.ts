@@ -8,11 +8,40 @@
  */
 
 import * as esbuild from 'esbuild'
+import { createHash } from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import { glob } from 'glob'
+import sharp from 'sharp'
 import { getEsbuildConfig } from './esbuild.config.ts'
 
 let outdir = './build/assets'
+
+async function buildFileOutputs(): Promise<Record<string, { path: string }>> {
+  let outputs: Record<string, { path: string }> = {}
+  let sourcePaths = await glob('app/images/books/**/*.png')
+
+  await Promise.all(
+    sourcePaths.map(async (sourcePath) => {
+      let sourceData = await fs.readFile(sourcePath)
+      let jpgData = await sharp(sourceData).jpeg({ quality: 72, mozjpeg: true }).toBuffer()
+      let hash = createHash('sha256')
+        .update(sourcePath)
+        .update('\0')
+        .update(jpgData)
+        .digest('hex')
+        .slice(0, 8)
+      let parsed = path.parse(sourcePath)
+      let outPath = `${parsed.dir.replace(/\\/g, '/')}/${parsed.name}-${hash}.jpg`
+      let fullOutPath = path.join(outdir, outPath)
+      await fs.mkdir(path.dirname(fullOutPath), { recursive: true })
+      await fs.writeFile(fullOutPath, jpgData)
+      outputs[sourcePath] = { path: outPath }
+    }),
+  )
+
+  return outputs
+}
 
 async function main() {
   await fs.rm(outdir, { recursive: true, force: true })
@@ -27,8 +56,9 @@ async function main() {
   console.log('')
 
   let result = await esbuild.build({ ...config, outdir })
+  let fileOutputs = await buildFileOutputs()
 
-  // Emit manifest with locally-scoped paths (relative to outdir) for assets(manifest, { baseUrl })
+  // Emit manifest with locally-scoped script paths (relative to outdir) for assets(manifest, { baseUrl })
   let prefix = 'build/assets/'
   let outputs: Record<string, (typeof result.metafile)['outputs'][string]> = {}
   for (let [outputPath, entry] of Object.entries(result.metafile.outputs)) {
@@ -39,7 +69,14 @@ async function main() {
     }))
     outputs[localPath] = imports ? { ...entry, imports } : entry
   }
-  let manifest = { outputs }
+  let manifest = {
+    scripts: {
+      outputs,
+    },
+    files: {
+      outputs: fileOutputs,
+    },
+  }
 
   let manifestPath = './build/assets-manifest.json'
   await fs.mkdir(path.dirname(manifestPath), { recursive: true })

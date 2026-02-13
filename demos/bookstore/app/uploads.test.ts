@@ -1,17 +1,19 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { load } from 'cheerio'
 
 import { loginAsAdmin, requestWithSession } from '../test/helpers.ts'
 import { router } from './router.ts'
-import { getAllBooks } from './models/books.ts'
 import { uploadsStorage as uploads } from './utils/uploads.ts'
 
 describe('uploads handler', () => {
   it('serves uploaded files from storage', async () => {
     let sessionId = await loginAsAdmin(router)
-
-    // Get initial book count
-    let initialBookCount = getAllBooks().length
+    let beforeBooksResponse = await router.fetch('https://remix.run/books')
+    assert.equal(beforeBooksResponse.status, 200)
+    let beforeBooksHtml = await beforeBooksResponse.text()
+    let beforePage = load(beforeBooksHtml)
+    let initialBookCount = beforePage('[data-testid^="book-card-"]').length
 
     // Create a multipart form with a file upload
     let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
@@ -74,16 +76,21 @@ describe('uploads handler', () => {
     assert.equal(createResponse.status, 302)
     assert.ok(createResponse.headers.get('Location')?.includes('/admin/books'))
 
-    // Get the newly created book from the model
-    let books = getAllBooks()
-    assert.equal(books.length, initialBookCount + 1)
+    // Fetch books page and extract uploaded cover URL from rendered markup.
+    let booksResponse = await router.fetch('https://remix.run/books')
+    assert.equal(booksResponse.status, 200)
+    let booksHtml = await booksResponse.text()
+    let booksPage = load(booksHtml)
+    assert.equal(booksPage('[data-testid^="book-card-"]').length, initialBookCount + 1)
+    let uploadedBookCard = booksPage('[data-testid="book-card-book-with-cover"]')
+    assert.equal(uploadedBookCard.length, 1)
+    assert.ok(uploadedBookCard.text().includes('Book with Cover'))
+    let coverUrl = uploadedBookCard.find('img').attr('src')
+    assert.ok(coverUrl, 'expected uploaded cover URL in uploaded book card')
+    let normalizedCoverUrl = coverUrl.replace(/^\/mock\/+/, '/')
 
-    let newBook = books[books.length - 1]
-    assert.equal(newBook.slug, 'book-with-cover')
-    assert.ok(newBook.coverUrl.startsWith('/uploads/'))
-
-    // Now fetch the uploaded file from the /uploads route using the book's coverUrl
-    let fileResponse = await router.fetch(`https://remix.run${newBook.coverUrl}`)
+    // Now fetch the uploaded file from the /uploads route.
+    let fileResponse = await router.fetch(`https://remix.run${normalizedCoverUrl}`)
 
     assert.equal(fileResponse.status, 200)
     assert.equal(fileResponse.headers.get('Content-Type'), 'image/jpeg')

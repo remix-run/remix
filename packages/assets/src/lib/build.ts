@@ -1,4 +1,3 @@
-import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as fsp from 'node:fs/promises'
 import MagicString from 'magic-string'
@@ -13,6 +12,14 @@ import { fixSourceMapSources } from './source-map.ts'
 import { hashCode } from './etag.ts'
 import type { AssetManifest } from './manifest-types.ts'
 import { toPosixPath } from './path-resolver.ts'
+import {
+  compileFileRules,
+  findFileRule,
+  normalizeSourcePath,
+  runFileRule,
+  selectVariant,
+  type CompiledFileRule,
+} from './files.ts'
 
 /**
  * Discover the full module graph from entry points.
@@ -201,6 +208,107 @@ function urlToOutputPath(
   return substituteFileNames(fileNamesTemplate, dir, name, contentHash)
 }
 
+function sourcePathToDirAndName(sourcePath: string): { dir: string; name: string; ext: string } {
+  let normalized = normalizeSourcePath(sourcePath)
+  let slash = normalized.lastIndexOf('/')
+  let dir = slash >= 0 ? normalized.slice(0, slash) : ''
+  let filename = slash >= 0 ? normalized.slice(slash + 1) : normalized
+  let dot = filename.lastIndexOf('.')
+  let name = dot >= 0 ? filename.slice(0, dot) : filename
+  let ext = dot >= 0 ? filename.slice(dot + 1) : ''
+  return { dir, name, ext }
+}
+
+function fileOutputPath(
+  sourcePath: string,
+  contentHash: string,
+  variant: string | undefined,
+  ext: string,
+): string {
+  let { dir, name } = sourcePathToDirAndName(sourcePath)
+  let segment = variant
+    ? `${name}-@${variant}-${contentHash.slice(0, 8)}`
+    : `${name}-${contentHash.slice(0, 8)}`
+  let fileName = ext ? `${segment}.${ext}` : segment
+  return [dir, fileName].filter(Boolean).join('/')
+}
+
+async function listAllFiles(root: string): Promise<string[]> {
+  let files: string[] = []
+
+  async function walk(dir: string) {
+    let entries = await fsp.readdir(dir, { withFileTypes: true })
+    await Promise.all(
+      entries.map(async (entry) => {
+        let absolutePath = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          if (entry.name === 'node_modules' || entry.name === '.git') {
+            return
+          }
+          await walk(absolutePath)
+          return
+        }
+        if (!entry.isFile()) return
+        files.push(normalizeSourcePath(path.relative(root, absolutePath)))
+      }),
+    )
+  }
+
+  await walk(root)
+  return files
+}
+
+async function buildFilesOutputs(
+  root: string,
+  outDir: string,
+  filesRules: CompiledFileRule[],
+): Promise<AssetManifest['files']['outputs']> {
+  let sourceFiles = await listAllFiles(root)
+  let outputs: AssetManifest['files']['outputs'] = {}
+
+  await Promise.all(
+    sourceFiles.map(async (sourcePath) => {
+      let rule = findFileRule(sourcePath, undefined, filesRules)
+      if (!rule) return
+
+      let absolutePath = path.join(root, ...sourcePath.split('/'))
+      let sourceData = await fsp.readFile(absolutePath)
+
+      if (rule.variants) {
+        let variants: Record<string, { path: string }> = {}
+        await Promise.all(
+          Object.keys(rule.variants).map(async (variant) => {
+            let result = await runFileRule(sourcePath, sourceData, rule, variant)
+            let contentHash = await hashCode(
+              result.data.toString('base64'),
+              `${sourcePath}\0${variant}`,
+            )
+            let outputPath = fileOutputPath(sourcePath, contentHash, variant, result.ext)
+            let fullPath = path.join(outDir, outputPath)
+            await fsp.mkdir(path.dirname(fullPath), { recursive: true })
+            await fsp.writeFile(fullPath, result.data)
+            variants[variant] = { path: outputPath }
+          }),
+        )
+        outputs[sourcePath] = rule.defaultVariant
+          ? { variants, default: rule.defaultVariant }
+          : { variants }
+        return
+      }
+
+      let result = await runFileRule(sourcePath, sourceData, rule, undefined)
+      let contentHash = await hashCode(result.data.toString('base64'), sourcePath)
+      let outputPath = fileOutputPath(sourcePath, contentHash, undefined, result.ext)
+      let fullPath = path.join(outDir, outputPath)
+      await fsp.mkdir(path.dirname(fullPath), { recursive: true })
+      await fsp.writeFile(fullPath, result.data)
+      outputs[sourcePath] = { path: outputPath }
+    }),
+  )
+
+  return outputs
+}
+
 /**
  * Relative import specifier from one output path to another (e.g. ./chunk.js).
  * @param fromOutPath Path of the file containing the import
@@ -221,6 +329,7 @@ function toRelativeImportSpecifier(fromOutPath: string, toOutPath: string): stri
 export async function build(options: BuildOptions): Promise<void> {
   let root = path.resolve(process.cwd(), options.root ?? '.')
   let outDir = path.resolve(root, options.outDir)
+  let scripts = options.scripts ?? options.entryPoints ?? []
   let fileNames = options.fileNames ?? DEFAULT_FILE_NAMES
   let includeHash = fileNames.includes('[hash]')
   let manifestPath = options.manifest === false ? null : (options.manifest ?? null)
@@ -260,7 +369,7 @@ export async function build(options: BuildOptions): Promise<void> {
   let resolutionCache = new Map<string, string>()
 
   let { orderedUrls, urlToAbsolutePath, urlToStaticImports, entryUrls } = await discoverGraph(
-    options.entryPoints,
+    scripts,
     root,
     ctx,
     externalSpecifiers,
@@ -367,8 +476,11 @@ export async function build(options: BuildOptions): Promise<void> {
     await fsp.writeFile(fullPath, code, 'utf-8')
   }
 
+  let filesRules = compileFileRules(options.files)
+  let filesOutputs = filesRules.length > 0 ? await buildFilesOutputs(root, outDir, filesRules) : {}
+
   if (manifestPath) {
-    let manifest: AssetManifest = { outputs: {} }
+    let manifest: AssetManifest = { scripts: { outputs: {} }, files: { outputs: filesOutputs } }
     let entryPathNorm = (u: string) => u.replace(/^\//, '')
     for (let url of orderedUrls) {
       let outPath = urlToOutPathMap.get(url)!
@@ -384,7 +496,7 @@ export async function build(options: BuildOptions): Promise<void> {
       if (entryUrls.includes(url)) {
         outputEntry.entryPoint = entryPathNorm(url)
       }
-      manifest.outputs[outPath] = outputEntry
+      manifest.scripts.outputs[outPath] = outputEntry
     }
     let manifestFullPath = path.isAbsolute(manifestPath)
       ? manifestPath

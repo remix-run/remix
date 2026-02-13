@@ -5,11 +5,12 @@
   "dependencies": {
     "@remix-run/assets": "workspace:*",
     "@remix-run/assets-middleware": "workspace:*",
-    "@remix-run/dev-assets-middleware": "workspace:*",
     "@remix-run/component": "workspace:*",
+    "@remix-run/dev-assets-middleware": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",
-    "@remix-run/static-middleware": "workspace:*"
+    "@remix-run/static-middleware": "workspace:*",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/node": "catalog:",

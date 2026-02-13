@@ -15,7 +15,7 @@ import {
 export function devAssets(options: CreateDevAssetsHandlerOptions): Middleware {
   let root = path.resolve(options.root ?? process.cwd())
   let handler = createDevAssetsHandler(options)
-  let assetsApi = createDevAssets(root)
+  let assetsApi = createDevAssets({ root, files: options.files })
 
   return async (context, next) => {
     context.assets = assetsApi

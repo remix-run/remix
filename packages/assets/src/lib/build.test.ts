@@ -132,8 +132,8 @@ export const main = helper`,
       let raw = await fsp.readFile(manifestFull, 'utf-8')
       let manifest = JSON.parse(raw)
 
-      assert.ok(manifest.outputs, 'manifest has outputs')
-      let entryOutput = Object.entries(manifest.outputs).find(
+      assert.ok(manifest.scripts?.outputs, 'manifest has scripts outputs')
+      let entryOutput = Object.entries(manifest.scripts.outputs).find(
         ([_, v]) => (v as { entryPoint?: string }).entryPoint === 'main.ts',
       )
       assert.ok(entryOutput, 'manifest has entry point main.ts')
@@ -405,11 +405,11 @@ export const out = tag + helper`,
       let manifest = JSON.parse(
         await fsp.readFile(path.join(root, 'out', 'manifest.json'), 'utf-8'),
       )
-      assert.ok(manifest.outputs['entry.js'], 'entry in manifest')
-      assert.ok(manifest.outputs['shim.js'], 'shim in manifest')
-      assert.ok(manifest.outputs['helper.js'], 'helper in manifest')
+      assert.ok(manifest.scripts.outputs['entry.js'], 'entry in manifest')
+      assert.ok(manifest.scripts.outputs['shim.js'], 'shim in manifest')
+      assert.ok(manifest.scripts.outputs['helper.js'], 'helper in manifest')
       assert.equal(
-        manifest.outputs['entry.js'].imports?.length,
+        manifest.scripts.outputs['entry.js'].imports?.length,
         2,
         'entry should list both shim and helper',
       )
@@ -534,6 +534,55 @@ export const out = tag + helper`,
       assert.equal(await fsp.readFile(externalPath, 'utf-8'), 'do not remove')
     } finally {
       fs.rmSync(parent, { recursive: true, force: true })
+    }
+  })
+
+  it('builds file variants and writes files manifest outputs', async () => {
+    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-files-'))
+    try {
+      await fsp.mkdir(path.join(root, 'app', 'images'), { recursive: true })
+      await fsp.writeFile(path.join(root, 'app', 'entry.ts'), 'export const x = 1')
+      await fsp.writeFile(path.join(root, 'app', 'images', 'logo.txt'), 'logo')
+
+      await build({
+        scripts: ['app/entry.ts'],
+        root,
+        outDir: './out',
+        fileNames: '[name]',
+        manifest: './out/manifest.json',
+        files: [
+          {
+            include: 'app/images/**/*.txt',
+            variants: {
+              small: (data) => Buffer.from(data.toString('utf-8').toUpperCase()),
+              large: (data) => Buffer.from(`${data.toString('utf-8')}!`),
+            },
+            defaultVariant: 'small',
+          },
+        ],
+      })
+
+      let manifest = JSON.parse(
+        await fsp.readFile(path.join(root, 'out', 'manifest.json'), 'utf-8'),
+      )
+      let logo = manifest.files.outputs['app/images/logo.txt']
+      assert.ok(logo, 'manifest should include file output')
+      assert.equal(logo.default, 'small')
+      assert.ok(logo.variants.small.path.endsWith('.txt'))
+      assert.ok(logo.variants.large.path.endsWith('.txt'))
+
+      let smallOutput = await fsp.readFile(
+        path.join(root, 'out', logo.variants.small.path),
+        'utf-8',
+      )
+      let largeOutput = await fsp.readFile(
+        path.join(root, 'out', logo.variants.large.path),
+        'utf-8',
+      )
+      assert.equal(smallOutput, 'LOGO')
+      assert.equal(largeOutput, 'logo!')
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
     }
   })
 })

@@ -36,12 +36,12 @@
     "@types/node": "catalog:",
     "@types/picomatch": "^3.0.2",
     "@typescript/native-preview": "catalog:",
+    "minimatch": "^10.1.2",
     "playwright": "catalog:",
     "prettier": "^3.4.2",
     "tsx": "catalog:"
   },
   "dependencies": {
-    "@remix-run/fetch-router": "workspace:^",
     "es-module-lexer": "^2.0.0",
     "magic-string": "^0.30.21",
     "picomatch": "^4.0.2",

@@ -36,6 +36,8 @@ type ExportEntry = {
   exportPath: string
   // The package/sub-export to re-export from: `@remix-run/headers`, `@remix-run/headers/cookie-storage`
   reExportFrom: string
+  // Source module file in the package where generator markers can be read
+  upstreamSourceFile: string
 }
 
 let { remixRunPackages, allExports } = await getRemixRunPackages()
@@ -89,23 +91,35 @@ async function getRemixRunPackages() {
     // Get all exports except package.json
     let packageExports = packageJson.exports
     if (packageExports && typeof packageExports === 'object') {
-      for (let [exportPath, _] of Object.entries(packageExports)) {
+      for (let [exportPath, exportValue] of Object.entries(packageExports)) {
         if (exportPath === './package.json') continue
 
         if (exportPath === '.') {
           // Main export
+          let upstreamExportSourcePath = getUpstreamSourceTsPathFromPackageExport(
+            packageName,
+            exportPath,
+            exportValue,
+          )
           remixRunPackage.exports.push({
             sourceFile: `${shortName}.ts`,
             exportPath: `./${shortName}`,
             reExportFrom: packageName,
+            upstreamSourceFile: path.join(packagesDir, packageDirName, upstreamExportSourcePath),
           })
         } else {
           // Sub-export (e.g., "./cookie-storage")
           let subExport = exportPath.replace('./', '')
+          let upstreamExportSourcePath = getUpstreamSourceTsPathFromPackageExport(
+            packageName,
+            exportPath,
+            exportValue,
+          )
           remixRunPackage.exports.push({
             sourceFile: `${shortName}/${subExport}.ts`,
             exportPath: `./${shortName}/${subExport}`,
             reExportFrom: `${packageName}/${subExport}`,
+            upstreamSourceFile: path.join(packagesDir, packageDirName, upstreamExportSourcePath),
           })
         }
       }
@@ -136,7 +150,9 @@ async function updateRemixPackage() {
     await fs.mkdir(sourceFileDir, { recursive: true })
     let content = [
       `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
-      `export * from '${entry.reExportFrom}'\n`,
+      ...(await createModuleAugmentationHooks(entry)),
+      `export * from '${entry.reExportFrom}'`,
+      ``,
     ].join('\n')
     await fs.writeFile(sourceFilePath, content, 'utf-8')
   }
@@ -179,6 +195,59 @@ async function updateRemixPackage() {
     JSON.stringify(remixPackageJson, null, 2) + '\n',
     'utf-8',
   )
+}
+
+function getUpstreamSourceTsPathFromPackageExport(
+  packageName: string,
+  exportPath: string,
+  exportValue: unknown,
+): string {
+  if (typeof exportValue === 'string') {
+    if (exportValue.endsWith('.ts')) return exportValue
+    throw new Error(
+      `Expected TypeScript source path for ${packageName} export "${exportPath}", got "${exportValue}"`,
+    )
+  }
+
+  if (exportValue && typeof exportValue === 'object') {
+    let upstreamSourcePath =
+      (exportValue as any).default ?? (exportValue as any).import ?? (exportValue as any).types
+    if (typeof upstreamSourcePath === 'string' && upstreamSourcePath.endsWith('.ts')) {
+      return upstreamSourcePath
+    }
+  }
+
+  throw new Error(
+    `Expected TypeScript source path for ${packageName} export "${exportPath}", but no .ts entry was found`,
+  )
+}
+
+async function createModuleAugmentationHooks(entry: ExportEntry): Promise<string[]> {
+  let sourceFileContents = await fs.readFile(entry.upstreamSourceFile, 'utf-8')
+  let markerPattern = /@remix:module-augmentation-hook\s+([A-Za-z_]\w*)/g
+  let hookNames = new Set<string>()
+
+  for (let match of sourceFileContents.matchAll(markerPattern)) {
+    let hookName = match[1]
+    hookNames.add(hookName)
+  }
+
+  let augmentationHooks = Array.from(hookNames)
+  if (augmentationHooks.length === 0) return []
+
+  let remixModuleName = `remix/${entry.exportPath.replace('./', '')}`
+  return [
+    `import type * as RemixModule from '${remixModuleName}'`,
+    '',
+    ...augmentationHooks.map((hookName) => `export interface ${hookName} {}`),
+    '',
+    `declare module '${entry.reExportFrom}' {`,
+    ...augmentationHooks.map(
+      (hookName) => `  interface ${hookName} extends RemixModule.${hookName} {}`,
+    ),
+    `}`,
+    '',
+  ]
 }
 
 // Build exports change summary

@@ -552,3 +552,97 @@ export function main() {
     })
   })
 })
+
+describe('file asset ETag behavior', () => {
+  let tempDir: string
+
+  function setupTempDir() {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'file-asset-etag-test-'))
+    fs.mkdirSync(path.join(tempDir, 'app', 'images'), { recursive: true })
+    fs.writeFileSync(path.join(tempDir, 'app', 'images', 'logo.txt'), 'logo')
+  }
+
+  function cleanupTempDir() {
+    if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true })
+  }
+
+  it('does not return 304 before first transform hash is known', async () => {
+    setupTempDir()
+    try {
+      let handler = createDevAssetsHandler({
+        root: tempDir,
+        allow: ['app/**'],
+        files: [
+          {
+            include: 'app/images/**/*.txt',
+            variants: {
+              card: (data) => data,
+            },
+          },
+        ],
+      })
+
+      let response = await handler.serve(
+        new Request('http://localhost/__@files/app/images/logo.txt?@card', {
+          headers: { 'If-None-Match': 'W/"definitely-not-a-match"' },
+        }),
+      )
+
+      assert.ok(response)
+      assert.equal(response!.status, 200)
+      assert.ok(response!.headers.get('ETag'))
+    } finally {
+      cleanupTempDir()
+    }
+  })
+
+  it('recomputes transform hash after handler restart before responding 304', async () => {
+    setupTempDir()
+    let transformRuns = 0
+    try {
+      let files = [
+        {
+          include: 'app/images/**/*.txt',
+          variants: {
+            card: (data: Buffer) => {
+              transformRuns++
+              return data
+            },
+          },
+        },
+      ]
+
+      let handler1 = createDevAssetsHandler({
+        root: tempDir,
+        allow: ['app/**'],
+        files,
+      })
+
+      let response1 = await handler1.serve(
+        new Request('http://localhost/__@files/app/images/logo.txt?@card'),
+      )
+      assert.ok(response1)
+      assert.equal(response1!.status, 200)
+      let etag = response1!.headers.get('ETag')
+      assert.ok(etag)
+      assert.equal(transformRuns, 1)
+
+      // New handler instance simulates a server restart with empty in-memory hashes.
+      let handler2 = createDevAssetsHandler({
+        root: tempDir,
+        allow: ['app/**'],
+        files,
+      })
+      let response2 = await handler2.serve(
+        new Request('http://localhost/__@files/app/images/logo.txt?@card', {
+          headers: { 'If-None-Match': etag! },
+        }),
+      )
+      assert.ok(response2)
+      assert.equal(response2!.status, 304)
+      assert.equal(transformRuns, 2)
+    } finally {
+      cleanupTempDir()
+    }
+  })
+})

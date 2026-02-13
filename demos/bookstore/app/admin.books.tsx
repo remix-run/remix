@@ -7,6 +7,8 @@ import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
+const PLACEHOLDER_COVER_PATH = 'app/images/books/bbq-1.png'
+
 export default {
   index() {
     let books = getAllBooks()
@@ -96,7 +98,6 @@ export default {
         { status: 404 },
       )
     }
-
     return render(
       <Layout>
         <h1>Book Details</h1>
@@ -239,7 +240,7 @@ export default {
       description: formData.get('description')?.toString() ?? '',
       price: parseFloat(formData.get('price')?.toString() ?? '0'),
       genre: formData.get('genre')?.toString() ?? '',
-      coverUrl: formData.get('cover')?.toString() ?? '/images/placeholder.jpg',
+      coverUrl: formData.get('cover')?.toString() || PLACEHOLDER_COVER_PATH,
       imageUrls: [],
       isbn: formData.get('isbn')?.toString() ?? '',
       publishedYear: parseInt(formData.get('publishedYear')?.toString() ?? '2024', 10),
@@ -262,7 +263,6 @@ export default {
         { status: 404 },
       )
     }
-
     return render(
       <Layout>
         <h1>Edit Book</h1>
@@ -342,7 +342,7 @@ export default {
 
             <div class="form-group">
               <label for="cover">Book Cover Image</label>
-              {book.coverUrl !== '/images/placeholder.jpg' && (
+              {book.coverUrl !== PLACEHOLDER_COVER_PATH && (
                 <div css={{ marginBottom: '0.5rem' }}>
                   <img
                     src={book.coverUrl}
@@ -380,9 +380,7 @@ export default {
       return new Response('Book not found', { status: 404 })
     }
 
-    // The uploadHandler automatically saves the file and returns the URL path
-    // If no file was uploaded, the form field will be empty and we keep the existing coverUrl
-    let coverUrl = formData.get('cover')?.toString() || book.coverUrl
+    let nextCoverUrl = formData.get('cover')?.toString()
 
     updateBook(params.bookId, {
       slug: formData.get('slug')?.toString() ?? '',
@@ -391,10 +389,10 @@ export default {
       description: formData.get('description')?.toString() ?? '',
       price: parseFloat(formData.get('price')?.toString() ?? '0'),
       genre: formData.get('genre')?.toString() ?? '',
-      coverUrl,
       isbn: formData.get('isbn')?.toString() ?? '',
       publishedYear: parseInt(formData.get('publishedYear')?.toString() ?? '2024', 10),
       inStock: formData.get('inStock')?.toString() === 'true',
+      ...(nextCoverUrl ? { coverUrl: nextCoverUrl } : {}),
     })
 
     return redirect(routes.admin.books.index.href())

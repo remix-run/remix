@@ -1,4 +1,5 @@
 import { createSession, type Session } from '@remix-run/session'
+import type { AssetsApi, FilesConfig } from '@remix-run/assets'
 
 import { AppStorage } from './app-storage.ts'
 import {
@@ -26,6 +27,13 @@ export interface AssetEntry {
 /**
  * The assets API for resolving entry points to their URLs.
  */
+export interface AssetsConfig {}
+
+type DefaultAssetsGet = (entryPath: string, variant?: string) => AssetEntry | null
+type AssetsGet = AssetsConfig extends { files: infer files extends FilesConfig }
+  ? AssetsApi<files>['get']
+  : DefaultAssetsGet
+
 export interface Assets {
   /**
    * Resolves an entry point path to its built asset information.
@@ -38,9 +46,10 @@ export interface Assets {
    * All formats are normalized to match the entry points in the asset manifest.
    *
    * @param entryPath Entry point path in any supported format
+   * @param variant Optional predefined file variant name for non-script assets
    * @returns Asset information (href and chunks) or null if not found
    */
-  get(entryPath: string): AssetEntry | null
+  get: AssetsGet
 }
 
 /**
@@ -172,7 +181,7 @@ export class RequestContext<
         'Assets middleware not configured. Use devAssets() from @remix-run/dev-assets-middleware.',
       )
 
-      return { get: () => null }
+      return { get: (_entryPath: string, _variant?: string) => null } as Assets
     }
 
     return this.#assets

@@ -8,19 +8,21 @@
 
 import { build } from 'remix/assets'
 import { getEsbuildConfig } from './esbuild.config.ts'
+import { files } from './assets.ts'
 
 async function main() {
   let config = await getEsbuildConfig()
-  let entryPoints = config.entryPoints as string[]
+  let scripts = config.entryPoints as string[]
 
-  console.log('Entry points:')
-  for (let entry of entryPoints) {
+  console.log('Scripts:')
+  for (let entry of scripts) {
     console.log(`  ${entry}`)
   }
   console.log('')
 
   await build({
-    entryPoints,
+    scripts,
+    files,
     workspaceRoot: '../..',
     outDir: './build/assets',
     minify: true,

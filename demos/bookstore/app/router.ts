@@ -1,5 +1,6 @@
 import * as fs from 'node:fs'
 import type { Middleware } from 'remix'
+import type { Assets } from 'remix/fetch-router'
 import { createRouter } from 'remix'
 import { asyncContext } from 'remix/async-context-middleware'
 import { compression } from 'remix/compression-middleware'
@@ -9,6 +10,7 @@ import { methodOverride } from 'remix/method-override-middleware'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
+import { files } from '../assets.ts'
 import { routes } from './routes.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
 import { uploadHandler } from './utils/uploads.ts'
@@ -26,10 +28,10 @@ import { uploadsAction } from './uploads.tsx'
 function mockAssets(): Middleware {
   return (context, next) => {
     context.assets = {
-      get: (path: string) => ({
+      get: ((path: string) => ({
         href: `/mock/${path}`,
         chunks: [],
-      }),
+      })) as Assets['get'],
     }
     return next()
   }
@@ -51,6 +53,7 @@ async function getAssetsMiddleware(): Promise<Middleware[]> {
         allow: ['app/**'],
         workspaceRoot: '../..',
         workspaceAllow: ['**/node_modules/**', 'packages/**'],
+        files,
       }),
     ]
   }

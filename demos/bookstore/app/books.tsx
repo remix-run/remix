@@ -115,7 +115,6 @@ export default {
           { status: 404 },
         )
       }
-
       let cart = getCurrentCart()
       let inCart = cart.items.some((item) => item.slug === book.slug)
 

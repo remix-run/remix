@@ -3,6 +3,7 @@ import * as fs from 'node:fs'
 import { createRequestListener } from '@remix-run/node-fetch-server'
 import { createRouter } from '@remix-run/fetch-router'
 import { staticFiles } from '@remix-run/static-middleware'
+import { files } from './assets.ts'
 
 let isDev = process.env.NODE_ENV === 'development'
 
@@ -22,6 +23,7 @@ async function getAssetsMiddleware() {
         allow: ['app/**'],
         workspaceRoot: '../..',
         workspaceAllow: ['**/node_modules/**', 'packages/**'],
+        files,
       }),
     ]
   }
@@ -55,6 +57,11 @@ async function main() {
   // Home page - renders HTML with the entry script
   router.get('/', ({ assets }) => {
     let entry = assets.get('app/entry.tsx')
+    let bbqThumbnail = assets.get('app/images/books/bbq-1.png', 'thumbnail')
+    let bbqCard = assets.get('app/images/books/bbq-1.png', 'card')
+    let bbqHero = assets.get('app/images/books/bbq-1.png', 'hero')
+    let heavyMetalThumbnail = assets.get('app/images/books/heavy-metal-1.png', 'thumbnail')
+    let threeWaysCard = assets.get('app/images/books/three-ways-1.png', 'card')
     if (!entry) {
       return new Response('Entry point not found', { status: 500 })
     }
@@ -74,7 +81,7 @@ async function main() {
     <style>
       body {
         font-family: system-ui, -apple-system, sans-serif;
-        max-width: 600px;
+        max-width: 980px;
         margin: 2rem auto;
         padding: 0 1rem;
       }
@@ -83,12 +90,73 @@ async function main() {
         border: 1px solid #ddd;
         border-radius: 8px;
       }
+      .gallery {
+        margin: 1.25rem 0;
+        display: grid;
+        gap: 1.5rem;
+      }
+      .variant-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .variant {
+        margin: 0;
+      }
+      .variant img {
+        height: auto;
+        display: block;
+        border-radius: 8px;
+      }
+      .variant p {
+        margin: 0.4rem 0 0;
+        font-size: 0.875rem;
+        color: #444;
+      }
+      .muted {
+        margin-top: 0;
+        color: #555;
+      }
     </style>
   </head>
   <body>
     <h1>Assets Middleware Demo</h1>
     <p>Mode: <strong>${isDev ? 'Development' : 'Production'}</strong></p>
     <p>${isDev ? 'TypeScript/JSX files are transformed on-the-fly.' : 'Serving pre-built and minified assets.'}</p>
+    <p class="muted">All source PNGs are converted to compressed JPGs by variants. Display width matches transformed variant width.</p>
+    <div class="gallery">
+      <section>
+        <h2>Same source, three variants</h2>
+        <div class="variant-row">
+          <figure class="variant">
+            ${bbqThumbnail ? `<img src="${bbqThumbnail.href}" width="120" alt="BBQ cover thumbnail variant" />` : '<p>BBQ thumbnail missing</p>'}
+            <p>thumbnail: 120w, jpg</p>
+          </figure>
+          <figure class="variant">
+            ${bbqCard ? `<img src="${bbqCard.href}" width="280" alt="BBQ cover card variant" />` : '<p>BBQ card missing</p>'}
+            <p>card: 280w, jpg</p>
+          </figure>
+          <figure class="variant">
+            ${bbqHero ? `<img src="${bbqHero.href}" width="560" alt="BBQ cover hero variant" />` : '<p>BBQ hero missing</p>'}
+            <p>hero: 560w, jpg</p>
+          </figure>
+        </div>
+      </section>
+      <section>
+        <h2>Other images using the same variants</h2>
+        <div class="variant-row">
+          <figure class="variant">
+            ${heavyMetalThumbnail ? `<img src="${heavyMetalThumbnail.href}" width="120" alt="Heavy metal cover thumbnail variant" />` : '<p>Heavy Metal missing</p>'}
+            <p>heavy-metal-1.png -> thumbnail jpg</p>
+          </figure>
+          <figure class="variant">
+            ${threeWaysCard ? `<img src="${threeWaysCard.href}" width="280" alt="Three ways cover card variant" />` : '<p>Three Ways missing</p>'}
+            <p>three-ways-1.png -> card jpg</p>
+          </figure>
+        </div>
+      </section>
+    </div>
     <div id="app"></div>
     <script type="module" src="${entry.href}"></script>
   </body>

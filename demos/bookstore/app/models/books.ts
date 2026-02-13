@@ -1,3 +1,5 @@
+import { getAssets } from '../utils/context.ts'
+
 export interface Book {
   id: string // unique identifier
   slug: string
@@ -23,8 +25,12 @@ const booksData: Book[] = [
     description: 'The perfect gift for the BBQ enthusiast in your life!',
     price: 16.99,
     genre: 'cookbook',
-    coverUrl: '/images/bbq-1.png',
-    imageUrls: ['/images/bbq-1.png', '/images/bbq-2.png', '/images/bbq-3.png'],
+    coverUrl: 'app/images/books/bbq-1.png',
+    imageUrls: [
+      'app/images/books/bbq-1.png',
+      'app/images/books/bbq-2.png',
+      'app/images/books/bbq-3.png',
+    ],
     isbn: '978-0525559474',
     publishedYear: 2020,
     inStock: true,
@@ -37,11 +43,11 @@ const booksData: Book[] = [
     description: 'The ultimate guide to heavy metal guitar riffs!',
     price: 27.0,
     genre: 'music',
-    coverUrl: '/images/heavy-metal-1.png',
+    coverUrl: 'app/images/books/heavy-metal-1.png',
     imageUrls: [
-      '/images/heavy-metal-1.png',
-      '/images/heavy-metal-2.png',
-      '/images/heavy-metal-3.png',
+      'app/images/books/heavy-metal-1.png',
+      'app/images/books/heavy-metal-2.png',
+      'app/images/books/heavy-metal-3.png',
     ],
     isbn: '978-0735211292',
     publishedYear: 2018,
@@ -55,33 +61,53 @@ const booksData: Book[] = [
     description: 'A practical guide to changing your life for the better.',
     price: 28.99,
     genre: 'self-help',
-    coverUrl: '/images/three-ways-1.png',
-    imageUrls: ['/images/three-ways-1.png', '/images/three-ways-2.png', '/images/three-ways-3.png'],
+    coverUrl: 'app/images/books/three-ways-1.png',
+    imageUrls: [
+      'app/images/books/three-ways-1.png',
+      'app/images/books/three-ways-2.png',
+      'app/images/books/three-ways-3.png',
+    ],
     isbn: '978-0593135204',
     publishedYear: 2021,
     inStock: true,
   },
 ]
 
+let assetsResolved = false
+function getBooksData(): Book[] {
+  if (!assetsResolved) {
+    let assets = getAssets()
+    for (let book of booksData) {
+      book.coverUrl = assets.get(book.coverUrl)?.href ?? book.coverUrl
+      book.imageUrls = book.imageUrls.map(
+        (sourcePath) => assets.get(sourcePath)?.href ?? sourcePath,
+      )
+    }
+    assetsResolved = true
+  }
+
+  return booksData
+}
+
 export function getAllBooks(): Book[] {
-  return [...booksData]
+  return [...getBooksData()]
 }
 
 export function getBookBySlug(slug: string): Book | undefined {
-  return booksData.find((book) => book.slug === slug)
+  return getBooksData().find((book) => book.slug === slug)
 }
 
 export function getBookById(id: string): Book | undefined {
-  return booksData.find((book) => book.id === id)
+  return getBooksData().find((book) => book.id === id)
 }
 
 export function getBooksByGenre(genre: string): Book[] {
-  return booksData.filter((book) => book.genre.toLowerCase() === genre.toLowerCase())
+  return getBooksData().filter((book) => book.genre.toLowerCase() === genre.toLowerCase())
 }
 
 export function searchBooks(query: string): Book[] {
   let lowerQuery = query.toLowerCase()
-  return booksData.filter(
+  return getBooksData().filter(
     (book) =>
       book.title.toLowerCase().includes(lowerQuery) ||
       book.author.toLowerCase().includes(lowerQuery) ||
@@ -90,30 +116,48 @@ export function searchBooks(query: string): Book[] {
 }
 
 export function getAvailableGenres(): string[] {
-  return Array.from(new Set(booksData.map((book) => book.genre)))
+  return Array.from(new Set(getBooksData().map((book) => book.genre)))
 }
 
 export function createBook(data: Omit<Book, 'id'>): Book {
+  let books = getBooksData()
+  let assets = getAssets()
+
   let newBook: Book = {
     ...data,
-    id: String(booksData.length + 1),
+    id: String(books.length + 1),
   }
-  booksData.push(newBook)
+
+  newBook.coverUrl = assets.get(newBook.coverUrl)?.href ?? newBook.coverUrl
+  newBook.imageUrls = newBook.imageUrls.map(
+    (sourcePath) => assets.get(sourcePath)?.href ?? sourcePath,
+  )
+
+  books.push(newBook)
   return newBook
 }
 
 export function updateBook(id: string, data: Partial<Book>): Book | undefined {
-  let index = booksData.findIndex((book) => book.id === id)
+  let books = getBooksData()
+  let index = books.findIndex((book) => book.id === id)
   if (index === -1) return undefined
 
-  booksData[index] = { ...booksData[index], ...data }
-  return booksData[index]
+  books[index] = { ...books[index], ...data }
+
+  let assets = getAssets()
+  books[index].coverUrl = assets.get(books[index].coverUrl)?.href ?? books[index].coverUrl
+  books[index].imageUrls = books[index].imageUrls.map(
+    (sourcePath) => assets.get(sourcePath)?.href ?? sourcePath,
+  )
+
+  return books[index]
 }
 
 export function deleteBook(id: string): boolean {
-  let index = booksData.findIndex((book) => book.id === id)
+  let books = getBooksData()
+  let index = books.findIndex((book) => book.id === id)
   if (index === -1) return false
 
-  booksData.splice(index, 1)
+  books.splice(index, 1)
   return true
 }
