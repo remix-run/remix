@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import * as typedoc from 'typedoc'
-import { debug, getApiNameFromFullName, info, invariant, warn } from './utils.ts'
+import { debug, getApiNameFromFullName, info, invariant, verbose, warn } from './utils.ts'
 
 type Maps = {
   comments: Map<string, typedoc.Reflection> // full name => TypeDoc Reflection
@@ -105,7 +105,7 @@ export function createLookupMaps(reflection: typedoc.ProjectReflection): Maps {
 
       let indent = '  '.repeat(apiName.split('.').length - 1)
       let logApi = (suffix: string) =>
-        debug(
+        verbose(
           [
             `${indent}[${typedoc.ReflectionKind[child.kind]}]`,
             apiName,
@@ -159,7 +159,7 @@ function getDuplicateAPIs(apisToDocument: Set<string>): Set<string> {
       continue
     }
 
-    let remixAPI = fullNames.find(
+    let remixAPIs = fullNames.filter(
       (name) => name.split('.').length === 2 && name.split('.')[0] === 'remix',
     )
     let deepRemixAPIs = fullNames.filter(
@@ -167,7 +167,11 @@ function getDuplicateAPIs(apisToDocument: Set<string>): Set<string> {
     )
     let nonRemixAPIs = fullNames.filter((name) => name.split('.')[0] !== 'remix')
 
-    if (remixAPI) {
+    if (remixAPIs.length > 1) {
+      throw new Error(`Cannot have the same API exported from multiple packages: ${apiName}`)
+    }
+
+    if (remixAPIs.length === 1) {
       // Remove non-remix APIs, keep the remix one
       for (let api of [...deepRemixAPIs, ...nonRemixAPIs]) {
         debug(`Preferring \`remix\` export for ${apiName}, removing: ${api}`)

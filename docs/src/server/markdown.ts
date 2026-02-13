@@ -5,6 +5,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { codeToHtml } from 'shiki'
 import { routes } from './routes.ts'
+import { MDN_SYMBOLS } from '../generate/mdn-symbols.ts'
 
 // No types exist for the `frontmatter` package
 const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
@@ -98,7 +99,7 @@ function getShikiExtension(
               dark: 'github-dark',
             },
             transformers: [
-              // Insert cross-links to known Remix APIs
+              // Insert cross-links to known APIs
               {
                 span(node) {
                   // We only enhance single-symbol spans
@@ -113,16 +114,28 @@ function getShikiExtension(
                   // Don't link to the current page
                   if (symbol === apiName) return
 
-                  // We don't know about this symbol
-                  if (!docFilesLookup.has(symbol)) return
+                  let linkEl: Element | undefined
+                  if (docFilesLookup.has(symbol)) {
+                    linkEl = link(symbol, {
+                      href: routes.api.href({
+                        version,
+                        slug: docFilesLookup.get(symbol)!.urlPath,
+                      }),
+                    })
+                  } else if (MDN_SYMBOLS.hasOwnProperty(symbol)) {
+                    linkEl = link(symbol, {
+                      href: MDN_SYMBOLS[symbol as keyof typeof MDN_SYMBOLS],
+                      target: '_blank',
+                    })
+                  }
 
-                  node.children = [
-                    ...(leadingSpaces ? spacer(leadingSpaces) : []),
-                    link(symbol, {
-                      href: routes.api.href({ version, slug: docFilesLookup.get(symbol)!.urlPath }),
-                    }),
-                    ...(trailingSpaces ? spacer(trailingSpaces) : []),
-                  ]
+                  if (linkEl) {
+                    node.children = [
+                      ...(leadingSpaces ? spacer(leadingSpaces) : []),
+                      linkEl,
+                      ...(trailingSpaces ? spacer(trailingSpaces) : []),
+                    ]
+                  }
                 },
               },
             ],
@@ -150,7 +163,10 @@ function getShikiExtension(
     ]
   }
 
-  function link(text: string, attrs: { href: string }): Element {
+  function link(
+    text: string,
+    attrs: { href: HTMLAnchorElement['href']; target?: HTMLAnchorElement['target'] },
+  ): Element {
     return {
       type: 'element',
       tagName: 'a',
