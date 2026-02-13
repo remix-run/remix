@@ -1,0 +1,39 @@
+import { RoutePattern } from "./route-pattern.js";
+import * as Specificity from "./specificity.js";
+export class ArrayMatcher {
+    ignoreCase;
+    #patterns = [];
+    /**
+     * @param options Constructor options
+     * @param options.ignoreCase When `true`, pathname matching is case-insensitive for all patterns. Defaults to `false`.
+     */
+    constructor(options) {
+        this.ignoreCase = options?.ignoreCase ?? false;
+    }
+    add(pattern, data) {
+        pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern;
+        this.#patterns.push({ pattern, data });
+    }
+    match(url, compareFn = Specificity.descending) {
+        let bestMatch = null;
+        for (let entry of this.#patterns) {
+            let match = entry.pattern.match(url, { ignoreCase: this.ignoreCase });
+            if (match) {
+                if (bestMatch === null || compareFn(match, bestMatch) < 0) {
+                    bestMatch = { ...match, data: entry.data };
+                }
+            }
+        }
+        return bestMatch;
+    }
+    matchAll(url, compareFn = Specificity.descending) {
+        let matches = [];
+        for (let entry of this.#patterns) {
+            let match = entry.pattern.match(url, { ignoreCase: this.ignoreCase });
+            if (match) {
+                matches.push({ ...match, data: entry.data });
+            }
+        }
+        return matches.sort(compareFn);
+    }
+}
