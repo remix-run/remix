@@ -1,5 +1,6 @@
 import * as typedoc from 'typedoc'
 import { getApiNameFromFullName, invariant, unimplemented, warn } from './utils.ts'
+import { MDN_SYMBOLS } from './mdn-symbols.ts'
 
 export type DocumentedAPI =
   | DocumentedFunction
@@ -466,31 +467,47 @@ function getApiParameterOrProperty(
 
 function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
   return parts.reduce((acc, part) => {
-    let text = part.text
+    let transformed = part.text
     if (part.kind === 'inline-tag' && part.tag === '@link') {
       let target = part.target
-      invariant(
-        target && target instanceof typedoc.Reflection,
-        `Missing/invalid target for @link content: ${part.text}`,
-      )
+      let href
+      if (target) {
+        if (target instanceof typedoc.ReflectionSymbolId) {
+          // If it's a symbol typedoc knows about it'll find it in the typescript
+          // lib and we can use one of our MDN links
+          if (target.packageName === 'typescript') {
+            if (MDN_SYMBOLS.hasOwnProperty(target.qualifiedName)) {
+              let href = MDN_SYMBOLS[target.qualifiedName as keyof typeof MDN_SYMBOLS]!
+              transformed = `[\`${part.text}\`](${href})`
+            } else {
+              warn('Missing MDN link for TypeScript symbol: ', target.qualifiedName)
+            }
+          } else {
+            throw new Error(`Unsupported @link target: ${target.qualifiedName}`)
+          }
+        } else if (target instanceof typedoc.Reflection) {
+          // prettier-ignore
+          let type: DocumentedAPI['type'] | null =
+            target.kind === typedoc.ReflectionKind.Function ? 'function' :
+            target.kind === typedoc.ReflectionKind.Class ? 'class' :
+            target.kind === typedoc.ReflectionKind.TypeAlias ? 'type' :
+            target.kind === typedoc.ReflectionKind.TypeLiteral ? 'type' :
+            target.kind === typedoc.ReflectionKind.Interface ? 'interface' : null;
 
-      // prettier-ignore
-      let type: DocumentedAPI['type'] | null =
-        target.kind === typedoc.ReflectionKind.Function ? 'function' :
-        target.kind === typedoc.ReflectionKind.Class ? 'class' :
-        target.kind === typedoc.ReflectionKind.TypeAlias ? 'type' :
-        target.kind === typedoc.ReflectionKind.TypeLiteral ? 'type' :
-        target.kind === typedoc.ReflectionKind.Interface ? 'interface' : null;
+          if (!type) {
+            throw new Error(`Unsupported @link target kind: ${typedoc.ReflectionKind[target.kind]}`)
+          }
 
-      if (!type) {
-        throw new Error(`Unsupported @link target kind: ${typedoc.ReflectionKind[target.kind]}`)
+          let path = getApiFilePath(target.getFriendlyFullName(), type).replace(/\.md$/, '')
+          href = `${WEBSITE_DOCS_PATH}/${path}`
+          transformed = `[\`${part.text}\`](${href})`
+        } else {
+          throw new Error(`Missing/invalid target for @link content: ${part.text}`)
+        }
       }
-
-      let path = getApiFilePath(target.getFriendlyFullName(), type).replace(/\.md$/, '')
-      let href = `${WEBSITE_DOCS_PATH}/${path}`
-      text = `[\`${part.text}\`](${href})`
     }
-    return acc + text
+
+    return acc + transformed
   }, '')
 }
 

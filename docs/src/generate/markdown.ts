@@ -9,7 +9,7 @@ import {
   type DocumentedInterfaceFunction,
   type DocumentedType,
 } from './documented-api.ts'
-import { debug, warn } from './utils.ts'
+import { debug, verbose, warn } from './utils.ts'
 
 export async function writeMarkdownFiles(comments: DocumentedAPI[], docsDir: string) {
   for (let comment of comments) {
@@ -53,7 +53,7 @@ const pre = async (content: string, lang = 'ts') => {
         'Failed to format code block, using unformatted content: ',
         content.length > 30 ? content.substring(0, 30) + '...' : content,
       )
-      debug(e)
+      verbose(e)
     }
   }
   return `\`\`\`${lang}\n${content}\n\`\`\``
