@@ -17,7 +17,7 @@ bench('href > complex route', () => {
 }).types([4457, 'instantiations'])
 
 bench('href > mediarss', async () => {
-  let { patterns } = await import('../routes/mediarss.ts')
+  let { patterns } = await import('../patterns/mediarss.ts')
   eagerlyEvaluateTypesForHrefParams(patterns)
 }).types([79052, 'instantiations'])
 
@@ -25,7 +25,7 @@ bench('href > mediarss', async () => {
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.
 //
 // bench('href > shopify', async () => {
-//   let { patterns } = await import('../routes/shopify.ts')
+//   let { patterns } = await import('../patterns/shopify.ts')
 //   // @ts-expect-error Type instantiation is excessively deep and possibly infinite. ts(2589)
 //   eagerlyEvaluateTypesForHrefParams(patterns)
 // }).types([5027028, 'instantiations'])

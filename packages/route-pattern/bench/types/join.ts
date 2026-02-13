@@ -12,7 +12,7 @@ bench('join', () => {
 }).types([2445, 'instantiations'])
 
 bench('join > mediarss', async () => {
-  let { patterns } = await import('../routes/mediarss.ts')
+  let { patterns } = await import('../patterns/mediarss.ts')
   eagerlyEvaluateTypesForJoin(patterns)
 }).types([74069, 'instantiations'])
 
@@ -20,7 +20,7 @@ bench('join > mediarss', async () => {
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.
 //
 // bench('join > shopify', async () => {
-//   let { patterns } = await import('../routes/shopify.ts')
+//   let { patterns } = await import('../patterns/shopify.ts')
 //   // @ts-expect-error Type instantiation is excessively deep and possibly infinite. ts(2589)
 //   eagerlyEvaluateTypesForJoin(patterns)
 // }).types([5169925, 'instantiations'])

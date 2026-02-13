@@ -16,12 +16,12 @@ bench('new > complex route', () => {
 }).types([3, 'instantiations'])
 
 bench('new > mediarss', async () => {
-  let { patterns } = await import('../routes/mediarss.ts')
+  let { patterns } = await import('../patterns/mediarss.ts')
   eagerlyEvaluateTypesForNew(patterns)
 }).types([2648, 'instantiations'])
 
 bench('new > shopify', async () => {
-  let { patterns } = await import('../routes/shopify.ts')
+  let { patterns } = await import('../patterns/shopify.ts')
   eagerlyEvaluateTypesForNew(patterns)
 }).types([12609, 'instantiations'])
 
