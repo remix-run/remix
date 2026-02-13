@@ -53,14 +53,15 @@ describe('plugin-spike document state plugin', () => {
 })
 
 function createIdPlugin(): Plugin {
-  return () => (host) => {
-    host.addEventListener('afterFlush', (event) => {
-      let id = event.input.props.id
-      if (typeof id === 'string' && id.length > 0) {
-        event.node.setAttribute('id', id)
-      } else {
-        event.node.removeAttribute('id')
-      }
-    })
-  }
+  return () => (host) => (input) => {
+      let id = input.props.id
+      host.queueTask((node) => {
+        if (typeof id === 'string' && id.length > 0) {
+          node.setAttribute('id', id)
+        } else {
+          node.removeAttribute('id')
+        }
+      })
+      return input
+    }
 }

@@ -1,18 +1,15 @@
-import {
-  HostAfterFlushEvent,
-  HostBeforeFlushEvent,
-  HostInsertEvent,
-  HostRemoveEvent,
-} from './types.ts'
+import { HostInsertEvent, HostRemoveEvent } from './types.ts'
 import type {
   CommittedHostNode,
   CommittedNode,
   DeferredRemoval,
   HostChild,
   HostFactory,
+  HostEventMap,
   HostHandle,
   HostInput,
   HostRenderNode,
+  HostTask,
   HostTransform,
   PreparedPlugin,
   RemovalRegistry,
@@ -119,9 +116,8 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
 
     if (current && current.kind === 'host' && current.type === input.type && current.key === key) {
       let transformedInput = applyTransforms(current, input)
-      dispatchHostFlush(current, 'beforeFlush', transformedInput, root.renderController!.signal)
       patchHost(current, transformedInput, root)
-      dispatchHostFlush(current, 'afterFlush', transformedInput, root.renderController!.signal)
+      runHostTasks(current, root.renderController!.signal)
       return current
     }
 
@@ -129,9 +125,7 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
     if (reclaimed) {
       initializeHostPlugins(reclaimed, hostFactories)
       let transformedInput = applyTransforms(reclaimed, input)
-      dispatchHostFlush(reclaimed, 'beforeFlush', transformedInput, root.renderController!.signal)
       patchHost(reclaimed, transformedInput, root)
-      dispatchHostFlush(reclaimed, 'afterFlush', transformedInput, root.renderController!.signal)
       if (current) {
         parent.insertBefore(reclaimed.dom, getAnchor(current))
         removeNode(current, parent)
@@ -139,6 +133,7 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
         parent.append(reclaimed.dom)
       }
       dispatchHostInsert(reclaimed, transformedInput, root.renderController!.signal)
+      runHostTasks(reclaimed, root.renderController!.signal)
       return reclaimed
     }
 
@@ -152,14 +147,13 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
       children: [],
       hostHandles: [],
       transforms: [],
+      pendingTasks: [],
       reclaimed: false,
     }
     initializeHostPlugins(hostNode, hostFactories)
 
     let transformedInput = applyTransforms(hostNode, input)
-    dispatchHostFlush(hostNode, 'beforeFlush', transformedInput, root.renderController!.signal)
     patchHost(hostNode, transformedInput, root)
-    dispatchHostFlush(hostNode, 'afterFlush', transformedInput, root.renderController!.signal)
 
     if (current) {
       parent.insertBefore(element, getAnchor(current))
@@ -168,6 +162,7 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
       parent.append(element)
     }
     dispatchHostInsert(hostNode, transformedInput, root.renderController!.signal)
+    runHostTasks(hostNode, root.renderController!.signal)
 
     return hostNode
   }
@@ -280,8 +275,14 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
   ) {
     node.hostHandles = []
     node.transforms = []
+    node.pendingTasks = []
     for (let createHost of factories) {
-      let hostHandle: HostHandle = new TypedEventTarget()
+      let hostTarget: TypedEventTarget<HostEventMap> = new TypedEventTarget()
+      let hostHandle: HostHandle = Object.assign(hostTarget, {
+        queueTask(task: HostTask) {
+          node.pendingTasks.push(task)
+        },
+      })
       let transform = createHost(hostHandle)
       node.hostHandles.push(hostHandle)
       if (transform) node.transforms.push(transform)
@@ -294,21 +295,6 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
       transformedInput = transform(transformedInput)
     }
     return transformedInput
-  }
-
-  function dispatchHostFlush(
-    node: CommittedHostNode,
-    type: 'beforeFlush' | 'afterFlush',
-    input: HostInput,
-    signal: AbortSignal,
-  ) {
-    for (let hostHandle of node.hostHandles) {
-      let event: HostAfterFlushEvent | HostBeforeFlushEvent =
-        type === 'beforeFlush'
-          ? new HostBeforeFlushEvent(input, node.dom, signal)
-          : new HostAfterFlushEvent(input, node.dom, signal)
-      hostHandle.dispatchEvent(event)
-    }
   }
 
   function dispatchHostRemove(node: CommittedHostNode, pending: Promise<void>[]) {
@@ -326,10 +312,14 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
       hostHandle.dispatchEvent(event)
     }
   }
-}
 
-function isReservedProp(name: string) {
-  return name === 'key' || name === 'children'
+  function runHostTasks(node: CommittedHostNode, signal: AbortSignal) {
+    let tasks = node.pendingTasks
+    node.pendingTasks = []
+    for (let task of tasks) {
+      task(node.dom, signal)
+    }
+  }
 }
 
 function getAnchor(node: CommittedNode) {

@@ -8,13 +8,6 @@ export const presence = definePlugin(() => (hostHandle) => {
   let exiting = false
   let committed = false
 
-  hostHandle.addEventListener('afterFlush', (event) => {
-    if (presenceMs <= 0) return
-    if (!exiting && committed) return
-    startEnterAnimation(event.node)
-    committed = true
-  })
-
   hostHandle.addEventListener('remove', (event) => {
     if (presenceMs <= 0) return
     exiting = true
@@ -30,6 +23,12 @@ export const presence = definePlugin(() => (hostHandle) => {
 
   return (input) => {
     presenceMs = toPresenceMs(input.props.presenceMs)
+    hostHandle.queueTask((node) => {
+      if (presenceMs <= 0) return
+      if (!exiting && committed) return
+      startEnterAnimation(node)
+      committed = true
+    })
     if (!('presenceMs' in input.props)) return input
     let { presenceMs: _presenceMs, ...props } = input.props
     return { ...input, props }

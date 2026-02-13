@@ -30,6 +30,7 @@ export type FlushContext = {
 }
 
 export type HostTransform = (input: HostInput) => HostInput
+export type HostTask = (node: Element, signal: AbortSignal) => void
 
 export class PluginBeforeFlushEvent extends Event {
   context: FlushContext
@@ -52,32 +53,6 @@ export class PluginAfterFlushEvent extends Event {
 export type PluginEventMap = {
   beforeFlush: PluginBeforeFlushEvent
   afterFlush: PluginAfterFlushEvent
-}
-
-export class HostBeforeFlushEvent extends Event {
-  input: HostInput
-  node: Element
-  signal: AbortSignal
-
-  constructor(input: HostInput, node: Element, signal: AbortSignal) {
-    super('beforeFlush')
-    this.input = input
-    this.node = node
-    this.signal = signal
-  }
-}
-
-export class HostAfterFlushEvent extends Event {
-  input: HostInput
-  node: Element
-  signal: AbortSignal
-
-  constructor(input: HostInput, node: Element, signal: AbortSignal) {
-    super('afterFlush')
-    this.input = input
-    this.node = node
-    this.signal = signal
-  }
 }
 
 export class HostInsertEvent extends Event {
@@ -109,14 +84,14 @@ export class HostRemoveEvent extends Event {
 }
 
 export type HostEventMap = {
-  beforeFlush: HostBeforeFlushEvent
-  afterFlush: HostAfterFlushEvent
   insert: HostInsertEvent
   remove: HostRemoveEvent
 }
 
 export type PluginHandle = TypedEventTarget<PluginEventMap>
-export type HostHandle = TypedEventTarget<HostEventMap>
+export type HostHandle = TypedEventTarget<HostEventMap> & {
+  queueTask(task: HostTask): void
+}
 
 export type HostFactory = (hostHandle: HostHandle) => void | HostTransform
 
@@ -163,6 +138,7 @@ export type CommittedHostNode = {
   children: CommittedNode[]
   hostHandles: HostHandle[]
   transforms: HostTransform[]
+  pendingTasks: HostTask[]
   reclaimed: boolean
 }
 

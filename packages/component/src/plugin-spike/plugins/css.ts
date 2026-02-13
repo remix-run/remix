@@ -12,47 +12,42 @@ export const css = definePlugin(() => {
   let styleManager = createStyleManager('rmx')
 
   return (host) => {
-    let currentSelector = ''
-    let nextSelector = ''
-    let nextCss = ''
-    let hostNode: null | Element = null
+    let current: null | ProcessedStyle = null
 
-    host.addEventListener('afterFlush', (event) => {
-      hostNode = event.node
-      if (nextSelector) {
-        event.node.setAttribute('data-css', nextSelector)
-      } else {
-        event.node.removeAttribute('data-css')
-      }
-      if (nextSelector === currentSelector) return
-      if (currentSelector) {
-        styleManager.remove(currentSelector)
-      }
-      if (nextSelector) {
-        styleManager.insert(nextSelector, nextCss)
-      }
-      currentSelector = nextSelector
-    })
+    function set(node: Element, css: unknown) {
+      let next = toProcessedStyle(css, styleCache)
+      if (current?.selector === next.selector) return
 
-    host.addEventListener('remove', () => {
-      hostNode?.removeAttribute('data-css')
-      if (!currentSelector) return
-      styleManager.remove(currentSelector)
-      currentSelector = ''
+      node.setAttribute('data-css', next.selector)
+      if (current) {
+        styleManager.remove(current.selector)
+      }
+      styleManager.insert(next.selector, next.css)
+      current = next
+    }
+
+    function clear(node: Element) {
+      node.removeAttribute('data-css')
+      if (current) styleManager.remove(current.selector)
+      current = null
+    }
+
+    host.addEventListener('remove', (event) => {
+      clear(event.node)
     })
 
     return (input) => {
       if (!('css' in input.props)) {
-        nextSelector = ''
-        nextCss = ''
+        if (current) host.queueTask(clear)
         return input
       }
 
-      let rawCss = input.props.css
+      let css = input.props.css
       delete input.props.css
-      let processed = toProcessedStyle(rawCss, styleCache)
-      nextSelector = processed.selector
-      nextCss = processed.css
+      host.queueTask((node) => {
+        set(node, css)
+      })
+
       return input
     }
   }

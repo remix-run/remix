@@ -27,10 +27,11 @@ Plugins can participate at three scopes:
 2. **Host scope** (once per mounted host instance)
    - Host factory shape:
      - `(hostHandle) => void | HostTransform`
-   - Attach listeners on host lifecycle:
+   - Host handle APIs:
+     - `addEventListener('insert' | 'remove', ...)`
+     - `queueTask((node, signal) => { ... })` for post-transform host work in the current flush
+   - Host lifecycle events:
      - `insert`
-     - `beforeFlush`
-     - `afterFlush`
      - `remove` (`event.waitUntil(...)` supported)
 
 3. **Render transform scope** (every host render)
@@ -43,6 +44,7 @@ Plugins can participate at three scopes:
 - `insert` means a host instance has been mounted into the DOM.
 - `remove` means that host instance is being removed; plugins can delay final DOM removal with
   `waitUntil`.
+- `queueTask` lets host plugins run work during the same flush after transforms are applied.
 - Host scope is **mount-scoped**. When a node is removed, that host scope is discarded.
 - Keyed reclaim may reuse the same DOM element, but it gets a **fresh host scope** (fresh listeners,
   fresh plugin state) for the new mount.
@@ -54,7 +56,7 @@ Plugins can participate at three scopes:
 
 - `interaction`
   - Reads `props.on` in transform.
-  - Applies listeners in `afterFlush` with `@remix-run/interaction/createContainer`.
+  - Applies listeners from `queueTask` with `@remix-run/interaction/createContainer`.
   - Disposes listener container on `remove`.
 
 - `presence`
@@ -69,7 +71,7 @@ Plugins can participate at three scopes:
 
 - `css`
   - Transform processes `props.css` into normalized style IDs and `data-css`.
-  - Host scope tracks usage and applies/removes rules around flush/remove.
+  - Host scope tracks usage and applies/removes rules via `queueTask` and `remove`.
   - Built on `src/lib/style` (`processStyle`, `createStyleManager`).
 
 - `connect`
