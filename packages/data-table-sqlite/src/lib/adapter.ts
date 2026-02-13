@@ -1,4 +1,5 @@
 import type {
+  AdapterCapabilityOverrides,
   AdapterExecuteRequest,
   AdapterResult,
   DatabaseAdapter,
@@ -12,11 +13,7 @@ import { compileSqliteStatement } from './sql-compiler.ts'
 export type SqliteDatabaseConnection = BetterSqliteDatabase
 
 export type SqliteDatabaseAdapterOptions = {
-  capabilities?: {
-    returning?: boolean
-    savepoints?: boolean
-    upsert?: boolean
-  }
+  capabilities?: AdapterCapabilityOverrides
 }
 
 export class SqliteDatabaseAdapter implements DatabaseAdapter {
@@ -165,7 +162,13 @@ function normalizeAffectedRowsForReader(
   kind: AdapterExecuteRequest['statement']['kind'],
   rows: Record<string, unknown>[],
 ): number | undefined {
-  if (kind === 'insert' || kind === 'insertMany' || kind === 'update' || kind === 'delete' || kind === 'upsert') {
+  if (
+    kind === 'insert' ||
+    kind === 'insertMany' ||
+    kind === 'update' ||
+    kind === 'delete' ||
+    kind === 'upsert'
+  ) {
     return rows.length
   }
 
@@ -181,7 +184,11 @@ function normalizeInsertIdForReader(
     return undefined
   }
 
-  if (statement.kind !== 'insert' && statement.kind !== 'insertMany' && statement.kind !== 'upsert') {
+  if (
+    statement.kind !== 'insert' &&
+    statement.kind !== 'insertMany' &&
+    statement.kind !== 'upsert'
+  ) {
     return undefined
   }
 
@@ -215,7 +222,11 @@ function normalizeInsertIdForRun(
     return undefined
   }
 
-  if (statement.kind !== 'insert' && statement.kind !== 'insertMany' && statement.kind !== 'upsert') {
+  if (
+    statement.kind !== 'insert' &&
+    statement.kind !== 'insertMany' &&
+    statement.kind !== 'upsert'
+  ) {
     return undefined
   }
 

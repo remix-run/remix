@@ -22,13 +22,11 @@ import { DataTableAdapterError, DataTableQueryError, DataTableValidationError } 
 import type {
   AnyRelation,
   AnyTable,
+  DataSchema,
   LoadedRelationMap,
   OrderByClause,
   OrderDirection,
-  PrimaryKeyInput,
   Relation,
-  RelationMapForTable,
-  Table,
   TableRow,
 } from './table.ts'
 import { getCompositeKey, getPrimaryKeyObject } from './table.ts'
@@ -37,8 +35,9 @@ import { and, eq, inList, normalizeWhereInput, or } from './operators.ts'
 import type { SqlStatement } from './sql.ts'
 import { rawSql, isSqlStatement } from './sql.ts'
 import type { AdapterStatement } from './adapter.ts'
+import type { Pretty } from './types.ts'
 
-type QueryState<table extends AnyTable> = {
+type QueryState = {
   select: '*' | SelectColumn[]
   distinct: boolean
   joins: JoinClause[]
@@ -48,7 +47,7 @@ type QueryState<table extends AnyTable> = {
   orderBy: OrderByClause[]
   limit?: number
   offset?: number
-  with: RelationMapForTable<table>
+  with: Record<string, AnyRelation>
 }
 
 type TableColumnName<table extends AnyTable> = keyof TableRow<table> & string
@@ -57,18 +56,30 @@ type QueryColumnName<table extends AnyTable> =
   | TableColumnName<table>
   | QualifiedTableColumnName<table>
 
-type QueryColumnTypeMap<table extends AnyTable> = {
-  [column in QueryColumnName<table>]: column extends TableColumnName<table>
-    ? TableRow<table>[column]
-    : column extends `${table['name']}.${infer name extends TableColumnName<table>}`
-      ? TableRow<table>[name]
+type RowColumnName<row extends Record<string, unknown>> = keyof row & string
+type QualifiedRowColumnName<
+  tableName extends string,
+  row extends Record<string, unknown>,
+> = `${tableName}.${RowColumnName<row>}`
+
+type QueryColumnTypeMapFromRow<tableName extends string, row extends Record<string, unknown>> = {
+  [column in
+    | RowColumnName<row>
+    | QualifiedRowColumnName<tableName, row>]: column extends RowColumnName<row>
+    ? row[column]
+    : column extends `${tableName}.${infer name extends RowColumnName<row>}`
+      ? row[name]
       : never
 }
+
+type QueryColumnTypeMap<table extends AnyTable> = Pretty<
+  QueryColumnTypeMapFromRow<table['name'], TableRow<table>>
+>
 
 type MergeColumnTypeMaps<
   left extends Record<string, unknown>,
   right extends Record<string, unknown>,
-> = {
+> = Pretty<{
   [column in Extract<keyof left | keyof right, string>]: column extends keyof right
     ? column extends keyof left
       ? left[column] | right[column]
@@ -76,44 +87,107 @@ type MergeColumnTypeMaps<
     : column extends keyof left
       ? left[column]
       : never
-}
+}>
 
 type QueryColumns<columnTypes extends Record<string, unknown>> = Extract<keyof columnTypes, string>
 
 type SelectedAliasRow<
   columnTypes extends Record<string, unknown>,
   selection extends Record<string, QueryColumns<columnTypes>>,
-> = {
+> = Pretty<{
   [alias in keyof selection]: selection[alias] extends keyof columnTypes
     ? columnTypes[selection[alias]]
     : never
-}
+}>
 
 type SavepointCounter = {
   value: number
 }
 
-type ReturningInput<table extends AnyTable> = '*' | (keyof TableRow<table> & string)[]
+type RelationMapForSourceName<tableName extends string> = Record<
+  string,
+  AnyRelation & { sourceTable: { name: tableName } }
+>
+
+type PrimaryKeyInputForRow<
+  row extends Record<string, unknown>,
+  primaryKey extends readonly string[],
+> = primaryKey extends readonly [infer column extends keyof row & string]
+  ? row[column]
+  : {
+      [column in primaryKey[number] & keyof row]: row[column]
+    }
+
+type ReturningInput<row extends Record<string, unknown>> = '*' | (keyof row & string)[]
+
+export type QueryTableInput<
+  tableName extends string,
+  row extends Record<string, unknown>,
+  primaryKey extends readonly (keyof row & string)[],
+> = AnyTable & {
+  kind: 'table'
+  name: tableName
+  columns: {
+    [column in keyof row & string]: DataSchema<any, row[column]>
+  }
+  primaryKey: primaryKey
+}
+
+export type QueryBuilderFor<
+  tableName extends string,
+  row extends Record<string, unknown>,
+  primaryKey extends readonly (keyof row & string)[],
+  loaded extends Record<string, unknown> = {},
+> = QueryBuilder<
+  Pretty<QueryColumnTypeMapFromRow<tableName, row>>,
+  row,
+  loaded,
+  tableName,
+  primaryKey
+>
+
+export type QueryMethod = <
+  tableName extends string,
+  row extends Record<string, unknown>,
+  primaryKey extends readonly (keyof row & string)[],
+>(
+  table: QueryTableInput<tableName, row, primaryKey>,
+) => QueryBuilderFor<tableName, row, primaryKey>
 
 export type WriteResult = {
   affectedRows: number
   insertId?: unknown
 }
 
-export type WriteRowsResult<row> = WriteResult & {
+export type WriteRowsResult<row> = {
+  affectedRows: number
+  insertId?: unknown
   rows: row[]
 }
 
-export type WriteRowResult<row> = WriteResult & {
+export type WriteRowResult<row> = {
+  affectedRows: number
+  insertId?: unknown
   row: row | null
 }
+
+export type QueryColumnTypesForTable<table extends AnyTable> = QueryColumnTypeMap<table>
+
+export type QueryForTable<
+  table extends AnyTable,
+  loaded extends Record<string, unknown> = {},
+> = QueryBuilder<
+  QueryColumnTypesForTable<table>,
+  TableRow<table>,
+  loaded,
+  table['name'],
+  table['primaryKey']
+>
 
 export type Database = {
   adapter: DatabaseAdapter
   now(): unknown
-  query<table extends AnyTable>(
-    table: table,
-  ): QueryBuilder<table, {}, QueryColumnTypeMap<table>, TableRow<table>>
+  query: QueryMethod
   exec(statement: string | SqlStatement, values?: unknown[]): Promise<AdapterResult>
   transaction<result>(
     callback: (database: Database) => Promise<result>,
@@ -147,9 +221,13 @@ class DatabaseRuntime implements Database {
     return this.#now()
   }
 
-  query<table extends AnyTable>(
-    table: table,
-  ): QueryBuilder<table, {}, QueryColumnTypeMap<table>, TableRow<table>> {
+  query: QueryMethod = <
+    tableName extends string,
+    row extends Record<string, unknown>,
+    primaryKey extends readonly (keyof row & string)[],
+  >(
+    table: QueryTableInput<tableName, row, primaryKey>,
+  ): QueryBuilderFor<tableName, row, primaryKey> => {
     return new QueryBuilder(this, table, createInitialQueryState())
   }
 
@@ -238,30 +316,37 @@ export function createDatabase(
 }
 
 export class QueryBuilder<
-  table extends AnyTable,
+  columnTypes extends Record<string, unknown>,
+  row extends Record<string, unknown>,
   loaded extends Record<string, unknown> = {},
-  columnTypes extends Record<string, unknown> = QueryColumnTypeMap<table>,
-  row extends Record<string, unknown> = TableRow<table>,
+  tableName extends string = string,
+  primaryKey extends readonly string[] = readonly string[],
 > {
   #database: DatabaseRuntime
-  #table: table
-  #state: QueryState<table>
+  #table: AnyTable
+  #state: QueryState
 
-  constructor(database: DatabaseRuntime, table: table, state: QueryState<table>) {
+  constructor(database: DatabaseRuntime, table: AnyTable, state: QueryState) {
     this.#database = database
     this.#table = table
     this.#state = state
   }
 
-  select<selection extends (keyof TableRow<table> & string)[]>(
+  select<selection extends (keyof row & string)[]>(
     ...columns: selection
-  ): QueryBuilder<table, loaded, columnTypes, Pick<TableRow<table>, selection[number]>>
+  ): QueryBuilder<columnTypes, Pick<row, selection[number]>, loaded, tableName, primaryKey>
   select<selection extends Record<string, QueryColumns<columnTypes>>>(
     selection: selection,
-  ): QueryBuilder<table, loaded, columnTypes, SelectedAliasRow<columnTypes, selection>>
+  ): QueryBuilder<
+    columnTypes,
+    SelectedAliasRow<columnTypes, selection>,
+    loaded,
+    tableName,
+    primaryKey
+  >
   select(
-    ...input: [Record<string, QueryColumns<columnTypes>>] | (keyof TableRow<table> & string)[]
-  ): QueryBuilder<table, loaded, columnTypes, any> {
+    ...input: [Record<string, QueryColumns<columnTypes>>] | (keyof row & string)[]
+  ): QueryBuilder<columnTypes, any, loaded, tableName, primaryKey> {
     if (
       input.length === 1 &&
       typeof input[0] === 'object' &&
@@ -275,21 +360,29 @@ export class QueryBuilder<
         alias,
       }))
 
-      return this.#clone({ select }) as QueryBuilder<table, loaded, columnTypes, any>
+      return this.#clone({ select }) as QueryBuilder<
+        columnTypes,
+        any,
+        loaded,
+        tableName,
+        primaryKey
+      >
     }
 
-    let columns = input as (keyof TableRow<table> & string)[]
+    let columns = input as (keyof row & string)[]
 
     return this.#clone({
       select: columns.map((column) => ({ column, alias: column })),
-    }) as QueryBuilder<table, loaded, columnTypes, any>
+    }) as QueryBuilder<columnTypes, any, loaded, tableName, primaryKey>
   }
 
-  distinct(value = true): QueryBuilder<table, loaded, columnTypes, row> {
+  distinct(value = true): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     return this.#clone({ distinct: value })
   }
 
-  where(input: WhereInput<QueryColumns<columnTypes>>): QueryBuilder<table, loaded, columnTypes, row> {
+  where(
+    input: WhereInput<QueryColumns<columnTypes>>,
+  ): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     let predicate = normalizeWhereInput(input)
     let normalizedPredicate = normalizePredicateValues(
       predicate,
@@ -301,7 +394,9 @@ export class QueryBuilder<
     })
   }
 
-  having(input: WhereInput<QueryColumns<columnTypes>>): QueryBuilder<table, loaded, columnTypes, row> {
+  having(
+    input: WhereInput<QueryColumns<columnTypes>>,
+  ): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     let predicate = normalizeWhereInput(input)
     let normalizedPredicate = normalizePredicateValues(
       predicate,
@@ -318,10 +413,11 @@ export class QueryBuilder<
     on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
     type: JoinType = 'inner',
   ): QueryBuilder<
-    table,
-    loaded,
     MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
-    row
+    row,
+    loaded,
+    tableName,
+    primaryKey
   > {
     let normalizedOn = normalizePredicateValues(
       on,
@@ -344,10 +440,11 @@ export class QueryBuilder<
       offset: this.#state.offset,
       with: { ...this.#state.with },
     }) as QueryBuilder<
-      table,
-      loaded,
       MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
-      row
+      row,
+      loaded,
+      tableName,
+      primaryKey
     >
   }
 
@@ -355,10 +452,11 @@ export class QueryBuilder<
     target: target,
     on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
   ): QueryBuilder<
-    table,
-    loaded,
     MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
-    row
+    row,
+    loaded,
+    tableName,
+    primaryKey
   > {
     return this.join(target, on, 'left')
   }
@@ -367,10 +465,11 @@ export class QueryBuilder<
     target: target,
     on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
   ): QueryBuilder<
-    table,
-    loaded,
     MergeColumnTypeMaps<columnTypes, QueryColumnTypeMap<target>>,
-    row
+    row,
+    loaded,
+    tableName,
+    primaryKey
   > {
     return this.join(target, on, 'right')
   }
@@ -378,35 +477,43 @@ export class QueryBuilder<
   orderBy(
     column: QueryColumns<columnTypes>,
     direction: OrderDirection = 'asc',
-  ): QueryBuilder<table, loaded, columnTypes, row> {
+  ): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     return this.#clone({
       orderBy: [...this.#state.orderBy, { column, direction }],
     })
   }
 
-  groupBy(...columns: QueryColumns<columnTypes>[]): QueryBuilder<table, loaded, columnTypes, row> {
+  groupBy(
+    ...columns: QueryColumns<columnTypes>[]
+  ): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     return this.#clone({
       groupBy: [...this.#state.groupBy, ...columns],
     })
   }
 
-  limit(value: number): QueryBuilder<table, loaded, columnTypes, row> {
+  limit(value: number): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     return this.#clone({ limit: value })
   }
 
-  offset(value: number): QueryBuilder<table, loaded, columnTypes, row> {
+  offset(value: number): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     return this.#clone({ offset: value })
   }
 
-  with<relations extends RelationMapForTable<table>>(
+  with<relations extends RelationMapForSourceName<tableName>>(
     relations: relations,
-  ): QueryBuilder<table, loaded & LoadedRelationMap<relations>, columnTypes, row> {
+  ): QueryBuilder<columnTypes, row, loaded & LoadedRelationMap<relations>, tableName, primaryKey> {
     return this.#clone({
       with: {
         ...this.#state.with,
         ...relations,
       },
-    }) as QueryBuilder<table, loaded & LoadedRelationMap<relations>, columnTypes, row>
+    }) as QueryBuilder<
+      columnTypes,
+      row,
+      loaded & LoadedRelationMap<relations>,
+      tableName,
+      primaryKey
+    >
   }
 
   async all(): Promise<Array<row & loaded>> {
@@ -432,13 +539,13 @@ export class QueryBuilder<
     return rows[0] ?? null
   }
 
-  async find(value: PrimaryKeyInput<table>): Promise<(row & loaded) | null> {
-    let where = getPrimaryKeyObject(this.#table, value)
-    return this.where(where).first()
+  async find(value: PrimaryKeyInputForRow<row, primaryKey>): Promise<(row & loaded) | null> {
+    let where = getPrimaryKeyObject(this.#table, value as any)
+    return this.where(where as WhereInput<QueryColumns<columnTypes>>).first()
   }
 
   async count(): Promise<number> {
-    let statement: CountStatement<table> = {
+    let statement: CountStatement<AnyTable> = {
       kind: 'count',
       table: this.#table,
       joins: [...this.#state.joins],
@@ -461,7 +568,7 @@ export class QueryBuilder<
   }
 
   async exists(): Promise<boolean> {
-    let statement: ExistsStatement<table> = {
+    let statement: ExistsStatement<AnyTable> = {
       kind: 'exists',
       table: this.#table,
       joins: [...this.#state.joins],
@@ -484,19 +591,15 @@ export class QueryBuilder<
   }
 
   async insert(
-    values: Partial<TableRow<table>>,
-    options?: { returning?: ReturningInput<table>; touch?: boolean },
-  ): Promise<WriteResult | WriteRowResult<TableRow<table>>> {
-    assertWriteState(
-      this.#state,
-      'insert',
-      {
-        where: false,
-        orderBy: false,
-        limit: false,
-        offset: false,
-      },
-    )
+    values: Partial<row>,
+    options?: { returning?: ReturningInput<row>; touch?: boolean },
+  ): Promise<WriteResult | WriteRowResult<row>> {
+    assertWriteState(this.#state, 'insert', {
+      where: false,
+      orderBy: false,
+      limit: false,
+      offset: false,
+    })
 
     let preparedValues = prepareInsertValues(
       this.#table,
@@ -509,7 +612,7 @@ export class QueryBuilder<
     assertReturningCapability(this.#database.adapter, 'insert', returning)
 
     if (returning) {
-      let statement: InsertStatement<table> = {
+      let statement: InsertStatement<AnyTable> = {
         kind: 'insert',
         table: this.#table,
         values: preparedValues,
@@ -517,7 +620,7 @@ export class QueryBuilder<
       }
 
       let result = await this.#database.execute(statement)
-      let row = (normalizeRows(result.rows)[0] ?? null) as TableRow<table> | null
+      let row = (normalizeRows(result.rows)[0] ?? null) as row | null
 
       return {
         affectedRows: result.affectedRows ?? 0,
@@ -526,7 +629,7 @@ export class QueryBuilder<
       }
     }
 
-    let statement: InsertStatement<table> = {
+    let statement: InsertStatement<AnyTable> = {
       kind: 'insert',
       table: this.#table,
       values: preparedValues,
@@ -542,19 +645,15 @@ export class QueryBuilder<
   }
 
   async insertMany(
-    values: Partial<TableRow<table>>[],
-    options?: { returning?: ReturningInput<table>; touch?: boolean },
-  ): Promise<WriteResult | WriteRowsResult<TableRow<table>>> {
-    assertWriteState(
-      this.#state,
-      'insertMany',
-      {
-        where: false,
-        orderBy: false,
-        limit: false,
-        offset: false,
-      },
-    )
+    values: Partial<row>[],
+    options?: { returning?: ReturningInput<row>; touch?: boolean },
+  ): Promise<WriteResult | WriteRowsResult<row>> {
+    assertWriteState(this.#state, 'insertMany', {
+      where: false,
+      orderBy: false,
+      limit: false,
+      offset: false,
+    })
 
     let preparedValues = values.map((value) =>
       prepareInsertValues(this.#table, value, this.#database.now(), options?.touch ?? true),
@@ -564,7 +663,7 @@ export class QueryBuilder<
     assertReturningCapability(this.#database.adapter, 'insertMany', returning)
 
     if (returning) {
-      let statement: InsertManyStatement<table> = {
+      let statement: InsertManyStatement<AnyTable> = {
         kind: 'insertMany',
         table: this.#table,
         values: preparedValues,
@@ -576,11 +675,11 @@ export class QueryBuilder<
       return {
         affectedRows: result.affectedRows ?? 0,
         insertId: result.insertId,
-        rows: normalizeRows(result.rows) as TableRow<table>[],
+        rows: normalizeRows(result.rows) as row[],
       }
     }
 
-    let statement: InsertManyStatement<table> = {
+    let statement: InsertManyStatement<AnyTable> = {
       kind: 'insertMany',
       table: this.#table,
       values: preparedValues,
@@ -596,19 +695,15 @@ export class QueryBuilder<
   }
 
   async update(
-    changes: Partial<TableRow<table>>,
-    options?: { returning?: ReturningInput<table>; touch?: boolean },
-  ): Promise<WriteResult | WriteRowsResult<TableRow<table>>> {
-    assertWriteState(
-      this.#state,
-      'update',
-      {
-        where: true,
-        orderBy: true,
-        limit: true,
-        offset: true,
-      },
-    )
+    changes: Partial<row>,
+    options?: { returning?: ReturningInput<row>; touch?: boolean },
+  ): Promise<WriteResult | WriteRowsResult<row>> {
+    assertWriteState(this.#state, 'update', {
+      where: true,
+      orderBy: true,
+      limit: true,
+      offset: true,
+    })
 
     let preparedChanges = prepareUpdateValues(
       this.#table,
@@ -650,7 +745,7 @@ export class QueryBuilder<
       })
     }
 
-    let statement: UpdateStatement<table> = {
+    let statement: UpdateStatement<AnyTable> = {
       kind: 'update',
       table: this.#table,
       changes: preparedChanges,
@@ -670,23 +765,19 @@ export class QueryBuilder<
     return {
       affectedRows: result.affectedRows ?? 0,
       insertId: result.insertId,
-      rows: normalizeRows(result.rows) as TableRow<table>[],
+      rows: normalizeRows(result.rows) as row[],
     }
   }
 
   async delete(options?: {
-    returning?: ReturningInput<table>
-  }): Promise<WriteResult | WriteRowsResult<TableRow<table>>> {
-    assertWriteState(
-      this.#state,
-      'delete',
-      {
-        where: true,
-        orderBy: true,
-        limit: true,
-        offset: true,
-      },
-    )
+    returning?: ReturningInput<row>
+  }): Promise<WriteResult | WriteRowsResult<row>> {
+    assertWriteState(this.#state, 'delete', {
+      where: true,
+      orderBy: true,
+      limit: true,
+      offset: true,
+    })
 
     let returning = options?.returning
     assertReturningCapability(this.#database.adapter, 'delete', returning)
@@ -718,7 +809,7 @@ export class QueryBuilder<
       })
     }
 
-    let statement: DeleteStatement<table> = {
+    let statement: DeleteStatement<AnyTable> = {
       kind: 'delete',
       table: this.#table,
       where: [...this.#state.where],
@@ -737,29 +828,25 @@ export class QueryBuilder<
     return {
       affectedRows: result.affectedRows ?? 0,
       insertId: result.insertId,
-      rows: normalizeRows(result.rows) as TableRow<table>[],
+      rows: normalizeRows(result.rows) as row[],
     }
   }
 
   async upsert(
-    values: Partial<TableRow<table>>,
+    values: Partial<row>,
     options?: {
-      returning?: ReturningInput<table>
+      returning?: ReturningInput<row>
       touch?: boolean
-      conflictTarget?: (keyof TableRow<table> & string)[]
-      update?: Partial<TableRow<table>>
+      conflictTarget?: (keyof row & string)[]
+      update?: Partial<row>
     },
-  ): Promise<WriteResult | WriteRowResult<TableRow<table>>> {
-    assertWriteState(
-      this.#state,
-      'upsert',
-      {
-        where: false,
-        orderBy: false,
-        limit: false,
-        offset: false,
-      },
-    )
+  ): Promise<WriteResult | WriteRowResult<row>> {
+    assertWriteState(this.#state, 'upsert', {
+      where: false,
+      orderBy: false,
+      limit: false,
+      offset: false,
+    })
 
     if (!this.#database.adapter.capabilities.upsert) {
       throw new DataTableQueryError('Adapter does not support upsert')
@@ -783,7 +870,7 @@ export class QueryBuilder<
     assertReturningCapability(this.#database.adapter, 'upsert', returning)
 
     if (returning) {
-      let statement: UpsertStatement<table> = {
+      let statement: UpsertStatement<AnyTable> = {
         kind: 'upsert',
         table: this.#table,
         values: preparedValues,
@@ -793,7 +880,7 @@ export class QueryBuilder<
       }
 
       let result = await this.#database.execute(statement)
-      let row = (normalizeRows(result.rows)[0] ?? null) as TableRow<table> | null
+      let row = (normalizeRows(result.rows)[0] ?? null) as row | null
 
       return {
         affectedRows: result.affectedRows ?? 0,
@@ -802,7 +889,7 @@ export class QueryBuilder<
       }
     }
 
-    let statement: UpsertStatement<table> = {
+    let statement: UpsertStatement<AnyTable> = {
       kind: 'upsert',
       table: this.#table,
       values: preparedValues,
@@ -819,7 +906,7 @@ export class QueryBuilder<
     return metadata
   }
 
-  #toSelectStatement(): SelectStatement<table> {
+  #toSelectStatement(): SelectStatement<AnyTable> {
     return {
       kind: 'select',
       table: this.#table,
@@ -835,7 +922,9 @@ export class QueryBuilder<
     }
   }
 
-  #clone(patch: Partial<QueryState<table>>): QueryBuilder<table, loaded, columnTypes, row> {
+  #clone(
+    patch: Partial<QueryState>,
+  ): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     return new QueryBuilder(this.#database, this.#table, {
       select: patch.select ?? cloneSelection(this.#state.select),
       distinct: patch.distinct ?? this.#state.distinct,
@@ -849,14 +938,13 @@ export class QueryBuilder<
       with: patch.with ? { ...patch.with } : { ...this.#state.with },
     })
   }
-
 }
 
 async function loadRelationsForRows(
   database: DatabaseRuntime,
   sourceTable: AnyTable,
   rows: Record<string, unknown>[],
-  relationMap: RelationMapForTable<any>,
+  relationMap: Record<string, AnyRelation>,
 ): Promise<Record<string, unknown>[]> {
   let output = rows.map((row) => ({ ...row }))
 
@@ -911,7 +999,7 @@ async function loadDirectRelationValues(
   let sourceTuples = uniqueTuples(sourceRows, relation.sourceKey)
 
   if (sourceTuples.length === 0) {
-    return sourceRows.map(() => relation.cardinality === 'many' ? [] : null)
+    return sourceRows.map(() => (relation.cardinality === 'many' ? [] : null))
   }
 
   let query = database.query(relation.targetTable)
@@ -1044,10 +1132,10 @@ async function loadHasManyThroughValues(
 }
 
 function applyRelationModifiers<table extends AnyTable>(
-  query: QueryBuilder<table, {}>,
+  query: QueryForTable<table>,
   relation: Relation<any, table, any, any>,
   options: { includePagination: boolean },
-): QueryBuilder<table, any> {
+): QueryForTable<table, any> {
   let next = query
 
   for (let predicate of relation.modifiers.where) {
@@ -1090,7 +1178,7 @@ function normalizeRows(rows: AdapterResult['rows']): Record<string, unknown>[] {
   return rows.map((row) => ({ ...row }))
 }
 
-function hasScopedWriteModifiers<table extends AnyTable>(state: QueryState<table>): boolean {
+function hasScopedWriteModifiers(state: QueryState): boolean {
   return state.orderBy.length > 0 || state.limit !== undefined || state.offset !== undefined
 }
 
@@ -1101,8 +1189,8 @@ type WriteStatePolicy = {
   offset: boolean
 }
 
-function assertWriteState<table extends AnyTable>(
-  state: QueryState<table>,
+function assertWriteState(
+  state: QueryState,
   operation: 'insert' | 'insertMany' | 'update' | 'delete' | 'upsert',
   policy: WriteStatePolicy,
 ): void {
@@ -1158,16 +1246,23 @@ function assertWriteState<table extends AnyTable>(
 async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
   database: Database,
   table: table,
-  state: QueryState<table>,
+  state: QueryState,
 ): Promise<Record<string, unknown>[]> {
-  let query: QueryBuilder<table, {}, QueryColumnTypeMap<table>, any> = database.query(table)
+  let query: QueryForTable<table> = database.query<
+    table['name'],
+    TableRow<table>,
+    table['primaryKey']
+  >(table as unknown as QueryTableInput<table['name'], TableRow<table>, table['primaryKey']>)
 
   for (let predicate of state.where) {
     query = query.where(predicate as Predicate<QueryColumnName<table>>)
   }
 
   for (let clause of state.orderBy) {
-    query = query.orderBy(clause.column as QueryColumns<QueryColumnTypeMap<table>>, clause.direction)
+    query = query.orderBy(
+      clause.column as QueryColumns<QueryColumnTypeMap<table>>,
+      clause.direction,
+    )
   }
 
   if (state.limit !== undefined) {
@@ -1178,9 +1273,7 @@ async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
     query = query.offset(state.offset)
   }
 
-  query = query.select(...(table.primaryKey as (keyof TableRow<table> & string)[]))
-
-  let rows = await query.all()
+  let rows = await query.select(...(table.primaryKey as (keyof TableRow<table> & string)[])).all()
   let primaryKeys = table.primaryKey as string[]
 
   return rows.map((row) => {
@@ -1194,7 +1287,7 @@ async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
   })
 }
 
-function createInitialQueryState<table extends AnyTable>(): QueryState<table> {
+function createInitialQueryState(): QueryState {
   return {
     select: '*',
     distinct: false,
@@ -1461,7 +1554,11 @@ function parsePredicateValue(column: ResolvedPredicateColumn, value: unknown): u
 
   if (!result.success) {
     throw new DataTableValidationError(
-      'Invalid filter value for column "' + column.columnName + '" in table "' + column.tableName + '"',
+      'Invalid filter value for column "' +
+        column.columnName +
+        '" in table "' +
+        column.tableName +
+        '"',
       result.issues,
       {
         metadata: {
@@ -1558,8 +1655,8 @@ function stringifyForKey(value: unknown): string {
   return JSON.stringify(value)
 }
 
-function normalizeReturningSelection<table extends AnyTable>(
-  returning: ReturningInput<table>,
+function normalizeReturningSelection<row extends Record<string, unknown>>(
+  returning: ReturningInput<row>,
 ): ReturningSelection {
   if (returning === '*') {
     return '*'
@@ -1608,10 +1705,10 @@ function rowKeys(row: Record<string, unknown>, keys: string[]): string[] {
   return output
 }
 
-function assertReturningCapability<table extends AnyTable>(
+function assertReturningCapability<row extends Record<string, unknown>>(
   adapter: DatabaseAdapter,
   operation: 'insert' | 'insertMany' | 'update' | 'delete' | 'upsert',
-  returning: ReturningInput<table> | undefined,
+  returning: ReturningInput<row> | undefined,
 ): void {
   if (returning && !adapter.capabilities.returning) {
     throw new DataTableQueryError(operation + '() returning is not supported by this adapter')

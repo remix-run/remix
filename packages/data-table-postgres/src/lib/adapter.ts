@@ -1,4 +1,5 @@
 import type {
+  AdapterCapabilityOverrides,
   AdapterExecuteRequest,
   AdapterResult,
   DatabaseAdapter,
@@ -7,6 +8,10 @@ import type {
 } from '@remix-run/data-table'
 
 import { compilePostgresStatement } from './sql-compiler.ts'
+
+type Pretty<value> = {
+  [key in keyof value]: value[key]
+} & {}
 
 export type PostgresQueryResult = {
   rows: unknown[]
@@ -17,20 +22,20 @@ export type PostgresDatabaseClient = {
   query(text: string, values?: unknown[]): Promise<PostgresQueryResult>
 }
 
-export type PostgresTransactionClient = PostgresDatabaseClient & {
-  release?: () => void
-}
+export type PostgresTransactionClient = Pretty<
+  PostgresDatabaseClient & {
+    release?: () => void
+  }
+>
 
-export type PostgresDatabasePool = PostgresDatabaseClient & {
-  connect?: () => Promise<PostgresTransactionClient>
-}
+export type PostgresDatabasePool = Pretty<
+  PostgresDatabaseClient & {
+    connect?: () => Promise<PostgresTransactionClient>
+  }
+>
 
 export type PostgresDatabaseAdapterOptions = {
-  capabilities?: {
-    returning?: boolean
-    savepoints?: boolean
-    upsert?: boolean
-  }
+  capabilities?: AdapterCapabilityOverrides
 }
 
 type TransactionState = {

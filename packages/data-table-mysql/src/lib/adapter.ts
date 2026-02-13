@@ -1,4 +1,5 @@
 import type {
+  AdapterCapabilityOverrides,
   AdapterExecuteRequest,
   AdapterResult,
   DatabaseAdapter,
@@ -15,8 +16,10 @@ export type MysqlQueryResultHeader = {
   insertId: unknown
 }
 
+export type MysqlQueryResponse = [result: unknown, fields?: unknown]
+
 export type MysqlDatabaseConnection = {
-  query(text: string, values?: unknown[]): Promise<[unknown, unknown?]>
+  query(text: string, values?: unknown[]): Promise<MysqlQueryResponse>
   beginTransaction(): Promise<void>
   commit(): Promise<void>
   rollback(): Promise<void>
@@ -24,16 +27,12 @@ export type MysqlDatabaseConnection = {
 }
 
 export type MysqlDatabasePool = {
-  query(text: string, values?: unknown[]): Promise<[unknown, unknown?]>
+  query(text: string, values?: unknown[]): Promise<MysqlQueryResponse>
   getConnection(): Promise<MysqlDatabaseConnection>
 }
 
 export type MysqlDatabaseAdapterOptions = {
-  capabilities?: {
-    returning?: boolean
-    savepoints?: boolean
-    upsert?: boolean
-  }
+  capabilities?: AdapterCapabilityOverrides
 }
 
 type TransactionState = {

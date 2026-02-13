@@ -1,4 +1,5 @@
 export type {
+  AdapterCapabilityOverrides,
   AdapterCapabilities,
   AdapterExecuteRequest,
   AdapterResult,
@@ -34,7 +35,9 @@ export type {
   RelationKind,
   RelationMapForTable,
   Table,
+  TableReference,
   TableRow,
+  TableRowWithLoaded,
   TimestampConfig,
   TimestampOptions,
 } from './lib/table.ts'
@@ -62,5 +65,15 @@ export {
 export type { SqlStatement } from './lib/sql.ts'
 export { rawSql, sql } from './lib/sql.ts'
 
-export type { Database, WriteResult, WriteRowResult, WriteRowsResult } from './lib/database.ts'
+export type {
+  Database,
+  QueryBuilderFor,
+  QueryColumnTypesForTable,
+  QueryForTable,
+  QueryMethod,
+  QueryTableInput,
+  WriteResult,
+  WriteRowResult,
+  WriteRowsResult,
+} from './lib/database.ts'
 export { createDatabase, QueryBuilder } from './lib/database.ts'

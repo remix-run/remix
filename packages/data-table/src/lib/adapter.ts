@@ -1,6 +1,7 @@
-import type { OrderByClause, AnyTable } from './table.ts'
+import type { AnyTable, OrderByClause, TableReference } from './table.ts'
 import type { Predicate } from './operators.ts'
 import type { SqlStatement } from './sql.ts'
+import type { Pretty } from './types.ts'
 
 export type JoinType = 'inner' | 'left' | 'right'
 
@@ -19,7 +20,7 @@ export type ReturningSelection = '*' | string[]
 
 export type SelectStatement<table extends AnyTable = AnyTable> = {
   kind: 'select'
-  table: table
+  table: TableReference<table>
   select: '*' | SelectColumn[]
   distinct: boolean
   joins: JoinClause[]
@@ -33,7 +34,7 @@ export type SelectStatement<table extends AnyTable = AnyTable> = {
 
 export type CountStatement<table extends AnyTable = AnyTable> = {
   kind: 'count'
-  table: table
+  table: TableReference<table>
   joins: JoinClause[]
   where: Predicate[]
   groupBy: string[]
@@ -42,7 +43,7 @@ export type CountStatement<table extends AnyTable = AnyTable> = {
 
 export type ExistsStatement<table extends AnyTable = AnyTable> = {
   kind: 'exists'
-  table: table
+  table: TableReference<table>
   joins: JoinClause[]
   where: Predicate[]
   groupBy: string[]
@@ -51,21 +52,21 @@ export type ExistsStatement<table extends AnyTable = AnyTable> = {
 
 export type InsertStatement<table extends AnyTable = AnyTable> = {
   kind: 'insert'
-  table: table
+  table: TableReference<table>
   values: Record<string, unknown>
   returning?: ReturningSelection
 }
 
 export type InsertManyStatement<table extends AnyTable = AnyTable> = {
   kind: 'insertMany'
-  table: table
+  table: TableReference<table>
   values: Record<string, unknown>[]
   returning?: ReturningSelection
 }
 
 export type UpdateStatement<table extends AnyTable = AnyTable> = {
   kind: 'update'
-  table: table
+  table: TableReference<table>
   changes: Record<string, unknown>
   where: Predicate[]
   returning?: ReturningSelection
@@ -73,14 +74,14 @@ export type UpdateStatement<table extends AnyTable = AnyTable> = {
 
 export type DeleteStatement<table extends AnyTable = AnyTable> = {
   kind: 'delete'
-  table: table
+  table: TableReference<table>
   where: Predicate[]
   returning?: ReturningSelection
 }
 
 export type UpsertStatement<table extends AnyTable = AnyTable> = {
   kind: 'upsert'
-  table: table
+  table: TableReference<table>
   values: Record<string, unknown>
   conflictTarget?: string[]
   update?: Record<string, unknown>
@@ -129,6 +130,8 @@ export type AdapterCapabilities = {
   savepoints: boolean
   upsert: boolean
 }
+
+export type AdapterCapabilityOverrides = Pretty<Partial<AdapterCapabilities>>
 
 export interface DatabaseAdapter {
   dialect: string

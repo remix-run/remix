@@ -1,7 +1,8 @@
-import type { AdapterStatement, AnyTable, Predicate } from '@remix-run/data-table'
+import type { AdapterStatement, Predicate } from '@remix-run/data-table'
 
 type JoinClause = Extract<AdapterStatement, { kind: 'select' }>['joins'][number]
 type UpsertStatement = Extract<AdapterStatement, { kind: 'upsert' }>
+type StatementTable = Extract<AdapterStatement, { kind: 'select' }>['table']
 
 type CompiledSql = {
   text: string
@@ -84,7 +85,9 @@ export function compileMysqlStatement(statement: AdapterStatement): CompiledSql 
         quoteIdentifier(statement.table.name) +
         ' set ' +
         columns
-          .map((column) => quotePath(column) + ' = ' + pushValue(context, statement.changes[column]))
+          .map(
+            (column) => quotePath(column) + ' = ' + pushValue(context, statement.changes[column]),
+          )
           .join(', ') +
         compileWhereClause(statement.where, context),
       values: context.values,
@@ -109,7 +112,7 @@ export function compileMysqlStatement(statement: AdapterStatement): CompiledSql 
 }
 
 function compileInsertStatement(
-  table: AnyTable,
+  table: StatementTable,
   values: Record<string, unknown>,
   context: CompileContext,
 ): CompiledSql {
@@ -127,20 +130,16 @@ function compileInsertStatement(
       'insert into ' +
       quoteIdentifier(table.name) +
       ' (' +
-      columns
-        .map((column) => quotePath(column))
-        .join(', ') +
+      columns.map((column) => quotePath(column)).join(', ') +
       ') values (' +
-      columns
-        .map((column) => pushValue(context, values[column]))
-        .join(', ') +
+      columns.map((column) => pushValue(context, values[column])).join(', ') +
       ')',
     values: context.values,
   }
 }
 
 function compileInsertManyStatement(
-  table: AnyTable,
+  table: StatementTable,
   rows: Record<string, unknown>[],
   context: CompileContext,
 ): CompiledSql {
@@ -160,7 +159,8 @@ function compileInsertManyStatement(
     }
   }
 
-  let values = rows.map((row) => (
+  let values = rows.map(
+    (row) =>
       '(' +
       columns
         .map((column) => {
@@ -168,17 +168,15 @@ function compileInsertManyStatement(
           return pushValue(context, value)
         })
         .join(', ') +
-      ')'
-    ))
+      ')',
+  )
 
   return {
     text:
       'insert into ' +
       quoteIdentifier(table.name) +
       ' (' +
-      columns
-        .map((column) => quotePath(column))
-        .join(', ') +
+      columns.map((column) => quotePath(column)).join(', ') +
       ') values ' +
       values.join(', '),
     values: context.values,
@@ -208,20 +206,20 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
       'insert into ' +
       quoteIdentifier(statement.table.name) +
       ' (' +
-      insertColumns
-        .map((column) => quotePath(column))
-        .join(', ') +
+      insertColumns.map((column) => quotePath(column)).join(', ') +
       ') values (' +
-      insertColumns
-        .map((column) => pushValue(context, statement.values[column]))
-        .join(', ') +
+      insertColumns.map((column) => pushValue(context, statement.values[column])).join(', ') +
       ') on duplicate key update ' +
       onDuplicate,
     values: context.values,
   }
 }
 
-function compileFromClause(table: AnyTable, joins: JoinClause[], context: CompileContext): string {
+function compileFromClause(
+  table: StatementTable,
+  joins: JoinClause[],
+  context: CompileContext,
+): string {
   let output = ' from ' + quoteIdentifier(table.name)
 
   for (let join of joins) {
@@ -244,9 +242,7 @@ function compileWhereClause(predicates: Predicate[], context: CompileContext): s
 
   return (
     ' where ' +
-    predicates
-      .map((predicate) => '(' + compilePredicate(predicate, context) + ')')
-      .join(' and ')
+    predicates.map((predicate) => '(' + compilePredicate(predicate, context) + ')').join(' and ')
   )
 }
 
@@ -255,12 +251,7 @@ function compileGroupByClause(columns: string[]): string {
     return ''
   }
 
-  return (
-    ' group by ' +
-    columns
-      .map((column) => quotePath(column))
-      .join(', ')
-  )
+  return ' group by ' + columns.map((column) => quotePath(column)).join(', ')
 }
 
 function compileHavingClause(predicates: Predicate[], context: CompileContext): string {
@@ -270,9 +261,7 @@ function compileHavingClause(predicates: Predicate[], context: CompileContext): 
 
   return (
     ' having ' +
-    predicates
-      .map((predicate) => '(' + compilePredicate(predicate, context) + ')')
-      .join(' and ')
+    predicates.map((predicate) => '(' + compilePredicate(predicate, context) + ')').join(' and ')
   )
 }
 
@@ -367,9 +356,7 @@ function compilePredicate(predicate: Predicate, context: CompileContext): string
         ' ' +
         keyword +
         ' (' +
-        values
-          .map((value) => pushValue(context, value))
-          .join(', ') +
+        values.map((value) => pushValue(context, value)).join(', ') +
         ')'
       )
     }

@@ -2,6 +2,7 @@ export type {
   MysqlDatabaseAdapterOptions,
   MysqlDatabaseConnection,
   MysqlDatabasePool,
+  MysqlQueryResponse,
   MysqlQueryResultHeader,
   MysqlQueryRows,
 } from './lib/adapter.ts'

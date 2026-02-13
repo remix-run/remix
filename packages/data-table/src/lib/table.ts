@@ -1,6 +1,7 @@
 import type { Predicate, WhereInput } from './operators.ts'
 import { inferForeignKey, singularize } from './inflection.ts'
 import { normalizeWhereInput } from './operators.ts'
+import type { Pretty } from './types.ts'
 
 export type DataSchema<input = unknown, output = input> = {
   '~standard': {
@@ -18,9 +19,14 @@ export type ColumnSchemas = Record<string, DataSchema<any, any>>
 export type InferSchemaOutput<schema> =
   schema extends DataSchema<any, infer output> ? output : never
 
-export type TableRow<table extends AnyTable> = {
+export type TableRow<table extends AnyTable> = Pretty<{
   [column in keyof table['columns']]: InferSchemaOutput<table['columns'][column]>
-}
+}>
+
+export type TableRowWithLoaded<
+  table extends AnyTable,
+  loaded extends Record<string, unknown> = {},
+> = Pretty<TableRow<table> & loaded>
 
 export type OrderDirection = 'asc' | 'desc'
 
@@ -55,8 +61,8 @@ export type RelationKind = 'hasMany' | 'hasOne' | 'belongsTo' | 'hasManyThrough'
 export type RelationResult<relation extends AnyRelation> =
   relation extends Relation<any, infer target, infer cardinality, infer loaded>
     ? cardinality extends 'many'
-      ? Array<TableRow<target> & loaded>
-      : (TableRow<target> & loaded) | null
+      ? Array<TableRowWithLoaded<target, loaded>>
+      : TableRowWithLoaded<target, loaded> | null
     : never
 
 export type RelationMapForTable<table extends AnyTable> = Record<
@@ -64,9 +70,13 @@ export type RelationMapForTable<table extends AnyTable> = Record<
   Relation<table, AnyTable, RelationCardinality, any>
 >
 
-export type LoadedRelationMap<relations extends RelationMapForTable<any>> = {
+export type LoadedRelationMap<relations extends RelationMapForTable<any>> = Pretty<{
   [name in keyof relations]: RelationResult<relations[name]>
-}
+}>
+
+export type TableReference<table extends AnyTable = AnyTable> = Pretty<
+  Pick<table, 'kind' | 'name' | 'columns' | 'primaryKey' | 'timestamps'>
+>
 
 export type KeySelector<table extends AnyTable> =
   | (keyof TableRow<table> & string)
@@ -405,9 +415,9 @@ export type PrimaryKeyInput<table extends AnyTable> = table['primaryKey'] extend
   infer column extends string,
 ]
   ? TableRow<table>[column]
-  : {
+  : Pretty<{
       [column in table['primaryKey'][number] & keyof TableRow<table>]: TableRow<table>[column]
-    }
+    }>
 
 export function getPrimaryKeyObject<table extends AnyTable>(
   table: table,

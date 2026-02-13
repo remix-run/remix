@@ -3,7 +3,9 @@ import { afterEach, describe, it } from 'node:test'
 import { boolean, number, string } from '@remix-run/data-schema'
 
 import { createDatabase } from './database.ts'
+import type { QueryBuilder, QueryColumnTypesForTable, QueryForTable } from './database.ts'
 import { createTable } from './table.ts'
+import type { TableReference } from './table.ts'
 import { eq } from './operators.ts'
 import type { SqliteTestSeed } from '../../test/sqlite-test-database.ts'
 import { createSqliteTestAdapter } from '../../test/sqlite-test-database.ts'
@@ -46,6 +48,47 @@ afterEach(() => {
 })
 
 describe('type safety', () => {
+  it('exposes query builder generics as column and row output maps', () => {
+    let db = createDatabase(createAdapter())
+    let query = db.query(Accounts)
+
+    type Query = typeof query
+    type QueryColumns =
+      Query extends QueryBuilder<infer columnTypes, any, any, any, any> ? columnTypes : never
+    type QueryRow = Query extends QueryBuilder<any, infer row, any, any, any> ? row : never
+    type QueryTableName = Query extends QueryBuilder<any, any, any, infer name, any> ? name : never
+    type QueryPrimaryKey = Query extends QueryBuilder<any, any, any, any, infer key> ? key : never
+    type QueryFromTableAlias = QueryForTable<typeof Accounts>
+    type QueryColumnsFromAlias = QueryColumnTypesForTable<typeof Accounts>
+    type AccountsReference = TableReference<typeof Accounts>
+    type AccountsReferenceColumns = keyof AccountsReference['columns'] & string
+
+    type ExpectedColumns = {
+      id: number
+      email: string
+      status: string
+      'accounts.id': number
+      'accounts.email': string
+      'accounts.status': string
+    }
+    type ExpectedRow = {
+      id: number
+      email: string
+      status: string
+    }
+
+    expectType<Equal<QueryColumns, ExpectedColumns>>()
+    expectType<Equal<QueryRow, ExpectedRow>>()
+    expectType<Equal<QueryTableName, 'accounts'>>()
+    expectType<Equal<QueryPrimaryKey, readonly ['id']>>()
+    expectType<Equal<Query, QueryFromTableAlias>>()
+    expectType<Equal<QueryColumns, QueryColumnsFromAlias>>()
+    expectType<Equal<AccountsReference['kind'], 'table'>>()
+    expectType<Equal<AccountsReference['name'], 'accounts'>>()
+    expectType<Equal<AccountsReference['primaryKey'], readonly ['id']>>()
+    expectType<Equal<AccountsReferenceColumns, 'email' | 'id' | 'status'>>()
+  })
+
   it('narrows select() result types while preserving relation types', async () => {
     let db = createDatabase(
       createAdapter({
@@ -117,12 +160,18 @@ describe('type safety', () => {
     rows[0].email
 
     function verifyTypeErrors(): void {
-      // @ts-expect-error unknown joined column for orderBy
-      db.query(Accounts).join(Projects, eq('accounts.id', 'projects.account_id')).orderBy('projects.nope')
-      // @ts-expect-error unknown joined column for groupBy
-      db.query(Accounts).join(Projects, eq('accounts.id', 'projects.account_id')).groupBy('projects.nope')
-      // @ts-expect-error unknown source column in alias selection
-      db.query(Accounts).join(Projects, eq('accounts.id', 'projects.account_id')).select({ bad: 'projects.nope' })
+      db.query(Accounts)
+        .join(Projects, eq('accounts.id', 'projects.account_id'))
+        // @ts-expect-error unknown joined column for orderBy
+        .orderBy('projects.nope')
+      db.query(Accounts)
+        .join(Projects, eq('accounts.id', 'projects.account_id'))
+        // @ts-expect-error unknown joined column for groupBy
+        .groupBy('projects.nope')
+      db.query(Accounts)
+        .join(Projects, eq('accounts.id', 'projects.account_id'))
+        // @ts-expect-error unknown source column in alias selection
+        .select({ bad: 'projects.nope' })
     }
 
     void verifyTypeErrors
@@ -137,7 +186,11 @@ describe('type safety', () => {
     )
 
     let filtered = await db.query(Accounts).where({ status: 'active' }).all()
-    let groupedCount = await db.query(Accounts).groupBy('status').having({ status: 'active' }).count()
+    let groupedCount = await db
+      .query(Accounts)
+      .groupBy('status')
+      .having({ status: 'active' })
+      .count()
     let joined = await db
       .query(Accounts)
       .join(Projects, eq('accounts.id', 'projects.account_id'))
