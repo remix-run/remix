@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { createReconciler } from './index.ts'
-import type { HostInput, Plugin } from './types.ts'
+import type { Plugin } from './types.ts'
 
 describe('plugin-spike reconciler', () => {
   it('mounts, updates, and removes host nodes', () => {
@@ -58,5 +58,5 @@ describe('plugin-spike reconciler', () => {
 })
 
 function createPassthroughPlugin(): Plugin {
-  return () => () => (input: HostInput) => input
+  return () => () => (input) => input
 }

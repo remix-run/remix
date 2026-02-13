@@ -29,9 +29,10 @@ export const presence = definePlugin(() => (hostHandle) => {
       startEnterAnimation(node)
       committed = true
     })
-    if (!('presenceMs' in input.props)) return input
-    let { presenceMs: _presenceMs, ...props } = input.props
-    return { ...input, props }
+    if ('presenceMs' in input.props) {
+      delete input.props.presenceMs
+    }
+    return input
   }
 
   function startEnterAnimation(node: Element) {

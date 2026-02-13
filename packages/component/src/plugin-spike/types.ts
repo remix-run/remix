@@ -13,6 +13,11 @@ export type HostInput = {
   children: HostChild[]
 }
 
+export type HostTransformInput = {
+  type: string
+  props: Record<string, unknown>
+}
+
 export type HostRenderNode = {
   kind: 'host'
   input: HostInput
@@ -29,7 +34,7 @@ export type FlushContext = {
   flushId: number
 }
 
-export type HostTransform = (input: HostInput) => HostInput
+export type HostTransform = (input: HostTransformInput) => HostTransformInput
 export type HostTask = (node: Element, signal: AbortSignal) => void
 
 export class PluginBeforeFlushEvent extends Event {
@@ -56,11 +61,11 @@ export type PluginEventMap = {
 }
 
 export class HostInsertEvent extends Event {
-  input: HostInput
+  input: HostTransformInput
   node: Element
   signal: AbortSignal
 
-  constructor(input: HostInput, node: Element, signal: AbortSignal) {
+  constructor(input: HostTransformInput, node: Element, signal: AbortSignal) {
     super('insert')
     this.input = input
     this.node = node

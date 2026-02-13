@@ -9,6 +9,7 @@ import type {
   HostHandle,
   HostInput,
   HostRenderNode,
+  HostTransformInput,
   HostTask,
   HostTransform,
   PreparedPlugin,
@@ -290,11 +291,18 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
   }
 
   function applyTransforms(node: CommittedHostNode, input: HostInput) {
-    let transformedInput = input
+    let transformedInput: HostTransformInput = {
+      type: input.type,
+      props: input.props,
+    }
     for (let transform of node.transforms) {
       transformedInput = transform(transformedInput)
     }
-    return transformedInput
+    return {
+      ...input,
+      type: transformedInput.type,
+      props: transformedInput.props,
+    }
   }
 
   function dispatchHostRemove(node: CommittedHostNode, pending: Promise<void>[]) {
@@ -307,8 +315,12 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
   }
 
   function dispatchHostInsert(node: CommittedHostNode, input: HostInput, signal: AbortSignal) {
+    let transformedInput: HostTransformInput = {
+      type: input.type,
+      props: input.props,
+    }
     for (let hostHandle of node.hostHandles) {
-      let event = new HostInsertEvent(input, node.dom, signal)
+      let event = new HostInsertEvent(transformedInput, node.dom, signal)
       hostHandle.dispatchEvent(event)
     }
   }

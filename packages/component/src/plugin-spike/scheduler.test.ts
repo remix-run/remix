@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { createReconciler } from './index.ts'
-import type { HostInput, Plugin } from './types.ts'
+import type { Plugin } from './types.ts'
 
 describe('plugin-spike scheduler', () => {
   it('runs beforeFlush and afterFlush around a batched flush', () => {
@@ -43,6 +43,6 @@ function createLoggingPlugin(events: string[]): Plugin {
     pluginHandle.addEventListener('afterFlush', (event) => {
       events.push(`after-${event.context.flushId}`)
     })
-    return () => (input: HostInput) => input
+    return () => (input) => input
   }
 }

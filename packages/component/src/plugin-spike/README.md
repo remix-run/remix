@@ -36,7 +36,7 @@ Plugins can participate at three scopes:
 
 3. **Render transform scope** (every host render)
    - Optional `HostTransform`:
-     - `(input) => input`
+     - `({ type, props }) => ({ type, props })`
    - Normalize/strip props and feed host-level listeners with derived data.
 
 ## Lifecycle semantics
@@ -85,6 +85,7 @@ Plugins can participate at three scopes:
 
 - Put mount-lifetime resources in host scope.
 - Put per-render prop shaping in transforms.
+- Treat `input.props` as instructions: if a plugin handles a prop, consume it by deleting it.
 - Put cross-tree/document behavior in plugin scope.
 - Keep remove/abort cleanup idempotent.
 - Add focused tests under `plugins/*.test.ts`.

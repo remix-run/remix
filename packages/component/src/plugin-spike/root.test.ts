@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { createReconciler } from './index.ts'
-import type { HostInput, Plugin } from './types.ts'
+import type { Plugin } from './types.ts'
 
 describe('plugin-spike plugins', () => {
   it('composes host transforms in plugin array order', () => {
@@ -43,7 +43,7 @@ function createPlugin(name: string, events: string[]): Plugin {
       events.push(`after-${name}`)
     })
 
-    return () => (input: HostInput) => {
+    return () => (input) => {
       events.push(`transform-${name}`)
       let props = { ...input.props, [`data-transform-${name}`]: true }
       return { ...input, props }

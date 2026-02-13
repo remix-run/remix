@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createReconciler } from '../index.ts'
 import { presence } from './presence.ts'
-import type { HostInput, Plugin } from '../types.ts'
+import type { Plugin } from '../types.ts'
 
 describe('plugin-spike example presence plugin', () => {
   let animations: MockAnimation[] = []
@@ -115,7 +115,7 @@ describe('plugin-spike example presence plugin', () => {
 })
 
 function createPassthroughPlugin(): Plugin {
-  return () => () => (input: HostInput) => input
+  return () => () => (input) => input
 }
 
 type MockAnimation = {
