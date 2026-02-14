@@ -1,6 +1,6 @@
 import { routes } from '../routes.ts'
-import { CartButton } from '../assets/cart-button.tsx'
 import type { Book } from '../models/books.ts'
+import { Frame } from 'remix/component'
 
 export interface BookCardProps {
   book: Book
@@ -8,7 +8,7 @@ export interface BookCardProps {
 }
 
 export function BookCard() {
-  return ({ book, inCart }: BookCardProps) => (
+  return ({ book }: BookCardProps) => (
     <div class="book-card">
       <img src={book.cover_url} alt={book.title} />
       <div class="book-card-body">
@@ -20,7 +20,7 @@ export function BookCard() {
             View Details
           </a>
 
-          <CartButton inCart={inCart} id={book.id} slug={book.slug} />
+          <Frame src={routes.fragments.cartButton.href({ bookId: book.id })} />
         </div>
       </div>
     </div>

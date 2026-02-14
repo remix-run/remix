@@ -1,4 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
+import { Frame } from 'remix/component'
 
 import { routes } from './routes.ts'
 import { getAllBooks, getBookBySlug, getBooksByGenre, getAvailableGenres } from './models/books.ts'
@@ -116,8 +117,6 @@ export default {
         )
       }
 
-      let cart = getCurrentCart()
-      let inCart = cart.items.some((item) => item.slug === book.slug)
       let imageUrls = JSON.parse(book.image_urls) as string[]
 
       return render(
@@ -173,39 +172,9 @@ export default {
               </div>
 
               {book.in_stock ? (
-                inCart ? (
-                  <form
-                    method="POST"
-                    action={routes.cart.api.remove.href()}
-                    css={{ marginTop: '2rem' }}
-                  >
-                    <input type="hidden" name="_method" value="DELETE" />
-                    <input type="hidden" name="bookId" value={book.id} />
-                    <button
-                      type="submit"
-                      class="btn"
-                      css={{ fontSize: '1.1rem', padding: '0.75rem 1.5rem' }}
-                    >
-                      Remove from Cart
-                    </button>
-                  </form>
-                ) : (
-                  <form
-                    method="POST"
-                    action={routes.cart.api.add.href()}
-                    css={{ marginTop: '2rem' }}
-                  >
-                    <input type="hidden" name="bookId" value={book.id} />
-                    <input type="hidden" name="slug" value={book.slug} />
-                    <button
-                      type="submit"
-                      class="btn"
-                      css={{ fontSize: '1.1rem', padding: '0.75rem 1.5rem' }}
-                    >
-                      Add to Cart
-                    </button>
-                  </form>
-                )
+                <div css={{ marginTop: '2rem' }}>
+                  <Frame src={routes.fragments.cartButton.href({ bookId: book.id })} />
+                </div>
               ) : (
                 <p css={{ color: '#e74c3c', fontWeight: 500 }}>
                   This book is currently out of stock.

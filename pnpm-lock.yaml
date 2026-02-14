@@ -79,6 +79,25 @@ importers:
         specifier: 'catalog:'
         version: 4.21.0
 
+  demos/frames:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.12
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+
   demos/sse:
     dependencies:
       '@remix-run/dom':

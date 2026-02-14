@@ -9,55 +9,33 @@ bench.baseline(() => {
 bench('href > simple route', () => {
   let pattern = new RoutePattern('/posts/:id')
   pattern.href({ id: '123' })
-}).types([1171, 'instantiations'])
+}).types([1053, 'instantiations'])
 
 bench('href > complex route', () => {
   let pattern = new RoutePattern('/api(/v:major(.:minor))/*path/help')
   pattern.href({ major: '1', minor: '2', path: 'users', help: 'help' })
-}).types([4575, 'instantiations'])
+}).types([4457, 'instantiations'])
 
-bench('href > mediarss', () => {
-  type Routes = typeof import('../routes/mediarss.ts').routes
-  let routes: { [route in keyof Routes]: RoutePattern<Routes[route]> } = {} as any
+bench('href > mediarss', async () => {
+  let { patterns } = await import('../patterns/mediarss.ts')
+  eagerlyEvaluateTypesForHrefParams(patterns)
+}).types([79052, 'instantiations'])
 
-  // @ts-expect-error missing required params: 'token'
-  routes.feed.href()
-  // @ts-expect-error missing required params: 'token'
-  routes.feed.href({ extra: '123' })
+// NOTE: This benchmark brings type checking to a crawl.
+// Uncomment to run the benchmark, but keep it commented to avoid CI failures.
+//
+// bench('href > shopify', async () => {
+//   let { patterns } = await import('../patterns/shopify.ts')
+//   // @ts-expect-error Type instantiation is excessively deep and possibly infinite. ts(2589)
+//   eagerlyEvaluateTypesForHrefParams(patterns)
+// }).types([5027028, 'instantiations'])
 
-  routes.feed.href({ token: '123' })
-  routes.media.href({ token: '123', path: 'users' })
-  routes.art.href({ token: '123', path: 'users' })
-  // OAuth routes (public)
-  routes.oauthToken.href()
-  routes.oauthJwks.href()
-  routes.oauthRegister.href()
-  routes.oauthServerMetadata.href()
-  // MCP routes
-  routes.mcp.href()
-  routes.mcpProtectedResource.href()
-  routes.mcpWidget.href({ token: '123', path: 'users' })
-  // Admin routes
-  routes.adminHealth.href()
-  routes.adminApiVersion.href()
-  routes.adminAuthorize.href()
-  routes.admin.href()
-  routes.adminCatchAll.href({ path: 'users' })
-  routes.adminApiFeeds.href()
-  routes.adminApiDirectories.href()
-  routes.adminApiBrowse.href()
-  routes.adminApiCreateDirectoryFeed.href()
-  routes.adminApiCreateCuratedFeed.href()
-  routes.adminApiFeed.href({ id: '123' })
-  routes.adminApiFeedTokens.href({ id: '123' })
-  routes.adminApiFeedItems.href({ id: '123' })
-  routes.adminApiFeedArtwork.href({ id: '123' })
-  routes.adminApiToken.href({ token: '123' })
-  routes.adminApiMedia.href()
-  routes.adminApiMediaAssignments.href()
-  routes.adminApiMediaDetail.href({ path: 'users' })
-  routes.adminApiMediaMetadata.href({ path: 'users' })
-  routes.adminApiMediaStream.href({ path: 'users' })
-  routes.adminApiMediaUpload.href()
-  routes.adminApiArtwork.href({ path: 'users' })
-}).types([79421, 'instantiations'])
+/** Type-only utility to force eager evaluation of href param types */
+function eagerlyEvaluateTypesForHrefParams<patterns extends ReadonlyArray<string>>(
+  // prettier-ignore
+  _: patterns & (
+    { [pattern in patterns[number]]: Parameters<RoutePattern<pattern>['href']>[0] } extends
+    { [pattern in patterns[number]]: Record<string, unknown> | null | undefined }
+    ? patterns : never
+  ),
+): void {}

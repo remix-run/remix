@@ -13,6 +13,9 @@ describe('hydration', () => {
 
   afterEach(() => {
     document.body.innerHTML = ''
+    for (let node of Array.from(document.head.childNodes)) {
+      document.head.removeChild(node)
+    }
   })
 
   describe('self-closing/void elements', () => {
@@ -108,7 +111,8 @@ describe('hydration', () => {
       root.render(<meta name="description" content="Test page" />)
       root.flush()
 
-      expect(container.querySelector('meta')).toBe(existingMeta)
+      expect(document.head.querySelector('meta')).toBe(existingMeta)
+      expect(container.querySelector('meta')).toBeNull()
       expect(existingMeta.getAttribute('name')).toBe('description')
       expect(existingMeta.getAttribute('content')).toBe('Test page')
     })
@@ -124,7 +128,8 @@ describe('hydration', () => {
       root.render(<link rel="stylesheet" href="/styles.css" />)
       root.flush()
 
-      expect(container.querySelector('link')).toBe(existingLink)
+      expect(document.head.querySelector('link')).toBe(existingLink)
+      expect(container.querySelector('link')).toBeNull()
       expect(existingLink.getAttribute('rel')).toBe('stylesheet')
       expect(existingLink.getAttribute('href')).toBe('/styles.css')
     })

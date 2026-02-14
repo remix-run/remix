@@ -69,9 +69,10 @@ describe('vnode rendering', () => {
         })
 
         capturedUpdate = () => {
-          handle.update(() => {
+          handle.queueTask(() => {
             taskCount++
           })
+          handle.update()
         }
         return () => null
       }

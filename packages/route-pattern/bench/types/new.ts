@@ -2,7 +2,7 @@ import { bench } from '@ark/attest'
 import { RoutePattern } from '@remix-run/route-pattern'
 
 bench.baseline(() => {
-  new RoutePattern('/')
+  new RoutePattern('')
 })
 
 bench('new > simple route', () => {
@@ -15,43 +15,22 @@ bench('new > complex route', () => {
   pattern.source
 }).types([3, 'instantiations'])
 
-bench('new > mediarss', () => {
-  type Routes = typeof import('../routes/mediarss.ts').routes
-  let routes: { [route in keyof Routes]: RoutePattern<Routes[route]> } = {} as any
+bench('new > mediarss', async () => {
+  let { patterns } = await import('../patterns/mediarss.ts')
+  eagerlyEvaluateTypesForNew(patterns)
+}).types([2648, 'instantiations'])
 
-  routes.feed
-  routes.media
-  routes.art
-  // OAuth routes (public)
-  routes.oauthToken
-  routes.oauthJwks
-  routes.oauthRegister
-  routes.oauthServerMetadata
-  // MCP routes
-  routes.mcp
-  routes.mcpProtectedResource
-  routes.mcpWidget
-  // Admin routes
-  routes.adminHealth
-  routes.adminApiVersion
-  routes.adminAuthorize
-  routes.admin
-  routes.adminCatchAll
-  routes.adminApiFeeds
-  routes.adminApiDirectories
-  routes.adminApiBrowse
-  routes.adminApiCreateDirectoryFeed
-  routes.adminApiCreateCuratedFeed
-  routes.adminApiFeed
-  routes.adminApiFeedTokens
-  routes.adminApiFeedItems
-  routes.adminApiFeedArtwork
-  routes.adminApiToken
-  routes.adminApiMedia
-  routes.adminApiMediaAssignments
-  routes.adminApiMediaDetail
-  routes.adminApiMediaMetadata
-  routes.adminApiMediaStream
-  routes.adminApiMediaUpload
-  routes.adminApiArtwork
-}).types([128, 'instantiations'])
+bench('new > shopify', async () => {
+  let { patterns } = await import('../patterns/shopify.ts')
+  eagerlyEvaluateTypesForNew(patterns)
+}).types([12609, 'instantiations'])
+
+/** Type-only utility to force eager evaluation of href param types */
+function eagerlyEvaluateTypesForNew<patterns extends ReadonlyArray<string>>(
+  // prettier-ignore
+  _: patterns & (
+    { [pattern in patterns[number]]: RoutePattern<pattern> } extends
+    { [pattern in patterns[number]]: RoutePattern<string> }
+    ? patterns : never
+  ),
+): void {}

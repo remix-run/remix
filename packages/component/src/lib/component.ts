@@ -1,6 +1,6 @@
 import type { EventListeners } from '@remix-run/interaction'
-import { createContainer } from '@remix-run/interaction'
-import type { ElementProps, ElementType, RemixElement, RemixNode, Renderable } from './jsx.ts'
+import { createContainer, TypedEventTarget } from '@remix-run/interaction'
+import type { ElementProps, ElementType, RemixNode, Renderable } from './jsx.ts'
 
 export type Task = (signal: AbortSignal) => void
 
@@ -18,11 +18,13 @@ export interface Handle<C = Record<string, never>> {
   context: Context<C>
 
   /**
-   * Schedules an update for the component to render again.
+   * Schedules an update for the component to render again. Returns a promise
+   * that resolves with an AbortSignal after the update completes. The signal
+   * is aborted when the component re-renders or is removed.
    *
-   * @param task A render task to run after the update completes
+   * @returns A promise that resolves with an AbortSignal after the update
    */
-  update(task?: Task): void
+  update(): Promise<AbortSignal>
 
   /**
    * Schedules a task to run after the next update.
@@ -35,6 +37,17 @@ export interface Handle<C = Record<string, never>> {
    * The component's closest frame
    */
   frame: FrameHandle
+
+  /**
+   * Access named frames in the current runtime tree.
+   */
+  frames: {
+    /**
+     * The root frame for the current runtime tree.
+     */
+    readonly top: FrameHandle
+    get(name: string): FrameHandle | undefined
+  }
 
   /**
    * A signal indicating the connected status of the component. When the
@@ -115,12 +128,19 @@ export interface Context<C> {
   get(component: ElementType | symbol): unknown | undefined
 }
 
-// export type FrameContent = RemixElement | Element | DocumentFragment | ReadableStream | string
-export type FrameContent = DocumentFragment | string
+export type FrameContent = ReadableStream<Uint8Array> | string
 
-export type FrameHandle = EventTarget & {
-  reload(): Promise<void>
+export type FrameHandleEventMap = {
+  reloadStart: Event
+  reloadComplete: Event
+}
+
+export type FrameHandle = TypedEventTarget<FrameHandleEventMap> & {
+  src: string
+  reload(): Promise<AbortSignal>
   replace(content: FrameContent): Promise<void>
+  // Internal runtime context used by client-rendered Frame reconciliation.
+  $runtime?: unknown
 }
 
 export interface FrameProps {
@@ -157,6 +177,8 @@ type ComponentConfig = {
   type: Function
   frame: FrameHandle
   getContext: (type: Component) => unknown
+  getFrameByName: (name: string) => FrameHandle | undefined
+  getTopFrame?: () => FrameHandle | undefined
 }
 
 export type ComponentHandle = ReturnType<typeof createComponent>
@@ -173,7 +195,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
   }
 
   let getContent: null | ((props: ElementProps) => RemixNode) = null
-  let scheduleUpdate: (task?: Task) => void = () => {
+  let scheduleUpdate: () => void = () => {
     throw new Error('scheduleUpdate not implemented')
   }
 
@@ -186,14 +208,23 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
 
   let handle: Handle<C> = {
     id: config.id,
-    update: (task?: Task) => {
-      if (task) taskQueue.push(task)
-      scheduleUpdate()
-    },
+    update: () =>
+      new Promise((resolve) => {
+        taskQueue.push((signal) => resolve(signal))
+        scheduleUpdate()
+      }),
     queueTask: (task: Task) => {
       taskQueue.push(task)
     },
     frame: config.frame,
+    frames: {
+      get top() {
+        return config.getTopFrame?.() ?? config.frame
+      },
+      get(name: string) {
+        return config.getFrameByName(name)
+      },
+    },
     context: context,
     get signal() {
       return getConnectedSignal()
@@ -247,11 +278,12 @@ export function createComponent<C = NoContext>(config: ComponentConfig) {
   }
 
   function remove(): (() => void)[] {
-    if (connectedCtrl) connectedCtrl.abort()
+    connectedCtrl?.abort()
+    renderCtrl?.abort()
     return dequeueTasks()
   }
 
-  function setScheduleUpdate(_scheduleUpdate: (task?: Task) => void) {
+  function setScheduleUpdate(_scheduleUpdate: () => void) {
     scheduleUpdate = _scheduleUpdate
   }
 
@@ -275,10 +307,11 @@ export function createFrameHandle(
     src: string
     replace: FrameHandle['replace']
     reload: FrameHandle['reload']
+    $runtime: FrameHandle['$runtime']
   }>,
 ): FrameHandle {
   return Object.assign(
-    new EventTarget(),
+    new TypedEventTarget<FrameHandleEventMap>(),
     {
       src: '/',
       replace: notImplemented('replace not implemented'),

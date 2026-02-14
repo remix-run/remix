@@ -1,24 +1,24 @@
 import type { Handle, NoContext, RemixNode } from './component.ts'
 
 /**
- * Serializable primitive types that can be passed as props to hydrated components
+ * Serializable primitive types that can be passed as props to entry components
  */
 export type SerializablePrimitive = string | number | boolean | null | undefined
 
 /**
- * Serializable object types that can be passed as props to hydrated components
+ * Serializable object types that can be passed as props to entry components
  */
 export type SerializableObject = {
   [key: string]: SerializableValue
 }
 
 /**
- * Serializable array types that can be passed as props to hydrated components
+ * Serializable array types that can be passed as props to entry components
  */
 export type SerializableArray = SerializableValue[]
 
 /**
- * All serializable values that can be passed as props to hydrated components.
+ * All serializable values that can be passed as props to entry components.
  * This includes primitives, objects, arrays, and Remix Elements.
  */
 export type SerializableValue =
@@ -35,33 +35,33 @@ export type SerializableProps = {
 }
 
 /**
- * Metadata added to hydrated components
+ * Metadata added to entry components
  */
-export type HydrationMetadata = {
-  $hydrated: true
+export type EntryMetadata = {
+  $entry: true
   $moduleUrl: string
   $exportName: string
 }
 
 /**
- * A hydrated component preserves the exact function type with added metadata
+ * An entry component preserves the exact function type with added metadata
  */
-export type HydratedComponent<context = NoContext, setup = undefined, props = {}> = ((
+export type EntryComponent<context = NoContext, setup = undefined, props = {}> = ((
   handle: Handle<context>,
   setup: setup,
 ) => (props: props) => RemixNode) &
-  HydrationMetadata
+  EntryMetadata
 
 /**
- * Marks a component as a hydration root for client-side hydration.
+ * Marks a component as a client entry for client-side hydration.
  *
  * @param href Module URL with optional export name (format: "/js/module.js#ExportName")
  * @param component Component function that will be hydrated on the client
- * @returns The component augmented with hydration metadata
+ * @returns The component augmented with entry metadata
  *
  * @example
  * ```tsx
- * export const Counter = hydrationRoot(
+ * export const Counter = clientEntry(
  *   '/js/counter.js#Counter',
  *   (handle: Handle, setup: number) {
  *     let count = setup
@@ -83,22 +83,22 @@ export type HydratedComponent<context = NoContext, setup = undefined, props = {}
  * )
  * ```
  */
-export function hydrationRoot<
+export function clientEntry<
   context = NoContext,
   setup extends SerializableValue = undefined,
   props extends SerializableProps = {},
 >(
   href: string,
   component: (handle: Handle<context>, setup: setup) => (props: props) => RemixNode,
-): HydratedComponent<context, setup, props>
+): EntryComponent<context, setup, props>
 
 // Implementation
-export function hydrationRoot(href: string, component: any): any {
+export function clientEntry(href: string, component: any): any {
   // Parse module URL and export name
   let [moduleUrl, exportName] = href.split('#')
 
   if (!moduleUrl) {
-    throw new Error('hydrationRoot() requires a module URL')
+    throw new Error('clientEntry() requires a module URL')
   }
 
   // Use component name as fallback if no export name provided
@@ -106,12 +106,12 @@ export function hydrationRoot(href: string, component: any): any {
 
   if (!finalExportName) {
     throw new Error(
-      'hydrationRoot() requires either an export name in the href (e.g., "/js/module.js#ComponentName") or a named component function',
+      'clientEntry() requires either an export name in the href (e.g., "/js/module.js#ComponentName") or a named component function',
     )
   }
 
-  // Augment the component with hydration metadata
-  component.$hydrated = true
+  // Augment the component with entry metadata
+  component.$entry = true
   component.$moduleUrl = moduleUrl
   component.$exportName = finalExportName
 
@@ -119,13 +119,21 @@ export function hydrationRoot(href: string, component: any): any {
 }
 
 /**
- * Type guard to check if a component is hydrated
+ * Type guard to check if a component is an entry component
  *
  * @param component The component to check
- * @returns True if the component has hydration metadata
+ * @returns True if the component has entry metadata
  */
-export function isHydratedComponent(component: unknown): component is HydratedComponent {
-  return Boolean(
-    component && typeof component === 'function' && (component as any).$hydrated === true,
-  )
+export function isEntry(component: unknown): component is EntryComponent {
+  return Boolean(component && typeof component === 'function' && (component as any).$entry === true)
+}
+export function logHydrationMismatch(...msg: any[]) {
+  console.error('Hydration mismatch:', ...msg)
+}
+
+export function skipComments(cursor: Node | null): Node | null {
+  while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
+    cursor = cursor.nextSibling
+  }
+  return cursor
 }
