@@ -270,10 +270,10 @@ describe('type safety', () => {
       db.findOne(Accounts, { where: { not_a_column: 'active' } })
       // @ts-expect-error unknown orderBy column
       db.findMany(Accounts, { orderBy: ['not_a_column', 'asc'] })
-      // @ts-expect-error unknown orderBy column in tuple list
       db.findMany(Accounts, {
         orderBy: [
           ['id', 'asc'],
+          // @ts-expect-error unknown orderBy column in tuple list
           ['not_a_column', 'desc'],
         ],
       })
@@ -326,11 +326,14 @@ describe('type safety', () => {
       db.update(Accounts, 1, { not_a_column: 'x' })
       // @ts-expect-error unknown where key
       db.updateMany(Accounts, { status: 'active' }, { where: { not_a_column: 'x' } })
-      // @ts-expect-error unknown orderBy key
       db.updateMany(
         Accounts,
         { status: 'active' },
-        { where: { status: 'active' }, orderBy: ['nope', 'asc'] },
+        {
+          where: { status: 'active' },
+          // @ts-expect-error unknown orderBy key
+          orderBy: ['nope', 'asc'],
+        },
       )
       // @ts-expect-error unknown where key
       db.deleteMany(Accounts, { where: { not_a_column: 'x' } })
