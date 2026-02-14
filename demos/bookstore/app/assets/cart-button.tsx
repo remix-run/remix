@@ -16,7 +16,7 @@ export const CartButton = clientEntry(moduleUrl, (handle: Handle) => {
           handle.update()
 
           let formData = new FormData()
-          formData.set('bookId', id)
+          formData.set('bookId', String(id))
           formData.set('slug', slug)
 
           await fetch(routes.api.cartToggle.href(), {
