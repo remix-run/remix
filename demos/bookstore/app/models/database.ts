@@ -132,7 +132,7 @@ async function initialize(): Promise<void> {
 
   let booksCount = await db.query(BooksTable).count()
   if (booksCount === 0) {
-    await db.query(BooksTable).insertMany([
+    await db.createMany(BooksTable, [
       {
         id: '001',
         slug: 'bbq',
@@ -188,7 +188,7 @@ async function initialize(): Promise<void> {
 
   let usersCount = await db.query(UsersTable).count()
   if (usersCount === 0) {
-    await db.query(UsersTable).insertMany([
+    await db.createMany(UsersTable, [
       {
         id: '1',
         email: 'admin@bookstore.com',
@@ -210,7 +210,7 @@ async function initialize(): Promise<void> {
 
   let ordersCount = await db.query(OrdersTable).count()
   if (ordersCount === 0) {
-    await db.query(OrdersTable).insertMany([
+    await db.createMany(OrdersTable, [
       {
         id: '1001',
         user_id: '2',

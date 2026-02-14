@@ -169,4 +169,47 @@ describe('mysql adapter', () => {
     assert.match(statements[0].text, /`id`\s+in\s+\(\?,\s*\?\)/)
     assert.deepEqual(statements[0].values, [1, 3])
   })
+
+  it('loads the inserted row for create({ returnRow: true }) without RETURNING support', async () => {
+    let statements: Array<{ text: string; values: unknown[] }> = []
+    let calls = 0
+
+    let connection = {
+      async query(text: string, values: unknown[] = []) {
+        statements.push({ text, values })
+        calls += 1
+
+        if (calls === 1) {
+          return [{ affectedRows: 1, insertId: 2 }, []]
+        }
+
+        if (calls === 2) {
+          return [[{ id: 2, email: 'fallback@example.com' }], []]
+        }
+
+        throw new Error('unexpected query call')
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
+
+    let created = await db.create(
+      Accounts,
+      {
+        email: 'fallback@example.com',
+      },
+      { returnRow: true },
+    )
+
+    assert.equal(created.id, 2)
+    assert.equal(created.email, 'fallback@example.com')
+    assert.equal(statements.length, 2)
+    assert.match(statements[0].text, /^insert into `accounts`/)
+    assert.match(statements[1].text, /^select \* from `accounts`/)
+    assert.match(statements[1].text, /where \(\(`id` = \?\)\)/)
+    assert.deepEqual(statements[1].values, [2])
+  })
 })

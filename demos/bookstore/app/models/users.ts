@@ -5,18 +5,16 @@ import { PasswordResetTokensTable, UsersTable, db } from './database.ts'
 
 export type User = TableRow<typeof UsersTable>
 
-type PasswordResetTokenRow = TableRow<typeof PasswordResetTokensTable>
-
 export async function getAllUsers(): Promise<User[]> {
-  return db.query(UsersTable).orderBy('id', 'asc').all()
+  return db.findMany(UsersTable, { orderBy: ['id', 'asc'] })
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-  return db.query(UsersTable).where({ id }).first()
+  return db.find(UsersTable, id)
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
-  return db.query(UsersTable).where(ilike('email', email)).first()
+  return db.findOne(UsersTable, { where: ilike('email', email) })
 }
 
 export async function authenticateUser(email: string, password: string): Promise<User | undefined> {
@@ -38,33 +36,25 @@ export async function createUser(
   let id = String(count + 1)
   let created_at = Date.now()
 
-  await db.query(UsersTable).insert({
-    id,
-    email,
-    password, // In production, hash this!
-    name,
-    role,
-    created_at,
-  })
-
-  let created = await getUserById(id)
-  if (!created) {
-    throw new Error('Failed to create user')
-  }
-
-  return created
+  return db.create(
+    UsersTable,
+    {
+      id,
+      email,
+      password, // In production, hash this!
+      name,
+      role,
+      created_at,
+    },
+    { returnRow: true },
+  )
 }
 
 export async function updateUser(
   id: string,
   data: Partial<Omit<User, 'id'>>,
 ): Promise<User | null> {
-  let existing = await getUserById(id)
-  if (!existing) {
-    return null
-  }
-
-  let changes: Record<string, unknown> = {}
+  let changes: Partial<User> = {}
   if (data.email !== undefined) changes.email = data.email
   if (data.password !== undefined) changes.password = data.password
   if (data.name !== undefined) changes.name = data.name
@@ -72,15 +62,14 @@ export async function updateUser(
   if (data.created_at !== undefined) changes.created_at = data.created_at
 
   if (Object.keys(changes).length > 0) {
-    await db.query(UsersTable).where({ id }).update(changes)
+    return db.update(UsersTable, id, changes)
   }
 
   return getUserById(id)
 }
 
 export async function deleteUser(id: string): Promise<boolean> {
-  let result = await db.query(UsersTable).where({ id }).delete()
-  return result.affectedRows > 0
+  return db.delete(UsersTable, id)
 }
 
 export async function createPasswordResetToken(email: string): Promise<string | undefined> {
@@ -91,7 +80,7 @@ export async function createPasswordResetToken(email: string): Promise<string | 
 
   let token = Math.random().toString(36).substring(2, 15)
 
-  await db.query(PasswordResetTokensTable).insert({
+  await db.create(PasswordResetTokensTable, {
     token,
     user_id: user.id,
     expires_at: Date.now() + 3600000,
@@ -101,10 +90,7 @@ export async function createPasswordResetToken(email: string): Promise<string | 
 }
 
 export async function resetPassword(token: string, newPassword: string): Promise<boolean> {
-  let tokenData = (await db
-    .query(PasswordResetTokensTable)
-    .where({ token })
-    .first()) as PasswordResetTokenRow | null
+  let tokenData = await db.find(PasswordResetTokensTable, { token })
 
   if (!tokenData || tokenData.expires_at < Date.now()) {
     return false
@@ -115,8 +101,8 @@ export async function resetPassword(token: string, newPassword: string): Promise
     return false
   }
 
-  await db.query(UsersTable).where({ id: user.id }).update({ password: newPassword })
-  await db.query(PasswordResetTokensTable).where({ token }).delete()
+  await db.update(UsersTable, user.id, { password: newPassword })
+  await db.delete(PasswordResetTokensTable, { token })
 
   return true
 }

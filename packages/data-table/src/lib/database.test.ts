@@ -292,6 +292,273 @@ describe('query builder', () => {
     assert.equal(membership.role, 'member')
   })
 
+  it('supports database-level find helpers', async () => {
+    let adapter = createAdapter({
+      accounts: [
+        { id: 1, email: 'amy@studio.test', status: 'active' },
+        { id: 2, email: 'brad@studio.test', status: 'inactive' },
+      ],
+      projects: [
+        { id: 100, account_id: 1, name: 'Spring Campaign', archived: false },
+        { id: 101, account_id: 1, name: 'Legacy Data Migration', archived: true },
+        { id: 102, account_id: 2, name: 'Customer Onboarding', archived: false },
+      ],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+    let openProjects = AccountProjects.where({ archived: false }).orderBy('id', 'asc')
+
+    let account = await db.find(Accounts, 1)
+    let activeAccount = await db.findOne(Accounts, {
+      where: { status: 'active' },
+      orderBy: ['id', 'asc'],
+    })
+    let activeAccounts = await db.findMany(Accounts, {
+      where: { status: 'active' },
+      orderBy: [
+        ['status', 'asc'],
+        ['id', 'asc'],
+      ],
+      limit: 1,
+    })
+    let accountsWithProjects = await db.findMany(Accounts, {
+      orderBy: ['id', 'asc'],
+      with: { projects: openProjects },
+    })
+
+    assert.equal(account?.email, 'amy@studio.test')
+    assert.equal(activeAccount?.id, 1)
+    assert.equal(activeAccounts.length, 1)
+    assert.equal(activeAccounts[0].id, 1)
+    assert.equal(accountsWithProjects[0].projects.length, 1)
+    assert.equal(accountsWithProjects[0].projects[0].id, 100)
+    assert.equal(accountsWithProjects[1].projects.length, 1)
+    assert.equal(accountsWithProjects[1].projects[0].id, 102)
+  })
+
+  it('supports database-level update helper', async () => {
+    let adapter = createAdapter({
+      accounts: [
+        { id: 1, email: 'amy@studio.test', status: 'active' },
+        { id: 2, email: 'brad@studio.test', status: 'inactive' },
+      ],
+      projects: [
+        { id: 100, account_id: 1, name: 'Spring Campaign', archived: false },
+        { id: 101, account_id: 1, name: 'Legacy Data Migration', archived: true },
+      ],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+    let openProjects = AccountProjects.where({ archived: false }).orderBy('id', 'asc')
+
+    let updated = await db.update(
+      Accounts,
+      1,
+      {
+        status: 'inactive',
+      },
+      { with: { projects: openProjects } },
+    )
+    let missing = await db.update(Accounts, 999, { status: 'active' })
+
+    assert.equal(updated?.status, 'inactive')
+    assert.equal(updated?.projects.length, 1)
+    assert.equal(updated?.projects[0].id, 100)
+    assert.equal(missing, null)
+  })
+
+  it('supports database-level updateMany helper', async () => {
+    let adapter = createAdapter({
+      accounts: [
+        { id: 1, email: 'amy@studio.test', status: 'inactive' },
+        { id: 2, email: 'brad@studio.test', status: 'inactive' },
+        { id: 3, email: 'cory@studio.test', status: 'active' },
+      ],
+      projects: [],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+    let result = await db.updateMany(
+      Accounts,
+      {
+        status: 'archived',
+      },
+      {
+        where: { status: 'inactive' },
+        orderBy: ['id', 'asc'],
+        limit: 1,
+      },
+    )
+
+    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+
+    assert.equal(result.affectedRows, 1)
+    assert.equal(rows[0].status, 'archived')
+    assert.equal(rows[1].status, 'inactive')
+    assert.equal(rows[2].status, 'active')
+  })
+
+  it('supports database-level delete helper', async () => {
+    let adapter = createAdapter({
+      accounts: [
+        { id: 1, email: 'amy@studio.test', status: 'active' },
+        { id: 2, email: 'brad@studio.test', status: 'inactive' },
+      ],
+      projects: [],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+    let deleted = await db.delete(Accounts, 2)
+    let deletedMissing = await db.delete(Accounts, 999)
+    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+
+    assert.equal(deleted, true)
+    assert.equal(deletedMissing, false)
+    assert.deepEqual(
+      rows.map((row) => row.id),
+      [1],
+    )
+  })
+
+  it('supports database-level deleteMany helper', async () => {
+    let adapter = createAdapter({
+      accounts: [
+        { id: 1, email: 'amy@studio.test', status: 'inactive' },
+        { id: 2, email: 'brad@studio.test', status: 'inactive' },
+        { id: 3, email: 'cory@studio.test', status: 'active' },
+      ],
+      projects: [],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+    let result = await db.deleteMany(Accounts, {
+      where: { status: 'inactive' },
+      orderBy: ['id', 'asc'],
+      limit: 1,
+    })
+
+    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+
+    assert.equal(result.affectedRows, 1)
+    assert.deepEqual(
+      rows.map((row) => row.id),
+      [2, 3],
+    )
+  })
+
+  it('supports database-level create helper returning result metadata by default', async () => {
+    let adapter = createAdapter({
+      accounts: [{ id: 1, email: 'existing@studio.test', status: 'active' }],
+      projects: [],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+    let result = await db.create(Accounts, {
+      email: 'new@studio.test',
+      status: 'active',
+    })
+    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+
+    assert.equal(result.affectedRows, 1)
+    assert.equal(rows.length, 2)
+    assert.equal(rows[1].email, 'new@studio.test')
+  })
+
+  it('supports database-level create helper returning a loaded row', async () => {
+    let adapter = createAdapter({
+      accounts: [],
+      projects: [{ id: 100, account_id: 99, name: 'Onboarding', archived: false }],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+    let created = await db.create(
+      Accounts,
+      {
+        id: 99,
+        email: 'new@studio.test',
+        status: 'active',
+      },
+      {
+        returnRow: true,
+        with: { projects: AccountProjects.orderBy('id', 'asc') },
+      },
+    )
+
+    assert.equal(created.id, 99)
+    assert.equal(created.email, 'new@studio.test')
+    assert.equal(created.projects.length, 1)
+    assert.equal(created.projects[0].id, 100)
+  })
+
+  it('supports createMany() metadata and rows return modes', async () => {
+    let adapter = createAdapter({
+      accounts: [{ id: 1, email: 'existing@studio.test', status: 'active' }],
+      projects: [],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+    let result = await db.createMany(Accounts, [
+      { id: 2, email: 'a@studio.test', status: 'active' },
+      { id: 3, email: 'b@studio.test', status: 'inactive' },
+    ])
+    let rows = await db.createMany(
+      Accounts,
+      [{ id: 4, email: 'c@studio.test', status: 'active' }],
+      { returnRows: true },
+    )
+
+    assert.equal(result.affectedRows, 2)
+    assert.equal(rows.length, 1)
+    assert.equal(rows[0].id, 4)
+    assert.equal(rows[0].email, 'c@studio.test')
+  })
+
+  it('throws for createMany({ returnRows: true }) when adapter has no RETURNING support', async () => {
+    let adapter = createAdapter(
+      {
+        accounts: [],
+        projects: [],
+        tasks: [],
+        memberships: [],
+      },
+      { returning: false },
+    )
+
+    let db = createTestDatabase(adapter)
+
+    await assert.rejects(
+      async function () {
+        await db.createMany(
+          Accounts,
+          [{ id: 1, email: 'a@studio.test', status: 'active' }],
+          { returnRows: true },
+        )
+      },
+      function (error: unknown) {
+        return (
+          error instanceof DataTableQueryError &&
+          error.message === 'createMany({ returnRows: true }) is not supported by this adapter'
+        )
+      },
+    )
+  })
+
   it('supports join/groupBy/having with count()', async () => {
     let adapter = createAdapter({
       accounts: [

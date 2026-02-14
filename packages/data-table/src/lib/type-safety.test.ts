@@ -3,7 +3,7 @@ import { afterEach, describe, it } from 'node:test'
 import { boolean, number, string } from '@remix-run/data-schema'
 
 import { createDatabase } from './database.ts'
-import type { QueryBuilder, QueryColumnTypesForTable, QueryForTable } from './database.ts'
+import type { QueryBuilder, QueryColumnTypesForTable, QueryForTable, WriteResult } from './database.ts'
 import { createTable } from './table.ts'
 import type { TableReference } from './table.ts'
 import { eq } from './operators.ts'
@@ -93,7 +93,10 @@ describe('type safety', () => {
     let db = createDatabase(
       createAdapter({
         accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
-        projects: [{ id: 100, account_id: 1, archived: false }],
+        projects: [
+          { id: 100, account_id: 1, archived: false },
+          { id: 101, account_id: 3, archived: false },
+        ],
       }),
     )
 
@@ -119,7 +122,10 @@ describe('type safety', () => {
     let db = createDatabase(
       createAdapter({
         accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
-        projects: [{ id: 100, account_id: 1, archived: false }],
+        projects: [
+          { id: 100, account_id: 1, archived: false },
+          { id: 101, account_id: 3, archived: false },
+        ],
       }),
     )
 
@@ -217,6 +223,178 @@ describe('type safety', () => {
       db.query(Accounts).join(Projects, eq('accounts.id', 'projects.not_a_column'))
       // @ts-expect-error relation predicate key must be from relation target table
       AccountProjects.where({ not_a_column: true })
+    }
+
+    void verifyTypeErrors
+  })
+
+  it('keeps findOne/findMany where and orderBy typing symmetric for single-table queries', async () => {
+    let db = createDatabase(
+      createAdapter({
+        accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
+        projects: [{ id: 100, account_id: 1, archived: false }],
+      }),
+    )
+
+    let first = await db.find(Accounts, 1)
+    let active = await db.findOne(Accounts, {
+      where: { status: 'active' },
+      orderBy: ['accounts.id', 'asc'],
+    })
+    let rows = await db.findMany(Accounts, {
+      where: eq('status', 'active'),
+      orderBy: [
+        ['status', 'asc'],
+        ['id', 'desc'],
+      ],
+      with: { projects: AccountProjects },
+    })
+
+    assert.equal(first?.id, 1)
+    assert.equal(active?.email, 'a@example.com')
+    assert.equal(rows.length, 1)
+    assert.equal(rows[0].projects.length, 1)
+
+    type Row = (typeof rows)[number]
+    expectType<Equal<Row['projects'][number]['id'], number>>()
+    expectType<Equal<Row['projects'][number]['account_id'], number>>()
+    expectType<Equal<Row['projects'][number]['archived'], boolean>>()
+
+    function verifyTypeErrors(): void {
+      // @ts-expect-error unknown where key
+      db.findOne(Accounts, { where: { not_a_column: 'active' } })
+      // @ts-expect-error unknown orderBy column
+      db.findMany(Accounts, { orderBy: ['not_a_column', 'asc'] })
+      // @ts-expect-error unknown orderBy column in tuple list
+      db.findMany(Accounts, { orderBy: [['id', 'asc'], ['not_a_column', 'desc']] })
+    }
+
+    void verifyTypeErrors
+  })
+
+  it('keeps update/delete helper typing symmetric for single-table queries', async () => {
+    let db = createDatabase(
+      createAdapter({
+        accounts: [
+          { id: 1, email: 'a@example.com', status: 'active' },
+          { id: 2, email: 'b@example.com', status: 'inactive' },
+        ],
+        projects: [{ id: 100, account_id: 1, archived: false }],
+      }),
+    )
+
+    let updated = await db.update(
+      Accounts,
+      1,
+      { status: 'inactive' },
+      { with: { projects: AccountProjects } },
+    )
+    let updateManyResult = await db.updateMany(
+      Accounts,
+      { status: 'active' },
+      {
+        where: { status: 'inactive' },
+        orderBy: ['id', 'asc'],
+        limit: 1,
+      },
+    )
+    let deleted = await db.delete(Accounts, 2)
+    let deleteManyResult = await db.deleteMany(Accounts, {
+      where: eq('status', 'active'),
+      orderBy: [['id', 'desc']],
+      limit: 1,
+    })
+
+    assert.equal(updated?.id, 1)
+    assert.equal(updated?.projects.length, 1)
+    assert.equal(updateManyResult.affectedRows, 1)
+    assert.equal(deleted, true)
+    assert.equal(deleteManyResult.affectedRows, 1)
+
+    function verifyTypeErrors(): void {
+      // @ts-expect-error unknown update key
+      db.update(Accounts, 1, { not_a_column: 'x' })
+      // @ts-expect-error unknown where key
+      db.updateMany(Accounts, { status: 'active' }, { where: { not_a_column: 'x' } })
+      // @ts-expect-error unknown orderBy key
+      db.updateMany(Accounts, { status: 'active' }, { where: { status: 'active' }, orderBy: ['nope', 'asc'] })
+      // @ts-expect-error unknown where key
+      db.deleteMany(Accounts, { where: { not_a_column: 'x' } })
+      // @ts-expect-error unknown orderBy key
+      db.deleteMany(Accounts, { where: { status: 'active' }, orderBy: [['nope', 'asc']] })
+    }
+
+    void verifyTypeErrors
+  })
+
+  it('supports typed create/createMany helper return modes', async () => {
+    let db = createDatabase(
+      createAdapter({
+        accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
+        projects: [
+          { id: 100, account_id: 1, archived: false },
+          { id: 101, account_id: 3, archived: false },
+        ],
+      }),
+    )
+
+    let createResult = await db.create(Accounts, {
+      id: 2,
+      email: 'b@example.com',
+      status: 'active',
+    })
+    let created = await db.create(
+      Accounts,
+      {
+        id: 3,
+        email: 'c@example.com',
+        status: 'inactive',
+      },
+      {
+        returnRow: true,
+        with: { projects: AccountProjects },
+      },
+    )
+    let createManyResult = await db.createMany(Accounts, [
+      { id: 4, email: 'd@example.com', status: 'active' },
+      { id: 5, email: 'e@example.com', status: 'inactive' },
+    ])
+    let createdRows = await db.createMany(
+      Accounts,
+      [{ id: 6, email: 'f@example.com', status: 'active' }],
+      { returnRows: true },
+    )
+
+    expectType<Equal<typeof createResult, WriteResult>>()
+    expectType<Equal<typeof createManyResult, WriteResult>>()
+    expectType<Equal<typeof created['id'], number>>()
+    expectType<Equal<typeof created['projects'][number]['id'], number>>()
+    expectType<Equal<(typeof createdRows)[number]['id'], number>>()
+    expectType<Equal<(typeof createdRows)[number]['email'], string>>()
+
+    assert.equal(createResult.affectedRows, 1)
+    assert.equal(created.id, 3)
+    assert.equal(created.projects.length, 1)
+    assert.equal(createManyResult.affectedRows, 2)
+    assert.equal(createdRows.length, 1)
+
+    function verifyTypeErrors(): void {
+      // @ts-expect-error unknown insert key
+      db.create(Accounts, { not_a_column: 'x' })
+      db.create(
+        Accounts,
+        { id: 7, email: 'g@example.com', status: 'active' },
+        // @ts-expect-error with is only supported when returnRow: true
+        { with: { projects: AccountProjects } },
+      )
+      // @ts-expect-error unknown createMany insert key
+      db.createMany(Accounts, [{ not_a_column: 'x' }])
+      db.createMany(
+        Accounts,
+        [{ id: 8, email: 'h@example.com', status: 'active' }],
+        // @ts-expect-error invalid createMany option key
+        { returnRow: true },
+      )
     }
 
     void verifyTypeErrors
