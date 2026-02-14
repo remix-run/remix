@@ -266,7 +266,11 @@ describe('query builder', () => {
       through: firstProjectPerAccount,
     }).orderBy('id', 'asc')
 
-    let accounts = await db.query(Accounts).orderBy('id', 'asc').with({ tasks: tasksThroughFirstProject }).all()
+    let accounts = await db
+      .query(Accounts)
+      .orderBy('id', 'asc')
+      .with({ tasks: tasksThroughFirstProject })
+      .all()
 
     assert.equal(accounts[0].tasks.length, 1)
     assert.equal(accounts[0].tasks[0].id, 1000)
@@ -544,11 +548,9 @@ describe('query builder', () => {
 
     await assert.rejects(
       async function () {
-        await db.createMany(
-          Accounts,
-          [{ id: 1, email: 'a@studio.test', status: 'active' }],
-          { returnRows: true },
-        )
+        await db.createMany(Accounts, [{ id: 1, email: 'a@studio.test', status: 'active' }], {
+          returnRows: true,
+        })
       },
       function (error: unknown) {
         return (
@@ -853,7 +855,10 @@ describe('writes and validation', () => {
     )
     assert.ok('rows' in inserted)
 
-    let deleted = await db.query(Accounts).where({ id: 2 }).delete({ returning: ['id'] })
+    let deleted = await db
+      .query(Accounts)
+      .where({ id: 2 })
+      .delete({ returning: ['id'] })
     assert.ok('rows' in deleted)
     if ('rows' in deleted) {
       assert.equal(deleted.rows.length, 1)
@@ -871,10 +876,12 @@ describe('writes and validation', () => {
     })
     let db = createTestDatabase(adapter)
 
-    let result = await db.query(Accounts).upsert(
-      { id: 1, email: 'a@studio.test', status: 'inactive' },
-      { conflictTarget: ['id'], returning: ['id', 'status'] },
-    )
+    let result = await db
+      .query(Accounts)
+      .upsert(
+        { id: 1, email: 'a@studio.test', status: 'inactive' },
+        { conflictTarget: ['id'], returning: ['id', 'status'] },
+      )
 
     assert.ok('row' in result)
     if ('row' in result) {
@@ -1030,7 +1037,10 @@ describe('writes and validation', () => {
 
     await assert.rejects(
       async function () {
-        await db.query(Accounts).where({ id: 'not-a-number' as never }).all()
+        await db
+          .query(Accounts)
+          .where({ id: 'not-a-number' as never })
+          .all()
       },
       function (error: unknown) {
         return (
@@ -1057,7 +1067,11 @@ describe('writes and validation', () => {
 
     await assert.rejects(
       async function () {
-        await db.query(Accounts).groupBy('status').having(eq('status', 123 as never)).count()
+        await db
+          .query(Accounts)
+          .groupBy('status')
+          .having(eq('status', 123 as never))
+          .count()
       },
       function (error: unknown) {
         return (
@@ -1181,13 +1195,16 @@ describe('transactions and raw sql', () => {
   })
 
   it('throws for nested transactions without savepoints', async () => {
-    let adapter = createAdapter({
-      accounts: [],
-      projects: [],
-      profiles: [],
-      tasks: [],
-      memberships: [],
-    }, { savepoints: false })
+    let adapter = createAdapter(
+      {
+        accounts: [],
+        projects: [],
+        profiles: [],
+        tasks: [],
+        memberships: [],
+      },
+      { savepoints: false },
+    )
 
     let db = createTestDatabase(adapter)
 
@@ -1251,7 +1268,10 @@ describe('adapter errors', () => {
   })
 })
 
-function createAdapter(seed: SqliteTestSeed = {}, options?: SqliteTestAdapterOptions): DatabaseAdapter {
+function createAdapter(
+  seed: SqliteTestSeed = {},
+  options?: SqliteTestAdapterOptions,
+): DatabaseAdapter {
   let { adapter, close } = createSqliteTestAdapter(seed, options)
   cleanups.add(close)
   return adapter

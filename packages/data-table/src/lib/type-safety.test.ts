@@ -3,7 +3,12 @@ import { afterEach, describe, it } from 'node:test'
 import { boolean, number, string } from '@remix-run/data-schema'
 
 import { createDatabase } from './database.ts'
-import type { QueryBuilder, QueryColumnTypesForTable, QueryForTable, WriteResult } from './database.ts'
+import type {
+  QueryBuilder,
+  QueryColumnTypesForTable,
+  QueryForTable,
+  WriteResult,
+} from './database.ts'
 import { createTable } from './table.ts'
 import type { TableReference } from './table.ts'
 import { eq } from './operators.ts'
@@ -266,7 +271,12 @@ describe('type safety', () => {
       // @ts-expect-error unknown orderBy column
       db.findMany(Accounts, { orderBy: ['not_a_column', 'asc'] })
       // @ts-expect-error unknown orderBy column in tuple list
-      db.findMany(Accounts, { orderBy: [['id', 'asc'], ['not_a_column', 'desc']] })
+      db.findMany(Accounts, {
+        orderBy: [
+          ['id', 'asc'],
+          ['not_a_column', 'desc'],
+        ],
+      })
     }
 
     void verifyTypeErrors
@@ -317,7 +327,11 @@ describe('type safety', () => {
       // @ts-expect-error unknown where key
       db.updateMany(Accounts, { status: 'active' }, { where: { not_a_column: 'x' } })
       // @ts-expect-error unknown orderBy key
-      db.updateMany(Accounts, { status: 'active' }, { where: { status: 'active' }, orderBy: ['nope', 'asc'] })
+      db.updateMany(
+        Accounts,
+        { status: 'active' },
+        { where: { status: 'active' }, orderBy: ['nope', 'asc'] },
+      )
       // @ts-expect-error unknown where key
       db.deleteMany(Accounts, { where: { not_a_column: 'x' } })
       // @ts-expect-error unknown orderBy key
@@ -367,8 +381,8 @@ describe('type safety', () => {
 
     expectType<Equal<typeof createResult, WriteResult>>()
     expectType<Equal<typeof createManyResult, WriteResult>>()
-    expectType<Equal<typeof created['id'], number>>()
-    expectType<Equal<typeof created['projects'][number]['id'], number>>()
+    expectType<Equal<(typeof created)['id'], number>>()
+    expectType<Equal<(typeof created)['projects'][number]['id'], number>>()
     expectType<Equal<(typeof createdRows)[number]['id'], number>>()
     expectType<Equal<(typeof createdRows)[number]['email'], string>>()
 

@@ -160,10 +160,14 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         { id: 2001, project_id: 201, title: 'B2-T1', state: 'open' },
       ])
 
-      let accounts = await db.query(Accounts).orderBy('id', 'asc').with({
-        projects: AccountProjects.orderBy('id', 'asc').limit(1),
-        tasks: AccountTasks.orderBy('id', 'asc').limit(1),
-      }).all()
+      let accounts = await db
+        .query(Accounts)
+        .orderBy('id', 'asc')
+        .with({
+          projects: AccountProjects.orderBy('id', 'asc').limit(1),
+          tasks: AccountTasks.orderBy('id', 'asc').limit(1),
+        })
+        .all()
 
       assert.equal(accounts.length, 2)
       assert.equal(accounts[0].projects.length, 1)
@@ -196,12 +200,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         .limit(1)
         .update({ status: 'paused' })
 
-      await db
-        .query(Accounts)
-        .where({ status: 'active' })
-        .orderBy('id', 'desc')
-        .limit(1)
-        .delete()
+      await db.query(Accounts).where({ status: 'active' }).orderBy('id', 'desc').limit(1).delete()
 
       let rows = await db.query(Accounts).orderBy('id', 'asc').all()
 
@@ -215,143 +214,171 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     },
   )
 
-  it('supports transactions and nested savepoints', { skip: !options.integrationEnabled }, async function () {
-    let db = options.createDatabase()
+  it(
+    'supports transactions and nested savepoints',
+    { skip: !options.integrationEnabled },
+    async function () {
+      let db = options.createDatabase()
 
-    await db.query(Accounts).insert({
-      id: 1,
-      email: 'a@example.com',
-      status: 'active',
-      nickname: null,
-    })
-
-    await db.transaction(async (outerTransaction) => {
-      await outerTransaction.query(Accounts).insert({
-        id: 2,
-        email: 'b@example.com',
+      await db.query(Accounts).insert({
+        id: 1,
+        email: 'a@example.com',
         status: 'active',
         nickname: null,
       })
 
-      await outerTransaction
-        .transaction(async (innerTransaction) => {
-          await innerTransaction.query(Accounts).insert({
-            id: 3,
-            email: 'c@example.com',
-            status: 'active',
-            nickname: null,
-          })
-
-          throw new Error('rollback inner')
-        })
-        .catch(() => undefined)
-    })
-
-    await db
-      .transaction(async (transactionDatabase) => {
-        await transactionDatabase.query(Accounts).insert({
-          id: 4,
-          email: 'd@example.com',
+      await db.transaction(async (outerTransaction) => {
+        await outerTransaction.query(Accounts).insert({
+          id: 2,
+          email: 'b@example.com',
           status: 'active',
           nickname: null,
         })
 
-        throw new Error('rollback outer')
+        await outerTransaction
+          .transaction(async (innerTransaction) => {
+            await innerTransaction.query(Accounts).insert({
+              id: 3,
+              email: 'c@example.com',
+              status: 'active',
+              nickname: null,
+            })
+
+            throw new Error('rollback inner')
+          })
+          .catch(() => undefined)
       })
-      .catch(() => undefined)
 
-    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+      await db
+        .transaction(async (transactionDatabase) => {
+          await transactionDatabase.query(Accounts).insert({
+            id: 4,
+            email: 'd@example.com',
+            status: 'active',
+            nickname: null,
+          })
 
-    assert.deepEqual(
-      rows.map((row) => row.id),
-      [1, 2],
-    )
-  })
+          throw new Error('rollback outer')
+        })
+        .catch(() => undefined)
 
-  it('supports upsert with conflict target', { skip: !options.integrationEnabled }, async function () {
-    let db = options.createDatabase()
+      let rows = await db.query(Accounts).orderBy('id', 'asc').all()
 
-    await db.query(Accounts).insert({
-      id: 1,
-      email: 'a@example.com',
-      status: 'active',
-      nickname: null,
-    })
+      assert.deepEqual(
+        rows.map((row) => row.id),
+        [1, 2],
+      )
+    },
+  )
 
-    await db.query(Accounts).upsert(
-      {
+  it(
+    'supports upsert with conflict target',
+    { skip: !options.integrationEnabled },
+    async function () {
+      let db = options.createDatabase()
+
+      await db.query(Accounts).insert({
         id: 1,
         email: 'a@example.com',
-        status: 'inactive',
-        nickname: 'alpha',
-      },
-      { conflictTarget: ['id'] },
-    )
-    await db.query(Accounts).upsert(
-      {
-        id: 2,
-        email: 'b@example.com',
         status: 'active',
         nickname: null,
-      },
-      { conflictTarget: ['id'] },
-    )
+      })
 
-    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+      await db.query(Accounts).upsert(
+        {
+          id: 1,
+          email: 'a@example.com',
+          status: 'inactive',
+          nickname: 'alpha',
+        },
+        { conflictTarget: ['id'] },
+      )
+      await db.query(Accounts).upsert(
+        {
+          id: 2,
+          email: 'b@example.com',
+          status: 'active',
+          nickname: null,
+        },
+        { conflictTarget: ['id'] },
+      )
 
-    assert.equal(rows.length, 2)
-    assert.equal(rows[0].status, 'inactive')
-    assert.equal(rows[0].nickname, 'alpha')
-    assert.equal(rows[1].id, 2)
-  })
+      let rows = await db.query(Accounts).orderBy('id', 'asc').all()
 
-  it('supports null and value operators in real queries', { skip: !options.integrationEnabled }, async function () {
-    let db = options.createDatabase()
+      assert.equal(rows.length, 2)
+      assert.equal(rows[0].status, 'inactive')
+      assert.equal(rows[0].nickname, 'alpha')
+      assert.equal(rows[1].id, 2)
+    },
+  )
 
-    await db.query(Accounts).insertMany([
-      {
-        id: 1,
-        email: 'A@Example.com',
-        status: 'active',
-        nickname: null,
-      },
-      {
-        id: 2,
-        email: 'b@example.com',
-        status: 'inactive',
-        nickname: 'bee',
-      },
-      {
-        id: 3,
-        email: 'c@example.com',
-        status: 'active',
-        nickname: null,
-      },
-    ])
+  it(
+    'supports null and value operators in real queries',
+    { skip: !options.integrationEnabled },
+    async function () {
+      let db = options.createDatabase()
 
-    let nullNickname = await db.query(Accounts).where(eq('nickname', null)).orderBy('id', 'asc').all()
-    let nonNullNickname = await db.query(Accounts).where(ne('nickname', null)).all()
-    let inRows = await db.query(Accounts).where(inList('id', [1, 3])).orderBy('id', 'asc').all()
-    let betweenRows = await db.query(Accounts).where(between('id', 2, 3)).orderBy('id', 'asc').all()
-    let ilikeRows = await db.query(Accounts).where(ilike('email', '%@example.com')).orderBy('id', 'asc').all()
+      await db.query(Accounts).insertMany([
+        {
+          id: 1,
+          email: 'A@Example.com',
+          status: 'active',
+          nickname: null,
+        },
+        {
+          id: 2,
+          email: 'b@example.com',
+          status: 'inactive',
+          nickname: 'bee',
+        },
+        {
+          id: 3,
+          email: 'c@example.com',
+          status: 'active',
+          nickname: null,
+        },
+      ])
 
-    assert.deepEqual(
-      nullNickname.map((row) => row.id),
-      [1, 3],
-    )
-    assert.equal(nonNullNickname.length, 1)
-    assert.equal(nonNullNickname[0].id, 2)
-    assert.deepEqual(
-      inRows.map((row) => row.id),
-      [1, 3],
-    )
-    assert.deepEqual(
-      betweenRows.map((row) => row.id),
-      [2, 3],
-    )
-    assert.deepEqual(
-      ilikeRows.map((row) => row.id),
-      [1, 2, 3],
-    )
-  })
+      let nullNickname = await db
+        .query(Accounts)
+        .where(eq('nickname', null))
+        .orderBy('id', 'asc')
+        .all()
+      let nonNullNickname = await db.query(Accounts).where(ne('nickname', null)).all()
+      let inRows = await db
+        .query(Accounts)
+        .where(inList('id', [1, 3]))
+        .orderBy('id', 'asc')
+        .all()
+      let betweenRows = await db
+        .query(Accounts)
+        .where(between('id', 2, 3))
+        .orderBy('id', 'asc')
+        .all()
+      let ilikeRows = await db
+        .query(Accounts)
+        .where(ilike('email', '%@example.com'))
+        .orderBy('id', 'asc')
+        .all()
+
+      assert.deepEqual(
+        nullNickname.map((row) => row.id),
+        [1, 3],
+      )
+      assert.equal(nonNullNickname.length, 1)
+      assert.equal(nonNullNickname[0].id, 2)
+      assert.deepEqual(
+        inRows.map((row) => row.id),
+        [1, 3],
+      )
+      assert.deepEqual(
+        betweenRows.map((row) => row.id),
+        [2, 3],
+      )
+      assert.deepEqual(
+        ilikeRows.map((row) => row.id),
+        [1, 2, 3],
+      )
+    },
+  )
 }

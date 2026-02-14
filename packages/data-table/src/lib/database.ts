@@ -367,7 +367,10 @@ class DatabaseRuntime implements Database {
     values: Partial<TableRow<table>>,
     options: CreateRowOptions<table, relations>,
   ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>>>
-  async create<table extends AnyTable, relations extends RelationMapForSourceName<table['name']> = {}>(
+  async create<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<table['name']> = {},
+  >(
     table: table,
     values: Partial<TableRow<table>>,
     options?: CreateResultOptions | CreateRowOptions<table, relations>,
@@ -404,9 +407,7 @@ class DatabaseRuntime implements Database {
       })
 
       if (!loaded) {
-        throw new DataTableQueryError(
-          'create({ returnRow: true }) failed to load inserted row',
-        )
+        throw new DataTableQueryError('create({ returnRow: true }) failed to load inserted row')
       }
 
       return loaded
@@ -465,7 +466,10 @@ class DatabaseRuntime implements Database {
     return toWriteResult(result)
   }
 
-  async find<table extends AnyTable, relations extends RelationMapForSourceName<table['name']> = {}>(
+  async find<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<table['name']> = {},
+  >(
     table: table,
     value: PrimaryKeyInput<table>,
     options?: { with?: relations },
@@ -475,17 +479,20 @@ class DatabaseRuntime implements Database {
     if (options?.with) {
       return query
         .with(options.with)
-        .find(value as PrimaryKeyInputForRow<TableRow<table>, table['primaryKey']>) as Promise<
-        TableRowWithLoaded<table, LoadedRelationMap<relations>> | null
-      >
+        .find(
+          value as PrimaryKeyInputForRow<TableRow<table>, table['primaryKey']>,
+        ) as Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
     }
 
-    return query.find(value as PrimaryKeyInputForRow<TableRow<table>, table['primaryKey']>) as Promise<
-      TableRowWithLoaded<table, LoadedRelationMap<relations>> | null
-    >
+    return query.find(
+      value as PrimaryKeyInputForRow<TableRow<table>, table['primaryKey']>,
+    ) as Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
   }
 
-  async findOne<table extends AnyTable, relations extends RelationMapForSourceName<table['name']> = {}>(
+  async findOne<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<table['name']> = {},
+  >(
     table: table,
     options: FindOneOptions<table, relations>,
   ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null> {
@@ -497,15 +504,19 @@ class DatabaseRuntime implements Database {
     }
 
     if (options.with) {
-      return query.with(options.with).first() as Promise<
-        TableRowWithLoaded<table, LoadedRelationMap<relations>> | null
-      >
+      return query.with(options.with).first() as Promise<TableRowWithLoaded<
+        table,
+        LoadedRelationMap<relations>
+      > | null>
     }
 
     return query.first() as Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
   }
 
-  async findMany<table extends AnyTable, relations extends RelationMapForSourceName<table['name']> = {}>(
+  async findMany<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<table['name']> = {},
+  >(
     table: table,
     options?: FindManyOptions<table, relations>,
   ): Promise<Array<TableRowWithLoaded<table, LoadedRelationMap<relations>>>> {
@@ -537,7 +548,10 @@ class DatabaseRuntime implements Database {
     return query.all() as Promise<Array<TableRowWithLoaded<table, LoadedRelationMap<relations>>>>
   }
 
-  async update<table extends AnyTable, relations extends RelationMapForSourceName<table['name']> = {}>(
+  async update<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<table['name']> = {},
+  >(
     table: table,
     value: PrimaryKeyInput<table>,
     changes: Partial<TableRow<table>>,
@@ -580,7 +594,10 @@ class DatabaseRuntime implements Database {
     return toWriteResult(result)
   }
 
-  async delete<table extends AnyTable>(table: table, value: PrimaryKeyInput<table>): Promise<boolean> {
+  async delete<table extends AnyTable>(
+    table: table,
+    value: PrimaryKeyInput<table>,
+  ): Promise<boolean> {
     let where = getPrimaryKeyWhere(table, value)
     let result = await this.query(asQueryTableInput(table)).where(where).delete()
     return toWriteResult(result).affectedRows > 0

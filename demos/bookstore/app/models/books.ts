@@ -28,19 +28,17 @@ export async function searchBooks(query: string): Promise<Book[]> {
   let lowerQuery = '%' + query.toLowerCase() + '%'
 
   return db.findMany(BooksTable, {
-    where:
-      or(ilike('title', lowerQuery), ilike('author', lowerQuery), ilike('description', lowerQuery)),
+    where: or(
+      ilike('title', lowerQuery),
+      ilike('author', lowerQuery),
+      ilike('description', lowerQuery),
+    ),
     orderBy: ['id', 'asc'],
   })
 }
 
 export async function getAvailableGenres(): Promise<string[]> {
-  let rows = await db
-    .query(BooksTable)
-    .select('genre')
-    .distinct()
-    .orderBy('genre', 'asc')
-    .all()
+  let rows = await db.query(BooksTable).select('genre').distinct().orderBy('genre', 'asc').all()
 
   return rows.map((row) => row.genre)
 }

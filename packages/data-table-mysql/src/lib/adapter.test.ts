@@ -107,13 +107,10 @@ describe('mysql adapter', () => {
 
     let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
 
-    await db.transaction(
-      async () => undefined,
-      {
-        isolationLevel: 'serializable',
-        readOnly: true,
-      },
-    )
+    await db.transaction(async () => undefined, {
+      isolationLevel: 'serializable',
+      readOnly: true,
+    })
 
     assert.deepEqual(lifecycle, [
       'set transaction isolation level serializable',
@@ -164,7 +161,10 @@ describe('mysql adapter', () => {
 
     let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
 
-    await db.query(Accounts).where(inList('id', [1, 3])).count()
+    await db
+      .query(Accounts)
+      .where(inList('id', [1, 3]))
+      .count()
 
     assert.match(statements[0].text, /`id`\s+in\s+\(\?,\s*\?\)/)
     assert.deepEqual(statements[0].values, [1, 3])
