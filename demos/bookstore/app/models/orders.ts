@@ -1,11 +1,6 @@
 import type { TableRow, TableRowWithLoaded } from 'remix/data-table'
 
-import {
-  bookForOrderItem,
-  itemsByOrder,
-  orders,
-  db,
-} from './database.ts'
+import { bookForOrderItem, itemsByOrder, orders, db } from './database.ts'
 
 export interface OrderItemInput {
   bookId: string

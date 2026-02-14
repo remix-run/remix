@@ -262,9 +262,11 @@ describe('query builder', () => {
 
     let db = createTestDatabase(adapter)
     let firstProjectPerAccount = accountProjects.orderBy('id', 'asc').limit(1)
-    let tasksThroughFirstProject = accounts.hasManyThrough(tasks, {
-      through: firstProjectPerAccount,
-    }).orderBy('id', 'asc')
+    let tasksThroughFirstProject = accounts
+      .hasManyThrough(tasks, {
+        through: firstProjectPerAccount,
+      })
+      .orderBy('id', 'asc')
 
     let accountRows = await db
       .query(accounts)
