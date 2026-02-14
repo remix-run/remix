@@ -1,6 +1,7 @@
 import type { TableRow, TableRowWith } from 'remix/data-table'
 
-import { bookForOrderItem, itemsByOrder, orders, db } from './database.ts'
+import { bookForOrderItem, itemsByOrder, orders } from './database.ts'
+import { getRequestDatabase } from './request-database.ts'
 
 export interface OrderItemInput {
   bookId: number
@@ -19,6 +20,7 @@ type OrderRow = TableRow<typeof orders>
 let orderItems = itemsByOrder.orderBy('book_id', 'asc').with({ book: bookForOrderItem })
 
 export async function getAllOrders(): Promise<Order[]> {
+  let db = getRequestDatabase()
   return db.findMany(orders, {
     orderBy: ['created_at', 'asc'],
     with: { items: orderItems },
@@ -30,6 +32,7 @@ export async function getOrderById(id: string): Promise<Order | null> {
   if (orderId === null) {
     return null
   }
+  let db = getRequestDatabase()
 
   return db.find(orders, orderId, {
     with: { items: orderItems },
@@ -41,6 +44,7 @@ export async function getOrdersByUserId(userId: number | string): Promise<Order[
   if (userIdValue === null) {
     return []
   }
+  let db = getRequestDatabase()
 
   return db.findMany(orders, {
     where: { user_id: userIdValue },
@@ -58,6 +62,7 @@ export async function createOrder(
   if (userIdValue === null) {
     throw new Error('Invalid user id')
   }
+  let db = getRequestDatabase()
 
   let total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
@@ -106,6 +111,7 @@ export async function updateOrderStatus(
     return null
   }
 
+  let db = getRequestDatabase()
   return db.update(orders, orderId, { status })
 }
 

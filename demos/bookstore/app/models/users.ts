@@ -1,10 +1,12 @@
 import type { TableRow } from 'remix/data-table'
 
-import { passwordResetTokens, users, db } from './database.ts'
+import { passwordResetTokens, users } from './database.ts'
+import { getRequestDatabase } from './request-database.ts'
 
 export type User = TableRow<typeof users>
 
 export async function getAllUsers(): Promise<User[]> {
+  let db = getRequestDatabase()
   return db.findMany(users, { orderBy: ['id', 'asc'] })
 }
 
@@ -14,10 +16,12 @@ export async function getUserById(id: number | string): Promise<User | null> {
     return null
   }
 
+  let db = getRequestDatabase()
   return db.find(users, userId)
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
+  let db = getRequestDatabase()
   return db.findOne(users, { where: { email: normalizeEmail(email) } })
 }
 
@@ -37,6 +41,7 @@ export async function createUser(
   role: 'customer' | 'admin' = 'customer',
 ): Promise<User> {
   let created_at = Date.now()
+  let db = getRequestDatabase()
 
   return db.create(
     users,
@@ -59,6 +64,7 @@ export async function updateUser(
   if (userId === null) {
     return null
   }
+  let db = getRequestDatabase()
 
   let changes: Partial<User> = {}
   if (data.email !== undefined) changes.email = normalizeEmail(data.email)
@@ -80,6 +86,7 @@ export async function deleteUser(id: number | string): Promise<boolean> {
     return false
   }
 
+  let db = getRequestDatabase()
   return db.delete(users, userId)
 }
 
@@ -88,6 +95,7 @@ export async function createPasswordResetToken(email: string): Promise<string | 
   if (!user) {
     return undefined
   }
+  let db = getRequestDatabase()
 
   let token = Math.random().toString(36).substring(2, 15)
 
@@ -101,6 +109,7 @@ export async function createPasswordResetToken(email: string): Promise<string | 
 }
 
 export async function resetPassword(token: string, newPassword: string): Promise<boolean> {
+  let db = getRequestDatabase()
   let tokenData = await db.find(passwordResetTokens, { token })
 
   if (!tokenData || tokenData.expires_at < Date.now()) {

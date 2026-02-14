@@ -1,15 +1,18 @@
 import type { TableRow } from 'remix/data-table'
 import { ilike, or } from 'remix/data-table'
 
-import { books, db } from './database.ts'
+import { books } from './database.ts'
+import { getRequestDatabase } from './request-database.ts'
 
 export type Book = TableRow<typeof books>
 
 export async function getAllBooks(): Promise<Book[]> {
+  let db = getRequestDatabase()
   return db.findMany(books, { orderBy: ['id', 'asc'] })
 }
 
 export async function getBookBySlug(slug: string): Promise<Book | null> {
+  let db = getRequestDatabase()
   return db.findOne(books, { where: { slug } })
 }
 
@@ -19,10 +22,12 @@ export async function getBookById(id: string): Promise<Book | null> {
     return null
   }
 
+  let db = getRequestDatabase()
   return db.find(books, bookId)
 }
 
 export async function getBooksByGenre(genre: string): Promise<Book[]> {
+  let db = getRequestDatabase()
   return db.findMany(books, {
     where: ilike('genre', genre),
     orderBy: ['id', 'asc'],
@@ -31,6 +36,7 @@ export async function getBooksByGenre(genre: string): Promise<Book[]> {
 
 export async function searchBooks(query: string): Promise<Book[]> {
   let lowerQuery = '%' + query.toLowerCase() + '%'
+  let db = getRequestDatabase()
 
   return db.findMany(books, {
     where: or(
@@ -43,12 +49,14 @@ export async function searchBooks(query: string): Promise<Book[]> {
 }
 
 export async function getAvailableGenres(): Promise<string[]> {
+  let db = getRequestDatabase()
   let rows = await db.query(books).select('genre').distinct().orderBy('genre', 'asc').all()
 
   return rows.map((row) => row.genre)
 }
 
 export async function createBook(data: Omit<Book, 'id'>): Promise<Book> {
+  let db = getRequestDatabase()
   return db.create(books, data, { returnRow: true })
 }
 
@@ -57,6 +65,7 @@ export async function updateBook(id: string, data: Partial<Book>): Promise<Book 
   if (bookId === null) {
     return null
   }
+  let db = getRequestDatabase()
 
   let changes: Partial<Book> = {}
   if (data.slug !== undefined) changes.slug = data.slug
@@ -84,6 +93,7 @@ export async function deleteBook(id: string): Promise<boolean> {
     return false
   }
 
+  let db = getRequestDatabase()
   return db.delete(books, bookId)
 }
 

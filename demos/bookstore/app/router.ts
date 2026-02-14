@@ -23,6 +23,7 @@ import * as marketingController from './marketing.tsx'
 import { uploadsAction } from './uploads.tsx'
 import fragmentsController from './fragments.tsx'
 import { routerStorageKey } from './utils/router-storage.ts'
+import { loadDatabase } from './middleware/database.ts'
 
 let middleware = []
 
@@ -42,6 +43,7 @@ middleware.push(formData({ uploadHandler }))
 middleware.push(methodOverride())
 middleware.push(session(sessionCookie, sessionStorage))
 middleware.push(asyncContext())
+middleware.push(loadDatabase())
 
 await initializeBookstoreDatabase()
 
