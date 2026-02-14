@@ -1,20 +1,25 @@
 # data-table
 
-Relational query toolkit for JavaScript runtimes. `data-table` gives you one typed API for
-PostgreSQL, MySQL, and SQLite adapters.
+Typed relational query toolkit for JavaScript runtimes.
 
 ## Features
 
-- **One API Across Databases**: Same query and relation APIs across adapters
+- **One API Across Databases**: Same query and relation APIs across PostgreSQL, MySQL, and SQLite adapters
+- **Two Complementary Query Styles**: Use the chainable query builder for advanced queries or high-level database helpers for common CRUD
 - **Type-Safe Reads**: Typed `select`, relation loading, and predicate keys
 - **Validated Writes and Filters**: Values are parsed with your `remix/data-schema` definitions
 - **Relation-First Queries**: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`, and nested eager loading
 - **Safe Scoped Writes**: `update`/`delete` with `orderBy`/`limit` run safely in a transaction
 - **Raw SQL Escape Hatch**: Execute SQL directly with `db.exec(sql\`...\`)`
 
-## Installation
+`data-table` gives you two complementary APIs:
 
-Install Remix and a database driver:
+- **Query Builder API** for expressive joins, aggregates, eager loading, and scoped writes
+- **Database Helper API** for common CRUD flows (`find`, `create`, `update`, `delete`)
+
+Both APIs are type-safe and validate values using your `remix/data-schema` definitions.
+
+## Installation
 
 ```sh
 npm i remix
@@ -25,151 +30,224 @@ npm i mysql2
 npm i better-sqlite3
 ```
 
-## Usage
+## Setup
 
-Define your tables and relations once, then query through an adapter-backed database.
+Define tables once, then create a database with an adapter.
 
 ```ts
-import * as s from 'remix/data-schema'
 import { Pool } from 'pg'
-import { createDatabase, createTable, eq, timestamps } from 'remix/data-table'
+import * as s from 'remix/data-schema'
+import { createDatabase, createTable } from 'remix/data-table'
 import { createPostgresDatabaseAdapter } from 'remix/data-table-postgres'
 
-let Accounts = createTable({
-  name: 'accounts',
+let Users = createTable({
+  name: 'users',
   columns: {
-    id: s.number(),
+    id: s.string(),
     email: s.string(),
-    status: s.string(),
-    ...timestamps(),
+    role: s.enum_(['customer', 'admin']),
+    created_at: s.number(),
   },
-  timestamps: true,
 })
 
-let Projects = createTable({
-  name: 'projects',
+let Orders = createTable({
+  name: 'orders',
   columns: {
-    id: s.number(),
-    account_id: s.number(),
-    name: s.string(),
-    archived: s.boolean(),
+    id: s.string(),
+    user_id: s.string(),
+    status: s.enum_(['pending', 'processing', 'shipped', 'delivered']),
+    total: s.number(),
+    created_at: s.number(),
   },
 })
 
-let Tasks = createTable({
-  name: 'tasks',
-  columns: {
-    id: s.number(),
-    project_id: s.number(),
-    title: s.string(),
-    state: s.string(),
-  },
-})
-
-let AccountProjects = Accounts.hasMany(Projects)
-let ProjectTasks = Projects.hasMany(Tasks)
+let UserOrders = Users.hasMany(Orders)
 
 let pool = new Pool({ connectionString: process.env.DATABASE_URL })
 let db = createDatabase(createPostgresDatabaseAdapter(pool))
-
-let accounts = await db
-  .query(Accounts)
-  .where({ status: 'active' })
-  .with({
-    projects: AccountProjects.where({ archived: false }).with({
-      tasks: ProjectTasks.where({ state: 'open' }),
-    }),
-  })
-  .all()
-
-await db
-  .query(Accounts)
-  .where(eq('accounts.id', 1))
-  .update({ status: 'inactive' }, { returning: ['id', 'status'] })
-
-// accounts[0].projects and accounts[0].projects[0].tasks are typed
 ```
 
-## Advanced Usage
+## Query Builder API
 
-### Adapter Setup
-
-`data-table` ships with support for the following databases:
-
-- [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres) - PostgreSQL adapter
-- [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql) - MySQL adapter
-- [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite) - SQLite adapter
-
-For tests, you can use a SQLite in-memory database.
+Use `db.query(Table)` when you need joins, custom shape selection, eager loading, or aggregate logic.
 
 ```ts
-import Database from 'better-sqlite3'
-import { createDatabase } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
+import { eq, ilike } from 'remix/data-table'
 
-let sqlite = new Database(':memory:')
-sqlite.exec(
-  'create table accounts (id integer primary key, email text not null, status text not null)',
-)
-
-let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
-```
-
-### Query Composition
-
-```ts
-import { eq } from 'remix/data-table'
-
-let rows = await db
-  .query(Accounts)
-  .join(Projects, eq('accounts.id', 'projects.account_id'))
-  .where(eq('projects.archived', false))
-  .select({
-    accountId: 'accounts.id',
-    accountEmail: 'accounts.email',
-    projectName: 'projects.name',
-  })
-  .orderBy('projects.name', 'asc')
-  .all()
-```
-
-### Scoped Writes
-
-When you scope `update`/`delete` with ordering or limits, `data-table` first resolves target
-primary keys, then applies the write in a transaction.
-
-```ts
-await db
-  .query(Accounts)
+let recentPendingOrders = await db
+  .query(Orders)
+  .join(Users, eq('orders.user_id', 'users.id'))
   .where({ status: 'pending' })
-  .orderBy('id', 'asc')
-  .limit(100)
-  .update({ status: 'active' })
+  .where(ilike('users.email', '%@example.com'))
+  .select({
+    orderId: 'orders.id',
+    customerEmail: 'users.email',
+    total: 'orders.total',
+    placedAt: 'orders.created_at',
+  })
+  .orderBy('orders.created_at', 'desc')
+  .limit(20)
+  .all()
 ```
 
-### Transactions
+Load relations with relation-scoped filtering and ordering:
 
 ```ts
-await db.transaction(async (outerTx) => {
-  await outerTx.query(Accounts).insert({ id: 20, email: 'x@example.com', status: 'active' })
+let customers = await db
+  .query(Users)
+  .where({ role: 'customer' })
+  .with({
+    recentOrders: UserOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
+  })
+  .all()
 
-  await outerTx
-    .transaction(async (innerTx) => {
-      await innerTx.query(Accounts).insert({ id: 21, email: 'y@example.com', status: 'active' })
+// customers[0].recentOrders is fully typed
+```
 
-      throw new Error('rollback inner only')
-    })
-    .catch(() => undefined)
+Run scoped writes safely with the same chainable API:
+
+```ts
+await db
+  .query(Orders)
+  .where({ status: 'pending' })
+  .orderBy('created_at', 'asc')
+  .limit(100)
+  .update({ status: 'processing' })
+```
+
+## Database Helper API (High-Level CRUD)
+
+Use these helpers for common operations without building a full query chain.
+
+### Read helpers
+
+```ts
+import { or } from 'remix/data-table'
+
+let user = await db.find(Users, 'u_001')
+
+let firstPending = await db.findOne(Orders, {
+  where: { status: 'pending' },
+  orderBy: ['created_at', 'asc'],
+})
+
+let page = await db.findMany(Orders, {
+  where: or({ status: 'pending' }, { status: 'processing' }),
+  orderBy: [
+    ['status', 'asc'],
+    ['created_at', 'desc'],
+  ],
+  limit: 50,
+  offset: 0,
 })
 ```
 
-### Raw SQL Escape Hatch
+`where` accepts the same single-table object/predicate inputs as `query().where(...)`, and `orderBy` uses tuple form:
+
+- `['column', 'asc' | 'desc']`
+- `[['columnA', 'asc'], ['columnB', 'desc']]`
+
+### Create helpers
+
+```ts
+// Default: metadata (affectedRows/insertId)
+let createResult = await db.create(Users, {
+  id: 'u_002',
+  email: 'sam@example.com',
+  role: 'customer',
+  created_at: Date.now(),
+})
+
+// Return a typed row (with optional relations)
+let createdUser = await db.create(
+  Users,
+  {
+    id: 'u_003',
+    email: 'pat@example.com',
+    role: 'customer',
+    created_at: Date.now(),
+  },
+  {
+    returnRow: true,
+    with: { recentOrders: UserOrders.orderBy('created_at', 'desc').limit(1) },
+  },
+)
+
+// Bulk insert metadata
+let createManyResult = await db.createMany(Orders, [
+  { id: 'o_101', user_id: 'u_002', status: 'pending', total: 24.99, created_at: Date.now() },
+  { id: 'o_102', user_id: 'u_003', status: 'pending', total: 48.5, created_at: Date.now() },
+])
+
+// Return inserted rows (requires adapter RETURNING support)
+let insertedRows = await db.createMany(
+  Orders,
+  [{ id: 'o_103', user_id: 'u_003', status: 'pending', total: 12, created_at: Date.now() }],
+  { returnRows: true },
+)
+```
+
+### Update and delete helpers
+
+```ts
+let updatedUser = await db.update(Users, 'u_003', { role: 'admin' })
+
+let updateManyResult = await db.updateMany(
+  Orders,
+  { status: 'processing' },
+  {
+    where: { status: 'pending' },
+    orderBy: ['created_at', 'asc'],
+    limit: 25,
+  },
+)
+
+let deletedUser = await db.delete(Users, 'u_002')
+
+let deleteManyResult = await db.deleteMany(Orders, {
+  where: { status: 'delivered' },
+  orderBy: [['created_at', 'asc']],
+  limit: 200,
+})
+```
+
+Return behavior:
+
+- `find`/`findOne` -> row or `null`
+- `findMany` -> rows
+- `create` -> `WriteResult` by default, row when `returnRow: true`
+- `createMany` -> `WriteResult` by default, rows when `returnRows: true` (RETURNING adapters only)
+- `update` -> updated row or `null`
+- `updateMany`/`deleteMany` -> `WriteResult`
+- `delete` -> `boolean`
+
+## Transactions
+
+```ts
+await db.transaction(async (tx) => {
+  let user = await tx.create(
+    Users,
+    { id: 'u_010', email: 'new@example.com', role: 'customer', created_at: Date.now() },
+    { returnRow: true },
+  )
+
+  await tx.create(Orders, {
+    id: 'o_500',
+    user_id: user.id,
+    status: 'pending',
+    total: 79,
+    created_at: Date.now(),
+  })
+})
+```
+
+## Raw SQL Escape Hatch
 
 ```ts
 import { rawSql, sql } from 'remix/data-table'
 
-await db.exec(sql`select * from accounts where id = ${42}`)
-await db.exec(rawSql('update accounts set status = ? where id = ?', ['active', 42]))
+await db.exec(sql`select * from users where id = ${'u_001'}`)
+await db.exec(rawSql('update users set role = ? where id = ?', ['admin', 'u_001']))
 ```
 
 ## Related Packages
