@@ -1,4 +1,4 @@
-import type { TableRow, TableRowWithLoaded } from 'remix/data-table'
+import type { TableRow, TableRowWith } from 'remix/data-table'
 
 import { bookForOrderItem, itemsByOrder, orders, db } from './database.ts'
 
@@ -9,11 +9,11 @@ export interface OrderItemInput {
   quantity: number
 }
 
-export type OrderItem = TableRowWithLoaded<
+export type OrderItem = TableRowWith<
   typeof itemsByOrder.targetTable,
   { book: TableRow<typeof bookForOrderItem.targetTable> | null }
 >
-export type Order = TableRowWithLoaded<typeof orders, { items: OrderItem[] }>
+export type Order = TableRowWith<typeof orders, { items: OrderItem[] }>
 type OrderRow = TableRow<typeof orders>
 
 let orderItems = itemsByOrder.orderBy('book_id', 'asc').with({ book: bookForOrderItem })

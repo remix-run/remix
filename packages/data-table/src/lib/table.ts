@@ -116,7 +116,7 @@ export type TableRow<table extends AnyTable> = Pretty<{
   [column in keyof TableColumns<table> & string]: InferSchemaOutput<TableColumns<table>[column]>
 }>
 
-export type TableRowWithLoaded<
+export type TableRowWith<
   table extends AnyTable,
   loaded extends Record<string, unknown> = {},
 > = Pretty<TableRow<table> & loaded>
@@ -205,8 +205,8 @@ export type RelationKind = 'hasMany' | 'hasOne' | 'belongsTo' | 'hasManyThrough'
 export type RelationResult<relation extends AnyRelation> =
   relation extends Relation<any, infer target, infer cardinality, infer loaded>
     ? cardinality extends 'many'
-      ? Array<TableRowWithLoaded<target, loaded>>
-      : TableRowWithLoaded<target, loaded> | null
+      ? Array<TableRowWith<target, loaded>>
+      : TableRowWith<target, loaded> | null
     : never
 
 export type RelationMapForTable<table extends AnyTable> = Record<

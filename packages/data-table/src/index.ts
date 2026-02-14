@@ -45,7 +45,7 @@ export type {
   TablePrimaryKey,
   TableReference,
   TableRow,
-  TableRowWithLoaded,
+  TableRowWith,
   TimestampConfig,
   TimestampOptions,
 } from './lib/table.ts'

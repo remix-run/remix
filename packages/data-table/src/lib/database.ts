@@ -32,7 +32,7 @@ import type {
   TableName,
   TablePrimaryKey,
   TableRow,
-  TableRowWithLoaded,
+  TableRowWith,
   tableMetadataKey,
 } from './table.ts'
 import {
@@ -304,7 +304,7 @@ export type Database = {
     table: table,
     values: Partial<TableRow<table>>,
     options: CreateRowOptions<table, relations>,
-  ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>>>
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>>>
   createMany<table extends AnyTable>(
     table: table,
     values: Array<Partial<TableRow<table>>>,
@@ -319,28 +319,22 @@ export type Database = {
     table: table,
     value: PrimaryKeyInput<table>,
     options?: { with?: relations },
-  ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
-  findOne<
-    table extends AnyTable,
-    relations extends RelationMapForSourceName<TableName<table>> = {},
-  >(
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
+  findOne<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
     table: table,
     options: FindOneOptions<table, relations>,
-  ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
-  findMany<
-    table extends AnyTable,
-    relations extends RelationMapForSourceName<TableName<table>> = {},
-  >(
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
+  findMany<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
     table: table,
     options?: FindManyOptions<table, relations>,
-  ): Promise<Array<TableRowWithLoaded<table, LoadedRelationMap<relations>>>>
+  ): Promise<Array<TableRowWith<table, LoadedRelationMap<relations>>>>
   count<table extends AnyTable>(table: table, options?: CountOptions<table>): Promise<number>
   update<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
     table: table,
     value: PrimaryKeyInput<table>,
     changes: Partial<TableRow<table>>,
     options?: UpdateOptions<table, relations>,
-  ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
   updateMany<table extends AnyTable>(
     table: table,
     changes: Partial<TableRow<table>>,
@@ -402,7 +396,7 @@ class DatabaseRuntime implements Database {
     table: table,
     values: Partial<TableRow<table>>,
     options: CreateRowOptions<table, relations>,
-  ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>>>
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>>>
   async create<
     table extends AnyTable,
     relations extends RelationMapForSourceName<TableName<table>> = {},
@@ -410,7 +404,7 @@ class DatabaseRuntime implements Database {
     table: table,
     values: Partial<TableRow<table>>,
     options?: CreateResultOptions | CreateRowOptions<table, relations>,
-  ): Promise<WriteResult | TableRowWithLoaded<table, LoadedRelationMap<relations>>> {
+  ): Promise<WriteResult | TableRowWith<table, LoadedRelationMap<relations>>> {
     let touch = options?.touch
     let query: QueryForTable<table> = this.query(asQueryTableInput(table))
 
@@ -433,7 +427,7 @@ class DatabaseRuntime implements Database {
       }
 
       if (!options.with) {
-        return row as TableRowWithLoaded<table, LoadedRelationMap<relations>>
+        return row as TableRowWith<table, LoadedRelationMap<relations>>
       }
 
       let where = getPrimaryKeyWhereFromRow(table, row)
@@ -509,7 +503,7 @@ class DatabaseRuntime implements Database {
     table: table,
     value: PrimaryKeyInput<table>,
     options?: { with?: relations },
-  ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null> {
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
     let query: QueryForTable<table> = this.query(asQueryTableInput(table))
 
     if (options?.with) {
@@ -517,12 +511,12 @@ class DatabaseRuntime implements Database {
         .with(options.with)
         .find(
           value as PrimaryKeyInputForRow<TableRow<table>, TablePrimaryKey<table>>,
-        ) as Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
+        ) as Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
     }
 
     return query.find(
       value as PrimaryKeyInputForRow<TableRow<table>, TablePrimaryKey<table>>,
-    ) as Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
+    ) as Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
   }
 
   async findOne<
@@ -531,7 +525,7 @@ class DatabaseRuntime implements Database {
   >(
     table: table,
     options: FindOneOptions<table, relations>,
-  ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null> {
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
     let query: QueryForTable<table> = this.query(asQueryTableInput(table)).where(options.where)
     let orderBy = normalizeOrderByInput(options.orderBy)
 
@@ -540,13 +534,13 @@ class DatabaseRuntime implements Database {
     }
 
     if (options.with) {
-      return query.with(options.with).first() as Promise<TableRowWithLoaded<
+      return query.with(options.with).first() as Promise<TableRowWith<
         table,
         LoadedRelationMap<relations>
       > | null>
     }
 
-    return query.first() as Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
+    return query.first() as Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
   }
 
   async findMany<
@@ -555,7 +549,7 @@ class DatabaseRuntime implements Database {
   >(
     table: table,
     options?: FindManyOptions<table, relations>,
-  ): Promise<Array<TableRowWithLoaded<table, LoadedRelationMap<relations>>>> {
+  ): Promise<Array<TableRowWith<table, LoadedRelationMap<relations>>>> {
     let query: QueryForTable<table> = this.query(asQueryTableInput(table))
 
     if (options?.where) {
@@ -577,11 +571,11 @@ class DatabaseRuntime implements Database {
 
     if (options?.with) {
       return query.with(options.with).all() as Promise<
-        Array<TableRowWithLoaded<table, LoadedRelationMap<relations>>>
+        Array<TableRowWith<table, LoadedRelationMap<relations>>>
       >
     }
 
-    return query.all() as Promise<Array<TableRowWithLoaded<table, LoadedRelationMap<relations>>>>
+    return query.all() as Promise<Array<TableRowWith<table, LoadedRelationMap<relations>>>>
   }
 
   async count<table extends AnyTable>(
@@ -605,7 +599,7 @@ class DatabaseRuntime implements Database {
     value: PrimaryKeyInput<table>,
     changes: Partial<TableRow<table>>,
     options?: UpdateOptions<table, relations>,
-  ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null> {
+  ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
     let existing = await this.find(table, value)
     if (!existing) {
       return null
