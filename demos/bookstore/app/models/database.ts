@@ -85,6 +85,17 @@ sqlite.pragma('foreign_keys = ON')
 let adapter = createSqliteDatabaseAdapter(sqlite)
 
 export let db = createDatabase(adapter)
+export type BookstoreDatabase = typeof db
+
+export function checkoutBookstoreDatabase(): {
+  db: BookstoreDatabase
+  release: () => void
+} {
+  return {
+    db,
+    release() {},
+  }
+}
 
 let initializePromise: Promise<void> | null = null
 

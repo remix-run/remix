@@ -75,6 +75,34 @@ export interface Router {
    */
   fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>
   /**
+   * Run a callback with a request context and middleware.
+   *
+   * This is useful in tests and utility code where you need access to request-scoped context
+   * (such as async-local storage, sessions, or other middleware-provided values) without
+   * dispatching to a route action.
+   *
+   * @param input The request input used to create the request context
+   * @param callback The callback to run
+   * @returns The callback result
+   */
+  run<result>(
+    input: string | URL | Request,
+    callback: (context: RequestContext) => Promise<result> | result,
+  ): Promise<result>
+  /**
+   * Run a callback with a request context and middleware.
+   *
+   * @param input The request input used to create the request context
+   * @param init The request init options
+   * @param callback The callback to run
+   * @returns The callback result
+   */
+  run<result>(
+    input: string | URL | Request,
+    init: RequestInit,
+    callback: (context: RequestContext) => Promise<result> | result,
+  ): Promise<result>
+  /**
    * Add a route to the router.
    *
    * @param method The request method to match
@@ -179,6 +207,16 @@ export function createRouter(options?: RouterOptions): Router {
   let defaultHandler = options?.defaultHandler ?? noMatchHandler
   let matcher = options?.matcher ?? new ArrayMatcher<MatchData>()
   let globalMiddleware = options?.middleware
+
+  function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
+    let request = new Request(input, init)
+
+    if (request.signal.aborted) {
+      throw request.signal.reason
+    }
+
+    return new RequestContext(request)
+  }
 
   function dispatch(context: RequestContext): Promise<Response> {
     for (let match of matcher.matchAll(context.url)) {
@@ -294,19 +332,61 @@ export function createRouter(options?: RouterOptions): Router {
 
   return {
     fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-      let request = new Request(input, init)
-
-      if (request.signal.aborted) {
-        throw request.signal.reason
-      }
-
-      let context = new RequestContext(request)
+      let context = createRequestContext(input, init)
 
       if (globalMiddleware) {
         return runMiddleware(globalMiddleware, context, dispatch)
       }
 
       return dispatch(context)
+    },
+    async run<result>(
+      input: string | URL | Request,
+      initOrCallback: RequestInit | ((context: RequestContext) => Promise<result> | result),
+      maybeCallback?: (context: RequestContext) => Promise<result> | result,
+    ): Promise<result> {
+      let init = typeof initOrCallback === 'function' ? undefined : initOrCallback
+      let callback = typeof initOrCallback === 'function' ? initOrCallback : maybeCallback
+      if (callback == null) {
+        throw new TypeError('router.run() requires a callback function')
+      }
+
+      let context = createRequestContext(input, init)
+      let callbackRan = false
+      let callbackThrew = false
+      let callbackError: unknown = undefined
+      let callbackResult: result | undefined = undefined
+
+      let runCallback = async (): Promise<Response> => {
+        callbackRan = true
+
+        try {
+          callbackResult = await callback(context)
+        } catch (error) {
+          callbackThrew = true
+          callbackError = error
+        }
+
+        return new Response(null, { status: 204 })
+      }
+
+      if (globalMiddleware) {
+        await runMiddleware(globalMiddleware, context, runCallback)
+      } else {
+        await runCallback()
+      }
+
+      if (!callbackRan) {
+        throw new Error(
+          'router.run() callback was not invoked. Ensure all middleware at this URL calls next() and does not return a Response directly.',
+        )
+      }
+
+      if (callbackThrew) {
+        throw callbackError
+      }
+
+      return callbackResult as result
     },
     route: addRoute,
     map: mapRoutes,

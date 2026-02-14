@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
 
+import { createStorageKey } from './app-storage.ts'
 import type { RequestContext } from './request-context.ts'
 import { createRoutes as route } from './route-map.ts'
 import type { MatchData } from './router.ts'
@@ -155,6 +156,77 @@ describe('router.fetch()', () => {
     assert.equal(response.status, 404)
     assert.equal(await response.text(), 'Not Found: /nonexistent')
     assert.deepEqual(requestLog, ['middleware'])
+  })
+})
+
+describe('router.run()', () => {
+  it('runs a callback and returns its value', async () => {
+    let router = createRouter()
+    let result = await router.run(
+      'https://remix.run/posts?sort=asc',
+      ({ url }) => `${url.pathname}:${url.searchParams.get('sort')}`,
+    )
+
+    assert.equal(result, '/posts:asc')
+  })
+
+  it('runs middleware before invoking the callback', async () => {
+    let key = createStorageKey('unset')
+    let requestLog: string[] = []
+
+    let router = createRouter({
+      middleware: [
+        (context, next) => {
+          requestLog.push('middleware')
+          context.storage.set(key, 'ready')
+          return next()
+        },
+      ],
+    })
+
+    let value = await router.run('https://remix.run', ({ storage }) => {
+      requestLog.push('callback')
+      return storage.get(key)
+    })
+
+    assert.equal(value, 'ready')
+    assert.deepEqual(requestLog, ['middleware', 'callback'])
+  })
+
+  it('throws when middleware short-circuits before invoking the callback', async () => {
+    let router = createRouter({
+      middleware: [
+        () => new Response('Unauthorized', { status: 401 }),
+      ],
+    })
+
+    await assert.rejects(
+      () => router.run('https://remix.run', () => 'ok'),
+      /router.run\(\) callback was not invoked/,
+    )
+  })
+
+  it('propagates callback errors', async () => {
+    let router = createRouter()
+
+    await assert.rejects(
+      () =>
+        router.run('https://remix.run', () => {
+          throw new Error('boom')
+        }),
+      /boom/,
+    )
+  })
+
+  it('accepts RequestInit options', async () => {
+    let router = createRouter()
+    let method = await router.run(
+      'https://remix.run',
+      { method: 'POST' },
+      ({ method }) => method,
+    )
+
+    assert.equal(method, 'POST')
   })
 })
 
