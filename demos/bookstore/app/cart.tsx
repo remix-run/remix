@@ -89,7 +89,7 @@ export default {
 
 export async function toggleCart({ session, formData }: any) {
   let bookId = formData.get('bookId')?.toString() ?? ''
-  let book = getBookById(bookId)
+  let book = await getBookById(bookId)
   if (!book) return new Response('Book not found', { status: 404 })
 
   let cart = getCurrentCart()
