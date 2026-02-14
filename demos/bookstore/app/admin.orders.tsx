@@ -6,8 +6,8 @@ import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 
 export default {
-  index() {
-    let orders = getAllOrders()
+  async index() {
+    let orders = await getAllOrders()
 
     return render(
       <Layout>
@@ -32,26 +32,30 @@ export default {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => (
-                <tr>
-                  <td>#{order.id}</td>
-                  <td>{order.createdAt.toLocaleDateString()}</td>
-                  <td>{order.items.length} item(s)</td>
-                  <td>${order.total.toFixed(2)}</td>
-                  <td>
-                    <span class="badge badge-info">{order.status}</span>
-                  </td>
-                  <td>
-                    <a
-                      href={routes.admin.orders.show.href({ orderId: order.id })}
-                      class="btn btn-secondary"
-                      css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
-                    >
-                      View
-                    </a>
-                  </td>
-                </tr>
-              ))}
+              {orders.map((order) => {
+                let items = JSON.parse(order.items_json) as Array<{ quantity: number }>
+
+                return (
+                  <tr>
+                    <td>#{order.id}</td>
+                    <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                    <td>{items.length} item(s)</td>
+                    <td>${order.total.toFixed(2)}</td>
+                    <td>
+                      <span class="badge badge-info">{order.status}</span>
+                    </td>
+                    <td>
+                      <a
+                        href={routes.admin.orders.show.href({ orderId: order.id })}
+                        class="btn btn-secondary"
+                        css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
+                      >
+                        View
+                      </a>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -59,8 +63,8 @@ export default {
     )
   },
 
-  show({ params }) {
-    let order = getOrderById(params.orderId)
+  async show({ params }) {
+    let order = await getOrderById(params.orderId)
 
     if (!order) {
       return render(
@@ -73,16 +77,28 @@ export default {
       )
     }
 
+    let items = JSON.parse(order.items_json) as Array<{
+      title: string
+      quantity: number
+      price: number
+    }>
+    let shippingAddress = JSON.parse(order.shipping_address_json) as {
+      street: string
+      city: string
+      state: string
+      zip: string
+    }
+
     return render(
       <Layout>
         <h1>Order #{order.id}</h1>
 
         <div class="card">
           <p>
-            <strong>Order Date:</strong> {order.createdAt.toLocaleDateString()}
+            <strong>Order Date:</strong> {new Date(order.created_at).toLocaleDateString()}
           </p>
           <p>
-            <strong>User ID:</strong> {order.userId}
+            <strong>User ID:</strong> {order.user_id}
           </p>
           <p>
             <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
@@ -99,7 +115,7 @@ export default {
               </tr>
             </thead>
             <tbody>
-              {order.items.map((item) => (
+              {items.map((item) => (
                 <tr>
                   <td>{item.title}</td>
                   <td>{item.quantity}</td>
@@ -119,9 +135,9 @@ export default {
           </table>
 
           <h2 css={{ marginTop: '2rem' }}>Shipping Address</h2>
-          <p>{order.shippingAddress.street}</p>
+          <p>{shippingAddress.street}</p>
           <p>
-            {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zip}
+            {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
           </p>
         </div>
 

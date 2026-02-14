@@ -42,6 +42,7 @@
   ],
   "pnpm": {
     "onlyBuiltDependencies": [
+      "better-sqlite3",
       "@remix-run/dom",
       "@remix-run/events",
       "@remix-run/style",

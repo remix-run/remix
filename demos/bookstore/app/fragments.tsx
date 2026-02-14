@@ -12,9 +12,9 @@ import { routes as appRoutes } from './routes.ts'
 export default {
   middleware: [loadAuth()],
   actions: {
-    cartButton({ params }: any) {
+    async cartButton({ params }: any) {
       let bookId = params.bookId ?? ''
-      let book = getBookById(bookId)
+      let book = await getBookById(bookId)
 
       if (!book) {
         return renderFragment(<p>Book not found</p>, { status: 404 })

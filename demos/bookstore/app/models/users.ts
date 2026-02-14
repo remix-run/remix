@@ -1,111 +1,108 @@
-export interface User {
-  id: string
-  email: string
-  password: string // In production, this would be hashed!
-  name: string
-  role: 'customer' | 'admin'
-  createdAt: Date
+import type { TableRow } from 'remix/data-table'
+import { ilike } from 'remix/data-table'
+
+import { PasswordResetTokensTable, UsersTable, db } from './database.ts'
+
+export type User = TableRow<typeof UsersTable>
+
+export async function getAllUsers(): Promise<User[]> {
+  return db.findMany(UsersTable, { orderBy: ['id', 'asc'] })
 }
 
-const usersData: User[] = [
-  {
-    id: '1',
-    email: 'admin@bookstore.com',
-    password: 'admin123', // Never do this in production!
-    name: 'Admin User',
-    role: 'admin',
-    createdAt: new Date('2024-01-01'),
-  },
-  {
-    id: '2',
-    email: 'customer@example.com',
-    password: 'password123',
-    name: 'John Doe',
-    role: 'customer',
-    createdAt: new Date('2024-02-15'),
-  },
-]
-
-export function getAllUsers(): User[] {
-  return [...usersData]
+export async function getUserById(id: string): Promise<User | null> {
+  return db.find(UsersTable, id)
 }
 
-export function getUserById(id: string): User | undefined {
-  return usersData.find((user) => user.id === id)
+export async function getUserByEmail(email: string): Promise<User | null> {
+  return db.findOne(UsersTable, { where: ilike('email', email) })
 }
 
-export function getUserByEmail(email: string): User | undefined {
-  return usersData.find((user) => user.email.toLowerCase() === email.toLowerCase())
-}
-
-export function authenticateUser(email: string, password: string): User | undefined {
-  let user = getUserByEmail(email)
+export async function authenticateUser(email: string, password: string): Promise<User | undefined> {
+  let user = await getUserByEmail(email)
   if (!user || user.password !== password) {
     return undefined
   }
+
   return user
 }
 
-export function createUser(
+export async function createUser(
   email: string,
   password: string,
   name: string,
   role: 'customer' | 'admin' = 'customer',
-): User {
-  let newUser: User = {
-    id: String(usersData.length + 1),
-    email,
-    password, // In production, hash this!
-    name,
-    role,
-    createdAt: new Date(),
+): Promise<User> {
+  let count = await db.count(UsersTable)
+  let id = String(count + 1)
+  let created_at = Date.now()
+
+  return db.create(
+    UsersTable,
+    {
+      id,
+      email,
+      password, // In production, hash this!
+      name,
+      role,
+      created_at,
+    },
+    { returnRow: true },
+  )
+}
+
+export async function updateUser(
+  id: string,
+  data: Partial<Omit<User, 'id'>>,
+): Promise<User | null> {
+  let changes: Partial<User> = {}
+  if (data.email !== undefined) changes.email = data.email
+  if (data.password !== undefined) changes.password = data.password
+  if (data.name !== undefined) changes.name = data.name
+  if (data.role !== undefined) changes.role = data.role
+  if (data.created_at !== undefined) changes.created_at = data.created_at
+
+  if (Object.keys(changes).length > 0) {
+    return db.update(UsersTable, id, changes)
   }
-  usersData.push(newUser)
-  return newUser
+
+  return getUserById(id)
 }
 
-export function updateUser(id: string, data: Partial<Omit<User, 'id'>>): User | undefined {
-  let index = usersData.findIndex((user) => user.id === id)
-  if (index === -1) return undefined
-
-  usersData[index] = { ...usersData[index], ...data }
-  return usersData[index]
+export async function deleteUser(id: string): Promise<boolean> {
+  return db.delete(UsersTable, id)
 }
 
-export function deleteUser(id: string): boolean {
-  let index = usersData.findIndex((user) => user.id === id)
-  if (index === -1) return false
-
-  usersData.splice(index, 1)
-  return true
-}
-
-// Password reset tokens (in production, use a proper token system)
-const resetTokens = new Map<string, { userId: string; expiresAt: Date }>()
-
-export function createPasswordResetToken(email: string): string | undefined {
-  let user = getUserByEmail(email)
-  if (!user) return undefined
+export async function createPasswordResetToken(email: string): Promise<string | undefined> {
+  let user = await getUserByEmail(email)
+  if (!user) {
+    return undefined
+  }
 
   let token = Math.random().toString(36).substring(2, 15)
-  resetTokens.set(token, {
-    userId: user.id,
-    expiresAt: new Date(Date.now() + 3600000), // 1 hour
+
+  await db.create(PasswordResetTokensTable, {
+    token,
+    user_id: user.id,
+    expires_at: Date.now() + 3600000,
   })
 
   return token
 }
 
-export function resetPassword(token: string, newPassword: string): boolean {
-  let tokenData = resetTokens.get(token)
-  if (!tokenData || tokenData.expiresAt < new Date()) {
+export async function resetPassword(token: string, newPassword: string): Promise<boolean> {
+  let tokenData = await db.find(PasswordResetTokensTable, { token })
+
+  if (!tokenData || tokenData.expires_at < Date.now()) {
     return false
   }
 
-  let user = getUserById(tokenData.userId)
-  if (!user) return false
+  let user = await getUserById(tokenData.user_id)
+  if (!user) {
+    return false
+  }
 
-  user.password = newPassword
-  resetTokens.delete(token)
+  await db.update(UsersTable, user.id, { password: newPassword })
+  await db.delete(PasswordResetTokensTable, { token })
+
   return true
 }
