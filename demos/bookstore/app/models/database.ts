@@ -130,7 +130,7 @@ async function initialize(): Promise<void> {
     )
   `)
 
-  let booksCount = await db.query(BooksTable).count()
+  let booksCount = await db.count(BooksTable)
   if (booksCount === 0) {
     await db.createMany(BooksTable, [
       {
@@ -186,7 +186,7 @@ async function initialize(): Promise<void> {
     ])
   }
 
-  let usersCount = await db.query(UsersTable).count()
+  let usersCount = await db.count(UsersTable)
   if (usersCount === 0) {
     await db.createMany(UsersTable, [
       {
@@ -208,7 +208,7 @@ async function initialize(): Promise<void> {
     ])
   }
 
-  let ordersCount = await db.query(OrdersTable).count()
+  let ordersCount = await db.count(OrdersTable)
   if (ordersCount === 0) {
     await db.createMany(OrdersTable, [
       {

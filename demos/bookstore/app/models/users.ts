@@ -32,7 +32,7 @@ export async function createUser(
   name: string,
   role: 'customer' | 'admin' = 'customer',
 ): Promise<User> {
-  let count = await db.query(UsersTable).count()
+  let count = await db.count(UsersTable)
   let id = String(count + 1)
   let created_at = Date.now()
 

@@ -240,6 +240,10 @@ export type DeleteManyOptions<table extends AnyTable> = {
   offset?: number
 }
 
+export type CountOptions<table extends AnyTable> = {
+  where?: SingleTableWhere<table>
+}
+
 export type CreateResultOptions = {
   touch?: boolean
   returnRow?: false
@@ -301,6 +305,7 @@ export type Database = {
     table: table,
     options?: FindManyOptions<table, relations>,
   ): Promise<Array<TableRowWithLoaded<table, LoadedRelationMap<relations>>>>
+  count<table extends AnyTable>(table: table, options?: CountOptions<table>): Promise<number>
   update<table extends AnyTable, relations extends RelationMapForSourceName<table['name']> = {}>(
     table: table,
     value: PrimaryKeyInput<table>,
@@ -548,6 +553,16 @@ class DatabaseRuntime implements Database {
     }
 
     return query.all() as Promise<Array<TableRowWithLoaded<table, LoadedRelationMap<relations>>>>
+  }
+
+  async count<table extends AnyTable>(table: table, options?: CountOptions<table>): Promise<number> {
+    let query: QueryForTable<table> = this.query(asQueryTableInput(table))
+
+    if (options?.where) {
+      query = query.where(options.where)
+    }
+
+    return query.count()
   }
 
   async update<

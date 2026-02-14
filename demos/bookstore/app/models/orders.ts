@@ -33,7 +33,7 @@ export async function createOrder(
 ): Promise<Order> {
   let items = JSON.parse(items_json) as OrderItem[]
   let total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  let count = await db.query(OrdersTable).count()
+  let count = await db.count(OrdersTable)
   let id = String(1000 + count + 1)
 
   return db.create(

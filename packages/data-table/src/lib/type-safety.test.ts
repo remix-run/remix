@@ -254,11 +254,13 @@ describe('type safety', () => {
       ],
       with: { projects: AccountProjects },
     })
+    let count = await db.count(Accounts, { where: { status: 'active' } })
 
     assert.equal(first?.id, 1)
     assert.equal(active?.email, 'a@example.com')
     assert.equal(rows.length, 1)
     assert.equal(rows[0].projects.length, 1)
+    assert.equal(count, 1)
 
     type Row = (typeof rows)[number]
     expectType<Equal<Row['projects'][number]['id'], number>>()
@@ -277,6 +279,14 @@ describe('type safety', () => {
           ['not_a_column', 'desc'],
         ],
       })
+      // @ts-expect-error unknown where key
+      db.count(Accounts, { where: { not_a_column: 'active' } })
+      // @ts-expect-error orderBy is not supported by db.count()
+      db.count(Accounts, { orderBy: ['id', 'asc'] })
+      // @ts-expect-error limit is not supported by db.count()
+      db.count(Accounts, { limit: 1 })
+      // @ts-expect-error offset is not supported by db.count()
+      db.count(Accounts, { offset: 1 })
     }
 
     void verifyTypeErrors

@@ -327,6 +327,7 @@ describe('query builder', () => {
       ],
       limit: 1,
     })
+    let activeCount = await db.count(Accounts, { where: { status: 'active' } })
     let accountsWithProjects = await db.findMany(Accounts, {
       orderBy: ['id', 'asc'],
       with: { projects: openProjects },
@@ -336,6 +337,7 @@ describe('query builder', () => {
     assert.equal(activeAccount?.id, 1)
     assert.equal(activeAccounts.length, 1)
     assert.equal(activeAccounts[0].id, 1)
+    assert.equal(activeCount, 1)
     assert.equal(accountsWithProjects[0].projects.length, 1)
     assert.equal(accountsWithProjects[0].projects[0].id, 100)
     assert.equal(accountsWithProjects[1].projects.length, 1)

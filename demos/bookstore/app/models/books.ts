@@ -44,7 +44,7 @@ export async function getAvailableGenres(): Promise<string[]> {
 }
 
 export async function createBook(data: Omit<Book, 'id'>): Promise<Book> {
-  let count = await db.query(BooksTable).count()
+  let count = await db.count(BooksTable)
   let id = String(count + 1)
 
   return db.create(BooksTable, { id, ...data }, { returnRow: true })
