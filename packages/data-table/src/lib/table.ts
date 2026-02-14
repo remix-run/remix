@@ -1,16 +1,8 @@
 import type { Predicate, WhereInput } from './operators.ts'
 import { inferForeignKey } from './inflection.ts'
 import { normalizeWhereInput } from './operators.ts'
-import {
-  columnMetadataKey,
-  normalizeColumnInput,
-  tableMetadataKey,
-} from './references.ts'
-import type {
-  ColumnInput,
-  ColumnReferenceLike,
-  TableMetadataLike,
-} from './references.ts'
+import { columnMetadataKey, normalizeColumnInput, tableMetadataKey } from './references.ts'
+import type { ColumnInput, ColumnReferenceLike, TableMetadataLike } from './references.ts'
 import type { Pretty } from './types.ts'
 
 /**
@@ -103,11 +95,9 @@ export type Table<
   name extends string,
   columns extends ColumnSchemas,
   primaryKey extends readonly ColumnNameFromColumns<columns>[],
-> = TableMetadataLike<name, columns, primaryKey, TimestampConfig | null> &
-  {
-    [tableMetadataKey]: TableMetadata<name, columns, primaryKey>
-  } &
-  TableColumnReferences<name, columns>
+> = TableMetadataLike<name, columns, primaryKey, TimestampConfig | null> & {
+  [tableMetadataKey]: TableMetadata<name, columns, primaryKey>
+} & TableColumnReferences<name, columns>
 
 export type AnyTable = Table<string, ColumnSchemas, readonly string[]>
 
@@ -505,7 +495,8 @@ export function hasManyThrough<source extends AnyTable, target extends AnyTable>
 
   if (throughRelation.sourceTable !== source) {
     throw new Error(
-      'hasManyThrough expects a through relation whose source table matches ' + getTableName(source),
+      'hasManyThrough expects a through relation whose source table matches ' +
+        getTableName(source),
     )
   }
 
@@ -590,13 +581,12 @@ export function timestamps(
   }
 }
 
-export type PrimaryKeyInput<table extends AnyTable> = TablePrimaryKey<table> extends readonly [
-  infer column extends string,
-]
-  ? TableRow<table>[column]
-  : Pretty<{
-      [column in TablePrimaryKey<table>[number] & keyof TableRow<table>]: TableRow<table>[column]
-    }>
+export type PrimaryKeyInput<table extends AnyTable> =
+  TablePrimaryKey<table> extends readonly [infer column extends string]
+    ? TableRow<table>[column]
+    : Pretty<{
+        [column in TablePrimaryKey<table>[number] & keyof TableRow<table>]: TableRow<table>[column]
+      }>
 
 /**
  * Normalizes a primary-key input into an object keyed by primary-key columns.

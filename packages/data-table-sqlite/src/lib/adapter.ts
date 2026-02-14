@@ -238,7 +238,13 @@ function quoteIdentifier(value: string): string {
 }
 
 function isWriteStatementKind(kind: AdapterExecuteRequest['statement']['kind']): boolean {
-  return kind === 'insert' || kind === 'insertMany' || kind === 'update' || kind === 'delete' || kind === 'upsert'
+  return (
+    kind === 'insert' ||
+    kind === 'insertMany' ||
+    kind === 'update' ||
+    kind === 'delete' ||
+    kind === 'upsert'
+  )
 }
 
 function isInsertStatementKind(kind: AdapterExecuteRequest['statement']['kind']): boolean {
@@ -247,6 +253,11 @@ function isInsertStatementKind(kind: AdapterExecuteRequest['statement']['kind'])
 
 function isInsertStatement(
   statement: AdapterExecuteRequest['statement'],
-): statement is Extract<AdapterExecuteRequest['statement'], { kind: 'insert' | 'insertMany' | 'upsert' }> {
-  return statement.kind === 'insert' || statement.kind === 'insertMany' || statement.kind === 'upsert'
+): statement is Extract<
+  AdapterExecuteRequest['statement'],
+  { kind: 'insert' | 'insertMany' | 'upsert' }
+> {
+  return (
+    statement.kind === 'insert' || statement.kind === 'insertMany' || statement.kind === 'upsert'
+  )
 }

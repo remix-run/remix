@@ -18,8 +18,8 @@ export type ComparisonOperator =
 
 type QualifiedColumnReference = `${string}.${string}`
 
-type PredicateColumn<input extends string | ColumnReferenceLike> =
-  NormalizeColumnInput<input> & string
+type PredicateColumn<input extends string | ColumnReferenceLike> = NormalizeColumnInput<input> &
+  string
 
 /**
  * Normalized predicate representation consumed by adapters.

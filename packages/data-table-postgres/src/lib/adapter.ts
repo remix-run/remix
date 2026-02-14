@@ -316,6 +316,11 @@ function isInsertStatementKind(kind: AdapterExecuteRequest['statement']['kind'])
 
 function isInsertStatement(
   statement: AdapterExecuteRequest['statement'],
-): statement is Extract<AdapterExecuteRequest['statement'], { kind: 'insert' | 'insertMany' | 'upsert' }> {
-  return statement.kind === 'insert' || statement.kind === 'insertMany' || statement.kind === 'upsert'
+): statement is Extract<
+  AdapterExecuteRequest['statement'],
+  { kind: 'insert' | 'insertMany' | 'upsert' }
+> {
+  return (
+    statement.kind === 'insert' || statement.kind === 'insertMany' || statement.kind === 'upsert'
+  )
 }

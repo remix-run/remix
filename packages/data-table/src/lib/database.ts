@@ -66,7 +66,8 @@ type QueryState = {
 }
 
 type TableColumnName<table extends AnyTable> = keyof TableRow<table> & string
-type QualifiedTableColumnName<table extends AnyTable> = `${TableName<table>}.${TableColumnName<table>}`
+type QualifiedTableColumnName<table extends AnyTable> =
+  `${TableName<table>}.${TableColumnName<table>}`
 type QueryColumnName<table extends AnyTable> =
   | TableColumnName<table>
   | QualifiedTableColumnName<table>
@@ -319,11 +320,17 @@ export type Database = {
     value: PrimaryKeyInput<table>,
     options?: { with?: relations },
   ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
-  findOne<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
+  findOne<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<TableName<table>> = {},
+  >(
     table: table,
     options: FindOneOptions<table, relations>,
   ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
-  findMany<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
+  findMany<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<TableName<table>> = {},
+  >(
     table: table,
     options?: FindManyOptions<table, relations>,
   ): Promise<Array<TableRowWithLoaded<table, LoadedRelationMap<relations>>>>
@@ -1994,11 +2001,17 @@ function prepareInsertValues<table extends AnyTable>(
     let createdAt = timestamps.createdAt
     let updatedAt = timestamps.updatedAt
 
-    if (Object.prototype.hasOwnProperty.call(columns, createdAt) && output[createdAt] === undefined) {
+    if (
+      Object.prototype.hasOwnProperty.call(columns, createdAt) &&
+      output[createdAt] === undefined
+    ) {
       output[createdAt] = now
     }
 
-    if (Object.prototype.hasOwnProperty.call(columns, updatedAt) && output[updatedAt] === undefined) {
+    if (
+      Object.prototype.hasOwnProperty.call(columns, updatedAt) &&
+      output[updatedAt] === undefined
+    ) {
       output[updatedAt] = now
     }
   }
@@ -2019,7 +2032,10 @@ function prepareUpdateValues<table extends AnyTable>(
   if (touch && timestamps) {
     let updatedAt = timestamps.updatedAt
 
-    if (Object.prototype.hasOwnProperty.call(columns, updatedAt) && output[updatedAt] === undefined) {
+    if (
+      Object.prototype.hasOwnProperty.call(columns, updatedAt) &&
+      output[updatedAt] === undefined
+    ) {
       output[updatedAt] = now
     }
   }
