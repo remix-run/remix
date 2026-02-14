@@ -37,11 +37,19 @@
     "@remix-run/data-table": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native-preview": "catalog:",
+    "better-sqlite3": "^12.4.1"
   },
   "dependencies": {
-    "@remix-run/data-table": "workspace:^",
+    "@remix-run/data-table": "workspace:^"
+  },
+  "peerDependencies": {
     "better-sqlite3": "^12.4.1"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": {
+      "optional": true
+    }
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",

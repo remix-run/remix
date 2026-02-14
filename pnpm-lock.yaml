@@ -370,9 +370,6 @@ importers:
       '@remix-run/data-table':
         specifier: workspace:^
         version: link:../data-table
-      mysql2:
-        specifier: ^3.15.3
-        version: 3.16.3
     devDependencies:
       '@remix-run/data-schema':
         specifier: workspace:*
@@ -383,15 +380,15 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      mysql2:
+        specifier: ^3.15.3
+        version: 3.16.3
 
   packages/data-table-postgres:
     dependencies:
       '@remix-run/data-table':
         specifier: workspace:^
         version: link:../data-table
-      pg:
-        specifier: ^8.16.3
-        version: 8.18.0
     devDependencies:
       '@remix-run/data-schema':
         specifier: workspace:*
@@ -405,15 +402,15 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      pg:
+        specifier: ^8.16.3
+        version: 8.18.0
 
   packages/data-table-sqlite:
     dependencies:
       '@remix-run/data-table':
         specifier: workspace:^
         version: link:../data-table
-      better-sqlite3:
-        specifier: ^12.4.1
-        version: 12.6.2
     devDependencies:
       '@remix-run/data-schema':
         specifier: workspace:*
@@ -427,6 +424,9 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      better-sqlite3:
+        specifier: ^12.4.1
+        version: 12.6.2
 
   packages/fetch-proxy:
     dependencies:

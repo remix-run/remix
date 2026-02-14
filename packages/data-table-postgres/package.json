@@ -37,11 +37,19 @@
     "@remix-run/data-table": "workspace:*",
     "@types/node": "catalog:",
     "@types/pg": "^8.15.6",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native-preview": "catalog:",
+    "pg": "^8.16.3"
   },
   "dependencies": {
-    "@remix-run/data-table": "workspace:^",
+    "@remix-run/data-table": "workspace:^"
+  },
+  "peerDependencies": {
     "pg": "^8.16.3"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    }
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
