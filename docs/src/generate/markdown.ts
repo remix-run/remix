@@ -68,7 +68,9 @@ function name(comment: DocumentedAPI) {
 }
 
 function source(comment: DocumentedAPI) {
-  return comment.source ? p(`[View Source](${comment.source})`) : undefined
+  return comment.source
+    ? p(`<a href="${comment.source}" target="_blank">View Source</a>`)
+    : undefined
 }
 
 function summary(comment: DocumentedAPI) {
