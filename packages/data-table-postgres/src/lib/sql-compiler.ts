@@ -1,3 +1,4 @@
+import { getTableName, getTablePrimaryKey } from '@remix-run/data-table'
 import type { AdapterStatement, Predicate, SqlStatement } from '@remix-run/data-table'
 
 type JoinClause = Extract<AdapterStatement, { kind: 'select' }>['joins'][number]
@@ -89,7 +90,7 @@ export function compilePostgresStatement(statement: AdapterStatement): CompiledS
     return {
       text:
         'update ' +
-        quoteIdentifier(statement.table.name) +
+        quoteIdentifier(getTableName(statement.table)) +
         ' set ' +
         assignments +
         compileWhereClause(statement.where, context) +
@@ -102,7 +103,7 @@ export function compilePostgresStatement(statement: AdapterStatement): CompiledS
     return {
       text:
         'delete from ' +
-        quoteIdentifier(statement.table.name) +
+        quoteIdentifier(getTableName(statement.table)) +
         compileWhereClause(statement.where, context) +
         compileReturningClause(statement.returning),
       values: context.values,
@@ -128,7 +129,7 @@ function compileInsertStatement(
     return {
       text:
         'insert into ' +
-        quoteIdentifier(table.name) +
+        quoteIdentifier(getTableName(table)) +
         ' default values' +
         compileReturningClause(returning),
       values: context.values,
@@ -141,7 +142,7 @@ function compileInsertStatement(
   return {
     text:
       'insert into ' +
-      quoteIdentifier(table.name) +
+      quoteIdentifier(getTableName(table)) +
       ' (' +
       quotedColumns.join(', ') +
       ') values (' +
@@ -171,7 +172,7 @@ function compileInsertManyStatement(
     return {
       text:
         'insert into ' +
-        quoteIdentifier(table.name) +
+        quoteIdentifier(getTableName(table)) +
         ' default values' +
         compileReturningClause(returning),
       values: context.values,
@@ -192,7 +193,7 @@ function compileInsertManyStatement(
   return {
     text:
       'insert into ' +
-      quoteIdentifier(table.name) +
+      quoteIdentifier(getTableName(table)) +
       ' (' +
       quotedColumns.join(', ') +
       ') values ' +
@@ -204,7 +205,7 @@ function compileInsertManyStatement(
 
 function compileUpsertStatement(statement: UpsertStatement, context: CompileContext): CompiledSql {
   let insertColumns = Object.keys(statement.values)
-  let conflictTarget = statement.conflictTarget ?? [...statement.table.primaryKey]
+  let conflictTarget = statement.conflictTarget ?? [...getTablePrimaryKey(statement.table)]
 
   if (insertColumns.length === 0) {
     throw new Error('upsert requires at least one value')
@@ -237,7 +238,7 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
   return {
     text:
       'insert into ' +
-      quoteIdentifier(statement.table.name) +
+      quoteIdentifier(getTableName(statement.table)) +
       ' (' +
       quotedInsertColumns.join(', ') +
       ') values (' +
@@ -275,14 +276,14 @@ function compileFromClause(
   joins: JoinClause[],
   context: CompileContext,
 ): string {
-  let output = ' from ' + quoteIdentifier(table.name)
+  let output = ' from ' + quoteIdentifier(getTableName(table))
 
   for (let join of joins) {
     output +=
       ' ' +
       normalizeJoinType(join.type) +
       ' join ' +
-      quoteIdentifier(join.table.name) +
+      quoteIdentifier(getTableName(join.table)) +
       ' on ' +
       compilePredicate(join.on, context)
   }

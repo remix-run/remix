@@ -1,3 +1,6 @@
+/**
+ * Base error for all `data-table` failures.
+ */
 export class DataTableError extends Error {
   code: string
   metadata?: Record<string, unknown>
@@ -17,6 +20,9 @@ export class DataTableError extends Error {
   }
 }
 
+/**
+ * Thrown when input data fails schema validation.
+ */
 export class DataTableValidationError extends DataTableError {
   issues: ReadonlyArray<unknown>
 
@@ -39,6 +45,9 @@ export class DataTableValidationError extends DataTableError {
   }
 }
 
+/**
+ * Thrown when a query is invalid for the current builder state.
+ */
 export class DataTableQueryError extends DataTableError {
   constructor(
     message: string,
@@ -57,6 +66,9 @@ export class DataTableQueryError extends DataTableError {
   }
 }
 
+/**
+ * Thrown when adapter execution fails.
+ */
 export class DataTableAdapterError extends DataTableError {
   constructor(
     message: string,
@@ -75,6 +87,9 @@ export class DataTableAdapterError extends DataTableError {
   }
 }
 
+/**
+ * Thrown when a database constraint is violated.
+ */
 export class DataTableConstraintError extends DataTableError {
   constructor(
     message: string,

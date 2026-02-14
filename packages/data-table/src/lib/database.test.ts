@@ -5,7 +5,7 @@ import { boolean, number, string } from '@remix-run/data-schema'
 import type { DatabaseAdapter } from './adapter.ts'
 import { createDatabase } from './database.ts'
 import { DataTableAdapterError, DataTableQueryError, DataTableValidationError } from './errors.ts'
-import { createTable, timestamps } from './table.ts'
+import { belongsTo, createTable, hasMany, hasManyThrough, hasOne, timestamps } from './table.ts'
 import { eq } from './operators.ts'
 import { sql } from './sql.ts'
 import type { SqliteTestAdapterOptions, SqliteTestSeed } from '../../test/sqlite-test-database.ts'
@@ -61,10 +61,10 @@ let memberships = createTable({
   },
 })
 
-let accountProjects = accounts.hasMany(projects)
-let accountProfile = accounts.hasOne(profiles)
-let projectAccount = projects.belongsTo(accounts)
-let accountTasks = accounts.hasManyThrough(tasks, {
+let accountProjects = hasMany(accounts, projects)
+let accountProfile = hasOne(accounts, profiles)
+let projectAccount = belongsTo(projects, accounts)
+let accountTasks = hasManyThrough(accounts, tasks, {
   through: accountProjects,
 })
 
@@ -262,11 +262,9 @@ describe('query builder', () => {
 
     let db = createTestDatabase(adapter)
     let firstProjectPerAccount = accountProjects.orderBy('id', 'asc').limit(1)
-    let tasksThroughFirstProject = accounts
-      .hasManyThrough(tasks, {
-        through: firstProjectPerAccount,
-      })
-      .orderBy('id', 'asc')
+    let tasksThroughFirstProject = hasManyThrough(accounts, tasks, {
+      through: firstProjectPerAccount,
+    }).orderBy('id', 'asc')
 
     let accountRows = await db
       .query(accounts)

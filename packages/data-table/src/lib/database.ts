@@ -28,16 +28,29 @@ import type {
   OrderDirection,
   PrimaryKeyInput,
   Relation,
+  Table,
+  TableName,
+  TablePrimaryKey,
   TableRow,
   TableRowWithLoaded,
+  tableMetadataKey,
 } from './table.ts'
-import { getCompositeKey, getPrimaryKeyObject } from './table.ts'
+import {
+  getCompositeKey,
+  getPrimaryKeyObject,
+  getTableColumns,
+  getTableName,
+  getTablePrimaryKey,
+  getTableTimestamps,
+} from './table.ts'
 import type { Predicate, WhereInput } from './operators.ts'
 import { and, eq, inList, normalizeWhereInput, or } from './operators.ts'
 import type { SqlStatement } from './sql.ts'
 import { rawSql, isSqlStatement } from './sql.ts'
 import type { AdapterStatement } from './adapter.ts'
 import type { Pretty } from './types.ts'
+import { normalizeColumnInput } from './references.ts'
+import type { ColumnInput, NormalizeColumnInput } from './references.ts'
 
 type QueryState = {
   select: '*' | SelectColumn[]
@@ -53,7 +66,7 @@ type QueryState = {
 }
 
 type TableColumnName<table extends AnyTable> = keyof TableRow<table> & string
-type QualifiedTableColumnName<table extends AnyTable> = `${table['name']}.${TableColumnName<table>}`
+type QualifiedTableColumnName<table extends AnyTable> = `${TableName<table>}.${TableColumnName<table>}`
 type QueryColumnName<table extends AnyTable> =
   | TableColumnName<table>
   | QualifiedTableColumnName<table>
@@ -75,7 +88,7 @@ type QueryColumnTypeMapFromRow<tableName extends string, row extends Record<stri
 }
 
 type QueryColumnTypeMap<table extends AnyTable> = Pretty<
-  QueryColumnTypeMapFromRow<table['name'], TableRow<table>>
+  QueryColumnTypeMapFromRow<TableName<table>, TableRow<table>>
 >
 
 type MergeColumnTypeMaps<
@@ -93,12 +106,16 @@ type MergeColumnTypeMaps<
 
 type QueryColumns<columnTypes extends Record<string, unknown>> = Extract<keyof columnTypes, string>
 
+type QueryColumnInput<columnTypes extends Record<string, unknown>> = ColumnInput<
+  QueryColumns<columnTypes>
+>
+
 type SelectedAliasRow<
   columnTypes extends Record<string, unknown>,
-  selection extends Record<string, QueryColumns<columnTypes>>,
+  selection extends Record<string, QueryColumnInput<columnTypes>>,
 > = Pretty<{
-  [alias in keyof selection]: selection[alias] extends keyof columnTypes
-    ? columnTypes[selection[alias]]
+  [alias in keyof selection]: NormalizeColumnInput<selection[alias]> extends keyof columnTypes
+    ? columnTypes[NormalizeColumnInput<selection[alias]>]
     : never
 }>
 
@@ -110,7 +127,13 @@ const executeStatement = Symbol('executeStatement')
 
 type RelationMapForSourceName<tableName extends string> = Record<
   string,
-  AnyRelation & { sourceTable: { name: tableName } }
+  AnyRelation & {
+    sourceTable: {
+      [tableMetadataKey]: {
+        name: tableName
+      }
+    }
+  }
 >
 
 type PrimaryKeyInputForRow<
@@ -128,14 +151,13 @@ export type QueryTableInput<
   tableName extends string,
   row extends Record<string, unknown>,
   primaryKey extends readonly (keyof row & string)[],
-> = AnyTable & {
-  kind: 'table'
-  name: tableName
-  columns: {
+> = Table<
+  tableName,
+  {
     [column in keyof row & string]: DataSchema<any, row[column]>
-  }
-  primaryKey: primaryKey
-}
+  },
+  primaryKey
+>
 
 export type QueryBuilderFor<
   tableName extends string,
@@ -184,8 +206,8 @@ export type QueryForTable<
   QueryColumnTypesForTable<table>,
   TableRow<table>,
   loaded,
-  table['name'],
-  table['primaryKey']
+  TableName<table>,
+  TablePrimaryKey<table>
 >
 
 export type SingleTableColumn<table extends AnyTable> = QueryColumns<QueryColumnTypeMap<table>>
@@ -201,7 +223,7 @@ export type OrderByInput<table extends AnyTable> = OrderByTuple<table> | OrderBy
 
 export type FindManyOptions<
   table extends AnyTable,
-  relations extends RelationMapForSourceName<table['name']> = {},
+  relations extends RelationMapForSourceName<TableName<table>> = {},
 > = {
   where?: SingleTableWhere<table>
   orderBy?: OrderByInput<table>
@@ -212,14 +234,14 @@ export type FindManyOptions<
 
 export type FindOneOptions<
   table extends AnyTable,
-  relations extends RelationMapForSourceName<table['name']> = {},
+  relations extends RelationMapForSourceName<TableName<table>> = {},
 > = Omit<FindManyOptions<table, relations>, 'limit' | 'offset'> & {
   where: SingleTableWhere<table>
 }
 
 export type UpdateOptions<
   table extends AnyTable,
-  relations extends RelationMapForSourceName<table['name']> = {},
+  relations extends RelationMapForSourceName<TableName<table>> = {},
 > = {
   touch?: boolean
   with?: relations
@@ -251,7 +273,7 @@ export type CreateResultOptions = {
 
 export type CreateRowOptions<
   table extends AnyTable,
-  relations extends RelationMapForSourceName<table['name']> = {},
+  relations extends RelationMapForSourceName<TableName<table>> = {},
 > = {
   touch?: boolean
   with?: relations
@@ -277,7 +299,7 @@ export type Database = {
     values: Partial<TableRow<table>>,
     options?: CreateResultOptions,
   ): Promise<WriteResult>
-  create<table extends AnyTable, relations extends RelationMapForSourceName<table['name']> = {}>(
+  create<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
     table: table,
     values: Partial<TableRow<table>>,
     options: CreateRowOptions<table, relations>,
@@ -292,21 +314,21 @@ export type Database = {
     values: Array<Partial<TableRow<table>>>,
     options: CreateManyRowsOptions,
   ): Promise<TableRow<table>[]>
-  find<table extends AnyTable, relations extends RelationMapForSourceName<table['name']> = {}>(
+  find<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
     table: table,
     value: PrimaryKeyInput<table>,
     options?: { with?: relations },
   ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
-  findOne<table extends AnyTable, relations extends RelationMapForSourceName<table['name']> = {}>(
+  findOne<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
     table: table,
     options: FindOneOptions<table, relations>,
   ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
-  findMany<table extends AnyTable, relations extends RelationMapForSourceName<table['name']> = {}>(
+  findMany<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
     table: table,
     options?: FindManyOptions<table, relations>,
   ): Promise<Array<TableRowWithLoaded<table, LoadedRelationMap<relations>>>>
   count<table extends AnyTable>(table: table, options?: CountOptions<table>): Promise<number>
-  update<table extends AnyTable, relations extends RelationMapForSourceName<table['name']> = {}>(
+  update<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
     table: table,
     value: PrimaryKeyInput<table>,
     changes: Partial<TableRow<table>>,
@@ -369,14 +391,14 @@ class DatabaseRuntime implements Database {
     values: Partial<TableRow<table>>,
     options?: CreateResultOptions,
   ): Promise<WriteResult>
-  create<table extends AnyTable, relations extends RelationMapForSourceName<table['name']> = {}>(
+  create<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
     table: table,
     values: Partial<TableRow<table>>,
     options: CreateRowOptions<table, relations>,
   ): Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>>>
   async create<
     table extends AnyTable,
-    relations extends RelationMapForSourceName<table['name']> = {},
+    relations extends RelationMapForSourceName<TableName<table>> = {},
   >(
     table: table,
     values: Partial<TableRow<table>>,
@@ -475,7 +497,7 @@ class DatabaseRuntime implements Database {
 
   async find<
     table extends AnyTable,
-    relations extends RelationMapForSourceName<table['name']> = {},
+    relations extends RelationMapForSourceName<TableName<table>> = {},
   >(
     table: table,
     value: PrimaryKeyInput<table>,
@@ -487,18 +509,18 @@ class DatabaseRuntime implements Database {
       return query
         .with(options.with)
         .find(
-          value as PrimaryKeyInputForRow<TableRow<table>, table['primaryKey']>,
+          value as PrimaryKeyInputForRow<TableRow<table>, TablePrimaryKey<table>>,
         ) as Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
     }
 
     return query.find(
-      value as PrimaryKeyInputForRow<TableRow<table>, table['primaryKey']>,
+      value as PrimaryKeyInputForRow<TableRow<table>, TablePrimaryKey<table>>,
     ) as Promise<TableRowWithLoaded<table, LoadedRelationMap<relations>> | null>
   }
 
   async findOne<
     table extends AnyTable,
-    relations extends RelationMapForSourceName<table['name']> = {},
+    relations extends RelationMapForSourceName<TableName<table>> = {},
   >(
     table: table,
     options: FindOneOptions<table, relations>,
@@ -522,7 +544,7 @@ class DatabaseRuntime implements Database {
 
   async findMany<
     table extends AnyTable,
-    relations extends RelationMapForSourceName<table['name']> = {},
+    relations extends RelationMapForSourceName<TableName<table>> = {},
   >(
     table: table,
     options?: FindManyOptions<table, relations>,
@@ -570,7 +592,7 @@ class DatabaseRuntime implements Database {
 
   async update<
     table extends AnyTable,
-    relations extends RelationMapForSourceName<table['name']> = {},
+    relations extends RelationMapForSourceName<TableName<table>> = {},
   >(
     table: table,
     value: PrimaryKeyInput<table>,
@@ -661,7 +683,7 @@ class DatabaseRuntime implements Database {
   ): Promise<result> {
     if (!this.#token) {
       let token = await this.#adapter.beginTransaction(options)
-      let transactionDatabase = new DatabaseRuntime({
+      let tx = new DatabaseRuntime({
         adapter: this.#adapter,
         token,
         now: this.#now,
@@ -669,7 +691,7 @@ class DatabaseRuntime implements Database {
       })
 
       try {
-        let result = await callback(transactionDatabase)
+        let result = await callback(tx)
         await this.#adapter.commitTransaction(token)
         return result
       } catch (error) {
@@ -716,6 +738,13 @@ class DatabaseRuntime implements Database {
   }
 }
 
+/**
+ * Creates a database runtime from an adapter.
+ * @param adapter Adapter implementation responsible for SQL execution.
+ * @param options Optional runtime options.
+ * @param options.now Clock function used for auto-managed timestamps.
+ * @returns A `Database` API instance.
+ */
 export function createDatabase(
   adapter: DatabaseAdapter,
   options?: { now?: () => unknown },
@@ -730,6 +759,9 @@ export function createDatabase(
   })
 }
 
+/**
+ * Immutable query builder used by `db.query(table)`.
+ */
 export class QueryBuilder<
   columnTypes extends Record<string, unknown>,
   row extends Record<string, unknown>,
@@ -747,10 +779,13 @@ export class QueryBuilder<
     this.#state = state
   }
 
+  /**
+   * Narrows selected columns, optionally with aliases.
+   */
   select<selection extends (keyof row & string)[]>(
     ...columns: selection
   ): QueryBuilder<columnTypes, Pick<row, selection[number]>, loaded, tableName, primaryKey>
-  select<selection extends Record<string, QueryColumns<columnTypes>>>(
+  select<selection extends Record<string, QueryColumnInput<columnTypes>>>(
     selection: selection,
   ): QueryBuilder<
     columnTypes,
@@ -760,7 +795,7 @@ export class QueryBuilder<
     primaryKey
   >
   select(
-    ...input: [Record<string, QueryColumns<columnTypes>>] | (keyof row & string)[]
+    ...input: [Record<string, QueryColumnInput<columnTypes>>] | (keyof row & string)[]
   ): QueryBuilder<columnTypes, any, loaded, tableName, primaryKey> {
     if (
       input.length === 1 &&
@@ -768,10 +803,10 @@ export class QueryBuilder<
       input[0] !== null &&
       !Array.isArray(input[0])
     ) {
-      let selection = input[0] as Record<string, QueryColumns<columnTypes>>
+      let selection = input[0] as Record<string, QueryColumnInput<columnTypes>>
       let aliases = Object.keys(selection)
       let select = aliases.map((alias) => ({
-        column: selection[alias],
+        column: normalizeColumnInput(selection[alias]),
         alias,
       }))
 
@@ -791,10 +826,20 @@ export class QueryBuilder<
     }) as QueryBuilder<columnTypes, any, loaded, tableName, primaryKey>
   }
 
+  /**
+   * Toggles `distinct` selection.
+   * @param value When `true`, eliminates duplicate rows.
+   * @returns A cloned query builder with updated distinct state.
+   */
   distinct(value = true): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     return this.#clone({ distinct: value })
   }
 
+  /**
+   * Adds a where predicate.
+   * @param input Predicate expression or column-value shorthand.
+   * @returns A cloned query builder with the appended where predicate.
+   */
   where(
     input: WhereInput<QueryColumns<columnTypes>>,
   ): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
@@ -809,6 +854,11 @@ export class QueryBuilder<
     })
   }
 
+  /**
+   * Adds a having predicate.
+   * @param input Predicate expression or aggregate filter shorthand.
+   * @returns A cloned query builder with the appended having predicate.
+   */
   having(
     input: WhereInput<QueryColumns<columnTypes>>,
   ): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
@@ -823,6 +873,13 @@ export class QueryBuilder<
     })
   }
 
+  /**
+   * Adds a join clause.
+   * @param target Target table to join.
+   * @param on Join predicate.
+   * @param type Join type.
+   * @returns A query builder whose column map includes joined table columns.
+   */
   join<target extends AnyTable>(
     target: target,
     on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
@@ -863,6 +920,12 @@ export class QueryBuilder<
     >
   }
 
+  /**
+   * Adds a left join clause.
+   * @param target Target table to join.
+   * @param on Join predicate.
+   * @returns A query builder whose column map includes joined table columns.
+   */
   leftJoin<target extends AnyTable>(
     target: target,
     on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
@@ -876,6 +939,12 @@ export class QueryBuilder<
     return this.join(target, on, 'left')
   }
 
+  /**
+   * Adds a right join clause.
+   * @param target Target table to join.
+   * @param on Join predicate.
+   * @returns A query builder whose column map includes joined table columns.
+   */
   rightJoin<target extends AnyTable>(
     target: target,
     on: Predicate<QueryColumns<columnTypes> | QueryColumnName<target>>,
@@ -889,31 +958,57 @@ export class QueryBuilder<
     return this.join(target, on, 'right')
   }
 
+  /**
+   * Appends an order-by clause.
+   * @param column Column to sort by.
+   * @param direction Sort direction.
+   * @returns A cloned query builder with the appended order-by clause.
+   */
   orderBy(
-    column: QueryColumns<columnTypes>,
+    column: QueryColumnInput<columnTypes>,
     direction: OrderDirection = 'asc',
   ): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     return this.#clone({
-      orderBy: [...this.#state.orderBy, { column, direction }],
+      orderBy: [...this.#state.orderBy, { column: normalizeColumnInput(column), direction }],
     })
   }
 
+  /**
+   * Appends group-by columns.
+   * @param columns Columns to include in the grouping set.
+   * @returns A cloned query builder with appended group-by columns.
+   */
   groupBy(
-    ...columns: QueryColumns<columnTypes>[]
+    ...columns: QueryColumnInput<columnTypes>[]
   ): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     return this.#clone({
-      groupBy: [...this.#state.groupBy, ...columns],
+      groupBy: [...this.#state.groupBy, ...columns.map((column) => normalizeColumnInput(column))],
     })
   }
 
+  /**
+   * Limits returned rows.
+   * @param value Maximum number of rows to return.
+   * @returns A cloned query builder with a row limit.
+   */
   limit(value: number): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     return this.#clone({ limit: value })
   }
 
+  /**
+   * Skips returned rows.
+   * @param value Number of rows to skip.
+   * @returns A cloned query builder with a row offset.
+   */
   offset(value: number): QueryBuilder<columnTypes, row, loaded, tableName, primaryKey> {
     return this.#clone({ offset: value })
   }
 
+  /**
+   * Configures eager-loaded relations.
+   * @param relations Relation map describing nested eager-load behavior.
+   * @returns A cloned query builder with relation loading configuration.
+   */
   with<relations extends RelationMapForSourceName<tableName>>(
     relations: relations,
   ): QueryBuilder<columnTypes, row, loaded & LoadedRelationMap<relations>, tableName, primaryKey> {
@@ -931,6 +1026,10 @@ export class QueryBuilder<
     >
   }
 
+  /**
+   * Executes the query and returns all rows.
+   * @returns All matching rows with requested eager-loaded relations.
+   */
   async all(): Promise<Array<row & loaded>> {
     let statement = this.#toSelectStatement()
     let result = await this.#database[executeStatement](statement)
@@ -949,16 +1048,29 @@ export class QueryBuilder<
     return rowsWithRelations as Array<row & loaded>
   }
 
+  /**
+   * Executes the query and returns the first row.
+   * @returns The first matching row, or `null` when no rows match.
+   */
   async first(): Promise<(row & loaded) | null> {
     let rows = await this.limit(1).all()
     return rows[0] ?? null
   }
 
+  /**
+   * Loads a single row by primary key.
+   * @param value Primary-key value or composite-key object.
+   * @returns The matching row, or `null` when no row exists.
+   */
   async find(value: PrimaryKeyInputForRow<row, primaryKey>): Promise<(row & loaded) | null> {
     let where = getPrimaryKeyObject(this.#table, value as any)
     return this.where(where as WhereInput<QueryColumns<columnTypes>>).first()
   }
 
+  /**
+   * Executes a count query.
+   * @returns Number of rows that match the current query scope.
+   */
   async count(): Promise<number> {
     let statement: CountStatement<AnyTable> = {
       kind: 'count',
@@ -982,6 +1094,10 @@ export class QueryBuilder<
     return 0
   }
 
+  /**
+   * Executes an existence query.
+   * @returns `true` when at least one row matches the current query scope.
+   */
   async exists(): Promise<boolean> {
     let statement: ExistsStatement<AnyTable> = {
       kind: 'exists',
@@ -1005,6 +1121,14 @@ export class QueryBuilder<
     return Boolean(result.rows && result.rows.length > 0)
   }
 
+  /**
+   * Inserts one row.
+   * @param values Values to insert.
+   * @param options Insert options.
+   * @param options.returning Optional return selection for adapters that support returning.
+   * @param options.touch When `true`, manages timestamp columns automatically.
+   * @returns Insert metadata, and optionally the returned row.
+   */
   async insert(
     values: Partial<row>,
     options?: { returning?: ReturningInput<row>; touch?: boolean },
@@ -1059,6 +1183,14 @@ export class QueryBuilder<
     return metadata
   }
 
+  /**
+   * Inserts many rows.
+   * @param values Values to insert.
+   * @param options Insert options.
+   * @param options.returning Optional return selection for adapters that support returning.
+   * @param options.touch When `true`, manages timestamp columns automatically.
+   * @returns Insert metadata, and optionally the returned rows.
+   */
   async insertMany(
     values: Partial<row>[],
     options?: { returning?: ReturningInput<row>; touch?: boolean },
@@ -1109,6 +1241,14 @@ export class QueryBuilder<
     return metadata
   }
 
+  /**
+   * Updates scoped rows.
+   * @param changes Column changes to apply.
+   * @param options Update options.
+   * @param options.returning Optional return selection for adapters that support returning.
+   * @param options.touch When `true`, updates timestamp columns automatically.
+   * @returns Update metadata, and optionally the returned rows.
+   */
   async update(
     changes: Partial<row>,
     options?: { returning?: ReturningInput<row>; touch?: boolean },
@@ -1137,8 +1277,8 @@ export class QueryBuilder<
       let table = this.#table
       let queryState = this.#state
 
-      return this.#database.transaction(async (transactionDatabase: Database) => {
-        let primaryKeys = await loadPrimaryKeyRowsForScope(transactionDatabase, table, queryState)
+      return this.#database.transaction(async (tx: Database) => {
+        let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, queryState)
         let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
         if (!primaryKeyPredicate) {
@@ -1156,7 +1296,7 @@ export class QueryBuilder<
           }
         }
 
-        return transactionDatabase.query(table).where(primaryKeyPredicate).update(changes, options)
+        return tx.query(table).where(primaryKeyPredicate).update(changes, options)
       })
     }
 
@@ -1184,6 +1324,12 @@ export class QueryBuilder<
     }
   }
 
+  /**
+   * Deletes scoped rows.
+   * @param options Delete options.
+   * @param options.returning Optional return selection for adapters that support returning.
+   * @returns Delete metadata, and optionally the returned rows.
+   */
   async delete(options?: {
     returning?: ReturningInput<row>
   }): Promise<WriteResult | WriteRowsResult<row>> {
@@ -1201,8 +1347,8 @@ export class QueryBuilder<
       let table = this.#table
       let queryState = this.#state
 
-      return this.#database.transaction(async (transactionDatabase: Database) => {
-        let primaryKeys = await loadPrimaryKeyRowsForScope(transactionDatabase, table, queryState)
+      return this.#database.transaction(async (tx: Database) => {
+        let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, queryState)
         let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
         if (!primaryKeyPredicate) {
@@ -1220,7 +1366,7 @@ export class QueryBuilder<
           }
         }
 
-        return transactionDatabase.query(table).where(primaryKeyPredicate).delete(options)
+        return tx.query(table).where(primaryKeyPredicate).delete(options)
       })
     }
 
@@ -1247,6 +1393,16 @@ export class QueryBuilder<
     }
   }
 
+  /**
+   * Performs an upsert operation.
+   * @param values Values to insert.
+   * @param options Upsert options.
+   * @param options.returning Optional return selection for adapters that support returning.
+   * @param options.touch When `true`, manages timestamp columns automatically.
+   * @param options.conflictTarget Conflict target columns for adapters that require them.
+   * @param options.update Optional update payload used when a conflict occurs.
+   * @returns Upsert metadata, and optionally the returned row.
+   */
   async upsert(
     values: Partial<row>,
     options?: {
@@ -1373,7 +1529,7 @@ async function loadRelationsForRows(
         'Relation "' +
           relationName +
           '" is not defined for source table "' +
-          sourceTable.name +
+          getTableName(sourceTable) +
           '"',
       )
     }
@@ -1533,7 +1689,7 @@ async function loadHasManyThroughValues(
       let rowsForThrough = targetRowsByThrough.get(throughKey) ?? []
 
       for (let row of rowsForThrough) {
-        let rowIdentity = getCompositeKey(row, relation.targetTable.primaryKey)
+        let rowIdentity = getCompositeKey(row, getTablePrimaryKey(relation.targetTable))
 
         if (!seen.has(rowIdentity)) {
           seen.add(rowIdentity)
@@ -1599,8 +1755,12 @@ function hasScopedWriteModifiers(state: QueryState): boolean {
 
 function asQueryTableInput<table extends AnyTable>(
   table: table,
-): QueryTableInput<table['name'], TableRow<table>, table['primaryKey']> {
-  return table as unknown as QueryTableInput<table['name'], TableRow<table>, table['primaryKey']>
+): QueryTableInput<TableName<table>, TableRow<table>, TablePrimaryKey<table>> {
+  return table as unknown as QueryTableInput<
+    TableName<table>,
+    TableRow<table>,
+    TablePrimaryKey<table>
+  >
 }
 
 function getPrimaryKeyWhere<table extends AnyTable>(
@@ -1616,7 +1776,7 @@ function getPrimaryKeyWhereFromRow<table extends AnyTable>(
 ): SingleTableWhere<table> {
   let where: Record<string, unknown> = {}
 
-  for (let key of table.primaryKey as string[]) {
+  for (let key of getTablePrimaryKey(table) as string[]) {
     where[key] = row[key]
   }
 
@@ -1628,7 +1788,7 @@ function resolveCreateRowWhere<table extends AnyTable>(
   values: Partial<TableRow<table>>,
   insertId: unknown,
 ): SingleTableWhere<table> {
-  let primaryKey = table.primaryKey as string[]
+  let primaryKey = getTablePrimaryKey(table) as string[]
 
   if (primaryKey.length === 1) {
     let key = primaryKey[0]
@@ -1652,7 +1812,7 @@ function resolveCreateRowWhere<table extends AnyTable>(
     if (!Object.prototype.hasOwnProperty.call(values, key)) {
       throw new DataTableQueryError(
         'create({ returnRow: true }) requires primary key values for table "' +
-          table.name +
+          getTableName(table) +
           '" when adapter does not support RETURNING',
       )
     }
@@ -1755,10 +1915,10 @@ async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
   state: QueryState,
 ): Promise<Record<string, unknown>[]> {
   let query: QueryForTable<table> = database.query<
-    table['name'],
+    TableName<table>,
     TableRow<table>,
-    table['primaryKey']
-  >(table as unknown as QueryTableInput<table['name'], TableRow<table>, table['primaryKey']>)
+    TablePrimaryKey<table>
+  >(table as unknown as QueryTableInput<TableName<table>, TableRow<table>, TablePrimaryKey<table>>)
 
   for (let predicate of state.where) {
     query = query.where(predicate as Predicate<QueryColumnName<table>>)
@@ -1779,8 +1939,10 @@ async function loadPrimaryKeyRowsForScope<table extends AnyTable>(
     query = query.offset(state.offset)
   }
 
-  let rows = await query.select(...(table.primaryKey as (keyof TableRow<table> & string)[])).all()
-  let primaryKeys = table.primaryKey as string[]
+  let rows = await query
+    .select(...(getTablePrimaryKey(table) as (keyof TableRow<table> & string)[]))
+    .all()
+  let primaryKeys = getTablePrimaryKey(table) as string[]
 
   return rows.map((row) => {
     let keyObject: Record<string, unknown> = {}
@@ -1825,22 +1987,18 @@ function prepareInsertValues<table extends AnyTable>(
   touch: boolean,
 ): Record<string, unknown> {
   let output = validatePartialRow(table, values)
+  let timestamps = getTableTimestamps(table)
+  let columns = getTableColumns(table)
 
-  if (touch && table.timestamps) {
-    let createdAt = table.timestamps.createdAt
-    let updatedAt = table.timestamps.updatedAt
+  if (touch && timestamps) {
+    let createdAt = timestamps.createdAt
+    let updatedAt = timestamps.updatedAt
 
-    if (
-      Object.prototype.hasOwnProperty.call(table.columns, createdAt) &&
-      output[createdAt] === undefined
-    ) {
+    if (Object.prototype.hasOwnProperty.call(columns, createdAt) && output[createdAt] === undefined) {
       output[createdAt] = now
     }
 
-    if (
-      Object.prototype.hasOwnProperty.call(table.columns, updatedAt) &&
-      output[updatedAt] === undefined
-    ) {
+    if (Object.prototype.hasOwnProperty.call(columns, updatedAt) && output[updatedAt] === undefined) {
       output[updatedAt] = now
     }
   }
@@ -1855,14 +2013,13 @@ function prepareUpdateValues<table extends AnyTable>(
   touch: boolean,
 ): Record<string, unknown> {
   let output = validatePartialRow(table, values)
+  let timestamps = getTableTimestamps(table)
+  let columns = getTableColumns(table)
 
-  if (touch && table.timestamps) {
-    let updatedAt = table.timestamps.updatedAt
+  if (touch && timestamps) {
+    let updatedAt = timestamps.updatedAt
 
-    if (
-      Object.prototype.hasOwnProperty.call(table.columns, updatedAt) &&
-      output[updatedAt] === undefined
-    ) {
+    if (Object.prototype.hasOwnProperty.call(columns, updatedAt) && output[updatedAt] === undefined) {
       output[updatedAt] = now
     }
   }
@@ -1875,20 +2032,22 @@ function validatePartialRow<table extends AnyTable>(
   values: Partial<TableRow<table>>,
 ): Record<string, unknown> {
   let output: Record<string, unknown> = {}
+  let columns = getTableColumns(table)
+  let tableName = getTableName(table)
 
   for (let key in values as Record<string, unknown>) {
     if (!Object.prototype.hasOwnProperty.call(values, key)) {
       continue
     }
 
-    if (!Object.prototype.hasOwnProperty.call(table.columns, key)) {
+    if (!Object.prototype.hasOwnProperty.call(columns, key)) {
       throw new DataTableValidationError(
-        'Unknown column "' + key + '" for table "' + table.name + '"',
+        'Unknown column "' + key + '" for table "' + tableName + '"',
         [],
       )
     }
 
-    let schema = table.columns[key]
+    let schema = columns[key]
     let inputValue = (values as Record<string, unknown>)[key]
     let result = parseSafe(schema as any, inputValue) as
       | { success: true; value: unknown }
@@ -1896,11 +2055,11 @@ function validatePartialRow<table extends AnyTable>(
 
     if (!result.success) {
       throw new DataTableValidationError(
-        'Invalid value for column "' + key + '" in table "' + table.name + '"',
+        'Invalid value for column "' + key + '" in table "' + tableName + '"',
         result.issues,
         {
           metadata: {
-            table: table.name,
+            table: tableName,
             column: key,
           },
         },
@@ -1927,18 +2086,21 @@ function createPredicateColumnResolver(
   let ambiguousColumns = new Set<string>()
 
   for (let table of tables) {
-    for (let columnName in table.columns) {
-      if (!Object.prototype.hasOwnProperty.call(table.columns, columnName)) {
+    let tableColumns = getTableColumns(table)
+    let tableName = getTableName(table)
+
+    for (let columnName in tableColumns) {
+      if (!Object.prototype.hasOwnProperty.call(tableColumns, columnName)) {
         continue
       }
 
       let resolvedColumn: ResolvedPredicateColumn = {
-        tableName: table.name,
+        tableName,
         columnName,
-        schema: table.columns[columnName],
+        schema: tableColumns[columnName],
       }
 
-      qualifiedColumns.set(table.name + '.' + columnName, resolvedColumn)
+      qualifiedColumns.set(tableName + '.' + columnName, resolvedColumn)
 
       if (ambiguousColumns.has(columnName)) {
         continue
@@ -2175,12 +2337,14 @@ function buildPrimaryKeyPredicate<table extends AnyTable>(
   table: table,
   keyObjects: Record<string, unknown>[],
 ): Predicate<TableColumnName<table>> | undefined {
+  let primaryKey = getTablePrimaryKey(table)
+
   if (keyObjects.length === 0) {
     return undefined
   }
 
-  if (table.primaryKey.length === 1) {
-    let key = table.primaryKey[0] as TableColumnName<table>
+  if (primaryKey.length === 1) {
+    let key = primaryKey[0] as TableColumnName<table>
     return inList(
       key,
       keyObjects.map((objectValue) => objectValue[key]),
@@ -2188,7 +2352,7 @@ function buildPrimaryKeyPredicate<table extends AnyTable>(
   }
 
   let predicates = keyObjects.map((objectValue) => {
-    let comparisons = table.primaryKey.map((key) => {
+    let comparisons = primaryKey.map((key) => {
       let typedKey = key as TableColumnName<table>
       return eq(typedKey, objectValue[typedKey])
     })

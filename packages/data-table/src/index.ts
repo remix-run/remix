@@ -19,8 +19,11 @@ export {
 
 export type {
   AnyRelation,
+  AnyColumn,
   AnyTable,
   BelongsToOptions,
+  ColumnReference,
+  ColumnReferenceForQualifiedName,
   ColumnSchemas,
   DataSchema,
   HasManyOptions,
@@ -35,13 +38,33 @@ export type {
   RelationKind,
   RelationMapForTable,
   Table,
+  TableColumnInput,
+  TableColumnName,
+  TableColumns,
+  TableName,
+  TablePrimaryKey,
   TableReference,
   TableRow,
   TableRowWithLoaded,
   TimestampConfig,
   TimestampOptions,
 } from './lib/table.ts'
-export { createTable, timestampSchema, timestamps } from './lib/table.ts'
+export {
+  belongsTo,
+  columnMetadataKey,
+  createTable,
+  getTableColumns,
+  getTableName,
+  getTablePrimaryKey,
+  getTableReference,
+  getTableTimestamps,
+  hasMany,
+  hasManyThrough,
+  hasOne,
+  tableMetadataKey,
+  timestampSchema,
+  timestamps,
+} from './lib/table.ts'
 
 export type { Predicate, WhereInput, WhereObject } from './lib/operators.ts'
 export {

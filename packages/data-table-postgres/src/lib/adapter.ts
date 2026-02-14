@@ -6,6 +6,7 @@ import type {
   TransactionOptions,
   TransactionToken,
 } from '@remix-run/data-table'
+import { getTablePrimaryKey } from '@remix-run/data-table'
 
 import { compilePostgresStatement } from './sql-compiler.ts'
 
@@ -13,27 +14,42 @@ type Pretty<value> = {
   [key in keyof value]: value[key]
 } & {}
 
+/**
+ * Result shape returned by postgres client `query()` calls.
+ */
 export type PostgresQueryResult = {
   rows: unknown[]
   rowCount: number | null
 }
 
+/**
+ * Minimal postgres client contract used by this adapter.
+ */
 export type PostgresDatabaseClient = {
   query(text: string, values?: unknown[]): Promise<PostgresQueryResult>
 }
 
+/**
+ * Postgres transaction client with optional connection release support.
+ */
 export type PostgresTransactionClient = Pretty<
   PostgresDatabaseClient & {
     release?: () => void
   }
 >
 
+/**
+ * Postgres pool-like client contract used by this adapter.
+ */
 export type PostgresDatabasePool = Pretty<
   PostgresDatabaseClient & {
     connect?: () => Promise<PostgresTransactionClient>
   }
 >
 
+/**
+ * Postgres adapter configuration.
+ */
 export type PostgresDatabaseAdapterOptions = {
   capabilities?: AdapterCapabilityOverrides
 }
@@ -43,6 +59,9 @@ type TransactionState = {
   releaseOnClose: boolean
 }
 
+/**
+ * `DatabaseAdapter` implementation for postgres-compatible clients.
+ */
 export class PostgresDatabaseAdapter implements DatabaseAdapter {
   dialect = 'postgres'
   capabilities
@@ -183,6 +202,12 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   }
 }
 
+/**
+ * Creates a postgres `DatabaseAdapter`.
+ * @param client Postgres pool or client.
+ * @param options Optional adapter capability overrides.
+ * @returns A configured postgres adapter.
+ */
 export function createPostgresDatabaseAdapter(
   client: PostgresDatabasePool,
   options?: PostgresDatabaseAdapterOptions,
@@ -265,23 +290,17 @@ function normalizeInsertId(
   statement: AdapterExecuteRequest['statement'],
   rows: Record<string, unknown>[],
 ): unknown {
-  if (kind !== 'insert' && kind !== 'insertMany' && kind !== 'upsert') {
+  if (!isInsertStatementKind(kind) || !isInsertStatement(statement)) {
     return undefined
   }
 
-  if (
-    statement.kind !== 'insert' &&
-    statement.kind !== 'insertMany' &&
-    statement.kind !== 'upsert'
-  ) {
+  let primaryKey = getTablePrimaryKey(statement.table)
+
+  if (primaryKey.length !== 1) {
     return undefined
   }
 
-  if (statement.table.primaryKey.length !== 1) {
-    return undefined
-  }
-
-  let key = statement.table.primaryKey[0]
+  let key = primaryKey[0]
   let row = rows[rows.length - 1]
 
   return row ? row[key] : undefined
@@ -289,4 +308,14 @@ function normalizeInsertId(
 
 function quoteIdentifier(value: string): string {
   return '"' + value.replace(/"/g, '""') + '"'
+}
+
+function isInsertStatementKind(kind: AdapterExecuteRequest['statement']['kind']): boolean {
+  return kind === 'insert' || kind === 'insertMany' || kind === 'upsert'
+}
+
+function isInsertStatement(
+  statement: AdapterExecuteRequest['statement'],
+): statement is Extract<AdapterExecuteRequest['statement'], { kind: 'insert' | 'insertMany' | 'upsert' }> {
+  return statement.kind === 'insert' || statement.kind === 'insertMany' || statement.kind === 'upsert'
 }

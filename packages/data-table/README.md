@@ -37,7 +37,7 @@ Define tables once, then create a database with an adapter.
 ```ts
 import { Pool } from 'pg'
 import * as s from 'remix/data-schema'
-import { createDatabase, createTable } from 'remix/data-table'
+import { createDatabase, createTable, hasMany } from 'remix/data-table'
 import { createPostgresDatabaseAdapter } from 'remix/data-table-postgres'
 
 let users = createTable({
@@ -61,7 +61,7 @@ let orders = createTable({
   },
 })
 
-let userOrders = users.hasMany(orders)
+let userOrders = hasMany(users, orders)
 
 let pool = new Pool({ connectionString: process.env.DATABASE_URL })
 let db = createDatabase(createPostgresDatabaseAdapter(pool))
@@ -76,16 +76,16 @@ import { eq, ilike } from 'remix/data-table'
 
 let recentPendingOrders = await db
   .query(orders)
-  .join(users, eq('orders.user_id', 'users.id'))
+  .join(users, eq(orders.user_id, users.id))
   .where({ status: 'pending' })
-  .where(ilike('users.email', '%@example.com'))
+  .where(ilike(users.email, '%@example.com'))
   .select({
-    orderId: 'orders.id',
-    customerEmail: 'users.email',
-    total: 'orders.total',
-    placedAt: 'orders.created_at',
+    orderId: orders.id,
+    customerEmail: users.email,
+    total: orders.total,
+    placedAt: orders.created_at,
   })
-  .orderBy('orders.created_at', 'desc')
+  .orderBy(orders.created_at, 'desc')
   .limit(20)
   .all()
 ```

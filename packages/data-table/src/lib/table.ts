@@ -1,8 +1,26 @@
 import type { Predicate, WhereInput } from './operators.ts'
-import { inferForeignKey, singularize } from './inflection.ts'
+import { inferForeignKey } from './inflection.ts'
 import { normalizeWhereInput } from './operators.ts'
+import {
+  columnMetadataKey,
+  normalizeColumnInput,
+  tableMetadataKey,
+} from './references.ts'
+import type {
+  ColumnInput,
+  ColumnReferenceLike,
+  TableMetadataLike,
+} from './references.ts'
 import type { Pretty } from './types.ts'
 
+/**
+ * Symbol key used to store non-enumerable table metadata.
+ */
+export { columnMetadataKey, tableMetadataKey } from './references.ts'
+
+/**
+ * Minimal Standard Schema-compatible contract used by `data-table`.
+ */
 export type DataSchema<input = unknown, output = input> = {
   '~standard': {
     version: number
@@ -14,26 +32,10 @@ export type DataSchema<input = unknown, output = input> = {
   }
 }
 
+/**
+ * Mapping of column names to schemas.
+ */
 export type ColumnSchemas = Record<string, DataSchema<any, any>>
-
-export type InferSchemaOutput<schema> =
-  schema extends DataSchema<any, infer output> ? output : never
-
-export type TableRow<table extends AnyTable> = Pretty<{
-  [column in keyof table['columns']]: InferSchemaOutput<table['columns'][column]>
-}>
-
-export type TableRowWithLoaded<
-  table extends AnyTable,
-  loaded extends Record<string, unknown> = {},
-> = Pretty<TableRow<table> & loaded>
-
-export type OrderDirection = 'asc' | 'desc'
-
-export type OrderByClause = {
-  column: string
-  direction: OrderDirection
-}
 
 type ColumnNameFromColumns<columns extends ColumnSchemas> = keyof columns & string
 
@@ -53,6 +55,158 @@ type NormalizePrimaryKey<
   : primaryKey extends ColumnNameFromColumns<columns>
     ? readonly [primaryKey]
     : DefaultPrimaryKey<columns>
+
+export type TimestampOptions = boolean | { createdAt?: string; updatedAt?: string }
+
+export type TimestampConfig = {
+  createdAt: string
+  updatedAt: string
+}
+
+type TableMetadata<
+  name extends string,
+  columns extends ColumnSchemas,
+  primaryKey extends readonly ColumnNameFromColumns<columns>[],
+> = {
+  name: name
+  columns: columns
+  primaryKey: primaryKey
+  timestamps: TimestampConfig | null
+}
+
+export type ColumnReference<
+  tableName extends string,
+  columnName extends string,
+  schema extends DataSchema<any, any>,
+> = ColumnReferenceLike<`${tableName}.${columnName}`> & {
+  [columnMetadataKey]: {
+    tableName: tableName
+    columnName: columnName
+    qualifiedName: `${tableName}.${columnName}`
+    schema: schema
+  }
+}
+
+export type AnyColumn = ColumnReference<string, string, DataSchema<any, any>>
+
+export type ColumnReferenceForQualifiedName<qualifiedName extends string> = AnyColumn & {
+  [columnMetadataKey]: {
+    qualifiedName: qualifiedName
+  }
+}
+
+type TableColumnReferences<name extends string, columns extends ColumnSchemas> = {
+  [column in keyof columns & string]: ColumnReference<name, column, columns[column]>
+}
+
+export type Table<
+  name extends string,
+  columns extends ColumnSchemas,
+  primaryKey extends readonly ColumnNameFromColumns<columns>[],
+> = TableMetadataLike<name, columns, primaryKey, TimestampConfig | null> &
+  {
+    [tableMetadataKey]: TableMetadata<name, columns, primaryKey>
+  } &
+  TableColumnReferences<name, columns>
+
+export type AnyTable = Table<string, ColumnSchemas, readonly string[]>
+
+export type TableName<table extends AnyTable> = table[typeof tableMetadataKey]['name']
+
+export type TableColumns<table extends AnyTable> = table[typeof tableMetadataKey]['columns']
+
+export type TablePrimaryKey<table extends AnyTable> = table[typeof tableMetadataKey]['primaryKey']
+
+export type TableTimestamps<table extends AnyTable> = table[typeof tableMetadataKey]['timestamps']
+
+export type InferSchemaOutput<schema> =
+  schema extends DataSchema<any, infer output> ? output : never
+
+export type TableRow<table extends AnyTable> = Pretty<{
+  [column in keyof TableColumns<table> & string]: InferSchemaOutput<TableColumns<table>[column]>
+}>
+
+export type TableRowWithLoaded<
+  table extends AnyTable,
+  loaded extends Record<string, unknown> = {},
+> = Pretty<TableRow<table> & loaded>
+
+export type TableColumnName<table extends AnyTable> = keyof TableColumns<table> & string
+
+export type QualifiedTableColumnName<table extends AnyTable> =
+  `${TableName<table>}.${TableColumnName<table>}`
+
+export type TableColumnInput<table extends AnyTable> = ColumnInput<
+  TableColumnName<table> | QualifiedTableColumnName<table>
+>
+
+export type TableReference<table extends AnyTable = AnyTable> = {
+  kind: 'table'
+  name: TableName<table>
+  columns: TableColumns<table>
+  primaryKey: TablePrimaryKey<table>
+  timestamps: TableTimestamps<table>
+}
+
+/**
+ * Creates a plain table reference snapshot from a table instance.
+ * @param table Source table instance.
+ * @returns Table metadata snapshot.
+ */
+export function getTableReference<table extends AnyTable>(table: table): TableReference<table> {
+  let metadata = table[tableMetadataKey]
+
+  return {
+    kind: 'table',
+    name: metadata.name as TableName<table>,
+    columns: metadata.columns as TableColumns<table>,
+    primaryKey: metadata.primaryKey as TablePrimaryKey<table>,
+    timestamps: metadata.timestamps as TableTimestamps<table>,
+  }
+}
+
+/**
+ * Returns a table's SQL name.
+ * @param table Source table instance.
+ * @returns Table SQL name.
+ */
+export function getTableName<table extends AnyTable>(table: table): TableName<table> {
+  return table[tableMetadataKey].name as TableName<table>
+}
+
+/**
+ * Returns a table's schema map.
+ * @param table Source table instance.
+ * @returns Table schema map.
+ */
+export function getTableColumns<table extends AnyTable>(table: table): TableColumns<table> {
+  return table[tableMetadataKey].columns as TableColumns<table>
+}
+
+/**
+ * Returns a table's primary key columns.
+ * @param table Source table instance.
+ * @returns Primary key columns.
+ */
+export function getTablePrimaryKey<table extends AnyTable>(table: table): TablePrimaryKey<table> {
+  return table[tableMetadataKey].primaryKey as TablePrimaryKey<table>
+}
+
+/**
+ * Returns a table's resolved timestamp configuration.
+ * @param table Source table instance.
+ * @returns Timestamp configuration or `null`.
+ */
+export function getTableTimestamps<table extends AnyTable>(table: table): TableTimestamps<table> {
+  return table[tableMetadataKey].timestamps as TableTimestamps<table>
+}
+
+export type OrderDirection = 'asc' | 'desc'
+
+export type OrderByClause = {
+  column: string
+  direction: OrderDirection
+}
 
 export type RelationCardinality = 'one' | 'many'
 
@@ -74,34 +228,26 @@ export type LoadedRelationMap<relations extends RelationMapForTable<any>> = Pret
   [name in keyof relations]: RelationResult<relations[name]>
 }>
 
-export type TableReference<table extends AnyTable = AnyTable> = Pretty<
-  Pick<table, 'kind' | 'name' | 'columns' | 'primaryKey' | 'timestamps'>
->
-
 export type KeySelector<table extends AnyTable> =
   | (keyof TableRow<table> & string)
   | readonly (keyof TableRow<table> & string)[]
 
 export type HasManyOptions<source extends AnyTable, target extends AnyTable> = {
-  name?: string
   foreignKey?: KeySelector<target>
   targetKey?: KeySelector<source>
 }
 
 export type HasOneOptions<source extends AnyTable, target extends AnyTable> = {
-  name?: string
   foreignKey?: KeySelector<target>
   targetKey?: KeySelector<source>
 }
 
 export type BelongsToOptions<source extends AnyTable, target extends AnyTable> = {
-  name?: string
   foreignKey?: KeySelector<source>
   targetKey?: KeySelector<target>
 }
 
 export type HasManyThroughOptions<source extends AnyTable, target extends AnyTable> = {
-  name?: string
   through: Relation<source, AnyTable, RelationCardinality, any>
   throughForeignKey?: KeySelector<target>
   throughTargetKey?: string | string[]
@@ -129,7 +275,6 @@ export type Relation<
 > = {
   kind: 'relation'
   relationKind: RelationKind
-  name: string
   sourceTable: source
   targetTable: target
   cardinality: cardinality
@@ -138,10 +283,10 @@ export type Relation<
   through?: ThroughRelationMetadata
   modifiers: RelationModifiers<target>
   where(
-    input: WhereInput<keyof TableRow<target> & string>,
+    input: WhereInput<TableColumnName<target> | QualifiedTableColumnName<target>>,
   ): Relation<source, target, cardinality, loaded>
   orderBy(
-    column: keyof TableRow<target> & string,
+    column: TableColumnInput<target>,
     direction?: OrderDirection,
   ): Relation<source, target, cardinality, loaded>
   limit(value: number): Relation<source, target, cardinality, loaded>
@@ -150,43 +295,6 @@ export type Relation<
     relations: relations,
   ): Relation<source, target, cardinality, loaded & LoadedRelationMap<relations>>
 }
-
-export type TimestampOptions = boolean | { createdAt?: string; updatedAt?: string }
-
-export type TimestampConfig = {
-  createdAt: string
-  updatedAt: string
-}
-
-export type Table<
-  name extends string,
-  columns extends ColumnSchemas,
-  primaryKey extends readonly ColumnNameFromColumns<columns>[],
-> = {
-  kind: 'table'
-  name: name
-  columns: columns
-  primaryKey: primaryKey
-  timestamps: TimestampConfig | null
-  hasMany<target extends AnyTable>(
-    target: target,
-    options?: HasManyOptions<Table<name, columns, primaryKey>, target>,
-  ): Relation<Table<name, columns, primaryKey>, target, 'many'>
-  hasOne<target extends AnyTable>(
-    target: target,
-    options?: HasOneOptions<Table<name, columns, primaryKey>, target>,
-  ): Relation<Table<name, columns, primaryKey>, target, 'one'>
-  belongsTo<target extends AnyTable>(
-    target: target,
-    options?: BelongsToOptions<Table<name, columns, primaryKey>, target>,
-  ): Relation<Table<name, columns, primaryKey>, target, 'one'>
-  hasManyThrough<target extends AnyTable>(
-    target: target,
-    options: HasManyThroughOptions<Table<name, columns, primaryKey>, target>,
-  ): Relation<Table<name, columns, primaryKey>, target, 'many'>
-}
-
-export type AnyTable = Table<string, ColumnSchemas, readonly string[]>
 
 export type AnyRelation = Relation<AnyTable, AnyTable, RelationCardinality, any>
 
@@ -204,11 +312,16 @@ export type CreateTableOptions<
   timestamps?: TimestampOptions
 }
 
-let DEFAULT_TIMESTAMP_CONFIG: TimestampConfig = {
+let defaultTimestampConfig: TimestampConfig = {
   createdAt: 'created_at',
   updatedAt: 'updated_at',
 }
 
+/**
+ * Creates a table object with symbol-backed metadata and direct column references.
+ * @param options Table declaration options.
+ * @returns A frozen table object.
+ */
 export function createTable<
   name extends string,
   columns extends ColumnSchemas,
@@ -221,159 +334,220 @@ export function createTable<
 ): Table<name, columns, NormalizePrimaryKey<columns, primaryKey>> {
   let resolvedPrimaryKey = normalizePrimaryKey(options.name, options.columns, options.primaryKey)
   let timestampConfig = normalizeTimestampConfig(options.timestamps)
+  let table = Object.create(null) as Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>
 
-  let table: Table<name, columns, NormalizePrimaryKey<columns, primaryKey>> = {
-    kind: 'table',
-    name: options.name,
-    columns: options.columns,
-    primaryKey: resolvedPrimaryKey as unknown as NormalizePrimaryKey<columns, primaryKey>,
-    timestamps: timestampConfig,
+  Object.defineProperty(table, tableMetadataKey, {
+    value: Object.freeze({
+      name: options.name,
+      columns: options.columns,
+      primaryKey: resolvedPrimaryKey,
+      timestamps: timestampConfig,
+    }),
+    enumerable: false,
+    writable: false,
+    configurable: false,
+  })
 
-    hasMany<target extends AnyTable>(
-      target: target,
-      relationOptions?: HasManyOptions<
-        Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>,
-        target
-      >,
-    ): Relation<Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>, target, 'many'> {
-      let sourceKey = normalizeKeySelector(
-        table,
-        relationOptions?.targetKey,
-        'targetKey',
-        table.primaryKey as string[],
-      )
-      let targetKey = normalizeKeySelector(target, relationOptions?.foreignKey, 'foreignKey', [
-        inferForeignKey(table.name),
-      ])
+  for (let columnName in options.columns) {
+    if (!Object.prototype.hasOwnProperty.call(options.columns, columnName)) {
+      continue
+    }
 
-      assertKeyLengths(table.name, target.name, sourceKey, targetKey)
+    let schema = options.columns[columnName]
+    let column = createColumnReference(options.name, columnName, schema)
 
-      return createRelation({
-        relationKind: 'hasMany',
-        cardinality: 'many',
-        name: relationOptions?.name ?? target.name,
-        sourceTable: table,
-        targetTable: target,
-        sourceKey,
-        targetKey,
-      })
-    },
-
-    hasOne<target extends AnyTable>(
-      target: target,
-      relationOptions?: HasOneOptions<
-        Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>,
-        target
-      >,
-    ): Relation<Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>, target, 'one'> {
-      let sourceKey = normalizeKeySelector(
-        table,
-        relationOptions?.targetKey,
-        'targetKey',
-        table.primaryKey as string[],
-      )
-      let targetKey = normalizeKeySelector(target, relationOptions?.foreignKey, 'foreignKey', [
-        inferForeignKey(table.name),
-      ])
-
-      assertKeyLengths(table.name, target.name, sourceKey, targetKey)
-
-      return createRelation({
-        relationKind: 'hasOne',
-        cardinality: 'one',
-        name: relationOptions?.name ?? singularize(target.name),
-        sourceTable: table,
-        targetTable: target,
-        sourceKey,
-        targetKey,
-      })
-    },
-
-    belongsTo<target extends AnyTable>(
-      target: target,
-      relationOptions?: BelongsToOptions<
-        Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>,
-        target
-      >,
-    ): Relation<Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>, target, 'one'> {
-      let sourceKey = normalizeKeySelector(table, relationOptions?.foreignKey, 'foreignKey', [
-        inferForeignKey(target.name),
-      ])
-      let targetKey = normalizeKeySelector(
-        target,
-        relationOptions?.targetKey,
-        'targetKey',
-        target.primaryKey as string[],
-      )
-
-      assertKeyLengths(table.name, target.name, sourceKey, targetKey)
-
-      return createRelation({
-        relationKind: 'belongsTo',
-        cardinality: 'one',
-        name: relationOptions?.name ?? singularize(target.name),
-        sourceTable: table,
-        targetTable: target,
-        sourceKey,
-        targetKey,
-      })
-    },
-
-    hasManyThrough<target extends AnyTable>(
-      target: target,
-      relationOptions: HasManyThroughOptions<
-        Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>,
-        target
-      >,
-    ): Relation<Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>, target, 'many'> {
-      let throughRelation = relationOptions.through
-
-      if (throughRelation.sourceTable !== table) {
-        throw new Error(
-          'hasManyThrough expects a through relation whose source table matches ' + table.name,
-        )
-      }
-
-      let throughTargetKey = normalizeStringKeysForTable(
-        throughRelation.targetTable,
-        relationOptions.throughTargetKey,
-        'throughTargetKey',
-        throughRelation.targetTable.primaryKey,
-      )
-      let throughForeignKey = normalizeKeySelector(
-        target,
-        relationOptions.throughForeignKey,
-        'throughForeignKey',
-        [inferForeignKey(throughRelation.targetTable.name)],
-      )
-
-      assertKeyLengths(
-        throughRelation.targetTable.name,
-        target.name,
-        throughTargetKey,
-        throughForeignKey,
-      )
-
-      return createRelation({
-        relationKind: 'hasManyThrough',
-        cardinality: 'many',
-        name: relationOptions.name ?? target.name,
-        sourceTable: table,
-        targetTable: target,
-        sourceKey: [...throughRelation.sourceKey],
-        targetKey: [...throughRelation.targetKey],
-        through: {
-          relation: throughRelation as AnyRelation,
-          throughSourceKey: throughTargetKey,
-          throughTargetKey: throughForeignKey,
-        },
-      })
-    },
+    Object.defineProperty(table, columnName, {
+      value: column,
+      enumerable: true,
+      writable: false,
+      configurable: false,
+    })
   }
 
-  return table
+  return Object.freeze(table) as Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>
 }
 
+function createColumnReference<
+  tableName extends string,
+  columnName extends string,
+  schema extends DataSchema<any, any>,
+>(
+  tableName: tableName,
+  columnName: columnName,
+  schema: schema,
+): ColumnReference<tableName, columnName, schema> {
+  return Object.freeze({
+    kind: 'column',
+    [columnMetadataKey]: Object.freeze({
+      tableName,
+      columnName,
+      qualifiedName: tableName + '.' + columnName,
+      schema,
+    }),
+  }) as ColumnReference<tableName, columnName, schema>
+}
+
+/**
+ * Defines a one-to-many relation from `source` to `target`.
+ * @param source Source table.
+ * @param target Target table.
+ * @param relationOptions Relation key configuration.
+ * @returns A relation descriptor.
+ */
+export function hasMany<source extends AnyTable, target extends AnyTable>(
+  source: source,
+  target: target,
+  relationOptions?: HasManyOptions<source, target>,
+): Relation<source, target, 'many'> {
+  let sourceKey = normalizeKeySelector(
+    source,
+    relationOptions?.targetKey,
+    'targetKey',
+    getTablePrimaryKey(source) as string[],
+  )
+  let targetKey = normalizeKeySelector(target, relationOptions?.foreignKey, 'foreignKey', [
+    inferForeignKey(getTableName(source)),
+  ])
+
+  assertKeyLengths(getTableName(source), getTableName(target), sourceKey, targetKey)
+
+  return createRelation({
+    relationKind: 'hasMany',
+    cardinality: 'many',
+    sourceTable: source,
+    targetTable: target,
+    sourceKey,
+    targetKey,
+  })
+}
+
+/**
+ * Defines a one-to-one relation from `source` to `target` where the foreign key lives on `target`.
+ * @param source Source table.
+ * @param target Target table.
+ * @param relationOptions Relation key configuration.
+ * @returns A relation descriptor.
+ */
+export function hasOne<source extends AnyTable, target extends AnyTable>(
+  source: source,
+  target: target,
+  relationOptions?: HasOneOptions<source, target>,
+): Relation<source, target, 'one'> {
+  let sourceKey = normalizeKeySelector(
+    source,
+    relationOptions?.targetKey,
+    'targetKey',
+    getTablePrimaryKey(source) as string[],
+  )
+  let targetKey = normalizeKeySelector(target, relationOptions?.foreignKey, 'foreignKey', [
+    inferForeignKey(getTableName(source)),
+  ])
+
+  assertKeyLengths(getTableName(source), getTableName(target), sourceKey, targetKey)
+
+  return createRelation({
+    relationKind: 'hasOne',
+    cardinality: 'one',
+    sourceTable: source,
+    targetTable: target,
+    sourceKey,
+    targetKey,
+  })
+}
+
+/**
+ * Defines a one-to-one relation from `source` to `target`.
+ * @param source Source table.
+ * @param target Target table.
+ * @param relationOptions Relation key configuration.
+ * @returns A relation descriptor.
+ */
+export function belongsTo<source extends AnyTable, target extends AnyTable>(
+  source: source,
+  target: target,
+  relationOptions?: BelongsToOptions<source, target>,
+): Relation<source, target, 'one'> {
+  let sourceKey = normalizeKeySelector(source, relationOptions?.foreignKey, 'foreignKey', [
+    inferForeignKey(getTableName(target)),
+  ])
+  let targetKey = normalizeKeySelector(
+    target,
+    relationOptions?.targetKey,
+    'targetKey',
+    getTablePrimaryKey(target) as string[],
+  )
+
+  assertKeyLengths(getTableName(source), getTableName(target), sourceKey, targetKey)
+
+  return createRelation({
+    relationKind: 'belongsTo',
+    cardinality: 'one',
+    sourceTable: source,
+    targetTable: target,
+    sourceKey,
+    targetKey,
+  })
+}
+
+/**
+ * Defines a one-to-many relation from `source` to `target` through an intermediate relation.
+ * @param source Source table.
+ * @param target Target table.
+ * @param relationOptions Through relation configuration.
+ * @returns A relation descriptor.
+ */
+export function hasManyThrough<source extends AnyTable, target extends AnyTable>(
+  source: source,
+  target: target,
+  relationOptions: HasManyThroughOptions<source, target>,
+): Relation<source, target, 'many'> {
+  let throughRelation = relationOptions.through
+
+  if (throughRelation.sourceTable !== source) {
+    throw new Error(
+      'hasManyThrough expects a through relation whose source table matches ' + getTableName(source),
+    )
+  }
+
+  let throughTargetKey = normalizeKeysForTable(
+    throughRelation.targetTable,
+    relationOptions.throughTargetKey,
+    'throughTargetKey',
+    getTablePrimaryKey(throughRelation.targetTable),
+  )
+  let throughForeignKey = normalizeKeySelector(
+    target,
+    relationOptions.throughForeignKey,
+    'throughForeignKey',
+    [inferForeignKey(getTableName(throughRelation.targetTable))],
+  )
+
+  assertKeyLengths(
+    getTableName(throughRelation.targetTable),
+    getTableName(target),
+    throughTargetKey,
+    throughForeignKey,
+  )
+
+  return createRelation({
+    relationKind: 'hasManyThrough',
+    cardinality: 'many',
+    sourceTable: source,
+    targetTable: target,
+    sourceKey: [...throughRelation.sourceKey],
+    targetKey: [...throughRelation.targetKey],
+    through: {
+      relation: throughRelation as AnyRelation,
+      throughSourceKey: throughTargetKey,
+      throughTargetKey: throughForeignKey,
+    },
+  })
+}
+
+/**
+ * Creates a schema that accepts `Date`, string, and numeric timestamp inputs.
+ * @returns Timestamp schema for generated timestamp helpers.
+ */
 export function timestampSchema(): DataSchema<unknown, Date | string | number> {
   return {
     '~standard': {
@@ -400,10 +574,15 @@ export function timestampSchema(): DataSchema<unknown, Date | string | number> {
   }
 }
 
-let DEFAULT_TIMESTAMP_SCHEMA = timestampSchema()
+let defaultTimestampSchema = timestampSchema()
 
+/**
+ * Convenience helper for standard snake_case timestamp columns.
+ * @param schema Schema used for both timestamp columns.
+ * @returns Column schema map for `created_at`/`updated_at`.
+ */
 export function timestamps(
-  schema: DataSchema<any, any> = DEFAULT_TIMESTAMP_SCHEMA,
+  schema: DataSchema<any, any> = defaultTimestampSchema,
 ): Record<'created_at' | 'updated_at', DataSchema<any, any>> {
   return {
     created_at: schema,
@@ -411,19 +590,25 @@ export function timestamps(
   }
 }
 
-export type PrimaryKeyInput<table extends AnyTable> = table['primaryKey'] extends readonly [
+export type PrimaryKeyInput<table extends AnyTable> = TablePrimaryKey<table> extends readonly [
   infer column extends string,
 ]
   ? TableRow<table>[column]
   : Pretty<{
-      [column in table['primaryKey'][number] & keyof TableRow<table>]: TableRow<table>[column]
+      [column in TablePrimaryKey<table>[number] & keyof TableRow<table>]: TableRow<table>[column]
     }>
 
+/**
+ * Normalizes a primary-key input into an object keyed by primary-key columns.
+ * @param table Source table.
+ * @param value Primary-key input value.
+ * @returns Primary-key object.
+ */
 export function getPrimaryKeyObject<table extends AnyTable>(
   table: table,
   value: PrimaryKeyInput<table>,
 ): Partial<TableRow<table>> {
-  let keys = table.primaryKey
+  let keys = getTablePrimaryKey(table)
 
   if (keys.length === 1 && (typeof value !== 'object' || value === null || Array.isArray(value))) {
     let key = keys[0] as keyof TableRow<table>
@@ -439,7 +624,9 @@ export function getPrimaryKeyObject<table extends AnyTable>(
 
   for (let key of keys) {
     if (!(key in objectValue)) {
-      throw new Error('Missing key "' + key + '" for primary key lookup on "' + table.name + '"')
+      throw new Error(
+        'Missing key "' + key + '" for primary key lookup on "' + getTableName(table) + '"',
+      )
     }
 
     ;(output as Record<string, unknown>)[key] = objectValue[key]
@@ -448,12 +635,23 @@ export function getPrimaryKeyObject<table extends AnyTable>(
   return output
 }
 
+/**
+ * Builds a stable key for a row tuple.
+ * @param row Source row.
+ * @param columns Columns included in the tuple.
+ * @returns Stable tuple key.
+ */
 export function getCompositeKey(row: Record<string, unknown>, columns: readonly string[]): string {
   let values = columns.map((column) => stableSerialize(row[column]))
 
   return values.join('::')
 }
 
+/**
+ * Serializes values into stable string representations for key generation.
+ * @param value Value to serialize.
+ * @returns Stable serialized value.
+ */
 export function stableSerialize(value: unknown): string {
   if (value === null) {
     return 'null'
@@ -514,36 +712,12 @@ function normalizeKeySelector<table extends AnyTable>(
   optionName: string,
   defaultValue: readonly string[],
 ): string[] {
-  if (selector === undefined) {
-    return [...defaultValue]
-  }
-
-  let keys = Array.isArray(selector) ? [...selector] : [selector]
-
-  if (keys.length === 0) {
-    throw new Error('Option "' + optionName + '" for table "' + table.name + '" must not be empty')
-  }
-
-  for (let key of keys) {
-    if (!Object.prototype.hasOwnProperty.call(table.columns, key)) {
-      throw new Error(
-        'Unknown column "' +
-          key +
-          '" in option "' +
-          optionName +
-          '" for table "' +
-          table.name +
-          '"',
-      )
-    }
-  }
-
-  return keys
+  return normalizeKeysForTable(table, selector, optionName, defaultValue)
 }
 
-function normalizeStringKeysForTable(
+function normalizeKeysForTable(
   table: AnyTable,
-  selector: string | string[] | undefined,
+  selector: string | readonly string[] | undefined,
   optionName: string,
   defaultValue: readonly string[],
 ): string[] {
@@ -554,18 +728,22 @@ function normalizeStringKeysForTable(
   let keys = Array.isArray(selector) ? [...selector] : [selector]
 
   if (keys.length === 0) {
-    throw new Error('Option "' + optionName + '" for table "' + table.name + '" must not be empty')
+    throw new Error(
+      'Option "' + optionName + '" for table "' + getTableName(table) + '" must not be empty',
+    )
   }
 
+  let columns = getTableColumns(table)
+
   for (let key of keys) {
-    if (!Object.prototype.hasOwnProperty.call(table.columns, key)) {
+    if (!Object.prototype.hasOwnProperty.call(columns, key)) {
       throw new Error(
         'Unknown column "' +
           key +
           '" in option "' +
           optionName +
           '" for table "' +
-          table.name +
+          getTableName(table) +
           '"',
       )
     }
@@ -580,12 +758,12 @@ function normalizeTimestampConfig(options: TimestampOptions | undefined): Timest
   }
 
   if (options === true) {
-    return { ...DEFAULT_TIMESTAMP_CONFIG }
+    return { ...defaultTimestampConfig }
   }
 
   return {
-    createdAt: options.createdAt ?? DEFAULT_TIMESTAMP_CONFIG.createdAt,
-    updatedAt: options.updatedAt ?? DEFAULT_TIMESTAMP_CONFIG.updatedAt,
+    createdAt: options.createdAt ?? defaultTimestampConfig.createdAt,
+    updatedAt: options.updatedAt ?? defaultTimestampConfig.updatedAt,
   }
 }
 
@@ -617,7 +795,6 @@ type CreateRelationOptions<
 > = {
   relationKind: RelationKind
   cardinality: cardinality
-  name: string
   sourceTable: source
   targetTable: target
   sourceKey: string[]
@@ -645,7 +822,6 @@ function createRelation<
   let relation: Relation<source, target, cardinality, loaded> = {
     kind: 'relation',
     relationKind: options.relationKind,
-    name: options.name,
     sourceTable: options.sourceTable,
     targetTable: options.targetTable,
     cardinality: options.cardinality,
@@ -654,16 +830,22 @@ function createRelation<
     through: options.through,
     modifiers: baseModifiers,
 
-    where(input: WhereInput<keyof TableRow<target> & string>) {
+    where(input: WhereInput<TableColumnName<target> | QualifiedTableColumnName<target>>) {
       let predicate = normalizeWhereInput(input)
       return cloneRelation(relation, {
         where: [...relation.modifiers.where, predicate],
       })
     },
 
-    orderBy(column: keyof TableRow<target> & string, direction: OrderDirection = 'asc') {
+    orderBy(column: TableColumnInput<target>, direction: OrderDirection = 'asc') {
       return cloneRelation(relation, {
-        orderBy: [...relation.modifiers.orderBy, { column, direction }],
+        orderBy: [
+          ...relation.modifiers.orderBy,
+          {
+            column: normalizeColumnInput(column),
+            direction,
+          },
+        ],
       })
     },
 
@@ -704,7 +886,6 @@ function cloneRelation<
   return createRelation({
     relationKind: relation.relationKind,
     cardinality: relation.cardinality,
-    name: relation.name,
     sourceTable: relation.sourceTable,
     targetTable: relation.targetTable,
     sourceKey: relation.sourceKey,

@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { number } from '@remix-run/data-schema'
 
 import {
   and,
@@ -17,10 +18,38 @@ import {
   notNull,
   or,
 } from './operators.ts'
+import { createTable } from './table.ts'
+
+let accounts = createTable({
+  name: 'accounts',
+  columns: {
+    id: number(),
+  },
+})
+
+let projects = createTable({
+  name: 'projects',
+  columns: {
+    id: number(),
+    account_id: number(),
+  },
+})
 
 describe('comparison predicates', () => {
   it('treats qualified string values as column references', () => {
     let predicate = eq('accounts.id', 'projects.account_id')
+
+    assert.deepEqual(predicate, {
+      type: 'comparison',
+      operator: 'eq',
+      column: 'accounts.id',
+      value: 'projects.account_id',
+      valueType: 'column',
+    })
+  })
+
+  it('supports column reference inputs', () => {
+    let predicate = eq(accounts.id, projects.account_id)
 
     assert.deepEqual(predicate, {
       type: 'comparison',

@@ -1,3 +1,4 @@
+import { getTableName, getTablePrimaryKey } from '@remix-run/data-table'
 import type { AdapterStatement, Predicate } from '@remix-run/data-table'
 
 type JoinClause = Extract<AdapterStatement, { kind: 'select' }>['joins'][number]
@@ -82,7 +83,7 @@ export function compileMysqlStatement(statement: AdapterStatement): CompiledSql 
     return {
       text:
         'update ' +
-        quoteIdentifier(statement.table.name) +
+        quoteIdentifier(getTableName(statement.table)) +
         ' set ' +
         columns
           .map(
@@ -98,7 +99,7 @@ export function compileMysqlStatement(statement: AdapterStatement): CompiledSql 
     return {
       text:
         'delete from ' +
-        quoteIdentifier(statement.table.name) +
+        quoteIdentifier(getTableName(statement.table)) +
         compileWhereClause(statement.where, context),
       values: context.values,
     }
@@ -120,7 +121,7 @@ function compileInsertStatement(
 
   if (columns.length === 0) {
     return {
-      text: 'insert into ' + quoteIdentifier(table.name) + ' () values ()',
+      text: 'insert into ' + quoteIdentifier(getTableName(table)) + ' () values ()',
       values: context.values,
     }
   }
@@ -128,7 +129,7 @@ function compileInsertStatement(
   return {
     text:
       'insert into ' +
-      quoteIdentifier(table.name) +
+      quoteIdentifier(getTableName(table)) +
       ' (' +
       columns.map((column) => quotePath(column)).join(', ') +
       ') values (' +
@@ -154,7 +155,7 @@ function compileInsertManyStatement(
 
   if (columns.length === 0) {
     return {
-      text: 'insert into ' + quoteIdentifier(table.name) + ' () values ()',
+      text: 'insert into ' + quoteIdentifier(getTableName(table)) + ' () values ()',
       values: context.values,
     }
   }
@@ -174,7 +175,7 @@ function compileInsertManyStatement(
   return {
     text:
       'insert into ' +
-      quoteIdentifier(table.name) +
+      quoteIdentifier(getTableName(table)) +
       ' (' +
       columns.map((column) => quotePath(column)).join(', ') +
       ') values ' +
@@ -192,7 +193,7 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
 
   let updateValues = statement.update ?? statement.values
   let updateColumns = Object.keys(updateValues)
-  let fallbackNoopColumn = statement.table.primaryKey[0]
+  let fallbackNoopColumn = getTablePrimaryKey(statement.table)[0]
 
   let onDuplicate =
     updateColumns.length > 0
@@ -204,7 +205,7 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
   return {
     text:
       'insert into ' +
-      quoteIdentifier(statement.table.name) +
+      quoteIdentifier(getTableName(statement.table)) +
       ' (' +
       insertColumns.map((column) => quotePath(column)).join(', ') +
       ') values (' +
@@ -220,14 +221,14 @@ function compileFromClause(
   joins: JoinClause[],
   context: CompileContext,
 ): string {
-  let output = ' from ' + quoteIdentifier(table.name)
+  let output = ' from ' + quoteIdentifier(getTableName(table))
 
   for (let join of joins) {
     output +=
       ' ' +
       normalizeJoinType(join.type) +
       ' join ' +
-      quoteIdentifier(join.table.name) +
+      quoteIdentifier(getTableName(join.table)) +
       ' on ' +
       compilePredicate(join.on, context)
   }

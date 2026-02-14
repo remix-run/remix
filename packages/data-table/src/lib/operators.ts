@@ -1,3 +1,9 @@
+import { isColumnReference, normalizeColumnInput } from './references.ts'
+import type { ColumnInput, ColumnReferenceLike, NormalizeColumnInput } from './references.ts'
+
+/**
+ * Comparison operators supported by `comparison` predicates.
+ */
 export type ComparisonOperator =
   | 'eq'
   | 'ne'
@@ -12,6 +18,12 @@ export type ComparisonOperator =
 
 type QualifiedColumnReference = `${string}.${string}`
 
+type PredicateColumn<input extends string | ColumnReferenceLike> =
+  NormalizeColumnInput<input> & string
+
+/**
+ * Normalized predicate representation consumed by adapters.
+ */
 export type Predicate<column extends string = string> =
   | {
       type: 'comparison'
@@ -46,176 +58,262 @@ export type Predicate<column extends string = string> =
 
 export type WhereObject<column extends string = string> = Partial<Record<column, unknown>>
 
+/**
+ * User-facing where input accepted by `query.where()` and relation modifiers.
+ */
 export type WhereInput<column extends string = string> = Predicate<column> | WhereObject<column>
 
-export function eq<left extends QualifiedColumnReference, right extends QualifiedColumnReference>(
+/**
+ * Builds an equality predicate.
+ */
+export function eq<
+  left extends ColumnInput<QualifiedColumnReference>,
+  right extends ColumnInput<QualifiedColumnReference>,
+>(
   column: left,
   value: right & (right extends `${string}@${string}` ? never : right),
-): Predicate<left | right>
-export function eq<column extends string>(column: column, value: unknown): Predicate<column>
-export function eq(column: string, value: unknown): Predicate<string> {
-  if (isQualifiedColumnReference(column) && isQualifiedColumnReference(value)) {
-    return {
-      type: 'comparison',
-      operator: 'eq',
-      column,
-      value,
-      valueType: 'column',
-    }
-  }
-
-  return { type: 'comparison', operator: 'eq', column, value, valueType: 'value' }
+): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+export function eq<column extends string | ColumnReferenceLike>(
+  column: column,
+  value: unknown,
+): Predicate<PredicateColumn<column>>
+export function eq(column: string | ColumnReferenceLike, value: unknown): Predicate<string> {
+  return createComparisonPredicate('eq', column, value)
 }
 
-export function ne<left extends QualifiedColumnReference, right extends QualifiedColumnReference>(
+/**
+ * Builds an inequality predicate.
+ */
+export function ne<
+  left extends ColumnInput<QualifiedColumnReference>,
+  right extends ColumnInput<QualifiedColumnReference>,
+>(
   column: left,
   value: right & (right extends `${string}@${string}` ? never : right),
-): Predicate<left | right>
-export function ne<column extends string>(column: column, value: unknown): Predicate<column>
-export function ne(column: string, value: unknown): Predicate<string> {
-  if (isQualifiedColumnReference(column) && isQualifiedColumnReference(value)) {
-    return {
-      type: 'comparison',
-      operator: 'ne',
-      column,
-      value,
-      valueType: 'column',
-    }
-  }
-
-  return { type: 'comparison', operator: 'ne', column, value, valueType: 'value' }
+): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+export function ne<column extends string | ColumnReferenceLike>(
+  column: column,
+  value: unknown,
+): Predicate<PredicateColumn<column>>
+export function ne(column: string | ColumnReferenceLike, value: unknown): Predicate<string> {
+  return createComparisonPredicate('ne', column, value)
 }
 
-export function gt<left extends QualifiedColumnReference, right extends QualifiedColumnReference>(
+/**
+ * Builds a greater-than predicate.
+ */
+export function gt<
+  left extends ColumnInput<QualifiedColumnReference>,
+  right extends ColumnInput<QualifiedColumnReference>,
+>(
   column: left,
   value: right & (right extends `${string}@${string}` ? never : right),
-): Predicate<left | right>
-export function gt<column extends string>(column: column, value: unknown): Predicate<column>
-export function gt(column: string, value: unknown): Predicate<string> {
-  if (isQualifiedColumnReference(column) && isQualifiedColumnReference(value)) {
-    return {
-      type: 'comparison',
-      operator: 'gt',
-      column,
-      value,
-      valueType: 'column',
-    }
-  }
-
-  return { type: 'comparison', operator: 'gt', column, value, valueType: 'value' }
+): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+export function gt<column extends string | ColumnReferenceLike>(
+  column: column,
+  value: unknown,
+): Predicate<PredicateColumn<column>>
+export function gt(column: string | ColumnReferenceLike, value: unknown): Predicate<string> {
+  return createComparisonPredicate('gt', column, value)
 }
 
-export function gte<left extends QualifiedColumnReference, right extends QualifiedColumnReference>(
+/**
+ * Builds a greater-than-or-equal predicate.
+ */
+export function gte<
+  left extends ColumnInput<QualifiedColumnReference>,
+  right extends ColumnInput<QualifiedColumnReference>,
+>(
   column: left,
   value: right & (right extends `${string}@${string}` ? never : right),
-): Predicate<left | right>
-export function gte<column extends string>(column: column, value: unknown): Predicate<column>
-export function gte(column: string, value: unknown): Predicate<string> {
-  if (isQualifiedColumnReference(column) && isQualifiedColumnReference(value)) {
-    return {
-      type: 'comparison',
-      operator: 'gte',
-      column,
-      value,
-      valueType: 'column',
-    }
-  }
-
-  return { type: 'comparison', operator: 'gte', column, value, valueType: 'value' }
+): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+export function gte<column extends string | ColumnReferenceLike>(
+  column: column,
+  value: unknown,
+): Predicate<PredicateColumn<column>>
+export function gte(column: string | ColumnReferenceLike, value: unknown): Predicate<string> {
+  return createComparisonPredicate('gte', column, value)
 }
 
-export function lt<left extends QualifiedColumnReference, right extends QualifiedColumnReference>(
+/**
+ * Builds a less-than predicate.
+ */
+export function lt<
+  left extends ColumnInput<QualifiedColumnReference>,
+  right extends ColumnInput<QualifiedColumnReference>,
+>(
   column: left,
   value: right & (right extends `${string}@${string}` ? never : right),
-): Predicate<left | right>
-export function lt<column extends string>(column: column, value: unknown): Predicate<column>
-export function lt(column: string, value: unknown): Predicate<string> {
-  if (isQualifiedColumnReference(column) && isQualifiedColumnReference(value)) {
-    return {
-      type: 'comparison',
-      operator: 'lt',
-      column,
-      value,
-      valueType: 'column',
-    }
-  }
-
-  return { type: 'comparison', operator: 'lt', column, value, valueType: 'value' }
+): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+export function lt<column extends string | ColumnReferenceLike>(
+  column: column,
+  value: unknown,
+): Predicate<PredicateColumn<column>>
+export function lt(column: string | ColumnReferenceLike, value: unknown): Predicate<string> {
+  return createComparisonPredicate('lt', column, value)
 }
 
-export function lte<left extends QualifiedColumnReference, right extends QualifiedColumnReference>(
+/**
+ * Builds a less-than-or-equal predicate.
+ */
+export function lte<
+  left extends ColumnInput<QualifiedColumnReference>,
+  right extends ColumnInput<QualifiedColumnReference>,
+>(
   column: left,
   value: right & (right extends `${string}@${string}` ? never : right),
-): Predicate<left | right>
-export function lte<column extends string>(column: column, value: unknown): Predicate<column>
-export function lte(column: string, value: unknown): Predicate<string> {
-  if (isQualifiedColumnReference(column) && isQualifiedColumnReference(value)) {
-    return {
-      type: 'comparison',
-      operator: 'lte',
-      column,
-      value,
-      valueType: 'column',
-    }
-  }
-
-  return { type: 'comparison', operator: 'lte', column, value, valueType: 'value' }
+): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+export function lte<column extends string | ColumnReferenceLike>(
+  column: column,
+  value: unknown,
+): Predicate<PredicateColumn<column>>
+export function lte(column: string | ColumnReferenceLike, value: unknown): Predicate<string> {
+  return createComparisonPredicate('lte', column, value)
 }
 
-export function inList<column extends string>(
+/**
+ * Builds an `IN` predicate.
+ * @param column Column to compare.
+ * @param values Candidate values.
+ * @returns An `in` comparison predicate.
+ */
+export function inList<column extends string | ColumnReferenceLike>(
   column: column,
   values: readonly unknown[],
-): Predicate<column> {
-  return { type: 'comparison', operator: 'in', column, value: [...values], valueType: 'value' }
-}
-
-export function notInList<column extends string>(
-  column: column,
-  values: readonly unknown[],
-): Predicate<column> {
+): Predicate<PredicateColumn<column>> {
   return {
     type: 'comparison',
-    operator: 'notIn',
-    column,
+    operator: 'in',
+    column: resolvePredicateColumn(column),
     value: [...values],
     valueType: 'value',
   }
 }
 
-export function like<column extends string>(column: column, value: string): Predicate<column> {
-  return { type: 'comparison', operator: 'like', column, value, valueType: 'value' }
+/**
+ * Builds a `NOT IN` predicate.
+ * @param column Column to compare.
+ * @param values Candidate values.
+ * @returns A `notIn` comparison predicate.
+ */
+export function notInList<column extends string | ColumnReferenceLike>(
+  column: column,
+  values: readonly unknown[],
+): Predicate<PredicateColumn<column>> {
+  return {
+    type: 'comparison',
+    operator: 'notIn',
+    column: resolvePredicateColumn(column),
+    value: [...values],
+    valueType: 'value',
+  }
 }
 
-export function ilike<column extends string>(column: column, value: string): Predicate<column> {
-  return { type: 'comparison', operator: 'ilike', column, value, valueType: 'value' }
+/**
+ * Builds a case-sensitive SQL `LIKE` predicate.
+ * @param column Column to compare.
+ * @param value Match pattern.
+ * @returns A `like` comparison predicate.
+ */
+export function like<column extends string | ColumnReferenceLike>(
+  column: column,
+  value: string,
+): Predicate<PredicateColumn<column>> {
+  return {
+    type: 'comparison',
+    operator: 'like',
+    column: resolvePredicateColumn(column),
+    value,
+    valueType: 'value',
+  }
 }
 
-export function between<column extends string>(
+/**
+ * Builds a case-insensitive SQL `LIKE` predicate.
+ * @param column Column to compare.
+ * @param value Match pattern.
+ * @returns An `ilike` comparison predicate.
+ */
+export function ilike<column extends string | ColumnReferenceLike>(
+  column: column,
+  value: string,
+): Predicate<PredicateColumn<column>> {
+  return {
+    type: 'comparison',
+    operator: 'ilike',
+    column: resolvePredicateColumn(column),
+    value,
+    valueType: 'value',
+  }
+}
+
+/**
+ * Builds a `BETWEEN` predicate.
+ * @param column Column to compare.
+ * @param lower Lower bound value.
+ * @param upper Upper bound value.
+ * @returns A `between` predicate.
+ */
+export function between<column extends string | ColumnReferenceLike>(
   column: column,
   lower: unknown,
   upper: unknown,
-): Predicate<column> {
-  return { type: 'between', column, lower, upper }
+): Predicate<PredicateColumn<column>> {
+  return {
+    type: 'between',
+    column: resolvePredicateColumn(column),
+    lower,
+    upper,
+  }
 }
 
-export function isNull<column extends string>(column: column): Predicate<column> {
-  return { type: 'null', operator: 'isNull', column }
+/**
+ * Builds an `IS NULL` predicate.
+ * @param column Column to compare.
+ * @returns An `isNull` predicate.
+ */
+export function isNull<column extends string | ColumnReferenceLike>(
+  column: column,
+): Predicate<PredicateColumn<column>> {
+  return { type: 'null', operator: 'isNull', column: resolvePredicateColumn(column) }
 }
 
-export function notNull<column extends string>(column: column): Predicate<column> {
-  return { type: 'null', operator: 'notNull', column }
+/**
+ * Builds an `IS NOT NULL` predicate.
+ * @param column Column to compare.
+ * @returns A `notNull` predicate.
+ */
+export function notNull<column extends string | ColumnReferenceLike>(
+  column: column,
+): Predicate<PredicateColumn<column>> {
+  return { type: 'null', operator: 'notNull', column: resolvePredicateColumn(column) }
 }
 
+/**
+ * Combines predicates with logical `AND`.
+ * @param predicates Child predicates.
+ * @returns A logical `and` predicate.
+ */
 export function and<column extends string>(...predicates: Predicate<column>[]): Predicate<column> {
   let filtered = predicates.filter(Boolean)
   return { type: 'logical', operator: 'and', predicates: filtered }
 }
 
+/**
+ * Combines predicates with logical `OR`.
+ * @param predicates Child predicates.
+ * @returns A logical `or` predicate.
+ */
 export function or<column extends string>(...predicates: Predicate<column>[]): Predicate<column> {
   let filtered = predicates.filter(Boolean)
   return { type: 'logical', operator: 'or', predicates: filtered }
 }
 
+/**
+ * Returns `true` when a value is a normalized predicate object.
+ * @param value Value to inspect.
+ * @returns Whether the value is a predicate.
+ */
 export function isPredicate<column extends string = string>(
   value: unknown,
 ): value is Predicate<column> {
@@ -236,6 +334,11 @@ export function isPredicate<column extends string = string>(
   )
 }
 
+/**
+ * Normalizes object shorthand into a predicate tree.
+ * @param input Predicate object or shorthand where map.
+ * @returns A normalized predicate.
+ */
 export function normalizeWhereInput<column extends string>(
   input: WhereInput<column>,
 ): Predicate<column> {
@@ -244,11 +347,16 @@ export function normalizeWhereInput<column extends string>(
   }
 
   let keys = Object.keys(input) as column[]
-  let predicates = keys.map((column) => eq(column, input[column]))
+  let predicates = keys.map((column) => eq(column, input[column]) as Predicate<column>)
 
   return and(...predicates)
 }
 
+/**
+ * Collects referenced columns from a predicate tree.
+ * @param predicate Predicate to inspect.
+ * @returns Referenced column names.
+ */
 export function getPredicateColumns(predicate: Predicate): string[] {
   if (predicate.type === 'comparison') {
     if (predicate.valueType === 'column') {
@@ -281,4 +389,45 @@ function isQualifiedColumnReference(value: unknown): value is QualifiedColumnRef
   }
 
   return /^[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)
+}
+
+function resolvePredicateColumn<input extends string | ColumnReferenceLike>(
+  column: input,
+): PredicateColumn<input> {
+  return normalizeColumnInput(column) as PredicateColumn<input>
+}
+
+function resolveComparisonValue(value: unknown): unknown {
+  if (isColumnReference(value)) {
+    return normalizeColumnInput(value)
+  }
+
+  return value
+}
+
+function createComparisonPredicate(
+  operator: Exclude<ComparisonOperator, 'in' | 'notIn'>,
+  column: string | ColumnReferenceLike,
+  value: unknown,
+): Predicate<string> {
+  let normalizedColumn = resolvePredicateColumn(column)
+  let normalizedValue = resolveComparisonValue(value)
+
+  if (isQualifiedColumnReference(normalizedColumn) && isQualifiedColumnReference(normalizedValue)) {
+    return {
+      type: 'comparison',
+      operator,
+      column: normalizedColumn,
+      value: normalizedValue,
+      valueType: 'column',
+    }
+  }
+
+  return {
+    type: 'comparison',
+    operator,
+    column: normalizedColumn,
+    value: normalizedValue,
+    valueType: 'value',
+  }
 }

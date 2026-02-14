@@ -6,16 +6,26 @@ import type {
   TransactionOptions,
   TransactionToken,
 } from '@remix-run/data-table'
+import { getTablePrimaryKey } from '@remix-run/data-table'
 import type { Database as BetterSqliteDatabase, RunResult } from 'better-sqlite3'
 
 import { compileSqliteStatement } from './sql-compiler.ts'
 
+/**
+ * Better SQLite3 database handle accepted by the sqlite adapter.
+ */
 export type SqliteDatabaseConnection = BetterSqliteDatabase
 
+/**
+ * Sqlite adapter configuration.
+ */
 export type SqliteDatabaseAdapterOptions = {
   capabilities?: AdapterCapabilityOverrides
 }
 
+/**
+ * `DatabaseAdapter` implementation for Better SQLite3.
+ */
 export class SqliteDatabaseAdapter implements DatabaseAdapter {
   dialect = 'sqlite'
   capabilities
@@ -115,6 +125,12 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
   }
 }
 
+/**
+ * Creates a sqlite `DatabaseAdapter`.
+ * @param database Better SQLite3 database instance.
+ * @param options Optional adapter capability overrides.
+ * @returns A configured sqlite adapter.
+ */
 export function createSqliteDatabaseAdapter(
   database: SqliteDatabaseConnection,
   options?: SqliteDatabaseAdapterOptions,
@@ -162,13 +178,7 @@ function normalizeAffectedRowsForReader(
   kind: AdapterExecuteRequest['statement']['kind'],
   rows: Record<string, unknown>[],
 ): number | undefined {
-  if (
-    kind === 'insert' ||
-    kind === 'insertMany' ||
-    kind === 'update' ||
-    kind === 'delete' ||
-    kind === 'upsert'
-  ) {
+  if (isWriteStatementKind(kind)) {
     return rows.length
   }
 
@@ -180,23 +190,17 @@ function normalizeInsertIdForReader(
   statement: AdapterExecuteRequest['statement'],
   rows: Record<string, unknown>[],
 ): unknown {
-  if (kind !== 'insert' && kind !== 'insertMany' && kind !== 'upsert') {
+  if (!isInsertStatementKind(kind) || !isInsertStatement(statement)) {
     return undefined
   }
 
-  if (
-    statement.kind !== 'insert' &&
-    statement.kind !== 'insertMany' &&
-    statement.kind !== 'upsert'
-  ) {
+  let primaryKey = getTablePrimaryKey(statement.table)
+
+  if (primaryKey.length !== 1) {
     return undefined
   }
 
-  if (statement.table.primaryKey.length !== 1) {
-    return undefined
-  }
-
-  let key = statement.table.primaryKey[0]
+  let key = primaryKey[0]
   let row = rows[rows.length - 1]
 
   return row ? row[key] : undefined
@@ -218,19 +222,11 @@ function normalizeInsertIdForRun(
   statement: AdapterExecuteRequest['statement'],
   result: RunResult,
 ): unknown {
-  if (kind !== 'insert' && kind !== 'insertMany' && kind !== 'upsert') {
+  if (!isInsertStatementKind(kind) || !isInsertStatement(statement)) {
     return undefined
   }
 
-  if (
-    statement.kind !== 'insert' &&
-    statement.kind !== 'insertMany' &&
-    statement.kind !== 'upsert'
-  ) {
-    return undefined
-  }
-
-  if (statement.table.primaryKey.length !== 1) {
+  if (getTablePrimaryKey(statement.table).length !== 1) {
     return undefined
   }
 
@@ -239,4 +235,18 @@ function normalizeInsertIdForRun(
 
 function quoteIdentifier(value: string): string {
   return '"' + value.replace(/"/g, '""') + '"'
+}
+
+function isWriteStatementKind(kind: AdapterExecuteRequest['statement']['kind']): boolean {
+  return kind === 'insert' || kind === 'insertMany' || kind === 'update' || kind === 'delete' || kind === 'upsert'
+}
+
+function isInsertStatementKind(kind: AdapterExecuteRequest['statement']['kind']): boolean {
+  return kind === 'insert' || kind === 'insertMany' || kind === 'upsert'
+}
+
+function isInsertStatement(
+  statement: AdapterExecuteRequest['statement'],
+): statement is Extract<AdapterExecuteRequest['statement'], { kind: 'insert' | 'insertMany' | 'upsert' }> {
+  return statement.kind === 'insert' || statement.kind === 'insertMany' || statement.kind === 'upsert'
 }

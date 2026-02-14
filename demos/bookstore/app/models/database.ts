@@ -2,7 +2,7 @@ import * as fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import BetterSqlite3 from 'better-sqlite3'
 import * as s from 'remix/data-schema'
-import { createDatabase, createTable, sql } from 'remix/data-table'
+import { belongsTo, createDatabase, createTable, hasMany, sql } from 'remix/data-table'
 import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
 export let books = createTable({
@@ -59,8 +59,8 @@ export let orderItems = createTable({
   },
 })
 
-export let itemsByOrder = orders.hasMany(orderItems, { name: 'items' })
-export let bookForOrderItem = orderItems.belongsTo(books, { name: 'book' })
+export let itemsByOrder = hasMany(orders, orderItems)
+export let bookForOrderItem = belongsTo(orderItems, books)
 
 export let passwordResetTokens = createTable({
   name: 'password_reset_tokens',

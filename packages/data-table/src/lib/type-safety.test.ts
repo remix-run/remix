@@ -9,7 +9,7 @@ import type {
   QueryForTable,
   WriteResult,
 } from './database.ts'
-import { createTable } from './table.ts'
+import { createTable, hasMany } from './table.ts'
 import type { TableReference } from './table.ts'
 import { eq } from './operators.ts'
 import type { SqliteTestSeed } from '../../test/sqlite-test-database.ts'
@@ -40,7 +40,7 @@ let projects = createTable({
   },
 })
 
-let accountProjects = accounts.hasMany(projects)
+let accountProjects = hasMany(accounts, projects)
 
 let cleanups = new Set<() => void>()
 
@@ -136,14 +136,14 @@ describe('type safety', () => {
 
     let rows = await db
       .query(accounts)
-      .join(projects, eq('accounts.id', 'projects.account_id'))
+      .join(projects, eq(accounts.id, projects.account_id))
       .select({
-        accountId: 'accounts.id',
-        accountEmail: 'accounts.email',
-        projectId: 'projects.id',
-        projectArchived: 'projects.archived',
+        accountId: accounts.id,
+        accountEmail: accounts.email,
+        projectId: projects.id,
+        projectArchived: projects.archived,
       })
-      .orderBy('projects.id', 'asc')
+      .orderBy(projects.id, 'asc')
       .all()
 
     assert.equal(rows.length, 1)
@@ -154,9 +154,9 @@ describe('type safety', () => {
 
     let groupedCount = await db
       .query(accounts)
-      .join(projects, eq('accounts.id', 'projects.account_id'))
-      .groupBy('projects.account_id')
-      .having(eq('projects.account_id', 1))
+      .join(projects, eq(accounts.id, projects.account_id))
+      .groupBy(projects.account_id)
+      .having(eq(projects.account_id, 1))
       .count()
 
     assert.equal(groupedCount, 1)
@@ -172,17 +172,17 @@ describe('type safety', () => {
 
     function verifyTypeErrors(): void {
       db.query(accounts)
-        .join(projects, eq('accounts.id', 'projects.account_id'))
+        .join(projects, eq(accounts.id, projects.account_id))
         // @ts-expect-error unknown joined column for orderBy
-        .orderBy('projects.nope')
+        .orderBy(projects.nope)
       db.query(accounts)
-        .join(projects, eq('accounts.id', 'projects.account_id'))
+        .join(projects, eq(accounts.id, projects.account_id))
         // @ts-expect-error unknown joined column for groupBy
-        .groupBy('projects.nope')
+        .groupBy(projects.nope)
       db.query(accounts)
-        .join(projects, eq('accounts.id', 'projects.account_id'))
+        .join(projects, eq(accounts.id, projects.account_id))
         // @ts-expect-error unknown source column in alias selection
-        .select({ bad: 'projects.nope' })
+        .select({ bad: projects.nope })
     }
 
     void verifyTypeErrors
@@ -204,8 +204,8 @@ describe('type safety', () => {
       .count()
     let joined = await db
       .query(accounts)
-      .join(projects, eq('accounts.id', 'projects.account_id'))
-      .where(eq('projects.archived', false))
+      .join(projects, eq(accounts.id, projects.account_id))
+      .where(eq(projects.archived, false))
       .all()
     let withRelations = await db
       .query(accounts)
@@ -225,7 +225,7 @@ describe('type safety', () => {
       // @ts-expect-error join predicate key must be from source or target table
       db.query(accounts).join(projects, eq('not_a_column', true))
       // @ts-expect-error right-hand column reference must be from source or target table
-      db.query(accounts).join(projects, eq('accounts.id', 'projects.not_a_column'))
+      db.query(accounts).join(projects, eq(accounts.id, 'projects.not_a_column'))
       // @ts-expect-error relation predicate key must be from relation target table
       accountProjects.where({ not_a_column: true })
     }

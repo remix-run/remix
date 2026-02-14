@@ -3,7 +3,7 @@ import { beforeEach, it } from 'node:test'
 import { boolean, nullable, number, string } from '@remix-run/data-schema'
 
 import type { Database } from '../src/lib/database.ts'
-import { createTable } from '../src/lib/table.ts'
+import { createTable, hasMany, hasManyThrough } from '../src/lib/table.ts'
 import { between, eq, ilike, inList, ne } from '../src/lib/operators.ts'
 
 let accounts = createTable({
@@ -36,8 +36,8 @@ let tasks = createTable({
   },
 })
 
-let accountProjects = accounts.hasMany(projects)
-let accountTasks = accounts.hasManyThrough(tasks, {
+let accountProjects = hasMany(accounts, projects)
+let accountTasks = hasManyThrough(accounts, tasks, {
   through: accountProjects,
 })
 

@@ -6,18 +6,31 @@ import type {
   TransactionOptions,
   TransactionToken,
 } from '@remix-run/data-table'
+import { getTablePrimaryKey } from '@remix-run/data-table'
 
 import { compileMysqlStatement } from './sql-compiler.ts'
 
+/**
+ * Row-array response shape for mysql query calls.
+ */
 export type MysqlQueryRows = Record<string, unknown>[]
 
+/**
+ * Metadata shape for mysql write results.
+ */
 export type MysqlQueryResultHeader = {
   affectedRows: number
   insertId: unknown
 }
 
+/**
+ * Supported mysql `query()` response tuple.
+ */
 export type MysqlQueryResponse = [result: unknown, fields?: unknown]
 
+/**
+ * Single mysql connection contract used by this adapter.
+ */
 export type MysqlDatabaseConnection = {
   query(text: string, values?: unknown[]): Promise<MysqlQueryResponse>
   beginTransaction(): Promise<void>
@@ -26,11 +39,17 @@ export type MysqlDatabaseConnection = {
   release?: () => void
 }
 
+/**
+ * Mysql pool contract used by this adapter.
+ */
 export type MysqlDatabasePool = {
   query(text: string, values?: unknown[]): Promise<MysqlQueryResponse>
   getConnection(): Promise<MysqlDatabaseConnection>
 }
 
+/**
+ * Mysql adapter configuration.
+ */
 export type MysqlDatabaseAdapterOptions = {
   capabilities?: AdapterCapabilityOverrides
 }
@@ -42,6 +61,9 @@ type TransactionState = {
 
 type MysqlQueryable = MysqlDatabasePool | MysqlDatabaseConnection
 
+/**
+ * `DatabaseAdapter` implementation for mysql-compatible clients.
+ */
 export class MysqlDatabaseAdapter implements DatabaseAdapter {
   dialect = 'mysql'
   capabilities
@@ -194,6 +216,12 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
   }
 }
 
+/**
+ * Creates a mysql `DatabaseAdapter`.
+ * @param client Mysql pool or connection.
+ * @param options Optional adapter capability overrides.
+ * @returns A configured mysql adapter.
+ */
 export function createMysqlDatabaseAdapter(
   client: MysqlQueryable,
   options?: MysqlDatabaseAdapterOptions,
@@ -260,19 +288,11 @@ function normalizeInsertId(
   statement: AdapterExecuteRequest['statement'],
   header: MysqlQueryResultHeader,
 ): unknown {
-  if (kind !== 'insert' && kind !== 'insertMany' && kind !== 'upsert') {
+  if (!isInsertStatementKind(kind) || !isInsertStatement(statement)) {
     return undefined
   }
 
-  if (
-    statement.kind !== 'insert' &&
-    statement.kind !== 'insertMany' &&
-    statement.kind !== 'upsert'
-  ) {
-    return undefined
-  }
-
-  if (statement.table.primaryKey.length !== 1) {
+  if (getTablePrimaryKey(statement.table).length !== 1) {
     return undefined
   }
 
@@ -281,4 +301,14 @@ function normalizeInsertId(
 
 function quoteIdentifier(value: string): string {
   return '`' + value.replace(/`/g, '``') + '`'
+}
+
+function isInsertStatementKind(kind: AdapterExecuteRequest['statement']['kind']): boolean {
+  return kind === 'insert' || kind === 'insertMany' || kind === 'upsert'
+}
+
+function isInsertStatement(
+  statement: AdapterExecuteRequest['statement'],
+): statement is Extract<AdapterExecuteRequest['statement'], { kind: 'insert' | 'insertMany' | 'upsert' }> {
+  return statement.kind === 'insert' || statement.kind === 'insertMany' || statement.kind === 'upsert'
 }
