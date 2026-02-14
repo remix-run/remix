@@ -124,14 +124,12 @@ export default {
 
       let order = await createOrder(
         user.id,
-        JSON.stringify(
-          cart.items.map((item) => ({
-            bookId: item.bookId,
-            title: item.title,
-            price: item.price,
-            quantity: item.quantity,
-          })),
-        ),
+        cart.items.map((item) => ({
+          bookId: item.bookId,
+          title: item.title,
+          price: item.price,
+          quantity: item.quantity,
+        })),
         JSON.stringify(shippingAddress),
       )
 

@@ -5,7 +5,7 @@ import { createDatabase, createTable, eq, inList, sql } from '@remix-run/data-ta
 
 import { createPostgresDatabaseAdapter } from './adapter.ts'
 
-let Accounts = createTable({
+let accounts = createTable({
   name: 'accounts',
   columns: {
     id: number(),
@@ -13,7 +13,7 @@ let Accounts = createTable({
   },
 })
 
-let Projects = createTable({
+let projects = createTable({
   name: 'projects',
   columns: {
     id: number(),
@@ -52,7 +52,7 @@ describe('postgres adapter', () => {
 
     let db = createDatabase(createPostgresDatabaseAdapter(client as never))
 
-    let count = await db.query(Accounts).count()
+    let count = await db.query(accounts).count()
     await db.exec(sql`select * from accounts where id = ${42}`)
 
     assert.equal(count, 2)
@@ -147,8 +147,8 @@ describe('postgres adapter', () => {
     let db = createDatabase(createPostgresDatabaseAdapter(client as never))
 
     await db
-      .query(Accounts)
-      .join(Projects, eq('accounts.id', 'projects.account_id'))
+      .query(accounts)
+      .join(projects, eq('accounts.id', 'projects.account_id'))
       .where(eq('accounts.email', 'ops@example.com'))
       .count()
 
@@ -177,7 +177,7 @@ describe('postgres adapter', () => {
     let db = createDatabase(createPostgresDatabaseAdapter(client as never))
 
     await db
-      .query(Accounts)
+      .query(accounts)
       .where(inList('id', [1, 3]))
       .count()
 

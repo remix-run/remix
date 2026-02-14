@@ -6,7 +6,7 @@ import type { Database } from '../src/lib/database.ts'
 import { createTable } from '../src/lib/table.ts'
 import { between, eq, ilike, inList, ne } from '../src/lib/operators.ts'
 
-let Accounts = createTable({
+let accounts = createTable({
   name: 'accounts',
   columns: {
     id: number(),
@@ -16,7 +16,7 @@ let Accounts = createTable({
   },
 })
 
-let Projects = createTable({
+let projects = createTable({
   name: 'projects',
   columns: {
     id: number(),
@@ -26,7 +26,7 @@ let Projects = createTable({
   },
 })
 
-let Tasks = createTable({
+let tasks = createTable({
   name: 'tasks',
   columns: {
     id: number(),
@@ -36,9 +36,9 @@ let Tasks = createTable({
   },
 })
 
-let AccountProjects = Accounts.hasMany(Projects)
-let AccountTasks = Accounts.hasManyThrough(Tasks, {
-  through: AccountProjects,
+let accountProjects = accounts.hasMany(projects)
+let accountTasks = accounts.hasManyThrough(tasks, {
+  through: accountProjects,
 })
 
 export type IntegrationContractOptions = {
@@ -62,7 +62,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     async function () {
       let db = options.createDatabase()
 
-      await db.query(Accounts).insertMany([
+      await db.query(accounts).insertMany([
         {
           id: 1,
           email: 'a@example.com',
@@ -76,7 +76,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
           nickname: 'bee',
         },
       ])
-      await db.query(Projects).insertMany([
+      await db.query(projects).insertMany([
         {
           id: 100,
           account_id: 1,
@@ -98,8 +98,8 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
       ])
 
       let joined = await db
-        .query(Accounts)
-        .join(Projects, eq('accounts.id', 'projects.account_id'))
+        .query(accounts)
+        .join(projects, eq('accounts.id', 'projects.account_id'))
         .where(eq('projects.archived', false))
         .select({
           accountId: 'accounts.id',
@@ -126,8 +126,8 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
       ])
 
       let groupedCount = await db
-        .query(Accounts)
-        .join(Projects, eq('accounts.id', 'projects.account_id'))
+        .query(accounts)
+        .join(projects, eq('accounts.id', 'projects.account_id'))
         .where(eq('projects.archived', false))
         .groupBy('accounts.id')
         .having(eq('accounts.id', 1))
@@ -143,41 +143,41 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     async function () {
       let db = options.createDatabase()
 
-      await db.query(Accounts).insertMany([
+      await db.query(accounts).insertMany([
         { id: 1, email: 'a@example.com', status: 'active', nickname: null },
         { id: 2, email: 'b@example.com', status: 'active', nickname: null },
       ])
-      await db.query(Projects).insertMany([
+      await db.query(projects).insertMany([
         { id: 100, account_id: 1, name: 'A-1', archived: false },
         { id: 101, account_id: 1, name: 'A-2', archived: false },
         { id: 200, account_id: 2, name: 'B-1', archived: false },
         { id: 201, account_id: 2, name: 'B-2', archived: false },
       ])
-      await db.query(Tasks).insertMany([
+      await db.query(tasks).insertMany([
         { id: 1000, project_id: 100, title: 'A1-T1', state: 'open' },
         { id: 1001, project_id: 101, title: 'A2-T1', state: 'open' },
         { id: 2000, project_id: 200, title: 'B1-T1', state: 'open' },
         { id: 2001, project_id: 201, title: 'B2-T1', state: 'open' },
       ])
 
-      let accounts = await db
-        .query(Accounts)
+      let accountRows = await db
+        .query(accounts)
         .orderBy('id', 'asc')
         .with({
-          projects: AccountProjects.orderBy('id', 'asc').limit(1),
-          tasks: AccountTasks.orderBy('id', 'asc').limit(1),
+          projects: accountProjects.orderBy('id', 'asc').limit(1),
+          tasks: accountTasks.orderBy('id', 'asc').limit(1),
         })
         .all()
 
-      assert.equal(accounts.length, 2)
-      assert.equal(accounts[0].projects.length, 1)
-      assert.equal(accounts[0].projects[0].id, 100)
-      assert.equal(accounts[1].projects.length, 1)
-      assert.equal(accounts[1].projects[0].id, 200)
-      assert.equal(accounts[0].tasks.length, 1)
-      assert.equal(accounts[0].tasks[0].id, 1000)
-      assert.equal(accounts[1].tasks.length, 1)
-      assert.equal(accounts[1].tasks[0].id, 2000)
+      assert.equal(accountRows.length, 2)
+      assert.equal(accountRows[0].projects.length, 1)
+      assert.equal(accountRows[0].projects[0].id, 100)
+      assert.equal(accountRows[1].projects.length, 1)
+      assert.equal(accountRows[1].projects[0].id, 200)
+      assert.equal(accountRows[0].tasks.length, 1)
+      assert.equal(accountRows[0].tasks[0].id, 1000)
+      assert.equal(accountRows[1].tasks.length, 1)
+      assert.equal(accountRows[1].tasks[0].id, 2000)
     },
   )
 
@@ -187,22 +187,22 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     async function () {
       let db = options.createDatabase()
 
-      await db.query(Accounts).insertMany([
+      await db.query(accounts).insertMany([
         { id: 1, email: 'a@example.com', status: 'active', nickname: null },
         { id: 2, email: 'b@example.com', status: 'active', nickname: null },
         { id: 3, email: 'c@example.com', status: 'active', nickname: null },
       ])
 
       await db
-        .query(Accounts)
+        .query(accounts)
         .where({ status: 'active' })
         .orderBy('id', 'asc')
         .limit(1)
         .update({ status: 'paused' })
 
-      await db.query(Accounts).where({ status: 'active' }).orderBy('id', 'desc').limit(1).delete()
+      await db.query(accounts).where({ status: 'active' }).orderBy('id', 'desc').limit(1).delete()
 
-      let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+      let rows = await db.query(accounts).orderBy('id', 'asc').all()
 
       assert.deepEqual(
         rows.map((row) => ({ id: row.id, status: row.status })),
@@ -220,7 +220,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     async function () {
       let db = options.createDatabase()
 
-      await db.query(Accounts).insert({
+      await db.query(accounts).insert({
         id: 1,
         email: 'a@example.com',
         status: 'active',
@@ -228,7 +228,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
       })
 
       await db.transaction(async (outerTransaction) => {
-        await outerTransaction.query(Accounts).insert({
+        await outerTransaction.query(accounts).insert({
           id: 2,
           email: 'b@example.com',
           status: 'active',
@@ -237,7 +237,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
 
         await outerTransaction
           .transaction(async (innerTransaction) => {
-            await innerTransaction.query(Accounts).insert({
+            await innerTransaction.query(accounts).insert({
               id: 3,
               email: 'c@example.com',
               status: 'active',
@@ -251,7 +251,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
 
       await db
         .transaction(async (transactionDatabase) => {
-          await transactionDatabase.query(Accounts).insert({
+          await transactionDatabase.query(accounts).insert({
             id: 4,
             email: 'd@example.com',
             status: 'active',
@@ -262,7 +262,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         })
         .catch(() => undefined)
 
-      let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+      let rows = await db.query(accounts).orderBy('id', 'asc').all()
 
       assert.deepEqual(
         rows.map((row) => row.id),
@@ -277,14 +277,14 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     async function () {
       let db = options.createDatabase()
 
-      await db.query(Accounts).insert({
+      await db.query(accounts).insert({
         id: 1,
         email: 'a@example.com',
         status: 'active',
         nickname: null,
       })
 
-      await db.query(Accounts).upsert(
+      await db.query(accounts).upsert(
         {
           id: 1,
           email: 'a@example.com',
@@ -293,7 +293,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         },
         { conflictTarget: ['id'] },
       )
-      await db.query(Accounts).upsert(
+      await db.query(accounts).upsert(
         {
           id: 2,
           email: 'b@example.com',
@@ -303,7 +303,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         { conflictTarget: ['id'] },
       )
 
-      let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+      let rows = await db.query(accounts).orderBy('id', 'asc').all()
 
       assert.equal(rows.length, 2)
       assert.equal(rows[0].status, 'inactive')
@@ -318,7 +318,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     async function () {
       let db = options.createDatabase()
 
-      await db.query(Accounts).insertMany([
+      await db.query(accounts).insertMany([
         {
           id: 1,
           email: 'A@Example.com',
@@ -340,23 +340,23 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
       ])
 
       let nullNickname = await db
-        .query(Accounts)
+        .query(accounts)
         .where(eq('nickname', null))
         .orderBy('id', 'asc')
         .all()
-      let nonNullNickname = await db.query(Accounts).where(ne('nickname', null)).all()
+      let nonNullNickname = await db.query(accounts).where(ne('nickname', null)).all()
       let inRows = await db
-        .query(Accounts)
+        .query(accounts)
         .where(inList('id', [1, 3]))
         .orderBy('id', 'asc')
         .all()
       let betweenRows = await db
-        .query(Accounts)
+        .query(accounts)
         .where(between('id', 2, 3))
         .orderBy('id', 'asc')
         .all()
       let ilikeRows = await db
-        .query(Accounts)
+        .query(accounts)
         .where(ilike('email', '%@example.com'))
         .orderBy('id', 'asc')
         .all()

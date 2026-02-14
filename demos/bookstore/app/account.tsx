@@ -148,32 +148,26 @@ export default {
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order) =>
-                      (() => {
-                        let items = JSON.parse(order.items_json) as Array<{ quantity: number }>
-
-                        return (
-                          <tr>
-                            <td>#{order.id}</td>
-                            <td>{new Date(order.created_at).toLocaleDateString()}</td>
-                            <td>{items.length} item(s)</td>
-                            <td>${order.total.toFixed(2)}</td>
-                            <td>
-                              <span class="badge badge-info">{order.status}</span>
-                            </td>
-                            <td>
-                              <a
-                                href={routes.account.orders.show.href({ orderId: order.id })}
-                                class="btn btn-secondary"
-                                css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
-                              >
-                                View
-                              </a>
-                            </td>
-                          </tr>
-                        )
-                      })(),
-                    )}
+                    {orders.map((order) => (
+                      <tr>
+                        <td>#{order.id}</td>
+                        <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                        <td>{order.items.length} item(s)</td>
+                        <td>${order.total.toFixed(2)}</td>
+                        <td>
+                          <span class="badge badge-info">{order.status}</span>
+                        </td>
+                        <td>
+                          <a
+                            href={routes.account.orders.show.href({ orderId: order.id })}
+                            class="btn btn-secondary"
+                            css={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }}
+                          >
+                            View
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               ) : (
@@ -210,11 +204,6 @@ export default {
           )
         }
 
-        let items = JSON.parse(order.items_json) as Array<{
-          title: string
-          quantity: number
-          price: number
-        }>
         let shippingAddress = JSON.parse(order.shipping_address_json) as {
           street: string
           city: string
@@ -245,12 +234,12 @@ export default {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => (
+                  {order.items.map((item) => (
                     <tr>
                       <td>{item.title}</td>
                       <td>{item.quantity}</td>
-                      <td>${item.price.toFixed(2)}</td>
-                      <td>${(item.price * item.quantity).toFixed(2)}</td>
+                      <td>${item.unit_price.toFixed(2)}</td>
+                      <td>${(item.unit_price * item.quantity).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -6,7 +6,7 @@ import { createDatabase, createTable, eq } from '@remix-run/data-table'
 
 import { createSqliteDatabaseAdapter } from './adapter.ts'
 
-let Accounts = createTable({
+let accounts = createTable({
   name: 'accounts',
   columns: {
     id: number(),
@@ -15,7 +15,7 @@ let Accounts = createTable({
   },
 })
 
-let Projects = createTable({
+let projects = createTable({
   name: 'projects',
   columns: {
     id: number(),
@@ -35,17 +35,17 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
 
     let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
 
-    await db.query(Accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
+    await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
 
     await db.transaction(async (outerTransaction) => {
       await outerTransaction
-        .query(Accounts)
+        .query(accounts)
         .insert({ id: 2, email: 'b@example.com', status: 'active' })
 
       await outerTransaction
         .transaction(async (innerTransactionDatabase) => {
           await innerTransactionDatabase
-            .query(Accounts)
+            .query(accounts)
             .insert({ id: 3, email: 'c@example.com', status: 'active' })
 
           throw new Error('rollback inner')
@@ -53,8 +53,8 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
         .catch(() => undefined)
     })
 
-    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
-    let count = await db.query(Accounts).count()
+    let rows = await db.query(accounts).orderBy('id', 'asc').all()
+    let count = await db.query(accounts).count()
 
     assert.equal(count, 2)
     assert.deepEqual(
@@ -73,10 +73,10 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
 
     let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
 
-    await db.query(Accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
+    await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
 
     let result = await db
-      .query(Accounts)
+      .query(accounts)
       .upsert(
         { id: 1, email: 'a@example.com', status: 'inactive' },
         { conflictTarget: ['id'], returning: ['id', 'status'] },
@@ -101,7 +101,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
     await db.transaction(
       async (transactionDatabase) => {
         await transactionDatabase
-          .query(Accounts)
+          .query(accounts)
           .insert({ id: 1, email: 'a@example.com', status: 'active' })
       },
       {
@@ -110,7 +110,7 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
       },
     )
 
-    let rows = await db.query(Accounts).all()
+    let rows = await db.query(accounts).all()
 
     assert.equal(rows.length, 1)
     assert.equal(rows[0].id, 1)
@@ -128,13 +128,13 @@ describe('sqlite adapter', { skip: !sqliteAvailable }, () => {
 
     let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
 
-    await db.query(Accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
-    await db.query(Projects).insert({ id: 10, account_id: 1, name: 'Alpha' })
-    await db.query(Projects).insert({ id: 11, account_id: 99, name: 'Beta' })
+    await db.query(accounts).insert({ id: 1, email: 'a@example.com', status: 'active' })
+    await db.query(projects).insert({ id: 10, account_id: 1, name: 'Alpha' })
+    await db.query(projects).insert({ id: 11, account_id: 99, name: 'Beta' })
 
     let count = await db
-      .query(Accounts)
-      .join(Projects, eq('accounts.id', 'projects.account_id'))
+      .query(accounts)
+      .join(projects, eq('accounts.id', 'projects.account_id'))
       .where(eq('accounts.email', 'a@example.com'))
       .count()
 

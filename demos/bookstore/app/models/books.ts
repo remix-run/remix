@@ -1,24 +1,24 @@
 import type { TableRow } from 'remix/data-table'
 import { ilike, or } from 'remix/data-table'
 
-import { BooksTable, db } from './database.ts'
+import { books, db } from './database.ts'
 
-export type Book = TableRow<typeof BooksTable>
+export type Book = TableRow<typeof books>
 
 export async function getAllBooks(): Promise<Book[]> {
-  return db.findMany(BooksTable, { orderBy: ['id', 'asc'] })
+  return db.findMany(books, { orderBy: ['id', 'asc'] })
 }
 
 export async function getBookBySlug(slug: string): Promise<Book | null> {
-  return db.findOne(BooksTable, { where: { slug } })
+  return db.findOne(books, { where: { slug } })
 }
 
 export async function getBookById(id: string): Promise<Book | null> {
-  return db.find(BooksTable, id)
+  return db.find(books, id)
 }
 
 export async function getBooksByGenre(genre: string): Promise<Book[]> {
-  return db.findMany(BooksTable, {
+  return db.findMany(books, {
     where: ilike('genre', genre),
     orderBy: ['id', 'asc'],
   })
@@ -27,7 +27,7 @@ export async function getBooksByGenre(genre: string): Promise<Book[]> {
 export async function searchBooks(query: string): Promise<Book[]> {
   let lowerQuery = '%' + query.toLowerCase() + '%'
 
-  return db.findMany(BooksTable, {
+  return db.findMany(books, {
     where: or(
       ilike('title', lowerQuery),
       ilike('author', lowerQuery),
@@ -38,16 +38,16 @@ export async function searchBooks(query: string): Promise<Book[]> {
 }
 
 export async function getAvailableGenres(): Promise<string[]> {
-  let rows = await db.query(BooksTable).select('genre').distinct().orderBy('genre', 'asc').all()
+  let rows = await db.query(books).select('genre').distinct().orderBy('genre', 'asc').all()
 
   return rows.map((row) => row.genre)
 }
 
 export async function createBook(data: Omit<Book, 'id'>): Promise<Book> {
-  let count = await db.count(BooksTable)
+  let count = await db.count(books)
   let id = String(count + 1)
 
-  return db.create(BooksTable, { id, ...data }, { returnRow: true })
+  return db.create(books, { id, ...data }, { returnRow: true })
 }
 
 export async function updateBook(id: string, data: Partial<Book>): Promise<Book | null> {
@@ -65,12 +65,12 @@ export async function updateBook(id: string, data: Partial<Book>): Promise<Book 
   if (data.in_stock !== undefined) changes.in_stock = data.in_stock
 
   if (Object.keys(changes).length > 0) {
-    return db.update(BooksTable, id, changes)
+    return db.update(books, id, changes)
   }
 
   return getBookById(id)
 }
 
 export async function deleteBook(id: string): Promise<boolean> {
-  return db.delete(BooksTable, id)
+  return db.delete(books, id)
 }

@@ -22,7 +22,7 @@ type Equal<left, right> =
 
 function expectType<condition extends true>(): void {}
 
-let Accounts = createTable({
+let accounts = createTable({
   name: 'accounts',
   columns: {
     id: number(),
@@ -31,7 +31,7 @@ let Accounts = createTable({
   },
 })
 
-let Projects = createTable({
+let projects = createTable({
   name: 'projects',
   columns: {
     id: number(),
@@ -40,7 +40,7 @@ let Projects = createTable({
   },
 })
 
-let AccountProjects = Accounts.hasMany(Projects)
+let accountProjects = accounts.hasMany(projects)
 
 let cleanups = new Set<() => void>()
 
@@ -55,7 +55,7 @@ afterEach(() => {
 describe('type safety', () => {
   it('exposes query builder generics as column and row output maps', () => {
     let db = createDatabase(createAdapter())
-    let query = db.query(Accounts)
+    let query = db.query(accounts)
 
     type Query = typeof query
     type QueryColumns =
@@ -63,9 +63,9 @@ describe('type safety', () => {
     type QueryRow = Query extends QueryBuilder<any, infer row, any, any, any> ? row : never
     type QueryTableName = Query extends QueryBuilder<any, any, any, infer name, any> ? name : never
     type QueryPrimaryKey = Query extends QueryBuilder<any, any, any, any, infer key> ? key : never
-    type QueryFromTableAlias = QueryForTable<typeof Accounts>
-    type QueryColumnsFromAlias = QueryColumnTypesForTable<typeof Accounts>
-    type AccountsReference = TableReference<typeof Accounts>
+    type QueryFromTableAlias = QueryForTable<typeof accounts>
+    type QueryColumnsFromAlias = QueryColumnTypesForTable<typeof accounts>
+    type AccountsReference = TableReference<typeof accounts>
     type AccountsReferenceColumns = keyof AccountsReference['columns'] & string
 
     type ExpectedColumns = {
@@ -105,7 +105,7 @@ describe('type safety', () => {
       }),
     )
 
-    let rows = await db.query(Accounts).select('id').with({ projects: AccountProjects }).all()
+    let rows = await db.query(accounts).select('id').with({ projects: accountProjects }).all()
 
     assert.equal(rows.length, 1)
     assert.equal(rows[0].id, 1)
@@ -135,8 +135,8 @@ describe('type safety', () => {
     )
 
     let rows = await db
-      .query(Accounts)
-      .join(Projects, eq('accounts.id', 'projects.account_id'))
+      .query(accounts)
+      .join(projects, eq('accounts.id', 'projects.account_id'))
       .select({
         accountId: 'accounts.id',
         accountEmail: 'accounts.email',
@@ -153,8 +153,8 @@ describe('type safety', () => {
     assert.equal(Boolean(rows[0].projectArchived), false)
 
     let groupedCount = await db
-      .query(Accounts)
-      .join(Projects, eq('accounts.id', 'projects.account_id'))
+      .query(accounts)
+      .join(projects, eq('accounts.id', 'projects.account_id'))
       .groupBy('projects.account_id')
       .having(eq('projects.account_id', 1))
       .count()
@@ -171,16 +171,16 @@ describe('type safety', () => {
     rows[0].email
 
     function verifyTypeErrors(): void {
-      db.query(Accounts)
-        .join(Projects, eq('accounts.id', 'projects.account_id'))
+      db.query(accounts)
+        .join(projects, eq('accounts.id', 'projects.account_id'))
         // @ts-expect-error unknown joined column for orderBy
         .orderBy('projects.nope')
-      db.query(Accounts)
-        .join(Projects, eq('accounts.id', 'projects.account_id'))
+      db.query(accounts)
+        .join(projects, eq('accounts.id', 'projects.account_id'))
         // @ts-expect-error unknown joined column for groupBy
         .groupBy('projects.nope')
-      db.query(Accounts)
-        .join(Projects, eq('accounts.id', 'projects.account_id'))
+      db.query(accounts)
+        .join(projects, eq('accounts.id', 'projects.account_id'))
         // @ts-expect-error unknown source column in alias selection
         .select({ bad: 'projects.nope' })
     }
@@ -196,20 +196,20 @@ describe('type safety', () => {
       }),
     )
 
-    let filtered = await db.query(Accounts).where({ status: 'active' }).all()
+    let filtered = await db.query(accounts).where({ status: 'active' }).all()
     let groupedCount = await db
-      .query(Accounts)
+      .query(accounts)
       .groupBy('status')
       .having({ status: 'active' })
       .count()
     let joined = await db
-      .query(Accounts)
-      .join(Projects, eq('accounts.id', 'projects.account_id'))
+      .query(accounts)
+      .join(projects, eq('accounts.id', 'projects.account_id'))
       .where(eq('projects.archived', false))
       .all()
     let withRelations = await db
-      .query(Accounts)
-      .with({ projects: AccountProjects.where({ archived: false }) })
+      .query(accounts)
+      .with({ projects: accountProjects.where({ archived: false }) })
       .all()
 
     assert.equal(filtered.length, 1)
@@ -219,15 +219,15 @@ describe('type safety', () => {
 
     function verifyTypeErrors(): void {
       // @ts-expect-error unknown predicate key
-      db.query(Accounts).where({ not_a_column: 'active' })
+      db.query(accounts).where({ not_a_column: 'active' })
       // @ts-expect-error unknown predicate key
-      db.query(Accounts).having({ not_a_column: 'active' })
+      db.query(accounts).having({ not_a_column: 'active' })
       // @ts-expect-error join predicate key must be from source or target table
-      db.query(Accounts).join(Projects, eq('not_a_column', true))
+      db.query(accounts).join(projects, eq('not_a_column', true))
       // @ts-expect-error right-hand column reference must be from source or target table
-      db.query(Accounts).join(Projects, eq('accounts.id', 'projects.not_a_column'))
+      db.query(accounts).join(projects, eq('accounts.id', 'projects.not_a_column'))
       // @ts-expect-error relation predicate key must be from relation target table
-      AccountProjects.where({ not_a_column: true })
+      accountProjects.where({ not_a_column: true })
     }
 
     void verifyTypeErrors
@@ -241,20 +241,20 @@ describe('type safety', () => {
       }),
     )
 
-    let first = await db.find(Accounts, 1)
-    let active = await db.findOne(Accounts, {
+    let first = await db.find(accounts, 1)
+    let active = await db.findOne(accounts, {
       where: { status: 'active' },
       orderBy: ['accounts.id', 'asc'],
     })
-    let rows = await db.findMany(Accounts, {
+    let rows = await db.findMany(accounts, {
       where: eq('status', 'active'),
       orderBy: [
         ['status', 'asc'],
         ['id', 'desc'],
       ],
-      with: { projects: AccountProjects },
+      with: { projects: accountProjects },
     })
-    let count = await db.count(Accounts, { where: { status: 'active' } })
+    let count = await db.count(accounts, { where: { status: 'active' } })
 
     assert.equal(first?.id, 1)
     assert.equal(active?.email, 'a@example.com')
@@ -269,10 +269,10 @@ describe('type safety', () => {
 
     function verifyTypeErrors(): void {
       // @ts-expect-error unknown where key
-      db.findOne(Accounts, { where: { not_a_column: 'active' } })
+      db.findOne(accounts, { where: { not_a_column: 'active' } })
       // @ts-expect-error unknown orderBy column
-      db.findMany(Accounts, { orderBy: ['not_a_column', 'asc'] })
-      db.findMany(Accounts, {
+      db.findMany(accounts, { orderBy: ['not_a_column', 'asc'] })
+      db.findMany(accounts, {
         orderBy: [
           ['id', 'asc'],
           // @ts-expect-error unknown orderBy column in tuple list
@@ -280,13 +280,13 @@ describe('type safety', () => {
         ],
       })
       // @ts-expect-error unknown where key
-      db.count(Accounts, { where: { not_a_column: 'active' } })
+      db.count(accounts, { where: { not_a_column: 'active' } })
       // @ts-expect-error orderBy is not supported by db.count()
-      db.count(Accounts, { orderBy: ['id', 'asc'] })
+      db.count(accounts, { orderBy: ['id', 'asc'] })
       // @ts-expect-error limit is not supported by db.count()
-      db.count(Accounts, { limit: 1 })
+      db.count(accounts, { limit: 1 })
       // @ts-expect-error offset is not supported by db.count()
-      db.count(Accounts, { offset: 1 })
+      db.count(accounts, { offset: 1 })
     }
 
     void verifyTypeErrors
@@ -304,13 +304,13 @@ describe('type safety', () => {
     )
 
     let updated = await db.update(
-      Accounts,
+      accounts,
       1,
       { status: 'inactive' },
-      { with: { projects: AccountProjects } },
+      { with: { projects: accountProjects } },
     )
     let updateManyResult = await db.updateMany(
-      Accounts,
+      accounts,
       { status: 'active' },
       {
         where: { status: 'inactive' },
@@ -318,8 +318,8 @@ describe('type safety', () => {
         limit: 1,
       },
     )
-    let deleted = await db.delete(Accounts, 2)
-    let deleteManyResult = await db.deleteMany(Accounts, {
+    let deleted = await db.delete(accounts, 2)
+    let deleteManyResult = await db.deleteMany(accounts, {
       where: eq('status', 'active'),
       orderBy: [['id', 'desc']],
       limit: 1,
@@ -333,11 +333,11 @@ describe('type safety', () => {
 
     function verifyTypeErrors(): void {
       // @ts-expect-error unknown update key
-      db.update(Accounts, 1, { not_a_column: 'x' })
+      db.update(accounts, 1, { not_a_column: 'x' })
       // @ts-expect-error unknown where key
-      db.updateMany(Accounts, { status: 'active' }, { where: { not_a_column: 'x' } })
+      db.updateMany(accounts, { status: 'active' }, { where: { not_a_column: 'x' } })
       db.updateMany(
-        Accounts,
+        accounts,
         { status: 'active' },
         {
           where: { status: 'active' },
@@ -346,9 +346,9 @@ describe('type safety', () => {
         },
       )
       // @ts-expect-error unknown where key
-      db.deleteMany(Accounts, { where: { not_a_column: 'x' } })
+      db.deleteMany(accounts, { where: { not_a_column: 'x' } })
       // @ts-expect-error unknown orderBy key
-      db.deleteMany(Accounts, { where: { status: 'active' }, orderBy: [['nope', 'asc']] })
+      db.deleteMany(accounts, { where: { status: 'active' }, orderBy: [['nope', 'asc']] })
     }
 
     void verifyTypeErrors
@@ -365,13 +365,13 @@ describe('type safety', () => {
       }),
     )
 
-    let createResult = await db.create(Accounts, {
+    let createResult = await db.create(accounts, {
       id: 2,
       email: 'b@example.com',
       status: 'active',
     })
     let created = await db.create(
-      Accounts,
+      accounts,
       {
         id: 3,
         email: 'c@example.com',
@@ -379,15 +379,15 @@ describe('type safety', () => {
       },
       {
         returnRow: true,
-        with: { projects: AccountProjects },
+        with: { projects: accountProjects },
       },
     )
-    let createManyResult = await db.createMany(Accounts, [
+    let createManyResult = await db.createMany(accounts, [
       { id: 4, email: 'd@example.com', status: 'active' },
       { id: 5, email: 'e@example.com', status: 'inactive' },
     ])
     let createdRows = await db.createMany(
-      Accounts,
+      accounts,
       [{ id: 6, email: 'f@example.com', status: 'active' }],
       { returnRows: true },
     )
@@ -407,17 +407,17 @@ describe('type safety', () => {
 
     function verifyTypeErrors(): void {
       // @ts-expect-error unknown insert key
-      db.create(Accounts, { not_a_column: 'x' })
+      db.create(accounts, { not_a_column: 'x' })
       db.create(
-        Accounts,
+        accounts,
         { id: 7, email: 'g@example.com', status: 'active' },
         // @ts-expect-error with is only supported when returnRow: true
-        { with: { projects: AccountProjects } },
+        { with: { projects: accountProjects } },
       )
       // @ts-expect-error unknown createMany insert key
-      db.createMany(Accounts, [{ not_a_column: 'x' }])
+      db.createMany(accounts, [{ not_a_column: 'x' }])
       db.createMany(
-        Accounts,
+        accounts,
         [{ id: 8, email: 'h@example.com', status: 'active' }],
         // @ts-expect-error invalid createMany option key
         { returnRow: true },

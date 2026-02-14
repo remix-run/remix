@@ -11,7 +11,7 @@ import { sql } from './sql.ts'
 import type { SqliteTestAdapterOptions, SqliteTestSeed } from '../../test/sqlite-test-database.ts'
 import { createSqliteTestAdapter } from '../../test/sqlite-test-database.ts'
 
-let Accounts = createTable({
+let accounts = createTable({
   name: 'accounts',
   columns: {
     id: number(),
@@ -22,7 +22,7 @@ let Accounts = createTable({
   timestamps: true,
 })
 
-let Projects = createTable({
+let projects = createTable({
   name: 'projects',
   columns: {
     id: number(),
@@ -32,7 +32,7 @@ let Projects = createTable({
   },
 })
 
-let Profiles = createTable({
+let profiles = createTable({
   name: 'profiles',
   columns: {
     id: number(),
@@ -41,7 +41,7 @@ let Profiles = createTable({
   },
 })
 
-let Tasks = createTable({
+let tasks = createTable({
   name: 'tasks',
   columns: {
     id: number(),
@@ -51,7 +51,7 @@ let Tasks = createTable({
   },
 })
 
-let Memberships = createTable({
+let memberships = createTable({
   name: 'memberships',
   primaryKey: ['organization_id', 'account_id'],
   columns: {
@@ -61,11 +61,11 @@ let Memberships = createTable({
   },
 })
 
-let AccountProjects = Accounts.hasMany(Projects)
-let AccountProfile = Accounts.hasOne(Profiles)
-let ProjectAccount = Projects.belongsTo(Accounts)
-let AccountTasks = Accounts.hasManyThrough(Tasks, {
-  through: AccountProjects,
+let accountProjects = accounts.hasMany(projects)
+let accountProfile = accounts.hasOne(profiles)
+let projectAccount = projects.belongsTo(accounts)
+let accountTasks = accounts.hasManyThrough(tasks, {
+  through: accountProjects,
 })
 
 let cleanups = new Set<() => void>()
@@ -95,9 +95,9 @@ describe('query builder', () => {
     })
 
     let db = createTestDatabase(adapter)
-    let archivedExcludedProjects = AccountProjects.where({ archived: false }).orderBy('id', 'asc')
+    let archivedExcludedProjects = accountProjects.where({ archived: false }).orderBy('id', 'asc')
 
-    let allAccountsQuery = db.query(Accounts)
+    let allAccountsQuery = db.query(accounts)
     let activeAccountsQuery = allAccountsQuery.where({ status: 'active' })
 
     let allAccounts = await allAccountsQuery.all()
@@ -133,15 +133,15 @@ describe('query builder', () => {
     })
 
     let db = createTestDatabase(adapter)
-    let openTasks = AccountTasks.where({ state: 'open' }).orderBy('id', 'asc')
+    let openTasks = accountTasks.where({ state: 'open' }).orderBy('id', 'asc')
 
-    let accounts = await db.query(Accounts).orderBy('id', 'asc').with({ tasks: openTasks }).all()
+    let accountRows = await db.query(accounts).orderBy('id', 'asc').with({ tasks: openTasks }).all()
 
-    assert.equal(accounts[0].tasks.length, 2)
-    assert.equal(accounts[0].tasks[0].title, 'Define Ad Sets')
-    assert.equal(accounts[0].tasks[1].title, 'Draft Landing Page')
-    assert.equal(accounts[1].tasks.length, 1)
-    assert.equal(accounts[1].tasks[0].title, 'Collect Testimonials')
+    assert.equal(accountRows[0].tasks.length, 2)
+    assert.equal(accountRows[0].tasks[0].title, 'Define Ad Sets')
+    assert.equal(accountRows[0].tasks[1].title, 'Draft Landing Page')
+    assert.equal(accountRows[1].tasks.length, 1)
+    assert.equal(accountRows[1].tasks[0].title, 'Collect Testimonials')
   })
 
   it('applies hasMany relation limit/offset per parent row', async () => {
@@ -163,10 +163,10 @@ describe('query builder', () => {
     let db = createTestDatabase(adapter)
 
     let firstProjectPerAccount = await db
-      .query(Accounts)
+      .query(accounts)
       .orderBy('id', 'asc')
       .with({
-        projects: AccountProjects.orderBy('id', 'asc').limit(1),
+        projects: accountProjects.orderBy('id', 'asc').limit(1),
       })
       .all()
 
@@ -176,10 +176,10 @@ describe('query builder', () => {
     assert.equal(firstProjectPerAccount[1].projects[0].id, 200)
 
     let secondProjectPerAccount = await db
-      .query(Accounts)
+      .query(accounts)
       .orderBy('id', 'asc')
       .with({
-        projects: AccountProjects.orderBy('id', 'asc').offset(1).limit(1),
+        projects: accountProjects.orderBy('id', 'asc').offset(1).limit(1),
       })
       .all()
 
@@ -213,10 +213,10 @@ describe('query builder', () => {
     let db = createTestDatabase(adapter)
 
     let firstTaskPerAccount = await db
-      .query(Accounts)
+      .query(accounts)
       .orderBy('id', 'asc')
       .with({
-        tasks: AccountTasks.orderBy('id', 'asc').limit(1),
+        tasks: accountTasks.orderBy('id', 'asc').limit(1),
       })
       .all()
 
@@ -226,10 +226,10 @@ describe('query builder', () => {
     assert.equal(firstTaskPerAccount[1].tasks[0].id, 2000)
 
     let secondTaskPerAccount = await db
-      .query(Accounts)
+      .query(accounts)
       .orderBy('id', 'asc')
       .with({
-        tasks: AccountTasks.orderBy('id', 'asc').offset(1).limit(1),
+        tasks: accountTasks.orderBy('id', 'asc').offset(1).limit(1),
       })
       .all()
 
@@ -261,21 +261,21 @@ describe('query builder', () => {
     })
 
     let db = createTestDatabase(adapter)
-    let firstProjectPerAccount = AccountProjects.orderBy('id', 'asc').limit(1)
-    let tasksThroughFirstProject = Accounts.hasManyThrough(Tasks, {
+    let firstProjectPerAccount = accountProjects.orderBy('id', 'asc').limit(1)
+    let tasksThroughFirstProject = accounts.hasManyThrough(tasks, {
       through: firstProjectPerAccount,
     }).orderBy('id', 'asc')
 
-    let accounts = await db
-      .query(Accounts)
+    let accountRows = await db
+      .query(accounts)
       .orderBy('id', 'asc')
       .with({ tasks: tasksThroughFirstProject })
       .all()
 
-    assert.equal(accounts[0].tasks.length, 1)
-    assert.equal(accounts[0].tasks[0].id, 1000)
-    assert.equal(accounts[1].tasks.length, 1)
-    assert.equal(accounts[1].tasks[0].id, 2000)
+    assert.equal(accountRows[0].tasks.length, 1)
+    assert.equal(accountRows[0].tasks[0].id, 1000)
+    assert.equal(accountRows[1].tasks.length, 1)
+    assert.equal(accountRows[1].tasks[0].id, 2000)
   })
 
   it('supports composite primary keys in find()', async () => {
@@ -290,7 +290,7 @@ describe('query builder', () => {
     })
 
     let db = createTestDatabase(adapter)
-    let membership = await db.query(Memberships).find({ organization_id: 9, account_id: 2 })
+    let membership = await db.query(memberships).find({ organization_id: 9, account_id: 2 })
 
     assert.ok(membership)
     assert.equal(membership.role, 'member')
@@ -312,14 +312,14 @@ describe('query builder', () => {
     })
 
     let db = createTestDatabase(adapter)
-    let openProjects = AccountProjects.where({ archived: false }).orderBy('id', 'asc')
+    let openProjects = accountProjects.where({ archived: false }).orderBy('id', 'asc')
 
-    let account = await db.find(Accounts, 1)
-    let activeAccount = await db.findOne(Accounts, {
+    let account = await db.find(accounts, 1)
+    let activeAccount = await db.findOne(accounts, {
       where: { status: 'active' },
       orderBy: ['id', 'asc'],
     })
-    let activeAccounts = await db.findMany(Accounts, {
+    let activeAccounts = await db.findMany(accounts, {
       where: { status: 'active' },
       orderBy: [
         ['status', 'asc'],
@@ -327,8 +327,8 @@ describe('query builder', () => {
       ],
       limit: 1,
     })
-    let activeCount = await db.count(Accounts, { where: { status: 'active' } })
-    let accountsWithProjects = await db.findMany(Accounts, {
+    let activeCount = await db.count(accounts, { where: { status: 'active' } })
+    let accountsWithProjects = await db.findMany(accounts, {
       orderBy: ['id', 'asc'],
       with: { projects: openProjects },
     })
@@ -359,17 +359,17 @@ describe('query builder', () => {
     })
 
     let db = createTestDatabase(adapter)
-    let openProjects = AccountProjects.where({ archived: false }).orderBy('id', 'asc')
+    let openProjects = accountProjects.where({ archived: false }).orderBy('id', 'asc')
 
     let updated = await db.update(
-      Accounts,
+      accounts,
       1,
       {
         status: 'inactive',
       },
       { with: { projects: openProjects } },
     )
-    let missing = await db.update(Accounts, 999, { status: 'active' })
+    let missing = await db.update(accounts, 999, { status: 'active' })
 
     assert.equal(updated?.status, 'inactive')
     assert.equal(updated?.projects.length, 1)
@@ -391,7 +391,7 @@ describe('query builder', () => {
 
     let db = createTestDatabase(adapter)
     let result = await db.updateMany(
-      Accounts,
+      accounts,
       {
         status: 'archived',
       },
@@ -402,7 +402,7 @@ describe('query builder', () => {
       },
     )
 
-    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+    let rows = await db.query(accounts).orderBy('id', 'asc').all()
 
     assert.equal(result.affectedRows, 1)
     assert.equal(rows[0].status, 'archived')
@@ -422,9 +422,9 @@ describe('query builder', () => {
     })
 
     let db = createTestDatabase(adapter)
-    let deleted = await db.delete(Accounts, 2)
-    let deletedMissing = await db.delete(Accounts, 999)
-    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+    let deleted = await db.delete(accounts, 2)
+    let deletedMissing = await db.delete(accounts, 999)
+    let rows = await db.query(accounts).orderBy('id', 'asc').all()
 
     assert.equal(deleted, true)
     assert.equal(deletedMissing, false)
@@ -447,13 +447,13 @@ describe('query builder', () => {
     })
 
     let db = createTestDatabase(adapter)
-    let result = await db.deleteMany(Accounts, {
+    let result = await db.deleteMany(accounts, {
       where: { status: 'inactive' },
       orderBy: ['id', 'asc'],
       limit: 1,
     })
 
-    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+    let rows = await db.query(accounts).orderBy('id', 'asc').all()
 
     assert.equal(result.affectedRows, 1)
     assert.deepEqual(
@@ -471,11 +471,11 @@ describe('query builder', () => {
     })
 
     let db = createTestDatabase(adapter)
-    let result = await db.create(Accounts, {
+    let result = await db.create(accounts, {
       email: 'new@studio.test',
       status: 'active',
     })
-    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+    let rows = await db.query(accounts).orderBy('id', 'asc').all()
 
     assert.equal(result.affectedRows, 1)
     assert.equal(rows.length, 2)
@@ -492,7 +492,7 @@ describe('query builder', () => {
 
     let db = createTestDatabase(adapter)
     let created = await db.create(
-      Accounts,
+      accounts,
       {
         id: 99,
         email: 'new@studio.test',
@@ -500,7 +500,7 @@ describe('query builder', () => {
       },
       {
         returnRow: true,
-        with: { projects: AccountProjects.orderBy('id', 'asc') },
+        with: { projects: accountProjects.orderBy('id', 'asc') },
       },
     )
 
@@ -519,12 +519,12 @@ describe('query builder', () => {
     })
 
     let db = createTestDatabase(adapter)
-    let result = await db.createMany(Accounts, [
+    let result = await db.createMany(accounts, [
       { id: 2, email: 'a@studio.test', status: 'active' },
       { id: 3, email: 'b@studio.test', status: 'inactive' },
     ])
     let rows = await db.createMany(
-      Accounts,
+      accounts,
       [{ id: 4, email: 'c@studio.test', status: 'active' }],
       { returnRows: true },
     )
@@ -550,7 +550,7 @@ describe('query builder', () => {
 
     await assert.rejects(
       async function () {
-        await db.createMany(Accounts, [{ id: 1, email: 'a@studio.test', status: 'active' }], {
+        await db.createMany(accounts, [{ id: 1, email: 'a@studio.test', status: 'active' }], {
           returnRows: true,
         })
       },
@@ -581,8 +581,8 @@ describe('query builder', () => {
     let db = createTestDatabase(adapter)
 
     let count = await db
-      .query(Accounts)
-      .join(Projects, eq('archived', false))
+      .query(accounts)
+      .join(projects, eq('archived', false))
       .groupBy('status')
       .having({ status: 'active' })
       .count()
@@ -602,8 +602,8 @@ describe('query builder', () => {
     let db = createTestDatabase(adapter)
 
     let rows = await db
-      .query(Accounts)
-      .join(Projects, eq('accounts.id', 'projects.account_id'))
+      .query(accounts)
+      .join(projects, eq('accounts.id', 'projects.account_id'))
       .select({
         accountId: 'accounts.id',
         accountEmail: 'accounts.email',
@@ -636,9 +636,9 @@ describe('query builder', () => {
     })
     let db = createTestDatabase(adapter)
 
-    let activeCount = await db.query(Accounts).where({ status: 'active' }).count()
-    let hasInactive = await db.query(Accounts).where({ status: 'inactive' }).exists()
-    let hasArchived = await db.query(Accounts).where({ status: 'archived' }).exists()
+    let activeCount = await db.query(accounts).where({ status: 'active' }).count()
+    let hasInactive = await db.query(accounts).where({ status: 'inactive' }).exists()
+    let hasArchived = await db.query(accounts).where({ status: 'archived' }).exists()
 
     assert.equal(activeCount, 1)
     assert.equal(hasInactive, true)
@@ -655,13 +655,13 @@ describe('query builder', () => {
     })
     let db = createTestDatabase(adapter)
 
-    let accounts = await db.query(Accounts).with({ profile: AccountProfile }).all()
-    let projects = await db.query(Projects).with({ account: ProjectAccount }).all()
+    let accountRows = await db.query(accounts).with({ profile: accountProfile }).all()
+    let projectRows = await db.query(projects).with({ account: projectAccount }).all()
 
-    assert.equal(accounts.length, 1)
-    assert.equal(accounts[0].profile?.display_name, 'Amy')
-    assert.equal(projects.length, 1)
-    assert.equal(projects[0].account?.email, 'amy@studio.test')
+    assert.equal(accountRows.length, 1)
+    assert.equal(accountRows[0].profile?.display_name, 'Amy')
+    assert.equal(projectRows.length, 1)
+    assert.equal(projectRows[0].account?.email, 'amy@studio.test')
   })
 })
 
@@ -680,7 +680,7 @@ describe('writes and validation', () => {
       },
     })
 
-    let insertResult = await db.query(Accounts).insert(
+    let insertResult = await db.query(accounts).insert(
       {
         id: 10,
         email: 'ops@studio.test',
@@ -696,7 +696,7 @@ describe('writes and validation', () => {
       assert.fail('Expected row in insert result')
     }
 
-    let savedAccount = await db.query(Accounts).find(10)
+    let savedAccount = await db.query(accounts).find(10)
     assert.ok(savedAccount)
     assert.deepEqual(savedAccount.created_at, createdAt)
     assert.deepEqual(savedAccount.updated_at, createdAt)
@@ -704,7 +704,7 @@ describe('writes and validation', () => {
     await assert.rejects(
       async function () {
         await db
-          .query(Accounts)
+          .query(accounts)
           .insert({ id: 11, email: 'billing@studio.test', status: 300 as never })
       },
       function (error: unknown) {
@@ -732,7 +732,7 @@ describe('writes and validation', () => {
     await assert.rejects(
       async () => {
         await db
-          .query(Accounts)
+          .query(accounts)
           .where({ status: 'active' })
           .orderBy('id', 'asc')
           .limit(1)
@@ -764,7 +764,7 @@ describe('writes and validation', () => {
     await assert.rejects(
       async () => {
         await db
-          .query(Accounts)
+          .query(accounts)
           .where({ status: 'active' })
           .orderBy('id', 'asc')
           .limit(1)
@@ -792,7 +792,7 @@ describe('writes and validation', () => {
 
     await assert.rejects(
       async () => {
-        await db.query(Accounts).insert(
+        await db.query(accounts).insert(
           {
             id: 2,
             email: 'finance@studio.test',
@@ -808,7 +808,7 @@ describe('writes and validation', () => {
 
     await assert.rejects(
       async () => {
-        await db.query(Accounts).insertMany(
+        await db.query(accounts).insertMany(
           [
             { id: 2, email: 'finance@studio.test', status: 'active' },
             { id: 3, email: 'ops@studio.test', status: 'active' },
@@ -823,7 +823,7 @@ describe('writes and validation', () => {
 
     await assert.rejects(
       async () => {
-        await db.query(Accounts).upsert(
+        await db.query(accounts).upsert(
           {
             id: 1,
             email: 'founder@studio.test',
@@ -848,7 +848,7 @@ describe('writes and validation', () => {
     })
     let db = createTestDatabase(adapter)
 
-    let inserted = await db.query(Accounts).insertMany(
+    let inserted = await db.query(accounts).insertMany(
       [
         { id: 1, email: 'a@studio.test', status: 'active' },
         { id: 2, email: 'b@studio.test', status: 'active' },
@@ -858,7 +858,7 @@ describe('writes and validation', () => {
     assert.ok('rows' in inserted)
 
     let deleted = await db
-      .query(Accounts)
+      .query(accounts)
       .where({ id: 2 })
       .delete({ returning: ['id'] })
     assert.ok('rows' in deleted)
@@ -879,7 +879,7 @@ describe('writes and validation', () => {
     let db = createTestDatabase(adapter)
 
     let result = await db
-      .query(Accounts)
+      .query(accounts)
       .upsert(
         { id: 1, email: 'a@studio.test', status: 'inactive' },
         { conflictTarget: ['id'], returning: ['id', 'status'] },
@@ -907,7 +907,7 @@ describe('writes and validation', () => {
     await assert.rejects(
       async function () {
         await db
-          .query(Accounts)
+          .query(accounts)
           .upsert({ id: 1, email: 'a@studio.test', status: 'active' }, { conflictTarget: ['id'] })
       },
       function (error: unknown) {
@@ -929,8 +929,8 @@ describe('writes and validation', () => {
     await assert.rejects(
       async function () {
         await db
-          .query(Accounts)
-          .join(Projects, eq('accounts.id', 'projects.account_id'))
+          .query(accounts)
+          .join(projects, eq('accounts.id', 'projects.account_id'))
           .update({ status: 'inactive' })
       },
       function (error: unknown) {
@@ -943,7 +943,7 @@ describe('writes and validation', () => {
 
     await assert.rejects(
       async function () {
-        await db.query(Accounts).groupBy('status').delete()
+        await db.query(accounts).groupBy('status').delete()
       },
       function (error: unknown) {
         return (
@@ -956,8 +956,8 @@ describe('writes and validation', () => {
     await assert.rejects(
       async function () {
         await db
-          .query(Accounts)
-          .with({ projects: AccountProjects })
+          .query(accounts)
+          .with({ projects: accountProjects })
           .upsert({ id: 1, email: 'a@studio.test', status: 'active' })
       },
       function (error: unknown) {
@@ -981,7 +981,7 @@ describe('writes and validation', () => {
 
     await assert.rejects(
       async function () {
-        await db.query(Accounts).where({ id: 1 }).insert({
+        await db.query(accounts).where({ id: 1 }).insert({
           id: 2,
           email: 'b@studio.test',
           status: 'active',
@@ -998,7 +998,7 @@ describe('writes and validation', () => {
     await assert.rejects(
       async function () {
         await db
-          .query(Accounts)
+          .query(accounts)
           .orderBy('id', 'asc')
           .insertMany([{ id: 3, email: 'c@studio.test', status: 'active' }])
       },
@@ -1012,7 +1012,7 @@ describe('writes and validation', () => {
 
     await assert.rejects(
       async function () {
-        await db.query(Accounts).limit(1).upsert({
+        await db.query(accounts).limit(1).upsert({
           id: 1,
           email: 'a@studio.test',
           status: 'inactive',
@@ -1040,7 +1040,7 @@ describe('writes and validation', () => {
     await assert.rejects(
       async function () {
         await db
-          .query(Accounts)
+          .query(accounts)
           .where({ id: 'not-a-number' as never })
           .all()
       },
@@ -1055,8 +1055,8 @@ describe('writes and validation', () => {
     await assert.rejects(
       async function () {
         await db
-          .query(Accounts)
-          .join(Projects, eq('projects.archived', 'nope' as never))
+          .query(accounts)
+          .join(projects, eq('projects.archived', 'nope' as never))
           .all()
       },
       function (error: unknown) {
@@ -1070,7 +1070,7 @@ describe('writes and validation', () => {
     await assert.rejects(
       async function () {
         await db
-          .query(Accounts)
+          .query(accounts)
           .groupBy('status')
           .having(eq('status', 123 as never))
           .count()
@@ -1098,13 +1098,13 @@ describe('transactions and raw sql', () => {
 
     await db.transaction(async (outerTransaction) => {
       await outerTransaction
-        .query(Accounts)
+        .query(accounts)
         .insert({ id: 2, email: 'pm@studio.test', status: 'active' })
 
       await outerTransaction
         .transaction(async (innerTransaction) => {
           await innerTransaction
-            .query(Accounts)
+            .query(accounts)
             .insert({ id: 3, email: 'design@studio.test', status: 'active' })
 
           throw new Error('Abort inner transaction')
@@ -1112,7 +1112,7 @@ describe('transactions and raw sql', () => {
         .catch(() => undefined)
     })
 
-    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+    let rows = await db.query(accounts).orderBy('id', 'asc').all()
 
     assert.equal(rows.length, 2)
     assert.equal(rows[1].email, 'pm@studio.test')
@@ -1135,7 +1135,7 @@ describe('transactions and raw sql', () => {
     await db.transaction(
       async (transactionDatabase) => {
         await transactionDatabase
-          .query(Accounts)
+          .query(accounts)
           .insert({ id: 2, email: 'pm@studio.test', status: 'active' })
       },
       {
@@ -1144,7 +1144,7 @@ describe('transactions and raw sql', () => {
       },
     )
 
-    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+    let rows = await db.query(accounts).orderBy('id', 'asc').all()
     assert.equal(rows.length, 2)
     assert.equal(rows[0].id, 1)
     assert.equal(rows[0].email, 'founder@studio.test')
@@ -1182,14 +1182,14 @@ describe('transactions and raw sql', () => {
     await db
       .transaction(async (transactionDatabase) => {
         await transactionDatabase
-          .query(Accounts)
+          .query(accounts)
           .insert({ id: 2, email: 'pm@studio.test', status: 'active' })
 
         throw new Error('Abort transaction')
       })
       .catch(() => undefined)
 
-    let rows = await db.query(Accounts).orderBy('id', 'asc').all()
+    let rows = await db.query(accounts).orderBy('id', 'asc').all()
     assert.deepEqual(
       rows.map((row) => ({ id: row.id, email: row.email, status: row.status })),
       [{ id: 1, email: 'founder@studio.test', status: 'active' }],
@@ -1252,7 +1252,7 @@ describe('adapter errors', () => {
 
     await assert.rejects(
       async function () {
-        await db.query(Accounts).all()
+        await db.query(accounts).all()
       },
       function (error: unknown) {
         if (!(error instanceof DataTableAdapterError)) {

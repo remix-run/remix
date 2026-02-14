@@ -5,7 +5,7 @@ import { createDatabase, createTable, eq, ilike, inList } from '@remix-run/data-
 
 import { createMysqlDatabaseAdapter } from './adapter.ts'
 
-let Accounts = createTable({
+let accounts = createTable({
   name: 'accounts',
   columns: {
     id: number(),
@@ -13,7 +13,7 @@ let Accounts = createTable({
   },
 })
 
-let Projects = createTable({
+let projects = createTable({
   name: 'projects',
   columns: {
     id: number(),
@@ -39,7 +39,7 @@ describe('mysql adapter', () => {
 
     let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
 
-    let count = await db.query(Accounts).where(ilike('email', '%EXAMPLE%')).count()
+    let count = await db.query(accounts).where(ilike('email', '%EXAMPLE%')).count()
 
     assert.equal(count, 3)
     assert.match(statements[0].text, /lower\(`email`\) like lower\(\?\)/)
@@ -80,7 +80,7 @@ describe('mysql adapter', () => {
     let db = createDatabase(createMysqlDatabaseAdapter(pool as never))
 
     await db.transaction(async (transactionDatabase) => {
-      await transactionDatabase.query(Accounts).insert({ id: 1, email: 'a@example.com' })
+      await transactionDatabase.query(accounts).insert({ id: 1, email: 'a@example.com' })
     })
 
     assert.deepEqual(lifecycle, ['getConnection', 'begin', 'commit', 'release'])
@@ -136,8 +136,8 @@ describe('mysql adapter', () => {
     let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
 
     await db
-      .query(Accounts)
-      .join(Projects, eq('accounts.id', 'projects.account_id'))
+      .query(accounts)
+      .join(projects, eq('accounts.id', 'projects.account_id'))
       .where(eq('accounts.email', 'ops@example.com'))
       .count()
 
@@ -162,7 +162,7 @@ describe('mysql adapter', () => {
     let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
 
     await db
-      .query(Accounts)
+      .query(accounts)
       .where(inList('id', [1, 3]))
       .count()
 
@@ -197,7 +197,7 @@ describe('mysql adapter', () => {
     let db = createDatabase(createMysqlDatabaseAdapter(connection as never))
 
     let created = await db.create(
-      Accounts,
+      accounts,
       {
         email: 'fallback@example.com',
       },

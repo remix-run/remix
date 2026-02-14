@@ -5,7 +5,7 @@ import * as s from 'remix/data-schema'
 import { createDatabase, createTable, sql } from 'remix/data-table'
 import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
-export let BooksTable = createTable({
+export let books = createTable({
   name: 'books',
   columns: {
     id: s.string(),
@@ -23,7 +23,7 @@ export let BooksTable = createTable({
   },
 })
 
-export let UsersTable = createTable({
+export let users = createTable({
   name: 'users',
   columns: {
     id: s.string(),
@@ -35,12 +35,11 @@ export let UsersTable = createTable({
   },
 })
 
-export let OrdersTable = createTable({
+export let orders = createTable({
   name: 'orders',
   columns: {
     id: s.string(),
     user_id: s.string(),
-    items_json: s.string(),
     total: s.number(),
     status: s.enum_(['pending', 'processing', 'shipped', 'delivered']),
     shipping_address_json: s.string(),
@@ -48,7 +47,22 @@ export let OrdersTable = createTable({
   },
 })
 
-export let PasswordResetTokensTable = createTable({
+export let orderItems = createTable({
+  name: 'order_items',
+  primaryKey: ['order_id', 'book_id'],
+  columns: {
+    order_id: s.string(),
+    book_id: s.string(),
+    title: s.string(),
+    unit_price: s.number(),
+    quantity: s.number(),
+  },
+})
+
+export let itemsByOrder = orders.hasMany(orderItems, { name: 'items' })
+export let bookForOrderItem = orderItems.belongsTo(books, { name: 'book' })
+
+export let passwordResetTokens = createTable({
   name: 'password_reset_tokens',
   primaryKey: ['token'],
   columns: {
@@ -114,12 +128,30 @@ async function initialize(): Promise<void> {
     create table if not exists orders (
       id text primary key,
       user_id text not null,
-      items_json text not null,
       total real not null,
       status text not null,
       shipping_address_json text not null,
       created_at integer not null
     )
+  `)
+
+  await db.exec(sql`
+    create table if not exists order_items (
+      order_id text not null,
+      book_id text not null,
+      title text not null,
+      unit_price real not null,
+      quantity integer not null,
+      primary key (order_id, book_id)
+    )
+  `)
+
+  await db.exec(sql`
+    create index if not exists order_items_order_id_idx on order_items (order_id)
+  `)
+
+  await db.exec(sql`
+    create index if not exists order_items_book_id_idx on order_items (book_id)
   `)
 
   await db.exec(sql`
@@ -130,9 +162,9 @@ async function initialize(): Promise<void> {
     )
   `)
 
-  let booksCount = await db.count(BooksTable)
+  let booksCount = await db.count(books)
   if (booksCount === 0) {
-    await db.createMany(BooksTable, [
+    await db.createMany(books, [
       {
         id: '001',
         slug: 'bbq',
@@ -186,9 +218,9 @@ async function initialize(): Promise<void> {
     ])
   }
 
-  let usersCount = await db.count(UsersTable)
+  let usersCount = await db.count(users)
   if (usersCount === 0) {
-    await db.createMany(UsersTable, [
+    await db.createMany(users, [
       {
         id: '1',
         email: 'admin@bookstore.com',
@@ -208,16 +240,12 @@ async function initialize(): Promise<void> {
     ])
   }
 
-  let ordersCount = await db.count(OrdersTable)
+  let ordersCount = await db.count(orders)
   if (ordersCount === 0) {
-    await db.createMany(OrdersTable, [
+    await db.createMany(orders, [
       {
         id: '1001',
         user_id: '2',
-        items_json: JSON.stringify([
-          { bookId: '1', title: 'The Midnight Library', price: 16.99, quantity: 1 },
-          { bookId: '3', title: 'Project Hail Mary', price: 28.99, quantity: 1 },
-        ]),
         total: 45.98,
         status: 'delivered',
         shipping_address_json: JSON.stringify({
@@ -231,9 +259,6 @@ async function initialize(): Promise<void> {
       {
         id: '1002',
         user_id: '2',
-        items_json: JSON.stringify([
-          { bookId: '2', title: 'Atomic Habits', price: 27.0, quantity: 2 },
-        ]),
         total: 54.0,
         status: 'shipped',
         shipping_address_json: JSON.stringify({
@@ -243,6 +268,33 @@ async function initialize(): Promise<void> {
           zip: '02101',
         }),
         created_at: new Date('2024-10-01').getTime(),
+      },
+    ])
+  }
+
+  let orderItemsCount = await db.count(orderItems)
+  if (orderItemsCount === 0) {
+    await db.createMany(orderItems, [
+      {
+        order_id: '1001',
+        book_id: '001',
+        title: 'Ash & Smoke',
+        unit_price: 16.99,
+        quantity: 1,
+      },
+      {
+        order_id: '1001',
+        book_id: '003',
+        title: 'Three Ways to Change Your Life',
+        unit_price: 28.99,
+        quantity: 1,
+      },
+      {
+        order_id: '1002',
+        book_id: '002',
+        title: 'Heavy Metal Guitar Riffs',
+        unit_price: 27.0,
+        quantity: 2,
       },
     ])
   }

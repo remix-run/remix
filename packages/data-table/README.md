@@ -40,7 +40,7 @@ import * as s from 'remix/data-schema'
 import { createDatabase, createTable } from 'remix/data-table'
 import { createPostgresDatabaseAdapter } from 'remix/data-table-postgres'
 
-let Users = createTable({
+let users = createTable({
   name: 'users',
   columns: {
     id: s.string(),
@@ -50,7 +50,7 @@ let Users = createTable({
   },
 })
 
-let Orders = createTable({
+let orders = createTable({
   name: 'orders',
   columns: {
     id: s.string(),
@@ -61,7 +61,7 @@ let Orders = createTable({
   },
 })
 
-let UserOrders = Users.hasMany(Orders)
+let userOrders = users.hasMany(orders)
 
 let pool = new Pool({ connectionString: process.env.DATABASE_URL })
 let db = createDatabase(createPostgresDatabaseAdapter(pool))
@@ -75,8 +75,8 @@ Use `db.query(Table)` when you need joins, custom shape selection, eager loading
 import { eq, ilike } from 'remix/data-table'
 
 let recentPendingOrders = await db
-  .query(Orders)
-  .join(Users, eq('orders.user_id', 'users.id'))
+  .query(orders)
+  .join(users, eq('orders.user_id', 'users.id'))
   .where({ status: 'pending' })
   .where(ilike('users.email', '%@example.com'))
   .select({
@@ -94,10 +94,10 @@ Load relations with relation-scoped filtering and ordering:
 
 ```ts
 let customers = await db
-  .query(Users)
+  .query(users)
   .where({ role: 'customer' })
   .with({
-    recentOrders: UserOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
+    recentOrders: userOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
   })
   .all()
 
@@ -108,7 +108,7 @@ Run scoped writes safely with the same chainable API:
 
 ```ts
 await db
-  .query(Orders)
+  .query(orders)
   .where({ status: 'pending' })
   .orderBy('created_at', 'asc')
   .limit(100)
@@ -124,14 +124,14 @@ Use these helpers for common operations without building a full query chain.
 ```ts
 import { or } from 'remix/data-table'
 
-let user = await db.find(Users, 'u_001')
+let user = await db.find(users, 'u_001')
 
-let firstPending = await db.findOne(Orders, {
+let firstPending = await db.findOne(orders, {
   where: { status: 'pending' },
   orderBy: ['created_at', 'asc'],
 })
 
-let page = await db.findMany(Orders, {
+let page = await db.findMany(orders, {
   where: or({ status: 'pending' }, { status: 'processing' }),
   orderBy: [
     ['status', 'asc'],
@@ -151,7 +151,7 @@ let page = await db.findMany(Orders, {
 
 ```ts
 // Default: metadata (affectedRows/insertId)
-let createResult = await db.create(Users, {
+let createResult = await db.create(users, {
   id: 'u_002',
   email: 'sam@example.com',
   role: 'customer',
@@ -160,7 +160,7 @@ let createResult = await db.create(Users, {
 
 // Return a typed row (with optional relations)
 let createdUser = await db.create(
-  Users,
+  users,
   {
     id: 'u_003',
     email: 'pat@example.com',
@@ -169,19 +169,19 @@ let createdUser = await db.create(
   },
   {
     returnRow: true,
-    with: { recentOrders: UserOrders.orderBy('created_at', 'desc').limit(1) },
+    with: { recentOrders: userOrders.orderBy('created_at', 'desc').limit(1) },
   },
 )
 
 // Bulk insert metadata
-let createManyResult = await db.createMany(Orders, [
+let createManyResult = await db.createMany(orders, [
   { id: 'o_101', user_id: 'u_002', status: 'pending', total: 24.99, created_at: Date.now() },
   { id: 'o_102', user_id: 'u_003', status: 'pending', total: 48.5, created_at: Date.now() },
 ])
 
 // Return inserted rows (requires adapter RETURNING support)
 let insertedRows = await db.createMany(
-  Orders,
+  orders,
   [{ id: 'o_103', user_id: 'u_003', status: 'pending', total: 12, created_at: Date.now() }],
   { returnRows: true },
 )
@@ -190,10 +190,10 @@ let insertedRows = await db.createMany(
 ### Update and delete helpers
 
 ```ts
-let updatedUser = await db.update(Users, 'u_003', { role: 'admin' })
+let updatedUser = await db.update(users, 'u_003', { role: 'admin' })
 
 let updateManyResult = await db.updateMany(
-  Orders,
+  orders,
   { status: 'processing' },
   {
     where: { status: 'pending' },
@@ -202,9 +202,9 @@ let updateManyResult = await db.updateMany(
   },
 )
 
-let deletedUser = await db.delete(Users, 'u_002')
+let deletedUser = await db.delete(users, 'u_002')
 
-let deleteManyResult = await db.deleteMany(Orders, {
+let deleteManyResult = await db.deleteMany(orders, {
   where: { status: 'delivered' },
   orderBy: [['created_at', 'asc']],
   limit: 200,
@@ -226,12 +226,12 @@ Return behavior:
 ```ts
 await db.transaction(async (tx) => {
   let user = await tx.create(
-    Users,
+    users,
     { id: 'u_010', email: 'new@example.com', role: 'customer', created_at: Date.now() },
     { returnRow: true },
   )
 
-  await tx.create(Orders, {
+  await tx.create(orders, {
     id: 'o_500',
     user_id: user.id,
     status: 'pending',
