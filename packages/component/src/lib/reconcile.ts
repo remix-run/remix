@@ -762,11 +762,11 @@ function resolveClientFrame(node: VNode, runtime: FrameRuntime, rootTarget: Even
   Promise.resolve(runtime.resolveFrame(frameSrc, resolveController.signal))
     .then(async (content) => {
       if (node._frameResolveToken !== token || resolveController.signal.aborted) return
-      node._frameFallbackRoot?.dispose()
-      node._frameFallbackRoot = undefined
       let nextContent = asAbortableFrameContent(content, resolveController.signal)
       await instance.render(nextContent, { signal: resolveController.signal })
       if (node._frameResolveToken !== token || resolveController.signal.aborted) return
+      node._frameFallbackRoot?.abandon()
+      node._frameFallbackRoot = undefined
       node._frameResolved = true
     })
     .catch(() => {})
@@ -1032,7 +1032,7 @@ function diffComponent(
 }
 
 // Cleanup without DOM removal - used for descendants when parent DOM node is removed
-function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleManager): void {
+export function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleManager): void {
   if (isCommittedTextNode(node)) {
     return
   }

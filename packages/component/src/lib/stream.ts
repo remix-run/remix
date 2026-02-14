@@ -1,6 +1,6 @@
 import { processStyle } from './style/lib/style.ts'
 import type { ComponentHandle, Key, RemixNode } from './component.ts'
-import type { ElementType, ElementProps, RemixElement } from './jsx.ts'
+import type { ElementType, ElementProps, RemixElement, Props } from './jsx.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from './component.ts'
 import { isEntry, type EntryComponent } from './client-entries.ts'
 
@@ -23,9 +23,14 @@ export interface RenderToStreamOptions {
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
 }
 
+type HydrationStyle = { href: string } & Omit<Props<'link'>, 'children' | 'rel'>
+
+type HydrationScript = { src: string } & Omit<Props<'script'>, 'children' | 'src'>
+
 interface HydrationData {
-  moduleUrl: string
   exportName: string
+  css?: HydrationStyle[]
+  js: [HydrationScript, ...HydrationScript[]]
   props: Record<string, unknown>
 }
 
@@ -47,6 +52,7 @@ interface RenderContext {
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
   pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
   hydrationData: Map<string, HydrationData>
+  seenLinks: Set<string>
   frameData: Map<string, FrameData>
   blockingFrameTails: ReadableStream<Uint8Array>[]
   serverIdScope: string
@@ -121,6 +127,7 @@ export function renderToStream(
     insideSvg: false,
     onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
+    seenLinks: new Set(),
     styleCache: new Map(),
     pendingFrames: [],
     hydrationData: new Map(),
@@ -577,8 +584,9 @@ function buildEntrySegment(
   // Store hydration data in context for aggregation
   let replacer = createHydrationPropsReplacer(context, framePath)
   context.hydrationData.set(instanceId, {
-    moduleUrl: type.$moduleUrl,
-    exportName: type.$exportName,
+    css: type.$asset.css,
+    exportName: type.$asset.exportName,
+    js: type.$asset.js,
     props: JSON.parse(JSON.stringify(props, replacer)),
   })
 
@@ -684,6 +692,9 @@ function finalizeHtml(html: string, context: RenderContext): string {
     context.headElements.push(`<style data-rmx-styles>${css}</style>`)
   }
 
+  // Run before we generate the head to allow for client components to inject required assets.
+  let rmxData = buildRmxDataScript(context)
+
   // Inject head elements if we have any
   if (context.headElements.length > 0) {
     let headContent = context.headElements.join('')
@@ -709,7 +720,6 @@ function finalizeHtml(html: string, context: RenderContext): string {
   }
 
   // Append aggregated hydration/frame data script at the end
-  let rmxData = buildRmxDataScript(context)
   if (rmxData) {
     if (hasHtmlRoot) {
       // Insert before </body> if present, otherwise before </html>
@@ -773,7 +783,26 @@ function buildRmxDataScript(context: RenderContext): string {
     f?: Record<string, FrameData>
   } = {}
 
+  let links = ''
+
   if (context.hydrationData.size > 0) {
+    for (let [, { css, js }] of context.hydrationData) {
+      if (!css?.length) continue
+      for (let props of css) {
+        if (context.seenLinks.has(props.href)) continue
+        context.seenLinks.add(props.href)
+        context.headElements.push(
+          `<link ${renderAttributes({ rel: 'stylesheet', ...props }, false)} />`,
+        )
+      }
+      for (let { src, ...props } of js) {
+        if (context.seenLinks.has(src)) continue
+        context.seenLinks.add(src)
+        context.headElements.push(
+          `<link ${renderAttributes({ rel: 'modulepreload', href: src, ...props }, false)} />`,
+        )
+      }
+    }
     data.h = Object.fromEntries(context.hydrationData)
   }
 
@@ -782,7 +811,7 @@ function buildRmxDataScript(context: RenderContext): string {
   }
 
   let serializedData = escapeScriptJson(JSON.stringify(data))
-  return `<script type="application/json" id="rmx-data">${serializedData}</script>`
+  return links + `<script type="application/json" id="rmx-data">${serializedData}</script>`
 }
 
 function escapeScriptJson(json: string): string {

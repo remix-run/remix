@@ -1,0 +1,20 @@
+{
+  "name": "nitro-demo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "remix": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "nitro": "3.0.1-alpha.2",
+    "vite": "8.0.0-beta.14"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "node .output/server/index.mjs",
+    "typecheck": "tsgo --noEmit"
+  }
+}

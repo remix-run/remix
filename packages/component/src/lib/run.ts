@@ -2,8 +2,15 @@ import { createFrame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { defaultStyleManager } from './diff-props.ts'
 import type { FrameContent } from './component.ts'
+import type { Props } from './jsx.ts'
 
-type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
+type HydrationScript = { src: string } & Omit<Props<'script'>, 'children' | 'src' | 'type'>
+
+type LoadModule = (
+  moduleUrl: HydrationScript,
+  exportName: string,
+  chunks: HydrationScript[],
+) => Promise<Function> | Function
 type ResolveFrame = (src: string, signal?: AbortSignal) => Promise<FrameContent> | FrameContent
 
 export type RunInit = {
