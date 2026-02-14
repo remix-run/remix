@@ -9,7 +9,7 @@ describe('cart handlers', () => {
     let response = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '001',
+        bookId: '1',
         slug: 'bbq',
       }),
       redirect: 'manual',
@@ -24,7 +24,7 @@ describe('cart handlers', () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '002',
+        bookId: '2',
         slug: 'heavy-metal',
       }),
       redirect: 'manual',
@@ -48,7 +48,7 @@ describe('cart handlers', () => {
     let addResponse1 = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '001',
+        bookId: '1',
         slug: 'bbq',
       }),
       redirect: 'manual',
@@ -61,7 +61,7 @@ describe('cart handlers', () => {
     let addRequest2 = requestWithSession('https://remix.run/cart/api/add', sessionId, {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '003',
+        bookId: '3',
         slug: 'three-ways',
       }),
     })
@@ -80,7 +80,7 @@ describe('cart handlers', () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '002',
+        bookId: '2',
         slug: 'heavy-metal',
       }),
       redirect: 'manual',
@@ -106,7 +106,7 @@ describe('cart handlers', () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '001',
+        bookId: '1',
         slug: 'bbq',
       }),
       redirect: 'manual',
@@ -139,7 +139,7 @@ describe('cart handlers', () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '001',
+        bookId: '1',
         slug: 'bbq',
       }),
       redirect: 'manual',
@@ -151,7 +151,7 @@ describe('cart handlers', () => {
     let request = requestWithSession('https://remix.run/cart/api/update', sessionId, {
       method: 'PUT',
       body: new URLSearchParams({
-        bookId: '001',
+        bookId: '1',
         quantity: '2',
         redirect: 'none',
       }),
@@ -165,7 +165,7 @@ describe('cart handlers', () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '001',
+        bookId: '1',
         slug: 'bbq',
       }),
       redirect: 'manual',
@@ -177,7 +177,7 @@ describe('cart handlers', () => {
     let request = requestWithSession('https://remix.run/cart/api/remove', sessionId, {
       method: 'DELETE',
       body: new URLSearchParams({
-        bookId: '001',
+        bookId: '1',
         redirect: 'none',
       }),
     })

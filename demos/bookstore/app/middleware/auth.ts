@@ -16,7 +16,7 @@ export function loadAuth(): Middleware {
     let userId = session.get('userId')
 
     // Only set current user if authenticated
-    if (typeof userId === 'string') {
+    if (typeof userId === 'string' || typeof userId === 'number') {
       let user = await getUserById(userId)
       if (user) {
         setCurrentUser(user)
@@ -43,7 +43,10 @@ export function requireAuth(options?: RequireAuthOptions): Middleware {
 
   return async ({ session, url }) => {
     let userId = session.get('userId')
-    let user = typeof userId === 'string' ? await getUserById(userId) : undefined
+    let user =
+      typeof userId === 'string' || typeof userId === 'number'
+        ? await getUserById(userId)
+        : undefined
 
     if (!user) {
       // Capture the current URL to redirect back to after login

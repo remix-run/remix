@@ -5,7 +5,7 @@ import { routes } from '../routes.ts'
 let moduleUrl = routes.assets.href({ path: 'cart-items.js#CartItems' })
 
 type CartItem = {
-  bookId: string
+  bookId: number
   slug: string
   title: string
   price: number
@@ -20,7 +20,7 @@ type CartItemsProps = {
 
 type PendingAction = {
   type: 'update' | 'remove'
-  bookId: string
+  bookId: number
 } | null
 
 export let CartItems = clientEntry(moduleUrl, (handle: Handle) => {

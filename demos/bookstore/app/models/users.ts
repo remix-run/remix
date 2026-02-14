@@ -1,5 +1,4 @@
 import type { TableRow } from 'remix/data-table'
-import { ilike } from 'remix/data-table'
 
 import { passwordResetTokens, users, db } from './database.ts'
 
@@ -9,12 +8,17 @@ export async function getAllUsers(): Promise<User[]> {
   return db.findMany(users, { orderBy: ['id', 'asc'] })
 }
 
-export async function getUserById(id: string): Promise<User | null> {
-  return db.find(users, id)
+export async function getUserById(id: number | string): Promise<User | null> {
+  let userId = parseUserId(id)
+  if (userId === null) {
+    return null
+  }
+
+  return db.find(users, userId)
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
-  return db.findOne(users, { where: ilike('email', email) })
+  return db.findOne(users, { where: { email: normalizeEmail(email) } })
 }
 
 export async function authenticateUser(email: string, password: string): Promise<User | undefined> {
@@ -32,15 +36,12 @@ export async function createUser(
   name: string,
   role: 'customer' | 'admin' = 'customer',
 ): Promise<User> {
-  let count = await db.count(users)
-  let id = String(count + 1)
   let created_at = Date.now()
 
   return db.create(
     users,
     {
-      id,
-      email,
+      email: normalizeEmail(email),
       password, // In production, hash this!
       name,
       role,
@@ -51,25 +52,35 @@ export async function createUser(
 }
 
 export async function updateUser(
-  id: string,
+  id: number | string,
   data: Partial<Omit<User, 'id'>>,
 ): Promise<User | null> {
+  let userId = parseUserId(id)
+  if (userId === null) {
+    return null
+  }
+
   let changes: Partial<User> = {}
-  if (data.email !== undefined) changes.email = data.email
+  if (data.email !== undefined) changes.email = normalizeEmail(data.email)
   if (data.password !== undefined) changes.password = data.password
   if (data.name !== undefined) changes.name = data.name
   if (data.role !== undefined) changes.role = data.role
   if (data.created_at !== undefined) changes.created_at = data.created_at
 
   if (Object.keys(changes).length > 0) {
-    return db.update(users, id, changes)
+    return db.update(users, userId, changes)
   }
 
-  return getUserById(id)
+  return getUserById(userId)
 }
 
-export async function deleteUser(id: string): Promise<boolean> {
-  return db.delete(users, id)
+export async function deleteUser(id: number | string): Promise<boolean> {
+  let userId = parseUserId(id)
+  if (userId === null) {
+    return false
+  }
+
+  return db.delete(users, userId)
 }
 
 export async function createPasswordResetToken(email: string): Promise<string | undefined> {
@@ -105,4 +116,18 @@ export async function resetPassword(token: string, newPassword: string): Promise
   await db.delete(passwordResetTokens, { token })
 
   return true
+}
+
+function parseUserId(id: number | string): number | null {
+  let parsed = typeof id === 'number' ? id : Number(id)
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null
+  }
+
+  return parsed
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
 }

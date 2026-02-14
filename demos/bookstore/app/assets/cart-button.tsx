@@ -7,7 +7,7 @@ let moduleUrl = routes.assets.href({ path: 'cart-button.js#CartButton' })
 export const CartButton = clientEntry(moduleUrl, (handle: Handle) => {
   let pending = false
 
-  return ({ inCart, id, slug }: { inCart: boolean; id: string; slug: string }) => (
+  return ({ inCart, id, slug }: { inCart: boolean; id: string | number; slug: string }) => (
     <button
       type="button"
       on={{

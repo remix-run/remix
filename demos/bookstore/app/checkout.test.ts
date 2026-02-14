@@ -24,7 +24,7 @@ describe('checkout handlers', () => {
     let addRequest = requestWithSession('https://remix.run/cart/api/add', sessionCookie, {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '001',
+        bookId: '1',
         slug: 'bbq',
       }),
     })

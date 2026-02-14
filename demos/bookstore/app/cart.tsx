@@ -33,9 +33,12 @@ export default {
           await new Promise((resolve) => setTimeout(resolve, 1000))
         }
 
-        let bookId = formData.get('bookId')?.toString() ?? ''
+        let bookId = parseBookId(formData.get('bookId'))
+        if (bookId === null) {
+          return new Response('Invalid book id', { status: 400 })
+        }
 
-        let book = await getBookById(bookId)
+        let book = await getBookById(String(bookId))
         if (!book) {
           return new Response('Book not found', { status: 404 })
         }
@@ -55,7 +58,11 @@ export default {
       async update({ session, formData }) {
         await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        let bookId = formData.get('bookId')?.toString() ?? ''
+        let bookId = parseBookId(formData.get('bookId'))
+        if (bookId === null) {
+          return new Response('Invalid book id', { status: 400 })
+        }
+
         let quantity = parseInt(formData.get('quantity')?.toString() ?? '1', 10)
 
         session.set('cart', updateCartItem(getCurrentCart(), bookId, quantity))
@@ -73,7 +80,10 @@ export default {
           await new Promise((resolve) => setTimeout(resolve, 1000))
         }
 
-        let bookId = formData.get('bookId')?.toString() ?? ''
+        let bookId = parseBookId(formData.get('bookId'))
+        if (bookId === null) {
+          return new Response('Invalid book id', { status: 400 })
+        }
 
         session.set('cart', removeFromCart(getCurrentCart(), bookId))
 
@@ -88,8 +98,12 @@ export default {
 } satisfies Controller<typeof routes.cart>
 
 export async function toggleCart({ session, formData }: any) {
-  let bookId = formData.get('bookId')?.toString() ?? ''
-  let book = await getBookById(bookId)
+  let bookId = parseBookId(formData.get('bookId'))
+  if (bookId === null) {
+    return new Response('Invalid book id', { status: 400 })
+  }
+
+  let book = await getBookById(String(bookId))
   if (!book) return new Response('Book not found', { status: 404 })
 
   let cart = getCurrentCart()
@@ -102,4 +116,18 @@ export async function toggleCart({ session, formData }: any) {
   session.set('cart', next)
 
   return new Response(null, { status: 204 })
+}
+
+function parseBookId(value: unknown): number | null {
+  let stringValue = typeof value === 'string' ? value : value?.toString()
+  if (!stringValue) {
+    return null
+  }
+
+  let parsed = Number(stringValue)
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null
+  }
+
+  return parsed
 }

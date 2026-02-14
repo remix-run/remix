@@ -14,7 +14,12 @@ export async function getBookBySlug(slug: string): Promise<Book | null> {
 }
 
 export async function getBookById(id: string): Promise<Book | null> {
-  return db.find(books, id)
+  let bookId = parseBookId(id)
+  if (bookId === null) {
+    return null
+  }
+
+  return db.find(books, bookId)
 }
 
 export async function getBooksByGenre(genre: string): Promise<Book[]> {
@@ -44,13 +49,15 @@ export async function getAvailableGenres(): Promise<string[]> {
 }
 
 export async function createBook(data: Omit<Book, 'id'>): Promise<Book> {
-  let count = await db.count(books)
-  let id = String(count + 1)
-
-  return db.create(books, { id, ...data }, { returnRow: true })
+  return db.create(books, data, { returnRow: true })
 }
 
 export async function updateBook(id: string, data: Partial<Book>): Promise<Book | null> {
+  let bookId = parseBookId(id)
+  if (bookId === null) {
+    return null
+  }
+
   let changes: Partial<Book> = {}
   if (data.slug !== undefined) changes.slug = data.slug
   if (data.title !== undefined) changes.title = data.title
@@ -65,12 +72,27 @@ export async function updateBook(id: string, data: Partial<Book>): Promise<Book 
   if (data.in_stock !== undefined) changes.in_stock = data.in_stock
 
   if (Object.keys(changes).length > 0) {
-    return db.update(books, id, changes)
+    return db.update(books, bookId, changes)
   }
 
-  return getBookById(id)
+  return getBookById(String(bookId))
 }
 
 export async function deleteBook(id: string): Promise<boolean> {
-  return db.delete(books, id)
+  let bookId = parseBookId(id)
+  if (bookId === null) {
+    return false
+  }
+
+  return db.delete(books, bookId)
+}
+
+function parseBookId(id: string): number | null {
+  let parsed = Number(id)
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null
+  }
+
+  return parsed
 }

@@ -8,7 +8,7 @@ import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 export let books = createTable({
   name: 'books',
   columns: {
-    id: s.string(),
+    id: s.number(),
     slug: s.string(),
     title: s.string(),
     author: s.string(),
@@ -26,7 +26,7 @@ export let books = createTable({
 export let users = createTable({
   name: 'users',
   columns: {
-    id: s.string(),
+    id: s.number(),
     email: s.string(),
     password: s.string(),
     name: s.string(),
@@ -38,8 +38,8 @@ export let users = createTable({
 export let orders = createTable({
   name: 'orders',
   columns: {
-    id: s.string(),
-    user_id: s.string(),
+    id: s.number(),
+    user_id: s.number(),
     total: s.number(),
     status: s.enum_(['pending', 'processing', 'shipped', 'delivered']),
     shipping_address_json: s.string(),
@@ -51,8 +51,8 @@ export let orderItems = createTable({
   name: 'order_items',
   primaryKey: ['order_id', 'book_id'],
   columns: {
-    order_id: s.string(),
-    book_id: s.string(),
+    order_id: s.number(),
+    book_id: s.number(),
     title: s.string(),
     unit_price: s.number(),
     quantity: s.number(),
@@ -67,7 +67,7 @@ export let passwordResetTokens = createTable({
   primaryKey: ['token'],
   columns: {
     token: s.string(),
-    user_id: s.string(),
+    user_id: s.number(),
     expires_at: s.number(),
   },
 })
@@ -81,6 +81,7 @@ if (process.env.NODE_ENV === 'test' && fs.existsSync(databaseFilePath)) {
 }
 
 let sqlite = new BetterSqlite3(databaseFilePath)
+sqlite.pragma('foreign_keys = ON')
 let adapter = createSqliteDatabaseAdapter(sqlite)
 
 export let db = createDatabase(adapter)
@@ -98,7 +99,7 @@ export async function initializeBookstoreDatabase(): Promise<void> {
 async function initialize(): Promise<void> {
   await db.exec(sql`
     create table if not exists books (
-      id text primary key,
+      id integer primary key autoincrement,
       slug text not null unique,
       title text not null,
       author text not null,
@@ -115,7 +116,7 @@ async function initialize(): Promise<void> {
 
   await db.exec(sql`
     create table if not exists users (
-      id text primary key,
+      id integer primary key autoincrement,
       email text not null unique,
       password text not null,
       name text not null,
@@ -126,8 +127,8 @@ async function initialize(): Promise<void> {
 
   await db.exec(sql`
     create table if not exists orders (
-      id text primary key,
-      user_id text not null,
+      id integer primary key autoincrement,
+      user_id integer not null references users (id) on delete restrict,
       total real not null,
       status text not null,
       shipping_address_json text not null,
@@ -136,9 +137,13 @@ async function initialize(): Promise<void> {
   `)
 
   await db.exec(sql`
+    create index if not exists orders_user_id_idx on orders (user_id)
+  `)
+
+  await db.exec(sql`
     create table if not exists order_items (
-      order_id text not null,
-      book_id text not null,
+      order_id integer not null references orders (id) on delete cascade,
+      book_id integer not null references books (id) on delete restrict,
       title text not null,
       unit_price real not null,
       quantity integer not null,
@@ -157,16 +162,20 @@ async function initialize(): Promise<void> {
   await db.exec(sql`
     create table if not exists password_reset_tokens (
       token text primary key,
-      user_id text not null,
+      user_id integer not null references users (id) on delete cascade,
       expires_at integer not null
     )
+  `)
+
+  await db.exec(sql`
+    create index if not exists password_reset_tokens_user_id_idx on password_reset_tokens (user_id)
   `)
 
   let booksCount = await db.count(books)
   if (booksCount === 0) {
     await db.createMany(books, [
       {
-        id: '001',
+        id: 1,
         slug: 'bbq',
         title: 'Ash & Smoke',
         author: 'Rusty Char-Broil',
@@ -180,7 +189,7 @@ async function initialize(): Promise<void> {
         in_stock: true,
       },
       {
-        id: '002',
+        id: 2,
         slug: 'heavy-metal',
         title: 'Heavy Metal Guitar Riffs',
         author: 'Axe Master Krush',
@@ -198,7 +207,7 @@ async function initialize(): Promise<void> {
         in_stock: true,
       },
       {
-        id: '003',
+        id: 3,
         slug: 'three-ways',
         title: 'Three Ways to Change Your Life',
         author: 'Britney Spears',
@@ -222,7 +231,7 @@ async function initialize(): Promise<void> {
   if (usersCount === 0) {
     await db.createMany(users, [
       {
-        id: '1',
+        id: 1,
         email: 'admin@bookstore.com',
         password: 'admin123',
         name: 'Admin User',
@@ -230,7 +239,7 @@ async function initialize(): Promise<void> {
         created_at: new Date('2024-01-01').getTime(),
       },
       {
-        id: '2',
+        id: 2,
         email: 'customer@example.com',
         password: 'password123',
         name: 'John Doe',
@@ -244,8 +253,8 @@ async function initialize(): Promise<void> {
   if (ordersCount === 0) {
     await db.createMany(orders, [
       {
-        id: '1001',
-        user_id: '2',
+        id: 1001,
+        user_id: 2,
         total: 45.98,
         status: 'delivered',
         shipping_address_json: JSON.stringify({
@@ -257,8 +266,8 @@ async function initialize(): Promise<void> {
         created_at: new Date('2024-09-15').getTime(),
       },
       {
-        id: '1002',
-        user_id: '2',
+        id: 1002,
+        user_id: 2,
         total: 54.0,
         status: 'shipped',
         shipping_address_json: JSON.stringify({
@@ -276,22 +285,22 @@ async function initialize(): Promise<void> {
   if (orderItemsCount === 0) {
     await db.createMany(orderItems, [
       {
-        order_id: '1001',
-        book_id: '001',
+        order_id: 1001,
+        book_id: 1,
         title: 'Ash & Smoke',
         unit_price: 16.99,
         quantity: 1,
       },
       {
-        order_id: '1001',
-        book_id: '003',
+        order_id: 1001,
+        book_id: 3,
         title: 'Three Ways to Change Your Life',
         unit_price: 28.99,
         quantity: 1,
       },
       {
-        order_id: '1002',
-        book_id: '002',
+        order_id: 1002,
+        book_id: 2,
         title: 'Heavy Metal Guitar Riffs',
         unit_price: 27.0,
         quantity: 2,

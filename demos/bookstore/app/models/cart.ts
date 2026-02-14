@@ -1,5 +1,5 @@
 export interface CartItem {
-  bookId: string
+  bookId: number
   slug: string
   title: string
   price: number
@@ -22,7 +22,7 @@ export function getCart(value: unknown): Cart {
 
 export function addToCart(
   cart: Cart,
-  bookId: string,
+  bookId: number,
   slug: string,
   title: string,
   price: number,
@@ -38,7 +38,7 @@ export function addToCart(
   return cart
 }
 
-export function updateCartItem(cart: Cart, bookId: string, quantity: number): Cart | undefined {
+export function updateCartItem(cart: Cart, bookId: number, quantity: number): Cart | undefined {
   let item = cart.items.find((item) => item.bookId === bookId)
 
   if (!item) return undefined
@@ -52,7 +52,7 @@ export function updateCartItem(cart: Cart, bookId: string, quantity: number): Ca
   return cart
 }
 
-export function removeFromCart(cart: Cart, bookId: string): Cart {
+export function removeFromCart(cart: Cart, bookId: number): Cart {
   cart.items = cart.items.filter((item) => item.bookId !== bookId)
   return cart
 }
