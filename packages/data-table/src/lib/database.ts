@@ -555,7 +555,10 @@ class DatabaseRuntime implements Database {
     return query.all() as Promise<Array<TableRowWithLoaded<table, LoadedRelationMap<relations>>>>
   }
 
-  async count<table extends AnyTable>(table: table, options?: CountOptions<table>): Promise<number> {
+  async count<table extends AnyTable>(
+    table: table,
+    options?: CountOptions<table>,
+  ): Promise<number> {
     let query: QueryForTable<table> = this.query(asQueryTableInput(table))
 
     if (options?.where) {
