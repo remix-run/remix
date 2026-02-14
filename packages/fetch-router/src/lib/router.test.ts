@@ -195,9 +195,7 @@ describe('router.run()', () => {
 
   it('throws when middleware short-circuits before invoking the callback', async () => {
     let router = createRouter({
-      middleware: [
-        () => new Response('Unauthorized', { status: 401 }),
-      ],
+      middleware: [() => new Response('Unauthorized', { status: 401 })],
     })
 
     await assert.rejects(
@@ -220,11 +218,7 @@ describe('router.run()', () => {
 
   it('accepts RequestInit options', async () => {
     let router = createRouter()
-    let method = await router.run(
-      'https://remix.run',
-      { method: 'POST' },
-      ({ method }) => method,
-    )
+    let method = await router.run('https://remix.run', { method: 'POST' }, ({ method }) => method)
 
     assert.equal(method, 'POST')
   })

@@ -92,11 +92,7 @@ let value = await router.run('https://remix.run', ({ storage }) => storage.get(k
 console.log(value) // "from middleware"
 
 // You can also provide RequestInit, similar to router.fetch(input, init)
-let method = await router.run(
-  'https://remix.run',
-  { method: 'POST' },
-  ({ method }) => method,
-)
+let method = await router.run('https://remix.run', { method: 'POST' }, ({ method }) => method)
 console.log(method) // "POST"
 ```
 

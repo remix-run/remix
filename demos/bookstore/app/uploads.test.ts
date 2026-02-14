@@ -11,7 +11,8 @@ describe('uploads handler', () => {
     let sessionId = await loginAsAdmin(router)
 
     // Get initial book count
-    let initialBookCount = (await router.run('https://remix.run/uploads', () => getAllBooks())).length
+    let initialBookCount = (await router.run('https://remix.run/uploads', () => getAllBooks()))
+      .length
 
     // Create a multipart form with a file upload
     let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'

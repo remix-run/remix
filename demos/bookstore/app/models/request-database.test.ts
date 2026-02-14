@@ -6,7 +6,9 @@ import { router } from '../router.ts'
 
 describe('request database', () => {
   it('returns the request database when middleware is installed', async () => {
-    let database = await router.run('https://remix.run/request-database', () => getRequestDatabase())
+    let database = await router.run('https://remix.run/request-database', () =>
+      getRequestDatabase(),
+    )
     assert.ok(database)
   })
 
