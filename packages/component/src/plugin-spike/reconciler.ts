@@ -41,7 +41,18 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
     root.renderController?.abort()
     root.renderController = new AbortController()
 
-    root.current = reconcileNode(root.current, nextNode, root.container, root)
+    let result = reconcileNode(
+      root.current,
+      nextNode,
+      root.container,
+      root,
+      root.hydrating ? root.hydrationCursor : null,
+    )
+    root.current = result.node
+    if (root.hydrating) {
+      root.hydrationCursor = null
+      root.hydrating = false
+    }
     runTasks(root)
   }
 
@@ -72,40 +83,58 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
     next: null | TextRenderNode | HostRenderNode,
     parent: ParentNode,
     root: RootState,
-  ): null | CommittedNode {
+    cursor: null | Node,
+  ): { node: null | CommittedNode; cursor: null | Node } {
     if (!next) {
-      return removeNode(current, parent)
+      return { node: removeNode(current, parent), cursor }
     }
 
     if (next.kind === 'text') {
-      return reconcileText(current, next, parent)
+      return reconcileText(current, next, parent, root, cursor)
     }
 
-    return reconcileHost(current, next.input, parent, root)
+    return reconcileHost(current, next.input, parent, root, cursor)
   }
 
   function reconcileText(
     current: null | CommittedNode,
     next: TextRenderNode,
     parent: ParentNode,
-  ): CommittedNode {
+    root: RootState,
+    cursor: null | Node,
+  ): { node: CommittedNode; cursor: null | Node } {
     if (current && current.kind === 'text') {
       if (current.value !== next.value) {
         current.dom.data = next.value
         current.value = next.value
       }
-      return current
+      return { node: current, cursor }
+    }
+
+    let candidate = root.hydrationPolicy.normalizeCursor(cursor)
+    if (candidate instanceof Text) {
+      let claim = root.hydrationPolicy.claimText(candidate, next.value)
+      if (current) {
+        removeNode(current, parent)
+      }
+      return {
+        node: { kind: 'text', dom: claim.node, value: next.value },
+        cursor: claim.nextCursor,
+      }
     }
 
     let text = getDocument(parent).createTextNode(next.value)
+    let anchor = candidate ?? (current ? getAnchor(current) : null)
     if (current) {
-      parent.insertBefore(text, getAnchor(current))
+      parent.insertBefore(text, anchor)
       removeNode(current, parent)
+    } else if (anchor) {
+      parent.insertBefore(text, anchor)
     } else {
       parent.append(text)
     }
 
-    return { kind: 'text', dom: text, value: next.value }
+    return { node: { kind: 'text', dom: text, value: next.value }, cursor: candidate }
   }
 
   function reconcileHost(
@@ -113,7 +142,8 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
     input: HostInput,
     parent: ParentNode,
     root: RootState,
-  ): CommittedNode {
+    cursor: null | Node,
+  ): { node: CommittedNode; cursor: null | Node } {
     let key = toKey(input.key)
 
     if (current && current.kind === 'host' && current.key === key) {
@@ -122,14 +152,14 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
         throw new Error('node plugins must resolve host type to string')
       }
       if (current.type !== transformedInput.type) {
-        return mountHost(current, transformedInput, key, parent, root)
+        return mountHost(current, transformedInput, key, parent, root, cursor)
       }
-      patchHost(current, transformedInput, root)
+      patchHost(current, transformedInput, root, null)
       runHostTasks(current, root.renderController!.signal)
-      return current
+      return { node: current, cursor }
     }
 
-    return mountHost(current, input, key, parent, root)
+    return mountHost(current, input, key, parent, root, cursor)
   }
 
   function mountHost(
@@ -138,7 +168,8 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
     key: string,
     parent: ParentNode,
     root: RootState,
-  ): CommittedHostNode {
+    cursor: null | Node,
+  ): { node: CommittedHostNode; cursor: null | Node } {
     let probe = createDraftHostNode(parent, key)
     initializeHostPlugins(probe, hostFactories, root)
     let transformedInput = applyTransforms(probe, input)
@@ -151,7 +182,7 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
       reclaimed.hostHandles = probe.hostHandles
       reclaimed.transforms = probe.transforms
       reclaimed.pendingTasks = probe.pendingTasks
-      patchHost(reclaimed, transformedInput, root)
+      patchHost(reclaimed, transformedInput, root, null)
       if (current) {
         parent.insertBefore(reclaimed.dom, getAnchor(current))
         removeNode(current, parent)
@@ -160,25 +191,62 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
       }
       dispatchHostInsert(reclaimed, transformedInput, root.renderController!.signal)
       runHostTasks(reclaimed, root.renderController!.signal)
-      return reclaimed
+      return { node: reclaimed, cursor }
     }
 
-    let element = getDocument(parent).createElement(transformedInput.type)
+    let candidate = root.hydrationPolicy.normalizeCursor(cursor)
+    let element: Element
+    let hydrated = false
+    let nextCursor = candidate
+    if (
+      candidate instanceof Element &&
+      root.hydrationPolicy.matchElement(candidate, transformedInput.type)
+    ) {
+      element = candidate
+      hydrated = true
+      nextCursor = candidate.nextSibling
+    } else {
+      let retry = root.hydrationPolicy.getRetryCandidate(candidate)
+      if (
+        retry instanceof Element &&
+        root.hydrationPolicy.matchElement(retry, transformedInput.type)
+      ) {
+        element = retry
+        hydrated = true
+        nextCursor = retry.nextSibling
+      } else {
+        root.hydrationPolicy.onElementMismatch(candidate, transformedInput.type)
+        nextCursor = candidate?.nextSibling ?? null
+        element = getDocument(parent).createElement(transformedInput.type)
+      }
+    }
+
     let hostNode = probe
     hostNode.type = transformedInput.type
     hostNode.dom = element
-    patchHost(hostNode, transformedInput, root)
+    let childCursor = hydrated ? element.firstChild : null
+    patchHost(hostNode, transformedInput, root, childCursor)
 
     if (current) {
       parent.insertBefore(element, getAnchor(current))
       removeNode(current, parent)
-    } else {
+    } else if (!hydrated) {
+      if (candidate) {
+        let stale = candidate
+        parent.insertBefore(element, candidate)
+        if (stale.parentNode === parent) {
+          parent.removeChild(stale)
+        }
+      } else {
+        parent.append(element)
+      }
+    } else if (element.parentNode !== parent) {
       parent.append(element)
     }
     dispatchHostInsert(hostNode, transformedInput, root.renderController!.signal)
     runHostTasks(hostNode, root.renderController!.signal)
 
-    return hostNode
+    return { node: hostNode, cursor: nextCursor }
   }
 
   function createDraftHostNode(parent: ParentNode, key: string): CommittedHostNode {
@@ -196,7 +264,12 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
     }
   }
 
-  function patchHost(node: CommittedHostNode, input: HostInput, root: RootState) {
+  function patchHost(
+    node: CommittedHostNode,
+    input: HostInput,
+    root: RootState,
+    cursor: null | Node,
+  ) {
     node.props = input.props
     node.key = toKey(input.key)
 
@@ -207,8 +280,9 @@ export function createReconcilerRuntime(plugins: PreparedPlugin[]) {
     for (let index = 0; index < max; index++) {
       let currentChild = node.children[index] ?? null
       let nextChild = nextChildren[index] ?? null
-      let reconciled = reconcileNode(currentChild, nextChild, node.dom, root)
-      if (reconciled) nextCommitted.push(reconciled)
+      let result = reconcileNode(currentChild, nextChild, node.dom, root, cursor)
+      cursor = result.cursor
+      if (result.node) nextCommitted.push(result.node)
     }
 
     node.children = nextCommitted

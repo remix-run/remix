@@ -1,8 +1,10 @@
 import { createReconcilerRuntime } from './reconciler.ts'
 import { createScheduler } from './scheduler.ts'
 import { connect } from './plugins/connect.ts'
+import { createHydrationPolicy } from './hydration-policy.ts'
 import { TypedEventTarget } from '@remix-run/interaction'
 import type {
+  HydrationPolicy,
   HostRenderNode,
   Plugin,
   PreparedPlugin,
@@ -22,12 +24,22 @@ export function createReconciler(plugins: Plugin[]) {
   let runtime = createReconcilerRuntime(preparedPlugins)
   let scheduler = createScheduler(preparedPlugins, runtime.reconcileRoot)
 
-  function createRoot(container: Element) {
+  function createRoot(
+    container: Element,
+    options: {
+      hydrate?: boolean
+      hydrationPolicy?: Partial<HydrationPolicy>
+    } = {},
+  ) {
+    let hydrate = options.hydrate ?? false
     let root: RootState = {
       container,
       current: null,
       render: null,
       enqueue,
+      hydrating: hydrate,
+      hydrationCursor: hydrate ? container.firstChild : null,
+      hydrationPolicy: createHydrationPolicy(options.hydrationPolicy),
       renderController: null,
       pendingTasks: [],
       scheduled: false,

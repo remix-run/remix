@@ -133,9 +133,20 @@ export type RootState = {
   render: null | ((handle: SpikeHandle) => SpikeRenderable)
   handle: SpikeHandle
   enqueue(): void
+  hydrating: boolean
+  hydrationCursor: null | Node
+  hydrationPolicy: HydrationPolicy
   renderController: null | AbortController
   pendingTasks: Task[]
   scheduled: boolean
+}
+
+export type HydrationPolicy = {
+  normalizeCursor(cursor: null | Node): null | Node
+  claimText(candidate: Text, value: string): { node: Text; nextCursor: null | Node }
+  matchElement(candidate: Element, type: string): boolean
+  onElementMismatch(candidate: null | Node, type: string): void
+  getRetryCandidate(candidate: null | Node): null | Node
 }
 
 export type CommittedTextNode = {
