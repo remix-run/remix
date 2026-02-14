@@ -320,11 +320,17 @@ export type Database = {
     value: PrimaryKeyInput<table>,
     options?: { with?: relations },
   ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
-  findOne<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
+  findOne<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<TableName<table>> = {},
+  >(
     table: table,
     options: FindOneOptions<table, relations>,
   ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null>
-  findMany<table extends AnyTable, relations extends RelationMapForSourceName<TableName<table>> = {}>(
+  findMany<
+    table extends AnyTable,
+    relations extends RelationMapForSourceName<TableName<table>> = {},
+  >(
     table: table,
     options?: FindManyOptions<table, relations>,
   ): Promise<Array<TableRowWith<table, LoadedRelationMap<relations>>>>
