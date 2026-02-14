@@ -8,8 +8,8 @@ import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  index() {
-    let books = getAllBooks()
+  async index() {
+    let books = await getAllBooks()
 
     return render(
       <Layout>
@@ -48,8 +48,8 @@ export default {
                   <td>{book.genre}</td>
                   <td>${book.price.toFixed(2)}</td>
                   <td>
-                    <span class={`badge ${book.inStock ? 'badge-success' : 'badge-warning'}`}>
-                      {book.inStock ? 'Yes' : 'No'}
+                    <span class={`badge ${book.in_stock ? 'badge-success' : 'badge-warning'}`}>
+                      {book.in_stock ? 'Yes' : 'No'}
                     </span>
                   </td>
                   <td class="actions">
@@ -83,8 +83,8 @@ export default {
     )
   },
 
-  show({ params }) {
-    let book = getBookById(params.bookId)
+  async show({ params }) {
+    let book = await getBookById(params.bookId)
 
     if (!book) {
       return render(
@@ -124,12 +124,12 @@ export default {
             <strong>ISBN:</strong> {book.isbn}
           </p>
           <p>
-            <strong>Published:</strong> {book.publishedYear}
+            <strong>Published:</strong> {book.published_year}
           </p>
           <p>
             <strong>In Stock:</strong>{' '}
-            <span class={`badge ${book.inStock ? 'badge-success' : 'badge-warning'}`}>
-              {book.inStock ? 'Yes' : 'No'}
+            <span class={`badge ${book.in_stock ? 'badge-success' : 'badge-warning'}`}>
+              {book.in_stock ? 'Yes' : 'No'}
             </span>
           </p>
 
@@ -232,25 +232,25 @@ export default {
   },
 
   async create({ formData }) {
-    createBook({
+    await createBook({
       slug: formData.get('slug')?.toString() ?? '',
       title: formData.get('title')?.toString() ?? '',
       author: formData.get('author')?.toString() ?? '',
       description: formData.get('description')?.toString() ?? '',
       price: parseFloat(formData.get('price')?.toString() ?? '0'),
       genre: formData.get('genre')?.toString() ?? '',
-      coverUrl: formData.get('cover')?.toString() ?? '/images/placeholder.jpg',
-      imageUrls: [],
+      cover_url: formData.get('cover')?.toString() ?? '/images/placeholder.jpg',
+      image_urls: JSON.stringify([]),
       isbn: formData.get('isbn')?.toString() ?? '',
-      publishedYear: parseInt(formData.get('publishedYear')?.toString() ?? '2024', 10),
-      inStock: formData.get('inStock')?.toString() === 'true',
+      published_year: parseInt(formData.get('publishedYear')?.toString() ?? '2024', 10),
+      in_stock: formData.get('inStock')?.toString() === 'true',
     })
 
     return redirect(routes.admin.books.index.href())
   },
 
-  edit({ params }) {
-    let book = getBookById(params.bookId)
+  async edit({ params }) {
+    let book = await getBookById(params.bookId)
 
     if (!book) {
       return render(
@@ -323,7 +323,7 @@ export default {
                 type="number"
                 id="publishedYear"
                 name="publishedYear"
-                value={book.publishedYear}
+                value={book.published_year}
                 required
               />
             </div>
@@ -331,10 +331,10 @@ export default {
             <div class="form-group">
               <label for="inStock">In Stock</label>
               <select id="inStock" name="inStock">
-                <option value="true" selected={book.inStock}>
+                <option value="true" selected={book.in_stock}>
                   Yes
                 </option>
-                <option value="false" selected={!book.inStock}>
+                <option value="false" selected={!book.in_stock}>
                   No
                 </option>
               </select>
@@ -342,10 +342,10 @@ export default {
 
             <div class="form-group">
               <label for="cover">Book Cover Image</label>
-              {book.coverUrl !== '/images/placeholder.jpg' && (
+              {book.cover_url !== '/images/placeholder.jpg' && (
                 <div css={{ marginBottom: '0.5rem' }}>
                   <img
-                    src={book.coverUrl}
+                    src={book.cover_url}
                     alt={book.title}
                     css={{ maxWidth: '200px', height: 'auto', borderRadius: '4px' }}
                   />
@@ -375,33 +375,33 @@ export default {
   },
 
   async update({ formData, params }) {
-    let book = getBookById(params.bookId)
+    let book = await getBookById(params.bookId)
     if (!book) {
       return new Response('Book not found', { status: 404 })
     }
 
     // The uploadHandler automatically saves the file and returns the URL path
-    // If no file was uploaded, the form field will be empty and we keep the existing coverUrl
-    let coverUrl = formData.get('cover')?.toString() || book.coverUrl
+    // If no file was uploaded, keep the existing cover_url
+    let cover_url = formData.get('cover')?.toString() || book.cover_url
 
-    updateBook(params.bookId, {
+    await updateBook(params.bookId, {
       slug: formData.get('slug')?.toString() ?? '',
       title: formData.get('title')?.toString() ?? '',
       author: formData.get('author')?.toString() ?? '',
       description: formData.get('description')?.toString() ?? '',
       price: parseFloat(formData.get('price')?.toString() ?? '0'),
       genre: formData.get('genre')?.toString() ?? '',
-      coverUrl,
+      cover_url,
       isbn: formData.get('isbn')?.toString() ?? '',
-      publishedYear: parseInt(formData.get('publishedYear')?.toString() ?? '2024', 10),
-      inStock: formData.get('inStock')?.toString() === 'true',
+      published_year: parseInt(formData.get('publishedYear')?.toString() ?? '2024', 10),
+      in_stock: formData.get('inStock')?.toString() === 'true',
     })
 
     return redirect(routes.admin.books.index.href())
   },
 
-  destroy({ params }) {
-    deleteBook(params.bookId)
+  async destroy({ params }) {
+    await deleteBook(params.bookId)
 
     return redirect(routes.admin.books.index.href())
   },

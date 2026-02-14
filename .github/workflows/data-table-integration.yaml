@@ -1,0 +1,168 @@
+name: Data Table Integration Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/data-table-integration.yaml'
+      - 'packages/data-table/**'
+      - 'packages/data-table-postgres/**'
+      - 'packages/data-table-mysql/**'
+      - 'packages/data-table-sqlite/**'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+  pull_request:
+    paths:
+      - '.github/workflows/data-table-integration.yaml'
+      - 'packages/data-table/**'
+      - 'packages/data-table-postgres/**'
+      - 'packages/data-table-mysql/**'
+      - 'packages/data-table-sqlite/**'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+
+jobs:
+  unit:
+    name: Unit and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run data-table package checks
+        run: |
+          pnpm --filter @remix-run/data-table run typecheck
+          pnpm --filter @remix-run/data-table run test
+          pnpm --filter @remix-run/data-table run build
+          pnpm --filter @remix-run/data-table-postgres run typecheck
+          pnpm --filter @remix-run/data-table-postgres run test
+          pnpm --filter @remix-run/data-table-postgres run build
+          pnpm --filter @remix-run/data-table-mysql run typecheck
+          pnpm --filter @remix-run/data-table-mysql run test
+          pnpm --filter @remix-run/data-table-mysql run build
+          pnpm --filter @remix-run/data-table-sqlite run typecheck
+          pnpm --filter @remix-run/data-table-sqlite run test
+          pnpm --filter @remix-run/data-table-sqlite run build
+
+  postgres-integration:
+    name: Postgres Integration
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: remix
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run postgres integration tests
+        env:
+          DATA_TABLE_INTEGRATION: '1'
+          DATA_TABLE_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
+        run: pnpm --filter @remix-run/data-table-postgres run test
+
+  mysql-integration:
+    name: MySQL Integration
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: remix
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run mysql integration tests
+        env:
+          DATA_TABLE_INTEGRATION: '1'
+          DATA_TABLE_MYSQL_URL: mysql://root:root@127.0.0.1:3306/remix
+        run: pnpm --filter @remix-run/data-table-mysql run test
+
+  sqlite-integration:
+    name: SQLite Integration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build sqlite native module
+        run: pnpm rebuild better-sqlite3
+
+      - name: Run sqlite adapter tests
+        env:
+          DATA_TABLE_INTEGRATION: '1'
+        run: pnpm --filter @remix-run/data-table-sqlite run test

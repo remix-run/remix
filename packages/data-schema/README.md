@@ -81,7 +81,6 @@ let User = object({
   name: string(),
   username: string().pipe(minLength(3)),
 })
-
 let result = parseSafe(User, input, {
   locale: 'es',
   errorMap(context) {

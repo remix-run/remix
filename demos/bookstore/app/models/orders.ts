@@ -1,3 +1,7 @@
+import type { TableRow } from 'remix/data-table'
+
+import { OrdersTable, db } from './database.ts'
+
 export interface OrderItem {
   bookId: string
   title: string
@@ -5,92 +9,51 @@ export interface OrderItem {
   quantity: number
 }
 
-export interface Order {
-  id: string
-  userId: string
-  items: OrderItem[]
-  total: number
-  status: 'pending' | 'processing' | 'shipped' | 'delivered'
-  shippingAddress: {
-    street: string
-    city: string
-    state: string
-    zip: string
-  }
-  createdAt: Date
+export type Order = TableRow<typeof OrdersTable>
+
+export async function getAllOrders(): Promise<Order[]> {
+  return db.findMany(OrdersTable, { orderBy: ['created_at', 'asc'] })
 }
 
-const ordersData: Order[] = [
-  {
-    id: '1001',
-    userId: '2',
-    items: [
-      { bookId: '1', title: 'The Midnight Library', price: 16.99, quantity: 1 },
-      { bookId: '3', title: 'Project Hail Mary', price: 28.99, quantity: 1 },
-    ],
-    total: 45.98,
-    status: 'delivered',
-    shippingAddress: {
-      street: '123 Main St',
-      city: 'Boston',
-      state: 'MA',
-      zip: '02101',
-    },
-    createdAt: new Date('2024-09-15'),
-  },
-  {
-    id: '1002',
-    userId: '2',
-    items: [{ bookId: '2', title: 'Atomic Habits', price: 27.0, quantity: 2 }],
-    total: 54.0,
-    status: 'shipped',
-    shippingAddress: {
-      street: '123 Main St',
-      city: 'Boston',
-      state: 'MA',
-      zip: '02101',
-    },
-    createdAt: new Date('2024-10-01'),
-  },
-]
-
-export function getAllOrders(): Order[] {
-  return [...ordersData]
+export async function getOrderById(id: string): Promise<Order | null> {
+  return db.find(OrdersTable, id)
 }
 
-export function getOrderById(id: string): Order | undefined {
-  return ordersData.find((order) => order.id === id)
+export async function getOrdersByUserId(userId: string): Promise<Order[]> {
+  return db.findMany(OrdersTable, {
+    where: { user_id: userId },
+    orderBy: ['created_at', 'asc'],
+  })
 }
 
-export function getOrdersByUserId(userId: string): Order[] {
-  return ordersData.filter((order) => order.userId === userId)
-}
-
-export function createOrder(
-  userId: string,
-  items: OrderItem[],
-  shippingAddress: Order['shippingAddress'],
-): Order {
+export async function createOrder(
+  user_id: string,
+  items_json: string,
+  shipping_address_json: string,
+): Promise<Order> {
+  let items = JSON.parse(items_json) as OrderItem[]
   let total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  let count = await db.query(OrdersTable).count()
+  let id = String(1000 + count + 1)
 
-  let newOrder: Order = {
-    id: String(1000 + ordersData.length + 1),
-    userId,
-    items,
-    total,
-    status: 'pending',
-    shippingAddress,
-    createdAt: new Date(),
-  }
-
-  ordersData.push(newOrder)
-  return newOrder
+  return db.create(
+    OrdersTable,
+    {
+      id,
+      user_id,
+      items_json,
+      total,
+      status: 'pending',
+      shipping_address_json,
+      created_at: Date.now(),
+    },
+    { returnRow: true },
+  )
 }
 
-export function updateOrderStatus(id: string, status: Order['status']): Order | undefined {
-  let order = getOrderById(id)
-  if (!order) return undefined
-
-  order.status = status
-  return order
+export async function updateOrderStatus(
+  id: string,
+  status: Order['status'],
+): Promise<Order | null> {
+  return db.update(OrdersTable, id, { status })
 }

@@ -8,6 +8,7 @@ import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
 import { routes } from './routes.ts'
+import { initializeBookstoreDatabase } from './models/database.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
 import { uploadHandler } from './utils/uploads.ts'
 
@@ -41,6 +42,8 @@ middleware.push(formData({ uploadHandler }))
 middleware.push(methodOverride())
 middleware.push(session(sessionCookie, sessionStorage))
 middleware.push(asyncContext())
+
+await initializeBookstoreDatabase()
 
 export let router = createRouter({ middleware })
 

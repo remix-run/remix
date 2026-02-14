@@ -3,9 +3,11 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "better-sqlite3": "^12.6.2",
     "remix": "workspace:*"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "esbuild": "^0.25.10",

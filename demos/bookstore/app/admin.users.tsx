@@ -9,9 +9,9 @@ import { getCurrentUser } from './utils/context.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  index() {
+  async index() {
     let user = getCurrentUser()
-    let users = getAllUsers()
+    let users = await getAllUsers()
 
     return render(
       <Layout>
@@ -44,7 +44,7 @@ export default {
                       {u.role}
                     </span>
                   </td>
-                  <td>{u.createdAt.toLocaleDateString()}</td>
+                  <td>{new Date(u.created_at).toLocaleDateString()}</td>
                   <td class="actions">
                     <a
                       href={routes.admin.users.edit.href({ userId: u.id })}
@@ -78,8 +78,8 @@ export default {
     )
   },
 
-  show({ params }) {
-    let targetUser = getUserById(params.userId)
+  async show({ params }) {
+    let targetUser = await getUserById(params.userId)
 
     if (!targetUser) {
       return render(
@@ -110,7 +110,7 @@ export default {
             </span>
           </p>
           <p>
-            <strong>Created:</strong> {targetUser.createdAt.toLocaleDateString()}
+            <strong>Created:</strong> {new Date(targetUser.created_at).toLocaleDateString()}
           </p>
 
           <div css={{ marginTop: '2rem' }}>
@@ -130,8 +130,8 @@ export default {
     )
   },
 
-  edit({ params }) {
-    let targetUser = getUserById(params.userId)
+  async edit({ params }) {
+    let targetUser = await getUserById(params.userId)
 
     if (!targetUser) {
       return render(
@@ -192,7 +192,7 @@ export default {
   },
 
   async update({ formData, params }) {
-    updateUser(params.userId, {
+    await updateUser(params.userId, {
       name: formData.get('name')?.toString() ?? '',
       email: formData.get('email')?.toString() ?? '',
       role: (formData.get('role')?.toString() ?? 'customer') as 'customer' | 'admin',
@@ -201,8 +201,8 @@ export default {
     return redirect(routes.admin.users.index.href())
   },
 
-  destroy({ params }) {
-    deleteUser(params.userId)
+  async destroy({ params }) {
+    await deleteUser(params.userId)
 
     return redirect(routes.admin.users.index.href())
   },

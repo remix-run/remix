@@ -11,7 +11,7 @@ describe('uploads handler', () => {
     let sessionId = await loginAsAdmin(router)
 
     // Get initial book count
-    let initialBookCount = getAllBooks().length
+    let initialBookCount = (await getAllBooks()).length
 
     // Create a multipart form with a file upload
     let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
@@ -75,15 +75,15 @@ describe('uploads handler', () => {
     assert.ok(createResponse.headers.get('Location')?.includes('/admin/books'))
 
     // Get the newly created book from the model
-    let books = getAllBooks()
+    let books = await getAllBooks()
     assert.equal(books.length, initialBookCount + 1)
 
     let newBook = books[books.length - 1]
     assert.equal(newBook.slug, 'book-with-cover')
-    assert.ok(newBook.coverUrl.startsWith('/uploads/'))
+    assert.ok(newBook.cover_url.startsWith('/uploads/'))
 
-    // Now fetch the uploaded file from the /uploads route using the book's coverUrl
-    let fileResponse = await router.fetch(`https://remix.run${newBook.coverUrl}`)
+    // Now fetch the uploaded file from the /uploads route using the book's cover_url
+    let fileResponse = await router.fetch(`https://remix.run${newBook.cover_url}`)
 
     assert.equal(fileResponse.status, 200)
     assert.equal(fileResponse.headers.get('Content-Type'), 'image/jpeg')
