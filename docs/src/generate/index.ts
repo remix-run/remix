@@ -30,9 +30,10 @@ let { values: cliArgs } = util.parseArgs({
       short: 'e',
       default: '../packages/*',
     },
-    gitRef: {
+    // Git tag to use for source code links from docs
+    tag: {
       type: 'string',
-      short: 'r',
+      short: 't',
     },
   },
 })
@@ -47,7 +48,7 @@ let { comments, apisToDocument } = await loadTypeDoc(
     ? // When input is specified, we're operating off an existing typedoc api.json file
       { input: cliArgs.input }
     : // Otherwise, we run typedoc and write the output to TYPEDOC_DIR
-      { entryPoints: cliArgs.entryPoints, typedocDir: TYPEDOC_DIR, gitRef: cliArgs.gitRef },
+      { entryPoints: cliArgs.entryPoints, typedocDir: TYPEDOC_DIR, tag: cliArgs.tag },
 )
 
 // Parse JSDocs into DocumentedAPI instances we can write out to markdown
