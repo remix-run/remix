@@ -112,7 +112,10 @@ export type UpdateHandle = {
 }
 
 export type HostFactory<elementNode> = (hostHandle: HostHandle<elementNode>) => void | NodeTransform
-export type Plugin<elementNode> = (pluginHandle: PluginHandle) => void | HostFactory<elementNode>
+export type Plugin<elementNode> = (
+  pluginHandle: PluginHandle,
+  root: ReconcilerRoot,
+) => void | HostFactory<elementNode>
 
 export function definePlugin<elementNode>(plugin: Plugin<elementNode>): Plugin<elementNode> {
   return plugin
@@ -215,6 +218,8 @@ export type RootState<
 > = {
   id: number
   target: EventTarget
+  parent: null | RootState<parentNode, node, elementNode, traversal>
+  branches: Set<RootState<parentNode, node, elementNode, traversal>>
   container: parentNode
   current: CommittedNode<node, elementNode>[]
   render: null | ((handle: NodeHandle) => RenderValue)
@@ -224,6 +229,9 @@ export type RootState<
   renderController: null | AbortController
   pendingTasks: RootTask[]
   scheduled: boolean
+  disposed: boolean
+  preparedPlugins: PreparedPlugin<elementNode>[]
+  hostFactories: HostFactory<elementNode>[]
 }
 
 export type ErrorPhase =
@@ -254,8 +262,9 @@ export class ReconcilerErrorEvent extends Event {
   }
 }
 
-export type ReconcilerRoot = EventTarget & {
+export type ReconcilerRoot<parentNode = unknown> = EventTarget & {
   render(render: null | RenderValue | ((handle: NodeHandle) => RenderValue)): void
+  branch(container: parentNode): ReconcilerRoot<parentNode>
   flush(): void
   remove(): void
   dispose(): void

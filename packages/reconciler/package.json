@@ -58,7 +58,7 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "tsx --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
-    "test:coverage": "c8 --check-coverage --lines 85 --functions 85 --branches 85 --statements 85 --reporter=text tsx --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
+    "test:coverage": "c8 --exclude \"src/testing/**\" --exclude \"**/*.test.ts\" --exclude \"**/*.test.tsx\" --check-coverage --lines 85 --functions 85 --branches 85 --statements 85 --reporter=text tsx --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
     "typecheck": "tsgo --noEmit"
   }
 }

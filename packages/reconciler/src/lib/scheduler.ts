@@ -1,5 +1,5 @@
 import { PluginAfterFlushEvent, PluginBeforeFlushEvent, ReconcilerErrorEvent } from './types.ts'
-import type { PreparedPlugin, RootState } from './types.ts'
+import type { RootState } from './types.ts'
 
 const MAX_CASCADING_FLUSHES = 50
 
@@ -8,7 +8,6 @@ export type Scheduler<parentNode, node, elementNode extends node & parentNode, t
 >
 
 export function createScheduler<parentNode, node, elementNode extends node & parentNode, traversal>(
-  plugins: PreparedPlugin<elementNode>[],
   reconcileRoot: (root: RootState<parentNode, node, elementNode, traversal>, flushId: number) => void,
 ) {
   let flushId = 0
@@ -46,9 +45,9 @@ export function createScheduler<parentNode, node, elementNode extends node & par
     flushId++
     let context = { flushId }
 
-    for (let plugin of plugins) {
-      let event = new PluginBeforeFlushEvent(context)
-      for (let root of batch) {
+    for (let root of batch) {
+      for (let plugin of root.preparedPlugins) {
+        let event = new PluginBeforeFlushEvent(context)
         try {
           plugin.handle.dispatchEvent(event)
         } catch (error) {
@@ -79,9 +78,9 @@ export function createScheduler<parentNode, node, elementNode extends node & par
       }
     }
 
-    for (let plugin of plugins) {
-      let event = new PluginAfterFlushEvent(context)
-      for (let root of batch) {
+    for (let root of batch) {
+      for (let plugin of root.preparedPlugins) {
+        let event = new PluginAfterFlushEvent(context)
         try {
           plugin.handle.dispatchEvent(event)
         } catch (error) {

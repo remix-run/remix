@@ -1,30 +1,79 @@
 # @remix-run/reconciler
 
-A plugin-driven reconciler runtime focused on:
+A plugin-driven reconciler runtime with a strict separation of responsibilities:
 
-- modular feature composition
-- platform policies (`NodePolicy`) instead of hard-coded DOM behavior
-- guarded scheduler/reconciler execution with root-level error events
-- efficient keyed and unkeyed child reconciliation
+- the reconciler owns tree diffing and scheduling
+- policies own platform-specific node operations
+- plugins own behavior and feature composition
 
-## Status
+This package is platform-agnostic by design and currently ships with testing helpers
+(`TestNodePolicy` and a testing JSX runtime).
 
-This package is intended to be the foundation for the next-generation component reconciler. It currently ships with a testing policy (`TestNodePolicy`) and a testing-only JSX runtime.
+## Design overview
 
-## Core architecture
+### `createReconciler(nodePolicy, plugins)`
 
-- `createReconciler(plugins, { nodePolicy })`
-  - prepares plugins, creates runtime + scheduler
-- `createRoot(container)`
-  - returns an `EventTarget` root with `render`, `flush`, `remove`, `dispose`
-- `NodePolicy`
-  - host operations (`create`, `insert`, `move`, `remove`, traversal/resolve)
-- plugins
-  - host transforms, lifecycle hooks, queued tasks
+Creates a reconciler instance from:
 
-## Error handling
+- a `NodePolicy` implementation (platform adapter)
+- a plugin pipeline (feature layer)
+- an internal runtime and scheduler
 
-Errors thrown by scheduler/reconciler/plugin/task execution are caught and dispatched as `error` events on the root.
+```ts
+import { createReconciler } from '@remix-run/reconciler'
+
+let reconciler = createReconciler(myNodePolicy, [myPlugin])
+```
+
+### `createRoot(container)`
+
+Returns a root `EventTarget` with:
+
+- `render(renderable)` to schedule work
+- `branch(container)` to create a child root anchored to this root
+- `flush()` to force a sync flush
+- `remove()` to remove rendered content
+- `dispose()` to remove content and stop scheduling
+
+```ts
+let root = reconciler.createRoot(container)
+let nested = root.branch(nestedContainer)
+
+root.render(<app>Hello</app>)
+nested.render(<panel>Hi</panel>)
+root.flush()
+```
+
+### Runtime and scheduler
+
+The runtime handles:
+
+- normalization of render values to internal nodes
+- keyed and unkeyed child reconciliation
+- mounting, patching, moving, and removing host nodes through `NodePolicy`
+- host task execution and root task execution
+
+The scheduler handles:
+
+- batching root updates
+- plugin lifecycle hooks (`beforeFlush` / `afterFlush`)
+- cascading update guardrails
+
+### Plugin model
+
+Plugins can:
+
+- register lifecycle listeners on plugin handles
+- register host listeners (`insert` / `remove`)
+- transform host input
+- queue host tasks and schedule updates
+
+Plugins should stay small and composable. The reconciler core should remain feature-agnostic.
+
+## Error model
+
+Root `error` events (`ReconcilerErrorEvent`) are used for reconciler-owned execution paths
+(for example reconcile, scheduler, root tasks, and host tasks).
 
 ```ts
 root.addEventListener('error', (event) => {
@@ -33,9 +82,95 @@ root.addEventListener('error', (event) => {
 })
 ```
 
-## Testing with JSX
+Important behavior:
 
-Use the testing runtime as `jsxImportSource`:
+- plugin and host listener throws are automatically dispatched on root as `error` events
+- plugins can still dispatch additional custom root events when needed
+
+## Writing a `NodePolicy`
+
+A `NodePolicy` is the platform adapter. It defines how the reconciler reads and mutates host nodes.
+
+Implement these capabilities:
+
+- create: `createText`, `createElement`
+- tree operations: `insert`, `move`, `remove`
+- traversal: `begin`, `enter`, `firstChild`, `nextSibling`
+- hydration/resolve: `resolveText`, `resolveElement`
+
+```ts
+let nodePolicy = {
+  createText(_parent, value) {
+    return { kind: 'text', value }
+  },
+  createElement(_parent, type) {
+    return { kind: 'element', type, children: [] }
+  },
+  // plus traversal, insert/move/remove, and resolve methods
+}
+```
+
+Guidelines:
+
+- keep operations deterministic and focused on host tree mutations
+- do not embed feature behavior in the policy
+- treat policy nodes as host implementation details
+
+## Writing plugins
+
+A plugin receives a plugin handle and root, and can optionally return a host factory.
+
+Typical plugin patterns:
+
+- transform host props before patching
+- respond to host insert/remove events
+- queue host tasks for imperative work
+- call `update()` for follow-up renders
+
+```ts
+let plugin = definePlugin((_pluginHandle, root) => (host) => {
+  host.addEventListener('insert', (event) => {
+    let insertEvent = event as HostInsertEvent<MyElementNode>
+    insertEvent.node.attributes.id = String(insertEvent.input.props.id ?? '')
+  })
+
+  // Optional custom event.
+  root.dispatchEvent(new Event('plugin-ready'))
+
+  return (input) => input
+})
+```
+
+Guidelines:
+
+- keep plugin scope narrow (single concern)
+- avoid cross-plugin coupling
+- dispatch explicit root events only for domain-level plugin signals
+
+## Minimal flow
+
+```ts
+let reconciler = createReconciler(nodePolicy, [myPlugin])
+let root = reconciler.createRoot(container)
+
+root.addEventListener('error', (event) => {
+  let errorEvent = event as ReconcilerErrorEvent
+  console.error(errorEvent.context.phase, errorEvent.error)
+})
+
+root.render(<app />)
+root.flush()
+```
+
+## Testing and JSX runtime
+
+For tests, use:
+
+- `@remix-run/reconciler/testing` helpers
+- `createTestNodePolicy()` and `createTestContainer()`
+- testing-only JSX runtime
+
+`tsconfig.json` example:
 
 ```json
 {
@@ -45,10 +180,3 @@ Use the testing runtime as `jsxImportSource`:
   }
 }
 ```
-
-The testing runtime exports:
-
-- `Fragment`
-- `jsx`
-- `jsxs`
-- `jsxDEV`

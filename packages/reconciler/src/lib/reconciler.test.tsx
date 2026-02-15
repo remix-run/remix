@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { createReconciler, definePlugin } from '../index.ts'
+import { createReconciler, definePlugin, ReconcilerErrorEvent } from '../index.ts'
 import { componentPlugin } from '../testing/component-plugin.ts'
 import { jsx } from '../testing/jsx-runtime.ts'
 import {
@@ -8,13 +8,13 @@ import {
   createTestNodePolicy,
   stringifyTestNode,
 } from '../testing/test-node-policy.ts'
-import type { Plugin, ReconcilerErrorEvent, RenderValue, UpdateHandle } from './types.ts'
+import type { Plugin, RenderValue, UpdateHandle } from './types.ts'
 
 describe('reconciler package', () => {
   it('renders, updates, and removes host content', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(<div id="first">hello</div>)
@@ -33,7 +33,7 @@ describe('reconciler package', () => {
   it('reorders keyed children using policy moves', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(
@@ -75,7 +75,7 @@ describe('reconciler package', () => {
       let next = { ...input.props, b: String(input.props.a ?? '') + '2' }
       return { ...input, props: next }
     })
-    let reconciler = createReconciler([pluginA, pluginB, attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [pluginA, pluginB, attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(<div />)
@@ -98,7 +98,7 @@ describe('reconciler package', () => {
       return next
     })
 
-    let reconciler = createReconciler([invalidHostType, attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [invalidHostType, attributeProps()])
     let root = reconciler.createRoot(container)
     root.addEventListener('error', (event) => {
       events.push(event as ReconcilerErrorEvent)
@@ -124,7 +124,7 @@ describe('reconciler package', () => {
       return input
     })
 
-    let reconciler = createReconciler([throwsHostTask, attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [throwsHostTask, attributeProps()])
     let root = reconciler.createRoot(container)
     root.addEventListener('error', (event) => {
       events.push(event as ReconcilerErrorEvent)
@@ -144,10 +144,37 @@ describe('reconciler package', () => {
     assert.ok(phases.includes('rootTask'))
   })
 
+  it('passes root to plugins so they can dispatch errors directly', () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let events: ReconcilerErrorEvent[] = []
+
+    let plugin = definePlugin((pluginHandle, root) => {
+      pluginHandle.addEventListener('beforeFlush', () => {
+        root.dispatchEvent(
+          new ReconcilerErrorEvent(new Error('plugin-failure'), { phase: 'plugin' }),
+        )
+      })
+      return undefined
+    })
+
+    let reconciler = createReconciler(nodePolicy, [plugin, attributeProps()])
+    let root = reconciler.createRoot(container)
+    root.addEventListener('error', (event) => {
+      events.push(event as ReconcilerErrorEvent)
+    })
+    root.render(<div>x</div>)
+    root.flush()
+
+    assert.equal(events.length, 1)
+    assert.equal(events[0].context.phase, 'plugin')
+    assert.equal((events[0].error as Error).message, 'plugin-failure')
+  })
+
   it('supports JSX fragments and nested arrays', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
 
     let items = ['x', 'y']
@@ -183,7 +210,7 @@ describe('reconciler package', () => {
   it('supports component setup once and scheduled updates', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([componentPlugin(), attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [componentPlugin(), attributeProps()])
     let root = reconciler.createRoot(container)
     let setupCalls = 0
     let capturedUpdate: null | (() => void) = null
@@ -218,54 +245,10 @@ describe('reconciler package', () => {
     assert.equal(setupCalls, 1)
   })
 
-  it('dispatches reconcile error when component setup is invalid', async () => {
-    let nodePolicy = createTestNodePolicy()
-    let container = createTestContainer()
-    let events: ReconcilerErrorEvent[] = []
-    let reconciler = createReconciler([componentPlugin(), attributeProps()], { nodePolicy })
-    let root = reconciler.createRoot(container)
-    root.addEventListener('error', (event) => {
-      events.push(event as ReconcilerErrorEvent)
-    })
-
-    function BadSetup(_handle: UpdateHandle) {
-      return null as unknown as (props: Record<string, unknown>) => unknown
-    }
-
-    root.render(jsx(BadSetup as unknown, {}))
-    root.flush()
-    await Promise.resolve()
-
-    assert.equal(stringifyTestNode(container), '')
-    assert.ok(events.some((event) => event.context.phase === 'reconcile'))
-  })
-
-  it('dispatches reconcile error when component render is not a JSX element', async () => {
-    let nodePolicy = createTestNodePolicy()
-    let container = createTestContainer()
-    let events: ReconcilerErrorEvent[] = []
-    let reconciler = createReconciler([componentPlugin(), attributeProps()], { nodePolicy })
-    let root = reconciler.createRoot(container)
-    root.addEventListener('error', (event) => {
-      events.push(event as ReconcilerErrorEvent)
-    })
-
-    function BadRender(_handle: UpdateHandle) {
-      return () => 'oops' as unknown as Record<string, unknown>
-    }
-
-    root.render(jsx(BadRender as unknown, {}))
-    root.flush()
-    await Promise.resolve()
-
-    assert.equal(stringifyTestNode(container), '')
-    assert.ok(events.some((event) => event.context.phase === 'reconcile'))
-  })
-
   it('updates only beneath component subtree when component handle updates', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([componentPlugin(), attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [componentPlugin(), attributeProps()])
     let root = reconciler.createRoot(container)
     let capturedUpdate: null | (() => void) = null
 
@@ -313,7 +296,7 @@ describe('reconciler package', () => {
   it('removes stale children in unkeyed lists', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(
@@ -339,7 +322,7 @@ describe('reconciler package', () => {
   it('replaces node when keyed type changes', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(<alpha key="a">first</alpha>)
@@ -365,7 +348,7 @@ describe('reconciler package', () => {
         phases.push('afterFlush')
       })
     })
-    let reconciler = createReconciler([lifecyclePlugin, attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [lifecyclePlugin, attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(<div>ok</div>)
@@ -374,6 +357,29 @@ describe('reconciler package', () => {
 
     assert.equal(stringifyTestNode(container), '<div>ok</div>')
     assert.deepEqual(phases, ['beforeFlush', 'afterFlush'])
+  })
+
+  it('dispatches plugin error when lifecycle listener throws', async () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let events: ReconcilerErrorEvent[] = []
+    let lifecyclePlugin = definePlugin((pluginHandle) => {
+      pluginHandle.addEventListener('beforeFlush', () => {
+        throw new Error('before-fail')
+      })
+    })
+    let reconciler = createReconciler(nodePolicy, [lifecyclePlugin, attributeProps()])
+    let root = reconciler.createRoot(container)
+    root.addEventListener('error', (event) => {
+      events.push(event as ReconcilerErrorEvent)
+    })
+
+    root.render(<div>ok</div>)
+    root.flush()
+    await Promise.resolve()
+
+    assert.ok(events.some((event) => event.context.phase === 'plugin'))
+    assert.ok(events.some((event) => (event.error as Error).message === 'before-fail'))
   })
 
   it('runs remove plugin waitUntil rejection path without crashing', async () => {
@@ -386,7 +392,7 @@ describe('reconciler package', () => {
       })
       return (input) => input
     })
-    let reconciler = createReconciler([rejectingRemovePlugin, attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [rejectingRemovePlugin, attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(<div key="a">a</div>)
@@ -402,7 +408,7 @@ describe('reconciler package', () => {
   it('keeps existing text when value is unchanged', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(<div>same</div>)
@@ -419,7 +425,7 @@ describe('reconciler package', () => {
   it('flattens direct node render values and ignores booleans', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
 
     let manualNode = {
@@ -437,35 +443,35 @@ describe('reconciler package', () => {
     assert.equal(stringifyTestNode(container), '<x>ok</x>')
   })
 
-  it('allows plugin-managed remove listener errors', () => {
+  it('dispatches plugin error when host listener throws', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let caught = 0
+    let events: ReconcilerErrorEvent[] = []
     let badRemovePlugin = definePlugin(() => (host) => {
       host.addEventListener('remove', () => {
-        try {
-          throw new Error('remove-listener')
-        } catch {
-          caught++
-        }
+        throw new Error('remove-listener')
       })
       return (input) => input
     })
-    let reconciler = createReconciler([badRemovePlugin, attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [badRemovePlugin, attributeProps()])
     let root = reconciler.createRoot(container)
+    root.addEventListener('error', (event) => {
+      events.push(event as ReconcilerErrorEvent)
+    })
 
     root.render(<div>x</div>)
     root.flush()
     root.render(null)
     root.flush()
 
-    assert.equal(caught, 1)
+    assert.ok(events.some((event) => event.context.phase === 'plugin'))
+    assert.ok(events.some((event) => event.context.nodeKey === ''))
   })
 
   it('handles mixed keyed and unkeyed siblings across updates', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(
@@ -497,7 +503,7 @@ describe('reconciler package', () => {
   it('handles duplicate keys without crashing and preserves deterministic output', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(
@@ -523,7 +529,7 @@ describe('reconciler package', () => {
   it('handles insertion and removal permutations for keyed lists', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(
@@ -558,7 +564,7 @@ describe('reconciler package', () => {
   it('sustains deterministic large-list churn', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler([attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
     let model: string[] = ['a', 'b', 'c', 'd', 'e']
     let seed = 12345
@@ -615,7 +621,7 @@ describe('reconciler package', () => {
       })
       return (input) => input
     })
-    let reconciler = createReconciler([deferPlugin, attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [deferPlugin, attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(<div key="a">a</div>)
@@ -659,7 +665,7 @@ describe('reconciler package', () => {
       return (input) => input
     })
 
-    let reconciler = createReconciler([capturePlugin, attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [capturePlugin, attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render(<div key="same">a</div>)
@@ -685,7 +691,7 @@ describe('reconciler package', () => {
     let container = createTestContainer()
     let events: ReconcilerErrorEvent[] = []
     let loops = 0
-    let reconciler = createReconciler([attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
     root.addEventListener('error', (event) => {
       events.push(event as ReconcilerErrorEvent)
@@ -723,7 +729,7 @@ describe('reconciler package', () => {
       })
     })
 
-    let reconciler = createReconciler([lifecyclePlugin, attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [lifecyclePlugin, attributeProps()])
     let rootA = reconciler.createRoot(a)
     let rootB = reconciler.createRoot(b)
 
@@ -738,6 +744,63 @@ describe('reconciler package', () => {
     assert.equal(afterCalls, 2)
   })
 
+  it('branches share scheduler flush while keeping separate containers', () => {
+    let nodePolicy = createTestNodePolicy()
+    let parentContainer = createTestContainer()
+    let branchContainer = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(parentContainer)
+    let branch = root.branch(branchContainer)
+
+    root.render(<div id="parent">a</div>)
+    branch.render(<div id="branch">b</div>)
+    root.flush()
+
+    assert.equal(stringifyTestNode(parentContainer), '<div id="parent">a</div>')
+    assert.equal(stringifyTestNode(branchContainer), '<div id="branch">b</div>')
+  })
+
+  it('disposing a branch does not dispose the parent root', () => {
+    let nodePolicy = createTestNodePolicy()
+    let parentContainer = createTestContainer()
+    let branchContainer = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(parentContainer)
+    let branch = root.branch(branchContainer)
+
+    root.render(<div>parent</div>)
+    branch.render(<div>branch</div>)
+    root.flush()
+    branch.dispose()
+
+    root.render(<div>still-parent</div>)
+    root.flush()
+
+    assert.equal(stringifyTestNode(parentContainer), '<div>still-parent</div>')
+    assert.equal(stringifyTestNode(branchContainer), '')
+  })
+
+  it('disposing a root disposes all of its branches', () => {
+    let nodePolicy = createTestNodePolicy()
+    let parentContainer = createTestContainer()
+    let childContainer = createTestContainer()
+    let grandchildContainer = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(parentContainer)
+    let child = root.branch(childContainer)
+    let grandchild = child.branch(grandchildContainer)
+
+    root.render(<div>root</div>)
+    child.render(<div>child</div>)
+    grandchild.render(<div>grandchild</div>)
+    root.flush()
+    root.dispose()
+
+    assert.equal(stringifyTestNode(parentContainer), '')
+    assert.equal(stringifyTestNode(childContainer), '')
+    assert.equal(stringifyTestNode(grandchildContainer), '')
+  })
+
   it('aborts root and host task signals across repeated updates and remove', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
@@ -749,7 +812,7 @@ describe('reconciler package', () => {
       })
       return input
     })
-    let reconciler = createReconciler([signalPlugin, attributeProps()], { nodePolicy })
+    let reconciler = createReconciler(nodePolicy, [signalPlugin, attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render((handle) => {

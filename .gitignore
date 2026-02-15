@@ -5,6 +5,7 @@ node_modules/
 pnpm-publish-summary.json
 reference/
 .tmp/
+packages/reconciler/coverage/
 
 .env
 

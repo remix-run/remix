@@ -1,5 +1,6 @@
 import { HostInsertEvent, HostRemoveEvent, ReconcilerErrorEvent } from './types.ts'
 import { RECONCILER_FRAGMENT, isReconcilerElement } from '../testing/jsx.ts'
+import { GuardedEventTarget } from './event-target.ts'
 import type {
   CommittedHostNode,
   CommittedNode,
@@ -12,7 +13,6 @@ import type {
   HostTask,
   NodeTransformInput,
   NodePolicy,
-  PreparedPlugin,
   RenderNode,
   RenderValue,
   RootState,
@@ -28,15 +28,8 @@ export function createReconcilerRuntime<
   node,
   elementNode extends node & parentNode,
   traversal,
->(
-  nodePolicy: NodePolicy<parentNode, node, node, elementNode, traversal>,
-  plugins: PreparedPlugin<elementNode>[],
-) {
+>(nodePolicy: NodePolicy<parentNode, node, node, elementNode, traversal>) {
   let removalRegistry = new Map<string, DeferredRemoval<parentNode, node, elementNode>>()
-  let hostFactories: HostFactory<elementNode>[] = []
-  for (let plugin of plugins) {
-    if (plugin.createHost) hostFactories.push(plugin.createHost)
-  }
 
   function createNode(input: NodeInput): NodeRenderNode {
     return {
@@ -304,7 +297,7 @@ export function createReconcilerRuntime<
     traversalCursor: traversal,
   ): { node: CommittedHostNode<node, elementNode>; traversal: traversal } {
     let probe = createDraftHostNode(parent, key, root)
-    initializeHostPlugins(probe, hostFactories, root)
+    initializeHostPlugins(probe, root.hostFactories, root)
     let transformedInput = applyTransforms(probe, input)
     if (typeof transformedInput.type !== 'string') {
       throw new Error('plugins must resolve host type to string')
@@ -462,7 +455,15 @@ export function createReconcilerRuntime<
     node.transforms = []
     node.pendingTasks = []
     for (let createHostFactory of factories) {
-      let hostTarget = new EventTarget()
+      let hostTarget = new GuardedEventTarget((error) => {
+        root.target.dispatchEvent(
+          new ReconcilerErrorEvent(error, {
+            phase: 'plugin',
+            rootId: root.id,
+            nodeKey: node.key,
+          }),
+        )
+      })
       let connected = new AbortController()
       hostTarget.addEventListener('remove', () => connected.abort())
       let hostHandle = Object.assign(hostTarget, {
