@@ -1,7 +1,11 @@
 export { createReconciler } from './lib/root.ts'
 export { definePlugin } from './lib/types.ts'
 export { ReconcilerErrorEvent } from './lib/types.ts'
-export { createTestContainer, createTestNodePolicy, stringifyTestNode } from './lib/test-node-policy.ts'
+export {
+  createTestContainer,
+  createTestNodePolicy,
+  stringifyTestNode,
+} from './lib/test-node-policy.ts'
 export { RECONCILER_FRAGMENT } from './testing/jsx.ts'
 
 export type {
@@ -9,14 +13,15 @@ export type {
   CommittedNode,
   ErrorPhase,
   Handle,
-  HostChild,
-  HostFactory,
+  NodeChild,
+  NodeFactory,
   HostHandle,
-  HostInput,
-  HostRenderNode,
+  NodeInput,
+  NodeRenderNode,
   HostTask,
-  HostTransform,
-  HostTransformInput,
+  NodeTransform,
+  NodeTransformInput,
+  NodeHandle,
   NodePolicy,
   Plugin,
   PluginHandle,
@@ -27,7 +32,6 @@ export type {
   RenderNode,
   RenderValue,
   RootTask,
-  SpikeHandle,
 } from './lib/types.ts'
 
 export type {

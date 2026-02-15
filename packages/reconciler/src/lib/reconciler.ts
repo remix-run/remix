@@ -5,14 +5,14 @@ import type {
   CommittedHostNode,
   CommittedNode,
   DeferredRemoval,
-  HostChild,
-  HostFactory,
+  NodeChild,
+  NodeFactory,
   HostHandle,
-  HostInput,
-  HostRenderNode,
+  NodeInput,
+  NodeRenderNode,
   HostTask,
-  HostTransformInput,
-  HostTransform,
+  NodeTransformInput,
+  NodeTransform,
   NodePolicy,
   PreparedPlugin,
   RenderNode,
@@ -35,14 +35,14 @@ export function createReconcilerRuntime<
   plugins: PreparedPlugin<elementNode>[],
 ) {
   let removalRegistry = new Map<string, DeferredRemoval<parentNode, node, elementNode>>()
-  let hostFactories: HostFactory<elementNode>[] = []
+  let nodeFactories: NodeFactory<elementNode>[] = []
   for (let plugin of plugins) {
-    if (plugin.createHost) hostFactories.push(plugin.createHost)
+    if (plugin.createNode) nodeFactories.push(plugin.createNode)
   }
 
-  function createHost(input: HostInput): HostRenderNode {
+  function createNode(input: NodeInput): NodeRenderNode {
     return {
-      kind: 'host',
+      kind: 'node',
       input,
     }
   }
@@ -69,7 +69,7 @@ export function createReconcilerRuntime<
   }
 
   return {
-    createHost,
+    createNode,
     reconcileRoot,
     removeRoot,
   }
@@ -113,7 +113,7 @@ export function createReconcilerRuntime<
 
     let hasKeys = false
     for (let child of nextChildren) {
-      if (child.kind === 'host' && toKey(child.input.key) !== '') {
+      if (child.kind === 'node' && toKey(child.input.key) !== '') {
         hasKeys = true
         break
       }
@@ -162,7 +162,7 @@ export function createReconcilerRuntime<
       let matchedIndex = -1
       let currentChild: null | CommittedNode<node, elementNode> = null
 
-      if (nextChild.kind === 'host') {
+      if (nextChild.kind === 'node') {
         let nextKey = toKey(nextChild.input.key)
         if (nextKey !== '') {
           let keyMatch = oldKeyMap.get(nextKey)
@@ -243,7 +243,7 @@ export function createReconcilerRuntime<
   ): { node: CommittedNode<node, elementNode>; traversal: traversal } {
     if (current && current.kind === 'text') {
       if (current.value !== next.value) {
-        updateTextValue(current.dom, next.value)
+        updateTextValue(current.instance, next.value)
         current.value = next.value
       }
       return { node: current, traversal: traversalCursor }
@@ -260,14 +260,14 @@ export function createReconcilerRuntime<
     }
 
     return {
-      node: { kind: 'text', dom: resolved.node, value: next.value },
+      node: { kind: 'text', instance: resolved.node, value: next.value },
       traversal: resolved.next,
     }
   }
 
   function reconcileHost(
     current: null | CommittedNode<node, elementNode>,
-    input: HostInput,
+    input: NodeInput,
     parent: parentNode,
     root: RootState<parentNode, node, elementNode, traversal>,
     anchor: null | node,
@@ -282,7 +282,7 @@ export function createReconcilerRuntime<
       if (current.type !== transformedInput.type) {
         return mountHost(current, transformedInput, key, parent, root, anchor, traversalCursor)
       }
-      patchHost(current, transformedInput, root, root.nodePolicy.enter(current.dom))
+      patchHost(current, transformedInput, root, root.nodePolicy.enter(current.instance))
       runHostTasks(current, root)
       return { node: current, traversal: traversalCursor }
     }
@@ -292,7 +292,7 @@ export function createReconcilerRuntime<
 
   function mountHost(
     current: null | CommittedNode<node, elementNode>,
-    input: HostInput,
+    input: NodeInput,
     key: string,
     parent: parentNode,
     root: RootState<parentNode, node, elementNode, traversal>,
@@ -300,7 +300,7 @@ export function createReconcilerRuntime<
     traversalCursor: traversal,
   ): { node: CommittedHostNode<node, elementNode>; traversal: traversal } {
     let probe = createDraftHostNode(parent, key, root)
-    initializeHostPlugins(probe, hostFactories, root)
+    initializeHostPlugins(probe, nodeFactories, root)
     let transformedInput = applyTransforms(probe, input)
     if (typeof transformedInput.type !== 'string') {
       throw new Error('plugins must resolve host type to string')
@@ -311,12 +311,12 @@ export function createReconcilerRuntime<
       reclaimed.hostHandles = probe.hostHandles
       reclaimed.transforms = probe.transforms
       reclaimed.pendingTasks = probe.pendingTasks
-      patchHost(reclaimed, transformedInput, root, root.nodePolicy.enter(reclaimed.dom))
+      patchHost(reclaimed, transformedInput, root, root.nodePolicy.enter(reclaimed.instance))
       let mountAnchor = current ? getAnchor(current) : anchor
       if (mountAnchor != null) {
-        root.nodePolicy.move(parent, reclaimed.dom, mountAnchor)
+        root.nodePolicy.move(parent, reclaimed.instance, mountAnchor)
       } else {
-        root.nodePolicy.move(parent, reclaimed.dom, null)
+        root.nodePolicy.move(parent, reclaimed.instance, null)
       }
       if (current) removeNode(current, parent, root)
       dispatchHostInsert(reclaimed, transformedInput, root)
@@ -327,14 +327,14 @@ export function createReconcilerRuntime<
     let resolved = root.nodePolicy.resolveElement(parent, traversalCursor, transformedInput.type)
     let hostNode = probe
     hostNode.type = transformedInput.type
-    hostNode.dom = resolved.node
-    patchHost(hostNode, transformedInput, root, root.nodePolicy.enter(hostNode.dom))
+    hostNode.instance = resolved.node
+    patchHost(hostNode, transformedInput, root, root.nodePolicy.enter(hostNode.instance))
 
     let mountAnchor = current ? getAnchor(current) : anchor
     if (mountAnchor != null) {
-      root.nodePolicy.insert(parent, hostNode.dom, mountAnchor)
-    } else if (root.nodePolicy.firstChild(parent) !== hostNode.dom) {
-      root.nodePolicy.insert(parent, hostNode.dom, null)
+      root.nodePolicy.insert(parent, hostNode.instance, mountAnchor)
+    } else if (root.nodePolicy.firstChild(parent) !== hostNode.instance) {
+      root.nodePolicy.insert(parent, hostNode.instance, null)
     }
     if (current) removeNode(current, parent, root)
 
@@ -345,14 +345,20 @@ export function createReconcilerRuntime<
 
   function patchHost(
     node: CommittedHostNode<node, elementNode>,
-    input: HostInput,
+    input: NodeInput,
     root: RootState<parentNode, node, elementNode, traversal>,
     traversalCursor: traversal,
   ) {
     node.props = input.props
     node.key = toKey(input.key)
-    let nextChildren = normalizeHostChildren(input.children)
-    node.children = reconcileChildren(node.children, nextChildren, node.dom as unknown as parentNode, root, traversalCursor)
+    let nextChildren = normalizeNodeChildren(input.children)
+    node.children = reconcileChildren(
+      node.children,
+      nextChildren,
+      node.instance as unknown as parentNode,
+      root,
+      traversalCursor,
+    )
   }
 
   function createDraftHostNode(
@@ -365,7 +371,7 @@ export function createReconcilerRuntime<
       type: '',
       key,
       props: {},
-      dom: root.nodePolicy.createElement(parent, 'placeholder'),
+      instance: root.nodePolicy.createElement(parent, 'placeholder'),
       children: [],
       hostHandles: [],
       transforms: [],
@@ -379,7 +385,7 @@ export function createReconcilerRuntime<
     root: RootState<parentNode, node, elementNode, traversal>,
   ) {
     if (current.kind === 'text') {
-      root.nodePolicy.remove(parent, current.dom)
+      root.nodePolicy.remove(parent, current.instance)
       return
     }
 
@@ -393,7 +399,7 @@ export function createReconcilerRuntime<
       deferRemoval(current, parent, root, done)
       return
     }
-    root.nodePolicy.remove(parent, current.dom)
+    root.nodePolicy.remove(parent, current.instance)
   }
 
   function deferRemoval(
@@ -421,7 +427,7 @@ export function createReconcilerRuntime<
       .then(() => {
         deferred.settled = true
         if (!deferred.reclaimed) {
-          root.nodePolicy.remove(parent, deferred.node.dom)
+          root.nodePolicy.remove(parent, deferred.node.instance)
         }
         if (key !== '') {
           removalRegistry.delete(registryKey)
@@ -441,13 +447,13 @@ export function createReconcilerRuntime<
 
   function initializeHostPlugins(
     node: CommittedHostNode<node, elementNode>,
-    factories: HostFactory<elementNode>[],
+    factories: NodeFactory<elementNode>[],
     root: RootState<parentNode, node, elementNode, traversal>,
   ) {
     node.hostHandles = []
     node.transforms = []
     node.pendingTasks = []
-    for (let createHost of factories) {
+    for (let createNodeFactory of factories) {
       let hostTarget = new SimpleEventTarget()
       let connected = new AbortController()
       hostTarget.addEventListener('remove', () => connected.abort())
@@ -465,14 +471,14 @@ export function createReconcilerRuntime<
           return connected.signal
         },
       }) as HostHandle<elementNode>
-      let transform = createHost(hostHandle)
+      let transform = createNodeFactory(hostHandle)
       node.hostHandles.push(hostHandle)
       if (transform) node.transforms.push(transform)
     }
   }
 
-  function applyTransforms(node: CommittedHostNode<node, elementNode>, input: HostInput): HostInput {
-    let transformedInput: HostTransformInput = {
+  function applyTransforms(node: CommittedHostNode<node, elementNode>, input: NodeInput): NodeInput {
+    let transformedInput: NodeTransformInput = {
       type: input.type,
       props: { ...input.props },
     }
@@ -481,7 +487,7 @@ export function createReconcilerRuntime<
     }
     let nextChildren = input.children
     if ('children' in transformedInput.props) {
-      nextChildren = toHostChildren(transformedInput.props.children)
+      nextChildren = toNodeChildren(transformedInput.props.children)
       delete transformedInput.props.children
     }
     return {
@@ -499,7 +505,7 @@ export function createReconcilerRuntime<
   ) {
     for (let hostHandle of node.hostHandles) {
       try {
-        let event = new HostRemoveEvent(node.dom, (promise) => {
+        let event = new HostRemoveEvent(node.instance, (promise) => {
           pending.push(promise.catch(() => undefined))
         })
         hostHandle.dispatchEvent(event)
@@ -517,16 +523,16 @@ export function createReconcilerRuntime<
 
   function dispatchHostInsert(
     node: CommittedHostNode<node, elementNode>,
-    input: HostInput,
+    input: NodeInput,
     root: RootState<parentNode, node, elementNode, traversal>,
   ) {
-    let transformedInput: HostTransformInput = {
+    let transformedInput: NodeTransformInput = {
       type: input.type,
       props: input.props,
     }
     for (let hostHandle of node.hostHandles) {
       try {
-        let event = new HostInsertEvent(transformedInput, node.dom, root.renderController!.signal)
+        let event = new HostInsertEvent(transformedInput, node.instance, root.renderController!.signal)
         hostHandle.dispatchEvent(event)
       } catch (error) {
         root.target.dispatchEvent(
@@ -550,7 +556,7 @@ export function createReconcilerRuntime<
     node.pendingTasks.length = 0
     for (let task of tasks) {
       try {
-        task(node.dom, signal)
+        task(node.instance, signal)
       } catch (error) {
         root.target.dispatchEvent(
           new ReconcilerErrorEvent(error, {
@@ -570,12 +576,12 @@ function placeCommittedNode<parentNode, node, elementNode extends node & parentN
   anchor: null | node,
   root: RootState<parentNode, node, elementNode, traversal>,
 ) {
-  let dom = getAnchor(nodeValue)
-  root.nodePolicy.move(parent, dom, anchor)
+  let instance = getAnchor(nodeValue)
+  root.nodePolicy.move(parent, instance, anchor)
 }
 
 function getAnchor<node, elementNode extends node>(node: CommittedNode<node, elementNode>) {
-  return node.kind === 'host' ? node.dom : node.dom
+  return node.kind === 'host' ? node.instance : node.instance
 }
 
 function toKey(value: unknown) {
@@ -615,9 +621,9 @@ function normalizeInto(value: RenderValue, normalized: RenderNode[]) {
     return
   }
   if (typeof value === 'object' && value && 'kind' in value) {
-    let direct = value as { kind?: unknown; input?: HostInput; value?: string }
-    if (direct.kind === 'host' && direct.input) {
-      normalized.push({ kind: 'host', input: direct.input })
+    let direct = value as { kind?: unknown; input?: NodeInput; value?: string }
+    if (direct.kind === 'node' && direct.input) {
+      normalized.push({ kind: 'node', input: direct.input })
       return
     }
     if (direct.kind === 'text' && typeof direct.value === 'string') {
@@ -634,18 +640,18 @@ function normalizeInto(value: RenderValue, normalized: RenderNode[]) {
     let rawChildren = props.children
     delete props.children
     normalized.push({
-      kind: 'host',
+      kind: 'node',
       input: {
         type: value.type,
         key: value.key,
         props,
-        children: toHostChildren(rawChildren),
+        children: toNodeChildren(rawChildren),
       },
     })
   }
 }
 
-function normalizeHostChildren(children: HostChild[]): RenderNode[] {
+function normalizeNodeChildren(children: NodeChild[]): RenderNode[] {
   let normalized: RenderNode[] = []
   for (let child of children) {
     let next = normalizeRenderNodes(child as RenderValue)
@@ -654,13 +660,13 @@ function normalizeHostChildren(children: HostChild[]): RenderNode[] {
   return normalized
 }
 
-function toHostChildren(children: unknown): HostChild[] {
-  let output: HostChild[] = []
-  toHostChildrenInto(children as RenderValue, output)
+function toNodeChildren(children: unknown): NodeChild[] {
+  let output: NodeChild[] = []
+  toNodeChildrenInto(children as RenderValue, output)
   return output
 }
 
-function toHostChildrenInto(children: RenderValue, output: HostChild[]) {
+function toNodeChildrenInto(children: RenderValue, output: NodeChild[]) {
   if (children == null) return
   if (typeof children === 'boolean') return
   if (typeof children === 'number' || typeof children === 'bigint') {
@@ -673,25 +679,25 @@ function toHostChildrenInto(children: RenderValue, output: HostChild[]) {
   }
   if (Array.isArray(children)) {
     for (let child of children) {
-      toHostChildrenInto(child, output)
+      toNodeChildrenInto(child, output)
     }
     return
   }
   if (!isReconcilerElement(children)) return
   if (children.type === RECONCILER_FRAGMENT) {
-    toHostChildrenInto(children.props.children as RenderValue, output)
+    toNodeChildrenInto(children.props.children as RenderValue, output)
     return
   }
   let props = { ...(children.props ?? {}) }
   let rawChildren = props.children
   delete props.children
   output.push({
-    kind: 'host',
+    kind: 'node',
     input: {
       type: children.type,
       key: children.key,
       props,
-      children: toHostChildren(rawChildren),
+      children: toNodeChildren(rawChildren),
     },
   })
 }

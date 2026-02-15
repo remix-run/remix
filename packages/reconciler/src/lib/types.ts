@@ -17,23 +17,23 @@ export type RenderValue =
   | ReconcilerElement
   | RenderValue[]
 
-export type HostChild = null | string | HostRenderNode
+export type NodeChild = null | string | NodeRenderNode
 
-export type HostInput = {
+export type NodeInput = {
   type: ReconcilerElementType
   key: unknown
   props: Record<string, unknown>
-  children: HostChild[]
+  children: NodeChild[]
 }
 
-export type HostTransformInput = {
+export type NodeTransformInput = {
   type: ReconcilerElementType
   props: Record<string, unknown>
 }
 
-export type HostRenderNode = {
-  kind: 'host'
-  input: HostInput
+export type NodeRenderNode = {
+  kind: 'node'
+  input: NodeInput
 }
 
 export type TextRenderNode = {
@@ -41,7 +41,7 @@ export type TextRenderNode = {
   value: string
 }
 
-export type RenderNode = HostRenderNode | TextRenderNode
+export type RenderNode = NodeRenderNode | TextRenderNode
 
 export type FlushContext = {
   flushId: number
@@ -49,7 +49,7 @@ export type FlushContext = {
 
 export type RootTask = (signal: AbortSignal) => void
 export type HostTask<elementNode> = (node: elementNode, signal: AbortSignal) => void
-export type HostTransform = (input: HostTransformInput) => HostTransformInput
+export type NodeTransform = (input: NodeTransformInput) => NodeTransformInput
 
 export class PluginBeforeFlushEvent extends Event {
   context: FlushContext
@@ -78,11 +78,11 @@ export type EventTargetLike = {
 export type PluginHandle = EventTargetLike
 
 export class HostInsertEvent<elementNode> extends Event {
-  input: HostTransformInput
+  input: NodeTransformInput
   node: elementNode
   signal: AbortSignal
 
-  constructor(input: HostTransformInput, node: elementNode, signal: AbortSignal) {
+  constructor(input: NodeTransformInput, node: elementNode, signal: AbortSignal) {
     super('insert')
     this.input = input
     this.node = node
@@ -117,8 +117,8 @@ export type Handle = {
   signal: AbortSignal
 }
 
-export type HostFactory<elementNode> = (hostHandle: HostHandle<elementNode>) => void | HostTransform
-export type Plugin<elementNode> = (pluginHandle: PluginHandle) => void | HostFactory<elementNode>
+export type NodeFactory<elementNode> = (hostHandle: HostHandle<elementNode>) => void | NodeTransform
+export type Plugin<elementNode> = (pluginHandle: PluginHandle) => void | NodeFactory<elementNode>
 
 export function definePlugin<elementNode>(plugin: Plugin<elementNode>): Plugin<elementNode> {
   return plugin
@@ -127,11 +127,11 @@ export function definePlugin<elementNode>(plugin: Plugin<elementNode>): Plugin<e
 export type PreparedPlugin<elementNode> = {
   name: string
   handle: PluginHandle
-  createHost: null | HostFactory<elementNode>
+  createNode: null | NodeFactory<elementNode>
 }
 
-export type SpikeHandle = {
-  host(input: HostInput): HostRenderNode
+export type NodeHandle = {
+  node(input: NodeInput): NodeRenderNode
   update(): Promise<AbortSignal>
   queueTask(task: RootTask): void
   signal: AbortSignal
@@ -149,7 +149,13 @@ export type ResolvedElement<elementNode, traversal = NodeTraversal> = {
   next: traversal
 }
 
-export type NodePolicy<parentNode, node, textNode extends node, elementNode extends node, traversal = NodeTraversal> = {
+export type NodePolicy<
+  parentNode,
+  node,
+  textNode extends node,
+  elementNode extends node,
+  traversal = NodeTraversal,
+> = {
   firstChild(parent: parentNode): null | node
   nextSibling(node: node): null | node
   begin(parent: parentNode): traversal
@@ -159,7 +165,11 @@ export type NodePolicy<parentNode, node, textNode extends node, elementNode exte
   insert(parent: parentNode, node: node, anchor: null | node): void
   move(parent: parentNode, node: node, anchor: null | node): void
   remove(parent: parentNode, node: node): void
-  resolveText(parent: parentNode, traversal: traversal, value: string): ResolvedText<textNode, traversal>
+  resolveText(
+    parent: parentNode,
+    traversal: traversal,
+    value: string,
+  ): ResolvedText<textNode, traversal>
   resolveElement(
     parent: parentNode,
     traversal: traversal,
@@ -169,7 +179,7 @@ export type NodePolicy<parentNode, node, textNode extends node, elementNode exte
 
 export type CommittedTextNode<textNode> = {
   kind: 'text'
-  dom: textNode
+  instance: textNode
   value: string
 }
 
@@ -178,10 +188,10 @@ export type CommittedHostNode<node, elementNode extends node> = {
   type: string
   key: string
   props: Record<string, unknown>
-  dom: elementNode
+  instance: elementNode
   children: CommittedNode<node, elementNode>[]
   hostHandles: HostHandle<elementNode>[]
-  transforms: HostTransform[]
+  transforms: NodeTransform[]
   pendingTasks: HostTask<elementNode>[]
 }
 
@@ -213,8 +223,8 @@ export type RootState<
   target: EventTarget
   container: parentNode
   current: CommittedNode<node, elementNode>[]
-  render: null | ((handle: SpikeHandle) => RenderValue)
-  handle: SpikeHandle
+  render: null | ((handle: NodeHandle) => RenderValue)
+  handle: NodeHandle
   enqueue(): void
   nodePolicy: NodePolicy<parentNode, node, node, elementNode, traversal>
   renderController: null | AbortController
@@ -251,7 +261,7 @@ export class ReconcilerErrorEvent extends Event {
 }
 
 export type ReconcilerRoot = EventTarget & {
-  render(render: null | RenderValue | ((handle: SpikeHandle) => RenderValue)): void
+  render(render: null | RenderValue | ((handle: NodeHandle) => RenderValue)): void
   flush(): void
   remove(): void
   dispose(): void
