@@ -20,32 +20,23 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
-    "./inflection": "./src/inflection.ts",
-    "./operators": "./src/operators.ts",
-    "./sql": "./src/sql.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./inflection": {
+      "types": "./dist/inflection.d.ts",
+      "default": "./dist/inflection.js"
+    },
+    "./operators": {
+      "types": "./dist/operators.d.ts",
+      "default": "./dist/operators.js"
+    },
+    "./sql": {
+      "types": "./dist/sql.d.ts",
+      "default": "./dist/sql.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./inflection": {
-        "types": "./dist/inflection.d.ts",
-        "default": "./dist/inflection.js"
-      },
-      "./operators": {
-        "types": "./dist/operators.d.ts",
-        "default": "./dist/operators.js"
-      },
-      "./sql": {
-        "types": "./dist/sql.d.ts",
-        "default": "./dist/sql.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/data-schema": "workspace:*",
@@ -55,7 +46,7 @@
     "better-sqlite3": "^12.4.1"
   },
   "dependencies": {
-    "@remix-run/data-schema": "workspace:^"
+    "@remix-run/data-schema": "remix-run/remix#preview/pr-11069&path:packages/data-schema"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
