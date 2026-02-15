@@ -14,6 +14,9 @@ export type {
   SerializableValue,
   SerializableProps,
   EntryComponent,
+  AssetMetadata,
+  HydrationScript,
+  HydrationStyle,
 } from './lib/client-entries.ts'
 
 // -- Components --

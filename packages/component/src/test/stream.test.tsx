@@ -880,8 +880,8 @@ describe('stream', () => {
 
       expect(data.h).toBeDefined()
       expect(data.h[hydrationId]).toEqual({
-        moduleUrl: '/js/counter.js',
         exportName: 'Counter',
+        js: [{ src: '/js/counter.js' }],
         props: { initialCount: 42 },
       })
 
@@ -939,8 +939,13 @@ describe('stream', () => {
       let data = parseRmxDataFromHtml(html)
       expect(Object.keys(data.h).length).toBe(2)
       for (let entry of Object.values<any>(data.h)) {
-        expect(entry.moduleUrl).toBe('/js/button.js')
-        expect(entry.exportName).toBe('Button')
+        expect(entry).toEqual({
+          exportName: 'Button',
+          js: [{ src: '/js/button.js' }],
+          props: {
+            text: expect.anything(),
+          },
+        })
       }
     })
 
@@ -1076,7 +1081,7 @@ describe('stream', () => {
       let [, entry] = getSingleEntry(data.h)
       expect(entry).toEqual({
         exportName: 'Card',
-        moduleUrl: '/js/card.js',
+        js: [{ src: '/js/card.js' }],
         props: {
           children: {
             $rmx: true,
@@ -1155,10 +1160,10 @@ describe('stream', () => {
       let entries = Object.values<any>(data.h)
       expect(entries.length).toBe(2)
       expect(
-        entries.some((entry) => entry.moduleUrl === '/card.js' && entry.exportName === 'Card'),
+        entries.some((entry) => entry.js[0].src === '/card.js' && entry.exportName === 'Card'),
       ).toBe(true)
       expect(
-        entries.some((entry) => entry.moduleUrl === '/button.js' && entry.exportName === 'Button'),
+        entries.some((entry) => entry.js[0].src === '/button.js' && entry.exportName === 'Button'),
       ).toBe(true)
     })
   })
