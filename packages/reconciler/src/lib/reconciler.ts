@@ -1,0 +1,707 @@
+import { HostInsertEvent, HostRemoveEvent, ReconcilerErrorEvent } from './types.ts'
+import { RECONCILER_FRAGMENT, isReconcilerElement } from '../testing/jsx.ts'
+import { SimpleEventTarget } from './simple-event-target.ts'
+import type {
+  CommittedHostNode,
+  CommittedNode,
+  DeferredRemoval,
+  HostChild,
+  HostFactory,
+  HostHandle,
+  HostInput,
+  HostRenderNode,
+  HostTask,
+  HostTransformInput,
+  HostTransform,
+  NodePolicy,
+  PreparedPlugin,
+  RenderNode,
+  RenderValue,
+  RootState,
+} from './types.ts'
+
+type DiffEntry<node, elementNode extends node> = {
+  node: CommittedNode<node, elementNode>
+  oldIndex: number
+}
+
+export function createReconcilerRuntime<
+  parentNode,
+  node,
+  elementNode extends node & parentNode,
+  traversal,
+>(
+  nodePolicy: NodePolicy<parentNode, node, node, elementNode, traversal>,
+  plugins: PreparedPlugin<elementNode>[],
+) {
+  let removalRegistry = new Map<string, DeferredRemoval<parentNode, node, elementNode>>()
+  let hostFactories: HostFactory<elementNode>[] = []
+  for (let plugin of plugins) {
+    if (plugin.createHost) hostFactories.push(plugin.createHost)
+  }
+
+  function createHost(input: HostInput): HostRenderNode {
+    return {
+      kind: 'host',
+      input,
+    }
+  }
+
+  function reconcileRoot(root: RootState<parentNode, node, elementNode, traversal>, flushId: number) {
+    let nextRenderable = root.render ? root.render(root.handle) : null
+    let nextNodes = normalizeRenderNodes(nextRenderable)
+
+    root.renderController?.abort()
+    root.renderController = new AbortController()
+
+    let traversal = root.nodePolicy.begin(root.container)
+    root.current = reconcileChildren(root.current, nextNodes, root.container, root, traversal)
+    runRootTasks(root, flushId)
+  }
+
+  function removeRoot(root: RootState<parentNode, node, elementNode, traversal>) {
+    root.renderController?.abort()
+    root.renderController = null
+    for (let child of root.current) {
+      removeNode(child, root.container, root)
+    }
+    root.current = []
+  }
+
+  return {
+    createHost,
+    reconcileRoot,
+    removeRoot,
+  }
+
+  function runRootTasks(root: RootState<parentNode, node, elementNode, traversal>, flushId: number) {
+    if (!root.renderController) return
+    let tasks = root.pendingTasks
+    root.pendingTasks = []
+    for (let task of tasks) {
+      try {
+        task(root.renderController.signal)
+      } catch (error) {
+        root.target.dispatchEvent(
+          new ReconcilerErrorEvent(error, {
+            phase: 'rootTask',
+            flushId,
+            rootId: root.id,
+          }),
+        )
+      }
+    }
+  }
+
+  function reconcileChildren(
+    currentChildren: CommittedNode<node, elementNode>[],
+    nextChildren: RenderNode[],
+    parent: parentNode,
+    root: RootState<parentNode, node, elementNode, traversal>,
+    traversalCursor: traversal,
+  ) {
+    if (currentChildren.length === 0) {
+      let nextCommitted: CommittedNode<node, elementNode>[] = []
+      let traversal = traversalCursor
+      for (let nextChild of nextChildren) {
+        let result = reconcileNode(null, nextChild, parent, root, null, traversal)
+        traversal = result.traversal
+        if (result.node) nextCommitted.push(result.node)
+      }
+      return nextCommitted
+    }
+
+    let hasKeys = false
+    for (let child of nextChildren) {
+      if (child.kind === 'host' && toKey(child.input.key) !== '') {
+        hasKeys = true
+        break
+      }
+    }
+
+    if (!hasKeys) {
+      let max = Math.max(currentChildren.length, nextChildren.length)
+      let nextCommitted: CommittedNode<node, elementNode>[] = []
+      let traversal = traversalCursor
+      for (let index = 0; index < max; index++) {
+        let currentChild = currentChildren[index] ?? null
+        let nextChild = nextChildren[index] ?? null
+        if (!nextChild) {
+          if (currentChild) removeNode(currentChild, parent, root)
+          continue
+        }
+        let result = reconcileNode(currentChild, nextChild, parent, root, null, traversal)
+        traversal = result.traversal
+        if (result.node) nextCommitted.push(result.node)
+      }
+      return nextCommitted
+    }
+
+    return reconcileKeyedChildren(currentChildren, nextChildren, parent, root)
+  }
+
+  function reconcileKeyedChildren(
+    currentChildren: CommittedNode<node, elementNode>[],
+    nextChildren: RenderNode[],
+    parent: parentNode,
+    root: RootState<parentNode, node, elementNode, traversal>,
+  ) {
+    let oldKeyMap = new Map<string, number>()
+    for (let index = 0; index < currentChildren.length; index++) {
+      let child = currentChildren[index]
+      if (child.kind !== 'host') continue
+      if (child.key === '') continue
+      oldKeyMap.set(child.key, index)
+    }
+
+    let matchedOld = new Set<number>()
+    let entries: DiffEntry<node, elementNode>[] = []
+    let traversal = root.nodePolicy.begin(parent)
+    for (let index = 0; index < nextChildren.length; index++) {
+      let nextChild = nextChildren[index]
+      let matchedIndex = -1
+      let currentChild: null | CommittedNode<node, elementNode> = null
+
+      if (nextChild.kind === 'host') {
+        let nextKey = toKey(nextChild.input.key)
+        if (nextKey !== '') {
+          let keyMatch = oldKeyMap.get(nextKey)
+          if (keyMatch != null) {
+            matchedIndex = keyMatch
+            currentChild = currentChildren[keyMatch] ?? null
+          }
+        }
+      }
+
+      if (!currentChild && index < currentChildren.length && !matchedOld.has(index)) {
+        let candidate = currentChildren[index]
+        if (!isKeyedHost(candidate)) {
+          currentChild = candidate
+          matchedIndex = index
+        }
+      }
+
+      if (matchedIndex >= 0) matchedOld.add(matchedIndex)
+
+      let result = reconcileNode(currentChild, nextChild, parent, root, null, traversal)
+      traversal = result.traversal
+      if (result.node) {
+        entries.push({ node: result.node, oldIndex: matchedIndex })
+      }
+    }
+
+    for (let index = 0; index < currentChildren.length; index++) {
+      if (matchedOld.has(index)) continue
+      removeNode(currentChildren[index], parent, root)
+    }
+
+    let anchor: null | node = null
+    for (let index = entries.length - 1; index >= 0; index--) {
+      let entry = entries[index]
+      let currentDom = getAnchor(entry.node)
+      let actualNext = root.nodePolicy.nextSibling(currentDom)
+      if (actualNext !== anchor) {
+        placeCommittedNode(parent, entry.node, anchor, root)
+      }
+      anchor = currentDom
+    }
+
+    let nextCommitted: CommittedNode<node, elementNode>[] = []
+    for (let entry of entries) {
+      nextCommitted.push(entry.node)
+    }
+    return nextCommitted
+  }
+
+  function reconcileNode(
+    current: null | CommittedNode<node, elementNode>,
+    next: null | RenderNode,
+    parent: parentNode,
+    root: RootState<parentNode, node, elementNode, traversal>,
+    anchor: null | node,
+    traversalCursor: traversal,
+  ): { node: null | CommittedNode<node, elementNode>; traversal: traversal } {
+    if (!next) {
+      if (current) removeNode(current, parent, root)
+      return { node: null, traversal: traversalCursor }
+    }
+
+    if (next.kind === 'text') {
+      return reconcileText(current, next, parent, root, anchor, traversalCursor)
+    }
+
+    return reconcileHost(current, next.input, parent, root, anchor, traversalCursor)
+  }
+
+  function reconcileText(
+    current: null | CommittedNode<node, elementNode>,
+    next: { kind: 'text'; value: string },
+    parent: parentNode,
+    root: RootState<parentNode, node, elementNode, traversal>,
+    anchor: null | node,
+    traversalCursor: traversal,
+  ): { node: CommittedNode<node, elementNode>; traversal: traversal } {
+    if (current && current.kind === 'text') {
+      if (current.value !== next.value) {
+        updateTextValue(current.dom, next.value)
+        current.value = next.value
+      }
+      return { node: current, traversal: traversalCursor }
+    }
+
+    let resolved = root.nodePolicy.resolveText(parent, traversalCursor, next.value)
+    if (current) {
+      root.nodePolicy.insert(parent, resolved.node, getAnchor(current))
+      removeNode(current, parent, root)
+    } else if (anchor != null) {
+      root.nodePolicy.insert(parent, resolved.node, anchor)
+    } else if (resolved.node !== root.nodePolicy.firstChild(parent)) {
+      root.nodePolicy.insert(parent, resolved.node, null)
+    }
+
+    return {
+      node: { kind: 'text', dom: resolved.node, value: next.value },
+      traversal: resolved.next,
+    }
+  }
+
+  function reconcileHost(
+    current: null | CommittedNode<node, elementNode>,
+    input: HostInput,
+    parent: parentNode,
+    root: RootState<parentNode, node, elementNode, traversal>,
+    anchor: null | node,
+    traversalCursor: traversal,
+  ): { node: CommittedNode<node, elementNode>; traversal: traversal } {
+    let key = toKey(input.key)
+    if (current && current.kind === 'host' && current.key === key) {
+      let transformedInput = applyTransforms(current, input)
+      if (typeof transformedInput.type !== 'string') {
+        throw new Error('plugins must resolve host type to string')
+      }
+      if (current.type !== transformedInput.type) {
+        return mountHost(current, transformedInput, key, parent, root, anchor, traversalCursor)
+      }
+      patchHost(current, transformedInput, root, root.nodePolicy.enter(current.dom))
+      runHostTasks(current, root)
+      return { node: current, traversal: traversalCursor }
+    }
+
+    return mountHost(current, input, key, parent, root, anchor, traversalCursor)
+  }
+
+  function mountHost(
+    current: null | CommittedNode<node, elementNode>,
+    input: HostInput,
+    key: string,
+    parent: parentNode,
+    root: RootState<parentNode, node, elementNode, traversal>,
+    anchor: null | node,
+    traversalCursor: traversal,
+  ): { node: CommittedHostNode<node, elementNode>; traversal: traversal } {
+    let probe = createDraftHostNode(parent, key, root)
+    initializeHostPlugins(probe, hostFactories, root)
+    let transformedInput = applyTransforms(probe, input)
+    if (typeof transformedInput.type !== 'string') {
+      throw new Error('plugins must resolve host type to string')
+    }
+
+    let reclaimed = reclaimHost(parent, transformedInput.type, key)
+    if (reclaimed) {
+      reclaimed.hostHandles = probe.hostHandles
+      reclaimed.transforms = probe.transforms
+      reclaimed.pendingTasks = probe.pendingTasks
+      patchHost(reclaimed, transformedInput, root, root.nodePolicy.enter(reclaimed.dom))
+      let mountAnchor = current ? getAnchor(current) : anchor
+      if (mountAnchor != null) {
+        root.nodePolicy.move(parent, reclaimed.dom, mountAnchor)
+      } else {
+        root.nodePolicy.move(parent, reclaimed.dom, null)
+      }
+      if (current) removeNode(current, parent, root)
+      dispatchHostInsert(reclaimed, transformedInput, root)
+      runHostTasks(reclaimed, root)
+      return { node: reclaimed, traversal: traversalCursor }
+    }
+
+    let resolved = root.nodePolicy.resolveElement(parent, traversalCursor, transformedInput.type)
+    let hostNode = probe
+    hostNode.type = transformedInput.type
+    hostNode.dom = resolved.node
+    patchHost(hostNode, transformedInput, root, root.nodePolicy.enter(hostNode.dom))
+
+    let mountAnchor = current ? getAnchor(current) : anchor
+    if (mountAnchor != null) {
+      root.nodePolicy.insert(parent, hostNode.dom, mountAnchor)
+    } else if (root.nodePolicy.firstChild(parent) !== hostNode.dom) {
+      root.nodePolicy.insert(parent, hostNode.dom, null)
+    }
+    if (current) removeNode(current, parent, root)
+
+    dispatchHostInsert(hostNode, transformedInput, root)
+    runHostTasks(hostNode, root)
+    return { node: hostNode, traversal: resolved.next }
+  }
+
+  function patchHost(
+    node: CommittedHostNode<node, elementNode>,
+    input: HostInput,
+    root: RootState<parentNode, node, elementNode, traversal>,
+    traversalCursor: traversal,
+  ) {
+    node.props = input.props
+    node.key = toKey(input.key)
+    let nextChildren = normalizeHostChildren(input.children)
+    node.children = reconcileChildren(node.children, nextChildren, node.dom as unknown as parentNode, root, traversalCursor)
+  }
+
+  function createDraftHostNode(
+    parent: parentNode,
+    key: string,
+    root: RootState<parentNode, node, elementNode, traversal>,
+  ): CommittedHostNode<node, elementNode> {
+    return {
+      kind: 'host',
+      type: '',
+      key,
+      props: {},
+      dom: root.nodePolicy.createElement(parent, 'placeholder'),
+      children: [],
+      hostHandles: [],
+      transforms: [],
+      pendingTasks: [],
+    }
+  }
+
+  function removeNode(
+    current: CommittedNode<node, elementNode>,
+    parent: parentNode,
+    root: RootState<parentNode, node, elementNode, traversal>,
+  ) {
+    if (current.kind === 'text') {
+      root.nodePolicy.remove(parent, current.dom)
+      return
+    }
+
+    let pendingRemoval: Promise<void>[] = []
+    dispatchHostRemove(current, pendingRemoval, root)
+    if (pendingRemoval.length > 0) {
+      let done =
+        pendingRemoval.length === 1
+          ? pendingRemoval[0]
+          : Promise.all(pendingRemoval).then(() => undefined)
+      deferRemoval(current, parent, root, done)
+      return
+    }
+    root.nodePolicy.remove(parent, current.dom)
+  }
+
+  function deferRemoval(
+    node: CommittedHostNode<node, elementNode>,
+    parent: parentNode,
+    root: RootState<parentNode, node, elementNode, traversal>,
+    done: Promise<void>,
+  ) {
+    let key = node.key
+    let registryKey = removalKey(node.type, key)
+    let deferred: DeferredRemoval<parentNode, node, elementNode> = {
+      key,
+      type: node.type,
+      parent,
+      node,
+      settled: false,
+      reclaimed: false,
+    }
+    if (key !== '') {
+      removalRegistry.set(registryKey, deferred)
+    }
+
+    done
+      .catch(() => {})
+      .then(() => {
+        deferred.settled = true
+        if (!deferred.reclaimed) {
+          root.nodePolicy.remove(parent, deferred.node.dom)
+        }
+        if (key !== '') {
+          removalRegistry.delete(registryKey)
+        }
+      })
+  }
+
+  function reclaimHost(parent: parentNode, type: string, key: string): null | CommittedHostNode<node, elementNode> {
+    if (key === '') return null
+    let deferred = removalRegistry.get(removalKey(type, key))
+    if (!deferred) return null
+    if (deferred.parent !== parent || deferred.settled) return null
+    deferred.reclaimed = true
+    removalRegistry.delete(removalKey(type, key))
+    return deferred.node
+  }
+
+  function initializeHostPlugins(
+    node: CommittedHostNode<node, elementNode>,
+    factories: HostFactory<elementNode>[],
+    root: RootState<parentNode, node, elementNode, traversal>,
+  ) {
+    node.hostHandles = []
+    node.transforms = []
+    node.pendingTasks = []
+    for (let createHost of factories) {
+      let hostTarget = new SimpleEventTarget()
+      let connected = new AbortController()
+      hostTarget.addEventListener('remove', () => connected.abort())
+      let hostHandle = Object.assign(hostTarget, {
+        queueTask(task: HostTask<elementNode>) {
+          node.pendingTasks.push(task)
+        },
+        update() {
+          return new Promise<AbortSignal>((resolve) => {
+            root.pendingTasks.push((signal) => resolve(signal))
+            root.enqueue()
+          })
+        },
+        get signal() {
+          return connected.signal
+        },
+      }) as HostHandle<elementNode>
+      let transform = createHost(hostHandle)
+      node.hostHandles.push(hostHandle)
+      if (transform) node.transforms.push(transform)
+    }
+  }
+
+  function applyTransforms(node: CommittedHostNode<node, elementNode>, input: HostInput): HostInput {
+    let transformedInput: HostTransformInput = {
+      type: input.type,
+      props: { ...input.props },
+    }
+    for (let transform of node.transforms) {
+      transformedInput = transform(transformedInput)
+    }
+    let nextChildren = input.children
+    if ('children' in transformedInput.props) {
+      nextChildren = toHostChildren(transformedInput.props.children)
+      delete transformedInput.props.children
+    }
+    return {
+      ...input,
+      type: transformedInput.type,
+      props: transformedInput.props,
+      children: nextChildren,
+    }
+  }
+
+  function dispatchHostRemove(
+    node: CommittedHostNode<node, elementNode>,
+    pending: Promise<void>[],
+    root: RootState<parentNode, node, elementNode, traversal>,
+  ) {
+    for (let hostHandle of node.hostHandles) {
+      try {
+        let event = new HostRemoveEvent(node.dom, (promise) => {
+          pending.push(promise.catch(() => undefined))
+        })
+        hostHandle.dispatchEvent(event)
+      } catch (error) {
+        root.target.dispatchEvent(
+          new ReconcilerErrorEvent(error, {
+            phase: 'plugin',
+            rootId: root.id,
+            nodeKey: node.key,
+          }),
+        )
+      }
+    }
+  }
+
+  function dispatchHostInsert(
+    node: CommittedHostNode<node, elementNode>,
+    input: HostInput,
+    root: RootState<parentNode, node, elementNode, traversal>,
+  ) {
+    let transformedInput: HostTransformInput = {
+      type: input.type,
+      props: input.props,
+    }
+    for (let hostHandle of node.hostHandles) {
+      try {
+        let event = new HostInsertEvent(transformedInput, node.dom, root.renderController!.signal)
+        hostHandle.dispatchEvent(event)
+      } catch (error) {
+        root.target.dispatchEvent(
+          new ReconcilerErrorEvent(error, {
+            phase: 'plugin',
+            rootId: root.id,
+            nodeKey: node.key,
+          }),
+        )
+      }
+    }
+  }
+
+  function runHostTasks(
+    node: CommittedHostNode<node, elementNode>,
+    root: RootState<parentNode, node, elementNode, traversal>,
+  ) {
+    let signal = root.renderController?.signal
+    if (!signal) return
+    let tasks = node.pendingTasks.slice()
+    node.pendingTasks.length = 0
+    for (let task of tasks) {
+      try {
+        task(node.dom, signal)
+      } catch (error) {
+        root.target.dispatchEvent(
+          new ReconcilerErrorEvent(error, {
+            phase: 'hostTask',
+            rootId: root.id,
+            nodeKey: node.key,
+          }),
+        )
+      }
+    }
+  }
+}
+
+function placeCommittedNode<parentNode, node, elementNode extends node & parentNode, traversal>(
+  parent: parentNode,
+  nodeValue: CommittedNode<node, elementNode>,
+  anchor: null | node,
+  root: RootState<parentNode, node, elementNode, traversal>,
+) {
+  let dom = getAnchor(nodeValue)
+  root.nodePolicy.move(parent, dom, anchor)
+}
+
+function getAnchor<node, elementNode extends node>(node: CommittedNode<node, elementNode>) {
+  return node.kind === 'host' ? node.dom : node.dom
+}
+
+function toKey(value: unknown) {
+  if (value == null) return ''
+  return String(value)
+}
+
+function removalKey(type: string, key: string) {
+  return `${type}::${key}`
+}
+
+function isKeyedHost<node, elementNode extends node>(node: CommittedNode<node, elementNode>) {
+  return node.kind === 'host' && node.key !== ''
+}
+
+function normalizeRenderNodes(value: RenderValue): RenderNode[] {
+  let normalized: RenderNode[] = []
+  normalizeInto(value, normalized)
+  return normalized
+}
+
+function normalizeInto(value: RenderValue, normalized: RenderNode[]) {
+  if (value == null) return
+  if (typeof value === 'boolean') return
+  if (typeof value === 'number' || typeof value === 'bigint') {
+    normalized.push({ kind: 'text', value: String(value) })
+    return
+  }
+  if (typeof value === 'string') {
+    normalized.push({ kind: 'text', value })
+    return
+  }
+  if (Array.isArray(value)) {
+    for (let item of value) {
+      normalizeInto(item, normalized)
+    }
+    return
+  }
+  if (typeof value === 'object' && value && 'kind' in value) {
+    let direct = value as { kind?: unknown; input?: HostInput; value?: string }
+    if (direct.kind === 'host' && direct.input) {
+      normalized.push({ kind: 'host', input: direct.input })
+      return
+    }
+    if (direct.kind === 'text' && typeof direct.value === 'string') {
+      normalized.push({ kind: 'text', value: direct.value })
+      return
+    }
+  }
+  if (isReconcilerElement(value)) {
+    if (value.type === RECONCILER_FRAGMENT) {
+      normalizeInto(value.props.children as RenderValue, normalized)
+      return
+    }
+    let props = { ...(value.props ?? {}) }
+    let rawChildren = props.children
+    delete props.children
+    normalized.push({
+      kind: 'host',
+      input: {
+        type: value.type,
+        key: value.key,
+        props,
+        children: toHostChildren(rawChildren),
+      },
+    })
+  }
+}
+
+function normalizeHostChildren(children: HostChild[]): RenderNode[] {
+  let normalized: RenderNode[] = []
+  for (let child of children) {
+    let next = normalizeRenderNodes(child as RenderValue)
+    normalized.push(...next)
+  }
+  return normalized
+}
+
+function toHostChildren(children: unknown): HostChild[] {
+  let output: HostChild[] = []
+  toHostChildrenInto(children as RenderValue, output)
+  return output
+}
+
+function toHostChildrenInto(children: RenderValue, output: HostChild[]) {
+  if (children == null) return
+  if (typeof children === 'boolean') return
+  if (typeof children === 'number' || typeof children === 'bigint') {
+    output.push(String(children))
+    return
+  }
+  if (typeof children === 'string') {
+    output.push(children)
+    return
+  }
+  if (Array.isArray(children)) {
+    for (let child of children) {
+      toHostChildrenInto(child, output)
+    }
+    return
+  }
+  if (!isReconcilerElement(children)) return
+  if (children.type === RECONCILER_FRAGMENT) {
+    toHostChildrenInto(children.props.children as RenderValue, output)
+    return
+  }
+  let props = { ...(children.props ?? {}) }
+  let rawChildren = props.children
+  delete props.children
+  output.push({
+    kind: 'host',
+    input: {
+      type: children.type,
+      key: children.key,
+      props,
+      children: toHostChildren(rawChildren),
+    },
+  })
+}
+
+function updateTextValue(node: unknown, value: string) {
+  if (node && typeof node === 'object' && 'value' in (node as Record<string, unknown>)) {
+    ;(node as { value: string }).value = value
+    return
+  }
+  if (node && typeof node === 'object' && 'data' in (node as Record<string, unknown>)) {
+    ;(node as { data: string }).data = value
+  }
+}

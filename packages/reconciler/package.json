@@ -1,0 +1,62 @@
+{
+  "name": "@remix-run/reconciler",
+  "version": "0.1.0",
+  "description": "A plugin-driven reconciler runtime for Remix",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/reconciler"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/reconciler#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts",
+    "./testing/jsx-runtime": "./src/testing/jsx-runtime.ts",
+    "./testing/jsx-dev-runtime": "./src/testing/jsx-dev-runtime.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./testing": {
+        "types": "./dist/testing/index.d.ts",
+        "default": "./dist/testing/index.js"
+      },
+      "./testing/jsx-runtime": {
+        "types": "./dist/testing/jsx-runtime.d.ts",
+        "default": "./dist/testing/jsx-runtime.js"
+      },
+      "./testing/jsx-dev-runtime": {
+        "types": "./dist/testing/jsx-dev-runtime.d.ts",
+        "default": "./dist/testing/jsx-dev-runtime.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "tsx": "catalog:"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "tsx --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
+    "typecheck": "tsgo --noEmit"
+  }
+}
