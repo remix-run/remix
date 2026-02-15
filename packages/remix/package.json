@@ -25,16 +25,16 @@
     "./component/server": "./src/component/server.ts",
     "./compression-middleware": "./src/compression-middleware.ts",
     "./cookie": "./src/cookie.ts",
+    "./data-model": "./src/data-model.ts",
     "./data-schema": "./src/data-schema.ts",
     "./data-schema/checks": "./src/data-schema/checks.ts",
     "./data-schema/coerce": "./src/data-schema/coerce.ts",
     "./data-schema/lazy": "./src/data-schema/lazy.ts",
-    "./data-model": "./src/data-model.ts",
     "./data-table": "./src/data-table.ts",
-    "./data-table/inflection": "./src/data-table/inflection.ts",
     "./data-table-mysql": "./src/data-table-mysql.ts",
     "./data-table-postgres": "./src/data-table-postgres.ts",
     "./data-table-sqlite": "./src/data-table-sqlite.ts",
+    "./data-table/inflection": "./src/data-table/inflection.ts",
     "./data-table/operators": "./src/data-table/operators.ts",
     "./data-table/sql": "./src/data-table/sql.ts",
     "./fetch-proxy": "./src/fetch-proxy.ts",
@@ -105,6 +105,10 @@
         "types": "./dist/cookie.d.ts",
         "default": "./dist/cookie.js"
       },
+      "./data-model": {
+        "types": "./dist/data-model.d.ts",
+        "default": "./dist/data-model.js"
+      },
       "./data-schema": {
         "types": "./dist/data-schema.d.ts",
         "default": "./dist/data-schema.js"
@@ -121,17 +125,9 @@
         "types": "./dist/data-schema/lazy.d.ts",
         "default": "./dist/data-schema/lazy.js"
       },
-      "./data-model": {
-        "types": "./dist/data-model.d.ts",
-        "default": "./dist/data-model.js"
-      },
       "./data-table": {
         "types": "./dist/data-table.d.ts",
         "default": "./dist/data-table.js"
-      },
-      "./data-table/inflection": {
-        "types": "./dist/data-table/inflection.d.ts",
-        "default": "./dist/data-table/inflection.js"
       },
       "./data-table-mysql": {
         "types": "./dist/data-table-mysql.d.ts",
@@ -144,6 +140,10 @@
       "./data-table-sqlite": {
         "types": "./dist/data-table-sqlite.d.ts",
         "default": "./dist/data-table-sqlite.js"
+      },
+      "./data-table/inflection": {
+        "types": "./dist/data-table/inflection.d.ts",
+        "default": "./dist/data-table/inflection.js"
       },
       "./data-table/operators": {
         "types": "./dist/data-table/operators.d.ts",
