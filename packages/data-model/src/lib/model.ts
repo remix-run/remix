@@ -5,11 +5,11 @@ import {
   hasManyThrough,
   hasOne,
 } from '@remix-run/data-table'
+import type { InferOutput } from '@remix-run/data-schema'
 import type {
   AnyTable,
   BelongsToOptions,
   ColumnSchemas,
-  DataSchema,
   Database,
   HasManyOptions,
   HasManyThroughOptions,
@@ -34,13 +34,11 @@ type FindManyOptions = {
 }
 type WriteOptions = { touch?: boolean; with?: unknown }
 
-type InferSchemaOutput<schema> = schema extends DataSchema<any, infer output> ? output : never
-
 /**
  * Infers instance property types from a model's `columns` definition.
  */
 export type InferModelProperties<columns extends ColumnSchemas> = {
-  [column in keyof columns & string]: InferSchemaOutput<columns[column]>
+  [column in keyof columns & string]: InferOutput<columns[column]>
 }
 
 /**

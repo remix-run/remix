@@ -357,9 +357,6 @@ importers:
       '@remix-run/data-table':
         specifier: workspace:^
         version: link:../data-table
-      '@remix-run/fetch-router':
-        specifier: workspace:^
-        version: link:../fetch-router
     devDependencies:
       '@remix-run/data-schema':
         specifier: workspace:*
