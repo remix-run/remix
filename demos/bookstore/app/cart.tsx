@@ -6,7 +6,6 @@ import { routes } from './routes.ts'
 
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
-import { getBookById } from './models/books.ts'
 import { addToCart, updateCartItem, removeFromCart } from './models/cart.ts'
 import { getCurrentCart } from './utils/context.ts'
 import { render } from './utils/render.ts'
@@ -27,7 +26,7 @@ export default {
     },
 
     api: {
-      async add({ session, formData }) {
+      async add({ formData, models, session }) {
         if (process.env.NODE_ENV !== 'test') {
           // Simulate network latency
           await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -38,7 +37,7 @@ export default {
           return new Response('Invalid book id', { status: 400 })
         }
 
-        let book = await getBookById(String(bookId))
+        let book = await models.Book.find(String(bookId))
         if (!book) {
           return new Response('Book not found', { status: 404 })
         }
@@ -97,13 +96,13 @@ export default {
   },
 } satisfies Controller<typeof routes.cart>
 
-export async function toggleCart({ session, formData }: any) {
+export async function toggleCart({ formData, models, session }: any) {
   let bookId = parseBookId(formData.get('bookId'))
   if (bookId === null) {
     return new Response('Invalid book id', { status: 400 })
   }
 
-  let book = await getBookById(String(bookId))
+  let book = await models.Book.find(String(bookId))
   if (!book) return new Response('Book not found', { status: 404 })
 
   let cart = getCurrentCart()

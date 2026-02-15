@@ -8,7 +8,7 @@ import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
 import { routes } from './routes.ts'
-import { initializeBookstoreDatabase } from './models/database.ts'
+import { initializeBookstoreDatabase } from './db.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
 import { uploadHandler } from './utils/uploads.ts'
 
@@ -23,7 +23,7 @@ import * as marketingController from './marketing.tsx'
 import { uploadsAction } from './uploads.tsx'
 import fragmentsController from './fragments.tsx'
 import { routerStorageKey } from './utils/router-storage.ts'
-import { loadDatabase } from './middleware/database.ts'
+import { loadModels } from './middleware/models.ts'
 
 let middleware = []
 
@@ -43,7 +43,7 @@ middleware.push(formData({ uploadHandler }))
 middleware.push(methodOverride())
 middleware.push(session(sessionCookie, sessionStorage))
 middleware.push(asyncContext())
-middleware.push(loadDatabase())
+middleware.push(loadModels())
 
 await initializeBookstoreDatabase()
 

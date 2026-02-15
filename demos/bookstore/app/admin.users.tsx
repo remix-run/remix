@@ -2,16 +2,15 @@ import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
-import { getAllUsers, getUserById, updateUser, deleteUser } from './models/users.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { getCurrentUser } from './utils/context.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  async index() {
+  async index({ models }) {
     let user = getCurrentUser()
-    let users = await getAllUsers()
+    let users = await models.User.all()
 
     return render(
       <Layout>
@@ -78,8 +77,8 @@ export default {
     )
   },
 
-  async show({ params }) {
-    let targetUser = await getUserById(params.userId)
+  async show({ models, params }) {
+    let targetUser = await models.User.find(params.userId)
 
     if (!targetUser) {
       return render(
@@ -130,8 +129,8 @@ export default {
     )
   },
 
-  async edit({ params }) {
-    let targetUser = await getUserById(params.userId)
+  async edit({ models, params }) {
+    let targetUser = await models.User.find(params.userId)
 
     if (!targetUser) {
       return render(
@@ -191,8 +190,8 @@ export default {
     )
   },
 
-  async update({ formData, params }) {
-    await updateUser(params.userId, {
+  async update({ formData, models, params }) {
+    await models.User.update(params.userId, {
       name: formData.get('name')?.toString() ?? '',
       email: formData.get('email')?.toString() ?? '',
       role: (formData.get('role')?.toString() ?? 'customer') as 'customer' | 'admin',
@@ -201,8 +200,8 @@ export default {
     return redirect(routes.admin.users.index.href())
   },
 
-  async destroy({ params }) {
-    await deleteUser(params.userId)
+  async destroy({ models, params }) {
+    await models.User.delete(params.userId)
 
     return redirect(routes.admin.users.index.href())
   },

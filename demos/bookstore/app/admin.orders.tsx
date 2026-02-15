@@ -1,13 +1,12 @@
 import type { Controller } from 'remix/fetch-router'
 
 import { routes } from './routes.ts'
-import { getAllOrders, getOrderById } from './models/orders.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 
 export default {
-  async index() {
-    let orders = await getAllOrders()
+  async index({ models }) {
+    let orders = await models.Order.all()
 
     return render(
       <Layout>
@@ -59,8 +58,8 @@ export default {
     )
   },
 
-  async show({ params }) {
-    let order = await getOrderById(params.orderId)
+  async show({ models, params }) {
+    let order = await models.Order.find(params.orderId)
 
     if (!order) {
       return render(

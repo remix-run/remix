@@ -1,5 +1,5 @@
 import { routes } from '../routes.ts'
-import type { Book } from '../models/books.ts'
+import type { Book } from '../models/book.ts'
 import { Frame } from 'remix/component'
 
 export interface BookCardProps {

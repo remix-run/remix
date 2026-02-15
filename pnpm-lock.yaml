@@ -352,6 +352,34 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/data-model:
+    dependencies:
+      '@remix-run/data-table':
+        specifier: workspace:^
+        version: link:../data-table
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+    devDependencies:
+      '@remix-run/data-schema':
+        specifier: workspace:*
+        version: link:../data-schema
+      '@remix-run/data-table-sqlite':
+        specifier: workspace:*
+        version: link:../data-table-sqlite
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      better-sqlite3:
+        specifier: ^12.6.2
+        version: 12.6.2
+
   packages/data-schema:
     dependencies:
       '@standard-schema/spec':
@@ -933,6 +961,9 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:^
         version: link:../cookie
+      '@remix-run/data-model':
+        specifier: workspace:^
+        version: link:../data-model
       '@remix-run/data-schema':
         specifier: workspace:^
         version: link:../data-schema

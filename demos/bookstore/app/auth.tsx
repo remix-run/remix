@@ -2,13 +2,6 @@ import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
-import {
-  authenticateUser,
-  createUser,
-  getUserByEmail,
-  createPasswordResetToken,
-  resetPassword,
-} from './models/users.ts'
 import { Document } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
@@ -82,12 +75,12 @@ export default {
         )
       },
 
-      async action({ session, formData, url }) {
+      async action({ formData, models, session, url }) {
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
         let returnTo = url.searchParams.get('returnTo')
 
-        let user = await authenticateUser(email, password)
+        let user = await models.User.authenticateUser(email, password)
         if (!user) {
           session.flash('error', 'Invalid email or password. Please try again.')
           return redirect(routes.auth.login.index.href(undefined, { returnTo }))
@@ -141,13 +134,13 @@ export default {
         )
       },
 
-      async action({ session, formData }) {
+      async action({ formData, models, session }) {
         let name = formData.get('name')?.toString() ?? ''
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
 
         // Check if user already exists
-        if (await getUserByEmail(email)) {
+        if (await models.User.getByEmail(email)) {
           return render(
             <Document>
               <div class="card" css={{ maxWidth: '500px', margin: '2rem auto' }}>
@@ -170,7 +163,7 @@ export default {
           )
         }
 
-        let user = await createUser(email, password, name)
+        let user = await models.User.register(email, password, name)
 
         session.set('userId', user.id)
 
@@ -210,9 +203,9 @@ export default {
         )
       },
 
-      async action({ formData }) {
+      async action({ formData, models }) {
         let email = formData.get('email')?.toString() ?? ''
-        let token = await createPasswordResetToken(email)
+        let token = await models.User.createPasswordResetToken(email)
 
         return render(
           <Document>
@@ -302,7 +295,7 @@ export default {
         )
       },
 
-      async action({ session, formData, params }) {
+      async action({ formData, models, params, session }) {
         let password = formData.get('password')?.toString() ?? ''
         let confirmPassword = formData.get('confirmPassword')?.toString() ?? ''
 
@@ -311,7 +304,7 @@ export default {
           return redirect(routes.auth.resetPassword.index.href({ token: params.token }))
         }
 
-        let success = await resetPassword(params.token, password)
+        let success = await models.User.resetPassword(params.token, password)
 
         if (!success) {
           session.flash('error', 'Invalid or expired reset token.')

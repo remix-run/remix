@@ -29,7 +29,9 @@
     "./data-schema/checks": "./src/data-schema/checks.ts",
     "./data-schema/coerce": "./src/data-schema/coerce.ts",
     "./data-schema/lazy": "./src/data-schema/lazy.ts",
+    "./data-model": "./src/data-model.ts",
     "./data-table": "./src/data-table.ts",
+    "./data-table/inflection": "./src/data-table/inflection.ts",
     "./data-table-mysql": "./src/data-table-mysql.ts",
     "./data-table-postgres": "./src/data-table-postgres.ts",
     "./data-table-sqlite": "./src/data-table-sqlite.ts",
@@ -119,9 +121,17 @@
         "types": "./dist/data-schema/lazy.d.ts",
         "default": "./dist/data-schema/lazy.js"
       },
+      "./data-model": {
+        "types": "./dist/data-model.d.ts",
+        "default": "./dist/data-model.js"
+      },
       "./data-table": {
         "types": "./dist/data-table.d.ts",
         "default": "./dist/data-table.js"
+      },
+      "./data-table/inflection": {
+        "types": "./dist/data-table/inflection.d.ts",
+        "default": "./dist/data-table/inflection.js"
       },
       "./data-table-mysql": {
         "types": "./dist/data-table-mysql.d.ts",
@@ -321,6 +331,7 @@
     "@remix-run/static-middleware": "workspace:^",
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/data-schema": "workspace:^",
+    "@remix-run/data-model": "workspace:^",
     "@remix-run/data-table": "workspace:^",
     "@remix-run/data-table-mysql": "workspace:^",
     "@remix-run/data-table-postgres": "workspace:^",

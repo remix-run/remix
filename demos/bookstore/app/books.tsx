@@ -2,7 +2,6 @@ import type { Controller } from 'remix/fetch-router'
 import { Frame } from 'remix/component'
 
 import { routes } from './routes.ts'
-import { getAllBooks, getBookBySlug, getBooksByGenre, getAvailableGenres } from './models/books.ts'
 import { BookCard } from './components/book-card.tsx'
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
@@ -13,9 +12,9 @@ import { ImageCarousel } from './assets/image-carousel.tsx'
 export default {
   middleware: [loadAuth()],
   actions: {
-    async index() {
-      let books = await getAllBooks()
-      let genres = await getAvailableGenres()
+    async index({ models }) {
+      let books = await models.Book.all()
+      let genres = await models.Book.getAvailableGenres()
       let cart = getCurrentCart()
 
       return render(
@@ -61,9 +60,9 @@ export default {
       )
     },
 
-    async genre({ params }) {
+    async genre({ models, params }) {
       let genre = params.genre
-      let books = await getBooksByGenre(genre)
+      let books = await models.Book.getByGenre(genre)
 
       if (books.length === 0) {
         return render(
@@ -103,8 +102,8 @@ export default {
       )
     },
 
-    async show({ params }) {
-      let book = await getBookBySlug(params.slug)
+    async show({ models, params }) {
+      let book = await models.Book.getBySlug(params.slug)
 
       if (!book) {
         return render(
