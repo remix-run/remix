@@ -25,7 +25,6 @@ export type {
   ColumnReference,
   ColumnReferenceForQualifiedName,
   ColumnSchemas,
-  DataSchema,
   HasManyOptions,
   HasManyThroughOptions,
   HasOneOptions,

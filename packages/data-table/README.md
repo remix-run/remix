@@ -14,10 +14,10 @@ Typed relational query toolkit for JavaScript runtimes.
 
 `data-table` gives you two complementary APIs:
 
-- **Query Builder API** for expressive joins, aggregates, eager loading, and scoped writes
-- **Database Helper API** for common CRUD flows (`find`, `create`, `update`, `delete`)
+- [**Query Builder**](#query-builder) for expressive joins, aggregates, eager loading, and scoped writes
+- [**CRUD Helpers**](#crud-helpers) for common create/read/update/delete flows (`find`, `create`, `update`, `delete`)
 
-Both APIs are type-safe and validate values using your `remix/data-schema` definitions.
+Both APIs are type-safe and validate values using your [remix/data-schema](https://github.com/remix-run/remix/tree/main/packages/data-schema) definitions.
 
 ## Installation
 
@@ -67,9 +67,9 @@ let pool = new Pool({ connectionString: process.env.DATABASE_URL })
 let db = createDatabase(createPostgresDatabaseAdapter(pool))
 ```
 
-## Query Builder API
+## Query Builder
 
-Use `db.query(Table)` when you need joins, custom shape selection, eager loading, or aggregate logic.
+Use `db.query(table)` when you need joins, custom shape selection, eager loading, or aggregate logic.
 
 ```ts
 import { eq, ilike } from 'remix/data-table'
@@ -115,11 +115,11 @@ await db
   .update({ status: 'processing' })
 ```
 
-## Database Helper API (High-Level CRUD)
+## CRUD Helpers
 
-Use these helpers for common operations without building a full query chain.
+`data-table` provides helpers for common create/read/update/delete operations. Use these helpers for common operations without building a full query chain.
 
-### Read helpers
+### Read operations
 
 ```ts
 import { or } from 'remix/data-table'
@@ -216,10 +216,43 @@ Return behavior:
 - `find`/`findOne` -> row or `null`
 - `findMany` -> rows
 - `create` -> `WriteResult` by default, row when `returnRow: true`
-- `createMany` -> `WriteResult` by default, rows when `returnRows: true` (RETURNING adapters only)
+- `createMany` -> `WriteResult` by default, rows when `returnRows: true` (not supported in MySQL because it doesn't support `RETURNING`)
 - `update` -> updated row or `null`
 - `updateMany`/`deleteMany` -> `WriteResult`
 - `delete` -> `boolean`
+
+### Data Validation
+
+For write operations, data validation happens before SQL is executed so invalid data does not get written to the database.
+
+`data-table` treats each column schema as both:
+
+- a runtime validator (is this input valid?)
+- a parser (what normalized value should be written?)
+
+If you're familiar with Zod, this is the same idea: schema-first validation where values are checked and parsed before use. In `data-table`, that parsing runs automatically on writes (`create`, `createMany`, `update`, `upsert`) so only schema-valid values are sent to the database. Invalid values and unknown columns fail fast before a write is attempted.
+
+Tables are also [Standard Schema](https://standardschema.dev/)-compatible, so you can run the same validation explicitly with `remix/data-schema` before writing:
+
+```ts
+import { parseSafe } from 'remix/data-schema'
+
+let result = parseSafe(users, {
+  id: 'u_004',
+  email: 'new@example.com',
+  role: 'customer',
+})
+
+if (!result.success) {
+  // Handle validation issues
+}
+```
+
+Validation semantics match `create()`/`update()` input behavior:
+
+- Partial objects are allowed
+- Unknown columns fail validation
+- Provided column values are parsed through each column schema
 
 ## Transactions
 

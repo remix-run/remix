@@ -1,4 +1,5 @@
 import { parseSafe } from '@remix-run/data-schema'
+import type { Schema } from '@remix-run/data-schema'
 
 import type {
   AdapterResult,
@@ -22,17 +23,16 @@ import { DataTableAdapterError, DataTableQueryError, DataTableValidationError } 
 import type {
   AnyRelation,
   AnyTable,
-  DataSchema,
   LoadedRelationMap,
   OrderByClause,
   OrderDirection,
   PrimaryKeyInput,
   Relation,
-  Table,
   TableName,
   TablePrimaryKey,
   TableRow,
   TableRowWith,
+  TimestampConfig,
   tableMetadataKey,
 } from './table.ts'
 import {
@@ -42,6 +42,7 @@ import {
   getTableName,
   getTablePrimaryKey,
   getTableTimestamps,
+  validatePartialRow,
 } from './table.ts'
 import type { Predicate, WhereInput } from './operators.ts'
 import { and, eq, inList, normalizeWhereInput, or } from './operators.ts'
@@ -50,7 +51,7 @@ import { rawSql, isSqlStatement } from './sql.ts'
 import type { AdapterStatement } from './adapter.ts'
 import type { Pretty } from './types.ts'
 import { normalizeColumnInput } from './references.ts'
-import type { ColumnInput, NormalizeColumnInput } from './references.ts'
+import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
 
 type QueryState = {
   select: '*' | SelectColumn[]
@@ -152,13 +153,16 @@ export type QueryTableInput<
   tableName extends string,
   row extends Record<string, unknown>,
   primaryKey extends readonly (keyof row & string)[],
-> = Table<
+> = TableMetadataLike<
   tableName,
   {
-    [column in keyof row & string]: DataSchema<any, row[column]>
+    [column in keyof row & string]: Schema<any, row[column]>
   },
-  primaryKey
->
+  primaryKey,
+  TimestampConfig | null
+> & {
+  '~standard': Schema<unknown, Partial<row>>['~standard']
+} & Record<string, unknown>
 
 export type QueryBuilderFor<
   tableName extends string,
@@ -1993,7 +1997,7 @@ function prepareInsertValues<table extends AnyTable>(
   now: unknown,
   touch: boolean,
 ): Record<string, unknown> {
-  let output = validatePartialRow(table, values)
+  let output = validateWriteValues(table, values)
   let timestamps = getTableTimestamps(table)
   let columns = getTableColumns(table)
 
@@ -2025,7 +2029,7 @@ function prepareUpdateValues<table extends AnyTable>(
   now: unknown,
   touch: boolean,
 ): Record<string, unknown> {
-  let output = validatePartialRow(table, values)
+  let output = validateWriteValues(table, values)
   let timestamps = getTableTimestamps(table)
   let columns = getTableColumns(table)
 
@@ -2043,49 +2047,52 @@ function prepareUpdateValues<table extends AnyTable>(
   return output
 }
 
-function validatePartialRow<table extends AnyTable>(
+function validateWriteValues<table extends AnyTable>(
   table: table,
   values: Partial<TableRow<table>>,
 ): Record<string, unknown> {
-  let output: Record<string, unknown> = {}
   let columns = getTableColumns(table)
   let tableName = getTableName(table)
+  let result = validatePartialRow(table, values)
 
-  for (let key in values as Record<string, unknown>) {
-    if (!Object.prototype.hasOwnProperty.call(values, key)) {
-      continue
-    }
+  if ('issues' in result) {
+    let firstIssue = result.issues[0]
+    let issuePath = firstIssue?.path
+    let firstPathSegment = issuePath && issuePath.length > 0 ? issuePath[0] : undefined
+    let column = typeof firstPathSegment === 'string' ? firstPathSegment : undefined
 
-    if (!Object.prototype.hasOwnProperty.call(columns, key)) {
+    if (column && !Object.prototype.hasOwnProperty.call(columns, column)) {
       throw new DataTableValidationError(
-        'Unknown column "' + key + '" for table "' + tableName + '"',
+        'Unknown column "' + column + '" for table "' + tableName + '"',
         [],
       )
     }
 
-    let schema = columns[key]
-    let inputValue = (values as Record<string, unknown>)[key]
-    let result = parseSafe(schema as any, inputValue) as
-      | { success: true; value: unknown }
-      | { success: false; issues: ReadonlyArray<unknown> }
-
-    if (!result.success) {
+    if (column) {
       throw new DataTableValidationError(
-        'Invalid value for column "' + key + '" in table "' + tableName + '"',
+        'Invalid value for column "' + column + '" in table "' + tableName + '"',
         result.issues,
         {
           metadata: {
             table: tableName,
-            column: key,
+            column,
           },
         },
       )
     }
 
-    output[key] = result.value
+    throw new DataTableValidationError(
+      'Invalid value for table "' + tableName + '"',
+      result.issues,
+      {
+        metadata: {
+          table: tableName,
+        },
+      },
+    )
   }
 
-  return output
+  return result.value as Record<string, unknown>
 }
 
 type ResolvedPredicateColumn = {

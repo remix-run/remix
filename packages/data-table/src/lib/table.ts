@@ -1,3 +1,5 @@
+import { createSchema, parseSafe } from '@remix-run/data-schema'
+import type { InferOutput, Issue, ParseOptions, Schema } from '@remix-run/data-schema'
 import type { Predicate, WhereInput } from './operators.ts'
 import { inferForeignKey } from './inflection.ts'
 import { normalizeWhereInput } from './operators.ts'
@@ -11,23 +13,9 @@ import type { Pretty } from './types.ts'
 export { columnMetadataKey, tableMetadataKey } from './references.ts'
 
 /**
- * Minimal Standard Schema-compatible contract used by `data-table`.
- */
-export type DataSchema<input = unknown, output = input> = {
-  '~standard': {
-    version: number
-    vendor: string
-    validate(
-      value: unknown,
-      options?: unknown,
-    ): { value: output } | { issues: ReadonlyArray<unknown> }
-  }
-}
-
-/**
  * Mapping of column names to schemas.
  */
-export type ColumnSchemas = Record<string, DataSchema<any, any>>
+export type ColumnSchemas = Record<string, Schema<any, any>>
 
 type ColumnNameFromColumns<columns extends ColumnSchemas> = keyof columns & string
 
@@ -69,7 +57,7 @@ type TableMetadata<
 export type ColumnReference<
   tableName extends string,
   columnName extends string,
-  schema extends DataSchema<any, any>,
+  schema extends Schema<any, any>,
 > = ColumnReferenceLike<`${tableName}.${columnName}`> & {
   [columnMetadataKey]: {
     tableName: tableName
@@ -79,7 +67,7 @@ export type ColumnReference<
   }
 }
 
-export type AnyColumn = ColumnReference<string, string, DataSchema<any, any>>
+export type AnyColumn = ColumnReference<string, string, Schema<any, any>>
 
 export type ColumnReferenceForQualifiedName<qualifiedName extends string> = AnyColumn & {
   [columnMetadataKey]: {
@@ -91,15 +79,33 @@ type TableColumnReferences<name extends string, columns extends ColumnSchemas> =
   [column in keyof columns & string]: ColumnReference<name, column, columns[column]>
 }
 
+type TableParseOutput<columns extends ColumnSchemas> = Partial<{
+  [column in keyof columns & string]: InferOutput<columns[column]>
+}>
+
 export type Table<
   name extends string,
   columns extends ColumnSchemas,
   primaryKey extends readonly ColumnNameFromColumns<columns>[],
 > = TableMetadataLike<name, columns, primaryKey, TimestampConfig | null> & {
   [tableMetadataKey]: TableMetadata<name, columns, primaryKey>
+  '~standard': Schema<unknown, TableParseOutput<columns>>['~standard']
 } & TableColumnReferences<name, columns>
 
-export type AnyTable = Table<string, ColumnSchemas, readonly string[]>
+export type AnyTable = TableMetadataLike<
+  string,
+  ColumnSchemas,
+  readonly string[],
+  TimestampConfig | null
+> & {
+  [tableMetadataKey]: {
+    name: string
+    columns: ColumnSchemas
+    primaryKey: readonly string[]
+    timestamps: TimestampConfig | null
+  }
+  '~standard': Schema<unknown, Partial<Record<string, unknown>>>['~standard']
+} & Record<string, unknown>
 
 export type TableName<table extends AnyTable> = table[typeof tableMetadataKey]['name']
 
@@ -109,11 +115,8 @@ export type TablePrimaryKey<table extends AnyTable> = table[typeof tableMetadata
 
 export type TableTimestamps<table extends AnyTable> = table[typeof tableMetadataKey]['timestamps']
 
-export type InferSchemaOutput<schema> =
-  schema extends DataSchema<any, infer output> ? output : never
-
 export type TableRow<table extends AnyTable> = Pretty<{
-  [column in keyof TableColumns<table> & string]: InferSchemaOutput<TableColumns<table>[column]>
+  [column in keyof TableColumns<table> & string]: InferOutput<TableColumns<table>[column]>
 }>
 
 export type TableRowWith<
@@ -307,6 +310,81 @@ let defaultTimestampConfig: TimestampConfig = {
   updatedAt: 'updated_at',
 }
 
+function prefixIssuePath(issue: Issue, key: string): Issue {
+  let issuePath = issue.path ?? []
+  return {
+    ...issue,
+    path: [key, ...issuePath],
+  }
+}
+
+function validatePartialRowInput<columns extends ColumnSchemas>(
+  tableName: string,
+  columns: columns,
+  value: unknown,
+  options?: ParseOptions,
+): { value: TableParseOutput<columns> } | { issues: ReadonlyArray<Issue> } {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return {
+      issues: [{ message: 'Expected object' }],
+    }
+  }
+
+  let input = value as Record<string, unknown>
+  let output: Record<string, unknown> = {}
+  let issues: Issue[] = []
+
+  for (let key in input) {
+    if (!Object.prototype.hasOwnProperty.call(input, key)) {
+      continue
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(columns, key)) {
+      issues.push({
+        message: 'Unknown column "' + key + '" for table "' + tableName + '"',
+        path: [key],
+      })
+      continue
+    }
+
+    let result = parseSafe(columns[key], input[key], options)
+
+    if (!result.success) {
+      issues.push(...result.issues.map((issue) => prefixIssuePath(issue, key)))
+      continue
+    }
+
+    output[key] = result.value
+  }
+
+  if (issues.length > 0) {
+    return { issues }
+  }
+
+  return { value: output as TableParseOutput<columns> }
+}
+
+export function validatePartialRow<table extends AnyTable>(
+  table: table,
+  value: unknown,
+  options?: ParseOptions,
+): { value: Partial<TableRow<table>> } | { issues: ReadonlyArray<Issue> } {
+  let result = validatePartialRowInput(
+    getTableName(table),
+    getTableColumns(table),
+    value,
+    options,
+  )
+
+  if ('issues' in result) {
+    return result
+  }
+
+  return {
+    value: result.value as Partial<TableRow<table>>,
+  }
+}
+
 /**
  * Creates a table object with symbol-backed metadata and direct column references.
  * @param options Table declaration options.
@@ -322,14 +400,23 @@ export function createTable<
 >(
   options: CreateTableOptions<name, columns, primaryKey>,
 ): Table<name, columns, NormalizePrimaryKey<columns, primaryKey>> {
-  let resolvedPrimaryKey = normalizePrimaryKey(options.name, options.columns, options.primaryKey)
+  let tableName = options.name
+  let columns = options.columns
+
+  if (Object.prototype.hasOwnProperty.call(columns, '~standard')) {
+    throw new Error(
+      'Column name "~standard" is reserved for table validation on "' + tableName + '"',
+    )
+  }
+
+  let resolvedPrimaryKey = normalizePrimaryKey(tableName, columns, options.primaryKey)
   let timestampConfig = normalizeTimestampConfig(options.timestamps)
   let table = Object.create(null) as Table<name, columns, NormalizePrimaryKey<columns, primaryKey>>
 
   Object.defineProperty(table, tableMetadataKey, {
     value: Object.freeze({
-      name: options.name,
-      columns: options.columns,
+      name: tableName,
+      columns,
       primaryKey: resolvedPrimaryKey,
       timestamps: timestampConfig,
     }),
@@ -338,13 +425,26 @@ export function createTable<
     configurable: false,
   })
 
-  for (let columnName in options.columns) {
-    if (!Object.prototype.hasOwnProperty.call(options.columns, columnName)) {
+  Object.defineProperty(table, '~standard', {
+    value: Object.freeze({
+      version: 1,
+      vendor: 'data-table',
+      validate(value: unknown, parseOptions?: ParseOptions) {
+        return validatePartialRowInput(tableName, columns, value, parseOptions)
+      },
+    }),
+    enumerable: false,
+    writable: false,
+    configurable: false,
+  })
+
+  for (let columnName in columns) {
+    if (!Object.prototype.hasOwnProperty.call(columns, columnName)) {
       continue
     }
 
-    let schema = options.columns[columnName]
-    let column = createColumnReference(options.name, columnName, schema)
+    let schema = columns[columnName]
+    let column = createColumnReference(tableName, columnName, schema)
 
     Object.defineProperty(table, columnName, {
       value: column,
@@ -360,7 +460,7 @@ export function createTable<
 function createColumnReference<
   tableName extends string,
   columnName extends string,
-  schema extends DataSchema<any, any>,
+  schema extends Schema<any, any>,
 >(
   tableName: tableName,
   columnName: columnName,
@@ -539,30 +639,20 @@ export function hasManyThrough<source extends AnyTable, target extends AnyTable>
  * Creates a schema that accepts `Date`, string, and numeric timestamp inputs.
  * @returns Timestamp schema for generated timestamp helpers.
  */
-export function timestampSchema(): DataSchema<unknown, Date | string | number> {
-  return {
-    '~standard': {
-      version: 1,
-      vendor: 'data-table',
-      validate(value: unknown) {
-        if (value instanceof Date) {
-          return { value }
-        }
+export function timestampSchema(): Schema<unknown, Date | string | number> {
+  return createSchema<unknown, Date | string | number>((value) => {
+    if (value instanceof Date) {
+      return { value }
+    }
 
-        if (typeof value === 'string' || typeof value === 'number') {
-          return { value }
-        }
+    if (typeof value === 'string' || typeof value === 'number') {
+      return { value }
+    }
 
-        return {
-          issues: [
-            {
-              message: 'Expected Date, string, or number',
-            },
-          ],
-        }
-      },
-    },
-  }
+    return {
+      issues: [{ message: 'Expected Date, string, or number' }],
+    }
+  })
 }
 
 let defaultTimestampSchema = timestampSchema()
@@ -573,8 +663,8 @@ let defaultTimestampSchema = timestampSchema()
  * @returns Column schema map for `created_at`/`updated_at`.
  */
 export function timestamps(
-  schema: DataSchema<any, any> = defaultTimestampSchema,
-): Record<'created_at' | 'updated_at', DataSchema<any, any>> {
+  schema: Schema<any, any> = defaultTimestampSchema,
+): Record<'created_at' | 'updated_at', Schema<any, any>> {
   return {
     created_at: schema,
     updated_at: schema,
