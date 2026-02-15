@@ -1,7 +1,7 @@
 export type ReconcilerElementType = unknown
 
 export type ReconcilerElement = {
-  $rcn: true
+  $rmx: true
   type: ReconcilerElementType
   key: unknown
   props: Record<string, unknown>
@@ -111,14 +111,14 @@ export type HostHandle<elementNode> = EventTargetLike & {
   signal: AbortSignal
 }
 
-export type Handle = {
+export type UpdateHandle = {
   update(): Promise<AbortSignal>
   queueTask(task: RootTask): void
   signal: AbortSignal
 }
 
-export type NodeFactory<elementNode> = (hostHandle: HostHandle<elementNode>) => void | NodeTransform
-export type Plugin<elementNode> = (pluginHandle: PluginHandle) => void | NodeFactory<elementNode>
+export type HostFactory<elementNode> = (hostHandle: HostHandle<elementNode>) => void | NodeTransform
+export type Plugin<elementNode> = (pluginHandle: PluginHandle) => void | HostFactory<elementNode>
 
 export function definePlugin<elementNode>(plugin: Plugin<elementNode>): Plugin<elementNode> {
   return plugin
@@ -127,7 +127,7 @@ export function definePlugin<elementNode>(plugin: Plugin<elementNode>): Plugin<e
 export type PreparedPlugin<elementNode> = {
   name: string
   handle: PluginHandle
-  createNode: null | NodeFactory<elementNode>
+  createHost: null | HostFactory<elementNode>
 }
 
 export type NodeHandle = {

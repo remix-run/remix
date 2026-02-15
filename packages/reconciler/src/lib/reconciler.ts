@@ -6,7 +6,7 @@ import type {
   CommittedNode,
   DeferredRemoval,
   NodeChild,
-  NodeFactory,
+  HostFactory,
   HostHandle,
   NodeInput,
   NodeRenderNode,
@@ -35,9 +35,9 @@ export function createReconcilerRuntime<
   plugins: PreparedPlugin<elementNode>[],
 ) {
   let removalRegistry = new Map<string, DeferredRemoval<parentNode, node, elementNode>>()
-  let nodeFactories: NodeFactory<elementNode>[] = []
+  let hostFactories: HostFactory<elementNode>[] = []
   for (let plugin of plugins) {
-    if (plugin.createNode) nodeFactories.push(plugin.createNode)
+    if (plugin.createHost) hostFactories.push(plugin.createHost)
   }
 
   function createNode(input: NodeInput): NodeRenderNode {
@@ -300,7 +300,7 @@ export function createReconcilerRuntime<
     traversalCursor: traversal,
   ): { node: CommittedHostNode<node, elementNode>; traversal: traversal } {
     let probe = createDraftHostNode(parent, key, root)
-    initializeHostPlugins(probe, nodeFactories, root)
+    initializeHostPlugins(probe, hostFactories, root)
     let transformedInput = applyTransforms(probe, input)
     if (typeof transformedInput.type !== 'string') {
       throw new Error('plugins must resolve host type to string')
@@ -447,13 +447,13 @@ export function createReconcilerRuntime<
 
   function initializeHostPlugins(
     node: CommittedHostNode<node, elementNode>,
-    factories: NodeFactory<elementNode>[],
+    factories: HostFactory<elementNode>[],
     root: RootState<parentNode, node, elementNode, traversal>,
   ) {
     node.hostHandles = []
     node.transforms = []
     node.pendingTasks = []
-    for (let createNodeFactory of factories) {
+    for (let createHostFactory of factories) {
       let hostTarget = new SimpleEventTarget()
       let connected = new AbortController()
       hostTarget.addEventListener('remove', () => connected.abort())
@@ -471,7 +471,7 @@ export function createReconcilerRuntime<
           return connected.signal
         },
       }) as HostHandle<elementNode>
-      let transform = createNodeFactory(hostHandle)
+      let transform = createHostFactory(hostHandle)
       node.hostHandles.push(hostHandle)
       if (transform) node.transforms.push(transform)
     }

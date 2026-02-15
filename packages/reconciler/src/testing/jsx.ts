@@ -9,7 +9,7 @@ export function createReconcilerElement(
   key: unknown,
 ): ReconcilerElement {
   return {
-    $rcn: true,
+    $rmx: true,
     type,
     key,
     props,
@@ -18,6 +18,6 @@ export function createReconcilerElement(
 
 export function isReconcilerElement(value: unknown): value is ReconcilerElement {
   if (!value || typeof value !== 'object') return false
-  let record = value as { $rcn?: unknown }
-  return record.$rcn === true
+  let record = value as { $rmx?: unknown }
+  return record.$rmx === true
 }

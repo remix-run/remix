@@ -9,6 +9,7 @@ import type {
   RenderValue,
   RootState,
   NodeHandle,
+  RootTask,
 } from './types.ts'
 
 let nextRootId = 1
@@ -33,8 +34,8 @@ export function createReconciler<
 ) {
   let preparedPlugins: PreparedPlugin<elementNode>[] = plugins.map((plugin) => {
     let handle = new SimpleEventTarget()
-    let createNode = plugin(handle) ?? null
-    return { handle, createNode, name: plugin.name || 'plugin' }
+    let createHost = plugin(handle) ?? null
+    return { handle, createHost, name: plugin.name || 'plugin' }
   })
   let runtime = createReconcilerRuntime(options.nodePolicy, preparedPlugins)
   let scheduler = createScheduler(preparedPlugins, runtime.reconcileRoot)
@@ -95,7 +96,7 @@ export function createReconciler<
       scheduler.enqueue(root)
     }
 
-    function queueTask(task: (signal: AbortSignal) => void) {
+    function queueTask(task: RootTask) {
       root.pendingTasks.push(task)
       enqueue()
     }

@@ -12,9 +12,9 @@ export type {
   CommittedHostNode,
   CommittedNode,
   ErrorPhase,
-  Handle,
+  UpdateHandle,
   NodeChild,
-  NodeFactory,
+  HostFactory,
   HostHandle,
   NodeInput,
   NodeRenderNode,
@@ -31,7 +31,7 @@ export type {
   ReconcilerRoot,
   RenderNode,
   RenderValue,
-  RootTask,
+  RootTask as Task,
 } from './lib/types.ts'
 
 export type {
