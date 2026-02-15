@@ -226,3 +226,42 @@ describe('ContentDisposition.from', () => {
     assert.equal(result.filename, 'test.txt')
   })
 })
+
+describe('ContentDisposition non-ASCII filename handling', () => {
+  it('decodes percent-encoded UTF-8 Japanese filename', () => {
+    // Simulates what happens when raw-headers encodes テスト画像.png
+    let header = new ContentDisposition(
+      'form-data; name="file"; filename="%E3%83%86%E3%82%B9%E3%83%88%E7%94%BB%E5%83%8F.png"',
+    )
+    assert.equal(header.preferredFilename, 'テスト画像.png')
+  })
+
+  it('decodes percent-encoded UTF-8 Chinese filename', () => {
+    // Simulates what happens when raw-headers encodes 文件.png
+    let header = new ContentDisposition(
+      'form-data; name="file"; filename="%E6%96%87%E4%BB%B6.png"',
+    )
+    assert.equal(header.preferredFilename, '文件.png')
+  })
+
+  it('decodes percent-encoded UTF-8 Korean filename', () => {
+    // Simulates what happens when raw-headers encodes 파일.png
+    let header = new ContentDisposition(
+      'form-data; name="file"; filename="%ED%8C%8C%EC%9D%BC.png"',
+    )
+    assert.equal(header.preferredFilename, '파일.png')
+  })
+
+  it('handles mixed ASCII and non-ASCII in filename', () => {
+    // Simulates test_テスト.png
+    let header = new ContentDisposition(
+      'form-data; name="file"; filename="test_%E3%83%86%E3%82%B9%E3%83%88.png"',
+    )
+    assert.equal(header.preferredFilename, 'test_テスト.png')
+  })
+
+  it('leaves plain ASCII filenames unchanged', () => {
+    let header = new ContentDisposition('form-data; name="file"; filename="plain.txt"')
+    assert.equal(header.preferredFilename, 'plain.txt')
+  })
+})

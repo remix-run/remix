@@ -93,3 +93,56 @@ describe('stringifyRawHeaders', () => {
     assert.equal(parsed.get('cache-control'), 'no-cache')
   })
 })
+
+describe('parseRawHeaders non-ASCII handling', () => {
+  it('encodes non-ASCII characters in header values', () => {
+    // Japanese filename: テスト画像.png
+    let headers = parseRawHeaders(
+      'Content-Disposition: form-data; name="file"; filename="テスト画像.png"',
+    )
+    let value = headers.get('content-disposition')
+    assert.ok(value !== null)
+    // Should be percent-encoded
+    assert.ok(value.includes('%E3%83%86%E3%82%B9%E3%83%88'), 'Should contain encoded テスト')
+    assert.ok(value.includes('%E7%94%BB%E5%83%8F'), 'Should contain encoded 画像')
+  })
+
+  it('encodes Chinese characters', () => {
+    // Chinese filename: 文件.png
+    let headers = parseRawHeaders(
+      'Content-Disposition: form-data; name="file"; filename="文件.png"',
+    )
+    let value = headers.get('content-disposition')
+    assert.ok(value !== null)
+    assert.ok(value.includes('%E6%96%87%E4%BB%B6'), 'Should contain encoded 文件')
+  })
+
+  it('encodes Korean characters', () => {
+    // Korean filename: 파일.png
+    let headers = parseRawHeaders(
+      'Content-Disposition: form-data; name="file"; filename="파일.png"',
+    )
+    let value = headers.get('content-disposition')
+    assert.ok(value !== null)
+    assert.ok(value.includes('%ED%8C%8C%EC%9D%BC'), 'Should contain encoded 파일')
+  })
+
+  it('preserves ASCII-only header values unchanged', () => {
+    let headers = parseRawHeaders('Content-Disposition: form-data; name="file"; filename="test.txt"')
+    assert.equal(
+      headers.get('content-disposition'),
+      'form-data; name="file"; filename="test.txt"',
+    )
+  })
+
+  it('handles mixed ASCII and non-ASCII', () => {
+    let headers = parseRawHeaders(
+      'Content-Disposition: form-data; name="file"; filename="test_テスト.png"',
+    )
+    let value = headers.get('content-disposition')
+    assert.ok(value !== null)
+    assert.ok(value.includes('test_'), 'Should preserve ASCII prefix')
+    assert.ok(value.includes('%E3%83%86%E3%82%B9%E3%83%88'), 'Should contain encoded テスト')
+    assert.ok(value.includes('.png'), 'Should preserve ASCII suffix')
+  })
+})
