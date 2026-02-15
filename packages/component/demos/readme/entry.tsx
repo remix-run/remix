@@ -542,7 +542,11 @@ function ThemedContent(handle: Handle) {
   let theme = handle.context.get(ThemeProviderAdvanced)
 
   // Subscribe to theme changes and update when it changes
-  handle.on(theme, { change: () => handle.update() })
+  handle.on(theme, {
+    change: () => {
+      handle.update()
+    },
+  })
 
   return () => (
     <div
