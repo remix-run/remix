@@ -3,7 +3,6 @@ import { describe, it } from 'node:test'
 
 import { loginAsAdmin, requestWithSession } from '../test/helpers.ts'
 import { router } from './router.ts'
-import { getAllBooks } from './models/books.ts'
 import { uploadsStorage as uploads } from './utils/uploads.ts'
 
 describe('uploads handler', () => {
@@ -11,8 +10,9 @@ describe('uploads handler', () => {
     let sessionId = await loginAsAdmin(router)
 
     // Get initial book count
-    let initialBookCount = (await router.run('https://remix.run/uploads', () => getAllBooks()))
-      .length
+    let initialBookCount = (
+      await router.run('https://remix.run/uploads', ({ models }) => models.Book.all())
+    ).length
 
     // Create a multipart form with a file upload
     let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
@@ -76,7 +76,7 @@ describe('uploads handler', () => {
     assert.ok(createResponse.headers.get('Location')?.includes('/admin/books'))
 
     // Get the newly created book from the model
-    let books = await router.run('https://remix.run/uploads', () => getAllBooks())
+    let books = await router.run('https://remix.run/uploads', ({ models }) => models.Book.all())
     assert.equal(books.length, initialBookCount + 1)
 
     let newBook = books[books.length - 1]

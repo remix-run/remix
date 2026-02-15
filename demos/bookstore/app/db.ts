@@ -1,76 +1,12 @@
 import * as fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import BetterSqlite3 from 'better-sqlite3'
-import * as s from 'remix/data-schema'
-import { belongsTo, createDatabase, createTable, hasMany, sql } from 'remix/data-table'
+import { createDatabase, sql } from 'remix/data-table'
 import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
-export let books = createTable({
-  name: 'books',
-  columns: {
-    id: s.number(),
-    slug: s.string(),
-    title: s.string(),
-    author: s.string(),
-    description: s.string(),
-    price: s.number(),
-    genre: s.string(),
-    image_urls: s.string(),
-    cover_url: s.string(),
-    isbn: s.string(),
-    published_year: s.number(),
-    in_stock: s.boolean(),
-  },
-})
-
-export let users = createTable({
-  name: 'users',
-  columns: {
-    id: s.number(),
-    email: s.string(),
-    password: s.string(),
-    name: s.string(),
-    role: s.enum_(['customer', 'admin']),
-    created_at: s.number(),
-  },
-})
-
-export let orders = createTable({
-  name: 'orders',
-  columns: {
-    id: s.number(),
-    user_id: s.number(),
-    total: s.number(),
-    status: s.enum_(['pending', 'processing', 'shipped', 'delivered']),
-    shipping_address_json: s.string(),
-    created_at: s.number(),
-  },
-})
-
-export let orderItems = createTable({
-  name: 'order_items',
-  primaryKey: ['order_id', 'book_id'],
-  columns: {
-    order_id: s.number(),
-    book_id: s.number(),
-    title: s.string(),
-    unit_price: s.number(),
-    quantity: s.number(),
-  },
-})
-
-export let itemsByOrder = hasMany(orders, orderItems)
-export let bookForOrderItem = belongsTo(orderItems, books)
-
-export let passwordResetTokens = createTable({
-  name: 'password_reset_tokens',
-  primaryKey: ['token'],
-  columns: {
-    token: s.string(),
-    user_id: s.number(),
-    expires_at: s.number(),
-  },
-})
+import { Book } from './models/book.ts'
+import { Order, OrderItem } from './models/order.ts'
+import { User } from './models/user.ts'
 
 let databaseFilePath = getDatabaseFilePath()
 
@@ -86,16 +22,6 @@ let adapter = createSqliteDatabaseAdapter(sqlite)
 
 export let db = createDatabase(adapter)
 export type BookstoreDatabase = typeof db
-
-export function checkoutBookstoreDatabase(): {
-  db: BookstoreDatabase
-  release: () => void
-} {
-  return {
-    db,
-    release() {},
-  }
-}
 
 let initializePromise: Promise<void> | null = null
 
@@ -182,9 +108,9 @@ async function initialize(): Promise<void> {
     create index if not exists password_reset_tokens_user_id_idx on password_reset_tokens (user_id)
   `)
 
-  let booksCount = await db.count(books)
+  let booksCount = await db.count(Book.table)
   if (booksCount === 0) {
-    await db.createMany(books, [
+    await db.createMany(Book.table, [
       {
         id: 1,
         slug: 'bbq',
@@ -238,9 +164,9 @@ async function initialize(): Promise<void> {
     ])
   }
 
-  let usersCount = await db.count(users)
+  let usersCount = await db.count(User.table)
   if (usersCount === 0) {
-    await db.createMany(users, [
+    await db.createMany(User.table, [
       {
         id: 1,
         email: 'admin@bookstore.com',
@@ -260,9 +186,9 @@ async function initialize(): Promise<void> {
     ])
   }
 
-  let ordersCount = await db.count(orders)
+  let ordersCount = await db.count(Order.table)
   if (ordersCount === 0) {
-    await db.createMany(orders, [
+    await db.createMany(Order.table, [
       {
         id: 1001,
         user_id: 2,
@@ -292,9 +218,9 @@ async function initialize(): Promise<void> {
     ])
   }
 
-  let orderItemsCount = await db.count(orderItems)
+  let orderItemsCount = await db.count(OrderItem.table)
   if (orderItemsCount === 0) {
-    await db.createMany(orderItems, [
+    await db.createMany(OrderItem.table, [
       {
         order_id: 1001,
         book_id: 1,

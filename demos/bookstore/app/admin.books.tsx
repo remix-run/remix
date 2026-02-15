@@ -2,14 +2,13 @@ import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
-import { getAllBooks, getBookById, createBook, updateBook, deleteBook } from './models/books.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  async index() {
-    let books = await getAllBooks()
+  async index({ models }) {
+    let books = await models.Book.all()
 
     return render(
       <Layout>
@@ -83,8 +82,8 @@ export default {
     )
   },
 
-  async show({ params }) {
-    let book = await getBookById(params.bookId)
+  async show({ models, params }) {
+    let book = await models.Book.find(params.bookId)
 
     if (!book) {
       return render(
@@ -231,8 +230,8 @@ export default {
     )
   },
 
-  async create({ formData }) {
-    await createBook({
+  async create({ formData, models }) {
+    await models.Book.create({
       slug: formData.get('slug')?.toString() ?? '',
       title: formData.get('title')?.toString() ?? '',
       author: formData.get('author')?.toString() ?? '',
@@ -249,8 +248,8 @@ export default {
     return redirect(routes.admin.books.index.href())
   },
 
-  async edit({ params }) {
-    let book = await getBookById(params.bookId)
+  async edit({ models, params }) {
+    let book = await models.Book.find(params.bookId)
 
     if (!book) {
       return render(
@@ -374,8 +373,8 @@ export default {
     )
   },
 
-  async update({ formData, params }) {
-    let book = await getBookById(params.bookId)
+  async update({ formData, models, params }) {
+    let book = await models.Book.find(params.bookId)
     if (!book) {
       return new Response('Book not found', { status: 404 })
     }
@@ -384,7 +383,7 @@ export default {
     // If no file was uploaded, keep the existing cover_url
     let cover_url = formData.get('cover')?.toString() || book.cover_url
 
-    await updateBook(params.bookId, {
+    await models.Book.update(params.bookId, {
       slug: formData.get('slug')?.toString() ?? '',
       title: formData.get('title')?.toString() ?? '',
       author: formData.get('author')?.toString() ?? '',
@@ -400,8 +399,8 @@ export default {
     return redirect(routes.admin.books.index.href())
   },
 
-  async destroy({ params }) {
-    await deleteBook(params.bookId)
+  async destroy({ models, params }) {
+    await models.Book.delete(params.bookId)
 
     return redirect(routes.admin.books.index.href())
   },

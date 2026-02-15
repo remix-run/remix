@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/data-table",
+  "name": "@remix-run/data-model",
   "version": "0.0.0",
-  "description": "A typed, relational query toolkit for Remix",
+  "description": "ActiveRecord-style models on top of data-table",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/data-table"
+    "directory": "packages/data-model"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/data-table#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/data-model#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -21,9 +21,6 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./inflection": "./src/inflection.ts",
-    "./operators": "./src/operators.ts",
-    "./sql": "./src/sql.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -32,30 +29,19 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./inflection": {
-        "types": "./dist/inflection.d.ts",
-        "default": "./dist/inflection.js"
-      },
-      "./operators": {
-        "types": "./dist/operators.d.ts",
-        "default": "./dist/operators.js"
-      },
-      "./sql": {
-        "types": "./dist/sql.d.ts",
-        "default": "./dist/sql.js"
-      },
       "./package.json": "./package.json"
     }
   },
   "devDependencies": {
     "@remix-run/data-schema": "workspace:*",
+    "@remix-run/data-table-sqlite": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "better-sqlite3": "^12.4.1"
+    "better-sqlite3": "^12.6.2"
   },
   "dependencies": {
-    "@remix-run/data-schema": "workspace:^"
+    "@remix-run/data-table": "workspace:^"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
@@ -67,9 +53,8 @@
   "keywords": [
     "remix",
     "orm",
-    "sql",
-    "database",
-    "query-builder",
-    "relational"
+    "active-record",
+    "data-model",
+    "database"
   ]
 }

@@ -23,7 +23,7 @@
 ## Code Style
 
 - **Imports**: Always use `import type { X }` for types (separate from value imports); use `export type { X }` for type exports; include `.ts` extensions
-- **Variables**: Prefer `let` for locals, `const` only at module scope; never use `var`
+- **Variables**: Prefer `let` for locals; always use `const` to declare variables at module scope; never use `var`
 - **Functions**: Use regular function declarations/expressions by default. For callback-based APIs (array methods, Promise callbacks, test callbacks, transaction callbacks, etc.), prefer arrow functions over `function` expressions. When an arrow callback only returns a single expression, use a concise body (`value => expression`) instead of braces/`return`
 - **Object methods**: When defining functions in object literals, use shorthand method syntax (`{ method() {} }`) instead of arrow functions (`{ method: () => {} }`)
 - **Classes**: Use native fields (omit `public`), `#private` for private members (no TypeScript accessibility modifiers)
@@ -31,6 +31,7 @@
 - **TypeScript**: Strict mode, ESNext target, ES2022 modules, bundler resolution, verbatimModuleSyntax
 - **Generics**: Use descriptive lowercase names for type parameters (e.g., `source`, `method`, `pattern`) instead of single uppercase letters like `T`, `P`, or `K`
 - **Comments**: Only add non-JSDoc comments when the code is doing something surprising or non-obvious
+- **Docs package names**: In documentation, always prefer the short `remix/<package>` import names (for example, `remix/data-schema`) and avoid `@remix-run/*` package names
 
 ## Test Structure
 

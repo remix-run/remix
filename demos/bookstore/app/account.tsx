@@ -4,8 +4,6 @@ import { redirect } from 'remix/response/redirect'
 import { routes } from './routes.ts'
 import { Layout } from './layout.tsx'
 import { requireAuth } from './middleware/auth.ts'
-import { getOrdersByUserId, getOrderById } from './models/orders.ts'
-import { updateUser } from './models/users.ts'
 import { getCurrentUser } from './utils/context.ts'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
@@ -107,7 +105,7 @@ export default {
         )
       },
 
-      async update({ formData }) {
+      async update({ formData, models }) {
         let user = getCurrentUser()
 
         let name = formData.get('name')?.toString() ?? ''
@@ -119,16 +117,16 @@ export default {
           updateData.password = password
         }
 
-        await updateUser(user.id, updateData)
+        await models.User.update(user.id, updateData)
 
         return redirect(routes.account.index.href())
       },
     },
 
     orders: {
-      async index() {
+      async index({ models }) {
         let user = getCurrentUser()
-        let orders = await getOrdersByUserId(user.id)
+        let orders = await models.Order.findByUserId(user.id)
 
         return render(
           <Layout>
@@ -184,9 +182,9 @@ export default {
         )
       },
 
-      async show({ params }) {
+      async show({ models, params }) {
         let user = getCurrentUser()
-        let order = await getOrderById(params.orderId)
+        let order = await models.Order.find(params.orderId)
 
         if (!order || order.user_id !== user.id) {
           return render(

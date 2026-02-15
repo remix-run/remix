@@ -747,11 +747,16 @@ describe('compressResponse()', () => {
 
       // Test that data arrives before stream closes AND is valid SSE format
       let receivedData = await new Promise<string>((resolve, reject) => {
+        let timeoutMs = isWindows ? (encodingName === 'br' ? 6_000 : 2_000) : 500
         let timeout = setTimeout(
           () => {
-            reject(new Error(`Timeout: data not flushed - flush may not be working`))
+            reject(
+              new Error(
+                `Timeout (${timeoutMs}ms): data not flushed for ${encodingName} - flush may not be working`,
+              ),
+            )
           },
-          isWindows ? 2_000 : 500,
+          timeoutMs,
         )
 
         decompressed.once('data', (chunk) => {

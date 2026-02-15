@@ -4,16 +4,17 @@ import { routes } from './routes.ts'
 import { BookCard } from './components/book-card.tsx'
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
-import { getBookBySlug, searchBooks } from './models/books.ts'
 import { render } from './utils/render.ts'
 import { getCurrentCart } from './utils/context.ts'
 
 export let home: BuildAction<'GET', typeof routes.home> = {
   middleware: [loadAuth()],
-  async action() {
+  async action({ models }) {
     let cart = getCurrentCart()
     let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
-    let featuredBookResults = await Promise.all(featuredSlugs.map((slug) => getBookBySlug(slug)))
+    let featuredBookResults = await Promise.all(
+      featuredSlugs.map((slug) => models.Book.getBySlug(slug)),
+    )
     let featuredBooks = featuredBookResults.filter((book) => book != null)
 
     return render(
@@ -163,9 +164,9 @@ export let contact: Controller<typeof routes.contact> = {
 
 export let search: BuildAction<'GET', typeof routes.search> = {
   middleware: [loadAuth()],
-  async action({ url }) {
+  async action({ models, url }) {
     let query = url.searchParams.get('q') ?? ''
-    let books = query ? await searchBooks(query) : []
+    let books = query ? await models.Book.search(query) : []
     let cart = getCurrentCart()
 
     return render(

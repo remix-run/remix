@@ -4,7 +4,6 @@ import { redirect } from 'remix/response/redirect'
 import { routes } from './routes.ts'
 import { requireAuth } from './middleware/auth.ts'
 import { clearCart, getCartTotal } from './models/cart.ts'
-import { createOrder, getOrderById } from './models/orders.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { getCurrentUser, getCurrentCart } from './utils/context.ts'
@@ -107,7 +106,7 @@ export default {
       )
     },
 
-    async action({ session, formData }) {
+    async action({ formData, models, session }) {
       let user = getCurrentUser()
       let cart = getCurrentCart()
 
@@ -122,7 +121,7 @@ export default {
         zip: formData.get('zip')?.toString() || '',
       }
 
-      let order = await createOrder(
+      let order = await models.Order.place(
         user.id,
         cart.items.map((item) => ({
           bookId: item.bookId,
@@ -138,9 +137,9 @@ export default {
       return redirect(routes.checkout.confirmation.href({ orderId: order.id }))
     },
 
-    async confirmation({ params }) {
+    async confirmation({ models, params }) {
       let user = getCurrentUser()
-      let order = await getOrderById(params.orderId)
+      let order = await models.Order.find(params.orderId)
 
       if (!order || order.user_id !== user.id) {
         return render(
