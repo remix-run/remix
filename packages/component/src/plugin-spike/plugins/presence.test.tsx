@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createReconciler } from '../index.ts'
+import { connect } from './connect.ts'
 import { presence } from './presence.ts'
 import type { Plugin } from '../types.ts'
 
@@ -20,7 +21,7 @@ describe('plugin-spike example presence plugin', () => {
       return animation as unknown as Animation
     })
 
-    let reconciler = createReconciler([presence, createPassthroughPlugin()])
+    let reconciler = createReconciler([connect, presence, createPassthroughPlugin()])
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
@@ -55,7 +56,7 @@ describe('plugin-spike example presence plugin', () => {
       return animation as unknown as Animation
     })
 
-    let reconciler = createReconciler([presence, createPassthroughPlugin()])
+    let reconciler = createReconciler([connect, presence, createPassthroughPlugin()])
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
     let firstNode: null | Element = null

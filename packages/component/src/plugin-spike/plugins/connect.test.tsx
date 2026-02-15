@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import { createReconciler } from '../index.ts'
+import { connect } from './connect.ts'
 import { presence } from './presence.ts'
 
 describe('plugin-spike connect plugin', () => {
   it('does not connect when initial connect prop is missing', () => {
     let calls = 0
-    let reconciler = createReconciler([])
+    let reconciler = createReconciler([connect])
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
@@ -32,7 +33,7 @@ describe('plugin-spike connect plugin', () => {
     let calls = 0
     let capturedSignal: null | AbortSignal = null
 
-    let reconciler = createReconciler([])
+    let reconciler = createReconciler([connect])
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
@@ -77,7 +78,7 @@ describe('plugin-spike connect plugin', () => {
     let firstNode: null | Element = null
     let secondNode: null | Element = null
 
-    let reconciler = createReconciler([presence])
+    let reconciler = createReconciler([connect, presence])
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 

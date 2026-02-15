@@ -1,5 +1,4 @@
 import { createReconciler } from './root.ts'
-import { createHydrationPolicy } from './hydration-policy.ts'
 import { ariaProps } from './plugins/aria-props.ts'
 import { attributeProps } from './plugins/attribute-props.ts'
 import { css as cssPlugin } from './plugins/css.ts'
@@ -33,7 +32,6 @@ export { attributeProps as attributePropsPlugin } from './plugins/attribute-prop
 export { component as componentPlugin } from './plugins/component.ts'
 export { connect as connectPlugin } from './plugins/connect.ts'
 export { definePlugin } from './types.ts'
-export { createHydrationPolicy }
 
 export function createRecommendedReconciler() {
   return createReconciler([
@@ -58,7 +56,6 @@ export type {
   HostTransformInput,
   HostTransform,
   HostRenderNode,
-  HydrationPolicy,
   Handle,
   SpikeHandle,
   Plugin as SpikePlugin,
