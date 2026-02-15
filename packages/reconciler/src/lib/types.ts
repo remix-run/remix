@@ -69,13 +69,7 @@ export class PluginAfterFlushEvent extends Event {
   }
 }
 
-export type EventTargetLike = {
-  addEventListener(type: string, listener: null | ((event: Event) => void)): void
-  removeEventListener(type: string, listener: null | ((event: Event) => void)): void
-  dispatchEvent(event: Event): boolean
-}
-
-export type PluginHandle = EventTargetLike
+export type PluginHandle = EventTarget
 
 export class HostInsertEvent<elementNode> extends Event {
   input: NodeTransformInput
@@ -105,7 +99,7 @@ export class HostRemoveEvent<elementNode> extends Event {
   }
 }
 
-export type HostHandle<elementNode> = EventTargetLike & {
+export type HostHandle<elementNode> = EventTarget & {
   queueTask(task: HostTask<elementNode>): void
   update(): Promise<AbortSignal>
   signal: AbortSignal

@@ -1,6 +1,5 @@
 import { createReconcilerRuntime } from './reconciler.ts'
 import { createScheduler } from './scheduler.ts'
-import { SimpleEventTarget } from './simple-event-target.ts'
 import type {
   NodePolicy,
   Plugin,
@@ -33,7 +32,7 @@ export function createReconciler<
   options: ReconcilerOptions<parentNode, node, elementNode, traversal>,
 ) {
   let preparedPlugins: PreparedPlugin<elementNode>[] = plugins.map((plugin) => {
-    let handle = new SimpleEventTarget()
+    let handle = new EventTarget()
     let createHost = plugin(handle) ?? null
     return { handle, createHost, name: plugin.name || 'plugin' }
   })

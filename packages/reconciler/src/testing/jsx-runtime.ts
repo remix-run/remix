@@ -1,10 +1,15 @@
 import { createReconcilerElement, RECONCILER_FRAGMENT } from './jsx.ts'
+import type { UpdateHandle } from '../lib/types.ts'
 
 export const Fragment = RECONCILER_FRAGMENT
 
 export type ReconcilerJsxElement = ReturnType<typeof createReconcilerElement>
 
-export function jsx(type: unknown, props: null | Record<string, unknown>, key?: unknown): ReconcilerJsxElement {
+export function jsx(
+  type: unknown,
+  props: null | Record<string, unknown>,
+  key?: unknown,
+): ReconcilerJsxElement {
   return createElement(type, props, key)
 }
 
@@ -32,11 +37,22 @@ function createElement(
 
 export namespace JSX {
   export type Element = ReconcilerJsxElement
-  export type ElementType = string | ((props: any) => Element)
+  export type ElementType =
+    | keyof IntrinsicElements
+    | ((handle: UpdateHandle, setup: any) => (props: any) => Element)
   export interface IntrinsicElements {
     [name: string]: Record<string, unknown>
   }
   export interface ElementChildrenAttribute {
     children: unknown
   }
+  export interface IntrinsicAttributes {
+    key?: unknown
+  }
+  export type LibraryManagedAttributes<component, props> = component extends (
+    handle: UpdateHandle,
+    ...args: unknown[]
+  ) => (props: infer renderProps) => unknown
+    ? renderProps
+    : props
 }

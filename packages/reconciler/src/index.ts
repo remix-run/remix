@@ -5,7 +5,7 @@ export {
   createTestContainer,
   createTestNodePolicy,
   stringifyTestNode,
-} from './lib/test-node-policy.ts'
+} from './testing/test-node-policy.ts'
 export { RECONCILER_FRAGMENT } from './testing/jsx.ts'
 
 export type {
@@ -41,4 +41,4 @@ export type {
   TestNodePolicy,
   TestTextNode,
   TestTraversal,
-} from './lib/test-node-policy.ts'
+} from './testing/test-node-policy.ts'

@@ -1,6 +1,10 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { createTestContainer, createTestNodePolicy, stringifyTestNode } from './test-node-policy.ts'
+import {
+  createTestContainer,
+  createTestNodePolicy,
+  stringifyTestNode,
+} from '../testing/test-node-policy.ts'
 
 describe('test node policy', () => {
   it('supports basic create/insert/move/remove operations', () => {

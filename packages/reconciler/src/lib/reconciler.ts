@@ -1,6 +1,5 @@
 import { HostInsertEvent, HostRemoveEvent, ReconcilerErrorEvent } from './types.ts'
 import { RECONCILER_FRAGMENT, isReconcilerElement } from '../testing/jsx.ts'
-import { SimpleEventTarget } from './simple-event-target.ts'
 import type {
   CommittedHostNode,
   CommittedNode,
@@ -12,7 +11,6 @@ import type {
   NodeRenderNode,
   HostTask,
   NodeTransformInput,
-  NodeTransform,
   NodePolicy,
   PreparedPlugin,
   RenderNode,
@@ -47,7 +45,10 @@ export function createReconcilerRuntime<
     }
   }
 
-  function reconcileRoot(root: RootState<parentNode, node, elementNode, traversal>, flushId: number) {
+  function reconcileRoot(
+    root: RootState<parentNode, node, elementNode, traversal>,
+    flushId: number,
+  ) {
     let nextRenderable = root.render ? root.render(root.handle) : null
     let nextNodes = normalizeRenderNodes(nextRenderable)
 
@@ -74,7 +75,10 @@ export function createReconcilerRuntime<
     removeRoot,
   }
 
-  function runRootTasks(root: RootState<parentNode, node, elementNode, traversal>, flushId: number) {
+  function runRootTasks(
+    root: RootState<parentNode, node, elementNode, traversal>,
+    flushId: number,
+  ) {
     if (!root.renderController) return
     let tasks = root.pendingTasks
     root.pendingTasks = []
@@ -435,7 +439,11 @@ export function createReconcilerRuntime<
       })
   }
 
-  function reclaimHost(parent: parentNode, type: string, key: string): null | CommittedHostNode<node, elementNode> {
+  function reclaimHost(
+    parent: parentNode,
+    type: string,
+    key: string,
+  ): null | CommittedHostNode<node, elementNode> {
     if (key === '') return null
     let deferred = removalRegistry.get(removalKey(type, key))
     if (!deferred) return null
@@ -454,7 +462,7 @@ export function createReconcilerRuntime<
     node.transforms = []
     node.pendingTasks = []
     for (let createHostFactory of factories) {
-      let hostTarget = new SimpleEventTarget()
+      let hostTarget = new EventTarget()
       let connected = new AbortController()
       hostTarget.addEventListener('remove', () => connected.abort())
       let hostHandle = Object.assign(hostTarget, {
@@ -477,7 +485,10 @@ export function createReconcilerRuntime<
     }
   }
 
-  function applyTransforms(node: CommittedHostNode<node, elementNode>, input: NodeInput): NodeInput {
+  function applyTransforms(
+    node: CommittedHostNode<node, elementNode>,
+    input: NodeInput,
+  ): NodeInput {
     let transformedInput: NodeTransformInput = {
       type: input.type,
       props: { ...input.props },
@@ -532,7 +543,11 @@ export function createReconcilerRuntime<
     }
     for (let hostHandle of node.hostHandles) {
       try {
-        let event = new HostInsertEvent(transformedInput, node.instance, root.renderController!.signal)
+        let event = new HostInsertEvent(
+          transformedInput,
+          node.instance,
+          root.renderController!.signal,
+        )
         hostHandle.dispatchEvent(event)
       } catch (error) {
         root.target.dispatchEvent(

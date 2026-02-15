@@ -1,4 +1,4 @@
-import type { NodePolicy, ResolvedElement, ResolvedText } from './types.ts'
+import type { NodePolicy, ResolvedElement, ResolvedText } from '../lib/types.ts'
 
 export type TestTextNode = {
   kind: 'text'

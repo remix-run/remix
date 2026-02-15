@@ -33,6 +33,7 @@ export function createScheduler<parentNode, node, elementNode extends node & par
     if (cascadingFlushCount > MAX_CASCADING_FLUSHES) {
       let error = new Error('reconciler flush infinite loop detected')
       for (let root of queue) {
+        root.scheduled = false
         root.target.dispatchEvent(new ReconcilerErrorEvent(error, { phase: 'scheduler', rootId: root.id }))
       }
       queue.clear()
