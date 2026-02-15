@@ -369,12 +369,7 @@ export function validatePartialRow<table extends AnyTable>(
   value: unknown,
   options?: ParseOptions,
 ): { value: Partial<TableRow<table>> } | { issues: ReadonlyArray<Issue> } {
-  let result = validatePartialRowInput(
-    getTableName(table),
-    getTableColumns(table),
-    value,
-    options,
-  )
+  let result = validatePartialRowInput(getTableName(table), getTableColumns(table), value, options)
 
   if ('issues' in result) {
     return result
