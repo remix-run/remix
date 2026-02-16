@@ -170,7 +170,7 @@ export default {
             email: normalizeEmail(email),
             password,
             name,
-            role: "customer",
+            role: 'customer',
             created_at: Date.now(),
           },
           { returnRow: true },
@@ -365,7 +365,6 @@ export default {
     },
   },
 } satisfies Controller<typeof routes.auth>
-
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()

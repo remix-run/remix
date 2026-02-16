@@ -46,7 +46,10 @@ export default {
             <h3>Browse by Genre</h3>
             <div css={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
               {genres.map((genreRow) => (
-                <a href={routes.books.genre.href({ genre: genreRow.genre })} class="btn btn-secondary">
+                <a
+                  href={routes.books.genre.href({ genre: genreRow.genre })}
+                  class="btn btn-secondary"
+                >
                   {genreRow.genre}
                 </a>
               ))}
@@ -109,8 +112,7 @@ export default {
     },
 
     async show({ params, db }) {
-      let book =
-        await db.findOne(books, { where: { slug: params.slug } })
+      let book = await db.findOne(books, { where: { slug: params.slug } })
 
       if (!book) {
         return render(
