@@ -279,6 +279,18 @@ importers:
         specifier: ^0.27.1
         version: 0.27.1
 
+  packages/component/bench/frameworks/remix-plugins:
+    dependencies:
+      '@remix-run/dom':
+        specifier: workspace:^
+        version: link:../../../../dom
+      '@remix-run/reconciler':
+        specifier: workspace:^
+        version: link:../../../../reconciler
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.1
+
   packages/component/bench/frameworks/solid:
     dependencies:
       esbuild:
@@ -361,6 +373,9 @@ importers:
 
   packages/dom:
     dependencies:
+      '@remix-run/interaction':
+        specifier: workspace:^
+        version: link:../interaction
       '@remix-run/reconciler':
         specifier: workspace:^
         version: link:../reconciler
