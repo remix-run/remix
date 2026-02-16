@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { RECONCILER_FRAGMENT } from '@remix-run/reconciler'
-import { Fragment } from './jsx-runtime.ts'
+import { Fragment, jsx, jsxs } from './jsx-runtime.ts'
 import type { Component } from '@remix-run/reconciler'
 
 describe('dom jsx runtime', () => {
@@ -31,6 +31,27 @@ describe('dom jsx runtime', () => {
 
   it('exports Fragment symbol compatible with reconciler', () => {
     expect(Fragment).toBe(RECONCILER_FRAGMENT)
+  })
+
+  it('supports explicit key argument and null props', () => {
+    let element = jsx('div', null, 'explicit')
+    expect(element.type).toBe('div')
+    expect(element.key).toBe('explicit')
+    expect(element.props).toEqual({})
+  })
+
+  it('supports jsxs factory calls', () => {
+    let element = jsxs('div', { id: 'x' })
+    expect(element.type).toBe('div')
+    expect(element.key).toBe(null)
+    expect(element.props.id).toBe('x')
+  })
+
+  it('extracts key from props when key argument is missing', () => {
+    let element = jsx('div', { key: 'props-key', id: 'y' })
+    expect(element.key).toBe('props-key')
+    expect('key' in element.props).toBe(false)
+    expect(element.props.id).toBe('y')
   })
 })
 

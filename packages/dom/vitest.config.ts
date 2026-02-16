@@ -17,5 +17,18 @@ export default defineConfig({
       screenshotFailures: false,
     },
     include: ['src/**/*.test.{ts,tsx}'],
+    coverage: {
+      enabled: false,
+      provider: 'v8',
+      all: false,
+      reporter: ['text'],
+      exclude: ['src/testing/**', '**/*.test.ts', '**/*.test.tsx'],
+      thresholds: {
+        lines: 85,
+        functions: 85,
+        branches: 85,
+        statements: 85,
+      },
+    },
   },
 })

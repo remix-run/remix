@@ -1,4 +1,14 @@
 export { createDomNodePolicy } from './lib/dom-node-policy.ts'
+export {
+  ariaDataAttributePlugin,
+  attributeFallbackPlugin,
+  createDomPlugins,
+  domPropertyOrAttributePlugin,
+  formStatePlugin,
+  innerHTMLPlugin,
+  stylePropsPlugin,
+  svgNormalizationPlugin,
+} from './lib/dom-plugins.ts'
 export { Fragment, jsx, jsxs } from './jsx-runtime.ts'
 export { jsxDEV } from './jsx-dev-runtime.ts'
 
