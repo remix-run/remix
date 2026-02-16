@@ -1,5 +1,5 @@
-import { definePlugin } from './types.ts'
-import type { HostHandle, Plugin, PluginHandle } from './types.ts'
+import { definePlugin } from '../types.ts'
+import type { HostHandle, Plugin, PluginHandle } from '../types.ts'
 
 export type DirectiveType<elementNode, args extends unknown[] = unknown[]> = (
   plugin: PluginHandle,

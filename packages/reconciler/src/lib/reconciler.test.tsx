@@ -1,7 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { createReconciler, definePlugin, ReconcilerErrorEvent } from '../index.ts'
-import { componentPlugin } from '../testing/component-plugin.ts'
+import { componentPlugin, createReconciler, definePlugin, ReconcilerErrorEvent } from '../index.ts'
 import { jsx } from '../testing/jsx-runtime.ts'
 import {
   createTestContainer,

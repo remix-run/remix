@@ -1,7 +1,8 @@
 export { createReconciler } from './lib/root.ts'
+export { componentPlugin } from './lib/plugins/component-plugin.ts'
 export { definePlugin } from './lib/types.ts'
 export { ReconcilerErrorEvent } from './lib/types.ts'
-export { createDirective, usePlugin } from './lib/directive-plugin.ts'
+export { createDirective, usePlugin } from './lib/plugins/directive-plugin.ts'
 export {
   createTestContainer,
   createTestNodePolicy,
@@ -36,7 +37,7 @@ export type {
   RootTask as Task,
 } from './lib/types.ts'
 
-export type { DirectiveDescriptor, DirectiveType, UseValue } from './lib/directive-plugin.ts'
+export type { DirectiveDescriptor, DirectiveType, UseValue } from './lib/plugins/directive-plugin.ts'
 
 export type {
   TestContainerNode,
