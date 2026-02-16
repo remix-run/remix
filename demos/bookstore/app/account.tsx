@@ -4,8 +4,7 @@ import { redirect } from 'remix/response/redirect'
 import { routes } from './routes.ts'
 import { Layout } from './layout.tsx'
 import { requireAuth } from './middleware/auth.ts'
-import { getOrdersByUserId, getOrderById } from './models/orders.ts'
-import { updateUser } from './models/users.ts'
+import { orders, orderItemsWithBook, users } from './data/schema.ts'
 import { getCurrentUser } from './utils/context.ts'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
@@ -107,7 +106,7 @@ export default {
         )
       },
 
-      async update({ formData }) {
+      async update({ db, formData }) {
         let user = getCurrentUser()
 
         let name = formData.get('name')?.toString() ?? ''
@@ -119,23 +118,27 @@ export default {
           updateData.password = password
         }
 
-        await updateUser(user.id, updateData)
+        await db.update(users, user.id, updateData)
 
         return redirect(routes.account.index.href())
       },
     },
 
     orders: {
-      async index() {
+      async index({ db }) {
         let user = getCurrentUser()
-        let orders = await getOrdersByUserId(user.id)
+        let userOrders = await db.findMany(orders, {
+          where: { user_id: user.id },
+          orderBy: ['created_at', 'asc'],
+          with: { items: orderItemsWithBook },
+        })
 
         return render(
           <Layout>
             <h1>My Orders</h1>
 
             <div class="card">
-              {orders.length > 0 ? (
+              {userOrders.length > 0 ? (
                 <table>
                   <thead>
                     <tr>
@@ -148,7 +151,7 @@ export default {
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order) => (
+                    {userOrders.map((order) => (
                       <tr>
                         <td>#{order.id}</td>
                         <td>{new Date(order.created_at).toLocaleDateString()}</td>
@@ -184,9 +187,11 @@ export default {
         )
       },
 
-      async show({ params }) {
+      async show({ db, params }) {
         let user = getCurrentUser()
-        let order = await getOrderById(params.orderId)
+        let order = await db.find(orders, params.orderId, {
+          with: { items: orderItemsWithBook },
+        })
 
         if (!order || order.user_id !== user.id) {
           return render(

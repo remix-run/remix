@@ -514,6 +514,10 @@ class DatabaseRuntime implements Database {
     value: PrimaryKeyInput<table>,
     options?: { with?: relations },
   ): Promise<TableRowWith<table, LoadedRelationMap<relations>> | null> {
+    if (value == null) {
+      return null
+    }
+
     let query: QueryForTable<table> = this.query(asQueryTableInput(table))
 
     if (options?.with) {

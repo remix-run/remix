@@ -2,14 +2,14 @@ import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
-import { getAllBooks, getBookById, createBook, updateBook, deleteBook } from './models/books.ts'
+import { books } from './data/schema.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  async index() {
-    let books = await getAllBooks()
+  async index({ db }) {
+    let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
 
     return render(
       <Layout>
@@ -41,7 +41,7 @@ export default {
               </tr>
             </thead>
             <tbody>
-              {books.map((book) => (
+              {allBooks.map((book) => (
                 <tr>
                   <td>{book.title}</td>
                   <td>{book.author}</td>
@@ -83,8 +83,8 @@ export default {
     )
   },
 
-  async show({ params }) {
-    let book = await getBookById(params.bookId)
+  async show({ db, params }) {
+    let book = await db.find(books, params.bookId)
 
     if (!book) {
       return render(
@@ -231,8 +231,8 @@ export default {
     )
   },
 
-  async create({ formData }) {
-    await createBook({
+  async create({ db, formData }) {
+    await db.create(books, {
       slug: formData.get('slug')?.toString() ?? '',
       title: formData.get('title')?.toString() ?? '',
       author: formData.get('author')?.toString() ?? '',
@@ -249,8 +249,8 @@ export default {
     return redirect(routes.admin.books.index.href())
   },
 
-  async edit({ params }) {
-    let book = await getBookById(params.bookId)
+  async edit({ db, params }) {
+    let book = await db.find(books, params.bookId)
 
     if (!book) {
       return render(
@@ -374,8 +374,8 @@ export default {
     )
   },
 
-  async update({ formData, params }) {
-    let book = await getBookById(params.bookId)
+  async update({ db, formData, params }) {
+    let book = await db.find(books, params.bookId)
     if (!book) {
       return new Response('Book not found', { status: 404 })
     }
@@ -384,7 +384,7 @@ export default {
     // If no file was uploaded, keep the existing cover_url
     let cover_url = formData.get('cover')?.toString() || book.cover_url
 
-    await updateBook(params.bookId, {
+    await db.update(books, book.id, {
       slug: formData.get('slug')?.toString() ?? '',
       title: formData.get('title')?.toString() ?? '',
       author: formData.get('author')?.toString() ?? '',
@@ -400,8 +400,11 @@ export default {
     return redirect(routes.admin.books.index.href())
   },
 
-  async destroy({ params }) {
-    await deleteBook(params.bookId)
+  async destroy({ db, params }) {
+    let book = await db.find(books, params.bookId)
+    if (book) {
+      await db.delete(books, book.id)
+    }
 
     return redirect(routes.admin.books.index.href())
   },

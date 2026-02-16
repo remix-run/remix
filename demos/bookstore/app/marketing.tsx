@@ -4,17 +4,24 @@ import { routes } from './routes.ts'
 import { BookCard } from './components/book-card.tsx'
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
-import { getBookBySlug, searchBooks } from './models/books.ts'
+import { ilike, inList, or } from 'remix/data-table'
+import { books } from './data/schema.ts'
 import { render } from './utils/render.ts'
 import { getCurrentCart } from './utils/context.ts'
 
 export let home: BuildAction<'GET', typeof routes.home> = {
   middleware: [loadAuth()],
-  async action() {
+  async action({ db }) {
     let cart = getCurrentCart()
     let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
-    let featuredBookResults = await Promise.all(featuredSlugs.map((slug) => getBookBySlug(slug)))
-    let featuredBooks = featuredBookResults.filter((book) => book != null)
+    let featuredBookRows = await db.findMany(books, {
+      where: inList('slug', featuredSlugs),
+    })
+    let featuredBooksBySlug = new Map(featuredBookRows.map((book) => [book.slug, book]))
+    let featuredBooks = featuredSlugs.flatMap((slug) => {
+      let book = featuredBooksBySlug.get(slug)
+      return book ? [book] : []
+    })
 
     return render(
       <Layout>
@@ -163,9 +170,18 @@ export let contact: Controller<typeof routes.contact> = {
 
 export let search: BuildAction<'GET', typeof routes.search> = {
   middleware: [loadAuth()],
-  async action({ url }) {
+  async action({ db, url }) {
     let query = url.searchParams.get('q') ?? ''
-    let books = query ? await searchBooks(query) : []
+    let matchingBooks = query
+      ? await db.findMany(books, {
+          where: or(
+            ilike('title', `%${query.toLowerCase()}%`),
+            ilike('author', `%${query.toLowerCase()}%`),
+            ilike('description', `%${query.toLowerCase()}%`),
+          ),
+          orderBy: ['id', 'asc'],
+        })
+      : []
     let cart = getCurrentCart()
 
     return render(
@@ -189,13 +205,13 @@ export let search: BuildAction<'GET', typeof routes.search> = {
 
         {query ? (
           <p css={{ marginBottom: '1rem' }}>
-            Found {books.length} result(s) for "{query}"
+            Found {matchingBooks.length} result(s) for "{query}"
           </p>
         ) : null}
 
         <div class="grid">
-          {books.length > 0 ? (
-            books.map((book) => {
+          {matchingBooks.length > 0 ? (
+            matchingBooks.map((book) => {
               let inCart = cart.items.some((item) => item.slug === book.slug)
               return <BookCard book={book} inCart={inCart} />
             })

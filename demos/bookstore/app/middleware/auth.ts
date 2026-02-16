@@ -3,7 +3,7 @@ import type { Route } from 'remix/fetch-router/routes'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../routes.ts'
-import { getUserById } from '../models/users.ts'
+import { users } from '../data/schema.ts'
 import { setCurrentUser } from '../utils/context.ts'
 
 /**
@@ -12,12 +12,12 @@ import { setCurrentUser } from '../utils/context.ts'
  * Attaches user (if any) to context.storage.
  */
 export function loadAuth(): Middleware {
-  return async ({ session }) => {
+  return async ({ db, session }) => {
     let userId = session.get('userId')
 
     // Only set current user if authenticated
     if (typeof userId === 'string' || typeof userId === 'number') {
-      let user = await getUserById(userId)
+      let user = await db.find(users, userId)
       if (user) {
         setCurrentUser(user)
       }
@@ -41,11 +41,11 @@ export interface RequireAuthOptions {
 export function requireAuth(options?: RequireAuthOptions): Middleware {
   let redirectRoute = options?.redirectTo ?? routes.auth.login.index
 
-  return async ({ session, url }) => {
+  return async ({ db, session, url }) => {
     let userId = session.get('userId')
     let user =
       typeof userId === 'string' || typeof userId === 'number'
-        ? await getUserById(userId)
+        ? await db.find(users, userId)
         : undefined
 
     if (!user) {

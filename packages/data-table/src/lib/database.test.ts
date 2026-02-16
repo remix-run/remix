@@ -344,6 +344,22 @@ describe('query builder', () => {
     assert.equal(accountsWithProjects[1].projects[0].id, 102)
   })
 
+  it('returns null from database-level find helper for nullish primary keys', async () => {
+    let adapter = createAdapter({
+      accounts: [{ id: 1, email: 'amy@studio.test', status: 'active' }],
+      projects: [],
+      tasks: [],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+    let nullResult = await db.find(accounts, null)
+    let undefinedResult = await db.find(accounts, undefined)
+
+    assert.equal(nullResult, null)
+    assert.equal(undefinedResult, null)
+  })
+
   it('supports database-level update helper', async () => {
     let adapter = createAdapter({
       accounts: [
