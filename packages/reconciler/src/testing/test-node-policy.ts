@@ -93,10 +93,7 @@ export function createTestNodePolicy(): TestNodePolicy {
     },
     remove(parent, node) {
       operations.remove++
-      let index = parent.children.indexOf(node)
-      if (index === -1) return
-      parent.children.splice(index, 1)
-      node.parent = null
+      removeNode(parent, node)
     },
     resolveText(parent, traversal, value): ResolvedText<TestTextNode, TestTraversal> {
       let candidate = traversal
@@ -161,6 +158,12 @@ export function createTestNodePolicy(): TestNodePolicy {
 }
 
 function insertNode(parent: TestParentNode, node: TestNode, anchor: null | TestNode) {
+  if (anchor && anchor.parent !== parent) {
+    throw new Error('anchor is not a child of parent')
+  }
+  if (node.parent && !node.parent.children.includes(node)) {
+    throw new Error('node parent relationship is invalid')
+  }
   if (node.parent) {
     let currentParent = node.parent
     let index = currentParent.children.indexOf(node)
@@ -183,6 +186,18 @@ export function stringifyTestNode(parent: TestParentNode): string {
     parts.push(stringifyChild(child))
   }
   return parts.join('')
+}
+
+function removeNode(parent: TestParentNode, node: TestNode) {
+  if (node.parent !== parent) {
+    throw new Error('node is not a child of parent')
+  }
+  let index = parent.children.indexOf(node)
+  if (index === -1) {
+    throw new Error('node parent relationship is invalid')
+  }
+  parent.children.splice(index, 1)
+  node.parent = null
 }
 
 function stringifyChild(node: TestNode): string {

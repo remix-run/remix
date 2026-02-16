@@ -6,9 +6,6 @@ import {
   createTestContainer,
   createTestNodePolicy,
   stringifyTestNode,
-  type TestNode,
-  type TestNodePolicy,
-  type TestParentNode,
 } from '../testing/test-node-policy.ts'
 import type { Component, Plugin, RenderValue, UpdateHandle } from './types.ts'
 
@@ -559,7 +556,7 @@ describe('reconciler package', () => {
   })
 
   it('updates middle keyed subtree from nested component handle', async () => {
-    let nodePolicy = createStrictMoveNodePolicy()
+    let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
     let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
@@ -1277,17 +1274,4 @@ async function waitFor(predicate: () => boolean, maxTurns: number) {
 function expectCallback(value: null | (() => void), message: string) {
   if (!value) throw new Error(message)
   return value
-}
-
-function createStrictMoveNodePolicy(): TestNodePolicy {
-  let nodePolicy = createTestNodePolicy()
-  return {
-    ...nodePolicy,
-    move(parent: TestParentNode, node: TestNode, anchor: null | TestNode) {
-      if (anchor && !parent.children.includes(anchor)) {
-        throw new Error('move anchor is not a child of parent')
-      }
-      nodePolicy.move(parent, node, anchor)
-    },
-  }
 }

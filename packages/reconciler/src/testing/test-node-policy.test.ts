@@ -41,4 +41,34 @@ describe('test node policy', () => {
     let resolvedElement = policy.resolveElement(container, resolvedText.next, 'div')
     assert.equal(resolvedElement.node.type, 'div')
   })
+
+  it('throws when insert/move anchor is not a child of parent', () => {
+    let policy = createTestNodePolicy()
+    let container = createTestContainer()
+    let other = createTestContainer()
+    let alpha = policy.createElement(container, 'alpha')
+    let beta = policy.createElement(container, 'beta')
+
+    policy.insert(container, alpha, null)
+    policy.insert(other, beta, null)
+
+    assert.throws(() => {
+      policy.insert(container, policy.createElement(container, 'gamma'), beta)
+    })
+    assert.throws(() => {
+      policy.move(container, alpha, beta)
+    })
+  })
+
+  it('throws when remove is called with wrong parent', () => {
+    let policy = createTestNodePolicy()
+    let container = createTestContainer()
+    let other = createTestContainer()
+    let alpha = policy.createElement(container, 'alpha')
+    policy.insert(container, alpha, null)
+
+    assert.throws(() => {
+      policy.remove(other, alpha)
+    })
+  })
 })
