@@ -17,8 +17,8 @@ let root = reconciler.createRoot(document.getElementById('app')!)
 `createDomNodePolicy(document)` implements:
 
 - traversal (`firstChild`, `nextSibling`, `begin`, `enter`)
-- node creation (`createElement`, `createText`)
+- node materialization (`resolveElement`, `resolveText`)
 - mutations (`insert`, `move`, `remove`)
-- hydration-style resolution (`resolveElement`, `resolveText`)
+- hydration/adoption through policy-controlled resolution
 
 More DOM-focused plugins (attributes, events, styles, refs, hydration strategy) can be layered on top of this policy through `@remix-run/reconciler` plugins.

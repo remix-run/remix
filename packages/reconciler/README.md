@@ -93,20 +93,21 @@ A `NodePolicy` is the platform adapter. It defines how the reconciler reads and 
 
 Implement these capabilities:
 
-- create: `createText`, `createElement`
 - tree operations: `insert`, `move`, `remove`
 - traversal: `begin`, `enter`, `firstChild`, `nextSibling`
-- hydration/resolve: `resolveText`, `resolveElement`
+- node materialization: `resolveText`, `resolveElement`
 
 ```ts
 let nodePolicy = {
-  createText(_parent, value) {
-    return { kind: 'text', value }
+  resolveText(_parent, traversal, value) {
+    // reuse from traversal when possible; otherwise create a text node
+    return { node: createText(value), next: traversal }
   },
-  createElement(_parent, type) {
-    return { kind: 'element', type, children: [] }
+  resolveElement(_parent, traversal, type) {
+    // reuse from traversal when possible; otherwise create an element node
+    return { node: createElement(type), next: traversal }
   },
-  // plus traversal, insert/move/remove, and resolve methods
+  // plus traversal and insert/move/remove methods
 }
 ```
 
