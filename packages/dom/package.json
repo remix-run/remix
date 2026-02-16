@@ -10,7 +10,14 @@
     "directory": "packages/dom"
   },
   "homepage": "https://github.com/remix-run/remix/tree/main/packages/dom#readme",
-  "files": ["LICENSE", "README.md", "dist", "src", "!src/**/*.test.ts", "!src/**/*.test.tsx"],
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx"
+  ],
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

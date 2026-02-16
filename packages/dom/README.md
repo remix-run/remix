@@ -6,14 +6,15 @@ This package currently provides:
 
 - a production-oriented `NodePolicy` implementation for DOM trees
 - a DOM JSX runtime (`@remix-run/dom/jsx-runtime`)
+- a Tier 1 DOM plugin pipeline for HTML/SVG props
 
 ## Usage
 
 ```ts
 import { createReconciler } from '@remix-run/reconciler'
-import { createDomNodePolicy } from '@remix-run/dom'
+import { createDomNodePolicy, createDomPlugins } from '@remix-run/dom'
 
-let reconciler = createReconciler(createDomNodePolicy(document), [])
+let reconciler = createReconciler(createDomNodePolicy(document), createDomPlugins())
 let root = reconciler.createRoot(document.getElementById('app')!)
 ```
 
@@ -39,4 +40,37 @@ later via plugins.
 - mutations (`insert`, `move`, `remove`)
 - hydration/adoption through policy-controlled resolution
 
-More DOM-focused plugins (attributes, events, styles, refs, hydration strategy) can be layered on top of this policy through `@remix-run/reconciler` plugins.
+## DOM plugin pipeline
+
+`createDomPlugins()` currently returns this ordered pipeline:
+
+- `innerHTMLPlugin`
+- `stylePropsPlugin`
+- `formStatePlugin`
+- `svgNormalizationPlugin`
+- `ariaDataAttributePlugin`
+- `domPropertyOrAttributePlugin`
+- `attributeFallbackPlugin`
+
+The ownership model is explicit: each plugin should delete props it handles, and
+`attributeFallbackPlugin` handles whatever is left.
+
+Custom stacks can compose the same plugins directly:
+
+```ts
+import {
+  attributeFallbackPlugin,
+  createDomNodePolicy,
+  domPropertyOrAttributePlugin,
+  formStatePlugin,
+  stylePropsPlugin,
+} from '@remix-run/dom'
+import { createReconciler } from '@remix-run/reconciler'
+
+let reconciler = createReconciler(createDomNodePolicy(document), [
+  stylePropsPlugin,
+  formStatePlugin,
+  domPropertyOrAttributePlugin,
+  attributeFallbackPlugin,
+])
+```

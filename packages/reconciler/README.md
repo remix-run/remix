@@ -70,6 +70,35 @@ Plugins can:
 
 Plugins should stay small and composable. The reconciler core should remain feature-agnostic.
 
+### Built-in `use` directives
+
+`usePlugin()` provides a small directive system you can reuse across platforms. A
+directive has three scopes:
+
+- plugin scope (created once per plugin instance)
+- host scope (created once per mounted host node)
+- render scope (called every render with directive args)
+
+```ts
+import { createDirective, usePlugin } from '@remix-run/reconciler'
+
+let focus = createDirective((_plugin) => (host) => (enabled: boolean) => {
+  if (!enabled) return
+  host.queueTask((node) => {
+    if ('focus' in (node as object)) {
+      ;(node as { focus?: () => void }).focus?.()
+    }
+  })
+})
+```
+
+Use it from host props with `use={[...]}`:
+
+```ts
+let reconciler = createReconciler(nodePolicy, [usePlugin(), myPropsPlugin])
+root.render(<input use={[focus(true)]} />)
+```
+
 ## Error model
 
 Root `error` events (`ReconcilerErrorEvent`) are used for reconciler-owned execution paths
@@ -147,6 +176,7 @@ Guidelines:
 - keep plugin scope narrow (single concern)
 - avoid cross-plugin coupling
 - dispatch explicit root events only for domain-level plugin signals
+- delete handled props so later plugins can iterate without extra guards
 
 ## Minimal flow
 
