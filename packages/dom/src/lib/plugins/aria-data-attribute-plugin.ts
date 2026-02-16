@@ -1,9 +1,8 @@
 import { definePlugin } from '@remix-run/reconciler'
-import type { Plugin } from '@remix-run/reconciler'
 
 type AttrValue = string
 
-export const ariaDataAttributePlugin: Plugin<Element> = definePlugin(() => (host) => {
+export const ariaDataAttributePlugin = definePlugin<Element>(() => (host) => {
   let current = new Set<string>()
 
   return (input) => {

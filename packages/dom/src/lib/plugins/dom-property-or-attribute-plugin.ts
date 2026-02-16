@@ -1,5 +1,4 @@
 import { definePlugin } from '@remix-run/reconciler'
-import type { Plugin } from '@remix-run/reconciler'
 
 const attributeExceptions = new Set([
   'width',
@@ -15,7 +14,7 @@ const attributeExceptions = new Set([
   'popover',
 ])
 
-export const domPropertyOrAttributePlugin: Plugin<Element> = definePlugin(() => (host) => {
+export const domPropertyOrAttributePlugin = definePlugin<Element>(() => (host) => {
   let current = new Set<string>()
 
   return (input) => {

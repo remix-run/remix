@@ -1,5 +1,5 @@
 import { RECONCILER_FRAGMENT } from '@remix-run/reconciler'
-import type { Component, ReconcilerElement, RenderValue } from '@remix-run/reconciler'
+import type { Component, ReconcilerElement, RenderValue, UseValue } from '@remix-run/reconciler'
 
 export const Fragment = RECONCILER_FRAGMENT
 
@@ -9,6 +9,7 @@ export type DomElementProps<node extends EventTarget> = {
   children?: RenderValue
   innerHTML?: string
   key?: unknown
+  use?: UseValue<node>
 } & Record<string, unknown>
 
 export type DomHTMLElements = {

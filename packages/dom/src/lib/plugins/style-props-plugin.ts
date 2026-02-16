@@ -1,10 +1,9 @@
 import { definePlugin } from '@remix-run/reconciler'
-import type { Plugin } from '@remix-run/reconciler'
 
 const STYLE_TEXT = Symbol('styleText')
 type StyleMap = Map<string | typeof STYLE_TEXT, string>
 
-export const stylePropsPlugin: Plugin<Element> = definePlugin(() => (host) => {
+export const stylePropsPlugin = definePlugin<Element>(() => (host) => {
   let current: StyleMap = new Map()
 
   return (input) => {

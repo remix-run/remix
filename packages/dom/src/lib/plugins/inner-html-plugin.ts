@@ -1,7 +1,6 @@
 import { definePlugin } from '@remix-run/reconciler'
-import type { Plugin } from '@remix-run/reconciler'
 
-export const innerHTMLPlugin: Plugin<Element> = definePlugin(() => (host) => {
+export const innerHTMLPlugin = definePlugin<Element>(() => (host) => {
   let current: null | string = null
 
   return (input) => {

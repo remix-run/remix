@@ -1,5 +1,4 @@
 import { definePlugin } from '@remix-run/reconciler'
-import type { Plugin } from '@remix-run/reconciler'
 
 const svgNameMap: Record<string, string> = {
   xlinkHref: 'xlink:href',
@@ -18,7 +17,7 @@ const svgNameMap: Record<string, string> = {
   className: 'class',
 }
 
-export const svgNormalizationPlugin: Plugin<Element> = definePlugin(() => () => (input) => {
+export const svgNormalizationPlugin = definePlugin<Element>(() => () => (input) => {
   for (let key in input.props) {
     if (!(key in svgNameMap)) continue
     let normalized = svgNameMap[key]

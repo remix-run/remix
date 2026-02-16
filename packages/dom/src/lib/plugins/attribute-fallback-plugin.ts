@@ -1,9 +1,8 @@
 import { definePlugin } from '@remix-run/reconciler'
-import type { Plugin } from '@remix-run/reconciler'
 
 type AttributeValue = true | string
 
-export const attributeFallbackPlugin: Plugin<Element> = definePlugin(() => (host) => {
+export const attributeFallbackPlugin = definePlugin<Element>(() => (host) => {
   let current = new Set<string>()
 
   return (input) => {

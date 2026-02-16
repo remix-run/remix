@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RECONCILER_FRAGMENT } from '@remix-run/reconciler'
+import { createDirective, RECONCILER_FRAGMENT } from '@remix-run/reconciler'
 import { Fragment, jsx, jsxs } from './jsx-runtime.ts'
 import type { Component } from '@remix-run/reconciler'
 
@@ -81,6 +81,13 @@ let badWithoutSetupValue = <WithoutSetupComponent setup={{ any: 'value' }} id="i
 // @ts-expect-error id is required
 let missingWithoutSetupProps = <WithoutSetupComponent />
 
+let noopDirective = createDirective<HTMLDivElement, [boolean]>(() => () => (_enabled) => {})
+let goodUseProp = <div use={[noopDirective(true)]} />
+// @ts-expect-error directive args are typed
+let badUseDirectiveArgs = <div use={[noopDirective('yes')]} />
+// @ts-expect-error use expects directive descriptors
+let badUseValue = <div use={['not-a-descriptor']} />
+
 void goodCounterElement
 void missingCounterSetup
 void badCounterSetupType
@@ -89,3 +96,6 @@ void goodWithoutSetupElement
 void goodWithoutSetupUndefined
 void badWithoutSetupValue
 void missingWithoutSetupProps
+void goodUseProp
+void badUseDirectiveArgs
+void badUseValue

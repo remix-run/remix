@@ -1,5 +1,4 @@
 import { definePlugin } from '@remix-run/reconciler'
-import type { Plugin } from '@remix-run/reconciler'
 
 type FormStateKey =
   | 'checked'
@@ -18,7 +17,7 @@ const formStateKeys: FormStateKey[] = [
   'selectedIndex',
 ]
 
-export const formStatePlugin: Plugin<Element> = definePlugin(() => (host) => {
+export const formStatePlugin = definePlugin<Element>(() => (host) => {
   let current = new Set<FormStateKey>()
 
   return (input) => {
