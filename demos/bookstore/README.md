@@ -21,7 +21,6 @@ Then visit http://localhost:44100
 
 - [`app/routes.ts`](app/routes.ts) shows declarative route definitions using `route()`, `form()`, and `resources()` helpers. All route URLs are generated with full type safety, so `routes.admin.books.edit.href({ bookId: '123' })` ensures you never have broken links.
 - [`app/router.ts`](app/router.ts) demonstrates how to compose middleware for cross-cutting concerns: static file serving, form data parsing, method override, sessions, and async context. Each middleware is independent and reusable.
-- Tests can use [`router.run()`](../../packages/fetch-router/README.md#running-code-in-request-context) to execute request-scoped code inside the same middleware stack without creating test-only routes.
 - [`app/middleware/database.ts`](app/middleware/database.ts) shows a request-scoped database pattern. It "checks out" a database handle at the start of each request, stores it in request context, and releases it in a `finally` block.
 - [`app/middleware/auth.ts`](app/middleware/auth.ts) provides two patterns:
   - **`loadAuth()`** - Optionally loads the current user without requiring authentication
