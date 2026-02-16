@@ -1,11 +1,11 @@
-# @remix-run/assets
+# assets
 
 Core package for unbundled asset handling.
 
 ## Installation
 
 ```sh
-npm install @remix-run/assets
+npm i remix
 ```
 
 ## Usage
@@ -13,7 +13,7 @@ npm install @remix-run/assets
 ### Dev handler
 
 ```ts
-import { createDevAssetsHandler } from '@remix-run/assets'
+import { createDevAssetsHandler } from 'remix/assets'
 
 let handler = createDevAssetsHandler({
   root: '.',
@@ -31,7 +31,7 @@ if (response) return response
 ### Production build
 
 ```ts
-import { build } from '@remix-run/assets'
+import { build } from 'remix/assets'
 
 await build({
   scripts: ['app/entry.tsx'],
@@ -49,7 +49,7 @@ await build({
 Use `scripts` to specify the entry points for the script graph.
 
 ```ts
-import { build } from '@remix-run/assets'
+import { build } from 'remix/assets'
 
 await build({
   scripts: ['app/entry.tsx'],
@@ -65,8 +65,8 @@ Runtime behavior:
 Use `files` rules to match source paths, run transforms, and optionally define named variants.
 
 ```ts
-import { build } from '@remix-run/assets'
-import type { FilesConfig } from '@remix-run/assets'
+import { build } from 'remix/assets'
+import type { FilesConfig } from 'remix/assets'
 import sharp from 'sharp'
 
 let files: FilesConfig = [
@@ -113,18 +113,38 @@ Production behavior:
 
 ## API
 
-- **build(options)** – Programmatic production build: discovers module graph from entry points, transforms and writes 1:1 output, optional manifest.
-- **createDevAssetsHandler(options)** – Stateful handler; owns module graph and caches. Returns `{ serve(request) => Promise<Response | null> }`.
-- **createDevAssets({ root, scripts?, files? })** – Dev-mode assets API (`get(entryPath, variant?)` → `{ href, chunks } | null`). Used by the middleware to set `context.assets`.
-- **createAssets<FilesConfig>(manifest, { baseUrl? })** – Production assets API from manifest (`get(entryPath, variant?)` → `{ href, chunks } | null`). Provide an optional generic (e.g. `createAssets<typeof files>(...)`) to narrow `.get()` variants.
-- **FilesConfig / FileRule / FileTransform** – File rules and transforms used by `build({ files })` and dev file handling.
+### `build(options)`
+
+Builds script/file assets for production, writes outputs, and optionally writes a manifest.
+
+### `createDevAssetsHandler(options)`
+
+Creates a stateful development handler with `serve(request)` for on-demand transforms.
+
+### `createDevAssets({ root, scripts?, files? })`
+
+Creates a dev assets API where `assets.get(entryPath, variant?)` returns `{ href, chunks } | null`.
+
+### `createAssets<FilesConfig>(manifest, { baseUrl? })`
+
+Creates a production assets API from a build manifest. You can pass a generic
+(`createAssets<typeof files>(...)`) to narrow allowed variants in `.get()`.
+
+### `defineFiles(files)`
+
+Helper for defining typed file rules/variants.
+
+### Types
+
+Exports include `BuildOptions`, `CreateDevAssetsHandlerOptions`, `CreateAssetsOptions`,
+`CreateDevAssetsOptions`, `AssetManifest`, and file rule/transform types.
 
 ## Related Packages
 
-- [dev-assets-middleware](https://github.com/remix-run/remix/tree/main/packages/dev-assets-middleware) – Development middleware that uses this package to transform and serve source files.
-- [assets-middleware](https://github.com/remix-run/remix/tree/main/packages/assets-middleware) – Production middleware for serving pre-built assets; consumes the manifest produced by `build()`.
-- [fetch-router](https://github.com/remix-run/remix/tree/main/packages/fetch-router) – Router for the web Fetch API (used with the middleware above).
+- [dev-assets-middleware](https://github.com/remix-run/remix/tree/main/packages/dev-assets-middleware)
+- [assets-middleware](https://github.com/remix-run/remix/tree/main/packages/assets-middleware)
+- [fetch-router](https://github.com/remix-run/remix/tree/main/packages/fetch-router)
 
 ## License
 
-MIT
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

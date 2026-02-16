@@ -2,7 +2,7 @@
   "name": "@remix-run/dev-assets-middleware",
   "version": "0.0.0",
   "description": "Development middleware for serving and transforming JavaScript/TypeScript source files",
-  "author": "Shopify Inc.",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",

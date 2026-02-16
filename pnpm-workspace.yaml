@@ -10,6 +10,7 @@ packages:
   - demos/*
   - docs
   - packages/*
+  - packages/assets/bench
   - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*
   - packages/interaction/demos

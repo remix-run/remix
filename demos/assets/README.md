@@ -1,4 +1,4 @@
-# Assets Middleware Demo
+# Assets Demo
 
 A demonstration of the assets middleware packages for serving JavaScript/TypeScript assets in both development and production modes.
 

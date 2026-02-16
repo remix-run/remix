@@ -74,44 +74,14 @@ export async function resolveSpecifiers(
   if (toResolve.length === 0) return
 
   try {
-    let stdinContents = toResolve
-      .map((s, i) => `export * as _${i} from ${JSON.stringify(s)}`)
-      .join('\n')
-
-    let result = await esbuild.build({
-      stdin: {
-        contents: stdinContents,
-        resolveDir: importerDir,
-        loader: 'js',
-      },
-      write: false,
-      bundle: true,
-      metafile: true,
-      platform: 'browser',
-      format: 'esm',
-      logLevel: 'silent',
-      plugins: [
-        {
-          name: 'empty-loader',
-          setup(build) {
-            build.onLoad({ filter: /.*/ }, () => ({ contents: '', loader: 'js' }))
-          },
-        },
-      ],
-    })
-
-    let inputs = result.metafile?.inputs ?? {}
-    let stdinInputs = inputs['<stdin>']
-    if (!stdinInputs?.imports) return
-
-    for (let i = 0; i < stdinInputs.imports.length; i++) {
-      let imp = stdinInputs.imports[i]
-      let specifier = toResolve[i]
-      if (!specifier || !imp.path) continue
-
-      let absolutePath = path.resolve(imp.path)
-      let cacheKey = `${specifier}\0${importerDir}`
-      let resolvedUrl = resolvedPathToUrl(absolutePath, ctx)
+    let resolvedSpecifiers = await resolveWithEsbuild(toResolve, importerDir)
+    for (let resolved of resolvedSpecifiers) {
+      let cacheKey = `${resolved.specifier}\0${importerDir}`
+      if (!resolved.absolutePath) {
+        resolutionCache.set(cacheKey, resolved.specifier)
+        continue
+      }
+      let resolvedUrl = resolvedPathToUrl(resolved.absolutePath, ctx)
       resolutionCache.set(cacheKey, resolvedUrl)
     }
   } catch {
@@ -125,6 +95,51 @@ export async function resolveSpecifiers(
 export interface ResolvedImport {
   url: string
   absolutePath: string
+}
+
+interface EsbuildResolvedSpecifier {
+  specifier: string
+  absolutePath: string | null
+}
+
+async function resolveWithEsbuild(
+  specifiers: string[],
+  importerDir: string,
+): Promise<EsbuildResolvedSpecifier[]> {
+  let resolved: EsbuildResolvedSpecifier[] = []
+
+  await esbuild.build({
+    stdin: {
+      contents: '',
+      loader: 'js',
+      resolveDir: importerDir,
+    },
+    write: false,
+    bundle: true,
+    platform: 'browser',
+    format: 'esm',
+    logLevel: 'silent',
+    plugins: [
+      {
+        name: 'resolver',
+        setup(build) {
+          build.onStart(async () => {
+            for (let specifier of specifiers) {
+              let result = await build.resolve(specifier, {
+                resolveDir: importerDir,
+                kind: 'import-statement',
+              })
+              let absolutePath =
+                !result.external && result.path && path.isAbsolute(result.path) ? result.path : null
+              resolved.push({ specifier, absolutePath })
+            }
+          })
+        },
+      },
+    ],
+  })
+
+  return resolved
 }
 
 /**
@@ -150,56 +165,25 @@ export async function resolveSpecifiersToPaths(
   let toResolve = specifiers.filter((s) => !isExternal(s))
   if (toResolve.length === 0) return []
 
-  let results: ResolvedImport[] = []
-
   try {
-    let stdinContents = toResolve
-      .map((s, i) => `export * as _${i} from ${JSON.stringify(s)}`)
-      .join('\n')
-
-    let result = await esbuild.build({
-      stdin: {
-        contents: stdinContents,
-        resolveDir: importerDir,
-        loader: 'js',
-      },
-      write: false,
-      bundle: true,
-      metafile: true,
-      platform: 'browser',
-      format: 'esm',
-      logLevel: 'silent',
-      plugins: [
-        {
-          name: 'empty-loader',
-          setup(build) {
-            build.onLoad({ filter: /.*/ }, () => ({ contents: '', loader: 'js' }))
-          },
-        },
-      ],
-    })
-
-    let inputs = result.metafile?.inputs ?? {}
-    let stdinInputs = inputs['<stdin>']
-    if (!stdinInputs?.imports) return []
-
-    for (let i = 0; i < stdinInputs.imports.length; i++) {
-      let imp = stdinInputs.imports[i]
-      let specifier = toResolve[i]
-      if (!specifier || !imp.path) continue
-
-      let absolutePath = path.resolve(imp.path)
-      let resolvedUrl = resolvedPathToUrl(absolutePath, ctx)
-      let cacheKey = `${specifier}\0${importerDir}`
+    let resolvedSpecifiers = await resolveWithEsbuild(toResolve, importerDir)
+    let results: ResolvedImport[] = []
+    for (let resolved of resolvedSpecifiers) {
+      let cacheKey = `${resolved.specifier}\0${importerDir}`
+      if (!resolved.absolutePath) {
+        resolutionCache.set(cacheKey, resolved.specifier)
+        continue
+      }
+      let resolvedUrl = resolvedPathToUrl(resolved.absolutePath, ctx)
       resolutionCache.set(cacheKey, resolvedUrl)
-      results.push({ url: resolvedUrl, absolutePath })
+      results.push({ url: resolvedUrl, absolutePath: resolved.absolutePath })
     }
+    return results
   } catch {
     for (let specifier of toResolve) {
       let cacheKey = `${specifier}\0${importerDir}`
       resolutionCache.set(cacheKey, specifier)
     }
+    return []
   }
-
-  return results
 }

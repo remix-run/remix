@@ -261,9 +261,6 @@ importers:
       prettier:
         specifier: ^3.4.2
         version: 3.7.4
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   packages/assets-middleware:
     dependencies:
@@ -280,6 +277,16 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+
+  packages/assets/bench:
+    dependencies:
+      '@remix-run/assets':
+        specifier: workspace:*
+        version: link:..
+    devDependencies:
+      '@ark/attest':
+        specifier: ^0.56.0
+        version: 0.56.0(typescript@5.9.3)
 
   packages/async-context-middleware:
     dependencies:

@@ -2,7 +2,7 @@
   "name": "@remix-run/assets-middleware",
   "version": "0.0.0",
   "description": "Production middleware for serving pre-built assets with manifest-based resolution",
-  "author": "Shopify Inc.",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",

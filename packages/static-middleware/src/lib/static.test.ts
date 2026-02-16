@@ -190,6 +190,22 @@ describe('staticFiles middleware', () => {
       assert.equal(await response.text(), 'content')
     })
 
+    it('normalizes repeated slashes in basePath', async () => {
+      createTestFile('entry.js', 'content')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { basePath: '//assets///' })],
+        action() {
+          return new Response('Fallback', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/assets/entry.js')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'content')
+    })
+
     it('falls through when path is exactly basePath (no trailing segment)', async () => {
       createTestFile('entry.js', 'content')
 
@@ -202,6 +218,39 @@ describe('staticFiles middleware', () => {
       })
 
       let response = await router.fetch('https://remix.run/assets')
+      assert.equal(response.status, 404)
+      assert.equal(await response.text(), 'Fallback')
+    })
+
+    it('serves root index file when path is exactly basePath', async () => {
+      createTestFile('index.html', '<h1>Assets Index</h1>')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { basePath: '/assets' })],
+        action() {
+          return new Response('Fallback', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/assets')
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '<h1>Assets Index</h1>')
+      assert.equal(response.headers.get('Content-Type'), 'text/html; charset=utf-8')
+    })
+
+    it('falls through for URL-encoded path segments under basePath', async () => {
+      createTestFile('dir with space/entry.js', 'content')
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { basePath: '/assets' })],
+        action() {
+          return new Response('Fallback', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/assets/dir%20with%20space/entry.js')
       assert.equal(response.status, 404)
       assert.equal(await response.text(), 'Fallback')
     })

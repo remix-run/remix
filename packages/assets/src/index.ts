@@ -3,7 +3,6 @@
  */
 
 export { createDevAssetsHandler } from './lib/dev-handler.ts'
-// TODO: Bike shed this and/or refactor.
 export { createDevAssets } from './lib/dev-assets.ts'
 export { createAssets } from './lib/assets.ts'
 export { defineFiles } from './lib/files.ts'

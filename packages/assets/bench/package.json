@@ -1,0 +1,14 @@
+{
+  "name": "assets-bench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench:types": "node bench.types.ts"
+  },
+  "dependencies": {
+    "@remix-run/assets": "workspace:*"
+  },
+  "devDependencies": {
+    "@ark/attest": "^0.56.0"
+  }
+}

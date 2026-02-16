@@ -1,8 +1,8 @@
 {
   "name": "@remix-run/assets",
   "version": "0.0.0",
-  "description": "Core transform, resolution, and dev handler for unbundled assets",
-  "author": "Shopify Inc.",
+  "description": "Unbundled browser build tooling and development handler",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -32,20 +32,19 @@
       "./package.json": "./package.json"
     }
   },
+  "dependencies": {
+    "es-module-lexer": "^2.0.0",
+    "esbuild": "catalog:",
+    "magic-string": "^0.30.21",
+    "picomatch": "^4.0.2"
+  },
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/picomatch": "^3.0.2",
     "@typescript/native-preview": "catalog:",
     "minimatch": "^10.1.2",
     "playwright": "catalog:",
-    "prettier": "^3.4.2",
-    "tsx": "catalog:"
-  },
-  "dependencies": {
-    "es-module-lexer": "^2.0.0",
-    "magic-string": "^0.30.21",
-    "picomatch": "^4.0.2",
-    "esbuild": "catalog:"
+    "prettier": "^3.4.2"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",

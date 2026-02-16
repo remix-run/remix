@@ -121,7 +121,7 @@ async function main() {
     </style>
   </head>
   <body>
-    <h1>Assets Middleware Demo</h1>
+    <h1>Assets Demo</h1>
     <p>Mode: <strong>${isDev ? 'Development' : 'Production'}</strong></p>
     <p>${isDev ? 'TypeScript/JSX files are transformed on-the-fly.' : 'Serving pre-built and minified assets.'}</p>
     <p class="muted">All source PNGs are converted to compressed JPGs by variants. Display width matches transformed variant width.</p>
