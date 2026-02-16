@@ -16,6 +16,7 @@ import type {
   NodeTransformInput,
   NodePolicy,
   ReconcilerElement,
+  SourceIdentityEntry,
   RenderNode,
   RenderValue,
   RootState,
@@ -276,42 +277,27 @@ export function createReconcilerRuntime<
   ): { node: CommittedNode<node, elementNode>; traversal: traversal } {
     let key = toKey(input.key)
     if (current && current.kind === 'host' && current.key === key) {
-      if (current.sourceType !== input.type) {
-        let mountAnchor = root.nodePolicy.nextSibling(getAnchor(current))
-        removeNode(current, parent, root)
-        return mountHost(
-          null,
-          input,
-          input.type,
-          key,
-          parent,
-          root,
-          mountAnchor,
-          root.nodePolicy.begin(parent),
-        )
-      }
-      let previousComponentInstances = current.componentInstances
-      let resolvedInput = resolveComponentInput(previousComponentInstances, input, root)
-      let nextComponentInstances = resolvedInput.componentInstances
-      current.componentInstances = nextComponentInstances
+      let resolvedInput = resolveComponentInput(current.componentInstances, input, root)
+      current.componentInstances = resolvedInput.componentInstances
       let transformedInput = applyTransforms(current, resolvedInput.input)
       if (typeof transformedInput.type !== 'string') {
         throw new Error('plugins must resolve host type to string')
       }
-      if (!isSameComponentChain(previousComponentInstances, nextComponentInstances)) {
+      if (!isSameSourceIdentity(current.sourceIdentity, resolvedInput.sourceIdentity)) {
         let mountAnchor = root.nodePolicy.nextSibling(getAnchor(current))
+        let componentInstances = resolvedInput.componentInstances
         current.componentInstances = []
         removeNode(current, parent, root)
         return mountHost(
           null,
           resolvedInput.input,
-          input.type,
+          resolvedInput.sourceIdentity,
           key,
           parent,
           root,
           mountAnchor,
           root.nodePolicy.begin(parent),
-          nextComponentInstances,
+          componentInstances,
         )
       }
       if (current.type !== transformedInput.type) {
@@ -320,7 +306,7 @@ export function createReconcilerRuntime<
         return mountHost(
           current,
           resolvedInput.input,
-          input.type,
+          resolvedInput.sourceIdentity,
           key,
           parent,
           root,
@@ -334,13 +320,22 @@ export function createReconcilerRuntime<
       return { node: current, traversal: traversalCursor }
     }
 
-    return mountHost(current, input, input.type, key, parent, root, anchor, traversalCursor)
+    return mountHost(
+      current,
+      input,
+      toSourceIdentityEntryList([{ type: input.type, key: input.key }]),
+      key,
+      parent,
+      root,
+      anchor,
+      traversalCursor,
+    )
   }
 
   function mountHost(
     current: null | CommittedNode<node, elementNode>,
     input: NodeInput,
-    sourceType: unknown,
+    sourceIdentity: SourceIdentityEntry[],
     key: string,
     parent: parentNode,
     root: RootState<parentNode, node, elementNode, traversal>,
@@ -348,15 +343,18 @@ export function createReconcilerRuntime<
     traversalCursor: traversal,
     reusedComponentInstances: ComponentInstance[] = [],
   ): { node: CommittedHostNode<node, elementNode>; traversal: traversal } {
-    let probe = createDraftHostNode(key, sourceType)
+    let probe = createDraftHostNode(key, sourceIdentity)
     initializeHostPlugins(probe, root.hostFactories, root)
     let transformedInput: NodeInput
+    let nextSourceIdentity = sourceIdentity
     if (reusedComponentInstances.length > 0) {
       probe.componentInstances = reusedComponentInstances
       transformedInput = applyTransforms(probe, input)
     } else {
       let resolvedInput = resolveComponentInput(probe.componentInstances, input, root)
       probe.componentInstances = resolvedInput.componentInstances
+      nextSourceIdentity = resolvedInput.sourceIdentity
+      probe.sourceIdentity = nextSourceIdentity
       transformedInput = applyTransforms(probe, resolvedInput.input)
     }
     if (typeof transformedInput.type !== 'string') {
@@ -365,7 +363,7 @@ export function createReconcilerRuntime<
 
     let reclaimed = reclaimHost(parent, transformedInput.type, key)
     if (reclaimed) {
-      reclaimed.sourceType = sourceType
+      reclaimed.sourceIdentity = nextSourceIdentity
       reclaimed.hostHandles = probe.hostHandles
       reclaimed.transforms = probe.transforms
       reclaimed.pendingTasks = probe.pendingTasks
@@ -385,7 +383,7 @@ export function createReconcilerRuntime<
 
     let resolved = root.nodePolicy.resolveElement(parent, traversalCursor, transformedInput.type)
     let hostNode = probe
-    hostNode.sourceType = sourceType
+    hostNode.sourceIdentity = nextSourceIdentity
     hostNode.type = transformedInput.type
     hostNode.instance = resolved.node
     patchHost(hostNode, transformedInput, root, root.nodePolicy.enter(hostNode.instance))
@@ -423,12 +421,12 @@ export function createReconcilerRuntime<
 
   function createDraftHostNode(
     key: string,
-    sourceType: unknown,
+    sourceIdentity: SourceIdentityEntry[],
   ): CommittedHostNode<node, elementNode> {
     return {
       kind: 'host',
       type: '',
-      sourceType,
+      sourceIdentity,
       key,
       props: {},
       instance: null as never as elementNode,
@@ -654,6 +652,7 @@ export function createReconcilerRuntime<
 
 type ResolveComponentResult = {
   input: NodeInput
+  sourceIdentity: SourceIdentityEntry[]
   componentInstances: ComponentInstance[]
 }
 
@@ -666,17 +665,20 @@ function resolveComponentInput<parentNode, node, elementNode extends node & pare
     disposeComponentInstances(currentInstances)
     return {
       input,
+      sourceIdentity: toSourceIdentityEntryList([{ type: input.type, key: input.key }]),
       componentInstances: [],
     }
   }
 
   let instances = currentInstances.slice()
+  let sourceIdentity: SourceIdentityEntry[] = []
   let resolvedType: unknown = input.type
   let resolvedProps = input.props
   let resolvedKey: unknown = input.key
   let depth = 0
 
   while (typeof resolvedType === 'function') {
+    sourceIdentity.push(toSourceIdentityEntry(resolvedType, resolvedKey))
     let nextInput = splitSetupProps(resolvedProps)
     let key = toKey(resolvedKey)
     let instance = instances[depth]
@@ -719,6 +721,7 @@ function resolveComponentInput<parentNode, node, elementNode extends node & pare
   let nextProps = { ...resolvedProps }
   let rawChildren = nextProps.children
   delete nextProps.children
+  sourceIdentity.push(toSourceIdentityEntry(resolvedType, resolvedKey))
 
   return {
     input: {
@@ -728,6 +731,7 @@ function resolveComponentInput<parentNode, node, elementNode extends node & pare
       props: nextProps,
       children: toNodeChildren(rawChildren),
     },
+    sourceIdentity,
     componentInstances: instances,
   }
 }
@@ -785,15 +789,28 @@ function disposeComponentInstance(instance: ComponentInstance) {
   instance.controller.abort()
 }
 
-function isSameComponentChain(previous: ComponentInstance[], next: ComponentInstance[]) {
+function isSameSourceIdentity(previous: SourceIdentityEntry[], next: SourceIdentityEntry[]) {
   if (previous.length !== next.length) return false
   for (let index = 0; index < previous.length; index++) {
-    let previousInstance = previous[index]
-    let nextInstance = next[index]
-    if (previousInstance?.type !== nextInstance?.type) return false
-    if (previousInstance?.key !== nextInstance?.key) return false
+    let previousEntry = previous[index]
+    let nextEntry = next[index]
+    if (previousEntry?.type !== nextEntry?.type) return false
+    if (previousEntry?.key !== nextEntry?.key) return false
   }
   return true
+}
+
+function toSourceIdentityEntry(type: unknown, key: unknown): SourceIdentityEntry {
+  return {
+    type,
+    key: toKey(key),
+  }
+}
+
+function toSourceIdentityEntryList(
+  entries: Array<{ type: unknown; key: unknown }>,
+): SourceIdentityEntry[] {
+  return entries.map((entry) => toSourceIdentityEntry(entry.type, entry.key))
 }
 
 function isElementRecord(value: unknown): value is ReconcilerElement {

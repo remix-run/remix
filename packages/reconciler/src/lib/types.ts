@@ -119,6 +119,11 @@ export type ComponentInstance = {
   controller: AbortController
 }
 
+export type SourceIdentityEntry = {
+  type: ReconcilerElementType
+  key: string
+}
+
 type SetupArgs<setup> = unknown extends setup
   ? [setup?: setup]
   : undefined extends setup
@@ -200,7 +205,7 @@ export type CommittedTextNode<textNode> = {
 export type CommittedHostNode<node, elementNode extends node> = {
   kind: 'host'
   type: string
-  sourceType: ReconcilerElementType
+  sourceIdentity: SourceIdentityEntry[]
   key: string
   props: Record<string, unknown>
   instance: elementNode
