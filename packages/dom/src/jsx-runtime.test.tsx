@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { createDirective, RECONCILER_FRAGMENT } from '@remix-run/reconciler'
 import { Fragment, jsx, jsxs } from './jsx-runtime.ts'
 import type { Component } from '@remix-run/reconciler'
+import type { Assert, IsEqual } from './testing/utils.ts'
+import type { DispatchedEvent } from './jsx-runtime.ts'
 
 describe('dom jsx runtime', () => {
   it('creates branded reconciler elements and extracts key from props', () => {
@@ -88,6 +90,36 @@ let badUseDirectiveArgs = <div use={[noopDirective('yes')]} />
 // @ts-expect-error use expects directive descriptors
 let badUseValue = <div use={['not-a-descriptor']} />
 
+let goodConnectProp = (
+  <button
+    connect={(node, signal) => {
+      type nodeType = Assert<IsEqual<typeof node, HTMLButtonElement>>
+      type signalType = Assert<IsEqual<typeof signal, AbortSignal>>
+    }}
+  />
+)
+
+let goodOnProp = (
+  <button
+    on={{
+      pointerdown(event) {
+        type eventType = Assert<IsEqual<typeof event, DispatchedEvent<PointerEvent, HTMLButtonElement>>>
+      },
+    }}
+  />
+)
+
+let badOnProp = (
+  <button
+    on={{
+      // @ts-expect-error pointerdown on button dispatches PointerEvent
+      pointerdown(event: DispatchedEvent<KeyboardEvent, HTMLButtonElement>) {
+        void event
+      },
+    }}
+  />
+)
+
 void goodCounterElement
 void missingCounterSetup
 void badCounterSetupType
@@ -99,3 +131,6 @@ void missingWithoutSetupProps
 void goodUseProp
 void badUseDirectiveArgs
 void badUseValue
+void goodConnectProp
+void goodOnProp
+void badOnProp

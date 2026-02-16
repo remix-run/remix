@@ -49,6 +49,7 @@ root.flush()
 The runtime handles:
 
 - normalization of render values to internal nodes
+- component resolution and per-instance setup/render lifecycle
 - keyed and unkeyed child reconciliation
 - mounting, patching, moving, and removing host nodes through `NodePolicy`
 - host task execution and root task execution
@@ -67,6 +68,9 @@ Plugins can:
 - register host listeners (`insert` / `remove`)
 - transform host input
 - queue host tasks and schedule updates
+
+Component recursion is reconciler-owned. By the time plugins run, node input has
+already been resolved to host elements.
 
 Plugins should stay small and composable. The reconciler core should remain feature-agnostic.
 
@@ -101,8 +105,9 @@ root.render(<input use={[focus(true)]} />)
 
 ## Error model
 
-Root `error` events (`ReconcilerErrorEvent`) are used for reconciler-owned execution paths
-(for example reconcile, scheduler, root tasks, and host tasks).
+Root `error` events (`ReconcilerErrorEvent`) are the single reconciler error
+surface for reconciler-owned execution paths (for example reconcile, scheduler,
+root tasks, and host tasks).
 
 ```ts
 root.addEventListener('error', (event) => {
@@ -113,7 +118,7 @@ root.addEventListener('error', (event) => {
 
 Important behavior:
 
-- plugin and host listener throws are automatically dispatched on root as `error` events
+- plugin and host listener throws are captured and dispatched on root as `error` events
 - plugins can still dispatch additional custom root events when needed
 
 ## Writing a `NodePolicy`

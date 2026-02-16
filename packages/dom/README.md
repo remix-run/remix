@@ -7,6 +7,8 @@ This package currently provides:
 - a production-oriented `NodePolicy` implementation for DOM trees
 - a DOM JSX runtime (`@remix-run/dom/jsx-runtime`)
 - a Tier 1 DOM plugin pipeline for HTML/SVG props
+- lightweight host lifecycle prop (`connect`)
+- lightweight host event prop (`on`)
 
 ## Usage
 
@@ -29,9 +31,31 @@ let root = reconciler.createRoot(document.getElementById('app')!)
 }
 ```
 
-The DOM JSX runtime intentionally excludes framework-specific props such as
-`connect`, `css`, and `animate`. Those behaviors are expected to be layered in
-later via plugins.
+The DOM JSX runtime includes lightweight `connect` and `on` props for host
+node lifecycle and events. Higher-level framework props such as `css` and
+`animate` are still expected to be layered in via additional plugins.
+
+Example:
+
+```tsx
+root.render(
+  <button
+    connect={(node, signal) => {
+      node.dataset.ready = 'true'
+      signal.addEventListener('abort', () => {
+        delete node.dataset.ready
+      })
+    }}
+    on={{
+      click(event) {
+        console.log(event.currentTarget.tagName)
+      },
+    }}
+  >
+    Click
+  </button>,
+)
+```
 
 `createDomNodePolicy(document)` implements:
 
@@ -47,6 +71,8 @@ later via plugins.
 - `innerHTMLPlugin`
 - `stylePropsPlugin`
 - `formStatePlugin`
+- `connectPlugin`
+- `onPlugin`
 - `svgNormalizationPlugin`
 - `ariaDataAttributePlugin`
 - `domPropertyOrAttributePlugin`
@@ -60,14 +86,18 @@ Custom stacks can compose the same plugins directly:
 ```ts
 import {
   attributeFallbackPlugin,
+  connectPlugin,
   createDomNodePolicy,
   domPropertyOrAttributePlugin,
   formStatePlugin,
+  onPlugin,
   stylePropsPlugin,
 } from '@remix-run/dom'
 import { createReconciler } from '@remix-run/reconciler'
 
 let reconciler = createReconciler(createDomNodePolicy(document), [
+  connectPlugin,
+  onPlugin,
   stylePropsPlugin,
   formStatePlugin,
   domPropertyOrAttributePlugin,

@@ -111,6 +111,14 @@ export type UpdateHandle = {
   signal: AbortSignal
 }
 
+export type ComponentInstance = {
+  type: ReconcilerElementType
+  key: string
+  render: (props: Record<string, unknown>) => ReconcilerElement
+  handle: UpdateHandle
+  controller: AbortController
+}
+
 type SetupArgs<setup> = unknown extends setup
   ? [setup?: setup]
   : undefined extends setup
@@ -192,10 +200,12 @@ export type CommittedTextNode<textNode> = {
 export type CommittedHostNode<node, elementNode extends node> = {
   kind: 'host'
   type: string
+  sourceType: ReconcilerElementType
   key: string
   props: Record<string, unknown>
   instance: elementNode
   children: CommittedNode<node, elementNode>[]
+  componentInstances: ComponentInstance[]
   hostHandles: HostHandle<elementNode>[]
   transforms: NodeTransform[]
   pendingTasks: HostTask<elementNode>[]

@@ -1,5 +1,7 @@
 import { RECONCILER_FRAGMENT } from '@remix-run/reconciler'
 import type { Component, ReconcilerElement, RenderValue, UseValue } from '@remix-run/reconciler'
+import type { ConnectValue } from './lib/plugins/connect-plugin.ts'
+import type { DispatchedEvent, OnValue } from './lib/plugins/on-plugin.ts'
 
 export const Fragment = RECONCILER_FRAGMENT
 
@@ -7,10 +9,14 @@ export type DomJsxElement = ReconcilerElement
 
 export type DomElementProps<node extends EventTarget> = {
   children?: RenderValue
+  connect?: ConnectValue<node>
   innerHTML?: string
   key?: unknown
+  on?: OnValue<node>
   use?: UseValue<node>
 } & Record<string, unknown>
+
+export type { ConnectValue, DispatchedEvent, OnValue }
 
 export type DomHTMLElements = {
   [tagName in keyof HTMLElementTagNameMap]: DomElementProps<HTMLElementTagNameMap[tagName]>

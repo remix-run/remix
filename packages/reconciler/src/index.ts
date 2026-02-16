@@ -1,5 +1,4 @@
 export { createReconciler } from './lib/root.ts'
-export { componentPlugin } from './lib/plugins/component-plugin.ts'
 export { definePlugin } from './lib/types.ts'
 export { ReconcilerErrorEvent } from './lib/types.ts'
 export { createDirective, usePlugin } from './lib/plugins/directive-plugin.ts'

@@ -2,6 +2,8 @@ import { HostInsertEvent, HostRemoveEvent, ReconcilerErrorEvent } from './types.
 import { RECONCILER_FRAGMENT, isReconcilerElement } from '../testing/jsx.ts'
 import { GuardedEventTarget } from './event-target.ts'
 import type {
+  Component,
+  ComponentInstance,
   CommittedHostNode,
   CommittedNode,
   DeferredRemoval,
@@ -13,9 +15,11 @@ import type {
   HostTask,
   NodeTransformInput,
   NodePolicy,
+  ReconcilerElement,
   RenderNode,
   RenderValue,
   RootState,
+  UpdateHandle,
 } from './types.ts'
 
 type DiffEntry<node, elementNode extends node> = {
@@ -272,42 +276,100 @@ export function createReconcilerRuntime<
   ): { node: CommittedNode<node, elementNode>; traversal: traversal } {
     let key = toKey(input.key)
     if (current && current.kind === 'host' && current.key === key) {
-      let transformedInput = applyTransforms(current, input)
+      if (current.sourceType !== input.type) {
+        let mountAnchor = root.nodePolicy.nextSibling(getAnchor(current))
+        removeNode(current, parent, root)
+        return mountHost(
+          null,
+          input,
+          input.type,
+          key,
+          parent,
+          root,
+          mountAnchor,
+          root.nodePolicy.begin(parent),
+        )
+      }
+      let previousComponentInstances = current.componentInstances
+      let resolvedInput = resolveComponentInput(previousComponentInstances, input, root)
+      let nextComponentInstances = resolvedInput.componentInstances
+      current.componentInstances = nextComponentInstances
+      let transformedInput = applyTransforms(current, resolvedInput.input)
       if (typeof transformedInput.type !== 'string') {
         throw new Error('plugins must resolve host type to string')
       }
+      if (!isSameComponentChain(previousComponentInstances, nextComponentInstances)) {
+        let mountAnchor = root.nodePolicy.nextSibling(getAnchor(current))
+        current.componentInstances = []
+        removeNode(current, parent, root)
+        return mountHost(
+          null,
+          resolvedInput.input,
+          input.type,
+          key,
+          parent,
+          root,
+          mountAnchor,
+          root.nodePolicy.begin(parent),
+          nextComponentInstances,
+        )
+      }
       if (current.type !== transformedInput.type) {
-        return mountHost(current, transformedInput, key, parent, root, anchor, traversalCursor)
+        let componentInstances = current.componentInstances
+        current.componentInstances = []
+        return mountHost(
+          current,
+          resolvedInput.input,
+          input.type,
+          key,
+          parent,
+          root,
+          anchor,
+          traversalCursor,
+          componentInstances,
+        )
       }
       patchHost(current, transformedInput, root, root.nodePolicy.enter(current.instance))
       runHostTasks(current, root)
       return { node: current, traversal: traversalCursor }
     }
 
-    return mountHost(current, input, key, parent, root, anchor, traversalCursor)
+    return mountHost(current, input, input.type, key, parent, root, anchor, traversalCursor)
   }
 
   function mountHost(
     current: null | CommittedNode<node, elementNode>,
     input: NodeInput,
+    sourceType: unknown,
     key: string,
     parent: parentNode,
     root: RootState<parentNode, node, elementNode, traversal>,
     anchor: null | node,
     traversalCursor: traversal,
+    reusedComponentInstances: ComponentInstance[] = [],
   ): { node: CommittedHostNode<node, elementNode>; traversal: traversal } {
-    let probe = createDraftHostNode(key)
+    let probe = createDraftHostNode(key, sourceType)
     initializeHostPlugins(probe, root.hostFactories, root)
-    let transformedInput = applyTransforms(probe, input)
+    let transformedInput: NodeInput
+    if (reusedComponentInstances.length > 0) {
+      probe.componentInstances = reusedComponentInstances
+      transformedInput = applyTransforms(probe, input)
+    } else {
+      let resolvedInput = resolveComponentInput(probe.componentInstances, input, root)
+      probe.componentInstances = resolvedInput.componentInstances
+      transformedInput = applyTransforms(probe, resolvedInput.input)
+    }
     if (typeof transformedInput.type !== 'string') {
       throw new Error('plugins must resolve host type to string')
     }
 
     let reclaimed = reclaimHost(parent, transformedInput.type, key)
     if (reclaimed) {
+      reclaimed.sourceType = sourceType
       reclaimed.hostHandles = probe.hostHandles
       reclaimed.transforms = probe.transforms
       reclaimed.pendingTasks = probe.pendingTasks
+      reclaimed.componentInstances = probe.componentInstances
       patchHost(reclaimed, transformedInput, root, root.nodePolicy.enter(reclaimed.instance))
       let mountAnchor = current ? getAnchor(current) : anchor
       if (mountAnchor != null) {
@@ -323,6 +385,7 @@ export function createReconcilerRuntime<
 
     let resolved = root.nodePolicy.resolveElement(parent, traversalCursor, transformedInput.type)
     let hostNode = probe
+    hostNode.sourceType = sourceType
     hostNode.type = transformedInput.type
     hostNode.instance = resolved.node
     patchHost(hostNode, transformedInput, root, root.nodePolicy.enter(hostNode.instance))
@@ -360,14 +423,17 @@ export function createReconcilerRuntime<
 
   function createDraftHostNode(
     key: string,
+    sourceType: unknown,
   ): CommittedHostNode<node, elementNode> {
     return {
       kind: 'host',
       type: '',
+      sourceType,
       key,
       props: {},
       instance: null as never as elementNode,
       children: [],
+      componentInstances: [],
       hostHandles: [],
       transforms: [],
       pendingTasks: [],
@@ -394,6 +460,7 @@ export function createReconcilerRuntime<
       deferRemoval(current, parent, root, done)
       return
     }
+    disposeComponentInstances(current.componentInstances)
     root.nodePolicy.remove(parent, current.instance)
   }
 
@@ -422,6 +489,7 @@ export function createReconcilerRuntime<
       .then(() => {
         deferred.settled = true
         if (!deferred.reclaimed) {
+          disposeComponentInstances(deferred.node.componentInstances)
           root.nodePolicy.remove(parent, deferred.node.instance)
         }
         if (key !== '') {
@@ -492,13 +560,13 @@ export function createReconcilerRuntime<
       type: input.type,
       props: { ...input.props },
     }
+    let nextChildren = input.children
     for (let transform of node.transforms) {
       transformedInput = transform(transformedInput)
-    }
-    let nextChildren = input.children
-    if ('children' in transformedInput.props) {
-      nextChildren = toNodeChildren(transformedInput.props.children)
-      delete transformedInput.props.children
+      if ('children' in transformedInput.props) {
+        nextChildren = toNodeChildren(transformedInput.props.children)
+        delete transformedInput.props.children
+      }
     }
     return {
       ...input,
@@ -582,6 +650,157 @@ export function createReconcilerRuntime<
       }
     }
   }
+}
+
+type ResolveComponentResult = {
+  input: NodeInput
+  componentInstances: ComponentInstance[]
+}
+
+function resolveComponentInput<parentNode, node, elementNode extends node & parentNode, traversal>(
+  currentInstances: ComponentInstance[],
+  input: NodeInput,
+  root: RootState<parentNode, node, elementNode, traversal>,
+): ResolveComponentResult {
+  if (typeof input.type !== 'function') {
+    disposeComponentInstances(currentInstances)
+    return {
+      input,
+      componentInstances: [],
+    }
+  }
+
+  let instances = currentInstances.slice()
+  let resolvedType: unknown = input.type
+  let resolvedProps = input.props
+  let resolvedKey: unknown = input.key
+  let depth = 0
+
+  while (typeof resolvedType === 'function') {
+    let nextInput = splitSetupProps(resolvedProps)
+    let key = toKey(resolvedKey)
+    let instance = instances[depth]
+    if (!instance || instance.type !== resolvedType || instance.key !== key) {
+      if (instance) {
+        disposeComponentInstance(instance)
+      }
+      let controller = new AbortController()
+      let handle = createComponentHandle(root, controller)
+      let render = (resolvedType as Component<unknown, Record<string, unknown>>)(handle, nextInput.setup)
+      if (typeof render !== 'function') {
+        throw new Error('component factory must return a render function')
+      }
+      instance = {
+        type: resolvedType,
+        key,
+        render,
+        handle,
+        controller,
+      }
+      instances[depth] = instance
+    }
+
+    let next = instance.render(nextInput.props)
+    if (!isElementRecord(next)) {
+      throw new Error('component render must return a JSX element')
+    }
+    resolvedType = next.type
+    resolvedProps = next.props
+    resolvedKey = next.key
+    depth++
+  }
+
+  for (let index = depth; index < instances.length; index++) {
+    let stale = instances[index]
+    if (stale) disposeComponentInstance(stale)
+  }
+  instances.length = depth
+
+  let nextProps = { ...resolvedProps }
+  let rawChildren = nextProps.children
+  delete nextProps.children
+
+  return {
+    input: {
+      ...input,
+      type: resolvedType,
+      key: resolvedKey,
+      props: nextProps,
+      children: toNodeChildren(rawChildren),
+    },
+    componentInstances: instances,
+  }
+}
+
+function createComponentHandle<parentNode, node, elementNode extends node & parentNode, traversal>(
+  root: RootState<parentNode, node, elementNode, traversal>,
+  controller: AbortController,
+): UpdateHandle {
+  return {
+    update() {
+      return new Promise<AbortSignal>((resolve) => {
+        if (root.disposed || controller.signal.aborted) {
+          let aborted = new AbortController()
+          aborted.abort()
+          resolve(aborted.signal)
+          return
+        }
+        root.pendingTasks.push((signal) => resolve(signal))
+        root.enqueue()
+      })
+    },
+    queueTask(task) {
+      if (root.disposed || controller.signal.aborted) return
+      root.pendingTasks.push(task)
+      root.enqueue()
+    },
+    get signal() {
+      return controller.signal
+    },
+  }
+}
+
+function splitSetupProps(props: Record<string, unknown>) {
+  if (!('setup' in props)) {
+    return {
+      setup: undefined,
+      props,
+    }
+  }
+  let { setup, ...nextProps } = props
+  return {
+    setup,
+    props: nextProps,
+  }
+}
+
+function disposeComponentInstances(instances: ComponentInstance[]) {
+  for (let instance of instances) {
+    disposeComponentInstance(instance)
+  }
+  instances.length = 0
+}
+
+function disposeComponentInstance(instance: ComponentInstance) {
+  instance.controller.abort()
+}
+
+function isSameComponentChain(previous: ComponentInstance[], next: ComponentInstance[]) {
+  if (previous.length !== next.length) return false
+  for (let index = 0; index < previous.length; index++) {
+    let previousInstance = previous[index]
+    let nextInstance = next[index]
+    if (previousInstance?.type !== nextInstance?.type) return false
+    if (previousInstance?.key !== nextInstance?.key) return false
+  }
+  return true
+}
+
+function isElementRecord(value: unknown): value is ReconcilerElement {
+  if (!value || typeof value !== 'object') return false
+  let record = value as { $rmx?: unknown; type?: unknown; props?: unknown }
+  if (record.$rmx !== true) return false
+  return 'type' in record && !!record.props && typeof record.props === 'object'
 }
 
 function placeCommittedNode<parentNode, node, elementNode extends node & parentNode, traversal>(

@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { componentPlugin, createReconciler, definePlugin, ReconcilerErrorEvent } from '../index.ts'
+import { createReconciler, definePlugin, ReconcilerErrorEvent } from '../index.ts'
 import { jsx } from '../testing/jsx-runtime.ts'
 import {
   createTestContainer,
@@ -209,7 +209,7 @@ describe('reconciler package', () => {
   it('supports component setup once and scheduled updates', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler(nodePolicy, [componentPlugin(), attributeProps()])
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
     let setupCalls = 0
     let setupValues: number[] = []
@@ -251,10 +251,312 @@ describe('reconciler package', () => {
     assert.equal(setupCalls, 1)
   })
 
+  it('supports component roots that return another component', () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(container)
+    let switchView: null | (() => void) = null
+
+    function Dashboard() {
+      return ({ onSwitchToTable }: { onSwitchToTable: () => void }) => (
+        <panel>
+          <button
+            on={{
+              click: onSwitchToTable,
+            }}
+          >
+            back
+          </button>
+        </panel>
+      )
+    }
+
+    function App(handle: UpdateHandle) {
+      let view: 'dashboard' | 'table' = 'table'
+
+      return () => {
+        switchView = () => {
+          view = view === 'table' ? 'dashboard' : 'table'
+          handle.update()
+        }
+        if (view === 'dashboard') {
+          return <Dashboard onSwitchToTable={switchView} />
+        }
+        return <screen mode="table" />
+      }
+    }
+
+    root.render(<App />)
+    root.flush()
+    assert.equal(stringifyTestNode(container), '<screen mode="table"></screen>')
+    expectCallback(switchView, 'expected captured dashboard switch')()
+    root.flush()
+    assert.equal(stringifyTestNode(container), '<panel><button>back</button></panel>')
+    expectCallback(switchView, 'expected captured table switch')()
+    root.flush()
+    assert.equal(stringifyTestNode(container), '<screen mode="table"></screen>')
+  })
+
+  it('supports deep component-to-component chains across updates', () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(container)
+
+    function Leaf() {
+      return ({ label }: { label: string }) => <leaf>{label}</leaf>
+    }
+
+    function Middle() {
+      return ({ label }: { label: string }) => <Leaf label={label} />
+    }
+
+    function Top() {
+      return ({ label }: { label: string }) => <Middle label={label} />
+    }
+
+    root.render(<Top label="one" />)
+    root.flush()
+    assert.equal(stringifyTestNode(container), '<leaf>one</leaf>')
+
+    root.render(<Top label="two" />)
+    root.flush()
+    assert.equal(stringifyTestNode(container), '<leaf>two</leaf>')
+  })
+
+  it('supports conditional component-or-host branches in nested trees', () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(container)
+
+    function Badge() {
+      return ({ label }: { label: string }) => <badge>{label}</badge>
+    }
+
+    function Conditional() {
+      return ({ enabled, label }: { enabled: boolean; label: string }) =>
+        enabled ? <Badge label={label} /> : <fallback>{label}</fallback>
+    }
+
+    function App() {
+      return ({ enabled }: { enabled: boolean }) => (
+        <root>
+          <left>L</left>
+          <Conditional enabled={enabled} label="X" />
+          <right>R</right>
+        </root>
+      )
+    }
+
+    root.render(<App enabled={false} />)
+    root.flush()
+    assert.equal(
+      stringifyTestNode(container),
+      '<root><left>L</left><fallback>X</fallback><right>R</right></root>',
+    )
+
+    root.render(<App enabled />)
+    root.flush()
+    assert.equal(
+      stringifyTestNode(container),
+      '<root><left>L</left><badge>X</badge><right>R</right></root>',
+    )
+
+    root.render(<App enabled={false} />)
+    root.flush()
+    assert.equal(
+      stringifyTestNode(container),
+      '<root><left>L</left><fallback>X</fallback><right>R</right></root>',
+    )
+  })
+
+  it('keeps sibling host boundaries for dashboard-style component trees', () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(container)
+
+    function Header() {
+      return ({ label }: { label: string }) => (
+        <div>
+          <h1>{label}</h1>
+          <button>Switch to Table</button>
+        </div>
+      )
+    }
+
+    function Dashboard() {
+      return ({ title }: { title: string }) => (
+        <container>
+          <Header label={title} />
+          <div>
+            <card>a</card>
+            <card>b</card>
+          </div>
+        </container>
+      )
+    }
+
+    root.render(<Dashboard title="Dashboard" />)
+    root.flush()
+
+    assert.equal(
+      stringifyTestNode(container),
+      '<container><div><h1>Dashboard</h1><button>Switch to Table</button></div><div><card>a</card><card>b</card></div></container>',
+    )
+  })
+
+  it('keeps sibling boundaries stable across component updates', () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(container)
+    let toggle: null | (() => void) = null
+
+    function Header() {
+      return ({ onSwitch }: { onSwitch: () => void }) => (
+        <div>
+          <h1>Dashboard</h1>
+          <button
+            on={{
+              click: onSwitch,
+            }}
+          >
+            Switch to Table
+          </button>
+        </div>
+      )
+    }
+
+    function App(handle: UpdateHandle) {
+      let step = 0
+      toggle = () => {
+        step++
+        handle.update()
+      }
+
+      return () => (
+        <container>
+          <Header onSwitch={toggle!} />
+          <div>{step === 0 ? <card>a</card> : <card>b</card>}</div>
+        </container>
+      )
+    }
+
+    root.render(<App />)
+    root.flush()
+    assert.equal(
+      stringifyTestNode(container),
+      '<container><div><h1>Dashboard</h1><button>Switch to Table</button></div><div><card>a</card></div></container>',
+    )
+
+    expectCallback(toggle, 'expected toggle callback')()
+    root.flush()
+    assert.equal(
+      stringifyTestNode(container),
+      '<container><div><h1>Dashboard</h1><button>Switch to Table</button></div><div><card>b</card></div></container>',
+    )
+  })
+
+  it('does not reuse host nodes across host-to-component swaps', () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(container)
+
+    function Dashboard() {
+      return () => (
+        <div id="dashboard">
+          <h1>Dashboard</h1>
+        </div>
+      )
+    }
+
+    root.render(
+      <div id="table">
+        <table>
+          <tbody />
+        </table>
+      </div>,
+    )
+    root.flush()
+    let firstRootNode = container.children[0]
+    if (!firstRootNode || firstRootNode.kind !== 'element') throw new Error('expected first root node')
+
+    root.render(<Dashboard />)
+    root.flush()
+    let secondRootNode = container.children[0]
+    if (!secondRootNode || secondRootNode.kind !== 'element') throw new Error('expected second root node')
+
+    assert.notEqual(secondRootNode, firstRootNode)
+    assert.equal(stringifyTestNode(container), '<div id="dashboard"><h1>Dashboard</h1></div>')
+  })
+
+  it('keeps dashboard sibling layout when switching from table host view', () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(container)
+    let switchToDashboard: null | (() => void) = null
+
+    function Dashboard() {
+      return () => (
+        <div class="container">
+          <div>
+            <h1>Dashboard</h1>
+            <button>Switch to Table</button>
+          </div>
+          <div>
+            <card>a</card>
+            <card>b</card>
+          </div>
+        </div>
+      )
+    }
+
+    function App(handle: UpdateHandle) {
+      let view: 'table' | 'dashboard' = 'table'
+      switchToDashboard = () => {
+        view = 'dashboard'
+        handle.update()
+      }
+
+      return () => {
+        if (view === 'dashboard') return <Dashboard />
+        return (
+          <div class="container">
+            <div class="jumbotron">
+              <h1>Table</h1>
+            </div>
+            <table>
+              <tbody />
+            </table>
+          </div>
+        )
+      }
+    }
+
+    root.render(<App />)
+    root.flush()
+    assert.equal(
+      stringifyTestNode(container),
+      '<div class="container"><div class="jumbotron"><h1>Table</h1></div><table><tbody></tbody></table></div>',
+    )
+
+    expectCallback(switchToDashboard, 'expected switch callback')()
+    root.flush()
+    assert.equal(
+      stringifyTestNode(container),
+      '<div class="container"><div><h1>Dashboard</h1><button>Switch to Table</button></div><div><card>a</card><card>b</card></div></div>',
+    )
+  })
+
   it('updates only beneath component subtree when component handle updates', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let reconciler = createReconciler(nodePolicy, [componentPlugin(), attributeProps()])
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
     let capturedUpdate: null | (() => void) = null
 
@@ -447,6 +749,53 @@ describe('reconciler package', () => {
     root.flush()
 
     assert.equal(stringifyTestNode(container), '<x>ok</x>')
+  })
+
+  it('normalizes numeric and bigint render values to text nodes', () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(container)
+
+    root.render([42, 7n])
+    root.flush()
+
+    assert.equal(stringifyTestNode(container), '427')
+  })
+
+  it('supports direct text render node values', () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(container)
+
+    let manualTextNode = {
+      kind: 'text' as const,
+      value: 'manual-text',
+    }
+    root.render(manualTextNode as unknown as RenderValue)
+    root.flush()
+
+    assert.equal(stringifyTestNode(container), 'manual-text')
+  })
+
+  it('normalizes fragment children inside host elements', () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(container)
+
+    root.render(
+      <box>
+        <>
+          <a>A</a>
+          <b>B</b>
+        </>
+      </box>,
+    )
+    root.flush()
+
+    assert.equal(stringifyTestNode(container), '<box><a>A</a><b>B</b></box>')
   })
 
   it('dispatches plugin error when host listener throws', () => {

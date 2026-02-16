@@ -52,6 +52,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
+    "@remix-run/interaction": "workspace:^",
     "@remix-run/reconciler": "workspace:^"
   },
   "devDependencies": {
