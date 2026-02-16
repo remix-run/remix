@@ -42,7 +42,7 @@ describe('dom reconciler integration', () => {
   it('preserves sibling shape across handle-driven updates', () => {
     let container = document.createElement('div')
     let root = createDomRoot(container)
-    let switchCard: null | (() => void) = null
+    let switchCard = () => {}
 
     function Header() {
       return ({ onSwitch }: { onSwitch: () => void }) => (
@@ -74,7 +74,8 @@ describe('dom reconciler integration', () => {
       '<main><div><h1>Dashboard</h1><button>Switch to Table</button></div><div><section>a</section></div></main>',
     )
 
-    expectCallback(switchCard, 'expected switch callback')()
+    if (!switchCard) throw new Error('expected switch callback')
+    switchCard()
     root.flush()
     expect(container.innerHTML).toBe(
       '<main><div><h1>Dashboard</h1><button>Switch to Table</button></div><div><section>b</section></div></main>',
@@ -161,7 +162,7 @@ describe('dom reconciler integration', () => {
       '<div class="container"><div class="jumbotron"><h1>Table</h1></div><table><tbody></tbody></table></div>',
     )
 
-    expectCallback(switchToDashboard, 'expected switch callback')()
+    switchToDashboard()
     root.flush()
     expect(container.innerHTML).toBe(
       '<div class="container"><div><h1>Dashboard</h1><button>Switch to Table</button></div><div><section>a</section><section>b</section></div></div>',
@@ -204,9 +205,4 @@ describe('dom reconciler integration', () => {
 function createDomRoot(container: HTMLElement) {
   let reconciler = createReconciler(createDomNodePolicy(document), createDomPlugins())
   return reconciler.createRoot(container)
-}
-
-function expectCallback(value: null | (() => void), message: string) {
-  if (!value) throw new Error(message)
-  return value
 }
