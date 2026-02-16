@@ -8,7 +8,7 @@ import {
   createTestNodePolicy,
   stringifyTestNode,
 } from '../testing/test-node-policy.ts'
-import type { Plugin, RenderValue, UpdateHandle } from './types.ts'
+import type { Component, Plugin, RenderValue, UpdateHandle } from './types.ts'
 
 describe('reconciler package', () => {
   it('renders, updates, and removes host content', () => {
@@ -213,31 +213,38 @@ describe('reconciler package', () => {
     let reconciler = createReconciler(nodePolicy, [componentPlugin(), attributeProps()])
     let root = reconciler.createRoot(container)
     let setupCalls = 0
+    let setupValues: number[] = []
     let capturedUpdate: null | (() => void) = null
 
-    function MyComp(handle: UpdateHandle) {
+    let MyComp: Component<{ start: number }, { foo: string }> = (handle, setup) => {
       setupCalls++
-      let state = 1
+      setupValues.push(setup.start)
+      let state = setup.start
       capturedUpdate = () => {
         state++
         handle.update()
       }
 
-      return (props: Record<string, unknown>) => (
-        <host>
-          {props.foo as string} {state}
-        </host>
-      )
+      return (props) => {
+        assert.equal('setup' in props, false)
+        return (
+          <host>
+            {props.foo} {state}
+          </host>
+        )
+      }
     }
-    root.render(<MyComp foo="one" />)
+    root.render(<MyComp setup={{ start: 1 }} foo="one" />)
     root.flush()
     assert.equal(stringifyTestNode(container), '<host>one 1</host>')
     assert.equal(setupCalls, 1)
+    assert.deepEqual(setupValues, [1])
 
-    root.render(<MyComp foo="two" />)
+    root.render(<MyComp setup={{ start: 9 }} foo="two" />)
     root.flush()
     assert.equal(stringifyTestNode(container), '<host>two 1</host>')
     assert.equal(setupCalls, 1)
+    assert.deepEqual(setupValues, [1])
 
     capturedUpdate!()
     root.flush()

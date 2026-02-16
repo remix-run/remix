@@ -9,6 +9,7 @@ export {
 export { RECONCILER_FRAGMENT } from './testing/jsx.ts'
 
 export type {
+  Component,
   CommittedHostNode,
   CommittedNode,
   ErrorPhase,

@@ -16,6 +16,6 @@ export default defineConfig({
       ],
       screenshotFailures: false,
     },
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 })

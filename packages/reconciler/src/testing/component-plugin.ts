@@ -1,16 +1,12 @@
 import { definePlugin } from '../lib/types.ts'
-import type { Plugin, UpdateHandle } from '../lib/types.ts'
-
-export type ComponentType<props extends Record<string, unknown> = Record<string, unknown>> = (
-  handle: UpdateHandle,
-) => (props: props) => unknown
+import type { Component, Plugin, ReconcilerElement, UpdateHandle } from '../lib/types.ts'
 
 export function componentPlugin<elementNode>(): Plugin<elementNode> {
-  type ComponentFactory = ComponentType<Record<string, unknown>>
+  type ComponentFactory = Component<unknown, Record<string, unknown>>
 
   return definePlugin(() => (hostHandle) => {
     let currentType: null | unknown = null
-    let render: null | ((props: Record<string, unknown>) => unknown) = null
+    let render: null | ((props: Record<string, unknown>) => ReconcilerElement) = null
     let handle: UpdateHandle = {
       update: hostHandle.update,
       queueTask(task) {
@@ -23,16 +19,17 @@ export function componentPlugin<elementNode>(): Plugin<elementNode> {
 
     return (input) => {
       if (typeof input.type !== 'function') return input
+      let nextInput = splitSetupProps(input.props)
       if (!render || currentType !== input.type) {
-        let setup = (input.type as ComponentFactory)(handle)
-        if (typeof setup !== 'function') {
+        let nextRender = (input.type as ComponentFactory)(handle, nextInput.setup)
+        if (typeof nextRender !== 'function') {
           throw new Error('component factory must return a render function')
         }
         currentType = input.type
-        render = setup
+        render = nextRender
       }
 
-      let next = render(input.props)
+      let next = render(nextInput.props)
       if (!isElementRecord(next)) {
         throw new Error('component render must return a JSX element')
       }
@@ -43,6 +40,20 @@ export function componentPlugin<elementNode>(): Plugin<elementNode> {
       }
     }
   })
+}
+
+function splitSetupProps(props: Record<string, unknown>) {
+  if (!('setup' in props)) {
+    return {
+      setup: undefined,
+      props,
+    }
+  }
+  let { setup, ...nextProps } = props
+  return {
+    setup,
+    props: nextProps,
+  }
 }
 
 function isElementRecord(value: unknown): value is { type: unknown; props: Record<string, unknown> } {

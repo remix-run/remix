@@ -170,6 +170,7 @@ For tests, use:
 - `@remix-run/reconciler/testing` helpers
 - `createTestNodePolicy()` and `createTestContainer()`
 - testing-only JSX runtime
+- shared `Component<setup, props>` type for setup-aware component factories
 
 `tsconfig.json` example:
 
@@ -180,4 +181,17 @@ For tests, use:
     "jsxImportSource": "@remix-run/reconciler/testing"
   }
 }
+```
+
+Setup-aware component example:
+
+```ts
+import type { Component } from '@remix-run/reconciler'
+
+let Counter: Component<{ start: number }, { label: string }> = (handle, setup) => {
+  let count = setup.start
+  return (props) => <host>{props.label}: {count}</host>
+}
+
+root.render(<Counter setup={{ start: 1 }} label="Clicks" />)
 ```

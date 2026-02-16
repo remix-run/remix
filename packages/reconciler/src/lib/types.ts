@@ -111,6 +111,17 @@ export type UpdateHandle = {
   signal: AbortSignal
 }
 
+type SetupArgs<setup> = unknown extends setup
+  ? [setup?: setup]
+  : undefined extends setup
+    ? [setup?: setup]
+    : [setup: setup]
+
+export type Component<
+  setup = undefined,
+  props extends Record<string, unknown> = Record<string, unknown>,
+> = (handle: UpdateHandle, ...setup: SetupArgs<setup>) => (props: props) => ReconcilerElement
+
 export type HostFactory<elementNode> = (hostHandle: HostHandle<elementNode>) => void | NodeTransform
 export type Plugin<elementNode> = (
   pluginHandle: PluginHandle,
