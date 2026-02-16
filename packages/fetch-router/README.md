@@ -68,37 +68,6 @@ let response = await router.fetch('https://remix.run/blog/hello-remix')
 console.log(await response.text()) // "Post hello-remix"
 ```
 
-### Running Code In Request Context
-
-Use `router.run()` when you need to execute code inside the router's middleware/request context
-without mapping a test-only route.
-
-```ts
-import { asyncContext } from 'remix/async-context-middleware'
-import { createRouter, createStorageKey } from 'remix/fetch-router'
-
-let key = createStorageKey<string>()
-let router = createRouter({
-  middleware: [
-    asyncContext(),
-    (context, next) => {
-      context.storage.set(key, 'from middleware')
-      return next()
-    },
-  ],
-})
-
-let value = await router.run('https://remix.run', ({ storage }) => storage.get(key))
-console.log(value) // "from middleware"
-
-// You can also provide RequestInit, similar to router.fetch(input, init)
-let method = await router.run('https://remix.run', { method: 'POST' }, ({ method }) => method)
-console.log(method) // "POST"
-```
-
-This is especially useful in tests for request-scoped services like authenticated users, database
-handles, correlation IDs, and per-request feature flags.
-
 The route map is an object of the same shape as the object pass into `route()`, including nested objects. The leaves of the map are `Route` objects, which you can see if you inspect the type of the `routes` variable in your IDE.
 
 ```ts
