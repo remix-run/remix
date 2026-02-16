@@ -1,5 +1,5 @@
-import type { Controller } from 'remix'
-import { redirect } from 'remix'
+import type { Controller } from 'remix/fetch-router'
+import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
 import { requireAuth } from './middleware/auth.ts'
@@ -122,7 +122,7 @@ export default {
         zip: formData.get('zip')?.toString() || '',
       }
 
-      let order = createOrder(
+      let order = await createOrder(
         user.id,
         cart.items.map((item) => ({
           bookId: item.bookId,
@@ -130,7 +130,7 @@ export default {
           price: item.price,
           quantity: item.quantity,
         })),
-        shippingAddress,
+        JSON.stringify(shippingAddress),
       )
 
       session.set('cart', clearCart(cart))
@@ -138,11 +138,11 @@ export default {
       return redirect(routes.checkout.confirmation.href({ orderId: order.id }))
     },
 
-    confirmation({ params }) {
+    async confirmation({ params }) {
       let user = getCurrentUser()
-      let order = getOrderById(params.orderId)
+      let order = await getOrderById(params.orderId)
 
-      if (!order || order.userId !== user.id) {
+      if (!order || order.user_id !== user.id) {
         return render(
           <Layout>
             <div class="card">
@@ -168,7 +168,7 @@ export default {
           <div class="card">
             <h2>Order #{order.id}</h2>
             <p>
-              <strong>Order Date:</strong> {order.createdAt.toLocaleDateString()}
+              <strong>Order Date:</strong> {new Date(order.created_at).toLocaleDateString()}
             </p>
             <p>
               <strong>Total:</strong> ${order.total.toFixed(2)}

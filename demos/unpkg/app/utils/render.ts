@@ -1,4 +1,5 @@
-import { html, type SafeHtml, createHtmlResponse } from 'remix'
+import { html, type SafeHtml } from 'remix/html-template'
+import { createHtmlResponse } from 'remix/response/html'
 
 export { html }
 

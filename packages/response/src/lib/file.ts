@@ -117,8 +117,8 @@ export interface FileResponseOptions<file extends FileLike = File> {
  * @returns A `Response` object containing the file
  *
  * @example
- * import { createFileResponse } from '@remix-run/response/file'
- * import { openLazyFile } from '@remix-run/fs'
+ * import { createFileResponse } from 'remix/response/file'
+ * import { openLazyFile } from 'remix/fs'
  *
  * let lazyFile = openLazyFile('./public/image.jpg')
  * return createFileResponse(lazyFile, request, {

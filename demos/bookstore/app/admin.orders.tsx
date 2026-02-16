@@ -1,4 +1,4 @@
-import type { Controller } from 'remix'
+import type { Controller } from 'remix/fetch-router'
 
 import { routes } from './routes.ts'
 import { getAllOrders, getOrderById } from './models/orders.ts'
@@ -6,8 +6,8 @@ import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 
 export default {
-  index() {
-    let orders = getAllOrders()
+  async index() {
+    let orders = await getAllOrders()
 
     return render(
       <Layout>
@@ -35,7 +35,7 @@ export default {
               {orders.map((order) => (
                 <tr>
                   <td>#{order.id}</td>
-                  <td>{order.createdAt.toLocaleDateString()}</td>
+                  <td>{new Date(order.created_at).toLocaleDateString()}</td>
                   <td>{order.items.length} item(s)</td>
                   <td>${order.total.toFixed(2)}</td>
                   <td>
@@ -59,8 +59,8 @@ export default {
     )
   },
 
-  show({ params }) {
-    let order = getOrderById(params.orderId)
+  async show({ params }) {
+    let order = await getOrderById(params.orderId)
 
     if (!order) {
       return render(
@@ -73,16 +73,23 @@ export default {
       )
     }
 
+    let shippingAddress = JSON.parse(order.shipping_address_json) as {
+      street: string
+      city: string
+      state: string
+      zip: string
+    }
+
     return render(
       <Layout>
         <h1>Order #{order.id}</h1>
 
         <div class="card">
           <p>
-            <strong>Order Date:</strong> {order.createdAt.toLocaleDateString()}
+            <strong>Order Date:</strong> {new Date(order.created_at).toLocaleDateString()}
           </p>
           <p>
-            <strong>User ID:</strong> {order.userId}
+            <strong>User ID:</strong> {order.user_id}
           </p>
           <p>
             <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
@@ -103,8 +110,8 @@ export default {
                 <tr>
                   <td>{item.title}</td>
                   <td>{item.quantity}</td>
-                  <td>${item.price.toFixed(2)}</td>
-                  <td>${(item.price * item.quantity).toFixed(2)}</td>
+                  <td>${item.unit_price.toFixed(2)}</td>
+                  <td>${(item.unit_price * item.quantity).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -119,9 +126,9 @@ export default {
           </table>
 
           <h2 css={{ marginTop: '2rem' }}>Shipping Address</h2>
-          <p>{order.shippingAddress.street}</p>
+          <p>{shippingAddress.street}</p>
           <p>
-            {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zip}
+            {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
           </p>
         </div>
 

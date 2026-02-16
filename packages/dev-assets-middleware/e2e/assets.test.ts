@@ -194,9 +194,7 @@ describe('assets middleware e2e', () => {
 
     await page.click('#increment')
 
-    await page.waitForFunction(() => {
-      return document.querySelector('#count')?.textContent === 'Count: 1'
-    })
+    await page.waitForFunction(() => document.querySelector('#count')?.textContent === 'Count: 1')
 
     let newCount = await page.textContent('#count')
     assert.equal(newCount, 'Count: 1')

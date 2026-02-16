@@ -1,0 +1,38 @@
+/** From https://github.com/kentcdodds/mediarss/blob/main/app/config/routes.ts */
+export const patterns = [
+  '/feed/:token',
+  '/media/:token/*path',
+  '/art/:token/*path',
+  // OAuth routes (public)
+  '/oauth/token',
+  '/oauth/jwks',
+  '/oauth/register',
+  '/.well-known/oauth-authorization-server',
+  // MCP routes
+  '/mcp',
+  '/.well-known/oauth-protected-resource/mcp',
+  '/mcp/widget/:token/*path',
+  // Admin routes
+  '/admin/health',
+  '/admin/api/version',
+  '/admin/authorize',
+  '/admin',
+  '/admin/*path',
+  '/admin/api/feeds',
+  '/admin/api/directories',
+  '/admin/api/browse',
+  '/admin/api/feeds/directory',
+  '/admin/api/feeds/curated',
+  '/admin/api/feeds/:id',
+  '/admin/api/feeds/:id/tokens',
+  '/admin/api/feeds/:id/items',
+  '/admin/api/feeds/:id/artwork',
+  '/admin/api/tokens/:token',
+  '/admin/api/media',
+  '/admin/api/media/assignments',
+  '/admin/api/media/*path',
+  '/admin/api/media/*path/metadata',
+  '/admin/api/media-stream/*path',
+  '/admin/api/media/upload',
+  '/admin/api/artwork/*path',
+] as const

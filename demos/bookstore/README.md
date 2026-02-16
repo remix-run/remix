@@ -21,11 +21,14 @@ Then visit http://localhost:44100
 
 - [`app/routes.ts`](app/routes.ts) shows declarative route definitions using `route()`, `form()`, and `resources()` helpers. All route URLs are generated with full type safety, so `routes.admin.books.edit.href({ bookId: '123' })` ensures you never have broken links.
 - [`app/router.ts`](app/router.ts) demonstrates how to compose middleware for cross-cutting concerns: static file serving, form data parsing, method override, sessions, and async context. Each middleware is independent and reusable.
+- Tests can use [`router.run()`](../../packages/fetch-router/README.md#running-code-in-request-context) to execute model code inside the same request middleware stack without creating test-only routes.
+- [`app/middleware/database.ts`](app/middleware/database.ts) shows a request-scoped database pattern. It "checks out" a database handle at the start of each request, stores it in request context, and releases it in a `finally` block.
 - [`app/middleware/auth.ts`](app/middleware/auth.ts) provides two patterns:
   - **`loadAuth()`** - Optionally loads the current user without requiring authentication
   - **`requireAuth()`** - Redirects to login with a `returnTo` parameter for post-login redirect
 - [`app/middleware/admin.ts`](app/middleware/admin.ts) shows role-based authorization that returns 403 for non-admin users.
 - [`app/utils/context.ts`](app/utils/context.ts) demonstrates sharing data across the request lifecycle without prop drilling. Any code can call `getCurrentUser()` to access the authenticated user set by middleware earlier in the chain.
+- [`app/models/request-database.ts`](app/models/request-database.ts) demonstrates how model code can read the current request's database object from async context instead of importing a global database instance directly.
 - [`app/utils/session.ts`](app/utils/session.ts) configures signed cookies and filesystem-based session storage.
 - [`app/utils/uploads.ts`](app/utils/uploads.ts) handles file uploads with `@remix-run/form-data-middleware`. The upload handler stores files and returns public URLs. [`app/uploads.tsx`](app/uploads.tsx) serves uploaded files with appropriate caching headers.
 - HTML forms only support GET and POST. [`app/components/restful-form.tsx`](app/components/restful-form.tsx) adds a hidden `_method` field for PUT and DELETE, which the `methodOverride()` middleware translates back to the original method.

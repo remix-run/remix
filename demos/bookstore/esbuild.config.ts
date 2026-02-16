@@ -3,36 +3,33 @@ import { glob } from 'glob'
 import * as fs from 'node:fs/promises'
 
 /**
- * Auto-discover hydration roots by scanning for files that contain both
- * `hydrationRoot` and `import.meta.url`.
- *
- * This is a simple proof-of-concept using string matching. A production
- * implementation would use proper AST parsing.
+ * Auto-discover client entries by scanning for files that contain both
+ * `clientEntry(...)` and `import.meta.url`.
  */
-async function discoverHydrationRoots(): Promise<string[]> {
+async function discoverClientEntries(): Promise<string[]> {
   let files = await glob('app/**/*.{ts,tsx}', { ignore: 'node_modules/**' })
-  let hydrationRoots: string[] = []
+  let clientEntries: string[] = []
 
   for (let file of files) {
     let content = await fs.readFile(file, 'utf-8')
     // Simple string matching - good enough for proof of concept
-    if (content.includes('hydrationRoot') && content.includes('import.meta.url')) {
-      hydrationRoots.push(file)
+    if (content.includes('clientEntry(') && content.includes('import.meta.url')) {
+      clientEntries.push(file)
     }
   }
 
-  return hydrationRoots
+  return clientEntries
 }
 
 /**
- * Create esbuild configuration, auto-discovering hydration roots in production builds.
- * In development, hydration roots are omitted since all files are served on-demand.
+ * Create esbuild configuration, auto-discovering client entries in production builds.
+ * In development, client entries are omitted since all files are served on-demand.
  */
 export async function getEsbuildConfig() {
   let isDev = process.env.NODE_ENV === 'development'
 
   return {
-    entryPoints: ['app/entry.tsx', ...(isDev ? [] : await discoverHydrationRoots())],
+    entryPoints: ['app/entry.tsx', ...(isDev ? [] : await discoverClientEntries())],
     bundle: true,
     splitting: true,
     format: 'esm',

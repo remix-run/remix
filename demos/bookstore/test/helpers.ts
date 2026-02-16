@@ -1,4 +1,4 @@
-import { SetCookie, CookieHeader as Cookie } from 'remix'
+import { SetCookie, Cookie } from 'remix/headers'
 
 /**
  * Extract a specific cookie value from Set-Cookie headers

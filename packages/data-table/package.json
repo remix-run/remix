@@ -1,0 +1,70 @@
+{
+  "name": "@remix-run/data-table",
+  "version": "0.0.0",
+  "description": "A typed, relational query toolkit for Remix",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/data-table"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/data-table#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./operators": "./src/operators.ts",
+    "./sql": "./src/sql.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./operators": {
+        "types": "./dist/operators.d.ts",
+        "default": "./dist/operators.js"
+      },
+      "./sql": {
+        "types": "./dist/sql.d.ts",
+        "default": "./dist/sql.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "devDependencies": {
+    "@remix-run/data-schema": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "better-sqlite3": "^12.4.1"
+  },
+  "dependencies": {
+    "@remix-run/data-schema": "workspace:^"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "remix",
+    "orm",
+    "sql",
+    "database",
+    "query-builder",
+    "relational"
+  ]
+}

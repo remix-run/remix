@@ -1,5 +1,5 @@
-import type { Controller } from 'remix'
-import { redirect } from 'remix'
+import type { Controller } from 'remix/fetch-router'
+import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
 import { Layout } from './layout.tsx'
@@ -32,7 +32,7 @@ export default {
               <strong>Role:</strong> {user.role}
             </p>
             <p>
-              <strong>Member Since:</strong> {user.createdAt.toLocaleDateString()}
+              <strong>Member Since:</strong> {new Date(user.created_at).toLocaleDateString()}
             </p>
 
             <p css={{ marginTop: '1.5rem' }}>
@@ -119,16 +119,16 @@ export default {
           updateData.password = password
         }
 
-        updateUser(user.id, updateData)
+        await updateUser(user.id, updateData)
 
         return redirect(routes.account.index.href())
       },
     },
 
     orders: {
-      index() {
+      async index() {
         let user = getCurrentUser()
-        let orders = getOrdersByUserId(user.id)
+        let orders = await getOrdersByUserId(user.id)
 
         return render(
           <Layout>
@@ -151,7 +151,7 @@ export default {
                     {orders.map((order) => (
                       <tr>
                         <td>#{order.id}</td>
-                        <td>{order.createdAt.toLocaleDateString()}</td>
+                        <td>{new Date(order.created_at).toLocaleDateString()}</td>
                         <td>{order.items.length} item(s)</td>
                         <td>${order.total.toFixed(2)}</td>
                         <td>
@@ -184,11 +184,11 @@ export default {
         )
       },
 
-      show({ params }) {
+      async show({ params }) {
         let user = getCurrentUser()
-        let order = getOrderById(params.orderId)
+        let order = await getOrderById(params.orderId)
 
-        if (!order || order.userId !== user.id) {
+        if (!order || order.user_id !== user.id) {
           return render(
             <Layout>
               <div class="card">
@@ -204,13 +204,20 @@ export default {
           )
         }
 
+        let shippingAddress = JSON.parse(order.shipping_address_json) as {
+          street: string
+          city: string
+          state: string
+          zip: string
+        }
+
         return render(
           <Layout>
             <h1>Order #{order.id}</h1>
 
             <div class="card">
               <p>
-                <strong>Order Date:</strong> {order.createdAt.toLocaleDateString()}
+                <strong>Order Date:</strong> {new Date(order.created_at).toLocaleDateString()}
               </p>
               <p>
                 <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
@@ -231,8 +238,8 @@ export default {
                     <tr>
                       <td>{item.title}</td>
                       <td>{item.quantity}</td>
-                      <td>${item.price.toFixed(2)}</td>
-                      <td>${(item.price * item.quantity).toFixed(2)}</td>
+                      <td>${item.unit_price.toFixed(2)}</td>
+                      <td>${(item.unit_price * item.quantity).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -247,10 +254,9 @@ export default {
               </table>
 
               <h2 css={{ marginTop: '2rem' }}>Shipping Address</h2>
-              <p>{order.shippingAddress.street}</p>
+              <p>{shippingAddress.street}</p>
               <p>
-                {order.shippingAddress.city}, {order.shippingAddress.state}{' '}
-                {order.shippingAddress.zip}
+                {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
               </p>
             </div>
 

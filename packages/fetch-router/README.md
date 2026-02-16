@@ -1,6 +1,6 @@
 # fetch-router
 
-A minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](../route-pattern). Ideal for building APIs, web services, and server-rendered applications across any JavaScript runtime.
+A minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). Ideal for building APIs, web services, and server-rendered applications.
 
 ## Features
 
@@ -11,16 +11,10 @@ A minimal, composable router built on the [web Fetch API](https://developer.mozi
 - **Flexible Middleware**: Apply middleware globally, per-route, or to entire route hierarchies
 - **Easy Testing**: Use standard `fetch()` to test your routes - no special test harness required
 
-## Goals
-
-- **Simplicity**: A router should be simple to understand and use. The entire API surface fits in your head.
-- **Composability**: Small routers combine to build large applications. Middleware and nested routers make organization natural.
-- **Standards-Based**: Built on web standards that work across runtimes. No proprietary APIs or Node.js-specific code.
-
 ## Installation
 
 ```sh
-npm install @remix-run/fetch-router
+npm i remix
 ```
 
 ## Usage
@@ -30,8 +24,8 @@ The main purpose of the router is to map incoming requests to request handlers a
 The example below is a small site with a home page, an "about" page, and a blog.
 
 ```ts
-import { createRouter, route } from '@remix-run/fetch-router'
-import { logger } from '@remix-run/logger-middleware'
+import { createRouter, route } from 'remix/fetch-router'
+import { logger } from 'remix/logger-middleware'
 
 // `route()` creates a "route map" that organizes routes by name. The keys
 // of the map may be any name, and may be nested to group related routes.
@@ -74,6 +68,37 @@ let response = await router.fetch('https://remix.run/blog/hello-remix')
 console.log(await response.text()) // "Post hello-remix"
 ```
 
+### Running Code In Request Context
+
+Use `router.run()` when you need to execute code inside the router's middleware/request context
+without mapping a test-only route.
+
+```ts
+import { asyncContext } from 'remix/async-context-middleware'
+import { createRouter, createStorageKey } from 'remix/fetch-router'
+
+let key = createStorageKey<string>()
+let router = createRouter({
+  middleware: [
+    asyncContext(),
+    (context, next) => {
+      context.storage.set(key, 'from middleware')
+      return next()
+    },
+  ],
+})
+
+let value = await router.run('https://remix.run', ({ storage }) => storage.get(key))
+console.log(value) // "from middleware"
+
+// You can also provide RequestInit, similar to router.fetch(input, init)
+let method = await router.run('https://remix.run', { method: 'POST' }, ({ method }) => method)
+console.log(method) // "POST"
+```
+
+This is especially useful in tests for request-scoped services like authenticated users, database
+handles, correlation IDs, and per-request feature flags.
+
 The route map is an object of the same shape as the object pass into `route()`, including nested objects. The leaves of the map are `Route` objects, which you can see if you inspect the type of the `routes` variable in your IDE.
 
 ```ts
@@ -97,9 +122,9 @@ In addition to describing the structure of your routes, route maps also make it 
 Note: We're using the [`createHtmlResponse` helper from `@remix-run/response`](https://github.com/remix-run/remix/tree/main/packages/response/README.md#html-responses) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
 
 ```ts
-import { createRouter, route } from '@remix-run/fetch-router'
-import { html } from '@remix-run/html-template'
-import { createHtmlResponse } from '@remix-run/response/html'
+import { createRouter, route } from 'remix/fetch-router'
+import { html } from 'remix/html-template'
+import { createHtmlResponse } from 'remix/response/html'
 
 let routes = route({
   home: '/',
@@ -186,7 +211,7 @@ However, we can also encode the request method into the route definition itself 
 
 ```ts
 import * as assert from 'node:assert/strict'
-import { createRouter, route } from '@remix-run/fetch-router'
+import { createRouter, route } from 'remix/fetch-router'
 
 let routes = route({
   home: { method: 'GET', pattern: '/' },
@@ -240,9 +265,9 @@ Continuing with [the example of the contact page](#routing-based-on-request-meth
 A `form()` route map contains two routes: `index` and `action`. The `index` route is a `GET` route that shows the form, and the `action` route is a `POST` route that handles the form submission.
 
 ```tsx
-import { createRouter, route, form } from '@remix-run/fetch-router'
-import { createHtmlResponse } from '@remix-run/response/html'
-import { html } from '@remix-run/html-template'
+import { createRouter, route, form } from 'remix/fetch-router'
+import { createHtmlResponse } from 'remix/response/html'
+import { html } from 'remix/html-template'
 
 let routes = route({
   home: '/',
@@ -318,7 +343,7 @@ router.map(routes, {
 The router provides a `resources()` helper that creates a route map with a set of resource-based routes, useful when defining RESTful API routes or modeling resources in a web application ([similar to Rails' `resources` helper](https://guides.rubyonrails.org/routing.html#resource-routing-the-rails-default)). You can think of "resources" as a way to define routes for a collection of related resources, like products, books, users, etc.
 
 ```ts
-import { createRouter, route, resources } from '@remix-run/fetch-router'
+import { createRouter, route, resources } from 'remix/fetch-router'
 
 let routes = route({
   brands: {
@@ -368,7 +393,7 @@ router.map(routes.brands, {
 The `resource()` helper creates a route map for a single resource (i.e. not something that is part of a collection). This is useful when defining operations on a singleton resource, like a user profile.
 
 ```tsx
-import { createRouter, route, resources, resource } from '@remix-run/fetch-router'
+import { createRouter, route, resources, resource } from 'remix/fetch-router'
 
 let routes = route({
   user: {
@@ -425,7 +450,7 @@ type Routes = typeof routes
 Resource route names may be customized using the `names` option when you'd prefer not to use the default `index`/`new`/`show`/`create`/`edit`/`update`/`destroy` route names.
 
 ```tsx
-import { createRouter, route, resources } from '@remix-run/fetch-router'
+import { createRouter, route, resources } from 'remix/fetch-router'
 
 let routes = route({
   users: resources('users', {
@@ -443,7 +468,7 @@ type Routes = typeof routes.users
 If you want to use a param name other than `id`, you can use the `param` option.
 
 ```tsx
-import { createRouter, route, resources } from '@remix-run/fetch-router'
+import { createRouter, route, resources } from 'remix/fetch-router'
 
 let routes = route({
   users: resources('users', {
@@ -480,7 +505,7 @@ Middleware functions run code before and/or after actions. They are a powerful w
 A basic logging middleware might look like this:
 
 ```ts
-import type { Middleware } from '@remix-run/fetch-router'
+import type { Middleware } from 'remix/fetch-router'
 
 // You can use the `Middleware` type to type middleware functions.
 function logger(): Middleware {
@@ -619,10 +644,10 @@ router.get('/posts/:id', ({ request, url, params, storage }) => {
 Response helpers for creating common HTTP responses are available in the [`@remix-run/response`](https://github.com/remix-run/remix/tree/main/packages/response) package:
 
 ```tsx
-import { createFileResponse } from '@remix-run/response/file'
-import { createHtmlResponse } from '@remix-run/response/html'
-import { createRedirectResponse } from '@remix-run/response/redirect'
-import { compressResponse } from '@remix-run/response/compress'
+import { createFileResponse } from 'remix/response/file'
+import { createHtmlResponse } from 'remix/response/html'
+import { createRedirectResponse } from 'remix/response/redirect'
+import { compressResponse } from 'remix/response/compress'
 
 let response = createHtmlResponse('<h1>Hello</h1>')
 let response = Response.json({ message: 'Hello' })
@@ -637,8 +662,8 @@ See the [`@remix-run/response` documentation](https://github.com/remix-run/remix
 For working with HTML strings and safe HTML interpolation, see the [`@remix-run/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template) package. It provides a `html` template tag with automatic escaping to prevent XSS vulnerabilities.
 
 ```ts
-import { html } from '@remix-run/html-template'
-import { createHtmlResponse } from '@remix-run/response/html'
+import { html } from 'remix/html-template'
+import { createHtmlResponse } from 'remix/response/html'
 
 // Use the template tag to escape unsafe variables in HTML.
 let unsafe = '<script>alert(1)</script>'

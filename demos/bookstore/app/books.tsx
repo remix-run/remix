@@ -1,4 +1,5 @@
-import type { Controller } from 'remix'
+import type { Controller } from 'remix/fetch-router'
+import { Frame } from 'remix/component'
 
 import { routes } from './routes.ts'
 import { getAllBooks, getBookBySlug, getBooksByGenre, getAvailableGenres } from './models/books.ts'
@@ -7,14 +8,14 @@ import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
 import { getCurrentCart } from './utils/context.ts'
-import { ImageCarousel } from './components/image-carousel.tsx'
+import { ImageCarousel } from './assets/image-carousel.tsx'
 
 export default {
   middleware: [loadAuth()],
   actions: {
-    index() {
-      let books = getAllBooks()
-      let genres = getAvailableGenres()
+    async index() {
+      let books = await getAllBooks()
+      let genres = await getAvailableGenres()
       let cart = getCurrentCart()
 
       return render(
@@ -60,9 +61,9 @@ export default {
       )
     },
 
-    genre({ params }) {
+    async genre({ params }) {
       let genre = params.genre
-      let books = getBooksByGenre(genre)
+      let books = await getBooksByGenre(genre)
 
       if (books.length === 0) {
         return render(
@@ -102,8 +103,8 @@ export default {
       )
     },
 
-    show({ params }) {
-      let book = getBookBySlug(params.slug)
+    async show({ params }) {
+      let book = await getBookBySlug(params.slug)
 
       if (!book) {
         return render(
@@ -115,8 +116,8 @@ export default {
           { status: 404 },
         )
       }
-      let cart = getCurrentCart()
-      let inCart = cart.items.some((item) => item.slug === book.slug)
+
+      let imageUrls = JSON.parse(book.image_urls) as string[]
 
       return render(
         <Layout>
@@ -129,7 +130,7 @@ export default {
                 overflow: 'hidden',
               }}
             >
-              <ImageCarousel images={book.imageUrls} />
+              <ImageCarousel images={imageUrls} />
             </div>
 
             <div class="card">
@@ -141,10 +142,10 @@ export default {
               <p css={{ margin: '1rem 0' }}>
                 <span class="badge badge-info">{book.genre}</span>
                 <span
-                  class={`badge ${book.inStock ? 'badge-success' : 'badge-warning'}`}
+                  class={`badge ${book.in_stock ? 'badge-success' : 'badge-warning'}`}
                   css={{ marginLeft: '0.5rem' }}
                 >
-                  {book.inStock ? 'In Stock' : 'Out of Stock'}
+                  {book.in_stock ? 'In Stock' : 'Out of Stock'}
                 </span>
               </p>
 
@@ -166,44 +167,14 @@ export default {
                   <strong>ISBN:</strong> {book.isbn}
                 </p>
                 <p>
-                  <strong>Published:</strong> {book.publishedYear}
+                  <strong>Published:</strong> {book.published_year}
                 </p>
               </div>
 
-              {book.inStock ? (
-                inCart ? (
-                  <form
-                    method="POST"
-                    action={routes.cart.api.remove.href()}
-                    css={{ marginTop: '2rem' }}
-                  >
-                    <input type="hidden" name="_method" value="DELETE" />
-                    <input type="hidden" name="bookId" value={book.id} />
-                    <button
-                      type="submit"
-                      class="btn"
-                      css={{ fontSize: '1.1rem', padding: '0.75rem 1.5rem' }}
-                    >
-                      Remove from Cart
-                    </button>
-                  </form>
-                ) : (
-                  <form
-                    method="POST"
-                    action={routes.cart.api.add.href()}
-                    css={{ marginTop: '2rem' }}
-                  >
-                    <input type="hidden" name="bookId" value={book.id} />
-                    <input type="hidden" name="slug" value={book.slug} />
-                    <button
-                      type="submit"
-                      class="btn"
-                      css={{ fontSize: '1.1rem', padding: '0.75rem 1.5rem' }}
-                    >
-                      Add to Cart
-                    </button>
-                  </form>
-                )
+              {book.in_stock ? (
+                <div css={{ marginTop: '2rem' }}>
+                  <Frame src={routes.fragments.cartButton.href({ bookId: book.id })} />
+                </div>
               ) : (
                 <p css={{ color: '#e74c3c', fontWeight: 500 }}>
                   This book is currently out of stock.

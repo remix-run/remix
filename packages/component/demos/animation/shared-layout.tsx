@@ -100,47 +100,45 @@ export function SharedLayout(handle: Handle) {
     shouldAnimate = true
   })
 
-  return () => {
-    return (
-      <div
+  return () => (
+    <div
+      css={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 16,
+      }}
+    >
+      <div css={{ display: 'flex', gap: 16 }}>
+        <OverlapExample state={state} />
+        <WaitExample state={state} />
+      </div>
+      <button
         css={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 16,
+          backgroundColor: '#0f1115',
+          color: '#f5f5f5',
+          border: 'none',
+          borderRadius: 8,
+          padding: '12px 32px',
+          fontSize: 14,
+          fontWeight: 500,
+          cursor: 'pointer',
+          transition: 'transform 100ms ease-in-out',
+          '&:active': {
+            transform: 'scale(0.95)',
+          },
+        }}
+        on={{
+          click() {
+            state = !state
+            handle.update()
+          },
         }}
       >
-        <div css={{ display: 'flex', gap: 16 }}>
-          <OverlapExample state={state} />
-          <WaitExample state={state} />
-        </div>
-        <button
-          css={{
-            backgroundColor: '#0f1115',
-            color: '#f5f5f5',
-            border: 'none',
-            borderRadius: 8,
-            padding: '12px 32px',
-            fontSize: 14,
-            fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'transform 100ms ease-in-out',
-            '&:active': {
-              transform: 'scale(0.95)',
-            },
-          }}
-          on={{
-            click() {
-              state = !state
-              handle.update()
-            },
-          }}
-        >
-          Switch
-        </button>
-      </div>
-    )
-  }
+        Switch
+      </button>
+    </div>
+  )
 }
 
 function Circle() {

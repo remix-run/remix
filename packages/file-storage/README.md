@@ -1,10 +1,6 @@
 # file-storage
 
-`file-storage` is a key/value interface for storing [`File` objects](https://developer.mozilla.org/en-US/docs/Web/API/File) in JavaScript.
-
-Handling file uploads and storage is a common requirement in web applications, but each storage backend (local disk, AWS S3, Cloudflare R2, etc.) has its own API and conventions. This fragmentation makes it difficult to write portable code that can easily switch between storage providers or support multiple backends simultaneously.
-
-Similar to how `localStorage` allows you to store key/value pairs of strings in the browser, `file-storage` allows you to store key/value pairs of files on the server with a consistent interface regardless of the underlying storage mechanism.
+Key/value storage interfaces for server-side [`File` objects](https://developer.mozilla.org/en-US/docs/Web/API/File). `file-storage` gives Remix apps one consistent API across local disk and cloud object storage backends.
 
 ## Features
 
@@ -15,10 +11,8 @@ Similar to how `localStorage` allows you to store key/value pairs of strings in 
 
 ## Installation
 
-Install from [npm](https://www.npmjs.com/):
-
 ```sh
-npm install @remix-run/file-storage
+npm i remix
 ```
 
 ## Usage
@@ -26,7 +20,7 @@ npm install @remix-run/file-storage
 ### File System
 
 ```ts
-import { createFsFileStorage } from '@remix-run/file-storage/fs'
+import { createFsFileStorage } from 'remix/file-storage/fs'
 
 let storage = createFsFileStorage('./user/files')
 

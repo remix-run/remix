@@ -1,96 +1,136 @@
-export interface OrderItem {
-  bookId: string
+import type { TableRow, TableRowWith } from 'remix/data-table'
+
+import { bookForOrderItem, itemsByOrder, orders } from './database.ts'
+import { getRequestDatabase } from './request-database.ts'
+
+export interface OrderItemInput {
+  bookId: number
   title: string
   price: number
   quantity: number
 }
 
-export interface Order {
-  id: string
-  userId: string
-  items: OrderItem[]
-  total: number
-  status: 'pending' | 'processing' | 'shipped' | 'delivered'
-  shippingAddress: {
-    street: string
-    city: string
-    state: string
-    zip: string
+export type OrderItem = TableRowWith<
+  typeof itemsByOrder.targetTable,
+  { book: TableRow<typeof bookForOrderItem.targetTable> | null }
+>
+export type Order = TableRowWith<typeof orders, { items: OrderItem[] }>
+type OrderRow = TableRow<typeof orders>
+
+let orderItems = itemsByOrder.orderBy('book_id', 'asc').with({ book: bookForOrderItem })
+
+export async function getAllOrders(): Promise<Order[]> {
+  let db = getRequestDatabase()
+  return db.findMany(orders, {
+    orderBy: ['created_at', 'asc'],
+    with: { items: orderItems },
+  })
+}
+
+export async function getOrderById(id: string): Promise<Order | null> {
+  let orderId = parseOrderId(id)
+  if (orderId === null) {
+    return null
   }
-  createdAt: Date
+  let db = getRequestDatabase()
+
+  return db.find(orders, orderId, {
+    with: { items: orderItems },
+  })
 }
 
-const ordersData: Order[] = [
-  {
-    id: '1001',
-    userId: '2',
-    items: [
-      { bookId: '1', title: 'The Midnight Library', price: 16.99, quantity: 1 },
-      { bookId: '3', title: 'Project Hail Mary', price: 28.99, quantity: 1 },
-    ],
-    total: 45.98,
-    status: 'delivered',
-    shippingAddress: {
-      street: '123 Main St',
-      city: 'Boston',
-      state: 'MA',
-      zip: '02101',
-    },
-    createdAt: new Date('2024-09-15'),
-  },
-  {
-    id: '1002',
-    userId: '2',
-    items: [{ bookId: '2', title: 'Atomic Habits', price: 27.0, quantity: 2 }],
-    total: 54.0,
-    status: 'shipped',
-    shippingAddress: {
-      street: '123 Main St',
-      city: 'Boston',
-      state: 'MA',
-      zip: '02101',
-    },
-    createdAt: new Date('2024-10-01'),
-  },
-]
+export async function getOrdersByUserId(userId: number | string): Promise<Order[]> {
+  let userIdValue = parseUserId(userId)
+  if (userIdValue === null) {
+    return []
+  }
+  let db = getRequestDatabase()
 
-export function getAllOrders(): Order[] {
-  return [...ordersData]
+  return db.findMany(orders, {
+    where: { user_id: userIdValue },
+    orderBy: ['created_at', 'asc'],
+    with: { items: orderItems },
+  })
 }
 
-export function getOrderById(id: string): Order | undefined {
-  return ordersData.find((order) => order.id === id)
-}
+export async function createOrder(
+  user_id: number | string,
+  items: OrderItemInput[],
+  shipping_address_json: string,
+): Promise<Order> {
+  let userIdValue = parseUserId(user_id)
+  if (userIdValue === null) {
+    throw new Error('Invalid user id')
+  }
+  let db = getRequestDatabase()
 
-export function getOrdersByUserId(userId: string): Order[] {
-  return ordersData.filter((order) => order.userId === userId)
-}
-
-export function createOrder(
-  userId: string,
-  items: OrderItem[],
-  shippingAddress: Order['shippingAddress'],
-): Order {
   let total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-  let newOrder: Order = {
-    id: String(1000 + ordersData.length + 1),
-    userId,
-    items,
-    total,
-    status: 'pending',
-    shippingAddress,
-    createdAt: new Date(),
-  }
+  return db.transaction(async (tx) => {
+    let createdOrder = await tx.create(
+      orders,
+      {
+        user_id: userIdValue,
+        total,
+        status: 'pending',
+        shipping_address_json,
+        created_at: Date.now(),
+      },
+      { returnRow: true },
+    )
 
-  ordersData.push(newOrder)
-  return newOrder
+    await tx.createMany(
+      itemsByOrder.targetTable,
+      items.map((item) => ({
+        order_id: createdOrder.id,
+        book_id: item.bookId,
+        title: item.title,
+        unit_price: item.price,
+        quantity: item.quantity,
+      })),
+    )
+
+    let order = await tx.find(orders, createdOrder.id, {
+      with: { items: orderItems },
+    })
+
+    if (!order) {
+      throw new Error('Failed to load created order')
+    }
+
+    return order
+  })
 }
 
-export function updateOrderStatus(id: string, status: Order['status']): Order | undefined {
-  let order = getOrderById(id)
-  if (!order) return undefined
+export async function updateOrderStatus(
+  id: number | string,
+  status: OrderRow['status'],
+): Promise<OrderRow | null> {
+  let orderId = parseOrderId(id)
+  if (orderId === null) {
+    return null
+  }
 
-  order.status = status
-  return order
+  let db = getRequestDatabase()
+  return db.update(orders, orderId, { status })
+}
+
+function parseOrderId(id: number | string): number | null {
+  let parsed = typeof id === 'number' ? id : Number(id)
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null
+  }
+
+  return parsed
+}
+
+function parseUserId(id: number | string): number | null {
+  let parsed = typeof id === 'number' ? id : Number(id)
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null
+  }
+
+  return parsed
 }

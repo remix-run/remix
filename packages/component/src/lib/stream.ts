@@ -1,26 +1,8 @@
-/**
- * Streaming render strategy
- *
- * - Composable segments: We build a segment tree (static text, composites, and frame
- *   regions) with deterministic hierarchical IDs. Blocking Frames attach async content
- *   producers; non-blocking Frames render fallbacks immediately.
- *
- * - Hierarchical IDs: Frame and Hydrated component IDs are derived from a stable path
- *   (e.g. f1, f1-1, f1-2 for frames; h1, h1.1, h1.2 for hydrated components), tracked via
- *   per-path child counters, so IDs are deterministic across passes and independent of timing.
- *
- * - Non-blocking Frames (with fallback) render immediately with pending status. Blocking
- *   Frames attach a promise via resolveFrame; we await all frame promises once, then
- *   serialize the segment tree to HTML for the stream's first chunk.
- *
- * - Head/style management is preserved: head-managed elements are hoisted and styles are
- *   collected/deduped before finalizing output.
- */
 import { processStyle } from './style/lib/style.ts'
 import type { ComponentHandle, Key, RemixNode } from './component.ts'
 import type { ElementType, ElementProps, RemixElement } from './jsx.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from './component.ts'
-import { isHydratedComponent, type HydratedComponent } from './hydration-root.ts'
+import { isEntry, type EntryComponent } from './client-entries.ts'
 
 interface VNode {
   type: ElementType
@@ -36,41 +18,18 @@ export function createVNode(type: ElementType, props: ElementProps, key?: Key): 
 
 export interface RenderToStreamOptions {
   onError?: (error: unknown) => void
-  resolveFrame?: (src: string) => Promise<RemixElement> | RemixElement
+  resolveFrame?: (
+    src: string,
+  ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
   /**
-   * Resolves hydration root URLs on the server to their final public URLs.
+   * Resolves client entry module URLs before they are serialized for hydration.
    *
-   * This is called during server-side rendering for each `hydrationRoot` component
-   * to transform the module URL (e.g., from `import.meta.url` which is a `file://` URL
-   * on the server) into the public URL that the browser can fetch.
+   * Useful when entry components are declared with dynamic source URLs
+   * (e.g. `import.meta.url`) that must be mapped to public asset URLs at render time.
    *
-   * By default, URLs are passed through unchanged. Provide a resolver when you need to:
-   * - Map server file paths to build output URLs (e.g., with content hashes)
-   * - Transform `file://` URLs from `import.meta.url` to public asset paths
-   *
-   * @param hydrationRoot The hydration root specifier from `hydrationRoot()`'s first argument
-   * @param metadata.exportName The export name (from hash or function name)
-   * @returns The resolved public URL for the browser to fetch
-   *
-   * @example
-   * ```tsx
-   * renderToString(node, {
-   *   resolveHydrationRootUrl(url, { exportName }) {
-   *     // Map file:// URLs to build outputs using asset manifest
-   *     if (url.startsWith('file://')) {
-   *       let entry = assets.get(url)
-   *       if (!entry) {
-   *         throw new Error(`Asset not found: ${url}`)
-   *       }
-   *       return entry.href
-   *     }
-   *     // Pass through already-resolved URLs
-   *     return url
-   *   }
-   * })
-   * ```
+   * By default, URLs are passed through unchanged.
    */
-  resolveHydrationRootUrl?: (url: string, metadata: { exportName: string }) => string
+  resolveClientEntryUrl?: (url: string, metadata: { exportName: string }) => string
 }
 
 interface HydrationData {
@@ -92,12 +51,21 @@ interface RenderContext {
   onError: (error: unknown) => void
   parentVNode?: VNode
   styleCache: Map<string, { selector: string; css: string }>
-  resolveFrame: (src: string) => Promise<RemixElement> | RemixElement
-  resolveHydrationRootUrl: (url: string, metadata: { exportName: string }) => string
-  idsByPath: Map<string, number>
-  pendingFrames: Array<{ frameId: string; promise: Promise<RemixElement> }>
+  resolveFrame: (
+    src: string,
+  ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
+  resolveClientEntryUrl: (url: string, metadata: { exportName: string }) => string
+  pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
   hydrationData: Map<string, HydrationData>
   frameData: Map<string, FrameData>
+  blockingFrameTails: ReadableStream<Uint8Array>[]
+  serverIdScope: string
+  serverIdCounter: number
+}
+
+interface ResolvedFrameHtml {
+  html: string
+  tail?: ReadableStream<Uint8Array>
 }
 
 type Segment =
@@ -159,22 +127,23 @@ export function renderToStream(
 
   let context: RenderContext = {
     headElements: [],
-    idsByPath: new Map(),
     insideHead: false,
     insideSvg: false,
     onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
-    resolveHydrationRootUrl: options?.resolveHydrationRootUrl ?? defaultResolveHydrationRootUrl,
+    resolveClientEntryUrl: options?.resolveClientEntryUrl ?? defaultResolveClientEntryUrl,
     styleCache: new Map(),
     pendingFrames: [],
     hydrationData: new Map(),
     frameData: new Map(),
+    blockingFrameTails: [],
+    serverIdScope: crypto.randomUUID().slice(0, 8),
+    serverIdCounter: 0,
   }
 
   return new ReadableStream({
     async start(controller) {
       try {
-        context.idsByPath.clear()
         let root = buildSegment(node, context, '')
         await resolveBlocking(root)
         let html = serializeSegment(root)
@@ -182,10 +151,21 @@ export function renderToStream(
         let bytes = encoder.encode(finalHtml)
         controller.enqueue(bytes)
 
+        // If we have any tails from blocking frame streams, stream them now.
+        // These contain nested non-blocking frame templates (or other follow-up chunks)
+        // that must come after the initial document chunk.
+        let tailPromise =
+          context.blockingFrameTails.length > 0
+            ? streamByteStreams(context.blockingFrameTails, controller, context.onError)
+            : Promise.resolve()
+
         // If we have pending non-blocking frames, stream them as they resolve
-        if (context.pendingFrames.length > 0) {
-          await streamPendingFrames(context, controller, encoder)
-        }
+        let pendingPromise =
+          context.pendingFrames.length > 0
+            ? streamPendingFrames(context, controller, encoder)
+            : Promise.resolve()
+
+        await Promise.all([tailPromise, pendingPromise])
 
         controller.close()
       } catch (error) {
@@ -200,8 +180,75 @@ function defaultResolveFrame(): never {
   throw new Error('No resolveFrame provided')
 }
 
-function defaultResolveHydrationRootUrl(url: string): string {
+function defaultResolveClientEntryUrl(url: string): string {
   return url
+}
+
+function randomId(prefix: string): string {
+  return prefix + crypto.randomUUID().slice(0, 8)
+}
+
+function createServerComponentId(context: RenderContext): string {
+  context.serverIdCounter++
+  return `s${context.serverIdScope}-${context.serverIdCounter}`
+}
+
+async function splitFirstChunk(
+  stream: ReadableStream<Uint8Array>,
+): Promise<{ first: Uint8Array; tail: ReadableStream<Uint8Array> }> {
+  let reader = stream.getReader()
+
+  let { value, done } = await reader.read()
+  if (done || !value) {
+    reader.releaseLock()
+    return {
+      first: new Uint8Array(),
+      tail: new ReadableStream({
+        start(controller) {
+          controller.close()
+        },
+      }),
+    }
+  }
+
+  let released = false
+  function release() {
+    if (released) return
+    released = true
+    try {
+      reader.releaseLock()
+    } catch {
+      // ignore
+    }
+  }
+
+  let tail = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      let next = await reader.read()
+      if (next.done) {
+        controller.close()
+        release()
+        return
+      }
+      controller.enqueue(next.value)
+    },
+    cancel(reason) {
+      release()
+      return reader.cancel(reason)
+    },
+  })
+
+  return { first: value, tail }
+}
+
+async function resolveFrameHtml(
+  input: string | ReadableStream<Uint8Array>,
+): Promise<ResolvedFrameHtml> {
+  if (typeof input === 'string') return { html: input }
+
+  let decoder = new TextDecoder()
+  let { first, tail } = await splitFirstChunk(input)
+  return { html: decoder.decode(first), tail }
 }
 
 function isRemixElement(node: unknown): node is RemixElement {
@@ -222,7 +269,7 @@ function compositeSeg(parts: Segment[]): Segment {
 
 function buildSegment(node: RemixNode, context: RenderContext, framePath: string): Segment {
   if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
-    return staticSeg(String(node))
+    return staticSeg(escapeTextContent(String(node)))
   }
 
   if (node === null || node === undefined || typeof node === 'boolean') {
@@ -267,10 +314,16 @@ function buildSegment(node: RemixNode, context: RenderContext, framePath: string
       if (type === Frame) {
         return buildFrameSegment(props, context, framePath)
       }
-      if (isHydratedComponent(type)) {
-        return buildHydratedComponentSegment(type, props, context, framePath)
+      if (isEntry(type)) {
+        return buildEntrySegment(type, props, context, framePath)
       }
-      return buildComponentSegment(type, props, context, 'ssr-component', framePath)
+      return buildComponentSegment(
+        type,
+        props,
+        context,
+        createServerComponentId(context),
+        framePath,
+      )
     }
   }
 
@@ -278,10 +331,7 @@ function buildSegment(node: RemixNode, context: RenderContext, framePath: string
 }
 
 function buildFrameSegment(props: any, context: RenderContext, framePath: string): Segment {
-  let nextIndex = (context.idsByPath.get(framePath) ?? 0) + 1
-  context.idsByPath.set(framePath, nextIndex)
-  let id = framePath ? `${framePath}-${nextIndex}` : `${nextIndex}`
-  let frameId = `f${id}`
+  let frameId = randomId('f')
 
   // Store frame data in context for aggregation
   context.frameData.set(frameId, {
@@ -298,12 +348,18 @@ function buildFrameSegment(props: any, context: RenderContext, framePath: string
 
   let nonBlocking = !!props.fallback
   if (nonBlocking) {
-    seg.content = buildSegment(props.fallback, context, id)
-    let framePromise = Promise.resolve(context.resolveFrame(props.src))
+    seg.content = buildSegment(props.fallback, context, framePath)
+    let framePromise = Promise.resolve(context.resolveFrame(props.src)).then(async (resolved) =>
+      resolveFrameHtml(resolved),
+    )
     context.pendingFrames.push({ frameId, promise: framePromise })
   } else {
-    seg.pending = Promise.resolve(context.resolveFrame(props.src)).then((resolved) => {
-      seg.content = buildSegment(resolved, context, id)
+    seg.pending = Promise.resolve(context.resolveFrame(props.src)).then(async (resolved) => {
+      let { html, tail } = await resolveFrameHtml(resolved)
+      seg.content = staticSeg(html)
+      if (tail) {
+        context.blockingFrameTails.push(tail)
+      }
     })
   }
 
@@ -411,6 +467,9 @@ function buildComponentSegment(
       }
       return undefined
     },
+    getFrameByName() {
+      return undefined
+    },
   })
 
   vnode._handle = handle
@@ -439,9 +498,14 @@ function createHydrationPropsReplacer(context: RenderContext, framePath: string)
     let type = element.type
     let props = element.props
 
-    // Special handling for Frame: serialize fallback subtree only
+    // Preserve Frame semantics through serialized props by emitting
+    // a dedicated descriptor that can be revived on the client.
     if (type === Frame) {
-      return unwrapNode(props.fallback)
+      return {
+        $rmxFrame: true,
+        props: transformProps(props),
+        key: element.key,
+      }
     }
 
     // If it's a DOM tag, return a serializable shape with transformed props
@@ -471,6 +535,9 @@ function createHydrationPropsReplacer(context: RenderContext, framePath: string)
             }
             current = current._parent
           }
+          return undefined
+        },
+        getFrameByName() {
           return undefined
         },
       })
@@ -513,22 +580,21 @@ function createHydrationPropsReplacer(context: RenderContext, framePath: string)
   }
 }
 
-function buildHydratedComponentSegment(
-  type: HydratedComponent,
+function buildEntrySegment(
+  type: EntryComponent,
   props: any,
   context: RenderContext,
   framePath: string,
 ): Segment {
-  let nextIndex = (context.idsByPath.get(framePath) ?? 0) + 1
-  context.idsByPath.set(framePath, nextIndex)
-  let id = framePath ? `${framePath}.${nextIndex}` : `${nextIndex}`
-  let instanceId = `h${id}`
-  let rendered = buildComponentSegment(type, props, context, instanceId, id)
+  let instanceId = randomId('h')
+  let rendered = buildComponentSegment(type, props, context, instanceId, framePath)
 
   // Store hydration data in context for aggregation
-  let replacer = createHydrationPropsReplacer(context, id)
+  let replacer = createHydrationPropsReplacer(context, framePath)
   context.hydrationData.set(instanceId, {
-    moduleUrl: context.resolveHydrationRootUrl(type.$moduleUrl, { exportName: type.$exportName }),
+    moduleUrl: context.resolveClientEntryUrl(type.$moduleUrl, {
+      exportName: type.$exportName,
+    }),
     exportName: type.$exportName,
     props: JSON.parse(JSON.stringify(props, replacer)),
   })
@@ -573,6 +639,14 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+function escapeTextContent(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function escapeTemplateContent(html: string): string {
+  return html.replace(/<\/template/gi, '<\\/template')
 }
 
 function transformAttributeName(name: string, isSvg: boolean): string {
@@ -672,10 +746,6 @@ function finalizeHtml(html: string, context: RenderContext): string {
     }
   }
 
-  if (hasHtmlRoot) {
-    html = '<!doctype html>' + html
-  }
-
   return html
 }
 
@@ -728,7 +798,13 @@ function buildRmxDataScript(context: RenderContext): string {
     data.f = Object.fromEntries(context.frameData)
   }
 
-  return `<script type="application/json" id="rmx-data">${JSON.stringify(data)}</script>`
+  let serializedData = escapeScriptJson(JSON.stringify(data))
+  return `<script type="application/json" id="rmx-data">${serializedData}</script>`
+}
+
+function escapeScriptJson(json: string): string {
+  // Avoid prematurely closing the script tag when serialized data contains "</script>".
+  return json.replace(/</g, '\\u003c')
 }
 
 function serializeStyleObject(style: Record<string, any>): string {
@@ -761,11 +837,10 @@ function serializeStyleObject(style: Record<string, any>): string {
   return parts.join(' ')
 }
 
-// TODO: Streamed Frame chunks don't include styles. If a Frame's resolved content uses `css` props,
-// those styles get added to styleCache but are never sent to the client. The elements would have
-// `data-css="rmx-xxx"` attributes pointing to CSS rules that don't exist. When Frame is fully
-// implemented, we need to track which styles are new for each chunk and include them in the
-// streamed template, e.g.: `<style data-rmx-styles>${newCss}</style>` prepended to the content.
+// Frame styles work end-to-end when frame handlers use their own `renderToStream`:
+// the handler's `finalizeHtml` emits `<style data-rmx-styles>` in its HTML, and on the client,
+// `hoistHeadElements` (frame.ts) moves it to `document.head` where the `adoptServerStyleTag`
+// MutationObserver (stylesheet.ts) picks it up and adopts the CSS into an adopted stylesheet.
 async function streamPendingFrames(
   context: RenderContext,
   controller: ReadableStreamDefaultController,
@@ -781,23 +856,45 @@ async function streamPendingFrames(
       batch.map(async ({ frameId, promise }) => {
         processedFrames.add(frameId)
         try {
-          let resolvedContent = await promise
-          // Derive hierarchical path from the frame id (strip the 'f' prefix)
-          let framePath = frameId.startsWith('f') ? frameId.slice(1) : frameId
-          let contentSegment = buildSegment(resolvedContent, context, framePath)
-          // Ensure any blocking descendants are fully resolved before streaming
-          await resolveBlocking(contentSegment)
-          let contentHtml = serializeSegment(contentSegment)
+          let { html, tail } = await promise
 
-          // Stream as a template element
-          let templateHtml = `<template id="${frameId}">${contentHtml}</template>`
+          // Stream as a template element (first chunk only)
+          let templateHtml = `<template id="${frameId}">${escapeTemplateContent(html)}</template>`
           controller.enqueue(encoder.encode(templateHtml))
+
+          // Forward any additional chunks from a stream-valued resolveFrame result.
+          if (tail) {
+            await streamByteStreams([tail], controller, context.onError)
+          }
         } catch (error) {
           context.onError(error)
         }
       }),
     )
   }
+}
+
+async function streamByteStreams(
+  streams: ReadableStream<Uint8Array>[],
+  controller: ReadableStreamDefaultController,
+  onError: (error: unknown) => void,
+): Promise<void> {
+  await Promise.all(
+    streams.map(async (stream) => {
+      let reader = stream.getReader()
+      try {
+        while (true) {
+          let { done, value } = await reader.read()
+          if (done) break
+          controller.enqueue(value)
+        }
+      } catch (error) {
+        onError(error)
+      } finally {
+        reader.releaseLock()
+      }
+    }),
+  )
 }
 
 async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {

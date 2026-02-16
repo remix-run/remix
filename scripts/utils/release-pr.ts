@@ -8,9 +8,10 @@ let maxBodyLength = 60_000
  * Generates the PR body for a release PR
  */
 export function generatePrBody(releases: PackageRelease[]): string {
+  let orderedReleases = sortReleasesForDisplay(releases)
   let header = generateHeader()
-  let releasesTable = generateReleasesTable(releases)
-  let changelogs = generateChangelogs(releases)
+  let releasesTable = generateReleasesTable(orderedReleases)
+  let changelogs = generateChangelogs(orderedReleases)
 
   let fullBody = [header, releasesTable, changelogs].join('\n\n')
 
@@ -22,9 +23,26 @@ export function generatePrBody(releases: PackageRelease[]): string {
   // Truncate changelogs section to fit
   let baseLength = header.length + releasesTable.length + 100 // buffer for truncation notice
   let availableForChangelogs = maxBodyLength - baseLength
-  let truncatedChangelogs = truncateChangelogs(releases, availableForChangelogs)
+  let truncatedChangelogs = truncateChangelogs(orderedReleases, availableForChangelogs)
 
   return [header, releasesTable, truncatedChangelogs].join('\n\n')
+}
+
+function sortReleasesForDisplay(releases: PackageRelease[]): PackageRelease[] {
+  return [...releases].sort((a, b) => {
+    let aIsRemix = a.packageDirName === 'remix'
+    let bIsRemix = b.packageDirName === 'remix'
+
+    if (aIsRemix && !bIsRemix) {
+      return -1
+    }
+
+    if (!aIsRemix && bIsRemix) {
+      return 1
+    }
+
+    return a.packageName.localeCompare(b.packageName)
+  })
 }
 
 function generateHeader(): string {

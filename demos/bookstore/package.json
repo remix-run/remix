@@ -3,10 +3,12 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "better-sqlite3": "^12.6.2",
     "remix": "workspace:*",
     "sharp": "^0.34.5"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "cheerio": "^1.2.0",

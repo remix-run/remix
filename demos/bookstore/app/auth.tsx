@@ -1,5 +1,5 @@
-import type { Controller } from 'remix'
-import { redirect } from 'remix'
+import type { Controller } from 'remix/fetch-router'
+import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
 import {
@@ -87,7 +87,7 @@ export default {
         let password = formData.get('password')?.toString() ?? ''
         let returnTo = url.searchParams.get('returnTo')
 
-        let user = authenticateUser(email, password)
+        let user = await authenticateUser(email, password)
         if (!user) {
           session.flash('error', 'Invalid email or password. Please try again.')
           return redirect(routes.auth.login.index.href(undefined, { returnTo }))
@@ -147,7 +147,7 @@ export default {
         let password = formData.get('password')?.toString() ?? ''
 
         // Check if user already exists
-        if (getUserByEmail(email)) {
+        if (await getUserByEmail(email)) {
           return render(
             <Document>
               <div class="card" css={{ maxWidth: '500px', margin: '2rem auto' }}>
@@ -170,7 +170,7 @@ export default {
           )
         }
 
-        let user = createUser(email, password, name)
+        let user = await createUser(email, password, name)
 
         session.set('userId', user.id)
 
@@ -212,7 +212,7 @@ export default {
 
       async action({ formData }) {
         let email = formData.get('email')?.toString() ?? ''
-        let token = createPasswordResetToken(email)
+        let token = await createPasswordResetToken(email)
 
         return render(
           <Document>
@@ -311,7 +311,7 @@ export default {
           return redirect(routes.auth.resetPassword.index.href({ token: params.token }))
         }
 
-        let success = resetPassword(params.token, password)
+        let success = await resetPassword(params.token, password)
 
         if (!success) {
           session.flash('error', 'Invalid or expired reset token.')

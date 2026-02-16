@@ -1,7 +1,6 @@
 import * as fs from 'node:fs'
-import type { Middleware } from 'remix'
-import type { Assets } from 'remix/fetch-router'
-import { createRouter } from 'remix'
+import type { Assets, Middleware } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
 import { asyncContext } from 'remix/async-context-middleware'
 import { compression } from 'remix/compression-middleware'
 import { formData } from 'remix/form-data-middleware'
@@ -12,6 +11,7 @@ import { staticFiles } from 'remix/static-middleware'
 
 import { files } from '../assets.ts'
 import { routes } from './routes.ts'
+import { initializeBookstoreDatabase } from './models/database.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
 import { uploadHandler } from './utils/uploads.ts'
 
@@ -20,9 +20,13 @@ import accountController from './account.tsx'
 import authController from './auth.tsx'
 import booksController from './books.tsx'
 import cartController from './cart.tsx'
+import { toggleCart } from './cart.tsx'
 import checkoutController from './checkout.tsx'
 import * as marketingController from './marketing.tsx'
 import { uploadsAction } from './uploads.tsx'
+import fragmentsController from './fragments.tsx'
+import { routerStorageKey } from './utils/router-storage.ts'
+import { loadDatabase } from './middleware/database.ts'
 
 // Mock assets middleware for tests (returns mock asset entries)
 function mockAssets(): Middleware {
@@ -72,8 +76,8 @@ async function getAssetsMiddleware(): Promise<Middleware[]> {
     assets(manifest, {
       baseUrl: '/assets',
     }),
-    staticFiles('./build/assets', {
-      basePath: '/assets',
+    staticFiles('./build', {
+      filter: (path) => path.startsWith('assets/'),
       cacheControl: 'public, max-age=31536000, immutable',
     }),
   ]
@@ -99,10 +103,21 @@ middleware.push(formData({ uploadHandler }))
 middleware.push(methodOverride())
 middleware.push(session(sessionCookie, sessionStorage))
 middleware.push(asyncContext())
+middleware.push(loadDatabase())
+
+await initializeBookstoreDatabase()
 
 export let router = createRouter({ middleware })
 
+// Make router available to render() for internal frame resolution (no network).
+middleware.unshift((context: any, next: any) => {
+  context.storage.set(routerStorageKey, router)
+  return next()
+})
+
 router.get(routes.uploads, uploadsAction)
+router.map(routes.fragments, fragmentsController)
+router.post(routes.api.cartToggle, toggleCart)
 
 router.map(routes.home, marketingController.home)
 router.map(routes.about, marketingController.about)

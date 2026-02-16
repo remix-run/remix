@@ -1,4 +1,4 @@
-import { createRouter } from 'remix'
+import { createRouter } from 'remix/fetch-router'
 import { compression } from 'remix/compression-middleware'
 import { logger } from 'remix/logger-middleware'
 import { staticFiles } from 'remix/static-middleware'

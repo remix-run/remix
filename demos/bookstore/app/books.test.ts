@@ -11,7 +11,7 @@ describe('books handlers', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
     assertContains(html, 'Browse Books')
-    assertContains(html, 'Ash & Smoke')
+    assertContains(html, 'Ash &amp; Smoke')
     assertContains(html, 'Heavy Metal Guitar Riffs')
     assertContains(html, 'Three Ways to Change Your Life')
   })
@@ -21,7 +21,7 @@ describe('books handlers', () => {
 
     assert.equal(response.status, 200)
     let html = await response.text()
-    assertContains(html, 'Ash & Smoke')
+    assertContains(html, 'Ash &amp; Smoke')
     assertContains(html, 'Rusty Char-Broil')
     assertContains(html, 'Add to Cart')
   })

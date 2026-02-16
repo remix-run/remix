@@ -1,5 +1,6 @@
-import type { Middleware, Route } from 'remix'
-import { redirect } from 'remix'
+import type { Middleware } from 'remix/fetch-router'
+import type { Route } from 'remix/fetch-router/routes'
+import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../routes.ts'
 import { getUserById } from '../models/users.ts'
@@ -11,12 +12,12 @@ import { setCurrentUser } from '../utils/context.ts'
  * Attaches user (if any) to context.storage.
  */
 export function loadAuth(): Middleware {
-  return ({ session }) => {
+  return async ({ session }) => {
     let userId = session.get('userId')
 
     // Only set current user if authenticated
-    if (typeof userId === 'string') {
-      let user = getUserById(userId)
+    if (typeof userId === 'string' || typeof userId === 'number') {
+      let user = await getUserById(userId)
       if (user) {
         setCurrentUser(user)
       }
@@ -40,9 +41,12 @@ export interface RequireAuthOptions {
 export function requireAuth(options?: RequireAuthOptions): Middleware {
   let redirectRoute = options?.redirectTo ?? routes.auth.login.index
 
-  return ({ session, url }) => {
+  return async ({ session, url }) => {
     let userId = session.get('userId')
-    let user = typeof userId === 'string' && getUserById(userId)
+    let user =
+      typeof userId === 'string' || typeof userId === 'number'
+        ? await getUserById(userId)
+        : undefined
 
     if (!user) {
       // Capture the current URL to redirect back to after login

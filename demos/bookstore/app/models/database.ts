@@ -1,0 +1,331 @@
+import * as fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import BetterSqlite3 from 'better-sqlite3'
+import * as s from 'remix/data-schema'
+import { belongsTo, createDatabase, createTable, hasMany, sql } from 'remix/data-table'
+import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
+
+export let books = createTable({
+  name: 'books',
+  columns: {
+    id: s.number(),
+    slug: s.string(),
+    title: s.string(),
+    author: s.string(),
+    description: s.string(),
+    price: s.number(),
+    genre: s.string(),
+    image_urls: s.string(),
+    cover_url: s.string(),
+    isbn: s.string(),
+    published_year: s.number(),
+    in_stock: s.boolean(),
+  },
+})
+
+export let users = createTable({
+  name: 'users',
+  columns: {
+    id: s.number(),
+    email: s.string(),
+    password: s.string(),
+    name: s.string(),
+    role: s.enum_(['customer', 'admin']),
+    created_at: s.number(),
+  },
+})
+
+export let orders = createTable({
+  name: 'orders',
+  columns: {
+    id: s.number(),
+    user_id: s.number(),
+    total: s.number(),
+    status: s.enum_(['pending', 'processing', 'shipped', 'delivered']),
+    shipping_address_json: s.string(),
+    created_at: s.number(),
+  },
+})
+
+export let orderItems = createTable({
+  name: 'order_items',
+  primaryKey: ['order_id', 'book_id'],
+  columns: {
+    order_id: s.number(),
+    book_id: s.number(),
+    title: s.string(),
+    unit_price: s.number(),
+    quantity: s.number(),
+  },
+})
+
+export let itemsByOrder = hasMany(orders, orderItems)
+export let bookForOrderItem = belongsTo(orderItems, books)
+
+export let passwordResetTokens = createTable({
+  name: 'password_reset_tokens',
+  primaryKey: ['token'],
+  columns: {
+    token: s.string(),
+    user_id: s.number(),
+    expires_at: s.number(),
+  },
+})
+
+let databaseFilePath = getDatabaseFilePath()
+
+fs.mkdirSync(fileURLToPath(new URL('../../tmp/', import.meta.url)), { recursive: true })
+
+if (process.env.NODE_ENV === 'test' && fs.existsSync(databaseFilePath)) {
+  fs.unlinkSync(databaseFilePath)
+}
+
+let sqlite = new BetterSqlite3(databaseFilePath)
+sqlite.pragma('foreign_keys = ON')
+let adapter = createSqliteDatabaseAdapter(sqlite)
+
+export let db = createDatabase(adapter)
+export type BookstoreDatabase = typeof db
+
+export function checkoutBookstoreDatabase(): {
+  db: BookstoreDatabase
+  release: () => void
+} {
+  return {
+    db,
+    release() {},
+  }
+}
+
+let initializePromise: Promise<void> | null = null
+
+export async function initializeBookstoreDatabase(): Promise<void> {
+  if (!initializePromise) {
+    initializePromise = initialize()
+  }
+
+  await initializePromise
+}
+
+async function initialize(): Promise<void> {
+  await db.exec(sql`
+    create table if not exists books (
+      id integer primary key autoincrement,
+      slug text not null unique,
+      title text not null,
+      author text not null,
+      description text not null,
+      price real not null,
+      genre text not null,
+      image_urls text not null,
+      cover_url text not null,
+      isbn text not null,
+      published_year integer not null,
+      in_stock integer not null
+    )
+  `)
+
+  await db.exec(sql`
+    create table if not exists users (
+      id integer primary key autoincrement,
+      email text not null unique,
+      password text not null,
+      name text not null,
+      role text not null,
+      created_at integer not null
+    )
+  `)
+
+  await db.exec(sql`
+    create table if not exists orders (
+      id integer primary key autoincrement,
+      user_id integer not null references users (id) on delete restrict,
+      total real not null,
+      status text not null,
+      shipping_address_json text not null,
+      created_at integer not null
+    )
+  `)
+
+  await db.exec(sql`
+    create index if not exists orders_user_id_idx on orders (user_id)
+  `)
+
+  await db.exec(sql`
+    create table if not exists order_items (
+      order_id integer not null references orders (id) on delete cascade,
+      book_id integer not null references books (id) on delete restrict,
+      title text not null,
+      unit_price real not null,
+      quantity integer not null,
+      primary key (order_id, book_id)
+    )
+  `)
+
+  await db.exec(sql`
+    create index if not exists order_items_order_id_idx on order_items (order_id)
+  `)
+
+  await db.exec(sql`
+    create index if not exists order_items_book_id_idx on order_items (book_id)
+  `)
+
+  await db.exec(sql`
+    create table if not exists password_reset_tokens (
+      token text primary key,
+      user_id integer not null references users (id) on delete cascade,
+      expires_at integer not null
+    )
+  `)
+
+  await db.exec(sql`
+    create index if not exists password_reset_tokens_user_id_idx on password_reset_tokens (user_id)
+  `)
+
+  let booksCount = await db.count(books)
+  if (booksCount === 0) {
+    await db.createMany(books, [
+      {
+        id: 1,
+        slug: 'bbq',
+        title: 'Ash & Smoke',
+        author: 'Rusty Char-Broil',
+        description: 'The perfect gift for the BBQ enthusiast in your life!',
+        price: 16.99,
+        genre: 'cookbook',
+        image_urls: JSON.stringify(['/images/bbq-1.png', '/images/bbq-2.png', '/images/bbq-3.png']),
+        cover_url: '/images/bbq-1.png',
+        isbn: '978-0525559474',
+        published_year: 2020,
+        in_stock: true,
+      },
+      {
+        id: 2,
+        slug: 'heavy-metal',
+        title: 'Heavy Metal Guitar Riffs',
+        author: 'Axe Master Krush',
+        description: 'The ultimate guide to heavy metal guitar riffs!',
+        price: 27.0,
+        genre: 'music',
+        image_urls: JSON.stringify([
+          '/images/heavy-metal-1.png',
+          '/images/heavy-metal-2.png',
+          '/images/heavy-metal-3.png',
+        ]),
+        cover_url: '/images/heavy-metal-1.png',
+        isbn: '978-0735211292',
+        published_year: 2018,
+        in_stock: true,
+      },
+      {
+        id: 3,
+        slug: 'three-ways',
+        title: 'Three Ways to Change Your Life',
+        author: 'Britney Spears',
+        description: 'A practical guide to changing your life for the better.',
+        price: 28.99,
+        genre: 'self-help',
+        image_urls: JSON.stringify([
+          '/images/three-ways-1.png',
+          '/images/three-ways-2.png',
+          '/images/three-ways-3.png',
+        ]),
+        cover_url: '/images/three-ways-1.png',
+        isbn: '978-0593135204',
+        published_year: 2021,
+        in_stock: true,
+      },
+    ])
+  }
+
+  let usersCount = await db.count(users)
+  if (usersCount === 0) {
+    await db.createMany(users, [
+      {
+        id: 1,
+        email: 'admin@bookstore.com',
+        password: 'admin123',
+        name: 'Admin User',
+        role: 'admin',
+        created_at: new Date('2024-01-01').getTime(),
+      },
+      {
+        id: 2,
+        email: 'customer@example.com',
+        password: 'password123',
+        name: 'John Doe',
+        role: 'customer',
+        created_at: new Date('2024-02-15').getTime(),
+      },
+    ])
+  }
+
+  let ordersCount = await db.count(orders)
+  if (ordersCount === 0) {
+    await db.createMany(orders, [
+      {
+        id: 1001,
+        user_id: 2,
+        total: 45.98,
+        status: 'delivered',
+        shipping_address_json: JSON.stringify({
+          street: '123 Main St',
+          city: 'Boston',
+          state: 'MA',
+          zip: '02101',
+        }),
+        created_at: new Date('2024-09-15').getTime(),
+      },
+      {
+        id: 1002,
+        user_id: 2,
+        total: 54.0,
+        status: 'shipped',
+        shipping_address_json: JSON.stringify({
+          street: '123 Main St',
+          city: 'Boston',
+          state: 'MA',
+          zip: '02101',
+        }),
+        created_at: new Date('2024-10-01').getTime(),
+      },
+    ])
+  }
+
+  let orderItemsCount = await db.count(orderItems)
+  if (orderItemsCount === 0) {
+    await db.createMany(orderItems, [
+      {
+        order_id: 1001,
+        book_id: 1,
+        title: 'Ash & Smoke',
+        unit_price: 16.99,
+        quantity: 1,
+      },
+      {
+        order_id: 1001,
+        book_id: 3,
+        title: 'Three Ways to Change Your Life',
+        unit_price: 28.99,
+        quantity: 1,
+      },
+      {
+        order_id: 1002,
+        book_id: 2,
+        title: 'Heavy Metal Guitar Riffs',
+        unit_price: 27.0,
+        quantity: 2,
+      },
+    ])
+  }
+}
+
+function getDatabaseFilePath(): string {
+  let tempDirectoryUrl = new URL('../../tmp/', import.meta.url)
+  let fileName =
+    process.env.NODE_ENV === 'test'
+      ? `bookstore.test.${process.pid}.${Date.now()}.sqlite`
+      : 'bookstore.sqlite'
+
+  return fileURLToPath(new URL(fileName, tempDirectoryUrl))
+}

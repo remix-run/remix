@@ -9,14 +9,14 @@ describe('PartPattern', () => {
     type AST = ConstructorParameters<typeof PartPattern>[0]
     function assertParse(source: string, ast: AST) {
       assert.deepEqual(
-        PartPattern.parse(source, { type: 'pathname', ignoreCase: false }),
-        new PartPattern(ast, { type: 'pathname', ignoreCase: false }),
+        PartPattern.parse(source, { type: 'pathname' }),
+        new PartPattern(ast, { type: 'pathname' }),
       )
     }
 
     function assertParseError(source: string, type: ParseError['type'], index: number) {
       assert.throws(
-        () => PartPattern.parse(source, { type: 'pathname', ignoreCase: false }),
+        () => PartPattern.parse(source, { type: 'pathname' }),
         new ParseError(type, source, index),
       )
     }
@@ -191,7 +191,7 @@ describe('PartPattern', () => {
 
   describe('source', () => {
     function assertSource(expected: string) {
-      let partPattern = PartPattern.parse(expected, { type: 'pathname', ignoreCase: false })
+      let partPattern = PartPattern.parse(expected, { type: 'pathname' })
       assert.equal(partPattern.source, expected)
     }
 
@@ -204,7 +204,7 @@ describe('PartPattern', () => {
   describe('match', () => {
     type MatchParam = { type: ':' | '*'; name: string; value: string; begin: number; end: number }
     function assertMatch(pattern: string, part: string, expected: Array<MatchParam>) {
-      let result = PartPattern.parse(pattern, { type: 'pathname', ignoreCase: false }).match(part)
+      let result = PartPattern.parse(pattern, { type: 'pathname' }).match(part)
       assert.deepEqual(result, expected)
     }
 
@@ -266,6 +266,13 @@ describe('PartPattern', () => {
 
     it('matches nested optional parameters when all absent', () => {
       assertMatch('api(/:major(/:minor))', 'api', [])
+    })
+
+    it('matches pattern with case-sensitivity determined by ignoreCase option', () => {
+      let pattern = PartPattern.parse('Posts/:id', { type: 'pathname' })
+      assert.equal(pattern.match('posts/123'), null)
+      assert.notEqual(pattern.match('Posts/123', { ignoreCase: false }), null)
+      assert.notEqual(pattern.match('posts/123', { ignoreCase: true }), null)
     })
   })
 })

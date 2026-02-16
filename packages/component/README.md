@@ -1,6 +1,6 @@
-# Remix Component
+# component
 
-A minimal component system that leans on JavaScript and DOM primitives.
+A minimal component system built on JavaScript and DOM primitives. Write components that render on the server, stream to the browser, and hydrate only where you need interactivity.
 
 ## Features
 
@@ -9,66 +9,161 @@ A minimal component system that leans on JavaScript and DOM primitives.
 - **Manual Updates** - Explicit control over when components update via `handle.update()`
 - **Real DOM Events** - Events are real DOM events using [`@remix-run/interaction`](../interaction)
 - **Inline CSS** - CSS prop with pseudo-selectors and nested rules
+- **Server Rendering** - Stream full pages or fragments with `renderToStream`
+- **Hydration** - Mark interactive components with `clientEntry` and hydrate them on the client with `run`
+- **Frames** - `<Frame>` streams partial server UI into the page and can be reloaded without a full page navigation
 
 ## Installation
 
 ```sh
-npm install @remix-run/component
+npm i remix
 ```
 
-## Getting Started
+## Quick Start
 
-Create a root and render a component:
+### Server
+
+Render a full page to a streaming response:
 
 ```tsx
-import { createRoot } from '@remix-run/component'
+import { renderToStream } from '@remix-run/component/server'
+import { Frame } from '@remix-run/component'
+import { Counter } from './assets/counter.tsx'
 
-function App(handle: Handle) {
-  let count = 0
+function App() {
+  return () => (
+    <html>
+      <head>
+        <title>My App</title>
+        <script async type="module" src="/assets/entry.js" />
+      </head>
+      <body>
+        <h1>Hello</h1>
+        <Counter setup={0} label="Clicks" />
+        <Frame src="/sidebar" fallback={<div>Loading...</div>} />
+      </body>
+    </html>
+  )
+}
+
+let stream = renderToStream(<App />, {
+  resolveFrame: (src) => fetchFrameHtml(src),
+})
+
+return new Response(stream, {
+  headers: { 'Content-Type': 'text/html' },
+})
+```
+
+### Client Entry
+
+Mark components that need client-side interactivity with `clientEntry`. They render on the server and hydrate on the client:
+
+```tsx
+import { clientEntry, type Handle } from '@remix-run/component'
+
+export let Counter = clientEntry(
+  '/assets/counter.js#Counter',
+  function Counter(handle: Handle, setup: number) {
+    let count = setup
+
+    return (props: { label: string }) => (
+      <div>
+        <span>
+          {props.label}: {count}
+        </span>
+        <button
+          on={{
+            click() {
+              count++
+              handle.update()
+            },
+          }}
+        >
+          +
+        </button>
+      </div>
+    )
+  },
+)
+```
+
+The first argument is the module URL and export name the client will use to load this component. The component renders on the server like any other component, and the client hydrates it in place, preserving the server-rendered HTML.
+
+### Client
+
+Boot the client with `run`. It finds all client entries in the page, loads their modules, and hydrates them:
+
+```tsx
+import { run } from '@remix-run/component'
+
+let app = run(document, {
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    return mod[exportName]
+  },
+  async resolveFrame(src) {
+    let res = await fetch(src, { headers: { accept: 'text/html' } })
+    return await res.text()
+  },
+})
+
+await app.ready()
+```
+
+### Frames
+
+`<Frame>` renders server content into the page. Frames can stream in after the initial HTML, nest other frames, and contain client entries. They can be reloaded from the client without a full page navigation:
+
+```tsx
+<Frame src="/sidebar" fallback={<div>Loading sidebar...</div>} />
+```
+
+Client entries inside a frame can trigger a reload:
+
+```tsx
+function RefreshButton(handle: Handle) {
   return () => (
     <button
       on={{
-        click: () => {
-          count++
-          handle.update()
+        click() {
+          handle.frame.reload()
         },
       }}
     >
-      Count: {count}
+      Refresh
     </button>
   )
 }
-
-createRoot(document.body).render(<App />)
 ```
 
-Components are functions that receive a `Handle` as their first argument. They must return a render function that receives props.
+When a frame reloads, its server HTML is re-fetched and diffed into the page. Client entries inside the frame receive updated props from the server while preserving their local state.
 
-## Component State and Updates
-
-State is managed with plain JavaScript variables. Call `handle.update()` to schedule an update:
+You can also name frames and reload adjacent ones:
 
 ```tsx
-function Counter(handle: Handle) {
-  let count = 0
+<Frame name="cart-summary" src="/cart-summary" />
+<Frame src="/cart-row" />
+```
 
+```tsx
+function CartRow(handle: Handle) {
   return () => (
-    <div>
-      <span>Count: {count}</span>
-      <button
-        on={{
-          click: () => {
-            count++
-            handle.update()
-          },
-        }}
-      >
-        Increment
-      </button>
-    </div>
+    <button
+      on={{
+        async click() {
+          await handle.frames.get('cart-summary')?.reload()
+          await handle.frame.reload()
+        },
+      }}
+    >
+      Save
+    </button>
   )
 }
 ```
+
+When a frame reloads, its server HTML is re-fetched and diffed into the page. Client entries inside the frame receive updated props from the server while preserving their local state.
 
 ## Components
 
@@ -328,16 +423,18 @@ function Component(handle: Handle) {
 
 Components receive a `Handle` as their first argument with the following API:
 
-- **`handle.update(task?)`** - Schedule an update. Optionally provide a task to run after the update.
+- **`handle.update()`** - Schedule an update and await completion to get an `AbortSignal`.
 - **`handle.queueTask(task)`** - Schedule a task to run after the next update. Useful for DOM operations that need to happen after rendering (e.g., moving focus, scrolling, measuring elements, etc.).
 - **`handle.on(target, listeners)`** - Listen to an event target with automatic cleanup when the component disconnects.
 - **`handle.signal`** - An `AbortSignal` that's aborted when the component is disconnected. Useful for cleanup.
 - **`handle.id`** - Stable identifier per component instance.
 - **`handle.context`** - Context API for ancestor/descendant communication.
+- **`handle.frame`** - The component's closest frame. Call `handle.frame.reload()` to refresh the frame's server content.
+- **`handle.frames.get(name)`** - Look up named frames in the current runtime tree for adjacent frame reloads.
 
-### `handle.update(task?)`
+### `handle.update()`
 
-Schedule an update. Optionally provide a task to run after the update completes.
+Schedule an update and optionally await completion to coordinate post-update work.
 
 ```tsx
 function Counter(handle: Handle) {
@@ -358,7 +455,7 @@ function Counter(handle: Handle) {
 }
 ```
 
-You can pass a task to run after the update:
+You can await the update before doing DOM work:
 
 ```tsx
 function Player(handle: Handle) {
@@ -372,12 +469,11 @@ function Player(handle: Handle) {
         disabled={isPlaying}
         connect={(node) => (playButton = node)}
         on={{
-          click: () => {
+          async click() {
             isPlaying = true
-            handle.update(() => {
-              // Focus the enabled button after update completes
-              stopButton.focus()
-            })
+            await handle.update()
+            // Focus the enabled button after update completes
+            stopButton.focus()
           },
         }}
       >
@@ -387,12 +483,11 @@ function Player(handle: Handle) {
         disabled={!isPlaying}
         connect={(node) => (stopButton = node)}
         on={{
-          click: () => {
+          async click() {
             isPlaying = false
-            handle.update(() => {
-              // Focus the enabled button after update completes
-              playButton.focus()
-            })
+            await handle.update()
+            // Focus the enabled button after update completes
+            playButton.focus()
           },
         }}
       >
@@ -539,7 +634,7 @@ function Header(handle: Handle) {
 Setting context values does not automatically trigger updates. If a provider needs to render its own context values, call `handle.update()` after setting them. However, since providers often don't render context values themselves, calling `update()` can cause expensive updates of the entire subtree. Instead, make your context an [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) and have consumers subscribe to changes.
 
 ```tsx
-import { TypedEventTarget } from '@remix-run/interaction'
+import { TypedEventTarget } from 'remix/interaction'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
   #value: 'light' | 'dark' = 'light'
@@ -605,17 +700,20 @@ function List(handle: Handle) {
 }
 ```
 
-## Wrapping Components
+## Documentation
 
-- use `Props<'div'>`
-- use `RemixNode` not JSX.Element, etc.
-
-## Future
-
-This package is a work in progress. Future features (demo'd at Remix Jam) include:
-
-- Server Rendering
-- Selective Hydration
-- `<Frame>` for streamable, reloadable partial server UI
+- [Getting Started](./docs/getting-started.md)
+- [Components](./docs/components.md)
+- [Handle API](./docs/handle.md)
+- [Server Rendering](./docs/server-rendering.md)
+- [Hydration](./docs/hydration.md)
+- [Frames](./docs/frames.md)
+- [Styling](./docs/styling.md)
+- [Events](./docs/events.md)
+- [Context](./docs/context.md)
+- [Composition](./docs/composition.md)
+- [Patterns](./docs/patterns.md)
+- [Testing](./docs/testing.md)
+- [Animation](./docs/animate.md)
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

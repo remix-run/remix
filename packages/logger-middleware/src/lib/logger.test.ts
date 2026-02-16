@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createRouter, route } from '@remix-run/fetch-router'
+import { createRouter } from '@remix-run/fetch-router'
+import { route } from '@remix-run/fetch-router/routes'
 
 import { logger } from './logger.ts'
 
@@ -17,14 +18,16 @@ describe('logger', () => {
       middleware: [logger({ log: (message) => messages.push(message) })],
     })
 
-    router.map(routes.home, () => {
-      return new Response('Home', {
-        headers: {
-          'Content-Length': '4',
-          'Content-Type': 'text/plain',
-        },
-      })
-    })
+    router.map(
+      routes.home,
+      () =>
+        new Response('Home', {
+          headers: {
+            'Content-Length': '4',
+            'Content-Type': 'text/plain',
+          },
+        }),
+    )
 
     let response = await router.fetch('https://remix.run')
 

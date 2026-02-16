@@ -1,7 +1,14 @@
-import { del, get, post, put, route, form, resources } from 'remix'
+import { del, get, post, put, route, form, resources } from 'remix/fetch-router/routes'
 
 export let routes = route({
   uploads: '/uploads/*key',
+  fragments: route('fragments', {
+    cartButton: get('/cart-button/:bookId'),
+    cartItems: get('/cart-items'),
+  }),
+  api: route('api', {
+    cartToggle: post('/cart/toggle'),
+  }),
 
   // Simple static routes
   home: '/',

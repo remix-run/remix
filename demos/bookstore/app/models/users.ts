@@ -1,111 +1,142 @@
-export interface User {
-  id: string
-  email: string
-  password: string // In production, this would be hashed!
-  name: string
-  role: 'customer' | 'admin'
-  createdAt: Date
+import type { TableRow } from 'remix/data-table'
+
+import { passwordResetTokens, users } from './database.ts'
+import { getRequestDatabase } from './request-database.ts'
+
+export type User = TableRow<typeof users>
+
+export async function getAllUsers(): Promise<User[]> {
+  let db = getRequestDatabase()
+  return db.findMany(users, { orderBy: ['id', 'asc'] })
 }
 
-const usersData: User[] = [
-  {
-    id: '1',
-    email: 'admin@bookstore.com',
-    password: 'admin123', // Never do this in production!
-    name: 'Admin User',
-    role: 'admin',
-    createdAt: new Date('2024-01-01'),
-  },
-  {
-    id: '2',
-    email: 'customer@example.com',
-    password: 'password123',
-    name: 'John Doe',
-    role: 'customer',
-    createdAt: new Date('2024-02-15'),
-  },
-]
+export async function getUserById(id: number | string): Promise<User | null> {
+  let userId = parseUserId(id)
+  if (userId === null) {
+    return null
+  }
 
-export function getAllUsers(): User[] {
-  return [...usersData]
+  let db = getRequestDatabase()
+  return db.find(users, userId)
 }
 
-export function getUserById(id: string): User | undefined {
-  return usersData.find((user) => user.id === id)
+export async function getUserByEmail(email: string): Promise<User | null> {
+  let db = getRequestDatabase()
+  return db.findOne(users, { where: { email: normalizeEmail(email) } })
 }
 
-export function getUserByEmail(email: string): User | undefined {
-  return usersData.find((user) => user.email.toLowerCase() === email.toLowerCase())
-}
-
-export function authenticateUser(email: string, password: string): User | undefined {
-  let user = getUserByEmail(email)
+export async function authenticateUser(email: string, password: string): Promise<User | undefined> {
+  let user = await getUserByEmail(email)
   if (!user || user.password !== password) {
     return undefined
   }
+
   return user
 }
 
-export function createUser(
+export async function createUser(
   email: string,
   password: string,
   name: string,
   role: 'customer' | 'admin' = 'customer',
-): User {
-  let newUser: User = {
-    id: String(usersData.length + 1),
-    email,
-    password, // In production, hash this!
-    name,
-    role,
-    createdAt: new Date(),
+): Promise<User> {
+  let created_at = Date.now()
+  let db = getRequestDatabase()
+
+  return db.create(
+    users,
+    {
+      email: normalizeEmail(email),
+      password, // In production, hash this!
+      name,
+      role,
+      created_at,
+    },
+    { returnRow: true },
+  )
+}
+
+export async function updateUser(
+  id: number | string,
+  data: Partial<Omit<User, 'id'>>,
+): Promise<User | null> {
+  let userId = parseUserId(id)
+  if (userId === null) {
+    return null
   }
-  usersData.push(newUser)
-  return newUser
+  let db = getRequestDatabase()
+
+  let changes: Partial<User> = {}
+  if (data.email !== undefined) changes.email = normalizeEmail(data.email)
+  if (data.password !== undefined) changes.password = data.password
+  if (data.name !== undefined) changes.name = data.name
+  if (data.role !== undefined) changes.role = data.role
+  if (data.created_at !== undefined) changes.created_at = data.created_at
+
+  if (Object.keys(changes).length > 0) {
+    return db.update(users, userId, changes)
+  }
+
+  return getUserById(userId)
 }
 
-export function updateUser(id: string, data: Partial<Omit<User, 'id'>>): User | undefined {
-  let index = usersData.findIndex((user) => user.id === id)
-  if (index === -1) return undefined
+export async function deleteUser(id: number | string): Promise<boolean> {
+  let userId = parseUserId(id)
+  if (userId === null) {
+    return false
+  }
 
-  usersData[index] = { ...usersData[index], ...data }
-  return usersData[index]
+  let db = getRequestDatabase()
+  return db.delete(users, userId)
 }
 
-export function deleteUser(id: string): boolean {
-  let index = usersData.findIndex((user) => user.id === id)
-  if (index === -1) return false
-
-  usersData.splice(index, 1)
-  return true
-}
-
-// Password reset tokens (in production, use a proper token system)
-const resetTokens = new Map<string, { userId: string; expiresAt: Date }>()
-
-export function createPasswordResetToken(email: string): string | undefined {
-  let user = getUserByEmail(email)
-  if (!user) return undefined
+export async function createPasswordResetToken(email: string): Promise<string | undefined> {
+  let user = await getUserByEmail(email)
+  if (!user) {
+    return undefined
+  }
+  let db = getRequestDatabase()
 
   let token = Math.random().toString(36).substring(2, 15)
-  resetTokens.set(token, {
-    userId: user.id,
-    expiresAt: new Date(Date.now() + 3600000), // 1 hour
+
+  await db.create(passwordResetTokens, {
+    token,
+    user_id: user.id,
+    expires_at: Date.now() + 3600000,
   })
 
   return token
 }
 
-export function resetPassword(token: string, newPassword: string): boolean {
-  let tokenData = resetTokens.get(token)
-  if (!tokenData || tokenData.expiresAt < new Date()) {
+export async function resetPassword(token: string, newPassword: string): Promise<boolean> {
+  let db = getRequestDatabase()
+  let tokenData = await db.find(passwordResetTokens, { token })
+
+  if (!tokenData || tokenData.expires_at < Date.now()) {
     return false
   }
 
-  let user = getUserById(tokenData.userId)
-  if (!user) return false
+  let user = await getUserById(tokenData.user_id)
+  if (!user) {
+    return false
+  }
 
-  user.password = newPassword
-  resetTokens.delete(token)
+  await db.update(users, user.id, { password: newPassword })
+  await db.delete(passwordResetTokens, { token })
+
   return true
+}
+
+function parseUserId(id: number | string): number | null {
+  let parsed = typeof id === 'number' ? id : Number(id)
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null
+  }
+
+  return parsed
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
 }

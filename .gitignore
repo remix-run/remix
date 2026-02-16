@@ -10,6 +10,7 @@ reference/
 .assets/
 test-results/
 playwright-report/
+/demos/tmp/
 
 .env
 

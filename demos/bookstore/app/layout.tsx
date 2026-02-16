@@ -11,18 +11,15 @@ export function Document() {
       throw new Error('Entry point not found')
     }
 
-    // Generate modulepreload links for all chunks
-    let preloads = entry.chunks
-      .map((chunk) => `<link rel="modulepreload" href="${chunk}" />`)
-      .join('\n        ')
-
     return (
       <html lang="en">
         <head>
           <meta charSet="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title>{title}</title>
-          {preloads}
+          {entry.chunks.map((chunk) => (
+            <link key={chunk} rel="modulepreload" href={chunk} />
+          ))}
           <script type="module" async src={entry.href} />
           <link rel="stylesheet" href="/app.css" />
         </head>

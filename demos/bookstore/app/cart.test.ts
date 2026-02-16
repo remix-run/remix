@@ -9,7 +9,7 @@ describe('cart handlers', () => {
     let response = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '001',
+        bookId: '1',
         slug: 'bbq',
       }),
       redirect: 'manual',
@@ -24,7 +24,7 @@ describe('cart handlers', () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '002',
+        bookId: '2',
         slug: 'heavy-metal',
       }),
       redirect: 'manual',
@@ -48,7 +48,7 @@ describe('cart handlers', () => {
     let addResponse1 = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '001',
+        bookId: '1',
         slug: 'bbq',
       }),
       redirect: 'manual',
@@ -61,7 +61,7 @@ describe('cart handlers', () => {
     let addRequest2 = requestWithSession('https://remix.run/cart/api/add', sessionId, {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '003',
+        bookId: '3',
         slug: 'three-ways',
       }),
     })
@@ -74,5 +74,115 @@ describe('cart handlers', () => {
     let html = await cartResponse.text()
     assertContains(html, 'Ash & Smoke')
     assertContains(html, 'Three Ways to Change Your Life')
+  })
+
+  it('GET /fragments/cart-items renders table fragment for cart items', async () => {
+    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
+      method: 'POST',
+      body: new URLSearchParams({
+        bookId: '2',
+        slug: 'heavy-metal',
+      }),
+      redirect: 'manual',
+    })
+
+    let sessionId = getSessionCookie(addResponse)
+    assert.ok(sessionId)
+
+    let request = requestWithSession('https://remix.run/fragments/cart-items', sessionId)
+    let response = await router.fetch(request)
+    let html = await response.text()
+
+    assert.equal(response.status, 200)
+    assertContains(html, '<table>')
+    assertContains(html, '<th>Book</th>')
+    assertContains(html, 'Heavy Metal Guitar Riffs')
+    assertContains(html, 'Update')
+    assertContains(html, 'Remove')
+    assertContains(html, 'Total:')
+  })
+
+  it('GET /fragments/cart-items renders totals and actions', async () => {
+    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
+      method: 'POST',
+      body: new URLSearchParams({
+        bookId: '1',
+        slug: 'bbq',
+      }),
+      redirect: 'manual',
+    })
+
+    let sessionId = getSessionCookie(addResponse)
+    assert.ok(sessionId)
+
+    let request = requestWithSession('https://remix.run/fragments/cart-items', sessionId)
+    let response = await router.fetch(request)
+    let html = await response.text()
+
+    assert.equal(response.status, 200)
+    assertContains(html, 'Total:')
+    assertContains(html, '$16.99')
+    assertContains(html, 'Continue Shopping')
+    assertContains(html, 'Login to Checkout')
+  })
+
+  it('GET /fragments/cart-items renders empty state when cart is empty', async () => {
+    let response = await router.fetch('https://remix.run/fragments/cart-items')
+    let html = await response.text()
+
+    assert.equal(response.status, 200)
+    assertContains(html, 'Your cart is empty.')
+    assertContains(html, 'Browse Books')
+  })
+
+  it('PUT /cart/api/update returns 204 when redirect is none', async () => {
+    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
+      method: 'POST',
+      body: new URLSearchParams({
+        bookId: '1',
+        slug: 'bbq',
+      }),
+      redirect: 'manual',
+    })
+
+    let sessionId = getSessionCookie(addResponse)
+    assert.ok(sessionId)
+
+    let request = requestWithSession('https://remix.run/cart/api/update', sessionId, {
+      method: 'PUT',
+      body: new URLSearchParams({
+        bookId: '1',
+        quantity: '2',
+        redirect: 'none',
+      }),
+    })
+    let response = await router.fetch(request)
+
+    assert.equal(response.status, 204)
+  })
+
+  it('DELETE /cart/api/remove returns 204 when redirect is none', async () => {
+    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
+      method: 'POST',
+      body: new URLSearchParams({
+        bookId: '1',
+        slug: 'bbq',
+      }),
+      redirect: 'manual',
+    })
+
+    let sessionId = getSessionCookie(addResponse)
+    assert.ok(sessionId)
+
+    let request = requestWithSession('https://remix.run/cart/api/remove', sessionId, {
+      method: 'DELETE',
+      body: new URLSearchParams({
+        bookId: '1',
+        redirect: 'none',
+      }),
+    })
+    let response = await router.fetch(request)
+
+    assert.equal(response.status, 204)
   })
 })

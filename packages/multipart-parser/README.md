@@ -1,16 +1,6 @@
 # multipart-parser
 
-`multipart-parser` is a fast, streaming multipart parser that works in **any JavaScript environment**, from serverless functions to traditional servers. Whether you're handling file uploads, parsing email attachments, or working with multipart API responses, `multipart-parser` has you covered.
-
-## Why multipart-parser?
-
-- **Universal JavaScript** - One library that works everywhere: Node.js, Bun, Deno, Cloudflare Workers, and browsers
-- **Blazing Fast** - Consistently outperforms popular alternatives like busboy in benchmarks
-- **Zero Dependencies** - Lightweight and secure with no external dependencies
-- **Memory Efficient** - Streaming architecture that `yield`s files as they are found in the stream
-- **Type Safe** - Written in TypeScript with comprehensive type definitions
-- **Standards Based** - Built on the web standard [Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) for maximum compatibility
-- **Production Ready** - Battle-tested error handling with specific error types for common scenarios
+Fast streaming multipart parsing for JavaScript. `multipart-parser` processes multipart bodies incrementally so large uploads can be handled without buffering the entire multipart payload in memory.
 
 ## Features
 
@@ -23,10 +13,8 @@
 
 ## Installation
 
-Install from [npm](https://www.npmjs.com/):
-
 ```sh
-npm install @remix-run/multipart-parser
+npm i remix
 ```
 
 ## Usage
@@ -34,7 +22,7 @@ npm install @remix-run/multipart-parser
 The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It automatically validates the request is `multipart/form-data`, extracts the multipart boundary from the `Content-Type` header, parses all fields and files in the `request.body` stream, and gives each one to you as a `MultipartPart` object with a rich API for accessing its metadata and content.
 
 ```ts
-import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser'
+import { MultipartParseError, parseMultipartRequest } from 'remix/multipart-parser'
 
 async function handleRequest(request: Request): void {
   try {
@@ -72,7 +60,7 @@ import {
   MultipartParseError,
   MaxFileSizeExceededError,
   parseMultipartRequest,
-} from '@remix-run/multipart-parser/node'
+} from 'remix/multipart-parser/node'
 
 const oneMb = Math.pow(2, 20)
 const maxFileSize = 10 * oneMb
@@ -97,13 +85,13 @@ async function handleRequest(request: Request): Promise<Response> {
 
 ## Node.js Bindings
 
-The main module (`import from "@remix-run/multipart-parser"`) assumes you're working with [the fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) (`Request`, `ReadableStream`, etc). Support for these interfaces was added to Node.js by the [undici](https://github.com/nodejs/undici) project in [version 16.5.0](https://nodejs.org/en/blog/release/v16.5.0).
+The main module (`import {} from 'remix/multipart-parser'`) assumes you're working with [the fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) (`Request`, `ReadableStream`, etc). Support for these interfaces was added to Node.js by the [undici](https://github.com/nodejs/undici) project in [version 16.5.0](https://nodejs.org/en/blog/release/v16.5.0).
 
 If however you're building a server for Node.js that relies on node-specific APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
 
 ```ts
 import * as http from 'node:http'
-import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser/node'
+import { MultipartParseError, parseMultipartRequest } from 'remix/multipart-parser/node'
 
 let server = http.createServer(async (req, res) => {
   try {
@@ -127,7 +115,7 @@ server.listen(8080)
 If you're working directly with multipart boundaries and buffers/streams of multipart data that are not necessarily part of a request, `multipart-parser` provides a low-level `parseMultipart()` API that you can use directly:
 
 ```ts
-import { parseMultipart } from '@remix-run/multipart-parser'
+import { parseMultipart } from 'remix/multipart-parser'
 
 let message = new Uint8Array(/* ... */)
 let boundary = '----WebKitFormBoundary56eac3x'
@@ -140,7 +128,7 @@ for (let part of parseMultipart(message, { boundary })) {
 In addition, the `parseMultipartStream` function provides an `async` generator interface for multipart data in a `ReadableStream`:
 
 ```ts
-import { parseMultipartStream } from '@remix-run/multipart-parser'
+import { parseMultipartStream } from 'remix/multipart-parser'
 
 let message = new ReadableStream(/* ... */)
 let boundary = '----WebKitFormBoundary56eac3x'

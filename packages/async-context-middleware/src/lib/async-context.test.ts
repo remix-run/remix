@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createRouter, route } from '@remix-run/fetch-router'
+import { createRouter } from '@remix-run/fetch-router'
+import { route } from '@remix-run/fetch-router/routes'
 
 import { asyncContext, getContext } from './async-context.ts'
 

@@ -434,9 +434,7 @@ describe('staticFiles middleware', () => {
     createTestFile('index.html', '<h1>Fallback Handler</h1>')
 
     let router = createRouter()
-    router.get('/api/users', () => {
-      return new Response('Users API')
-    })
+    router.get('/api/users', () => new Response('Users API'))
     router.get('*path', {
       middleware: [staticFiles(tmpDir)],
       action() {

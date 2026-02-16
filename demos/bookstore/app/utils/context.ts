@@ -1,5 +1,5 @@
 import type { Assets } from 'remix/fetch-router'
-import { createStorageKey } from 'remix'
+import { createStorageKey } from 'remix/fetch-router'
 import { getContext } from 'remix/async-context-middleware'
 
 import { type Cart, getCart } from '../models/cart.ts'

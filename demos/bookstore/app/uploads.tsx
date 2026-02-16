@@ -1,5 +1,5 @@
-import type { BuildAction } from 'remix'
-import { createFileResponse as sendFile } from 'remix'
+import type { BuildAction } from 'remix/fetch-router'
+import { createFileResponse as sendFile } from 'remix/response/file'
 
 import type { routes } from './routes.ts'
 import { uploadsStorage } from './utils/uploads.ts'
