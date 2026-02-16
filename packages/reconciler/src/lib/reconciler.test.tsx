@@ -6,6 +6,9 @@ import {
   createTestContainer,
   createTestNodePolicy,
   stringifyTestNode,
+  type TestNode,
+  type TestNodePolicy,
+  type TestParentNode,
 } from '../testing/test-node-policy.ts'
 import type { Component, Plugin, RenderValue, UpdateHandle } from './types.ts'
 
@@ -483,12 +486,14 @@ describe('reconciler package', () => {
     )
     root.flush()
     let firstRootNode = container.children[0]
-    if (!firstRootNode || firstRootNode.kind !== 'element') throw new Error('expected first root node')
+    if (!firstRootNode || firstRootNode.kind !== 'element')
+      throw new Error('expected first root node')
 
     root.render(<Dashboard />)
     root.flush()
     let secondRootNode = container.children[0]
-    if (!secondRootNode || secondRootNode.kind !== 'element') throw new Error('expected second root node')
+    if (!secondRootNode || secondRootNode.kind !== 'element')
+      throw new Error('expected second root node')
 
     assert.notEqual(secondRootNode, firstRootNode)
     assert.equal(stringifyTestNode(container), '<div id="dashboard"><h1>Dashboard</h1></div>')
@@ -551,6 +556,40 @@ describe('reconciler package', () => {
       stringifyTestNode(container),
       '<div class="container"><div><h1>Dashboard</h1><button>Switch to Table</button></div><div><card>a</card><card>b</card></div></div>',
     )
+  })
+
+  it('updates middle keyed subtree from nested component handle', async () => {
+    let nodePolicy = createStrictMoveNodePolicy()
+    let container = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(container)
+    let activateNested: null | (() => void) = null
+
+    function Nested(handle: UpdateHandle) {
+      let active = false
+      activateNested = () => {
+        active = true
+        handle.update()
+      }
+      return () => <item>{active ? 'next:2' : '2'}</item>
+    }
+
+    function App() {
+      return () => (
+        <root>
+          <Nested key="a" />
+        </root>
+      )
+    }
+
+    root.render(<App />)
+    root.flush()
+    assert.equal(stringifyTestNode(container), '<root><item>2</item></root>')
+    expectCallback(activateNested, 'expected nested callback')()
+    root.flush()
+    await Promise.resolve()
+
+    assert.equal(stringifyTestNode(container), '<root><item>next:2</item></root>')
   })
 
   it('updates only beneath component subtree when component handle updates', () => {
@@ -1238,4 +1277,17 @@ async function waitFor(predicate: () => boolean, maxTurns: number) {
 function expectCallback(value: null | (() => void), message: string) {
   if (!value) throw new Error(message)
   return value
+}
+
+function createStrictMoveNodePolicy(): TestNodePolicy {
+  let nodePolicy = createTestNodePolicy()
+  return {
+    ...nodePolicy,
+    move(parent: TestParentNode, node: TestNode, anchor: null | TestNode) {
+      if (anchor && !parent.children.includes(anchor)) {
+        throw new Error('move anchor is not a child of parent')
+      }
+      nodePolicy.move(parent, node, anchor)
+    },
+  }
 }

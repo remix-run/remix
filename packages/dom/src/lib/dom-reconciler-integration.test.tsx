@@ -74,8 +74,7 @@ describe('dom reconciler integration', () => {
       '<main><div><h1>Dashboard</h1><button>Switch to Table</button></div><div><section>a</section></div></main>',
     )
 
-    if (!switchCard) throw new Error('expected switch callback')
-    switchCard()
+    expectCallback(switchCard, 'expected switch callback')()
     root.flush()
     expect(container.innerHTML).toBe(
       '<main><div><h1>Dashboard</h1><button>Switch to Table</button></div><div><section>b</section></div></main>',
@@ -117,7 +116,7 @@ describe('dom reconciler integration', () => {
   it('keeps dashboard sibling layout when switching from table host view', () => {
     let container = document.createElement('div')
     let root = createDomRoot(container)
-    let switchToDashboard: null | (() => void) = null
+    let switchToDashboard = () => {}
 
     function Dashboard() {
       return () => (
@@ -162,16 +161,52 @@ describe('dom reconciler integration', () => {
       '<div class="container"><div class="jumbotron"><h1>Table</h1></div><table><tbody></tbody></table></div>',
     )
 
-    if (!switchToDashboard) throw new Error('expected switch callback')
-    switchToDashboard()
+    expectCallback(switchToDashboard, 'expected switch callback')()
     root.flush()
     expect(container.innerHTML).toBe(
       '<div class="container"><div><h1>Dashboard</h1><button>Switch to Table</button></div><div><section>a</section><section>b</section></div></div>',
     )
+  })
+
+  it('updates middle keyed subtree from nested component handle', async () => {
+    let container = document.createElement('div')
+    let root = createDomRoot(container)
+    let activateNested = () => {}
+
+    function Nested(handle: UpdateHandle) {
+      let active = false
+      activateNested = () => {
+        active = true
+        handle.update()
+      }
+      return () => <span>{active ? 'next:2' : '2'}</span>
+    }
+
+    function App() {
+      return () => (
+        <div>
+          <Nested key="a" />
+        </div>
+      )
+    }
+
+    root.render(<App />)
+    root.flush()
+    expect(container.innerHTML).toBe('<div><span>2</span></div>')
+    activateNested()
+    root.flush()
+    await Promise.resolve()
+
+    expect(container.innerHTML).toBe('<div><span>next:2</span></div>')
   })
 })
 
 function createDomRoot(container: HTMLElement) {
   let reconciler = createReconciler(createDomNodePolicy(document), createDomPlugins())
   return reconciler.createRoot(container)
+}
+
+function expectCallback(value: null | (() => void), message: string) {
+  if (!value) throw new Error(message)
+  return value
 }

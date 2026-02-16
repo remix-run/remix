@@ -278,7 +278,6 @@ export function createReconcilerRuntime<
     let key = toKey(input.key)
     if (current && current.kind === 'host' && current.key === key) {
       let resolvedInput = resolveComponentInput(current.componentInstances, input, root)
-      current.componentInstances = resolvedInput.componentInstances
       let transformedInput = applyTransforms(current, resolvedInput.input)
       if (typeof transformedInput.type !== 'string') {
         throw new Error('plugins must resolve host type to string')
@@ -300,6 +299,7 @@ export function createReconcilerRuntime<
           componentInstances,
         )
       }
+      current.componentInstances = resolvedInput.componentInstances
       if (current.type !== transformedInput.type) {
         let componentInstances = current.componentInstances
         current.componentInstances = []
@@ -408,7 +408,6 @@ export function createReconcilerRuntime<
     traversalCursor: traversal,
   ) {
     node.props = input.props
-    node.key = toKey(input.key)
     let nextChildren = normalizeNodeChildren(input.children)
     node.children = reconcileChildren(
       node.children,
