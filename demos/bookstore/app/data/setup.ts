@@ -1,76 +1,10 @@
 import * as fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import BetterSqlite3 from 'better-sqlite3'
-import * as s from 'remix/data-schema'
-import { belongsTo, createDatabase, createTable, hasMany, sql } from 'remix/data-table'
+import { createDatabase, sql } from 'remix/data-table'
 import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
-export let books = createTable({
-  name: 'books',
-  columns: {
-    id: s.number(),
-    slug: s.string(),
-    title: s.string(),
-    author: s.string(),
-    description: s.string(),
-    price: s.number(),
-    genre: s.string(),
-    image_urls: s.string(),
-    cover_url: s.string(),
-    isbn: s.string(),
-    published_year: s.number(),
-    in_stock: s.boolean(),
-  },
-})
-
-export let users = createTable({
-  name: 'users',
-  columns: {
-    id: s.number(),
-    email: s.string(),
-    password: s.string(),
-    name: s.string(),
-    role: s.enum_(['customer', 'admin']),
-    created_at: s.number(),
-  },
-})
-
-export let orders = createTable({
-  name: 'orders',
-  columns: {
-    id: s.number(),
-    user_id: s.number(),
-    total: s.number(),
-    status: s.enum_(['pending', 'processing', 'shipped', 'delivered']),
-    shipping_address_json: s.string(),
-    created_at: s.number(),
-  },
-})
-
-export let orderItems = createTable({
-  name: 'order_items',
-  primaryKey: ['order_id', 'book_id'],
-  columns: {
-    order_id: s.number(),
-    book_id: s.number(),
-    title: s.string(),
-    unit_price: s.number(),
-    quantity: s.number(),
-  },
-})
-
-export let itemsByOrder = hasMany(orders, orderItems)
-export let bookForOrderItem = belongsTo(orderItems, books)
-
-export let passwordResetTokens = createTable({
-  name: 'password_reset_tokens',
-  primaryKey: ['token'],
-  columns: {
-    token: s.string(),
-    user_id: s.number(),
-    expires_at: s.number(),
-  },
-})
+import { books, orderItems, orders, users } from './schema.ts'
 
 let databaseFilePath = getDatabaseFilePath()
 
@@ -85,17 +19,6 @@ sqlite.pragma('foreign_keys = ON')
 let adapter = createSqliteDatabaseAdapter(sqlite)
 
 export let db = createDatabase(adapter)
-export type BookstoreDatabase = typeof db
-
-export function checkoutBookstoreDatabase(): {
-  db: BookstoreDatabase
-  release: () => void
-} {
-  return {
-    db,
-    release() {},
-  }
-}
 
 let initializePromise: Promise<void> | null = null
 
@@ -221,8 +144,8 @@ async function initialize(): Promise<void> {
         id: 3,
         slug: 'three-ways',
         title: 'Three Ways to Change Your Life',
-        author: 'Britney Spears',
-        description: 'A practical guide to changing your life for the better.',
+        author: 'Wisdom Sage',
+        description: 'Life-changing strategies for modern living and personal growth.',
         price: 28.99,
         genre: 'self-help',
         image_urls: JSON.stringify([
@@ -231,9 +154,9 @@ async function initialize(): Promise<void> {
           '/images/three-ways-3.png',
         ]),
         cover_url: '/images/three-ways-1.png',
-        isbn: '978-0593135204',
+        isbn: '978-0061120084',
         published_year: 2021,
-        in_stock: true,
+        in_stock: false,
       },
     ])
   }
@@ -247,7 +170,7 @@ async function initialize(): Promise<void> {
         password: 'admin123',
         name: 'Admin User',
         role: 'admin',
-        created_at: new Date('2024-01-01').getTime(),
+        created_at: new Date('2024-01-15').getTime(),
       },
       {
         id: 2,
@@ -255,7 +178,7 @@ async function initialize(): Promise<void> {
         password: 'password123',
         name: 'John Doe',
         role: 'customer',
-        created_at: new Date('2024-02-15').getTime(),
+        created_at: new Date('2024-03-01').getTime(),
       },
     ])
   }

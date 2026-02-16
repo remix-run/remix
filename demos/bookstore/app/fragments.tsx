@@ -2,8 +2,8 @@ import type { Controller } from 'remix/fetch-router'
 import type { routes } from './routes.ts'
 import { CartButton } from './assets/cart-button.tsx'
 import { CartItems } from './assets/cart-items.tsx'
-import { getBookById } from './models/books.ts'
-import { getCartTotal } from './models/cart.ts'
+import { getCartTotal } from './data/cart.ts'
+import { books } from './data/schema.ts'
 import { loadAuth } from './middleware/auth.ts'
 import { getCurrentCart, getCurrentUserSafely } from './utils/context.ts'
 import { renderFragment } from './utils/render.ts'
@@ -12,9 +12,8 @@ import { routes as appRoutes } from './routes.ts'
 export default {
   middleware: [loadAuth()],
   actions: {
-    async cartButton({ params }: any) {
-      let bookId = params.bookId ?? ''
-      let book = await getBookById(bookId)
+    async cartButton({ db, params }) {
+      let book = await db.find(books, params.bookId)
 
       if (!book) {
         return renderFragment(<p>Book not found</p>, { status: 404 })

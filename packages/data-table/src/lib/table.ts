@@ -1,5 +1,5 @@
 import { createSchema, parseSafe } from '@remix-run/data-schema'
-import type { InferOutput, Issue, ParseOptions, Schema } from '@remix-run/data-schema'
+import type { InferInput, InferOutput, Issue, ParseOptions, Schema } from '@remix-run/data-schema'
 import type { Predicate, WhereInput } from './operators.ts'
 import { inferForeignKey } from './inflection.ts'
 import { normalizeWhereInput } from './operators.ts'
@@ -668,9 +668,13 @@ export function timestamps(
 
 export type PrimaryKeyInput<table extends AnyTable> =
   TablePrimaryKey<table> extends readonly [infer column extends string]
-    ? TableRow<table>[column]
+    ? column extends keyof TableColumns<table> & string
+      ? InferInput<TableColumns<table>[column]>
+      : never
     : Pretty<{
-        [column in TablePrimaryKey<table>[number] & keyof TableRow<table>]: TableRow<table>[column]
+        [column in TablePrimaryKey<table>[number] & keyof TableColumns<table> & string]: InferInput<
+          TableColumns<table>[column]
+        >
       }>
 
 /**

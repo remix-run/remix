@@ -2,7 +2,9 @@ import type { Controller } from 'remix/fetch-router'
 import { Frame } from 'remix/component'
 
 import { routes } from './routes.ts'
-import { getAllBooks, getBookBySlug, getBooksByGenre, getAvailableGenres } from './models/books.ts'
+import { ilike } from 'remix/data-table'
+
+import { books } from './data/schema.ts'
 import { BookCard } from './components/book-card.tsx'
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
@@ -13,9 +15,9 @@ import { ImageCarousel } from './assets/image-carousel.tsx'
 export default {
   middleware: [loadAuth()],
   actions: {
-    async index() {
-      let books = await getAllBooks()
-      let genres = await getAvailableGenres()
+    async index({ db }) {
+      let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
+      let genres = await db.query(books).select('genre').distinct().orderBy('genre', 'asc').all()
       let cart = getCurrentCart()
 
       return render(
@@ -43,16 +45,16 @@ export default {
           <div class="card" css={{ marginBottom: '2rem' }}>
             <h3>Browse by Genre</h3>
             <div css={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-              {genres.map((genre) => (
-                <a href={routes.books.genre.href({ genre })} class="btn btn-secondary">
-                  {genre}
+              {genres.map((genreRow) => (
+                <a href={routes.books.genre.href({ genre: genreRow.genre })} class="btn btn-secondary">
+                  {genreRow.genre}
                 </a>
               ))}
             </div>
           </div>
 
           <div class="grid">
-            {books.map((book) => {
+            {allBooks.map((book) => {
               let inCart = cart.items.some((item) => item.slug === book.slug)
               return <BookCard book={book} inCart={inCart} />
             })}
@@ -61,11 +63,14 @@ export default {
       )
     },
 
-    async genre({ params }) {
+    async genre({ params, db }) {
       let genre = params.genre
-      let books = await getBooksByGenre(genre)
+      let matchingBooks = await db.findMany(books, {
+        where: ilike('genre', genre),
+        orderBy: ['id', 'asc'],
+      })
 
-      if (books.length === 0) {
+      if (matchingBooks.length === 0) {
         return render(
           <Layout>
             <div class="card">
@@ -94,7 +99,7 @@ export default {
           </p>
 
           <div class="grid" css={{ marginTop: '2rem' }}>
-            {books.map((book) => {
+            {matchingBooks.map((book) => {
               let inCart = cart.items.some((item) => item.slug === book.slug)
               return <BookCard book={book} inCart={inCart} />
             })}
@@ -103,8 +108,9 @@ export default {
       )
     },
 
-    async show({ params }) {
-      let book = await getBookBySlug(params.slug)
+    async show({ params, db }) {
+      let book =
+        await db.findOne(books, { where: { slug: params.slug } })
 
       if (!book) {
         return render(

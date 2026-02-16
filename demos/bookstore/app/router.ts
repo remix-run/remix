@@ -8,7 +8,7 @@ import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
 import { routes } from './routes.ts'
-import { initializeBookstoreDatabase } from './models/database.ts'
+import { initializeBookstoreDatabase } from './data/setup.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
 import { uploadHandler } from './utils/uploads.ts'
 

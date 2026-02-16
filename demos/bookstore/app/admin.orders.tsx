@@ -1,13 +1,16 @@
 import type { Controller } from 'remix/fetch-router'
 
 import { routes } from './routes.ts'
-import { getAllOrders, getOrderById } from './models/orders.ts'
+import { orders, orderItemsWithBook } from './data/schema.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 
 export default {
-  async index() {
-    let orders = await getAllOrders()
+  async index({ db }) {
+    let allOrders = await db.findMany(orders, {
+      orderBy: ['created_at', 'asc'],
+      with: { items: orderItemsWithBook },
+    })
 
     return render(
       <Layout>
@@ -32,7 +35,7 @@ export default {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => (
+              {allOrders.map((order) => (
                 <tr>
                   <td>#{order.id}</td>
                   <td>{new Date(order.created_at).toLocaleDateString()}</td>
@@ -59,8 +62,10 @@ export default {
     )
   },
 
-  async show({ params }) {
-    let order = await getOrderById(params.orderId)
+  async show({ db, params }) {
+    let order = await db.find(orders, params.orderId, {
+      with: { items: orderItemsWithBook },
+    })
 
     if (!order) {
       return render(

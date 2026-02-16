@@ -3,8 +3,8 @@ import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
 import { requireAuth } from './middleware/auth.ts'
-import { clearCart, getCartTotal } from './models/cart.ts'
-import { createOrder, getOrderById } from './models/orders.ts'
+import { clearCart, getCartTotal } from './data/cart.ts'
+import { itemsByOrder, orders, orderItemsWithBook } from './data/schema.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { getCurrentUser, getCurrentCart } from './utils/context.ts'
@@ -107,7 +107,7 @@ export default {
       )
     },
 
-    async action({ session, formData }) {
+    async action({ db, session, formData }) {
       let user = getCurrentUser()
       let cart = getCurrentCart()
 
@@ -122,25 +122,53 @@ export default {
         zip: formData.get('zip')?.toString() || '',
       }
 
-      let order = await createOrder(
-        user.id,
-        cart.items.map((item) => ({
-          bookId: item.bookId,
-          title: item.title,
-          price: item.price,
-          quantity: item.quantity,
-        })),
-        JSON.stringify(shippingAddress),
-      )
+      let total = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+
+      let order = await db.transaction(async (tx) => {
+        let createdOrder = await tx.create(
+          orders,
+          {
+            user_id: user.id,
+            total,
+            status: 'pending',
+            shipping_address_json: JSON.stringify(shippingAddress),
+            created_at: Date.now(),
+          },
+          { returnRow: true },
+        )
+
+        await tx.createMany(
+          itemsByOrder.targetTable,
+          cart.items.map((item) => ({
+            order_id: createdOrder.id,
+            book_id: item.bookId,
+            title: item.title,
+            unit_price: item.price,
+            quantity: item.quantity,
+          })),
+        )
+
+        let created = await tx.find(orders, createdOrder.id, {
+          with: { items: orderItemsWithBook },
+        })
+
+        if (!created) {
+          throw new Error('Failed to load created order')
+        }
+
+        return created
+      })
 
       session.set('cart', clearCart(cart))
 
       return redirect(routes.checkout.confirmation.href({ orderId: order.id }))
     },
 
-    async confirmation({ params }) {
+    async confirmation({ db, params }) {
       let user = getCurrentUser()
-      let order = await getOrderById(params.orderId)
+      let order = await db.find(orders, params.orderId, {
+        with: { items: orderItemsWithBook },
+      })
 
       if (!order || order.user_id !== user.id) {
         return render(
