@@ -552,7 +552,7 @@ function FormWidgets(handle: Handle) {
 }
 
 function Dashboard(handle: Handle) {
-  let dashboardRows = buildData(10)
+  let dashboardRows = buildData(300)
 
   let sortDashboardAsc = () => {
     dashboardRows = sortRows(dashboardRows, true)

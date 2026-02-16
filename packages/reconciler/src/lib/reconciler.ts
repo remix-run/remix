@@ -149,8 +149,10 @@ export function createReconcilerRuntime<
     root: RootState<parentNode, node, elementNode, traversal>,
   ) {
     let oldKeyMap = new Map<string, number>()
+    let oldNodeIndexByAnchor = new Map<node, number>()
     for (let index = 0; index < currentChildren.length; index++) {
       let child = currentChildren[index]
+      oldNodeIndexByAnchor.set(getAnchor(child), index)
       if (child.kind !== 'host') continue
       if (child.key === '') continue
       oldKeyMap.set(child.key, index)
@@ -189,6 +191,10 @@ export function createReconcilerRuntime<
       traversal = result.traversal
       if (result.node) {
         entries.push({ node: result.node, oldIndex: matchedIndex })
+        if (matchedIndex < 0) {
+          let reusedIndex = oldNodeIndexByAnchor.get(getAnchor(result.node))
+          if (reusedIndex != null) matchedOld.add(reusedIndex)
+        }
       }
     }
 
@@ -687,7 +693,10 @@ function resolveComponentInput<parentNode, node, elementNode extends node & pare
       }
       let controller = new AbortController()
       let handle = createComponentHandle(root, controller)
-      let render = (resolvedType as Component<unknown, Record<string, unknown>>)(handle, nextInput.setup)
+      let render = (resolvedType as Component<unknown, Record<string, unknown>>)(
+        handle,
+        nextInput.setup,
+      )
       if (typeof render !== 'function') {
         throw new Error('component factory must return a render function')
       }

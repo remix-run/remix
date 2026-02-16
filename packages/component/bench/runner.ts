@@ -118,6 +118,8 @@ interface Operation {
   teardown?: (page: Page) => Promise<void>
 }
 
+const EVENT_TIMING_TIMEOUT_MS = 5000
+
 // Click an element and measure time until next paint using Event Timing API
 // Also captures Chrome DevTools Profiler data for detailed function-level analysis
 async function clickAndMeasure(
@@ -153,23 +155,48 @@ async function clickAndMeasure(
   // Use Playwright's click which fires real pointer events
   await page.click(selector)
 
-  // Wait for paint and retrieve the timing result
-  let timing = (await page.evaluate(`
-    new Promise(function(resolve) {
-      function check() {
-        if (window.__benchResult !== null) {
-          resolve(window.__benchResult);
-        } else {
-          requestAnimationFrame(check);
-        }
-      }
-      requestAnimationFrame(check);
-    })
-  `)) as TimingResult
+  let timing: TimingResult
+  let result: any
+  try {
+    let operationLabel = operationName ?? 'unknown'
+    // Wait for paint and retrieve timing with a hard timeout.
+    timing = (await page.evaluate(`
+      new Promise(function(resolve, reject) {
+        var timeoutMs = ${EVENT_TIMING_TIMEOUT_MS}
+        var selector = ${JSON.stringify(selector)}
+        var operationName = ${JSON.stringify(operationLabel)}
+        var timeoutId = setTimeout(function() {
+          if (window.__benchObserver) {
+            window.__benchObserver.disconnect()
+          }
+          reject(new Error(
+            'Timed out waiting for Event Timing click entry after ' +
+            timeoutMs +
+            'ms (selector="' +
+            selector +
+            '", operation="' +
+            operationName +
+            '")'
+          ))
+        }, timeoutMs)
 
-  // Stop profiler and get results
-  let result = await cdp.send('Profiler.stop')
-  await cdp.send('Profiler.disable')
+        function check() {
+          if (window.__benchResult !== null) {
+            clearTimeout(timeoutId)
+            resolve(window.__benchResult)
+            return
+          }
+          requestAnimationFrame(check)
+        }
+
+        requestAnimationFrame(check)
+      })
+    `)) as TimingResult
+  } finally {
+    // Always stop profiler to avoid session leaks, even on timeout/error.
+    result = await cdp.send('Profiler.stop').catch(() => null)
+    await cdp.send('Profiler.disable').catch(() => undefined)
+  }
 
   // Process profiling data
   let profileData: FunctionProfile[] | undefined
@@ -552,6 +579,7 @@ function printProfileTable(profile: FunctionProfile[], operationName: string): v
 async function benchmarkFramework(
   page: Page,
   framework: string,
+  getRecentConsoleMessages: () => string[],
 ): Promise<{ results: BenchmarkResult[]; profiles: Map<string, FunctionProfile[][]> }> {
   let results: BenchmarkResult[] = []
   let profiles = new Map<string, FunctionProfile[][]>()
@@ -565,41 +593,66 @@ async function benchmarkFramework(
       : operations
 
   for (let operation of filteredOperations) {
-    let scriptingTimes: number[] = []
-    let totalTimes: number[] = []
-    let runProfiles: FunctionProfile[][] = []
+    try {
+      let scriptingTimes: number[] = []
+      let totalTimes: number[] = []
+      let runProfiles: FunctionProfile[][] = []
 
-    // Reload page before each operation to reset all JS state (idCounter, etc.)
-    await page.goto(url)
-    await page.waitForSelector('#run')
+      // Reload page before each operation to reset all JS state (idCounter, etc.)
+      await page.goto(url)
+      await page.waitForSelector('#run')
 
-    // Warmup runs (not recorded)
-    for (let i = 0; i < warmupRuns; i++) {
-      await measureOperation(page, operation)
-    }
-
-    // Benchmark runs
-    for (let i = 0; i < benchmarkRuns; i++) {
-      let timing = await measureOperation(page, operation)
-      scriptingTimes.push(timing.scripting)
-      totalTimes.push(timing.total)
-      if (showProfile && timing.profile) {
-        runProfiles.push(timing.profile)
+      // Warmup runs (not recorded)
+      for (let i = 0; i < warmupRuns; i++) {
+        await measureOperation(page, operation)
       }
+
+      // Benchmark runs
+      for (let i = 0; i < benchmarkRuns; i++) {
+        let timing = await measureOperation(page, operation)
+        scriptingTimes.push(timing.scripting)
+        totalTimes.push(timing.total)
+        if (showProfile && timing.profile) {
+          runProfiles.push(timing.profile)
+        }
+      }
+
+      results.push({
+        framework,
+        operation: operation.name,
+        scripting: calcStats(scriptingTimes),
+        total: calcStats(totalTimes),
+      })
+
+      if (showProfile && runProfiles.length > 0) {
+        profiles.set(operation.name, runProfiles)
+      }
+
+      process.stdout.write('.')
+    } catch (error) {
+      process.stdout.write('x')
+      let url = page.url()
+      let dom = await page.content().catch(() => '<unable to read page content>')
+      let compactDom = dom.replace(/\s+/g, ' ').trim()
+      let domSnippet =
+        compactDom.length > 800 ? `${compactDom.slice(0, 800)}... [truncated]` : compactDom
+      let consoleMessages = getRecentConsoleMessages()
+      let consoleBlock =
+        consoleMessages.length > 0 ? consoleMessages.join('\n') : '(no console warnings/errors)'
+
+      throw new Error(
+        [
+          `Benchmark operation failed: framework="${framework}" operation="${operation.name}"`,
+          `URL: ${url}`,
+          'Recent browser console:',
+          consoleBlock,
+          'Page content snapshot:',
+          domSnippet,
+          'Original error:',
+          formatError(error),
+        ].join('\n'),
+      )
     }
-
-    results.push({
-      framework,
-      operation: operation.name,
-      scripting: calcStats(scriptingTimes),
-      total: calcStats(totalTimes),
-    })
-
-    if (showProfile && runProfiles.length > 0) {
-      profiles.set(operation.name, runProfiles)
-    }
-
-    process.stdout.write('.')
   }
 
   return { results, profiles }
@@ -780,6 +833,21 @@ async function main(): Promise<void> {
     console.log('Launching browser...')
     browser = await chromium.launch({ headless })
     let page = await browser.newPage()
+    let recentConsoleMessages: string[] = []
+    function addConsoleMessage(message: string) {
+      recentConsoleMessages.push(message)
+      if (recentConsoleMessages.length > 50) {
+        recentConsoleMessages.shift()
+      }
+    }
+    page.on('console', (message) => {
+      let type = message.type()
+      if (type !== 'warning' && type !== 'error') return
+      addConsoleMessage(`[console:${type}] ${message.text()}`)
+    })
+    page.on('pageerror', (error) => {
+      addConsoleMessage(`[pageerror] ${error.message}`)
+    })
 
     // Enable CPU throttling via CDP
     let client = await page.context().newCDPSession(page)
@@ -819,7 +887,9 @@ async function main(): Promise<void> {
 
     for (let framework of frameworks) {
       process.stdout.write(`  ${framework}: `)
-      let { results, profiles } = await benchmarkFramework(page, framework)
+      let { results, profiles } = await benchmarkFramework(page, framework, () =>
+        recentConsoleMessages.slice(-10),
+      )
       allResults.push(...results)
       // Store profiles keyed by framework-operation name
       for (let [operationName, runProfiles] of profiles.entries()) {
@@ -869,3 +939,10 @@ main().catch((error) => {
   console.error('Benchmark failed:', error)
   process.exit(1)
 })
+
+function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.stack || error.message
+  }
+  return String(error)
+}

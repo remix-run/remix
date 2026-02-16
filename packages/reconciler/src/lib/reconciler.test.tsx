@@ -589,6 +589,37 @@ describe('reconciler package', () => {
     assert.equal(stringifyTestNode(container), '<root><item>next:2</item></root>')
   })
 
+  it('replaces keyed children when key set changes completely', () => {
+    let nodePolicy = createTestNodePolicy()
+    let container = createTestContainer()
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
+    let root = reconciler.createRoot(container)
+    let replaceKeys: null | (() => void) = null
+
+    function App(handle: UpdateHandle) {
+      let keys = ['a', 'b', 'c']
+      replaceKeys = () => {
+        keys = ['d', 'e', 'f']
+        handle.update()
+      }
+      return () => (
+        <list>
+          {keys.map((key) => (
+            <item key={key}>{key}</item>
+          ))}
+        </list>
+      )
+    }
+
+    root.render(<App />)
+    root.flush()
+    assert.equal(stringifyTestNode(container), '<list><item>a</item><item>b</item><item>c</item></list>')
+
+    expectCallback(replaceKeys, 'expected replace callback')()
+    root.flush()
+    assert.equal(stringifyTestNode(container), '<list><item>d</item><item>e</item><item>f</item></list>')
+  })
+
   it('updates only beneath component subtree when component handle updates', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()

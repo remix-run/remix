@@ -200,6 +200,35 @@ describe('dom reconciler integration', () => {
 
     expect(container.innerHTML).toBe('<div><span>next:2</span></div>')
   })
+
+  it('replaces keyed children when key set changes completely', () => {
+    let container = document.createElement('div')
+    let root = createDomRoot(container)
+    let replaceKeys = () => {}
+
+    function App(handle: UpdateHandle) {
+      let keys = ['a', 'b', 'c']
+      replaceKeys = () => {
+        keys = ['d', 'e', 'f']
+        handle.update()
+      }
+      return () => (
+        <div>
+          {keys.map((key) => (
+            <span key={key}>{key}</span>
+          ))}
+        </div>
+      )
+    }
+
+    root.render(<App />)
+    root.flush()
+    expect(container.innerHTML).toBe('<div><span>a</span><span>b</span><span>c</span></div>')
+
+    replaceKeys()
+    root.flush()
+    expect(container.innerHTML).toBe('<div><span>d</span><span>e</span><span>f</span></div>')
+  })
 })
 
 function createDomRoot(container: HTMLElement) {
