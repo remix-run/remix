@@ -18,313 +18,255 @@
   ],
   "type": "module",
   "exports": {
-    "./async-context-middleware": "./src/async-context-middleware.ts",
-    "./component": "./src/component.ts",
-    "./component/jsx-dev-runtime": "./src/component/jsx-dev-runtime.ts",
-    "./component/jsx-runtime": "./src/component/jsx-runtime.ts",
-    "./component/server": "./src/component/server.ts",
-    "./compression-middleware": "./src/compression-middleware.ts",
-    "./cookie": "./src/cookie.ts",
-    "./data-schema": "./src/data-schema.ts",
-    "./data-schema/checks": "./src/data-schema/checks.ts",
-    "./data-schema/coerce": "./src/data-schema/coerce.ts",
-    "./data-schema/lazy": "./src/data-schema/lazy.ts",
-    "./data-table": "./src/data-table.ts",
-    "./data-table-mysql": "./src/data-table-mysql.ts",
-    "./data-table-postgres": "./src/data-table-postgres.ts",
-    "./data-table-sqlite": "./src/data-table-sqlite.ts",
-    "./data-table/operators": "./src/data-table/operators.ts",
-    "./data-table/sql": "./src/data-table/sql.ts",
-    "./fetch-proxy": "./src/fetch-proxy.ts",
-    "./fetch-router": "./src/fetch-router.ts",
-    "./fetch-router/routes": "./src/fetch-router/routes.ts",
-    "./file-storage": "./src/file-storage.ts",
-    "./file-storage/fs": "./src/file-storage/fs.ts",
-    "./file-storage/memory": "./src/file-storage/memory.ts",
-    "./form-data-middleware": "./src/form-data-middleware.ts",
-    "./form-data-parser": "./src/form-data-parser.ts",
-    "./fs": "./src/fs.ts",
-    "./headers": "./src/headers.ts",
-    "./html-template": "./src/html-template.ts",
-    "./interaction": "./src/interaction.ts",
-    "./interaction/form": "./src/interaction/form.ts",
-    "./interaction/keys": "./src/interaction/keys.ts",
-    "./interaction/popover": "./src/interaction/popover.ts",
-    "./interaction/press": "./src/interaction/press.ts",
-    "./lazy-file": "./src/lazy-file.ts",
-    "./logger-middleware": "./src/logger-middleware.ts",
-    "./method-override-middleware": "./src/method-override-middleware.ts",
-    "./mime": "./src/mime.ts",
-    "./multipart-parser": "./src/multipart-parser.ts",
-    "./multipart-parser/node": "./src/multipart-parser/node.ts",
-    "./node-fetch-server": "./src/node-fetch-server.ts",
-    "./response/compress": "./src/response/compress.ts",
-    "./response/file": "./src/response/file.ts",
-    "./response/html": "./src/response/html.ts",
-    "./response/redirect": "./src/response/redirect.ts",
-    "./route-pattern": "./src/route-pattern.ts",
-    "./route-pattern/specificity": "./src/route-pattern/specificity.ts",
-    "./session": "./src/session.ts",
-    "./session-middleware": "./src/session-middleware.ts",
-    "./session/cookie-storage": "./src/session/cookie-storage.ts",
-    "./session/fs-storage": "./src/session/fs-storage.ts",
-    "./session/memory-storage": "./src/session/memory-storage.ts",
-    "./static-middleware": "./src/static-middleware.ts",
-    "./tar-parser": "./src/tar-parser.ts",
+    "./async-context-middleware": {
+      "types": "./dist/async-context-middleware.d.ts",
+      "default": "./dist/async-context-middleware.js"
+    },
+    "./component": {
+      "types": "./dist/component.d.ts",
+      "default": "./dist/component.js"
+    },
+    "./component/jsx-dev-runtime": {
+      "types": "./dist/component/jsx-dev-runtime.d.ts",
+      "default": "./dist/component/jsx-dev-runtime.js"
+    },
+    "./component/jsx-runtime": {
+      "types": "./dist/component/jsx-runtime.d.ts",
+      "default": "./dist/component/jsx-runtime.js"
+    },
+    "./component/server": {
+      "types": "./dist/component/server.d.ts",
+      "default": "./dist/component/server.js"
+    },
+    "./compression-middleware": {
+      "types": "./dist/compression-middleware.d.ts",
+      "default": "./dist/compression-middleware.js"
+    },
+    "./cookie": {
+      "types": "./dist/cookie.d.ts",
+      "default": "./dist/cookie.js"
+    },
+    "./data-schema": {
+      "types": "./dist/data-schema.d.ts",
+      "default": "./dist/data-schema.js"
+    },
+    "./data-schema/checks": {
+      "types": "./dist/data-schema/checks.d.ts",
+      "default": "./dist/data-schema/checks.js"
+    },
+    "./data-schema/coerce": {
+      "types": "./dist/data-schema/coerce.d.ts",
+      "default": "./dist/data-schema/coerce.js"
+    },
+    "./data-schema/lazy": {
+      "types": "./dist/data-schema/lazy.d.ts",
+      "default": "./dist/data-schema/lazy.js"
+    },
+    "./data-table": {
+      "types": "./dist/data-table.d.ts",
+      "default": "./dist/data-table.js"
+    },
+    "./data-table-mysql": {
+      "types": "./dist/data-table-mysql.d.ts",
+      "default": "./dist/data-table-mysql.js"
+    },
+    "./data-table-postgres": {
+      "types": "./dist/data-table-postgres.d.ts",
+      "default": "./dist/data-table-postgres.js"
+    },
+    "./data-table-sqlite": {
+      "types": "./dist/data-table-sqlite.d.ts",
+      "default": "./dist/data-table-sqlite.js"
+    },
+    "./data-table/operators": {
+      "types": "./dist/data-table/operators.d.ts",
+      "default": "./dist/data-table/operators.js"
+    },
+    "./data-table/sql": {
+      "types": "./dist/data-table/sql.d.ts",
+      "default": "./dist/data-table/sql.js"
+    },
+    "./fetch-proxy": {
+      "types": "./dist/fetch-proxy.d.ts",
+      "default": "./dist/fetch-proxy.js"
+    },
+    "./fetch-router": {
+      "types": "./dist/fetch-router.d.ts",
+      "default": "./dist/fetch-router.js"
+    },
+    "./fetch-router/routes": {
+      "types": "./dist/fetch-router/routes.d.ts",
+      "default": "./dist/fetch-router/routes.js"
+    },
+    "./file-storage": {
+      "types": "./dist/file-storage.d.ts",
+      "default": "./dist/file-storage.js"
+    },
+    "./file-storage/fs": {
+      "types": "./dist/file-storage/fs.d.ts",
+      "default": "./dist/file-storage/fs.js"
+    },
+    "./file-storage/memory": {
+      "types": "./dist/file-storage/memory.d.ts",
+      "default": "./dist/file-storage/memory.js"
+    },
+    "./form-data-middleware": {
+      "types": "./dist/form-data-middleware.d.ts",
+      "default": "./dist/form-data-middleware.js"
+    },
+    "./form-data-parser": {
+      "types": "./dist/form-data-parser.d.ts",
+      "default": "./dist/form-data-parser.js"
+    },
+    "./fs": {
+      "types": "./dist/fs.d.ts",
+      "default": "./dist/fs.js"
+    },
+    "./headers": {
+      "types": "./dist/headers.d.ts",
+      "default": "./dist/headers.js"
+    },
+    "./html-template": {
+      "types": "./dist/html-template.d.ts",
+      "default": "./dist/html-template.js"
+    },
+    "./interaction": {
+      "types": "./dist/interaction.d.ts",
+      "default": "./dist/interaction.js"
+    },
+    "./interaction/form": {
+      "types": "./dist/interaction/form.d.ts",
+      "default": "./dist/interaction/form.js"
+    },
+    "./interaction/keys": {
+      "types": "./dist/interaction/keys.d.ts",
+      "default": "./dist/interaction/keys.js"
+    },
+    "./interaction/popover": {
+      "types": "./dist/interaction/popover.d.ts",
+      "default": "./dist/interaction/popover.js"
+    },
+    "./interaction/press": {
+      "types": "./dist/interaction/press.d.ts",
+      "default": "./dist/interaction/press.js"
+    },
+    "./lazy-file": {
+      "types": "./dist/lazy-file.d.ts",
+      "default": "./dist/lazy-file.js"
+    },
+    "./logger-middleware": {
+      "types": "./dist/logger-middleware.d.ts",
+      "default": "./dist/logger-middleware.js"
+    },
+    "./method-override-middleware": {
+      "types": "./dist/method-override-middleware.d.ts",
+      "default": "./dist/method-override-middleware.js"
+    },
+    "./mime": {
+      "types": "./dist/mime.d.ts",
+      "default": "./dist/mime.js"
+    },
+    "./multipart-parser": {
+      "types": "./dist/multipart-parser.d.ts",
+      "default": "./dist/multipart-parser.js"
+    },
+    "./multipart-parser/node": {
+      "types": "./dist/multipart-parser/node.d.ts",
+      "default": "./dist/multipart-parser/node.js"
+    },
+    "./node-fetch-server": {
+      "types": "./dist/node-fetch-server.d.ts",
+      "default": "./dist/node-fetch-server.js"
+    },
+    "./response/compress": {
+      "types": "./dist/response/compress.d.ts",
+      "default": "./dist/response/compress.js"
+    },
+    "./response/file": {
+      "types": "./dist/response/file.d.ts",
+      "default": "./dist/response/file.js"
+    },
+    "./response/html": {
+      "types": "./dist/response/html.d.ts",
+      "default": "./dist/response/html.js"
+    },
+    "./response/redirect": {
+      "types": "./dist/response/redirect.d.ts",
+      "default": "./dist/response/redirect.js"
+    },
+    "./route-pattern": {
+      "types": "./dist/route-pattern.d.ts",
+      "default": "./dist/route-pattern.js"
+    },
+    "./route-pattern/specificity": {
+      "types": "./dist/route-pattern/specificity.d.ts",
+      "default": "./dist/route-pattern/specificity.js"
+    },
+    "./session": {
+      "types": "./dist/session.d.ts",
+      "default": "./dist/session.js"
+    },
+    "./session-middleware": {
+      "types": "./dist/session-middleware.d.ts",
+      "default": "./dist/session-middleware.js"
+    },
+    "./session/cookie-storage": {
+      "types": "./dist/session/cookie-storage.d.ts",
+      "default": "./dist/session/cookie-storage.js"
+    },
+    "./session/fs-storage": {
+      "types": "./dist/session/fs-storage.d.ts",
+      "default": "./dist/session/fs-storage.js"
+    },
+    "./session/memory-storage": {
+      "types": "./dist/session/memory-storage.d.ts",
+      "default": "./dist/session/memory-storage.js"
+    },
+    "./static-middleware": {
+      "types": "./dist/static-middleware.d.ts",
+      "default": "./dist/static-middleware.js"
+    },
+    "./tar-parser": {
+      "types": "./dist/tar-parser.d.ts",
+      "default": "./dist/tar-parser.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      "./async-context-middleware": {
-        "types": "./dist/async-context-middleware.d.ts",
-        "default": "./dist/async-context-middleware.js"
-      },
-      "./component": {
-        "types": "./dist/component.d.ts",
-        "default": "./dist/component.js"
-      },
-      "./component/jsx-dev-runtime": {
-        "types": "./dist/component/jsx-dev-runtime.d.ts",
-        "default": "./dist/component/jsx-dev-runtime.js"
-      },
-      "./component/jsx-runtime": {
-        "types": "./dist/component/jsx-runtime.d.ts",
-        "default": "./dist/component/jsx-runtime.js"
-      },
-      "./component/server": {
-        "types": "./dist/component/server.d.ts",
-        "default": "./dist/component/server.js"
-      },
-      "./compression-middleware": {
-        "types": "./dist/compression-middleware.d.ts",
-        "default": "./dist/compression-middleware.js"
-      },
-      "./cookie": {
-        "types": "./dist/cookie.d.ts",
-        "default": "./dist/cookie.js"
-      },
-      "./data-schema": {
-        "types": "./dist/data-schema.d.ts",
-        "default": "./dist/data-schema.js"
-      },
-      "./data-schema/checks": {
-        "types": "./dist/data-schema/checks.d.ts",
-        "default": "./dist/data-schema/checks.js"
-      },
-      "./data-schema/coerce": {
-        "types": "./dist/data-schema/coerce.d.ts",
-        "default": "./dist/data-schema/coerce.js"
-      },
-      "./data-schema/lazy": {
-        "types": "./dist/data-schema/lazy.d.ts",
-        "default": "./dist/data-schema/lazy.js"
-      },
-      "./data-table": {
-        "types": "./dist/data-table.d.ts",
-        "default": "./dist/data-table.js"
-      },
-      "./data-table-mysql": {
-        "types": "./dist/data-table-mysql.d.ts",
-        "default": "./dist/data-table-mysql.js"
-      },
-      "./data-table-postgres": {
-        "types": "./dist/data-table-postgres.d.ts",
-        "default": "./dist/data-table-postgres.js"
-      },
-      "./data-table-sqlite": {
-        "types": "./dist/data-table-sqlite.d.ts",
-        "default": "./dist/data-table-sqlite.js"
-      },
-      "./data-table/operators": {
-        "types": "./dist/data-table/operators.d.ts",
-        "default": "./dist/data-table/operators.js"
-      },
-      "./data-table/sql": {
-        "types": "./dist/data-table/sql.d.ts",
-        "default": "./dist/data-table/sql.js"
-      },
-      "./fetch-proxy": {
-        "types": "./dist/fetch-proxy.d.ts",
-        "default": "./dist/fetch-proxy.js"
-      },
-      "./fetch-router": {
-        "types": "./dist/fetch-router.d.ts",
-        "default": "./dist/fetch-router.js"
-      },
-      "./fetch-router/routes": {
-        "types": "./dist/fetch-router/routes.d.ts",
-        "default": "./dist/fetch-router/routes.js"
-      },
-      "./file-storage": {
-        "types": "./dist/file-storage.d.ts",
-        "default": "./dist/file-storage.js"
-      },
-      "./file-storage/fs": {
-        "types": "./dist/file-storage/fs.d.ts",
-        "default": "./dist/file-storage/fs.js"
-      },
-      "./file-storage/memory": {
-        "types": "./dist/file-storage/memory.d.ts",
-        "default": "./dist/file-storage/memory.js"
-      },
-      "./form-data-middleware": {
-        "types": "./dist/form-data-middleware.d.ts",
-        "default": "./dist/form-data-middleware.js"
-      },
-      "./form-data-parser": {
-        "types": "./dist/form-data-parser.d.ts",
-        "default": "./dist/form-data-parser.js"
-      },
-      "./fs": {
-        "types": "./dist/fs.d.ts",
-        "default": "./dist/fs.js"
-      },
-      "./headers": {
-        "types": "./dist/headers.d.ts",
-        "default": "./dist/headers.js"
-      },
-      "./html-template": {
-        "types": "./dist/html-template.d.ts",
-        "default": "./dist/html-template.js"
-      },
-      "./interaction": {
-        "types": "./dist/interaction.d.ts",
-        "default": "./dist/interaction.js"
-      },
-      "./interaction/form": {
-        "types": "./dist/interaction/form.d.ts",
-        "default": "./dist/interaction/form.js"
-      },
-      "./interaction/keys": {
-        "types": "./dist/interaction/keys.d.ts",
-        "default": "./dist/interaction/keys.js"
-      },
-      "./interaction/popover": {
-        "types": "./dist/interaction/popover.d.ts",
-        "default": "./dist/interaction/popover.js"
-      },
-      "./interaction/press": {
-        "types": "./dist/interaction/press.d.ts",
-        "default": "./dist/interaction/press.js"
-      },
-      "./lazy-file": {
-        "types": "./dist/lazy-file.d.ts",
-        "default": "./dist/lazy-file.js"
-      },
-      "./logger-middleware": {
-        "types": "./dist/logger-middleware.d.ts",
-        "default": "./dist/logger-middleware.js"
-      },
-      "./method-override-middleware": {
-        "types": "./dist/method-override-middleware.d.ts",
-        "default": "./dist/method-override-middleware.js"
-      },
-      "./mime": {
-        "types": "./dist/mime.d.ts",
-        "default": "./dist/mime.js"
-      },
-      "./multipart-parser": {
-        "types": "./dist/multipart-parser.d.ts",
-        "default": "./dist/multipart-parser.js"
-      },
-      "./multipart-parser/node": {
-        "types": "./dist/multipart-parser/node.d.ts",
-        "default": "./dist/multipart-parser/node.js"
-      },
-      "./node-fetch-server": {
-        "types": "./dist/node-fetch-server.d.ts",
-        "default": "./dist/node-fetch-server.js"
-      },
-      "./response/compress": {
-        "types": "./dist/response/compress.d.ts",
-        "default": "./dist/response/compress.js"
-      },
-      "./response/file": {
-        "types": "./dist/response/file.d.ts",
-        "default": "./dist/response/file.js"
-      },
-      "./response/html": {
-        "types": "./dist/response/html.d.ts",
-        "default": "./dist/response/html.js"
-      },
-      "./response/redirect": {
-        "types": "./dist/response/redirect.d.ts",
-        "default": "./dist/response/redirect.js"
-      },
-      "./route-pattern": {
-        "types": "./dist/route-pattern.d.ts",
-        "default": "./dist/route-pattern.js"
-      },
-      "./route-pattern/specificity": {
-        "types": "./dist/route-pattern/specificity.d.ts",
-        "default": "./dist/route-pattern/specificity.js"
-      },
-      "./session": {
-        "types": "./dist/session.d.ts",
-        "default": "./dist/session.js"
-      },
-      "./session-middleware": {
-        "types": "./dist/session-middleware.d.ts",
-        "default": "./dist/session-middleware.js"
-      },
-      "./session/cookie-storage": {
-        "types": "./dist/session/cookie-storage.d.ts",
-        "default": "./dist/session/cookie-storage.js"
-      },
-      "./session/fs-storage": {
-        "types": "./dist/session/fs-storage.d.ts",
-        "default": "./dist/session/fs-storage.js"
-      },
-      "./session/memory-storage": {
-        "types": "./dist/session/memory-storage.d.ts",
-        "default": "./dist/session/memory-storage.js"
-      },
-      "./static-middleware": {
-        "types": "./dist/static-middleware.d.ts",
-        "default": "./dist/static-middleware.js"
-      },
-      "./tar-parser": {
-        "types": "./dist/tar-parser.d.ts",
-        "default": "./dist/tar-parser.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "typescript": "catalog:"
   },
   "dependencies": {
-    "@remix-run/async-context-middleware": "workspace:^",
-    "@remix-run/component": "workspace:^",
-    "@remix-run/compression-middleware": "workspace:^",
-    "@remix-run/cookie": "workspace:^",
-    "@remix-run/fetch-proxy": "workspace:^",
-    "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/file-storage": "workspace:^",
-    "@remix-run/form-data-middleware": "workspace:^",
-    "@remix-run/form-data-parser": "workspace:^",
-    "@remix-run/fs": "workspace:^",
-    "@remix-run/headers": "workspace:^",
-    "@remix-run/html-template": "workspace:^",
-    "@remix-run/interaction": "workspace:^",
-    "@remix-run/lazy-file": "workspace:^",
-    "@remix-run/logger-middleware": "workspace:^",
-    "@remix-run/method-override-middleware": "workspace:^",
-    "@remix-run/mime": "workspace:^",
-    "@remix-run/multipart-parser": "workspace:^",
-    "@remix-run/node-fetch-server": "workspace:^",
-    "@remix-run/response": "workspace:^",
-    "@remix-run/route-pattern": "workspace:^",
-    "@remix-run/session": "workspace:^",
-    "@remix-run/session-middleware": "workspace:^",
-    "@remix-run/static-middleware": "workspace:^",
-    "@remix-run/tar-parser": "workspace:^",
-    "@remix-run/data-schema": "workspace:^",
-    "@remix-run/data-table": "workspace:^",
-    "@remix-run/data-table-mysql": "workspace:^",
-    "@remix-run/data-table-postgres": "workspace:^",
-    "@remix-run/data-table-sqlite": "workspace:^"
+    "@remix-run/async-context-middleware": "remix-run/remix#preview/pr-11072&path:packages/async-context-middleware",
+    "@remix-run/component": "remix-run/remix#preview/pr-11072&path:packages/component",
+    "@remix-run/compression-middleware": "remix-run/remix#preview/pr-11072&path:packages/compression-middleware",
+    "@remix-run/cookie": "remix-run/remix#preview/pr-11072&path:packages/cookie",
+    "@remix-run/fetch-proxy": "remix-run/remix#preview/pr-11072&path:packages/fetch-proxy",
+    "@remix-run/fetch-router": "remix-run/remix#preview/pr-11072&path:packages/fetch-router",
+    "@remix-run/file-storage": "remix-run/remix#preview/pr-11072&path:packages/file-storage",
+    "@remix-run/form-data-middleware": "remix-run/remix#preview/pr-11072&path:packages/form-data-middleware",
+    "@remix-run/form-data-parser": "remix-run/remix#preview/pr-11072&path:packages/form-data-parser",
+    "@remix-run/fs": "remix-run/remix#preview/pr-11072&path:packages/fs",
+    "@remix-run/headers": "remix-run/remix#preview/pr-11072&path:packages/headers",
+    "@remix-run/html-template": "remix-run/remix#preview/pr-11072&path:packages/html-template",
+    "@remix-run/interaction": "remix-run/remix#preview/pr-11072&path:packages/interaction",
+    "@remix-run/lazy-file": "remix-run/remix#preview/pr-11072&path:packages/lazy-file",
+    "@remix-run/logger-middleware": "remix-run/remix#preview/pr-11072&path:packages/logger-middleware",
+    "@remix-run/method-override-middleware": "remix-run/remix#preview/pr-11072&path:packages/method-override-middleware",
+    "@remix-run/mime": "remix-run/remix#preview/pr-11072&path:packages/mime",
+    "@remix-run/multipart-parser": "remix-run/remix#preview/pr-11072&path:packages/multipart-parser",
+    "@remix-run/node-fetch-server": "remix-run/remix#preview/pr-11072&path:packages/node-fetch-server",
+    "@remix-run/response": "remix-run/remix#preview/pr-11072&path:packages/response",
+    "@remix-run/route-pattern": "remix-run/remix#preview/pr-11072&path:packages/route-pattern",
+    "@remix-run/session": "remix-run/remix#preview/pr-11072&path:packages/session",
+    "@remix-run/session-middleware": "remix-run/remix#preview/pr-11072&path:packages/session-middleware",
+    "@remix-run/static-middleware": "remix-run/remix#preview/pr-11072&path:packages/static-middleware",
+    "@remix-run/tar-parser": "remix-run/remix#preview/pr-11072&path:packages/tar-parser",
+    "@remix-run/data-schema": "remix-run/remix#preview/pr-11072&path:packages/data-schema",
+    "@remix-run/data-table": "remix-run/remix#preview/pr-11072&path:packages/data-table",
+    "@remix-run/data-table-mysql": "remix-run/remix#preview/pr-11072&path:packages/data-table-mysql",
+    "@remix-run/data-table-postgres": "remix-run/remix#preview/pr-11072&path:packages/data-table-postgres",
+    "@remix-run/data-table-sqlite": "remix-run/remix#preview/pr-11072&path:packages/data-table-sqlite"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

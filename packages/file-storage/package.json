@@ -19,31 +19,23 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./fs": "./src/fs.ts",
-    "./memory": "./src/memory.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./fs": {
+      "types": "./dist/fs.d.ts",
+      "default": "./dist/fs.js"
+    },
+    "./memory": {
+      "types": "./dist/memory.d.ts",
+      "default": "./dist/memory.js"
+    },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./fs": {
-        "types": "./dist/fs.d.ts",
-        "default": "./dist/fs.js"
-      },
-      "./memory": {
-        "types": "./dist/memory.d.ts",
-        "default": "./dist/memory.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/fs": "workspace:^",
-    "@remix-run/lazy-file": "workspace:^"
+    "@remix-run/fs": "remix-run/remix#preview/pr-11072&path:packages/fs",
+    "@remix-run/lazy-file": "remix-run/remix#preview/pr-11072&path:packages/lazy-file"
   },
   "devDependencies": {
     "@remix-run/form-data-parser": "workspace:*",
