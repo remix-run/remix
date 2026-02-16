@@ -5,29 +5,10 @@ export const Fragment = RECONCILER_FRAGMENT
 
 export type DomJsxElement = ReconcilerElement
 
-type StyleValue =
-  | string
-  | Partial<CSSStyleDeclaration>
-  | Record<string, null | undefined | string | number>
-
-type DomEventMap<node extends EventTarget> = {
-  [eventType in keyof GlobalEventHandlersEventMap]?: (
-    event: GlobalEventHandlersEventMap[eventType] & {
-      currentTarget: node
-      target: EventTarget | null
-    },
-  ) => void
-}
-
 export type DomElementProps<node extends EventTarget> = {
   children?: RenderValue
-  class?: string
-  className?: string
   innerHTML?: string
   key?: unknown
-  on?: DomEventMap<node>
-  ref?: (node: node) => void
-  style?: StyleValue
 } & Record<string, unknown>
 
 export type DomHTMLElements = {
@@ -97,11 +78,13 @@ export namespace JSX {
   export interface IntrinsicAttributes {
     key?: unknown
   }
-  export type LibraryManagedAttributes<component, props> = component extends Component<
-    infer setup,
-    infer renderProps
-  >
-    ? (unknown extends setup ? {} : undefined extends setup ? { setup?: setup } : { setup: setup }) &
-        renderProps
-    : props
+  export type LibraryManagedAttributes<component, props> =
+    component extends Component<infer setup, infer renderProps>
+      ? (unknown extends setup
+          ? {}
+          : undefined extends setup
+            ? { setup?: setup }
+            : { setup: setup }) &
+          renderProps
+      : props
 }
