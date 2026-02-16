@@ -4,7 +4,7 @@ import { routes } from './routes.ts'
 import { BookCard } from './components/book-card.tsx'
 import { Layout } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
-import { ilike, or } from 'remix/data-table'
+import { ilike, inList, or } from 'remix/data-table'
 import { books } from './data/schema.ts'
 import { render } from './utils/render.ts'
 import { getCurrentCart } from './utils/context.ts'
@@ -14,10 +14,14 @@ export let home: BuildAction<'GET', typeof routes.home> = {
   async action({ db }) {
     let cart = getCurrentCart()
     let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
-    let featuredBookResults = await Promise.all(
-      featuredSlugs.map((slug) => db.findOne(books, { where: { slug } })),
-    )
-    let featuredBooks = featuredBookResults.filter((book) => book != null)
+    let featuredBookRows = await db.findMany(books, {
+      where: inList('slug', featuredSlugs),
+    })
+    let featuredBooksBySlug = new Map(featuredBookRows.map((book) => [book.slug, book]))
+    let featuredBooks = featuredSlugs.flatMap((slug) => {
+      let book = featuredBooksBySlug.get(slug)
+      return book ? [book] : []
+    })
 
     return render(
       <Layout>
