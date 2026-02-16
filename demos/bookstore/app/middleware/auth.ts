@@ -1,10 +1,9 @@
 import type { Middleware } from 'remix/fetch-router'
 import type { Route } from 'remix/fetch-router/routes'
-import type { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../routes.ts'
-import { type User, users } from '../data/schema.ts'
+import { users } from '../data/schema.ts'
 import { setCurrentUser } from '../utils/context.ts'
 
 /**
@@ -18,7 +17,7 @@ export function loadAuth(): Middleware {
 
     // Only set current user if authenticated
     if (typeof userId === 'string' || typeof userId === 'number') {
-      let user = await getUserById(db, userId)
+      let user = await db.find(users, userId)
       if (user) {
         setCurrentUser(user)
       }
@@ -46,7 +45,7 @@ export function requireAuth(options?: RequireAuthOptions): Middleware {
     let userId = session.get('userId')
     let user =
       typeof userId === 'string' || typeof userId === 'number'
-        ? await getUserById(db, userId)
+        ? await db.find(users, userId)
         : undefined
 
     if (!user) {
@@ -56,14 +55,4 @@ export function requireAuth(options?: RequireAuthOptions): Middleware {
 
     setCurrentUser(user)
   }
-}
-
-
-async function getUserById(db: Database, id: number | string): Promise<User | null> {
-  let parsed = typeof id === 'number' ? id : Number(id)
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    return null
-  }
-
-  return db.find(users, parsed)
 }
