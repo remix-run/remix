@@ -6,4 +6,10 @@ This is the changelog for [`data-schema`](https://github.com/remix-run/remix/tre
 
 ### Minor Changes
 
+- Initial release of `@remix-run/data-schema`.
+
+## v0.1.0
+
+### Minor Changes
+
 - Initial release.
