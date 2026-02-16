@@ -32,6 +32,8 @@ export type TestNodePolicy = NodePolicy<
   TestElementNode,
   TestTraversal
 > & {
+  createText(parent: TestParentNode, value: string): TestTextNode
+  createElement(parent: TestParentNode, type: string): TestElementNode
   operations: {
     createText: number
     createElement: number
@@ -76,22 +78,10 @@ export function createTestNodePolicy(): TestNodePolicy {
       return parent.children[0] ?? null
     },
     createText(_parent, value) {
-      operations.createText++
-      return {
-        kind: 'text',
-        value,
-        parent: null,
-      }
+      return createTextNode(value)
     },
     createElement(_parent, type) {
-      operations.createElement++
-      return {
-        kind: 'element',
-        type,
-        attributes: {},
-        children: [],
-        parent: null,
-      }
+      return createElementNode(type)
     },
     insert(parent, node, anchor) {
       operations.insert++
@@ -111,8 +101,7 @@ export function createTestNodePolicy(): TestNodePolicy {
     resolveText(parent, traversal, value): ResolvedText<TestTextNode, TestTraversal> {
       let candidate = traversal
       if (!candidate || candidate.kind !== 'text') {
-        let node = this.createText(parent, value)
-        this.insert(parent, node, candidate)
+        let node = createTextNode(value)
         return {
           node,
           next: candidate,
@@ -142,16 +131,32 @@ export function createTestNodePolicy(): TestNodePolicy {
       }
 
       let next = candidate ? this.nextSibling(candidate) : null
-      let node = this.createElement(parent, type)
-      this.insert(parent, node, candidate)
-      if (candidate) {
-        this.remove(parent, candidate)
-      }
+      let node = createElementNode(type)
       return {
         node,
         next,
       }
     },
+  }
+
+  function createTextNode(value: string): TestTextNode {
+    operations.createText++
+    return {
+      kind: 'text',
+      value,
+      parent: null,
+    }
+  }
+
+  function createElementNode(type: string): TestElementNode {
+    operations.createElement++
+    return {
+      kind: 'element',
+      type,
+      attributes: {},
+      children: [],
+      parent: null,
+    }
   }
 }
 

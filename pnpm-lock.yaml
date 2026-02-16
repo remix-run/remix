@@ -359,6 +359,28 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/dom:
+    dependencies:
+      '@remix-run/reconciler':
+        specifier: workspace:^
+        version: link:../reconciler
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      '@vitest/browser':
+        specifier: ^3.2.4
+        version: 3.2.4(playwright@1.57.0)(vite@7.3.0(@types/node@24.10.4)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)
+      playwright:
+        specifier: 'catalog:'
+        version: 1.57.0
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.10.4)(@vitest/browser@3.2.4)(tsx@4.21.0)(yaml@2.8.2)
+
   packages/fetch-proxy:
     dependencies:
       '@remix-run/headers':

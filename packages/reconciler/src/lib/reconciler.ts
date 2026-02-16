@@ -296,7 +296,7 @@ export function createReconcilerRuntime<
     anchor: null | node,
     traversalCursor: traversal,
   ): { node: CommittedHostNode<node, elementNode>; traversal: traversal } {
-    let probe = createDraftHostNode(parent, key, root)
+    let probe = createDraftHostNode(key)
     initializeHostPlugins(probe, root.hostFactories, root)
     let transformedInput = applyTransforms(probe, input)
     if (typeof transformedInput.type !== 'string') {
@@ -359,16 +359,14 @@ export function createReconcilerRuntime<
   }
 
   function createDraftHostNode(
-    parent: parentNode,
     key: string,
-    root: RootState<parentNode, node, elementNode, traversal>,
   ): CommittedHostNode<node, elementNode> {
     return {
       kind: 'host',
       type: '',
       key,
       props: {},
-      instance: root.nodePolicy.createElement(parent, 'placeholder'),
+      instance: null as never as elementNode,
       children: [],
       hostHandles: [],
       transforms: [],

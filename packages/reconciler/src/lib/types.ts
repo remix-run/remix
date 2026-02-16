@@ -157,8 +157,6 @@ export type NodePolicy<
   nextSibling(node: node): null | node
   begin(parent: parentNode): traversal
   enter(parent: parentNode): traversal
-  createText(parent: parentNode, value: string): textNode
-  createElement(parent: parentNode, type: string): elementNode
   insert(parent: parentNode, node: node, anchor: null | node): void
   move(parent: parentNode, node: node, anchor: null | node): void
   remove(parent: parentNode, node: node): void
