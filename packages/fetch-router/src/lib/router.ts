@@ -302,9 +302,10 @@ export function createRouter(options?: RouterOptions): Router {
     }
   }
 
-  return {
+  let router: Router = {
     fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
       let context = createRequestContext(input, init)
+      context.router = router
 
       if (globalMiddleware) {
         return runMiddleware(globalMiddleware, context, dispatch)
@@ -353,8 +354,10 @@ export function createRouter(options?: RouterOptions): Router {
     options<pattern extends string>(
       route: pattern | RoutePattern<pattern> | Route<'OPTIONS' | 'ANY', pattern>,
       action: Action<'OPTIONS', pattern>,
-    ): void {
-      addRoute('OPTIONS', route, action)
-    },
+      ): void {
+        addRoute('OPTIONS', route, action)
+      },
   }
+
+  return router
 }

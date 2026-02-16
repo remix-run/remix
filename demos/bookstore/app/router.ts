@@ -22,7 +22,6 @@ import checkoutController from './checkout.tsx'
 import * as marketingController from './marketing.tsx'
 import { uploadsAction } from './uploads.tsx'
 import fragmentsController from './fragments.tsx'
-import { routerStorageKey } from './utils/router-storage.ts'
 import { loadDatabase } from './middleware/database.ts'
 
 let middleware = []
@@ -48,12 +47,6 @@ middleware.push(loadDatabase())
 await initializeBookstoreDatabase()
 
 export let router = createRouter({ middleware })
-
-// Make router available to render() for internal frame resolution (no network).
-middleware.unshift((context: any, next: any) => {
-  context.storage.set(routerStorageKey, router)
-  return next()
-})
 
 router.get(routes.uploads, uploadsAction)
 router.map(routes.fragments, fragmentsController)
