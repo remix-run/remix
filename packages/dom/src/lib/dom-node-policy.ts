@@ -4,7 +4,10 @@ export type DomParentNode = Node & ParentNode
 export type DomNode = Node
 export type DomTextNode = Text
 export type DomElementNode = Element
-export type DomTraversal = null | Node
+export type DomTraversal = {
+  namespace: string
+  next: null | Node
+}
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg'
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 
@@ -25,10 +28,10 @@ export function createDomNodePolicy(document: Document): DomNodePolicy {
       return node.nextSibling
     },
     begin(parent) {
-      return parent.firstChild
+      return createTraversal(parent, parent.firstChild)
     },
     enter(parent) {
-      return parent.firstChild
+      return createTraversal(parent, parent.firstChild)
     },
     insert(parent, node, anchor) {
       parent.insertBefore(node, anchor)
@@ -39,13 +42,14 @@ export function createDomNodePolicy(document: Document): DomNodePolicy {
     remove(_parent, node) {
       node.parentNode?.removeChild(node)
     },
-    resolveText(_parent, traversal, value) {
-      if (traversal && traversal.nodeType === Node.TEXT_NODE) {
-        let node = traversal as Text
+    resolveText(parent, traversal, value) {
+      let candidate = traversal.next
+      if (candidate && candidate.nodeType === Node.TEXT_NODE) {
+        let node = candidate as Text
         if (node.data !== value) node.data = value
         return {
           node,
-          next: traversal.nextSibling,
+          next: createTraversal(parent, candidate.nextSibling),
         }
       }
       return {
@@ -53,14 +57,15 @@ export function createDomNodePolicy(document: Document): DomNodePolicy {
         next: traversal,
       }
     },
-    resolveElement(_parent, traversal, type) {
-      let namespace = resolveNamespace(_parent)
-      if (traversal && traversal.nodeType === Node.ELEMENT_NODE) {
-        let node = traversal as Element
+    resolveElement(parent, traversal, type) {
+      let candidate = traversal.next
+      let namespace = traversal.namespace
+      if (candidate && candidate.nodeType === Node.ELEMENT_NODE) {
+        let node = candidate as Element
         if (node.localName === type && node.namespaceURI === namespace) {
           return {
             node,
-            next: traversal.nextSibling,
+            next: createTraversal(parent, candidate.nextSibling),
           }
         }
       }
@@ -69,6 +74,13 @@ export function createDomNodePolicy(document: Document): DomNodePolicy {
         next: traversal,
       }
     },
+  }
+}
+
+function createTraversal(parent: DomParentNode, next: null | Node): DomTraversal {
+  return {
+    namespace: resolveNamespace(parent),
+    next,
   }
 }
 
