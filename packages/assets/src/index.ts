@@ -1,7 +1,3 @@
-/**
- * Core transform, resolution, and dev handler for unbundled assets.
- */
-
 export { createDevAssetsHandler } from './lib/dev-handler.ts'
 export { createDevAssets } from './lib/dev-assets.ts'
 export { createAssets } from './lib/assets.ts'

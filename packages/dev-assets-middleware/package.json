@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/dev-assets-middleware",
   "version": "0.0.0",
-  "description": "Development middleware for serving and transforming JavaScript/TypeScript source files",
+  "description": "Middleware for transforming assets with 'remix/assets' and serving them in development",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {

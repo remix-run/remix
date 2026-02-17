@@ -6,13 +6,15 @@ import {
   type CreateDevAssetsHandlerOptions,
 } from '@remix-run/assets'
 
+export type DevAssetsMiddlewareOptions = CreateDevAssetsHandlerOptions
+
 /**
  * Creates a middleware that serves and transforms source files for development.
  *
  * @param options Configuration options (root, allow, deny, workspaceRoot, workspaceAllow, workspaceDeny, sourcemap, external)
  * @returns The dev assets middleware
  */
-export function devAssets(options: CreateDevAssetsHandlerOptions): Middleware {
+export function devAssets(options: DevAssetsMiddlewareOptions): Middleware {
   let root = path.resolve(options.root ?? process.cwd())
   let handler = createDevAssetsHandler(options)
   let assetsApi = createDevAssets({ root, files: options.files })

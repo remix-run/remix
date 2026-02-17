@@ -1,1 +1,1 @@
-export { devAssets } from './lib/assets.ts'
+export { devAssets, type DevAssetsMiddlewareOptions } from './lib/assets.ts'

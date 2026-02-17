@@ -45,9 +45,5 @@ export function getCurrentCart(): Cart {
  * Get the assets API from the context.
  */
 export function getAssets(): Assets {
-  let assets = getContext().assets
-  if (!assets) {
-    throw new Error('Assets not available in context')
-  }
-  return assets
+  return getContext().assets
 }

@@ -19,15 +19,6 @@ async function main() {
 
   let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
-  function shutdown() {
-    server.close(() => {
-      process.exit(0)
-    })
-  }
-
-  process.on('SIGINT', shutdown)
-  process.on('SIGTERM', shutdown)
-
   server.listen(port, () => {
     console.log(`Bookstore is running on http://localhost:${port}`)
     console.log(`Mode: ${isDev ? 'development' : 'production'}`)
@@ -37,6 +28,19 @@ async function main() {
     console.log('  Customer: customer@example.com / password123')
     console.log('')
   })
+
+  let shuttingDown = false
+
+  function shutdown() {
+    if (shuttingDown) return
+    shuttingDown = true
+    server.close(() => {
+      process.exit(0)
+    })
+  }
+
+  process.on('SIGINT', shutdown)
+  process.on('SIGTERM', shutdown)
 }
 
 main().catch((error) => {

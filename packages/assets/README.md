@@ -1,6 +1,6 @@
 # assets
 
-Core package for unbundled asset handling.
+Unbundled browser build tooling and development handler.
 
 ## Installation
 
@@ -16,10 +16,17 @@ npm i remix
 import { createDevAssetsHandler } from 'remix/assets'
 
 let handler = createDevAssetsHandler({
-  root: '.',
-  allow: ['app/**'],
-  workspaceRoot: '..',
-  workspaceAllow: ['**/node_modules/**'],
+  allow: ['app/**', '**/node_modules/**'],
+  files: [
+    {
+      include: 'app/**/*.{png,jpg,jpeg}',
+      variants: {
+        original: (buffer) => buffer,
+        thumbnail: (buffer) => generateThumbnail(buffer),
+      },
+      defaultVariant: 'original',
+    },
+  ],
 })
 
 // In your request handler:
@@ -28,116 +35,66 @@ if (response) return response
 // ...
 ```
 
+Resolving dev assets:
+
+```ts
+import { createDevAssets } from 'remix/assets'
+import generateThumbnail from './generate-thumbnail.ts'
+
+let assets = createDevAssets({
+  allow: ['app/**', '**/node_modules/**'],
+  files: [
+    {
+      include: 'app/**/*.{png,jpg,jpeg}',
+      variants: {
+        original: (buffer) => buffer,
+        thumbnail: (buffer) => generateThumbnail(buffer),
+      },
+      defaultVariant: 'original',
+    },
+  ],
+})
+```
+
 ### Production build
 
 ```ts
 import { build } from 'remix/assets'
+import generateThumbnail from './generate-thumbnail.ts'
 
 await build({
   scripts: ['app/entry.tsx'],
-  root: '.',
+  files: [
+    {
+      include: 'app/**/*.{png,jpg,jpeg}',
+      variants: {
+        original: (buffer) => buffer,
+        thumbnail: (buffer) => generateThumbnail(buffer),
+      },
+      defaultVariant: 'original',
+    },
+  ],
   outDir: './build/assets',
+  fileNames: '[dir]/[name]-[hash]',
   minify: true,
   sourcemap: 'external',
-  fileNames: '[dir]/[name]-[hash]',
   manifest: './build/assets-manifest.json',
 })
 ```
 
-### Script handling (JS/TS module graph)
+### Workspace configuration
 
-Use `scripts` to specify the entry points for the script graph.
-
-```ts
-import { build } from 'remix/assets'
-
-await build({
-  scripts: ['app/entry.tsx'],
-})
-```
-
-Runtime behavior:
-
-- `assets.get('app/entry.tsx')` resolves the script output.
-
-### File handling (images/fonts/etc)
-
-Use `files` rules to match source paths, run transforms, and optionally define named variants.
+To serve files from outside the project root, you can configure the `workspaceRoot` option, along with optional `workspaceAllow` and `workspaceDeny` patterns that replace the top-level `allow` and `deny` patterns.
 
 ```ts
-import { build } from 'remix/assets'
-import type { FilesConfig } from 'remix/assets'
-import sharp from 'sharp'
+import { createDevAssetsHandler } from 'remix/assets'
 
-let files: FilesConfig = [
-  {
-    include: 'app/images/**/*.{png,jpg,jpeg}',
-    variants: {
-      thumbnail: (data) => sharp(data).resize(200).jpeg({ quality: 80 }).toBuffer(),
-      card: (data) => sharp(data).resize(600).jpeg({ quality: 85 }).toBuffer(),
-    },
-    defaultVariant: 'card',
-  },
-  {
-    include: 'app/icons/**/*.svg',
-    transform: (data) => data,
-  },
-]
-
-await build({
-  scripts: ['app/entry.tsx'],
-  files,
-  root: '.',
-  outDir: './build/assets',
-  manifest: './build/assets-manifest.json',
+let handler = createDevAssetsHandler({
+  allow: ['app/**', '**/node_modules/**'],
+  workspaceRoot: '../..',
+  workspaceAllow: ['packages/*/src/**/*', '**/node_modules/**'],
 })
 ```
-
-Runtime behavior:
-
-- `assets.get('app/images/logo.png', 'thumbnail')` resolves a file variant.
-- `assets.get('app/images/logo.png')` uses `defaultVariant` when configured.
-- `assets.get('app/icons/logo.svg')` resolves a non-variant transformed file.
-- Missing files or invalid variants return `null`.
-
-Development behavior:
-
-- `createDevAssets({ root, files })` emits `href`s under `/__@files/...`.
-- File transforms/variants are resolved on-demand by the dev handler.
-
-Production behavior:
-
-- `build()` pre-generates file outputs and writes `manifest.files.outputs`.
-- Production middleware reads the manifest and serves static hashed outputs (no runtime transforms).
-- You can also create an assets API directly from a manifest with `createAssets(manifest, { baseUrl? })`.
-
-## API
-
-### `build(options)`
-
-Builds script/file assets for production, writes outputs, and optionally writes a manifest.
-
-### `createDevAssetsHandler(options)`
-
-Creates a stateful development handler with `serve(request)` for on-demand transforms.
-
-### `createDevAssets({ root, scripts?, files? })`
-
-Creates a dev assets API where `assets.get(entryPath, variant?)` returns `{ href, chunks } | null`.
-
-### `createAssets<FilesConfig>(manifest, { baseUrl? })`
-
-Creates a production assets API from a build manifest. You can pass a generic
-(`createAssets<typeof files>(...)`) to narrow allowed variants in `.get()`.
-
-### `defineFiles(files)`
-
-Helper for defining typed file rules/variants.
-
-### Types
-
-Exports include `BuildOptions`, `CreateDevAssetsHandlerOptions`, `CreateAssetsOptions`,
-`CreateDevAssetsOptions`, `AssetManifest`, and file rule/transform types.
 
 ## Related Packages
 

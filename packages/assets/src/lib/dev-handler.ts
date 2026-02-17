@@ -291,7 +291,7 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
     }
   }
 
-  async function serveFileAssetRequest(
+  async function handleFileAssetRequest(
     requestUrl: URL,
     ifNoneMatch: string | null,
   ): Promise<Response> {
@@ -406,7 +406,7 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
       let ifNoneMatch = request.headers.get('If-None-Match')
 
       if (pathname.startsWith('/__@files/')) {
-        return serveFileAssetRequest(requestUrl, ifNoneMatch)
+        return handleFileAssetRequest(requestUrl, ifNoneMatch)
       }
 
       if (pathname.startsWith('/__@workspace/')) {

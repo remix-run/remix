@@ -57,11 +57,13 @@ async function main() {
   // Home page - renders HTML with the entry script
   router.get('/', ({ assets }) => {
     let entry = assets.get('app/entry.tsx')
+
     let bbqThumbnail = assets.get('app/images/books/bbq-1.png', 'thumbnail')
     let bbqCard = assets.get('app/images/books/bbq-1.png', 'card')
     let bbqHero = assets.get('app/images/books/bbq-1.png', 'hero')
     let heavyMetalThumbnail = assets.get('app/images/books/heavy-metal-1.png', 'thumbnail')
     let threeWaysCard = assets.get('app/images/books/three-ways-1.png', 'card')
+
     if (!entry) {
       return new Response('Entry point not found', { status: 500 })
     }

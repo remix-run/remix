@@ -42,8 +42,8 @@ export async function extractImportSpecifiers(
  * Extracts the package name from an import specifier.
  *
  * Examples:
- * - `'lodash'` → `'lodash'`
- * - `'lodash/map'` → `'lodash'`
+ * - `'remix'` → `'remix'`
+ * - `'remix/component'` → `'remix'`
  * - `'@remix-run/component'` → `'@remix-run/component'`
  * - `'@remix-run/component/jsx-runtime'` → `'@remix-run/component'`
  *
