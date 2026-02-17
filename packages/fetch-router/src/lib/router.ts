@@ -180,6 +180,16 @@ export function createRouter(options?: RouterOptions): Router {
   let matcher = options?.matcher ?? new ArrayMatcher<MatchData>()
   let globalMiddleware = options?.middleware
 
+  function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
+    let request = new Request(input, init)
+
+    if (request.signal.aborted) {
+      throw request.signal.reason
+    }
+
+    return new RequestContext(request)
+  }
+
   function dispatch(context: RequestContext): Promise<Response> {
     for (let match of matcher.matchAll(context.url)) {
       let { handler, method, middleware } = match.data
@@ -294,13 +304,7 @@ export function createRouter(options?: RouterOptions): Router {
 
   return {
     fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-      let request = new Request(input, init)
-
-      if (request.signal.aborted) {
-        throw request.signal.reason
-      }
-
-      let context = new RequestContext(request)
+      let context = createRequestContext(input, init)
 
       if (globalMiddleware) {
         return runMiddleware(globalMiddleware, context, dispatch)

@@ -1,6 +1,9 @@
 import { createContainer } from '@remix-run/interaction'
-import type { Component, ComponentHandle, FrameHandle } from './component.ts'
+import type { Component, ComponentHandle, FrameContent, FrameHandle } from './component.ts'
 import { createComponent, Frame } from './component.ts'
+import type { Frame as FrameInstance, FrameRuntime } from './frame.ts'
+import { createFrame } from './frame.ts'
+import { createRangeRoot } from './vdom.ts'
 import type {
   ComponentNode,
   CommittedComponentNode,
@@ -24,7 +27,8 @@ import {
 } from './vnode.ts'
 import { invariant } from './invariant.ts'
 import { diffHostProps, cleanupCssProps } from './diff-props.ts'
-import { skipComments, logHydrationMismatch } from './hydration.ts'
+import type { StyleManager } from './style/index.ts'
+import { skipComments, logHydrationMismatch } from './client-entries.ts'
 import type { Scheduler } from './scheduler.ts'
 import { toVNode } from './to-vnode.ts'
 import {
@@ -48,7 +52,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg'
 const INSERT_VNODE = 1 << 0
 const MATCHED = 1 << 1
 
-let fixmeIdCounter = 0
+let idCounter = 0
 
 // Compute SVG context for a node based on its parent and type.
 // Returns true if the node is within an SVG subtree, false otherwise.
@@ -64,12 +68,38 @@ function getSvgContext(vParent: VNode, nodeType: VNodeType): boolean {
   return vParent._svg ?? false
 }
 
+function isHeadHostNode(node: HostNode): boolean {
+  return node.type.toLowerCase() === 'head'
+}
+
+function isHeadManagedHostNode(node: HostNode): boolean {
+  let tag = node.type.toLowerCase()
+  if (tag === 'title' || tag === 'meta' || tag === 'link' || tag === 'style') {
+    return true
+  }
+  if (tag === 'script') {
+    return node.props?.type === 'application/ld+json'
+  }
+  return false
+}
+
+function getDocumentHead(domParent: ParentNode): HTMLHeadElement | null {
+  if (domParent instanceof Document) {
+    return domParent.head
+  }
+  if (domParent instanceof Node) {
+    return domParent.ownerDocument?.head ?? null
+  }
+  return null
+}
+
 export function diffVNodes(
   curr: VNode | null,
   next: VNode,
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
+  styles: StyleManager,
   vParent: VNode,
   rootTarget: EventTarget,
   anchor?: Node,
@@ -80,11 +110,21 @@ export function diffVNodes(
 
   // new
   if (curr === null) {
-    return insert(next, domParent, frame, scheduler, vParent, rootTarget, anchor, rootCursor)
+    return insert(
+      next,
+      domParent,
+      frame,
+      scheduler,
+      styles,
+      vParent,
+      rootTarget,
+      anchor,
+      rootCursor,
+    )
   }
 
   if (curr.type !== next.type) {
-    replace(curr, next, domParent, frame, scheduler, vParent, rootTarget, anchor)
+    replace(curr, next, domParent, frame, scheduler, styles, vParent, rootTarget, anchor)
     return rootCursor
   }
 
@@ -94,12 +134,12 @@ export function diffVNodes(
   }
 
   if (isCommittedHostNode(curr) && isHostNode(next)) {
-    diffHost(curr, next, frame, scheduler, vParent, rootTarget)
+    diffHost(curr, next, frame, scheduler, styles, vParent, rootTarget)
     return rootCursor
   }
 
   if (isCommittedComponentNode(curr) && isComponentNode(next)) {
-    diffComponent(curr, next, frame, scheduler, domParent, vParent, rootTarget)
+    diffComponent(curr, next, frame, scheduler, styles, domParent, vParent, rootTarget)
     return rootCursor
   }
 
@@ -110,6 +150,7 @@ export function diffVNodes(
       domParent,
       frame,
       scheduler,
+      styles,
       vParent,
       rootTarget,
       undefined,
@@ -119,7 +160,8 @@ export function diffVNodes(
   }
 
   if (curr.type === Frame && next.type === Frame) {
-    throw new Error('TODO: Frame diff not implemented')
+    diffFrame(curr, next, domParent, frame, scheduler, styles, vParent, rootTarget, anchor)
+    return rootCursor
   }
 
   invariant(false, 'Unexpected diff case')
@@ -131,14 +173,20 @@ function replace(
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
+  styles: StyleManager,
   vParent: VNode,
   rootTarget: EventTarget,
   anchor?: Node,
 ) {
-  // Use curr's DOM position (most accurate), fall back to anchor if curr has no DOM
-  anchor = findFirstDomAnchor(curr) || anchor
-  insert(next, domParent, frame, scheduler, vParent, rootTarget, anchor)
-  remove(curr, domParent, scheduler)
+  // Use curr's DOM position (most accurate) when it belongs to this parent.
+  // Hoisted head nodes live under document.head and cannot be used as anchors
+  // for body/range insertions.
+  let currAnchor = findFirstDomAnchor(curr)
+  if (currAnchor && currAnchor.parentNode === domParent) {
+    anchor = currAnchor
+  }
+  insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, anchor)
+  remove(curr, domParent, scheduler, styles)
 }
 
 function diffHost(
@@ -146,6 +194,7 @@ function diffHost(
   next: HostNode,
   frame: FrameHandle,
   scheduler: Scheduler,
+  styles: StyleManager,
   vParent: VNode,
   rootTarget: EventTarget,
 ) {
@@ -160,8 +209,17 @@ function diffHost(
     curr._dom.innerHTML = ''
   }
 
-  diffChildren(curr._children, next._children, curr._dom, frame, scheduler, next, rootTarget)
-  diffHostProps(curr.props, next.props, curr._dom)
+  diffChildren(
+    curr._children,
+    next._children,
+    curr._dom,
+    frame,
+    scheduler,
+    styles,
+    next,
+    rootTarget,
+  )
+  diffHostProps(curr.props, next.props, curr._dom, styles)
 
   next._dom = curr._dom
   next._parent = vParent
@@ -267,6 +325,7 @@ function insert(
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
+  styles: StyleManager,
   vParent: VNode,
   rootTarget: EventTarget,
   anchor?: Node,
@@ -281,7 +340,10 @@ function insert(
     cursor = null
   }
 
-  cursor = skipComments(cursor ?? null)
+  cursor =
+    node.type === Frame
+      ? skipCommentsExceptFrameStart(cursor ?? null)
+      : skipComments(cursor ?? null)
 
   // Also check after skipComments in case we skipped past the anchor
   if (cursor && anchor && cursor === anchor) {
@@ -320,10 +382,53 @@ function insert(
   }
 
   if (isHostNode(node)) {
+    if (isHeadHostNode(node)) {
+      let targetHead = getDocumentHead(domParent)
+      if (targetHead) {
+        let childCursor = cursor
+        if (cursor instanceof Element && cursor.tagName.toLowerCase() === 'head') {
+          childCursor = cursor.firstChild
+          let nextCursor = cursor.nextSibling
+          if (cursor !== targetHead) {
+            while (cursor.firstChild) {
+              targetHead.appendChild(cursor.firstChild)
+            }
+            cursor.remove()
+          }
+          cursor = nextCursor
+        }
+
+        // Render explicit <head> children directly into document.head.
+        diffChildren(
+          null,
+          node._children,
+          targetHead,
+          frame,
+          scheduler,
+          styles,
+          node,
+          rootTarget,
+          childCursor,
+        )
+        diffHostProps({}, node.props, targetHead, styles)
+        setupHostNode(node, targetHead, scheduler)
+        return cursor
+      }
+    }
+
     // Check for matching exiting node that can be reclaimed
     let exitingNode = findMatchingExitingNode(node.type, node.key, domParent)
     if (exitingNode) {
-      reclaimExitingNode(exitingNode, node, domParent, frame, scheduler, vParent, rootTarget)
+      reclaimExitingNode(
+        exitingNode,
+        node,
+        domParent,
+        frame,
+        scheduler,
+        styles,
+        vParent,
+        rootTarget,
+      )
       return cursor
     }
 
@@ -332,9 +437,8 @@ function insert(
       // HTML elements are case-insensitive, so we lowercase for comparison
       let cursorTag = node._svg ? cursor.tagName : cursor.tagName.toLowerCase()
       if (cursorTag === node.type) {
-        // FIXME: hydrate css prop
-        // correct hydration mismatches
-        diffHostProps({}, node.props, cursor)
+        let nextCursor = cursor.nextSibling
+        diffHostProps({}, node.props, cursor, styles)
 
         // Handle innerHTML prop
         if (node.props.innerHTML != null) {
@@ -348,6 +452,7 @@ function insert(
             cursor,
             frame,
             scheduler,
+            styles,
             node,
             rootTarget,
             childCursor,
@@ -355,7 +460,13 @@ function insert(
         }
 
         setupHostNode(node, cursor, scheduler)
-        return cursor.nextSibling
+        if (isHeadManagedHostNode(node)) {
+          let targetHead = getDocumentHead(domParent)
+          if (targetHead && cursor.parentNode !== targetHead) {
+            targetHead.appendChild(cursor)
+          }
+        }
+        return nextCursor
       } else {
         // Type mismatch - try single-advance retry to handle browser extension injections
         // at the start of containers. Skip this node and try the next sibling once.
@@ -363,8 +474,9 @@ function insert(
         if (nextSibling instanceof Element) {
           let nextTag = node._svg ? nextSibling.tagName : nextSibling.tagName.toLowerCase()
           if (nextTag === node.type) {
+            let nextCursor = nextSibling.nextSibling
             // Found a match after skipping - adopt it and leave skipped node in place
-            diffHostProps({}, node.props, nextSibling)
+            diffHostProps({}, node.props, nextSibling, styles)
 
             if (node.props.innerHTML != null) {
               nextSibling.innerHTML = node.props.innerHTML
@@ -376,6 +488,7 @@ function insert(
                 nextSibling,
                 frame,
                 scheduler,
+                styles,
                 node,
                 rootTarget,
                 childCursor,
@@ -383,7 +496,13 @@ function insert(
             }
 
             setupHostNode(node, nextSibling, scheduler)
-            return nextSibling.nextSibling
+            if (isHeadManagedHostNode(node)) {
+              let targetHead = getDocumentHead(domParent)
+              if (targetHead && nextSibling.parentNode !== targetHead) {
+                targetHead.appendChild(nextSibling)
+              }
+            }
+            return nextCursor
           }
         }
         // Retry failed - log mismatch and create new element (don't remove mismatched nodes)
@@ -394,24 +513,43 @@ function insert(
     let dom = node._svg
       ? document.createElementNS(SVG_NS, node.type)
       : document.createElement(node.type)
-    diffHostProps({}, node.props, dom)
+    diffHostProps({}, node.props, dom, styles)
 
     // Handle innerHTML prop
     if (node.props.innerHTML != null) {
       dom.innerHTML = node.props.innerHTML
     } else {
-      diffChildren(null, node._children, dom, frame, scheduler, node, rootTarget)
+      diffChildren(null, node._children, dom, frame, scheduler, styles, node, rootTarget)
     }
 
     setupHostNode(node, dom, scheduler)
-    doInsert(dom)
+    if (isHeadManagedHostNode(node)) {
+      let targetHead = getDocumentHead(domParent)
+      if (targetHead) {
+        targetHead.appendChild(dom)
+      } else {
+        doInsert(dom)
+      }
+    } else {
+      doInsert(dom)
+    }
     return cursor
   }
 
   if (isFragmentNode(node)) {
     // Insert fragment children in order before the same anchor
     for (let child of node._children) {
-      cursor = insert(child, domParent, frame, scheduler, vParent, rootTarget, anchor, cursor)
+      cursor = insert(
+        child,
+        domParent,
+        frame,
+        scheduler,
+        styles,
+        vParent,
+        rootTarget,
+        anchor,
+        cursor,
+      )
     }
     return cursor
   }
@@ -422,6 +560,7 @@ function insert(
       node,
       frame,
       scheduler,
+      styles,
       domParent,
       vParent,
       rootTarget,
@@ -431,10 +570,357 @@ function insert(
   }
 
   if (node.type === Frame) {
-    throw new Error('TODO: Frame insert not implemented')
+    return insertFrame(
+      node,
+      domParent,
+      frame,
+      scheduler,
+      styles,
+      vParent,
+      rootTarget,
+      anchor,
+      cursor,
+    )
   }
 
   invariant(false, 'Unexpected node type')
+}
+
+function diffFrame(
+  curr: VNode,
+  next: VNode,
+  domParent: ParentNode,
+  frame: FrameHandle,
+  scheduler: Scheduler,
+  styles: StyleManager,
+  vParent: VNode,
+  rootTarget: EventTarget,
+  anchor?: Node,
+): void {
+  let currSrc = getFrameSrc(curr)
+  let nextSrc = getFrameSrc(next)
+  let currName = getFrameName(curr)
+  let nextName = getFrameName(next)
+
+  if (currName !== nextName) {
+    let replaceAnchor = curr._rangeEnd?.nextSibling ?? anchor
+    remove(curr, domParent, scheduler, styles)
+    insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, replaceAnchor)
+    return
+  }
+
+  // If the frame hasn't resolved yet, preserve existing cancel/remount behavior
+  // so pending streams from the old src cannot take over the new src.
+  if (currSrc !== nextSrc && !curr._frameResolved) {
+    let replaceAnchor = curr._rangeEnd?.nextSibling ?? anchor
+    remove(curr, domParent, scheduler, styles)
+    insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, replaceAnchor)
+    return
+  }
+
+  next._rangeStart = curr._rangeStart
+  next._rangeEnd = curr._rangeEnd
+  next._frameInstance = curr._frameInstance
+  next._frameFallbackRoot = curr._frameFallbackRoot
+  next._frameResolveToken = curr._frameResolveToken
+  next._frameResolved = curr._frameResolved
+  next._parent = vParent
+
+  if (currSrc !== nextSrc) {
+    let frameInstance = next._frameInstance as FrameInstance | undefined
+    if (frameInstance) {
+      frameInstance.handle.src = nextSrc
+    }
+
+    let runtime = getFrameRuntime(frame)
+    if (runtime) {
+      resolveClientFrame(next, runtime, rootTarget)
+    }
+  }
+
+  if (!next._frameResolved && next._frameFallbackRoot) {
+    next._frameFallbackRoot.render(next.props?.fallback ?? null)
+  }
+}
+
+function insertFrame(
+  node: VNode,
+  domParent: ParentNode,
+  frame: FrameHandle,
+  scheduler: Scheduler,
+  styles: StyleManager,
+  vParent: VNode,
+  rootTarget: EventTarget,
+  anchor?: Node,
+  cursor?: Node | null,
+): Node | null | undefined {
+  let runtime = getFrameRuntime(frame)
+  if (!runtime) {
+    throw new Error(
+      'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
+    )
+  }
+
+  // Hydration path: adopt server-rendered frame markers and reuse the existing
+  // frame instance created during createSubFrames().
+  if (isFrameStartComment(cursor)) {
+    let start = cursor
+    let end = findFrameEndComment(start)
+    if (end) {
+      node._rangeStart = start
+      node._rangeEnd = end
+      node._parent = vParent
+      node._frameResolveToken = 0
+      node._frameResolveController = undefined
+      node._frameFallbackRoot = undefined
+      node._frameResolved = true
+
+      let frameId = getFrameIdFromComment(start)
+      let marker = frameId ? runtime.data.f?.[frameId] : undefined
+      let src = marker?.src ?? getFrameSrc(node)
+      let instance = runtime.frameInstances.get(start)
+      if (!instance) {
+        instance = createFrame([start, end], {
+          name: getFrameName(node),
+          src,
+          marker: frameId && marker ? { ...marker, id: frameId } : undefined,
+          loadModule: runtime.loadModule,
+          resolveFrame: runtime.resolveFrame,
+          pendingClientEntries: runtime.pendingClientEntries,
+          scheduler: runtime.scheduler,
+          styleManager: runtime.styleManager,
+          data: runtime.data,
+          moduleCache: runtime.moduleCache,
+          moduleLoads: runtime.moduleLoads,
+          frameInstances: runtime.frameInstances,
+          namedFrames: runtime.namedFrames,
+        })
+        runtime.frameInstances.set(start, instance)
+      }
+
+      node._frameInstance = instance
+
+      return end.nextSibling
+    }
+  }
+
+  let start = document.createComment(` rmx:f:${randomFrameId()} `)
+  let end = document.createComment(' /rmx:f ')
+  let doInsert = anchor
+    ? (dom: Node) => domParent.insertBefore(dom, anchor)
+    : (dom: Node) => domParent.appendChild(dom)
+
+  doInsert(start)
+  doInsert(end)
+
+  node._rangeStart = start
+  node._rangeEnd = end
+  node._parent = vParent
+
+  let fallbackRoot = createRangeRoot([start, end], {
+    frame,
+    styleManager: styles,
+  })
+  fallbackRoot.render(node.props?.fallback ?? null)
+  node._frameFallbackRoot = fallbackRoot
+  node._frameResolved = false
+  node._frameResolveToken = 0
+
+  let instance = createFrame([start, end], {
+    name: getFrameName(node),
+    src: getFrameSrc(node),
+    loadModule: runtime.loadModule,
+    resolveFrame: runtime.resolveFrame,
+    pendingClientEntries: runtime.pendingClientEntries,
+    scheduler: runtime.scheduler,
+    styleManager: runtime.styleManager,
+    data: runtime.data,
+    moduleCache: runtime.moduleCache,
+    moduleLoads: runtime.moduleLoads,
+    frameInstances: runtime.frameInstances,
+    namedFrames: runtime.namedFrames,
+  })
+  node._frameInstance = instance
+  runtime.frameInstances.set(start, instance)
+
+  resolveClientFrame(node, runtime, rootTarget)
+
+  return cursor
+}
+
+function resolveClientFrame(node: VNode, runtime: FrameRuntime, rootTarget: EventTarget): void {
+  let frameSrc = getFrameSrc(node)
+  let instance = node._frameInstance as FrameInstance | undefined
+  if (!instance) return
+
+  let token = (node._frameResolveToken ?? 0) + 1
+  node._frameResolveToken = token
+  node._frameResolveController?.abort()
+  let resolveController = new AbortController()
+  node._frameResolveController = resolveController
+
+  Promise.resolve(runtime.resolveFrame(frameSrc, resolveController.signal))
+    .then(async (content) => {
+      if (node._frameResolveToken !== token || resolveController.signal.aborted) return
+      node._frameFallbackRoot?.dispose()
+      node._frameFallbackRoot = undefined
+      let nextContent = asAbortableFrameContent(content, resolveController.signal)
+      await instance.render(nextContent, { signal: resolveController.signal })
+      if (node._frameResolveToken !== token || resolveController.signal.aborted) return
+      node._frameResolved = true
+    })
+    .catch(() => {})
+    .finally(() => {
+      if (node._frameResolveController === resolveController) {
+        node._frameResolveController = undefined
+      }
+    })
+}
+
+function disposeFrameResources(node: VNode): void {
+  node._frameResolveToken = (node._frameResolveToken ?? 0) + 1
+  node._frameResolveController?.abort()
+  node._frameResolveController = undefined
+  node._frameFallbackRoot?.dispose()
+  node._frameFallbackRoot = undefined
+
+  let frameInstance = node._frameInstance as FrameInstance | undefined
+  if (frameInstance) {
+    frameInstance.dispose()
+    node._frameInstance = undefined
+  }
+}
+
+function asAbortableFrameContent(content: FrameContent, signal: AbortSignal): FrameContent {
+  if (!(content instanceof ReadableStream)) return content
+  return createAbortableReadableStream(content, signal)
+}
+
+function createAbortableReadableStream(
+  source: ReadableStream<Uint8Array>,
+  signal: AbortSignal,
+): ReadableStream<Uint8Array> {
+  let reader = source.getReader()
+  let aborted = false
+
+  let onAbort = () => {
+    aborted = true
+    void reader.cancel(signal.reason)
+  }
+
+  if (signal.aborted) onAbort()
+  else signal.addEventListener('abort', onAbort, { once: true })
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      if (aborted) {
+        controller.close()
+        return
+      }
+
+      let removeAbortReadListener: undefined | (() => void)
+      let abortRead = new Promise<ReadableStreamReadResult<Uint8Array>>((resolve) => {
+        if (signal.aborted) {
+          resolve({ done: true, value: undefined as unknown as Uint8Array })
+          return
+        }
+        let onAbortRead = () => {
+          resolve({ done: true, value: undefined as unknown as Uint8Array })
+        }
+        removeAbortReadListener = () => signal.removeEventListener('abort', onAbortRead)
+        signal.addEventListener('abort', onAbortRead, { once: true })
+      })
+
+      let { done, value } = await Promise.race([reader.read(), abortRead])
+      removeAbortReadListener?.()
+
+      if (done) {
+        controller.close()
+        return
+      }
+      controller.enqueue(value)
+    },
+    cancel(reason) {
+      signal.removeEventListener('abort', onAbort)
+      return reader.cancel(reason)
+    },
+  })
+}
+
+function removeFrameDomRange(node: VNode, domParent: ParentNode): void {
+  let start = node._rangeStart
+  let end = node._rangeEnd
+  if (!(start instanceof Comment) || !(end instanceof Comment)) return
+
+  let cursor: Node | null = start
+  while (cursor) {
+    let nextSibling: Node | null = cursor.nextSibling
+    if (cursor.parentNode === domParent) {
+      domParent.removeChild(cursor)
+    }
+    if (cursor === end) break
+    cursor = nextSibling
+  }
+
+  node._rangeStart = undefined
+  node._rangeEnd = undefined
+}
+
+function getFrameRuntime(frame: FrameHandle): FrameRuntime | undefined {
+  return frame.$runtime as FrameRuntime | undefined
+}
+
+function getFrameSrc(node: VNode): string {
+  let src = node.props?.src
+  invariant(typeof src === 'string' && src.length > 0, '<Frame /> requires a src prop')
+  return src
+}
+
+function getFrameName(node: VNode): string | undefined {
+  let name = node.props?.name
+  return typeof name === 'string' && name.length > 0 ? name : undefined
+}
+
+function randomFrameId(): string {
+  return `f${crypto.randomUUID().slice(0, 8)}`
+}
+
+function skipCommentsExceptFrameStart(cursor: Node | null): Node | null {
+  while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
+    if (isFrameStartComment(cursor)) return cursor
+    cursor = cursor.nextSibling
+  }
+  return cursor
+}
+
+function isFrameStartComment(node: Node | null | undefined): node is Comment {
+  return node instanceof Comment && node.data.trim().startsWith('rmx:f:')
+}
+
+function isFrameEndComment(node: Node | null | undefined): node is Comment {
+  return node instanceof Comment && node.data.trim() === '/rmx:f'
+}
+
+function getFrameIdFromComment(comment: Comment): string | undefined {
+  let text = comment.data.trim()
+  if (!text.startsWith('rmx:f:')) return undefined
+  return text.slice('rmx:f:'.length)
+}
+
+function findFrameEndComment(start: Comment): Comment | null {
+  let depth = 1
+  let node: Node | null = start.nextSibling
+
+  while (node) {
+    if (isFrameStartComment(node)) depth++
+    else if (isFrameEndComment(node)) {
+      depth--
+      if (depth === 0) return node
+    }
+    node = node.nextSibling
+  }
+
+  return null
 }
 
 export function renderComponent(
@@ -444,6 +930,7 @@ export function renderComponent(
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
+  styles: StyleManager,
   rootTarget: EventTarget,
   vParent?: VNode,
   anchor?: Node,
@@ -458,6 +945,7 @@ export function renderComponent(
     domParent,
     frame,
     scheduler,
+    styles,
     next,
     rootTarget,
     anchor,
@@ -483,6 +971,7 @@ function diffComponent(
   next: ComponentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
+  styles: StyleManager,
   domParent: ParentNode,
   vParent: VNode,
   rootTarget: EventTarget,
@@ -490,12 +979,24 @@ function diffComponent(
   cursor?: Node | null,
 ): Node | null | undefined {
   if (curr === null) {
+    let componentId = vParent._pendingHydrationComponentId
+    if (componentId) {
+      vParent._pendingHydrationComponentId = undefined
+    } else {
+      componentId = `c${++idCounter}`
+    }
     next._handle = createComponent({
-      id: `e${++fixmeIdCounter}`,
+      id: componentId,
       frame,
       type: next.type,
-      getContext: (type: Component) => {
-        return findContextFromAncestry(vParent, type)
+      getContext: (type: Component) => findContextFromAncestry(vParent, type),
+      getFrameByName(name: string) {
+        let runtime = getFrameRuntime(frame)
+        return runtime?.namedFrames.get(name)
+      },
+      getTopFrame() {
+        let runtime = getFrameRuntime(frame)
+        return runtime?.topFrame
       },
     })
 
@@ -506,6 +1007,7 @@ function diffComponent(
       domParent,
       frame,
       scheduler,
+      styles,
       rootTarget,
       vParent,
       anchor,
@@ -521,6 +1023,7 @@ function diffComponent(
     domParent,
     frame,
     scheduler,
+    styles,
     rootTarget,
     vParent,
     anchor,
@@ -529,17 +1032,17 @@ function diffComponent(
 }
 
 // Cleanup without DOM removal - used for descendants when parent DOM node is removed
-function cleanupDescendants(node: VNode, scheduler: Scheduler): void {
+function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleManager): void {
   if (isCommittedTextNode(node)) {
     return
   }
 
   if (isCommittedHostNode(node)) {
     for (let child of node._children) {
-      cleanupDescendants(child, scheduler)
+      cleanupDescendants(child, scheduler, styles)
     }
 
-    cleanupCssProps(node.props)
+    cleanupCssProps(node.props, styles)
 
     // Unregister from layout animations
     let presenceConfig = getPresenceConfig(node)
@@ -556,20 +1059,30 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler): void {
 
   if (isFragmentNode(node)) {
     for (let child of node._children) {
-      cleanupDescendants(child, scheduler)
+      cleanupDescendants(child, scheduler, styles)
     }
     return
   }
 
   if (isCommittedComponentNode(node)) {
-    cleanupDescendants(node._content, scheduler)
+    cleanupDescendants(node._content, scheduler, styles)
     let tasks = node._handle.remove()
     scheduler.enqueueTasks(tasks)
     return
   }
+
+  if (node.type === Frame) {
+    disposeFrameResources(node)
+    return
+  }
 }
 
-export function remove(node: VNode, domParent: ParentNode, scheduler: Scheduler) {
+export function remove(
+  node: VNode,
+  domParent: ParentNode,
+  scheduler: Scheduler,
+  styles: StyleManager,
+) {
   if (isCommittedTextNode(node)) {
     domParent.removeChild(node._dom)
     return
@@ -599,14 +1112,14 @@ export function remove(node: VNode, domParent: ParentNode, scheduler: Scheduler)
           if (!node._exiting) return
           unmarkNodeExiting(node)
           node._animation = undefined
-          performHostNodeRemoval(node, domParent, scheduler)
+          performHostNodeRemoval(node, domParent, scheduler, styles)
         })
         return
       }
 
       // Enter animation finished or doesn't exist - play exit animation
       playExitAnimation(node, presenceConfig.exit, domParent, () => {
-        performHostNodeRemoval(node, domParent, scheduler)
+        performHostNodeRemoval(node, domParent, scheduler, styles)
       })
       return
     }
@@ -616,21 +1129,27 @@ export function remove(node: VNode, domParent: ParentNode, scheduler: Scheduler)
       node._animation.cancel()
       node._animation = undefined
     }
-    performHostNodeRemoval(node, domParent, scheduler)
+    performHostNodeRemoval(node, domParent, scheduler, styles)
     return
   }
 
   if (isFragmentNode(node)) {
     for (let child of node._children) {
-      remove(child, domParent, scheduler)
+      remove(child, domParent, scheduler, styles)
     }
     return
   }
 
   if (isCommittedComponentNode(node)) {
-    remove(node._content, domParent, scheduler)
+    remove(node._content, domParent, scheduler, styles)
     let tasks = node._handle.remove()
     scheduler.enqueueTasks(tasks)
+    return
+  }
+
+  if (node.type === Frame) {
+    disposeFrameResources(node)
+    removeFrameDomRange(node, domParent)
     return
   }
 }
@@ -640,22 +1159,29 @@ function performHostNodeRemoval(
   node: CommittedHostNode,
   domParent: ParentNode,
   scheduler: Scheduler,
+  styles: StyleManager,
 ) {
-  // Clean up all descendants first (before removing DOM subtree)
-  for (let child of node._children) {
-    cleanupDescendants(child, scheduler)
+  if (isHeadHostNode(node)) {
+    for (let child of node._children) {
+      remove(child, node._dom, scheduler, styles)
+    }
+  } else {
+    // Clean up all descendants first (before removing DOM subtree)
+    for (let child of node._children) {
+      cleanupDescendants(child, scheduler, styles)
+    }
   }
 
-  cleanupCssProps(node.props)
+  cleanupCssProps(node.props, styles)
 
   // Unregister from layout animations
   let presenceConfig = getPresenceConfig(node)
   if (presenceConfig?.layout) {
     unregisterLayoutElement(node._dom)
   }
-  // Only remove if still in DOM (might have been removed by parent)
-  if (node._dom.parentNode === domParent) {
-    domParent.removeChild(node._dom)
+  // Never remove the real document.head node when reconciling a <head> vnode.
+  if (!isHeadHostNode(node)) {
+    node._dom.parentNode?.removeChild(node._dom)
   }
   if (node._controller) node._controller.abort()
   let _events = node._events
@@ -670,36 +1196,63 @@ function diffChildren(
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
+  styles: StyleManager,
   vParent: VNode,
   rootTarget: EventTarget,
   cursor?: Node | null,
   anchor?: Node,
 ) {
+  let nextLength = next.length
+
+  // Warn when duplicate keys are present among siblings. Duplicate keys are
+  // still processed (last one wins), but they make keyed diffing ambiguous.
+  let hasKeys = false
+  let seenKeys = new Set<string>()
+  let duplicateKeys = new Set<string>()
+  for (let i = 0; i < nextLength; i++) {
+    let node = next[i]
+    if (node && node.key != null) {
+      hasKeys = true
+      if (seenKeys.has(node.key)) {
+        duplicateKeys.add(node.key)
+      } else {
+        seenKeys.add(node.key)
+      }
+    }
+  }
+
+  if (duplicateKeys.size > 0) {
+    let quotedKeys = Array.from(duplicateKeys, (key) => `"${key}"`)
+    console.warn(
+      `Duplicate keys detected in siblings: ${quotedKeys.join(', ')}. Keys should be unique.`,
+    )
+  }
+
   // Initial mount / hydration: delegate to insert() for each child so that
   // hydration cursors and creation logic remain centralized there.
   if (curr === null) {
     for (let node of next) {
-      cursor = insert(node, domParent, frame, scheduler, vParent, rootTarget, anchor, cursor)
+      cursor = insert(
+        node,
+        domParent,
+        frame,
+        scheduler,
+        styles,
+        vParent,
+        rootTarget,
+        anchor,
+        cursor,
+      )
     }
     vParent._children = next
     return cursor
   }
 
   let currLength = curr.length
-  let nextLength = next.length
 
   // Detect if any keys are present in the new children. If not, we can fall
   // back to the simpler index-based diff which is cheaper and matches
   // pre-existing behavior.
-  let hasKeys = false
-  for (let i = 0; i < nextLength; i++) {
-    let node = next[i]
-    if (node && node.key != null) {
-      hasKeys = true
-      break
-    }
-  }
-
   if (!hasKeys) {
     for (let i = 0; i < nextLength; i++) {
       let currentNode = i < currLength ? curr[i] : null
@@ -709,6 +1262,7 @@ function diffChildren(
         domParent,
         frame,
         scheduler,
+        styles,
         vParent,
         rootTarget,
         anchor,
@@ -719,7 +1273,7 @@ function diffChildren(
     if (currLength > nextLength) {
       for (let i = nextLength; i < currLength; i++) {
         let node = curr[i]
-        if (node) remove(node, domParent, scheduler)
+        if (node) remove(node, domParent, scheduler, styles)
       }
     }
 
@@ -828,7 +1382,7 @@ function diffChildren(
     for (let i = 0; i < oldChildrenLength; i++) {
       let oldVNode = oldChildren[i]
       if (oldVNode && ((oldVNode._flags ?? 0) & MATCHED) === 0) {
-        remove(oldVNode, domParent, scheduler)
+        remove(oldVNode, domParent, scheduler, styles)
       }
     }
   }
@@ -852,6 +1406,7 @@ function diffChildren(
       domParent,
       frame,
       scheduler,
+      styles,
       vParent,
       rootTarget,
       anchor,
@@ -898,6 +1453,7 @@ export function findFirstDomAnchor(node: VNode | null | undefined): Node | null 
   if (isCommittedTextNode(node)) return node._dom
   if (isCommittedHostNode(node)) return node._dom
   if (isCommittedComponentNode(node)) return findFirstDomAnchor(node._content)
+  if (node.type === Frame) return node._rangeStart ?? null
   if (isFragmentNode(node)) {
     for (let child of node._children) {
       let dom = findFirstDomAnchor(child)
@@ -912,6 +1468,7 @@ export function findLastDomAnchor(node: VNode | null | undefined): Node | null {
   if (isCommittedTextNode(node)) return node._dom
   if (isCommittedHostNode(node)) return node._dom
   if (isCommittedComponentNode(node)) return findLastDomAnchor(node._content)
+  if (node.type === Frame) return node._rangeEnd ?? null
   if (isFragmentNode(node)) {
     for (let i = node._children.length - 1; i >= 0; i--) {
       let dom = findLastDomAnchor(node._children[i])
@@ -959,6 +1516,7 @@ function reclaimExitingNode(
   domParent: ParentNode,
   frame: FrameHandle,
   scheduler: Scheduler,
+  styles: StyleManager,
   vParent: VNode,
   rootTarget: EventTarget,
 ): void {
@@ -982,7 +1540,7 @@ function reclaimExitingNode(
   newNode._animation = exitingNode._animation
 
   // Diff props on the existing DOM element
-  diffHostProps(exitingNode.props, newNode.props, exitingNode._dom)
+  diffHostProps(exitingNode.props, newNode.props, exitingNode._dom, styles)
 
   // Diff children
   diffChildren(
@@ -991,6 +1549,7 @@ function reclaimExitingNode(
     exitingNode._dom,
     frame,
     scheduler,
+    styles,
     newNode,
     rootTarget,
   )

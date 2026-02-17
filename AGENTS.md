@@ -7,6 +7,7 @@
 - **Single test file**: `node --disable-warning=ExperimentalWarning --test './packages/<package>/src/**/<filename>.test.ts'`
 - **Typecheck**: `pnpm run typecheck` (all packages) or `pnpm --filter @remix-run/<package> run typecheck`
 - **Lint**: `pnpm run lint` (check) or `pnpm run lint:fix` (auto-fix)
+- **Before finishing work**: Run `pnpm run lint` and resolve any lint errors before reporting completion.
 - **Format**: `pnpm run format` (auto-fix) or `pnpm run format:check` (check only)
 - **Clean**: `pnpm run clean` (git clean -fdX)
 
@@ -15,6 +16,7 @@
 - **Monorepo**: pnpm workspace with packages in `packages/` directory
 - **Key packages**: headers, fetch-proxy, fetch-router, file-storage, form-data-parser, lazy-file, multipart-parser, node-fetch-server, route-pattern, tar-parser
 - **Package exports**: All `exports` in `package.json` have a dedicated file in `src` that defines the public API by re-exporting from within `src/lib`
+- **Cross-package boundaries**: Avoid re-exporting APIs/types from other packages. Consumers should import from the owning package directly. Reuse shared concepts from sibling packages internally instead of creating bespoke duplicate implementations.
 - **Philosophy**: Web standards-first, runtime-agnostic (Node.js, Bun, Deno, Cloudflare Workers). Use Web Streams API, Uint8Array, Web Crypto API, Blob/File instead of Node.js APIs
 - **Tests run from source** (no build required), using Node.js test runner
 
@@ -22,7 +24,7 @@
 
 - **Imports**: Always use `import type { X }` for types (separate from value imports); use `export type { X }` for type exports; include `.ts` extensions
 - **Variables**: Prefer `let` for locals, `const` only at module scope; never use `var`
-- **Functions**: Use regular function declarations/expressions by default. Only use arrow functions as callbacks (e.g., route handlers, array methods) where preserving lexical `this` is beneficial or the syntax is more concise
+- **Functions**: Use regular function declarations/expressions by default. For callback-based APIs (array methods, Promise callbacks, test callbacks, transaction callbacks, etc.), prefer arrow functions over `function` expressions. When an arrow callback only returns a single expression, use a concise body (`value => expression`) instead of braces/`return`
 - **Object methods**: When defining functions in object literals, use shorthand method syntax (`{ method() {} }`) instead of arrow functions (`{ method: () => {} }`)
 - **Classes**: Use native fields (omit `public`), `#private` for private members (no TypeScript accessibility modifiers)
 - **Formatting**: Prettier (printWidth: 100, no semicolons, single quotes, spaces not tabs)

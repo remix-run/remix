@@ -1,9 +1,25 @@
 # route-pattern
 
-Fast URL matching and href generation with type safe params.
+Type-safe URL matching and href generation for JavaScript. `route-pattern` supports path params, wildcards, optionals, and full-URL patterns with predictable ranking.
+
+## Features
+
+- **Type-Safe Params** - Infer params from patterns for compile-time route correctness
+- **Flexible Pattern Syntax** - Variables, wildcards, optionals, and query constraints
+- **Full URL Support** - Match protocol, host, pathname, and search params
+- **Deterministic Ranking** - Static segments beat params, and params beat wildcards
+- **Runtime Agnostic** - Works across Node.js, Bun, Deno, Cloudflare Workers, and browsers
+
+## Installation
+
+```sh
+npm i remix
+```
+
+## Quick Example
 
 ```ts
-import { RoutePattern } from '@remix-run/route-pattern'
+import { RoutePattern } from 'remix/route-pattern'
 
 let blog = new RoutePattern('blog/:slug')
 blog.match('https://remix.run/blog/v3') // { params: { slug: 'v3' } }
@@ -17,20 +33,6 @@ api.href({ path: 'users/profile' }) // '/api/users/profile'
 let cdn = new RoutePattern('http(s)://:region.cdn.com/assets/*file.:ext')
 cdn.match('https://us-west.cdn.com/assets/images/logo.png') // { params: { region: 'us-west', file: 'images/logo', ext: 'png' } }
 cdn.href({ region: 'us-west', file: 'images/logo', ext: 'png' }) // 'https://us-west.cdn.com/assets/images/logo.png'
-```
-
-**Goals**
-
-- **Universal**: Runs on any JS runtime (Node, Bun, Deno, Cloudflare Workers, browsers, ...)
-- **Type-safe params**: Autocomplete and validation for variables, wildcards, and search params
-- **Full URL matching**: Protocol, hostname, port, pathname, search params
-- **Fast**: Includes matchers optimized for small and large apps
-- **Simple ranking**: Static segments beat variables, variables beat wildcards
-
-## Installation
-
-```sh
-npm install @remix-run/route-pattern
 ```
 
 ## Intuitive syntax
@@ -80,7 +82,7 @@ new RoutePattern('search?q') // allows additional search params beyond ?q
 Match URLs against multiple patterns. Each pattern can have associated data (handlers, route IDs, metadata, etc.):
 
 ```ts
-import { ArrayMatcher as Matcher } from '@remix-run/route-pattern'
+import { ArrayMatcher as Matcher } from 'remix/route-pattern'
 
 // Any data type you want!  👇
 let matcher = new Matcher<string>()
@@ -106,8 +108,8 @@ Note: Performance depends on your specific patterns—benchmark both to verify w
 Both implement the `Matcher` API so you can swap them out easily:
 
 ```ts
-// import { ArrayMatcher as Matcher } from "@remix-run/route-pattern"
-import { TrieMatcher as Matcher } from '@remix-run/route-pattern'
+// import { ArrayMatcher as Matcher } from 'remix/route-pattern'
+import { TrieMatcher as Matcher } from 'remix/route-pattern'
 ```
 
 ## Specificity
@@ -117,7 +119,7 @@ When multiple patterns match a URL, the most specific pattern wins.
 **Pathname specificity** (left-to-right):
 
 ```ts
-import { ArrayMatcher } from '@remix-run/route-pattern'
+import { ArrayMatcher } from 'remix/route-pattern'
 
 let matcher = new ArrayMatcher<string>()
 matcher.add('blog/hello', 'static')

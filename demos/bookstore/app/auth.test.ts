@@ -47,6 +47,20 @@ describe('auth handlers', () => {
     assertContains(html, 'Invalid email or password')
   })
 
+  it('POST /login does not treat wildcard characters as email matches', async () => {
+    let response = await router.fetch('https://remix.run/login', {
+      method: 'POST',
+      body: new URLSearchParams({
+        email: '%@bookstore.com',
+        password: 'admin123',
+      }),
+      redirect: 'manual',
+    })
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), '/login')
+  })
+
   it('flash error message is cleared after being displayed once', async () => {
     // POST invalid credentials to trigger flash message
     let response = await router.fetch('https://remix.run/login', {

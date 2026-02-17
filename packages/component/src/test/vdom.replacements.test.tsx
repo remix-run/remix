@@ -26,16 +26,19 @@ describe('vnode rendering', () => {
       expect(container.querySelector('div')).toBe(div)
     })
 
-    it.skip('updates an element with attributes', () => {
+    it('updates an element with attributes', () => {
       let container = document.createElement('div')
       let { render } = createRoot(container)
       render(<input id="hello" value="world" />)
-      expect(container.innerHTML).toBe('<input id="hello" value="world">')
-
       let input = container.querySelector('input')
+      invariant(input)
+      expect(input.getAttribute('id')).toBe('hello')
+      expect(input.value).toBe('world')
+
       render(<input id="hello" value="world 2" />)
-      expect(container.innerHTML).toBe('<input id="hello" value="world 2">')
       expect(container.querySelector('input')).toBe(input)
+      expect(input.getAttribute('id')).toBe('hello')
+      expect(input.value).toBe('world 2')
     })
 
     it('updates a fragment', () => {

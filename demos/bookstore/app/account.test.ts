@@ -36,6 +36,17 @@ describe('account handlers', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
     assertContains(html, 'Order #1001')
-    assertContains(html, 'The Midnight Library')
+    assertContains(html, 'Ash &amp; Smoke')
+  })
+
+  it('GET /account/orders shows item counts from normalized order items', async () => {
+    let sessionId = await loginAsCustomer(router)
+    let request = requestWithSession('https://remix.run/account/orders', sessionId)
+    let response = await router.fetch(request)
+
+    assert.equal(response.status, 200)
+    let html = await response.text()
+    assertContains(html, '2 item(s)')
+    assertContains(html, '1 item(s)')
   })
 })

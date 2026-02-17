@@ -9,9 +9,9 @@ Build reusable interaction patterns with the `@remix-run/interaction` package.
 The interaction package provides several ready-to-use interactions:
 
 ```tsx
-import { press, pressDown, pressUp, longPress, pressCancel } from '@remix-run/interaction/press'
-import { swipeStart, swipeMove, swipeEnd, swipeCancel } from '@remix-run/interaction/swipe'
-import { arrowUp, arrowDown, arrowLeft, arrowRight, space } from '@remix-run/interaction/keys'
+import { press, pressDown, pressUp, longPress, pressCancel } from 'remix/interaction/press'
+import { swipeStart, swipeMove, swipeEnd, swipeCancel } from 'remix/interaction/swipe'
+import { arrowUp, arrowDown, arrowLeft, arrowRight, space } from 'remix/interaction/keys'
 ```
 
 Use them like any event type:
@@ -47,7 +47,7 @@ Don't create a custom interaction when:
 Use `defineInteraction` to create a reusable interaction:
 
 ```ts
-import { defineInteraction, type Interaction } from '@remix-run/interaction'
+import { defineInteraction, type Interaction } from 'remix/interaction'
 
 // 1. Define the interaction with a unique namespaced type
 export let dragRelease = defineInteraction('myapp:drag-release', DragRelease)
@@ -162,7 +162,7 @@ function DraggableCard(handle: Handle) {
 A more complex example that tracks repeated taps to calculate BPM:
 
 ```ts
-import { defineInteraction, type Interaction } from '@remix-run/interaction'
+import { defineInteraction, type Interaction } from 'remix/interaction'
 
 export let tempo = defineInteraction('myapp:tempo', Tempo)
 

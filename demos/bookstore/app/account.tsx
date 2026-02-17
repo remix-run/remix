@@ -4,8 +4,7 @@ import { redirect } from 'remix/response/redirect'
 import { routes } from './routes.ts'
 import { Layout } from './layout.tsx'
 import { requireAuth } from './middleware/auth.ts'
-import { getOrdersByUserId, getOrderById } from './models/orders.ts'
-import { updateUser } from './models/users.ts'
+import { orders, orderItemsWithBook, users } from './data/schema.ts'
 import { getCurrentUser } from './utils/context.ts'
 import { render } from './utils/render.ts'
 import { RestfulForm } from './components/restful-form.tsx'
@@ -32,7 +31,7 @@ export default {
               <strong>Role:</strong> {user.role}
             </p>
             <p>
-              <strong>Member Since:</strong> {user.createdAt.toLocaleDateString()}
+              <strong>Member Since:</strong> {new Date(user.created_at).toLocaleDateString()}
             </p>
 
             <p css={{ marginTop: '1.5rem' }}>
@@ -107,7 +106,7 @@ export default {
         )
       },
 
-      async update({ formData }) {
+      async update({ db, formData }) {
         let user = getCurrentUser()
 
         let name = formData.get('name')?.toString() ?? ''
@@ -119,23 +118,27 @@ export default {
           updateData.password = password
         }
 
-        updateUser(user.id, updateData)
+        await db.update(users, user.id, updateData)
 
         return redirect(routes.account.index.href())
       },
     },
 
     orders: {
-      index() {
+      async index({ db }) {
         let user = getCurrentUser()
-        let orders = getOrdersByUserId(user.id)
+        let userOrders = await db.findMany(orders, {
+          where: { user_id: user.id },
+          orderBy: ['created_at', 'asc'],
+          with: { items: orderItemsWithBook },
+        })
 
         return render(
           <Layout>
             <h1>My Orders</h1>
 
             <div class="card">
-              {orders.length > 0 ? (
+              {userOrders.length > 0 ? (
                 <table>
                   <thead>
                     <tr>
@@ -148,10 +151,10 @@ export default {
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order) => (
+                    {userOrders.map((order) => (
                       <tr>
                         <td>#{order.id}</td>
-                        <td>{order.createdAt.toLocaleDateString()}</td>
+                        <td>{new Date(order.created_at).toLocaleDateString()}</td>
                         <td>{order.items.length} item(s)</td>
                         <td>${order.total.toFixed(2)}</td>
                         <td>
@@ -184,11 +187,13 @@ export default {
         )
       },
 
-      show({ params }) {
+      async show({ db, params }) {
         let user = getCurrentUser()
-        let order = getOrderById(params.orderId)
+        let order = await db.find(orders, params.orderId, {
+          with: { items: orderItemsWithBook },
+        })
 
-        if (!order || order.userId !== user.id) {
+        if (!order || order.user_id !== user.id) {
           return render(
             <Layout>
               <div class="card">
@@ -204,13 +209,20 @@ export default {
           )
         }
 
+        let shippingAddress = JSON.parse(order.shipping_address_json) as {
+          street: string
+          city: string
+          state: string
+          zip: string
+        }
+
         return render(
           <Layout>
             <h1>Order #{order.id}</h1>
 
             <div class="card">
               <p>
-                <strong>Order Date:</strong> {order.createdAt.toLocaleDateString()}
+                <strong>Order Date:</strong> {new Date(order.created_at).toLocaleDateString()}
               </p>
               <p>
                 <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
@@ -231,8 +243,8 @@ export default {
                     <tr>
                       <td>{item.title}</td>
                       <td>{item.quantity}</td>
-                      <td>${item.price.toFixed(2)}</td>
-                      <td>${(item.price * item.quantity).toFixed(2)}</td>
+                      <td>${item.unit_price.toFixed(2)}</td>
+                      <td>${(item.unit_price * item.quantity).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -247,10 +259,9 @@ export default {
               </table>
 
               <h2 css={{ marginTop: '2rem' }}>Shipping Address</h2>
-              <p>{order.shippingAddress.street}</p>
+              <p>{shippingAddress.street}</p>
               <p>
-                {order.shippingAddress.city}, {order.shippingAddress.state}{' '}
-                {order.shippingAddress.zip}
+                {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
               </p>
             </div>
 

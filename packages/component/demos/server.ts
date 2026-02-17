@@ -2,7 +2,8 @@ import * as fs from 'node:fs'
 import * as http from 'node:http'
 import * as path from 'node:path'
 
-import { createRouter, route } from 'remix/fetch-router'
+import { createRouter } from 'remix/fetch-router'
+import { route } from 'remix/fetch-router/routes'
 import { createRequestListener } from 'remix/node-fetch-server'
 import { staticFiles } from 'remix/static-middleware'
 
@@ -75,9 +76,7 @@ router.get(routes.index, () => {
 })
 
 let server = http.createServer(
-  createRequestListener(async (request) => {
-    return await router.fetch(request)
-  }),
+  createRequestListener(async (request) => await router.fetch(request)),
 )
 
 server.listen(44100, () => {

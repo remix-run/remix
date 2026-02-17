@@ -2,16 +2,16 @@ import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
-import { getAllUsers, getUserById, updateUser, deleteUser } from './models/users.ts'
+import { users } from './data/schema.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 import { getCurrentUser } from './utils/context.ts'
 import { RestfulForm } from './components/restful-form.tsx'
 
 export default {
-  index() {
+  async index({ db }) {
     let user = getCurrentUser()
-    let users = getAllUsers()
+    let allUsers = await db.findMany(users, { orderBy: ['id', 'asc'] })
 
     return render(
       <Layout>
@@ -35,7 +35,7 @@ export default {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {allUsers.map((u) => (
                 <tr>
                   <td>{u.name}</td>
                   <td>{u.email}</td>
@@ -44,7 +44,7 @@ export default {
                       {u.role}
                     </span>
                   </td>
-                  <td>{u.createdAt.toLocaleDateString()}</td>
+                  <td>{new Date(u.created_at).toLocaleDateString()}</td>
                   <td class="actions">
                     <a
                       href={routes.admin.users.edit.href({ userId: u.id })}
@@ -78,8 +78,8 @@ export default {
     )
   },
 
-  show({ params }) {
-    let targetUser = getUserById(params.userId)
+  async show({ db, params }) {
+    let targetUser = await db.find(users, params.userId)
 
     if (!targetUser) {
       return render(
@@ -110,7 +110,7 @@ export default {
             </span>
           </p>
           <p>
-            <strong>Created:</strong> {targetUser.createdAt.toLocaleDateString()}
+            <strong>Created:</strong> {new Date(targetUser.created_at).toLocaleDateString()}
           </p>
 
           <div css={{ marginTop: '2rem' }}>
@@ -130,8 +130,8 @@ export default {
     )
   },
 
-  edit({ params }) {
-    let targetUser = getUserById(params.userId)
+  async edit({ db, params }) {
+    let targetUser = await db.find(users, params.userId)
 
     if (!targetUser) {
       return render(
@@ -191,18 +191,24 @@ export default {
     )
   },
 
-  async update({ formData, params }) {
-    updateUser(params.userId, {
-      name: formData.get('name')?.toString() ?? '',
-      email: formData.get('email')?.toString() ?? '',
-      role: (formData.get('role')?.toString() ?? 'customer') as 'customer' | 'admin',
-    })
+  async update({ db, formData, params }) {
+    let targetUser = await db.find(users, params.userId)
+    if (targetUser) {
+      await db.update(users, targetUser.id, {
+        name: formData.get('name')?.toString() ?? '',
+        email: formData.get('email')?.toString() ?? '',
+        role: (formData.get('role')?.toString() ?? 'customer') as 'customer' | 'admin',
+      })
+    }
 
     return redirect(routes.admin.users.index.href())
   },
 
-  destroy({ params }) {
-    deleteUser(params.userId)
+  async destroy({ db, params }) {
+    let targetUser = await db.find(users, params.userId)
+    if (targetUser) {
+      await db.delete(users, targetUser.id)
+    }
 
     return redirect(routes.admin.users.index.href())
   },

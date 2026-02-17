@@ -1397,10 +1397,9 @@ describe('compressResponse()', () => {
       it('handles cancel while waiting for drain', async () => {
         let destroyed = false
         let mockCompressor = createMockCompressor({
-          write: () => {
+          write: () =>
             // Never call callback or emit drain, forcing the wait
-            return false
-          },
+            false,
           end: () => {},
           destroy: () => {
             destroyed = true

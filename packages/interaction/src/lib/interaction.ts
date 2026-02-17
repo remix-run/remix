@@ -70,7 +70,7 @@ export type InteractionSetup = (handle: Interaction) => void
  * ### Example
  *
  * ```ts
- * import { defineInteraction, on } from '@remix-run/interaction'
+ * import { defineInteraction, on } from 'remix/interaction'
  *
  * // define the interaction
  * export let keydownEnter = defineInteraction('my:keydown-enter', KeydownEnter)
@@ -265,8 +265,8 @@ export function createContainer<target extends EventTarget>(
  * Add event listeners with async reentry protection and semantic Interactions. Shorthand for `createContainer` without options.
  *
  * @example
- * import { on } from "@remix-run/interaction"
- * import { longPress } from "@remix-run/interaction/press"
+ * import { on } from 'remix/interaction'
+ * import { longPress } from 'remix/interaction/press'
  *
  * let button = document.createElement('button')
  * let dispose = on(button, {

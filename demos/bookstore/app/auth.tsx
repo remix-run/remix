@@ -2,13 +2,7 @@ import type { Controller } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from './routes.ts'
-import {
-  authenticateUser,
-  createUser,
-  getUserByEmail,
-  createPasswordResetToken,
-  resetPassword,
-} from './models/users.ts'
+import { passwordResetTokens, users } from './data/schema.ts'
 import { Document } from './layout.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { render } from './utils/render.ts'
@@ -82,13 +76,13 @@ export default {
         )
       },
 
-      async action({ session, formData, url }) {
+      async action({ db, session, formData, url }) {
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
         let returnTo = url.searchParams.get('returnTo')
 
-        let user = authenticateUser(email, password)
-        if (!user) {
+        let user = await db.findOne(users, { where: { email: normalizeEmail(email) } })
+        if (!user || user.password !== password) {
           session.flash('error', 'Invalid email or password. Please try again.')
           return redirect(routes.auth.login.index.href(undefined, { returnTo }))
         }
@@ -141,13 +135,13 @@ export default {
         )
       },
 
-      async action({ session, formData }) {
+      async action({ db, session, formData }) {
         let name = formData.get('name')?.toString() ?? ''
         let email = formData.get('email')?.toString() ?? ''
         let password = formData.get('password')?.toString() ?? ''
 
         // Check if user already exists
-        if (getUserByEmail(email)) {
+        if (await db.findOne(users, { where: { email: normalizeEmail(email) } })) {
           return render(
             <Document>
               <div class="card" css={{ maxWidth: '500px', margin: '2rem auto' }}>
@@ -170,7 +164,17 @@ export default {
           )
         }
 
-        let user = createUser(email, password, name)
+        let user = await db.create(
+          users,
+          {
+            email: normalizeEmail(email),
+            password,
+            name,
+            role: 'customer',
+            created_at: Date.now(),
+          },
+          { returnRow: true },
+        )
 
         session.set('userId', user.id)
 
@@ -210,9 +214,19 @@ export default {
         )
       },
 
-      async action({ formData }) {
+      async action({ db, formData }) {
         let email = formData.get('email')?.toString() ?? ''
-        let token = createPasswordResetToken(email)
+        let user = await db.findOne(users, { where: { email: normalizeEmail(email) } })
+        let token = undefined as string | undefined
+
+        if (user) {
+          token = Math.random().toString(36).substring(2, 15)
+          await db.create(passwordResetTokens, {
+            token,
+            user_id: user.id,
+            expires_at: Date.now() + 3600000,
+          })
+        }
 
         return render(
           <Document>
@@ -302,21 +316,36 @@ export default {
         )
       },
 
-      async action({ session, formData, params }) {
+      async action({ db, session, formData, params }) {
         let password = formData.get('password')?.toString() ?? ''
         let confirmPassword = formData.get('confirmPassword')?.toString() ?? ''
+        let token = params.token
+
+        if (!token) {
+          session.flash('error', 'Invalid or expired reset token.')
+          return redirect(routes.auth.forgotPassword.index.href())
+        }
 
         if (password !== confirmPassword) {
           session.flash('error', 'Passwords do not match.')
-          return redirect(routes.auth.resetPassword.index.href({ token: params.token }))
+          return redirect(routes.auth.resetPassword.index.href({ token }))
         }
 
-        let success = resetPassword(params.token, password)
+        let tokenData = await db.find(passwordResetTokens, { token })
 
-        if (!success) {
+        if (!tokenData || tokenData.expires_at < Date.now()) {
           session.flash('error', 'Invalid or expired reset token.')
-          return redirect(routes.auth.resetPassword.index.href({ token: params.token }))
+          return redirect(routes.auth.resetPassword.index.href({ token }))
         }
+
+        let user = await db.find(users, tokenData.user_id)
+        if (!user) {
+          session.flash('error', 'Invalid or expired reset token.')
+          return redirect(routes.auth.resetPassword.index.href({ token }))
+        }
+
+        await db.update(users, user.id, { password })
+        await db.delete(passwordResetTokens, { token })
 
         return render(
           <Document>
@@ -336,3 +365,7 @@ export default {
     },
   },
 } satisfies Controller<typeof routes.auth>
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
+}

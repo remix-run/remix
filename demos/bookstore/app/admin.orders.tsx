@@ -1,13 +1,16 @@
 import type { Controller } from 'remix/fetch-router'
 
 import { routes } from './routes.ts'
-import { getAllOrders, getOrderById } from './models/orders.ts'
+import { orders, orderItemsWithBook } from './data/schema.ts'
 import { Layout } from './layout.tsx'
 import { render } from './utils/render.ts'
 
 export default {
-  index() {
-    let orders = getAllOrders()
+  async index({ db }) {
+    let allOrders = await db.findMany(orders, {
+      orderBy: ['created_at', 'asc'],
+      with: { items: orderItemsWithBook },
+    })
 
     return render(
       <Layout>
@@ -32,10 +35,10 @@ export default {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => (
+              {allOrders.map((order) => (
                 <tr>
                   <td>#{order.id}</td>
-                  <td>{order.createdAt.toLocaleDateString()}</td>
+                  <td>{new Date(order.created_at).toLocaleDateString()}</td>
                   <td>{order.items.length} item(s)</td>
                   <td>${order.total.toFixed(2)}</td>
                   <td>
@@ -59,8 +62,10 @@ export default {
     )
   },
 
-  show({ params }) {
-    let order = getOrderById(params.orderId)
+  async show({ db, params }) {
+    let order = await db.find(orders, params.orderId, {
+      with: { items: orderItemsWithBook },
+    })
 
     if (!order) {
       return render(
@@ -73,16 +78,23 @@ export default {
       )
     }
 
+    let shippingAddress = JSON.parse(order.shipping_address_json) as {
+      street: string
+      city: string
+      state: string
+      zip: string
+    }
+
     return render(
       <Layout>
         <h1>Order #{order.id}</h1>
 
         <div class="card">
           <p>
-            <strong>Order Date:</strong> {order.createdAt.toLocaleDateString()}
+            <strong>Order Date:</strong> {new Date(order.created_at).toLocaleDateString()}
           </p>
           <p>
-            <strong>User ID:</strong> {order.userId}
+            <strong>User ID:</strong> {order.user_id}
           </p>
           <p>
             <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
@@ -103,8 +115,8 @@ export default {
                 <tr>
                   <td>{item.title}</td>
                   <td>{item.quantity}</td>
-                  <td>${item.price.toFixed(2)}</td>
-                  <td>${(item.price * item.quantity).toFixed(2)}</td>
+                  <td>${item.unit_price.toFixed(2)}</td>
+                  <td>${(item.unit_price * item.quantity).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -119,9 +131,9 @@ export default {
           </table>
 
           <h2 css={{ marginTop: '2rem' }}>Shipping Address</h2>
-          <p>{order.shippingAddress.street}</p>
+          <p>{shippingAddress.street}</p>
           <p>
-            {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zip}
+            {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
           </p>
         </div>
 

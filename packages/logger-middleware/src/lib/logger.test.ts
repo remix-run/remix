@@ -18,14 +18,16 @@ describe('logger', () => {
       middleware: [logger({ log: (message) => messages.push(message) })],
     })
 
-    router.map(routes.home, () => {
-      return new Response('Home', {
-        headers: {
-          'Content-Length': '4',
-          'Content-Type': 'text/plain',
-        },
-      })
-    })
+    router.map(
+      routes.home,
+      () =>
+        new Response('Home', {
+          headers: {
+            'Content-Length': '4',
+            'Content-Type': 'text/plain',
+          },
+        }),
+    )
 
     let response = await router.fetch('https://remix.run')
 

@@ -1,14 +1,35 @@
+// -- Roots --
+export { run } from './lib/run.ts'
+export type { AppRuntime, RunInit } from './lib/run.ts'
+
 export { createRoot, createRangeRoot, createScheduler } from './lib/vdom.ts'
+export type { VirtualRoot, VirtualRootEventMap, VirtualRootOptions, Scheduler } from './lib/vdom.ts'
 
-export { createElement } from './lib/create-element.ts'
+// -- Client Entries --
+export { clientEntry } from './lib/client-entries.ts'
+export type {
+  SerializablePrimitive,
+  SerializableObject,
+  SerializableArray,
+  SerializableValue,
+  SerializableProps,
+  EntryComponent,
+} from './lib/client-entries.ts'
 
-export {
-  Fragment,
-  // Catch,
-  // Frame,
+// -- Components --
+export { Fragment, Frame } from './lib/component.ts'
+export type {
+  Task,
+  Handle,
+  Context,
+  FrameHandleEventMap,
+  FrameContent,
+  FrameHandle,
+  FrameProps,
 } from './lib/component.ts'
 
-// Export types from jsx.ts
+// -- Elements/JSX/Props --
+export { createElement } from './lib/create-element.ts'
 export type {
   ElementType,
   ElementProps,
@@ -17,8 +38,6 @@ export type {
   RemixNode,
   Props,
 } from './lib/jsx.ts'
-
-// Export types from dom.ts
 export type {
   HostProps,
   LayoutAnimationConfig,
@@ -30,23 +49,9 @@ export type {
   AnimateProp,
 } from './lib/dom.ts'
 
-// Export types from vdom.ts
-export type { VirtualRoot, VirtualRootEventMap, VirtualRootOptions, Scheduler } from './lib/vdom.ts'
+// -- Animation --
+export { spring } from './lib/spring.ts'
+export type { SpringIterator, SpringPreset, SpringOptions } from './lib/spring.ts'
 
-// Export types from component.ts
-export type { Context, FrameHandle, Handle, Task } from './lib/component.ts'
-
-export { spring, type SpringIterator, type SpringPreset, type SpringOptions } from './lib/spring.ts'
-
-export { tween, easings, type TweenOptions, type BezierCurve } from './lib/tween.ts'
-
-export { hydrationRoot } from './lib/hydration-root.ts'
-
-export {
-  hydrate,
-  type HydrationRootOptions,
-  type HydrationRootEventMap,
-  type HydrationRoot,
-  type HydrateOptions,
-  type HydrateResult,
-} from './lib/hydrate-client.ts'
+export { tween, easings } from './lib/tween.ts'
+export type { TweenOptions, BezierCurve } from './lib/tween.ts'

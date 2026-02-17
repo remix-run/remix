@@ -2,7 +2,12 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { router } from './router.ts'
-import { getSessionCookie, loginAsCustomer, requestWithSession } from '../test/helpers.ts'
+import {
+  assertContains,
+  getSessionCookie,
+  loginAsCustomer,
+  requestWithSession,
+} from '../test/helpers.ts'
 
 describe('checkout handlers', () => {
   it('GET /checkout redirects when not authenticated', async () => {
@@ -19,7 +24,7 @@ describe('checkout handlers', () => {
     let addRequest = requestWithSession('https://remix.run/cart/api/add', sessionCookie, {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '001',
+        bookId: '1',
         slug: 'bbq',
       }),
     })
@@ -39,9 +44,24 @@ describe('checkout handlers', () => {
       }),
     })
     let checkoutResponse = await router.fetch(checkoutRequest)
+    let confirmationUrl = checkoutResponse.headers.get('Location')
+    sessionCookie = getSessionCookie(checkoutResponse) ?? sessionCookie
 
     assert.equal(checkoutResponse.status, 302)
-    assert.ok(checkoutResponse.headers.get('Location')?.includes('/checkout/'))
-    assert.ok(checkoutResponse.headers.get('Location')?.includes('/confirmation'))
+    assert.ok(confirmationUrl?.includes('/checkout/'))
+    assert.ok(confirmationUrl?.includes('/confirmation'))
+
+    let orderId = confirmationUrl?.match(/\/checkout\/([^/]+)\/confirmation/)?.[1]
+    assert.ok(orderId)
+
+    let orderDetailsRequest = requestWithSession(
+      `https://remix.run/account/orders/${orderId}`,
+      sessionCookie,
+    )
+    let orderDetailsResponse = await router.fetch(orderDetailsRequest)
+
+    assert.equal(orderDetailsResponse.status, 200)
+    let orderDetailsHtml = await orderDetailsResponse.text()
+    assertContains(orderDetailsHtml, 'Ash &amp; Smoke')
   })
 })

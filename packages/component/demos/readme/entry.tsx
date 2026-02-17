@@ -81,24 +81,22 @@ function CounterWithSetup(handle: Handle, setup: number) {
 function CounterWithLabel(handle: Handle, setup: number) {
   let count = setup // use setup for initialization
 
-  return (props: { label?: string }) => {
+  return (props: { label?: string }) => (
     // props only contains render-time values
-    return (
-      <div>
-        {props.label}: {count}
-        <button
-          on={{
-            click: () => {
-              count++
-              handle.update()
-            },
-          }}
-        >
-          +
-        </button>
-      </div>
-    )
-  }
+    <div>
+      {props.label}: {count}
+      <button
+        on={{
+          click: () => {
+            count++
+            handle.update()
+          },
+        }}
+      >
+        +
+      </button>
+    </div>
+  )
 }
 
 // ============================================================================
@@ -346,7 +344,7 @@ function ResizeComponent(handle: Handle) {
 }
 
 // ============================================================================
-// handle.update(task) - Player
+// handle.update() - Player
 // ============================================================================
 function Player(handle: Handle) {
   let isPlaying = false
@@ -359,12 +357,11 @@ function Player(handle: Handle) {
         disabled={isPlaying}
         connect={(node) => (playButton = node)}
         on={{
-          click: () => {
+          async click() {
             isPlaying = true
-            handle.update(() => {
-              // Focus the enabled button after update completes
-              stopButton.focus()
-            })
+            await handle.update()
+            // Focus the enabled button after update completes
+            stopButton.focus()
           },
         }}
         css={{
@@ -378,12 +375,11 @@ function Player(handle: Handle) {
         disabled={!isPlaying}
         connect={(node) => (stopButton = node)}
         on={{
-          click: () => {
+          async click() {
             isPlaying = false
-            handle.update(() => {
-              // Focus the enabled button after update completes
-              playButton.focus()
-            })
+            await handle.update()
+            // Focus the enabled button after update completes
+            playButton.focus()
           },
         }}
         css={{
@@ -546,7 +542,11 @@ function ThemedContent(handle: Handle) {
   let theme = handle.context.get(ThemeProviderAdvanced)
 
   // Subscribe to theme changes and update when it changes
-  handle.on(theme, { change: () => handle.update() })
+  handle.on(theme, {
+    change: () => {
+      handle.update()
+    },
+  })
 
   return () => (
     <div
@@ -643,7 +643,7 @@ function DemoApp(handle: Handle) {
         <ResizeComponent />
       </Example>
 
-      <Example title="handle.update(task) - Player">
+      <Example title="handle.update() - Player">
         <Player />
       </Example>
 

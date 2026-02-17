@@ -215,7 +215,7 @@ Without a key, the reconciler can't determine if a new element should reclaim an
 Spread a spring value to get physics-based `duration` and `easing`:
 
 ```tsx
-import { spring } from '@remix-run/component'
+import { spring } from 'remix/component'
 
 let el = (
   <div
@@ -243,7 +243,7 @@ See [Spring API](./spring.md) for available presets and custom spring options.
 A toggle component with animate:
 
 ```tsx
-import { createRoot, type Handle } from '@remix-run/component'
+import { createRoot, type Handle } from 'remix/component'
 
 function ToggleContent(handle: Handle) {
   let show = false
@@ -304,7 +304,7 @@ Enable layout animations with `layout: true`:
 Or customize duration and easing, including springs:
 
 ```tsx
-import { spring } from '@remix-run/component'
+import { spring } from 'remix/component'
 
 let custom = (
   <div

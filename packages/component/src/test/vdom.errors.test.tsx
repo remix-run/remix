@@ -323,4 +323,75 @@ describe('vdom error handling', () => {
       expect(container.innerHTML).toBe('<button>Click</button>')
     })
   })
+
+  describe('cascading updates protection', () => {
+    it('dispatches error when handle.update() is called during render', async () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let errorHandler = vi.fn()
+      root.addEventListener('error', errorHandler)
+
+      let renderCount = 0
+      let triggerUpdate: () => void
+
+      function InfiniteLoop(handle: Handle) {
+        triggerUpdate = () => {
+          handle.update()
+        }
+        return () => {
+          renderCount++
+          if (renderCount > 1) {
+            handle.update()
+          }
+          return <div>count: {renderCount}</div>
+        }
+      }
+
+      root.render(<InfiniteLoop />)
+      root.flush()
+      expect(container.innerHTML).toBe('<div>count: 1</div>')
+      expect(renderCount).toBe(1)
+
+      triggerUpdate!()
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(errorHandler).toHaveBeenCalled()
+      let error = (errorHandler.mock.calls[0][0] as ErrorEvent).error as Error
+      expect(error.message).toContain('infinite loop detected')
+      expect(renderCount).toBeLessThan(100)
+    })
+
+    it('allows legitimate multiple updates within same event loop turn', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let errorHandler = vi.fn()
+      root.addEventListener('error', errorHandler)
+
+      let count = 0
+      let update: () => void
+
+      function Counter(handle: Handle) {
+        update = () => handle.update()
+        return () => <div>count: {count}</div>
+      }
+
+      root.render(<Counter />)
+      root.flush()
+
+      count++
+      update!()
+      root.flush()
+
+      count++
+      update!()
+      root.flush()
+
+      count++
+      update!()
+      root.flush()
+
+      expect(container.innerHTML).toBe('<div>count: 3</div>')
+      expect(errorHandler).not.toHaveBeenCalled()
+    })
+  })
 })

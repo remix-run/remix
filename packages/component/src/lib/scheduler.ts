@@ -7,16 +7,27 @@ import {
 import type { CommittedComponentNode, VNode } from './vnode.ts'
 import { isCommittedComponentNode } from './vnode.ts'
 import { findNextSiblingDomAnchor, renderComponent } from './reconcile.ts'
+import { defaultStyleManager } from './diff-props.ts'
+import type { StyleManager } from './style/index.ts'
 
 type EmptyFn = () => void
 
 export type Scheduler = ReturnType<typeof createScheduler>
 
-export function createScheduler(doc: Document, rootTarget: EventTarget) {
+// Protect against infinite cascading updates (e.g. handle.update() during render)
+const MAX_CASCADING_UPDATES = 50
+
+export function createScheduler(
+  doc: Document,
+  rootTarget: EventTarget,
+  styles: StyleManager = defaultStyleManager,
+) {
   let documentState = createDocumentState(doc)
   let scheduled = new Map<CommittedComponentNode, ParentNode>()
   let tasks: EmptyFn[] = []
   let flushScheduled = false
+  let cascadingUpdateCount = 0
+  let resetScheduled = false
   let scheduler: {
     enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void
     enqueueTasks(newTasks: EmptyFn[]): void
@@ -28,6 +39,17 @@ export function createScheduler(doc: Document, rootTarget: EventTarget) {
     rootTarget.dispatchEvent(new ErrorEvent('error', { error }))
   }
 
+  function scheduleCounterReset() {
+    if (resetScheduled) return
+    resetScheduled = true
+    // Reset when control returns to the event loop while still allowing
+    // microtask-driven flushes in the same turn to count as cascading.
+    setTimeout(() => {
+      cascadingUpdateCount = 0
+      resetScheduled = false
+    }, 0)
+  }
+
   function flush() {
     flushScheduled = false
 
@@ -36,6 +58,15 @@ export function createScheduler(doc: Document, rootTarget: EventTarget) {
 
     let hasWork = batch.size > 0 || tasks.length > 0
     if (!hasWork) return
+
+    cascadingUpdateCount++
+    scheduleCounterReset()
+
+    if (cascadingUpdateCount > MAX_CASCADING_UPDATES) {
+      let error = new Error('handle.update() infinite loop detected')
+      dispatchError(error)
+      return
+    }
 
     // Mark layout elements within updating components as pending BEFORE capture
     // This ensures we only capture/apply for elements whose components are updating
@@ -72,6 +103,7 @@ export function createScheduler(doc: Document, rootTarget: EventTarget) {
             domParent,
             handle.frame,
             scheduler,
+            styles,
             rootTarget,
             vParent,
             anchor,

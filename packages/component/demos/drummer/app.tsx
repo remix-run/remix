@@ -104,7 +104,9 @@ function DrumControls(handle: Handle) {
   let play: HTMLButtonElement
 
   handle.on(drummer, {
-    change: () => handle.update(),
+    change: () => {
+      handle.update()
+    },
   })
 
   return () => (

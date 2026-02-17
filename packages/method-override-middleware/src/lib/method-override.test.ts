@@ -12,12 +12,8 @@ describe('methodOverride middleware', () => {
       middleware: [formData(), methodOverride()],
     })
 
-    router.post('/', () => {
-      return new Response('Created')
-    })
-    router.delete('/', () => {
-      return new Response('Deleted')
-    })
+    router.post('/', () => new Response('Created'))
+    router.delete('/', () => new Response('Deleted'))
 
     let response = await router.fetch('https://remix.run', {
       method: 'POST',

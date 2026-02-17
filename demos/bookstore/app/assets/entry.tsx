@@ -1,16 +1,27 @@
-import { hydrate } from 'remix/component'
+import { run } from 'remix/component'
 
-let root = hydrate({
-  async loadModule(moduleUrl, exportName) {
+let app = run(document, {
+  async loadModule(moduleUrl: string, exportName: string) {
     let mod = await import(moduleUrl)
-    let Component = mod[exportName]
+    let Component = (mod as any)[exportName]
     if (!Component) {
       throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
     }
     return Component
   },
+  async resolveFrame(src, signal) {
+    let response = await fetch(src, { headers: { accept: 'text/html' }, signal })
+    if (!response.ok) {
+      return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
+    }
+    // let text = await response.text()
+    // console.log(text)
+    // return text
+    if (response.body) return response.body
+    return response.text()
+  },
 })
 
-root.addEventListener('error', (event) => {
-  console.error('Hydration error:', event.error)
+app.ready().catch((error: unknown) => {
+  console.error('Frame adoption failed:', error)
 })

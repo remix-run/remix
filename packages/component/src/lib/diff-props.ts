@@ -1,5 +1,6 @@
 import { invariant } from './invariant.ts'
 import { processStyle, createStyleManager, normalizeCssValue } from './style/index.ts'
+import type { StyleManager } from './style/index.ts'
 import type { ElementProps } from './jsx.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
@@ -8,20 +9,22 @@ const XML_NS = 'http://www.w3.org/XML/1998/namespace'
 
 // global so all roots share it
 let styleCache = new Map<string, { selector: string; css: string }>()
-let styleManager =
-  typeof window !== 'undefined'
-    ? createStyleManager()
-    : (null as unknown as ReturnType<typeof createStyleManager>)
+let globalStyleManager =
+  typeof window !== 'undefined' ? createStyleManager() : (null as unknown as StyleManager)
 
-export function cleanupCssProps(props: ElementProps | undefined) {
+export { type StyleManager }
+
+export let defaultStyleManager: StyleManager = globalStyleManager
+
+export function cleanupCssProps(props: ElementProps | undefined, styles?: StyleManager) {
   if (!props?.css) return
   let { selector } = processStyle(props.css, styleCache)
   if (selector) {
-    styleManager.remove(selector)
+    ;(styles ?? globalStyleManager).remove(selector)
   }
 }
 
-function diffCssProp(curr: ElementProps, next: ElementProps, dom: Element) {
+function diffCssProp(curr: ElementProps, next: ElementProps, dom: Element, styles: StyleManager) {
   let prevSelector = curr.css ? processStyle(curr.css, styleCache).selector : ''
   let { selector: nextSelector, css } = next.css
     ? processStyle(next.css, styleCache)
@@ -32,13 +35,13 @@ function diffCssProp(curr: ElementProps, next: ElementProps, dom: Element) {
   // Remove old CSS
   if (prevSelector) {
     dom.removeAttribute('data-css')
-    styleManager.remove(prevSelector)
+    styles.remove(prevSelector)
   }
 
   // Add new CSS
   if (css && nextSelector) {
     dom.setAttribute('data-css', nextSelector)
-    styleManager.insert(nextSelector, css)
+    styles.insert(nextSelector, css)
   }
 }
 
@@ -147,23 +150,41 @@ function camelToKebab(input: string): string {
     .toLowerCase()
 }
 
-export function diffHostProps(curr: ElementProps, next: ElementProps, dom: Element) {
+function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, name: string): void {
+  try {
+    if (name === 'value' || name === 'defaultValue') {
+      dom[name] = ''
+      return
+    }
+    if (name === 'checked' || name === 'defaultChecked' || name === 'selected') {
+      dom[name] = false
+      return
+    }
+    if (name === 'selectedIndex') {
+      dom[name] = -1
+    }
+  } catch {}
+}
+
+export function diffHostProps(
+  curr: ElementProps,
+  next: ElementProps,
+  dom: Element,
+  styles?: StyleManager,
+) {
   let isSvg = dom.namespaceURI === SVG_NS
 
   if (next.css || curr.css) {
-    diffCssProp(curr, next, dom)
+    diffCssProp(curr, next, dom, styles ?? globalStyleManager)
   }
 
   // Removals
   for (let name in curr) {
     if (isFrameworkProp(name)) continue
     if (!(name in next) || next[name] == null) {
-      // Prefer property clearing when applicable (align with Preact)
+      // Clear runtime state for form-like props where removing the attribute is not enough.
       if (canUseProperty(dom, name, isSvg)) {
-        try {
-          dom[name] = ''
-          continue
-        } catch {}
+        clearRuntimePropertyOnRemoval(dom, name)
       }
 
       let { ns, attr } = normalizePropName(name, isSvg)
@@ -229,6 +250,7 @@ export function resetStyleState() {
     typeof window !== 'undefined',
     'resetStyleState() is only available in a browser environment',
   )
-  styleManager.dispose()
-  styleManager = createStyleManager()
+  globalStyleManager.dispose()
+  globalStyleManager = createStyleManager()
+  defaultStyleManager = globalStyleManager
 }

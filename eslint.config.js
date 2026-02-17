@@ -104,6 +104,8 @@ export default [
       'prefer-let/prefer-let': 'error',
       // Disallow `var` entirely
       'no-var': 'error',
+      // Prefer concise arrow callbacks when only returning an expression
+      'arrow-body-style': ['error', 'as-needed'],
     },
   },
   {
