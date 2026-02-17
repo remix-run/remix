@@ -1,6 +1,7 @@
-export { Fragment, jsx, jsxs } from './jsx-runtime.ts'
 import { jsx } from './jsx-runtime.ts'
 import type { ReconcilerJsxElement } from './jsx-runtime.ts'
+
+export { Fragment, jsx, jsxs } from './jsx-runtime.ts'
 
 export function jsxDEV(
   type: unknown,

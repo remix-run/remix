@@ -38,7 +38,11 @@ export type {
   RootTask as Task,
 } from './lib/types.ts'
 
-export type { DirectiveDescriptor, DirectiveType, UseValue } from './lib/plugins/directive-plugin.ts'
+export type {
+  DirectiveDescriptor,
+  DirectiveType,
+  UseValue,
+} from './lib/plugins/directive-plugin.ts'
 
 export type {
   TestContainerNode,

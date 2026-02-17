@@ -4,9 +4,7 @@ import {
   RECONCILER_PROP_KEYS,
   RECONCILER_PROP_SHAPE,
 } from '@remix-run/reconciler'
-import type { Component, NodeChild, ReconcilerElement, RenderValue, UseValue } from '@remix-run/reconciler'
-import type { ConnectValue } from './lib/plugins/connect-plugin.ts'
-import type { DispatchedEvent, OnValue } from './lib/plugins/on-plugin.ts'
+import type { Component, NodeChild, ReconcilerElement, RenderValue } from '@remix-run/reconciler'
 
 export const Fragment = RECONCILER_FRAGMENT
 
@@ -15,14 +13,9 @@ const EMPTY_NODE_CHILDREN: NodeChild[] = []
 
 export type DomElementProps<node extends EventTarget> = {
   children?: RenderValue
-  connect?: ConnectValue<node>
   innerHTML?: string
   key?: unknown
-  on?: OnValue<node>
-  use?: UseValue<node>
 } & Record<string, unknown>
-
-export type { ConnectValue, DispatchedEvent, OnValue }
 
 export type DomHTMLElements = {
   [tagName in keyof HTMLElementTagNameMap]: DomElementProps<HTMLElementTagNameMap[tagName]>
@@ -74,7 +67,9 @@ function createElement(
     delete nextProps.key
   }
   let nodeChildren =
-    'children' in nextProps ? toNodeChildren(nextProps.children as RenderValue) : EMPTY_NODE_CHILDREN
+    'children' in nextProps
+      ? toNodeChildren(nextProps.children as RenderValue)
+      : EMPTY_NODE_CHILDREN
   let propKeys = listRenderablePropKeys(nextProps)
   let element: DomJsxElement = {
     $rmx: true,
@@ -148,9 +143,12 @@ function toNodeChildrenInto(children: RenderValue, output: NodeChild[]) {
       key: element.key,
       props: splitChildrenProps(element.props),
       children: element[RECONCILER_NODE_CHILDREN] ?? [],
-      propKeys: (element as DomJsxElement & { [RECONCILER_PROP_KEYS]?: string[] })[RECONCILER_PROP_KEYS],
-      propShape:
-        (element as DomJsxElement & { [RECONCILER_PROP_SHAPE]?: string })[RECONCILER_PROP_SHAPE],
+      propKeys: (element as DomJsxElement & { [RECONCILER_PROP_KEYS]?: string[] })[
+        RECONCILER_PROP_KEYS
+      ],
+      propShape: (element as DomJsxElement & { [RECONCILER_PROP_SHAPE]?: string })[
+        RECONCILER_PROP_SHAPE
+      ],
     },
   })
 }
