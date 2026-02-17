@@ -62,18 +62,30 @@ describe('reconciler package', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
     let events: string[] = []
-    let pluginA = definePlugin(() => () => (input) => {
-      events.push('a')
-      return {
-        ...input,
-        props: { ...input.props, a: '1' },
-      }
-    })
-    let pluginB = definePlugin(() => () => (input) => {
-      events.push('b')
-      let next = { ...input.props, b: String(input.props.a ?? '') + '2' }
-      return { ...input, props: next }
-    })
+    let pluginA = definePlugin(() => ({
+      keys: '*',
+      setup() {
+        return {
+          commit(input) {
+            events.push('a')
+            input.props.a = '1'
+          },
+          remove() {},
+        }
+      },
+    }))
+    let pluginB = definePlugin(() => ({
+      keys: '*',
+      setup() {
+        return {
+          commit(input) {
+            events.push('b')
+            input.props.b = String(input.props.a ?? '') + '2'
+          },
+          remove() {},
+        }
+      },
+    }))
     let reconciler = createReconciler(nodePolicy, [pluginA, pluginB, attributeProps()])
     let root = reconciler.createRoot(container)
 
@@ -89,13 +101,18 @@ describe('reconciler package', () => {
     let container = createTestContainer()
     let events: ReconcilerErrorEvent[] = []
 
-    let invalidHostType = definePlugin(() => () => (_input) => {
-      let next = {
-        type: 123,
-        props: {},
-      }
-      return next
-    })
+    let invalidHostType = definePlugin(() => ({
+      keys: '*',
+      setup() {
+        return {
+          commit(input) {
+            input.type = 123
+            input.props = {}
+          },
+          remove() {},
+        }
+      },
+    }))
 
     let reconciler = createReconciler(nodePolicy, [invalidHostType, attributeProps()])
     let root = reconciler.createRoot(container)
@@ -111,19 +128,24 @@ describe('reconciler package', () => {
     assert.ok(phases.includes('reconcile'))
   })
 
-  it('dispatches root errors for root and host task failures', async () => {
+  it('dispatches root errors for root and plugin failures', async () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
     let events: ReconcilerErrorEvent[] = []
 
-    let throwsHostTask = definePlugin(() => (host) => (input) => {
-      host.queueTask(() => {
-        throw new Error('host-task')
-      })
-      return input
-    })
+    let throwsPlugin = definePlugin(() => ({
+      keys: '*',
+      setup() {
+        return {
+          commit() {
+            throw new Error('plugin-failure')
+          },
+          remove() {},
+        }
+      },
+    }))
 
-    let reconciler = createReconciler(nodePolicy, [throwsHostTask, attributeProps()])
+    let reconciler = createReconciler(nodePolicy, [throwsPlugin, attributeProps()])
     let root = reconciler.createRoot(container)
     root.addEventListener('error', (event) => {
       events.push(event as ReconcilerErrorEvent)
@@ -139,7 +161,7 @@ describe('reconciler package', () => {
     await Promise.resolve()
 
     let phases = events.map((event) => event.context.phase)
-    assert.ok(phases.includes('hostTask'))
+    assert.ok(phases.includes('plugin'))
     assert.ok(phases.includes('rootTask'))
   })
 
@@ -760,13 +782,17 @@ describe('reconciler package', () => {
   it('runs remove plugin waitUntil rejection path without crashing', async () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
-    let rejectingRemovePlugin = definePlugin(() => (host) => {
-      host.addEventListener('remove', (event) => {
-        let removeEvent = event as unknown as { waitUntil(promise: Promise<void>): void }
-        removeEvent.waitUntil(Promise.reject(new Error('ignore')))
-      })
-      return (input) => input
-    })
+    let rejectingRemovePlugin = definePlugin(() => ({
+      keys: '*',
+      setup() {
+        return {
+          commit() {},
+          remove() {
+            return Promise.reject(new Error('ignore'))
+          },
+        }
+      },
+    }))
     let reconciler = createReconciler(nodePolicy, [rejectingRemovePlugin, attributeProps()])
     let root = reconciler.createRoot(container)
 
@@ -869,12 +895,17 @@ describe('reconciler package', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
     let events: ReconcilerErrorEvent[] = []
-    let badRemovePlugin = definePlugin(() => (host) => {
-      host.addEventListener('remove', () => {
-        throw new Error('remove-listener')
-      })
-      return (input) => input
-    })
+    let badRemovePlugin = definePlugin(() => ({
+      keys: '*',
+      setup() {
+        return {
+          commit() {},
+          remove() {
+            throw new Error('remove-listener')
+          },
+        }
+      },
+    }))
     let reconciler = createReconciler(nodePolicy, [badRemovePlugin, attributeProps()])
     let root = reconciler.createRoot(container)
     root.addEventListener('error', (event) => {
@@ -1032,17 +1063,19 @@ describe('reconciler package', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
     let resolveRemoval: null | (() => void) = null
-    let deferPlugin = definePlugin(() => (host) => {
-      host.addEventListener('remove', (event) => {
-        let removeEvent = event as unknown as { waitUntil(promise: Promise<void>): void }
-        removeEvent.waitUntil(
-          new Promise<void>((resolve) => {
-            resolveRemoval = resolve
-          }),
-        )
-      })
-      return (input) => input
-    })
+    let deferPlugin = definePlugin(() => ({
+      keys: '*',
+      setup() {
+        return {
+          commit() {},
+          remove() {
+            return new Promise<void>((resolve) => {
+              resolveRemoval = resolve
+            })
+          },
+        }
+      },
+    }))
     let reconciler = createReconciler(nodePolicy, [deferPlugin, attributeProps()])
     let root = reconciler.createRoot(container)
 
@@ -1067,25 +1100,26 @@ describe('reconciler package', () => {
     let firstNode: null | object = null
     let secondNode: null | object = null
 
-    let capturePlugin = definePlugin(() => (host) => {
-      host.addEventListener('insert', (event) => {
-        let insertEvent = event as unknown as { node: object }
-        if (!firstNode) {
-          firstNode = insertEvent.node
-        } else {
-          secondNode = insertEvent.node
+    let capturePlugin = definePlugin(() => ({
+      keys: '*',
+      setup() {
+        return {
+          commit(_input, node) {
+            if (!firstNode) {
+              firstNode = node as object
+            } else {
+              secondNode = node as object
+            }
+          },
+          remove(_node, reason) {
+            if (reason !== 'unmount') return
+            return new Promise<void>((resolve) => {
+              resolveRemoval = resolve
+            })
+          },
         }
-      })
-      host.addEventListener('remove', (event) => {
-        let removeEvent = event as unknown as { waitUntil(promise: Promise<void>): void }
-        removeEvent.waitUntil(
-          new Promise<void>((resolve) => {
-            resolveRemoval = resolve
-          }),
-        )
-      })
-      return (input) => input
-    })
+      },
+    }))
 
     let reconciler = createReconciler(nodePolicy, [capturePlugin, attributeProps()])
     let root = reconciler.createRoot(container)
@@ -1223,18 +1257,11 @@ describe('reconciler package', () => {
     assert.equal(stringifyTestNode(grandchildContainer), '')
   })
 
-  it('aborts root and host task signals across repeated updates and remove', () => {
+  it('aborts root task signals across repeated updates and remove', () => {
     let nodePolicy = createTestNodePolicy()
     let container = createTestContainer()
     let rootSignals: AbortSignal[] = []
-    let hostSignals: AbortSignal[] = []
-    let signalPlugin = definePlugin(() => (host) => (input) => {
-      host.queueTask((_node, signal) => {
-        hostSignals.push(signal)
-      })
-      return input
-    })
-    let reconciler = createReconciler(nodePolicy, [signalPlugin, attributeProps()])
+    let reconciler = createReconciler(nodePolicy, [attributeProps()])
     let root = reconciler.createRoot(container)
 
     root.render((handle) => {
@@ -1253,45 +1280,50 @@ describe('reconciler package', () => {
     root.flush()
 
     assert.equal(rootSignals.length, 2)
-    assert.equal(hostSignals.length, 2)
     assert.equal(rootSignals[0].aborted, true)
-    assert.equal(hostSignals[0].aborted, true)
     assert.equal(rootSignals[1].aborted, false)
-    assert.equal(hostSignals[1].aborted, false)
 
     root.remove()
     assert.equal(rootSignals[1].aborted, true)
-    assert.equal(hostSignals[1].aborted, true)
   })
 })
 
 function attributeProps<
   elementNode extends { attributes: Record<string, string> },
 >(): Plugin<elementNode> {
-  return definePlugin(() => (host) => {
-    let current = new Set<string>()
-    return (input) => {
-      let next = new Map<string, string>()
-      for (let key in input.props) {
-        if (key === 'children') continue
-        let value = input.props[key]
-        if (value == null || value === false) continue
-        if (typeof value === 'object' || typeof value === 'function') continue
-        next.set(key, String(value))
+  return definePlugin(() => ({
+    keys: '*',
+    setup() {
+      let current = new Set<string>()
+      return {
+        commit(input, node) {
+          let next = new Map<string, string>()
+          for (let key in input.props) {
+            if (key === 'children') continue
+            let value = input.props[key]
+            if (value == null || value === false) continue
+            if (typeof value === 'object' || typeof value === 'function') continue
+            next.set(key, String(value))
+          }
+          for (let key of current) {
+            if (next.has(key)) continue
+            delete node.attributes[key]
+          }
+          for (let [key, value] of next) {
+            node.attributes[key] = value
+          }
+          current = new Set(next.keys())
+        },
+        remove(node, reason) {
+          if (reason === 'unmount') return
+          for (let key of current) {
+            delete node.attributes[key]
+          }
+          current.clear()
+        },
       }
-      host.queueTask((node) => {
-        for (let key of current) {
-          if (next.has(key)) continue
-          delete node.attributes[key]
-        }
-        for (let [key, value] of next) {
-          node.attributes[key] = value
-        }
-        current = new Set(next.keys())
-      })
-      return input
-    }
-  })
+    },
+  }))
 }
 
 async function waitFor(predicate: () => boolean, maxTurns: number) {

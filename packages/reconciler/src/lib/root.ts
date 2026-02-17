@@ -3,7 +3,8 @@ import { createScheduler } from './scheduler.ts'
 import { GuardedEventTarget } from './event-target.ts'
 import { ReconcilerErrorEvent } from './types.ts'
 import type {
-  HostFactory,
+  HostPlugin,
+  HostPluginDispatchPlan,
   NodePolicy,
   Plugin,
   PreparedPlugin,
@@ -54,7 +55,8 @@ export function createReconciler<
       disposed: false,
       handle: null as never,
       preparedPlugins: [],
-      hostFactories: [],
+      hostPlugins: [],
+      hostPluginDispatch: createHostPluginDispatch([]),
     }
     parent?.branches.add(root)
 
@@ -140,14 +142,15 @@ export function createReconciler<
           )
         })
         let createHost = plugin(pluginHandle, reconcilerRoot) ?? null
-        return { handle: pluginHandle, createHost, name: pluginName }
+        return { handle: pluginHandle, hostPlugin: createHost, name: pluginName }
       })
-      let hostFactories: HostFactory<elementNode>[] = []
+      let hostPlugins: HostPlugin<elementNode>[] = []
       for (let plugin of preparedPlugins) {
-        if (plugin.createHost) hostFactories.push(plugin.createHost)
+        if (plugin.hostPlugin) hostPlugins.push(plugin.hostPlugin)
       }
       root.preparedPlugins = preparedPlugins
-      root.hostFactories = hostFactories
+      root.hostPlugins = hostPlugins
+      root.hostPluginDispatch = createHostPluginDispatch(hostPlugins)
     }
   }
 
@@ -164,4 +167,51 @@ export function createReconciler<
   return {
     createRoot,
   }
+}
+
+function createHostPluginDispatch<elementNode>(
+  hostPlugins: HostPlugin<elementNode>[],
+): HostPluginDispatchPlan {
+  let pre = {
+    keyed: new Map<string, number[]>(),
+    wildcard: [] as number[],
+    byShape: new Map<string, number[]>(),
+    seenMarks: createSeenMarks(hostPlugins.length),
+    seenEpoch: 0,
+  }
+  let post = {
+    keyed: new Map<string, number[]>(),
+    wildcard: [] as number[],
+    byShape: new Map<string, number[]>(),
+    seenMarks: createSeenMarks(hostPlugins.length),
+    seenEpoch: 0,
+  }
+
+  for (let index = 0; index < hostPlugins.length; index++) {
+    let hostPlugin = hostPlugins[index]
+    let phase = hostPlugin.phase ?? 'pre'
+    let target = phase === 'post' ? post : pre
+    if (hostPlugin.keys === '*') {
+      target.wildcard.push(index)
+      continue
+    }
+    for (let key of hostPlugin.keys) {
+      let list = target.keyed.get(key)
+      if (!list) {
+        list = []
+        target.keyed.set(key, list)
+      }
+      list.push(index)
+    }
+  }
+
+  return { pre, post }
+}
+
+function createSeenMarks(size: number) {
+  let marks: number[] = []
+  for (let index = 0; index < size; index++) {
+    marks.push(0)
+  }
+  return marks
 }

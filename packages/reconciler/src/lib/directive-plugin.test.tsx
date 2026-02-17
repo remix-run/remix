@@ -17,7 +17,7 @@ describe('use plugin', () => {
 
     let track = createDirective<{ attributes: Record<string, string> }, [string]>((_pluginHandle) => {
       pluginScopeCalls++
-      return (_hostHandle) => {
+      return (_node) => {
         hostScopeCalls++
         return (nextValue: string) => {
           updates.push(nextValue)
@@ -73,7 +73,7 @@ describe('use plugin', () => {
     let cleaned = 0
 
     let track = createDirective<{ attributes: Record<string, string> }, [string]>((_pluginHandle) => {
-      return (_hostHandle) => {
+      return (_node) => {
         return (...args: [string?]) => {
           if (args.length === 0) {
             cleaned++
@@ -108,27 +108,36 @@ describe('use plugin', () => {
 function attributeProps<
   elementNode extends { attributes: Record<string, string> },
 >(): Plugin<elementNode> {
-  return definePlugin<elementNode>(() => (host) => {
-    let current = new Set<string>()
-    return (input) => {
-      let next = new Map<string, string>()
-      for (let key in input.props) {
-        let value = input.props[key]
-        if (value == null || value === false) continue
-        if (typeof value === 'object' || typeof value === 'function') continue
-        next.set(key, String(value))
+  return definePlugin<elementNode>(() => ({
+    keys: '*',
+    setup() {
+      let current = new Set<string>()
+      return {
+        commit(input, node) {
+          let next = new Map<string, string>()
+          for (let key in input.props) {
+            let value = input.props[key]
+            if (value == null || value === false) continue
+            if (typeof value === 'object' || typeof value === 'function') continue
+            next.set(key, String(value))
+          }
+          for (let key of current) {
+            if (next.has(key)) continue
+            delete node.attributes[key]
+          }
+          for (let [key, value] of next) {
+            node.attributes[key] = value
+          }
+          current = new Set(next.keys())
+        },
+        remove(node, reason) {
+          if (reason === 'unmount') return
+          for (let key of current) {
+            delete node.attributes[key]
+          }
+          current.clear()
+        },
       }
-      host.queueTask((node) => {
-        for (let key of current) {
-          if (next.has(key)) continue
-          delete node.attributes[key]
-        }
-        for (let [key, value] of next) {
-          node.attributes[key] = value
-        }
-        current = new Set(next.keys())
-      })
-      return input
-    }
-  })
+    },
+  }))
 }

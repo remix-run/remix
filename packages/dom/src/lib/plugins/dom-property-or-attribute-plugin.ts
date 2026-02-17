@@ -14,36 +14,60 @@ const attributeExceptions = new Set([
   'popover',
 ])
 
-export const domPropertyOrAttributePlugin = definePlugin<Element>(() => (host) => {
-  let current = new Set<string>()
+export const domPropertyOrAttributePlugin = definePlugin<Element>(() => ({
+  keys: '*',
+  setup() {
+    let currentValues: null | Map<string, unknown> = null
+    let seenVersions: null | Map<string, number> = null
+    let currentVersion = 0
+    let commitKeys: string[] = []
+    let commitValues: unknown[] = []
 
-  return (input) => {
-    let next = new Map<string, unknown>()
-    for (let key in input.props) {
-      let value = input.props[key]
-      if (!shouldHandleValue(value)) continue
-      next.set(key, value)
-      delete input.props[key]
+    return {
+      commit(input, node) {
+        commitKeys.length = 0
+        commitValues.length = 0
+        for (let key in input.props) {
+          let value = input.props[key]
+          if (!shouldHandleValue(value)) continue
+          commitKeys.push(key)
+          commitValues.push(value)
+          delete input.props[key]
+        }
+
+        if (!currentValues) currentValues = new Map()
+        if (!seenVersions) seenVersions = new Map()
+        currentVersion++
+
+        for (let index = 0; index < commitKeys.length; index++) {
+          let key = commitKeys[index]
+          let value = commitValues[index]
+          seenVersions.set(key, currentVersion)
+          if (currentValues.has(key) && currentValues.get(key) === value) continue
+          setNodeValue(node, key, value)
+          currentValues.set(key, value)
+        }
+
+        for (let [key] of currentValues) {
+          if (seenVersions.get(key) === currentVersion) continue
+          resetNodeValue(node, key)
+          currentValues.delete(key)
+        }
+      },
+      remove(node, reason) {
+        if (reason === 'unmount') return
+        if (!currentValues || currentValues.size === 0) return
+        for (let [key] of currentValues) {
+          resetNodeValue(node, key)
+        }
+        currentValues.clear()
+        currentValues = null
+        seenVersions?.clear()
+        seenVersions = null
+      },
     }
-
-    if (next.size === 0 && current.size === 0) return input
-
-    host.queueTask((node) => {
-      for (let key of current) {
-        if (next.has(key)) continue
-        resetNodeValue(node, key)
-      }
-
-      for (let [key, value] of next) {
-        setNodeValue(node, key, value)
-      }
-
-      current = new Set(next.keys())
-    })
-
-    return input
-  }
-})
+  },
+}))
 
 function shouldHandleValue(value: unknown) {
   if (typeof value === 'function') return false

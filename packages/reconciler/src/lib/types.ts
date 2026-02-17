@@ -5,6 +5,9 @@ export type ReconcilerElement = {
   type: ReconcilerElementType
   key: unknown
   props: Record<string, unknown>
+  __rmxNodeChildren?: NodeChild[]
+  __rmxPropKeys?: string[]
+  __rmxPropShape?: string
 }
 
 export type RenderValue =
@@ -24,6 +27,8 @@ export type NodeInput = {
   key: unknown
   props: Record<string, unknown>
   children: NodeChild[]
+  propKeys?: string[]
+  propShape?: string
 }
 
 export type NodeTransformInput = {
@@ -48,8 +53,6 @@ export type FlushContext = {
 }
 
 export type RootTask = (signal: AbortSignal) => void
-export type HostTask<elementNode> = (node: elementNode, signal: AbortSignal) => void
-export type NodeTransform = (input: NodeTransformInput) => NodeTransformInput
 
 export class PluginBeforeFlushEvent extends Event {
   context: FlushContext
@@ -99,12 +102,6 @@ export class HostRemoveEvent<elementNode> extends Event {
   }
 }
 
-export type HostHandle<elementNode> = EventTarget & {
-  queueTask(task: HostTask<elementNode>): void
-  update(): Promise<AbortSignal>
-  signal: AbortSignal
-}
-
 export type UpdateHandle = {
   update(): Promise<AbortSignal>
   queueTask(task: RootTask): void
@@ -135,11 +132,36 @@ export type Component<
   props extends Record<string, unknown> = Record<string, unknown>,
 > = (handle: UpdateHandle, ...setup: SetupArgs<setup>) => (props: props) => ReconcilerElement
 
-export type HostFactory<elementNode> = (hostHandle: HostHandle<elementNode>) => void | NodeTransform
+export type HostPluginPhase = 'pre' | 'post'
+
+export type HostPluginInstance<elementNode> = {
+  commit(input: NodeTransformInput, node: elementNode): void
+  remove(node: elementNode, reason: 'deactivate' | 'unmount'): void | Promise<void>
+}
+
+export type HostPlugin<elementNode> = {
+  keys: '*' | readonly string[]
+  phase?: HostPluginPhase
+  setup(): HostPluginInstance<elementNode>
+}
+
+export type HostPluginDispatchPhase = {
+  keyed: Map<string, number[]>
+  wildcard: number[]
+  byShape: Map<string, number[]>
+  seenMarks: number[]
+  seenEpoch: number
+}
+
+export type HostPluginDispatchPlan = {
+  pre: HostPluginDispatchPhase
+  post: HostPluginDispatchPhase
+}
+
 export type Plugin<elementNode> = (
   pluginHandle: PluginHandle,
   root: ReconcilerRoot,
-) => void | HostFactory<elementNode>
+) => void | HostPlugin<elementNode>
 
 export function definePlugin<elementNode>(plugin: Plugin<elementNode>): Plugin<elementNode> {
   return plugin
@@ -148,7 +170,7 @@ export function definePlugin<elementNode>(plugin: Plugin<elementNode>): Plugin<e
 export type PreparedPlugin<elementNode> = {
   name: string
   handle: PluginHandle
-  createHost: null | HostFactory<elementNode>
+  hostPlugin: null | HostPlugin<elementNode>
 }
 
 export type NodeHandle = {
@@ -211,9 +233,11 @@ export type CommittedHostNode<node, elementNode extends node> = {
   instance: elementNode
   children: CommittedNode<node, elementNode>[]
   componentInstances: ComponentInstance[]
-  hostHandles: HostHandle<elementNode>[]
-  transforms: NodeTransform[]
-  pendingTasks: HostTask<elementNode>[]
+  pluginInstances: null | Array<null | HostPluginInstance<elementNode>>
+  pluginSeenMarks: null | number[]
+  pluginSeenEpoch: number
+  pluginActivePre: null | number[]
+  pluginActivePost: null | number[]
 }
 
 export type CommittedNode<node, elementNode extends node> =
@@ -255,7 +279,8 @@ export type RootState<
   scheduled: boolean
   disposed: boolean
   preparedPlugins: PreparedPlugin<elementNode>[]
-  hostFactories: HostFactory<elementNode>[]
+  hostPlugins: HostPlugin<elementNode>[]
+  hostPluginDispatch: HostPluginDispatchPlan
 }
 
 export type ErrorPhase =
@@ -263,7 +288,6 @@ export type ErrorPhase =
   | 'afterFlush'
   | 'reconcile'
   | 'plugin'
-  | 'hostTask'
   | 'rootTask'
   | 'scheduler'
 

@@ -1,9 +1,9 @@
 import { definePlugin } from '../types.ts'
-import type { HostHandle, Plugin, PluginHandle } from '../types.ts'
+import type { Plugin, PluginHandle } from '../types.ts'
 
 export type DirectiveType<elementNode, args extends unknown[] = unknown[]> = (
   plugin: PluginHandle,
-) => (host: HostHandle<elementNode>) => (...args: args) => void
+) => (node: elementNode) => (...args: args) => void
 
 export type DirectiveDescriptor<elementNode, args extends unknown[] = unknown[]> = {
   type: DirectiveType<elementNode, args>
@@ -24,55 +24,65 @@ export function createDirective<elementNode, args extends unknown[]>(
 
 export function usePlugin<elementNode>(): Plugin<elementNode> {
   return definePlugin<elementNode>((pluginHandle) => {
-    let typeCache = new Map<AnyDirectiveType<elementNode>, (host: HostHandle<elementNode>) => DirectiveRunner>()
+    let typeCache = new Map<AnyDirectiveType<elementNode>, (node: elementNode) => DirectiveRunner>()
 
-    return (hostHandle) => {
-      let runners: DirectiveRunner[] = []
-      let runnerTypes: AnyDirectiveType<elementNode>[] = []
+    return {
+      keys: ['use'],
+      setup() {
+        let runners: DirectiveRunner[] = []
+        let runnerTypes: AnyDirectiveType<elementNode>[] = []
 
-      return (input) => {
-        let descriptors = normalizeUseValue<elementNode>(input.props.use)
-        if ('use' in input.props) {
-          delete input.props.use
+        return {
+          commit(input, node) {
+            let descriptors = normalizeUseValue<elementNode>(input.props.use)
+            if ('use' in input.props) {
+              delete input.props.use
+            }
+
+            for (let index = 0; index < descriptors.length; index++) {
+              let descriptor = descriptors[index]
+              let currentType = runnerTypes[index]
+              if (currentType !== descriptor.type) {
+                let createRunner = getRunnerFactory(typeCache, descriptor.type, pluginHandle)
+                runners[index] = createRunner(node)
+                runnerTypes[index] = descriptor.type
+              }
+
+              let runner = runners[index]
+              if (runner) {
+                runner(...descriptor.args)
+              }
+            }
+
+            for (let index = descriptors.length; index < runners.length; index++) {
+              let runner = runners[index]
+              if (runner) {
+                runner()
+              }
+            }
+
+            if (runners.length > descriptors.length) {
+              runners.length = descriptors.length
+            }
+            if (runnerTypes.length > descriptors.length) {
+              runnerTypes.length = descriptors.length
+            }
+          },
+          remove() {
+            for (let runner of runners) {
+              runner()
+            }
+            runners.length = 0
+            runnerTypes.length = 0
+          },
         }
-
-        for (let index = 0; index < descriptors.length; index++) {
-          let descriptor = descriptors[index]
-          let currentType = runnerTypes[index]
-          if (currentType !== descriptor.type) {
-            let createRunner = getRunnerFactory(typeCache, descriptor.type, pluginHandle)
-            runners[index] = createRunner(hostHandle)
-            runnerTypes[index] = descriptor.type
-          }
-
-          let runner = runners[index]
-          if (runner) {
-            runner(...descriptor.args)
-          }
-        }
-
-        for (let index = descriptors.length; index < runners.length; index++) {
-          let runner = runners[index]
-          if (runner) {
-            runner()
-          }
-        }
-
-        if (runners.length > descriptors.length) {
-          runners.length = descriptors.length
-        }
-        if (runnerTypes.length > descriptors.length) {
-          runnerTypes.length = descriptors.length
-        }
-
-        return input
-      }
+      },
     }
   })
 }
 
 function getRunnerFactory<elementNode>(
-  cache: Map<AnyDirectiveType<elementNode>, (host: HostHandle<elementNode>) => DirectiveRunner>,
+  cache: Map<AnyDirectiveType<elementNode>, (node: elementNode) => DirectiveRunner>,
   type: AnyDirectiveType<elementNode>,
   pluginHandle: PluginHandle,
 ) {

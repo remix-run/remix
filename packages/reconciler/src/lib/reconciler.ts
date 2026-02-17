@@ -1,23 +1,27 @@
-import { HostInsertEvent, HostRemoveEvent, ReconcilerErrorEvent } from './types.ts'
-import { RECONCILER_FRAGMENT, isReconcilerElement } from '../testing/jsx.ts'
-import { GuardedEventTarget } from './event-target.ts'
+import { ReconcilerErrorEvent } from './types.ts'
+import {
+  RECONCILER_FRAGMENT,
+  RECONCILER_NODE_CHILDREN,
+  RECONCILER_PROP_KEYS,
+  RECONCILER_PROP_SHAPE,
+  isReconcilerElement,
+} from '../testing/jsx.ts'
 import type {
   Component,
   ComponentInstance,
   CommittedHostNode,
   CommittedNode,
   DeferredRemoval,
+  HostPluginPhase,
+  HostPluginDispatchPhase,
+  HostPluginInstance,
   NodeChild,
-  HostFactory,
-  HostHandle,
   NodeInput,
   NodeRenderNode,
-  HostTask,
   NodeTransformInput,
   NodePolicy,
   ReconcilerElement,
   SourceIdentityEntry,
-  RenderNode,
   RenderValue,
   RootState,
   UpdateHandle,
@@ -27,6 +31,7 @@ type DiffEntry<node, elementNode extends node> = {
   node: CommittedNode<node, elementNode>
   oldIndex: number
 }
+const EMPTY_NODE_CHILDREN: NodeChild[] = []
 
 export function createReconcilerRuntime<
   parentNode,
@@ -48,7 +53,7 @@ export function createReconcilerRuntime<
     flushId: number,
   ) {
     let nextRenderable = root.render ? root.render(root.handle) : null
-    let nextNodes = normalizeRenderNodes(nextRenderable)
+    let nextNodes = toNodeChildren(nextRenderable)
 
     root.renderController?.abort()
     root.renderController = new AbortController()
@@ -97,7 +102,7 @@ export function createReconcilerRuntime<
 
   function reconcileChildren(
     currentChildren: CommittedNode<node, elementNode>[],
-    nextChildren: RenderNode[],
+    nextChildren: NodeChild[],
     parent: parentNode,
     root: RootState<parentNode, node, elementNode, traversal>,
     traversalCursor: traversal,
@@ -115,7 +120,7 @@ export function createReconcilerRuntime<
 
     let hasKeys = false
     for (let child of nextChildren) {
-      if (child.kind === 'node' && toKey(child.input.key) !== '') {
+      if (typeof child !== 'string' && child && toKey(child.input.key) !== '') {
         hasKeys = true
         break
       }
@@ -144,7 +149,7 @@ export function createReconcilerRuntime<
 
   function reconcileKeyedChildren(
     currentChildren: CommittedNode<node, elementNode>[],
-    nextChildren: RenderNode[],
+    nextChildren: NodeChild[],
     parent: parentNode,
     root: RootState<parentNode, node, elementNode, traversal>,
   ) {
@@ -166,7 +171,7 @@ export function createReconcilerRuntime<
       let matchedIndex = -1
       let currentChild: null | CommittedNode<node, elementNode> = null
 
-      if (nextChild.kind === 'node') {
+      if (typeof nextChild !== 'string' && nextChild) {
         let nextKey = toKey(nextChild.input.key)
         if (nextKey !== '') {
           let keyMatch = oldKeyMap.get(nextKey)
@@ -223,18 +228,18 @@ export function createReconcilerRuntime<
 
   function reconcileNode(
     current: null | CommittedNode<node, elementNode>,
-    next: null | RenderNode,
+    next: null | NodeChild,
     parent: parentNode,
     root: RootState<parentNode, node, elementNode, traversal>,
     anchor: null | node,
     traversalCursor: traversal,
   ): { node: null | CommittedNode<node, elementNode>; traversal: traversal } {
-    if (!next) {
+    if (next == null) {
       if (current) removeNode(current, parent, root)
       return { node: null, traversal: traversalCursor }
     }
 
-    if (next.kind === 'text') {
+    if (typeof next === 'string') {
       return reconcileText(current, next, parent, root, anchor, traversalCursor)
     }
 
@@ -243,21 +248,21 @@ export function createReconcilerRuntime<
 
   function reconcileText(
     current: null | CommittedNode<node, elementNode>,
-    next: { kind: 'text'; value: string },
+    next: string,
     parent: parentNode,
     root: RootState<parentNode, node, elementNode, traversal>,
     anchor: null | node,
     traversalCursor: traversal,
   ): { node: CommittedNode<node, elementNode>; traversal: traversal } {
     if (current && current.kind === 'text') {
-      if (current.value !== next.value) {
-        updateTextValue(current.instance, next.value)
-        current.value = next.value
+      if (current.value !== next) {
+        updateTextValue(current.instance, next)
+        current.value = next
       }
       return { node: current, traversal: traversalCursor }
     }
 
-    let resolved = root.nodePolicy.resolveText(parent, traversalCursor, next.value)
+    let resolved = root.nodePolicy.resolveText(parent, traversalCursor, next)
     if (current) {
       root.nodePolicy.insert(parent, resolved.node, getAnchor(current))
       removeNode(current, parent, root)
@@ -268,7 +273,7 @@ export function createReconcilerRuntime<
     }
 
     return {
-      node: { kind: 'text', instance: resolved.node, value: next.value },
+      node: { kind: 'text', instance: resolved.node, value: next },
       traversal: resolved.next,
     }
   }
@@ -284,8 +289,8 @@ export function createReconcilerRuntime<
     let key = toKey(input.key)
     if (current && current.kind === 'host' && current.key === key) {
       let resolvedInput = resolveComponentInput(current.componentInstances, input, root)
-      let transformedInput = applyTransforms(current, resolvedInput.input)
-      if (typeof transformedInput.type !== 'string') {
+      let hostInput = resolvedInput.input
+      if (typeof hostInput.type !== 'string') {
         throw new Error('plugins must resolve host type to string')
       }
       if (!isSameSourceIdentity(current.sourceIdentity, resolvedInput.sourceIdentity)) {
@@ -306,12 +311,12 @@ export function createReconcilerRuntime<
         )
       }
       current.componentInstances = resolvedInput.componentInstances
-      if (current.type !== transformedInput.type) {
+      if (current.type !== hostInput.type) {
         let componentInstances = current.componentInstances
         current.componentInstances = []
         return mountHost(
           current,
-          resolvedInput.input,
+          hostInput,
           resolvedInput.sourceIdentity,
           key,
           parent,
@@ -321,8 +326,20 @@ export function createReconcilerRuntime<
           componentInstances,
         )
       }
-      patchHost(current, transformedInput, root, root.nodePolicy.enter(current.instance))
-      runHostTasks(current, root)
+      let preInput = applyPluginsForPhase(current, hostInput, root, 'pre')
+      if (preInput.type !== current.type) {
+        throw new Error('plugins cannot change host type during patch')
+      }
+      patchHost(current, preInput, root, root.nodePolicy.enter(current.instance))
+      let postInput = applyPluginsForPhase(current, preInput, root, 'post')
+      if (postInput.type !== current.type) {
+        throw new Error('plugins cannot change host type during patch')
+      }
+      if (postInput.children !== preInput.children) {
+        patchHost(current, postInput, root, root.nodePolicy.enter(current.instance))
+      } else {
+        current.props = postInput.props
+      }
       return { node: current, traversal: traversalCursor }
     }
 
@@ -350,31 +367,46 @@ export function createReconcilerRuntime<
     reusedComponentInstances: ComponentInstance[] = [],
   ): { node: CommittedHostNode<node, elementNode>; traversal: traversal } {
     let probe = createDraftHostNode(key, sourceIdentity)
-    initializeHostPlugins(probe, root.hostFactories, root)
-    let transformedInput: NodeInput
+    let hostInput: NodeInput = input
     let nextSourceIdentity = sourceIdentity
     if (reusedComponentInstances.length > 0) {
       probe.componentInstances = reusedComponentInstances
-      transformedInput = applyTransforms(probe, input)
     } else {
-      let resolvedInput = resolveComponentInput(probe.componentInstances, input, root)
+      let resolvedInput = resolveComponentInput(
+        probe.componentInstances,
+        input,
+        root,
+        probe.sourceIdentity,
+      )
       probe.componentInstances = resolvedInput.componentInstances
       nextSourceIdentity = resolvedInput.sourceIdentity
       probe.sourceIdentity = nextSourceIdentity
-      transformedInput = applyTransforms(probe, resolvedInput.input)
+      hostInput = resolvedInput.input
     }
-    if (typeof transformedInput.type !== 'string') {
+    if (typeof hostInput.type !== 'string') {
       throw new Error('plugins must resolve host type to string')
     }
+    let hostType = hostInput.type
 
-    let reclaimed = reclaimHost(parent, transformedInput.type, key)
+    let reclaimed = reclaimHost(parent, hostType, key)
     if (reclaimed) {
       reclaimed.sourceIdentity = nextSourceIdentity
-      reclaimed.hostHandles = probe.hostHandles
-      reclaimed.transforms = probe.transforms
-      reclaimed.pendingTasks = probe.pendingTasks
       reclaimed.componentInstances = probe.componentInstances
-      patchHost(reclaimed, transformedInput, root, root.nodePolicy.enter(reclaimed.instance))
+      reclaimed.type = hostType
+      let preInput = applyPluginsForPhase(reclaimed, hostInput, root, 'pre')
+      if (preInput.type !== hostType) {
+        throw new Error('plugins cannot change host type during mount')
+      }
+      patchHost(reclaimed, preInput, root, root.nodePolicy.enter(reclaimed.instance))
+      let postInput = applyPluginsForPhase(reclaimed, preInput, root, 'post')
+      if (postInput.type !== hostType) {
+        throw new Error('plugins cannot change host type during mount')
+      }
+      if (postInput.children !== preInput.children) {
+        patchHost(reclaimed, postInput, root, root.nodePolicy.enter(reclaimed.instance))
+      } else {
+        reclaimed.props = postInput.props
+      }
       let mountAnchor = current ? getAnchor(current) : anchor
       if (mountAnchor != null) {
         root.nodePolicy.move(parent, reclaimed.instance, mountAnchor)
@@ -382,17 +414,28 @@ export function createReconcilerRuntime<
         root.nodePolicy.move(parent, reclaimed.instance, null)
       }
       if (current) removeNode(current, parent, root)
-      dispatchHostInsert(reclaimed, transformedInput, root)
-      runHostTasks(reclaimed, root)
       return { node: reclaimed, traversal: traversalCursor }
     }
 
-    let resolved = root.nodePolicy.resolveElement(parent, traversalCursor, transformedInput.type)
+    let resolved = root.nodePolicy.resolveElement(parent, traversalCursor, hostType)
     let hostNode = probe
     hostNode.sourceIdentity = nextSourceIdentity
-    hostNode.type = transformedInput.type
+    hostNode.type = hostType
     hostNode.instance = resolved.node
-    patchHost(hostNode, transformedInput, root, root.nodePolicy.enter(hostNode.instance))
+    let preInput = applyPluginsForPhase(hostNode, hostInput, root, 'pre')
+    if (preInput.type !== hostType) {
+      throw new Error('plugins cannot change host type during mount')
+    }
+    patchHost(hostNode, preInput, root, root.nodePolicy.enter(hostNode.instance))
+    let postInput = applyPluginsForPhase(hostNode, preInput, root, 'post')
+    if (postInput.type !== hostType) {
+      throw new Error('plugins cannot change host type during mount')
+    }
+    if (postInput.children !== preInput.children) {
+      patchHost(hostNode, postInput, root, root.nodePolicy.enter(hostNode.instance))
+    } else {
+      hostNode.props = postInput.props
+    }
 
     let mountAnchor = current ? getAnchor(current) : anchor
     if (mountAnchor != null) {
@@ -402,8 +445,6 @@ export function createReconcilerRuntime<
     }
     if (current) removeNode(current, parent, root)
 
-    dispatchHostInsert(hostNode, transformedInput, root)
-    runHostTasks(hostNode, root)
     return { node: hostNode, traversal: resolved.next }
   }
 
@@ -414,7 +455,7 @@ export function createReconcilerRuntime<
     traversalCursor: traversal,
   ) {
     node.props = input.props
-    let nextChildren = normalizeNodeChildren(input.children)
+    let nextChildren = input.children
     node.children = reconcileChildren(
       node.children,
       nextChildren,
@@ -437,9 +478,11 @@ export function createReconcilerRuntime<
       instance: null as never as elementNode,
       children: [],
       componentInstances: [],
-      hostHandles: [],
-      transforms: [],
-      pendingTasks: [],
+      pluginInstances: null,
+      pluginSeenMarks: null,
+      pluginSeenEpoch: 0,
+      pluginActivePre: null,
+      pluginActivePost: null,
     }
   }
 
@@ -454,7 +497,7 @@ export function createReconcilerRuntime<
     }
 
     let pendingRemoval: Promise<void>[] = []
-    dispatchHostRemove(current, pendingRemoval, root)
+    deactivateHostPlugins(current, pendingRemoval, root, 'unmount')
     if (pendingRemoval.length > 0) {
       let done =
         pendingRemoval.length === 1
@@ -515,144 +558,143 @@ export function createReconcilerRuntime<
     return deferred.node
   }
 
-  function initializeHostPlugins(
-    node: CommittedHostNode<node, elementNode>,
-    factories: HostFactory<elementNode>[],
-    root: RootState<parentNode, node, elementNode, traversal>,
-  ) {
-    node.hostHandles = []
-    node.transforms = []
-    node.pendingTasks = []
-    for (let createHostFactory of factories) {
-      let hostTarget = new GuardedEventTarget((error) => {
-        root.target.dispatchEvent(
-          new ReconcilerErrorEvent(error, {
-            phase: 'plugin',
-            rootId: root.id,
-            nodeKey: node.key,
-          }),
-        )
-      })
-      let connected = new AbortController()
-      hostTarget.addEventListener('remove', () => connected.abort())
-      let hostHandle = Object.assign(hostTarget, {
-        queueTask(task: HostTask<elementNode>) {
-          node.pendingTasks.push(task)
-        },
-        update() {
-          return new Promise<AbortSignal>((resolve) => {
-            root.pendingTasks.push((signal) => resolve(signal))
-            root.enqueue()
-          })
-        },
-        get signal() {
-          return connected.signal
-        },
-      }) as HostHandle<elementNode>
-      let transform = createHostFactory(hostHandle)
-      node.hostHandles.push(hostHandle)
-      if (transform) node.transforms.push(transform)
-    }
-  }
-
-  function applyTransforms(
+  function applyPluginsForPhase(
     node: CommittedHostNode<node, elementNode>,
     input: NodeInput,
+    root: RootState<parentNode, node, elementNode, traversal>,
+    phase: HostPluginPhase,
   ): NodeInput {
-    let transformedInput: NodeTransformInput = {
-      type: input.type,
-      props: { ...input.props },
-    }
+    if (root.hostPlugins.length === 0) return input
+
+    let dispatch = phase === 'post' ? root.hostPluginDispatch.post : root.hostPluginDispatch.pre
+    let transformedInput: NodeTransformInput = input as unknown as NodeTransformInput
     let nextChildren = input.children
-    for (let transform of node.transforms) {
-      transformedInput = transform(transformedInput)
-      if ('children' in transformedInput.props) {
-        nextChildren = toNodeChildren(transformedInput.props.children)
-        delete transformedInput.props.children
+    let candidates = resolveDispatchCandidates(dispatch, input, transformedInput.props)
+    let seenMarks = node.pluginSeenMarks
+    if (!seenMarks || seenMarks.length !== root.hostPlugins.length) {
+      seenMarks = createSeenMarks(root.hostPlugins.length)
+      node.pluginSeenMarks = seenMarks
+      node.pluginSeenEpoch = 0
+    }
+    let seenEpoch = node.pluginSeenEpoch + 1
+    if (seenEpoch >= Number.MAX_SAFE_INTEGER) {
+      clearSeenMarks(seenMarks)
+      seenEpoch = 1
+    }
+    node.pluginSeenEpoch = seenEpoch
+    for (let index of candidates) {
+      seenMarks[index] = seenEpoch
+    }
+
+    let active = phase === 'post' ? node.pluginActivePost : node.pluginActivePre
+    if (!active) {
+      active = []
+      if (phase === 'post') node.pluginActivePost = active
+      else node.pluginActivePre = active
+    }
+    for (let index = 0; index < active.length; index++) {
+      let pluginIndex = active[index]
+      if (seenMarks[pluginIndex] === seenEpoch) continue
+      let instance = node.pluginInstances?.[pluginIndex]
+      if (!instance) continue
+      deactivatePluginInstance(instance, node, root, 'deactivate')
+      if (node.pluginInstances) node.pluginInstances[pluginIndex] = null
+    }
+    active.length = 0
+
+    for (let pluginIndex of candidates) {
+      let hostPlugin = root.hostPlugins[pluginIndex]
+      let instance = node.pluginInstances?.[pluginIndex] ?? null
+      if (!instance) {
+        try {
+          instance = hostPlugin.setup()
+          if (!node.pluginInstances) {
+            node.pluginInstances = createPluginInstanceSlots(root.hostPlugins.length)
+          }
+          node.pluginInstances[pluginIndex] = instance
+        } catch (error) {
+          reportPluginError(root, node, error)
+          continue
+        }
+      }
+
+      try {
+        instance.commit(transformedInput, node.instance)
+        active.push(pluginIndex)
+      } catch (error) {
+        reportPluginError(root, node, error)
       }
     }
+
+    if ('children' in transformedInput.props) {
+      nextChildren = toNodeChildren(transformedInput.props.children)
+      delete transformedInput.props.children
+    }
+
+    if (transformedInput.type === input.type && nextChildren === input.children) {
+      return input
+    }
+
     return {
-      ...input,
+      key: input.key,
       type: transformedInput.type,
       props: transformedInput.props,
       children: nextChildren,
+      propKeys: input.propKeys,
+      propShape: input.propShape,
     }
   }
 
-  function dispatchHostRemove(
+  function deactivateHostPlugins(
     node: CommittedHostNode<node, elementNode>,
     pending: Promise<void>[],
     root: RootState<parentNode, node, elementNode, traversal>,
+    reason: 'deactivate' | 'unmount',
   ) {
-    for (let hostHandle of node.hostHandles) {
-      try {
-        let event = new HostRemoveEvent(node.instance, (promise) => {
-          pending.push(promise.catch(() => undefined))
-        })
-        hostHandle.dispatchEvent(event)
-      } catch (error) {
-        root.target.dispatchEvent(
-          new ReconcilerErrorEvent(error, {
-            phase: 'plugin',
-            rootId: root.id,
-            nodeKey: node.key,
-          }),
-        )
+    if (node.pluginInstances) {
+      for (let index = 0; index < node.pluginInstances.length; index++) {
+        let instance = node.pluginInstances[index]
+        if (!instance) continue
+        let waited = deactivatePluginInstance(instance, node, root, reason)
+        if (waited) pending.push(waited)
+        node.pluginInstances[index] = null
       }
     }
+    if (node.pluginActivePre) node.pluginActivePre.length = 0
+    if (node.pluginActivePost) node.pluginActivePost.length = 0
   }
 
-  function dispatchHostInsert(
+  function deactivatePluginInstance(
+    instance: HostPluginInstance<elementNode>,
     node: CommittedHostNode<node, elementNode>,
-    input: NodeInput,
     root: RootState<parentNode, node, elementNode, traversal>,
+    reason: 'deactivate' | 'unmount',
   ) {
-    let transformedInput: NodeTransformInput = {
-      type: input.type,
-      props: input.props,
-    }
-    for (let hostHandle of node.hostHandles) {
-      try {
-        let event = new HostInsertEvent(
-          transformedInput,
-          node.instance,
-          root.renderController!.signal,
-        )
-        hostHandle.dispatchEvent(event)
-      } catch (error) {
-        root.target.dispatchEvent(
-          new ReconcilerErrorEvent(error, {
-            phase: 'plugin',
-            rootId: root.id,
-            nodeKey: node.key,
-          }),
-        )
+    try {
+      let pending = instance.remove(node.instance, reason)
+      if (pending && typeof pending.then === 'function') {
+        return pending.then(() => undefined).catch(() => undefined)
       }
+    } catch (error) {
+      reportPluginError(root, node, error)
     }
+    return null
   }
 
-  function runHostTasks(
-    node: CommittedHostNode<node, elementNode>,
+  function reportPluginError(
     root: RootState<parentNode, node, elementNode, traversal>,
+    node: CommittedHostNode<node, elementNode>,
+    error: unknown,
   ) {
-    let signal = root.renderController?.signal
-    if (!signal) return
-    let tasks = node.pendingTasks.slice()
-    node.pendingTasks.length = 0
-    for (let task of tasks) {
-      try {
-        task(node.instance, signal)
-      } catch (error) {
-        root.target.dispatchEvent(
-          new ReconcilerErrorEvent(error, {
-            phase: 'hostTask',
-            rootId: root.id,
-            nodeKey: node.key,
-          }),
-        )
-      }
-    }
+    root.target.dispatchEvent(
+      new ReconcilerErrorEvent(error, {
+        phase: 'plugin',
+        rootId: root.id,
+        nodeKey: node.key,
+      }),
+    )
   }
+
 }
 
 type ResolveComponentResult = {
@@ -665,25 +707,30 @@ function resolveComponentInput<parentNode, node, elementNode extends node & pare
   currentInstances: ComponentInstance[],
   input: NodeInput,
   root: RootState<parentNode, node, elementNode, traversal>,
+  sourceIdentityBuffer?: SourceIdentityEntry[],
 ): ResolveComponentResult {
   if (typeof input.type !== 'function') {
     disposeComponentInstances(currentInstances)
+    let sourceIdentity = sourceIdentityBuffer ?? []
+    sourceIdentity.length = 1
+    writeSourceIdentityEntry(sourceIdentity, 0, input.type, input.key)
     return {
       input,
-      sourceIdentity: toSourceIdentityEntryList([{ type: input.type, key: input.key }]),
+      sourceIdentity,
       componentInstances: [],
     }
   }
 
-  let instances = currentInstances.slice()
-  let sourceIdentity: SourceIdentityEntry[] = []
+  let instances = currentInstances
+  let sourceIdentity: SourceIdentityEntry[] = sourceIdentityBuffer ?? []
+  sourceIdentity.length = 0
   let resolvedType: unknown = input.type
   let resolvedProps = input.props
   let resolvedKey: unknown = input.key
   let depth = 0
 
   while (typeof resolvedType === 'function') {
-    sourceIdentity.push(toSourceIdentityEntry(resolvedType, resolvedKey))
+    writeSourceIdentityEntry(sourceIdentity, depth, resolvedType, resolvedKey)
     let nextInput = splitSetupProps(resolvedProps)
     let key = toKey(resolvedKey)
     let instance = instances[depth]
@@ -726,19 +773,12 @@ function resolveComponentInput<parentNode, node, elementNode extends node & pare
   }
   instances.length = depth
 
-  let nextProps = { ...resolvedProps }
-  let rawChildren = nextProps.children
-  delete nextProps.children
-  sourceIdentity.push(toSourceIdentityEntry(resolvedType, resolvedKey))
+  let { props: nextProps, children: rawChildren } = splitChildrenProps(resolvedProps)
+  writeSourceIdentityEntry(sourceIdentity, depth, resolvedType, resolvedKey)
+  sourceIdentity.length = depth + 1
 
   return {
-    input: {
-      ...input,
-      type: resolvedType,
-      key: resolvedKey,
-      props: nextProps,
-      children: toNodeChildren(rawChildren),
-    },
+    input: toNodeInput(resolvedType, resolvedKey, nextProps, rawChildren),
     sourceIdentity,
     componentInstances: instances,
   }
@@ -779,10 +819,34 @@ function splitSetupProps(props: Record<string, unknown>) {
       props,
     }
   }
-  let { setup, ...nextProps } = props
+  let setup = props.setup
+  let nextProps: Record<string, unknown> = {}
+  for (let key in props) {
+    if (key === 'setup') continue
+    nextProps[key] = props[key]
+  }
   return {
     setup,
     props: nextProps,
+  }
+}
+
+function splitChildrenProps(props: Record<string, unknown>) {
+  if (!('children' in props)) {
+    return {
+      props,
+      children: undefined as unknown,
+    }
+  }
+  let children = props.children
+  let nextProps: Record<string, unknown> = {}
+  for (let key in props) {
+    if (key === 'children') continue
+    nextProps[key] = props[key]
+  }
+  return {
+    props: nextProps,
+    children,
   }
 }
 
@@ -851,77 +915,96 @@ function removalKey(type: string, key: string) {
   return `${type}::${key}`
 }
 
+function createPluginInstanceSlots<elementNode>(size: number): Array<null | HostPluginInstance<elementNode>> {
+  let slots: Array<null | HostPluginInstance<elementNode>> = []
+  for (let index = 0; index < size; index++) {
+    slots.push(null)
+  }
+  return slots
+}
+
+function createSeenMarks(size: number): number[] {
+  let marks: number[] = []
+  for (let index = 0; index < size; index++) {
+    marks.push(0)
+  }
+  return marks
+}
+
+function clearSeenMarks(marks: number[]) {
+  for (let index = 0; index < marks.length; index++) {
+    marks[index] = 0
+  }
+}
+
+function resolveDispatchCandidates(
+  dispatch: HostPluginDispatchPhase,
+  input: NodeInput,
+  props: Record<string, unknown>,
+): number[] {
+  let propKeys = input.propKeys ?? toPropKeys(props)
+  if (!input.propKeys) {
+    input.propKeys = propKeys
+  }
+  let shape = input.propShape ?? toPropShape(propKeys)
+  if (!input.propShape) {
+    input.propShape = shape
+  }
+  let cached = dispatch.byShape.get(shape)
+  if (cached) return cached
+
+  let seenEpoch = dispatch.seenEpoch + 1
+  if (seenEpoch >= Number.MAX_SAFE_INTEGER) {
+    clearSeenMarks(dispatch.seenMarks)
+    seenEpoch = 1
+  }
+  dispatch.seenEpoch = seenEpoch
+
+  let seenMarks = dispatch.seenMarks
+  for (let key of propKeys) {
+    let keyed = dispatch.keyed.get(key)
+    if (!keyed) continue
+    for (let index of keyed) {
+      seenMarks[index] = seenEpoch
+    }
+  }
+  for (let index of dispatch.wildcard) {
+    seenMarks[index] = seenEpoch
+  }
+
+  let resolved: number[] = []
+  for (let index = 0; index < seenMarks.length; index++) {
+    if (seenMarks[index] === seenEpoch) resolved.push(index)
+  }
+  dispatch.byShape.set(shape, resolved)
+  return resolved
+}
+
+function toPropKeys(props: Record<string, unknown>): string[] {
+  let keys: string[] = []
+  for (let key in props) {
+    keys.push(key)
+  }
+  return keys
+}
+
+function toPropShape(keys: string[]) {
+  if (keys.length === 0) return ''
+  return keys.join('\u0001')
+}
+
+
 function isKeyedHost<node, elementNode extends node>(node: CommittedNode<node, elementNode>) {
   return node.kind === 'host' && node.key !== ''
 }
 
-function normalizeRenderNodes(value: RenderValue): RenderNode[] {
-  let normalized: RenderNode[] = []
-  normalizeInto(value, normalized)
-  return normalized
-}
-
-function normalizeInto(value: RenderValue, normalized: RenderNode[]) {
-  if (value == null) return
-  if (typeof value === 'boolean') return
-  if (typeof value === 'number' || typeof value === 'bigint') {
-    normalized.push({ kind: 'text', value: String(value) })
-    return
-  }
-  if (typeof value === 'string') {
-    normalized.push({ kind: 'text', value })
-    return
-  }
-  if (Array.isArray(value)) {
-    for (let item of value) {
-      normalizeInto(item, normalized)
-    }
-    return
-  }
-  if (typeof value === 'object' && value && 'kind' in value) {
-    let direct = value as { kind?: unknown; input?: NodeInput; value?: string }
-    if (direct.kind === 'node' && direct.input) {
-      normalized.push({ kind: 'node', input: direct.input })
-      return
-    }
-    if (direct.kind === 'text' && typeof direct.value === 'string') {
-      normalized.push({ kind: 'text', value: direct.value })
-      return
-    }
-  }
-  if (isReconcilerElement(value)) {
-    if (value.type === RECONCILER_FRAGMENT) {
-      normalizeInto(value.props.children as RenderValue, normalized)
-      return
-    }
-    let props = { ...(value.props ?? {}) }
-    let rawChildren = props.children
-    delete props.children
-    normalized.push({
-      kind: 'node',
-      input: {
-        type: value.type,
-        key: value.key,
-        props,
-        children: toNodeChildren(rawChildren),
-      },
-    })
-  }
-}
-
-function normalizeNodeChildren(children: NodeChild[]): RenderNode[] {
-  let normalized: RenderNode[] = []
-  for (let child of children) {
-    let next = normalizeRenderNodes(child as RenderValue)
-    normalized.push(...next)
-  }
-  return normalized
-}
-
 function toNodeChildren(children: unknown): NodeChild[] {
+  if (children == null || typeof children === 'boolean') return EMPTY_NODE_CHILDREN
+  if (typeof children === 'string') return [children]
+  if (typeof children === 'number' || typeof children === 'bigint') return [String(children)]
   let output: NodeChild[] = []
   toNodeChildrenInto(children as RenderValue, output)
-  return output
+  return output.length === 0 ? EMPTY_NODE_CHILDREN : output
 }
 
 function toNodeChildrenInto(children: RenderValue, output: NodeChild[]) {
@@ -941,23 +1024,86 @@ function toNodeChildrenInto(children: RenderValue, output: NodeChild[]) {
     }
     return
   }
+  if (typeof children === 'object' && children && 'kind' in children) {
+    let direct = children as { kind?: unknown; input?: NodeInput; value?: string }
+    if (direct.kind === 'node' && direct.input) {
+      output.push(children as unknown as NodeChild)
+      return
+    }
+    if (direct.kind === 'text' && typeof direct.value === 'string') {
+      output.push(direct.value)
+      return
+    }
+  }
   if (!isReconcilerElement(children)) return
   if (children.type === RECONCILER_FRAGMENT) {
+    let cachedFragmentChildren = (children as ReconcilerElement & { [RECONCILER_NODE_CHILDREN]?: NodeChild[] })[
+      RECONCILER_NODE_CHILDREN
+    ]
+    if (cachedFragmentChildren) {
+      for (let child of cachedFragmentChildren) {
+        output.push(child)
+      }
+      return
+    }
     toNodeChildrenInto(children.props.children as RenderValue, output)
     return
   }
-  let props = { ...(children.props ?? {}) }
-  let rawChildren = props.children
-  delete props.children
+  let sourceProps = (children.props ?? {}) as Record<string, unknown>
+  let { props, children: rawChildren } = splitChildrenProps(sourceProps)
+  let cached = children as ReconcilerElement & {
+    [RECONCILER_NODE_CHILDREN]?: NodeChild[]
+    [RECONCILER_PROP_KEYS]?: string[]
+    [RECONCILER_PROP_SHAPE]?: string
+  }
+  let cachedChildren = cached[RECONCILER_NODE_CHILDREN]
   output.push({
     kind: 'node',
     input: {
       type: children.type,
       key: children.key,
       props,
-      children: toNodeChildren(rawChildren),
+      children: cachedChildren ?? toNodeChildren(rawChildren),
+      propKeys: cached[RECONCILER_PROP_KEYS],
+      propShape: cached[RECONCILER_PROP_SHAPE],
     },
   })
+}
+
+function toNodeInput(
+  type: unknown,
+  key: unknown,
+  props: Record<string, unknown>,
+  rawChildren: unknown,
+): NodeInput {
+  let children: NodeChild[] = []
+  toNodeChildrenInto(rawChildren as RenderValue, children)
+  let propKeys = toPropKeys(props)
+  return {
+    type,
+    key,
+    props,
+    children: children.length === 0 ? EMPTY_NODE_CHILDREN : children,
+    propKeys,
+    propShape: toPropShape(propKeys),
+  }
+}
+
+function writeSourceIdentityEntry(
+  output: SourceIdentityEntry[],
+  index: number,
+  type: unknown,
+  key: unknown,
+) {
+  let nextType = type
+  let nextKey = toKey(key)
+  let current = output[index]
+  if (current) {
+    current.type = nextType
+    current.key = nextKey
+    return
+  }
+  output[index] = { type: nextType, key: nextKey }
 }
 
 function updateTextValue(node: unknown, value: string) {

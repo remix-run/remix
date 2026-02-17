@@ -5,28 +5,36 @@ import type { Dispatched, EventListeners, EventsContainer } from '@remix-run/int
 export type DispatchedEvent<event extends Event, node extends EventTarget> = Dispatched<event, node>
 export type OnValue<node extends EventTarget> = EventListeners<node>
 
-export const onPlugin = definePlugin<Element>(() => (host) => {
-  let container: null | EventsContainer<Element> = null
-  let listeners: null | OnValue<Element> = null
+export const onPlugin = definePlugin<Element>(() => ({
+  keys: ['on'],
+  setup() {
+    let container: null | EventsContainer<Element> = null
 
-  return (input) => {
-    let value = input.props.on
-    listeners = isListeners(value) ? value : null
-    delete input.props.on
+    return {
+      commit(input, node) {
+        let value = input.props.on
+        let listeners = isListeners(value) ? value : null
+        delete input.props.on
 
-    if (listeners || container) {
-      host.queueTask((node) => {
         if (!container) {
           container = createContainer(node)
-          host.addEventListener('remove', container.dispose, { once: true })
         }
         container.set(listeners ?? {})
-      })
+      },
+      remove(_node, reason) {
+        if (!container) return
+        if (reason === 'deactivate') {
+          container.dispose()
+          container = null
+          return
+        }
+        // Ensure listeners are torn down if host is removed.
+        container.dispose()
+        container = null
+      },
     }
-
-    return input
-  }
-})
+  },
+}))
 
 function isListeners(value: unknown): value is OnValue<Element> {
   return !!value && typeof value === 'object' && !Array.isArray(value)

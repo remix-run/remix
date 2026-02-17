@@ -8,6 +8,9 @@ export {
   stringifyTestNode,
 } from './testing/test-node-policy.ts'
 export { RECONCILER_FRAGMENT } from './testing/jsx.ts'
+export { RECONCILER_NODE_CHILDREN } from './testing/jsx.ts'
+export { RECONCILER_PROP_KEYS } from './testing/jsx.ts'
+export { RECONCILER_PROP_SHAPE } from './testing/jsx.ts'
 
 export type {
   Component,
@@ -15,13 +18,12 @@ export type {
   CommittedNode,
   ErrorPhase,
   UpdateHandle,
+  HostPlugin,
+  HostPluginInstance,
+  HostPluginPhase,
   NodeChild,
-  HostFactory,
-  HostHandle,
   NodeInput,
   NodeRenderNode,
-  HostTask,
-  NodeTransform,
   NodeTransformInput,
   NodeHandle,
   NodePolicy,

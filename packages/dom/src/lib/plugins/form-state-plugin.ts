@@ -17,37 +17,65 @@ const formStateKeys: FormStateKey[] = [
   'selectedIndex',
 ]
 
-export const formStatePlugin = definePlugin<Element>(() => (host) => {
-  let current = new Set<FormStateKey>()
+export const formStatePlugin = definePlugin<Element>(() => ({
+  keys: formStateKeys,
+  phase: 'post',
+  setup() {
+    let current: null | Partial<Record<FormStateKey, unknown>> = null
+    let hasCurrent = false
 
-  return (input) => {
-    let next = new Map<FormStateKey, unknown>()
-    for (let key of formStateKeys) {
-      if (!(key in input.props)) continue
-      next.set(key, input.props[key])
-      delete input.props[key]
-    }
-
-    if (next.size === 0 && current.size === 0) return input
-
-    host.queueTask((node) => {
-      for (let key of current) {
-        if (next.has(key)) continue
-        resetProperty(node, key)
-      }
-      for (let [key, value] of next) {
-        if (value == null) {
-          resetProperty(node, key)
-        } else {
-          ;(node as unknown as Record<string, unknown>)[key] = value
+    return {
+      commit(input, node) {
+        let next: Partial<Record<FormStateKey, unknown>> | null = null
+        for (let key of formStateKeys) {
+          if (!(key in input.props)) continue
+          if (!next) next = {}
+          next[key] = input.props[key]
+          delete input.props[key]
         }
-      }
-      current = new Set(next.keys())
-    })
 
-    return input
-  }
-})
+        if (!current) current = {}
+
+        for (let key of formStateKeys) {
+          let hadKey = Object.prototype.hasOwnProperty.call(current, key)
+          let nextHasKey = !!next && Object.prototype.hasOwnProperty.call(next, key)
+          if (!nextHasKey) {
+            if (!hadKey) continue
+            resetProperty(node, key)
+            delete current[key]
+            hasCurrent = hasAnyOwnProperty(current)
+            continue
+          }
+
+          let value = next ? next[key] : undefined
+          if (value == null) {
+            if (!hadKey) continue
+            resetProperty(node, key)
+            delete current[key]
+            hasCurrent = hasAnyOwnProperty(current)
+            continue
+          }
+
+          if (hadKey && current[key] === value) continue
+          ;(node as unknown as Record<string, unknown>)[key] = value
+          current[key] = value
+          hasCurrent = true
+        }
+
+      },
+      remove(node, reason) {
+        if (reason === 'unmount') return
+        if (!current || !hasCurrent) return
+        for (let key of formStateKeys) {
+          if (!Object.prototype.hasOwnProperty.call(current, key)) continue
+          resetProperty(node, key)
+        }
+        current = null
+        hasCurrent = false
+      },
+    }
+  },
+}))
 
 function resetProperty(node: Element, key: FormStateKey) {
   let target = node as unknown as Record<string, unknown>
@@ -65,4 +93,11 @@ function resetProperty(node: Element, key: FormStateKey) {
       target[key] = false
       return
   }
+}
+
+function hasAnyOwnProperty(value: object) {
+  for (let key in value) {
+    if (Object.prototype.hasOwnProperty.call(value, key)) return true
+  }
+  return false
 }

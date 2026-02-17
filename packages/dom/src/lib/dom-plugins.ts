@@ -7,6 +7,7 @@ import { domPropertyOrAttributePlugin } from './plugins/dom-property-or-attribut
 import { formStatePlugin } from './plugins/form-state-plugin.ts'
 import { innerHTMLPlugin } from './plugins/inner-html-plugin.ts'
 import { onPlugin } from './plugins/on-plugin.ts'
+import { restPropsPlugin } from './plugins/rest-props-plugin.ts'
 import { stylePropsPlugin } from './plugins/style-props-plugin.ts'
 import { svgNormalizationPlugin } from './plugins/svg-normalization-plugin.ts'
 
@@ -18,9 +19,7 @@ export function createDomPlugins(): Plugin<Element>[] {
     connectPlugin,
     onPlugin,
     svgNormalizationPlugin,
-    ariaDataAttributePlugin,
-    domPropertyOrAttributePlugin,
-    attributeFallbackPlugin,
+    restPropsPlugin,
   ]
 }
 
@@ -28,6 +27,7 @@ export {
   ariaDataAttributePlugin,
   attributeFallbackPlugin,
   connectPlugin,
+  restPropsPlugin,
   domPropertyOrAttributePlugin,
   formStatePlugin,
   innerHTMLPlugin,

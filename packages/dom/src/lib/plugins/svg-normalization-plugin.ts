@@ -17,14 +17,21 @@ const svgNameMap: Record<string, string> = {
   className: 'class',
 }
 
-export const svgNormalizationPlugin = definePlugin<Element>(() => () => (input) => {
-  for (let key in input.props) {
-    if (!(key in svgNameMap)) continue
-    let normalized = svgNameMap[key]
-    if (!(normalized in input.props)) {
-      input.props[normalized] = input.props[key]
+export const svgNormalizationPlugin = definePlugin<Element>(() => ({
+  keys: Object.keys(svgNameMap),
+  setup() {
+    return {
+      commit(input, _node) {
+        for (let key in input.props) {
+          if (!(key in svgNameMap)) continue
+          let normalized = svgNameMap[key]
+          if (!(normalized in input.props)) {
+            input.props[normalized] = input.props[key]
+          }
+          delete input.props[key]
+        }
+      },
+      remove() {},
     }
-    delete input.props[key]
-  }
-  return input
-})
+  },
+}))
