@@ -19,32 +19,23 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./cookie-storage": "./src/cookie-storage.ts",
-    "./fs-storage": "./src/fs-storage.ts",
-    "./memory-storage": "./src/memory-storage.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./cookie-storage": {
+      "types": "./dist/cookie-storage.d.ts",
+      "default": "./dist/cookie-storage.js"
+    },
+    "./fs-storage": {
+      "types": "./dist/fs-storage.d.ts",
+      "default": "./dist/fs-storage.js"
+    },
+    "./memory-storage": {
+      "types": "./dist/memory-storage.d.ts",
+      "default": "./dist/memory-storage.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./cookie-storage": {
-        "types": "./dist/cookie-storage.d.ts",
-        "default": "./dist/cookie-storage.js"
-      },
-      "./fs-storage": {
-        "types": "./dist/fs-storage.d.ts",
-        "default": "./dist/fs-storage.js"
-      },
-      "./memory-storage": {
-        "types": "./dist/memory-storage.d.ts",
-        "default": "./dist/memory-storage.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@types/node": "catalog:",

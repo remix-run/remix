@@ -19,20 +19,14 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/multipart-parser": "workspace:^"
+    "@remix-run/multipart-parser": "remix-run/remix#preview/pr-11075&path:packages/multipart-parser"
   },
   "devDependencies": {
     "@types/node": "catalog:",
