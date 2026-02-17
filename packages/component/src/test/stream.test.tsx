@@ -417,7 +417,9 @@ describe('stream', () => {
       let stream = renderToStream(
         <svg>
           <defs>
-            <filter id="f" filterUnits="userSpaceOnUse" primitiveUnits="objectBoundingBox" />
+            <filter id="f" filterUnits="userSpaceOnUse" primitiveUnits="objectBoundingBox">
+              <feGaussianBlur stdDeviation="2.5" />
+            </filter>
             <linearGradient id="g" gradientUnits="userSpaceOnUse" />
           </defs>
         </svg>,
@@ -429,6 +431,8 @@ describe('stream', () => {
       expect(html).not.toContain('filter-units=')
       expect(html).not.toContain('primitive-units=')
       expect(html).not.toContain('gradient-units=')
+      expect(html).toContain('stdDeviation="2.5"')
+      expect(html).not.toContain('std-deviation=')
     })
   })
 

@@ -97,14 +97,19 @@ describe('vnode rendering', () => {
       expect(removed.hasAttribute('stroke-linecap')).toBe(false)
     })
 
-    it('uses canonical filterUnits attribute semantics', () => {
+    it('uses canonical semantics for critical SVG attributes', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
       root.render(
         <svg>
           <defs>
-            <filter id="f" filterUnits="userSpaceOnUse" x="0" y="0" width="100" height="100" />
+            <filter id="f" filterUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+              <feGaussianBlur id="blur" stdDeviation="2.5" />
+            </filter>
+            <linearGradient id="g" gradientUnits="userSpaceOnUse" />
+            <mask id="m" maskUnits="userSpaceOnUse" />
+            <clipPath id="c" clipPathUnits="objectBoundingBox" />
           </defs>
         </svg>,
       )
@@ -114,6 +119,29 @@ describe('vnode rendering', () => {
       expect(filter.getAttribute('filterUnits')).toBe('userSpaceOnUse')
       expect(filter.getAttribute('filter-units')).toBe(null)
       expect(filter.filterUnits.baseVal).toBe(1)
+
+      let blur = container.querySelector('#blur')
+      invariant(blur instanceof SVGFEGaussianBlurElement)
+      expect(blur.getAttribute('stdDeviation')).toBe('2.5')
+      expect(blur.getAttribute('std-deviation')).toBe(null)
+
+      let gradient = container.querySelector('#g')
+      invariant(gradient instanceof SVGLinearGradientElement)
+      expect(gradient.getAttribute('gradientUnits')).toBe('userSpaceOnUse')
+      expect(gradient.getAttribute('gradient-units')).toBe(null)
+      expect(gradient.gradientUnits.baseVal).toBe(1)
+
+      let mask = container.querySelector('#m')
+      invariant(mask instanceof SVGMaskElement)
+      expect(mask.getAttribute('maskUnits')).toBe('userSpaceOnUse')
+      expect(mask.getAttribute('mask-units')).toBe(null)
+      expect(mask.maskUnits.baseVal).toBe(1)
+
+      let clipPath = container.querySelector('#c')
+      invariant(clipPath instanceof SVGClipPathElement)
+      expect(clipPath.getAttribute('clipPathUnits')).toBe('objectBoundingBox')
+      expect(clipPath.getAttribute('clip-path-units')).toBe(null)
+      expect(clipPath.clipPathUnits.baseVal).toBe(2)
     })
 
     it('attaches events on SVG elements', () => {
