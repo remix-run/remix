@@ -1,7 +1,7 @@
 export { createReconciler } from './lib/root.ts'
 export { definePlugin } from './lib/types.ts'
 export { ReconcilerErrorEvent } from './lib/types.ts'
-export { createDirective, usePlugin } from './lib/plugins/directive-plugin.ts'
+export { createTestNodeReconciler } from './testing/test-node-reconciler.ts'
 export {
   createTestContainer,
   createTestNodePolicy,
@@ -16,33 +16,19 @@ export type {
   Component,
   CommittedHostNode,
   CommittedNode,
-  ErrorPhase,
   UpdateHandle,
-  HostPlugin,
-  HostPluginInstance,
-  HostPluginPhase,
-  NodeChild,
-  NodeInput,
-  NodeRenderNode,
-  NodeTransformInput,
-  NodeHandle,
+  HostInput,
   NodePolicy,
   Plugin,
-  PluginHandle,
+  PluginHostContext,
+  PluginPhase,
   PreparedPlugin,
   ReconcilerElement,
-  ReconcilerErrorContext,
   ReconcilerRoot,
   RenderNode,
   RenderValue,
   RootTask as Task,
 } from './lib/types.ts'
-
-export type {
-  DirectiveDescriptor,
-  DirectiveType,
-  UseValue,
-} from './lib/plugins/directive-plugin.ts'
 
 export type {
   TestContainerNode,

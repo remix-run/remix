@@ -8,7 +8,9 @@ import {
 export const Fragment = RECONCILER_FRAGMENT
 const EMPTY_CHILDREN: RenderValue[] = []
 
-export type ComponentHandle = {}
+export type ComponentHandle = {
+  update(): Promise<AbortSignal>
+}
 export type RenderValue =
   | ReconcilerJsxElement
   | string

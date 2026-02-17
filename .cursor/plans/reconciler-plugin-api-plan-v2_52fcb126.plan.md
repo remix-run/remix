@@ -3,26 +3,26 @@ name: reconciler-plugin-api-plan-v2
 overview: Build a brand-new reconciler/plugin system with a JSX-first test harness, using a delete-and-rewrite strategy for prior DOM prototype code unless specific pieces are proven worth salvaging.
 todos:
   - id: lock-rewrite-spec
-    content: Update architecture doc with rewrite-first policy, plugin phases, and consumed-prop model
+    content: Phase 1 - Update architecture doc with rewrite-first policy, plugin phases, and consumed-prop model
     status: completed
   - id: implement-plugin-core
-    content: Implement routing, consumed-prop tracking, and slot lifecycle in new reconciler core
-    status: completed
-  - id: implement-reference-plugins
-    content: Implement on plugin and terminal rest-props plugin with form-state/aria-data/fallback ordering
+    content: Phase 2 - Implement routing, consumed-prop tracking, and slot lifecycle in new reconciler core
     status: completed
   - id: build-test-node-reconciler
-    content: Add in-memory TestNodePolicy and TestNodeReconciler render/flush/inspect helpers
+    content: Phase 3 - Add in-memory TestNodePolicy and TestNodeReconciler render/flush/inspect helpers with illegal-operation invariants
     status: completed
   - id: build-testing-jsx-runtime
-    content: Implement testing jsx/jsxs/Fragment runtime and dev-runtime exports
+    content: Phase 3 - Implement minimal testing jsx/jsxs/Fragment runtime and dev-runtime exports
     status: completed
   - id: author-jsx-tests
-    content: Write core lifecycle/order/perf-adjacent tests using JSX inputs
+    content: Phase 3 - Write reconciliation validation tests (complex mixed trees, children composition, updates, replacements, keyed/unkeyed moves, keyed replacements, inserts) plus perf/lifecycle checks
     status: completed
+  - id: implement-dom-package
+    content: Phase 4 - Implement terminal DOM plugin behavior in packages/dom (form-state, aria/data, fallback)
+    status: pending
   - id: delete-obsolete-prototype
-    content: Delete obsolete prior prototype paths once replacements are validated
-    status: completed
+    content: Phase 5 - Delete obsolete prior prototype paths once replacements are validated
+    status: pending
 isProject: false
 ---
 
@@ -41,6 +41,7 @@ Build a brand-new reconciler/plugin architecture and testing surface, with a **r
 - Core architecture/spec updates in [packages/reconciler/architecture.md](/Users/ryan/remix-run/remix/packages/reconciler/architecture.md)
 - New reconciler implementation in [packages/reconciler/src/lib](/Users/ryan/remix-run/remix/packages/reconciler/src/lib)
 - New testing harness/runtime in [packages/reconciler/src/testing](/Users/ryan/remix-run/remix/packages/reconciler/src/testing)
+- Phase-4 DOM implementation in `packages/dom` for terminal behavior (form-state, aria/data, fallback)
 - Prior prototype references in [packages/dom/src/lib](/Users/ryan/remix-run/remix/packages/dom/src/lib) used only as optional inspiration, not migration targets
 
 ## Rewrite-First Policy
@@ -71,7 +72,7 @@ Build a brand-new reconciler/plugin architecture and testing surface, with a **r
 2. Route-table selects `special` plugin candidates.
 3. If no candidates and no active slots, take zero-allocation fast path.
 4. Special plugins run in deterministic order and mark consumed props.
-5. One terminal rest-props plugin handles form-state keys first, then aria/data, then fallback.
+5. Terminal rest-props behavior is added in Phase 4 in the DOM package.
 6. Active slots tracked by plugin ID for O(active) updates and teardown.
 
 ```mermaid
@@ -79,8 +80,7 @@ flowchart TD
   hostInput[HostInput] --> routeCompile[RouteTableLookup]
   routeCompile --> specialPhase[SpecialPhasePlugins]
   specialPhase --> consumedState[ConsumedPropsState]
-  consumedState --> terminalPhase[TerminalRestPropsPlugin]
-  terminalPhase --> commitDone[CommitComplete]
+  consumedState --> commitDone[CommitComplete]
   commitDone --> activeIndex[ActiveSlotsByPluginId]
 ```
 
@@ -89,7 +89,8 @@ flowchart TD
 - Build `TestNodeReconciler` in `packages/reconciler/src/testing` with:
   - in-memory `TestNodePolicy`,
   - root create/render/flush/dispose helpers,
-  - inspectable tree output and lifecycle event logs.
+  - inspectable tree output and lifecycle event logs,
+  - DOM-like parent/child/sibling bookkeeping plus invariant checks that fail fast on illegal operations (invalid anchors, cross-parent moves, duplicate ownership, remove of non-child).
 - Build minimal JSX runtime for tests:
   - `jsx`, `jsxs`, `Fragment` in `jsx-runtime.ts`,
   - dev variant in `jsx-dev-runtime.ts`,
@@ -105,31 +106,50 @@ import { createTestNodeReconciler } from '@remix-run/reconciler/testing'
 let root = createTestNodeReconciler().createRoot()
 root.render(
   <Fragment>
-    <view on={{ click() {} }} value="x" data-id="123" />
+    <view value="x" data-id="123" />
   </Fragment>
 )
+```
+
+Simple update trigger pattern for tests:
+
+```ts
+let capturedUpdate = () => {}
+function MyComp(handle: { update(): void }) {
+  capturedUpdate = () => {
+    // update some state
+    handle.update()
+  }
+  return <view />
+}
 ```
 
 ## Implementation Phases
 
 - Phase 1: Finalize architecture/spec language for rewrite-first model and plugin phases.
 - Phase 2: Implement new reconciler plugin execution core (routing, consumed props, slot lifecycle).
-- Phase 3: Implement representative plugins (`on`, terminal rest-props with form-state + aria/data + fallback).
-- Phase 4: Implement `TestNodeReconciler` and test JSX runtime; author core tests in JSX.
-- Phase 5: Add perf and lifecycle validation (fast path, sparse/dense props, teardown-heavy updates).
-- Phase 6: Remove obsolete prototype code paths where replacement is complete.
+- Phase 3: Add post-phase-2 validation in `TestNodeReconciler` and JSX tests, including perf/lifecycle validation (fast path, sparse/dense props, teardown-heavy updates):
+  - complex mixed trees (host + component nodes),
+  - children composition and nesting behavior,
+  - component-triggered updates via captured `handle.update()`,
+  - replacements, unkeyed moves, keyed moves, keyed replacements, and inserts.
+- Phase 4: Implement terminal DOM package behavior (`packages/dom`) for form-state, aria/data, and fallback handling.
+- Phase 5: Remove obsolete prototype code paths where replacement is complete.
 
 ## Validation
 
 - Correctness:
   - phase and priority ordering,
+  - complex mixed host/component tree reconciliation and children composition,
+  - replacements, unkeyed moves, keyed moves, keyed replacements, and inserts,
   - inactive-active-inactive transitions,
   - unmount teardown determinism,
-  - exception safety (`commitHost` failure still tears down owned resources).
+  - exception safety (`commitHost` failure still tears down owned resources),
+  - illegal host operation detection in `TestNodePolicy` invariants.
 - Performance:
   - no-special-prop fast path,
   - sparse special props,
-  - dense mixed props,
+  - dense mixed props (reconciler core only),
   - mount/update/unmount churn.
 
 ## Risks and Mitigations
