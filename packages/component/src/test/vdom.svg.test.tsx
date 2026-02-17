@@ -97,6 +97,25 @@ describe('vnode rendering', () => {
       expect(removed.hasAttribute('stroke-linecap')).toBe(false)
     })
 
+    it('uses canonical filterUnits attribute semantics', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(
+        <svg>
+          <defs>
+            <filter id="f" filterUnits="userSpaceOnUse" x="0" y="0" width="100" height="100" />
+          </defs>
+        </svg>,
+      )
+
+      let filter = container.querySelector('#f')
+      invariant(filter instanceof SVGFilterElement)
+      expect(filter.getAttribute('filterUnits')).toBe('userSpaceOnUse')
+      expect(filter.getAttribute('filter-units')).toBe(null)
+      expect(filter.filterUnits.baseVal).toBe(1)
+    })
+
     it('attaches events on SVG elements', () => {
       let container = document.createElement('div')
       let root = createRoot(container)

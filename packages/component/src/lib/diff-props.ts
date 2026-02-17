@@ -2,10 +2,9 @@ import { invariant } from './invariant.ts'
 import { processStyle, createStyleManager, normalizeCssValue } from './style/index.ts'
 import type { StyleManager } from './style/index.ts'
 import type { ElementProps } from './jsx.ts'
+import { normalizeSvgAttribute } from './svg-attributes.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
-const XLINK_NS = 'http://www.w3.org/1999/xlink'
-const XML_NS = 'http://www.w3.org/XML/1998/namespace'
 
 // global so all roots share it
 let styleCache = new Map<string, { selector: string; css: string }>()
@@ -119,35 +118,7 @@ function normalizePropName(name: string, isSvg: boolean): { ns?: string; attr: s
     return { attr: name.toLowerCase() }
   }
 
-  // SVG namespaced specials
-  if (name === 'xlinkHref') return { ns: XLINK_NS, attr: 'xlink:href' }
-  if (name === 'xmlLang') return { ns: XML_NS, attr: 'xml:lang' }
-  if (name === 'xmlSpace') return { ns: XML_NS, attr: 'xml:space' }
-
-  // SVG preserved-case exceptions
-  if (
-    name === 'viewBox' ||
-    name === 'preserveAspectRatio' ||
-    name === 'gradientUnits' ||
-    name === 'gradientTransform' ||
-    name === 'patternUnits' ||
-    name === 'patternTransform' ||
-    name === 'clipPathUnits' ||
-    name === 'maskUnits' ||
-    name === 'maskContentUnits'
-  ) {
-    return { attr: name }
-  }
-
-  // General SVG: kebab-case
-  return { attr: camelToKebab(name) }
-}
-
-function camelToKebab(input: string): string {
-  return input
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .replace(/_/g, '-')
-    .toLowerCase()
+  return normalizeSvgAttribute(name)
 }
 
 function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, name: string): void {
