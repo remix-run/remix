@@ -200,5 +200,34 @@ describe('hydration', () => {
       expect(container.querySelector('svg')).toBe(existingSvg)
       expect(existingSvg.getAttribute('preserveAspectRatio')).toBe('xMidYMid meet')
     })
+
+    it('hydrates SVG filterUnits with canonical case and semantics', async () => {
+      let html = await renderToString(
+        <svg>
+          <defs>
+            <filter id="f" filterUnits="userSpaceOnUse" />
+          </defs>
+        </svg>,
+      )
+      container.innerHTML = html
+
+      let existingFilter = container.querySelector('#f')
+      invariant(existingFilter instanceof SVGFilterElement)
+
+      let root = createRoot(container)
+      root.render(
+        <svg>
+          <defs>
+            <filter id="f" filterUnits="userSpaceOnUse" />
+          </defs>
+        </svg>,
+      )
+      root.flush()
+
+      expect(container.querySelector('#f')).toBe(existingFilter)
+      expect(existingFilter.getAttribute('filterUnits')).toBe('userSpaceOnUse')
+      expect(existingFilter.getAttribute('filter-units')).toBe(null)
+      expect(existingFilter.filterUnits.baseVal).toBe(1)
+    })
   })
 })
