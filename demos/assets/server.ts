@@ -10,19 +10,19 @@ let isDev = process.env.NODE_ENV === 'development'
 /**
  * Get the middleware required for assets in the current environment.
  *
- * In development: devAssets only (on-the-fly TypeScript/JSX transformation).
- * In production: assets middleware (manifest/entry resolution) plus staticFiles
- * for serving the built asset output at /assets (so the app doesn't need to wire
- * static serving separately; CDN setups would use only the assets middleware).
+ * In development: devAssets serves source files with on-the-fly transformation
+ * and resolves file variants through the files config.
+ * In production: assets middleware resolves against the generated manifest, while
+ * staticFiles serves the built asset output at /assets.
  */
 async function getAssetsMiddleware() {
   if (isDev) {
     let { devAssets } = await import('@remix-run/dev-assets-middleware')
     return [
       devAssets({
-        allow: ['app/**'],
+        allow: ['app/**', '**/node_modules/**'],
         workspaceRoot: '../..',
-        workspaceAllow: ['**/node_modules/**', 'packages/**'],
+        workspaceAllow: ['packages/*/src/**', '**/node_modules/**'],
         files,
       }),
     ]
@@ -56,21 +56,21 @@ async function main() {
 
   // Home page - renders HTML with the entry script
   router.get('/', ({ assets }) => {
-    let entry = assets.get('app/entry.tsx')
+    let entry = assets.resolve('app/entry.tsx')
 
-    let bbqThumbnail = assets.get('app/images/books/bbq-1.png', 'thumbnail')
-    let bbqCard = assets.get('app/images/books/bbq-1.png', 'card')
-    let bbqHero = assets.get('app/images/books/bbq-1.png', 'hero')
-    let heavyMetalThumbnail = assets.get('app/images/books/heavy-metal-1.png', 'thumbnail')
-    let threeWaysCard = assets.get('app/images/books/three-ways-1.png', 'card')
+    let bbqThumbnail = assets.resolve('app/images/books/bbq-1.png', 'thumbnail')
+    let bbqCard = assets.resolve('app/images/books/bbq-1.png', 'card')
+    let bbqHero = assets.resolve('app/images/books/bbq-1.png', 'hero')
+    let heavyMetalThumbnail = assets.resolve('app/images/books/heavy-metal-1.png', 'thumbnail')
+    let threeWaysCard = assets.resolve('app/images/books/three-ways-1.png', 'card')
 
     if (!entry) {
       return new Response('Entry point not found', { status: 500 })
     }
 
-    // Generate modulepreload links for all chunks
-    let preloads = entry.chunks
-      .map((chunk) => `<link rel="modulepreload" href="${chunk}" />`)
+    // Generate modulepreload links for all preloads
+    let preloads = entry.preloads
+      .map((preload) => `<link rel="modulepreload" href="${preload}" />`)
       .join('\n    ')
 
     let html = `<!DOCTYPE html>
@@ -126,40 +126,26 @@ async function main() {
     <h1>Assets Demo</h1>
     <p>Mode: <strong>${isDev ? 'Development' : 'Production'}</strong></p>
     <p>${isDev ? 'TypeScript/JSX files are transformed on-the-fly.' : 'Serving pre-built and minified assets.'}</p>
+    <div id="app"></div>
+    <br />
     <p class="muted">All source PNGs are converted to compressed JPGs by variants. Display width matches transformed variant width.</p>
     <div class="gallery">
       <section>
         <h2>Same source, three variants</h2>
         <div class="variant-row">
-          <figure class="variant">
-            ${bbqThumbnail ? `<img src="${bbqThumbnail.href}" width="120" alt="BBQ cover thumbnail variant" />` : '<p>BBQ thumbnail missing</p>'}
-            <p>thumbnail: 120w, jpg</p>
-          </figure>
-          <figure class="variant">
-            ${bbqCard ? `<img src="${bbqCard.href}" width="280" alt="BBQ cover card variant" />` : '<p>BBQ card missing</p>'}
-            <p>card: 280w, jpg</p>
-          </figure>
-          <figure class="variant">
-            ${bbqHero ? `<img src="${bbqHero.href}" width="560" alt="BBQ cover hero variant" />` : '<p>BBQ hero missing</p>'}
-            <p>hero: 560w, jpg</p>
-          </figure>
+          ${bbqThumbnail ? `<figure class="variant"><img src="${bbqThumbnail.href}" width="120" alt="BBQ cover thumbnail variant" /><p>thumbnail: 120w, jpg</p></figure>` : ''}
+          ${bbqCard ? `<figure class="variant"><img src="${bbqCard.href}" width="280" alt="BBQ cover card variant" /><p>card: 280w, jpg</p></figure>` : ''}
+          ${bbqHero ? `<figure class="variant"><img src="${bbqHero.href}" width="560" alt="BBQ cover hero variant" /><p>hero: 560w, jpg</p></figure>` : ''}
         </div>
       </section>
       <section>
         <h2>Other images using the same variants</h2>
         <div class="variant-row">
-          <figure class="variant">
-            ${heavyMetalThumbnail ? `<img src="${heavyMetalThumbnail.href}" width="120" alt="Heavy metal cover thumbnail variant" />` : '<p>Heavy Metal missing</p>'}
-            <p>heavy-metal-1.png -> thumbnail jpg</p>
-          </figure>
-          <figure class="variant">
-            ${threeWaysCard ? `<img src="${threeWaysCard.href}" width="280" alt="Three ways cover card variant" />` : '<p>Three Ways missing</p>'}
-            <p>three-ways-1.png -> card jpg</p>
-          </figure>
+          ${heavyMetalThumbnail ? `<figure class="variant"><img src="${heavyMetalThumbnail.href}" width="120" alt="Heavy metal cover thumbnail variant" /><p>heavy-metal-1.png -> thumbnail jpg</p></figure>` : ''}
+          ${threeWaysCard ? `<figure class="variant"><img src="${threeWaysCard.href}" width="280" alt="Three ways cover card variant" /><p>three-ways-1.png -> card jpg</p></figure>` : ''}
         </div>
       </section>
     </div>
-    <div id="app"></div>
     <script type="module" src="${entry.href}"></script>
   </body>
 </html>`
@@ -182,7 +168,17 @@ async function main() {
 
   let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
+  server.listen(port, () => {
+    console.log(`Assets demo is running on http://localhost:${port}`)
+    console.log(`Mode: ${isDev ? 'development' : 'production'}`)
+  })
+
+  let shuttingDown = false
+
   function shutdown() {
+    console.log('Shutting down server...')
+    if (shuttingDown) return
+    shuttingDown = true
     server.close(() => {
       process.exit(0)
     })
@@ -190,11 +186,6 @@ async function main() {
 
   process.on('SIGINT', shutdown)
   process.on('SIGTERM', shutdown)
-
-  server.listen(port, () => {
-    console.log(`Assets demo is running on http://localhost:${port}`)
-    console.log(`Mode: ${isDev ? 'development' : 'production'}`)
-  })
 }
 
 main().catch((error) => {

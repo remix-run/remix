@@ -6,7 +6,7 @@ import { getCurrentUserSafely, getAssets } from './utils/context.ts'
 export function Document() {
   return ({ title = 'Bookstore', children }: { title?: string; children?: RemixNode }) => {
     let assets = getAssets()
-    let entry = assets.get('app/entry.tsx')
+    let entry = assets.resolve('app/entry.tsx')
     if (!entry) {
       throw new Error('Entry point not found')
     }
@@ -17,8 +17,8 @@ export function Document() {
           <meta charSet="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title>{title}</title>
-          {entry.chunks.map((chunk) => (
-            <link key={chunk} rel="modulepreload" href={chunk} />
+          {entry.preloads.map((preload) => (
+            <link key={preload} rel="modulepreload" href={preload} />
           ))}
           <script type="module" async src={entry.href} />
           <link rel="stylesheet" href="/app.css" />

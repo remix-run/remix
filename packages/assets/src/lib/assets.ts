@@ -1,9 +1,9 @@
 import { relative, isAbsolute } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { AssetsApi, FilesConfig } from './files.ts'
-import type { AssetManifest } from './manifest-types.ts'
+import type { AssetResolver, FilesConfig } from './files.ts'
+import type { AssetsManifest } from './manifest-types.ts'
 
-export interface CreateAssetsOptions {
+export interface CreateAssetResolverOptions {
   /**
    * URL prefix where built assets are served.
    * Use with locally-scoped manifests (output paths relative to outDir).
@@ -22,20 +22,20 @@ function outputPathToHref(outputPath: string, baseUrl: string | undefined): stri
 }
 
 /**
- * Creates an assets API from a compatible build manifest.
+ * Creates an asset resolver from a compatible build manifest.
  *
  * - `href` returns the output file URL (with baseUrl prefix when provided)
- * - `chunks` includes all transitive static imports for modulepreload
- * - Dynamic imports are excluded from chunks (they load on-demand)
+ * - `preloads` includes all transitive static imports for modulepreload
+ * - Dynamic imports are excluded from preloads (they load on-demand)
  *
  * @param manifest A compatible assets manifest
  * @param options Optional baseUrl for locally-scoped manifests
- * @returns An assets object for resolving entry paths to URLs
+ * @returns A resolver function for resolving entry paths to URLs
  */
-export function createAssets<files extends FilesConfig = FilesConfig>(
-  manifest: AssetManifest,
-  options?: CreateAssetsOptions,
-): AssetsApi<files> {
+export function createAssetResolver<files extends FilesConfig = FilesConfig>(
+  manifest: AssetsManifest,
+  options?: CreateAssetResolverOptions,
+): AssetResolver<files> {
   let baseUrl = options?.baseUrl
   let scriptOutputs = manifest.scripts.outputs
   let fileOutputs = manifest.files.outputs
@@ -64,76 +64,84 @@ export function createAssets<files extends FilesConfig = FilesConfig>(
     outputToImports.set(outputPath, staticImports)
   }
 
-  // Cache for resolved chunks (entryPath -> chunks array)
-  let chunksCache = new Map<string, string[]>()
+  let overlappingPaths = Object.keys(fileOutputs).filter((sourcePath) =>
+    entryToOutput.has(sourcePath),
+  )
+  if (overlappingPaths.length > 0) {
+    console.warn(
+      `[assets] ${overlappingPaths.length} source path(s) are configured as both file and script entries. ` +
+        `File entries take precedence: ${overlappingPaths.slice(0, 5).join(', ')}`,
+    )
+  }
 
-  return {
-    get(entryPath: string, variant?: string) {
-      // Convert file:// URLs to file paths
-      let pathToNormalize = entryPath.startsWith('file://') ? fileURLToPath(entryPath) : entryPath
+  // Cache for resolved preloads (entryPath -> preloads array)
+  let preloadsCache = new Map<string, string[]>()
 
-      // Root-relative paths (e.g. /app/entry.tsx) — strip leading slash; don't treat as filesystem absolute
-      if (!entryPath.startsWith('file://') && pathToNormalize.startsWith('/')) {
-        pathToNormalize = pathToNormalize.replace(/^\/+/, '')
-      } else if (isAbsolute(pathToNormalize)) {
-        pathToNormalize = relative(process.cwd(), pathToNormalize)
+  return (entryPath: string, variant?: string) => {
+    // Convert file:// URLs to file paths
+    let pathToNormalize = entryPath.startsWith('file://') ? fileURLToPath(entryPath) : entryPath
+
+    // Root-relative paths (e.g. /app/entry.tsx) — strip leading slash; don't treat as filesystem absolute
+    if (!entryPath.startsWith('file://') && pathToNormalize.startsWith('/')) {
+      pathToNormalize = pathToNormalize.replace(/^\/+/, '')
+    } else if (isAbsolute(pathToNormalize)) {
+      pathToNormalize = relative(process.cwd(), pathToNormalize)
+    }
+
+    // Normalize the entry path (remove leading ./)
+    let normalizedPath = pathToNormalize.replace(/^(\.\/)+/, '')
+
+    let fileOutput = fileOutputs[normalizedPath]
+    if (fileOutput) {
+      if ('path' in fileOutput) {
+        if (variant) return null
+        let href = outputPathToHref(fileOutput.path, baseUrl)
+        return { href, preloads: [] }
       }
 
-      // Normalize the entry path (remove leading ./)
-      let normalizedPath = pathToNormalize.replace(/^(\.\/)+/, '')
+      let selectedVariant = variant ?? fileOutput.defaultVariant
+      if (!selectedVariant) return null
+      let selectedOutput = fileOutput.variants[selectedVariant]
+      if (!selectedOutput) return null
+      let href = outputPathToHref(selectedOutput.path, baseUrl)
+      return { href, preloads: [] }
+    }
 
-      let fileOutput = fileOutputs[normalizedPath]
-      if (fileOutput) {
-        if ('path' in fileOutput) {
-          if (variant) return null
-          let href = outputPathToHref(fileOutput.path, baseUrl)
-          return { href, chunks: [href] }
-        }
+    if (variant) return null
 
-        let selectedVariant = variant ?? fileOutput.default
-        if (!selectedVariant) return null
-        let selectedOutput = fileOutput.variants[selectedVariant]
-        if (!selectedOutput) return null
-        let href = outputPathToHref(selectedOutput.path, baseUrl)
-        return { href, chunks: [href] }
-      }
+    // Look up the output file for this entry point
+    let outputPath = entryToOutput.get(normalizedPath)
+    if (!outputPath) {
+      return null
+    }
 
-      if (variant) return null
+    let href = outputPathToHref(outputPath, baseUrl)
 
-      // Look up the output file for this entry point
-      let outputPath = entryToOutput.get(normalizedPath)
-      if (!outputPath) {
-        return null
-      }
+    // Get all preloads (cached)
+    let preloads = preloadsCache.get(normalizedPath)
+    if (!preloads) {
+      preloads = collectTransitivePreloads(outputPath, outputToImports, baseUrl)
+      preloadsCache.set(normalizedPath, preloads)
+    }
 
-      let href = outputPathToHref(outputPath, baseUrl)
-
-      // Get all chunks (cached)
-      let chunks = chunksCache.get(normalizedPath)
-      if (!chunks) {
-        chunks = collectTransitiveChunks(outputPath, outputToImports, baseUrl)
-        chunksCache.set(normalizedPath, chunks)
-      }
-
-      return { href, chunks }
-    },
+    return { href, preloads }
   }
 }
 
 // Collect all transitive static imports for an output file.
-// Returns URLs for all chunks (with baseUrl prefix when provided).
-function collectTransitiveChunks(
+// Returns URLs for all preloads (with baseUrl prefix when provided).
+function collectTransitivePreloads(
   outputPath: string,
   outputToImports: Map<string, string[]>,
   baseUrl: string | undefined,
 ): string[] {
   let visited = new Set<string>()
-  let chunks: string[] = []
+  let preloads: string[] = []
 
   function visit(path: string) {
     if (visited.has(path)) return
     visited.add(path)
-    chunks.push(outputPathToHref(path, baseUrl))
+    preloads.push(outputPathToHref(path, baseUrl))
     let imports = outputToImports.get(path)
     if (imports) {
       for (let importedPath of imports) {
@@ -143,5 +151,5 @@ function collectTransitiveChunks(
   }
 
   visit(outputPath)
-  return chunks
+  return preloads
 }

@@ -25,7 +25,10 @@ let router = createRouter({
           include: 'app/**/*.{png,jpg,jpeg}',
           variants: {
             original: (buffer) => buffer,
-            thumbnail: (buffer) => generateThumbnail(buffer),
+            thumbnail: async (buffer) => {
+              let { generateThumbnail } = await import('./generate-thumbnail.ts')
+              return await generateThumbnail(buffer)
+            },
           },
           defaultVariant: 'original',
         },
@@ -33,11 +36,20 @@ let router = createRouter({
     }),
   ],
 })
+
+router.get('/', ({ assets }) => {
+  let entry = assets.resolve('app/entry.tsx')
+  entry?.href // '/app/entry.tsx'
+  entry?.preloads // ['/app/entry.tsx']
+
+  let thumbnail = assets.resolve('app/images/logo.png', 'thumbnail')
+  thumbnail?.href // '/__@files/app/images/logo.png?@thumbnail'
+})
 ```
 
 ### Workspace Access
 
-Files outside the app root are served via `/__@workspace/` URLs. Use `workspaceRoot`, along with optional `workspaceAllow` / `workspaceDeny` that replace the top-level `allow` / `deny` patterns.
+To serve files from outside the project root, you can configure the `workspaceRoot` option, along with optional `workspaceAllow` and `workspaceDeny` patterns that replace the top-level `allow` and `deny` patterns.
 
 ```ts
 devAssets({

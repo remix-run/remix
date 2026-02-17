@@ -2,6 +2,7 @@ import * as path from 'node:path'
 import type * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as esbuild from 'esbuild'
+import { detectContentType } from '@remix-run/mime'
 import type { ModuleGraph } from './module-graph.ts'
 import { createModuleGraph, ensureModuleNode, getModuleByUrl } from './module-graph.ts'
 import { isCommonJS } from './import-rewriter.ts'
@@ -258,37 +259,7 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
   }
 
   function getContentTypeForExtension(ext: string): string {
-    switch (ext.toLowerCase()) {
-      case 'png':
-        return 'image/png'
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg'
-      case 'webp':
-        return 'image/webp'
-      case 'avif':
-        return 'image/avif'
-      case 'gif':
-        return 'image/gif'
-      case 'svg':
-        return 'image/svg+xml'
-      case 'woff':
-        return 'font/woff'
-      case 'woff2':
-        return 'font/woff2'
-      case 'ttf':
-        return 'font/ttf'
-      case 'otf':
-        return 'font/otf'
-      case 'css':
-        return 'text/css; charset=utf-8'
-      case 'txt':
-        return 'text/plain; charset=utf-8'
-      case 'json':
-        return 'application/json; charset=utf-8'
-      default:
-        return 'application/octet-stream'
-    }
+    return detectContentType(ext) ?? 'application/octet-stream'
   }
 
   async function handleFileAssetRequest(
@@ -350,8 +321,13 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
               ETag: transformState.etag,
             },
           })
-        } catch {
-          // Cache entry missing on disk, regenerate below.
+        } catch (error) {
+          let code = (error as NodeJS.ErrnoException).code
+          if (code === 'ENOENT') {
+            // Cache entry missing on disk, regenerate below.
+          } else {
+            throw error
+          }
         }
       }
     }

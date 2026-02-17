@@ -33,8 +33,8 @@ describe('middleware wiring', () => {
           }),
           async (context, _next) => {
             nextCalled = true
-            let entry = context.assets.get('entry.ts')
-            assert.deepEqual(entry, { href: '/entry.ts', chunks: ['/entry.ts'] })
+            let entry = context.assets.resolve('entry.ts')
+            assert.deepEqual(entry, { href: '/entry.ts', preloads: ['/entry.ts'] })
             return new Response('next-called')
           },
         ],
@@ -49,7 +49,7 @@ describe('middleware wiring', () => {
     }
   })
 
-  it('exposes script entries via context.assets.get() when files config is not provided', async () => {
+  it('exposes script entries via context.assets.resolve() when files config is not provided', async () => {
     let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-context-'))
     try {
       let appDir = path.join(tmpDir, 'app')
@@ -63,8 +63,8 @@ describe('middleware wiring', () => {
             allow: ['**/*.ts'],
           }),
           async (context, _next) => {
-            let entry = context.assets.get('entry.ts')
-            let withVariant = context.assets.get('entry.ts', 'thumbnail' as never)
+            let entry = context.assets.resolve('entry.ts')
+            let withVariant = context.assets.resolve('entry.ts', 'thumbnail' as never)
             return Response.json({ entry, withVariant })
           },
         ],
@@ -72,14 +72,14 @@ describe('middleware wiring', () => {
 
       let response = await router.fetch(new Request('http://localhost/not-served.ts'))
       let json = await response.json()
-      assert.deepEqual(json.entry, { href: '/entry.ts', chunks: ['/entry.ts'] })
+      assert.deepEqual(json.entry, { href: '/entry.ts', preloads: ['/entry.ts'] })
       assert.equal(json.withVariant, null)
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }
   })
 
-  it('exposes file entries via context.assets.get() when files config is provided', async () => {
+  it('exposes file entries via context.assets.resolve() when files config is provided', async () => {
     let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-context-'))
     try {
       let appDir = path.join(tmpDir, 'app')
@@ -108,9 +108,9 @@ describe('middleware wiring', () => {
             ],
           }),
           async (context, _next) => {
-            let defaultVariant = context.assets.get('images/logo.png')
-            let thumbVariant = context.assets.get('images/logo.png', 'thumb')
-            let missingVariant = context.assets.get('images/logo.png', 'missing' as never)
+            let defaultVariant = context.assets.resolve('images/logo.png')
+            let thumbVariant = context.assets.resolve('images/logo.png', 'thumb')
+            let missingVariant = context.assets.resolve('images/logo.png', 'missing' as never)
             return Response.json({ defaultVariant, thumbVariant, missingVariant })
           },
         ],
@@ -120,11 +120,11 @@ describe('middleware wiring', () => {
       let json = await response.json()
       assert.deepEqual(json.defaultVariant, {
         href: '/__@files/images/logo.png?@card',
-        chunks: ['/__@files/images/logo.png?@card'],
+        preloads: [],
       })
       assert.deepEqual(json.thumbVariant, {
         href: '/__@files/images/logo.png?@thumb',
-        chunks: ['/__@files/images/logo.png?@thumb'],
+        preloads: [],
       })
       assert.equal(json.missingVariant, null)
     } finally {

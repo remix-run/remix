@@ -7,30 +7,19 @@
  */
 
 import { build } from 'remix/assets'
-import { getEsbuildConfig } from './esbuild.config.ts'
-import { files } from './assets.ts'
+import { getAssetsBuildConfig } from './assets.config.ts'
 
 async function main() {
-  let config = await getEsbuildConfig()
-  let scripts = config.entryPoints as string[]
+  let config = await getAssetsBuildConfig()
 
   console.log('Scripts:')
-  for (let entry of scripts) {
+  for (let entry of config.scripts) {
     console.log(`  ${entry}`)
   }
   console.log('')
 
-  await build({
-    scripts,
-    files,
-    workspaceRoot: '../..',
-    outDir: './build/assets',
-    minify: true,
-    sourcemap: 'external',
-    fileNames: '[dir]/[name]-[hash]',
-    manifest: './build/assets-manifest.json',
-  })
-  console.log('Outputs written to ./build/assets')
+  await build(config)
+  console.log(`Outputs written to ${config.outDir}`)
 }
 
 main().catch((error) => {

@@ -2,7 +2,7 @@ import * as path from 'node:path'
 import type { Middleware } from '@remix-run/fetch-router'
 import {
   createDevAssetsHandler,
-  createDevAssets,
+  createDevAssetResolver,
   type CreateDevAssetsHandlerOptions,
 } from '@remix-run/assets'
 
@@ -16,11 +16,12 @@ export type DevAssetsMiddlewareOptions = CreateDevAssetsHandlerOptions
  */
 export function devAssets(options: DevAssetsMiddlewareOptions): Middleware {
   let root = path.resolve(options.root ?? process.cwd())
-  let handler = createDevAssetsHandler(options)
-  let assetsApi = createDevAssets({ root, files: options.files })
+  let resolvedOptions: CreateDevAssetsHandlerOptions = { ...options, root }
+  let handler = createDevAssetsHandler(resolvedOptions)
+  let resolveAsset = createDevAssetResolver({ root, files: options.files })
 
   return async (context, next) => {
-    context.assets = assetsApi
+    context.assets = { resolve: resolveAsset }
 
     let response = await handler.serve(context.request)
     if (response) {

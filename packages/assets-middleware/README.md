@@ -2,7 +2,7 @@
 
 Middleware for resolving assets from the `remix/assets` build manifest.
 
-This is the production counterpart to `remix/dev-assets-middleware`. While the dev middleware transforms source files on-the-fly, this package uses a pre-built manifest to source file paths to their hashed output files and all required chunks.
+This is the production counterpart to `remix/dev-assets-middleware`. While the dev middleware transforms source files on-the-fly, this package uses a pre-built manifest to source file paths to their hashed output files and all required module preloads.
 
 ## Installation
 
@@ -17,37 +17,20 @@ import { createRouter } from 'remix/fetch-router'
 import { assets } from 'remix/assets-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
-// Load the manifest from the build directory:
-import loadManifest from './load-manifest.ts'
+// Load the assets manifest from the build directory
+import { loadManifest } from './load-manifest.ts'
 let manifest = await loadManifest()
 
 let router = createRouter({
-  middleware: [assets(manifest), staticFiles('./build')],
+  middleware: [assets(manifest, { baseUrl: '/assets' }), staticFiles('./build')],
 })
 
 router.get('/', ({ assets }) => {
-  let entry = assets.get('app/entry.tsx')
-  // entry.href = '/build/entry-ABC123.js' (hashed filename)
-  // entry.chunks = ['/build/entry-ABC123.js', '/build/chunk-DEF456.js', ...]
+  let entry = assets.resolve('app/entry.tsx')
+  // entry.href = '/build/assets/entry-ABC123.js'
+  // entry.preloads = ['/build/assets/entry-ABC123.js', '/build/assets/utils-DEF456.js', ...]
 })
 ```
-
-## API
-
-### `assets(manifest)`
-
-Creates middleware that attaches `context.assets` from a `remix/assets` manifest.
-Use `context.assets.get(entryPath, variant?)` in route handlers to read hashed output URLs/chunks.
-
-## How it works
-
-1. At build time, `remix/assets` generates an assets manifest with information about all outputs
-2. `assets()` processes this manifest to build lookup tables:
-   - Entry point path → output file path
-   - Output file → all transitive static imports (chunks)
-3. `context.assets.get('app/entry.tsx')` returns:
-   - `href`: The hashed output file URL (e.g., `/build/entry-ABC123.js`)
-   - `chunks`: All chunks needed for this entry for modulepreload. Dynamic imports are excluded from `chunks` as they load on-demand.
 
 ## Related Packages
 

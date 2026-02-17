@@ -5,9 +5,9 @@ import * as path from 'node:path'
 import * as os from 'node:os'
 import { pathToFileURL } from 'node:url'
 
-import { createDevAssets } from './dev-assets.ts'
+import { createDevAssetResolver } from './dev-assets.ts'
 
-describe('createDevAssets', () => {
+describe('createDevAssetResolver', () => {
   let tempDir: string
 
   function setupTempDir() {
@@ -27,8 +27,8 @@ describe('createDevAssets', () => {
     it('returns href as source path with leading slash', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir })
-        let entry = assets.get('entry.tsx')
+        let resolveAsset = createDevAssetResolver({ root: tempDir })
+        let entry = resolveAsset('entry.tsx')
 
         assert.ok(entry, 'entry should not be null')
         assert.equal(entry!.href, '/entry.tsx')
@@ -37,14 +37,14 @@ describe('createDevAssets', () => {
       }
     })
 
-    it('returns chunks as array containing only href', () => {
+    it('returns preloads as array containing only href', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir })
-        let entry = assets.get('entry.tsx')
+        let resolveAsset = createDevAssetResolver({ root: tempDir })
+        let entry = resolveAsset('entry.tsx')
 
         assert.ok(entry, 'entry should not be null')
-        assert.deepEqual(entry!.chunks, ['/entry.tsx'])
+        assert.deepEqual(entry!.preloads, ['/entry.tsx'])
       } finally {
         cleanupTempDir()
       }
@@ -53,12 +53,12 @@ describe('createDevAssets', () => {
     it('handles nested paths', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir })
-        let entry = assets.get('components/Button.tsx')
+        let resolveAsset = createDevAssetResolver({ root: tempDir })
+        let entry = resolveAsset('components/Button.tsx')
 
         assert.ok(entry, 'entry should not be null')
         assert.equal(entry!.href, '/components/Button.tsx')
-        assert.deepEqual(entry!.chunks, ['/components/Button.tsx'])
+        assert.deepEqual(entry!.preloads, ['/components/Button.tsx'])
       } finally {
         cleanupTempDir()
       }
@@ -67,8 +67,8 @@ describe('createDevAssets', () => {
     it('normalizes leading slashes in entry path', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir })
-        let entry = assets.get('/entry.tsx')
+        let resolveAsset = createDevAssetResolver({ root: tempDir })
+        let entry = resolveAsset('/entry.tsx')
 
         assert.ok(entry, 'entry should not be null')
         assert.equal(entry!.href, '/entry.tsx')
@@ -80,8 +80,8 @@ describe('createDevAssets', () => {
     it('normalizes multiple leading slashes', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir })
-        let entry = assets.get('///entry.tsx')
+        let resolveAsset = createDevAssetResolver({ root: tempDir })
+        let entry = resolveAsset('///entry.tsx')
 
         assert.ok(entry, 'entry should not be null')
         assert.equal(entry!.href, '/entry.tsx')
@@ -93,15 +93,15 @@ describe('createDevAssets', () => {
     it('resolves file:// URLs to root-relative href (e.g. hydration roots)', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir })
+        let resolveAsset = createDevAssetResolver({ root: tempDir })
         let absolutePath = path.join(tempDir, 'entry.tsx')
         let fileUrl = pathToFileURL(absolutePath).href
 
-        let entry = assets.get(fileUrl)
+        let entry = resolveAsset(fileUrl)
 
         assert.ok(entry, 'entry should not be null for file:// URL under root')
         assert.equal(entry!.href, '/entry.tsx')
-        assert.deepEqual(entry!.chunks, ['/entry.tsx'])
+        assert.deepEqual(entry!.preloads, ['/entry.tsx'])
       } finally {
         cleanupTempDir()
       }
@@ -110,11 +110,11 @@ describe('createDevAssets', () => {
     it('resolves file:// URL for nested path (e.g. app/components/cart-button.tsx)', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir })
+        let resolveAsset = createDevAssetResolver({ root: tempDir })
         let absolutePath = path.join(tempDir, 'components', 'Button.tsx')
         let fileUrl = pathToFileURL(absolutePath).href
 
-        let entry = assets.get(fileUrl)
+        let entry = resolveAsset(fileUrl)
 
         assert.ok(entry, 'entry should not be null for file:// URL under root')
         assert.equal(entry!.href, '/components/Button.tsx')
@@ -126,9 +126,9 @@ describe('createDevAssets', () => {
     it('returns null if entry file does not exist', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir })
+        let resolveAsset = createDevAssetResolver({ root: tempDir })
 
-        assert.equal(assets.get('nonexistent.tsx'), null)
+        assert.equal(resolveAsset('nonexistent.tsx'), null)
       } finally {
         cleanupTempDir()
       }
@@ -137,9 +137,9 @@ describe('createDevAssets', () => {
     it('returns null for nested non-existent paths', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir })
+        let resolveAsset = createDevAssetResolver({ root: tempDir })
 
-        assert.equal(assets.get('missing/file.tsx'), null)
+        assert.equal(resolveAsset('missing/file.tsx'), null)
       } finally {
         cleanupTempDir()
       }
@@ -149,8 +149,8 @@ describe('createDevAssets', () => {
       setupTempDir()
       try {
         let relativePath = path.relative(process.cwd(), tempDir)
-        let assets = createDevAssets({ root: relativePath })
-        let entry = assets.get('entry.tsx')
+        let resolveAsset = createDevAssetResolver({ root: relativePath })
+        let entry = resolveAsset('entry.tsx')
 
         assert.ok(entry, 'entry should not be null')
         assert.equal(entry!.href, '/entry.tsx')
@@ -162,8 +162,8 @@ describe('createDevAssets', () => {
     it('works with absolute root path', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir })
-        let entry = assets.get('entry.tsx')
+        let resolveAsset = createDevAssetResolver({ root: tempDir })
+        let entry = resolveAsset('entry.tsx')
 
         assert.ok(entry, 'entry should not be null')
         assert.equal(entry!.href, '/entry.tsx')
@@ -175,11 +175,11 @@ describe('createDevAssets', () => {
     it('restricts to specified scripts when provided', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir, scripts: ['entry.tsx'] })
+        let resolveAsset = createDevAssetResolver({ root: tempDir, scripts: ['entry.tsx'] })
 
-        assert.ok(assets.get('entry.tsx'), 'entry.tsx should be accessible')
+        assert.ok(resolveAsset('entry.tsx'), 'entry.tsx should be accessible')
         assert.equal(
-          assets.get('components/Button.tsx'),
+          resolveAsset('components/Button.tsx'),
           null,
           'components/Button.tsx should not be accessible',
         )
@@ -193,10 +193,13 @@ describe('createDevAssets', () => {
     it('allows all files when scripts not specified', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir })
+        let resolveAsset = createDevAssetResolver({ root: tempDir })
 
-        assert.ok(assets.get('entry.tsx'), 'entry.tsx should be accessible')
-        assert.ok(assets.get('components/Button.tsx'), 'components/Button.tsx should be accessible')
+        assert.ok(resolveAsset('entry.tsx'), 'entry.tsx should be accessible')
+        assert.ok(
+          resolveAsset('components/Button.tsx'),
+          'components/Button.tsx should be accessible',
+        )
       } finally {
         cleanupTempDir()
       }
@@ -205,11 +208,11 @@ describe('createDevAssets', () => {
     it('restricts to specified scripts when provided', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir, scripts: ['entry.tsx'] })
+        let resolveAsset = createDevAssetResolver({ root: tempDir, scripts: ['entry.tsx'] })
 
-        assert.ok(assets.get('entry.tsx'), 'entry.tsx should be accessible')
+        assert.ok(resolveAsset('entry.tsx'), 'entry.tsx should be accessible')
         assert.equal(
-          assets.get('components/Button.tsx'),
+          resolveAsset('components/Button.tsx'),
           null,
           'components/Button.tsx should not be accessible',
         )
@@ -221,13 +224,16 @@ describe('createDevAssets', () => {
     it('allows multiple scripts', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({
+        let resolveAsset = createDevAssetResolver({
           root: tempDir,
           scripts: ['entry.tsx', 'components/Button.tsx'],
         })
 
-        assert.ok(assets.get('entry.tsx'), 'entry.tsx should be accessible')
-        assert.ok(assets.get('components/Button.tsx'), 'components/Button.tsx should be accessible')
+        assert.ok(resolveAsset('entry.tsx'), 'entry.tsx should be accessible')
+        assert.ok(
+          resolveAsset('components/Button.tsx'),
+          'components/Button.tsx should be accessible',
+        )
       } finally {
         cleanupTempDir()
       }
@@ -236,10 +242,10 @@ describe('createDevAssets', () => {
     it('normalizes leading slashes in scripts', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir, scripts: ['entry.tsx'] })
+        let resolveAsset = createDevAssetResolver({ root: tempDir, scripts: ['entry.tsx'] })
 
-        assert.ok(assets.get('entry.tsx'), 'without leading slash should work')
-        assert.ok(assets.get('/entry.tsx'), 'with leading slash should work')
+        assert.ok(resolveAsset('entry.tsx'), 'without leading slash should work')
+        assert.ok(resolveAsset('/entry.tsx'), 'with leading slash should work')
       } finally {
         cleanupTempDir()
       }
@@ -248,9 +254,9 @@ describe('createDevAssets', () => {
     it('returns null for non-script files even if they exist', () => {
       setupTempDir()
       try {
-        let assets = createDevAssets({ root: tempDir, scripts: ['entry.tsx'] })
+        let resolveAsset = createDevAssetResolver({ root: tempDir, scripts: ['entry.tsx'] })
 
-        assert.equal(assets.get('components/Button.tsx'), null)
+        assert.equal(resolveAsset('components/Button.tsx'), null)
       } finally {
         cleanupTempDir()
       }
@@ -263,7 +269,7 @@ describe('createDevAssets', () => {
       try {
         fs.mkdirSync(path.join(tempDir, 'images'))
         fs.writeFileSync(path.join(tempDir, 'images', 'logo.txt'), 'logo')
-        let assets = createDevAssets({
+        let resolveAsset = createDevAssetResolver({
           root: tempDir,
           files: [
             {
@@ -275,9 +281,10 @@ describe('createDevAssets', () => {
           ],
         })
 
-        let entry = assets.get('images/logo.txt', 'small')
+        let entry = resolveAsset('images/logo.txt', 'small')
         assert.ok(entry, 'entry should not be null')
         assert.equal(entry.href, '/__@files/images/logo.txt?@small')
+        assert.deepEqual(entry.preloads, [])
       } finally {
         cleanupTempDir()
       }
@@ -288,7 +295,7 @@ describe('createDevAssets', () => {
       try {
         fs.mkdirSync(path.join(tempDir, 'images'))
         fs.writeFileSync(path.join(tempDir, 'images', 'logo.txt'), 'logo')
-        let assets = createDevAssets({
+        let resolveAsset = createDevAssetResolver({
           root: tempDir,
           files: [
             {
@@ -300,7 +307,7 @@ describe('createDevAssets', () => {
           ],
         })
 
-        assert.equal(assets.get('images/logo.txt'), null)
+        assert.equal(resolveAsset('images/logo.txt'), null)
       } finally {
         cleanupTempDir()
       }
@@ -311,7 +318,7 @@ describe('createDevAssets', () => {
       try {
         fs.mkdirSync(path.join(tempDir, 'images'), { recursive: true })
         fs.writeFileSync(path.join(tempDir, 'images', 'avatar@2x'), 'logo')
-        let assets = createDevAssets({
+        let resolveAsset = createDevAssetResolver({
           root: tempDir,
           files: [
             {
@@ -323,7 +330,7 @@ describe('createDevAssets', () => {
           ],
         })
 
-        let entry = assets.get('images/avatar@2x', 'card')
+        let entry = resolveAsset('images/avatar@2x', 'card')
         assert.ok(entry, 'entry should not be null')
         assert.equal(entry.href, '/__@files/images/avatar%402x?@card')
       } finally {

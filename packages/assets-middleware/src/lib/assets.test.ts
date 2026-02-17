@@ -1,13 +1,13 @@
 import { describe, it } from 'node:test'
 import * as assert from 'node:assert/strict'
-import type { AssetManifest } from '@remix-run/assets'
+import type { AssetsManifest } from '@remix-run/assets'
 import { assets } from './assets.ts'
 
 function toCurrentManifest(manifest: {
-  scripts?: AssetManifest['scripts']
-  files?: AssetManifest['files']
+  scripts?: AssetsManifest['scripts']
+  files?: AssetsManifest['files']
   outputs?: Record<string, { entryPoint?: string; imports?: Array<{ path: string; kind: string }> }>
-}): AssetManifest {
+}): AssetsManifest {
   return {
     scripts: {
       outputs: manifest.scripts?.outputs ?? manifest.outputs ?? {},
@@ -36,10 +36,10 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/images/logo.png', 'card')
+    let result = mockContext.assets.resolve('app/images/logo.png', 'card')
     assert.notEqual(result, null)
     assert.equal(result?.href, '/assets/logo-card-abc123.png')
-    assert.deepEqual(result?.chunks, ['/assets/logo-card-abc123.png'])
+    assert.deepEqual(result?.preloads, [])
   })
 
   it('resolves file asset default variant when variant is omitted', () => {
@@ -51,7 +51,7 @@ describe('assets middleware', () => {
               optimized: { path: 'assets/logo-optimized-abc123.png' },
               thumbnail: { path: 'assets/logo-thumbnail-def456.png' },
             },
-            default: 'optimized',
+            defaultVariant: 'optimized',
           },
         },
       },
@@ -61,9 +61,10 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/images/logo.png')
+    let result = mockContext.assets.resolve('app/images/logo.png')
     assert.notEqual(result, null)
     assert.equal(result?.href, '/assets/logo-optimized-abc123.png')
+    assert.deepEqual(result?.preloads, [])
   })
 
   it('returns null when variant is omitted for file that has no default variant', () => {
@@ -83,7 +84,7 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/images/logo.png')
+    let result = mockContext.assets.resolve('app/images/logo.png')
     assert.equal(result, null)
   })
 
@@ -100,7 +101,7 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/non-existent.tsx')
+    let result = mockContext.assets.resolve('app/non-existent.tsx')
     assert.equal(result, null)
   })
 
@@ -117,7 +118,7 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/entry.tsx')
+    let result = mockContext.assets.resolve('app/entry.tsx')
     assert.notEqual(result, null)
     assert.equal(result?.href, '/build/entry-ABC123.js')
   })
@@ -137,10 +138,10 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/entry.tsx')
+    let result = mockContext.assets.resolve('app/entry.tsx')
     assert.notEqual(result, null)
     assert.equal(result?.href, '/build/assets/entry-ABC123.js')
-    assert.deepEqual(result?.chunks, [
+    assert.deepEqual(result?.preloads, [
       '/build/assets/entry-ABC123.js',
       '/build/assets/chunk-DEF456.js',
     ])
@@ -157,7 +158,7 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/entry.tsx')
+    let result = mockContext.assets.resolve('app/entry.tsx')
     assert.notEqual(result, null)
     assert.equal(result?.href, '/assets/entry.js')
   })
@@ -175,7 +176,7 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('/app/entry.tsx')
+    let result = mockContext.assets.resolve('/app/entry.tsx')
     assert.notEqual(result, null)
     assert.equal(result?.href, '/build/entry.js')
   })
@@ -193,12 +194,12 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('./app/entry.tsx')
+    let result = mockContext.assets.resolve('./app/entry.tsx')
     assert.notEqual(result, null)
     assert.equal(result?.href, '/build/entry.js')
   })
 
-  it('includes the entry in chunks', () => {
+  it('includes the entry in preloads', () => {
     let manifest = {
       outputs: {
         'build/entry.js': {
@@ -211,12 +212,12 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/entry.tsx')
+    let result = mockContext.assets.resolve('app/entry.tsx')
     assert.notEqual(result, null)
-    assert.deepEqual(result?.chunks, ['/build/entry.js'])
+    assert.deepEqual(result?.preloads, ['/build/entry.js'])
   })
 
-  it('includes static imports in chunks', () => {
+  it('includes static imports in preloads', () => {
     let manifest = {
       outputs: {
         'build/entry.js': {
@@ -231,12 +232,12 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/entry.tsx')
+    let result = mockContext.assets.resolve('app/entry.tsx')
     assert.notEqual(result, null)
-    assert.deepEqual(result?.chunks, ['/build/entry.js', '/build/chunk-utils.js'])
+    assert.deepEqual(result?.preloads, ['/build/entry.js', '/build/chunk-utils.js'])
   })
 
-  it('includes transitive static imports in chunks', () => {
+  it('includes transitive static imports in preloads', () => {
     let manifest = {
       outputs: {
         'build/entry.js': {
@@ -257,9 +258,9 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/entry.tsx')
+    let result = mockContext.assets.resolve('app/entry.tsx')
     assert.notEqual(result, null)
-    assert.deepEqual(result?.chunks, [
+    assert.deepEqual(result?.preloads, [
       '/build/entry.js',
       '/build/chunk-a.js',
       '/build/chunk-b.js',
@@ -267,7 +268,7 @@ describe('assets middleware', () => {
     ])
   })
 
-  it('excludes dynamic imports from chunks', () => {
+  it('excludes dynamic imports from preloads', () => {
     let manifest = {
       outputs: {
         'build/entry.js': {
@@ -286,9 +287,9 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/entry.tsx')
+    let result = mockContext.assets.resolve('app/entry.tsx')
     assert.notEqual(result, null)
-    assert.deepEqual(result?.chunks, ['/build/entry.js', '/build/chunk-static.js'])
+    assert.deepEqual(result?.preloads, ['/build/entry.js', '/build/chunk-static.js'])
   })
 
   it('handles circular imports without infinite loop', () => {
@@ -311,12 +312,16 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/entry.tsx')
+    let result = mockContext.assets.resolve('app/entry.tsx')
     assert.notEqual(result, null)
-    assert.deepEqual(result?.chunks, ['/build/entry.js', '/build/chunk-a.js', '/build/chunk-b.js'])
+    assert.deepEqual(result?.preloads, [
+      '/build/entry.js',
+      '/build/chunk-a.js',
+      '/build/chunk-b.js',
+    ])
   })
 
-  it('caches chunk resolution', () => {
+  it('caches preload resolution', () => {
     let manifest = {
       outputs: {
         'build/entry.js': {
@@ -331,11 +336,11 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result1 = mockContext.assets.get('app/entry.tsx')
-    let result2 = mockContext.assets.get('app/entry.tsx')
+    let result1 = mockContext.assets.resolve('app/entry.tsx')
+    let result2 = mockContext.assets.resolve('app/entry.tsx')
 
     // Same array reference indicates caching
-    assert.equal(result1?.chunks, result2?.chunks)
+    assert.equal(result1?.preloads, result2?.preloads)
   })
 
   it('handles multiple entry points', () => {
@@ -357,11 +362,11 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let main = mockContext.assets.get('app/main.tsx')
-    assert.deepEqual(main?.chunks, ['/build/main.js', '/build/shared.js'])
+    let main = mockContext.assets.resolve('app/main.tsx')
+    assert.deepEqual(main?.preloads, ['/build/main.js', '/build/shared.js'])
 
-    let admin = mockContext.assets.get('app/admin.tsx')
-    assert.deepEqual(admin?.chunks, ['/build/admin.js', '/build/shared.js'])
+    let admin = mockContext.assets.resolve('app/admin.tsx')
+    assert.deepEqual(admin?.preloads, ['/build/admin.js', '/build/shared.js'])
   })
 
   it('handles output paths with ./ prefix', () => {
@@ -377,7 +382,7 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/entry.tsx')
+    let result = mockContext.assets.resolve('app/entry.tsx')
     assert.notEqual(result, null)
     assert.equal(result?.href, '/build/entry.js')
   })
@@ -395,7 +400,7 @@ describe('assets middleware', () => {
     let mockContext = { assets: null as any }
     middleware(mockContext as any, async () => new Response())
 
-    let result = mockContext.assets.get('app/routes/admin/dashboard.tsx')
+    let result = mockContext.assets.resolve('app/routes/admin/dashboard.tsx')
     assert.notEqual(result, null)
     assert.equal(result?.href, '/build/routes/admin/dashboard.js')
   })
@@ -436,7 +441,7 @@ describe('assets middleware', () => {
 
     let capturedEntry: any = null
     await middleware(mockContext as any, async () => {
-      capturedEntry = mockContext.assets.get('app/entry.tsx')
+      capturedEntry = mockContext.assets.resolve('app/entry.tsx')
       return new Response('ok')
     })
 

@@ -1,4 +1,4 @@
-import type { Assets } from '@remix-run/fetch-router'
+import type { AssetsContext } from '@remix-run/fetch-router'
 import type { FilesConfig } from '@remix-run/assets'
 
 type Files = readonly [
@@ -33,17 +33,17 @@ declare module '@remix-run/fetch-router' {
   }
 }
 
-declare let assets: Assets
+declare let assets: AssetsContext
 
-assets.get('app/fixture-with-default/cover.png', 'card')
-assets.get('app/fixture-with-default/cover.png')
-assets.get('app/fixture-required-variant/cover.png', 'card')
+assets.resolve('app/fixture-with-default/cover.png', 'card')
+assets.resolve('app/fixture-with-default/cover.png')
+assets.resolve('app/fixture-required-variant/cover.png', 'card')
 // @ts-expect-error variants without defaultVariant require variant argument
-assets.get('app/fixture-required-variant/cover.png')
+assets.resolve('app/fixture-required-variant/cover.png')
 
 // @ts-expect-error invalid variant should fail for matched path
-assets.get('app/fixture-with-default/cover.png', 'thumbnail')
+assets.resolve('app/fixture-with-default/cover.png', 'thumbnail')
 // @ts-expect-error transform-only rules should not accept variants
-assets.get('app/fixture-transform-only/logo.svg', 'card')
+assets.resolve('app/fixture-transform-only/logo.svg', 'card')
 // @ts-expect-error unmatched paths should not accept variants
-assets.get('app/fixture-unmatched/entry.tsx', 'card')
+assets.resolve('app/fixture-unmatched/entry.tsx', 'card')

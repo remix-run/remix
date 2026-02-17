@@ -10,7 +10,7 @@ import { extractImportSpecifiers } from './import-rewriter.ts'
 import { isExternalSpecifier } from './rewrite.ts'
 import { fixSourceMapSources } from './source-map.ts'
 import { hashCode } from './etag.ts'
-import type { AssetManifest } from './manifest-types.ts'
+import type { AssetsManifest } from './manifest-types.ts'
 import { toPosixPath } from './path-resolver.ts'
 import {
   compileFileRules,
@@ -26,7 +26,7 @@ import {
  * Fills resolutionCache for use in pass 1. Returns URLs in topological order (dependencies first).
  * Transforms each file with esbuild before extracting specifiers so we parse JS (lexer does not handle TS/JSX).
  *
- * @param entryPoints Entry paths relative to root
+ * @param scripts Script paths relative to root
  * @param root Project root
  * @param ctx Resolve context
  * @param externalSpecifiers Specifiers to skip
@@ -35,7 +35,7 @@ import {
  * @returns Ordered URLs, path maps, and entry URLs
  */
 async function discoverGraph(
-  entryPoints: string[],
+  scripts: string[],
   root: string,
   ctx: ResolveContext,
   externalSpecifiers: string[],
@@ -55,7 +55,7 @@ async function discoverGraph(
   let seenUrls = new Set<string>()
   let queue: string[] = []
 
-  for (let entry of entryPoints) {
+  for (let entry of scripts) {
     let normalized = entry.replace(/^\.\/+/, '').replace(/^\/+/, '')
     let absolutePath = path.resolve(root, normalized)
     queue.push(absolutePath)
@@ -131,7 +131,7 @@ async function discoverGraph(
     urlToImportSpecifiers.set(url, importSpecifiers)
   }
 
-  let entryUrls = entryPoints.map((e) => {
+  let entryUrls = scripts.map((e) => {
     let normalized = e.replace(/^\.\/+/, '').replace(/^\/+/, '')
     let absolutePath = path.resolve(root, normalized)
     return resolvedPathToUrl(absolutePath, ctx)
@@ -262,9 +262,9 @@ async function buildFilesOutputs(
   root: string,
   outDir: string,
   filesRules: CompiledFileRule[],
-): Promise<AssetManifest['files']['outputs']> {
+): Promise<AssetsManifest['files']['outputs']> {
   let sourceFiles = await listAllFiles(root)
-  let outputs: AssetManifest['files']['outputs'] = {}
+  let outputs: AssetsManifest['files']['outputs'] = {}
 
   await Promise.all(
     sourceFiles.map(async (sourcePath) => {
@@ -291,7 +291,7 @@ async function buildFilesOutputs(
           }),
         )
         outputs[sourcePath] = rule.defaultVariant
-          ? { variants, default: rule.defaultVariant }
+          ? { variants, defaultVariant: rule.defaultVariant }
           : { variants }
         return
       }
@@ -324,12 +324,12 @@ function toRelativeImportSpecifier(fromOutPath: string, toOutPath: string): stri
 /**
  * Programmatic build: discover graph from entries, two-pass transform + write, optional manifest.
  *
- * @param options Build options (entryPoints, root, outDir, etc.)
+ * @param options Build options (scripts, root, outDir, etc.)
  */
 export async function build(options: BuildOptions): Promise<void> {
   let root = path.resolve(process.cwd(), options.root ?? '.')
   let outDir = path.resolve(root, options.outDir)
-  let scripts = options.scripts ?? options.entryPoints ?? []
+  let scripts = options.scripts ?? []
   let fileNames = options.fileNames ?? DEFAULT_FILE_NAMES
   let includeHash = fileNames.includes('[hash]')
   let manifestPath = options.manifest === false ? null : (options.manifest ?? null)
@@ -480,7 +480,7 @@ export async function build(options: BuildOptions): Promise<void> {
   let filesOutputs = filesRules.length > 0 ? await buildFilesOutputs(root, outDir, filesRules) : {}
 
   if (manifestPath) {
-    let manifest: AssetManifest = { scripts: { outputs: {} }, files: { outputs: filesOutputs } }
+    let manifest: AssetsManifest = { scripts: { outputs: {} }, files: { outputs: filesOutputs } }
     let entryPathNorm = (u: string) => u.replace(/^\//, '')
     for (let url of orderedUrls) {
       let outPath = urlToOutPathMap.get(url)!

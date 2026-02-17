@@ -1,8 +1,8 @@
 /**
- * Shape compatible with assets-middleware AssetManifest.
+ * Shape compatible with assets-middleware AssetsManifest.
  * Used for build manifest output so prod serve can use the same middleware.
  */
-export interface AssetManifest {
+export interface AssetsManifest {
   scripts: {
     outputs: {
       [outputPath: string]: {
@@ -23,7 +23,7 @@ export interface AssetManifest {
                 path: string
               }
             }
-            default?: string
+            defaultVariant?: string
           }
     }
   }

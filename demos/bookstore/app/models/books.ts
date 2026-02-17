@@ -28,17 +28,18 @@ export async function getBookById(id: string): Promise<Book | null> {
 
 export async function getBooksByGenre(genre: string): Promise<Book[]> {
   let db = getRequestDatabase()
-  return db.findMany(books, {
+  let rows = await db.findMany(books, {
     where: ilike('genre', genre),
     orderBy: ['id', 'asc'],
   })
+  return rows
 }
 
 export async function searchBooks(query: string): Promise<Book[]> {
   let lowerQuery = '%' + query.toLowerCase() + '%'
   let db = getRequestDatabase()
 
-  return db.findMany(books, {
+  let rows = await db.findMany(books, {
     where: or(
       ilike('title', lowerQuery),
       ilike('author', lowerQuery),
@@ -46,6 +47,7 @@ export async function searchBooks(query: string): Promise<Book[]> {
     ),
     orderBy: ['id', 'asc'],
   })
+  return rows
 }
 
 export async function getAvailableGenres(): Promise<string[]> {

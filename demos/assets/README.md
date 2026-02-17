@@ -6,7 +6,7 @@ A demonstration of the assets middleware packages for serving compiled/transform
 
 ### Development Mode
 
-Development mode transforms TypeScript files and images on-the-fly:
+Development mode transforms source scripts and file assets on-the-fly:
 
 ```bash
 cd demos/assets
@@ -31,7 +31,7 @@ Then visit http://localhost:44100
 
 ## Code Highlights
 
-- [`server.ts`](server.ts) uses `@remix-run/dev-assets-middleware` in development for on-the-fly TypeScript and image transformation, and `@remix-run/assets-middleware` in production with pre-built assets and a manifest.
-- [`build.ts`](build.ts) uses esbuild to bundle the entry point, outputting hashed filenames and a metafile for the production manifest.
+- [`server.ts`](server.ts) uses `@remix-run/dev-assets-middleware` in development for source transformation plus file variants, and `@remix-run/assets-middleware` in production for manifest-based resolution with static serving under `/assets`.
+- [`build.ts`](build.ts) uses `@remix-run/assets` to build scripts/files and emit a local manifest consumed by the production middleware.
 - [`app/entry.tsx`](app/entry.tsx) is the browser entry point that mounts the React component tree.
 - [`app/components/App.tsx`](app/components/App.tsx) and [`app/components/Counter.tsx`](app/components/Counter.tsx) demonstrate `@remix-run/component` usage with setup functions and reactive updates.

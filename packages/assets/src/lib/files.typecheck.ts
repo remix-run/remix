@@ -1,5 +1,5 @@
 import { defineFiles } from './files.ts'
-import type { AssetsApi, FileTransform, TypedAssetsGet, VariantArg } from './files.ts'
+import type { AssetResolver, FileTransform, TypedAssetResolver, VariantArg } from './files.ts'
 
 type Assert<value extends true> = value
 type IsEqual<a, b> =
@@ -98,18 +98,18 @@ type OverlappingGlobsUnionVariants = Assert<
   >
 >
 
-type BroadAssetsApiVariantIsString = Assert<
-  IsEqual<Parameters<AssetsApi['get']>[1], string | undefined>
+type BroadAssetResolverVariantIsString = Assert<
+  IsEqual<Parameters<AssetResolver>[1], string | undefined>
 >
 
-declare let getWithVariants: TypedAssetsGet<FilesWithVariants>
-getWithVariants('fixtures/required-variant/a.png', 'card')
+declare let resolveWithVariants: TypedAssetResolver<FilesWithVariants>
+resolveWithVariants('fixtures/required-variant/a.png', 'card')
 // @ts-expect-error variants without defaultVariant require variant argument
-getWithVariants('fixtures/required-variant/a.png')
+resolveWithVariants('fixtures/required-variant/a.png')
 // @ts-expect-error invalid variant should fail for matched path
-getWithVariants('fixtures/required-variant/a.png', 'invalid')
+resolveWithVariants('fixtures/required-variant/a.png', 'invalid')
 // @ts-expect-error unmatched path should not accept variants
-getWithVariants('fixtures/unmatched/entry.tsx', 'card')
+resolveWithVariants('fixtures/unmatched/entry.tsx', 'card')
 
 defineFiles([
   {

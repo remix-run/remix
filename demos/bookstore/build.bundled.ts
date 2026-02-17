@@ -8,64 +8,55 @@
  */
 
 import * as esbuild from 'esbuild'
-import { createHash } from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { glob } from 'glob'
-import sharp from 'sharp'
-import { getEsbuildConfig } from './esbuild.config.ts'
+import { getAssetsBuildConfig } from './assets.config.ts'
 
-let outdir = './build/assets'
+function normalizePathForManifest(value: string): string {
+  return value.replace(/\\/g, '/').replace(/^\.\//, '')
+}
 
-async function buildFileOutputs(): Promise<Record<string, { path: string }>> {
-  let outputs: Record<string, { path: string }> = {}
-  let sourcePaths = await glob('app/images/books/**/*.png')
-
-  await Promise.all(
-    sourcePaths.map(async (sourcePath) => {
-      let sourceData = await fs.readFile(sourcePath)
-      let jpgData = await sharp(sourceData).jpeg({ quality: 72, mozjpeg: true }).toBuffer()
-      let hash = createHash('sha256')
-        .update(sourcePath)
-        .update('\0')
-        .update(jpgData)
-        .digest('hex')
-        .slice(0, 8)
-      let parsed = path.parse(sourcePath)
-      let outPath = `${parsed.dir.replace(/\\/g, '/')}/${parsed.name}-${hash}.jpg`
-      let fullOutPath = path.join(outdir, outPath)
-      await fs.mkdir(path.dirname(fullOutPath), { recursive: true })
-      await fs.writeFile(fullOutPath, jpgData)
-      outputs[sourcePath] = { path: outPath }
-    }),
-  )
-
-  return outputs
+function toManifestLocalPath(value: string, prefix: string): string {
+  let normalizedPath = normalizePathForManifest(value)
+  return normalizedPath.startsWith(prefix) ? normalizedPath.slice(prefix.length) : normalizedPath
 }
 
 async function main() {
-  await fs.rm(outdir, { recursive: true, force: true })
-  await fs.mkdir(outdir, { recursive: true })
+  let config = await getAssetsBuildConfig()
 
-  let config = await getEsbuildConfig()
+  await fs.rm(config.outDir, { recursive: true, force: true })
+  await fs.mkdir(config.outDir, { recursive: true })
+
+  let esbuildConfig = {
+    entryPoints: config.scripts,
+    outdir: config.outDir,
+    bundle: true,
+    splitting: true,
+    format: 'esm',
+    outbase: 'app',
+    entryNames: '[dir]/[name]-[hash]',
+    chunkNames: 'chunks/[name]-[hash]',
+    metafile: true,
+    minify: config.minify,
+    sourcemap: config.sourcemap,
+  } as const satisfies esbuild.BuildOptions
 
   console.log('Entry points:')
-  for (let entryPoint of config.entryPoints!) {
+  for (let entryPoint of esbuildConfig.entryPoints) {
     console.log(`  ${entryPoint}`)
   }
   console.log('')
 
-  let result = await esbuild.build({ ...config, outdir })
-  let fileOutputs = await buildFileOutputs()
+  let result = await esbuild.build(esbuildConfig)
 
   // Emit manifest with locally-scoped script paths (relative to outdir) for assets(manifest, { baseUrl })
-  let prefix = 'build/assets/'
+  let prefix = `${normalizePathForManifest(esbuildConfig.outdir)}/`
   let outputs: Record<string, (typeof result.metafile)['outputs'][string]> = {}
   for (let [outputPath, entry] of Object.entries(result.metafile.outputs)) {
-    let localPath = outputPath.startsWith(prefix) ? outputPath.slice(prefix.length) : outputPath
+    let localPath = toManifestLocalPath(outputPath, prefix)
     let imports = entry.imports?.map((imp) => ({
       ...imp,
-      path: imp.path.startsWith(prefix) ? imp.path.slice(prefix.length) : imp.path,
+      path: toManifestLocalPath(imp.path, prefix),
     }))
     outputs[localPath] = imports ? { ...entry, imports } : entry
   }
@@ -74,11 +65,11 @@ async function main() {
       outputs,
     },
     files: {
-      outputs: fileOutputs,
+      outputs: {},
     },
   }
 
-  let manifestPath = './build/assets-manifest.json'
+  let manifestPath = config.manifest
   await fs.mkdir(path.dirname(manifestPath), { recursive: true })
   await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2))
 

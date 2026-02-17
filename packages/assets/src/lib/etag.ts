@@ -1,3 +1,5 @@
+import { IfNoneMatch } from '@remix-run/headers'
+
 export async function hashCode(code: string, pathSalt?: string): Promise<string> {
   let input = pathSalt !== undefined ? pathSalt + '\0' + code : code
   let encoder = new TextEncoder()
@@ -19,19 +21,10 @@ export function generateETag(hash: string): string {
 export function matchesETag(ifNoneMatch: string | null, etag: string): boolean {
   if (!ifNoneMatch) return false
 
-  // Handle multiple ETags in If-None-Match (comma-separated)
-  let tags = ifNoneMatch.split(',').map((t) => t.trim())
+  let ifNoneMatchHeader = IfNoneMatch.from(ifNoneMatch)
+  if (ifNoneMatchHeader.matches(etag)) return true
 
-  // Check for wildcard
-  if (tags.includes('*')) return true
-
-  // Check for exact match (with or without weak prefix)
-  for (let tag of tags) {
-    // Normalize: remove W/ prefix for comparison
-    let normalizedTag = tag.replace(/^W\//, '')
-    let normalizedETag = etag.replace(/^W\//, '')
-    if (normalizedTag === normalizedETag) return true
-  }
-
-  return false
+  let weakEtag = etag.startsWith('W/') ? etag : `W/${etag}`
+  let strongEtag = etag.replace(/^W\//, '')
+  return ifNoneMatchHeader.matches(weakEtag) || ifNoneMatchHeader.matches(strongEtag)
 }

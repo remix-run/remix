@@ -6,7 +6,7 @@ type NoInfer<value> = [value][value extends any ? 0 : never]
 
 export interface AssetEntry {
   href: string
-  chunks: string[]
+  preloads: string[]
 }
 
 export interface FileTransformContext {
@@ -100,21 +100,17 @@ export type VariantArg<files extends FilesConfig, sourcePath extends string> =
       : [variant: VariantNames<files, sourcePath>]
     : [variant?: never]
 
-export type TypedAssetsGet<files extends FilesConfig> = <const sourcePath extends string>(
+export type TypedAssetResolver<files extends FilesConfig> = <const sourcePath extends string>(
   entryPath: sourcePath,
   ...variant: VariantArg<files, NoInfer<sourcePath>>
 ) => AssetEntry | null
 
-type DefaultAssetsGet = (entryPath: string, variant?: string) => AssetEntry | null
+type DefaultAssetResolver = (entryPath: string, variant?: string) => AssetEntry | null
 type HasBroadIncludes<files extends FilesConfig> = string extends files[number]['include']
   ? true
   : false
-type AssetsGet<files extends FilesConfig> =
-  HasBroadIncludes<files> extends true ? DefaultAssetsGet : TypedAssetsGet<files>
-
-export interface AssetsApi<files extends FilesConfig = FilesConfig> {
-  get: AssetsGet<files>
-}
+export type AssetResolver<files extends FilesConfig = FilesConfig> =
+  HasBroadIncludes<files> extends true ? DefaultAssetResolver : TypedAssetResolver<files>
 
 export interface CompiledFileRule {
   include: string

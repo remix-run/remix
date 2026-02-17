@@ -102,9 +102,6 @@ importers:
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
-      sharp:
-        specifier: ^0.34.5
-        version: 0.34.5
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^7.6.13
@@ -230,6 +227,12 @@ importers:
 
   packages/assets:
     dependencies:
+      '@remix-run/headers':
+        specifier: workspace:*
+        version: link:../headers
+      '@remix-run/mime':
+        specifier: workspace:*
+        version: link:../mime
       es-module-lexer:
         specifier: ^2.0.0
         version: 2.0.0

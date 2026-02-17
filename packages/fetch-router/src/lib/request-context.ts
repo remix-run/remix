@@ -1,5 +1,5 @@
 import { createSession, type Session } from '@remix-run/session'
-import type { AssetsApi, FilesConfig } from '@remix-run/assets'
+import type { AssetResolver, FilesConfig } from '@remix-run/assets'
 
 import { AppStorage } from './app-storage.ts'
 import {
@@ -17,24 +17,24 @@ export interface AssetEntry {
    */
   href: string
   /**
-   * All chunks needed for this entry (for module preloading).
+   * All URLs needed for module preloading.
    * In dev mode, this is just `[href]`. In prod mode, this includes
-   * all statically imported chunks.
+   * all statically imported modules.
    */
-  chunks: string[]
+  preloads: string[]
 }
 
 /**
- * The assets API for resolving entry points to their URLs.
+ * The assets context surface for resolving entry points to their URLs.
  */
 export interface AssetsConfig {}
 
-type DefaultAssetsGet = (entryPath: string, variant?: string) => AssetEntry | null
-type AssetsGet = AssetsConfig extends { files: infer files extends FilesConfig }
-  ? AssetsApi<files>['get']
-  : DefaultAssetsGet
+type DefaultAssetResolver = (entryPath: string, variant?: string) => AssetEntry | null
+type ContextAssetResolver = AssetsConfig extends { files: infer files extends FilesConfig }
+  ? AssetResolver<files>
+  : DefaultAssetResolver
 
-export interface Assets {
+export interface AssetsContext {
   /**
    * Resolves an entry point path to its built asset information.
    *
@@ -47,9 +47,9 @@ export interface Assets {
    *
    * @param entryPath Entry point path in any supported format
    * @param variant Optional predefined file variant name for non-script assets
-   * @returns Asset information (href and chunks) or null if not found
+   * @returns Asset information (href and preloads) or null if not found
    */
-  get: AssetsGet
+  resolve: ContextAssetResolver
 }
 
 /**
@@ -171,27 +171,27 @@ export class RequestContext<
   }
 
   /**
-   * The assets API for resolving entry points to their URLs.
+   * The assets context surface for resolving entry points to their URLs.
    *
    * Note: This is only available when using the `assets()` middleware.
    */
-  get assets(): Assets {
+  get assets(): AssetsContext {
     if (this.#assets == null) {
       console.warn(
         'Assets middleware not configured. Use devAssets() from @remix-run/dev-assets-middleware.',
       )
 
-      return { get: (_entryPath: string, _variant?: string) => null } as Assets
+      return { resolve: (_entryPath: string, _variant?: string) => null } as AssetsContext
     }
 
     return this.#assets
   }
 
-  set assets(value: Assets) {
+  set assets(value: AssetsContext) {
     this.#assets = value
   }
 
-  #assets?: Assets
+  #assets?: AssetsContext
 
   /**
    * Shared application-specific storage.

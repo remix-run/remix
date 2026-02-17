@@ -10,57 +10,10 @@ npm i remix
 
 ## Usage
 
-### Dev handler
-
-```ts
-import { createDevAssetsHandler } from 'remix/assets'
-
-let handler = createDevAssetsHandler({
-  allow: ['app/**', '**/node_modules/**'],
-  files: [
-    {
-      include: 'app/**/*.{png,jpg,jpeg}',
-      variants: {
-        original: (buffer) => buffer,
-        thumbnail: (buffer) => generateThumbnail(buffer),
-      },
-      defaultVariant: 'original',
-    },
-  ],
-})
-
-// In your request handler:
-let response = await handler.serve(request)
-if (response) return response
-// ...
-```
-
-Resolving dev assets:
-
-```ts
-import { createDevAssets } from 'remix/assets'
-import generateThumbnail from './generate-thumbnail.ts'
-
-let assets = createDevAssets({
-  allow: ['app/**', '**/node_modules/**'],
-  files: [
-    {
-      include: 'app/**/*.{png,jpg,jpeg}',
-      variants: {
-        original: (buffer) => buffer,
-        thumbnail: (buffer) => generateThumbnail(buffer),
-      },
-      defaultVariant: 'original',
-    },
-  ],
-})
-```
-
-### Production build
+### Build
 
 ```ts
 import { build } from 'remix/assets'
-import generateThumbnail from './generate-thumbnail.ts'
 
 await build({
   scripts: ['app/entry.tsx'],
@@ -69,7 +22,10 @@ await build({
       include: 'app/**/*.{png,jpg,jpeg}',
       variants: {
         original: (buffer) => buffer,
-        thumbnail: (buffer) => generateThumbnail(buffer),
+        thumbnail: async (buffer) => {
+          let { generateThumbnail } = await import('./generate-thumbnail.ts')
+          return await generateThumbnail(buffer)
+        },
       },
       defaultVariant: 'original',
     },
@@ -82,9 +38,99 @@ await build({
 })
 ```
 
-### Workspace configuration
+Resolving assets:
 
-To serve files from outside the project root, you can configure the `workspaceRoot` option, along with optional `workspaceAllow` and `workspaceDeny` patterns that replace the top-level `allow` and `deny` patterns.
+```ts
+import { createAssetResolver } from 'remix/assets'
+
+// Load the assets manifest from the build directory
+import { loadManifest } from './load-manifest.ts'
+let manifest = await loadManifest()
+
+let resolveAsset = createAssetResolver(manifest, { baseUrl: '/assets' })
+
+let entry = resolveAsset('app/entry.tsx')
+entry?.href // '/build/assets/entry-ABC123.js'
+entry?.preloads // ['/build/assets/entry-ABC123.js', '/build/assets/utils-DEF456.js', ...]
+
+let thumbnail = resolveAsset('app/images/logo.png', 'thumbnail')
+thumbnail?.href // '/build/assets/images/logo-@thumbnail-ABC123.png'
+```
+
+### Development Assets Handler
+
+```ts
+import { createDevAssetsHandler } from 'remix/assets'
+
+let handler = createDevAssetsHandler({
+  allow: ['app/**', '**/node_modules/**'],
+  files: [
+    {
+      include: 'app/**/*.{png,jpg,jpeg}',
+      variants: {
+        original: (buffer) => buffer,
+        thumbnail: async (buffer) => {
+          let { generateThumbnail } = await import('./generate-thumbnail.ts')
+          return await generateThumbnail(buffer)
+        },
+      },
+      defaultVariant: 'original',
+    },
+  ],
+})
+
+// For example, in a request handler:
+export async function fetch(request: Request) {
+  let response = await handler.serve(request)
+  return response ?? new Response('Not Found', { status: 404 })
+}
+```
+
+Resolving development assets:
+
+```ts
+import { createDevAssetResolver } from 'remix/assets'
+
+let resolveAsset = createDevAssetResolver({
+  root: '.',
+  files: [
+    {
+      include: 'app/**/*.{png,jpg,jpeg}',
+      variants: {
+        original: (buffer) => buffer,
+        thumbnail: async (buffer) => {
+          let { generateThumbnail } = await import('./generate-thumbnail.ts')
+          return await generateThumbnail(buffer)
+        },
+      },
+      defaultVariant: 'original',
+    },
+  ],
+})
+
+let entry = resolveAsset('app/entry.tsx')
+entry?.href // '/app/entry.tsx'
+entry?.preloads // ['/app/entry.tsx']
+
+let thumbnail = resolveAsset('app/images/logo.png', 'thumbnail')
+thumbnail?.href // '/__@files/app/images/logo.png?@thumbnail'
+```
+
+### Workspace Access
+
+To handle files from outside the project root, you can configure the `workspaceRoot` option.
+
+```ts
+import { build } from 'remix/assets'
+
+await build({
+  scripts: ['app/entry.tsx'],
+  workspaceRoot: '../..',
+  // ...
+})
+```
+
+In development you can also configure the optional `workspaceAllow` and `workspaceDeny` patterns that replace the top-level `allow` and `deny` patterns.
 
 ```ts
 import { createDevAssetsHandler } from 'remix/assets'
@@ -98,8 +144,8 @@ let handler = createDevAssetsHandler({
 
 ## Related Packages
 
-- [dev-assets-middleware](https://github.com/remix-run/remix/tree/main/packages/dev-assets-middleware)
 - [assets-middleware](https://github.com/remix-run/remix/tree/main/packages/assets-middleware)
+- [dev-assets-middleware](https://github.com/remix-run/remix/tree/main/packages/dev-assets-middleware)
 - [fetch-router](https://github.com/remix-run/remix/tree/main/packages/fetch-router)
 
 ## License

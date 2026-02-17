@@ -1,7 +1,7 @@
 import type { FilesConfig, FileTransform } from './files.ts'
-import { createAssets } from './assets.ts'
-import { createDevAssets } from './dev-assets.ts'
-import type { AssetManifest } from './manifest-types.ts'
+import { createAssetResolver } from './assets.ts'
+import { createDevAssetResolver } from './dev-assets.ts'
+import type { AssetsManifest } from './manifest-types.ts'
 
 type IdTransform = FileTransform
 
@@ -19,22 +19,27 @@ type TypedFiles = readonly [
   },
 ]
 
-declare let manifest: AssetManifest
+declare let manifest: AssetsManifest
 declare let files: TypedFiles
 
-let typedFromManifest = createAssets<typeof files>(manifest)
-let typedFromDev = createDevAssets({ root: '.', files })
+{
+  let resolveAsset = createAssetResolver<typeof files>(manifest)
+  resolveAsset('app/images/logo.png', 'card')
+  // @ts-expect-error variant is required for matching rule with variants and no defaultVariant
+  resolveAsset('app/images/logo.png')
+  // @ts-expect-error invalid variant should fail for matched path
+  resolveAsset('app/images/logo.png', 'thumbnail')
+}
 
-typedFromManifest.get('app/images/logo.png', 'card')
-typedFromDev.get('app/images/logo.png', 'hero')
-
-// @ts-expect-error variant is required for matching rule with variants and no defaultVariant
-typedFromManifest.get('app/images/logo.png')
-// @ts-expect-error invalid variant should fail for matched path
-typedFromManifest.get('app/images/logo.png', 'thumbnail')
-// @ts-expect-error transform-only paths should reject variants
-typedFromDev.get('app/icons/logo.svg', 'card')
+{
+  let resolveAsset = createDevAssetResolver({ root: '.', files })
+  resolveAsset('app/images/logo.png', 'hero')
+  // @ts-expect-error transform-only paths should reject variants
+  resolveAsset('app/icons/logo.svg', 'card')
+}
 
 let broadFiles: FilesConfig = [{ include: '**/*', transform: (data) => data }]
-let broadTyped = createAssets<typeof broadFiles>(manifest)
-broadTyped.get('anything/at/all.ts', 'any-variant-name')
+{
+  let resolveAsset = createAssetResolver<typeof broadFiles>(manifest)
+  resolveAsset('anything/at/all.ts', 'any-variant-name')
+}

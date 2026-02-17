@@ -18,7 +18,7 @@ export interface CreateDevAssetsHandlerOptions {
   sourcemap?: boolean
   /** Import specifiers to leave unchanged (e.g. CDN URLs, bare specifiers for import maps). */
   external?: string | string[]
-  /** File transformation rules used by assets.get(path, variant?) in development. */
+  /** File transformation rules used by asset resolvers in development. */
   files?: FilesConfig
   /**
    * Persistent cache location for transformed file variants in development.
@@ -30,13 +30,11 @@ export interface CreateDevAssetsHandlerOptions {
 
 /**
  * Options for the programmatic build API.
- * No allow/deny—build is graph-driven from entryPoints.
+ * No allow/deny—build is graph-driven from scripts.
  */
 export interface BuildOptions {
   /** Script entry paths relative to root (e.g. ['app/entry.tsx']) */
   scripts?: string[]
-  /** @deprecated Use scripts. Entry paths relative to root (e.g. ['app/entry.tsx']) */
-  entryPoints?: string[]
   /** Project root. Default: process.cwd(). Use "." for cwd. */
   root?: string
   /** Output directory (e.g. './build') */
@@ -60,7 +58,7 @@ export interface BuildOptions {
   fileNames?: string
   /** Workspace root for /__@workspace/ output (optional). No allow/deny—build is graph-driven. */
   workspaceRoot?: string
-  /** Path to emit manifest (AssetManifest) or false to skip (default: false) */
+  /** Path to emit manifest (AssetsManifest) or false to skip (default: false) */
   manifest?: string | false
   /** File transformation rules for non-JS assets. */
   files?: FilesConfig

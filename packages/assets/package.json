@@ -33,6 +33,8 @@
     }
   },
   "dependencies": {
+    "@remix-run/headers": "workspace:*",
+    "@remix-run/mime": "workspace:*",
     "es-module-lexer": "^2.0.0",
     "esbuild": "catalog:",
     "magic-string": "^0.30.21",

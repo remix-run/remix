@@ -31,7 +31,7 @@ export const y = 2 + x`,
       )
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir,
         fileNames: '[name]',
@@ -79,7 +79,7 @@ export const bar = 'b' + foo`,
       )
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -121,7 +121,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'helper.ts'), `export const helper = 1`)
 
       await build({
-        entryPoints: ['main.ts'],
+        scripts: ['main.ts'],
         root,
         outDir,
         fileNames: '[name]',
@@ -158,7 +158,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: './out',
         manifest: false,
@@ -183,7 +183,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'app', 'entry.ts'), `export const x = 1`)
 
       await build({
-        entryPoints: ['app/entry.ts'],
+        scripts: ['app/entry.ts'],
         root,
         outDir: './out',
         fileNames: '[dir]/[name]-[hash]',
@@ -219,7 +219,7 @@ export const main = helper`,
       )
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: './out',
         fileNames: '[name]-[hash]',
@@ -247,7 +247,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -271,7 +271,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -301,7 +301,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -328,7 +328,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -353,7 +353,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -384,7 +384,7 @@ export const out = tag + helper`,
       fs.writeFileSync(path.join(root, 'helper.ts'), `export const helper = 'ok'`)
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -436,7 +436,7 @@ export const out = tag + helper`,
       fs.writeFileSync(path.join(outPath, 'leftover.txt'), 'should be removed')
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -461,7 +461,7 @@ export const out = tag + helper`,
       fs.writeFileSync(preservedPath, 'must remain')
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -491,7 +491,7 @@ export const out = tag + helper`,
       fs.writeFileSync(path.join(outPath, 'leftover.txt'), 'should be removed')
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: outPath,
         fileNames: '[name]',
@@ -518,7 +518,7 @@ export const out = tag + helper`,
       fs.writeFileSync(externalPath, 'do not remove')
 
       await build({
-        entryPoints: ['entry.ts'],
+        scripts: ['entry.ts'],
         root,
         outDir: path.relative(root, outDir),
         fileNames: '[name]',
@@ -567,7 +567,7 @@ export const out = tag + helper`,
       )
       let logo = manifest.files.outputs['app/images/logo.txt']
       assert.ok(logo, 'manifest should include file output')
-      assert.equal(logo.default, 'small')
+      assert.equal(logo.defaultVariant, 'small')
       assert.ok(logo.variants.small.path.endsWith('.txt'))
       assert.ok(logo.variants.large.path.endsWith('.txt'))
 

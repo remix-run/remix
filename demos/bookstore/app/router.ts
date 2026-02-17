@@ -1,5 +1,5 @@
 import * as fs from 'node:fs'
-import type { Assets, Middleware } from 'remix/fetch-router'
+import type { AssetsContext, Middleware } from 'remix/fetch-router'
 import { createRouter } from 'remix/fetch-router'
 import { asyncContext } from 'remix/async-context-middleware'
 import { compression } from 'remix/compression-middleware'
@@ -9,7 +9,6 @@ import { methodOverride } from 'remix/method-override-middleware'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
-import { files } from '../assets.ts'
 import { routes } from './routes.ts'
 import { initializeBookstoreDatabase } from './models/database.ts'
 import { sessionCookie, sessionStorage } from './utils/session.ts'
@@ -32,10 +31,10 @@ import { loadDatabase } from './middleware/database.ts'
 function mockAssets(): Middleware {
   return (context, next) => {
     context.assets = {
-      get: ((path: string) => ({
-        href: `/mock/${path}`,
-        chunks: [],
-      })) as Assets['get'],
+      resolve: (sourcePath: string) => ({
+        href: `/mock/${sourcePath}`,
+        preloads: [],
+      }),
     }
     return next()
   }
@@ -54,10 +53,9 @@ async function getAssetsMiddleware(): Promise<Middleware[]> {
     let { devAssets } = await import('remix/dev-assets-middleware')
     return [
       devAssets({
-        allow: ['app/**'],
+        allow: ['app/**', '**/node_modules/**'],
         workspaceRoot: '../..',
-        workspaceAllow: ['**/node_modules/**', 'packages/**'],
-        files,
+        workspaceAllow: ['packages/*/src/**', '**/node_modules/**'],
       }),
     ]
   }
@@ -76,8 +74,8 @@ async function getAssetsMiddleware(): Promise<Middleware[]> {
     assets(manifest, {
       baseUrl: '/assets',
     }),
-    staticFiles('./build', {
-      filter: (path) => path.startsWith('assets/'),
+    staticFiles('./build/assets', {
+      basePath: '/assets',
       cacheControl: 'public, max-age=31536000, immutable',
     }),
   ]

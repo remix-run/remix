@@ -7,7 +7,7 @@ export type { Middleware, NextFunction } from './lib/middleware.ts'
 
 export { RequestContext } from './lib/request-context.ts'
 // @remix:module-augmentation-hook AssetsConfig
-export type { Assets, AssetEntry, AssetsConfig } from './lib/request-context.ts'
+export type { AssetsContext, AssetEntry, AssetsConfig } from './lib/request-context.ts'
 
 export { RequestMethods } from './lib/request-methods.ts'
 export type { RequestMethod } from './lib/request-methods.ts'

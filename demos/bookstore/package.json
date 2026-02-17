@@ -4,8 +4,7 @@
   "type": "module",
   "dependencies": {
     "better-sqlite3": "^12.6.2",
-    "remix": "workspace:*",
-    "sharp": "^0.34.5"
+    "remix": "workspace:*"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

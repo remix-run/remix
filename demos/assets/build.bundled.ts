@@ -10,7 +10,6 @@
 import * as esbuild from 'esbuild'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { esbuildConfig } from './esbuild.config.ts'
 
 let outdir = './build/assets'
 
@@ -19,7 +18,15 @@ async function main() {
   await fs.mkdir(outdir, { recursive: true })
 
   let result = await esbuild.build({
-    ...esbuildConfig,
+    entryPoints: ['app/entry.tsx'],
+    bundle: true,
+    splitting: true,
+    format: 'esm',
+    entryNames: '[name]-[hash]',
+    chunkNames: 'chunk-[hash]',
+    metafile: true,
+    minify: true,
+    sourcemap: 'external',
     outdir,
   })
 

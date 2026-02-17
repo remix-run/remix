@@ -18,7 +18,7 @@ export function render(node: RemixNode, init?: ResponseInit) {
         return url
       }
 
-      let entry = assets.get(url)
+      let entry = assets.resolve(url)
       if (!entry) {
         throw new Error(
           `Client entry asset not found for "${url}". ` +
