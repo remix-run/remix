@@ -14,6 +14,7 @@ async function main() {
     scripts: ['app/entry.tsx'],
     workspaceRoot: '../..',
     outDir: './build/assets',
+    baseUrl: '/assets',
     minify: true,
     sourcemap: 'external',
     fileNames: '[dir]/[name]-[hash]',

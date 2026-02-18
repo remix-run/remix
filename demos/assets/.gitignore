@@ -1,4 +1,2 @@
 .assets/**/*.build.ts
 .assets-cache/
-build/
-tmp/

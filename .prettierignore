@@ -3,6 +3,8 @@ dist/
 tmp/
 reference/
 **/*.bundled.*
+.assets/
+.assets-cache/
 **/public/assets/
 **/test/fixtures/
 **/worker-configuration.d.ts

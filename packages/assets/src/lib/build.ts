@@ -20,6 +20,7 @@ import {
   selectVariant,
   type CompiledFileRule,
 } from './files.ts'
+import { GENERATED_MARKER, toCodegenFilePath, writeIfChanged } from './codegen.ts'
 
 /**
  * Discover the full module graph from entry points.
@@ -321,8 +322,95 @@ function toRelativeImportSpecifier(fromOutPath: string, toOutPath: string): stri
   return rel.startsWith('.') ? rel : './' + rel
 }
 
+function toAssetUrl(outputPath: string, baseUrl: string): string {
+  let segment = outputPath.replace(/^\.?\//, '')
+  if (baseUrl !== '') {
+    let base = baseUrl.replace(/\/+$/, '')
+    return base ? `${base}/${segment}` : `/${segment}`
+  }
+  return `/${segment}`
+}
+
+function formatPreloads(urls: string[]): string {
+  if (urls.length === 0) return '[]'
+  if (urls.length === 1) return `['${urls[0]}']`
+  return `[\n${urls.map((u) => `  '${u}'`).join(',\n')},\n]`
+}
+
+function generateBuildFileContent(
+  sourcePath: string,
+  output: AssetsManifest['files']['outputs'][string],
+  baseUrl: string,
+): string {
+  let lines = [GENERATED_MARKER, `// source: ${sourcePath}`]
+
+  if ('variants' in output) {
+    let variantEntries = Object.entries(output.variants)
+    if (output.defaultVariant) {
+      let defaultPath = output.variants[output.defaultVariant].path
+      lines.push(`export const href = '${toAssetUrl(defaultPath, baseUrl)}'`)
+    }
+    lines.push(`export const variants = {`)
+    for (let [variant, variantOutput] of variantEntries) {
+      lines.push(`  ${variant}: { href: '${toAssetUrl(variantOutput.path, baseUrl)}' },`)
+    }
+    lines.push(`}`)
+  } else {
+    lines.push(`export const href = '${toAssetUrl(output.path, baseUrl)}'`)
+  }
+
+  return lines.join('\n') + '\n'
+}
+
+function generateBuildScriptContent(
+  sourcePath: string,
+  outputPath: string,
+  preloadUrls: string[],
+  baseUrl: string,
+): string {
+  let href = toAssetUrl(outputPath, baseUrl)
+  return (
+    [
+      GENERATED_MARKER,
+      `// source: ${sourcePath}`,
+      `export const href = '${href}'`,
+      `export const preloads = ${formatPreloads(preloadUrls)}`,
+    ].join('\n') + '\n'
+  )
+}
+
+function collectPreloadUrls(
+  entryUrl: string,
+  urlToStaticImports: Map<string, string[]>,
+  urlToOutPathMap: Map<string, string>,
+  baseUrl: string,
+): string[] {
+  let visited = new Set<string>()
+  let urls: string[] = []
+
+  function visit(url: string) {
+    if (visited.has(url)) return
+    visited.add(url)
+    let outPath = urlToOutPathMap.get(url)
+    if (outPath) {
+      urls.push(toAssetUrl(outPath, baseUrl))
+    }
+    for (let importedUrl of urlToStaticImports.get(url) ?? []) {
+      visit(importedUrl)
+    }
+  }
+
+  visit(entryUrl)
+  return urls
+}
+
 /**
  * Programmatic build: discover graph from entries, two-pass transform + write, optional manifest.
+ *
+ * Phase 1: Build and write file assets, generate file asset .build.ts files.
+ * Phase 2: Discover module graph from script entries (can now resolve #assets/... imports to
+ * the .build.ts files generated in Phase 1), transform and write script files, generate script
+ * entry .build.ts files.
  *
  * @param options Build options (scripts, root, outDir, etc.)
  */
@@ -333,6 +421,8 @@ export async function build(options: BuildOptions): Promise<void> {
   let fileNames = options.fileNames ?? DEFAULT_FILE_NAMES
   let includeHash = fileNames.includes('[hash]')
   let manifestPath = options.manifest === false ? null : (options.manifest ?? null)
+  let codegenAbsDir = path.resolve(root, options.codegenDir ?? '.assets')
+  let baseUrl = options.baseUrl ?? ''
 
   let workspaceRoot = options.workspaceRoot ? path.resolve(root, options.workspaceRoot) : null
   let ctx: ResolveContext = {
@@ -366,6 +456,35 @@ export async function build(options: BuildOptions): Promise<void> {
     }
   }
 
+  let filesRules = compileFileRules(options.files)
+
+  let emptyOutDir: boolean
+  if (options.emptyOutDir !== undefined) {
+    emptyOutDir = options.emptyOutDir
+  } else {
+    let rootNorm = path.normalize(root)
+    let outDirNorm = path.normalize(outDir)
+    emptyOutDir = outDirNorm === rootNorm || outDirNorm.startsWith(rootNorm + path.sep)
+  }
+  if (emptyOutDir) {
+    await fsp.rm(outDir, { recursive: true, force: true })
+  }
+  await fsp.mkdir(outDir, { recursive: true })
+
+  // Phase 1: File assets — hash, transform, write outputs, generate .build.ts files.
+  // Must run before discoverGraph so that esbuild can resolve #assets/... imports to
+  // the generated .build.ts files when discovering the script module graph.
+  let filesOutputs = filesRules.length > 0 ? await buildFilesOutputs(root, outDir, filesRules) : {}
+
+  await Promise.all(
+    Object.entries(filesOutputs).map(async ([sourcePath, output]) => {
+      let buildFilePath = toCodegenFilePath(sourcePath, codegenAbsDir, 'build')
+      await writeIfChanged(buildFilePath, generateBuildFileContent(sourcePath, output, baseUrl))
+    }),
+  )
+
+  // Phase 2: Script assets — discover module graph (now able to resolve #assets/... imports),
+  // transform files, assign output paths, write outputs, generate script entry .build.ts files.
   let resolutionCache = new Map<string, string>()
 
   let { orderedUrls, urlToAbsolutePath, urlToStaticImports, entryUrls } = await discoverGraph(
@@ -448,19 +567,6 @@ export async function build(options: BuildOptions): Promise<void> {
     if (ms) urlToFinalCode.set(url, ms.toString())
   }
 
-  let emptyOutDir: boolean
-  if (options.emptyOutDir !== undefined) {
-    emptyOutDir = options.emptyOutDir
-  } else {
-    let rootNorm = path.normalize(root)
-    let outDirNorm = path.normalize(outDir)
-    emptyOutDir = outDirNorm === rootNorm || outDirNorm.startsWith(rootNorm + path.sep)
-  }
-  if (emptyOutDir) {
-    await fsp.rm(outDir, { recursive: true, force: true })
-  }
-  await fsp.mkdir(outDir, { recursive: true })
-
   for (let url of orderedUrls) {
     let outPath = urlToOutPathMap.get(url)!
     let code = urlToFinalCode.get(url)!
@@ -476,8 +582,20 @@ export async function build(options: BuildOptions): Promise<void> {
     await fsp.writeFile(fullPath, code, 'utf-8')
   }
 
-  let filesRules = compileFileRules(options.files)
-  let filesOutputs = filesRules.length > 0 ? await buildFilesOutputs(root, outDir, filesRules) : {}
+  // Generate script entry .build.ts files
+  await Promise.all(
+    entryUrls.map(async (entryUrl) => {
+      let outPath = urlToOutPathMap.get(entryUrl)
+      if (!outPath) return
+      let sourcePath = normalizeSourcePath(entryUrl.replace(/^\//, ''))
+      let preloadUrls = collectPreloadUrls(entryUrl, urlToStaticImports, urlToOutPathMap, baseUrl)
+      let buildFilePath = toCodegenFilePath(sourcePath, codegenAbsDir, 'build')
+      await writeIfChanged(
+        buildFilePath,
+        generateBuildScriptContent(sourcePath, outPath, preloadUrls, baseUrl),
+      )
+    }),
+  )
 
   if (manifestPath) {
     let manifest: AssetsManifest = { scripts: { outputs: {} }, files: { outputs: filesOutputs } }

@@ -220,6 +220,72 @@ describe('resolveSpecifiersToPaths', () => {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }
   })
+
+  it('resolves package subpath imports to condition-specific files', async () => {
+    let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'resolve-test-conditions-'))
+    try {
+      let appDir = path.join(tmpDir, 'app')
+      let srcDir = path.join(appDir, 'src')
+      let assetsDir = path.join(appDir, '.assets', 'app', 'images')
+      await fsp.mkdir(srcDir, { recursive: true })
+      await fsp.mkdir(assetsDir, { recursive: true })
+      await fsp.writeFile(path.join(assetsDir, 'logo.dev.ts'), "export default '/dev-url'\n")
+      await fsp.writeFile(path.join(assetsDir, 'logo.build.ts'), "export default '/build-url'\n")
+      await fsp.writeFile(
+        path.join(appDir, 'package.json'),
+        JSON.stringify({
+          name: 'app',
+          type: 'module',
+          imports: {
+            '#assets/*': {
+              development: './.assets/*.dev.ts',
+              default: './.assets/*.build.ts',
+            },
+          },
+        }),
+      )
+
+      let ctx: ResolveContext = {
+        root: appDir,
+        workspaceRoot: null,
+        allowPatterns: ['**'],
+        denyPatterns: [],
+        workspaceAllowPatterns: ['**'],
+        workspaceDenyPatterns: [],
+      }
+
+      let devResolved = await resolveSpecifiersToPaths(
+        ['#assets/app/images/logo'],
+        srcDir,
+        ctx,
+        new Map(),
+        [],
+        () => false,
+        ['development'],
+      )
+      assert.equal(devResolved.length, 1)
+      assert.ok(
+        devResolved[0]?.absolutePath?.endsWith('logo.dev.ts'),
+        `Expected .dev.ts with development condition, got: ${devResolved[0]?.absolutePath}`,
+      )
+
+      let buildResolved = await resolveSpecifiersToPaths(
+        ['#assets/app/images/logo'],
+        srcDir,
+        ctx,
+        new Map(),
+        [],
+        () => false,
+      )
+      assert.equal(buildResolved.length, 1)
+      assert.ok(
+        buildResolved[0]?.absolutePath?.endsWith('logo.build.ts'),
+        `Expected .build.ts with default condition, got: ${buildResolved[0]?.absolutePath}`,
+      )
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('resolveSpecifiers', () => {

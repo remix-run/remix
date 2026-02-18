@@ -7,7 +7,6 @@ node_modules/
 pnpm-publish-summary.json
 reference/
 .tmp/
-.assets/
 test-results/
 playwright-report/
 /demos/tmp/

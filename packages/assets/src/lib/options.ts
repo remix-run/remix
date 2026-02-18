@@ -23,7 +23,7 @@ export interface CreateDevAssetsHandlerOptions {
   /**
    * Persistent cache location for transformed file variants in development.
    * Set to false to disable filesystem caching for transformed files.
-   * Default: './.assets/files-cache'
+   * Default: './.assets-cache'
    */
   filesCache?: string | false
 }
@@ -62,6 +62,17 @@ export interface BuildOptions {
   manifest?: string | false
   /** File transformation rules for non-JS assets. */
   files?: FilesConfig
+  /**
+   * Directory for generated .dev.ts and .build.ts asset files.
+   * Default: '.assets'
+   */
+  codegenDir?: string
+  /**
+   * URL prefix where built assets are served (e.g. '/assets').
+   * Used to generate correct URLs in .build.ts files.
+   * Default: '' (root-relative URLs like /app/entry-ABC123.js)
+   */
+  baseUrl?: string
 }
 
 /** Source map mode supported by build (and passed to transform). */

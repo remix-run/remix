@@ -178,7 +178,7 @@ export class RequestContext<
   get assets(): AssetsContext {
     if (this.#assets == null) {
       console.warn(
-        'Assets middleware not configured. Use devAssets() from @remix-run/dev-assets-middleware.',
+        'Assets middleware not configured. Use remix/dev-assets-middleware or remix/assets-middleware.',
       )
 
       return { resolve: (_entryPath: string, _variant?: string) => null } as AssetsContext

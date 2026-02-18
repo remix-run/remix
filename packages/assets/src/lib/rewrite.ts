@@ -21,6 +21,7 @@ export function isExternalSpecifier(specifier: string, externalSpecifiers: strin
  * @param resolutionCache Map of specifier → resolved URL.
  * @param ctx Resolve context.
  * @param externalSpecifiers Specifier strings to leave unchanged (not rewritten).
+ * @param conditions Custom esbuild conditions for conditional exports/imports resolution.
  * @returns Rewritten code and combined source map.
  */
 export async function rewriteImports(
@@ -31,6 +32,7 @@ export async function rewriteImports(
   resolutionCache: Map<string, string>,
   ctx: ResolveContext,
   externalSpecifiers: string[],
+  conditions?: string[],
 ): Promise<{ code: string; map: string | null }> {
   await lexerReady
 
@@ -59,8 +61,14 @@ export async function rewriteImports(
 
   if (uncachedSpecifiers.length > 0) {
     let unique = [...new Set(uncachedSpecifiers)]
-    await resolveSpecifiers(unique, importerDir, ctx, resolutionCache, externalSpecifiers, (s) =>
-      isExternalSpecifier(s, externalSpecifiers),
+    await resolveSpecifiers(
+      unique,
+      importerDir,
+      ctx,
+      resolutionCache,
+      externalSpecifiers,
+      (s) => isExternalSpecifier(s, externalSpecifiers),
+      conditions,
     )
   }
 

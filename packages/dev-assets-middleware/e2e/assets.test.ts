@@ -9,11 +9,12 @@ import { chromium, type Browser, type Page } from 'playwright'
 import { createRouter, type Middleware } from '@remix-run/fetch-router'
 import { createRequestListener } from '@remix-run/node-fetch-server'
 
-import { devAssets } from '../src/lib/assets.ts'
+import { createDevAssets } from '../src/lib/assets.ts'
 
 let browser: Browser
 let page: Page
 let server: http.Server
+let devAssets: ReturnType<typeof createDevAssets>
 let tmpDir: string
 let baseUrl: string
 
@@ -88,16 +89,15 @@ async function startServer(
     return next()
   }
 
+  devAssets = createDevAssets({
+    root: appDir,
+    allow: ['**'], // Allow all files in app dir for tests
+    workspaceRoot: projectRoot,
+    workspaceAllow: ['**/node_modules/**', 'packages/**'],
+  })
+
   let router = createRouter({
-    middleware: [
-      serveIndex,
-      devAssets({
-        root: appDir,
-        allow: ['**'], // Allow all files in app dir for tests
-        workspaceRoot: projectRoot,
-        workspaceAllow: ['**/node_modules/**', 'packages/**'],
-      }),
-    ],
+    middleware: [serveIndex, devAssets.middleware],
   })
 
   let listener = createRequestListener((request) => router.fetch(request))
@@ -133,6 +133,7 @@ describe('assets middleware e2e', () => {
   after(async () => {
     await page?.close()
     await browser?.close()
+    devAssets?.close()
 
     if (server) {
       await new Promise<void>((resolve) => server.close(() => resolve()))

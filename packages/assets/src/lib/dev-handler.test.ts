@@ -486,6 +486,60 @@ export { foo, dynamicExternal, helper, dynamicHelper }`,
   })
 })
 
+describe('#assets/ import resolution', () => {
+  it('rewrites #assets/ imports using the development condition, not the default', async () => {
+    let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-conditions-'))
+    try {
+      let appDir = path.join(tmpDir)
+      let srcDir = path.join(appDir, 'app')
+      let assetsDir = path.join(appDir, '.assets', 'app', 'images')
+      await fsp.mkdir(srcDir, { recursive: true })
+      await fsp.mkdir(assetsDir, { recursive: true })
+
+      await fsp.writeFile(path.join(assetsDir, 'logo.dev.ts'), "export default '/dev-url'\n")
+      await fsp.writeFile(path.join(assetsDir, 'logo.build.ts'), "export default '/build-url'\n")
+      await fsp.writeFile(
+        path.join(appDir, 'package.json'),
+        JSON.stringify({
+          name: 'app',
+          type: 'module',
+          imports: {
+            '#assets/*': {
+              development: './.assets/*.dev.ts',
+              default: './.assets/*.build.ts',
+            },
+          },
+        }),
+      )
+      await fsp.writeFile(
+        path.join(srcDir, 'entry.ts'),
+        "import logoUrl from '#assets/app/images/logo'; export { logoUrl }",
+      )
+
+      let handler = createDevAssetsHandler({
+        root: appDir,
+        allow: ['app/**', '.assets/**'],
+      })
+
+      let response = await handler.serve(new Request('http://localhost/app/entry.ts'))
+      assert.ok(response)
+      assert.equal(response!.status, 200)
+      let code = await response!.text()
+
+      assert.ok(
+        code.includes('.dev.ts'),
+        `Expected import rewritten to .dev.ts with development condition, got:\n${code}`,
+      )
+      assert.ok(
+        !code.includes('.build.ts'),
+        `Expected no .build.ts import in dev mode, got:\n${code}`,
+      )
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+})
+
 describe('module graph integration', () => {
   let tempDir: string
 

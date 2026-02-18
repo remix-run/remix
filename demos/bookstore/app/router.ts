@@ -43,24 +43,35 @@ function mockAssets(): Middleware {
 /**
  * Get the middleware required for assets in the current environment.
  *
- * In development: devAssets only (on-the-fly transform).
+ * In development: createDevAssets only (on-the-fly transform).
  * In test: mock assets middleware.
  * In production: assets middleware (manifest/entry resolution) plus staticFiles
  * for serving the built asset output at /assets.
  */
-async function getAssetsMiddleware(): Promise<Middleware[]> {
+async function getAssetsMiddleware(): Promise<{
+  middleware: Middleware[]
+  close(): void
+}> {
   if (process.env.NODE_ENV === 'development') {
-    let { devAssets } = await import('remix/dev-assets-middleware')
-    return [
-      devAssets({
-        allow: ['app/**', '**/node_modules/**'],
-        workspaceRoot: '../..',
-        workspaceAllow: ['packages/*/src/**', '**/node_modules/**'],
-      }),
-    ]
+    let { createDevAssets } = await import('remix/dev-assets-middleware')
+    let { getAssetsBuildConfig } = await import('../assets.config.ts')
+    let config = await getAssetsBuildConfig()
+    let devAssets = createDevAssets({
+      allow: ['app/**', '**/node_modules/**'],
+      workspaceRoot: '../..',
+      workspaceAllow: ['packages/*/src/**', '**/node_modules/**'],
+      scripts: config.scripts,
+    })
+    return {
+      middleware: [devAssets.middleware],
+      close: () => devAssets.close(),
+    }
   }
   if (process.env.NODE_ENV === 'test') {
-    return [mockAssets()]
+    return {
+      middleware: [mockAssets()],
+      close() {},
+    }
   }
   let { assets } = await import('remix/assets-middleware')
   let manifestPath = './build/assets-manifest.json'
@@ -70,15 +81,18 @@ async function getAssetsMiddleware(): Promise<Middleware[]> {
     )
   }
   let manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
-  return [
-    assets(manifest, {
-      baseUrl: '/assets',
-    }),
-    staticFiles('./build/assets', {
-      basePath: '/assets',
-      cacheControl: 'public, max-age=31536000, immutable',
-    }),
-  ]
+  return {
+    middleware: [
+      assets(manifest, {
+        baseUrl: '/assets',
+      }),
+      staticFiles('./build/assets', {
+        basePath: '/assets',
+        cacheControl: 'public, max-age=31536000, immutable',
+      }),
+    ],
+    close() {},
+  }
 }
 
 let middleware = []
@@ -88,7 +102,10 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 middleware.push(compression())
-middleware.push(...(await getAssetsMiddleware()))
+
+let assets = await getAssetsMiddleware()
+middleware.push(...assets.middleware)
+export let closeMiddleware = () => assets.close()
 
 middleware.push(
   staticFiles('./public', {

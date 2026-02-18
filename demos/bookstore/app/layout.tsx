@@ -1,32 +1,25 @@
 import type { RemixNode } from 'remix/component'
 
+import * as entryAsset from '#assets/app/entry.tsx'
 import { routes } from './routes.ts'
-import { getCurrentUserSafely, getAssets } from './utils/context.ts'
+import { getCurrentUserSafely } from './utils/context.ts'
 
 export function Document() {
-  return ({ title = 'Bookstore', children }: { title?: string; children?: RemixNode }) => {
-    let assets = getAssets()
-    let entry = assets.resolve('app/entry.tsx')
-    if (!entry) {
-      throw new Error('Entry point not found')
-    }
-
-    return (
-      <html lang="en">
-        <head>
-          <meta charSet="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>{title}</title>
-          {entry.preloads.map((preload) => (
-            <link key={preload} rel="modulepreload" href={preload} />
-          ))}
-          <script type="module" async src={entry.href} />
-          <link rel="stylesheet" href="/app.css" />
-        </head>
-        <body>{children}</body>
-      </html>
-    )
-  }
+  return ({ title = 'Bookstore', children }: { title?: string; children?: RemixNode }) => (
+    <html lang="en">
+      <head>
+        <meta charSet="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{title}</title>
+        {entryAsset.preloads.map((preload) => (
+          <link key={preload} rel="modulepreload" href={preload} />
+        ))}
+        <script type="module" async src={entryAsset.href} />
+        <link rel="stylesheet" href="/app.css" />
+      </head>
+      <body>{children}</body>
+    </html>
+  )
 }
 
 export function Layout() {

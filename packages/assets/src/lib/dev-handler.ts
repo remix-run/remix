@@ -82,7 +82,7 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
   let filesCacheLocation =
     options.filesCache === false
       ? null
-      : path.resolve(root, options.filesCache ?? './.assets/files-cache')
+      : path.resolve(root, options.filesCache ?? './.assets-cache')
 
   function getCachedFilePrefix(
     sourcePath: string,
@@ -115,6 +115,7 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
     allowPatterns: string[],
     denyPatterns: string[],
     fileMtime?: number,
+    conditions?: string[],
   ): Promise<string> {
     let moduleNode = ensureModuleNode(caches.moduleGraph, sourceUrl, filePath)
 
@@ -164,6 +165,7 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
       caches.resolution,
       ctx,
       externalSpecifiers,
+      conditions,
     )
 
     let mapJson = rewritten.map && rewritten.map !== '{}' ? rewritten.map : null
@@ -230,6 +232,7 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
         workspaceAllow,
         workspaceDeny,
         stat.mtimeMs,
+        ['development'],
       )
 
       let moduleNode = getModuleByUrl(caches.moduleGraph, pathname)
@@ -423,6 +426,7 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
           appAllow,
           appDeny,
           stat.mtimeMs,
+          ['development'],
         )
 
         let moduleNode = getModuleByUrl(caches.moduleGraph, pathname)

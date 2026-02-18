@@ -14,27 +14,27 @@ npm i remix
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
-import { devAssets } from 'remix/dev-assets-middleware'
+import { createDevAssets } from 'remix/dev-assets-middleware'
+
+let devAssets = createDevAssets({
+  allow: ['app/**', '**/node_modules/**'],
+  files: [
+    {
+      include: 'app/**/*.{png,jpg,jpeg}',
+      variants: {
+        original: (buffer) => buffer,
+        thumbnail: async (buffer) => {
+          let { generateThumbnail } = await import('./generate-thumbnail.ts')
+          return await generateThumbnail(buffer)
+        },
+      },
+      defaultVariant: 'original',
+    },
+  ],
+})
 
 let router = createRouter({
-  middleware: [
-    devAssets({
-      allow: ['app/**', '**/node_modules/**'],
-      files: [
-        {
-          include: 'app/**/*.{png,jpg,jpeg}',
-          variants: {
-            original: (buffer) => buffer,
-            thumbnail: async (buffer) => {
-              let { generateThumbnail } = await import('./generate-thumbnail.ts')
-              return await generateThumbnail(buffer)
-            },
-          },
-          defaultVariant: 'original',
-        },
-      ],
-    }),
-  ],
+  middleware: [devAssets.middleware],
 })
 
 router.get('/', ({ assets }) => {
@@ -45,6 +45,9 @@ router.get('/', ({ assets }) => {
   let thumbnail = assets.resolve('app/images/logo.png', 'thumbnail')
   thumbnail?.href // '/__@files/app/images/logo.png?@thumbnail'
 })
+
+// On server shutdown, stop the file watcher
+devAssets.close()
 ```
 
 ### Workspace Access
@@ -52,7 +55,7 @@ router.get('/', ({ assets }) => {
 To serve files from outside the project root, you can configure the `workspaceRoot` option, along with optional `workspaceAllow` and `workspaceDeny` patterns that replace the top-level `allow` and `deny` patterns.
 
 ```ts
-devAssets({
+createDevAssets({
   allow: ['app/**', '**/node_modules/**'],
   workspaceRoot: '../..',
   workspaceAllow: ['packages/*/src/**/*', '**/node_modules/**'],

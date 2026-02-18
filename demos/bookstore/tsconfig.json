@@ -10,6 +10,8 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "remix/component"
-  }
+    "jsxImportSource": "remix/component",
+    "customConditions": ["development"]
+  },
+  "include": [".assets/**/*.ts", "**/*.ts", "**/*.tsx"]
 }

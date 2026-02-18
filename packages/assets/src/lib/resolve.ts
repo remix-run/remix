@@ -61,6 +61,7 @@ export function resolvedPathToUrl(absolutePath: string, ctx: ResolveContext): st
  * @param resolutionCache Map to fill with specifier → resolved URL.
  * @param externalSpecifiers Specifier strings to skip (not resolved).
  * @param isExternal Function to check if a specifier is external.
+ * @param conditions Custom esbuild conditions for conditional exports/imports resolution.
  */
 export async function resolveSpecifiers(
   specifiers: string[],
@@ -69,12 +70,13 @@ export async function resolveSpecifiers(
   resolutionCache: Map<string, string>,
   externalSpecifiers: string[],
   isExternal: (specifier: string) => boolean,
+  conditions?: string[],
 ): Promise<void> {
   let toResolve = specifiers.filter((s) => !isExternal(s))
   if (toResolve.length === 0) return
 
   try {
-    let resolvedSpecifiers = await resolveWithEsbuild(toResolve, importerDir)
+    let resolvedSpecifiers = await resolveWithEsbuild(toResolve, importerDir, conditions)
     for (let resolved of resolvedSpecifiers) {
       let cacheKey = `${resolved.specifier}\0${importerDir}`
       if (!resolved.absolutePath) {
@@ -105,6 +107,7 @@ interface EsbuildResolvedSpecifier {
 async function resolveWithEsbuild(
   specifiers: string[],
   importerDir: string,
+  conditions?: string[],
 ): Promise<EsbuildResolvedSpecifier[]> {
   let resolved: EsbuildResolvedSpecifier[] = []
 
@@ -119,6 +122,7 @@ async function resolveWithEsbuild(
     platform: 'browser',
     format: 'esm',
     logLevel: 'silent',
+    conditions,
     plugins: [
       {
         name: 'resolver',
@@ -152,6 +156,7 @@ async function resolveWithEsbuild(
  * @param resolutionCache Map to fill with specifier -> URL
  * @param externalSpecifiers Specifiers to skip
  * @param isExternal Function to check if a specifier is external
+ * @param conditions Custom esbuild conditions for conditional exports/imports resolution.
  * @returns Array of { url, absolutePath } for each resolved import
  */
 export async function resolveSpecifiersToPaths(
@@ -161,12 +166,13 @@ export async function resolveSpecifiersToPaths(
   resolutionCache: Map<string, string>,
   externalSpecifiers: string[],
   isExternal: (specifier: string) => boolean,
+  conditions?: string[],
 ): Promise<ResolvedImport[]> {
   let toResolve = specifiers.filter((s) => !isExternal(s))
   if (toResolve.length === 0) return []
 
   try {
-    let resolvedSpecifiers = await resolveWithEsbuild(toResolve, importerDir)
+    let resolvedSpecifiers = await resolveWithEsbuild(toResolve, importerDir, conditions)
     let results: ResolvedImport[] = []
     for (let resolved of resolvedSpecifiers) {
       let cacheKey = `${resolved.specifier}\0${importerDir}`

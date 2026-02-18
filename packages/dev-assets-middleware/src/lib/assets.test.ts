@@ -7,12 +7,128 @@ import * as os from 'node:os'
 
 import { createRouter } from '@remix-run/fetch-router'
 
-import { devAssets } from './assets.ts'
+import { createDevAssets } from './assets.ts'
 
-describe('devAssets middleware', () => {
-  it('returns a function (middleware)', () => {
-    let mw = devAssets({ allow: ['**'] })
-    assert.equal(typeof mw, 'function')
+describe('createDevAssets', () => {
+  it('returns an object with middleware and close()', () => {
+    let devAssets = createDevAssets({ allow: ['**'] })
+    assert.equal(typeof devAssets.middleware, 'function')
+    assert.equal(typeof devAssets.close, 'function')
+  })
+
+  it('generates .dev.ts files for configured script entries on startup', async () => {
+    let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-script-codegen-'))
+    let appDir = path.join(tmpDir, 'app')
+    fs.mkdirSync(appDir, { recursive: true })
+    fs.writeFileSync(path.join(appDir, 'entry.tsx'), 'export default function App() {}')
+
+    let devAssets = createDevAssets({
+      root: tmpDir,
+      allow: ['app/**'],
+      scripts: ['app/entry.tsx'],
+    })
+    try {
+      let router = createRouter({
+        middleware: [devAssets.middleware, async (_ctx, _next) => new Response('ok')],
+      })
+      // First request awaits codegenInit, ensuring the initial codegen pass has run
+      await router.fetch(new Request('http://localhost/'))
+
+      let devFilePath = path.join(tmpDir, '.assets', 'app', 'entry.tsx.dev.ts')
+      let content = fs.readFileSync(devFilePath, 'utf-8')
+      assert.ok(
+        content.includes("export const href = '/app/entry.tsx'"),
+        `Expected dev URL in generated .dev.ts, got:\n${content}`,
+      )
+    } finally {
+      devAssets.close()
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not generate script .dev.ts files when scripts option is omitted', async () => {
+    let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-no-script-codegen-'))
+    let appDir = path.join(tmpDir, 'app')
+    let imagesDir = path.join(appDir, 'images')
+    fs.mkdirSync(imagesDir, { recursive: true })
+    fs.writeFileSync(path.join(appDir, 'entry.tsx'), 'export default function App() {}')
+    fs.writeFileSync(path.join(imagesDir, 'logo.png'), 'fake-png')
+
+    // files is provided (triggering codegenWatch) but scripts is intentionally omitted
+    let devAssets = createDevAssets({
+      root: tmpDir,
+      allow: ['app/**'],
+      files: [{ include: 'app/images/**/*.png' }],
+    })
+    try {
+      let router = createRouter({
+        middleware: [devAssets.middleware, async (_ctx, _next) => new Response('ok')],
+      })
+      await router.fetch(new Request('http://localhost/'))
+
+      let scriptDevFile = path.join(tmpDir, '.assets', 'app', 'entry.tsx.dev.ts')
+      assert.ok(
+        !fs.existsSync(scriptDevFile),
+        'entry.tsx.dev.ts should not be generated when scripts option is omitted',
+      )
+    } finally {
+      devAssets.close()
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('auto-allows the default codegenDir (.assets) so browsers can fetch .dev.ts files', async () => {
+    let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-codegen-allow-'))
+    try {
+      let assetsDir = path.join(tmpDir, '.assets', 'app')
+      await fsp.mkdir(assetsDir, { recursive: true })
+      await fsp.writeFile(path.join(assetsDir, 'logo.dev.ts'), "export default '/dev-url'\n")
+
+      let router = createRouter({
+        middleware: [
+          createDevAssets({
+            root: tmpDir,
+            allow: ['app/**'],
+            // Intentionally omit .assets/** — should be auto-allowed
+          }).middleware,
+        ],
+      })
+
+      let response = await router.fetch(new Request('http://localhost/.assets/app/logo.dev.ts'))
+      assert.equal(
+        response.status,
+        200,
+        'codegenDir should be auto-allowed even when not in allow option',
+      )
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('auto-allows a custom codegenDir when specified', async () => {
+    let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-codegen-custom-'))
+    try {
+      let assetsDir = path.join(tmpDir, 'custom-assets', 'app')
+      await fsp.mkdir(assetsDir, { recursive: true })
+      await fsp.writeFile(path.join(assetsDir, 'logo.dev.ts'), "export default '/dev-url'\n")
+
+      let router = createRouter({
+        middleware: [
+          createDevAssets({
+            root: tmpDir,
+            allow: ['app/**'],
+            codegenDir: 'custom-assets',
+          }).middleware,
+        ],
+      })
+
+      let response = await router.fetch(
+        new Request('http://localhost/custom-assets/app/logo.dev.ts'),
+      )
+      assert.equal(response.status, 200, 'custom codegenDir should be auto-allowed')
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
   })
 })
 
@@ -27,10 +143,10 @@ describe('middleware wiring', () => {
       let nextCalled = false
       let router = createRouter({
         middleware: [
-          devAssets({
+          createDevAssets({
             root: appDir,
             allow: ['**/*.ts'],
-          }),
+          }).middleware,
           async (context, _next) => {
             nextCalled = true
             let entry = context.assets.resolve('entry.ts')
@@ -58,10 +174,10 @@ describe('middleware wiring', () => {
 
       let router = createRouter({
         middleware: [
-          devAssets({
+          createDevAssets({
             root: appDir,
             allow: ['**/*.ts'],
-          }),
+          }).middleware,
           async (context, _next) => {
             let entry = context.assets.resolve('entry.ts')
             let withVariant = context.assets.resolve('entry.ts', 'thumbnail' as never)
@@ -81,32 +197,33 @@ describe('middleware wiring', () => {
 
   it('exposes file entries via context.assets.resolve() when files config is provided', async () => {
     let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-context-'))
-    try {
-      let appDir = path.join(tmpDir, 'app')
-      let imagesDir = path.join(appDir, 'images')
-      await fsp.mkdir(imagesDir, { recursive: true })
-      await fsp.writeFile(path.join(imagesDir, 'logo.png'), 'fake-png')
+    let appDir = path.join(tmpDir, 'app')
+    let imagesDir = path.join(appDir, 'images')
+    await fsp.mkdir(imagesDir, { recursive: true })
+    await fsp.writeFile(path.join(imagesDir, 'logo.png'), 'fake-png')
 
+    let devAssets = createDevAssets({
+      root: appDir,
+      allow: ['**/*'],
+      files: [
+        {
+          include: 'images/**/*.png',
+          variants: {
+            card(data) {
+              return data
+            },
+            thumb(data) {
+              return data
+            },
+          },
+          defaultVariant: 'card',
+        },
+      ],
+    })
+    try {
       let router = createRouter({
         middleware: [
-          devAssets({
-            root: appDir,
-            allow: ['**/*'],
-            files: [
-              {
-                include: 'images/**/*.png',
-                variants: {
-                  card(data) {
-                    return data
-                  },
-                  thumb(data) {
-                    return data
-                  },
-                },
-                defaultVariant: 'card',
-              },
-            ],
-          }),
+          devAssets.middleware,
           async (context, _next) => {
             let defaultVariant = context.assets.resolve('images/logo.png')
             let thumbVariant = context.assets.resolve('images/logo.png', 'thumb')
@@ -128,11 +245,12 @@ describe('middleware wiring', () => {
       })
       assert.equal(json.missingVariant, null)
     } finally {
+      devAssets.close()
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }
   })
 
-  it('serves and transforms a file when using createRouter + devAssets', async () => {
+  it('serves and transforms a file when using createRouter + createDevAssets', async () => {
     let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-wiring-'))
     try {
       let appDir = path.join(tmpDir, 'app')
@@ -144,10 +262,10 @@ describe('middleware wiring', () => {
 
       let router = createRouter({
         middleware: [
-          devAssets({
+          createDevAssets({
             root: appDir,
             allow: ['**'],
-          }),
+          }).middleware,
         ],
       })
 
@@ -173,10 +291,10 @@ describe('middleware wiring', () => {
       let nextCalled = false
       let router = createRouter({
         middleware: [
-          devAssets({
+          createDevAssets({
             root: appDir,
             allow: ['**/*.ts'],
-          }),
+          }).middleware,
           async (_context, _next) => {
             nextCalled = true
             return new Response('next')
@@ -201,7 +319,7 @@ describe('middleware wiring', () => {
 
       let router = createRouter({
         middleware: [
-          devAssets({ root: appDir, allow: ['**'] }),
+          createDevAssets({ root: appDir, allow: ['**'] }).middleware,
           async (_context, _next) => new Response('not-found', { status: 404 }),
         ],
       })
@@ -226,11 +344,11 @@ describe('middleware wiring', () => {
 
       let router = createRouter({
         middleware: [
-          devAssets({
+          createDevAssets({
             root: appDir,
             allow: ['**/*.ts'],
             deny: ['**/secret.ts'],
-          }),
+          }).middleware,
         ],
       })
 
@@ -256,13 +374,13 @@ describe('middleware wiring', () => {
 
       let router = createRouter({
         middleware: [
-          devAssets({
+          createDevAssets({
             root: appDir,
             allow: ['**/*.ts'],
             workspaceRoot: tmpDir,
             workspaceAllow: ['packages/**'],
             workspaceDeny: ['**/blocked.ts'],
-          }),
+          }).middleware,
         ],
       })
 
@@ -292,11 +410,11 @@ describe('middleware wiring', () => {
 
       let router = createRouter({
         middleware: [
-          devAssets({
+          createDevAssets({
             root: appDir,
             allow: ['**/*.ts'],
             external: ['react'],
-          }),
+          }).middleware,
         ],
       })
 
@@ -321,11 +439,11 @@ describe('middleware wiring', () => {
 
       let router = createRouter({
         middleware: [
-          devAssets({
+          createDevAssets({
             root: appDir,
             allow: ['**/*.ts'],
             sourcemap: false,
-          }),
+          }).middleware,
         ],
       })
 

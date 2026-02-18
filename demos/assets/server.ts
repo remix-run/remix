@@ -1,8 +1,11 @@
 import * as http from 'node:http'
 import * as fs from 'node:fs'
 import { createRequestListener } from '@remix-run/node-fetch-server'
-import { createRouter } from '@remix-run/fetch-router'
+import { createRouter, type Middleware } from '@remix-run/fetch-router'
 import { staticFiles } from '@remix-run/static-middleware'
+import * as entryAsset from '#assets/app/entry.tsx'
+import * as heavyMetalBookAsset from '#assets/app/images/books/heavy-metal-1.png'
+import * as threeWaysBookAsset from '#assets/app/images/books/three-ways-1.png'
 import { files } from './assets.ts'
 
 let isDev = process.env.NODE_ENV === 'development'
@@ -10,22 +13,28 @@ let isDev = process.env.NODE_ENV === 'development'
 /**
  * Get the middleware required for assets in the current environment.
  *
- * In development: devAssets serves source files with on-the-fly transformation
+ * In development: createDevAssets serves source files with on-the-fly transformation
  * and resolves file variants through the files config.
  * In production: assets middleware resolves against the generated manifest, while
  * staticFiles serves the built asset output at /assets.
  */
-async function getAssetsMiddleware() {
+async function getAssetsMiddleware(): Promise<{
+  middleware: Middleware[]
+  close(): void
+}> {
   if (isDev) {
-    let { devAssets } = await import('@remix-run/dev-assets-middleware')
-    return [
-      devAssets({
-        allow: ['app/**', '**/node_modules/**'],
-        workspaceRoot: '../..',
-        workspaceAllow: ['packages/*/src/**', '**/node_modules/**'],
-        files,
-      }),
-    ]
+    let { createDevAssets } = await import('@remix-run/dev-assets-middleware')
+    let devAssets = createDevAssets({
+      allow: ['app/**', '**/node_modules/**'],
+      workspaceRoot: '../..',
+      workspaceAllow: ['packages/*/src/**', '**/node_modules/**'],
+      scripts: ['app/entry.tsx'],
+      files,
+    })
+    return {
+      middleware: [devAssets.middleware],
+      close: () => devAssets.close(),
+    }
   }
 
   let { assets } = await import('@remix-run/assets-middleware')
@@ -36,40 +45,33 @@ async function getAssetsMiddleware() {
     )
   }
   let manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
-  return [
-    assets(manifest, {
-      baseUrl: '/assets',
-    }),
-    staticFiles('./build/assets', {
-      basePath: '/assets',
-      cacheControl: 'public, max-age=31536000, immutable',
-    }),
-  ]
+  return {
+    middleware: [
+      assets(manifest, { baseUrl: '/assets' }),
+      staticFiles('./build/assets', {
+        basePath: '/assets',
+        cacheControl: 'public, max-age=31536000, immutable',
+      }),
+    ],
+    close() {},
+  }
 }
 
 async function main() {
-  let assetsMiddleware = await getAssetsMiddleware()
+  let assets = await getAssetsMiddleware()
 
   let router = createRouter({
-    middleware: [...assetsMiddleware, staticFiles('./public')],
+    middleware: [...assets.middleware, staticFiles('./public')],
   })
 
   // Home page - renders HTML with the entry script
   router.get('/', ({ assets }) => {
-    let entry = assets.resolve('app/entry.tsx')
-
     let bbqThumbnail = assets.resolve('app/images/books/bbq-1.png', 'thumbnail')
     let bbqCard = assets.resolve('app/images/books/bbq-1.png', 'card')
     let bbqHero = assets.resolve('app/images/books/bbq-1.png', 'hero')
-    let heavyMetalThumbnail = assets.resolve('app/images/books/heavy-metal-1.png', 'thumbnail')
-    let threeWaysCard = assets.resolve('app/images/books/three-ways-1.png', 'card')
-
-    if (!entry) {
-      return new Response('Entry point not found', { status: 500 })
-    }
 
     // Generate modulepreload links for all preloads
-    let preloads = entry.preloads
+    let preloads = entryAsset.preloads
       .map((preload) => `<link rel="modulepreload" href="${preload}" />`)
       .join('\n    ')
 
@@ -131,7 +133,7 @@ async function main() {
     <p class="muted">All source PNGs are converted to compressed JPGs by variants. Display width matches transformed variant width.</p>
     <div class="gallery">
       <section>
-        <h2>Same source, three variants</h2>
+        <h2>Same source, three variants (dynamic resolve)</h2>
         <div class="variant-row">
           ${bbqThumbnail ? `<figure class="variant"><img src="${bbqThumbnail.href}" width="120" alt="BBQ cover thumbnail variant" /><p>thumbnail: 120w, jpg</p></figure>` : ''}
           ${bbqCard ? `<figure class="variant"><img src="${bbqCard.href}" width="280" alt="BBQ cover card variant" /><p>card: 280w, jpg</p></figure>` : ''}
@@ -139,14 +141,14 @@ async function main() {
         </div>
       </section>
       <section>
-        <h2>Other images using the same variants</h2>
+        <h2>Other images using the same variants (static imports)</h2>
         <div class="variant-row">
-          ${heavyMetalThumbnail ? `<figure class="variant"><img src="${heavyMetalThumbnail.href}" width="120" alt="Heavy metal cover thumbnail variant" /><p>heavy-metal-1.png -> thumbnail jpg</p></figure>` : ''}
-          ${threeWaysCard ? `<figure class="variant"><img src="${threeWaysCard.href}" width="280" alt="Three ways cover card variant" /><p>three-ways-1.png -> card jpg</p></figure>` : ''}
+          <figure class="variant"><img src="${heavyMetalBookAsset.variants.card.href}" width="120" alt="Heavy metal cover thumbnail variant" /><p>heavy-metal-1.png -> thumbnail jpg</p></figure>
+          <figure class="variant"><img src="${threeWaysBookAsset.variants.card.href}" width="280" alt="Three ways cover card variant" /><p>three-ways-1.png -> card jpg</p></figure>
         </div>
       </section>
     </div>
-    <script type="module" src="${entry.href}"></script>
+    <script type="module" src="${entryAsset.href}"></script>
   </body>
 </html>`
 
@@ -179,6 +181,7 @@ async function main() {
     console.log('Shutting down server...')
     if (shuttingDown) return
     shuttingDown = true
+    assets.close()
     server.close(() => {
       process.exit(0)
     })

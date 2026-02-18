@@ -9,6 +9,8 @@
     "jsxImportSource": "@remix-run/component",
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
-    "verbatimModuleSyntax": true
-  }
+    "verbatimModuleSyntax": true,
+    "customConditions": ["development"]
+  },
+  "include": [".assets/**/*.ts", "**/*.ts", "**/*.tsx"]
 }

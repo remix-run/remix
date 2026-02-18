@@ -15,12 +15,19 @@
     "glob": "^11.0.0",
     "tsx": "catalog:"
   },
+  "imports": {
+    "#assets/*": {
+      "development": "./.assets/*.dev.ts",
+      "test": "./.assets/*.dev.ts",
+      "default": "./.assets/*.build.ts"
+    }
+  },
   "scripts": {
-    "dev": "NODE_ENV=development tsx watch server.ts",
+    "dev": "NODE_ENV=development NODE_OPTIONS='--conditions=development' tsx watch server.ts",
     "build": "tsx build.ts",
     "build:bundled": "tsx build.bundled.ts",
-    "start": "tsx server.ts",
-    "test": "NODE_ENV=test tsx --test",
+    "start": "NODE_ENV=production tsx server.ts",
+    "test": "NODE_ENV=test NODE_OPTIONS='--conditions=test' tsx --test",
     "typecheck": "tsgo --noEmit"
   }
 }
