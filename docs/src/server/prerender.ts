@@ -6,8 +6,8 @@ import * as util from 'node:util'
 import { parse } from 'node-html-parser'
 import * as semver from 'semver'
 import { type Router } from 'remix/fetch-router'
-import { createRouter } from './router.tsx'
-import type { AppContext } from './components.tsx'
+import { createRouter, getDefaultVersions } from './router.tsx'
+import type { ServerContext } from './components.tsx'
 
 let { values: cliArgs } = util.parseArgs({
   options: {
@@ -23,6 +23,7 @@ let { values: cliArgs } = util.parseArgs({
   },
 })
 
+const assetsDir = path.join(process.cwd(), 'build', 'assets')
 const outputDir = path.join(process.cwd(), cliArgs.dir)
 const versions = await getVersionsToBuild(outputDir, cliArgs.all === true)
 if (versions) {
@@ -33,33 +34,37 @@ if (versions) {
 
 const docsRouter = createRouter(versions)
 
+// Copy static assets to the output directory
+await fs.cp(assetsDir, path.join(outputDir, 'assets'), { recursive: true })
+for (let version of versions || getDefaultVersions()) {
+  if (version.crawl) {
+    await fs.cp(assetsDir, path.join(outputDir, version.version, 'assets'), { recursive: true })
+  }
+}
+
 await spider(docsRouter, outputDir)
 
 // Spider the website served by router, beginning at /
-async function spider(router: Router, outputDir: string, urlQueue = ['/']) {
+async function spider(router: Router, outputDir: string, urlQueue = new Set(['/'])) {
   await fs.mkdir(outputDir, { recursive: true })
 
   // Track URLs we have already downloaded to avoid loops
   let downloadedUrls = new Set<string>()
 
-  while (urlQueue.length > 0) {
-    await crawl(router, urlQueue, downloadedUrls, outputDir)
+  for (let urlPath of urlQueue) {
+    if (urlPath && !downloadedUrls.has(urlPath)) {
+      let { downloadedUrl, discoveredUrls } = await crawl(router, urlPath, outputDir)
+      downloadedUrls.add(downloadedUrl)
+      discoveredUrls
+        .filter((href) => !downloadedUrls.has(href))
+        .forEach((href) => urlQueue.add(href))
+    }
   }
 
   console.log(`\nCrawling complete!`)
 }
 
-async function crawl(
-  router: Router,
-  urlQueue: string[],
-  downloadedUrls: Set<string>,
-  outputDir: string,
-): Promise<void> {
-  let urlPath = urlQueue.shift()
-  if (!urlPath || downloadedUrls.has(urlPath)) {
-    return
-  }
-
+async function crawl(router: Router, urlPath: string, outputDir: string) {
   let response
   try {
     response = await router.fetch(new Request(`http://localhost${urlPath}`))
@@ -92,19 +97,24 @@ async function crawl(
     await fs.writeFile(outputPath, html, 'utf-8')
 
     // Parse HTML files for other resources/links to add to queue
-    urlQueue.push(
-      ...parse(html)
-        .querySelectorAll('a:not([rel="nofollow"]),link')
+    return {
+      downloadedUrl: urlPath,
+      discoveredUrls: parse(html)
+        .querySelectorAll('a:not([rel="nofollow"])')
         .map((link) => link.getAttribute('href'))
-        .filter((href) => href && !isAbsoluteUrl(href) && !downloadedUrls.has(href))
-        .map((href) => resolveRelativeLink(href!, urlPath)),
-    )
+        .filter((href) => href && !isAbsoluteUrl(href))
+        .map((href) => resolveRelativeLink(href!, urlPath))
+        .flatMap((href) =>
+          href.includes('/api/') && !href.endsWith('.md')
+            ? [href, href + '.md', href.replace('/api/', '/fragment/')]
+            : [href],
+        ),
+    }
   } else {
     let content = await response.arrayBuffer()
     await fs.writeFile(outputPath, new Uint8Array(content))
+    return { downloadedUrl: urlPath, discoveredUrls: [] }
   }
-
-  downloadedUrls.add(urlPath)
 }
 
 function isAbsoluteUrl(href: string): boolean {
@@ -124,7 +134,7 @@ function resolveRelativeLink(link: string, url: string): string {
 async function getVersionsToBuild(
   outputDir: string,
   all: boolean,
-): Promise<AppContext['versions'] | undefined> {
+): Promise<ServerContext['versions'] | undefined> {
   // Get all Remix v3 tags, transform them to vX.Y.Z format, sort newest to oldest
   const remixVersions = cp
     .execSync('git tag', { encoding: 'utf-8' })

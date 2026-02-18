@@ -166,6 +166,9 @@ importers:
         specifier: ^7.7.3
         version: 7.7.3
     devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.6
+        version: 1.0.6
       '@types/hast':
         specifier: ^3.0.4
         version: 3.0.4
@@ -175,6 +178,9 @@ importers:
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.12
       shiki:
         specifier: ^3.22.0
         version: 3.22.0
@@ -2339,6 +2345,9 @@ packages:
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
 
+  '@types/dom-navigation@1.0.6':
+    resolution: {integrity: sha512-4srBpebg8rFDm0LafYuWhZMgLoSr5J4gx4q1uaTqOXwVk00y+CkTdJ4SC57sR1cMhP0ZRjApMRdHVcFYOvPGTw==}
+
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
@@ -3480,6 +3489,7 @@ packages:
 
   glob@10.4.5:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   globals@14.0.0:
@@ -6071,6 +6081,8 @@ snapshots:
       '@types/node': 24.10.4
 
   '@types/deep-eql@4.0.2': {}
+
+  '@types/dom-navigation@1.0.6': {}
 
   '@types/estree@1.0.8': {}
 

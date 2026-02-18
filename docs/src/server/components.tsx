@@ -1,5 +1,5 @@
-import { type RemixNode } from 'remix/component/jsx-runtime'
-import { type DocFile } from './markdown.ts'
+import type { RemixNode } from 'remix/component/jsx-runtime'
+import type { DocFile } from './markdown.ts'
 import { routes } from './routes.ts'
 import type { Handle } from 'remix/component'
 
@@ -26,20 +26,20 @@ export function NotFound() {
   }
 }
 
-export type AppContext = {
+export type ServerContext = {
   docFiles: DocFile[]
   versions: { version: string; crawl: boolean }[]
-  slug?: string
   activeVersion?: string
+  slug?: string
 }
 
-export function App(handle: Handle<AppContext>, setup: AppContext) {
+export function ServerProvider(handle: Handle<ServerContext>, setup: ServerContext) {
   handle.context.set(setup)
-  return ({ children }: { children: RemixNode | RemixNode[] }) => <Layout>{children}</Layout>
+  return ({ children }: { children: RemixNode | RemixNode[] }) => children
 }
 
-export function Layout(handle: Handle) {
-  let { activeVersion } = handle.context.get(App)
+export function Document(handle: Handle) {
+  let { activeVersion } = handle.context.get(ServerProvider)
   return ({ children }: { children: RemixNode | RemixNode[] }) => (
     <html lang="en">
       <head>
@@ -51,24 +51,33 @@ export function Layout(handle: Handle) {
           href={routes.assets.href({ version: activeVersion, asset: 'docs.css' })}
           rel="stylesheet"
         />
+        <script
+          async
+          type="module"
+          src={routes.assets.href({ version: activeVersion, asset: 'entry.js' })}
+        />
       </head>
-      <body>
-        <div class="container">
-          <nav class="sidebar">
-            <VersionDropdown />
-            <Nav />
-          </nav>
-          <main class="main-content">
-            <div class="content">{children}</div>
-          </main>
-        </div>
-      </body>
+      <body>{children}</body>
     </html>
   )
 }
 
+export function Layout(handle: Handle) {
+  return ({ children }: { children: RemixNode | RemixNode[] }) => (
+    <div class="container">
+      <nav class="sidebar">
+        <VersionDropdown />
+        <Nav />
+      </nav>
+      <main class="main-content">
+        <div class="content">{children}</div>
+      </main>
+    </div>
+  )
+}
+
 export function VersionDropdown(handle: Handle) {
-  let { versions, activeVersion } = handle.context.get(App)
+  let { versions, activeVersion } = handle.context.get(ServerProvider)
   let latestVersion = versions[0]?.version
 
   // When we're displaying an active version, only include versions up until
@@ -96,7 +105,7 @@ export function VersionDropdown(handle: Handle) {
 }
 
 function VersionLink(handle: Handle) {
-  let { activeVersion } = handle.context.get(App)
+  let { activeVersion, slug } = handle.context.get(ServerProvider)
   return ({
     version,
     latest,
@@ -144,7 +153,7 @@ type ApiTypes = {
 }
 
 export function Nav(handle: Handle) {
-  let { docFiles, activeVersion: version } = handle.context.get(App)
+  let { docFiles } = handle.context.get(ServerProvider)
   return () => {
     let packageGroups = new Map<string, ApiTypes>()
 
@@ -191,7 +200,7 @@ function NavDropdown() {
 }
 
 function NavDropdownSection(handle: Handle) {
-  let { activeVersion: version } = handle.context.get(App)
+  let { activeVersion: version } = handle.context.get(ServerProvider)
   return ({ title, files, type }: { title: string; files: ApiTypes; type: keyof ApiTypes }) => {
     if (files[type].length === 0) {
       return null
@@ -203,7 +212,7 @@ function NavDropdownSection(handle: Handle) {
         {...files[type].map((file) => (
           <li>
             {/* TODO: Add back active formatting */}
-            <a href={routes.api.href({ version, slug: file.urlPath })}>{file.name}</a>
+            <a href={routes.docs.href({ version, slug: file.urlPath })}>{file.name}</a>
           </li>
         ))}
       </>

@@ -117,7 +117,7 @@ function getShikiExtension(
                   let linkEl: Element | undefined
                   if (docFilesLookup.has(symbol)) {
                     linkEl = link(symbol, {
-                      href: routes.api.href({
+                      href: routes.docs.href({
                         version,
                         slug: docFilesLookup.get(symbol)!.urlPath,
                       }),
