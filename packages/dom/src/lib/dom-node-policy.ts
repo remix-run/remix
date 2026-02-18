@@ -4,34 +4,39 @@ export type DomParentNode = Node & ParentNode
 export type DomNode = Node
 export type DomTextNode = Text
 export type DomElementNode = Element
-export type DomTraversal = {
-  namespace: string
-  next: null | Node
-}
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg'
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 
-export type DomNodePolicy = NodePolicy<
-  DomParentNode,
-  DomNode,
-  DomTextNode,
-  DomElementNode,
-  DomTraversal
->
+export type DomTraversal = {
+  next: null | Node
+}
+
+export type DomNodePolicy = NodePolicy<DomParentNode, DomNode, DomTextNode, DomElementNode>
 
 export function createDomNodePolicy(document: Document): DomNodePolicy {
   return {
+    createText(value) {
+      return document.createTextNode(value)
+    },
+    setText(node, value) {
+      if (node.data !== value) node.data = value
+    },
+    createElement(parent, type) {
+      let namespace = resolveNamespace(parent)
+      if (namespace === HTML_NAMESPACE) return document.createElement(type)
+      return document.createElementNS(namespace, type)
+    },
+    getType(node) {
+      return node.localName
+    },
+    getParent(node) {
+      return node.parentNode as null | DomParentNode
+    },
     firstChild(parent) {
       return parent.firstChild
     },
     nextSibling(node) {
       return node.nextSibling
-    },
-    begin(parent) {
-      return createTraversal(parent, parent.firstChild)
-    },
-    enter(parent) {
-      return createTraversal(parent, parent.firstChild)
     },
     insert(parent, node, anchor) {
       parent.insertBefore(node, anchor)
@@ -39,54 +44,11 @@ export function createDomNodePolicy(document: Document): DomNodePolicy {
     move(parent, node, anchor) {
       parent.insertBefore(node, anchor)
     },
-    remove(_parent, node) {
+    remove(parent, node) {
+      if (node.parentNode !== parent) return
       node.parentNode?.removeChild(node)
     },
-    resolveText(parent, traversal, value) {
-      let candidate = traversal.next
-      if (candidate && candidate.nodeType === Node.TEXT_NODE) {
-        let node = candidate as Text
-        if (node.data !== value) node.data = value
-        return {
-          node,
-          next: createTraversal(parent, candidate.nextSibling),
-        }
-      }
-      return {
-        node: document.createTextNode(value),
-        next: traversal,
-      }
-    },
-    resolveElement(parent, traversal, type) {
-      let candidate = traversal.next
-      let namespace = traversal.namespace
-      if (candidate && candidate.nodeType === Node.ELEMENT_NODE) {
-        let node = candidate as Element
-        if (node.localName === type && node.namespaceURI === namespace) {
-          return {
-            node,
-            next: createTraversal(parent, candidate.nextSibling),
-          }
-        }
-      }
-      return {
-        node: createElementForNamespace(document, namespace, type),
-        next: traversal,
-      }
-    },
   }
-}
-
-function createTraversal(parent: DomParentNode, next: null | Node): DomTraversal {
-  return {
-    namespace: resolveNamespace(parent),
-    next,
-  }
-}
-
-function createElementForNamespace(document: Document, namespace: string, type: string) {
-  if (namespace === HTML_NAMESPACE) return document.createElement(type)
-  return document.createElementNS(namespace, type)
 }
 
 function resolveNamespace(parent: DomParentNode) {

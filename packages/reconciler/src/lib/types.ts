@@ -20,7 +20,7 @@ export type ReconcilerElement = {
 export type NodePolicy<parent, node, text extends node, element extends node> = {
   createText(value: string): text
   setText(node: text, value: string): void
-  createElement(type: string): element
+  createElement(parent: parent | element, type: string): element
   getType(node: element): string
   getParent(node: node): null | parent | element
   firstChild(parent: parent | element): null | node
@@ -35,7 +35,6 @@ export type HostInput = {
   key: unknown
   props: Record<string, unknown>
   children: RenderValue[]
-  propKeys: string[]
 }
 
 export type PluginRouting = {
@@ -44,10 +43,17 @@ export type PluginRouting = {
 
 export type PluginPhase = 'special' | 'terminal'
 
+export type HostPropDelta = {
+  kind: 'mount' | 'update'
+  previousProps: Record<string, unknown>
+  nextProps: Record<string, unknown>
+  changedKeys: string[]
+}
+
 export type PluginHostContext<parent, node, text extends node, element extends node> = {
   root: ReconcilerRoot<RenderValue>
   host: CommittedHostNode<parent, node, text, element>
-  input: HostInput
+  delta: HostPropDelta
   consume(key: string): void
   isConsumed(key: string): boolean
   remainingPropsView(): Record<string, unknown>
@@ -57,20 +63,10 @@ export type Plugin<parent, node, text extends node, element extends node> = {
   phase: PluginPhase
   priority?: number
   routing?: PluginRouting
-  shouldActivate?(
-    context: PluginHostContext<parent, node, text, element>,
-  ): boolean
-  mountHost?(
-    context: PluginHostContext<parent, node, text, element>,
-  ): unknown
-  commitHost?(
-    context: PluginHostContext<parent, node, text, element>,
-    slot: unknown,
-  ): void
-  unmountHost?(
-    context: PluginHostContext<parent, node, text, element>,
-    slot: unknown,
-  ): void
+  shouldActivate?(context: PluginHostContext<parent, node, text, element>): boolean
+  mount?(context: PluginHostContext<parent, node, text, element>): unknown
+  apply?(context: PluginHostContext<parent, node, text, element>, slot: unknown): void
+  unmount?(context: PluginHostContext<parent, node, text, element>, slot: unknown): void
 }
 
 export type PreparedPlugin<parent, node, text extends node, element extends node> = {
@@ -108,7 +104,6 @@ export type HostRenderNode = {
   key: unknown
   props: Record<string, unknown>
   children: RenderValue[]
-  propKeys: string[]
 }
 
 export type ComponentRenderNode = {
@@ -120,16 +115,20 @@ export type ComponentRenderNode = {
 }
 
 export type CommittedTextNode<text> = {
+  id: number
   kind: 'text'
   key: unknown
   node: text
+  value: string
 }
 
 export type CommittedHostNode<parent, node, text extends node, element extends node> = {
+  id: number
   kind: 'host'
   key: unknown
   type: string
-  input: HostInput
+  props: Record<string, unknown>
+  childrenInput: RenderValue[]
   node: element
   children: CommittedNode<parent, node, text, element>[]
   pluginSlots: Array<undefined | unknown>
@@ -137,10 +136,13 @@ export type CommittedHostNode<parent, node, text extends node, element extends n
 }
 
 export type CommittedComponentNode<parent, node, text extends node, element extends node> = {
+  id: number
   kind: 'component'
   key: unknown
   type: Component<any, any, RenderValue>
   render: (props: Record<string, unknown>) => RenderValue
+  props: Record<string, unknown>
+  pendingUpdate: boolean
   child: null | CommittedNode<parent, node, text, element>
   handle: UpdateHandle
 }

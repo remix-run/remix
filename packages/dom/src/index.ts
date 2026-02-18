@@ -1,24 +1,16 @@
 export { createDomNodePolicy } from './lib/dom-node-policy.ts'
+export { createDomReconciler } from './lib/dom-reconciler.ts'
 export {
-  ariaDataAttributePlugin,
-  attributeFallbackPlugin,
-  connectPlugin,
+  basicPropsPlugin,
   createDomPlugins,
-  domPropertyOrAttributePlugin,
-  formStatePlugin,
-  innerHTMLPlugin,
   onPlugin,
   stylePropsPlugin,
-  svgNormalizationPlugin,
 } from './lib/dom-plugins.ts'
 export { Fragment, jsx, jsxs } from './jsx-runtime.ts'
 export { jsxDEV } from './jsx-dev-runtime.ts'
 
 export type {
   ConnectValue,
-} from './lib/plugins/connect-plugin.ts'
-
-export type {
   DomElementProps,
   DomHTMLElements,
   DomJsxElement,

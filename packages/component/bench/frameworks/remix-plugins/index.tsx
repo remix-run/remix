@@ -8,9 +8,8 @@ import {
   buildData,
 } from '../shared.ts'
 import type { Benchmark, Row } from '../shared.ts'
-import { createDomNodePolicy, createDomPlugins } from '@remix-run/dom'
-import { createReconciler } from '@remix-run/reconciler'
-import type { UpdateHandle as Handle, ReconcilerErrorEvent } from '@remix-run/reconciler'
+import { createDomReconciler } from '@remix-run/dom'
+import type { UpdateHandle as Handle } from '@remix-run/reconciler'
 
 export const name = 'remix-plugins'
 
@@ -879,17 +878,9 @@ function App(handle: Handle) {
   }
 }
 
-let reconciler = createReconciler(createDomNodePolicy(document), createDomPlugins())
+let reconciler = createDomReconciler(document)
 
 let el = document.getElementById('app')!
 let root = reconciler.createRoot(el)
-
-root.addEventListener('error', (event) => {
-  let errorEvent = event as ReconcilerErrorEvent
-  console.error(errorEvent.context.phase, errorEvent.error)
-  let message =
-    errorEvent.error instanceof Error ? errorEvent.error.message : String(errorEvent.error)
-  root.render(<div>Error! {message}</div>)
-})
 
 root.render(<App />)

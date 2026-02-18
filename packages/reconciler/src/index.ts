@@ -16,6 +16,7 @@ export type {
   Component,
   CommittedHostNode,
   CommittedNode,
+  HostPropDelta,
   UpdateHandle,
   HostInput,
   NodePolicy,

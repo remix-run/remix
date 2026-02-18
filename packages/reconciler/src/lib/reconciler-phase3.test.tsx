@@ -2,8 +2,9 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { createTestNodeReconciler } from '../testing/test-node-reconciler.ts'
 import type { Component } from '../testing/jsx-runtime.ts'
+import { definePlugin } from './types.ts'
 
-describe('reconciler phase 3 validation', () => {
+describe('incremental reconciler validation', () => {
   it('reconciles complex mixed host/component trees with children composition', () => {
     let Wrap: Component<undefined, { title: string; children?: unknown }> = () => (props) => (
       <panel>
@@ -52,6 +53,88 @@ describe('reconciler phase 3 validation', () => {
     capturedUpdate()
     root.flush()
     assert.equal(root.inspect(), '<value>1</value>')
+  })
+
+  it('propagates local component updates through stable ancestors', () => {
+    let updateLeaf = () => {}
+    let Leaf: Component<undefined, {}> = (handle) => {
+      let count = 0
+      updateLeaf = () => {
+        count++
+        handle.update()
+      }
+      return () => <leaf>{String(count)}</leaf>
+    }
+    let Wrapper: Component<undefined, { children?: unknown }> = () => (props) => (
+      <wrapper>{props.children}</wrapper>
+    )
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+    root.render(
+      <Wrapper>
+        <Leaf />
+      </Wrapper>,
+    )
+    root.flush()
+    assert.equal(root.inspect(), '<wrapper><leaf>0</leaf></wrapper>')
+
+    updateLeaf()
+    root.flush()
+    assert.equal(root.inspect(), '<wrapper><leaf>1</leaf></wrapper>')
+  })
+
+  it('bails out component subtree when props are shallow-equal and no local update is pending', () => {
+    let renders = 0
+    let Child: Component<undefined, { label: string }> = () => (props) => {
+      renders++
+      return <leaf>{props.label}</leaf>
+    }
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+
+    root.render(
+      <wrap>
+        <Child label="same" />
+      </wrap>,
+    )
+    root.flush()
+    assert.equal(renders, 1)
+
+    root.render(
+      <wrap>
+        <Child label="same" />
+      </wrap>,
+    )
+    root.flush()
+    assert.equal(renders, 1)
+  })
+
+  it('runs routed plugins only when dependencies change', () => {
+    let pluginApplies = 0
+    let routedPlugin = definePlugin({
+      phase: 'special' as const,
+      routing: { keys: ['data-x'] },
+      shouldActivate(context) {
+        return typeof context.delta.nextProps['data-x'] === 'string'
+      },
+      apply() {
+        pluginApplies++
+      },
+    })
+    let reconciler = createTestNodeReconciler([routedPlugin])
+    let root = reconciler.createRoot()
+
+    root.render(<item id="a" data-x="one" />)
+    root.flush()
+    assert.equal(pluginApplies, 1)
+
+    root.render(<item id="a" data-x="one" />)
+    root.flush()
+    assert.equal(pluginApplies, 1)
+
+    root.render(<item id="a" data-x="two" />)
+    root.flush()
+    assert.equal(pluginApplies, 2)
   })
 
   it('replaces host nodes when type changes', () => {

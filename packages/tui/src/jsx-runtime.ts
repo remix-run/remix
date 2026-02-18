@@ -7,59 +7,26 @@ import {
 import type { Component, ReconcilerElement, RenderValue } from '@remix-run/reconciler'
 
 export const Fragment = RECONCILER_FRAGMENT
-
-export type DomJsxElement = ReconcilerElement
+export type TuiJsxElement = ReconcilerElement
 const EMPTY_NODE_CHILDREN: RenderValue[] = []
 
-export type DispatchedEvent<event extends Event, node extends EventTarget> = event & {
-  currentTarget: node
-}
+export type TuiStyleValue = Record<string, string | number | boolean | null | undefined>
+export type TuiLayoutValue = Record<string, string | number | boolean | null | undefined>
+export type TuiOnValue = Record<string, ((...args: unknown[]) => void) | undefined>
 
-export type OnValue<node extends EventTarget> = {
-  [type: string]: (event: DispatchedEvent<Event, node>) => void
-}
-
-export type ConnectValue<node extends EventTarget> = (
-  node: node,
-  signal: AbortSignal,
-) => void
-
-export type DomElementProps<node extends EventTarget> = {
+export type TuiElementProps = {
   children?: RenderValue
-  connect?: ConnectValue<node>
-  innerHTML?: string | null
   key?: unknown
-  on?: OnValue<node>
-  style?: Record<string, string | number | null | undefined>
+  style?: TuiStyleValue
+  layout?: TuiLayoutValue
+  on?: TuiOnValue
 } & Record<string, unknown>
-
-export type DomHTMLElements = {
-  [tagName in keyof HTMLElementTagNameMap]: DomElementProps<HTMLElementTagNameMap[tagName]>
-}
-
-export type DomSVGElements = {
-  [tagName in keyof SVGElementTagNameMap]: DomElementProps<SVGElementTagNameMap[tagName]>
-}
-
-export type DomMathMLElements = {
-  [tagName in keyof MathMLElementTagNameMap]: DomElementProps<MathMLElementTagNameMap[tagName]>
-}
-
-type SharedTagNames = Extract<keyof DomHTMLElements, keyof DomSVGElements>
-
-type DomIntrinsicElements = {
-  [tagName in Exclude<keyof DomHTMLElements, SharedTagNames>]: DomHTMLElements[tagName]
-} & {
-  [tagName in Exclude<keyof DomSVGElements, SharedTagNames>]: DomSVGElements[tagName]
-} & {
-  [tagName in SharedTagNames]: DomElementProps<Element>
-} & DomMathMLElements
 
 export function jsx(
   type: unknown,
   props: null | Record<string, unknown>,
   key?: unknown,
-): DomJsxElement {
+): TuiJsxElement {
   return createElement(type, props, key)
 }
 
@@ -67,7 +34,7 @@ export function jsxs(
   type: unknown,
   props: null | Record<string, unknown>,
   key?: unknown,
-): DomJsxElement {
+): TuiJsxElement {
   return createElement(type, props, key)
 }
 
@@ -75,7 +42,7 @@ function createElement(
   type: unknown,
   props: null | Record<string, unknown>,
   key: unknown,
-): DomJsxElement {
+): TuiJsxElement {
   let nextProps = props ? { ...props } : {}
   let resolvedKey = key
   if (resolvedKey == null && 'key' in nextProps) {
@@ -87,13 +54,13 @@ function createElement(
       ? toNodeChildren(nextProps.children as RenderValue)
       : EMPTY_NODE_CHILDREN
   let propKeys = listRenderablePropKeys(nextProps)
-  let element: DomJsxElement = {
+  let element: TuiJsxElement = {
     $rmx: true,
     type,
     key: resolvedKey ?? null,
     props: nextProps,
   }
-  let cached = element as DomJsxElement & {
+  let cached = element as TuiJsxElement & {
     [RECONCILER_NODE_CHILDREN]?: RenderValue[]
     [RECONCILER_PROP_KEYS]?: string[]
     [RECONCILER_PROP_SHAPE]?: string
@@ -125,9 +92,11 @@ function toPropShape(keys: string[]) {
 }
 
 export namespace JSX {
-  export type Element = DomJsxElement
+  export type Element = TuiJsxElement
   export type ElementType = keyof IntrinsicElements | Component<any, any, RenderValue>
-  export type IntrinsicElements = DomIntrinsicElements
+  export interface IntrinsicElements {
+    [name: string]: TuiElementProps
+  }
   export interface ElementChildrenAttribute {
     children: unknown
   }

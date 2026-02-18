@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createDirective, RECONCILER_FRAGMENT } from '@remix-run/reconciler'
+import { RECONCILER_FRAGMENT } from '@remix-run/reconciler'
 import { Fragment, jsx, jsxs } from './jsx-runtime.ts'
 import type { Component } from '@remix-run/reconciler'
 import type { Assert, IsEqual } from './testing/utils.ts'
@@ -57,8 +57,8 @@ describe('dom jsx runtime', () => {
   })
 })
 
-type Counter = Component<{ start: number }, { label: string }>
-type WithoutSetup = Component<undefined, { id: string }>
+type Counter = Component<{ start: number }, { label: string }, unknown>
+type WithoutSetup = Component<undefined, { id: string }, unknown>
 
 let CounterComponent: Counter = (_handle, setup) => (props) => {
   // @ts-expect-error setup should not be present in render props
@@ -83,12 +83,8 @@ let badWithoutSetupValue = <WithoutSetupComponent setup={{ any: 'value' }} id="i
 // @ts-expect-error id is required
 let missingWithoutSetupProps = <WithoutSetupComponent />
 
-let noopDirective = createDirective<HTMLDivElement, [boolean]>(() => () => (_enabled) => {})
-let goodUseProp = <div use={[noopDirective(true)]} />
-// @ts-expect-error directive args are typed
-let badUseDirectiveArgs = <div use={[noopDirective('yes')]} />
-// @ts-expect-error use expects directive descriptors
-let badUseValue = <div use={['not-a-descriptor']} />
+let goodStyleProp = <div style={{ color: 'red' }} />
+let goodDataAttribute = <div data-id="x" />
 
 let goodConnectProp = (
   <button
@@ -128,9 +124,8 @@ void goodWithoutSetupElement
 void goodWithoutSetupUndefined
 void badWithoutSetupValue
 void missingWithoutSetupProps
-void goodUseProp
-void badUseDirectiveArgs
-void badUseValue
+void goodStyleProp
+void goodDataAttribute
 void goodConnectProp
 void goodOnProp
 void badOnProp

@@ -11,7 +11,7 @@ import type {
   CommittedTextNode,
   Component,
   ComponentRenderNode,
-  HostInput,
+  HostPropDelta,
   HostRenderNode,
   NodePolicy,
   Plugin,
@@ -22,7 +22,6 @@ import type {
   RenderNode,
   RenderValue,
   RootTask,
-  TextRenderNode,
   UpdateHandle,
 } from './types.ts'
 
@@ -33,6 +32,9 @@ type RootState<parent, node, text extends node, element extends node> = {
   pendingTasks: RootTask[]
   renderController: null | AbortController
   disposed: boolean
+  dirtyNodeIds: Set<number>
+  hasPendingComponentUpdate: boolean
+  pendingHostCommits: PendingHostCommit<parent, node, text, element>[]
   enqueue(): void
 }
 
@@ -44,9 +46,20 @@ type ReconcilerOptions<parent, node, text extends node, element extends node> = 
 type PreparedPlugins<parent, node, text extends node, element extends node> = {
   orderedSpecial: PreparedPlugin<parent, node, text, element>[]
   orderedTerminal: PreparedPlugin<parent, node, text, element>[]
+  terminalIds: number[]
   routedSpecialByKey: Map<string, number[]>
   unroutedSpecialIds: number[]
   all: PreparedPlugin<parent, node, text, element>[]
+}
+
+type PendingHostCommit<parent, node, text extends node, element extends node> = {
+  host: CommittedHostNode<parent, node, text, element>
+  delta: HostPropDelta
+}
+
+type NodeResult<parent, node, text extends node, element extends node> = {
+  node: CommittedNode<parent, node, text, element>
+  changed: boolean
 }
 
 export function createReconciler<parent, node, text extends node, element extends node>(
@@ -55,6 +68,9 @@ export function createReconciler<parent, node, text extends node, element extend
   let policy = options.policy
   let plugins = preparePlugins(options.plugins ?? [])
   let scheduler = createScheduler()
+  let nextNodeId = 1
+  let candidateMarks = new Uint32Array(Math.max(plugins.all.length, 1))
+  let candidateVersion = 1
 
   return {
     createRoot(container: parent): ReconcilerRoot<RenderValue> {
@@ -65,6 +81,9 @@ export function createReconciler<parent, node, text extends node, element extend
         pendingTasks: [],
         renderController: null,
         disposed: false,
+        dirtyNodeIds: new Set(),
+        hasPendingComponentUpdate: false,
+        pendingHostCommits: [],
         enqueue() {},
       }
 
@@ -100,10 +119,15 @@ export function createReconciler<parent, node, text extends node, element extend
         if (root.disposed) return
         root.renderController?.abort()
         root.renderController = new AbortController()
+        root.dirtyNodeIds.clear()
+        root.pendingHostCommits.length = 0
 
         let nextNodes = normalizeToRenderNodes(root.renderValue)
-        root.current = reconcileChildren(root.container, root.current, nextNodes, root)
+        let { children } = reconcileChildren(root.container, root.current, nextNodes, root)
+        root.current = children
+        flushPendingHostCommits(root)
         runPendingTasks(root)
+        root.hasPendingComponentUpdate = false
       }
     },
   }
@@ -117,12 +141,21 @@ export function createReconciler<parent, node, text extends node, element extend
     }
   }
 
+  function flushPendingHostCommits(root: RootState<parent, node, text, element>) {
+    for (let commit of root.pendingHostCommits) {
+      runHostPlugins(commit.host, commit.delta, root)
+    }
+    root.pendingHostCommits.length = 0
+  }
+
   function reconcileChildren(
     parentNode: parent | element,
     currentChildren: CommittedNode<parent, node, text, element>[],
     nextNodes: RenderNode[],
     root: RootState<parent, node, text, element>,
   ) {
+    let requiresPlacement = false
+    let changed = false
     let used: boolean[] = []
     for (let index = 0; index < currentChildren.length; index++) used[index] = false
 
@@ -136,6 +169,7 @@ export function createReconciler<parent, node, text extends node, element extend
     }
 
     let nextCommitted: CommittedNode<parent, node, text, element>[] = []
+    let sourceIndices: number[] = []
     let scanIndex = 0
     for (let next of nextNodes) {
       let matchIndex = findMatchIndex(
@@ -148,26 +182,52 @@ export function createReconciler<parent, node, text extends node, element extend
       if (matchIndex >= 0) {
         used[matchIndex] = true
         if (matchIndex === scanIndex) scanIndex++
+        if (matchIndex !== nextCommitted.length) {
+          requiresPlacement = true
+          changed = true
+        }
+        let previousMaterial = firstMaterialNode(currentChildren[matchIndex])
         let reconciled = reconcileNode(
           currentChildren[matchIndex],
           next,
           parentNode,
           root,
         )
-        nextCommitted.push(reconciled)
+        let nextMaterial = firstMaterialNode(reconciled.node)
+        if (previousMaterial !== nextMaterial) {
+          requiresPlacement = true
+          changed = true
+        }
+        changed = changed || reconciled.changed
+        nextCommitted.push(reconciled.node)
+        sourceIndices.push(matchIndex)
         continue
       }
-      let mounted = mountNode(next, root)
-      nextCommitted.push(mounted)
+      let mounted = mountNode(parentNode, next, root)
+      requiresPlacement = true
+      changed = true
+      nextCommitted.push(mounted.node)
+      sourceIndices.push(-1)
     }
 
     for (let index = 0; index < currentChildren.length; index++) {
       if (used[index]) continue
+      requiresPlacement = true
+      changed = true
       removeNode(parentNode, currentChildren[index], root)
     }
 
-    placeChildren(parentNode, nextCommitted)
-    return nextCommitted
+    if (requiresPlacement) {
+      if (canUseMinimalMovePlacement(currentChildren, nextNodes, sourceIndices)) {
+        placeChildrenWithMinimalMoves(parentNode, nextCommitted, sourceIndices)
+      } else {
+        placeChildren(parentNode, nextCommitted)
+      }
+    }
+    return {
+      children: nextCommitted,
+      changed,
+    }
   }
 
   function findMatchIndex(
@@ -210,109 +270,213 @@ export function createReconciler<parent, node, text extends node, element extend
     next: RenderNode,
     parentNode: parent | element,
     root: RootState<parent, node, text, element>,
-  ): CommittedNode<parent, node, text, element> {
+  ): NodeResult<parent, node, text, element> {
     if (!isCompatible(current, next)) {
-      let mounted = mountNode(next, root)
+      let mounted = mountNode(parentNode, next, root)
       removeNode(parentNode, current, root)
-      return mounted
+      return {
+        node: mounted.node,
+        changed: true,
+      }
     }
 
     if (next.kind === 'text' && current.kind === 'text') {
-      policy.setText(current.node, next.value)
+      let changed = current.value !== next.value
+      if (changed) {
+        policy.setText(current.node, next.value)
+        current.value = next.value
+        root.dirtyNodeIds.add(current.id)
+      }
       current.key = next.key
-      return current
+      return {
+        node: current,
+        changed,
+      }
     }
 
     if (next.kind === 'host' && current.kind === 'host') {
+      let previousProps = current.props
+      let propsChangedKeys = listChangedPropKeys(previousProps, next.props)
+      let propsChanged = propsChangedKeys.length > 0
       current.key = next.key
-      current.type = next.type
-      current.input = toHostInput(next)
-      runHostPlugins(current, root)
-      current.children = reconcileChildren(current.node, current.children, normalizeToRenderNodes(next.children), root)
-      return current
+      current.props = next.props
+      current.childrenInput = next.children
+      if (propsChanged) {
+        root.dirtyNodeIds.add(current.id)
+        root.pendingHostCommits.push({
+          host: current,
+          delta: {
+            kind: 'update',
+            previousProps,
+            nextProps: next.props,
+            changedKeys: propsChangedKeys,
+          },
+        })
+      }
+      let childrenResult = reconcileChildren(
+        current.node,
+        current.children,
+        normalizeToRenderNodes(next.children),
+        root,
+      )
+      current.children = childrenResult.children
+      return {
+        node: current,
+        changed: propsChanged || childrenResult.changed,
+      }
     }
 
     if (next.kind === 'component' && current.kind === 'component') {
       current.key = next.key
-      let rendered = current.render(next.props)
+      let propsChanged = !shallowEqualProps(current.props, next.props)
+      current.props = next.props
+      if (!propsChanged && !current.pendingUpdate && !root.hasPendingComponentUpdate) {
+        return {
+          node: current,
+          changed: false,
+        }
+      }
+      current.pendingUpdate = false
+      root.dirtyNodeIds.add(current.id)
+      let rendered = current.render(current.props)
       let nextChild = normalizeSingle(rendered)
       if (nextChild) {
         if (current.child) {
-          current.child = reconcileNode(current.child, nextChild, parentNode, root)
+          let childResult = reconcileNode(current.child, nextChild, parentNode, root)
+          current.child = childResult.node
+          return {
+            node: current,
+            changed: propsChanged || childResult.changed,
+          }
         } else {
-          current.child = mountNode(nextChild, root)
+          let mounted = mountNode(parentNode, nextChild, root)
+          current.child = mounted.node
+          return {
+            node: current,
+            changed: true,
+          }
         }
       } else if (current.child) {
         removeNode(parentNode, current.child, root)
         current.child = null
+        return {
+          node: current,
+          changed: true,
+        }
       }
-      return current
+      return {
+        node: current,
+        changed: propsChanged,
+      }
     }
 
-    let mounted = mountNode(next, root)
+    let mounted = mountNode(parentNode, next, root)
     removeNode(parentNode, current, root)
-    return mounted
+    return {
+      node: mounted.node,
+      changed: true,
+    }
   }
 
   function mountNode(
+    parentNode: parent | element,
     next: RenderNode,
     root: RootState<parent, node, text, element>,
-  ): CommittedNode<parent, node, text, element> {
+  ): NodeResult<parent, node, text, element> {
     if (next.kind === 'text') {
       let textNode = policy.createText(next.value)
       let committed: CommittedTextNode<text> = {
+        id: nextNodeId++,
         kind: 'text',
         key: next.key,
         node: textNode,
+        value: next.value,
       }
-      return committed
+      root.dirtyNodeIds.add(committed.id)
+      return {
+        node: committed,
+        changed: true,
+      }
     }
 
     if (next.kind === 'host') {
-      let node = policy.createElement(next.type)
+      let node = policy.createElement(parentNode, next.type)
       let committed: CommittedHostNode<parent, node, text, element> = {
+        id: nextNodeId++,
         kind: 'host',
         key: next.key,
         type: next.type,
-        input: toHostInput(next),
+        props: next.props,
+        childrenInput: next.children,
         node,
         children: [],
         pluginSlots: [],
         activePluginIds: [],
       }
-      runHostPlugins(committed, root)
       let children = normalizeToRenderNodes(next.children)
-      committed.children = reconcileChildren(node, [], children, root)
-      return committed
+      let childrenResult = reconcileChildren(node, [], children, root)
+      committed.children = childrenResult.children
+      root.pendingHostCommits.push({
+        host: committed,
+        delta: {
+          kind: 'mount',
+          previousProps: {},
+          nextProps: committed.props,
+          changedKeys: listOwnPropKeys(committed.props),
+        },
+      })
+      root.dirtyNodeIds.add(committed.id)
+      return {
+        node: committed,
+        changed: true,
+      }
     }
 
-    let handle = createUpdateHandle(root)
+    let committed: CommittedComponentNode<parent, node, text, element>
+    let handle = createUpdateHandle(root, () => {
+      committed.pendingUpdate = true
+      root.dirtyNodeIds.add(committed.id)
+      root.hasPendingComponentUpdate = true
+    })
     let render = next.type(handle, next.setup)
     let childValue = render(next.props)
-    let committed: CommittedComponentNode<parent, node, text, element> = {
+    committed = {
+      id: nextNodeId++,
       kind: 'component',
       key: next.key,
       type: next.type,
       render: render as (props: Record<string, unknown>) => RenderValue,
+      props: next.props,
+      pendingUpdate: false,
       child: null,
       handle,
     }
     let normalized = normalizeSingle(childValue)
     if (normalized) {
-      committed.child = mountNode(normalized, root)
+      let mounted = mountNode(parentNode, normalized, root)
+      committed.child = mounted.node
     }
-    return committed
+    root.dirtyNodeIds.add(committed.id)
+    return {
+      node: committed,
+      changed: true,
+    }
   }
 
-  function createUpdateHandle(root: RootState<parent, node, text, element>): UpdateHandle {
+  function createUpdateHandle(
+    root: RootState<parent, node, text, element>,
+    markDirty: () => void,
+  ): UpdateHandle {
     return {
       update() {
         return new Promise((resolve) => {
+          markDirty()
           root.pendingTasks.push((signal) => resolve(signal))
           root.enqueue()
         })
       },
       queueTask(task) {
+        markDirty()
         root.pendingTasks.push(task)
         root.enqueue()
       },
@@ -355,9 +519,43 @@ export function createReconciler<parent, node, text extends node, element extend
       if (existingParent == null) {
         policy.insert(parentNode, childNode, anchor)
       } else if (existingParent === parentNode) {
-        policy.move(parentNode, childNode, anchor)
+        if (policy.nextSibling(childNode) !== anchor) {
+          policy.move(parentNode, childNode, anchor)
+        }
       } else {
         throw new Error('illegal cross-parent placement')
+      }
+      anchor = childNode
+    }
+  }
+
+  function placeChildrenWithMinimalMoves(
+    parentNode: parent | element,
+    children: CommittedNode<parent, node, text, element>[],
+    sourceIndices: number[],
+  ) {
+    let stableIndices = longestIncreasingSubsequenceIndices(sourceIndices)
+    let stableMarks = new Uint8Array(children.length)
+    for (let index of stableIndices) stableMarks[index] = 1
+
+    let anchor: null | node = null
+    for (let index = children.length - 1; index >= 0; index--) {
+      let childNode = firstMaterialNode(children[index])
+      if (!childNode) continue
+      let sourceIndex = sourceIndices[index]
+      if (sourceIndex === -1) {
+        policy.insert(parentNode, childNode, anchor)
+      } else if (!stableMarks[index]) {
+        let existingParent = policy.getParent(childNode)
+        if (existingParent == null) {
+          policy.insert(parentNode, childNode, anchor)
+        } else if (existingParent === parentNode) {
+          if (policy.nextSibling(childNode) !== anchor) {
+            policy.move(parentNode, childNode, anchor)
+          }
+        } else {
+          throw new Error('illegal cross-parent placement')
+        }
       }
       anchor = childNode
     }
@@ -373,15 +571,17 @@ export function createReconciler<parent, node, text extends node, element extend
 
   function runHostPlugins(
     host: CommittedHostNode<parent, node, text, element>,
+    delta: HostPropDelta,
     root: RootState<parent, node, text, element>,
   ) {
     if (plugins.all.length === 0 && host.activePluginIds.length === 0) return
+    if (delta.kind === 'update' && delta.changedKeys.length === 0) return
 
     let consumed: null | Set<string> = null
     let context: PluginHostContext<parent, node, text, element> = {
       root: createRootFacade(root),
       host,
-      input: host.input,
+      delta,
       consume(key) {
         if (!consumed) consumed = new Set()
         consumed.add(key)
@@ -390,17 +590,28 @@ export function createReconciler<parent, node, text extends node, element extend
         return consumed?.has(key) ?? false
       },
       remainingPropsView() {
+        if (!consumed) return delta.nextProps
         let output: Record<string, unknown> = {}
-        for (let key in host.input.props) {
+        for (let key in delta.nextProps) {
           if (consumed?.has(key)) continue
-          output[key] = host.input.props[key]
+          output[key] = delta.nextProps[key]
         }
         return output
       },
     }
 
-    runPluginPhase(plugins.orderedSpecial, plugins.routedSpecialByKey, plugins.unroutedSpecialIds, context)
-    runPluginPhase(plugins.orderedTerminal, new Map(), [], context)
+    runPluginPhase(
+      plugins.orderedSpecial,
+      plugins.routedSpecialByKey,
+      plugins.unroutedSpecialIds,
+      context,
+    )
+    runPluginPhase(
+      plugins.orderedTerminal,
+      new Map(),
+      plugins.terminalIds,
+      context,
+    )
   }
 
   function teardownHostPlugins(
@@ -411,13 +622,18 @@ export function createReconciler<parent, node, text extends node, element extend
     let context: PluginHostContext<parent, node, text, element> = {
       root: createRootFacade(root),
       host,
-      input: host.input,
+      delta: {
+        kind: 'update',
+        previousProps: host.props,
+        nextProps: host.props,
+        changedKeys: [],
+      },
       consume() {},
       isConsumed() {
         return false
       },
       remainingPropsView() {
-        return host.input.props
+        return host.props
       },
     }
     let ids = host.activePluginIds.slice()
@@ -426,7 +642,7 @@ export function createReconciler<parent, node, text extends node, element extend
       if (!prepared) continue
       let slot = host.pluginSlots[pluginId]
       if (slot === undefined) continue
-      prepared.plugin.unmountHost?.(context, slot)
+      prepared.plugin.unmount?.(context, slot)
       host.pluginSlots[pluginId] = undefined
     }
     host.activePluginIds = []
@@ -439,19 +655,40 @@ export function createReconciler<parent, node, text extends node, element extend
     context: PluginHostContext<parent, node, text, element>,
   ) {
     if (ordered.length === 0 && context.host.activePluginIds.length === 0) return
-    let candidateIds = new Set<number>()
-    for (let id of unroutedIds) candidateIds.add(id)
-    for (let key of context.input.propKeys) {
+    if (context.delta.kind === 'update' && context.delta.changedKeys.length === 0) return
+    if (candidateVersion === 0xffffffff) {
+      candidateMarks.fill(0)
+      candidateVersion = 1
+    } else {
+      candidateVersion++
+    }
+    let usePresenceRouting = context.delta.kind === 'mount'
+    if (usePresenceRouting) {
+      for (let id of unroutedIds) {
+        candidateMarks[id] = candidateVersion
+      }
+    }
+    for (let key of context.delta.changedKeys) {
       let routed = routedByKey.get(key)
       if (!routed) continue
-      for (let id of routed) candidateIds.add(id)
+      for (let id of routed) {
+        candidateMarks[id] = candidateVersion
+      }
     }
-    for (let id of context.host.activePluginIds) candidateIds.add(id)
-
-    if (candidateIds.size === 0) return
+    if (usePresenceRouting) {
+      for (let [key, routed] of routedByKey) {
+        if (!(key in context.delta.nextProps)) continue
+        for (let id of routed) {
+          candidateMarks[id] = candidateVersion
+        }
+      }
+    }
+    for (let id of context.host.activePluginIds) {
+      candidateMarks[id] = candidateVersion
+    }
 
     for (let prepared of ordered) {
-      if (!candidateIds.has(prepared.id)) continue
+      if (candidateMarks[prepared.id] !== candidateVersion) continue
       let plugin = prepared.plugin
       let isActive = context.host.pluginSlots[prepared.id] !== undefined
       let shouldActivate = plugin.shouldActivate?.(context) ?? true
@@ -459,20 +696,20 @@ export function createReconciler<parent, node, text extends node, element extend
       if (isActive && !shouldActivate) {
         let previousSlot = context.host.pluginSlots[prepared.id]
         if (previousSlot !== undefined) {
-          plugin.unmountHost?.(context, previousSlot)
+          plugin.unmount?.(context, previousSlot)
           context.host.pluginSlots[prepared.id] = undefined
           context.host.activePluginIds = context.host.activePluginIds.filter((id) => id !== prepared.id)
         }
         continue
       }
       if (!isActive) {
-        let mounted = plugin.mountHost?.(context)
+        let mounted = plugin.mount?.(context)
         context.host.pluginSlots[prepared.id] = mounted === undefined ? null : mounted
         context.host.activePluginIds.push(prepared.id)
       }
       let slot = context.host.pluginSlots[prepared.id]
       if (slot !== undefined) {
-        plugin.commitHost?.(context, slot)
+        plugin.apply?.(context, slot)
       }
     }
   }
@@ -508,6 +745,7 @@ function preparePlugins<parent, node, text extends node, element extends node>(
   let orderedTerminal = all
     .filter((plugin) => plugin.phase === 'terminal')
     .sort(comparePreparedPlugins)
+  let terminalIds = orderedTerminal.map((plugin) => plugin.id)
   let routedSpecialByKey = new Map<string, number[]>()
   let unroutedSpecialIds: number[] = []
   for (let plugin of orderedSpecial) {
@@ -524,6 +762,7 @@ function preparePlugins<parent, node, text extends node, element extends node>(
   return {
     orderedSpecial,
     orderedTerminal,
+    terminalIds,
     routedSpecialByKey,
     unroutedSpecialIds,
     all,
@@ -547,16 +786,6 @@ function isCompatible<parent, node, text extends node, element extends node>(
   if (current.kind === 'host' && next.kind === 'host') return current.type === next.type
   if (current.kind === 'component' && next.kind === 'component') return current.type === next.type
   return false
-}
-
-function toHostInput(next: HostRenderNode): HostInput {
-  return {
-    type: next.type,
-    key: next.key,
-    props: next.props,
-    children: next.children,
-    propKeys: next.propKeys,
-  }
 }
 
 function normalizeSingle(value: RenderValue): null | RenderNode {
@@ -595,28 +824,25 @@ function collectRenderNodes(value: null | RenderValue, output: RenderNode[]) {
 
   if (typeof value.type === 'string') {
     let children = readChildren(value)
-    let props: Record<string, unknown> = {}
-    for (let key in value.props) {
-      if (key === 'children') continue
-      props[key] = value.props[key]
-    }
-    let propKeys = readPropKeys(value, props)
+    let props = value.props
     let host: HostRenderNode = {
       kind: 'host',
       type: value.type,
       key: value.key,
       props,
       children,
-      propKeys,
     }
     output.push(host)
     return
   }
 
   if (typeof value.type === 'function') {
-    let props = { ...value.props }
+    let props = value.props
     let setup = props.setup
-    delete props.setup
+    if ('setup' in props) {
+      props = { ...props }
+      delete props.setup
+    }
     let component: ComponentRenderNode = {
       kind: 'component',
       type: value.type as Component<any, any, RenderValue>,
@@ -639,14 +865,116 @@ function readChildren(element: ReconcilerElement): RenderValue[] {
   return [children as RenderValue]
 }
 
-function readPropKeys(element: ReconcilerElement, props: Record<string, unknown>) {
-  let cached = (element as ReconcilerElement & { [RECONCILER_PROP_KEYS]?: string[] })[
+function listOwnPropKeys(props: Record<string, unknown>) {
+  let keys: string[] = []
+  for (let key in props) {
+    if (key === 'children') continue
+    keys.push(key)
+  }
+  return keys
+}
+
+function listChangedPropKeys(
+  previous: Record<string, unknown>,
+  next: Record<string, unknown>,
+) {
+  if (previous === next) return []
+  let changed: string[] = []
+  for (let key in next) {
+    if (key === 'children') continue
+    if (previous[key] !== next[key]) changed.push(key)
+  }
+  for (let key in previous) {
+    if (key === 'children') continue
+    if (key in next) continue
+    changed.push(key)
+  }
+  return changed
+}
+
+function shallowEqualProps(previous: Record<string, unknown>, next: Record<string, unknown>) {
+  if (previous === next) return true
+  let previousKeys = (previous as ReconcilerElement & { [RECONCILER_PROP_KEYS]?: string[] })[
     RECONCILER_PROP_KEYS
   ]
-  if (cached) return cached
-  let keys: string[] = []
-  for (let key in props) keys.push(key)
-  return keys
+  let nextKeys = (next as ReconcilerElement & { [RECONCILER_PROP_KEYS]?: string[] })[
+    RECONCILER_PROP_KEYS
+  ]
+  if (previousKeys && nextKeys) {
+    if (previousKeys.length !== nextKeys.length) return false
+    for (let index = 0; index < nextKeys.length; index++) {
+      let key = nextKeys[index]
+      if (previous[key] !== next[key]) return false
+    }
+    return true
+  }
+  let size = 0
+  for (let key in next) {
+    if (key === 'children') continue
+    size++
+    if (previous[key] !== next[key]) return false
+  }
+  let previousSize = 0
+  for (let key in previous) {
+    if (key === 'children') continue
+    previousSize++
+  }
+  return previousSize === size
+}
+
+function canUseMinimalMovePlacement<parent, node, text extends node, element extends node>(
+  currentChildren: CommittedNode<parent, node, text, element>[],
+  nextNodes: RenderNode[],
+  sourceIndices: number[],
+) {
+  if (currentChildren.length !== nextNodes.length) return false
+  if (nextNodes.length === 0) return false
+  for (let index = 0; index < nextNodes.length; index++) {
+    if (nextNodes[index].key == null) return false
+    if (sourceIndices[index] < 0) return false
+  }
+  return true
+}
+
+function longestIncreasingSubsequenceIndices(values: number[]) {
+  let predecessors = new Int32Array(values.length)
+  let tails: number[] = []
+  let tailPositions: number[] = []
+  for (let index = 0; index < values.length; index++) {
+    let value = values[index]
+    if (value < 0) continue
+    let low = 0
+    let high = tails.length
+    while (low < high) {
+      let mid = (low + high) >> 1
+      if (tails[mid] < value) {
+        low = mid + 1
+      } else {
+        high = mid
+      }
+    }
+    if (low > 0) {
+      predecessors[index] = tailPositions[low - 1]
+    } else {
+      predecessors[index] = -1
+    }
+    if (low === tails.length) {
+      tails.push(value)
+      tailPositions.push(index)
+    } else {
+      tails[low] = value
+      tailPositions[low] = index
+    }
+  }
+  let output: number[] = []
+  if (tailPositions.length === 0) return output
+  let cursor = tailPositions[tailPositions.length - 1]
+  while (cursor >= 0) {
+    output.push(cursor)
+    cursor = predecessors[cursor]
+  }
+  output.reverse()
+  return output
 }
 
 function isReconcilerElement(value: unknown): value is ReconcilerElement {

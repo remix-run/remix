@@ -1,68 +1,67 @@
-import type { NodePolicy } from '../lib/types.ts'
+import type { NodePolicy } from '@remix-run/reconciler'
+import type { TuiHostBridge, TuiHostNode } from './tui-host.ts'
 
-export type TestContainerNode = {
+export type TuiContainerNode = {
   kind: 'container'
-  children: TestNode[]
+  host: unknown
+  bridge: TuiHostBridge
+  children: TuiNode[]
 }
 
-export type TestElementNode = {
+export type TuiElementNode = {
   kind: 'element'
   type: string
-  parent: null | TestContainerNode | TestElementNode
-  children: TestNode[]
+  host: TuiHostNode
+  parent: null | TuiContainerNode | TuiElementNode
+  children: TuiNode[]
+  bridge: TuiHostBridge
 }
 
-export type TestTextNode = {
+export type TuiTextNode = {
   kind: 'text'
-  value: string
-  parent: null | TestContainerNode | TestElementNode
+  host: TuiHostNode
+  parent: null | TuiContainerNode | TuiElementNode
+  bridge: TuiHostBridge
 }
 
-export type TestNode = TestElementNode | TestTextNode
+export type TuiNode = TuiElementNode | TuiTextNode
+export type TuiParentNode = TuiContainerNode | TuiElementNode
 
-export type TestTraversal = {
-  next: null | TestNode
-}
+export type TuiNodePolicy = NodePolicy<TuiContainerNode, TuiNode, TuiTextNode, TuiElementNode>
 
-export type TestNodePolicy = NodePolicy<
-  TestContainerNode,
-  TestNode,
-  TestTextNode,
-  TestElementNode
-> & {
-  operations: string[]
-  assertTreeConsistency(container: TestContainerNode): void
-}
-
-export function createTestContainer(): TestContainerNode {
+export function createTuiContainer(host: unknown, bridge: TuiHostBridge): TuiContainerNode {
   return {
     kind: 'container',
+    host,
+    bridge,
     children: [],
   }
 }
 
-export function createTestNodePolicy(): TestNodePolicy {
-  let operations: string[] = []
-
+export function createTuiNodePolicy(): TuiNodePolicy {
+  let fallbackBridge = createFallbackBridge()
   return {
-    operations,
     createText(value) {
       return {
         kind: 'text',
-        value,
+        host: fallbackBridge.createText(value),
         parent: null,
+        bridge: fallbackBridge,
       }
     },
     setText(node, value) {
-      node.value = value
-      operations.push(`setText:${value}`)
+      let bridge = node.parent?.bridge ?? node.bridge
+      bridge.setText(node.host, value)
     },
-    createElement(_parent, type) {
+    createElement(parent, type) {
+      let bridge = parent.bridge
       return {
         kind: 'element',
         type,
+        host: bridge.createElement(type),
         parent: null,
         children: [],
+        bridge,
       }
     },
     getType(node) {
@@ -93,7 +92,8 @@ export function createTestNodePolicy(): TestNodePolicy {
         parent.children.splice(index, 0, node)
       }
       node.parent = parent
-      operations.push(`insert:${describeNode(node)}`)
+      node.bridge = parent.bridge
+      parent.bridge.insert(parent.host, node.host, anchor?.host ?? null)
     },
     move(parent, node, anchor) {
       assertAnchor(parent, anchor)
@@ -114,7 +114,7 @@ export function createTestNodePolicy(): TestNodePolicy {
       } else {
         parent.children.splice(nextIndex, 0, node)
       }
-      operations.push(`move:${describeNode(node)}`)
+      parent.bridge.move(parent.host, node.host, anchor?.host ?? null)
     },
     remove(parent, node) {
       if (node.parent !== parent) {
@@ -126,42 +126,23 @@ export function createTestNodePolicy(): TestNodePolicy {
       }
       parent.children.splice(index, 1)
       node.parent = null
-      operations.push(`remove:${describeNode(node)}`)
-    },
-    assertTreeConsistency(container) {
-      assertParentLinks(null, container)
+      parent.bridge.remove(parent.host, node.host)
     },
   }
 }
 
-export function stringifyTestNode(node: TestContainerNode | TestNode): string {
-  if (node.kind === 'container') {
-    return node.children.map((child) => stringifyTestNode(child)).join('')
-  }
-  if (node.kind === 'text') return node.value
-  let children = node.children.map((child) => stringifyTestNode(child)).join('')
-  return `<${node.type}>${children}</${node.type}>`
+export function assertTuiTreeConsistency(container: TuiContainerNode) {
+  assertParentLinks(null, container)
 }
 
-function assertAnchor(
-  parent: TestContainerNode | TestElementNode,
-  anchor: null | TestNode,
-) {
+function assertAnchor(parent: TuiParentNode, anchor: null | TuiNode) {
   if (!anchor) return
   if (anchor.parent !== parent) {
     throw new Error('illegal operation: anchor is not a child of parent')
   }
 }
 
-function describeNode(node: TestNode) {
-  if (node.kind === 'text') return `text(${node.value})`
-  return `element(${node.type})`
-}
-
-function assertParentLinks(
-  parent: null | TestContainerNode | TestElementNode,
-  node: TestContainerNode | TestNode,
-) {
+function assertParentLinks(parent: null | TuiParentNode, node: TuiContainerNode | TuiNode) {
   if (node.kind === 'container') {
     for (let child of node.children) assertParentLinks(node, child)
     return
@@ -172,4 +153,27 @@ function assertParentLinks(
   if (node.kind === 'element') {
     for (let child of node.children) assertParentLinks(node, child)
   }
+}
+
+function createFallbackBridge() {
+  return {
+    createElement(type) {
+      return { type: 'element', tag: type, text: '', props: {} }
+    },
+    createText(value) {
+      return { type: 'text', tag: '#text', text: value, props: {} }
+    },
+    setText(node, value) {
+      node.text = value
+    },
+    insert() {},
+    move() {},
+    remove() {},
+    setProp(node, key, value) {
+      node.props[key] = value
+    },
+    removeProp(node, key) {
+      delete node.props[key]
+    },
+  } satisfies TuiHostBridge
 }

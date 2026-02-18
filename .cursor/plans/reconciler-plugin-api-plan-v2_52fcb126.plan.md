@@ -18,8 +18,8 @@ todos:
     content: Phase 3 - Write reconciliation validation tests (complex mixed trees, children composition, updates, replacements, keyed/unkeyed moves, keyed replacements, inserts) plus perf/lifecycle checks
     status: completed
   - id: implement-dom-package
-    content: Phase 4 - Implement terminal DOM plugin behavior in packages/dom (form-state, aria/data, fallback)
-    status: pending
+    content: Phase 4 - Implement DOM plugins in packages/dom for on, style, and basic props/attributes fallback
+    status: completed
   - id: delete-obsolete-prototype
     content: Phase 5 - Delete obsolete prior prototype paths once replacements are validated
     status: pending
