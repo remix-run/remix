@@ -28,7 +28,7 @@ let { values: cliArgs } = util.parseArgs({
     entryPoints: {
       type: 'string',
       short: 'e',
-      default: '../packages/*',
+      default: '../packages/!(data-table*)',
     },
     // Git tag to use for source code links from docs
     tag: {
