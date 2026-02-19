@@ -19,6 +19,7 @@ import {
   notNull,
   type AdapterStatement,
   type DatabaseAdapter,
+  or,
 } from '@remix-run/data-table'
 import { compileSqliteStatement } from './sql-compiler.ts'
 
@@ -318,12 +319,25 @@ describe('sqlite sql-compiler', () => {
       })
     })
 
-    it('compile multiple where', async () => {
+    it('compile logical and', async () => {
       await db.query(accounts).where({ status: 'enabled' }).where(gt(accounts.id, 10)).all()
       let compiled = compileSqliteStatement(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" where (("status" = ?)) and ("accounts"."id" > ?)',
         values: ['enabled', 10],
+      })
+    })
+
+    it('compile logical or', async () => {
+      await db
+        .query(accounts)
+        .where(or(eq(accounts.status, 'enabled'), eq(accounts.status, 'disabled')))
+        .all()
+
+      let compiled = compileSqliteStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" where (("accounts"."status" = ?) or ("accounts"."status" = ?))',
+        values: ['enabled', 'disabled'],
       })
     })
 
