@@ -97,7 +97,7 @@ async function getFunctionMarkdown(comment: DocumentedFunction): Promise<string>
     comment.parameters.length > 0
       ? h2(
           'Params',
-          comment.parameters.map((param) => h3(code(param.name), param.description)).join('\n\n'),
+          comment.parameters.map((param) => h3(param.name, param.description)).join('\n\n'),
         )
       : undefined,
     comment.returns ? h2('Returns', comment.returns) : undefined,
@@ -119,17 +119,14 @@ async function getClassMarkdown(comment: DocumentedClass): Promise<string> {
           'Constructor',
           [
             comment.constructor.description,
-            ...comment.constructor.parameters.map((p) => h3(code(p.name), p.description)),
+            ...comment.constructor.parameters.map((p) => h3(p.name, p.description)),
           ]
             .filter(Boolean)
             .join('\n\n'),
         )
       : undefined,
     comment.properties && comment.properties.length > 0
-      ? h2(
-          'Properties',
-          comment.properties.map((p) => h3(code(p.name), p.description)).join('\n\n'),
-        )
+      ? h2('Properties', comment.properties.map((p) => h3(p.name, p.description)).join('\n\n'))
       : undefined,
     comment.methods && comment.methods.length > 0
       ? h2(
@@ -137,7 +134,7 @@ async function getClassMarkdown(comment: DocumentedClass): Promise<string> {
           comment.methods
             .map((m) =>
               [
-                h3(code(m.signature), m.description),
+                h3(m.signature, m.description),
                 ...m.parameters.map((p) => h4(p.name, p.description)),
               ].join('\n\n'),
             )
@@ -158,10 +155,7 @@ async function getInterfaceMarkdown(comment: DocumentedInterface): Promise<strin
     aliases(comment),
     h2('Signature', await pre(comment.signature)),
     comment.properties && comment.properties.length > 0
-      ? h2(
-          'Properties',
-          comment.properties.map((p) => h3(code(p.name), p.description)).join('\n\n'),
-        )
+      ? h2('Properties', comment.properties.map((p) => h3(p.name, p.description)).join('\n\n'))
       : undefined,
     comment.methods && comment.methods.length > 0
       ? h2(
@@ -169,7 +163,7 @@ async function getInterfaceMarkdown(comment: DocumentedInterface): Promise<strin
           comment.methods
             .map((m) =>
               [
-                h3(code(m.signature), m.description),
+                h3(m.signature, m.description),
                 ...m.parameters.map((p) => h4(p.name, p.description)),
               ].join('\n\n'),
             )
@@ -198,7 +192,7 @@ async function getInterfaceFunctionMarkdown(comment: DocumentedInterfaceFunction
     comment.parameters.length > 0
       ? h2(
           'Params',
-          comment.parameters.map((param) => h3(code(param.name), param.description)).join('\n\n'),
+          comment.parameters.map((param) => h3(param.name, param.description)).join('\n\n'),
         )
       : undefined,
     comment.returns ? h2('Returns', comment.returns) : undefined,

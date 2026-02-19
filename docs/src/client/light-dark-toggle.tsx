@@ -9,6 +9,7 @@ export const LightDarkToggle = clientEntry(
     return () => {
       return (
         <button
+          css={{ height: '100%', width: '44px', cursor: 'pointer' }}
           connect={(node) => {
             el = node
             isDark = document.body.classList.contains('dark')
@@ -22,7 +23,7 @@ export const LightDarkToggle = clientEntry(
             },
           }}
         >
-          {isDark ? '🌙' : '💡'}
+          {isDark ? '💡' : '🌙'}
         </button>
       )
     }
