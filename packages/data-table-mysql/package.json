@@ -20,17 +20,11 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/data-schema": "workspace:*",
@@ -40,7 +34,7 @@
     "mysql2": "^3.15.3"
   },
   "dependencies": {
-    "@remix-run/data-table": "workspace:^"
+    "@remix-run/data-table": "remix-run/remix#preview/pr-11080&path:packages/data-table"
   },
   "peerDependencies": {
     "mysql2": "^3.15.3"
