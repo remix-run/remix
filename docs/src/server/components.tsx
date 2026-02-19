@@ -2,6 +2,7 @@ import type { RemixNode } from 'remix/component/jsx-runtime'
 import type { DocFile } from './markdown.ts'
 import { routes } from './routes.ts'
 import type { Handle } from 'remix/component'
+import { LightDarkToggle } from '../client/light-dark-toggle.tsx'
 
 export function Home() {
   return () => {
@@ -66,6 +67,7 @@ export function Layout(handle: Handle) {
   return ({ children }: { children: RemixNode | RemixNode[] }) => (
     <div class="container">
       <nav class="sidebar">
+        <LightDarkToggle />
         <VersionDropdown />
         <Nav />
       </nav>
