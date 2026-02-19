@@ -4,14 +4,7 @@ import { Frame, type RemixNode } from 'remix/component'
 import { renderToStream } from 'remix/component/server'
 import { createRouter as _createRouter, type Router } from 'remix/fetch-router'
 import { createHtmlResponse } from 'remix/response/html'
-import {
-  ServerProvider,
-  Home,
-  Layout,
-  NotFound,
-  Document,
-  type ServerContext,
-} from './components.tsx'
+import { ServerPage, Home, NotFound, type ServerContext } from './components.tsx'
 import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
 import { routes } from './routes.ts'
 import { createFileResponse } from 'remix/response/file'
@@ -37,6 +30,25 @@ export function createRouter(versions?: ServerContext['versions']) {
 
   const router = _createRouter()
 
+  const respond = {
+    async file(request: Request, filePath: string, name: string) {
+      return await createFileResponse(openLazyFile(filePath, { name }), request)
+    },
+    async document(request: Request, node: RemixNode, init?: ResponseInit) {
+      let body = await stream(router, request, node, init)
+      return createHtmlResponse(body, init)
+    },
+    async fragment(request: Request, node: RemixNode, init?: ResponseInit) {
+      let body = await stream(router, request, node, init)
+      return new Response(body, {
+        ...init,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          ...init?.headers,
+        },
+      })
+    },
+  }
   router.map(routes, {
     assets: ({ request, params }) => {
       // Replicate `staticFiles` middleware but allowing for a dynamic version param
@@ -44,13 +56,12 @@ export function createRouter(versions?: ServerContext['versions']) {
         process.env.NODE_ENV === 'development' && params.asset.endsWith('.css')
           ? path.join(DEV_CSS_DIR, params.asset)
           : path.join(ASSETS_DIR, params.asset)
-      return file(request, filePath, params.asset)
+      return respond.file(request, filePath, params.asset)
     },
     async docs({ request, params }) {
-      return await document(
-        router,
+      return await respond.document(
         request,
-        <ServerProvider
+        <ServerPage
           setup={{
             docFiles,
             versions,
@@ -58,41 +69,42 @@ export function createRouter(versions?: ServerContext['versions']) {
             activeVersion: params.version,
           }}
         >
-          <Document>
-            <Layout>
-              <Frame src={routes.fragment.href({ version: params.version, slug: params.slug })} />
-            </Layout>
-          </Document>
-        </ServerProvider>,
+          <Frame src={routes.fragment.href({ version: params.version, slug: params.slug })} />
+        </ServerPage>,
       )
     },
     async home({ request, params }) {
-      return document(
-        router,
+      return respond.document(
         request,
-        <ServerProvider setup={{ docFiles, versions, activeVersion: params.version }}>
-          <Document>
-            <Layout>
-              <Frame src={routes.fragment.href({ version: params.version })} />
-            </Layout>
-          </Document>
-        </ServerProvider>,
+        <ServerPage setup={{ docFiles, versions, activeVersion: params.version }}>
+          <Frame src={routes.fragment.href({ version: params.version })} />
+        </ServerPage>,
       )
     },
     async fragment({ request, url, params }) {
-      // Home page
+      let node: RemixNode
+
       if (!params.slug) {
-        return await spaFragment(router, request, <Home />)
+        // Home page
+        node = <Home />
+      } else {
+        // Docs page
+        let docFile = docFiles.find((file) => file.urlPath === params.slug)
+        if (!docFile) {
+          node = <NotFound slug={params.slug} />
+        } else {
+          let html = await renderMarkdownFile(docFile.path, docFilesLookup, params.version)
+          node = <div innerHTML={html} />
+        }
       }
 
-      let docFile = docFiles.find((file) => file.urlPath === params.slug)
-      if (!docFile) {
-        return await fragment(router, request, <NotFound url={url} />, { status: 404 })
-      }
-
-      // Docs page
-      let html = await renderMarkdownFile(docFile.path, docFilesLookup, params.version)
-      return await spaFragment(router, request, <div innerHTML={html} />)
+      return respond.fragment(
+        request,
+        <>
+          {node}
+          <ClientRouter />
+        </>,
+      )
     },
     async markdown({ request, params }) {
       let docFile = docFiles.find((file) => file.urlPath === params.slug)
@@ -100,7 +112,7 @@ export function createRouter(versions?: ServerContext['versions']) {
         return new Response('Not Found', { status: 404 })
       }
 
-      return file(request, docFile.path, params.slug)
+      return respond.file(request, docFile.path, params.slug)
     },
   })
 
@@ -108,36 +120,6 @@ export function createRouter(versions?: ServerContext['versions']) {
 }
 
 // Response helpers
-async function document(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
-  let body = await stream(router, request, node, init)
-  return createHtmlResponse(body, init)
-}
-
-function file(request: Request, filePath: string, name: string) {
-  return createFileResponse(openLazyFile(filePath, { name }), request)
-}
-
-async function fragment(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
-  let body = await stream(router, request, node, init)
-  return new Response(body, {
-    ...init,
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      ...init?.headers,
-    },
-  })
-}
-
-function spaFragment(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
-  return fragment(
-    router,
-    request,
-    <>
-      <ClientRouter />
-      {node}
-    </>,
-  )
-}
 
 function stream(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
   return renderToStream(node, {

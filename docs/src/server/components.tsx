@@ -7,8 +7,8 @@ import { LightDarkToggle } from '../client/light-dark-toggle.tsx'
 export function Home() {
   return () => {
     return (
-      <div class="home-message">
-        <h1>Welcome to Remix API Documentation</h1>
+      <div class="home">
+        <h1>Remix API Documentation</h1>
         <p>Select a document from the sidebar to get started.</p>
       </div>
     )
@@ -16,12 +16,12 @@ export function Home() {
 }
 
 export function NotFound() {
-  return ({ url }: { url: URL }) => {
+  return ({ slug }: { slug: string }) => {
     return (
       <div class="error">
-        <h2>404 - Not Found</h2>
-        <p>The requested document was not found.</p>
-        <p>Path: {url.pathname}</p>
+        <h2>Not Found</h2>
+        <p>The requested document was not found:</p>
+        <p>{slug}</p>
       </div>
     )
   }
@@ -34,13 +34,17 @@ export type ServerContext = {
   slug?: string
 }
 
-export function ServerProvider(handle: Handle<ServerContext>, setup: ServerContext) {
+export function ServerPage(handle: Handle<ServerContext>, setup: ServerContext) {
   handle.context.set(setup)
-  return ({ children }: { children: RemixNode | RemixNode[] }) => children
+  return ({ children }: { children: RemixNode | RemixNode[] }) => (
+    <Document>
+      <Layout>{children}</Layout>
+    </Document>
+  )
 }
 
-export function Document(handle: Handle) {
-  let { activeVersion } = handle.context.get(ServerProvider)
+function Document(handle: Handle) {
+  let { activeVersion } = handle.context.get(ServerPage)
   return ({ children }: { children: RemixNode | RemixNode[] }) => (
     <html lang="en">
       <head>
@@ -63,15 +67,15 @@ export function Document(handle: Handle) {
   )
 }
 
-export function Layout(handle: Handle) {
+function Layout(handle: Handle) {
   return ({ children }: { children: RemixNode | RemixNode[] }) => (
     <div class="container">
       <nav class="sidebar">
         <header>
-          <div class="logo">
+          <a href={routes.home.href({ version: undefined })} class="logo">
             <RemixLogoLight />
             <RemixLogoDark />
-          </div>
+          </a>
           <div class="toggle">
             <LightDarkToggle />
           </div>
@@ -87,7 +91,7 @@ export function Layout(handle: Handle) {
 }
 
 export function VersionDropdown(handle: Handle) {
-  let { versions, activeVersion } = handle.context.get(ServerProvider)
+  let { versions, activeVersion } = handle.context.get(ServerPage)
   let latestVersion = versions[0]?.version
 
   // When we're displaying an active version, only include versions up until
@@ -115,7 +119,7 @@ export function VersionDropdown(handle: Handle) {
 }
 
 function VersionLink(handle: Handle) {
-  let { activeVersion, slug } = handle.context.get(ServerProvider)
+  let { activeVersion, slug } = handle.context.get(ServerPage)
   return ({
     version,
     latest,
@@ -163,7 +167,7 @@ type ApiTypes = {
 }
 
 export function Nav(handle: Handle) {
-  let { docFiles } = handle.context.get(ServerProvider)
+  let { docFiles } = handle.context.get(ServerPage)
   return () => {
     let packageGroups = new Map<string, ApiTypes>()
 
@@ -210,7 +214,7 @@ function NavDropdown() {
 }
 
 function NavDropdownSection(handle: Handle) {
-  let { activeVersion: version } = handle.context.get(ServerProvider)
+  let { activeVersion: version } = handle.context.get(ServerPage)
   return ({ title, files, type }: { title: string; files: ApiTypes; type: keyof ApiTypes }) => {
     if (files[type].length === 0) {
       return null

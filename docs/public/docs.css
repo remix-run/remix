@@ -274,6 +274,19 @@ code {
 }
 
 .content {
+  .home {
+    text-align: center;
+    margin-top: 30%;
+
+    h1 {
+      font-size: var(--h2-size);
+    }
+  }
+
+  .error {
+    text-align: center;
+  }
+
   a {
     /* color: var(--text-link-color); */
     text-decoration: none;
