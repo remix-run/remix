@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
-import { number, string } from '@remix-run/data-schema'
+import { boolean, number, string } from '@remix-run/data-schema'
 import {
   between,
   createDatabase,
@@ -28,6 +28,7 @@ let accounts = createTable({
     id: number(),
     email: string(),
     status: string(),
+    deleted: boolean(),
   },
 })
 
@@ -50,6 +51,14 @@ let fakeAdapter = {
 
   execute: async (request) => {
     statements.push(request.statement)
+    // usefull for update
+    if (request.statement.kind === 'select') {
+      return {
+        rows: [{ id: 1 }],
+      }
+    }
+
+    // for insert with returning
     if (request.statement.kind === 'insert' && request.statement.returning) {
       return {
         rows: [{ id: 10 }],
@@ -100,7 +109,7 @@ describe('sqlite sql-compilter', () => {
       })
     })
 
-    it('compile left left join', async () => {
+    it('compile left join', async () => {
       await db.query(accounts).leftJoin(tasks, eq(accounts.id, tasks.account_id)).all()
 
       let compiled = compileSqliteStatement(statements[0])
@@ -110,7 +119,7 @@ describe('sqlite sql-compilter', () => {
       })
     })
 
-    it('compile right left join', async () => {
+    it('compile right join', async () => {
       await db.query(accounts).rightJoin(tasks, eq(accounts.id, tasks.account_id)).all()
 
       let compiled = compileSqliteStatement(statements[0])
@@ -318,12 +327,59 @@ describe('sqlite sql-compilter', () => {
       })
     })
 
+    it('compile having', async () => {
+      await db.query(tasks).having({ account_id: 20 }).all()
+      let compiled = compileSqliteStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "tasks" having (("account_id" = ?))',
+        values: [20],
+      })
+    })
+
     it('compile pagination', async () => {
       await db.query(accounts).offset(5).limit(10).all()
       let compiled = compileSqliteStatement(statements[0])
       assert.deepEqual(compiled, {
         text: 'select * from "accounts" limit 10 offset 5',
         values: [],
+      })
+    })
+
+    it('compile with normalized boolean - true', async () => {
+      await db.query(accounts).where({ deleted: true }).all()
+      let compiled = compileSqliteStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" where (("deleted" = ?))',
+        values: [1],
+      })
+    })
+
+    it('compile with normalized boolean - false', async () => {
+      await db.query(accounts).where({ deleted: false }).all()
+      let compiled = compileSqliteStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" where (("deleted" = ?))',
+        values: [0],
+      })
+    })
+  })
+
+  describe('count - exists statement', () => {
+    it('compile count', async () => {
+      await db.query(tasks).where({ account_id: 1 }).count()
+      let compiled = compileSqliteStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select count(*) as "count" from (select 1 from "tasks" where (("account_id" = ?))) as "__dt_count"',
+        values: [1],
+      })
+    })
+
+    it('compile exists', async () => {
+      await db.query(tasks).where({ account_id: 1 }).exists()
+      let compiled = compileSqliteStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select count(*) as "count" from (select 1 from "tasks" where (("account_id" = ?))) as "__dt_count"',
+        values: [1],
       })
     })
   })
@@ -409,16 +465,16 @@ describe('sqlite sql-compilter', () => {
 
   describe('update statement', () => {
     it('compile for one', async () => {
-      // TODO: is QueryBuilder's responsability to ensure entry exists in db ?
       await db.update(accounts, 1, {
         email: 'info@remix.run',
         status: 'enabled',
       })
 
-      let compiled = compileSqliteStatement(statements[0])
+      // is QueryBuilder's responsability to ensure entry exists in db ?
+      let compiled = compileSqliteStatement(statements[1]) // statements[0] is for the initial select
       assert.deepEqual(compiled, {
-        text: 'select * from "accounts" where (("id" = ?)) limit 1',
-        values: [1],
+        text: 'update "accounts" set "email" = ?, "status" = ? where (("id" = ?))',
+        values: ['info@remix.run', 'enabled', 1],
       })
     })
 
