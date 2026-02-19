@@ -18,10 +18,12 @@ import { createFileResponse } from 'remix/response/file'
 import { openLazyFile } from 'remix/fs'
 import { ClientRouter } from '../client/client-router.tsx'
 
-const REPO_DIR = path.resolve(process.cwd(), '..')
+const DOCS_DIR = process.cwd()
+const REPO_DIR = path.resolve(DOCS_DIR, '..')
 const BUILD_DIR = path.join(REPO_DIR, 'docs', 'build')
 const MD_DIR = path.join(BUILD_DIR, 'md')
 const ASSETS_DIR = path.join(BUILD_DIR, 'assets')
+const DEV_CSS_DIR = path.join(DOCS_DIR, 'public')
 const REMIX_PKG = path.join(REPO_DIR, 'packages', 'remix')
 
 const { docFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
@@ -34,7 +36,10 @@ export function createRouter(versions?: ServerContext['versions']) {
   router.map(routes, {
     assets: ({ request, params }) => {
       // Replicate `staticFiles` middleware but allowing for a dynamic version param
-      let filePath = path.join(ASSETS_DIR, params.asset)
+      let filePath =
+        process.env.NODE_ENV === 'development' && params.asset.endsWith('.css')
+          ? path.join(DEV_CSS_DIR, params.asset)
+          : path.join(ASSETS_DIR, params.asset)
       let lazyFile = openLazyFile(filePath, { name: params.asset })
       return createFileResponse(lazyFile, request)
     },
