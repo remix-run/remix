@@ -18,15 +18,19 @@ import { createFileResponse } from 'remix/response/file'
 import { openLazyFile } from 'remix/fs'
 import { ClientRouter } from '../client/client-router.tsx'
 
-const DOCS_DIR = process.cwd()
+const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..')
 const BUILD_DIR = path.join(REPO_DIR, 'docs', 'build')
 const MD_DIR = path.join(BUILD_DIR, 'md')
 const ASSETS_DIR = path.join(BUILD_DIR, 'assets')
 const DEV_CSS_DIR = path.join(DOCS_DIR, 'public')
-const REMIX_PKG = path.join(REPO_DIR, 'packages', 'remix')
+const REMIX_PKG_JSON = path.join(REPO_DIR, 'packages', 'remix', 'package.json')
 
 const { docFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
+
+export const getDefaultVersions = (): ServerContext['versions'] => {
+  return [{ version: JSON.parse(fs.readFileSync(REMIX_PKG_JSON, 'utf-8')).version, crawl: true }]
+}
 
 export function createRouter(versions?: ServerContext['versions']) {
   versions ??= getDefaultVersions()
@@ -40,8 +44,7 @@ export function createRouter(versions?: ServerContext['versions']) {
         process.env.NODE_ENV === 'development' && params.asset.endsWith('.css')
           ? path.join(DEV_CSS_DIR, params.asset)
           : path.join(ASSETS_DIR, params.asset)
-      let lazyFile = openLazyFile(filePath, { name: params.asset })
-      return createFileResponse(lazyFile, request)
+      return file(request, filePath, params.asset)
     },
     async docs({ request, params }) {
       return await document(
@@ -77,15 +80,9 @@ export function createRouter(versions?: ServerContext['versions']) {
       )
     },
     async fragment({ request, url, params }) {
+      // Home page
       if (!params.slug) {
-        return fragment(
-          router,
-          request,
-          <>
-            <Home />
-            <ClientRouter />
-          </>,
-        )
+        return await spaFragment(router, request, <Home />)
       }
 
       let docFile = docFiles.find((file) => file.urlPath === params.slug)
@@ -93,33 +90,53 @@ export function createRouter(versions?: ServerContext['versions']) {
         return await fragment(router, request, <NotFound url={url} />, { status: 404 })
       }
 
+      // Docs page
       let html = await renderMarkdownFile(docFile.path, docFilesLookup, params.version)
-      return await fragment(
-        router,
-        request,
-        <>
-          <div innerHTML={html} />
-          <ClientRouter />
-        </>,
-      )
+      return await spaFragment(router, request, <div innerHTML={html} />)
     },
-    async md({ request, url, params }) {
-      if (!params.slug) {
-        return new Response('Not Found', { status: 404 })
-      }
-
+    async markdown({ request, params }) {
       let docFile = docFiles.find((file) => file.urlPath === params.slug)
       if (!docFile) {
         return new Response('Not Found', { status: 404 })
       }
 
-      // Replicate `staticFiles` middleware but allowing for a dynamic version param
-      let lazyFile = openLazyFile(docFile.path, { name: params.slug })
-      return createFileResponse(lazyFile, request)
+      return file(request, docFile.path, params.slug)
     },
   })
 
   return router
+}
+
+// Response helpers
+async function document(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
+  let body = await stream(router, request, node, init)
+  return createHtmlResponse(body, init)
+}
+
+function file(request: Request, filePath: string, name: string) {
+  return createFileResponse(openLazyFile(filePath, { name }), request)
+}
+
+async function fragment(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
+  let body = await stream(router, request, node, init)
+  return new Response(body, {
+    ...init,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      ...init?.headers,
+    },
+  })
+}
+
+function spaFragment(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
+  return fragment(
+    router,
+    request,
+    <>
+      <ClientRouter />
+      {node}
+    </>,
+  )
 }
 
 function stream(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
@@ -152,26 +169,4 @@ function stream(router: Router, request: Request, node: RemixNode, init?: Respon
       return await res.text()
     },
   })
-}
-
-async function fragment(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
-  let body = await stream(router, request, node, init)
-  return new Response(body, {
-    ...init,
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      ...init?.headers,
-    },
-  })
-}
-
-async function document(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
-  let body = await stream(router, request, node, init)
-  return createHtmlResponse(body, init)
-}
-
-export function getDefaultVersions(): ServerContext['versions'] {
-  let remixPkgJson = path.join(REMIX_PKG, 'package.json')
-  let { version } = JSON.parse(fs.readFileSync(remixPkgJson, 'utf-8'))
-  return [{ version, crawl: true }]
 }

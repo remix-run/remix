@@ -5,5 +5,5 @@ export const routes = route({
   docs: '/(:version/)api/*slug',
   home: '/(:version/)',
   fragment: '/(:version/)fragment/(*slug)',
-  md: '/(:version/)api/*slug.md',
+  markdown: '/(:version/)api/*slug.md',
 })
