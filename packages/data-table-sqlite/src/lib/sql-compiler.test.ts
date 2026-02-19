@@ -69,7 +69,7 @@ let fakeAdapter = {
 } as DatabaseAdapter
 let db = createDatabase(fakeAdapter)
 
-describe('sqlite sql-compilter', () => {
+describe('sqlite sql-compiler', () => {
   beforeEach(() => {
     statements = []
   })
@@ -531,7 +531,7 @@ describe('sqlite sql-compilter', () => {
       })
     })
 
-    it('compile without update do nothing', async () => {
+    it('compile without update columns', async () => {
       await db.query(accounts).upsert(
         {
           status: 'enabled',
