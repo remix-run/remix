@@ -100,7 +100,7 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
     return {
       downloadedUrl: urlPath,
       discoveredUrls: parse(html)
-        .querySelectorAll('a:not([rel="nofollow"])')
+        .querySelectorAll('a:not([rel="nofollow"]),link:not([rel="preload"]):not([rel="prefetch"])')
         .map((link) => link.getAttribute('href'))
         .filter((href) => href && !isAbsoluteUrl(href))
         .map((href) => resolveRelativeLink(href!, urlPath))
