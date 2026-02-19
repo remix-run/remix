@@ -318,6 +318,15 @@ describe('sqlite sql-compiler', () => {
       })
     })
 
+    it('compile multiple where', async () => {
+      await db.query(accounts).where({ status: 'enabled' }).where(gt(accounts.id, 10)).all()
+      let compiled = compileSqliteStatement(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" where (("status" = ?)) and ("accounts"."id" > ?)',
+        values: ['enabled', 10],
+      })
+    })
+
     it('compile groupBy', async () => {
       await db.query(tasks).groupBy(tasks.account_id).all()
       let compiled = compileSqliteStatement(statements[0])
