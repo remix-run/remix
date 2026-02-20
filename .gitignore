@@ -1,4 +1,3 @@
-dist/
 node_modules/
 pnpm-publish-summary.json
 reference/
