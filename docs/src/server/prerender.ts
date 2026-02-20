@@ -8,6 +8,7 @@ import * as semver from 'semver'
 import { type Router } from 'remix/fetch-router'
 import { createRouter, getDefaultVersions } from './router.tsx'
 import type { ServerContext } from './components.tsx'
+import { routes } from './routes.ts'
 
 let { values: cliArgs } = util.parseArgs({
   options: {
@@ -104,11 +105,12 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
         .map((link) => link.getAttribute('href'))
         .filter((href) => href && !isAbsoluteUrl(href))
         .map((href) => resolveRelativeLink(href!, urlPath))
-        .flatMap((href) =>
-          href.includes('/api/') && !href.endsWith('.md')
-            ? [href, href + '.md', href.replace('/api/', '/fragment/')]
-            : [href],
-        ),
+        .flatMap((href) => {
+          let match = routes.docs.match(`http://localhost${href}`)
+          return match
+            ? [href, routes.markdown.href(match.params), routes.fragment.href(match.params)]
+            : [href]
+        }),
     }
   } else {
     let content = await response.arrayBuffer()
