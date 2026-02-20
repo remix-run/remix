@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { RECONCILER_FRAGMENT } from '@remix-run/reconciler'
 import { Fragment, jsx, jsxs } from './jsx-runtime.ts'
-import type { Component } from '@remix-run/reconciler'
+import type { Component, RenderValue } from '@remix-run/reconciler'
 import type { Assert, IsEqual } from './testing/utils.ts'
 import type { DispatchedEvent } from './jsx-runtime.ts'
+import { on } from './lib/dom-plugins.ts'
 
 describe('dom jsx runtime', () => {
   it('creates branded reconciler elements and extracts key from props', () => {
@@ -57,8 +58,8 @@ describe('dom jsx runtime', () => {
   })
 })
 
-type Counter = Component<{ start: number }, { label: string }, unknown>
-type WithoutSetup = Component<undefined, { id: string }, unknown>
+type Counter = Component<{ start: number }, { label: string }, RenderValue>
+type WithoutSetup = Component<undefined, { id: string }, RenderValue>
 
 let CounterComponent: Counter = (_handle, setup) => (props) => {
   // @ts-expect-error setup should not be present in render props
@@ -95,24 +96,34 @@ let goodConnectProp = (
   />
 )
 
-let goodOnProp = (
+let goodOnMixin = (
   <button
-    on={{
-      pointerdown(event) {
+    mix={[
+      on('pointerdown', (event) => {
         type eventType = Assert<IsEqual<typeof event, DispatchedEvent<PointerEvent, HTMLButtonElement>>>
-      },
-    }}
+      }),
+    ]}
   />
 )
 
-let badOnProp = (
+let goodOnMixinInput = (
+  <input
+    mix={[
+      on<HTMLInputElement>('input', (event) => {
+        type eventType = Assert<IsEqual<typeof event, DispatchedEvent<Event, HTMLInputElement>>>
+      }),
+    ]}
+  />
+)
+
+let badOnMixin = (
   <button
-    on={{
+    mix={[
       // @ts-expect-error pointerdown on button dispatches PointerEvent
-      pointerdown(event: DispatchedEvent<KeyboardEvent, HTMLButtonElement>) {
+      on('pointerdown', (event: DispatchedEvent<KeyboardEvent, HTMLButtonElement>) => {
         void event
-      },
-    }}
+      }),
+    ]}
   />
 )
 
@@ -127,5 +138,6 @@ void missingWithoutSetupProps
 void goodStyleProp
 void goodDataAttribute
 void goodConnectProp
-void goodOnProp
-void badOnProp
+void goodOnMixin
+void goodOnMixinInput
+void badOnMixin

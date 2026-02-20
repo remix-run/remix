@@ -5,7 +5,7 @@ export type TestContainerNode = {
   children: TestNode[]
 }
 
-export type TestElementNode = {
+export type TestElementNode = EventTarget & {
   kind: 'element'
   type: string
   parent: null | TestContainerNode | TestElementNode
@@ -58,12 +58,12 @@ export function createTestNodePolicy(): TestNodePolicy {
       operations.push(`setText:${value}`)
     },
     createElement(_parent, type) {
-      return {
-        kind: 'element',
+      return Object.assign(new EventTarget(), {
+        kind: 'element' as const,
         type,
-        parent: null,
-        children: [],
-      }
+        parent: null as null | TestContainerNode | TestElementNode,
+        children: [] as TestNode[],
+      })
     },
     getType(node) {
       return node.type

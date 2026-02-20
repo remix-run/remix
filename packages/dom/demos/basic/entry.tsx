@@ -5,7 +5,7 @@ function Counter(handle: { update(): Promise<AbortSignal> }, _setup: unknown) {
   return () => (
     <button
       mix={[
-        on('click', () => {
+        on('click', (event) => {
           count++
           void handle.update()
         }),

@@ -16,8 +16,26 @@ export type DispatchedEvent<event extends Event, node extends EventTarget> = eve
   currentTarget: node
 }
 
+type EventMap<node extends EventTarget> = node extends HTMLElement
+  ? HTMLElementEventMap
+  : node extends SVGSVGElement
+    ? SVGSVGElementEventMap
+    : node extends SVGElement
+      ? SVGElementEventMap
+      : node extends Element
+        ? ElementEventMap
+        : node extends Window
+          ? WindowEventMap
+          : node extends Document
+            ? DocumentEventMap
+            : GlobalEventHandlersEventMap & Record<string, Event>
+
 export type OnValue<node extends EventTarget> = {
-  [type: string]: (event: DispatchedEvent<Event, node>) => void
+  [type in Extract<keyof EventMap<node>, string>]?: (
+    event: DispatchedEvent<EventMap<node>[type] extends Event ? EventMap<node>[type] : Event, node>,
+  ) => void
+} & {
+  [type: string]: (event: DispatchedEvent<any, node>) => void
 }
 
 export type ConnectValue<node extends EventTarget> = (
