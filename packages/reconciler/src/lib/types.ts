@@ -54,6 +54,7 @@ export type PluginHostContext<parent, node, text extends node, element extends n
   root: ReconcilerRoot<RenderValue>
   host: CommittedHostNode<parent, node, text, element>
   delta: HostPropDelta
+  mergeProps(props: Record<string, unknown>): void
   consume(key: string): void
   isConsumed(key: string): boolean
   remainingPropsView(): Record<string, unknown>

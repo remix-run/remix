@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createDomReconciler } from './dom-reconciler.ts'
+import { on } from './dom-plugins.ts'
 
 describe('dom reconciler plugins', () => {
   it('applies on/style/basic props and updates/removes them', () => {
@@ -13,11 +14,11 @@ describe('dom reconciler plugins', () => {
         id="first"
         data-id="123"
         style={{ color: 'red' }}
-        on={{
-          click() {
+        mix={[
+          on('click', () => {
             clicks++
-          },
-        }}
+          }),
+        ]}
       >
         hello
       </button>,

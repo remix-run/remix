@@ -1,6 +1,7 @@
 export { createReconciler } from './lib/root.ts'
 export { definePlugin } from './lib/types.ts'
 export { ReconcilerErrorEvent } from './lib/types.ts'
+export { createMixin, mixPlugin } from './lib/mix-plugin.ts'
 export { createTestNodeReconciler } from './testing/test-node-reconciler.ts'
 export {
   createTestContainer,
@@ -30,6 +31,8 @@ export type {
   RenderValue,
   RootTask as Task,
 } from './lib/types.ts'
+
+export type { MixinDescriptor, MixinType, MixValue } from './lib/mix-plugin.ts'
 
 export type {
   TestContainerNode,

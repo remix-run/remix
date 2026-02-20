@@ -578,10 +578,42 @@ export function createReconciler<parent, node, text extends node, element extend
     if (delta.kind === 'update' && delta.changedKeys.length === 0) return
 
     let consumed: null | Set<string> = null
+    let effectiveDelta: HostPropDelta = {
+      kind: delta.kind,
+      previousProps: delta.previousProps,
+      nextProps: { ...delta.nextProps },
+      changedKeys: delta.changedKeys.slice(),
+    }
+    let phaseRoutedByKey: null | Map<string, number[]> = null
+    let phaseCandidateMarks: null | Uint32Array = null
+    let phaseCandidateVersion = 0
+    let phaseOrdered: null | PreparedPlugin<parent, node, text, element>[] = null
+    let phaseCursor = -1
     let context: PluginHostContext<parent, node, text, element> = {
       root: createRootFacade(root),
       host,
-      delta,
+      delta: effectiveDelta,
+      mergeProps(props) {
+        let mergedKeys: string[] = []
+        for (let key in props) {
+          let nextValue = props[key]
+          if (effectiveDelta.nextProps[key] === nextValue) continue
+          effectiveDelta.nextProps[key] = nextValue
+          if (!effectiveDelta.changedKeys.includes(key)) {
+            effectiveDelta.changedKeys.push(key)
+            mergedKeys.push(key)
+          }
+        }
+        if (!phaseRoutedByKey || !phaseCandidateMarks || !phaseOrdered) return
+        for (let key of mergedKeys) {
+          let routed = phaseRoutedByKey.get(key)
+          if (!routed) continue
+          for (let id of routed) {
+            if (!isPhasePluginAhead(phaseOrdered, id, phaseCursor)) continue
+            phaseCandidateMarks[id] = phaseCandidateVersion
+          }
+        }
+      },
       consume(key) {
         if (!consumed) consumed = new Set()
         consumed.add(key)
@@ -605,13 +637,32 @@ export function createReconciler<parent, node, text extends node, element extend
       plugins.routedSpecialByKey,
       plugins.unroutedSpecialIds,
       context,
+      {
+        setPhaseState(routedByKey, candidateMarks, candidateVersion, ordered, cursor) {
+          phaseRoutedByKey = routedByKey
+          phaseCandidateMarks = candidateMarks
+          phaseCandidateVersion = candidateVersion
+          phaseOrdered = ordered
+          phaseCursor = cursor
+        },
+      },
     )
     runPluginPhase(
       plugins.orderedTerminal,
       new Map(),
       plugins.terminalIds,
       context,
+      {
+        setPhaseState() {
+          phaseRoutedByKey = null
+          phaseCandidateMarks = null
+          phaseOrdered = null
+          phaseCursor = -1
+          phaseCandidateVersion = 0
+        },
+      },
     )
+    host.props = effectiveDelta.nextProps
   }
 
   function teardownHostPlugins(
@@ -628,6 +679,7 @@ export function createReconciler<parent, node, text extends node, element extend
         nextProps: host.props,
         changedKeys: [],
       },
+      mergeProps() {},
       consume() {},
       isConsumed() {
         return false
@@ -653,6 +705,15 @@ export function createReconciler<parent, node, text extends node, element extend
     routedByKey: Map<string, number[]>,
     unroutedIds: number[],
     context: PluginHostContext<parent, node, text, element>,
+    hooks: {
+      setPhaseState(
+        routedByKey: Map<string, number[]>,
+        candidateMarks: Uint32Array,
+        candidateVersion: number,
+        ordered: PreparedPlugin<parent, node, text, element>[],
+        cursor: number,
+      ): void
+    },
   ) {
     if (ordered.length === 0 && context.host.activePluginIds.length === 0) return
     if (context.delta.kind === 'update' && context.delta.changedKeys.length === 0) return
@@ -687,7 +748,9 @@ export function createReconciler<parent, node, text extends node, element extend
       candidateMarks[id] = candidateVersion
     }
 
-    for (let prepared of ordered) {
+    for (let cursor = 0; cursor < ordered.length; cursor++) {
+      let prepared = ordered[cursor]
+      hooks.setPhaseState(routedByKey, candidateMarks, candidateVersion, ordered, cursor)
       if (candidateMarks[prepared.id] !== candidateVersion) continue
       let plugin = prepared.plugin
       let isActive = context.host.pluginSlots[prepared.id] !== undefined
@@ -712,6 +775,17 @@ export function createReconciler<parent, node, text extends node, element extend
         plugin.apply?.(context, slot)
       }
     }
+  }
+
+  function isPhasePluginAhead(
+    ordered: PreparedPlugin<parent, node, text, element>[],
+    id: number,
+    cursor: number,
+  ) {
+    for (let index = cursor + 1; index < ordered.length; index++) {
+      if (ordered[index].id === id) return true
+    }
+    return false
   }
 
   function createRootFacade(_root: RootState<parent, node, text, element>): ReconcilerRoot<RenderValue> {

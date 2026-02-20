@@ -2,7 +2,10 @@ export { createDomNodePolicy } from './lib/dom-node-policy.ts'
 export { createDomReconciler } from './lib/dom-reconciler.ts'
 export {
   basicPropsPlugin,
+  createMixin,
   createDomPlugins,
+  mixPlugin,
+  on,
   onPlugin,
   stylePropsPlugin,
 } from './lib/dom-plugins.ts'
@@ -18,6 +21,9 @@ export type {
   DomSVGElements,
   DispatchedEvent,
   OnValue,
+  MixValue,
+  MixinDescriptor,
+  MixinType,
 } from './jsx-runtime.ts'
 
 export type {

@@ -5,6 +5,7 @@ import {
   RECONCILER_PROP_SHAPE,
 } from '@remix-run/reconciler'
 import type { Component, ReconcilerElement, RenderValue } from '@remix-run/reconciler'
+import type { MixValue } from '@remix-run/reconciler'
 
 export const Fragment = RECONCILER_FRAGMENT
 
@@ -24,6 +25,12 @@ export type ConnectValue<node extends EventTarget> = (
   signal: AbortSignal,
 ) => void
 
+export type {
+  MixValue,
+  MixinDescriptor,
+  MixinType,
+} from '@remix-run/reconciler'
+
 export type DomElementProps<node extends EventTarget> = {
   children?: RenderValue
   connect?: ConnectValue<node>
@@ -31,6 +38,7 @@ export type DomElementProps<node extends EventTarget> = {
   key?: unknown
   on?: OnValue<node>
   style?: Record<string, string | number | null | undefined>
+  mix?: MixValue<node>
 } & Record<string, unknown>
 
 export type DomHTMLElements = {
