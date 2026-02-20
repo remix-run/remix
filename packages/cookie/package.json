@@ -19,24 +19,18 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
   "dependencies": {
-    "@remix-run/headers": "workspace:^"
+    "@remix-run/headers": "remix-run/remix#preview/pr-11010&path:packages/headers"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
