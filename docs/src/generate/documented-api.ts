@@ -1,6 +1,6 @@
 import * as typedoc from 'typedoc'
 import { getApiNameFromFullName, invariant, unimplemented, warn } from './utils.ts'
-import { MDN_SYMBOLS } from './mdn-symbols.ts'
+import { IGNORE_SYMBOLS, MDN_SYMBOLS } from './symbols.ts'
 
 export type DocumentedAPI =
   | DocumentedFunction
