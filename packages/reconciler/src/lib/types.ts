@@ -56,10 +56,9 @@ export type PluginHostContext<element = EventTarget> = {
   remainingPropsView(): Record<string, unknown>
 }
 
-export type PluginSetupHandle<element = EventTarget> = {
+export type PluginSetupHandle<element = EventTarget> = EventTarget & {
   root: ReconcilerRoot<RenderValue>
   host: CommittedHostNode<any, any, any, element>
-  signal: AbortSignal
 }
 
 export type Plugin<element = EventTarget> = {
@@ -67,9 +66,7 @@ export type Plugin<element = EventTarget> = {
   priority?: number
   keys?: string[]
   shouldActivate?(context: PluginHostContext<element>): boolean
-  setup?(
-    handle: PluginSetupHandle<element>,
-  ): ((context: PluginHostContext<element>) => void) | void
+  setup?(handle: PluginSetupHandle<element>): void
   mount?(context: PluginHostContext<element>): unknown
   apply?(context: PluginHostContext<element>, slot: unknown): void
   unmount?(context: PluginHostContext<element>, slot: unknown): void
@@ -171,6 +168,43 @@ export class ReconcilerErrorEvent extends Event {
   constructor(cause: unknown) {
     super('error')
     this.cause = cause
+  }
+}
+
+export class PluginCommitEvent<element = EventTarget> extends Event {
+  root: ReconcilerRoot<RenderValue>
+  host: CommittedHostNode<any, any, any, element>
+  delta: HostPropDelta
+  #mergeProps: PluginHostContext<element>['mergeProps']
+  #consume: PluginHostContext<element>['consume']
+  #isConsumed: PluginHostContext<element>['isConsumed']
+  #remainingPropsView: PluginHostContext<element>['remainingPropsView']
+
+  constructor(context: PluginHostContext<element>) {
+    super('commit')
+    this.root = context.root
+    this.host = context.host
+    this.delta = context.delta
+    this.#mergeProps = context.mergeProps
+    this.#consume = context.consume
+    this.#isConsumed = context.isConsumed
+    this.#remainingPropsView = context.remainingPropsView
+  }
+
+  mergeProps(props: Record<string, unknown>) {
+    this.#mergeProps(props)
+  }
+
+  consume(key: string) {
+    this.#consume(key)
+  }
+
+  isConsumed(key: string) {
+    return this.#isConsumed(key)
+  }
+
+  remainingPropsView() {
+    return this.#remainingPropsView()
   }
 }
 

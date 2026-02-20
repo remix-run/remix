@@ -1,4 +1,4 @@
-import { definePlugin } from '@remix-run/reconciler'
+import { definePlugin, type PluginCommitEvent } from '@remix-run/reconciler'
 
 export let stylePropsPlugin = definePlugin<HTMLElement | SVGElement>({
   phase: 'special',
@@ -13,7 +13,7 @@ export let stylePropsPlugin = definePlugin<HTMLElement | SVGElement>({
     let element = handle.host.node
     let previousStyle: null | Record<string, unknown> = null
 
-    handle.signal.addEventListener('abort', () => {
+    handle.addEventListener('remove', () => {
       if (!previousStyle) return
       for (let key in previousStyle) {
         element.style.removeProperty(toCssPropertyName(key))
@@ -21,7 +21,8 @@ export let stylePropsPlugin = definePlugin<HTMLElement | SVGElement>({
       previousStyle = null
     })
 
-    return (context) => {
+    handle.addEventListener('commit', (event) => {
+      let context = event as PluginCommitEvent<HTMLElement | SVGElement>
       let nextStyle = context.delta.nextProps.style as Record<string, unknown>
       if (previousStyle === nextStyle) {
         context.consume('style')
@@ -47,7 +48,7 @@ export let stylePropsPlugin = definePlugin<HTMLElement | SVGElement>({
 
       previousStyle = nextStyle
       context.consume('style')
-    }
+    })
   },
 })
 

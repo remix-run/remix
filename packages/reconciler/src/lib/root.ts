@@ -4,6 +4,7 @@ import {
   RECONCILER_PROP_KEYS,
 } from '../testing/jsx.ts'
 import { createScheduler } from './scheduler.ts'
+import { PluginCommitEvent } from './types.ts'
 import type {
   CommittedComponentNode,
   CommittedHostNode,
@@ -16,6 +17,7 @@ import type {
   NodePolicy,
   Plugin,
   PluginHostContext,
+  PluginSetupHandle,
   PreparedPlugin,
   ReconcilerElement,
   ReconcilerRoot,
@@ -772,7 +774,7 @@ export function createReconciler<parent, node, text extends node, element extend
       let slot = context.host.pluginSlots[prepared.id]
       if (slot !== undefined) {
         if (isSetupSlot(slot)) {
-          slot.run?.(context)
+          slot.handle.dispatchEvent(new PluginCommitEvent(context))
         } else {
           plugin.apply?.(context, slot)
         }
@@ -785,16 +787,13 @@ export function createReconciler<parent, node, text extends node, element extend
     context: PluginHostContext<element>,
   ) {
     if (plugin.setup) {
-      let controller = new AbortController()
-      let run = plugin.setup({
-        root: context.root,
-        host: context.host,
-        signal: controller.signal,
-      })
+      let handle = new EventTarget() as PluginSetupHandle<element>
+      handle.root = context.root
+      handle.host = context.host
+      plugin.setup(handle)
       return {
         __rmxSetupSlot: true as const,
-        controller,
-        run: run ?? null,
+        handle,
       }
     }
     let mounted = plugin.mount?.(context)
@@ -807,7 +806,7 @@ export function createReconciler<parent, node, text extends node, element extend
     slot: unknown,
   ) {
     if (isSetupSlot(slot)) {
-      slot.controller.abort()
+      slot.handle.dispatchEvent(new Event('remove'))
       return
     }
     plugin.unmount?.(context, slot)
@@ -817,12 +816,11 @@ export function createReconciler<parent, node, text extends node, element extend
     slot: unknown,
   ): slot is {
     __rmxSetupSlot: true
-    controller: AbortController
-    run: null | ((context: PluginHostContext<element>) => void)
+    handle: PluginSetupHandle<element>
   } {
     if (!slot || typeof slot !== 'object') return false
-    let value = slot as { __rmxSetupSlot?: unknown; controller?: unknown }
-    return value.__rmxSetupSlot === true && value.controller instanceof AbortController
+    let value = slot as { __rmxSetupSlot?: unknown; handle?: unknown }
+    return value.__rmxSetupSlot === true && value.handle instanceof EventTarget
   }
 
   function removeActivePluginId(ids: number[], id: number) {

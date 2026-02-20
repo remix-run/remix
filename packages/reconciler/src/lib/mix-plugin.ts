@@ -1,5 +1,6 @@
 import { definePlugin } from './types.ts'
 import type { Plugin } from './types.ts'
+import type { PluginCommitEvent } from './types.ts'
 
 export type MixinType<node extends EventTarget = EventTarget, args extends unknown[] = unknown[]> = () => (
   node: node,
@@ -47,7 +48,7 @@ export let mixPlugin: Plugin<EventTarget> = definePlugin({
     let node = handle.host.node
     let runnerEntries: RunnerEntry[] = []
 
-    handle.signal.addEventListener('abort', () => {
+    handle.addEventListener('remove', () => {
       for (let index = 0; index < runnerEntries.length; index++) {
         let entry = runnerEntries[index]
         entry?.controller.abort()
@@ -56,7 +57,8 @@ export let mixPlugin: Plugin<EventTarget> = definePlugin({
       controller.abort()
     })
 
-    return (context) => {
+    handle.addEventListener('commit', (event) => {
+      let context = event as PluginCommitEvent<EventTarget>
       let descriptors = resolveMixDescriptors(context.delta.nextProps)
       let mergedProps: null | Record<string, unknown> = null
       let maxDescriptors = 1024
@@ -98,7 +100,7 @@ export let mixPlugin: Plugin<EventTarget> = definePlugin({
       }
       if (mergedProps) context.mergeProps(mergedProps)
       context.consume('mix')
-    }
+    })
   },
 })
 

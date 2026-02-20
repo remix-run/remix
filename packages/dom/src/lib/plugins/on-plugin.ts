@@ -1,4 +1,5 @@
 import { definePlugin } from '@remix-run/reconciler'
+import type { PluginCommitEvent } from '@remix-run/reconciler'
 import type { Plugin } from '@remix-run/reconciler'
 import type { DomElementNode } from '../dom-node-policy.ts'
 
@@ -19,7 +20,7 @@ export let onPlugin: Plugin<DomElementNode> = definePlugin({
     let activeByType = new Map<string, EventListener>()
     let listenerTable: ListenerTable = new Map()
 
-    handle.signal.addEventListener('abort', () => {
+    handle.addEventListener('remove', () => {
       for (let [type, entry] of listenerTable) {
         element.removeEventListener(type, entry.dispatch)
       }
@@ -27,7 +28,8 @@ export let onPlugin: Plugin<DomElementNode> = definePlugin({
       activeByType.clear()
     })
 
-    return (context) => {
+    handle.addEventListener('commit', (event) => {
+      let context = event as PluginCommitEvent<DomElementNode>
       let nextOn = context.delta.nextProps.on
       if (!nextOn || typeof nextOn !== 'object') return
       let nextByType = nextOn as Record<string, unknown>
@@ -61,6 +63,6 @@ export let onPlugin: Plugin<DomElementNode> = definePlugin({
       }
 
       context.consume('on')
-    }
+    })
   },
 })
