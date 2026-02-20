@@ -63,7 +63,6 @@ let glass = css({
 })
 
 let page = css({
-  minHeight: '100vh',
   margin: 0,
   padding: 24,
   fontFamily:
@@ -139,6 +138,7 @@ function App(handle: { update(): Promise<AbortSignal> }, _setup: unknown) {
   )
 }
 
+document.body.style.margin = '0'
 let reconciler = createDomReconciler(document)
 let root = reconciler.createRoot(document.body)
 root.render(<App />)
