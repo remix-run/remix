@@ -11,33 +11,30 @@ export let basicPropsPlugin: Plugin<DomParentNode, DomNode, DomTextNode, DomElem
   definePlugin({
     phase: 'terminal',
     priority: 0,
-    mount() {
-      return {
-        previousProps: {} as Record<string, unknown>,
+    setup(handle) {
+      let element = handle.host.node as HTMLElement
+      let previousProps: Record<string, unknown> = {}
+
+      handle.signal.addEventListener('abort', () => {
+        for (let key in previousProps) {
+          removeProp(element, key)
+        }
+        previousProps = {}
+      })
+
+      return (context) => {
+        let props = context.remainingPropsView()
+        for (let key in props) {
+          let nextValue = props[key]
+          if (previousProps[key] === nextValue) continue
+          applyProp(element, key, nextValue)
+        }
+        for (let key in previousProps) {
+          if (key in props) continue
+          removeProp(element, key)
+        }
+        previousProps = props
       }
-    },
-    apply(context, slot) {
-      let state = slot as { previousProps: Record<string, unknown> }
-      let element = context.host.node as HTMLElement
-      let props = context.remainingPropsView()
-      for (let key in props) {
-        let nextValue = props[key]
-        if (state.previousProps[key] === nextValue) continue
-        applyProp(element, key, nextValue)
-      }
-      for (let key in state.previousProps) {
-        if (key in props) continue
-        removeProp(element, key)
-      }
-      state.previousProps = props
-    },
-    unmount(context, slot) {
-      let state = slot as { previousProps: Record<string, unknown> }
-      let element = context.host.node as HTMLElement
-      for (let key in state.previousProps) {
-        removeProp(element, key)
-      }
-      state.previousProps = {}
     },
   })
 
@@ -68,7 +65,7 @@ function applyProp(element: HTMLElement, key: string, value: unknown) {
     return
   }
   if (key in element && !key.includes('-')) {
-    ;(element as Record<string, unknown>)[key] = value
+    ;(element as unknown as Record<string, unknown>)[key] = value
     return
   }
   applyAttribute(element, key, value)
@@ -93,12 +90,12 @@ function removeProp(element: HTMLElement, key: string) {
     return
   }
   if (key in element && !key.includes('-')) {
-    let value = (element as Record<string, unknown>)[key]
+    let value = (element as unknown as Record<string, unknown>)[key]
     if (typeof value === 'boolean') {
-      ;(element as Record<string, unknown>)[key] = false
+      ;(element as unknown as Record<string, unknown>)[key] = false
       return
     }
-    ;(element as Record<string, unknown>)[key] = ''
+    ;(element as unknown as Record<string, unknown>)[key] = ''
     return
   }
   element.removeAttribute(key)

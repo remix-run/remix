@@ -7,11 +7,8 @@ type OnHandler<target extends EventTarget, event extends Event> = (
   reentrySignal: AbortSignal,
 ) => void
 
-let onMixin = createMixin<
-  [type: string, handler: OnHandler<EventTarget, Event>],
-  EventTarget
->(() => {
-  return (node, signal) => {
+let onMixin = createMixin<[type: string, handler: OnHandler<EventTarget, Event>], EventTarget>(
+  () => (node, signal) => {
     let activeType = ''
     let activeHandler: null | OnHandler<EventTarget, Event> = null
     let reentryController: null | AbortController = null
@@ -44,8 +41,8 @@ let onMixin = createMixin<
       }
       activeHandler = handler
     }
-  }
-})
+  },
+)
 
 export function on<target extends EventTarget = EventTarget, event extends Event = Event>(
   type: string,

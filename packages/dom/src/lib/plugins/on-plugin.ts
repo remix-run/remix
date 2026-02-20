@@ -14,62 +14,53 @@ export let onPlugin: Plugin<DomParentNode, DomNode, DomTextNode, DomElementNode>
   shouldActivate(context) {
     return typeof context.delta.nextProps.on === 'object' && context.delta.nextProps.on != null
   },
-  mount() {
-    return {
-      activeByType: new Map<string, EventListener>(),
-      listenerTable: new Map<string, ListenerEntry>(),
-    }
-  },
-  apply(context, slot) {
-    let element = context.host.node as EventTarget
-    let state = slot as {
-      activeByType: Map<string, EventListener>
-      listenerTable: ListenerTable
-    }
-    let nextOn = context.delta.nextProps.on
-    if (!nextOn || typeof nextOn !== 'object') return
-    let nextByType = nextOn as Record<string, unknown>
+  setup(handle) {
+    let element = handle.host.node as EventTarget
+    let activeByType = new Map<string, EventListener>()
+    let listenerTable: ListenerTable = new Map()
 
-    for (let [type, entry] of state.listenerTable) {
-      if (type in nextByType) continue
-      element.removeEventListener(type, entry.dispatch)
-      state.listenerTable.delete(type)
-      state.activeByType.delete(type)
-    }
-
-    for (let type in nextByType) {
-      let candidate = nextByType[type]
-      if (typeof candidate !== 'function') continue
-      let nextHandler = candidate as EventListener
-      let existing = state.listenerTable.get(type)
-      if (existing) {
-        state.activeByType.set(type, nextHandler)
-        continue
+    handle.signal.addEventListener('abort', () => {
+      for (let [type, entry] of listenerTable) {
+        element.removeEventListener(type, entry.dispatch)
       }
-      let dispatch: EventListener = (event) => {
-        let active = state.activeByType.get(type)
-        if (!active) return
-        active(event)
-      }
-      state.listenerTable.set(type, {
-        dispatch,
-      })
-      state.activeByType.set(type, nextHandler)
-      element.addEventListener(type, dispatch)
-    }
+      listenerTable.clear()
+      activeByType.clear()
+    })
 
-    context.consume('on')
-  },
-  unmount(context, slot) {
-    let element = context.host.node as EventTarget
-    let state = slot as {
-      activeByType: Map<string, EventListener>
-      listenerTable: ListenerTable
+    return (context) => {
+      let nextOn = context.delta.nextProps.on
+      if (!nextOn || typeof nextOn !== 'object') return
+      let nextByType = nextOn as Record<string, unknown>
+
+      for (let [type, entry] of listenerTable) {
+        if (type in nextByType) continue
+        element.removeEventListener(type, entry.dispatch)
+        listenerTable.delete(type)
+        activeByType.delete(type)
+      }
+
+      for (let type in nextByType) {
+        let candidate = nextByType[type]
+        if (typeof candidate !== 'function') continue
+        let nextHandler = candidate as EventListener
+        let existing = listenerTable.get(type)
+        if (existing) {
+          activeByType.set(type, nextHandler)
+          continue
+        }
+        let dispatch: EventListener = (event) => {
+          let active = activeByType.get(type)
+          if (!active) return
+          active(event)
+        }
+        listenerTable.set(type, {
+          dispatch,
+        })
+        activeByType.set(type, nextHandler)
+        element.addEventListener(type, dispatch)
+      }
+
+      context.consume('on')
     }
-    for (let [type, entry] of state.listenerTable) {
-      element.removeEventListener(type, entry.dispatch)
-    }
-    state.listenerTable.clear()
-    state.activeByType.clear()
   },
 })

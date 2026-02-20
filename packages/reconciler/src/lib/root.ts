@@ -694,7 +694,7 @@ export function createReconciler<parent, node, text extends node, element extend
       if (!prepared) continue
       let slot = host.pluginSlots[pluginId]
       if (slot === undefined) continue
-      prepared.plugin.unmount?.(context, slot)
+      teardownPlugin(prepared.plugin, context, slot)
       host.pluginSlots[pluginId] = undefined
     }
     host.activePluginIds = []
@@ -759,22 +759,76 @@ export function createReconciler<parent, node, text extends node, element extend
       if (isActive && !shouldActivate) {
         let previousSlot = context.host.pluginSlots[prepared.id]
         if (previousSlot !== undefined) {
-          plugin.unmount?.(context, previousSlot)
+          teardownPlugin(plugin, context, previousSlot)
           context.host.pluginSlots[prepared.id] = undefined
-          context.host.activePluginIds = context.host.activePluginIds.filter((id) => id !== prepared.id)
+          removeActivePluginId(context.host.activePluginIds, prepared.id)
         }
         continue
       }
       if (!isActive) {
-        let mounted = plugin.mount?.(context)
-        context.host.pluginSlots[prepared.id] = mounted === undefined ? null : mounted
+        context.host.pluginSlots[prepared.id] = setupPlugin(plugin, context)
         context.host.activePluginIds.push(prepared.id)
       }
       let slot = context.host.pluginSlots[prepared.id]
       if (slot !== undefined) {
-        plugin.apply?.(context, slot)
+        if (isSetupSlot(slot)) {
+          slot.run?.(context)
+        } else {
+          plugin.apply?.(context, slot)
+        }
       }
     }
+  }
+
+  function setupPlugin(
+    plugin: Plugin<parent, node, text, element>,
+    context: PluginHostContext<parent, node, text, element>,
+  ) {
+    if (plugin.setup) {
+      let controller = new AbortController()
+      let run = plugin.setup({
+        root: context.root,
+        host: context.host,
+        signal: controller.signal,
+      })
+      return {
+        __rmxSetupSlot: true as const,
+        controller,
+        run: run ?? null,
+      }
+    }
+    let mounted = plugin.mount?.(context)
+    return mounted === undefined ? null : mounted
+  }
+
+  function teardownPlugin(
+    plugin: Plugin<parent, node, text, element>,
+    context: PluginHostContext<parent, node, text, element>,
+    slot: unknown,
+  ) {
+    if (isSetupSlot(slot)) {
+      slot.controller.abort()
+      return
+    }
+    plugin.unmount?.(context, slot)
+  }
+
+  function isSetupSlot(
+    slot: unknown,
+  ): slot is {
+    __rmxSetupSlot: true
+    controller: AbortController
+    run: null | ((context: PluginHostContext<parent, node, text, element>) => void)
+  } {
+    if (!slot || typeof slot !== 'object') return false
+    let value = slot as { __rmxSetupSlot?: unknown; controller?: unknown }
+    return value.__rmxSetupSlot === true && value.controller instanceof AbortController
+  }
+
+  function removeActivePluginId(ids: number[], id: number) {
+    let index = ids.indexOf(id)
+    if (index === -1) return
+    ids.splice(index, 1)
   }
 
   function isPhasePluginAhead(

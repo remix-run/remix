@@ -60,11 +60,20 @@ export type PluginHostContext<parent, node, text extends node, element extends n
   remainingPropsView(): Record<string, unknown>
 }
 
+export type PluginSetupHandle<parent, node, text extends node, element extends node> = {
+  root: ReconcilerRoot<RenderValue>
+  host: CommittedHostNode<parent, node, text, element>
+  signal: AbortSignal
+}
+
 export type Plugin<parent, node, text extends node, element extends node> = {
   phase: PluginPhase
   priority?: number
   routing?: PluginRouting
   shouldActivate?(context: PluginHostContext<parent, node, text, element>): boolean
+  setup?(
+    handle: PluginSetupHandle<parent, node, text, element>,
+  ): ((context: PluginHostContext<parent, node, text, element>) => void) | void
   mount?(context: PluginHostContext<parent, node, text, element>): unknown
   apply?(context: PluginHostContext<parent, node, text, element>, slot: unknown): void
   unmount?(context: PluginHostContext<parent, node, text, element>, slot: unknown): void

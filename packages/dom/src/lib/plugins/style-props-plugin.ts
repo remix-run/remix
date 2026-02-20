@@ -17,50 +17,45 @@ export let stylePropsPlugin: Plugin<DomParentNode, DomNode, DomTextNode, DomElem
         typeof context.delta.nextProps.style === 'object' && context.delta.nextProps.style != null
       )
     },
-    mount() {
-      return {
-        previousStyle: null as null | Record<string, unknown>,
-      }
-    },
-    apply(context, slot) {
-      let state = slot as { previousStyle: null | Record<string, unknown> }
-      let element = context.host.node as HTMLElement
-      let nextStyle = context.delta.nextProps.style as Record<string, unknown>
-      let previousStyle = state.previousStyle
-      if (previousStyle === nextStyle) {
-        context.consume('style')
-        return
-      }
+    setup(handle) {
+      let element = handle.host.node as HTMLElement
+      let previousStyle: null | Record<string, unknown> = null
 
-      for (let key in nextStyle) {
-        let value = nextStyle[key]
-        if (previousStyle && previousStyle[key] === value) continue
-        if (value == null) {
-          element.style.removeProperty(toCssPropertyName(key))
-          continue
-        }
-        element.style.setProperty(toCssPropertyName(key), String(value))
-      }
-
-      if (previousStyle) {
+      handle.signal.addEventListener('abort', () => {
+        if (!previousStyle) return
         for (let key in previousStyle) {
-          if (key in nextStyle) continue
           element.style.removeProperty(toCssPropertyName(key))
         }
-      }
+        previousStyle = null
+      })
 
-      state.previousStyle = nextStyle
-      context.consume('style')
-    },
-    unmount(context, slot) {
-      let state = slot as { previousStyle: null | Record<string, unknown> }
-      let element = context.host.node as HTMLElement
-      let previousStyle = state.previousStyle
-      if (!previousStyle) return
-      for (let key in previousStyle) {
-        element.style.removeProperty(toCssPropertyName(key))
+      return (context) => {
+        let nextStyle = context.delta.nextProps.style as Record<string, unknown>
+        if (previousStyle === nextStyle) {
+          context.consume('style')
+          return
+        }
+
+        for (let key in nextStyle) {
+          let value = nextStyle[key]
+          if (previousStyle && previousStyle[key] === value) continue
+          if (value == null) {
+            element.style.removeProperty(toCssPropertyName(key))
+            continue
+          }
+          element.style.setProperty(toCssPropertyName(key), String(value))
+        }
+
+        if (previousStyle) {
+          for (let key in previousStyle) {
+            if (key in nextStyle) continue
+            element.style.removeProperty(toCssPropertyName(key))
+          }
+        }
+
+        previousStyle = nextStyle
+        context.consume('style')
       }
-      state.previousStyle = null
     },
   })
 

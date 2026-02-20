@@ -42,72 +42,63 @@ export let mixPlugin: Plugin<any, EventTarget, EventTarget, EventTarget> = defin
   shouldActivate(context) {
     return resolveMixDescriptors(context.delta.nextProps).length > 0
   },
-  mount() {
+  setup(handle) {
     let controller = new AbortController()
-    return {
-      controller,
-      runnerEntries: [] as RunnerEntry[],
-    }
-  },
-  apply(context, slot) {
-    let state = slot as {
-      controller: AbortController
-      runnerEntries: RunnerEntry[]
-    }
-    let node = context.host.node
-    let descriptors = resolveMixDescriptors(context.delta.nextProps)
-    let mergedProps: null | Record<string, unknown> = null
-    let maxDescriptors = 1024
-    for (let index = 0; index < descriptors.length && index < maxDescriptors; index++) {
-      let descriptor = descriptors[index]
-      let entry = state.runnerEntries[index]
-      if (!entry || entry.type !== descriptor.type) {
+    let node = handle.host.node
+    let runnerEntries: RunnerEntry[] = []
+
+    handle.signal.addEventListener('abort', () => {
+      for (let index = 0; index < runnerEntries.length; index++) {
+        let entry = runnerEntries[index]
         entry?.controller.abort()
-        let createRunner = getMixinRunnerFactory(descriptor.type)
-        let controller = new AbortController()
-        state.controller.signal.addEventListener('abort', () => {
-          controller.abort()
-        })
-        entry = {
-          type: descriptor.type,
-          runner: createRunner(node, controller.signal),
-          controller,
+      }
+      runnerEntries.length = 0
+      controller.abort()
+    })
+
+    return (context) => {
+      let descriptors = resolveMixDescriptors(context.delta.nextProps)
+      let mergedProps: null | Record<string, unknown> = null
+      let maxDescriptors = 1024
+      for (let index = 0; index < descriptors.length && index < maxDescriptors; index++) {
+        let descriptor = descriptors[index]
+        let entry = runnerEntries[index]
+        if (!entry || entry.type !== descriptor.type) {
+          entry?.controller.abort()
+          let createRunner = getMixinRunnerFactory(descriptor.type)
+          let childController = new AbortController()
+          controller.signal.addEventListener('abort', () => {
+            childController.abort()
+          })
+          entry = {
+            type: descriptor.type,
+            runner: createRunner(node, childController.signal),
+            controller: childController,
+          }
+          runnerEntries[index] = entry
         }
-        state.runnerEntries[index] = entry
+        let runner = entry.runner
+        if (!runner) continue
+        let result = runner(...descriptor.args, context.delta.nextProps)
+        if (!result || typeof result !== 'object') continue
+        let nestedDescriptors = resolveMixDescriptors(result as Record<string, unknown>)
+        for (let nested of nestedDescriptors) descriptors.push(nested)
+        if (!mergedProps) mergedProps = {}
+        for (let key in result) {
+          if (key === 'mix') continue
+          mergedProps[key] = result[key]
+        }
       }
-      let runner = entry.runner
-      if (!runner) continue
-      let result = runner(...descriptor.args, context.delta.nextProps)
-      if (!result || typeof result !== 'object') continue
-      let nestedDescriptors = resolveMixDescriptors(result as Record<string, unknown>)
-      for (let nested of nestedDescriptors) descriptors.push(nested)
-      if (!mergedProps) mergedProps = {}
-      for (let key in result) {
-        if (key === 'mix') continue
-        mergedProps[key] = result[key]
+      for (let index = descriptors.length; index < runnerEntries.length; index++) {
+        let entry = runnerEntries[index]
+        entry?.controller.abort()
       }
+      if (runnerEntries.length > descriptors.length) {
+        runnerEntries.length = descriptors.length
+      }
+      if (mergedProps) context.mergeProps(mergedProps)
+      context.consume('mix')
     }
-    for (let index = descriptors.length; index < state.runnerEntries.length; index++) {
-      let entry = state.runnerEntries[index]
-      entry?.controller.abort()
-    }
-    if (state.runnerEntries.length > descriptors.length) {
-      state.runnerEntries.length = descriptors.length
-    }
-    if (mergedProps) context.mergeProps(mergedProps)
-    context.consume('mix')
-  },
-  unmount(_context, slot) {
-    let state = slot as {
-      controller: AbortController
-      runnerEntries: RunnerEntry[]
-    }
-    for (let index = 0; index < state.runnerEntries.length; index++) {
-      let entry = state.runnerEntries[index]
-      entry?.controller.abort()
-    }
-    state.runnerEntries.length = 0
-    state.controller.abort()
   },
 })
 
