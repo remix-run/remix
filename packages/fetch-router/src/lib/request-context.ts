@@ -1,4 +1,5 @@
 import { createSession, type Session } from '@remix-run/session'
+import type { Router } from './router.ts'
 
 import { AppStorage } from './app-storage.ts'
 import {
@@ -117,6 +118,23 @@ export class RequestContext<
   }
 
   #session?: Session
+
+  #router?: Router
+
+  /**
+   * The router handling this request.
+   */
+  get router(): Router {
+    if (this.#router == null) {
+      throw new Error('No router found in request context.')
+    }
+
+    return this.#router
+  }
+
+  set router(router: Router) {
+    this.#router = router
+  }
 
   /**
    * Whether the session has been started.
