@@ -3,6 +3,7 @@ export { createDomReconciler } from './lib/dom-reconciler.ts'
 export {
   basicPropsPlugin,
   createMixin,
+  css,
   createDomPlugins,
   mixPlugin,
   on,

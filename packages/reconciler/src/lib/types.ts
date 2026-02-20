@@ -76,6 +76,10 @@ export type Plugin<element = EventTarget> = {
   unmount?(context: PluginHostContext<element>, slot: unknown): void
 }
 
+export type PluginDefinition<element = EventTarget> =
+  | Plugin<element>
+  | ((root: PluginRootHandle) => Plugin<element>)
+
 export type PreparedPlugin<element = EventTarget> = {
   id: number
   phase: PluginPhase

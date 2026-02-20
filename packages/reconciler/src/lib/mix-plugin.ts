@@ -1,10 +1,11 @@
 import { definePlugin } from './types.ts'
 import type { Plugin } from './types.ts'
 import type { PluginCommitEvent } from './types.ts'
+import type { PluginSetupHandle } from './types.ts'
 
 export type MixinType<node extends EventTarget = EventTarget, args extends unknown[] = unknown[]> = () => (
+  handle: PluginSetupHandle<node>,
   node: node,
-  signal: AbortSignal,
 ) => (...args: [...args, currentProps: Record<string, unknown>]) => void | null | Record<string, unknown>
 
 export type MixinDescriptor<
@@ -27,7 +28,7 @@ type AnyMixinRunner = (
 type RunnerEntry = {
   type: AnyMixinType
   runner: AnyMixinRunner
-  controller: AbortController
+  handle: PluginSetupHandle<EventTarget>
 }
 
 export function createMixin<args extends unknown[], node extends EventTarget = EventTarget>(
@@ -44,17 +45,15 @@ export let mixPlugin: Plugin<EventTarget> = definePlugin({
     return resolveMixDescriptors(context.delta.nextProps).length > 0
   },
   setup(handle) {
-    let controller = new AbortController()
     let node = handle.host.node
     let runnerEntries: RunnerEntry[] = []
 
     handle.addEventListener('remove', () => {
       for (let index = 0; index < runnerEntries.length; index++) {
         let entry = runnerEntries[index]
-        entry?.controller.abort()
+        entry?.handle.dispatchEvent(new Event('remove'))
       }
       runnerEntries.length = 0
-      controller.abort()
     })
 
     handle.addEventListener('commit', (event) => {
@@ -66,16 +65,15 @@ export let mixPlugin: Plugin<EventTarget> = definePlugin({
         let descriptor = descriptors[index]
         let entry = runnerEntries[index]
         if (!entry || entry.type !== descriptor.type) {
-          entry?.controller.abort()
+          entry?.handle.dispatchEvent(new Event('remove'))
           let createRunner = getMixinRunnerFactory(descriptor.type)
-          let childController = new AbortController()
-          controller.signal.addEventListener('abort', () => {
-            childController.abort()
-          })
+          let entryHandle = new EventTarget() as PluginSetupHandle<EventTarget>
+          entryHandle.root = handle.root
+          entryHandle.host = handle.host
           entry = {
             type: descriptor.type,
-            runner: createRunner(node, childController.signal),
-            controller: childController,
+            runner: createRunner(entryHandle, node),
+            handle: entryHandle,
           }
           runnerEntries[index] = entry
         }
@@ -93,7 +91,7 @@ export let mixPlugin: Plugin<EventTarget> = definePlugin({
       }
       for (let index = descriptors.length; index < runnerEntries.length; index++) {
         let entry = runnerEntries[index]
-        entry?.controller.abort()
+        entry?.handle.dispatchEvent(new Event('remove'))
       }
       if (runnerEntries.length > descriptors.length) {
         runnerEntries.length = descriptors.length
@@ -106,7 +104,7 @@ export let mixPlugin: Plugin<EventTarget> = definePlugin({
 
 let mixinRunnerFactoryCache = new Map<
   AnyMixinType,
-  (node: EventTarget, signal: AbortSignal) => AnyMixinRunner
+  (handle: PluginSetupHandle<EventTarget>, node: EventTarget) => AnyMixinRunner
 >()
 
 function getMixinRunnerFactory(type: AnyMixinType) {

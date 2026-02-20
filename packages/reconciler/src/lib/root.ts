@@ -16,6 +16,7 @@ import type {
   HostRenderNode,
   NodePolicy,
   Plugin,
+  PluginDefinition,
   PluginHostContext,
   PluginRootHandle,
   PluginSetupHandle,
@@ -43,7 +44,7 @@ type RootState<parent, node, text extends node, element extends node> = {
 
 type ReconcilerOptions<parent, node, text extends node, element extends node> = {
   policy: NodePolicy<parent, node, text, element>
-  plugins?: Array<Plugin<any> | ((root: PluginRootHandle) => Plugin<any>)>
+  plugins?: Array<PluginDefinition<any>>
 }
 
 type PreparedPlugins = {
@@ -900,7 +901,7 @@ function preparePlugins(rawPlugins: Array<Plugin<any>>): PreparedPlugins {
 }
 
 function materializePlugins(
-  plugins: Array<Plugin<any> | ((root: PluginRootHandle) => Plugin<any>)>,
+  plugins: Array<PluginDefinition<any>>,
   root: PluginRootHandle,
 ) {
   let output: Plugin<any>[] = []

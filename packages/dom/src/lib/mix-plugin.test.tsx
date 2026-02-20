@@ -11,9 +11,9 @@ describe('dom mix plugin', () => {
 
     let track = createMixin<[string], HTMLButtonElement>(() => {
       pluginScopeCalls++
-      return (_node, signal) => {
+      return (handle, _node) => {
         nodeScopeCalls++
-        signal.addEventListener('abort', () => {
+        handle.addEventListener('remove', () => {
           cleanups++
         })
         return (value: string = '') => {

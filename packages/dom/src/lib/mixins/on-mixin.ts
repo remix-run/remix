@@ -8,7 +8,7 @@ type OnHandler<target extends EventTarget, event extends Event> = (
 ) => void
 
 let onMixin = createMixin<[type: string, handler: OnHandler<EventTarget, Event>], EventTarget>(
-  () => (node, signal) => {
+  () => (handle, node) => {
     let activeType = ''
     let activeHandler: null | OnHandler<EventTarget, Event> = null
     let reentryController: null | AbortController = null
@@ -20,7 +20,7 @@ let onMixin = createMixin<[type: string, handler: OnHandler<EventTarget, Event>]
       activeHandler(event as DispatchedEvent<Event, EventTarget>, reentryController.signal)
     }
 
-    signal.addEventListener('abort', () => {
+    handle.addEventListener('remove', () => {
       reentryController?.abort()
       if (activeType) {
         node.removeEventListener(activeType, listener)
@@ -48,7 +48,7 @@ export function on<target extends EventTarget = EventTarget, event extends Event
   type: string,
   handler: OnHandler<target, event>,
 ): MixinDescriptor<target, [type: string, handler: OnHandler<target, event>]> {
-  return onMixin(type, handler as unknown as OnHandler<EventTarget, Event>) as MixinDescriptor<
+  return onMixin(type, handler as unknown as OnHandler<EventTarget, Event>) as unknown as MixinDescriptor<
     target,
     [type: string, handler: OnHandler<target, event>]
   >

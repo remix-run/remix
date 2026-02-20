@@ -8,7 +8,7 @@ export type DragDetail = {
 export let dragStartEvent = 'rmx:dragstart' as const
 export let dragEndEvent = 'rmx:dragend' as const
 
-let baseDraggable = createMixin<[boolean], HTMLElement>(() => (node, signal) => {
+let baseDraggable = createMixin<[boolean], HTMLElement>(() => (handle, node) => {
   if (!(node instanceof HTMLElement)) return () => {}
   let enabled = true
   let pointerId: null | number = null
@@ -44,7 +44,7 @@ let baseDraggable = createMixin<[boolean], HTMLElement>(() => (node, signal) => 
   }
 
   node.addEventListener('pointerdown', onPointerDown)
-  signal.addEventListener('abort', () => {
+  handle.addEventListener('remove', () => {
     stopDrag()
     node.removeEventListener('pointerdown', onPointerDown)
   })

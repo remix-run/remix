@@ -24,6 +24,7 @@ export type {
   HostInput,
   NodePolicy,
   Plugin,
+  PluginDefinition,
   PluginHostContext,
   PluginPhase,
   PreparedPlugin,
