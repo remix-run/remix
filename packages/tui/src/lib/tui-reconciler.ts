@@ -5,14 +5,11 @@ import { createTuiNodePolicy, createTuiContainer } from './tui-node-policy.ts'
 import type {
   TuiContainerNode,
   TuiElementNode,
-  TuiNode,
-  TuiParentNode,
-  TuiTextNode,
 } from './tui-node-policy.ts'
 import { createTuiPlugins } from './tui-plugins.ts'
 
 export type CreateTuiReconcilerOptions = {
-  plugins?: Plugin<TuiParentNode, TuiNode, TuiTextNode, TuiElementNode>[]
+  plugins?: Plugin<TuiElementNode>[]
 }
 
 export function createTuiReconciler(options: CreateTuiReconcilerOptions = {}) {

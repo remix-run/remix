@@ -1,13 +1,13 @@
 import { definePlugin } from '@remix-run/reconciler'
 import type { Plugin } from '@remix-run/reconciler'
-import type { DomElementNode, DomNode, DomParentNode, DomTextNode } from '../dom-node-policy.ts'
+import type { DomElementNode } from '../dom-node-policy.ts'
 
 type ListenerEntry = {
   dispatch: EventListener
 }
 type ListenerTable = Map<string, ListenerEntry>
 
-export let onPlugin: Plugin<DomParentNode, DomNode, DomTextNode, DomElementNode> = definePlugin({
+export let onPlugin: Plugin<DomElementNode> = definePlugin({
   phase: 'special',
   priority: 0,
   routing: { keys: ['on'] },

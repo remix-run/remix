@@ -3,15 +3,10 @@ import { basicPropsPlugin } from './plugins/basic-props-plugin.ts'
 import { inputEventPlugin } from './plugins/input-event-plugin.ts'
 import { layoutPlugin } from './plugins/layout-plugin.ts'
 import { stylePlugin } from './plugins/style-plugin.ts'
-import type {
-  TuiElementNode,
-  TuiNode,
-  TuiParentNode,
-  TuiTextNode,
-} from './tui-node-policy.ts'
+import type { TuiElementNode } from './tui-node-policy.ts'
 
 export function createTuiPlugins() {
-  let plugins: Plugin<TuiParentNode, TuiNode, TuiTextNode, TuiElementNode>[] = [
+  let plugins: Plugin<TuiElementNode>[] = [
     stylePlugin,
     layoutPlugin,
     inputEventPlugin,

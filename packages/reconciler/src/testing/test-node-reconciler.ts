@@ -8,13 +8,11 @@ import {
 import type {
   TestContainerNode,
   TestElementNode,
-  TestNode,
   TestNodePolicy,
-  TestTextNode,
 } from './test-node-policy.ts'
 
 export function createTestNodeReconciler(
-  plugins: Plugin<TestContainerNode, TestNode, TestTextNode, TestElementNode>[] = [],
+  plugins: Plugin<TestElementNode>[] = [],
 ) {
   let policy = createTestNodePolicy()
   let reconciler = createReconciler({

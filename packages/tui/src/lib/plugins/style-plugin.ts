@@ -1,13 +1,8 @@
 import { definePlugin } from '@remix-run/reconciler'
 import type { Plugin } from '@remix-run/reconciler'
-import type {
-  TuiElementNode,
-  TuiNode,
-  TuiParentNode,
-  TuiTextNode,
-} from '../tui-node-policy.ts'
+import type { TuiElementNode } from '../tui-node-policy.ts'
 
-export let stylePlugin: Plugin<TuiParentNode, TuiNode, TuiTextNode, TuiElementNode> = definePlugin({
+export let stylePlugin: Plugin<TuiElementNode> = definePlugin({
   phase: 'special',
   priority: 0,
   routing: { keys: ['style'] },

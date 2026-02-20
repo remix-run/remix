@@ -50,9 +50,9 @@ export type HostPropDelta = {
   changedKeys: string[]
 }
 
-export type PluginHostContext<parent, node, text extends node, element extends node> = {
+export type PluginHostContext<element = EventTarget> = {
   root: ReconcilerRoot<RenderValue>
-  host: CommittedHostNode<parent, node, text, element>
+  host: CommittedHostNode<any, any, any, element>
   delta: HostPropDelta
   mergeProps(props: Record<string, unknown>): void
   consume(key: string): void
@@ -60,31 +60,31 @@ export type PluginHostContext<parent, node, text extends node, element extends n
   remainingPropsView(): Record<string, unknown>
 }
 
-export type PluginSetupHandle<parent, node, text extends node, element extends node> = {
+export type PluginSetupHandle<element = EventTarget> = {
   root: ReconcilerRoot<RenderValue>
-  host: CommittedHostNode<parent, node, text, element>
+  host: CommittedHostNode<any, any, any, element>
   signal: AbortSignal
 }
 
-export type Plugin<parent, node, text extends node, element extends node> = {
+export type Plugin<element = EventTarget> = {
   phase: PluginPhase
   priority?: number
   routing?: PluginRouting
-  shouldActivate?(context: PluginHostContext<parent, node, text, element>): boolean
+  shouldActivate?(context: PluginHostContext<element>): boolean
   setup?(
-    handle: PluginSetupHandle<parent, node, text, element>,
-  ): ((context: PluginHostContext<parent, node, text, element>) => void) | void
-  mount?(context: PluginHostContext<parent, node, text, element>): unknown
-  apply?(context: PluginHostContext<parent, node, text, element>, slot: unknown): void
-  unmount?(context: PluginHostContext<parent, node, text, element>, slot: unknown): void
+    handle: PluginSetupHandle<element>,
+  ): ((context: PluginHostContext<element>) => void) | void
+  mount?(context: PluginHostContext<element>): unknown
+  apply?(context: PluginHostContext<element>, slot: unknown): void
+  unmount?(context: PluginHostContext<element>, slot: unknown): void
 }
 
-export type PreparedPlugin<parent, node, text extends node, element extends node> = {
+export type PreparedPlugin<element = EventTarget> = {
   id: number
   phase: PluginPhase
   priority: number
   routingKeys: string[]
-  plugin: Plugin<parent, node, text, element>
+  plugin: Plugin<element>
 }
 
 export type RenderValue =
@@ -178,8 +178,6 @@ export class ReconcilerErrorEvent extends Event {
   }
 }
 
-export function definePlugin<parent, node, text extends node, element extends node>(
-  plugin: Plugin<parent, node, text, element>,
-) {
+export function definePlugin<element>(plugin: Plugin<element>) {
   return plugin
 }

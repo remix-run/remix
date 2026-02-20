@@ -35,7 +35,7 @@ export function createMixin<args extends unknown[], node extends EventTarget = E
   return (...args: args): MixinDescriptor<node, args> => ({ type, args })
 }
 
-export let mixPlugin: Plugin<any, EventTarget, EventTarget, EventTarget> = definePlugin({
+export let mixPlugin: Plugin<EventTarget> = definePlugin({
   phase: 'special',
   priority: 0,
   routing: { keys: ['mix'] },

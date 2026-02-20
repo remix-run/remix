@@ -1,42 +1,36 @@
 import { definePlugin } from '@remix-run/reconciler'
 import type { Plugin } from '@remix-run/reconciler'
-import type {
-  DomElementNode,
-  DomNode,
-  DomParentNode,
-  DomTextNode,
-} from '../dom-node-policy.ts'
+import type { DomElementNode } from '../dom-node-policy.ts'
 
-export let basicPropsPlugin: Plugin<DomParentNode, DomNode, DomTextNode, DomElementNode> =
-  definePlugin({
-    phase: 'terminal',
-    priority: 0,
-    setup(handle) {
-      let element = handle.host.node as HTMLElement
-      let previousProps: Record<string, unknown> = {}
+export let basicPropsPlugin: Plugin<DomElementNode> = definePlugin({
+  phase: 'terminal',
+  priority: 0,
+  setup(handle) {
+    let element = handle.host.node as HTMLElement
+    let previousProps: Record<string, unknown> = {}
 
-      handle.signal.addEventListener('abort', () => {
-        for (let key in previousProps) {
-          removeProp(element, key)
-        }
-        previousProps = {}
-      })
-
-      return (context) => {
-        let props = context.remainingPropsView()
-        for (let key in props) {
-          let nextValue = props[key]
-          if (previousProps[key] === nextValue) continue
-          applyProp(element, key, nextValue)
-        }
-        for (let key in previousProps) {
-          if (key in props) continue
-          removeProp(element, key)
-        }
-        previousProps = props
+    handle.signal.addEventListener('abort', () => {
+      for (let key in previousProps) {
+        removeProp(element, key)
       }
-    },
-  })
+      previousProps = {}
+    })
+
+    return (context) => {
+      let props = context.remainingPropsView()
+      for (let key in props) {
+        let nextValue = props[key]
+        if (previousProps[key] === nextValue) continue
+        applyProp(element, key, nextValue)
+      }
+      for (let key in previousProps) {
+        if (key in props) continue
+        removeProp(element, key)
+      }
+      previousProps = props
+    }
+  },
+})
 
 function applyProp(element: HTMLElement, key: string, value: unknown) {
   if (key === 'children') return

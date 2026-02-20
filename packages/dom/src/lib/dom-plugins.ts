@@ -4,15 +4,9 @@ import { basicPropsPlugin } from './plugins/basic-props-plugin.ts'
 import { onPlugin } from './plugins/on-plugin.ts'
 import { stylePropsPlugin } from './plugins/style-props-plugin.ts'
 import { on } from './mixins/on-mixin.ts'
-import type {
-  DomElementNode,
-  DomNode,
-  DomParentNode,
-  DomTextNode,
-} from './dom-node-policy.ts'
 
 export function createDomPlugins() {
-  let plugins: Plugin<DomParentNode, DomNode, DomTextNode, DomElementNode>[] = [
+  let plugins: Plugin<any>[] = [
     mixPlugin,
     onPlugin,
     stylePropsPlugin,

@@ -40,16 +40,16 @@ type RootState<parent, node, text extends node, element extends node> = {
 
 type ReconcilerOptions<parent, node, text extends node, element extends node> = {
   policy: NodePolicy<parent, node, text, element>
-  plugins?: Array<Plugin<parent, node, text, element>>
+  plugins?: Array<Plugin<any>>
 }
 
-type PreparedPlugins<parent, node, text extends node, element extends node> = {
-  orderedSpecial: PreparedPlugin<parent, node, text, element>[]
-  orderedTerminal: PreparedPlugin<parent, node, text, element>[]
+type PreparedPlugins = {
+  orderedSpecial: PreparedPlugin<any>[]
+  orderedTerminal: PreparedPlugin<any>[]
   terminalIds: number[]
   routedSpecialByKey: Map<string, number[]>
   unroutedSpecialIds: number[]
-  all: PreparedPlugin<parent, node, text, element>[]
+  all: PreparedPlugin<any>[]
 }
 
 type PendingHostCommit<parent, node, text extends node, element extends node> = {
@@ -587,9 +587,9 @@ export function createReconciler<parent, node, text extends node, element extend
     let phaseRoutedByKey: null | Map<string, number[]> = null
     let phaseCandidateMarks: null | Uint32Array = null
     let phaseCandidateVersion = 0
-    let phaseOrdered: null | PreparedPlugin<parent, node, text, element>[] = null
+    let phaseOrdered: null | PreparedPlugin<any>[] = null
     let phaseCursor = -1
-    let context: PluginHostContext<parent, node, text, element> = {
+    let context: PluginHostContext<element> = {
       root: createRootFacade(root),
       host,
       delta: effectiveDelta,
@@ -670,7 +670,7 @@ export function createReconciler<parent, node, text extends node, element extend
     root: RootState<parent, node, text, element>,
   ) {
     if (host.activePluginIds.length === 0) return
-    let context: PluginHostContext<parent, node, text, element> = {
+    let context: PluginHostContext<element> = {
       root: createRootFacade(root),
       host,
       delta: {
@@ -701,16 +701,16 @@ export function createReconciler<parent, node, text extends node, element extend
   }
 
   function runPluginPhase(
-    ordered: PreparedPlugin<parent, node, text, element>[],
+    ordered: PreparedPlugin<any>[],
     routedByKey: Map<string, number[]>,
     unroutedIds: number[],
-    context: PluginHostContext<parent, node, text, element>,
+    context: PluginHostContext<element>,
     hooks: {
       setPhaseState(
         routedByKey: Map<string, number[]>,
         candidateMarks: Uint32Array,
         candidateVersion: number,
-        ordered: PreparedPlugin<parent, node, text, element>[],
+        ordered: PreparedPlugin<any>[],
         cursor: number,
       ): void
     },
@@ -781,8 +781,8 @@ export function createReconciler<parent, node, text extends node, element extend
   }
 
   function setupPlugin(
-    plugin: Plugin<parent, node, text, element>,
-    context: PluginHostContext<parent, node, text, element>,
+    plugin: Plugin<any>,
+    context: PluginHostContext<element>,
   ) {
     if (plugin.setup) {
       let controller = new AbortController()
@@ -802,8 +802,8 @@ export function createReconciler<parent, node, text extends node, element extend
   }
 
   function teardownPlugin(
-    plugin: Plugin<parent, node, text, element>,
-    context: PluginHostContext<parent, node, text, element>,
+    plugin: Plugin<any>,
+    context: PluginHostContext<element>,
     slot: unknown,
   ) {
     if (isSetupSlot(slot)) {
@@ -818,7 +818,7 @@ export function createReconciler<parent, node, text extends node, element extend
   ): slot is {
     __rmxSetupSlot: true
     controller: AbortController
-    run: null | ((context: PluginHostContext<parent, node, text, element>) => void)
+    run: null | ((context: PluginHostContext<element>) => void)
   } {
     if (!slot || typeof slot !== 'object') return false
     let value = slot as { __rmxSetupSlot?: unknown; controller?: unknown }
@@ -832,7 +832,7 @@ export function createReconciler<parent, node, text extends node, element extend
   }
 
   function isPhasePluginAhead(
-    ordered: PreparedPlugin<parent, node, text, element>[],
+    ordered: PreparedPlugin<any>[],
     id: number,
     cursor: number,
   ) {
@@ -852,13 +852,11 @@ export function createReconciler<parent, node, text extends node, element extend
   }
 }
 
-function preparePlugins<parent, node, text extends node, element extends node>(
-  rawPlugins: Array<Plugin<parent, node, text, element>>,
-): PreparedPlugins<parent, node, text, element> {
-  let all: PreparedPlugin<parent, node, text, element>[] = []
+function preparePlugins(rawPlugins: Array<Plugin<any>>): PreparedPlugins {
+  let all: PreparedPlugin<any>[] = []
   for (let index = 0; index < rawPlugins.length; index++) {
     let plugin = rawPlugins[index]
-    let prepared: PreparedPlugin<parent, node, text, element> = {
+    let prepared: PreparedPlugin<any> = {
       id: index,
       phase: plugin.phase,
       priority: plugin.priority ?? 0,
@@ -897,10 +895,7 @@ function preparePlugins<parent, node, text extends node, element extends node>(
   }
 }
 
-function comparePreparedPlugins<parent, node, text extends node, element extends node>(
-  a: PreparedPlugin<parent, node, text, element>,
-  b: PreparedPlugin<parent, node, text, element>,
-) {
+function comparePreparedPlugins(a: PreparedPlugin<any>, b: PreparedPlugin<any>) {
   if (a.priority !== b.priority) return a.priority - b.priority
   return a.id - b.id
 }
