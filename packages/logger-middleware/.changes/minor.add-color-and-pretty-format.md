@@ -1,0 +1,1 @@
+Add `colors` option for colorized output and new "pretty" format tokens (`%durationPretty`, `%contentLengthPretty`) for human-readable durations and file sizes. Colorization is off by default but can be enabled in supported TTY environments.
