@@ -67,10 +67,10 @@ function Document(handle: Handle) {
   )
 }
 
-function Layout(handle: Handle) {
+function Layout() {
   return ({ children }: { children: RemixNode | RemixNode[] }) => (
     <div class="container">
-      <nav class="sidebar">
+      <div class="sidebar">
         <header>
           <a href={routes.home.href({ version: undefined })} class="logo">
             <RemixLogoLight />
@@ -80,9 +80,11 @@ function Layout(handle: Handle) {
             <LightDarkToggle />
           </div>
         </header>
-        <VersionDropdown />
-        <Nav />
-      </nav>
+        <nav>
+          <VersionDropdown />
+          <Nav />
+        </nav>
+      </div>
       <main class="main">
         <div class="content">{children}</div>
       </main>
@@ -91,7 +93,7 @@ function Layout(handle: Handle) {
 }
 
 export function VersionDropdown(handle: Handle) {
-  let { versions, activeVersion } = handle.context.get(ServerPage)
+  let { versions, activeVersion, slug } = handle.context.get(ServerPage)
   let latestVersion = versions[0]?.version
 
   // When we're displaying an active version, only include versions up until
@@ -105,14 +107,16 @@ export function VersionDropdown(handle: Handle) {
   }
 
   return () => (
-    <NavDropdown title="Version">
+    <NavDropdown title="Version" open={activeVersion != null}>
       <ul>
-        {...navVersions.map((version, index) => (
-          <VersionLink
-            version={version}
-            latest={versions.length === 0 || version.version === latestVersion}
-          />
-        ))}
+        <li>
+          {...navVersions.map((version) => (
+            <VersionLink
+              version={version}
+              latest={versions.length === 0 || version.version === latestVersion}
+            />
+          ))}
+        </li>
       </ul>
     </NavDropdown>
   )
@@ -129,13 +133,14 @@ function VersionLink(handle: Handle) {
   }) => {
     let includeLatestLink = latest && !activeVersion
     return (
-      <li>
+      <>
         <a
           href={routes.home.href({
             version: !includeLatestLink ? version.version : undefined,
           })}
           style={{ display: latest ? 'inline-block' : undefined }}
           rel={!version.crawl ? 'nofollow' : undefined}
+          class={!slug && version.version === activeVersion ? 'active' : undefined}
         >
           {version.version}
         </a>
@@ -154,7 +159,7 @@ function VersionLink(handle: Handle) {
             </a>
           </>
         ) : null}
-      </li>
+      </>
     )
   }
 }
@@ -167,15 +172,19 @@ type ApiTypes = {
 }
 
 export function Nav(handle: Handle) {
-  let { docFiles } = handle.context.get(ServerPage)
+  let { docFiles, slug } = handle.context.get(ServerPage)
   return () => {
     let packageGroups = new Map<string, ApiTypes>()
+    let activePackage = undefined
 
     for (let file of docFiles) {
       if (!packageGroups.has(file.package)) {
         packageGroups.set(file.package, { type: [], interface: [], function: [], class: [] })
       }
       packageGroups.get(file.package)![file.type as keyof ApiTypes].push(file)
+      if (file.urlPath === slug) {
+        activePackage = file.package
+      }
     }
 
     let sortedNavItems = Array.from(packageGroups.entries()).sort((a, b) => {
@@ -192,29 +201,35 @@ export function Nav(handle: Handle) {
     })
 
     return sortedNavItems.map(([packageName, files]) => (
-      <NavDropdown title={packageName}>
-        <ul>
-          <NavDropdownSection title="Types" files={files} type="type" />
-          <NavDropdownSection title="Interfaces" files={files} type="interface" />
-          <NavDropdownSection title="Classes" files={files} type="class" />
-          <NavDropdownSection title="Functions" files={files} type="function" />
-        </ul>
+      <NavDropdown title={packageName} open={packageName === activePackage}>
+        <NavDropdownSection title="Types" files={files} type="type" />
+        <NavDropdownSection title="Interfaces" files={files} type="interface" />
+        <NavDropdownSection title="Classes" files={files} type="class" />
+        <NavDropdownSection title="Functions" files={files} type="function" />
       </NavDropdown>
     ))
   }
 }
 
-function NavDropdown() {
-  return ({ title, children }: { title: string; children: RemixNode | RemixNode[] }) => (
-    <details>
+function NavDropdown(handle: Handle) {
+  return ({
+    title,
+    open,
+    children,
+  }: {
+    title: string
+    open: boolean
+    children: RemixNode | RemixNode[]
+  }) => (
+    <details open={open}>
       <summary>{title}</summary>
-      {children}
+      <div class="items">{children}</div>
     </details>
   )
 }
 
 function NavDropdownSection(handle: Handle) {
-  let { activeVersion: version } = handle.context.get(ServerPage)
+  let { activeVersion: version, slug } = handle.context.get(ServerPage)
   return ({ title, files, type }: { title: string; files: ApiTypes; type: keyof ApiTypes }) => {
     if (files[type].length === 0) {
       return null
@@ -223,12 +238,18 @@ function NavDropdownSection(handle: Handle) {
     return (
       <>
         <p>{title}</p>
-        {...files[type].map((file) => (
-          <li>
-            {/* TODO: Add back active formatting */}
-            <a href={routes.docs.href({ version, slug: file.urlPath })}>{file.name}</a>
-          </li>
-        ))}
+        <ul>
+          {...files[type].map((file) => (
+            <li>
+              <a
+                href={routes.docs.href({ version, slug: file.urlPath })}
+                class={slug === file.urlPath ? 'active' : undefined}
+              >
+                {file.name}
+              </a>
+            </li>
+          ))}
+        </ul>
       </>
     )
   }
