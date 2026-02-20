@@ -13,6 +13,7 @@ packages:
   - packages/form-data-parser/demos/*
   - packages/interaction/demos
   - packages/component/demos
+  - packages/dom/demos
   - packages/component/bench
   - packages/component/bench/frameworks/*
   - packages/lazy-file/scripts

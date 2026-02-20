@@ -399,6 +399,22 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.10.4)(@vitest/browser@3.2.4)(tsx@4.21.0)(yaml@2.8.2)
 
+  packages/dom/demos:
+    dependencies:
+      '@remix-run/dom':
+        specifier: workspace:^
+        version: link:..
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      concurrently:
+        specifier: ^9.2.1
+        version: 9.2.1
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.12
+
   packages/fetch-proxy:
     dependencies:
       '@remix-run/headers':

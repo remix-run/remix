@@ -1,0 +1,20 @@
+{
+  "name": "@remix-run/dom-demos",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@remix-run/dom": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.25.11"
+  },
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:browser\" \"pnpm dev:server\"",
+    "dev:browser": "esbuild ./*/entry.tsx --bundle --outdir=. --outbase=. --entry-names=\"[dir]/[name].bundled\" --format=esm --platform=browser --target=es2020 --sourcemap=inline --watch",
+    "dev:server": "node --experimental-strip-types --watch server.ts",
+    "build": "esbuild ./*/entry.tsx --bundle --outdir=. --outbase=. --entry-names=\"[dir]/[name].bundled\" --format=esm --platform=browser --target=es2020",
+    "start": "node --experimental-strip-types server.ts"
+  }
+}
