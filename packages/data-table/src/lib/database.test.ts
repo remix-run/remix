@@ -61,6 +61,15 @@ let memberships = createTable({
   },
 })
 
+let invoices = createTable({
+  name: 'billing.invoices',
+  columns: {
+    id: number(),
+    account_id: number(),
+    total: number(),
+  },
+})
+
 let accountProjects = hasMany(accounts, projects)
 let accountProfile = hasOne(accounts, profiles)
 let projectAccount = belongsTo(projects, accounts)
@@ -678,6 +687,26 @@ describe('query builder', () => {
     assert.equal(accountRows[0].profile?.display_name, 'Amy')
     assert.equal(projectRows.length, 1)
     assert.equal(projectRows[0].account?.email, 'amy@studio.test')
+  })
+
+  it('supports cross schema query', async () => {
+    let adapter = createAdapter({
+      accounts: [{ id: 1, email: 'amy@studio.test', status: 'active' }],
+      invoices: [{ id: 100, account_id: 1, total: 1000 }],
+    })
+    let db = createTestDatabase(adapter)
+    let invoiceRows = await db
+      .query(invoices)
+      .join(accounts, eq(accounts.id, invoices.account_id))
+      .select({
+        email: accounts.email,
+        total: invoices.total,
+      })
+      .all()
+
+    assert.equal(invoiceRows.length, 1)
+    assert.equal(invoiceRows[0].email, 'amy@studio.test')
+    assert.equal(invoiceRows[0].total, 1000)
   })
 })
 

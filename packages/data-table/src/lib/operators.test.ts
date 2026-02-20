@@ -35,6 +35,15 @@ let projects = createTable({
   },
 })
 
+let invoices = createTable({
+  name: 'billing.invoices',
+  columns: {
+    id: number(),
+    account_id: number(),
+    total: number(),
+  },
+})
+
 describe('comparison predicates', () => {
   it('treats qualified string values as column references', () => {
     let predicate = eq('accounts.id', 'projects.account_id')
@@ -56,6 +65,18 @@ describe('comparison predicates', () => {
       operator: 'eq',
       column: 'accounts.id',
       value: 'projects.account_id',
+      valueType: 'column',
+    })
+  })
+
+  it('supports cross schema column reference inputs', () => {
+    let predicate = eq(accounts.id, invoices.account_id)
+
+    assert.deepEqual(predicate, {
+      type: 'comparison',
+      operator: 'eq',
+      column: 'accounts.id',
+      value: 'billing.invoices.account_id',
       valueType: 'column',
     })
   })

@@ -388,7 +388,7 @@ function isQualifiedColumnReference(value: unknown): value is QualifiedColumnRef
     return false
   }
 
-  return /^[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)
+  return /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)+$/.test(value)
 }
 
 function resolvePredicateColumn<input extends string | ColumnReferenceLike>(
