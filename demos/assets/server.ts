@@ -4,17 +4,17 @@ import { createRequestListener } from '@remix-run/node-fetch-server'
 import { createRouter, type Middleware } from '@remix-run/fetch-router'
 import { staticFiles } from '@remix-run/static-middleware'
 import * as entryAsset from '#assets/app/entry.tsx'
+import * as bbqBookAsset from '#assets/app/images/books/bbq-1.png'
 import * as heavyMetalBookAsset from '#assets/app/images/books/heavy-metal-1.png'
 import * as threeWaysBookAsset from '#assets/app/images/books/three-ways-1.png'
-import { files } from './assets.ts'
+import { source } from './assets.ts'
 
 let isDev = process.env.NODE_ENV === 'development'
 
 /**
- * Get the middleware required for assets in the current environment.
+ * Get the middleware required for serving asset files in the current environment.
  *
- * In development: createDevAssets serves source files with on-the-fly transformation
- * and resolves file variants through the files config.
+ * In development: createDevAssets serves source files with on-the-fly transformation.
  * In production: assets middleware resolves against the generated manifest, while
  * staticFiles serves the built asset output at /assets.
  */
@@ -25,11 +25,10 @@ async function getAssetsMiddleware(): Promise<{
   if (isDev) {
     let { createDevAssets } = await import('@remix-run/dev-assets-middleware')
     let devAssets = createDevAssets({
+      source,
       allow: ['app/**', '**/node_modules/**'],
       workspaceRoot: '../..',
       workspaceAllow: ['packages/*/src/**', '**/node_modules/**'],
-      scripts: ['app/entry.tsx'],
-      files,
     })
     return {
       middleware: [devAssets.middleware],
@@ -58,10 +57,10 @@ async function getAssetsMiddleware(): Promise<{
 }
 
 async function main() {
-  let assets = await getAssetsMiddleware()
+  let { middleware, close } = await getAssetsMiddleware()
 
   let router = createRouter({
-    middleware: [...assets.middleware, staticFiles('./public')],
+    middleware: [...middleware, staticFiles('./public')],
   })
 
   // Home page - renders HTML with the entry script
@@ -141,6 +140,12 @@ async function main() {
         </div>
       </section>
       <section>
+        <h2>Default variant (uses defaultVariant: &quot;card&quot;)</h2>
+        <div class="variant-row">
+          <figure class="variant"><img src="${bbqBookAsset.href}" width="280" alt="BBQ cover default variant" /><p>bbq-1.png (no variant requested) → card jpg</p></figure>
+        </div>
+      </section>
+      <section>
         <h2>Other images using the same variants (static imports)</h2>
         <div class="variant-row">
           <figure class="variant"><img src="${heavyMetalBookAsset.variants.card.href}" width="120" alt="Heavy metal cover thumbnail variant" /><p>heavy-metal-1.png -> thumbnail jpg</p></figure>
@@ -148,6 +153,11 @@ async function main() {
         </div>
       </section>
     </div>
+    <hr />
+    <section>
+      <h2>Web Worker (cross-script <code>#assets/</code> import)</h2>
+      <p id="worker-result">Computing fib(42) in worker…</p>
+    </section>
     <script type="module" src="${entryAsset.href}"></script>
   </body>
 </html>`
@@ -181,7 +191,7 @@ async function main() {
     console.log('Shutting down server...')
     if (shuttingDown) return
     shuttingDown = true
-    assets.close()
+    close()
     server.close(() => {
       process.exit(0)
     })

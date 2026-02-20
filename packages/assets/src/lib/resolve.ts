@@ -9,7 +9,7 @@ export interface ResolveContext {
   /** Allow/deny for app root; enforced by the handler, not used in resolvedPathToUrl. */
   allowPatterns: string[]
   denyPatterns: string[]
-  /** Used for paths under workspace root when emitting /__@workspace/ URLs. */
+  /** Used for paths under workspace root when emitting /__@assets/__@workspace/ URLs. */
   workspaceAllowPatterns: string[]
   workspaceDenyPatterns: string[]
 }
@@ -19,7 +19,7 @@ export interface ResolveContext {
  *
  * @param absolutePath Resolved absolute file path.
  * @param ctx Resolve context (root, workspaceRoot, allow/deny patterns).
- * @returns URL path (e.g. /path or /__@workspace/path).
+ * @returns URL path (e.g. /__@assets/path or /__@assets/__@workspace/path).
  */
 export function resolvedPathToUrl(absolutePath: string, ctx: ResolveContext): string {
   let realPath: string
@@ -37,7 +37,7 @@ export function resolvedPathToUrl(absolutePath: string, ctx: ResolveContext): st
 
   if (realPath.startsWith(realRoot + path.sep)) {
     let relativePath = path.relative(realRoot, realPath)
-    return '/' + toPosixPath(relativePath)
+    return '/__@assets/' + toPosixPath(relativePath)
   }
 
   if (realWorkspaceRoot && realPath.startsWith(realWorkspaceRoot + path.sep)) {
@@ -46,7 +46,7 @@ export function resolvedPathToUrl(absolutePath: string, ctx: ResolveContext): st
     if (!isPathAllowed(posixPath, ctx.workspaceAllowPatterns, ctx.workspaceDenyPatterns)) {
       return absolutePath
     }
-    return '/__@workspace/' + posixPath
+    return '/__@assets/__@workspace/' + posixPath
   }
 
   return absolutePath

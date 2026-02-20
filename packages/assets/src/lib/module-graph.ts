@@ -6,7 +6,7 @@
  */
 
 export interface ModuleNode {
-  /** URL that identifies this module (e.g., '/app/entry.tsx' or '/__@workspace/node_modules/pkg/index.js') */
+  /** URL that identifies this module (e.g., '/__@assets/app/entry.tsx' or '/__@assets/__@workspace/node_modules/pkg/index.js') */
   url: string
   /** Absolute file path on disk */
   file: string

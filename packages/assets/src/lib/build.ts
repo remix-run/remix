@@ -36,7 +36,7 @@ import { GENERATED_MARKER, toCodegenFilePath, writeIfChanged } from './codegen.t
  * @returns Ordered URLs, path maps, and entry URLs
  */
 async function discoverGraph(
-  scripts: string[],
+  scripts: readonly string[],
   root: string,
   ctx: ResolveContext,
   externalSpecifiers: string[],
@@ -114,13 +114,14 @@ async function discoverGraph(
       resolutionCache,
       externalSpecifiers,
       (s) => isExternalSpecifier(s, externalSpecifiers),
+      ['placeholder'],
     )
 
     let staticImportUrls: string[] = []
     let importSpecifiers: Array<{ specifier: string; resolvedUrl: string }> = []
     for (let i = 0; i < resolved.length; i++) {
       let r = resolved[i]
-      if (r.url.startsWith('/') || r.url.startsWith('/__@workspace/')) {
+      if (r.url.startsWith('/__@assets/')) {
         staticImportUrls.push(r.url)
         if (toResolve[i]) importSpecifiers.push({ specifier: toResolve[i], resolvedUrl: r.url })
         if (!seenPaths.has(r.absolutePath)) {
@@ -168,11 +169,28 @@ const DEFAULT_FILE_NAMES = '[name]-[hash]'
  * @param url Module URL path (e.g. /app/entry.tsx)
  * @returns Object with dir and name (no trailing slash on dir)
  */
+/**
+ * Strip the /__@assets/ scope prefix (and optional /__@workspace/ sub-scope within it)
+ * from a dev URL to recover the original source-relative path.
+ *
+ * @param url Dev URL to strip the scope prefix from.
+ * @returns Source-relative path without leading slash or scope prefix.
+ */
+function urlToSourcePath(url: string): string {
+  if (url.startsWith('/__@assets/__@workspace/')) {
+    return url.slice('/__@assets/__@workspace/'.length)
+  }
+  if (url.startsWith('/__@assets/')) {
+    return url.slice('/__@assets/'.length)
+  }
+  return url.replace(/^\//, '')
+}
+
 function urlToDirAndName(url: string): { dir: string; name: string } {
-  let p = url.replace(/^\//, '')
-  let slash = p.lastIndexOf('/')
-  let dir = slash >= 0 ? p.slice(0, slash) : ''
-  let base = slash >= 0 ? p.slice(slash + 1) : p
+  let stripped = urlToSourcePath(url)
+  let slash = stripped.lastIndexOf('/')
+  let dir = slash >= 0 ? stripped.slice(0, slash) : ''
+  let base = slash >= 0 ? stripped.slice(slash + 1) : stripped
   let dot = base.lastIndexOf('.')
   let name = dot >= 0 ? base.slice(0, dot) : base
   return { dir, name }
@@ -417,7 +435,7 @@ function collectPreloadUrls(
 export async function build(options: BuildOptions): Promise<void> {
   let root = path.resolve(process.cwd(), options.root ?? '.')
   let outDir = path.resolve(root, options.outDir)
-  let scripts = options.scripts ?? []
+  let scripts = options.source?.scripts ?? []
   let fileNames = options.fileNames ?? DEFAULT_FILE_NAMES
   let includeHash = fileNames.includes('[hash]')
   let manifestPath = options.manifest === false ? null : (options.manifest ?? null)
@@ -456,7 +474,7 @@ export async function build(options: BuildOptions): Promise<void> {
     }
   }
 
-  let filesRules = compileFileRules(options.files)
+  let filesRules = compileFileRules(options.source?.files)
 
   let emptyOutDir: boolean
   if (options.emptyOutDir !== undefined) {
@@ -516,6 +534,7 @@ export async function build(options: BuildOptions): Promise<void> {
         resolutionCache,
         ctx,
         externalSpecifiers,
+        ['placeholder'],
       )
       let fixedMap: string | null = null
       if (rewritten.map && rewritten.map !== '{}' && sourceMapEnabled) {
@@ -567,6 +586,114 @@ export async function build(options: BuildOptions): Promise<void> {
     if (ms) urlToFinalCode.set(url, ms.toString())
   }
 
+  // Pass 3: substitute /__@assets/ placeholder URL strings with real hashed URLs, then
+  // cascade hash recomputation topologically through any files whose content changed.
+  {
+    // Build a map from source-relative path → real serving URL for every built output.
+    let sourcePathToRealUrl = new Map<string, string>()
+    for (let [url, outPath] of urlToOutPathMap) {
+      sourcePathToRealUrl.set(
+        normalizeSourcePath(urlToSourcePath(url)),
+        toAssetUrl(outPath, baseUrl),
+      )
+    }
+    for (let [sourcePath, output] of Object.entries(filesOutputs)) {
+      if ('path' in output) {
+        sourcePathToRealUrl.set(sourcePath, toAssetUrl(output.path, baseUrl))
+      } else if ('variants' in output) {
+        for (let [variant, variantOutput] of Object.entries(output.variants)) {
+          sourcePathToRealUrl.set(
+            `${sourcePath}?@${variant}`,
+            toAssetUrl(variantOutput.path, baseUrl),
+          )
+        }
+      }
+    }
+
+    // Track output path renames caused by hash recomputation: old path → new path.
+    let renamedPaths = new Map<string, string>()
+
+    for (let url of orderedUrls) {
+      let outPath = urlToOutPathMap.get(url)!
+      let anythingChanged = false
+
+      // Step 1: Update relative import specifiers that pointed to a file that was
+      // renamed in an earlier iteration of this loop (cascade from leaves upward).
+      if (renamedPaths.size > 0) {
+        let code = urlToFinalCode.get(url)!
+        let specifiersWithPos = await extractImportSpecifiers(code)
+        let ms: MagicString | null = null
+        for (let { specifier, start, end } of specifiersWithPos) {
+          if (!specifier.startsWith('./') && !specifier.startsWith('../')) continue
+          let fromDir = toPosixPath(path.dirname(outPath))
+          let resolvedOld = toPosixPath(path.normalize(path.join(fromDir, specifier)))
+          let newPath = renamedPaths.get(resolvedOld)
+          if (newPath) {
+            let newRelative = toRelativeImportSpecifier(outPath, newPath)
+            if (!ms) ms = new MagicString(code)
+            ms.overwrite(start, end, newRelative)
+          }
+        }
+        if (ms) {
+          urlToFinalCode.set(url, ms.toString())
+          anythingChanged = true
+        }
+      }
+
+      // Step 2: Substitute any /__@assets/ placeholder URL strings in this file.
+      {
+        let code = urlToFinalCode.get(url)!
+        if (code.includes('/__@assets/')) {
+          let ms = new MagicString(code)
+          let changed = false
+
+          // Preloads: ['/__@assets/path#preloads'] → full transitive preload list (1:N)
+          for (let match of code.matchAll(/\[["'](\/__@assets\/[^"'#]+)#preloads["']\]/g)) {
+            let sourcePath = match[1].slice('/__@assets/'.length)
+            let entryUrl = '/__@assets/' + sourcePath
+            let preloadUrls = collectPreloadUrls(
+              entryUrl,
+              urlToStaticImports,
+              urlToOutPathMap,
+              baseUrl,
+            )
+            if (preloadUrls.length > 0) {
+              let replacement = '[' + preloadUrls.map((u) => `'${u}'`).join(', ') + ']'
+              ms.overwrite(match.index!, match.index! + match[0].length, replacement)
+              changed = true
+            }
+          }
+
+          // Hrefs: '/__@assets/path' → real URL (1:1 substitution, not #preloads)
+          for (let match of code.matchAll(/["'](\/__@assets\/[^"'#]+)["']/g)) {
+            let sourcePath = match[1].slice('/__@assets/'.length)
+            let realUrl = sourcePathToRealUrl.get(sourcePath)
+            if (realUrl !== undefined) {
+              ms.overwrite(match.index! + 1, match.index! + match[0].length - 1, realUrl)
+              changed = true
+            }
+          }
+
+          if (changed) {
+            urlToFinalCode.set(url, ms.toString())
+            anythingChanged = true
+          }
+        }
+      }
+
+      // Step 3: If content changed, recompute hash → new filename → record rename for cascade.
+      if (anythingChanged && includeHash) {
+        let newCode = urlToFinalCode.get(url)!
+        let newHash = await hashCode(newCode, url)
+        let newOutPath = urlToOutputPath(url, newHash, fileNames)
+        if (newOutPath !== outPath) {
+          urlToOutPathMap.set(url, newOutPath)
+          renamedPaths.set(outPath, newOutPath)
+        }
+      }
+    }
+  }
+
   for (let url of orderedUrls) {
     let outPath = urlToOutPathMap.get(url)!
     let code = urlToFinalCode.get(url)!
@@ -587,7 +714,7 @@ export async function build(options: BuildOptions): Promise<void> {
     entryUrls.map(async (entryUrl) => {
       let outPath = urlToOutPathMap.get(entryUrl)
       if (!outPath) return
-      let sourcePath = normalizeSourcePath(entryUrl.replace(/^\//, ''))
+      let sourcePath = normalizeSourcePath(urlToSourcePath(entryUrl))
       let preloadUrls = collectPreloadUrls(entryUrl, urlToStaticImports, urlToOutPathMap, baseUrl)
       let buildFilePath = toCodegenFilePath(sourcePath, codegenAbsDir, 'build')
       await writeIfChanged(
@@ -599,7 +726,7 @@ export async function build(options: BuildOptions): Promise<void> {
 
   if (manifestPath) {
     let manifest: AssetsManifest = { scripts: { outputs: {} }, files: { outputs: filesOutputs } }
-    let entryPathNorm = (u: string) => u.replace(/^\//, '')
+    let entryPathNorm = urlToSourcePath
     for (let url of orderedUrls) {
       let outPath = urlToOutPathMap.get(url)!
       let staticImports = urlToStaticImports.get(url) ?? []

@@ -32,7 +32,7 @@ declare let files: TypedFiles
 }
 
 {
-  let resolveAsset = createDevAssetResolver({ root: '.', files })
+  let resolveAsset = createDevAssetResolver({ root: '.', source: { files } })
   resolveAsset('app/images/logo.png', 'hero')
   // @ts-expect-error transform-only paths should reject variants
   resolveAsset('app/icons/logo.svg', 'card')

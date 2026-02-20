@@ -10,6 +10,7 @@
 import * as esbuild from 'esbuild'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import { codegenBuild } from 'remix/assets'
 import { getAssetsBuildConfig } from './assets.config.ts'
 
 function normalizePathForManifest(value: string): string {
@@ -28,31 +29,32 @@ async function main() {
   await fs.mkdir(config.outDir, { recursive: true })
 
   let esbuildConfig = {
-    entryPoints: config.scripts,
+    entryPoints: [...config.source.scripts],
     outdir: config.outDir,
     bundle: true,
     splitting: true,
     format: 'esm',
-    outbase: 'app',
-    entryNames: '[dir]/[name]-[hash]',
+    entryNames: config.fileNames,
     chunkNames: 'chunks/[name]-[hash]',
     metafile: true,
     minify: config.minify,
     sourcemap: config.sourcemap,
+    conditions: ['placeholder'],
   } as const satisfies esbuild.BuildOptions
 
   console.log('Entry points:')
-  for (let entryPoint of esbuildConfig.entryPoints) {
+  for (let entryPoint of config.source.scripts) {
     console.log(`  ${entryPoint}`)
   }
   console.log('')
 
   let result = await esbuild.build(esbuildConfig)
+  let metafile = result.metafile!
 
   // Emit manifest with locally-scoped script paths (relative to outdir) for assets(manifest, { baseUrl })
   let prefix = `${normalizePathForManifest(esbuildConfig.outdir)}/`
-  let outputs: Record<string, (typeof result.metafile)['outputs'][string]> = {}
-  for (let [outputPath, entry] of Object.entries(result.metafile.outputs)) {
+  let outputs: Record<string, (typeof metafile)['outputs'][string]> = {}
+  for (let [outputPath, entry] of Object.entries(metafile.outputs)) {
     let localPath = toManifestLocalPath(outputPath, prefix)
     let imports = entry.imports?.map((imp) => ({
       ...imp,
@@ -73,10 +75,13 @@ async function main() {
   await fs.mkdir(path.dirname(manifestPath), { recursive: true })
   await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2))
 
+  // Generate .build.ts files so #assets/ imports reflect this build's output paths.
+  await codegenBuild({ manifest, baseUrl: config.baseUrl })
+
   console.log('Build complete!')
   console.log('')
   console.log('Outputs:')
-  for (let output of Object.keys(result.metafile.outputs)) {
+  for (let output of Object.keys(metafile.outputs)) {
     console.log(`  ${output}`)
   }
   console.log('')

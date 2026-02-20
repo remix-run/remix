@@ -7,20 +7,10 @@
  */
 
 import { build } from '@remix-run/assets'
-import { files } from './assets.ts'
+import { buildConfig } from './assets.ts'
 
 async function main() {
-  await build({
-    scripts: ['app/entry.tsx'],
-    workspaceRoot: '../..',
-    outDir: './build/assets',
-    baseUrl: '/assets',
-    minify: true,
-    sourcemap: 'external',
-    fileNames: '[dir]/[name]-[hash]',
-    manifest: './build/assets-manifest.json',
-    files,
-  })
+  await build(buildConfig)
   console.log('Outputs written to ./build/assets')
 }
 

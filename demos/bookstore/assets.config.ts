@@ -12,9 +12,12 @@ export async function getAssetsBuildConfig() {
   }
 
   return {
-    scripts: ['app/entry.tsx', ...clientEntries],
+    source: {
+      scripts: ['app/entry.tsx', ...clientEntries],
+    },
     workspaceRoot: '../..',
     outDir: './build/assets',
+    baseUrl: '/assets',
     fileNames: '[name]-[hash]',
     manifest: './build/assets-manifest.json',
     minify: true,

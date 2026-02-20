@@ -57,10 +57,10 @@ async function getAssetsMiddleware(): Promise<{
     let { getAssetsBuildConfig } = await import('../assets.config.ts')
     let config = await getAssetsBuildConfig()
     let devAssets = createDevAssets({
+      source: config.source,
       allow: ['app/**', '**/node_modules/**'],
-      workspaceRoot: '../..',
+      workspaceRoot: config.workspaceRoot,
       workspaceAllow: ['packages/*/src/**', '**/node_modules/**'],
-      scripts: config.scripts,
     })
     return {
       middleware: [devAssets.middleware],

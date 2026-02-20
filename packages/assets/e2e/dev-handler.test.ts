@@ -99,7 +99,7 @@ describe('createDevAssetsHandler e2e', () => {
   })
 
   it('serves transformed TypeScript with correct content type', async () => {
-    let response = await fetch(`${baseUrl}/entry.ts`)
+    let response = await fetch(`${baseUrl}/__@assets/entry.ts`)
     assert.equal(response.status, 200)
 
     let contentType = response.headers.get('content-type')
@@ -107,21 +107,29 @@ describe('createDevAssetsHandler e2e', () => {
 
     let body = await response.text()
     assert.ok(!body.includes(': string'), 'Expected TypeScript to be transformed')
-    assert.ok(body.includes('/utils/greet.ts') || body.includes('greet'), 'Expected imports')
+    assert.ok(
+      body.includes('/__@assets/utils/greet.ts') || body.includes('greet'),
+      'Expected imports rewritten to /__@assets/ URLs',
+    )
   })
 
   it('returns 404 for non-existent files', async () => {
-    let response = await fetch(`${baseUrl}/does-not-exist.tsx`)
+    let response = await fetch(`${baseUrl}/__@assets/does-not-exist.tsx`)
     assert.equal(response.status, 404)
   })
 
+  it('returns null (404 from server) for bare paths without /__@assets/ scope', async () => {
+    let response = await fetch(`${baseUrl}/entry.ts`)
+    assert.equal(response.status, 404, 'bare paths must not be served without /__@assets/ scope')
+  })
+
   it('returns ETag and supports 304 when unchanged', async () => {
-    let res1 = await fetch(`${baseUrl}/entry.ts`)
+    let res1 = await fetch(`${baseUrl}/__@assets/entry.ts`)
     assert.equal(res1.status, 200)
     let etag = res1.headers.get('etag')
     assert.ok(etag, 'Expected ETag header')
 
-    let res2 = await fetch(`${baseUrl}/entry.ts`, {
+    let res2 = await fetch(`${baseUrl}/__@assets/entry.ts`, {
       headers: { 'If-None-Match': etag! },
     })
     assert.equal(res2.status, 304)

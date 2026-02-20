@@ -19,16 +19,17 @@
   },
   "imports": {
     "#assets/*": {
-      "development": "./.assets/*.dev.ts",
-      "test": "./.assets/*.dev.ts",
+      "placeholder": "./.assets/*.placeholder.ts",
       "default": "./.assets/*.build.ts"
     }
   },
   "scripts": {
-    "dev": "NODE_ENV=development NODE_OPTIONS='--conditions=development' tsx watch server.ts",
+    "dev": "NODE_ENV=development NODE_OPTIONS='--conditions=placeholder' tsx watch server.ts",
     "build": "tsx build.ts",
     "build:bundled": "tsx build.bundled.ts",
     "start": "NODE_ENV=production tsx server.ts",
-    "typecheck": "tsgo --noEmit"
+    "codegen": "tsx codegen.ts",
+    "codegen:check": "tsx codegen.check.ts",
+    "typecheck": "pnpm codegen && tsgo --noEmit"
   }
 }

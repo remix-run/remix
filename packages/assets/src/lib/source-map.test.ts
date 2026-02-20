@@ -52,7 +52,7 @@ describe('parseInlineSourceMap', () => {
   it('handles workspace URL paths', () => {
     let sourceMap = {
       version: 3,
-      sources: ['/__@workspace/node_modules/@remix-run/component/src/index.ts'],
+      sources: ['/__@assets/__@workspace/node_modules/@remix-run/component/src/index.ts'],
       mappings: 'AAAA',
     }
     let base64 = Buffer.from(JSON.stringify(sourceMap)).toString('base64')
@@ -61,7 +61,10 @@ describe('parseInlineSourceMap', () => {
     let parsed = parseInlineSourceMap(code)
 
     assert.ok(parsed)
-    assert.equal(parsed!.sources[0], '/__@workspace/node_modules/@remix-run/component/src/index.ts')
+    assert.equal(
+      parsed!.sources[0],
+      '/__@assets/__@workspace/node_modules/@remix-run/component/src/index.ts',
+    )
   })
 })
 
@@ -132,11 +135,11 @@ describe('fixSourceMapPaths', () => {
     let base64 = Buffer.from(JSON.stringify(sourceMap)).toString('base64')
     let code = `export function createRoot() {}\n//# sourceMappingURL=data:application/json;base64,${base64}`
 
-    let fixed = fixSourceMapPaths(code, '/__@workspace/packages/component/src/index.ts')
+    let fixed = fixSourceMapPaths(code, '/__@assets/__@workspace/packages/component/src/index.ts')
 
     let parsed = parseInlineSourceMap(fixed)
     assert.ok(parsed)
-    assert.deepEqual(parsed!.sources, ['/__@workspace/packages/component/src/index.ts'])
+    assert.deepEqual(parsed!.sources, ['/__@assets/__@workspace/packages/component/src/index.ts'])
   })
 
   it('preserves mappings when fixing paths', () => {

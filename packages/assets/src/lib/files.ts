@@ -61,6 +61,23 @@ export function defineFiles<const files extends readonly FileRule[]>(
   return files
 }
 
+export interface AssetsSource<files extends FilesConfig = FilesConfig> {
+  /** Script entry paths relative to root (e.g. ['app/entry.tsx']) */
+  scripts?: readonly string[]
+  /** File transformation rules for non-JS assets. */
+  files?: files
+}
+
+type ValidateSource<source> = source extends { files: infer files extends readonly FileRule[] }
+  ? { files: ValidateFiles<files> }
+  : unknown
+
+export function defineAssetsSource<
+  const source extends { scripts?: readonly string[]; files?: readonly FileRule[] },
+>(source: source & ValidateSource<source>): source {
+  return source as source
+}
+
 type MatchedRule<rule extends FileRule, sourcePath extends string> =
   MatchGlob<sourcePath, rule['include']> extends true ? rule : never
 
@@ -150,7 +167,7 @@ export function selectVariant(
   requestedVariant: string | undefined,
 ): string | null {
   if (!rule.variants) {
-    return requestedVariant ? null : null
+    return null
   }
 
   if (requestedVariant) {

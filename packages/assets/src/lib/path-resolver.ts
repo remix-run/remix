@@ -1,6 +1,5 @@
 import * as path from 'node:path'
 import picomatch from 'picomatch'
-import type { CreateDevAssetsHandlerOptions } from './options.ts'
 
 // Convert a path to posix-style (forward slashes)
 export function toPosixPath(p: string): string {
@@ -29,42 +28,4 @@ export function isPathAllowed(posixPath: string, allow: string[], deny: string[]
     return false
   }
   return matchesPatterns(posixPath, allow)
-}
-
-export type DevPathResolution =
-  | { kind: 'app'; filePath: string }
-  | { kind: 'workspace'; filePath: string }
-
-/**
- * Creates a function that resolves a request pathname to an absolute file path and kind (app vs workspace).
- * Returns null if the path is not allowed or not found.
- *
- * @param options Handler options for root, allow, deny, workspaceRoot, workspaceAllow, workspaceDeny.
- * @returns Resolver function (pathname) => { kind, filePath } or null.
- */
-export function createDevPathResolver(
-  options: CreateDevAssetsHandlerOptions,
-): (pathname: string) => DevPathResolution | null {
-  let root = path.resolve(process.cwd(), options.root ?? '.')
-  let appAllow = options.allow ?? []
-  let appDeny = options.deny ?? []
-  let workspaceRoot = options.workspaceRoot ? path.resolve(options.workspaceRoot) : null
-  let workspaceAllow = options.workspaceAllow ?? appAllow
-  let workspaceDeny = options.workspaceDeny ?? appDeny
-
-  return function resolvePathname(pathname: string): DevPathResolution | null {
-    if (pathname.startsWith('/__@workspace/')) {
-      if (!workspaceRoot) return null
-      let posixPath = pathname.slice('/__@workspace/'.length)
-      if (!isPathAllowed(posixPath, workspaceAllow, workspaceDeny)) return null
-      let filePath = path.join(workspaceRoot, ...posixPath.split('/'))
-      return { kind: 'workspace', filePath }
-    }
-
-    let relativePath = pathname.replace(/^\/+/, '')
-    let posixPath = toPosixPath(relativePath)
-    if (!isPathAllowed(posixPath, appAllow, appDeny)) return null
-    let filePath = path.join(root, relativePath)
-    return { kind: 'app', filePath }
-  }
 }

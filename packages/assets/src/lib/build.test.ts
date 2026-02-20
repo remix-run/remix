@@ -31,7 +31,7 @@ export const y = 2 + x`,
       )
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir,
         fileNames: '[name]',
@@ -79,7 +79,7 @@ export const bar = 'b' + foo`,
       )
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -121,7 +121,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'helper.ts'), `export const helper = 1`)
 
       await build({
-        scripts: ['main.ts'],
+        source: { scripts: ['main.ts'] },
         root,
         outDir,
         fileNames: '[name]',
@@ -158,7 +158,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: './out',
         manifest: false,
@@ -183,7 +183,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'app', 'entry.ts'), `export const x = 1`)
 
       await build({
-        scripts: ['app/entry.ts'],
+        source: { scripts: ['app/entry.ts'] },
         root,
         outDir: './out',
         fileNames: '[dir]/[name]-[hash]',
@@ -219,7 +219,7 @@ export const main = helper`,
       )
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: './out',
         fileNames: '[name]-[hash]',
@@ -247,7 +247,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -271,7 +271,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -301,7 +301,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -328,7 +328,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -353,7 +353,7 @@ export const main = helper`,
       fs.writeFileSync(path.join(root, 'entry.ts'), `export const x = 1`)
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -384,7 +384,7 @@ export const out = tag + helper`,
       fs.writeFileSync(path.join(root, 'helper.ts'), `export const helper = 'ok'`)
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -436,7 +436,7 @@ export const out = tag + helper`,
       fs.writeFileSync(path.join(outPath, 'leftover.txt'), 'should be removed')
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -461,7 +461,7 @@ export const out = tag + helper`,
       fs.writeFileSync(preservedPath, 'must remain')
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: './out',
         fileNames: '[name]',
@@ -491,7 +491,7 @@ export const out = tag + helper`,
       fs.writeFileSync(path.join(outPath, 'leftover.txt'), 'should be removed')
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: outPath,
         fileNames: '[name]',
@@ -518,7 +518,7 @@ export const out = tag + helper`,
       fs.writeFileSync(externalPath, 'do not remove')
 
       await build({
-        scripts: ['entry.ts'],
+        source: { scripts: ['entry.ts'] },
         root,
         outDir: path.relative(root, outDir),
         fileNames: '[name]',
@@ -537,6 +537,153 @@ export const out = tag + helper`,
     }
   })
 
+  it('substitutes /__@assets/ placeholder URLs from cross-entry #assets/ imports', async () => {
+    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-placeholder-sub-'))
+    try {
+      // package.json with placeholder condition so #assets/ resolves to .placeholder.ts
+      fs.writeFileSync(
+        path.join(root, 'package.json'),
+        JSON.stringify({
+          imports: {
+            '#assets/*': {
+              placeholder: './.assets/*.placeholder.ts',
+              default: './.assets/*.build.ts',
+            },
+          },
+        }),
+      )
+
+      fs.mkdirSync(path.join(root, 'app'), { recursive: true })
+
+      // Worker: a separate script entry loaded dynamically by URL
+      fs.writeFileSync(
+        path.join(root, 'app', 'worker.ts'),
+        `addEventListener('message', (e: MessageEvent<number>) => { postMessage(e.data * 2) })`,
+      )
+
+      // Entry: imports #assets/app/worker.ts to get the worker's href at runtime
+      fs.writeFileSync(
+        path.join(root, 'app', 'entry.ts'),
+        `import * as workerAsset from '#assets/app/worker.ts'
+export const workerHref = workerAsset.href`,
+      )
+
+      // Placeholder file that codegen would normally generate
+      fs.mkdirSync(path.join(root, '.assets', 'app'), { recursive: true })
+      fs.writeFileSync(
+        path.join(root, '.assets', 'app', 'worker.ts.placeholder.ts'),
+        `// @generated\nexport const href = '/__@assets/app/worker.ts'\nexport const preloads = ['/__@assets/app/worker.ts#preloads']\n`,
+      )
+
+      await build({
+        source: { scripts: ['app/entry.ts', 'app/worker.ts'] },
+        root,
+        outDir: './out',
+        fileNames: '[dir]/[name]',
+        baseUrl: '/assets',
+        manifest: false,
+      })
+
+      let outDir = path.join(root, 'out')
+
+      // The compiled placeholder shim should live under .assets/app/ in the output
+      let shimPath = path.join(outDir, '.assets', 'app', 'worker.ts.placeholder.js')
+      let shimContent = await fsp.readFile(shimPath, 'utf-8')
+
+      // After substitution, /__@assets/ placeholder should be gone
+      assert.ok(
+        !shimContent.includes('/__@assets/'),
+        `shim should not contain /__@assets/ after substitution; got:\n${shimContent}`,
+      )
+      // Real URL should be present
+      assert.ok(
+        shimContent.includes('/assets/app/worker.js'),
+        `shim should export the real worker URL /assets/app/worker.js; got:\n${shimContent}`,
+      )
+
+      // Entry output should not contain the bare #assets/ specifier
+      let entryContent = await fsp.readFile(path.join(outDir, 'app', 'entry.js'), 'utf-8')
+      assert.ok(
+        !entryContent.includes('#assets/'),
+        `entry output should not contain bare #assets/ specifiers; got:\n${entryContent}`,
+      )
+
+      // Worker output should be unaffected
+      let workerContent = await fsp.readFile(path.join(outDir, 'app', 'worker.js'), 'utf-8')
+      assert.ok(workerContent.includes('postMessage'), 'worker output should contain its code')
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('cascades hash recomputation when placeholder shim content changes', async () => {
+    let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-placeholder-hash-'))
+    try {
+      fs.writeFileSync(
+        path.join(root, 'package.json'),
+        JSON.stringify({
+          imports: {
+            '#assets/*': {
+              placeholder: './.assets/*.placeholder.ts',
+              default: './.assets/*.build.ts',
+            },
+          },
+        }),
+      )
+
+      fs.mkdirSync(path.join(root, 'app'), { recursive: true })
+      fs.writeFileSync(
+        path.join(root, 'app', 'worker.ts'),
+        `addEventListener('message', (e: MessageEvent<number>) => { postMessage(e.data * 2) })`,
+      )
+      fs.writeFileSync(
+        path.join(root, 'app', 'entry.ts'),
+        `import * as w from '#assets/app/worker.ts'
+export const href = w.href`,
+      )
+      fs.mkdirSync(path.join(root, '.assets', 'app'), { recursive: true })
+      fs.writeFileSync(
+        path.join(root, '.assets', 'app', 'worker.ts.placeholder.ts'),
+        `// @generated\nexport const href = '/__@assets/app/worker.ts'\nexport const preloads = ['/__@assets/app/worker.ts#preloads']\n`,
+      )
+
+      await build({
+        source: { scripts: ['app/entry.ts', 'app/worker.ts'] },
+        root,
+        outDir: './out',
+        fileNames: '[dir]/[name]-[hash]',
+        baseUrl: '/assets',
+        manifest: false,
+      })
+
+      let outDir = path.join(root, 'out')
+
+      // After substitution and hash cascade, no /__@assets/ should remain in any output
+      async function collectJs(dir: string): Promise<string[]> {
+        let files: string[] = []
+        for (let entry of await fsp.readdir(dir, { withFileTypes: true })) {
+          let full = path.join(dir, entry.name)
+          if (entry.isDirectory()) files.push(...(await collectJs(full)))
+          else if (entry.name.endsWith('.js')) files.push(full)
+        }
+        return files
+      }
+
+      let allJs = await collectJs(outDir)
+      assert.ok(allJs.length >= 3, 'expected at least worker, placeholder shim, entry outputs')
+
+      for (let filePath of allJs) {
+        let content = await fsp.readFile(filePath, 'utf-8')
+        assert.ok(
+          !content.includes('/__@assets/'),
+          `${path.relative(root, filePath)} should not contain /__@assets/ after substitution`,
+        )
+      }
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it('builds file variants and writes files manifest outputs', async () => {
     let root = fs.mkdtempSync(path.join(os.tmpdir(), 'assets-build-files-'))
     try {
@@ -545,21 +692,23 @@ export const out = tag + helper`,
       await fsp.writeFile(path.join(root, 'app', 'images', 'logo.txt'), 'logo')
 
       await build({
-        scripts: ['app/entry.ts'],
+        source: {
+          scripts: ['app/entry.ts'],
+          files: [
+            {
+              include: 'app/images/**/*.txt',
+              variants: {
+                small: (data) => Buffer.from(data.toString('utf-8').toUpperCase()),
+                large: (data) => Buffer.from(`${data.toString('utf-8')}!`),
+              },
+              defaultVariant: 'small',
+            },
+          ],
+        },
         root,
         outDir: './out',
         fileNames: '[name]',
         manifest: './out/manifest.json',
-        files: [
-          {
-            include: 'app/images/**/*.txt',
-            variants: {
-              small: (data) => Buffer.from(data.toString('utf-8').toUpperCase()),
-              large: (data) => Buffer.from(`${data.toString('utf-8')}!`),
-            },
-            defaultVariant: 'small',
-          },
-        ],
       })
 
       let manifest = JSON.parse(

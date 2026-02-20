@@ -38,8 +38,8 @@ describe('resolvedPathToUrl', () => {
       let url = resolvedPathToUrl(absolutePath, ctx)
 
       assert.ok(
-        url.startsWith('/__@workspace/'),
-        `Expected /__@workspace/ URL, got: ${url}. ` +
+        url.startsWith('/__@assets/__@workspace/'),
+        `Expected /__@assets/__@workspace/ URL, got: ${url}. ` +
           `(Bug: using app allow for workspace paths would emit absolute path)`,
       )
       assert.ok(url.includes('packages/pkg/index.ts'), `Expected path in URL, got: ${url}`)
@@ -93,8 +93,8 @@ describe('resolveSpecifiersToPaths', () => {
 
       assert.equal(resolved.length, 1)
       assert.equal(resolved[0]?.absolutePath, fs.realpathSync(path.join(libDir, 'util.ts')))
-      assert.equal(resolved[0]?.url, '/lib/util.ts')
-      assert.equal(resolutionCache.get(`@app/util\0${srcDir}`), '/lib/util.ts')
+      assert.equal(resolved[0]?.url, '/__@assets/lib/util.ts')
+      assert.equal(resolutionCache.get(`@app/util\0${srcDir}`), '/__@assets/lib/util.ts')
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }
@@ -156,10 +156,13 @@ describe('resolveSpecifiersToPaths', () => {
       let byUrl = new Set(resolved.map((r) => r.url))
 
       assert.equal(resolved.length, 2)
-      assert.ok(byUrl.has('/node_modules/pkg/feature.js'))
-      assert.ok(byUrl.has('/src/internal.ts'))
-      assert.equal(resolutionCache.get(`pkg/feature\0${srcDir}`), '/node_modules/pkg/feature.js')
-      assert.equal(resolutionCache.get(`#internal\0${srcDir}`), '/src/internal.ts')
+      assert.ok(byUrl.has('/__@assets/node_modules/pkg/feature.js'))
+      assert.ok(byUrl.has('/__@assets/src/internal.ts'))
+      assert.equal(
+        resolutionCache.get(`pkg/feature\0${srcDir}`),
+        '/__@assets/node_modules/pkg/feature.js',
+      )
+      assert.equal(resolutionCache.get(`#internal\0${srcDir}`), '/__@assets/src/internal.ts')
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }
@@ -211,10 +214,10 @@ describe('resolveSpecifiersToPaths', () => {
         resolved[0]?.absolutePath,
         fs.realpathSync(path.join(workspacePkgDir, 'index.ts')),
       )
-      assert.equal(resolved[0]?.url, '/__@workspace/packages/lib/index.ts')
+      assert.equal(resolved[0]?.url, '/__@assets/__@workspace/packages/lib/index.ts')
       assert.equal(
         resolutionCache.get(`@workspace/lib\0${srcDir}`),
-        '/__@workspace/packages/lib/index.ts',
+        '/__@assets/__@workspace/packages/lib/index.ts',
       )
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true })
@@ -229,7 +232,10 @@ describe('resolveSpecifiersToPaths', () => {
       let assetsDir = path.join(appDir, '.assets', 'app', 'images')
       await fsp.mkdir(srcDir, { recursive: true })
       await fsp.mkdir(assetsDir, { recursive: true })
-      await fsp.writeFile(path.join(assetsDir, 'logo.dev.ts'), "export default '/dev-url'\n")
+      await fsp.writeFile(
+        path.join(assetsDir, 'logo.placeholder.ts'),
+        "export default '/__@assets/dev-url'\n",
+      )
       await fsp.writeFile(path.join(assetsDir, 'logo.build.ts'), "export default '/build-url'\n")
       await fsp.writeFile(
         path.join(appDir, 'package.json'),
@@ -238,7 +244,7 @@ describe('resolveSpecifiersToPaths', () => {
           type: 'module',
           imports: {
             '#assets/*': {
-              development: './.assets/*.dev.ts',
+              placeholder: './.assets/*.placeholder.ts',
               default: './.assets/*.build.ts',
             },
           },
@@ -254,19 +260,19 @@ describe('resolveSpecifiersToPaths', () => {
         workspaceDenyPatterns: [],
       }
 
-      let devResolved = await resolveSpecifiersToPaths(
+      let placeholderResolved = await resolveSpecifiersToPaths(
         ['#assets/app/images/logo'],
         srcDir,
         ctx,
         new Map(),
         [],
         () => false,
-        ['development'],
+        ['placeholder'],
       )
-      assert.equal(devResolved.length, 1)
+      assert.equal(placeholderResolved.length, 1)
       assert.ok(
-        devResolved[0]?.absolutePath?.endsWith('logo.dev.ts'),
-        `Expected .dev.ts with development condition, got: ${devResolved[0]?.absolutePath}`,
+        placeholderResolved[0]?.absolutePath?.endsWith('logo.placeholder.ts'),
+        `Expected .placeholder.ts with placeholder condition, got: ${placeholderResolved[0]?.absolutePath}`,
       )
 
       let buildResolved = await resolveSpecifiersToPaths(

@@ -9,19 +9,20 @@ import {
   type AssetEntry,
   type AssetResolver,
   type FilesConfig,
+  type AssetsSource,
 } from './files.ts'
 
 export interface CreateDevAssetResolverOptions<files extends FilesConfig = FilesConfig> {
-  root: string
-  scripts?: string[]
-  files?: files
+  /** Project root. Default: process.cwd() */
+  root?: string
+  source?: AssetsSource<files>
 }
 
 /**
  * Creates an asset resolver for dev mode with 1:1 source-to-URL mapping.
  *
  * In dev mode:
- * - `href` returns the source path as a URL (e.g., '/app/entry.tsx')
+ * - `href` returns the source path as a `/__@assets/` URL (e.g., '/__@assets/app/entry.tsx')
  * - Script entries return `preloads: [href]` since there's no code splitting in dev
  * - File entries return `preloads: []` because file assets have no module graph
  * - Entry paths are always treated as relative to root (leading slashes stripped, .. collapsed)
@@ -33,9 +34,9 @@ export interface CreateDevAssetResolverOptions<files extends FilesConfig = Files
 export function createDevAssetResolver<files extends FilesConfig = FilesConfig>(
   options: CreateDevAssetResolverOptions<files>,
 ): AssetResolver<files> {
-  let scripts = options.scripts
-  let absoluteRoot = path.resolve(options.root)
-  let compiledFileRules = compileFileRules(options.files)
+  let scripts = options.source?.scripts
+  let absoluteRoot = path.resolve(options.root ?? '.')
+  let compiledFileRules = compileFileRules(options.source?.files)
 
   function normalizeEntryPath(entryPath: string): string {
     let p: string
@@ -57,7 +58,7 @@ export function createDevAssetResolver<files extends FilesConfig = FilesConfig>(
   function createDevFileHref(sourcePath: string, variant: string | undefined): string {
     let encodedPath = sourcePath.split('/').map(encodeURIComponent).join('/')
     let query = variant ? `@${encodeURIComponent(variant)}` : ''
-    return query ? `/__@files/${encodedPath}?${query}` : `/__@files/${encodedPath}`
+    return query ? `/__@assets/${encodedPath}?${query}` : `/__@assets/${encodedPath}`
   }
 
   let allowedSet: Set<string> | null = null
@@ -98,7 +99,7 @@ export function createDevAssetResolver<files extends FilesConfig = FilesConfig>(
 
     if (variant) return null
     if (allowedSet && !allowedSet.has(normalizedPath)) return null
-    let href = '/' + normalizedPath
+    let href = '/__@assets/' + normalizedPath
     return { href, preloads: [href] }
   }
 }

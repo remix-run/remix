@@ -9,7 +9,7 @@ import { isCommonJS } from './import-rewriter.ts'
 import { fixSourceMapPaths } from './source-map.ts'
 import { hashCode, generateETag, matchesETag } from './etag.ts'
 import type { CreateDevAssetsHandlerOptions } from './options.ts'
-import { toPosixPath, isPathAllowed, createDevPathResolver } from './path-resolver.ts'
+import { isPathAllowed } from './path-resolver.ts'
 import type { ResolveContext } from './resolve.ts'
 import { rewriteImports } from './rewrite.ts'
 import {
@@ -76,8 +76,7 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
     moduleGraph: createModuleGraph(),
   }
 
-  let pathResolver = createDevPathResolver(options)
-  let compiledFileRules = compileFileRules(options.files)
+  let compiledFileRules = compileFileRules(options.source?.files)
   let fileAssetTransforms = new Map<string, FileAssetTransformState>()
   let filesCacheLocation =
     options.filesCache === false
@@ -200,7 +199,7 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
         headers: { 'Content-Type': 'text/plain' },
       })
     }
-    let posixPath = pathname.slice('/__@workspace/'.length)
+    let posixPath = pathname.slice('/__@assets/__@workspace/'.length)
     if (!isPathAllowed(posixPath, workspaceAllow, workspaceDeny)) {
       if (DEBUG) {
         console.warn(`[assets] Blocked: ${pathname}`)
@@ -232,7 +231,7 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
         workspaceAllow,
         workspaceDeny,
         stat.mtimeMs,
-        ['development'],
+        ['placeholder'],
       )
 
       let moduleNode = getModuleByUrl(caches.moduleGraph, pathname)
@@ -269,7 +268,8 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
     requestUrl: URL,
     ifNoneMatch: string | null,
   ): Promise<Response> {
-    let tailPath = requestUrl.pathname.slice('/__@files/'.length)
+    let pathname = requestUrl.pathname
+    let tailPath = pathname.slice('/__@assets/'.length)
     if (!tailPath) return new Response('Not Found', { status: 404 })
 
     let decodedTail = tailPath
@@ -375,6 +375,69 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
     })
   }
 
+  async function handleScriptAssetRequest(
+    pathname: string,
+    ifNoneMatch: string | null,
+  ): Promise<Response> {
+    // Strip /__@assets/ prefix to get the source-relative path
+    let relativePath = pathname.slice('/__@assets/'.length)
+    if (!relativePath) return new Response('Not Found', { status: 404 })
+
+    let posixPath = relativePath
+    if (!isPathAllowed(posixPath, appAllow, appDeny)) {
+      if (DEBUG) {
+        console.warn(`[assets] Blocked: ${pathname}`)
+      }
+      return new Response('Forbidden', {
+        status: 403,
+        headers: { 'Content-Type': 'text/plain' },
+      })
+    }
+
+    let filePath = path.join(root, ...relativePath.split('/'))
+    let stat
+    try {
+      stat = await fsp.stat(filePath)
+      if (stat.isDirectory()) return new Response('Not Found', { status: 404 })
+    } catch {
+      return new Response('Not Found', { status: 404 })
+    }
+
+    try {
+      let source = await fsp.readFile(filePath, 'utf-8')
+      let transformed = await transformSource(
+        source,
+        filePath,
+        pathname,
+        appAllow,
+        appDeny,
+        stat.mtimeMs,
+        ['placeholder'],
+      )
+
+      let moduleNode = getModuleByUrl(caches.moduleGraph, pathname)
+      let hash = moduleNode?.transformResult?.hash ?? ''
+      let etag = generateETag(hash)
+      if (matchesETag(ifNoneMatch, etag)) {
+        return new Response(null, { status: 304, headers: { ETag: etag } })
+      }
+
+      return new Response(transformed, {
+        headers: {
+          'Content-Type': 'application/javascript; charset=utf-8',
+          'Cache-Control': 'no-cache',
+          ETag: etag,
+        },
+      })
+    } catch (error) {
+      let message = error instanceof Error ? error.message : String(error)
+      return new Response(`Transform error: ${message}`, {
+        status: 500,
+        headers: { 'Content-Type': 'text/plain' },
+      })
+    }
+  }
+
   return {
     async serve(request: Request): Promise<Response | null> {
       if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -384,72 +447,30 @@ export function createDevAssetsHandler(options: CreateDevAssetsHandlerOptions): 
       let pathname = requestUrl.pathname
       let ifNoneMatch = request.headers.get('If-None-Match')
 
-      if (pathname.startsWith('/__@files/')) {
-        return handleFileAssetRequest(requestUrl, ifNoneMatch)
-      }
-
-      if (pathname.startsWith('/__@workspace/')) {
+      if (pathname.startsWith('/__@assets/__@workspace/')) {
         return handleWorkspaceRequest(pathname, ifNoneMatch)
       }
 
-      let resolution = pathResolver(pathname)
-      if (!resolution) return null
-
-      let filePath = resolution.filePath
-      let stat: fs.Stats
-      try {
-        stat = await fsp.stat(filePath)
-        if (stat.isDirectory()) return null
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
-        throw error
-      }
-
-      let relativePath = pathname.replace(/^\/+/, '')
-      let posixPath = toPosixPath(relativePath)
-      if (!isPathAllowed(posixPath, appAllow, appDeny)) {
-        if (DEBUG) {
-          console.warn(`[assets] Blocked: ${pathname}`)
-        }
-        return new Response('Forbidden', {
-          status: 403,
-          headers: { 'Content-Type': 'text/plain' },
-        })
-      }
-
-      try {
-        let source = await fsp.readFile(filePath, 'utf-8')
-        let transformed = await transformSource(
-          source,
-          filePath,
-          pathname,
-          appAllow,
-          appDeny,
-          stat.mtimeMs,
-          ['development'],
+      if (pathname.startsWith('/__@assets/')) {
+        // Determine asset type by checking the path against configured file rules.
+        // A file asset may or may not have a ?@variant query param (e.g. when defaultVariant
+        // is set, the request has no query param but is still a file asset).
+        let tailPath = pathname.slice('/__@assets/'.length)
+        let sourcePath = normalizeSourcePath(
+          tailPath
+            .split('/')
+            .filter(Boolean)
+            .map((s) => decodeURIComponent(s))
+            .join('/'),
         )
-
-        let moduleNode = getModuleByUrl(caches.moduleGraph, pathname)
-        let hash = moduleNode?.transformResult?.hash ?? ''
-        let etag = generateETag(hash)
-        if (matchesETag(ifNoneMatch, etag)) {
-          return new Response(null, { status: 304, headers: { ETag: etag } })
+        let fileRule = findFileRule(sourcePath, undefined, compiledFileRules)
+        if (fileRule) {
+          return handleFileAssetRequest(requestUrl, ifNoneMatch)
         }
-
-        return new Response(transformed, {
-          headers: {
-            'Content-Type': 'application/javascript; charset=utf-8',
-            'Cache-Control': 'no-cache',
-            ETag: etag,
-          },
-        })
-      } catch (error) {
-        let message = error instanceof Error ? error.message : String(error)
-        return new Response(`Transform error: ${message}`, {
-          status: 500,
-          headers: { 'Content-Type': 'text/plain' },
-        })
+        return handleScriptAssetRequest(pathname, ifNoneMatch)
       }
+
+      return null
     },
   }
 }

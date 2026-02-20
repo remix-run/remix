@@ -16,7 +16,7 @@ describe('createDevAssets', () => {
     assert.equal(typeof devAssets.close, 'function')
   })
 
-  it('generates .dev.ts files for configured script entries on startup', async () => {
+  it('generates .placeholder.ts files for configured script entries on startup', async () => {
     let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-script-codegen-'))
     let appDir = path.join(tmpDir, 'app')
     fs.mkdirSync(appDir, { recursive: true })
@@ -25,7 +25,7 @@ describe('createDevAssets', () => {
     let devAssets = createDevAssets({
       root: tmpDir,
       allow: ['app/**'],
-      scripts: ['app/entry.tsx'],
+      source: { scripts: ['app/entry.tsx'] },
     })
     try {
       let router = createRouter({
@@ -34,11 +34,11 @@ describe('createDevAssets', () => {
       // First request awaits codegenInit, ensuring the initial codegen pass has run
       await router.fetch(new Request('http://localhost/'))
 
-      let devFilePath = path.join(tmpDir, '.assets', 'app', 'entry.tsx.dev.ts')
-      let content = fs.readFileSync(devFilePath, 'utf-8')
+      let placeholderFilePath = path.join(tmpDir, '.assets', 'app', 'entry.tsx.placeholder.ts')
+      let content = fs.readFileSync(placeholderFilePath, 'utf-8')
       assert.ok(
-        content.includes("export const href = '/app/entry.tsx'"),
-        `Expected dev URL in generated .dev.ts, got:\n${content}`,
+        content.includes("export const href = '/__@assets/app/entry.tsx'"),
+        `Expected placeholder URL in generated .placeholder.ts, got:\n${content}`,
       )
     } finally {
       devAssets.close()
@@ -46,7 +46,7 @@ describe('createDevAssets', () => {
     }
   })
 
-  it('does not generate script .dev.ts files when scripts option is omitted', async () => {
+  it('does not generate script .placeholder.ts files when scripts option is omitted', async () => {
     let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-no-script-codegen-'))
     let appDir = path.join(tmpDir, 'app')
     let imagesDir = path.join(appDir, 'images')
@@ -54,11 +54,11 @@ describe('createDevAssets', () => {
     fs.writeFileSync(path.join(appDir, 'entry.tsx'), 'export default function App() {}')
     fs.writeFileSync(path.join(imagesDir, 'logo.png'), 'fake-png')
 
-    // files is provided (triggering codegenWatch) but scripts is intentionally omitted
+    // source.files is provided (triggering watchCodegenPlaceholders) but scripts is intentionally omitted
     let devAssets = createDevAssets({
       root: tmpDir,
       allow: ['app/**'],
-      files: [{ include: 'app/images/**/*.png' }],
+      source: { files: [{ include: 'app/images/**/*.png' }] },
     })
     try {
       let router = createRouter({
@@ -66,10 +66,10 @@ describe('createDevAssets', () => {
       })
       await router.fetch(new Request('http://localhost/'))
 
-      let scriptDevFile = path.join(tmpDir, '.assets', 'app', 'entry.tsx.dev.ts')
+      let scriptPlaceholderFile = path.join(tmpDir, '.assets', 'app', 'entry.tsx.placeholder.ts')
       assert.ok(
-        !fs.existsSync(scriptDevFile),
-        'entry.tsx.dev.ts should not be generated when scripts option is omitted',
+        !fs.existsSync(scriptPlaceholderFile),
+        'entry.tsx.placeholder.ts should not be generated when scripts option is omitted',
       )
     } finally {
       devAssets.close()
@@ -82,7 +82,10 @@ describe('createDevAssets', () => {
     try {
       let assetsDir = path.join(tmpDir, '.assets', 'app')
       await fsp.mkdir(assetsDir, { recursive: true })
-      await fsp.writeFile(path.join(assetsDir, 'logo.dev.ts'), "export default '/dev-url'\n")
+      await fsp.writeFile(
+        path.join(assetsDir, 'logo.placeholder.ts'),
+        "export default '/__@assets/logo'\n",
+      )
 
       let router = createRouter({
         middleware: [
@@ -94,7 +97,9 @@ describe('createDevAssets', () => {
         ],
       })
 
-      let response = await router.fetch(new Request('http://localhost/.assets/app/logo.dev.ts'))
+      let response = await router.fetch(
+        new Request('http://localhost/__@assets/.assets/app/logo.placeholder.ts'),
+      )
       assert.equal(
         response.status,
         200,
@@ -110,7 +115,10 @@ describe('createDevAssets', () => {
     try {
       let assetsDir = path.join(tmpDir, 'custom-assets', 'app')
       await fsp.mkdir(assetsDir, { recursive: true })
-      await fsp.writeFile(path.join(assetsDir, 'logo.dev.ts'), "export default '/dev-url'\n")
+      await fsp.writeFile(
+        path.join(assetsDir, 'logo.placeholder.ts'),
+        "export default '/__@assets/logo'\n",
+      )
 
       let router = createRouter({
         middleware: [
@@ -123,7 +131,7 @@ describe('createDevAssets', () => {
       })
 
       let response = await router.fetch(
-        new Request('http://localhost/custom-assets/app/logo.dev.ts'),
+        new Request('http://localhost/__@assets/custom-assets/app/logo.placeholder.ts'),
       )
       assert.equal(response.status, 200, 'custom codegenDir should be auto-allowed')
     } finally {
@@ -150,7 +158,10 @@ describe('middleware wiring', () => {
           async (context, _next) => {
             nextCalled = true
             let entry = context.assets.resolve('entry.ts')
-            assert.deepEqual(entry, { href: '/entry.ts', preloads: ['/entry.ts'] })
+            assert.deepEqual(entry, {
+              href: '/__@assets/entry.ts',
+              preloads: ['/__@assets/entry.ts'],
+            })
             return new Response('next-called')
           },
         ],
@@ -188,7 +199,10 @@ describe('middleware wiring', () => {
 
       let response = await router.fetch(new Request('http://localhost/not-served.ts'))
       let json = await response.json()
-      assert.deepEqual(json.entry, { href: '/entry.ts', preloads: ['/entry.ts'] })
+      assert.deepEqual(json.entry, {
+        href: '/__@assets/entry.ts',
+        preloads: ['/__@assets/entry.ts'],
+      })
       assert.equal(json.withVariant, null)
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true })
@@ -205,20 +219,22 @@ describe('middleware wiring', () => {
     let devAssets = createDevAssets({
       root: appDir,
       allow: ['**/*'],
-      files: [
-        {
-          include: 'images/**/*.png',
-          variants: {
-            card(data) {
-              return data
+      source: {
+        files: [
+          {
+            include: 'images/**/*.png',
+            variants: {
+              card(data) {
+                return data
+              },
+              thumb(data) {
+                return data
+              },
             },
-            thumb(data) {
-              return data
-            },
+            defaultVariant: 'card',
           },
-          defaultVariant: 'card',
-        },
-      ],
+        ],
+      },
     })
     try {
       let router = createRouter({
@@ -236,11 +252,11 @@ describe('middleware wiring', () => {
       let response = await router.fetch(new Request('http://localhost/not-served.ts'))
       let json = await response.json()
       assert.deepEqual(json.defaultVariant, {
-        href: '/__@files/images/logo.png?@card',
+        href: '/__@assets/images/logo.png?@card',
         preloads: [],
       })
       assert.deepEqual(json.thumbVariant, {
-        href: '/__@files/images/logo.png?@thumb',
+        href: '/__@assets/images/logo.png?@thumb',
         preloads: [],
       })
       assert.equal(json.missingVariant, null)
@@ -269,7 +285,7 @@ describe('middleware wiring', () => {
         ],
       })
 
-      let request = new Request('http://localhost/entry.ts')
+      let request = new Request('http://localhost/__@assets/entry.ts')
       let response = await router.fetch(request)
 
       assert.equal(response.status, 200)
@@ -302,7 +318,7 @@ describe('middleware wiring', () => {
         ],
       })
 
-      let response = await router.fetch(new Request('http://localhost/entry.ts'))
+      let response = await router.fetch(new Request('http://localhost/__@assets/entry.ts'))
       assert.equal(response.status, 200)
       assert.equal(nextCalled, false)
       assert.ok((await response.text()).includes('served'))
@@ -311,24 +327,28 @@ describe('middleware wiring', () => {
     }
   })
 
-  it('calls next() when path is not served by assets (404 from later middleware)', async () => {
+  it('returns null for bare paths so next middleware can handle them', async () => {
     let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-wiring-'))
     try {
       let appDir = path.join(tmpDir, 'app')
       await fsp.mkdir(appDir, { recursive: true })
 
+      let nextCalled = false
       let router = createRouter({
         middleware: [
           createDevAssets({ root: appDir, allow: ['**'] }).middleware,
-          async (_context, _next) => new Response('not-found', { status: 404 }),
+          async (_context, _next) => {
+            nextCalled = true
+            return new Response('from-next', { status: 200 })
+          },
         ],
       })
 
-      let request = new Request('http://localhost/nonexistent.ts')
-      let response = await router.fetch(request)
-
-      assert.equal(response.status, 404)
-      assert.equal(await response.text(), 'not-found')
+      // Bare path (no /__@assets/ scope) falls through to next middleware
+      let response = await router.fetch(new Request('http://localhost/some-route'))
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'from-next')
+      assert.equal(nextCalled, true, 'next middleware should have been called for bare path')
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }
@@ -352,11 +372,11 @@ describe('middleware wiring', () => {
         ],
       })
 
-      let allowed = await router.fetch(new Request('http://localhost/entry.ts'))
+      let allowed = await router.fetch(new Request('http://localhost/__@assets/entry.ts'))
       assert.equal(allowed.status, 200)
 
-      let denied = await router.fetch(new Request('http://localhost/secret.ts'))
-      assert.equal(denied.status, 404)
+      let denied = await router.fetch(new Request('http://localhost/__@assets/secret.ts'))
+      assert.equal(denied.status, 403)
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }
@@ -385,12 +405,12 @@ describe('middleware wiring', () => {
       })
 
       let allowed = await router.fetch(
-        new Request('http://localhost/__@workspace/packages/utils.ts'),
+        new Request('http://localhost/__@assets/__@workspace/packages/utils.ts'),
       )
       assert.equal(allowed.status, 200)
 
       let denied = await router.fetch(
-        new Request('http://localhost/__@workspace/packages/blocked.ts'),
+        new Request('http://localhost/__@assets/__@workspace/packages/blocked.ts'),
       )
       assert.equal(denied.status, 403)
     } finally {
@@ -418,7 +438,7 @@ describe('middleware wiring', () => {
         ],
       })
 
-      let response = await router.fetch(new Request('http://localhost/entry.ts'))
+      let response = await router.fetch(new Request('http://localhost/__@assets/entry.ts'))
       let body = await response.text()
       assert.equal(response.status, 200)
       assert.ok(
@@ -447,7 +467,7 @@ describe('middleware wiring', () => {
         ],
       })
 
-      let response = await router.fetch(new Request('http://localhost/entry.ts'))
+      let response = await router.fetch(new Request('http://localhost/__@assets/entry.ts'))
       let body = await response.text()
       assert.equal(response.status, 200)
       assert.equal(body.includes('sourceMappingURL=data:application/json;base64,'), false)

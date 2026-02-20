@@ -10,7 +10,7 @@
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
-    "customConditions": ["development"]
+    "customConditions": ["placeholder"]
   },
   "include": [".assets/**/*.ts", "**/*.ts", "**/*.tsx"]
 }

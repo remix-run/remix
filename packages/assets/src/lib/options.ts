@@ -1,9 +1,11 @@
-import type { FilesConfig } from './files.ts'
+import type { AssetsSource } from './files.ts'
 
 /**
  * Options for createDevAssetsHandler.
  */
 export interface CreateDevAssetsHandlerOptions {
+  /** Source definition (scripts + file rules). */
+  source?: AssetsSource
   /** Project root. Default: process.cwd(). Use "." for cwd. */
   root?: string
   allow: string[]
@@ -18,8 +20,6 @@ export interface CreateDevAssetsHandlerOptions {
   sourcemap?: boolean
   /** Import specifiers to leave unchanged (e.g. CDN URLs, bare specifiers for import maps). */
   external?: string | string[]
-  /** File transformation rules used by asset resolvers in development. */
-  files?: FilesConfig
   /**
    * Persistent cache location for transformed file variants in development.
    * Set to false to disable filesystem caching for transformed files.
@@ -33,8 +33,8 @@ export interface CreateDevAssetsHandlerOptions {
  * No allow/deny—build is graph-driven from scripts.
  */
 export interface BuildOptions {
-  /** Script entry paths relative to root (e.g. ['app/entry.tsx']) */
-  scripts?: string[]
+  /** Source definition (scripts + file rules). */
+  source?: AssetsSource
   /** Project root. Default: process.cwd(). Use "." for cwd. */
   root?: string
   /** Output directory (e.g. './build') */
@@ -60,10 +60,8 @@ export interface BuildOptions {
   workspaceRoot?: string
   /** Path to emit manifest (AssetsManifest) or false to skip (default: false) */
   manifest?: string | false
-  /** File transformation rules for non-JS assets. */
-  files?: FilesConfig
   /**
-   * Directory for generated .dev.ts and .build.ts asset files.
+   * Directory for generated .placeholder.ts and .build.ts asset files.
    * Default: '.assets'
    */
   codegenDir?: string

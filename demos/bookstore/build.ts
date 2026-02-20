@@ -13,7 +13,7 @@ async function main() {
   let config = await getAssetsBuildConfig()
 
   console.log('Scripts:')
-  for (let entry of config.scripts) {
+  for (let entry of config.source.scripts) {
     console.log(`  ${entry}`)
   }
   console.log('')

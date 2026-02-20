@@ -3,20 +3,21 @@ import type { Middleware } from '@remix-run/fetch-router'
 import {
   createDevAssetsHandler,
   createDevAssetResolver,
-  codegenWatch,
+  watchCodegenPlaceholders,
   type CreateDevAssetsHandlerOptions,
   type CodegenWatcher,
+  type AssetsSource,
 } from '@remix-run/assets'
 
 export interface DevAssetsMiddlewareOptions extends CreateDevAssetsHandlerOptions {
   /**
-   * Script entry paths relative to root (e.g. ['app/entry.tsx']).
-   * When provided, .dev.ts files are generated for these entries so they can
-   * be imported via #assets/... subpath imports.
+   * Source definition (scripts + file rules).
+   * When provided, .placeholder.ts files are generated for these entries so
+   * they can be imported via #assets/... subpath imports.
    */
-  scripts?: string[]
+  source?: AssetsSource
   /**
-   * Directory for generated .dev.ts asset files.
+   * Directory for generated .placeholder.ts asset files.
    * Default: '.assets'
    */
   codegenDir?: string
@@ -25,15 +26,15 @@ export interface DevAssetsMiddlewareOptions extends CreateDevAssetsHandlerOption
 export interface DevAssetsHandler {
   /** The middleware to pass to createRouter(). */
   middleware: Middleware
-  /** Stop the file watcher started by codegenWatch(). */
+  /** Stop the file watcher started by watchCodegenPlaceholders(). */
   close(): void
 }
 
 /**
  * Creates a dev assets middleware that serves and transforms source files for
- * development. When scripts or files options are provided, runs codegenWatch()
- * on startup to generate/update .dev.ts files before accepting requests, so
- * #assets/... imports resolve immediately.
+ * development. When a source option is provided, runs watchCodegenPlaceholders()
+ * on startup to generate/update .placeholder.ts files before accepting requests,
+ * so #assets/... imports resolve immediately.
  *
  * @param options Configuration options
  * @returns An object with middleware and a close() method to stop the watcher
@@ -41,22 +42,21 @@ export interface DevAssetsHandler {
 export function createDevAssets(options: DevAssetsMiddlewareOptions): DevAssetsHandler {
   let root = path.resolve(options.root ?? process.cwd())
   let codegenDir = options.codegenDir ?? '.assets'
-  // Auto-allow the codegen directory so browsers can fetch resolved .dev.ts files.
+  // Auto-allow the codegen directory so browsers can fetch resolved .placeholder.ts files.
   let resolvedOptions: CreateDevAssetsHandlerOptions = {
     ...options,
     root,
     allow: [...(options.allow ?? []), `${codegenDir}/**`],
   }
   let handler = createDevAssetsHandler(resolvedOptions)
-  let resolveAsset = createDevAssetResolver({ root, files: options.files })
+  let resolveAsset = createDevAssetResolver({ root, source: options.source })
 
   let watcher: CodegenWatcher | null = null
   let codegenInit: Promise<void> | null = null
 
-  if (options.scripts?.length || options.files?.length) {
-    codegenInit = codegenWatch({
-      scripts: options.scripts,
-      files: options.files,
+  if (options.source?.scripts?.length || options.source?.files?.length) {
+    codegenInit = watchCodegenPlaceholders({
+      source: options.source,
       root,
       codegenDir: options.codegenDir,
     }).then((w) => {

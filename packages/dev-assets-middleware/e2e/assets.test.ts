@@ -25,7 +25,7 @@ let fixtureFiles = {
 <head><title>Test App</title></head>
 <body>
   <div id="app"></div>
-  <script type="module" src="/entry.ts"></script>
+  <script type="module" src="/__@assets/entry.ts"></script>
 </body>
 </html>`,
 
@@ -202,7 +202,7 @@ describe('assets middleware e2e', () => {
   })
 
   it('serves transformed TypeScript', async () => {
-    let response = await page.goto(`${baseUrl}/entry.ts`)
+    let response = await page.goto(`${baseUrl}/__@assets/entry.ts`)
     assert.ok(response?.ok())
 
     let contentType = response?.headers()['content-type']
@@ -212,7 +212,7 @@ describe('assets middleware e2e', () => {
     // TypeScript type annotation should be stripped
     assert.ok(!body?.includes(': string'), 'Expected TypeScript to be transformed')
     // Imports should be resolved to absolute URLs
-    assert.ok(body?.includes('/utils/greet.ts'), 'Expected import paths to be resolved')
+    assert.ok(body?.includes('/__@assets/utils/greet.ts'), 'Expected import paths to be resolved')
   })
 
   it('returns 404 for non-existent files', async () => {

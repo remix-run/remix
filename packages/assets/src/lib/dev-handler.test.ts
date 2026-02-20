@@ -32,13 +32,26 @@ describe('allow/deny security', () => {
   }
 
   describe('app root security', () => {
-    it('blocks requests when no allow patterns configured', async () => {
+    it('returns 403 when no allow patterns configured', async () => {
       setupDirs()
       try {
         let handler = createDevAssetsHandler({ root: tempDir, allow: [] })
+        let response = await handler.serve(new Request('http://localhost/__@assets/app/entry.ts'))
+
+        assert.ok(response)
+        assert.equal(response!.status, 403)
+      } finally {
+        cleanupDirs()
+      }
+    })
+
+    it('returns null for requests without /__@assets/ scope', async () => {
+      setupDirs()
+      try {
+        let handler = createDevAssetsHandler({ root: tempDir, allow: ['app/**'] })
         let response = await handler.serve(new Request('http://localhost/app/entry.ts'))
 
-        assert.equal(response, null, 'handler should not serve when no allow patterns')
+        assert.equal(response, null, 'bare paths should not be served — must use /__@assets/ scope')
       } finally {
         cleanupDirs()
       }
@@ -48,7 +61,7 @@ describe('allow/deny security', () => {
       setupDirs()
       try {
         let handler = createDevAssetsHandler({ root: tempDir, allow: ['app/**'] })
-        let response = await handler.serve(new Request('http://localhost/app/entry.ts'))
+        let response = await handler.serve(new Request('http://localhost/__@assets/app/entry.ts'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -58,19 +71,20 @@ describe('allow/deny security', () => {
       }
     })
 
-    it('blocks requests not matching allow patterns', async () => {
+    it('returns 403 for requests not matching allow patterns', async () => {
       setupDirs()
       try {
         let handler = createDevAssetsHandler({ root: tempDir, allow: ['app/**'] })
-        let response = await handler.serve(new Request('http://localhost/server.ts'))
+        let response = await handler.serve(new Request('http://localhost/__@assets/server.ts'))
 
-        assert.equal(response, null, 'handler should not serve path outside allow')
+        assert.ok(response)
+        assert.equal(response!.status, 403)
       } finally {
         cleanupDirs()
       }
     })
 
-    it('blocks requests matching deny patterns', async () => {
+    it('returns 403 for requests matching deny patterns', async () => {
       setupDirs()
       fs.writeFileSync(path.join(tempDir, 'secret.ts'), 'export let SECRET = "foo"')
 
@@ -80,9 +94,10 @@ describe('allow/deny security', () => {
           allow: ['**'],
           deny: ['secret.ts'],
         })
-        let response = await handler.serve(new Request('http://localhost/secret.ts'))
+        let response = await handler.serve(new Request('http://localhost/__@assets/secret.ts'))
 
-        assert.equal(response, null, 'handler should not serve path matching deny')
+        assert.ok(response)
+        assert.equal(response!.status, 403)
       } finally {
         cleanupDirs()
       }
@@ -96,9 +111,10 @@ describe('allow/deny security', () => {
           allow: ['**'],
           deny: ['server.ts'],
         })
-        let response = await handler.serve(new Request('http://localhost/server.ts'))
+        let response = await handler.serve(new Request('http://localhost/__@assets/server.ts'))
 
-        assert.equal(response, null, 'handler should not serve path matching deny')
+        assert.ok(response)
+        assert.equal(response!.status, 403)
       } finally {
         cleanupDirs()
       }
@@ -114,7 +130,7 @@ describe('allow/deny security', () => {
           allow: ['app/**'],
         })
         let response = await handler.serve(
-          new Request('http://localhost/__@workspace/node_modules/pkg/index.js'),
+          new Request('http://localhost/__@assets/__@workspace/node_modules/pkg/index.js'),
         )
 
         assert.ok(response)
@@ -134,7 +150,7 @@ describe('allow/deny security', () => {
           workspaceAllow: ['**/node_modules/**'],
         })
         let response = await handler.serve(
-          new Request('http://localhost/__@workspace/node_modules/pkg/index.js'),
+          new Request('http://localhost/__@assets/__@workspace/node_modules/pkg/index.js'),
         )
 
         assert.ok(response)
@@ -154,7 +170,7 @@ describe('allow/deny security', () => {
           workspaceAllow: ['**/node_modules/**'],
         })
         let response = await handler.serve(
-          new Request('http://localhost/__@workspace/packages/lib/index.ts'),
+          new Request('http://localhost/__@assets/__@workspace/packages/lib/index.ts'),
         )
 
         assert.ok(response)
@@ -174,7 +190,9 @@ describe('allow/deny security', () => {
           workspaceRoot: workspaceDir,
           workspaceAllow: ['**'],
         })
-        let response = await handler.serve(new Request('http://localhost/__@workspace/.env'))
+        let response = await handler.serve(
+          new Request('http://localhost/__@assets/__@workspace/.env'),
+        )
 
         assert.ok(response)
         assert.equal(response!.status, 403)
@@ -197,11 +215,15 @@ describe('allow/deny security', () => {
           workspaceDeny: ['**/.env*', '**/test.ts'],
         })
 
-        let response1 = await handler.serve(new Request('http://localhost/__@workspace/test.ts'))
+        let response1 = await handler.serve(
+          new Request('http://localhost/__@assets/__@workspace/test.ts'),
+        )
         assert.ok(response1)
         assert.equal(response1!.status, 403, 'Should block workspace-specific deny pattern')
 
-        let response2 = await handler.serve(new Request('http://localhost/__@workspace/.env'))
+        let response2 = await handler.serve(
+          new Request('http://localhost/__@assets/__@workspace/.env'),
+        )
         assert.ok(response2)
         assert.equal(response2!.status, 403, 'Should block inherited deny pattern')
       } finally {
@@ -245,7 +267,7 @@ describe('esbuild config support', () => {
           allow: ['app/**'],
         })
 
-        let response = await handler.serve(new Request('http://localhost/app/simple.ts'))
+        let response = await handler.serve(new Request('http://localhost/__@assets/app/simple.ts'))
         assert.ok(response)
         assert.equal(response!.status, 200)
         let text = await response!.text()
@@ -265,7 +287,9 @@ describe('esbuild config support', () => {
           allow: ['app/**'],
         })
 
-        let response = await handler.serve(new Request('http://localhost/app/with-import.tsx'))
+        let response = await handler.serve(
+          new Request('http://localhost/__@assets/app/with-import.tsx'),
+        )
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -291,7 +315,7 @@ describe('esbuild config support', () => {
           sourcemap: false,
         })
 
-        let response = await handler.serve(new Request('http://localhost/app/entry.tsx'))
+        let response = await handler.serve(new Request('http://localhost/__@assets/app/entry.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -311,7 +335,7 @@ describe('esbuild config support', () => {
           sourcemap: true,
         })
 
-        let response = await handler.serve(new Request('http://localhost/app/entry.tsx'))
+        let response = await handler.serve(new Request('http://localhost/__@assets/app/entry.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -350,7 +374,7 @@ root.render(<div>Hello</div>)`,
           'export function helper() { return "helper" }',
         )
 
-        let response = await handler.serve(new Request('http://localhost/app/entry.tsx'))
+        let response = await handler.serve(new Request('http://localhost/__@assets/app/entry.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -359,7 +383,7 @@ root.render(<div>Hello</div>)`,
           code.includes('https://unpkg.com/@remix-run/component'),
           'should preserve CDN URL',
         )
-        assert.ok(code.includes('/app/utils.ts'), 'should rewrite relative import')
+        assert.ok(code.includes('/__@assets/app/utils.ts'), 'should rewrite relative import')
       } finally {
         cleanupTempDir()
       }
@@ -391,7 +415,7 @@ export function createApp() {
           'export function helper() { return "helper" }',
         )
 
-        let response = await handler.serve(new Request('http://localhost/app/entry.tsx'))
+        let response = await handler.serve(new Request('http://localhost/__@assets/app/entry.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -400,7 +424,7 @@ export function createApp() {
           code.includes("'@remix-run/component'") || code.includes('"@remix-run/component"'),
           'should preserve @remix-run/component import',
         )
-        assert.ok(code.includes('/app/utils.ts'), 'should rewrite relative import')
+        assert.ok(code.includes('/__@assets/app/utils.ts'), 'should rewrite relative import')
       } finally {
         cleanupTempDir()
       }
@@ -428,7 +452,7 @@ export { foo, bar, helper }`,
           'export function helper() { return "helper" }',
         )
 
-        let response = await handler.serve(new Request('http://localhost/app/entry.tsx'))
+        let response = await handler.serve(new Request('http://localhost/__@assets/app/entry.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
@@ -441,7 +465,7 @@ export { foo, bar, helper }`,
           code.includes("'@external/another'") || code.includes('"@external/another"'),
           'should preserve @external/another import',
         )
-        assert.ok(code.includes('/app/utils.ts'), 'should rewrite relative import')
+        assert.ok(code.includes('/__@assets/app/utils.ts'), 'should rewrite relative import')
       } finally {
         cleanupTempDir()
       }
@@ -470,14 +494,14 @@ export { foo, dynamicExternal, helper, dynamicHelper }`,
           'export function helper() { return "helper" }',
         )
 
-        let response = await handler.serve(new Request('http://localhost/app/entry.tsx'))
+        let response = await handler.serve(new Request('http://localhost/__@assets/app/entry.tsx'))
 
         assert.ok(response)
         assert.equal(response!.status, 200)
         let code = await response!.text()
         let externalMatches = code.match(/['"]@external\/package['"]/g)
         assert.equal(externalMatches?.length, 2, 'should preserve both @external/package imports')
-        let utilsMatches = code.match(/\/app\/utils\.ts/g)
+        let utilsMatches = code.match(/\/__@assets\/app\/utils\.ts/g)
         assert.equal(utilsMatches?.length, 2, 'should rewrite both relative imports')
       } finally {
         cleanupTempDir()
@@ -487,7 +511,7 @@ export { foo, dynamicExternal, helper, dynamicHelper }`,
 })
 
 describe('#assets/ import resolution', () => {
-  it('rewrites #assets/ imports using the development condition, not the default', async () => {
+  it('rewrites #assets/ imports using the placeholder condition, not the default', async () => {
     let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-assets-conditions-'))
     try {
       let appDir = path.join(tmpDir)
@@ -496,7 +520,10 @@ describe('#assets/ import resolution', () => {
       await fsp.mkdir(srcDir, { recursive: true })
       await fsp.mkdir(assetsDir, { recursive: true })
 
-      await fsp.writeFile(path.join(assetsDir, 'logo.dev.ts'), "export default '/dev-url'\n")
+      await fsp.writeFile(
+        path.join(assetsDir, 'logo.placeholder.ts'),
+        "export default '/__@assets/dev-url'\n",
+      )
       await fsp.writeFile(path.join(assetsDir, 'logo.build.ts'), "export default '/build-url'\n")
       await fsp.writeFile(
         path.join(appDir, 'package.json'),
@@ -505,7 +532,7 @@ describe('#assets/ import resolution', () => {
           type: 'module',
           imports: {
             '#assets/*': {
-              development: './.assets/*.dev.ts',
+              placeholder: './.assets/*.placeholder.ts',
               default: './.assets/*.build.ts',
             },
           },
@@ -521,14 +548,14 @@ describe('#assets/ import resolution', () => {
         allow: ['app/**', '.assets/**'],
       })
 
-      let response = await handler.serve(new Request('http://localhost/app/entry.ts'))
+      let response = await handler.serve(new Request('http://localhost/__@assets/app/entry.ts'))
       assert.ok(response)
       assert.equal(response!.status, 200)
       let code = await response!.text()
 
       assert.ok(
-        code.includes('.dev.ts'),
-        `Expected import rewritten to .dev.ts with development condition, got:\n${code}`,
+        code.includes('.placeholder.ts'),
+        `Expected import rewritten to .placeholder.ts with placeholder condition, got:\n${code}`,
       )
       assert.ok(
         !code.includes('.build.ts'),
@@ -573,13 +600,13 @@ export function main() {
           'export function helper() { return "v1" }',
         )
 
-        let response1 = await handler.serve(new Request('http://localhost/app/entry.tsx'))
+        let response1 = await handler.serve(new Request('http://localhost/__@assets/app/entry.tsx'))
         assert.ok(response1)
         assert.equal(response1!.status, 200)
         let code1 = await response1!.text()
         assert.ok(code1.includes('main'))
 
-        let response2 = await handler.serve(new Request('http://localhost/app/entry.tsx'))
+        let response2 = await handler.serve(new Request('http://localhost/__@assets/app/entry.tsx'))
         assert.ok(response2)
         assert.equal(response2!.status, 200)
         let code2 = await response2!.text()
@@ -594,7 +621,7 @@ export function main() {
 }`,
         )
 
-        let response3 = await handler.serve(new Request('http://localhost/app/entry.tsx'))
+        let response3 = await handler.serve(new Request('http://localhost/__@assets/app/entry.tsx'))
         assert.ok(response3)
         assert.equal(response3!.status, 200)
         let code3 = await response3!.text()
@@ -604,6 +631,79 @@ export function main() {
         cleanupTempDir()
       }
     })
+  })
+})
+
+describe('file asset routing', () => {
+  it('routes to file handler when path matches a file rule, even without a ?@variant query param (defaultVariant case)', async () => {
+    let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'file-asset-routing-'))
+    try {
+      let appDir = path.join(tmpDir, 'app', 'images')
+      await fsp.mkdir(appDir, { recursive: true })
+      await fsp.writeFile(path.join(appDir, 'logo.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+
+      let handler = createDevAssetsHandler({
+        root: tmpDir,
+        allow: ['app/**'],
+        source: {
+          files: [
+            {
+              include: 'app/images/**/*.png',
+              defaultVariant: 'webp',
+              variants: {
+                webp: (data) => data,
+              },
+            },
+          ],
+        },
+      })
+
+      // No ?@variant — handler must consult file rules, not just check for query params
+      let response = await handler.serve(
+        new Request('http://localhost/__@assets/app/images/logo.png'),
+      )
+
+      assert.ok(response)
+      // Would be a transform error or 500 if routed to the script handler (not valid JS)
+      assert.notEqual(response!.status, 500, 'must not be routed to the script handler')
+      assert.ok(
+        response!.status === 200 || response!.status === 404,
+        `expected 200 or 404 from file handler, got ${response!.status}`,
+      )
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not treat a JS file as a file asset just because a file rule with variants exists for other paths', async () => {
+    let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'file-asset-routing-no-match-'))
+    try {
+      let appDir = path.join(tmpDir, 'app')
+      await fsp.mkdir(appDir, { recursive: true })
+      await fsp.writeFile(path.join(appDir, 'entry.ts'), 'export const x = 1')
+
+      let handler = createDevAssetsHandler({
+        root: tmpDir,
+        allow: ['app/**'],
+        source: {
+          files: [
+            {
+              include: 'app/images/**/*.png',
+              variants: { webp: (data) => data },
+            },
+          ],
+        },
+      })
+
+      // entry.ts does not match the file rule — must be routed to the script handler
+      let response = await handler.serve(new Request('http://localhost/__@assets/app/entry.ts'))
+
+      assert.ok(response)
+      assert.equal(response!.status, 200)
+      assert.ok(response!.headers.get('content-type')?.includes('javascript'))
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
   })
 })
 
@@ -626,18 +726,20 @@ describe('file asset ETag behavior', () => {
       let handler = createDevAssetsHandler({
         root: tempDir,
         allow: ['app/**'],
-        files: [
-          {
-            include: 'app/images/**/*.txt',
-            variants: {
-              card: (data) => data,
+        source: {
+          files: [
+            {
+              include: 'app/images/**/*.txt',
+              variants: {
+                card: (data) => data,
+              },
             },
-          },
-        ],
+          ],
+        },
       })
 
       let response = await handler.serve(
-        new Request('http://localhost/__@files/app/images/logo.txt?@card', {
+        new Request('http://localhost/__@assets/app/images/logo.txt?@card', {
           headers: { 'If-None-Match': 'W/"definitely-not-a-match"' },
         }),
       )
@@ -669,11 +771,11 @@ describe('file asset ETag behavior', () => {
       let handler1 = createDevAssetsHandler({
         root: tempDir,
         allow: ['app/**'],
-        files,
+        source: { files },
       })
 
       let response1 = await handler1.serve(
-        new Request('http://localhost/__@files/app/images/logo.txt?@card'),
+        new Request('http://localhost/__@assets/app/images/logo.txt?@card'),
       )
       assert.ok(response1)
       assert.equal(response1!.status, 200)
@@ -685,10 +787,10 @@ describe('file asset ETag behavior', () => {
       let handler2 = createDevAssetsHandler({
         root: tempDir,
         allow: ['app/**'],
-        files,
+        source: { files },
       })
       let response2 = await handler2.serve(
-        new Request('http://localhost/__@files/app/images/logo.txt?@card', {
+        new Request('http://localhost/__@assets/app/images/logo.txt?@card', {
           headers: { 'If-None-Match': etag! },
         }),
       )
