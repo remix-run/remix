@@ -1,6 +1,6 @@
 import { definePlugin, type PluginCommitEvent } from '@remix-run/reconciler'
 
-export let stylePropsPlugin = definePlugin<HTMLElement | SVGElement>({
+export let stylePropsPlugin = definePlugin<HTMLElement | SVGElement>(() => ({
   phase: 'special',
   priority: 1,
   keys: ['style'],
@@ -50,7 +50,7 @@ export let stylePropsPlugin = definePlugin<HTMLElement | SVGElement>({
       context.consume('style')
     })
   },
-})
+}))
 
 function toCssPropertyName(value: string) {
   if (value.startsWith('--')) return value

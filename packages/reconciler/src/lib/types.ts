@@ -61,6 +61,10 @@ export type PluginSetupHandle<element = EventTarget> = EventTarget & {
   host: CommittedHostNode<any, any, any, element>
 }
 
+export type PluginRootHandle = EventTarget & {
+  root: ReconcilerRoot<RenderValue>
+}
+
 export type Plugin<element = EventTarget> = {
   phase: PluginPhase
   priority?: number
@@ -78,6 +82,24 @@ export type PreparedPlugin<element = EventTarget> = {
   priority: number
   routingKeys: string[]
   plugin: Plugin<element>
+}
+
+export class PluginBeforeCommitEvent extends Event {
+  root: ReconcilerRoot<RenderValue>
+
+  constructor(root: ReconcilerRoot<RenderValue>) {
+    super('beforeCommit')
+    this.root = root
+  }
+}
+
+export class PluginAfterCommitEvent extends Event {
+  root: ReconcilerRoot<RenderValue>
+
+  constructor(root: ReconcilerRoot<RenderValue>) {
+    super('afterCommit')
+    this.root = root
+  }
 }
 
 export type RenderValue =
@@ -208,6 +230,12 @@ export class PluginCommitEvent<element = EventTarget> extends Event {
   }
 }
 
-export function definePlugin<element>(plugin: Plugin<element>) {
+export function definePlugin<element>(plugin: Plugin<element>): Plugin<element>
+export function definePlugin<element>(
+  plugin: (root: PluginRootHandle) => Plugin<element>,
+): (root: PluginRootHandle) => Plugin<element>
+export function definePlugin<element>(
+  plugin: Plugin<element> | ((root: PluginRootHandle) => Plugin<element>),
+) {
   return plugin
 }

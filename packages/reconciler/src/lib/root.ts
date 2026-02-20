@@ -4,7 +4,7 @@ import {
   RECONCILER_PROP_KEYS,
 } from '../testing/jsx.ts'
 import { createScheduler } from './scheduler.ts'
-import { PluginCommitEvent } from './types.ts'
+import { PluginAfterCommitEvent, PluginBeforeCommitEvent, PluginCommitEvent } from './types.ts'
 import type {
   CommittedComponentNode,
   CommittedHostNode,
@@ -17,6 +17,7 @@ import type {
   NodePolicy,
   Plugin,
   PluginHostContext,
+  PluginRootHandle,
   PluginSetupHandle,
   PreparedPlugin,
   ReconcilerElement,
@@ -42,7 +43,7 @@ type RootState<parent, node, text extends node, element extends node> = {
 
 type ReconcilerOptions<parent, node, text extends node, element extends node> = {
   policy: NodePolicy<parent, node, text, element>
-  plugins?: Array<Plugin<any>>
+  plugins?: Array<Plugin<any> | ((root: PluginRootHandle) => Plugin<any>)>
 }
 
 type PreparedPlugins = {
@@ -68,7 +69,9 @@ export function createReconciler<parent, node, text extends node, element extend
   options: ReconcilerOptions<parent, node, text, element>,
 ) {
   let policy = options.policy
-  let plugins = preparePlugins(options.plugins ?? [])
+  let pluginRootHandle = new EventTarget() as PluginRootHandle
+  pluginRootHandle.root = createEmptyRootFacade()
+  let plugins = preparePlugins(materializePlugins(options.plugins ?? [], pluginRootHandle))
   let scheduler = createScheduler()
   let nextNodeId = 1
   let candidateMarks = new Uint32Array(Math.max(plugins.all.length, 1))
@@ -93,8 +96,7 @@ export function createReconciler<parent, node, text extends node, element extend
         flushWork,
       }
       root.enqueue = () => scheduler.enqueue(scheduledRoot)
-
-      return {
+      let rootApi: ReconcilerRoot<RenderValue> = {
         render(value) {
           if (root.disposed) return
           root.renderValue = value
@@ -116,9 +118,12 @@ export function createReconciler<parent, node, text extends node, element extend
           root.disposed = true
         },
       }
+      pluginRootHandle.root = rootApi
+      return rootApi
 
       function flushWork() {
         if (root.disposed) return
+        pluginRootHandle.dispatchEvent(new PluginBeforeCommitEvent(rootApi))
         root.renderController?.abort()
         root.renderController = new AbortController()
         root.dirtyNodeIds.clear()
@@ -130,6 +135,7 @@ export function createReconciler<parent, node, text extends node, element extend
         flushPendingHostCommits(root)
         runPendingTasks(root)
         root.hasPendingComponentUpdate = false
+        pluginRootHandle.dispatchEvent(new PluginAfterCommitEvent(rootApi))
       }
     },
   }
@@ -890,6 +896,30 @@ function preparePlugins(rawPlugins: Array<Plugin<any>>): PreparedPlugins {
     routedSpecialByKey,
     unroutedSpecialIds,
     all,
+  }
+}
+
+function materializePlugins(
+  plugins: Array<Plugin<any> | ((root: PluginRootHandle) => Plugin<any>)>,
+  root: PluginRootHandle,
+) {
+  let output: Plugin<any>[] = []
+  for (let plugin of plugins) {
+    if (typeof plugin === 'function') {
+      output.push(plugin(root))
+      continue
+    }
+    output.push(plugin)
+  }
+  return output
+}
+
+function createEmptyRootFacade(): ReconcilerRoot<RenderValue> {
+  return {
+    render() {},
+    flush() {},
+    remove() {},
+    dispose() {},
   }
 }
 

@@ -1,5 +1,6 @@
 export { createReconciler } from './lib/root.ts'
 export { definePlugin } from './lib/types.ts'
+export { PluginAfterCommitEvent, PluginBeforeCommitEvent } from './lib/types.ts'
 export { PluginCommitEvent } from './lib/types.ts'
 export { ReconcilerErrorEvent } from './lib/types.ts'
 export { createMixin, mixPlugin } from './lib/mix-plugin.ts'
