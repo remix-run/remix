@@ -17,6 +17,9 @@ declare global {
   }
 }
 
+const $ = (s: string) => document.querySelector(s)
+const $$ = (s: string) => Array.from(document.querySelectorAll(s))
+
 export const ClientRouter = clientEntry(
   `${routes.assets.href({ asset: 'client-router.js' })}#ClientRouter`,
   (handle: Handle) => {
@@ -59,6 +62,10 @@ export const ClientRouter = clientEntry(
               if (signal.aborted) return
               handle.frame.src = routes.fragment.href(nextMatch.params)
               await handle.frame.reload()
+
+              // Update active sidebar link
+              $$('nav a.active').forEach((e) => e.classList.remove('active'))
+              $(`nav a[href="${routes.docs.href(nextMatch.params)}"]`)?.classList.add('active')
             },
           })
         },
