@@ -5,7 +5,7 @@ import { createDomPlugins } from './dom-plugins.ts'
 
 export function createDomReconciler(
   document: Document,
-  plugins: PluginDefinition<any>[] = createDomPlugins(),
+  plugins: PluginDefinition<any>[] = createDomPlugins(document),
 ) {
   return createReconciler({
     policy: createDomNodePolicy(document),

@@ -5,6 +5,8 @@ export {
   createMixin,
   css,
   createDomPlugins,
+  createDocumentStatePlugin,
+  getDocumentState,
   mixPlugin,
   on,
   onPlugin,
