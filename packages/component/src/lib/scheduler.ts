@@ -83,10 +83,11 @@ export function createScheduler(
 
     if (batch.size > 0) {
       let vnodes = Array.from(batch)
-      let noScheduledAncestor = new Set<VNode>()
+      let noAncestorInBatch = new Set<VNode>()
+      let ancestorInBatch = new Set<VNode>()
 
       for (let [vnode, domParent] of vnodes) {
-        if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
+        if (ancestorIsScheduled(vnode, batch, noAncestorInBatch, ancestorInBatch)) continue
         let handle = vnode._handle
         let curr = vnode._content
         let vParent = vnode._parent!
@@ -141,29 +142,34 @@ export function createScheduler(
   function ancestorIsScheduled(
     vnode: VNode,
     batch: Map<CommittedComponentNode, ParentNode>,
-    safe: Set<VNode>,
+    noAncestorInBatch: Set<VNode>,
+    ancestorInBatch: Set<VNode>,
   ): boolean {
     let path: VNode[] = []
     let current = vnode._parent
 
     while (current) {
-      // Already verified this node has no scheduled ancestor above it
-      if (safe.has(current)) {
-        for (let node of path) safe.add(node)
+      // Already verified this node has **no** scheduled ancestor above it
+      if (noAncestorInBatch.has(current)) {
+        for (let node of path) noAncestorInBatch.add(node)
         return false
       }
 
-      path.push(current)
-
-      if (isCommittedComponentNode(current) && batch.has(current)) {
+      if (
+        // Already verified this node has a scheduled ancestor above it
+        ancestorInBatch.has(current) ||
+        (isCommittedComponentNode(current) && batch.has(current))
+      ) {
+        for (let node of path) ancestorInBatch.add(node)
         return true
       }
 
+      path.push(current)
       current = current._parent
     }
 
     // Reached root - mark entire path as safe for future lookups
-    for (let node of path) safe.add(node)
+    for (let node of path) noAncestorInBatch.add(node)
     return false
   }
 
