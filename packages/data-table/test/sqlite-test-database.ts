@@ -94,6 +94,17 @@ function initializeSchema(database: BetterSqliteDatabase): void {
       ')',
     ].join('\n'),
   )
+
+  database.exec(`attach database '' as billing`)
+  database.exec(
+    [
+      'create table billing.invoices (',
+      '  id integer primary key,',
+      '  account_id integer not null,',
+      '  total integer not null',
+      ')',
+    ].join('\n'),
+  )
 }
 
 function seedDatabase(database: BetterSqliteDatabase, seed: SqliteTestSeed): void {
