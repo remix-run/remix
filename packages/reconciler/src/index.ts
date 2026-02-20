@@ -35,7 +35,7 @@ export type {
   RootTask as Task,
 } from './lib/types.ts'
 
-export type { MixinDescriptor, MixinType, MixValue } from './lib/mix-plugin.ts'
+export type { MixinDescriptor, MixinHandle, MixinType, MixValue } from './lib/mix-plugin.ts'
 
 export type {
   TestContainerNode,

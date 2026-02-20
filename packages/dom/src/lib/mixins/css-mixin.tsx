@@ -1,5 +1,6 @@
 import { createMixin } from '@remix-run/reconciler'
 import type { MixinDescriptor } from '@remix-run/reconciler'
+import type { JSX as DomJSX } from '../../jsx-runtime.ts'
 
 type CssScalar = string | number
 type CssInput = {
@@ -19,56 +20,63 @@ type DocumentStyles = {
 
 let documentStylesByRef = new WeakMap<Document, DocumentStyles>()
 
-let cssMixin = createMixin<[styles: CssInput | null | undefined], Element>(() => (handle, node) => {
-  let currentDoc: null | Document = null
-  let currentKey = ''
-  let currentClassName = ''
+type DomElementType = Extract<keyof DomJSX.IntrinsicElements, string>
 
-  handle.addEventListener('remove', () => {
-    detach(node)
-  })
+let cssMixin = createMixin<[styles: CssInput | null | undefined], Element, DomElementType>(
+  (handle) => {
+    let currentDoc: null | Document = null
+    let currentKey = ''
+    let currentClassName = ''
 
-  return (styles) => {
-    if (styles == null) {
-      detach(node)
-      return
-    }
-    if (typeof styles !== 'object' || Array.isArray(styles)) {
-      detach(node)
-      return
-    }
-    if (!(node instanceof Element)) return
-    let doc = node.ownerDocument
-    if (!doc) return
-    let key = stableSerialize(styles)
-    if (doc === currentDoc && key === currentKey) return
-    detach(node)
-    let nextEntry = getOrCreateCssEntry(doc, styles, key)
-    node.classList.add(nextEntry.className)
-    nextEntry.refCount++
-    currentDoc = doc
-    currentKey = key
-    currentClassName = nextEntry.className
-  }
-  function detach(node: Element) {
-    if (!currentDoc || !currentKey || !currentClassName) return
-    if (node instanceof Element) {
-      node.classList.remove(currentClassName)
-    }
-    let styles = documentStylesByRef.get(currentDoc)
-    let entry = styles?.entries.get(currentKey)
-    if (entry) {
-      entry.refCount--
-      if (entry.refCount <= 0) {
-        styles?.entries.delete(currentKey)
-        if (styles) syncStyleSheet(styles)
+    handle.addEventListener('remove', () => {
+      detach()
+    })
+
+    return (styles, props) => {
+      if (styles == null || typeof styles !== 'object' || Array.isArray(styles)) {
+        detach()
+        return <handle.element {...props} />
       }
+
+      let nextKey = stableSerialize(styles)
+      let nextClassName = `rmx-css-${hashString(nextKey)}`
+      handle.queueTask((node) => {
+        if (!(node instanceof Element)) return
+        let doc = node.ownerDocument
+        if (!doc) return
+        if (doc === currentDoc && nextKey === currentKey) return
+        detach()
+        let entry = getOrCreateCssEntry(doc, styles, nextKey)
+        entry.refCount++
+        currentDoc = doc
+        currentKey = nextKey
+        currentClassName = entry.className
+      })
+
+      let nextProps = {
+        ...props,
+        className: appendClassName(props.className, nextClassName),
+      }
+      return <handle.element {...nextProps} />
     }
-    currentDoc = null
-    currentKey = ''
-    currentClassName = ''
-  }
-})
+
+    function detach() {
+      if (!currentDoc || !currentKey || !currentClassName) return
+      let styles = documentStylesByRef.get(currentDoc)
+      let entry = styles?.entries.get(currentKey)
+      if (entry) {
+        entry.refCount--
+        if (entry.refCount <= 0) {
+          styles?.entries.delete(currentKey)
+          if (styles) syncStyleSheet(styles)
+        }
+      }
+      currentDoc = null
+      currentKey = ''
+      currentClassName = ''
+    }
+  },
+)
 
 export function css<node extends Element = Element>(
   styles: CssInput | null | undefined,
@@ -154,6 +162,11 @@ function toCssValue(key: string, value: CssScalar) {
     return `${value}px`
   }
   return String(value)
+}
+
+function appendClassName(existing: unknown, nextClassName: string) {
+  if (typeof existing !== 'string' || existing.length === 0) return nextClassName
+  return `${existing} ${nextClassName}`
 }
 
 function isCssInput(value: unknown): value is CssInput {

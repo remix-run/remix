@@ -103,6 +103,50 @@ let reconciler = createReconciler(nodePolicy, [usePlugin(), myPropsPlugin])
 root.render(<input use={[focus(true)]} />)
 ```
 
+### Creating mixins
+
+Mixins are lightweight, composable host behaviors powered by `mixPlugin`.
+Create them with `createMixin(...)`, then pass descriptors on `props.mix`.
+
+Mixin scope model:
+
+- factory scope: `createMixin((handle, type) => ...)` runs once per mounted host path
+- render scope: returned function runs on each host commit with mixin args and composed props
+- lifecycle scope: `handle` emits `commit` and `remove` events for side effects and teardown
+
+```ts
+import { createMixin, createReconciler, mixPlugin } from '@remix-run/reconciler'
+
+let appendClass = createMixin<[name: string], EventTarget>((handle, _type) => {
+  return (name, currentProps) => {
+    let current = typeof currentProps.className === 'string' ? currentProps.className : ''
+    let className = current ? `${current} ${name}` : name
+    return {
+      $rmx: true,
+      type: handle.element,
+      key: null,
+      props: {
+        ...currentProps,
+        className,
+      },
+    }
+  }
+})
+
+let reconciler = createReconciler(nodePolicy, [mixPlugin, myPropsPlugin])
+let root = reconciler.createRoot(container)
+root.render(<button mix={[appendClass('primary')]} />)
+```
+
+Notes:
+
+- mixin render can return `void`/`null` for no-op
+- mixins must return a reconciler element with the same host type (`handle.element`)
+- returning `props.mix` from a mixin composes nested mixins
+- `handle.update()` schedules the next render cycle
+- `handle.queueTask((node, signal) => ...)` runs after commit with the materialized host node
+- use `handle.addEventListener('remove', ...)` for teardown
+
 ## Error model
 
 Root `error` events (`ReconcilerErrorEvent`) are the single reconciler error

@@ -9,6 +9,7 @@ export {
   getDocumentState,
   mixPlugin,
   on,
+  spring,
   stylePropsPlugin,
 } from './lib/dom-plugins.ts'
 export { Fragment, jsx, jsxs } from './jsx-runtime.ts'

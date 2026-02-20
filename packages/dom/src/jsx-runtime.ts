@@ -79,7 +79,9 @@ type DomIntrinsicElements = {
   [tagName in Exclude<keyof DomSVGElements, SharedTagNames>]: DomSVGElements[tagName]
 } & {
   [tagName in SharedTagNames]: DomElementProps<Element>
-} & DomMathMLElements
+} & DomMathMLElements & {
+  [tagName: string]: DomElementProps<Element>
+}
 
 export function jsx(
   type: unknown,

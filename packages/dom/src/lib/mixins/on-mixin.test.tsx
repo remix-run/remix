@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createDomReconciler } from '../dom-reconciler.ts'
-import { on } from './on-mixin.ts'
+import { on } from './on-mixin.tsx'
 
 describe('on mixin', () => {
   it('supports reentry signal and aborts previous run', () => {

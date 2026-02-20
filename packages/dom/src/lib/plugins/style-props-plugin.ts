@@ -36,7 +36,7 @@ export let stylePropsPlugin = definePlugin<HTMLElement | SVGElement>(() => ({
           element.style.removeProperty(toCssPropertyName(key))
           continue
         }
-        element.style.setProperty(toCssPropertyName(key), String(value))
+        element.style.setProperty(toCssPropertyName(key), toCssValue(key, value))
       }
 
       if (previousStyle) {
@@ -55,4 +55,24 @@ export let stylePropsPlugin = definePlugin<HTMLElement | SVGElement>(() => ({
 function toCssPropertyName(value: string) {
   if (value.startsWith('--')) return value
   return value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+}
+
+function toCssValue(key: string, value: unknown) {
+  if (typeof value === 'number' && !isUnitlessProperty(key) && !key.startsWith('--')) {
+    return `${value}px`
+  }
+  return String(value)
+}
+
+function isUnitlessProperty(key: string) {
+  return (
+    key === 'opacity' ||
+    key === 'zIndex' ||
+    key === 'fontWeight' ||
+    key === 'lineHeight' ||
+    key === 'flex' ||
+    key === 'flexGrow' ||
+    key === 'flexShrink' ||
+    key === 'order'
+  )
 }

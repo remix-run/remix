@@ -5,6 +5,8 @@ export type UpdateHandle = {
   queueTask(task: RootTask): void
 }
 
+export type HostTask<element> = (node: element, signal: AbortSignal) => void
+
 export type Component<setup, renderProps, renderValue> = (
   handle: UpdateHandle,
   setup: setup,
@@ -20,6 +22,7 @@ export type ReconcilerElement = {
 export type NodePolicy<parent, node, text extends node, element extends node> = {
   createText(value: string): text
   setText(node: text, value: string): void
+  prepareHostMount?(parent: parent | element, input: HostInput): void
   createElement(parent: parent | element, type: string): element
   getType(node: element): string
   getParent(node: node): null | parent | element
@@ -59,6 +62,8 @@ export type PluginHostContext<element = EventTarget> = {
 export type PluginSetupHandle<element = EventTarget> = EventTarget & {
   root: ReconcilerRoot<RenderValue>
   host: CommittedHostNode<any, any, any, element>
+  update(): Promise<AbortSignal>
+  queueTask(task: HostTask<element>): void
 }
 
 export type PluginRootHandle = EventTarget & {
@@ -116,10 +121,7 @@ export type RenderValue =
   | undefined
   | RenderValue[]
 
-export type RenderNode =
-  | TextRenderNode
-  | HostRenderNode
-  | ComponentRenderNode
+export type RenderNode = TextRenderNode | HostRenderNode | ComponentRenderNode
 
 export type TextRenderNode = {
   kind: 'text'

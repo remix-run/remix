@@ -6,9 +6,8 @@ This package currently provides:
 
 - a production-oriented `NodePolicy` implementation for DOM trees
 - a DOM JSX runtime (`@remix-run/dom/jsx-runtime`)
-- a Tier 1 DOM plugin pipeline for HTML/SVG props
-- lightweight host lifecycle prop (`connect`)
-- lightweight host event prop (`on`)
+- a DOM plugin pipeline (`createDomPlugins(document)`)
+- first-class mixins (`on`, `css`) via `mixPlugin`
 
 ## Usage
 
@@ -16,7 +15,10 @@ This package currently provides:
 import { createReconciler } from '@remix-run/reconciler'
 import { createDomNodePolicy, createDomPlugins } from '@remix-run/dom'
 
-let reconciler = createReconciler(createDomNodePolicy(document), createDomPlugins())
+let reconciler = createReconciler({
+  policy: createDomNodePolicy(document),
+  plugins: createDomPlugins(document),
+})
 let root = reconciler.createRoot(document.getElementById('app')!)
 ```
 
@@ -31,26 +33,27 @@ let root = reconciler.createRoot(document.getElementById('app')!)
 }
 ```
 
-The DOM JSX runtime includes lightweight `connect` and `on` props for host
-node lifecycle and events. Higher-level framework props such as `css` and
-`animate` are still expected to be layered in via additional plugins.
+The DOM JSX runtime supports host props like `style`, `connect`, and `mix`.
+Event handling is expressed with mixins using `on(...)`.
 
 Example:
 
 ```tsx
+import { css, on } from '@remix-run/dom'
+
 root.render(
   <button
-    connect={(node, signal) => {
-      node.dataset.ready = 'true'
-      signal.addEventListener('abort', () => {
-        delete node.dataset.ready
-      })
-    }}
-    on={{
-      click(event) {
+    mix={[
+      css({
+        padding: '10px 14px',
+        borderRadius: 8,
+        backgroundColor: '#1f2937',
+        color: '#fff',
+      }),
+      on('click', (event) => {
         console.log(event.currentTarget.tagName)
-      },
-    }}
+      }),
+    ]}
   >
     Click
   </button>,
@@ -62,45 +65,15 @@ root.render(
 - traversal (`firstChild`, `nextSibling`, `begin`, `enter`)
 - node materialization (`resolveElement`, `resolveText`)
 - mutations (`insert`, `move`, `remove`)
-- hydration/adoption through policy-controlled resolution
+- lifecycle hooks and mount metadata through `prepareHostMount`
 
 ## DOM plugin pipeline
 
-`createDomPlugins()` currently returns this ordered pipeline:
+`createDomPlugins(document)` returns:
 
-- `innerHTMLPlugin`
+- `createDocumentStatePlugin(document)`
+- `mixPlugin`
 - `stylePropsPlugin`
-- `formStatePlugin`
-- `connectPlugin`
-- `onPlugin`
-- `svgNormalizationPlugin`
-- `ariaDataAttributePlugin`
-- `domPropertyOrAttributePlugin`
-- `attributeFallbackPlugin`
+- `basicPropsPlugin`
 
-The ownership model is explicit: each plugin should delete props it handles, and
-`attributeFallbackPlugin` handles whatever is left.
-
-Custom stacks can compose the same plugins directly:
-
-```ts
-import {
-  attributeFallbackPlugin,
-  connectPlugin,
-  createDomNodePolicy,
-  domPropertyOrAttributePlugin,
-  formStatePlugin,
-  onPlugin,
-  stylePropsPlugin,
-} from '@remix-run/dom'
-import { createReconciler } from '@remix-run/reconciler'
-
-let reconciler = createReconciler(createDomNodePolicy(document), [
-  connectPlugin,
-  onPlugin,
-  stylePropsPlugin,
-  formStatePlugin,
-  domPropertyOrAttributePlugin,
-  attributeFallbackPlugin,
-])
-```
+`mixPlugin` powers declarative host behavior composition through `props.mix`.

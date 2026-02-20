@@ -113,7 +113,7 @@ describe('incremental reconciler validation', () => {
     let pluginApplies = 0
     let routedPlugin = definePlugin({
       phase: 'special' as const,
-      routing: { keys: ['data-x'] },
+      keys: ['data-x'],
       shouldActivate(context) {
         return typeof context.delta.nextProps['data-x'] === 'string'
       },

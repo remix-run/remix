@@ -5,22 +5,21 @@ import { createMixin, mixPlugin } from './mix-plugin.ts'
 import { definePlugin } from './types.ts'
 
 describe('mix plugin', () => {
-  it('runs mix mixins with stable plugin-scope setup and unmount cleanup', () => {
-    let pluginScopeCalls = 0
-    let nodeScopeCalls = 0
-    let updates: string[] = []
+  it('runs mixins with stable per-host setup and unmount cleanup', () => {
+    let setupCalls = 0
+    let renderCalls = 0
+    let seenTypes: string[] = []
     let cleanups = 0
 
-    let track = createMixin<[string], EventTarget>(() => {
-      pluginScopeCalls++
-      return (handle, _node) => {
-        nodeScopeCalls++
-        handle.addEventListener('remove', () => {
-          cleanups++
-        })
-        return (value: string = '') => {
-          if (value) updates.push(value)
-        }
+    let track = createMixin<[string], EventTarget>((handle, type) => {
+      setupCalls++
+      seenTypes.push(type)
+      handle.addEventListener('remove', () => {
+        cleanups++
+      })
+      return (value: string = '', props) => {
+        renderCalls++
+        return <handle.element {...props} data-track={value} />
       }
     })
 
@@ -30,17 +29,16 @@ describe('mix plugin', () => {
 
     root.render(<button mix={[track(value)]}>hello</button>)
     root.flush()
-    assert.equal(pluginScopeCalls, 1)
-    assert.equal(nodeScopeCalls, 1)
-    assert.deepEqual(updates, ['first'])
+    assert.equal(setupCalls, 1)
+    assert.equal(renderCalls, 1)
+    assert.deepEqual(seenTypes, ['button'])
     assert.equal(cleanups, 0)
 
     value = 'second'
     root.render(<button mix={[track(value)]}>hello</button>)
     root.flush()
-    assert.equal(pluginScopeCalls, 1)
-    assert.equal(nodeScopeCalls, 1)
-    assert.deepEqual(updates, ['first', 'second'])
+    assert.equal(setupCalls, 1)
+    assert.equal(renderCalls, 2)
     assert.equal(cleanups, 0)
 
     root.render(null)
@@ -51,12 +49,10 @@ describe('mix plugin', () => {
   it('merges returned props so routed plugins can apply them', () => {
     let observedClassNames: string[] = []
 
-    let addClass = createMixin<[string], EventTarget>(() => () => (name, currentProps) => {
+    let addClass = createMixin<[string], EventTarget>((handle) => (name, currentProps) => {
       let existing = typeof currentProps.className === 'string' ? currentProps.className : ''
       let next = existing ? `${existing} ${name}` : name
-      return {
-        className: next,
-      }
+      return <handle.element {...currentProps} {...({ className: next } as any)} />
     })
 
     let classNamePlugin = definePlugin<EventTarget>({
@@ -74,11 +70,19 @@ describe('mix plugin', () => {
     let reconciler = createTestNodeReconciler([mixPlugin as any, classNamePlugin as any])
     let root = reconciler.createRoot()
 
-    root.render(<button className="base" mix={[addClass('from-mix')]}>hello</button>)
+    root.render(
+      <button className="base" mix={[addClass('from-mix')]}>
+        hello
+      </button>,
+    )
     root.flush()
     assert.deepEqual(observedClassNames, ['base from-mix'])
 
-    root.render(<button className="next" mix={[addClass('again')]}>hello</button>)
+    root.render(
+      <button className="next" mix={[addClass('again')]}>
+        hello
+      </button>,
+    )
     root.flush()
     assert.deepEqual(observedClassNames, ['base from-mix', 'next again'])
   })
@@ -86,13 +90,13 @@ describe('mix plugin', () => {
   it('composes nested mixins returned from mixin render', () => {
     let applied = 0
 
-    let markApplied = createMixin<[], EventTarget>(() => () => () => ({
-      applied: true,
-    }))
+    let markApplied = createMixin<[], EventTarget>((handle) => (_props) => (
+      <handle.element {...({ applied: true } as any)} />
+    ))
 
-    let composed = createMixin<[], EventTarget>(() => () => () => ({
-      mix: [markApplied()],
-    }))
+    let composed = createMixin<[], EventTarget>((handle) => (_props) => (
+      <handle.element {...({ mix: [markApplied()] } as any)} />
+    ))
 
     let appliedPlugin = definePlugin<EventTarget>({
       phase: 'special',
@@ -112,5 +116,26 @@ describe('mix plugin', () => {
     root.render(<button mix={[composed()]}>hello</button>)
     root.flush()
     assert.equal(applied, 1)
+  })
+
+  it('passes the materialized host node to queueTask', () => {
+    let receivedType: null | string = null
+    let calls = 0
+
+    let inspectNode = createMixin<[], { type: string }>((handle) => (_props) => {
+      handle.queueTask((node) => {
+        calls++
+        receivedType = node.type
+      })
+      return <handle.element />
+    })
+
+    let reconciler = createTestNodeReconciler([mixPlugin as any])
+    let root = reconciler.createRoot()
+    root.render(<button mix={[inspectNode()]}>hello</button>)
+    root.flush()
+
+    assert.equal(calls, 1)
+    assert.equal(receivedType, 'button')
   })
 })

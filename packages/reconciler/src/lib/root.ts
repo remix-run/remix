@@ -409,6 +409,12 @@ export function createReconciler<parent, node, text extends node, element extend
     }
 
     if (next.kind === 'host') {
+      policy.prepareHostMount?.(parentNode, {
+        type: next.type,
+        key: next.key,
+        props: next.props,
+        children: next.children,
+      })
       let node = policy.createElement(parentNode, next.type)
       let committed: CommittedHostNode<parent, node, text, element> = {
         id: nextNodeId++,
@@ -646,6 +652,7 @@ export function createReconciler<parent, node, text extends node, element extend
       plugins.routedSpecialByKey,
       plugins.unroutedSpecialIds,
       context,
+      root,
       {
         setPhaseState(routedByKey, candidateMarks, candidateVersion, ordered, cursor) {
           phaseRoutedByKey = routedByKey
@@ -661,6 +668,7 @@ export function createReconciler<parent, node, text extends node, element extend
       new Map(),
       plugins.terminalIds,
       context,
+      root,
       {
         setPhaseState() {
           phaseRoutedByKey = null
@@ -714,6 +722,7 @@ export function createReconciler<parent, node, text extends node, element extend
     routedByKey: Map<string, number[]>,
     unroutedIds: number[],
     context: PluginHostContext<element>,
+    root: RootState<parent, node, text, element>,
     hooks: {
       setPhaseState(
         routedByKey: Map<string, number[]>,
@@ -775,7 +784,7 @@ export function createReconciler<parent, node, text extends node, element extend
         continue
       }
       if (!isActive) {
-        context.host.pluginSlots[prepared.id] = setupPlugin(plugin, context)
+        context.host.pluginSlots[prepared.id] = setupPlugin(plugin, context, root)
         context.host.activePluginIds.push(prepared.id)
       }
       let slot = context.host.pluginSlots[prepared.id]
@@ -792,11 +801,23 @@ export function createReconciler<parent, node, text extends node, element extend
   function setupPlugin(
     plugin: Plugin<any>,
     context: PluginHostContext<element>,
+    root: RootState<parent, node, text, element>,
   ) {
     if (plugin.setup) {
       let handle = new EventTarget() as PluginSetupHandle<element>
       handle.root = context.root
       handle.host = context.host
+      handle.update = () =>
+        new Promise((resolve) => {
+          root.hasPendingComponentUpdate = true
+          root.dirtyNodeIds.add(context.host.id)
+          root.pendingTasks.push((signal) => resolve(signal))
+          root.enqueue()
+        })
+      handle.queueTask = (task) => {
+        root.pendingTasks.push((signal) => task(context.host.node, signal))
+        root.enqueue()
+      }
       plugin.setup(handle)
       return {
         __rmxSetupSlot: true as const,
@@ -847,12 +868,28 @@ export function createReconciler<parent, node, text extends node, element extend
     return false
   }
 
-  function createRootFacade(_root: RootState<parent, node, text, element>): ReconcilerRoot<RenderValue> {
+  function createRootFacade(root: RootState<parent, node, text, element>): ReconcilerRoot<RenderValue> {
     return {
-      render() {},
-      flush() {},
-      remove() {},
-      dispose() {},
+      render(value) {
+        if (root.disposed) return
+        root.renderValue = value
+        root.enqueue()
+      },
+      flush() {
+        if (root.disposed) return
+        scheduler.flush()
+      },
+      remove() {
+        if (root.disposed) return
+        root.renderValue = null
+        root.enqueue()
+      },
+      dispose() {
+        if (root.disposed) return
+        root.renderValue = null
+        root.enqueue()
+        root.disposed = true
+      },
     }
   }
 }
