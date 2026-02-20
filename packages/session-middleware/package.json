@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/session-middleware",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Middleware for managing sessions with cookie-based storage",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

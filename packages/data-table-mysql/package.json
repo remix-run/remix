@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/data-table-mysql",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "MySQL adapter for @remix-run/data-table",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
