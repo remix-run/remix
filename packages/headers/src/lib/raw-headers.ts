@@ -3,6 +3,30 @@ import { canonicalHeaderName } from './header-names.ts'
 const CRLF = '\r\n'
 
 /**
+ * Encodes non-ASCII characters in a string using percent-encoding.
+ * This is needed because the native Headers class only accepts ISO-8859-1 characters.
+ *
+ * @param value - The string to encode
+ * @returns The encoded string with non-ASCII characters percent-encoded
+ */
+function encodeNonAscii(value: string): string {
+  let encoder = new TextEncoder()
+
+  return Array.from(value).reduce((result, char) => {
+    let code = char.charCodeAt(0)
+
+    if (code > 127) {
+      return encoder.encode(char).reduce(
+        (acc, byte) => acc + '%' + byte.toString(16).toUpperCase().padStart(2, '0'),
+        result
+      )
+    }
+
+    return result + char
+  }, '')
+}
+
+/**
  * Parses a raw HTTP header string into a `Headers` object.
  *
  * @param raw A raw HTTP header string with headers separated by CRLF (`\r\n`)
@@ -19,7 +43,27 @@ export function parse(raw: string): Headers {
   for (let line of raw.split(CRLF)) {
     let match = line.match(/^([^:]+):(.*)/)
     if (match) {
-      headers.append(match[1].trim(), match[2].trim())
+      let name = match[1].trim()
+      let value = match[2].trim()
+      try {
+        headers.append(name, value)
+      } catch (error) {
+        // Native Headers throws for non-ISO-8859-1 characters.
+        // Different runtimes use different error messages:
+        // - Browser: "ISO-8859-1"
+        // - Node.js: "ByteString" / "greater than 255"
+        // Encode non-ASCII characters so the header can be stored.
+        if (
+          error instanceof TypeError &&
+          (error.message.includes('ISO-8859-1') ||
+            error.message.includes('ByteString') ||
+            error.message.includes('greater than 255'))
+        ) {
+          headers.append(name, encodeNonAscii(value))
+        } else {
+          throw error
+        }
+      }
     }
   }
 
