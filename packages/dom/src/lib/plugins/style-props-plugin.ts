@@ -3,7 +3,7 @@ import { definePlugin } from '@remix-run/reconciler'
 export let stylePropsPlugin = definePlugin<HTMLElement | SVGElement>({
   phase: 'special',
   priority: 1,
-  routing: { keys: ['style'] },
+  keys: ['style'],
   shouldActivate(context) {
     return (
       typeof context.delta.nextProps.style === 'object' && context.delta.nextProps.style != null

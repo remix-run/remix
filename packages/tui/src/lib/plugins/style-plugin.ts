@@ -5,7 +5,7 @@ import type { TuiElementNode } from '../tui-node-policy.ts'
 export let stylePlugin: Plugin<TuiElementNode> = definePlugin({
   phase: 'special',
   priority: 0,
-  routing: { keys: ['style'] },
+  keys: ['style'],
   shouldActivate(context) {
     return typeof context.delta.nextProps.style === 'object' && context.delta.nextProps.style != null
   },

@@ -37,10 +37,6 @@ export type HostInput = {
   children: RenderValue[]
 }
 
-export type PluginRouting = {
-  keys?: string[]
-}
-
 export type PluginPhase = 'special' | 'terminal'
 
 export type HostPropDelta = {
@@ -69,7 +65,7 @@ export type PluginSetupHandle<element = EventTarget> = {
 export type Plugin<element = EventTarget> = {
   phase: PluginPhase
   priority?: number
-  routing?: PluginRouting
+  keys?: string[]
   shouldActivate?(context: PluginHostContext<element>): boolean
   setup?(
     handle: PluginSetupHandle<element>,

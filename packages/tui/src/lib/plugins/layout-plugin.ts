@@ -5,7 +5,7 @@ import type { TuiElementNode } from '../tui-node-policy.ts'
 export let layoutPlugin: Plugin<TuiElementNode> = definePlugin({
   phase: 'special',
   priority: 1,
-  routing: { keys: ['layout'] },
+  keys: ['layout'],
   shouldActivate(context) {
     return typeof context.delta.nextProps.layout === 'object' && context.delta.nextProps.layout != null
   },

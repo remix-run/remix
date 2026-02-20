@@ -5,7 +5,7 @@ import type { TuiElementNode } from '../tui-node-policy.ts'
 export let inputEventPlugin: Plugin<TuiElementNode> = definePlugin({
   phase: 'special',
   priority: 2,
-  routing: { keys: ['on'] },
+  keys: ['on'],
   shouldActivate(context) {
     return typeof context.delta.nextProps.on === 'object' && context.delta.nextProps.on != null
   },

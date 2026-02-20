@@ -38,7 +38,7 @@ export function createMixin<args extends unknown[], node extends EventTarget = E
 export let mixPlugin: Plugin<EventTarget> = definePlugin({
   phase: 'special',
   priority: 0,
-  routing: { keys: ['mix'] },
+  keys: ['mix'],
   shouldActivate(context) {
     return resolveMixDescriptors(context.delta.nextProps).length > 0
   },

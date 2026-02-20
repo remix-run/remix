@@ -10,7 +10,7 @@ type ListenerTable = Map<string, ListenerEntry>
 export let onPlugin: Plugin<DomElementNode> = definePlugin({
   phase: 'special',
   priority: 0,
-  routing: { keys: ['on'] },
+  keys: ['on'],
   shouldActivate(context) {
     return typeof context.delta.nextProps.on === 'object' && context.delta.nextProps.on != null
   },

@@ -860,7 +860,7 @@ function preparePlugins(rawPlugins: Array<Plugin<any>>): PreparedPlugins {
       id: index,
       phase: plugin.phase,
       priority: plugin.priority ?? 0,
-      routingKeys: plugin.routing?.keys ?? [],
+      routingKeys: plugin.keys ?? [],
       plugin,
     }
     all.push(prepared)
