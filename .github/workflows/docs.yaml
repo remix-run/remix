@@ -1,0 +1,24 @@
+name: API Docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        required: true
+
+jobs:
+  api-docs:
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger remix-api-docs
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.REMIX_API_DOCS_PAT }}
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: 'remix-run',
+              repo: 'remix-api-docs',
+              event_type: 'update-docs',
+              client_payload: { tag: '${{ github.event.inputs.tag }}' }
+            });
