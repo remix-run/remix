@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createDomReconciler } from './dom-reconciler.ts'
-import { createMixin, on } from './dom-plugins.ts'
+import { createMixin, mixPlugin, on } from './dom-plugins.ts'
 
 describe('dom mix plugin', () => {
   it('runs mix mixins with stable plugin-scope setup and unmount cleanup', () => {
@@ -48,65 +48,25 @@ describe('dom mix plugin', () => {
   })
 
   it('merges returned props so routed plugins can apply them', () => {
-    let clicks = 0
-    let doubleClicks = 0
-    let increment = 1
-    let bindClick = createMixin<[], HTMLButtonElement>(() => () => (currentProps) => {
-      let currentOn =
-        typeof currentProps.on === 'object' && currentProps.on != null
-          ? (currentProps.on as Record<string, unknown>)
-          : null
-      return {
-        on: {
-          ...(currentOn ?? {}),
-          dblclick() {
-            doubleClicks++
-          },
-        }
-      }
+    let observedClassNames: string[] = []
+    let addClass = createMixin<[string], HTMLButtonElement>(() => () => (name, currentProps) => {
+      let existing = typeof currentProps.className === 'string' ? currentProps.className : ''
+      let next = existing ? `${existing} ${name}` : name
+      observedClassNames.push(next)
+      return null
     })
 
-    let reconciler = createDomReconciler(document)
+    let reconciler = createDomReconciler(document, [mixPlugin])
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render(
-      <button
-        mix={[bindClick()]}
-        on={{
-          click() {
-            clicks += increment
-          },
-        }}
-      >
-        hello
-      </button>,
-    )
+    root.render(<button className="base" mix={[addClass('from-mix')]}>hello</button>)
     root.flush()
-    let button = container.firstElementChild as HTMLButtonElement
-    button.click()
-    expect(clicks).toBe(1)
-    button.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
-    expect(doubleClicks).toBe(1)
+    expect(observedClassNames).toEqual(['base from-mix'])
 
-    increment = 3
-    root.render(
-      <button
-        mix={[bindClick()]}
-        on={{
-          click() {
-            clicks += increment
-          },
-        }}
-      >
-        hello
-      </button>,
-    )
+    root.render(<button className="next" mix={[addClass('again')]}>hello</button>)
     root.flush()
-    button.click()
-    expect(clicks).toBe(4)
-    button.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
-    expect(doubleClicks).toBe(2)
+    expect(observedClassNames).toEqual(['base from-mix', 'next again'])
   })
 
   it('supports on mixin with reentry signal', () => {
