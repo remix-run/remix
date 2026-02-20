@@ -19,25 +19,18 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./node": "./src/node.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./node": {
-        "types": "./dist/node.d.ts",
-        "default": "./dist/node.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/headers": "workspace:^"
+    "@remix-run/headers": "remix-run/remix#preview/main&path:packages/headers"
   },
   "devDependencies": {
     "@types/node": "catalog:",
