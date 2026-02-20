@@ -1,3 +1,17 @@
+// Ignore auto-linking for APIs of ours that conflict with built in symbols
+export const IGNORE_SYMBOLS = new Set([
+  'any',
+  'array',
+  'bigint',
+  'boolean',
+  'map',
+  'number',
+  'object',
+  'set',
+  'string',
+  'symbol',
+])
+
 export const MDN_SYMBOLS = {
   AbortSignal: 'https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal',
   ArrayBuffer:

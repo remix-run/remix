@@ -5,7 +5,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { codeToHtml } from 'shiki'
 import { routes } from './routes.ts'
-import { MDN_SYMBOLS } from '../generate/mdn-symbols.ts'
+import { IGNORE_SYMBOLS, MDN_SYMBOLS } from '../generate/symbols.ts'
 
 // No types exist for the `frontmatter` package
 const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
@@ -113,6 +113,8 @@ function getShikiExtension(
 
                   // Don't link to the current page
                   if (symbol === apiName) return
+                  // Don't link to anything in the ignore list
+                  if (IGNORE_SYMBOLS.has(symbol)) return
 
                   let linkEl: Element | undefined
                   if (docFilesLookup.has(symbol)) {
