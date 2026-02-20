@@ -2,8 +2,14 @@ import type { EventListeners } from '@remix-run/interaction'
 import { createContainer, TypedEventTarget } from '@remix-run/interaction'
 import type { ElementProps, ElementType, RemixNode, Renderable } from './jsx.ts'
 
+/**
+ * A task function scheduled to run after a component update.
+ */
 export type Task = (signal: AbortSignal) => void
 
+/**
+ * Handle provided to component functions for managing component state and lifecycle.
+ */
 export interface Handle<C = Record<string, never>> {
   /**
    * Stable identifier per component instance. Useful for HTML APIs like
@@ -122,6 +128,10 @@ export type ContextFrom<ComponentType> =
       ? Provided
       : never
 
+/**
+ * Set and get values in an element tree for indirect ancestor/descendant
+ * communication.
+ */
 export interface Context<C> {
   set(values: C): void
   get<ComponentType>(component: ComponentType): ContextFrom<ComponentType>
@@ -135,6 +145,9 @@ export type FrameHandleEventMap = {
   reloadComplete: Event
 }
 
+/**
+ * Handle for interacting with a Frame component instance.
+ */
 export type FrameHandle = TypedEventTarget<FrameHandleEventMap> & {
   src: string
   reload(): Promise<AbortSignal>
