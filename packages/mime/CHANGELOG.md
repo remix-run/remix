@@ -2,6 +2,12 @@
 
 This is the changelog for [`mime`](https://github.com/remix-run/remix/tree/main/packages/mime). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.0
+
+### Minor Changes
+
+- Include all MIME types from mime-db, including experimental (`x-`) and vendor-specific (`vnd.`) types.
+
 ## v0.3.0
 
 ### Minor Changes

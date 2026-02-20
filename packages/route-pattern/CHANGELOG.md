@@ -2,6 +2,193 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.19.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remove `RoutePatternOptions` type and rework `ignoreCase`
+
+  `RoutePattern.ignoreCase` field has been removed and `ignoreCase` now only applies to `pathname` (no longer applies to `search`)
+
+  Case sensitivity is now determined only when matching.
+
+  - `RoutePattern.match` now accept `ignoreCase` option
+  - `Matcher` constructors now accept `ignoreCase` option
+
+  ```ts
+  // BEFORE
+  let pattern = new RoutePattern('/Posts/:id', { ignoreCase: true })
+  pattern.match(url)
+  pattern.join(other, { ignoreCase: true })
+
+  let matcher = new ArrayMatcher()
+
+  // AFTER
+  let pattern = new RoutePattern('/Posts/:id')
+  pattern.match(url) // default: ignoreCase = false
+  pattern.match(url, { ignoreCase: true })
+  pattern.join(other)
+
+  let arrayMatcher = new ArrayMatcher() // default: ignoreCase = false
+  // OR
+  let arrayMatcher = new ArrayMatcher({ ignoreCase: true })
+
+  let trieMatcher = new TrieMatcher() // default: ignoreCase = false
+  // OR
+  let trieMatcher = new TrieMatcher({ ignoreCase: true })
+  ```
+
+- BREAKING CHANGE: Change how params are represented within `RoutePattern.ast`
+
+  Previously, `RoutePattern.ast.{hostname,pathname}.tokens` had param tokens like:
+
+  ```ts
+  type ParamToken = { type: ':'; '*'; nameIndex: number }
+  ```
+
+  where the `nameIndex` was used to access the param name from `paramNames`:
+
+  ```ts
+  let { pathname } = pattern.ast
+
+  for (let token of pathname.tokens) {
+    if (token.type === ':' || token.type === '*') {
+      let paramName = pathname.paramNames[token.nameIndex]
+      console.log('name: ', paramName)
+    }
+  }
+  ```
+
+  This has now been simplified so that param tokens contain their own name:
+
+  ```ts
+  type ParamToken = { type: ':' | '*'; name: string }
+
+  let { pathname } = pattern.ast
+
+  for (let token of pathname.tokens) {
+    if (token.type === ':' || token.type === '*') {
+      console.log('name: ', token.name)
+    }
+  }
+  ```
+
+  If you want to iterate over _just_ the params, there's a new `.params` getter:
+
+  ```ts
+  let { pathname } = pattern.ast
+
+  for (let param of pathname.params) {
+    console.log('type: ', param.type)
+    console.log('name: ', param.name)
+  }
+  ```
+
+- BREAKING CHANGE: Rename match `meta` to `paramsMeta`
+
+  For `RoutePattern.match` and `type RoutePatternMatch`:
+
+  ```ts
+  import { RoutePattern, type RoutePatternMatch } from 'remix/route-pattern'
+
+  let pattern = new RoutePattern('...')
+  let match = pattern.match(url)
+
+  // BEFORE
+  type Meta = RoutePatternMatch['meta']
+  match.meta
+
+  // AFTER
+  type ParamsMeta = RoutePatternMatch['paramsMeta']
+  match.paramsMeta
+  ```
+
+  For `Matcher.match` and `type Match`:
+
+  ```ts
+  import { Matcher, type Match } from 'remix/route-pattern'
+
+  let matcher: Matcher = new ArrayMatcher() // Or TrieMatcher
+
+  let match = matcher.match(url)
+
+  // BEFORE
+  type Meta = Match['meta']
+  match.meta
+
+  // AFTER
+  type ParamsMeta = Match['paramsMeta']
+  match.paramsMeta
+  ```
+
+### Patch Changes
+
+- Previously, `href` was throwing an `HrefError` with `missing-params` type when a nameless wildcard was encountered outside of an optional.
+  But that was misleading since nameless optionals aren't something the user should be passing in values for.
+  Instead, `href` now throws an `HrefError` with the correct `nameless-wildcard` type for this case.
+
+  Error messages have also been improved for many of the `HrefError` types.
+  Notably, the variants shown in `missing-params` were confusing since they leaked internal formatting for params.
+  That has been removed and the resulting error message is now shorter and simpler.
+
+- Previously, including extra params in `RoutePattern.href` resulted in a type error:
+
+  ```ts
+  let pattern = new RoutePattern('/posts/:id')
+  pattern.href({ id: 1, extra: 'stuff' })
+  //                     ^^^^^
+  // 'extra' does not exist in type 'HrefParams<"/posts/:id">'
+  ```
+
+  Now, extra params are allowed and autocomplete for inferred params still works:
+
+  ```ts
+  let pattern = new RoutePattern('/posts/:id')
+  pattern.href({ id: 1, extra: 'stuff' }) // no type error
+
+  pattern.href({})
+  //             ^ autocomplete suggests `id`
+  ```
+
+- `ArrayMatcher.match` (optimized for small apps) got ~1.06x faster for our small app benchmark.
+  `TrieMatcher.match` (optimized for large apps) got ~1.17x faster across the board.
+
+- Patterns with omitted port only match URLs with empty port `''`
+
+  Previously, there was a bug that caused omitted ports in patterns to match any ports.
+
+- `paramsMeta` shows a nameless wildcard match for omitted hostname
+
+  An omitted hostname is already coerced to `*` (nameless wildcard) to represent "match any hostname" during matching.
+  Previously, `paramsMeta` did not distinguish between a fully static hostname and an omitted hostname as both had `hostname` set to `[]`.
+  Now, `paramsMeta` returns a nameless wildcard match for the entire hostname when the hostname is omitted.
+
+  Example:
+
+  ```ts
+  const pattern = new RoutePattern('/users/:id')
+  const match = pattern.match('http://example.com/users/123')
+  // match.paramsMeta.hostname is now [{ type: '*', name: '*', begin: 0, end: 11, value: 'example.com' }]
+  ```
+
+  As a result, `Specificity.descending` (the default ordering for matchers) now correctly orders patterns with static hostname before patterns with omitted hostnames.
+
+- `TrieMatcher` allows overlapping routes
+
+  For example:
+
+  ```ts
+  let pattern1 = new RoutePattern('://api.example.com/users/:id')
+  let pattern2 = new RoutePattern('://api.example.com/users(/:id)')
+
+  matcher.add(pattern1)
+  matcher.add(pattern2)
+  ```
+
+  In this case, the second pattern fully overlaps the first one when the optional is included and the TrieMatcher could not store overlapping routes, so `pattern1` was silently dropped.
+
+  Now, `TrieMatcher` allows overlapping routes by storing an array of route patterns in the trie nodes.
+
 ## v0.18.0
 
 ### Minor Changes
