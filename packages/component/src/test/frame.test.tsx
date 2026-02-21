@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { Handle } from '../lib/component.ts'
 import { Frame } from '../lib/component.ts'
-import { clientEntry } from '../lib/client-entries.ts'
+import { clientEntry, type HydrationScript } from '../lib/client-entries.ts'
 import { run } from '../lib/run.ts'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
@@ -73,7 +73,7 @@ describe('run', () => {
     let frame = run(document, { loadModule })
     await frame.ready()
 
-    expect(loadModule).toHaveBeenCalledWith('/js/counter.js', 'Counter')
+    expect(loadModule).toHaveBeenCalledWith({ src: '/js/counter.js' }, 'Counter', [])
 
     let button = document.querySelector('button')
     expect(button?.textContent).toBe('Count: 5')
@@ -181,10 +181,10 @@ describe('run', () => {
     document.body.innerHTML = html
 
     let [slowModulePromise, resolveSlowModule] = withResolvers<Function>()
-    let loadModule = vi.fn().mockImplementation((moduleUrl: string, exportName: string) => {
-      if (moduleUrl === '/js/fast.js' && exportName === 'Fast') return Fast
-      if (moduleUrl === '/js/slow.js' && exportName === 'Slow') return slowModulePromise
-      throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
+    let loadModule = vi.fn().mockImplementation((asset: HydrationScript, exportName: string) => {
+      if (asset.src === '/js/fast.js' && exportName === 'Fast') return Fast
+      if (asset.src === '/js/slow.js' && exportName === 'Slow') return slowModulePromise
+      throw new Error(`Unexpected module request: ${asset.src}#${exportName}`)
     })
 
     let app = run(document, { loadModule })
@@ -249,7 +249,7 @@ describe('run', () => {
     let frame = run(document, { loadModule })
     await frame.ready()
 
-    expect(loadModule).toHaveBeenCalledWith('/js/card.js', 'Card')
+    expect(loadModule).toHaveBeenCalledWith({ src: '/js/card.js' }, 'Card', [])
     expect(document.querySelector('h2')?.textContent).toBe('Test')
     expect(document.querySelector('p')?.textContent).toBe('Count: 42')
     expect(document.querySelectorAll('li')).toHaveLength(3)
@@ -307,10 +307,10 @@ describe('run', () => {
     let frameId = getCommentMarkerId(first.value, 'rmx:f:')
     let [lateModulePromise, resolveLateModule] = withResolvers<Function>()
 
-    let loadModule = vi.fn().mockImplementation((moduleUrl: string, exportName: string) => {
-      if (moduleUrl === '/js/initial.js' && exportName === 'Initial') return Initial
-      if (moduleUrl === '/js/late.js' && exportName === 'Late') return lateModulePromise
-      throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
+    let loadModule = vi.fn().mockImplementation((asset: HydrationScript, exportName: string) => {
+      if (asset.src === '/js/initial.js' && exportName === 'Initial') return Initial
+      if (asset.src === '/js/late.js' && exportName === 'Late') return lateModulePromise
+      throw new Error(`Unexpected module request: ${asset.src}#${exportName}`)
     })
 
     let app = run(document, { loadModule })
@@ -479,17 +479,17 @@ describe('run', () => {
       <!-- rmx:h:h1 --><button id="a">A</button><!-- /rmx:h -->
       <!-- rmx:h:h2 --><button id="b">B</button><!-- /rmx:h -->
       <script type="application/json" id="rmx-data">
-        {"h":{"h1":{"moduleUrl":"/a.js","exportName":"A","props":{}}}}
+        {"h":{"h1":{"exportName":"A","js":[{"src":"/a.js"}],"props":{}}}}
       </script>
       <script type="application/json" id="rmx-data">
-        {"h":{"h2":{"moduleUrl":"/b.js","exportName":"B","props":{}}}}
+        {"h":{"h2":{"exportName":"B","js":[{"src":"/b.js"}],"props":{}}}}
       </script>
     `
 
-    let loadModule = vi.fn().mockImplementation((moduleUrl: string, exportName: string) => {
-      if (moduleUrl === '/a.js' && exportName === 'A') return A
-      if (moduleUrl === '/b.js' && exportName === 'B') return B
-      throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
+    let loadModule = vi.fn().mockImplementation((asset: HydrationScript, exportName: string) => {
+      if (asset.src === '/a.js' && exportName === 'A') return A
+      if (asset.src === '/b.js' && exportName === 'B') return B
+      throw new Error(`Unexpected module request: ${asset.src}#${exportName}`)
     })
 
     let frame = run(document, { loadModule })
@@ -524,23 +524,23 @@ describe('run', () => {
       <!-- rmx:h:h1 --><button id="a">A</button><!-- /rmx:h -->
       <!-- rmx:h:h2 --><button id="b">B</button><!-- /rmx:h -->
       <script type="application/json" id="rmx-data">
-        {"h":{"__proto__":{"h2":{"moduleUrl":"/evil.js","exportName":"Evil","props":{}}}}}
+        {"h":{"__proto__":{"h2":{"exportName":"Evil","js":[{"src":["/evil.js"]}],"props":{}}}}}
       </script>
       <script type="application/json" id="rmx-data">
-        {"h":{"h1":{"moduleUrl":"/a.js","exportName":"A","props":{}}}}
+        {"h":{"h1":{"exportName":"A","js":[{"src":"/a.js"}],"props":{}}}}
       </script>
     `
 
-    let loadModule = vi.fn().mockImplementation((moduleUrl: string, exportName: string) => {
-      if (moduleUrl === '/a.js' && exportName === 'A') return A
-      throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
+    let loadModule = vi.fn().mockImplementation((asset: HydrationScript, exportName: string) => {
+      if (asset.src === '/a.js' && exportName === 'A') return A
+      throw new Error(`Unexpected module request: ${asset.src}#${exportName}`)
     })
 
     let frame = run(document, { loadModule })
     await frame.ready()
 
     expect(loadModule).toHaveBeenCalledTimes(1)
-    expect(loadModule).toHaveBeenCalledWith('/a.js', 'A')
+    expect(loadModule).toHaveBeenCalledWith({ src: '/a.js' }, 'A', [])
 
     frame.dispose()
   })
@@ -591,9 +591,9 @@ describe('run', () => {
     expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
 
     let clientFrame = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/assets/reload.js' && exportName === 'Reload') return ReloadButton
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      loadModule(asset, exportName) {
+        if (asset.src === '/assets/reload.js' && exportName === 'Reload') return ReloadButton
+        throw new Error(`Unexpected module: ${asset.src}#${exportName}`)
       },
       resolveFrame: renderTimeFragment,
     })
@@ -671,11 +671,11 @@ describe('run', () => {
     document.body.innerHTML = html
 
     let clientFrame = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/assets/reload-empty.js' && exportName === 'ReloadEmpty') {
+      loadModule(asset, exportName) {
+        if (asset.src === '/assets/reload-empty.js' && exportName === 'ReloadEmpty') {
           return ReloadButton
         }
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+        throw new Error(`Unexpected module: ${asset.src}#${exportName}`)
       },
       resolveFrame(src: string) {
         if (src !== '/reload-empty') throw new Error(`Unexpected frame src: ${src}`)
@@ -741,9 +741,9 @@ describe('run', () => {
     document.body.innerHTML = html
 
     let clientFrame = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/assets/row-action.js' && exportName === 'RowAction') return RowAction
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      loadModule(asset, exportName) {
+        if (asset.src === '/assets/row-action.js' && exportName === 'RowAction') return RowAction
+        throw new Error(`Unexpected module: ${asset.src}#${exportName}`)
       },
       resolveFrame,
     })
@@ -794,11 +794,11 @@ describe('run', () => {
     )
 
     let app = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/assets/reload-top.js' && exportName === 'ReloadTop') {
+      loadModule(asset, exportName) {
+        if (asset.src === '/assets/reload-top.js' && exportName === 'ReloadTop') {
           return ReloadTop
         }
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+        throw new Error(`Unexpected module: ${asset.src}#${exportName}`)
       },
       async resolveFrame(src: string) {
         if (src === '/inner') {
@@ -888,11 +888,11 @@ describe('run', () => {
     document.body.innerHTML = html
 
     let app = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/assets/reload-events.js' && exportName === 'ReloadEvents') {
+      loadModule(asset, exportName) {
+        if (asset.src === '/assets/reload-events.js' && exportName === 'ReloadEvents') {
           return RowAction
         }
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+        throw new Error(`Unexpected module: ${asset.src}#${exportName}`)
       },
       resolveFrame,
     })
@@ -958,9 +958,9 @@ describe('run', () => {
     expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
 
     let clientFrame = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/assets/reload-css.js' && exportName === 'ReloadCss') return ReloadButton
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      loadModule(asset, exportName) {
+        if (asset.src === '/assets/reload-css.js' && exportName === 'ReloadCss') return ReloadButton
+        throw new Error(`Unexpected module: ${asset.src}#${exportName}`)
       },
       resolveFrame: renderTimeFragmentWithCss,
     })
@@ -1027,11 +1027,11 @@ describe('run', () => {
     document.body.innerHTML = html
 
     let clientFrame = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/assets/reload-abort.js' && exportName === 'ReloadAbort') {
+      loadModule(asset, exportName) {
+        if (asset.src === '/assets/reload-abort.js' && exportName === 'ReloadAbort') {
           return ReloadButton
         }
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+        throw new Error(`Unexpected module: ${asset.src}#${exportName}`)
       },
       resolveFrame(src: string, signal?: AbortSignal) {
         if (src !== '/reload-abort') throw new Error(`Unexpected frame src: ${src}`)
@@ -1125,10 +1125,10 @@ describe('run', () => {
     expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
 
     let clientFrame = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/assets/reload-head.js' && exportName === 'ReloadHead')
+      loadModule(asset, exportName) {
+        if (asset.src === '/assets/reload-head.js' && exportName === 'ReloadHead')
           return ReloadButton
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+        throw new Error(`Unexpected module: ${asset.src}#${exportName}`)
       },
       resolveFrame: renderHeadFragment,
     })
@@ -1357,7 +1357,7 @@ describe('run', () => {
       '<!-- rmx:f:f1 --><span id="frame">Loading…</span><!-- /rmx:f -->' +
       '</div>' +
       '<script type="application/json" id="rmx-data">' +
-      '{"h":{"h1":{"moduleUrl":"/counter.js","exportName":"Counter","props":{}}},' +
+      '{"h":{"h1":{"exportName":"Counter","js":["/counter.js"],"css":[],"props":{}}},' +
       '"f":{"f1":{"status":"pending","src":"/slow"}}}' +
       '</script>'
 
@@ -1774,9 +1774,9 @@ describe('run', () => {
     document.body.innerHTML = pageHtml
 
     let app = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/js/post-run.js' && exportName === 'PostRunFrame') return PostRunFrame
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      loadModule(asset, exportName) {
+        if (asset.src === '/js/post-run.js' && exportName === 'PostRunFrame') return PostRunFrame
+        throw new Error(`Unexpected module: ${asset.src}#${exportName}`)
       },
       resolveFrame: async () => '<p id="post-run-loaded">Post-run loaded</p>',
     })
@@ -1841,11 +1841,11 @@ describe('run', () => {
       )
 
     let app = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/js/mounted-frame.js' && exportName === 'MountedFrame') {
+      loadModule(asset, exportName) {
+        if (asset.src === '/js/mounted-frame.js' && exportName === 'MountedFrame') {
           return MountedFrame
         }
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+        throw new Error(`Unexpected module: ${asset.src}#${exportName}`)
       },
       resolveFrame: clientResolveFrame,
     })
@@ -1898,9 +1898,9 @@ describe('run', () => {
     expect(document.getElementById('child-frame')?.textContent).toBe('Loading child frame…')
 
     let app = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/js/card.js' && exportName === 'Card') return Card
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      loadModule(asset, exportName) {
+        if (asset.src === '/js/card.js' && exportName === 'Card') return Card
+        throw new Error(`Unexpected module: ${asset.src}#${exportName}`)
       },
     })
 
@@ -2033,11 +2033,11 @@ describe('run', () => {
     document.body.innerHTML = serverHtml
 
     let app = run(document, {
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/assets/reload-stream.js' && exportName === 'ReloadStream') {
+      loadModule(asset, exportName) {
+        if (asset.src === '/assets/reload-stream.js' && exportName === 'ReloadStream') {
           return ReloadButton
         }
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+        throw new Error(`Unexpected module: ${asset.src}#${exportName}`)
       },
       resolveFrame(src: string) {
         if (src === '/reload-streamed') {

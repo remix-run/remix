@@ -1,11 +1,13 @@
 import { run } from 'remix/component'
 
 let app = run(document, {
-  async loadModule(moduleUrl: string, exportName: string) {
-    let mod = await import(moduleUrl)
+  async loadModule({ src }, exportName, chunks) {
+    let modPromise = import(src)
+    chunks.map(({ src }) => import(src).catch())
+    let mod = await modPromise
     let Component = (mod as any)[exportName]
     if (!Component) {
-      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+      throw new Error(`Unknown component: ${src}#${exportName}`)
     }
     return Component
   },

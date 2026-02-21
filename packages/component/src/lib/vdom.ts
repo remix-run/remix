@@ -4,7 +4,7 @@ import { createFrameHandle } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './jsx.ts'
 import { createScheduler, type Scheduler } from './scheduler.ts'
-import { diffVNodes, remove as removeVNode } from './reconcile.ts'
+import { diffVNodes, remove as removeVNode, cleanupDescendants } from './reconcile.ts'
 import { toVNode } from './to-vnode.ts'
 import { ROOT_VNODE, type VNode } from './vnode.ts'
 import { resetStyleState, defaultStyleManager } from './diff-props.ts'
@@ -17,6 +17,7 @@ export type VirtualRootEventMap = {
 export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
   render: (element: RemixNode) => void
   dispose: () => void
+  abandon: () => void
   flush: () => void
 }
 
@@ -113,6 +114,14 @@ export function createRangeRoot(
       scheduler.dequeue()
     },
 
+    abandon() {
+      if (!vroot) return
+      let current = vroot
+      vroot = null
+      scheduler.enqueueTasks([() => cleanupDescendants(current, scheduler, styles)])
+      scheduler.dequeue()
+    },
+
     flush() {
       scheduler.dequeue()
     },
@@ -172,6 +181,14 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       let current = vroot
       vroot = null
       scheduler.enqueueTasks([() => removeVNode(current, container, scheduler, styles)])
+      scheduler.dequeue()
+    },
+
+    abandon() {
+      if (!vroot) return
+      let current = vroot
+      vroot = null
+      scheduler.enqueueTasks([() => cleanupDescendants(current, scheduler, styles)])
       scheduler.dequeue()
     },
 

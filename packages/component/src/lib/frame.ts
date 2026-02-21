@@ -1,7 +1,7 @@
 import { jsx } from './jsx.ts'
 import { Frame, createFrameHandle, type FrameContent } from './component.ts'
 import { invariant } from './invariant.ts'
-import type { RemixElement } from './jsx.ts'
+import type { Props, RemixElement } from './jsx.ts'
 import type { FrameHandle } from './component.ts'
 import type { Scheduler } from './vdom.ts'
 import { createRangeRoot } from './vdom.ts'
@@ -16,9 +16,14 @@ type FrameData = {
   src: string
 }
 
-type HydrationData = {
-  moduleUrl: string
+type HydrationStyle = { href: string } & Omit<Props<'link'>, 'children' | 'rel'>
+
+type HydrationScript = { src: string } & Omit<Props<'script'>, 'children' | 'src' | 'type'>
+
+interface HydrationData {
   exportName: string
+  css?: HydrationStyle[]
+  js: [HydrationScript, ...HydrationScript[]]
   props: Record<string, unknown>
 }
 
@@ -37,7 +42,11 @@ type FrameMarkerData = FrameData & {
 
 type PendingClientEntries = Map<Comment, [Comment, RemixElement]>
 
-export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
+export type LoadModule = (
+  moduleUrl: HydrationScript,
+  exportName: string,
+  chunks: HydrationScript[],
+) => Promise<Function> | Function
 
 export type ResolveFrame = (
   src: string,
@@ -215,7 +224,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       typeof content === 'string' ? createFragmentFromString(container.doc, content) : content
-    hoistHeadElements(container.doc, fragment)
+    await hoistHeadElements(container.doc, fragment)
     mergeRmxDataFromFragment(context.data, fragment)
 
     let nextContainer = createContainer(fragment)
@@ -243,14 +252,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let markerId = init.marker.id
       let early = consumeFrameTemplate(markerId) ?? getEarlyFrameContent(markerId)
       if (early) {
-        hoistHeadElements(container.doc, early)
+        await hoistHeadElements(container.doc, early)
         mergeRmxDataFromFragment(context.data, early)
         await render(early, { initialHydrationTracker })
       } else {
         let observer = setupTemplateObserver()
         let unsubscribe = subscribeFrameTemplate(markerId, async (fragment) => {
           unsubscribe()
-          hoistHeadElements(container.doc, fragment)
+          await hoistHeadElements(container.doc, fragment)
           mergeRmxDataFromFragment(context.data, fragment)
           await render(fragment)
           observer.disconnect()
@@ -259,7 +268,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         let buffered = consumeFrameTemplate(markerId)
         if (buffered) {
           unsubscribe()
-          hoistHeadElements(container.doc, buffered)
+          await hoistHeadElements(container.doc, buffered)
           mergeRmxDataFromFragment(context.data, buffered)
           await render(buffered)
           observer.disconnect()
@@ -399,7 +408,7 @@ function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): vo
   }
 }
 
-function hoistHeadElements(doc: Document, fragment: DocumentFragment): void {
+async function hoistHeadElements(doc: Document, fragment: DocumentFragment): Promise<any> {
   let target = doc.head
   if (!target) return
 
@@ -417,11 +426,23 @@ function hoistHeadElements(doc: Document, fragment: DocumentFragment): void {
     fragment.querySelectorAll('title,meta,link,style,script[type="application/ld+json"]'),
   )
 
+  let promises: Promise<void>[] = []
   for (let element of maybeHeadManaged) {
     if (!(element instanceof Element)) continue
     if (!isHeadManagedElementNode(element)) continue
     target.appendChild(element)
+    if (element.tagName.toLowerCase() === 'link') {
+      promises.push(
+        new Promise<void>((resolve) => {
+          let done = () => resolve()
+          element.addEventListener('load', done)
+          element.addEventListener('error', done)
+        }),
+      )
+    }
   }
+
+  return Promise.all(promises)
 }
 
 function isHeadManagedElementNode(element: Element): boolean {
@@ -489,7 +510,7 @@ function scheduleHydrationMarker(
   initialHydrationTracker?: InitialHydrationTracker,
 ): void {
   let done = initialHydrationTracker?.track()
-  let key = `${entry.moduleUrl}#${entry.exportName}`
+  let key = `${entry.js[0].src}#${entry.exportName}`
 
   let hydrateWithComponent = (component: Function) => {
     if (!isHydrationMarkerLive(marker, context)) return
@@ -516,6 +537,39 @@ function scheduleHydrationMarker(
     })
 }
 
+function loadStyle(link: HydrationStyle) {
+  let el = document.querySelector<HTMLLinkElement>(`link[href="${link.href}"][rel="stylesheet"]`)
+  let entry = performance.getEntriesByType('resource').find(({ name }) => name === link.href)
+
+  if (entry && el?.sheet?.href === link.href) return
+
+  return new Promise<void>((resolve) => {
+    let done = () => resolve()
+    console.log({
+      entry,
+      sheetHref: el?.sheet?.href,
+      el,
+    })
+    if (!el) {
+      el = document.createElement('link')
+      el.rel = 'stylesheet'
+      for (let [name, value] of Object.entries(el)) {
+        el.setAttribute(name, value)
+      }
+      el.onload = done
+      el.onerror = done
+      document.head.appendChild(el)
+    } else {
+      el.addEventListener('load', done)
+      el.addEventListener('error', done)
+    }
+  })
+}
+
+function loadCss(css: HydrationStyle[]) {
+  return Promise.all(css.map((props) => loadStyle(props)))
+}
+
 function getOrStartModuleLoad(
   key: string,
   entry: HydrationData,
@@ -527,9 +581,12 @@ function getOrStartModuleLoad(
 
   let loadPromise = (async () => {
     try {
-      let mod = await context.loadModule(entry.moduleUrl, entry.exportName)
+      let [mod] = await Promise.all([
+        context.loadModule(entry.js[0], entry.exportName, entry.js.slice(1)),
+        entry.css?.length && loadCss(entry.css),
+      ])
       if (typeof mod !== 'function') {
-        throw new Error(`Export "${entry.exportName}" from "${entry.moduleUrl}" is not a function`)
+        throw new Error(`Export "${entry.exportName}" from "${entry.js[0].src}" is not a function`)
       }
       context.moduleCache.set(key, mod)
       return mod

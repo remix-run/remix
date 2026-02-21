@@ -1,4 +1,5 @@
 import type { Handle, NoContext, RemixNode } from './component.ts'
+import type { Props } from './jsx.ts'
 
 /**
  * Serializable primitive types that can be passed as props to entry components
@@ -35,12 +36,30 @@ export type SerializableProps = {
 }
 
 /**
+ * A style required for hydration.
+ */
+export type HydrationStyle = { href: string } & Omit<Props<'link'>, 'children' | 'rel'>
+
+/**
+ * A script required for hydration.
+ */
+export type HydrationScript = { src: string } & Omit<Props<'script'>, 'children' | 'src' | 'type'>
+
+/**
+ * Component asset loading metadata
+ */
+export type AssetMetadata = {
+  exportName: string
+  js: [HydrationScript, ...HydrationScript[]]
+  css?: HydrationStyle[]
+}
+
+/**
  * Metadata added to entry components
  */
 export type EntryMetadata = {
   $entry: true
-  $moduleUrl: string
-  $exportName: string
+  $asset: Required<AssetMetadata>
 }
 
 /**
@@ -88,32 +107,41 @@ export function clientEntry<
   setup extends SerializableValue = undefined,
   props extends SerializableProps = {},
 >(
-  href: string,
+  href: string | AssetMetadata,
   component: (handle: Handle<context>, setup: setup) => (props: props) => RemixNode,
 ): EntryComponent<context, setup, props>
 
 // Implementation
-export function clientEntry(href: string, component: any): any {
-  // Parse module URL and export name
-  let [moduleUrl, exportName] = href.split('#')
+export function clientEntry(asset: string | AssetMetadata, component: any): any {
+  if (typeof asset !== 'object' || asset === null) {
+    // Parse module URL and export name
+    let [moduleUrl, parsedExportName] = asset?.split('#') ?? []
 
-  if (!moduleUrl) {
-    throw new Error('clientEntry() requires a module URL')
+    if (!moduleUrl) {
+      throw new Error('clientEntry() requires a module URL')
+    }
+
+    // Use component name as fallback if no export name provided
+    let finalExportName = parsedExportName || component.name
+
+    if (!finalExportName) {
+      throw new Error(
+        'clientEntry() requires either an exportName in the asset, a hash in a string (e.g., "/js/module.js#ComponentName") or a named component function',
+      )
+    }
+    asset = {
+      exportName: finalExportName,
+      js: [{ src: moduleUrl }],
+    }
   }
 
-  // Use component name as fallback if no export name provided
-  let finalExportName = exportName || component.name
-
-  if (!finalExportName) {
-    throw new Error(
-      'clientEntry() requires either an export name in the href (e.g., "/js/module.js#ComponentName") or a named component function',
-    )
+  if (!asset) {
+    throw new Error('clientEntry() requires an asset')
   }
 
   // Augment the component with entry metadata
   component.$entry = true
-  component.$moduleUrl = moduleUrl
-  component.$exportName = finalExportName
+  component.$asset = asset
 
   return component
 }
