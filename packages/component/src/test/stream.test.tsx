@@ -412,6 +412,28 @@ describe('stream', () => {
       let html = await drain(stream)
       expect(html).toBe('<svg><text xml:lang="en" xml:space="preserve">Hi</text></svg>')
     })
+
+    it('renders canonical camelCase unit attributes for SVG filters and gradients', async () => {
+      let stream = renderToStream(
+        <svg>
+          <defs>
+            <filter id="f" filterUnits="userSpaceOnUse" primitiveUnits="objectBoundingBox">
+              <feGaussianBlur stdDeviation="2.5" />
+            </filter>
+            <linearGradient id="g" gradientUnits="userSpaceOnUse" />
+          </defs>
+        </svg>,
+      )
+      let html = await drain(stream)
+      expect(html).toContain('filterUnits="userSpaceOnUse"')
+      expect(html).toContain('primitiveUnits="objectBoundingBox"')
+      expect(html).toContain('gradientUnits="userSpaceOnUse"')
+      expect(html).not.toContain('filter-units=')
+      expect(html).not.toContain('primitive-units=')
+      expect(html).not.toContain('gradient-units=')
+      expect(html).toContain('stdDeviation="2.5"')
+      expect(html).not.toContain('std-deviation=')
+    })
   })
 
   describe('styles', () => {

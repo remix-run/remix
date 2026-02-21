@@ -3,6 +3,7 @@ import type { ComponentHandle, Key, RemixNode } from './component.ts'
 import type { ElementType, ElementProps, RemixElement } from './jsx.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from './component.ts'
 import { isEntry, type EntryComponent } from './client-entries.ts'
+import { normalizeSvgAttribute } from './svg-attributes.ts'
 
 interface VNode {
   type: ElementType
@@ -636,11 +637,6 @@ function transformAttributeName(name: string, isSvg: boolean): string {
   // aria-/data- pass through
   if (name.startsWith('aria-') || name.startsWith('data-')) return name
 
-  // Namespaced
-  if (name === 'xlinkHref') return 'xlink:href'
-  if (name === 'xmlLang') return 'xml:lang'
-  if (name === 'xmlSpace') return 'xml:space'
-
   // HTML mappings
   if (!isSvg) {
     if (name === 'className') return 'class'
@@ -651,29 +647,7 @@ function transformAttributeName(name: string, isSvg: boolean): string {
     return name.toLowerCase()
   }
 
-  // SVG preserved-case exceptions
-  if (
-    name === 'viewBox' ||
-    name === 'preserveAspectRatio' ||
-    name === 'gradientUnits' ||
-    name === 'gradientTransform' ||
-    name === 'patternUnits' ||
-    name === 'patternTransform' ||
-    name === 'clipPathUnits' ||
-    name === 'maskUnits' ||
-    name === 'maskContentUnits'
-  )
-    return name
-
-  // General SVG: kebab-case
-  return camelToKebab(name)
-}
-
-function camelToKebab(input: string): string {
-  return input
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .replace(/_/g, '-')
-    .toLowerCase()
+  return normalizeSvgAttribute(name).attr
 }
 
 function finalizeHtml(html: string, context: RenderContext): string {
