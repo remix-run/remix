@@ -19,32 +19,23 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./server": "./src/server.ts",
-    "./jsx-runtime": "./src/jsx-runtime.ts",
-    "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./jsx-runtime": {
+      "types": "./dist/jsx-runtime.d.ts",
+      "default": "./dist/jsx-runtime.js"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./dist/jsx-dev-runtime.d.ts",
+      "default": "./dist/jsx-dev-runtime.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./server": {
-        "types": "./dist/server.d.ts",
-        "default": "./dist/server.js"
-      },
-      "./jsx-runtime": {
-        "types": "./dist/jsx-runtime.d.ts",
-        "default": "./dist/jsx-runtime.js"
-      },
-      "./jsx-dev-runtime": {
-        "types": "./dist/jsx-dev-runtime.d.ts",
-        "default": "./dist/jsx-dev-runtime.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -63,6 +54,6 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@remix-run/interaction": "workspace:^"
+    "@remix-run/interaction": "remix-run/remix#preview/pr-11083&path:packages/interaction"
   }
 }
