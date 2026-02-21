@@ -360,10 +360,10 @@ export class MultipartParser {
     this.#contentLength += chunk.length
   }
 
-  #analyzeCarryBoundary(carry: Uint8Array, chunk: Uint8Array):
-    | { kind: 'none' }
-    | { kind: 'partial'; start: number }
-    | { kind: 'full'; start: number } {
+  #analyzeCarryBoundary(
+    carry: Uint8Array,
+    chunk: Uint8Array,
+  ): { kind: 'none' } | { kind: 'partial'; start: number } | { kind: 'full'; start: number } {
     let totalLength = carry.length + chunk.length
 
     for (let start = 0; start < carry.length; ++start) {
