@@ -82,7 +82,13 @@ export const oneLargeFile = new MultipartMessage(boundary, [10 * oneMb])
 
 export const oneHundredSmallFiles = new MultipartMessage(boundary, Array(100).fill(oneKb))
 
-export const fiveLargeFiles = new MultipartMessage(boundary, [10 * oneMb, 10 * oneMb, 10 * oneMb, 20 * oneMb, 50 * oneMb])
+export const fiveLargeFiles = new MultipartMessage(boundary, [
+  10 * oneMb,
+  10 * oneMb,
+  10 * oneMb,
+  20 * oneMb,
+  50 * oneMb,
+])
 
 export const oneLargeFileAdversarial = new MultipartMessage(boundary, [
   createAdversarialBytes(10 * oneMb, boundary),

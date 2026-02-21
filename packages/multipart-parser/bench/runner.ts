@@ -109,7 +109,7 @@ function getBenchmarkStats(
   let mean = measurements.reduce((a, b) => a + b, 0) / measurements.length
   let variance = measurements.reduce((a, b) => a + (b - mean) ** 2, 0) / measurements.length
   let stdDev = Math.sqrt(variance)
-  let throughputMibPerSec = (messageSizeBytes / (1024 * 1024)) / (mean / 1000)
+  let throughputMibPerSec = messageSizeBytes / (1024 * 1024) / (mean / 1000)
 
   return {
     meanMs: mean,
