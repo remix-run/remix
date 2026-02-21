@@ -68,6 +68,40 @@ describe('isMultipartRequest', async () => {
 
 describe('parseMultipartRequest', async () => {
   let boundary = '----WebKitFormBoundaryz8Zv2UxQ7f4a0Z3H'
+  let boundaryBytes = new TextEncoder().encode(`\r\n--${boundary}`)
+
+  function indexOfBytes(haystack: Uint8Array, needle: Uint8Array, start = 0): number {
+    outer: for (let i = start; i <= haystack.length - needle.length; ++i) {
+      for (let j = 0; j < needle.length; ++j) {
+        if (haystack[i + j] !== needle[j]) {
+          continue outer
+        }
+      }
+      return i
+    }
+
+    return -1
+  }
+
+  function createChunkedRequest(body: Uint8Array, chunkSize: number): Request {
+    let stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (let i = 0; i < body.length; i += chunkSize) {
+          controller.enqueue(body.subarray(i, i + chunkSize))
+        }
+        controller.close()
+      },
+    })
+
+    return new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: stream,
+      duplex: 'half',
+    } as RequestInit & { duplex: 'half' })
+  }
 
   it('parses an empty multipart message', async () => {
     let request = new Request('https://example.com', {
@@ -244,6 +278,74 @@ describe('parseMultipartRequest', async () => {
     assert.equal(parts[0].filename, 'random.dat')
     assert.equal(parts[0].mediaType, 'application/octet-stream')
     assert.deepEqual(parts[0].content, content)
+  })
+
+  it('parses when boundary is split across chunks', async () => {
+    let body = createMultipartMessage(boundary, {
+      field1: 'value1',
+      field2: 'value2',
+    })
+    let boundaryIndex = indexOfBytes(body, boundaryBytes, 1)
+    assert.ok(boundaryIndex > 0)
+
+    let request = createChunkedRequest(body, boundaryIndex + 3)
+
+    let parts: MultipartPart[] = []
+    for await (let part of parseMultipartRequest(request)) {
+      parts.push(part)
+    }
+
+    assert.equal(parts.length, 2)
+    assert.equal(parts[0].name, 'field1')
+    assert.equal(parts[0].text, 'value1')
+    assert.equal(parts[1].name, 'field2')
+    assert.equal(parts[1].text, 'value2')
+  })
+
+  it('parses when a partial boundary tail is at chunk edge', async () => {
+    let body = createMultipartMessage(boundary, {
+      field1: 'value1',
+      field2: 'value2',
+    })
+    let boundaryIndex = indexOfBytes(body, boundaryBytes, 1)
+    assert.ok(boundaryIndex > 0)
+
+    // End first chunk with only '\r' from the '\r\n--boundary' marker.
+    let request = createChunkedRequest(body, boundaryIndex + 1)
+
+    let parts: MultipartPart[] = []
+    for await (let part of parseMultipartRequest(request)) {
+      parts.push(part)
+    }
+
+    assert.equal(parts.length, 2)
+    assert.equal(parts[0].name, 'field1')
+    assert.equal(parts[0].text, 'value1')
+    assert.equal(parts[1].name, 'field2')
+    assert.equal(parts[1].text, 'value2')
+  })
+
+  it('parses when boundary starts exactly at next chunk edge', async () => {
+    let body = createMultipartMessage(boundary, {
+      field1: 'value1',
+      field2: 'value2',
+    })
+    let boundaryIndex = indexOfBytes(body, boundaryBytes, 1)
+    assert.ok(boundaryIndex > 0)
+
+    // End first chunk right before '\r\n--boundary'.
+    let request = createChunkedRequest(body, boundaryIndex)
+
+    let parts: MultipartPart[] = []
+    for await (let part of parseMultipartRequest(request)) {
+      parts.push(part)
+    }
+
+    assert.equal(parts.length, 2)
+    assert.equal(parts[0].name, 'field1')
+    assert.equal(parts[0].text, 'value1')
+    assert.equal(parts[1].name, 'field2')
+    assert.equal(parts[1].text, 'value2')
   })
 
   it('throws when Content-Type is not multipart/form-data', async () => {
