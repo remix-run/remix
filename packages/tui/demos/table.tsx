@@ -12,9 +12,9 @@ function TableDemo(handle: { update(): Promise<AbortSignal> }, _setup: unknown) 
   let ascending = true
 
   rerender = () => {
-    rows = rows.slice().sort((a, b) =>
-      ascending ? a.label.localeCompare(b.label) : b.label.localeCompare(a.label),
-    )
+    rows = rows
+      .slice()
+      .sort((a, b) => (ascending ? a.label.localeCompare(b.label) : b.label.localeCompare(a.label)))
     ascending = !ascending
     void handle.update()
   }

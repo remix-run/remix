@@ -5,7 +5,10 @@ import { stylePropsPlugin } from './style-props-plugin.ts'
 
 describe('style props plugin', () => {
   it('applies style object updates and teardown cleanup', () => {
-    let reconciler = createDomReconciler(document, [stylePropsPlugin as any, basicPropsPlugin as any])
+    let reconciler = createDomReconciler(document, [
+      stylePropsPlugin as any,
+      basicPropsPlugin as any,
+    ])
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
     let stableStyle = {

@@ -7,7 +7,9 @@ export let stylePlugin: Plugin<TuiElementNode> = definePlugin({
   priority: 0,
   keys: ['style'],
   shouldActivate(context) {
-    return typeof context.delta.nextProps.style === 'object' && context.delta.nextProps.style != null
+    return (
+      typeof context.delta.nextProps.style === 'object' && context.delta.nextProps.style != null
+    )
   },
   mount() {
     return {

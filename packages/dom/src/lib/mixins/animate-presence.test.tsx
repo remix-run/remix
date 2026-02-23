@@ -165,7 +165,9 @@ describe('animate presence mixins', () => {
     let reconciler = createDomReconciler(document)
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
-    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(() => createAnimation())
+    let animateSpy = vi
+      .spyOn(HTMLElement.prototype, 'animate')
+      .mockImplementation(() => createAnimation())
 
     root.render(
       <div
@@ -187,7 +189,9 @@ describe('animate presence mixins', () => {
     let reconciler = createDomReconciler(document)
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
-    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(() => createAnimation())
+    let animateSpy = vi
+      .spyOn(HTMLElement.prototype, 'animate')
+      .mockImplementation(() => createAnimation())
 
     root.render(
       <div

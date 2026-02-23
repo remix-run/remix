@@ -34,7 +34,11 @@ export async function createOpenTuiHostBridge(options: Record<string, unknown> =
   }
 
   let renderer = await createCliRenderer(options)
-  let bridge = decorateBridgeWithOpenTui(renderer as Record<string, unknown>, BoxRenderable, TextRenderable)
+  let bridge = decorateBridgeWithOpenTui(
+    renderer as Record<string, unknown>,
+    BoxRenderable,
+    TextRenderable,
+  )
   return {
     renderer,
     bridge,
@@ -95,10 +99,9 @@ function decorateBridgeWithOpenTui(
       if (!childRenderable) return
       let anchorRenderable = anchor ? ensureRenderable(anchor, renderer, TextRenderable) : null
       if (anchorRenderable && hasMethod(parentRenderable, 'insertBefore')) {
-        ;(parentRenderable as { insertBefore(obj: unknown, anchorObj: unknown): void }).insertBefore(
-          childRenderable,
-          anchorRenderable,
-        )
+        ;(
+          parentRenderable as { insertBefore(obj: unknown, anchorObj: unknown): void }
+        ).insertBefore(childRenderable, anchorRenderable)
       } else if (hasMethod(parentRenderable, 'add')) {
         ;(parentRenderable as { add(obj: unknown): void }).add(childRenderable)
       }
@@ -118,10 +121,9 @@ function decorateBridgeWithOpenTui(
       }
       let anchorRenderable = anchor ? ensureRenderable(anchor, renderer, TextRenderable) : null
       if (anchorRenderable && hasMethod(parentRenderable, 'insertBefore')) {
-        ;(parentRenderable as { insertBefore(obj: unknown, anchorObj: unknown): void }).insertBefore(
-          childRenderable,
-          anchorRenderable,
-        )
+        ;(
+          parentRenderable as { insertBefore(obj: unknown, anchorObj: unknown): void }
+        ).insertBefore(childRenderable, anchorRenderable)
       } else if (hasMethod(parentRenderable, 'add')) {
         ;(parentRenderable as { add(obj: unknown): void }).add(childRenderable)
       }
@@ -165,7 +167,11 @@ function decorateBridgeWithOpenTui(
         return
       }
       if (key.startsWith('layout.')) {
-        applyLayoutProp(renderable as Record<string, unknown>, key.slice('layout.'.length), undefined)
+        applyLayoutProp(
+          renderable as Record<string, unknown>,
+          key.slice('layout.'.length),
+          undefined,
+        )
         return
       }
       if (key.startsWith('on.')) {

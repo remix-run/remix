@@ -38,16 +38,9 @@ export type OnValue<node extends EventTarget> = {
   [type: string]: (event: DispatchedEvent<any, node>) => void
 }
 
-export type ConnectValue<node extends EventTarget> = (
-  node: node,
-  signal: AbortSignal,
-) => void
+export type ConnectValue<node extends EventTarget> = (node: node, signal: AbortSignal) => void
 
-export type {
-  MixValue,
-  MixinDescriptor,
-  MixinType,
-} from '@remix-run/reconciler'
+export type { MixValue, MixinDescriptor, MixinType } from '@remix-run/reconciler'
 
 export type DomElementProps<node extends EventTarget> = {
   children?: RenderValue
@@ -80,8 +73,8 @@ type DomIntrinsicElements = {
 } & {
   [tagName in SharedTagNames]: DomElementProps<Element>
 } & DomMathMLElements & {
-  [tagName: string]: DomElementProps<Element>
-}
+    [tagName: string]: DomElementProps<Element>
+  }
 
 export function jsx(
   type: unknown,

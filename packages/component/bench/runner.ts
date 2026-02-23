@@ -655,7 +655,9 @@ function printAllocationProfileTable(profile: AllocationProfile[], operationName
   console.log(`\n${operationName}`)
   console.log('🧠 Top functions by allocated heap (median):')
   console.log('═'.repeat(100))
-  console.log(`${'Function'.padEnd(68)} ${'Bytes'.padStart(14)} ${'KB'.padStart(10)} ${'%'.padStart(8)}`)
+  console.log(
+    `${'Function'.padEnd(68)} ${'Bytes'.padStart(14)} ${'KB'.padStart(10)} ${'%'.padStart(8)}`,
+  )
   console.log('─'.repeat(100))
   for (let item of profile) {
     let name = item.name.length > 66 ? '...' + item.name.slice(-63) : item.name

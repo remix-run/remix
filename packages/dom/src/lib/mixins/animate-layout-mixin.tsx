@@ -55,7 +55,8 @@ let animateLayoutMixin = createMixin<
 
       let deltaX = firstRect.left - lastRect.left
       let deltaY = firstRect.top - lastRect.top
-      let canScale = firstRect.width > 0 && firstRect.height > 0 && lastRect.width > 0 && lastRect.height > 0
+      let canScale =
+        firstRect.width > 0 && firstRect.height > 0 && lastRect.width > 0 && lastRect.height > 0
       let scaleX = canScale ? firstRect.width / lastRect.width : 1
       let scaleY = canScale ? firstRect.height / lastRect.height : 1
       let hasDelta =
@@ -77,7 +78,10 @@ let animateLayoutMixin = createMixin<
       }
 
       let animation = node.animate(
-        [{ transform: fromTransform, transformOrigin: 'top left' }, { transform: 'none', transformOrigin: 'top left' }],
+        [
+          { transform: fromTransform, transformOrigin: 'top left' },
+          { transform: 'none', transformOrigin: 'top left' },
+        ],
         { duration, easing },
       )
       activeAnimation = animation
@@ -99,5 +103,8 @@ let animateLayoutMixin = createMixin<
 export function animateLayout<node extends HTMLElement = HTMLElement>(
   options?: AnimateLayoutOptions,
 ): MixinDescriptor<node, [options: AnimateLayoutOptions | undefined]> {
-  return animateLayoutMixin(options) as MixinDescriptor<node, [options: AnimateLayoutOptions | undefined]>
+  return animateLayoutMixin(options) as MixinDescriptor<
+    node,
+    [options: AnimateLayoutOptions | undefined]
+  >
 }

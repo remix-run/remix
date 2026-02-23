@@ -34,58 +34,56 @@ let onMixin = createMixin<
   [type: string, handler: OnHandler<EventTarget, Event>],
   EventTarget,
   DomElementType
->(
-  (handle) => {
-    let activeNode: null | EventTarget = null
-    let activeType = ''
-    let activeHandler: null | OnHandler<EventTarget, Event> = null
-    let reentryController: null | AbortController = null
+>((handle) => {
+  let activeNode: null | EventTarget = null
+  let activeType = ''
+  let activeHandler: null | OnHandler<EventTarget, Event> = null
+  let reentryController: null | AbortController = null
 
-    let listener: EventListener = (event) => {
-      if (!activeHandler) return
-      reentryController?.abort()
-      reentryController = new AbortController()
-      activeHandler(event as DispatchedEvent<Event, EventTarget>, reentryController.signal)
+  let listener: EventListener = (event) => {
+    if (!activeHandler) return
+    reentryController?.abort()
+    reentryController = new AbortController()
+    activeHandler(event as DispatchedEvent<Event, EventTarget>, reentryController.signal)
+  }
+
+  let detach = () => {
+    if (activeNode && activeType) {
+      activeNode.removeEventListener(activeType, listener)
     }
+  }
 
-    let detach = () => {
-      if (activeNode && activeType) {
-        activeNode.removeEventListener(activeType, listener)
-      }
-    }
+  let syncListener = () => {
+    if (!activeNode || !activeType) return
+    activeNode.addEventListener(activeType, listener)
+  }
 
-    let syncListener = () => {
-      if (!activeNode || !activeType) return
-      activeNode.addEventListener(activeType, listener)
-    }
+  handle.addEventListener('remove', () => {
+    reentryController?.abort()
+    detach()
+    activeNode = null
+    activeType = ''
+    activeHandler = null
+  })
 
-    handle.addEventListener('remove', () => {
-      reentryController?.abort()
+  return (type: string, handler: OnHandler<EventTarget, Event>, props) => {
+    let changedType = activeType !== type
+    let changedHandler = activeHandler !== handler
+    if (changedType || changedHandler) {
       detach()
-      activeNode = null
-      activeType = ''
-      activeHandler = null
-    })
-
-    return (type: string, handler: OnHandler<EventTarget, Event>, props) => {
-      let changedType = activeType !== type
-      let changedHandler = activeHandler !== handler
-      if (changedType || changedHandler) {
-        detach()
-        activeType = type
-        activeHandler = handler
-        syncListener()
-      }
-      handle.queueTask((node) => {
-        if (activeNode === node) return
-        detach()
-        activeNode = node
-        syncListener()
-      })
-      return <handle.element {...props} />
+      activeType = type
+      activeHandler = handler
+      syncListener()
     }
-  },
-)
+    handle.queueTask((node) => {
+      if (activeNode === node) return
+      detach()
+      activeNode = node
+      syncListener()
+    })
+    return <handle.element {...props} />
+  }
+})
 
 export function on<target extends EventTarget, type extends EventType<target>>(
   type: type,

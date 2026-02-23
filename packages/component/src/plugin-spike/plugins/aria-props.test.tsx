@@ -9,9 +9,7 @@ describe('plugin-spike aria-props plugin', () => {
     let container = document.createElement('div')
     let root = reconciler.createRoot(container)
 
-    root.render(() => (
-      <div key="a" aria-hidden={true} aria-colindex={3} />
-    ))
+    root.render(() => <div key="a" aria-hidden={true} aria-colindex={3} />)
     root.flush()
 
     let node = container.querySelector('div')

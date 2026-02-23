@@ -5,7 +5,10 @@ export type DirectiveType<args extends any[] = any[]> = (
   plugin: PluginHandle,
 ) => (host: HostHandle) => (...args: args) => void
 
-export type DirectiveDescriptor<target extends EventTarget = EventTarget, args extends any[] = any[]> = {
+export type DirectiveDescriptor<
+  target extends EventTarget = EventTarget,
+  args extends any[] = any[],
+> = {
   type: DirectiveType<args>
   args: args
   __target?: target

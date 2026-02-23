@@ -143,10 +143,7 @@ export function stringifyTestNode(node: TestContainerNode | TestNode): string {
   return `<${node.type}>${children}</${node.type}>`
 }
 
-function assertAnchor(
-  parent: TestContainerNode | TestElementNode,
-  anchor: null | TestNode,
-) {
+function assertAnchor(parent: TestContainerNode | TestElementNode, anchor: null | TestNode) {
   if (!anchor) return
   if (anchor.parent !== parent) {
     throw new Error('illegal operation: anchor is not a child of parent')

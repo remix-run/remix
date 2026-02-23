@@ -3,10 +3,7 @@ import {
   RECONCILER_NODE_CHILDREN,
   RECONCILER_PROP_KEYS,
 } from '../testing/jsx.ts'
-import {
-  isPhasePluginAhead,
-  removeActivePluginId,
-} from './root-helpers.ts'
+import { isPhasePluginAhead, removeActivePluginId } from './root-helpers.ts'
 import { createScheduler } from './scheduler.ts'
 import {
   PluginAfterCommitEvent,
@@ -219,13 +216,7 @@ export function createReconciler<parent, node, text extends node, element extend
     let sourceIndices: number[] = []
     let scanIndex = 0
     for (let next of nextNodes) {
-      let matchIndex = findMatchIndex(
-        currentChildren,
-        used,
-        keyed,
-        next,
-        scanIndex,
-      )
+      let matchIndex = findMatchIndex(currentChildren, used, keyed, next, scanIndex)
       if (matchIndex >= 0) {
         used[matchIndex] = true
         if (matchIndex === scanIndex) scanIndex++
@@ -234,12 +225,7 @@ export function createReconciler<parent, node, text extends node, element extend
           changed = true
         }
         let previousMaterial = firstMaterialNode(currentChildren[matchIndex])
-        let reconciled = reconcileNode(
-          currentChildren[matchIndex],
-          next,
-          parentNode,
-          root,
-        )
+        let reconciled = reconcileNode(currentChildren[matchIndex], next, parentNode, root)
         let nextMaterial = firstMaterialNode(reconciled.node)
         if (previousMaterial !== nextMaterial) {
           requiresPlacement = true
@@ -598,7 +584,9 @@ export function createReconciler<parent, node, text extends node, element extend
         let done =
           waitUntilPromises.length === 0
             ? Promise.resolve()
-            : Promise.all(waitUntilPromises.map((promise) => promise.catch(() => {}))).then(() => {})
+            : Promise.all(waitUntilPromises.map((promise) => promise.catch(() => {}))).then(
+                () => {},
+              )
         done.then(() => {
           if (retained.canceled) return
           finalizeRetainedHost(retained, root)
@@ -755,22 +743,15 @@ export function createReconciler<parent, node, text extends node, element extend
         },
       },
     )
-    runPluginPhase(
-      plugins.orderedTerminal,
-      new Map(),
-      plugins.terminalIds,
-      context,
-      root,
-      {
-        setPhaseState() {
-          phaseRoutedByKey = null
-          phaseCandidateMarks = null
-          phaseOrdered = null
-          phaseCursor = -1
-          phaseCandidateVersion = 0
-        },
+    runPluginPhase(plugins.orderedTerminal, new Map(), plugins.terminalIds, context, root, {
+      setPhaseState() {
+        phaseRoutedByKey = null
+        phaseCandidateMarks = null
+        phaseOrdered = null
+        phaseCursor = -1
+        phaseCandidateVersion = 0
       },
-    )
+    })
     host.props = effectiveDelta.nextProps
   }
 
@@ -976,7 +957,6 @@ export function createReconciler<parent, node, text extends node, element extend
     if (!parent) return
     policy.remove(parent, host.node)
   }
-
 }
 
 function preparePlugins(rawPlugins: Array<Plugin<any>>): PreparedPlugins {
@@ -1022,10 +1002,7 @@ function preparePlugins(rawPlugins: Array<Plugin<any>>): PreparedPlugins {
   }
 }
 
-function materializePlugins(
-  plugins: Array<PluginDefinition<any>>,
-  root: PluginRootHandle,
-) {
+function materializePlugins(plugins: Array<PluginDefinition<any>>, root: PluginRootHandle) {
   let output: Plugin<any>[] = []
   for (let plugin of plugins) {
     if (typeof plugin === 'function') {
@@ -1148,10 +1125,7 @@ function listOwnPropKeys(props: Record<string, unknown>) {
   return keys
 }
 
-function listChangedPropKeys(
-  previous: Record<string, unknown>,
-  next: Record<string, unknown>,
-) {
+function listChangedPropKeys(previous: Record<string, unknown>, next: Record<string, unknown>) {
   if (previous === next) return []
   let changed: string[] = []
   for (let key in next) {

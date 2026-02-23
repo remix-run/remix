@@ -13,19 +13,12 @@ export type MixinType<
 > = (
   handle: MixinHandle<node, elementType>,
   type: elementType,
-) => (
-  ...args: [...args, currentProps: Record<string, unknown>]
-) => void | null | ReconcilerElement
+) => (...args: [...args, currentProps: Record<string, unknown>]) => void | null | ReconcilerElement
 
-type MixinRuntimeType<
-  args extends unknown[] = unknown[],
-  elementType extends string = string,
-> = (
+type MixinRuntimeType<args extends unknown[] = unknown[], elementType extends string = string> = (
   handle: MixinHandle<unknown, elementType>,
   type: elementType,
-) => (
-  ...args: [...args, currentProps: Record<string, unknown>]
-) => void | null | ReconcilerElement
+) => (...args: [...args, currentProps: Record<string, unknown>]) => void | null | ReconcilerElement
 
 export type MixinDescriptor<
   node = unknown,
@@ -83,9 +76,11 @@ class MixinDetachEvent extends Event {
   }
 }
 
-export function createMixin<args extends unknown[], node = unknown, elementType extends string = string>(
-  type: MixinType<node, args, elementType>,
-) {
+export function createMixin<
+  args extends unknown[],
+  node = unknown,
+  elementType extends string = string,
+>(type: MixinType<node, args, elementType>) {
   return (...args: args): MixinDescriptor<node, args, elementType> => ({
     type: type as unknown as MixinRuntimeType<args, elementType>,
     args,
@@ -119,65 +114,69 @@ export let mixPlugin: Plugin<unknown> = definePlugin({
       },
       commit(event) {
         let context = event as PluginCommitEvent<unknown>
-      let descriptors = resolveMixDescriptors(context.delta.nextProps)
-      let composedProps = withoutMix(context.delta.nextProps)
-      let maxDescriptors = 1024
-      for (let index = 0; index < descriptors.length && index < maxDescriptors; index++) {
-        let descriptor = descriptors[index]
-        let entry = runnerEntries[index]
-        if (!entry || entry.type !== descriptor.type) {
+        let descriptors = resolveMixDescriptors(context.delta.nextProps)
+        let composedProps = withoutMix(context.delta.nextProps)
+        let maxDescriptors = 1024
+        for (let index = 0; index < descriptors.length && index < maxDescriptors; index++) {
+          let descriptor = descriptors[index]
+          let entry = runnerEntries[index]
+          if (!entry || entry.type !== descriptor.type) {
+            entry?.handle.dispatchEvent(new Event('remove'))
+            let entryHandle = createMixinHandle(handle)
+            entry = {
+              type: descriptor.type,
+              runner: descriptor.type(entryHandle, hostType) as AnyMixinRunner,
+              handle: entryHandle,
+            }
+            runnerEntries[index] = entry
+          }
+          let runner = entry.runner
+          if (!runner) continue
+          let result = runner(...descriptor.args, composedProps)
+          if (!result) continue
+          if (!isReconcilerElement(result)) {
+            handle.root.dispatchEvent(
+              new ReconcilerErrorEvent(new Error('mixins must return a reconciler element')),
+            )
+            continue
+          }
+          let resultType =
+            typeof result.type === 'string'
+              ? result.type
+              : isMixinElement(result.type)
+                ? result.type.__rmxMixinElementType
+                : null
+          if (resultType == null || resultType !== hostType) {
+            handle.root.dispatchEvent(
+              new ReconcilerErrorEvent(
+                new Error('mixins must return an element with the same host type'),
+              ),
+            )
+            continue
+          }
+          if (result.type !== resultType) {
+            result = {
+              ...result,
+              type: resultType,
+            }
+          }
+          let nestedDescriptors = resolveMixDescriptors(result.props)
+          for (let nested of nestedDescriptors) descriptors.push(nested)
+          composedProps = withoutMix(result.props)
+        }
+        for (let index = descriptors.length; index < runnerEntries.length; index++) {
+          let entry = runnerEntries[index]
           entry?.handle.dispatchEvent(new Event('remove'))
-          let entryHandle = createMixinHandle(handle)
-          entry = {
-            type: descriptor.type,
-            runner: descriptor.type(entryHandle, hostType) as AnyMixinRunner,
-            handle: entryHandle,
-          }
-          runnerEntries[index] = entry
         }
-        let runner = entry.runner
-        if (!runner) continue
-        let result = runner(...descriptor.args, composedProps)
-        if (!result) continue
-        if (!isReconcilerElement(result)) {
-          handle.root.dispatchEvent(new ReconcilerErrorEvent(new Error('mixins must return a reconciler element')))
-          continue
+        if (runnerEntries.length > descriptors.length) {
+          runnerEntries.length = descriptors.length
         }
-        let resultType =
-          typeof result.type === 'string'
-            ? result.type
-            : isMixinElement(result.type)
-              ? result.type.__rmxMixinElementType
-              : null
-        if (resultType == null || resultType !== hostType) {
-          handle.root.dispatchEvent(
-            new ReconcilerErrorEvent(new Error('mixins must return an element with the same host type')),
-          )
-          continue
-        }
-        if (result.type !== resultType) {
-          result = {
-            ...result,
-            type: resultType,
-          }
-        }
-        let nestedDescriptors = resolveMixDescriptors(result.props)
-        for (let nested of nestedDescriptors) descriptors.push(nested)
-        composedProps = withoutMix(result.props)
-      }
-      for (let index = descriptors.length; index < runnerEntries.length; index++) {
-        let entry = runnerEntries[index]
-        entry?.handle.dispatchEvent(new Event('remove'))
-      }
-      if (runnerEntries.length > descriptors.length) {
-        runnerEntries.length = descriptors.length
-      }
-      let nextMix = context.delta.nextProps.mix
-      context.replaceProps({
-        ...composedProps,
-        ...(nextMix === undefined ? {} : { mix: nextMix }),
-      })
-      context.consume('mix')
+        let nextMix = context.delta.nextProps.mix
+        context.replaceProps({
+          ...composedProps,
+          ...(nextMix === undefined ? {} : { mix: nextMix }),
+        })
+        context.consume('mix')
       },
     }
   },
@@ -185,12 +184,12 @@ export let mixPlugin: Plugin<unknown> = definePlugin({
 
 function createMixinHandle(handle: PluginSetupHandle<unknown>) {
   let mixinHandle = new EventTarget() as MixinHandle<unknown, string>
-  let element = (((_updateHandle: unknown, _setup: unknown) => (props: Record<string, unknown>) => ({
+  let element = ((_updateHandle: unknown, _setup: unknown) => (props: Record<string, unknown>) => ({
     $rmx: true as const,
     type: handle.host.type,
     key: null,
     props,
-  })) as unknown) as MixinElement<string>
+  })) as unknown as MixinElement<string>
   element.__rmxMixinElementType = handle.host.type
   mixinHandle.root = handle.root
   mixinHandle.element = element

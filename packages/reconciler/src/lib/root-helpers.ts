@@ -7,11 +7,7 @@ export function removeActivePluginId(ids: number[], id: number) {
   ids.splice(index, 1)
 }
 
-export function isPhasePluginAhead(
-  ordered: PreparedPlugin<any>[],
-  id: number,
-  cursor: number,
-) {
+export function isPhasePluginAhead(ordered: PreparedPlugin<any>[], id: number, cursor: number) {
   for (let index = cursor + 1; index < ordered.length; index++) {
     if (ordered[index].id === id) return true
   }

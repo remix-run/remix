@@ -1,19 +1,9 @@
 import { createReconciler } from '../lib/root.ts'
 import type { Plugin, RenderValue } from '../lib/types.ts'
-import {
-  createTestContainer,
-  createTestNodePolicy,
-  stringifyTestNode,
-} from './test-node-policy.ts'
-import type {
-  TestContainerNode,
-  TestElementNode,
-  TestNodePolicy,
-} from './test-node-policy.ts'
+import { createTestContainer, createTestNodePolicy, stringifyTestNode } from './test-node-policy.ts'
+import type { TestContainerNode, TestElementNode, TestNodePolicy } from './test-node-policy.ts'
 
-export function createTestNodeReconciler(
-  plugins: Plugin<TestElementNode>[] = [],
-) {
+export function createTestNodeReconciler(plugins: Plugin<TestElementNode>[] = []) {
   let policy = createTestNodePolicy()
   let reconciler = createReconciler({
     policy,

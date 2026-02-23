@@ -7,7 +7,9 @@ export let layoutPlugin: Plugin<TuiElementNode> = definePlugin({
   priority: 1,
   keys: ['layout'],
   shouldActivate(context) {
-    return typeof context.delta.nextProps.layout === 'object' && context.delta.nextProps.layout != null
+    return (
+      typeof context.delta.nextProps.layout === 'object' && context.delta.nextProps.layout != null
+    )
   },
   mount() {
     return {

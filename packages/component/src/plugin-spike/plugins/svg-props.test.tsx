@@ -10,9 +10,7 @@ describe('plugin-spike svg-props plugin', () => {
     let root = reconciler.createRoot(container)
     let xlinkNamespace = 'http://www.w3.org/1999/xlink'
 
-    root.render(() => (
-      <svg key="a" viewBox="0 0 10 10" strokeWidth={2} xlinkHref="#shape" />
-    ))
+    root.render(() => <svg key="a" viewBox="0 0 10 10" strokeWidth={2} xlinkHref="#shape" />)
     root.flush()
 
     let node = container.querySelector('svg')

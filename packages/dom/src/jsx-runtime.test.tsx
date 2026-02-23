@@ -100,7 +100,9 @@ let goodOnMixin = (
   <button
     mix={[
       on('pointerdown', (event) => {
-        type eventType = Assert<IsEqual<typeof event, DispatchedEvent<PointerEvent, HTMLButtonElement>>>
+        type eventType = Assert<
+          IsEqual<typeof event, DispatchedEvent<PointerEvent, HTMLButtonElement>>
+        >
       }),
     ]}
   />

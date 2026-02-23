@@ -6,7 +6,10 @@ import { createDocumentStatePlugin, getDocumentState } from './document-state-pl
 describe('document state plugin', () => {
   it('tracks commit state and restores focus by fallback id', () => {
     let documentStatePlugin = createDocumentStatePlugin(document)
-    let reconciler = createDomReconciler(document, [documentStatePlugin as any, basicPropsPlugin as any])
+    let reconciler = createDomReconciler(document, [
+      documentStatePlugin as any,
+      basicPropsPlugin as any,
+    ])
     let container = document.createElement('div')
     document.body.appendChild(container)
     let root = reconciler.createRoot(container)
@@ -18,7 +21,11 @@ describe('document state plugin', () => {
       first.focus()
       first.setSelectionRange(1, 2, 'forward')
 
-      root.render(<textarea id="focus-target" key="two">next</textarea>)
+      root.render(
+        <textarea id="focus-target" key="two">
+          next
+        </textarea>,
+      )
       root.flush()
 
       root.render(<div __rmx_document_state_internal__={true} />)

@@ -1,5 +1,9 @@
 export { createOpenTuiHostBridge } from './lib/tui-host.ts'
-export { assertTuiTreeConsistency, createTuiContainer, createTuiNodePolicy } from './lib/tui-node-policy.ts'
+export {
+  assertTuiTreeConsistency,
+  createTuiContainer,
+  createTuiNodePolicy,
+} from './lib/tui-node-policy.ts'
 export { createTuiReconciler, createOpenTuiRoot } from './lib/tui-reconciler.ts'
 export {
   basicPropsPlugin,

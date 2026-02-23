@@ -11,11 +11,7 @@ describe('plugin-spike css plugin', () => {
     let root = reconciler.createRoot(container)
 
     root.render(() => (
-      <div
-        key="root"
-        css={{ color: 'rgb(255, 0, 0)' }}
-        connect={() => {}}
-      >
+      <div key="root" css={{ color: 'rgb(255, 0, 0)' }} connect={() => {}}>
         hello
       </div>
     ))

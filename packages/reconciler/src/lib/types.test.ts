@@ -8,7 +8,13 @@ import {
   ReconcilerErrorEvent,
   definePlugin,
 } from './types.ts'
-import type { HostPropDelta, Plugin, PluginHostContext, ReconcilerRoot, RenderValue } from './types.ts'
+import type {
+  HostPropDelta,
+  Plugin,
+  PluginHostContext,
+  ReconcilerRoot,
+  RenderValue,
+} from './types.ts'
 
 describe('types helpers', () => {
   it('constructs commit lifecycle events with root references', () => {

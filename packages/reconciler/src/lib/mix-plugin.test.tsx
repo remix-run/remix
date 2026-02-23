@@ -373,7 +373,7 @@ describe('mix plugin', () => {
   })
 
   it('reports an error when a mixin returns a non-element', () => {
-    let broken = createMixin<[], EventTarget>(() => () => ({ nope: true } as any))
+    let broken = createMixin<[], EventTarget>(() => () => ({ nope: true }) as any)
     let reconciler = createTestNodeReconciler([mixPlugin as any])
     let root = reconciler.createRoot()
     let errors: string[] = []
@@ -495,5 +495,4 @@ describe('mix plugin', () => {
     root.flush()
     assert.equal(removeCalls, 1)
   })
-
 })

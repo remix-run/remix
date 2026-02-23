@@ -19,12 +19,14 @@ reconciler:
 Plugins can participate at three scopes:
 
 1. **Plugin scope** (once per reconciler)
+
    - Attach listeners on plugin lifecycle:
      - `beforeFlush`
      - `afterFlush`
    - Return an optional host factory.
 
 2. **Host scope** (once per mounted host instance)
+
    - Host factory shape:
      - `(hostHandle) => void | HostTransform`
    - Host handle APIs:
@@ -55,21 +57,25 @@ Plugins can participate at three scopes:
 ## Current PoC plugins
 
 - `interaction`
+
   - Reads `props.on` in transform.
   - Applies listeners from `queueTask` with `@remix-run/interaction/createContainer`.
   - Disposes listener container on `remove`.
 
 - `presence`
+
   - Reads `presenceMs` in transform.
   - Uses Web Animations API for enter/exit.
   - Delays removal via `event.waitUntil(exitAnimation.finished)`.
   - Handles interrupt/reclaim by canceling prior active animations for the element.
 
 - `documentState`
+
   - Plugin-level `beforeFlush` captures focus/selection/scroll.
   - Plugin-level `afterFlush` restores UI state.
 
 - `css`
+
   - Transform processes `props.css` into normalized style IDs and `data-css`.
   - Host scope tracks usage and applies/removes rules via `queueTask` and `remove`.
   - Built on `src/lib/style` (`processStyle`, `createStyleManager`).

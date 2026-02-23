@@ -22,7 +22,10 @@ describe('animateLayout mixin', () => {
     let root = reconciler.createRoot(container)
 
     root.render(
-      <div mix={[animateLayout({ duration: 420, easing: 'linear' })]} style={{ width: '10px', height: '10px' }} />,
+      <div
+        mix={[animateLayout({ duration: 420, easing: 'linear' })]}
+        style={{ width: '10px', height: '10px' }}
+      />,
     )
     flushTwice(root)
 
@@ -37,7 +40,10 @@ describe('animateLayout mixin', () => {
       .mockReturnValueOnce(createRect(100, 0, 100, 100))
 
     root.render(
-      <div mix={[animateLayout({ duration: 420, easing: 'linear' })]} style={{ width: '20px', height: '10px' }} />,
+      <div
+        mix={[animateLayout({ duration: 420, easing: 'linear' })]}
+        style={{ width: '20px', height: '10px' }}
+      />,
     )
     flushTwice(root)
 
@@ -65,7 +71,10 @@ describe('animateLayout mixin', () => {
     let node = container.firstElementChild as HTMLElement
     let firstAnimation = createAnimation()
     let secondAnimation = createAnimation()
-    let animateSpy = vi.fn(() => firstAnimation).mockImplementationOnce(() => firstAnimation).mockImplementationOnce(() => secondAnimation)
+    let animateSpy = vi
+      .fn(() => firstAnimation)
+      .mockImplementationOnce(() => firstAnimation)
+      .mockImplementationOnce(() => secondAnimation)
     node.animate = animateSpy
 
     vi.spyOn(node, 'getBoundingClientRect')

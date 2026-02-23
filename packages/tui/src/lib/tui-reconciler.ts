@@ -2,10 +2,7 @@ import { createReconciler } from '@remix-run/reconciler'
 import type { Plugin } from '@remix-run/reconciler'
 import { createOpenTuiHostBridge } from './tui-host.ts'
 import { createTuiNodePolicy, createTuiContainer } from './tui-node-policy.ts'
-import type {
-  TuiContainerNode,
-  TuiElementNode,
-} from './tui-node-policy.ts'
+import type { TuiContainerNode, TuiElementNode } from './tui-node-policy.ts'
 import { createTuiPlugins } from './tui-plugins.ts'
 
 export type CreateTuiReconcilerOptions = {
@@ -36,10 +33,4 @@ export async function createOpenTuiRoot(options: Record<string, unknown> = {}) {
   }
 }
 
-export type {
-  TuiContainerNode,
-  TuiElementNode,
-  TuiNode,
-  TuiParentNode,
-  TuiTextNode,
-}
+export type { TuiContainerNode, TuiElementNode, TuiNode, TuiParentNode, TuiTextNode }
