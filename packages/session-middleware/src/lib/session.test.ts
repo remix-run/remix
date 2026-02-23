@@ -46,6 +46,24 @@ describe('session middleware', () => {
     assert.equal(await response3.text(), 'Count: 3')
   })
 
+  it('allows for direct return of fetch() call', async () => {
+    let cookie = createCookie('__sess', { secrets: ['secret1'] })
+    let storage = createCookieSessionStorage()
+
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, storage)],
+    })
+
+    router.map('/', ({ session }) => {
+      session.set('count', Number(session.get('count') ?? 0) + 1)
+      return fetch('http://example.com')
+    })
+
+    const response = await router.fetch('https://remix.run')
+
+    assert.equal(response.headers.get('Set-Cookie')?.length != null, true)
+  })
+
   it('throws if the session cookie is not signed', async () => {
     let cookie = createCookie('__sess', { secrets: [] })
     let storage = createCookieSessionStorage()
