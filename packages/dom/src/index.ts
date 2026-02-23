@@ -38,4 +38,4 @@ export type {
   DomTraversal,
 } from './lib/dom-node-policy.ts'
 
-export type { Component } from '@remix-run/reconciler'
+export type { Component, ComponentHandle } from '@remix-run/reconciler'

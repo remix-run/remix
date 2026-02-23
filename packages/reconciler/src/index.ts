@@ -16,6 +16,7 @@ export { RECONCILER_PROP_KEYS } from './testing/jsx.ts'
 export { RECONCILER_PROP_SHAPE } from './testing/jsx.ts'
 
 export type {
+  ComponentHandle,
   Component,
   CommittedHostNode,
   CommittedNode,

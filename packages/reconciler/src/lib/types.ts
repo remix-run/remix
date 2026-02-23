@@ -5,6 +5,8 @@ export type UpdateHandle = {
   queueTask(task: RootTask): void
 }
 
+export type ComponentHandle = UpdateHandle
+
 export type HostTask<element> = (node: element, signal: AbortSignal) => void
 
 export type Component<setup, renderProps, renderValue> = (

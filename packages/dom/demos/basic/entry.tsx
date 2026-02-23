@@ -1,6 +1,7 @@
 import { createDomReconciler, on } from '@remix-run/dom'
+import type { ComponentHandle } from '@remix-run/dom'
 
-function Counter(handle: { update(): Promise<AbortSignal> }, _setup: unknown) {
+function Counter(handle: ComponentHandle, _setup: unknown) {
   let count = 0
   return () => (
     <button
