@@ -3,11 +3,6 @@ import { createDomReconciler } from '../dom-reconciler.ts'
 import { animateEntrance, animateExit } from './animate-presence.tsx'
 
 describe('animate presence mixins', () => {
-  function flushTwice(root: { flush(): void }) {
-    root.flush()
-    root.flush()
-  }
-
   afterEach(() => {
     vi.restoreAllMocks()
   })
@@ -29,7 +24,7 @@ describe('animate presence mixins', () => {
         ]}
       />,
     )
-    flushTwice(root)
+    root.flush()
 
     expect(animateSpy).toHaveBeenCalledTimes(1)
     let calls = animateSpy.mock.calls as unknown as unknown[][]
@@ -49,7 +44,7 @@ describe('animate presence mixins', () => {
     let root = reconciler.createRoot(container)
 
     root.render(<div mix={[animateExit({ keyframes: { opacity: 0, transform: 'scale(0.8)' } })]} />)
-    flushTwice(root)
+    root.flush()
 
     let node = container.firstElementChild as HTMLElement
     let animation = createAnimation()
@@ -57,7 +52,7 @@ describe('animate presence mixins', () => {
     node.animate = animateSpy
 
     root.render(null)
-    flushTwice(root)
+    root.flush()
 
     expect(animateSpy).toHaveBeenCalledTimes(1)
     let calls = animateSpy.mock.calls as unknown as unknown[][]
@@ -79,11 +74,11 @@ describe('animate presence mixins', () => {
     let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(() => animation)
 
     root.render(<div mix={[animateEntrance(), animateExit()]} />)
-    flushTwice(root)
+    root.flush()
     expect(animateSpy).toHaveBeenCalledTimes(1)
 
     root.render(null)
-    flushTwice(root)
+    root.flush()
 
     expect(animation.reverse).toHaveBeenCalledTimes(1)
     expect(animateSpy).toHaveBeenCalledTimes(1)
@@ -95,7 +90,7 @@ describe('animate presence mixins', () => {
     let root = reconciler.createRoot(container)
 
     root.render(<div key="same" mix={[animateExit({ keyframes: { opacity: 0 } })]} />)
-    flushTwice(root)
+    root.flush()
 
     let node = container.firstElementChild as HTMLElement
     let animation = createAnimation()
@@ -103,11 +98,11 @@ describe('animate presence mixins', () => {
     node.animate = animateSpy
 
     root.render(null)
-    flushTwice(root)
+    root.flush()
     expect(container.firstElementChild).toBe(node)
 
     root.render(<div key="same" mix={[animateExit({ keyframes: { opacity: 0 } })]} />)
-    flushTwice(root)
+    root.flush()
 
     expect(container.firstElementChild).toBe(node)
     expect(animation.reverse).toHaveBeenCalledTimes(1)
@@ -120,14 +115,14 @@ describe('animate presence mixins', () => {
     let root = reconciler.createRoot(container)
 
     root.render(<div key="same" mix={[animateExit({ keyframes: { opacity: 0 } })]} />)
-    flushTwice(root)
+    root.flush()
 
     let node = container.firstElementChild as HTMLElement
     let animation = createAnimation()
     node.animate = vi.fn(() => animation)
 
     root.render(null)
-    flushTwice(root)
+    root.flush()
 
     expect(container.firstElementChild).toBe(node)
     animation.dispatchFinish()
@@ -147,14 +142,14 @@ describe('animate presence mixins', () => {
         style={{ opacity: 1, transform: 'scale(1)', backgroundColor: 'red' }}
       />,
     )
-    flushTwice(root)
+    root.flush()
 
     let node = container.firstElementChild as HTMLElement
     let animation = createAnimation()
     node.animate = vi.fn(() => animation)
 
     root.render(null)
-    flushTwice(root)
+    root.flush()
 
     expect(container.firstElementChild).toBe(node)
     expect(node.style.opacity).toBe('1')
@@ -180,7 +175,7 @@ describe('animate presence mixins', () => {
         ]}
       />,
     )
-    flushTwice(root)
+    root.flush()
 
     expect(animateSpy).toHaveBeenCalledTimes(0)
   })
@@ -205,11 +200,11 @@ describe('animate presence mixins', () => {
         ]}
       />,
     )
-    flushTwice(root)
+    root.flush()
     expect(animateSpy).toHaveBeenCalledTimes(0)
 
     root.render(null)
-    flushTwice(root)
+    root.flush()
     root.render(
       <div
         key="same"
@@ -222,7 +217,7 @@ describe('animate presence mixins', () => {
         ]}
       />,
     )
-    flushTwice(root)
+    root.flush()
 
     expect(animateSpy).toHaveBeenCalledTimes(1)
   })

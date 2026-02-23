@@ -56,7 +56,6 @@ describe('on mixin', () => {
       />,
     )
     root.flush()
-    root.flush()
 
     let button = container.firstElementChild as HTMLButtonElement
     button.click()
@@ -71,7 +70,6 @@ describe('on mixin', () => {
         ]}
       />,
     )
-    root.flush()
     root.flush()
 
     button.click()

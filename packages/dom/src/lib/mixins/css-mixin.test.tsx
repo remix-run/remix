@@ -3,11 +3,6 @@ import { createDomReconciler } from '../dom-reconciler.ts'
 import { css } from './css-mixin.tsx'
 
 describe('css mixin', () => {
-  function flushTwice(root: { flush(): void }) {
-    root.flush()
-    root.flush()
-  }
-
   it('applies a generated class and stylesheet rule', () => {
     let reconciler = createDomReconciler(document)
     let container = document.createElement('div')
@@ -25,7 +20,7 @@ describe('css mixin', () => {
         hello
       </button>,
     )
-    flushTwice(root)
+    root.flush()
 
     let button = container.firstElementChild as HTMLButtonElement
     expect(button).toBeTruthy()
@@ -52,7 +47,7 @@ describe('css mixin', () => {
         <button mix={[css({ paddingTop: 8, color: 'hotpink' })]}>b</button>
       </section>,
     )
-    flushTwice(root)
+    root.flush()
 
     let section = container.firstElementChild as HTMLElement
     let first = section.children[0] as HTMLButtonElement
@@ -65,7 +60,7 @@ describe('css mixin', () => {
     expect(cssText.includes(`.${first.className}`)).toBe(true)
 
     root.render(null)
-    flushTwice(root)
+    root.flush()
 
     expect(container.firstElementChild).toBeNull()
   })
@@ -80,7 +75,7 @@ describe('css mixin', () => {
         hello
       </button>,
     )
-    flushTwice(root)
+    root.flush()
 
     let button = container.firstElementChild as HTMLButtonElement
     let firstClassName = button.className
@@ -98,7 +93,7 @@ describe('css mixin', () => {
         hello
       </button>,
     )
-    flushTwice(root)
+    root.flush()
 
     let updated = container.firstElementChild as HTMLButtonElement
     let secondClassName = updated.className
@@ -131,7 +126,7 @@ describe('css mixin', () => {
         ]}
       />,
     )
-    flushTwice(root)
+    root.flush()
 
     let button = container.firstElementChild as HTMLButtonElement
     expect(button.className.includes('rmx-css-')).toBe(true)
@@ -143,11 +138,11 @@ describe('css mixin', () => {
     expect(cssText.includes('--accent:2px;')).toBe(true)
 
     root.render(<button mix={[css(null)]} />)
-    flushTwice(root)
+    root.flush()
     expect((container.firstElementChild as HTMLButtonElement).className).toBe('')
 
     root.render(<button mix={[css([] as any)]} />)
-    flushTwice(root)
+    root.flush()
     expect((container.firstElementChild as HTMLButtonElement).className).toBe('')
   })
 })

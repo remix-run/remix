@@ -7,11 +7,6 @@ type MockAnimation = Animation & {
 }
 
 describe('animateLayout mixin', () => {
-  function flushTwice(root: { flush(): void }) {
-    root.flush()
-    root.flush()
-  }
-
   afterEach(() => {
     vi.restoreAllMocks()
   })
@@ -27,7 +22,7 @@ describe('animateLayout mixin', () => {
         style={{ width: '10px', height: '10px' }}
       />,
     )
-    flushTwice(root)
+    root.flush()
 
     let node = container.firstElementChild as HTMLElement
     let animation = createAnimation()
@@ -45,7 +40,7 @@ describe('animateLayout mixin', () => {
         style={{ width: '20px', height: '10px' }}
       />,
     )
-    flushTwice(root)
+    root.flush()
 
     expect(getRectSpy).toHaveBeenCalledTimes(2)
     expect(animateSpy).toHaveBeenCalledTimes(1)
@@ -66,7 +61,7 @@ describe('animateLayout mixin', () => {
     let root = reconciler.createRoot(container)
 
     root.render(<div mix={[animateLayout({ duration: 300, easing: 'ease-out' })]} />)
-    flushTwice(root)
+    root.flush()
 
     let node = container.firstElementChild as HTMLElement
     let firstAnimation = createAnimation()
@@ -84,10 +79,10 @@ describe('animateLayout mixin', () => {
       .mockReturnValueOnce(createRect(40, 0, 100, 100))
 
     root.render(<div mix={[animateLayout({ duration: 300, easing: 'ease-out' })]} />)
-    flushTwice(root)
+    root.flush()
 
     root.render(<div mix={[animateLayout({ duration: 300, easing: 'ease-out' })]} />)
-    flushTwice(root)
+    root.flush()
 
     expect(animateSpy).toHaveBeenCalledTimes(2)
     expect(firstAnimation.cancel).toHaveBeenCalledTimes(1)
@@ -100,7 +95,7 @@ describe('animateLayout mixin', () => {
     let root = reconciler.createRoot(container)
 
     root.render(<div mix={[animateLayout()]} />)
-    flushTwice(root)
+    root.flush()
 
     let node = container.firstElementChild as HTMLElement
     let animation = createAnimation()
@@ -112,11 +107,11 @@ describe('animateLayout mixin', () => {
       .mockReturnValueOnce(createRect(20, 0, 100, 100))
 
     root.render(<div mix={[animateLayout()]} />)
-    flushTwice(root)
+    root.flush()
     expect(animateSpy).toHaveBeenCalledTimes(1)
 
     root.render(null)
-    flushTwice(root)
+    root.flush()
 
     expect(animation.cancel).toHaveBeenCalledTimes(1)
   })
@@ -127,7 +122,7 @@ describe('animateLayout mixin', () => {
     let root = reconciler.createRoot(container)
 
     root.render(<div mix={[animateLayout()]} />)
-    flushTwice(root)
+    root.flush()
 
     let node = container.firstElementChild as HTMLElement
     let animateSpy = vi.fn(() => createAnimation())
@@ -138,7 +133,7 @@ describe('animateLayout mixin', () => {
       .mockReturnValueOnce(createRect(10, 10, 100, 100))
 
     root.render(<div mix={[animateLayout()]} />)
-    flushTwice(root)
+    root.flush()
 
     expect(animateSpy).toHaveBeenCalledTimes(0)
   })
