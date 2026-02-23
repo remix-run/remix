@@ -1,189 +1,131 @@
-# Reconciler Architecture
+# Reconciler Architecture (Current Runtime)
 
-This document describes the intended architecture for `packages/reconciler` as a design target for a new branch rewrite.
+This document is a practical guide for coding agents and contributors working on
+`packages/reconciler` today.
 
-The primary motivations are:
+> Note: older proposal terms like `routing`, `mountHost`, `commitHost`,
+> `unmountHost`, and `branch()` are not current APIs.
 
-- **Modularity**: behavior is composed from plugins rather than a monolithic reconciler.
-- **Encapsulation**: each feature owns its own state, lifecycle, and cleanup.
-- **Performance**: hot paths avoid unnecessary work, especially allocations and host setup for non-participating nodes.
+## Source of Truth
 
-## Design Goals
+When docs and code disagree, trust these files:
 
-- Keep the reconciler focused on tree diffing, node lifecycle, and scheduling.
-- Keep host semantics in the node policy and plugins, not in reconciler conditionals.
-- Make plugin participation explicit and lazy:
-  - no host plugin setup for nodes that do not match.
-  - no per-node feature state allocations until a plugin is active for that node.
-- Ensure deterministic cleanup when participation ends or a node unmounts.
-- Preserve a small, ergonomic authoring surface for plugin writers.
+- `packages/reconciler/src/lib/types.ts`
+- `packages/reconciler/src/lib/root.ts`
+- `packages/reconciler/src/lib/mix-plugin.ts`
 
-## Non-Goals
+## Core Responsibilities
 
-- Recreating a centralized monolith of feature conditionals in the reconciler.
-- Forcing shared semantic operations across policies (plugins can perform direct host work).
-- Eagerly allocating feature-specific state for all nodes.
+The reconciler owns:
 
-## Core API Surface
+- render normalization and tree diffing
+- keyed/unkeyed child reconciliation
+- component setup/render/update lifecycle
+- plugin lifecycle dispatch (`setup`, `commit`, `remove`)
+- scheduling and task flushing (`update`, `queueTask`)
+- root lifecycle events (`beforeCommit`, `afterCommit`, `error`)
 
-## `createReconciler(...)`
+Host/platform-specific behavior stays in `NodePolicy`.
 
-`createReconciler` constructs a reconciler instance from:
+Separation of concerns:
 
-- a **node policy** (host operations),
-- a list of **plugins** (feature modules).
+- plugins provide policy semantics (how host props/lifecycle are interpreted)
+- mixins are composable behavior units for both library/platform code and application code
 
-At runtime it returns root objects that can render, flush, remove, and dispose.
+## Runtime Shapes
 
-Responsibilities:
+### `createReconciler({ policy, plugins })`
 
-- schedule and execute reconciliation work,
-- diff and patch child trees,
-- invoke plugin host lifecycles in a stable order,
-- route all host operations through the node policy,
-- report errors with context (phase, root, plugin/node metadata).
+Creates a reconciler instance from:
 
-## Node Policy
+- `policy: NodePolicy<...>`
+- `plugins?: PluginDefinition<any>[]`
 
-The node policy is the host abstraction layer. It defines how the reconciler reads and mutates the host tree.
+### `ReconcilerRoot`
 
-Expected operations include:
+`createRoot(container)` returns an `EventTarget` with:
 
-- structure traversal (`begin`, `enter`, `firstChild`, `nextSibling`),
-- placement (`insert`, `move`, `remove`),
-- node resolution (`resolveElement`, `resolveText`).
+- `render(value)`
+- `flush()`
+- `remove()`
+- `dispose()`
 
-Principles:
+Error handling is event-based:
 
-- policy methods are minimal, predictable primitives,
-- reconciler does not embed DOM-specific behavior,
-- plugins can use direct host node operations in `commit` where appropriate.
+- root dispatches `ReconcilerErrorEvent` with `event.cause`
 
-## `definePlugin(...)`
+## Plugin Model
 
-`definePlugin` is the authoring entrypoint for modular behavior.
+Plugins are defined with `definePlugin(...)` and run in two scopes:
 
-Conceptually, a plugin declares:
+1. **Root scope** (optional): `definePlugin((root) => ({ ...plugin }))`
+   - register root listeners via `root.addEventListener(...)`
+2. **Node scope**: `setup(handle)` returns `PluginNodeScope`
+   - `commit(event)` runs each host commit while active
+   - `remove()` runs when plugin deactivates or host unmounts
 
-- **phase**: `'special' | 'terminal'`
-- **priority**: deterministic intra-phase ordering
-- **routing hints**: key-based candidate routing for fast participation checks
-- **slot lifecycle**: mount/commit/unmount host participation without per-host closures
-
-## Plugin API Shape
-
-The target plugin shape is:
+Current plugin contract:
 
 - `phase: 'special' | 'terminal'`
 - `priority?: number`
-- `routing?: { keys?: string[] }`
-- `shouldActivate?(context)` optional participation gate
-- `mountHost?(context)` lazy slot allocation for host-local state
-- `commitHost?(context, slot)` operational hot path for active hosts
-- `unmountHost?(context, slot)` deterministic teardown when participation ends/unmounts
+- `keys?: string[]`
+- `shouldActivate?(context)`
+- `setup?(handle) => void | { commit?, remove? }`
 
-Design intent:
+### Commit mutation model
 
-- routing makes candidate selection cheap and explicit,
-- mount/commit/unmount avoids per-host closure/object churn,
-- active slots are tracked by plugin id for O(active) teardown,
-- plugins consume props through context helpers (`consume`, `isConsumed`, `remainingPropsView`) instead of mutating `input.props`.
+`commit(event)` receives `PluginCommitEvent`, which exposes:
 
-## Lifecycle Model
+- `event.delta`
+- `event.consume(key)`
+- `event.isConsumed(key)`
+- `event.remainingPropsView()`
+- `event.replaceProps(nextProps)`
 
-For a host node over time:
+There is no `mergeProps` API.
 
-1. Reconciler builds host input (`props`, `propKeys`, children).
-2. Route table selects candidate `special` plugins from key hints.
-3. If no candidates and no active slots, reconciler takes a zero-allocation fast path.
-4. Candidate plugins evaluate `shouldActivate` and lazily `mountHost` when needed.
-5. Active plugins run `commitHost`.
-6. `special` phase records consumed props; terminal behavior reads the remaining props view.
-7. If participation ends, `unmountHost` runs and slot state is released.
-8. On host unmount, active slots are torn down in deterministic order.
+## Mixin Model
 
-This model preserves plugin encapsulation while keeping inactive features near-zero cost.
+Mixins are implemented by `mixPlugin` and authored with `createMixin(...)`.
 
-## Performance Strategy
+Mixin scope model:
 
-Performance is a first-class architectural concern, not a later optimization pass.
+1. factory: `createMixin((handle, type) => renderFn)`
+2. render: `renderFn(...args, props) => <handle.element ... />`
+3. lifecycle: `handle` emits `commit`/`remove`
 
-### Participation-First Execution
+Important guarantees:
 
-- Fast rejection for non-participating hosts via route-table key hints.
-- No slot allocation unless participation is active.
-- No plugin-local per-host closure allocation for hosts that do not use that feature.
+- mixins compose in order via `props.mix`
+- each mixin receives current composed props
+- final mixin output determines final host props
+- `handle.queueTask((node, signal) => ...)` receives materialized host node
 
-### Allocation Discipline
+## NodePolicy Contract
 
-- Reuse buffers and state where possible in reconciler internals.
-- Avoid creating wrapper objects in hot loops when stable structures can be reused.
-- Keep data flow linear and branch-light in commit paths.
+A policy implements host operations used by reconciliation:
 
-### Plugin Isolation Without Runtime Tax
+- node creation/text updates: `createElement`, `createText`, `setText`
+- traversal/introspection: `getParent`, `getType`, `firstChild`, `nextSibling`
+- placement/removal: `insert`, `move`, `remove`
+- optional preprocessing: `prepareHostMount`
 
-- Modular plugins should not imply "all plugins run on all nodes."
-- Dispatch checks only routed candidates plus currently-active slots.
-- Active slot instances are tracked explicitly for O(active) cleanup.
+Keep policy methods deterministic and host-focused.
 
-## Ordering and Determinism
+## Performance Notes
 
-- Plugin declaration order defines execution order for matching plugins.
-- Cleanup ordering is deterministic and stable across updates.
-- Transition rules (inactive -> active, active -> inactive, unmount) are explicit and testable.
+The current runtime optimizes for:
 
-## Error Handling
+- key-based plugin candidate routing (`keys`)
+- lazy plugin setup per host only when active
+- deterministic teardown of active plugin scopes
+- batched scheduler flush behavior
 
-- Errors are surfaced with phase context (reconcile/plugin/root task lifecycle).
-- Plugin failures should isolate to the failing phase and preserve debuggability.
-- Root-level event hooks (`beforeCommit`, `afterCommit`) remain available for instrumentation and orchestration.
+## Agent Guidelines
 
-## Why This Shape
+When generating code:
 
-This architecture preserves the plugin ergonomics that make feature work pleasant:
-
-- clear scope boundaries,
-- feature-local state and lifecycle,
-- composability without spreading conditionals across reconciler internals.
-
-At the same time, it addresses the key performance requirement:
-
-- if a host is not participating in a feature, the runtime should do as close to **nothing** as possible for that feature (no setup, no state allocation, no teardown bookkeeping).
-
----
-
-Example plugins:
-
-### `special` plugin with consumed props
-
-```ts
-let specialPlugin = definePlugin({
-  phase: 'special',
-  priority: 0,
-  routing: { keys: ['style', 'connect'] },
-  shouldActivate(context) {
-    return 'style' in context.input.props || 'connect' in context.input.props
-  },
-  mountHost() {
-    return { mounted: true }
-  },
-  commitHost(context) {
-    if ('style' in context.input.props) context.consume('style')
-    if ('connect' in context.input.props) context.consume('connect')
-  },
-  unmountHost() {},
-})
-```
-
-### `terminal` plugin with remaining props
-
-```ts
-let terminalPlugin = definePlugin({
-  phase: 'terminal',
-  priority: 0,
-  commitHost(context) {
-    let props = context.remainingPropsView()
-    // apply fallback props here in deterministic order
-  },
-})
-```
+1. For app behavior, use components + mixins first; for policy semantics, use plugins.
+2. Prefer explicit lifecycle handling (`commit`/`remove`, root events) over ad-hoc state mutation.
+3. Use `replaceProps` + explicit object spreads when you need merge semantics.
+4. Write behavior-first tests through public APIs; avoid internal-state coupling.

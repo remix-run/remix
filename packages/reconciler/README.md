@@ -4,25 +4,41 @@ A plugin-driven reconciler runtime with a strict separation of responsibilities:
 
 - the reconciler owns tree diffing and scheduling
 - policies own platform-specific node operations
-- plugins own behavior and feature composition
+- plugins define semantic interpretation for policy-backed host nodes
+- mixins provide composable behavior for both platform packages and application code
 
 This package is platform-agnostic by design and currently ships with testing helpers
 (`TestNodePolicy` and a testing JSX runtime).
 
+## Agent-first orientation
+
+If you are generating code:
+
+1. Treat these files as source of truth over prose examples:
+   - `packages/reconciler/src/lib/types.ts`
+   - `packages/reconciler/src/lib/root.ts`
+   - `packages/reconciler/src/lib/mix-plugin.ts`
+2. Prefer small, composable plugins and mixins over adding feature logic to reconciler core.
+3. Keep application behavior in components/mixins; reserve plugins for policy semantics.
+4. Keep host/platform behavior in `NodePolicy`, not in generic reconciler code.
+
 ## Design overview
 
-### `createReconciler(nodePolicy, plugins)`
+### `createReconciler({ policy, plugins })`
 
 Creates a reconciler instance from:
 
-- a `NodePolicy` implementation (platform adapter)
-- a plugin pipeline (feature layer)
+- a `NodePolicy` implementation (`policy`) for host operations
+- an optional plugin pipeline (`plugins`) that gives meaning to host props for that policy
 - an internal runtime and scheduler
 
 ```ts
 import { createReconciler } from '@remix-run/reconciler'
 
-let reconciler = createReconciler(myNodePolicy, [myPlugin])
+let reconciler = createReconciler({
+  policy: myNodePolicy,
+  plugins: [myPlugin],
+})
 ```
 
 ### `createRoot(container)`
@@ -30,17 +46,13 @@ let reconciler = createReconciler(myNodePolicy, [myPlugin])
 Returns a root `EventTarget` with:
 
 - `render(renderable)` to schedule work
-- `branch(container)` to create a child root anchored to this root
 - `flush()` to force a sync flush
 - `remove()` to remove rendered content
 - `dispose()` to remove content and stop scheduling
 
 ```ts
 let root = reconciler.createRoot(container)
-let nested = root.branch(nestedContainer)
-
 root.render(<app>Hello</app>)
-nested.render(<panel>Hi</panel>)
 root.flush()
 ```
 
@@ -68,35 +80,7 @@ Component recursion is reconciler-owned. By the time plugins run, node input has
 already been resolved to host elements.
 
 Plugins should stay small and composable. The reconciler core should remain feature-agnostic.
-
-### Built-in `use` directives
-
-`usePlugin()` provides a small directive system you can reuse across platforms. A
-directive has three scopes:
-
-- plugin scope (created once per plugin instance)
-- host scope (created once per mounted host node)
-- render scope (called every render with directive args)
-
-```ts
-import { createDirective, usePlugin } from '@remix-run/reconciler'
-
-let focus = createDirective((_plugin) => (host) => (enabled: boolean) => {
-  if (!enabled) return
-  host.queueTask((node) => {
-    if ('focus' in (node as object)) {
-      ;(node as { focus?: () => void }).focus?.()
-    }
-  })
-})
-```
-
-Use it from host props with `use={[...]}`:
-
-```ts
-let reconciler = createReconciler(nodePolicy, [usePlugin(), myPropsPlugin])
-root.render(<input use={[focus(true)]} />)
-```
+Plugins are policy-level semantics, not application-level feature modules.
 
 ### Creating mixins
 
@@ -116,19 +100,14 @@ let appendClass = createMixin<[name: string], EventTarget>((handle, _type) => {
   return (name, currentProps) => {
     let current = typeof currentProps.className === 'string' ? currentProps.className : ''
     let className = current ? `${current} ${name}` : name
-    return {
-      $rmx: true,
-      type: handle.element,
-      key: null,
-      props: {
-        ...currentProps,
-        className,
-      },
-    }
+    return <handle.element {...currentProps} className={className} />
   }
 })
 
-let reconciler = createReconciler(nodePolicy, [mixPlugin, myPropsPlugin])
+let reconciler = createReconciler({
+  policy: nodePolicy,
+  plugins: [mixPlugin, myPropsPlugin],
+})
 let root = reconciler.createRoot(container)
 root.render(<button mix={[appendClass('primary')]} />)
 ```
@@ -151,7 +130,7 @@ root tasks, and host tasks).
 ```ts
 root.addEventListener('error', (event) => {
   let reconcilerError = event as ReconcilerErrorEvent
-  console.error(reconcilerError.context.phase, reconcilerError.error)
+  console.error(reconcilerError.cause)
 })
 ```
 
@@ -166,21 +145,43 @@ A `NodePolicy` is the platform adapter. It defines how the reconciler reads and 
 
 Implement these capabilities:
 
-- tree operations: `insert`, `move`, `remove`
-- traversal: `begin`, `enter`, `firstChild`, `nextSibling`
-- node materialization: `resolveText`, `resolveElement`
+- host creation: `createElement`, `createText`, `setText`
+- host traversal/introspection: `getParent`, `getType`, `firstChild`, `nextSibling`
+- host mutations: `insert`, `move`, `remove`
+- optional mount preprocessing: `prepareHostMount`
 
 ```ts
 let nodePolicy = {
-  resolveText(_parent, traversal, value) {
-    // reuse from traversal when possible; otherwise create a text node
-    return { node: createText(value), next: traversal }
+  createText(value) {
+    return document.createTextNode(value)
   },
-  resolveElement(_parent, traversal, type) {
-    // reuse from traversal when possible; otherwise create an element node
-    return { node: createElement(type), next: traversal }
+  setText(node, value) {
+    node.nodeValue = value
   },
-  // plus traversal and insert/move/remove methods
+  createElement(_parent, type) {
+    return document.createElement(type)
+  },
+  getType(node) {
+    return node.tagName.toLowerCase()
+  },
+  getParent(node) {
+    return node.parentNode
+  },
+  firstChild(parent) {
+    return parent.firstChild
+  },
+  nextSibling(node) {
+    return node.nextSibling
+  },
+  insert(parent, node, anchor) {
+    parent.insertBefore(node, anchor)
+  },
+  move(parent, node, anchor) {
+    parent.insertBefore(node, anchor)
+  },
+  remove(parent, node) {
+    parent.removeChild(node)
+  },
 }
 ```
 
@@ -192,6 +193,8 @@ Guidelines:
 
 ## Writing plugins
 
+Plugins are intended to define **policy semantics** (for example, how a host prop is interpreted
+for a given node policy). They are not the primary app-layer extension surface.
 A plugin uses three intentional scopes:
 
 - root scope: `definePlugin(root => ({ ... }))` (runs once when the reconciler is created)
@@ -241,6 +244,7 @@ Guidelines:
 - treat `commit(event)` as a snapshot; mutate via explicit methods (`replaceProps`, `consume`)
 - use `handle.queueTask((node, signal) => ...)` for post-commit imperative work
 - use `remove()` for node teardown, and root events for global lifecycle behavior
+- do not put application-specific feature logic in plugins; encode app behavior in components/mixins
 
 ## Minimal flow
 
