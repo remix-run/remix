@@ -16,38 +16,12 @@ export type DispatchedEvent<event extends Event, node extends EventTarget> = eve
   currentTarget: node
 }
 
-type EventMap<node extends EventTarget> = node extends HTMLElement
-  ? HTMLElementEventMap
-  : node extends SVGSVGElement
-    ? SVGSVGElementEventMap
-    : node extends SVGElement
-      ? SVGElementEventMap
-      : node extends Element
-        ? ElementEventMap
-        : node extends Window
-          ? WindowEventMap
-          : node extends Document
-            ? DocumentEventMap
-            : GlobalEventHandlersEventMap & Record<string, Event>
-
-export type OnValue<node extends EventTarget> = {
-  [type in Extract<keyof EventMap<node>, string>]?: (
-    event: DispatchedEvent<EventMap<node>[type] extends Event ? EventMap<node>[type] : Event, node>,
-  ) => void
-} & {
-  [type: string]: (event: DispatchedEvent<any, node>) => void
-}
-
-export type ConnectValue<node extends EventTarget> = (node: node, signal: AbortSignal) => void
-
 export type { MixValue, MixinDescriptor, MixinType } from '@remix-run/reconciler'
 
 export type DomElementProps<node extends EventTarget> = {
   children?: RenderValue
-  connect?: ConnectValue<node>
   innerHTML?: string | null
   key?: unknown
-  on?: OnValue<node>
   style?: Record<string, string | number | null | undefined>
   mix?: MixValue<node>
 } & Record<string, unknown>

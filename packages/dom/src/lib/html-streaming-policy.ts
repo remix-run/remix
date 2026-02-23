@@ -178,14 +178,7 @@ function serializeAttributes(props: Record<string, unknown>) {
 }
 
 function isFrameworkProp(name: string) {
-  return (
-    name === 'children' ||
-    name === 'key' ||
-    name === 'on' ||
-    name === 'connect' ||
-    name === 'mix' ||
-    name === 'fallback'
-  )
+  return name === 'children' || name === 'key' || name === 'mix' || name === 'fallback'
 }
 
 function isHeadManagedElement(type: string, props: Record<string, unknown>) {

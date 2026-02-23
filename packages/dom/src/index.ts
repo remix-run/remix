@@ -20,14 +20,12 @@ export { Fragment, jsx, jsxs } from './jsx-runtime.ts'
 export { jsxDEV } from './jsx-dev-runtime.ts'
 
 export type {
-  ConnectValue,
   DomElementProps,
   DomHTMLElements,
   DomJsxElement,
   DomMathMLElements,
   DomSVGElements,
   DispatchedEvent,
-  OnValue,
   MixValue,
   MixinDescriptor,
   MixinType,

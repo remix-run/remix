@@ -135,6 +135,105 @@ describe('renderToHTMLStream', () => {
     )
     expect(html).toContain('"src":"/meta"')
   })
+
+  it('omits metadata script when there are no frames', async () => {
+    let html = await readStream(renderToHTMLStream(<main>plain</main>))
+    expect(html.includes('id="rmx-data"')).toBe(false)
+  })
+
+  it('marks frame metadata as resolved when no fallback is provided', async () => {
+    let html = await readStream(
+      renderToHTMLStream(<frame src="/resolved" />, {
+        resolveFrame: async () => '<div>resolved</div>',
+      }),
+    )
+    expect(html).toContain('"status":"resolved"')
+    expect(html).toContain('"src":"/resolved"')
+  })
+
+  it('handles frame boundaries without resolveFrame', async () => {
+    let html = await readStream(renderToHTMLStream(<frame src="/x" fallback={<i>f</i>} />))
+    expect(html).toContain('<!-- f:')
+    expect(html).toContain('<i>f</i>')
+    expect(html.includes('<template id=')).toBe(false)
+  })
+
+  it('supports resolveFrame returning Uint8Array', async () => {
+    let html = await readStream(
+      renderToHTMLStream(<frame src="/u8" fallback={'wait'} />, {
+        resolveFrame: async () => new TextEncoder().encode('<b>u8</b>'),
+      }),
+    )
+    expect(html).toContain('<template id="')
+    expect(html).toContain('<b>u8</b>')
+  })
+
+  it('supports resolveFrame returning ReadableStream and escapes template closers', async () => {
+    let bytes = new TextEncoder().encode('<div>x</div></template><div>y</div>')
+    let streamValue = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes.slice(0, 7))
+        controller.enqueue(bytes.slice(7))
+        controller.close()
+      },
+    })
+    let html = await readStream(
+      renderToHTMLStream(<frame src="/stream" fallback={'wait'} />, {
+        resolveFrame: async () => streamValue,
+      }),
+    )
+    expect(html).toContain('<template id="')
+    expect(html).toContain('<\\/template>')
+  })
+
+  it('throws when frame src is not a string', async () => {
+    let stream = renderToHTMLStream(<frame src={123 as any} fallback={'x'} />)
+    await expect(readStream(stream)).rejects.toThrow('<frame> requires a "src" string prop')
+  })
+
+  it('honors already-aborted signal before streaming starts', async () => {
+    let controller = new AbortController()
+    controller.abort(new Error('already stopped'))
+    let stream = renderToHTMLStream(<frame src="/x" fallback={'wait'} />, {
+      signal: controller.signal,
+      resolveFrame: async () => '<div>late</div>',
+    })
+    await expect(readStream(stream)).rejects.toThrow('already stopped')
+  })
+
+  it('consumes framework-only props and normalizes style variants', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <main>
+          <div
+            mix={{} as any}
+            style={{ '--x': 1, color: 'red', width: Infinity as any } as any}
+          />
+          <p style={'display:block' as any} />
+          <span style={123 as any} />
+        </main>,
+      ),
+    )
+    expect(html).toContain('<div style="--x:1;color:red"></div>')
+    expect(html).toContain('<p style="display:block"></p>')
+    expect(html).toContain('<span></span>')
+    expect(html.includes(' mix=')).toBe(false)
+  })
+
+  it('hoists managed script tags and keeps non-managed scripts inline', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <html>
+          <body>
+            <script type="application/ld+json">{'{"a":1}'}</script>
+            <script type="module">{'console.log(1)'}</script>
+          </body>
+        </html>,
+      ),
+    )
+    expect(html).toContain('<head><script type="application/ld+json">{"a":1}</script></head>')
+    expect(html).toContain('<script type="module">console.log(1)</script>')
+  })
 })
 
 async function readStream(stream: ReadableStream<Uint8Array>) {

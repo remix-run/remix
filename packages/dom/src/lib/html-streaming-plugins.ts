@@ -8,17 +8,15 @@ export function createHtmlStreamingPlugins(): StreamingPluginDefinition[] {
 let frameworkPropsStreamingPlugin = defineStreamingPlugin({
   phase: 'special',
   priority: -10,
-  keys: ['children', 'key', 'on', 'connect', 'mix'],
+  keys: ['children', 'key', 'mix'],
   shouldActivate(context) {
     let props = context.delta.nextProps
-    return 'on' in props || 'connect' in props || 'mix' in props
+    return 'mix' in props
   },
   setup() {
     return {
       commit(context) {
         let props = context.remainingPropsView()
-        if ('on' in props) delete props.on
-        if ('connect' in props) delete props.connect
         if ('mix' in props) delete props.mix
         context.replaceProps(props)
       },

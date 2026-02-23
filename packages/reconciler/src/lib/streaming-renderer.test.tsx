@@ -114,4 +114,168 @@ describe('createStreamingRenderer', () => {
     }
     assert.equal(chunks.join(''), '<x>y</x>')
   })
+
+  it('supports boundaries and deferred chunks', async () => {
+    let renderer = createStreamingRenderer({
+      policy: {
+        resolveBoundary(input) {
+          if (input.type !== 'frame') return null
+          return {
+            open: '<b-open>',
+            fallback: input.props.fallback as any,
+            close: '</b-close>',
+            deferred: Promise.resolve('<b-deferred/>'),
+          }
+        },
+        beginElement(input) {
+          return { state: { type: input.type }, open: `<${input.type}>` }
+        },
+        text(value) {
+          return value
+        },
+        endElement(state) {
+          return `</${state.type}>`
+        },
+      },
+    })
+    let html = await renderer
+      .createRoot(
+        <root>
+          <frame fallback={<p>wait</p>} />
+        </root>,
+      )
+      .toString()
+    assert.equal(html, '<root><b-open><p>wait</p></b-close></root><b-deferred/>')
+  })
+
+  it('reports deferred chunk errors', async () => {
+    let renderer = createStreamingRenderer({
+      policy: {
+        resolveBoundary(input) {
+          if (input.type !== 'frame') return null
+          return {
+            open: '<start>',
+            close: '</end>',
+            deferred: Promise.reject(new Error('deferred boom')),
+          }
+        },
+        beginElement(input) {
+          return { state: { type: input.type }, open: `<${input.type}>` }
+        },
+        text(value) {
+          return value
+        },
+        endElement(state) {
+          return `</${state.type}>`
+        },
+      },
+    })
+    let root = renderer.createRoot(<frame />)
+    await assert.rejects(() => root.toString(), /deferred boom/)
+  })
+
+  it('supports iterable and async iterable chunk outputs', async () => {
+    let renderer = createStreamingRenderer<string, void, ElementState>({
+      policy: {
+        beginElement(input) {
+          async function* asyncClose() {
+            yield `</${input.type}`
+            yield '>'
+          }
+          return {
+            state: { type: input.type },
+            open: [`<${input.type}`, '>'],
+            body: asyncClose(),
+            skipChildren: true,
+          }
+        },
+        text(value) {
+          return value
+        },
+        endElement() {
+          return undefined
+        },
+      },
+    })
+    let html = await renderer.createRoot(<x />).toString()
+    assert.equal(html, '<x></x>')
+  })
+
+  it('supports Uint8Array chunk output and decoding in toString', async () => {
+    let encoder = new TextEncoder()
+    let renderer = createStreamingRenderer<Uint8Array, void, ElementState>({
+      policy: {
+        beginElement(input) {
+          return {
+            state: { type: input.type },
+            open: encoder.encode(`<${input.type}>`),
+          }
+        },
+        text(value) {
+          return encoder.encode(value)
+        },
+        endElement(state) {
+          return encoder.encode(`</${state.type}>`)
+        },
+      },
+    })
+    let html = await renderer.createRoot(<u8>ok</u8>).toString()
+    assert.equal(html, '<u8>ok</u8>')
+  })
+
+  it('aborts while beginRoot is pending', async () => {
+    let resolveRoot = () => {}
+    let beginRootPending = new Promise<void>((resolve) => {
+      resolveRoot = resolve
+    })
+    let renderer = createStreamingRenderer({
+      policy: {
+        async beginRoot() {
+          await beginRootPending
+        },
+        beginElement(input) {
+          return { state: { type: input.type }, open: `<${input.type}>` }
+        },
+        text(value) {
+          return value
+        },
+        endElement(state) {
+          return `</${state.type}>`
+        },
+      },
+    })
+    let root = renderer.createRoot(<a />)
+    let pending = root.toString()
+    root.abort(new Error('aborted early'))
+    resolveRoot()
+    await assert.rejects(() => pending, /aborted early/)
+  })
+
+  it('supports plugin factories and non-activating plugins', async () => {
+    let activated = 0
+    let removed = 0
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+      plugins: [
+        () => ({
+          phase: 'special',
+          shouldActivate() {
+            return false
+          },
+          setup() {
+            activated++
+            return {
+              remove() {
+                removed++
+              },
+            }
+          },
+        }),
+      ],
+    })
+    let html = await renderer.createRoot(<x value="1" />).toString()
+    assert.equal(html, '<x value="1"></x>')
+    assert.equal(activated, 0)
+    assert.equal(removed, 0)
+  })
 })

@@ -87,15 +87,6 @@ let missingWithoutSetupProps = <WithoutSetupComponent />
 let goodStyleProp = <div style={{ color: 'red' }} />
 let goodDataAttribute = <div data-id="x" />
 
-let goodConnectProp = (
-  <button
-    connect={(node, signal) => {
-      type nodeType = Assert<IsEqual<typeof node, HTMLButtonElement>>
-      type signalType = Assert<IsEqual<typeof signal, AbortSignal>>
-    }}
-  />
-)
-
 let goodOnMixin = (
   <button
     mix={[
@@ -139,7 +130,6 @@ void badWithoutSetupValue
 void missingWithoutSetupProps
 void goodStyleProp
 void goodDataAttribute
-void goodConnectProp
 void goodOnMixin
 void goodOnMixinInput
 void badOnMixin
