@@ -137,6 +137,49 @@ describe('animateLayout mixin', () => {
 
     expect(animateSpy).toHaveBeenCalledTimes(0)
   })
+
+  it('animates with translate-only transform when scale cannot be computed', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+
+    root.render(<div mix={[animateLayout()]} />)
+    root.flush()
+
+    let node = container.firstElementChild as HTMLElement
+    let animation = createAnimation()
+    let animateSpy = vi.fn(() => animation)
+    node.animate = animateSpy
+
+    vi.spyOn(node, 'getBoundingClientRect')
+      .mockReturnValueOnce(createRect(0, 0, 0, 0))
+      .mockReturnValueOnce(createRect(20, 10, 100, 100))
+
+    root.render(<div mix={[animateLayout()]} />)
+    root.flush()
+
+    expect(animateSpy).toHaveBeenCalledTimes(1)
+    let calls = animateSpy.mock.calls as unknown as unknown[][]
+    let keyframes = calls[0]?.[0] as Keyframe[] | undefined
+    if (!keyframes) {
+      throw new Error('expected animate keyframes')
+    }
+    expect(keyframes[0]?.transform).toBe('translate(-20px, -10px)')
+  })
+
+  it('skips animation when mixed onto non-HTMLElement nodes', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(() => createAnimation())
+
+    root.render(<svg mix={[animateLayout() as any]} />)
+    root.flush()
+    root.render(<svg mix={[animateLayout() as any]} />)
+    root.flush()
+
+    expect(animateSpy).toHaveBeenCalledTimes(0)
+  })
 })
 
 function createAnimation(): MockAnimation {

@@ -221,6 +221,55 @@ describe('animate presence mixins', () => {
 
     expect(animateSpy).toHaveBeenCalledTimes(1)
   })
+
+  it('supports array keyframes and numeric options for entrance', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+    let animation = createAnimation()
+    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(() => animation)
+
+    root.render(
+      <div
+        mix={[
+          animateEntrance({
+            keyframes: [{ opacity: 0, transform: 'scale(0.8)' }, { opacity: 1 }],
+            options: 120,
+          }),
+        ]}
+      />,
+    )
+    root.flush()
+
+    expect(animateSpy).toHaveBeenCalledTimes(1)
+    let keyframes = (animateSpy.mock.calls[0]?.[0] ?? []) as Keyframe[]
+    let options = animateSpy.mock.calls[0]?.[1] as number
+    expect(keyframes[0]).toMatchObject({ opacity: 0, transform: 'scale(0.8)' })
+    expect(options).toBe(120)
+  })
+
+  it('falls back to default keyframes for invalid definitions', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+    let animation = createAnimation()
+    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(() => animation)
+
+    root.render(
+      <div
+        mix={[
+          animateEntrance({
+            keyframes: 'bad' as any,
+          }),
+        ]}
+      />,
+    )
+    root.flush()
+
+    let keyframes = (animateSpy.mock.calls[0]?.[0] ?? []) as Keyframe[]
+    expect(keyframes[0]).toMatchObject({ opacity: 0 })
+  })
+
 })
 
 function createAnimation() {

@@ -122,7 +122,7 @@ describe('createStreamingRenderer', () => {
           if (input.type !== 'frame') return null
           return {
             open: '<b-open>',
-            fallback: input.props.fallback as any,
+            content: input.props.fallback as any,
             close: '</b-close>',
             deferred: Promise.resolve('<b-deferred/>'),
           }
@@ -277,5 +277,54 @@ describe('createStreamingRenderer', () => {
     assert.equal(html, '<x value="1"></x>')
     assert.equal(activated, 0)
     assert.equal(removed, 0)
+  })
+
+  it('allows plugin factories to use empty streaming root facade', async () => {
+    let seen = {
+      toString: '',
+      streamIsReadable: false,
+    }
+    let pendingToString: null | Promise<void> = null
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+      plugins: [
+        (pluginRoot) => {
+          let reader = pluginRoot.root.stream().getReader()
+          seen.streamIsReadable = typeof reader.read === 'function'
+          pendingToString = pluginRoot.root.toString().then((value) => {
+            seen.toString = value
+          })
+          return {
+            phase: 'special',
+          }
+        },
+      ],
+    })
+    await renderer.createRoot(<x>y</x>).toString()
+    await pendingToString
+    assert.equal(seen.streamIsReadable, true)
+    assert.equal(seen.toString, '')
+  })
+
+  it('decodes mixed Uint8Array and string chunk outputs', async () => {
+    let encoder = new TextEncoder()
+    let renderer = createStreamingRenderer<Uint8Array | string, void, ElementState>({
+      policy: {
+        beginElement(input) {
+          return {
+            state: { type: input.type },
+            open: [encoder.encode(`<${input.type}>`), ''],
+          }
+        },
+        text(value) {
+          return value
+        },
+        endElement(state) {
+          return [encoder.encode(`</${state.type}>`), '']
+        },
+      },
+    })
+    let html = await renderer.createRoot(<m>ok</m>).toString()
+    assert.equal(html, '<m>ok</m>')
   })
 })
