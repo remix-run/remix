@@ -5,6 +5,7 @@ import {
   StreamingErrorEvent,
 } from './types.ts'
 import type {
+  ComponentHandle,
   Component,
   PreparedStreamingPlugin,
   ReconcilerElement,
@@ -22,7 +23,6 @@ import type {
   StreamingRenderValue,
   StreamingRenderer,
   StreamingRendererRoot,
-  UpdateHandle,
 } from './types.ts'
 
 type PreparedStreamingPlugins = {
@@ -41,6 +41,7 @@ type StreamingRootState<chunk, rootContext, elementState> = {
   rootContext: rootContext
   started: boolean
   nodeId: number
+  componentId: number
   onError: (error: unknown) => void
   policy: StreamingPolicy<chunk, rootContext, elementState>
 }
@@ -84,6 +85,7 @@ function createStreamingRoot<chunk, rootContext, elementState>(
     rootContext: undefined as rootContext,
     started: false,
     nodeId: 1,
+          componentId: 1,
     onError(error) {
       let err = error instanceof Error ? error : new Error(String(error))
       console.error(err)
@@ -189,7 +191,11 @@ async function emitValue<chunk, rootContext, elementState>(
       props = { ...props }
       delete props.setup
     }
-    let handle = createComponentUpdateHandle(state.abortController.signal, state.tasks)
+    let handle = createComponentUpdateHandle(
+      `c${state.componentId++}`,
+      state.abortController.signal,
+      state.tasks,
+    )
     let render = (value.type as Component<any, any, StreamingRenderValue>)(handle, setup)
     let rendered = render(props)
     await emitValue(rendered, controller, root, state, plugins)
@@ -380,8 +386,13 @@ function teardownHostPlugins(host: StreamingHostNode) {
   host.activePluginIds = []
 }
 
-function createComponentUpdateHandle(signal: AbortSignal, tasks: RootTask[]): UpdateHandle {
+function createComponentUpdateHandle(
+  id: string,
+  signal: AbortSignal,
+  tasks: RootTask[],
+): ComponentHandle {
   return {
+    id,
     update: async () => signal,
     queueTask(task) {
       tasks.push(task)

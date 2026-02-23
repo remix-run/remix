@@ -13,6 +13,7 @@ import {
   ReconcilerErrorEvent,
 } from './types.ts'
 import type {
+  ComponentHandle,
   CommittedComponentNode,
   CommittedHostNode,
   CommittedNode,
@@ -34,7 +35,6 @@ import type {
   RenderNode,
   RenderValue,
   RootTask,
-  UpdateHandle,
 } from './types.ts'
 
 type RootState<parent, node, text extends node, element extends node> = {
@@ -97,6 +97,7 @@ export function createReconciler<parent, node, text extends node, element extend
   let plugins = preparePlugins(materializePlugins(options.plugins ?? [], pluginRootHandle))
   let scheduler = createScheduler()
   let nextNodeId = 1
+  let nextComponentId = 1
   let candidateMarks = new Uint32Array(Math.max(plugins.all.length, 1))
   let candidateVersion = 1
 
@@ -507,7 +508,7 @@ export function createReconciler<parent, node, text extends node, element extend
     }
 
     let committed: CommittedComponentNode<parent, node, text, element>
-    let handle = createUpdateHandle(root, () => {
+    let handle = createUpdateHandle(root, `c${nextComponentId++}`, () => {
       committed.pendingUpdate = true
       root.dirtyNodeIds.add(committed.id)
       root.hasPendingComponentUpdate = true
@@ -539,9 +540,11 @@ export function createReconciler<parent, node, text extends node, element extend
 
   function createUpdateHandle(
     root: RootState<parent, node, text, element>,
+    id: string,
     markDirty: () => void,
-  ): UpdateHandle {
+  ): ComponentHandle {
     return {
+      id,
       update() {
         return new Promise((resolve) => {
           markDirty()

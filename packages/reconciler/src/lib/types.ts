@@ -5,12 +5,14 @@ export type UpdateHandle = {
   queueTask(task: RootTask): void
 }
 
-export type ComponentHandle = UpdateHandle
+export type ComponentHandle = UpdateHandle & {
+  id: string
+}
 
 export type HostTask<element> = (node: element, signal: AbortSignal) => void
 
 export type Component<setup, renderProps, renderValue> = (
-  handle: UpdateHandle,
+  handle: ComponentHandle,
   setup: setup,
 ) => (props: renderProps) => renderValue
 
@@ -180,7 +182,7 @@ export type CommittedComponentNode<parent, node, text extends node, element exte
   props: Record<string, unknown>
   pendingUpdate: boolean
   child: null | CommittedNode<parent, node, text, element>
-  handle: UpdateHandle
+  handle: ComponentHandle
 }
 
 export type CommittedNode<parent, node, text extends node, element extends node> =

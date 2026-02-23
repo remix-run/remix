@@ -9,6 +9,7 @@ export const Fragment = RECONCILER_FRAGMENT
 const EMPTY_CHILDREN: RenderValue[] = []
 
 export type ComponentHandle = {
+  id: string
   update(): Promise<AbortSignal>
   queueTask(task: (signal: AbortSignal) => void): void
 }

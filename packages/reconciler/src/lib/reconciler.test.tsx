@@ -58,6 +58,44 @@ describe('incremental reconciler validation', () => {
     assert.equal(root.inspect(), '<value>1</value>')
   })
 
+  it('exposes a stable component handle.id per instance', () => {
+    let setupIds: string[] = []
+    let renderIds: string[] = []
+    let triggerUpdate = () => {}
+    let Counter: Component<undefined, {}> = (handle) => {
+      setupIds.push(handle.id)
+      let count = 0
+      triggerUpdate = () => {
+        count++
+        handle.update()
+      }
+      return () => {
+        renderIds.push(handle.id)
+        return <value>{String(count)}</value>
+      }
+    }
+
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+    root.render(<Counter />)
+    root.flush()
+    triggerUpdate()
+    root.flush()
+
+    assert.equal(setupIds.length, 1)
+    assert.match(setupIds[0]!, /^c\d+$/)
+    assert.deepEqual(renderIds, [setupIds[0], setupIds[0]])
+
+    root.render(null)
+    root.flush()
+    root.render(<Counter />)
+    root.flush()
+
+    assert.equal(setupIds.length, 2)
+    assert.notEqual(setupIds[1], setupIds[0])
+    assert.equal(setupIds[1]!.startsWith('c'), true)
+  })
+
   it('propagates local component updates through stable ancestors', () => {
     let updateLeaf = () => {}
     let Leaf: Component<undefined, {}> = (handle) => {
