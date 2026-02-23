@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { clientEntry } from '../index.ts'
 import { renderToHTMLStream } from './render-to-html-stream.ts'
 
 describe('renderToHTMLStream', () => {
@@ -9,7 +10,9 @@ describe('renderToHTMLStream', () => {
       </main>,
     )
     let html = await readStream(stream)
-    expect(html).toBe('<main class="app" style="color:red;background-color:black">&lt;hello&gt;</main>')
+    expect(html).toBe(
+      '<main class="app" style="color:red;background-color:black">&lt;hello&gt;</main>',
+    )
   })
 
   it('supports raw innerHTML and void elements', async () => {
@@ -96,18 +99,15 @@ describe('renderToHTMLStream', () => {
       resolveFrameStarted = resolve
     })
     let abortController = new AbortController()
-    let stream = renderToHTMLStream(
-      <frame src="/x" fallback={'wait'} />,
-      {
-        signal: abortController.signal,
-        async resolveFrame(_src, signal) {
-          capturedSignal = signal
-          resolveFrameStarted()
-          await new Promise((resolve) => setTimeout(resolve, 0))
-          return '<div>late</div>'
-        },
+    let stream = renderToHTMLStream(<frame src="/x" fallback={'wait'} />, {
+      signal: abortController.signal,
+      async resolveFrame(_src, signal) {
+        capturedSignal = signal
+        resolveFrameStarted()
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        return '<div>late</div>'
       },
-    )
+    })
     let readPromise = readStream(stream)
     await frameStarted
     abortController.abort(new Error('cancel frame'))
@@ -130,9 +130,7 @@ describe('renderToHTMLStream', () => {
     )
     let html = await readStream(stream)
     expect(html).toContain('<head><title>From body</title></head>')
-    expect(html).toContain(
-      '<script type="application/json" id="rmx-data">{"f":{"',
-    )
+    expect(html).toContain('<script type="application/json" id="rmx-data">{"f":{"')
     expect(html).toContain('"src":"/meta"')
   })
 
@@ -205,10 +203,7 @@ describe('renderToHTMLStream', () => {
     let html = await readStream(
       renderToHTMLStream(
         <main>
-          <div
-            mix={{} as any}
-            style={{ '--x': 1, color: 'red', width: Infinity as any } as any}
-          />
+          <div mix={{} as any} style={{ '--x': 1, color: 'red', width: Infinity as any } as any} />
           <p style={'display:block' as any} />
           <span style={123 as any} />
         </main>,
@@ -234,6 +229,53 @@ describe('renderToHTMLStream', () => {
     expect(html).toContain('<head><script type="application/ld+json">{"a":1}</script></head>')
     expect(html).toContain('<script type="module">console.log(1)</script>')
   })
+
+  it('emits hydration markers and rmx-data.h for client entries', async () => {
+    let CounterEntry = clientEntry(
+      '/entries/counter.js#Counter',
+      () => (props: { label: string }) => <button>{props.label}</button>,
+    )
+    let html = await readStream(
+      renderToHTMLStream(
+        <main>
+          <CounterEntry label="hello" />
+        </main>,
+      ),
+    )
+    let hydrationId = html.match(/<!-- rmx:h:([^ ]+) -->/)?.[1]
+    if (!hydrationId) throw new Error('missing hydration marker')
+    expect(html).toContain(`<!-- rmx:h:${hydrationId} --><button>hello</button><!-- /rmx:h -->`)
+    expect(html).toContain(
+      `<script type="application/json" id="rmx-data">{"h":{"${hydrationId}":{"moduleUrl":"/entries/counter.js","exportName":"Counter","props":{"label":"hello"}}}}</script>`,
+    )
+  })
+
+  it('emits both h and f payloads when entries and frames coexist', async () => {
+    let ClientWidget = clientEntry('/entries/widget.js#Widget', () => () => <div>client</div>)
+    let html = await readStream(
+      renderToHTMLStream(
+        <main>
+          <ClientWidget />
+          <frame src="/sidebar" fallback={<p>loading</p>} />
+        </main>,
+        {
+          resolveFrame: async () => '<aside>done</aside>',
+        },
+      ),
+    )
+    expect(html).toContain('"h":{')
+    expect(html).toContain('"f":{')
+  })
+
+  it('escapes script-significant characters in hydration payload json', async () => {
+    let EscapeEntry = clientEntry('/entries/escape.js#Escape', () => (props: { text: string }) => (
+      <div>{props.text}</div>
+    ))
+    let html = await readStream(
+      renderToHTMLStream(<EscapeEntry text={'</script><x>'} />),
+    )
+    expect(html).toContain('\\u003c/script>\\u003cx>')
+  })
 })
 
 async function readStream(stream: ReadableStream<Uint8Array>) {
@@ -242,7 +284,10 @@ async function readStream(stream: ReadableStream<Uint8Array>) {
   return readRemaining(reader, decoder)
 }
 
-async function readRemaining(reader: ReadableStreamDefaultReader<Uint8Array>, decoder: TextDecoder) {
+async function readRemaining(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  decoder: TextDecoder,
+) {
   let output = ''
   while (true) {
     let result = await reader.read()

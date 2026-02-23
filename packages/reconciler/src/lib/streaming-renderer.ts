@@ -10,6 +10,7 @@ import type {
   PreparedStreamingPlugin,
   ReconcilerElement,
   RootTask,
+  StreamingComponentInput,
   StreamingChunkOutput,
   StreamingHostInput,
   StreamingHostNode,
@@ -185,6 +186,7 @@ async function emitValue<chunk, rootContext, elementState>(
   }
 
   if (typeof value.type === 'function') {
+    let componentType = value.type as Component<any, any, StreamingRenderValue>
     let props = value.props
     let setup = props.setup
     if ('setup' in props) {
@@ -196,8 +198,34 @@ async function emitValue<chunk, rootContext, elementState>(
       state.abortController.signal,
       state.tasks,
     )
-    let render = (value.type as Component<any, any, StreamingRenderValue>)(handle, setup)
+    let render = componentType(handle, setup)
     let rendered = render(props)
+    let componentBoundaryInput: StreamingComponentInput = {
+      kind: 'component',
+      type: componentType,
+      key: value.key,
+      props,
+      rendered,
+    }
+    let boundary = await awaitWithAbort(
+      state.policy.resolveBoundary?.(
+        componentBoundaryInput,
+        state.rootContext,
+        state.abortController.signal,
+      ),
+      state.abortController.signal,
+    )
+    if (boundary) {
+      await emitChunkOutput(boundary.open, controller, state.abortController.signal)
+      if (boundary.content !== undefined) {
+        await emitValue(boundary.content, controller, root, state, plugins)
+      }
+      await emitChunkOutput(boundary.close, controller, state.abortController.signal)
+      if (boundary.deferred) {
+        state.deferred.push(boundary.deferred)
+      }
+      return
+    }
     await emitValue(rendered, controller, root, state, plugins)
     return
   }
@@ -205,6 +233,7 @@ async function emitValue<chunk, rootContext, elementState>(
   if (typeof value.type !== 'string') return
 
   let hostInput: StreamingHostInput = {
+    kind: 'host',
     type: value.type,
     key: value.key,
     props: value.props,
@@ -216,6 +245,7 @@ async function emitValue<chunk, rootContext, elementState>(
   let boundary = await awaitWithAbort(
     state.policy.resolveBoundary?.(
       {
+        kind: 'host',
         type: host.type,
         key: host.key,
         props: nextProps,
@@ -228,8 +258,8 @@ async function emitValue<chunk, rootContext, elementState>(
   )
   if (boundary) {
     await emitChunkOutput(boundary.open, controller, state.abortController.signal)
-    if (boundary.fallback !== undefined) {
-      await emitValue(boundary.fallback, controller, root, state, plugins)
+    if (boundary.content !== undefined) {
+      await emitValue(boundary.content, controller, root, state, plugins)
     }
     await emitChunkOutput(boundary.close, controller, state.abortController.signal)
     if (boundary.deferred) {
@@ -241,6 +271,7 @@ async function emitValue<chunk, rootContext, elementState>(
   let start = await awaitWithAbort(
     state.policy.beginElement(
     {
+      kind: 'host',
       type: host.type,
       key: host.key,
       props: nextProps,

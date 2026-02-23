@@ -293,11 +293,22 @@ export type StreamingChunkOutput<chunk> =
 export type StreamingRenderValue = RenderValue | Promise<RenderValue>
 
 export type StreamingHostInput = {
+  kind: 'host'
   type: string
   key: unknown
   props: Record<string, unknown>
   children: StreamingRenderValue[]
 }
+
+export type StreamingComponentInput = {
+  kind: 'component'
+  type: Component<any, any, StreamingRenderValue>
+  key: unknown
+  props: Record<string, unknown>
+  rendered: StreamingRenderValue
+}
+
+export type StreamingBoundaryInput = StreamingHostInput | StreamingComponentInput
 
 export type StreamingElementStart<chunk, elementState> = {
   state: elementState
@@ -308,7 +319,7 @@ export type StreamingElementStart<chunk, elementState> = {
 
 export type StreamingBoundaryResult<chunk> = {
   open?: StreamingChunkOutput<chunk>
-  fallback?: null | StreamingRenderValue
+  content?: null | StreamingRenderValue
   close?: StreamingChunkOutput<chunk>
   deferred?: Promise<StreamingChunkOutput<chunk>>
 }
@@ -316,7 +327,7 @@ export type StreamingBoundaryResult<chunk> = {
 export type StreamingPolicy<chunk, rootContext = unknown, elementState = unknown> = {
   beginRoot?(root: StreamingRendererRoot<chunk>): rootContext | Promise<rootContext>
   resolveBoundary?(
-    input: StreamingHostInput,
+    input: StreamingBoundaryInput,
     context: rootContext,
     signal: AbortSignal,
   ): null | StreamingBoundaryResult<chunk> | Promise<null | StreamingBoundaryResult<chunk>>

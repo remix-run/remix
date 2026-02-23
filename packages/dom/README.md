@@ -8,6 +8,7 @@ This package currently provides:
 - a DOM JSX runtime (`@remix-run/dom/jsx-runtime`)
 - a DOM plugin pipeline (`createDomPlugins(document)`)
 - first-class mixins (`on`, `css`, `animateLayout`) via `mixPlugin`
+- server-side `clientEntry(...)` markers/payload generation for future hydration
 
 ## Agent-first orientation
 
@@ -58,7 +59,28 @@ Notes:
 - does not require a `document`
 - supports cancellation with `signal`
 - supports `<frame src fallback>` async boundaries via `resolveFrame`
-- hydration/bootstrap concerns are intentionally out of scope for this API phase
+- includes server-side client-entry markers and `rmx-data` hydration payloads
+- hydration/bootstrap runtime concerns are intentionally out of scope for this API phase
+
+### `clientEntry` (server-side artifacts only)
+
+Use `clientEntry` to annotate components that should emit hydration markers + metadata during SSR:
+
+```ts
+import { clientEntry, renderToHTMLStream } from '@remix-run/dom'
+
+let CounterEntry = clientEntry('/entries/counter.js#Counter', (_handle) => (props: { label: string }) => (
+  <button>{props.label}</button>
+))
+
+let stream = renderToHTMLStream(<CounterEntry label="Count" />)
+```
+
+Current behavior:
+
+- wraps rendered output with `<!-- rmx:h:{id} --> ... <!-- /rmx:h -->`
+- appends hydration metadata under `h` in `<script type="application/json" id="rmx-data">`
+- does not hydrate on the client yet (runtime is intentionally deferred)
 
 `tsconfig.json` example for DOM JSX:
 
@@ -71,7 +93,7 @@ Notes:
 }
 ```
 
-The DOM JSX runtime supports host props like `style`, `connect`, and `mix`.
+The DOM JSX runtime supports host props like `style` and `mix`.
 Event handling is expressed with mixins using `on(...)`.
 
 Example:

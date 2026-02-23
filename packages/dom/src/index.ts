@@ -1,5 +1,6 @@
 export { createDomNodePolicy } from './lib/dom-node-policy.ts'
 export { createDomReconciler } from './lib/dom-reconciler.ts'
+export { clientEntry } from './lib/client-entry.ts'
 export { renderToHTMLStream } from './lib/render-to-html-stream.ts'
 export {
   animateEntrance,
@@ -41,4 +42,13 @@ export type {
 } from './lib/dom-node-policy.ts'
 
 export type { Component, ComponentHandle } from '@remix-run/reconciler'
+export type {
+  EntryComponent,
+  HydrationData,
+  SerializableArray,
+  SerializableObject,
+  SerializablePrimitive,
+  SerializableProps,
+  SerializableValue,
+} from './lib/client-entry.ts'
 export type { RenderToHTMLStreamOptions } from './lib/render-to-html-stream.ts'

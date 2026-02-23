@@ -1,5 +1,10 @@
 import type { StreamingPolicy } from '@remix-run/reconciler'
 import type { StreamingRenderValue } from '@remix-run/reconciler'
+import {
+  isEntry,
+  serializeHydrationProps,
+  type HydrationData,
+} from './client-entry.ts'
 
 let encoder = new TextEncoder()
 
@@ -14,6 +19,7 @@ type HtmlRootContext = {
   hoistedHeadElements: string[]
   sinkStack: Array<'main' | 'hoist'>
   frameData: Map<string, FrameMeta>
+  hydrationData: Map<string, HydrationData>
 }
 
 type HtmlElementState = {
@@ -60,19 +66,38 @@ export function createHtmlStreamingPolicy(
         hoistedHeadElements: [],
         sinkStack: ['main'],
         frameData: new Map(),
+        hydrationData: new Map(),
       }
     },
     resolveBoundary(input, context, signal) {
+      if (input.kind === 'component' && isEntry(input.type)) {
+        if (!input.props || typeof input.props !== 'object' || Array.isArray(input.props)) {
+          throw new Error('clientEntry props must be an object')
+        }
+        let hydrationId = crypto.randomUUID()
+        context.hydrationData.set(hydrationId, {
+          moduleUrl: input.type.$moduleUrl,
+          exportName: input.type.$exportName,
+          props: serializeHydrationProps(input.props),
+        })
+        return {
+          open: encoder.encode(`<!-- rmx:h:${hydrationId} -->`),
+          content: input.rendered,
+          close: encoder.encode('<!-- /rmx:h -->'),
+        }
+      }
+
+      if (input.kind !== 'host') return null
       if (input.type !== 'frame') return null
       let src = input.props.src
       if (typeof src !== 'string') {
         throw new Error('<frame> requires a "src" string prop')
       }
       let frameId = crypto.randomUUID()
-      let fallback =
+      let content =
         'fallback' in input.props ? (input.props.fallback as null | StreamingRenderValue) : null
       context.frameData.set(frameId, {
-        status: fallback == null ? 'resolved' : 'pending',
+        status: content == null ? 'resolved' : 'pending',
         src,
       })
       let deferred = options.resolveFrame
@@ -80,7 +105,7 @@ export function createHtmlStreamingPolicy(
         : Promise.resolve(undefined)
       return {
         open: encoder.encode(`<!-- f:${frameId} -->`),
-        fallback,
+        content,
         close: encoder.encode('<!-- /f -->'),
         deferred,
       }
@@ -150,9 +175,9 @@ export function createHtmlStreamingPolicy(
           : `<head>${context.hoistedHeadElements.join('')}</head>`
         chunks.push(encoder.encode(wrapped))
       }
-      let frameScript = serializeFrameDataScript(context.frameData)
-      if (frameScript) {
-        chunks.push(encoder.encode(frameScript))
+      let rmxDataScript = serializeRmxDataScript(context.hydrationData, context.frameData)
+      if (rmxDataScript) {
+        chunks.push(encoder.encode(rmxDataScript))
       }
       return chunks
     },
@@ -251,9 +276,21 @@ async function readByteStream(stream: ReadableStream<Uint8Array>, signal: AbortS
   }
 }
 
-function serializeFrameDataScript(frameData: Map<string, FrameMeta>) {
-  if (frameData.size === 0) return ''
-  let data = { f: Object.fromEntries(frameData) }
+function serializeRmxDataScript(
+  hydrationData: Map<string, HydrationData>,
+  frameData: Map<string, FrameMeta>,
+) {
+  if (frameData.size === 0 && hydrationData.size === 0) return ''
+  let data: {
+    h?: Record<string, HydrationData>
+    f?: Record<string, FrameMeta>
+  } = {}
+  if (hydrationData.size > 0) {
+    data.h = Object.fromEntries(hydrationData)
+  }
+  if (frameData.size > 0) {
+    data.f = Object.fromEntries(frameData)
+  }
   let json = JSON.stringify(data).replaceAll('<', '\\u003c')
   return `<script type="application/json" id="rmx-data">${json}</script>`
 }
