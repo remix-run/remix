@@ -564,8 +564,8 @@ export const out = tag + helper`,
       // Entry: imports #assets/app/worker.ts to get the worker's href at runtime
       fs.writeFileSync(
         path.join(root, 'app', 'entry.ts'),
-        `import * as workerAsset from '#assets/app/worker.ts'
-export const workerHref = workerAsset.href`,
+        `import workerTsAsset from '#assets/app/worker.ts'
+export const workerHref = workerTsAsset.href`,
       )
 
       // Placeholder file that codegen would normally generate
@@ -638,8 +638,8 @@ export const workerHref = workerAsset.href`,
       )
       fs.writeFileSync(
         path.join(root, 'app', 'entry.ts'),
-        `import * as w from '#assets/app/worker.ts'
-export const href = w.href`,
+        `import workerTsAsset from '#assets/app/worker.ts'
+export const href = workerTsAsset.href`,
       )
       fs.mkdirSync(path.join(root, '.assets', 'app'), { recursive: true })
       fs.writeFileSync(

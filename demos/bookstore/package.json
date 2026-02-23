@@ -27,6 +27,8 @@
     "build:bundled": "tsx build.bundled.ts",
     "start": "NODE_ENV=production tsx server.ts",
     "test": "NODE_ENV=test NODE_OPTIONS='--conditions=placeholder' tsx --test",
-    "typecheck": "tsgo --noEmit"
+    "codegen": "tsx codegen.ts",
+    "codegen:check": "tsx codegen.check.ts",
+    "typecheck": "pnpm codegen && tsgo --noEmit"
   }
 }

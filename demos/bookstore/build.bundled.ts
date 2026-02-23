@@ -11,7 +11,7 @@ import * as esbuild from 'esbuild'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { codegenBuild } from 'remix/assets'
-import { getAssetsBuildConfig } from './assets.config.ts'
+import { getAssetsBuildConfig } from './assets.ts'
 
 function normalizePathForManifest(value: string): string {
   return value.replace(/\\/g, '/').replace(/^\.\//, '')

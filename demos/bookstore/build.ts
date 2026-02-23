@@ -7,7 +7,7 @@
  */
 
 import { build } from 'remix/assets'
-import { getAssetsBuildConfig } from './assets.config.ts'
+import { getAssetsBuildConfig } from './assets.ts'
 
 async function main() {
   let config = await getAssetsBuildConfig()

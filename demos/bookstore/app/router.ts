@@ -54,7 +54,7 @@ async function getAssetsMiddleware(): Promise<{
 }> {
   if (process.env.NODE_ENV === 'development') {
     let { createDevAssets } = await import('remix/dev-assets-middleware')
-    let { getAssetsBuildConfig } = await import('../assets.config.ts')
+    let { getAssetsBuildConfig } = await import('../assets.ts')
     let config = await getAssetsBuildConfig()
     let devAssets = createDevAssets({
       source: config.source,

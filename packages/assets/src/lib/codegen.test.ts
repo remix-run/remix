@@ -5,8 +5,55 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import * as os from 'node:os'
 
-import { codegenPlaceholders, checkCodegenPlaceholders, codegenBuild } from './codegen.ts'
+import {
+  codegenPlaceholders,
+  checkCodegenPlaceholders,
+  codegenBuild,
+  toAssetVarName,
+} from './codegen.ts'
 import type { AssetsManifest } from './manifest-types.ts'
+
+// ---------------------------------------------------------------------------
+// toAssetVarName
+// ---------------------------------------------------------------------------
+
+describe('toAssetVarName', () => {
+  it('combines stem and extension into a camelCase name with Asset suffix', () => {
+    assert.equal(toAssetVarName('app/worker.ts'), 'workerTsAsset')
+  })
+
+  it('handles multi-segment extensions', () => {
+    assert.equal(toAssetVarName('app/entry.tsx'), 'entryTsxAsset')
+  })
+
+  it('camelCases hyphenated filenames', () => {
+    assert.equal(toAssetVarName('app/images/heavy-metal-1.png'), 'heavyMetal1PngAsset')
+  })
+
+  it('prefixes with underscore when filename starts with a digit', () => {
+    assert.equal(toAssetVarName('app/images/123-foo.png'), '_123FooPngAsset')
+  })
+
+  it('uses only the filename, ignoring the directory path', () => {
+    assert.equal(toAssetVarName('some/deeply/nested/path/icon.svg'), 'iconSvgAsset')
+  })
+
+  it('works for a filename with no directory component', () => {
+    assert.equal(toAssetVarName('logo.png'), 'logoPngAsset')
+  })
+
+  it('preserves Unicode letters (e.g. accented characters)', () => {
+    assert.equal(toAssetVarName('app/café.ts'), 'caféTsAsset')
+  })
+
+  it('preserves other Unicode letters in filenames', () => {
+    assert.equal(toAssetVarName('app/naïve-résumé.ts'), 'naïveRésuméTsAsset')
+  })
+
+  it('prefixes with underscore when filename starts with a Unicode digit', () => {
+    assert.equal(toAssetVarName('app/١٢٣.png'), '_١٢٣PngAsset')
+  })
+})
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -427,7 +474,7 @@ describe('codegenPlaceholders', () => {
         'utf-8',
       )
       assert.ok(
-        content.includes("export const href = '/__@assets/app/entry.tsx'"),
+        content.includes("href: '/__@assets/app/entry.tsx'"),
         `Expected /__@assets/ href, got:\n${content}`,
       )
     } finally {
@@ -446,7 +493,7 @@ describe('codegenPlaceholders', () => {
         'utf-8',
       )
       assert.ok(
-        content.includes("export const preloads = ['/__@assets/app/entry.tsx#preloads']"),
+        content.includes("preloads: ['/__@assets/app/entry.tsx#preloads']"),
         `Expected #preloads fragment, got:\n${content}`,
       )
     } finally {
@@ -506,11 +553,11 @@ describe('codegenBuild — script entries', () => {
         'utf-8',
       )
       assert.ok(
-        content.includes("export const href = '/assets/entry-ABC123.js'"),
+        content.includes("href: '/assets/entry-ABC123.js'"),
         `Expected hashed href, got:\n${content}`,
       )
       assert.ok(
-        content.includes("export const preloads = ['/assets/entry-ABC123.js']"),
+        content.includes("preloads: ['/assets/entry-ABC123.js']"),
         `Expected single preload, got:\n${content}`,
       )
     } finally {
@@ -829,7 +876,7 @@ describe('codegenBuild — script entries', () => {
         'utf-8',
       )
       assert.ok(
-        content.includes("export const href = '/entry-ABC.js'"),
+        content.includes("href: '/entry-ABC.js'"),
         `Expected root-relative URL, got:\n${content}`,
       )
     } finally {
@@ -942,7 +989,7 @@ describe('codegenBuild — file entries', () => {
         'utf-8',
       )
       assert.ok(
-        content.includes("export const href = '/assets/app/images/logo-ABC123.png'"),
+        content.includes("href: '/assets/app/images/logo-ABC123.png'"),
         `Expected hashed href, got:\n${content}`,
       )
     } finally {
@@ -1009,7 +1056,7 @@ describe('codegenBuild — file entries', () => {
         'utf-8',
       )
       assert.ok(
-        content.includes("export const href = '/assets/app/images/photo-@card-BBB.jpg'"),
+        content.includes("href: '/assets/app/images/photo-@card-BBB.jpg'"),
         `Expected default href from defaultVariant, got:\n${content}`,
       )
       assert.ok(
@@ -1043,10 +1090,10 @@ describe('codegenBuild — file entries', () => {
         'utf-8',
       )
       assert.ok(
-        !content.includes('export const href'),
+        !content.includes("  href: '"),
         `Expected no top-level href without defaultVariant, got:\n${content}`,
       )
-      assert.ok(content.includes('export const variants'), `Expected variants export`)
+      assert.ok(content.includes('variants: {'), `Expected variants object`)
     } finally {
       cleanup(root)
     }

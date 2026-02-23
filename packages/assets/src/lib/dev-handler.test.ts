@@ -540,7 +540,7 @@ describe('#assets/ import resolution', () => {
       )
       await fsp.writeFile(
         path.join(srcDir, 'entry.ts'),
-        "import logoUrl from '#assets/app/images/logo'; export { logoUrl }",
+        "import logoPngAsset from '#assets/app/images/logo'; export { logoPngAsset }",
       )
 
       let handler = createDevAssetsHandler({

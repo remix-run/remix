@@ -1,8 +1,8 @@
 import type { RemixNode } from 'remix/component'
-
-import * as entryAsset from '#assets/app/entry.tsx'
 import { routes } from './routes.ts'
 import { getCurrentUserSafely } from './utils/context.ts'
+
+import entryTsxAsset from '#assets/app/entry.tsx'
 
 export function Document() {
   return ({ title = 'Bookstore', children }: { title?: string; children?: RemixNode }) => (
@@ -11,10 +11,10 @@ export function Document() {
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{title}</title>
-        {entryAsset.preloads.map((preload) => (
+        {entryTsxAsset.preloads.map((preload) => (
           <link key={preload} rel="modulepreload" href={preload} />
         ))}
-        <script type="module" async src={entryAsset.href} />
+        <script type="module" async src={entryTsxAsset.href} />
         <link rel="stylesheet" href="/app.css" />
       </head>
       <body>{children}</body>

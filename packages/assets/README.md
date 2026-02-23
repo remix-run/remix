@@ -121,13 +121,13 @@ thumbnail?.href // '/__@files/app/images/logo.png?@thumbnail'
 You can generate static TypeScript files that export URLs directly, making them easily available and type safe across server, browser and test environments.
 
 ```ts
-import * as entryAsset from '#assets/app/entry.tsx'
-entryAsset.href // '/assets/entry-ABC123.js'
-entryAsset.preloads // ['/assets/entry-ABC123.js', '/assets/app-DEF456.js', '/assets/utils-GHI789.js']
+import entryTsxAsset from '#assets/app/entry.tsx'
+entryTsxAsset.href // '/assets/entry-ABC123.js'
+entryTsxAsset.preloads // ['/assets/entry-ABC123.js', '/assets/app-DEF456.js', '/assets/utils-GHI789.js']
 
-import * as imageAsset from '#assets/app/images/logo.png'
-imageAsset.href // '/assets/logo-ABC123.jpg'
-imageAsset.variants.thumbnail.href // '/assets/logo-@thumbnail-ABC123.jpg'
+import logoPngAsset from '#assets/app/images/logo.png'
+logoPngAsset.href // '/assets/logo-ABC123.jpg'
+logoPngAsset.variants.thumbnail.href // '/assets/logo-@thumbnail-ABC123.jpg'
 ```
 
 These imports don't require a build step to resolve — they point to real files on disk generated in the `.assets/` directory by default.
