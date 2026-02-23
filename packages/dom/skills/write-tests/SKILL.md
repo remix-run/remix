@@ -32,6 +32,9 @@ Focus on observable behavior, not implementation details:
 4. Assert concrete DOM state and event outcomes.
 5. Do not use loops or conditionals to generate tests inside `describe()` blocks.
 6. Use stable test names that describe behavior and scenario.
+7. Do not "game" coverage with meaningless assertions (for example, always-true checks like `length >= 0`).
+8. Do not add/expand `/* c8 ignore */` blocks unless the branch is truly unreachable in runtime behavior; prefer adding tests.
+9. If a branch is difficult to test, first refactor for testability or add a narrow integration test that exercises real behavior.
 
 ## Common Patterns
 
@@ -66,6 +69,7 @@ it('updates style on rerender without dropping prior props', () => {
 - [ ] Tests avoid implementation-coupled assertions
 - [ ] `describe()` blocks contain explicit tests (no generated cases)
 - [ ] Test names explain intent and expected outcome
+- [ ] No fake coverage padding (no tautological assertions, no broad `c8 ignore`)
 - [ ] Coverage run passes for the changed area
 
 ## Validation

@@ -32,6 +32,9 @@ Design tests around public runtime contracts:
 4. Avoid tests coupled to internal private state.
 5. Do not use loops or conditionals to generate tests inside `describe()` blocks.
 6. For type behavior, use dedicated type tests with precise expectations.
+7. Do not pad coverage with vacuous assertions; every assertion should validate contract-level behavior.
+8. Do not use broad `/* c8 ignore */` to satisfy thresholds. If ignore is unavoidable, scope it to the smallest truly unreachable branch and justify it in code review.
+9. Prefer testing teardown/error/scheduling behavior directly rather than hiding helper branches from coverage.
 
 ## Common Patterns
 
@@ -66,6 +69,7 @@ it('preserves inferred node type for plugin handle', () => {
 - [ ] Regression tests exist for every bug fix
 - [ ] Type-level changes are covered by dedicated type tests
 - [ ] `describe()` blocks contain explicit tests (no generated cases)
+- [ ] No coverage cheats (no tautologies, no broad ignore regions)
 - [ ] Coverage run passes for the changed area
 
 ## Validation
