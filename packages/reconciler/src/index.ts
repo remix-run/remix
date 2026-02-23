@@ -26,6 +26,7 @@ export type {
   Plugin,
   PluginDefinition,
   PluginHostContext,
+  PluginNodeScope,
   PluginPhase,
   PreparedPlugin,
   ReconcilerElement,

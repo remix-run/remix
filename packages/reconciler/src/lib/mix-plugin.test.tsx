@@ -61,9 +61,13 @@ describe('mix plugin', () => {
       shouldActivate(context) {
         return typeof context.delta.nextProps.className === 'string'
       },
-      apply(context) {
-        observedClassNames.push(context.delta.nextProps.className as string)
-        context.consume('className')
+      setup() {
+        return {
+          commit(context) {
+            observedClassNames.push(context.delta.nextProps.className as string)
+            context.consume('className')
+          },
+        }
       },
     })
 
@@ -104,9 +108,13 @@ describe('mix plugin', () => {
       shouldActivate(context) {
         return context.delta.nextProps.applied === true
       },
-      apply(context) {
-        applied++
-        context.consume('applied')
+      setup() {
+        return {
+          commit(context) {
+            applied++
+            context.consume('applied')
+          },
+        }
       },
     })
 
@@ -163,14 +171,18 @@ describe('mix plugin', () => {
           typeof context.delta.nextProps.title === 'string'
         )
       },
-      apply(context) {
-        if (typeof context.delta.nextProps.className === 'string') {
-          observedClassNames.push(context.delta.nextProps.className)
-          context.consume('className')
-        }
-        if (typeof context.delta.nextProps.title === 'string') {
-          observedTitles.push(context.delta.nextProps.title)
-          context.consume('title')
+      setup() {
+        return {
+          commit(context) {
+            if (typeof context.delta.nextProps.className === 'string') {
+              observedClassNames.push(context.delta.nextProps.className)
+              context.consume('className')
+            }
+            if (typeof context.delta.nextProps.title === 'string') {
+              observedTitles.push(context.delta.nextProps.title)
+              context.consume('title')
+            }
+          },
         }
       },
     })
@@ -200,9 +212,13 @@ describe('mix plugin', () => {
       shouldActivate(context) {
         return 'title' in context.delta.nextProps || context.delta.kind === 'update'
       },
-      apply(context) {
-        observedTitles.push(context.delta.nextProps.title)
-        context.consume('title')
+      setup() {
+        return {
+          commit(context) {
+            observedTitles.push(context.delta.nextProps.title)
+            context.consume('title')
+          },
+        }
       },
     })
 
@@ -262,9 +278,13 @@ describe('mix plugin', () => {
       shouldActivate(context) {
         return typeof context.delta.nextProps.title === 'string'
       },
-      apply(context) {
-        seenTitles.push(context.delta.nextProps.title as string)
-        context.consume('title')
+      setup() {
+        return {
+          commit(context) {
+            seenTitles.push(context.delta.nextProps.title as string)
+            context.consume('title')
+          },
+        }
       },
     })
     let reconciler = createTestNodeReconciler([mixPlugin as any, titlePlugin as any])
@@ -286,9 +306,13 @@ describe('mix plugin', () => {
       shouldActivate(context) {
         return typeof context.delta.nextProps.title === 'string'
       },
-      apply(context) {
-        seenTitles.push(context.delta.nextProps.title as string)
-        context.consume('title')
+      setup() {
+        return {
+          commit(context) {
+            seenTitles.push(context.delta.nextProps.title as string)
+            context.consume('title')
+          },
+        }
       },
     })
     let reconciler = createTestNodeReconciler([mixPlugin as any, titlePlugin as any])
@@ -325,8 +349,12 @@ describe('mix plugin', () => {
       shouldActivate() {
         return true
       },
-      apply() {
-        throw new Error('boom')
+      setup() {
+        return {
+          commit() {
+            throw new Error('boom')
+          },
+        }
       },
     })
     let reconciler = createTestNodeReconciler([crashingPlugin as any])
@@ -409,8 +437,12 @@ describe('mix plugin', () => {
       shouldActivate(context) {
         return typeof context.delta.nextProps.title === 'string'
       },
-      apply(context) {
-        context.consume('title')
+      setup() {
+        return {
+          commit(context) {
+            context.consume('title')
+          },
+        }
       },
     })
     let reconciler = createTestNodeReconciler([mixPlugin as any, titlePlugin as any])

@@ -1,5 +1,4 @@
 import { definePlugin } from '@remix-run/reconciler'
-import type { PluginCommitEvent } from '@remix-run/reconciler'
 import type { Plugin } from '@remix-run/reconciler'
 import type { DomElementNode } from '../dom-node-policy.ts'
 
@@ -10,27 +9,27 @@ export let basicPropsPlugin: Plugin<DomElementNode> = definePlugin({
     let element = handle.host.node as HTMLElement
     let previousProps: Record<string, unknown> = {}
 
-    handle.addEventListener('remove', () => {
-      for (let key in previousProps) {
-        removeProp(element, key)
-      }
-      previousProps = {}
-    })
-
-    handle.addEventListener('commit', (event) => {
-      let context = event as PluginCommitEvent<DomElementNode>
-      let props = context.remainingPropsView()
-      for (let key in props) {
-        let nextValue = props[key]
-        if (previousProps[key] === nextValue) continue
-        applyProp(element, key, nextValue)
-      }
-      for (let key in previousProps) {
-        if (key in props) continue
-        removeProp(element, key)
-      }
-      previousProps = props
-    })
+    return {
+      remove() {
+        for (let key in previousProps) {
+          removeProp(element, key)
+        }
+        previousProps = {}
+      },
+      commit(context) {
+        let props = context.remainingPropsView()
+        for (let key in props) {
+          let nextValue = props[key]
+          if (previousProps[key] === nextValue) continue
+          applyProp(element, key, nextValue)
+        }
+        for (let key in previousProps) {
+          if (key in props) continue
+          removeProp(element, key)
+        }
+        previousProps = props
+      },
+    }
   },
 })
 

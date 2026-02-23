@@ -5,9 +5,7 @@ import {
 } from '../testing/jsx.ts'
 import {
   isPhasePluginAhead,
-  isSetupSlot,
   removeActivePluginId,
-  teardownPlugin,
 } from './root-helpers.ts'
 import { createScheduler } from './scheduler.ts'
 import {
@@ -29,6 +27,7 @@ import type {
   Plugin,
   PluginDefinition,
   PluginHostContext,
+  PluginNodeScope,
   PluginRootHandle,
   PluginSetupHandle,
   PreparedPlugin,
@@ -640,19 +639,6 @@ export function createReconciler<parent, node, text extends node, element extend
       root: root.api,
       host,
       delta: effectiveDelta,
-      mergeProps(props) {
-        let mergedKeys: string[] = []
-        for (let key in props) {
-          let nextValue = props[key]
-          if (effectiveDelta.nextProps[key] === nextValue) continue
-          effectiveDelta.nextProps[key] = nextValue
-          if (!effectiveDelta.changedKeys.includes(key)) {
-            effectiveDelta.changedKeys.push(key)
-            mergedKeys.push(key)
-          }
-        }
-        markKeysForLaterPhasePlugins(mergedKeys)
-      },
       replaceProps(props) {
         effectiveDelta.nextProps = { ...props }
         effectiveDelta.changedKeys = listChangedPropKeys(
@@ -719,32 +705,12 @@ export function createReconciler<parent, node, text extends node, element extend
     root: RootState<parent, node, text, element>,
   ) {
     if (host.activePluginIds.length === 0) return
-    let context: PluginHostContext<element> = {
-      root: root.api,
-      host,
-      delta: {
-        kind: 'update',
-        previousProps: host.props,
-        nextProps: host.props,
-        changedKeys: [],
-      },
-      mergeProps() {},
-      replaceProps() {},
-      consume() {},
-      isConsumed() {
-        return false
-      },
-      remainingPropsView() {
-        return host.props
-      },
-    }
     let ids = host.activePluginIds.slice()
     for (let pluginId of ids) {
-      let prepared = plugins.all[pluginId]
-      if (!prepared) continue
+      if (!plugins.all[pluginId]) continue
       let slot = host.pluginSlots[pluginId]
       if (slot === undefined) continue
-      teardownPlugin(prepared.plugin, context, slot)
+      slot?.remove?.()
       host.pluginSlots[pluginId] = undefined
     }
     host.activePluginIds = []
@@ -810,7 +776,7 @@ export function createReconciler<parent, node, text extends node, element extend
       if (isActive && !shouldActivate) {
         let previousSlot = context.host.pluginSlots[prepared.id]
         if (previousSlot !== undefined) {
-          teardownPlugin(plugin, context, previousSlot)
+          previousSlot?.remove?.()
           context.host.pluginSlots[prepared.id] = undefined
           removeActivePluginId(context.host.activePluginIds, prepared.id)
         }
@@ -822,11 +788,7 @@ export function createReconciler<parent, node, text extends node, element extend
       }
       let slot = context.host.pluginSlots[prepared.id]
       if (slot !== undefined) {
-        if (isSetupSlot(slot)) {
-          slot.handle.dispatchEvent(new PluginCommitEvent(context))
-        } else {
-          plugin.apply?.(context, slot)
-        }
+        slot?.commit?.(new PluginCommitEvent(context))
       }
     }
   }
@@ -835,29 +797,23 @@ export function createReconciler<parent, node, text extends node, element extend
     plugin: Plugin<any>,
     context: PluginHostContext<element>,
     root: RootState<parent, node, text, element>,
-  ) {
-    if (plugin.setup) {
-      let handle = new EventTarget() as PluginSetupHandle<element>
-      handle.root = context.root
-      handle.host = context.host
-      handle.update = () =>
+  ): null | PluginNodeScope<any> {
+    if (!plugin.setup) return null
+    let handle: PluginSetupHandle<element> = {
+      root: context.root,
+      host: context.host,
+      update: () =>
         new Promise((resolve) => {
           root.hasPendingComponentUpdate = true
           root.dirtyNodeIds.add(context.host.id)
           root.pendingTasks.push((signal) => resolve(signal))
           root.enqueue()
-        })
-      handle.queueTask = (task) => {
+        }),
+      queueTask: (task) => {
         root.pendingTasks.push((signal) => task(context.host.node, signal))
-      }
-      plugin.setup(handle)
-      return {
-        __rmxSetupSlot: true as const,
-        handle,
-      }
+      },
     }
-    let mounted = plugin.mount?.(context)
-    return mounted === undefined ? null : mounted
+    return plugin.setup(handle) ?? null
   }
 
 }

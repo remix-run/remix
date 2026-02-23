@@ -84,17 +84,16 @@ export let mixPlugin: Plugin<unknown> = definePlugin({
   setup(handle) {
     let hostType = handle.host.type
     let runnerEntries: RunnerEntry[] = []
-
-    handle.addEventListener('remove', () => {
-      for (let index = 0; index < runnerEntries.length; index++) {
-        let entry = runnerEntries[index]
-        entry?.handle.dispatchEvent(new Event('remove'))
-      }
-      runnerEntries.length = 0
-    })
-
-    handle.addEventListener('commit', (event) => {
-      let context = event as PluginCommitEvent<unknown>
+    return {
+      remove() {
+        for (let index = 0; index < runnerEntries.length; index++) {
+          let entry = runnerEntries[index]
+          entry?.handle.dispatchEvent(new Event('remove'))
+        }
+        runnerEntries.length = 0
+      },
+      commit(event) {
+        let context = event as PluginCommitEvent<unknown>
       let descriptors = resolveMixDescriptors(context.delta.nextProps)
       let composedProps = withoutMix(context.delta.nextProps)
       let maxDescriptors = 1024
@@ -154,7 +153,8 @@ export let mixPlugin: Plugin<unknown> = definePlugin({
         ...(nextMix === undefined ? {} : { mix: nextMix }),
       })
       context.consume('mix')
-    })
+      },
+    }
   },
 })
 

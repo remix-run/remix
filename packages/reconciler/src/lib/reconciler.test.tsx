@@ -120,8 +120,12 @@ describe('incremental reconciler validation', () => {
       shouldActivate(context) {
         return typeof context.delta.nextProps['data-x'] === 'string'
       },
-      apply() {
-        pluginApplies++
+      setup() {
+        return {
+          commit() {
+            pluginApplies++
+          },
+        }
       },
     })
     let reconciler = createTestNodeReconciler([routedPlugin])
@@ -149,9 +153,16 @@ describe('incremental reconciler validation', () => {
       shouldActivate() {
         return true
       },
-      apply(context) {
-        order.push('seed')
-        context.mergeProps({ k: 'from-seed' })
+      setup() {
+        return {
+          commit(context) {
+            order.push('seed')
+            context.replaceProps({
+              ...context.delta.nextProps,
+              k: 'from-seed',
+            })
+          },
+        }
       },
     })
     let routedOne = definePlugin<EventTarget>({
@@ -160,8 +171,12 @@ describe('incremental reconciler validation', () => {
       shouldActivate() {
         return true
       },
-      apply() {
-        order.push('routed-one')
+      setup() {
+        return {
+          commit() {
+            order.push('routed-one')
+          },
+        }
       },
     })
     let routedTwo = definePlugin<EventTarget>({
@@ -170,11 +185,18 @@ describe('incremental reconciler validation', () => {
       shouldActivate() {
         return true
       },
-      apply(context) {
-        order.push('routed-two')
-        // This calls mergeProps after routed plugins have already run, so only
-        // plugins ahead of this cursor can be marked for later execution.
-        context.mergeProps({ k: 'from-routed-two' })
+      setup() {
+        return {
+          commit(context) {
+            order.push('routed-two')
+            // This calls replaceProps after routed plugins have already run, so only
+            // plugins ahead of this cursor can be marked for later execution.
+            context.replaceProps({
+              ...context.delta.nextProps,
+              k: 'from-routed-two',
+            })
+          },
+        }
       },
     })
     let terminal = definePlugin<EventTarget>({
@@ -183,8 +205,12 @@ describe('incremental reconciler validation', () => {
       shouldActivate() {
         return true
       },
-      apply(context) {
-        terminalValues.push(String(context.delta.nextProps.k))
+      setup() {
+        return {
+          commit(context) {
+            terminalValues.push(String(context.delta.nextProps.k))
+          },
+        }
       },
     })
     let reconciler = createTestNodeReconciler([
@@ -355,7 +381,7 @@ describe('incremental reconciler validation', () => {
     assert.equal(queued, 1)
   })
 
-  it('deactivates plugins and runs unmount when shouldActivate turns false', () => {
+  it('deactivates plugins and runs remove when shouldActivate turns false', () => {
     let mounts = 0
     let unmounts = 0
     let plugin = definePlugin<EventTarget>({
@@ -364,12 +390,13 @@ describe('incremental reconciler validation', () => {
       shouldActivate(context) {
         return context.delta.nextProps.active === true
       },
-      mount() {
+      setup() {
         mounts++
-        return { mounted: true }
-      },
-      unmount() {
-        unmounts++
+        return {
+          remove() {
+            unmounts++
+          },
+        }
       },
     })
     let reconciler = createTestNodeReconciler([plugin as any])
@@ -385,7 +412,7 @@ describe('incremental reconciler validation', () => {
     assert.equal(unmounts, 1)
   })
 
-  it('supports plugin host context merge/replace/consume helpers', () => {
+  it('supports plugin host context replace/consume helpers', () => {
     let seen: Array<Record<string, unknown>> = []
     let plugin = definePlugin<EventTarget>({
       phase: 'special',
@@ -393,15 +420,18 @@ describe('incremental reconciler validation', () => {
       shouldActivate() {
         return true
       },
-      apply(context) {
-        context.mergeProps({ y: 'merged' })
-        context.replaceProps({ z: 'replaced' })
-        context.consume('z')
-        seen.push({
-          zConsumed: context.isConsumed('z'),
-          xConsumed: context.isConsumed('x'),
-          remaining: context.remainingPropsView(),
-        })
+      setup() {
+        return {
+          commit(context) {
+            context.replaceProps({ z: 'replaced' })
+            context.consume('z')
+            seen.push({
+              zConsumed: context.isConsumed('z'),
+              xConsumed: context.isConsumed('x'),
+              remaining: context.remainingPropsView(),
+            })
+          },
+        }
       },
     })
     let reconciler = createTestNodeReconciler([plugin as any])
@@ -416,7 +446,7 @@ describe('incremental reconciler validation', () => {
   it('handles component setup prop and fragment children', () => {
     let setupSeen: unknown[] = []
     let propsSetupSeen: unknown[] = []
-    let WithSetup: Component<string, { label: string; setup?: never }> = (_handle, setup) => {
+    let WithSetup: Component<string, { label: string }> = (_handle, setup) => {
       setupSeen.push(setup)
       return (props) => {
         propsSetupSeen.push((props as Record<string, unknown>).setup)
@@ -486,23 +516,29 @@ describe('incremental reconciler validation', () => {
         handle.queueTask(() => {
           queued++
         })
-        handle.addEventListener('commit', () => {
-          if (updates === 0) {
-            updates++
-            void handle.update()
-          }
-        })
-        handle.addEventListener('remove', () => {
-          setupRemoves++
-        })
+        return {
+          commit() {
+            if (updates === 0) {
+              updates++
+              void handle.update()
+            }
+          },
+          remove() {
+            setupRemoves++
+          },
+        }
       },
     })
 
     let terminalPlugin = definePlugin<EventTarget>({
       phase: 'terminal',
       keys: ['enabled'],
-      apply() {
-        terminalRuns++
+      setup() {
+        return {
+          commit() {
+            terminalRuns++
+          },
+        }
       },
     })
 
@@ -512,17 +548,16 @@ describe('incremental reconciler validation', () => {
       shouldActivate(context) {
         return context.delta.nextProps.enabled === true
       },
-      mount() {
-        return { active: true }
-      },
-      unmount(context) {
-        context.mergeProps({ merged: true })
-        context.replaceProps({ replaced: true })
-        context.consume('replaced')
-        unmountReads.push({
-          consumed: context.isConsumed('replaced'),
-          remaining: context.remainingPropsView(),
-        })
+      setup() {
+        return {
+          commit(context) {
+            context.replaceProps({ replaced: true })
+            context.consume('replaced')
+          },
+          remove() {
+            unmountReads.push({ consumed: true, remaining: {} })
+          },
+        }
       },
     })
 
@@ -544,7 +579,7 @@ describe('incremental reconciler validation', () => {
     assert.deepEqual(unmountReads, [{ consumed: true, remaining: {} }])
   })
 
-  it('handles null mount slots and routed self-merges safely', () => {
+  it('handles null setup scopes and routed self-merges safely', () => {
     let unmounts = 0
     let merges = 0
     let nullSlotPlugin = definePlugin<EventTarget>({
@@ -553,15 +588,19 @@ describe('incremental reconciler validation', () => {
       shouldActivate(context) {
         return context.delta.nextProps.active === true
       },
-      mount() {
-        return null
-      },
-      apply(context) {
-        merges++
-        context.mergeProps({ active: context.delta.nextProps.active })
-      },
-      unmount() {
-        unmounts++
+      setup() {
+        return {
+          commit(context) {
+            merges++
+            context.replaceProps({
+              ...context.delta.nextProps,
+              active: context.delta.nextProps.active,
+            })
+          },
+          remove() {
+            unmounts++
+          },
+        }
       },
     })
     let reconciler = createTestNodeReconciler([nullSlotPlugin as any])
@@ -584,10 +623,12 @@ describe('incremental reconciler validation', () => {
         return context.delta.nextProps.enabled === true
       },
       setup(handle) {
-        handle.addEventListener('commit', () => {
-          // Simulate internal corruption from unexpected plugin mutation.
-          handle.host.activePluginIds.length = 0
-        })
+        return {
+          commit() {
+            // Simulate internal corruption from unexpected plugin mutation.
+            handle.host.activePluginIds.length = 0
+          },
+        }
       },
     })
     let reconciler = createTestNodeReconciler([corruptedPlugin as any])
@@ -607,28 +648,20 @@ describe('incremental reconciler validation', () => {
     assert.equal(errors[0]?.includes('active plugin id'), true)
   })
 
-  it('runs unmount teardown context when host nodes are removed', () => {
-    let unmountReads: Array<{
-      consumedAfterConsume: boolean
-      remaining: Record<string, unknown>
-    }> = []
+  it('runs remove teardown when host nodes are removed', () => {
+    let removals = 0
     let teardownPlugin = definePlugin<EventTarget>({
       phase: 'special',
       keys: ['flag'],
       shouldActivate() {
         return true
       },
-      mount() {
-        return { mounted: true }
-      },
-      unmount(context) {
-        context.mergeProps({ ignored: true })
-        context.replaceProps({ replaced: true })
-        context.consume('flag')
-        unmountReads.push({
-          consumedAfterConsume: context.isConsumed('flag'),
-          remaining: context.remainingPropsView(),
-        })
+      setup() {
+        return {
+          remove() {
+            removals++
+          },
+        }
       },
     })
     let reconciler = createTestNodeReconciler([teardownPlugin as any])
@@ -639,7 +672,7 @@ describe('incremental reconciler validation', () => {
     root.render(null)
     root.flush()
 
-    assert.deepEqual(unmountReads, [{ consumedAfterConsume: false, remaining: { flag: 'on' } }])
+    assert.equal(removals, 1)
   })
 
   it('handles falsy render values and hosts without children', () => {
@@ -667,10 +700,14 @@ describe('incremental reconciler validation', () => {
       shouldActivate() {
         return true
       },
-      apply(context) {
-        if (calls > 0) return
-        calls++
-        context.root.dispose()
+      setup() {
+        return {
+          commit(context) {
+            if (calls > 0) return
+            calls++
+            context.root.dispose()
+          },
+        }
       },
     })
     let reconciler = createTestNodeReconciler([disposePlugin as any])
@@ -692,32 +729,32 @@ describe('incremental reconciler validation', () => {
     let root = reconciler.createRoot()
 
     let firstProps: Record<string, unknown> = { label: 'a' }
-    firstProps[RECONCILER_PROP_KEYS] = ['label']
+    ;(firstProps as any)[RECONCILER_PROP_KEYS] = ['label']
     root.render(jsx(Comp, firstProps))
     root.flush()
     assert.equal(renders, 1)
 
     let secondProps: Record<string, unknown> = { label: 'a', extra: true }
-    secondProps[RECONCILER_PROP_KEYS] = ['label', 'extra']
+    ;(secondProps as any)[RECONCILER_PROP_KEYS] = ['label', 'extra']
     root.render(jsx(Comp, secondProps))
     root.flush()
     assert.equal(renders, 2)
 
     let thirdProps: Record<string, unknown> = { label: 'a' }
-    thirdProps[RECONCILER_PROP_KEYS] = ['label']
+    ;(thirdProps as any)[RECONCILER_PROP_KEYS] = ['label']
     root.render(jsx(Comp, thirdProps))
     root.flush()
     assert.equal(renders, 3)
 
     let fourthProps: Record<string, unknown> = { label: 'a' }
-    fourthProps[RECONCILER_PROP_KEYS] = ['label']
+    ;(fourthProps as any)[RECONCILER_PROP_KEYS] = ['label']
     root.render(jsx(Comp, fourthProps))
     root.flush()
     assert.equal(renders, 3)
   })
 
   it('reads fallback children when node-children cache is missing', () => {
-    let manualElement = {
+    let manualElement: any = {
       $rmx: true as const,
       type: 'node',
       key: null,
@@ -729,7 +766,7 @@ describe('incremental reconciler validation', () => {
     root.flush()
     assert.equal(root.inspect(), '<node>123</node>')
 
-    ;(manualElement as any)[RECONCILER_NODE_CHILDREN] = undefined
+    manualElement[RECONCILER_NODE_CHILDREN] = undefined
     manualElement.props.children = ['a', 'b']
     root.render(manualElement as any)
     root.flush()

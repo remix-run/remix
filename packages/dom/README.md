@@ -77,3 +77,11 @@ root.render(
 - `basicPropsPlugin`
 
 `mixPlugin` powers declarative host behavior composition through `props.mix`.
+
+DOM plugins follow the reconciler's scope-return model:
+
+- root scope: register root lifecycle listeners (`beforeCommit`, `afterCommit`)
+- node setup scope: `setup(handle)` runs once per active host node
+- node lifecycle scope: return `{ commit(event), remove() }`
+
+`stylePropsPlugin` and `basicPropsPlugin` are reference implementations of this pattern.

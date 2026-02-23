@@ -1,28 +1,5 @@
 import { invariant } from './invariant.ts'
-import type { Plugin, PluginHostContext, PluginSetupHandle, PreparedPlugin } from './types.ts'
-
-export function teardownPlugin<element>(
-  plugin: Plugin<any>,
-  context: PluginHostContext<element>,
-  slot: unknown,
-) {
-  if (isSetupSlot<element>(slot)) {
-    slot.handle.dispatchEvent(new Event('remove'))
-    return
-  }
-  plugin.unmount?.(context, slot)
-}
-
-export function isSetupSlot<element>(
-  slot: unknown,
-): slot is {
-  __rmxSetupSlot: true
-  handle: PluginSetupHandle<element>
-} {
-  if (!slot || typeof slot !== 'object') return false
-  let value = slot as { __rmxSetupSlot?: unknown; handle?: unknown }
-  return value.__rmxSetupSlot === true && value.handle instanceof EventTarget
-}
+import type { PreparedPlugin } from './types.ts'
 
 export function removeActivePluginId(ids: number[], id: number) {
   let index = ids.indexOf(id)

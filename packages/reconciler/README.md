@@ -57,17 +57,12 @@ The runtime handles:
 The scheduler handles:
 
 - batching root updates
-- plugin lifecycle hooks (`beforeFlush` / `afterFlush`)
+- root lifecycle events (`beforeCommit` / `afterCommit`)
 - cascading update guardrails
 
 ### Plugin model
 
-Plugins can:
-
-- register lifecycle listeners on plugin handles
-- register host listeners (`insert` / `remove`)
-- transform host input
-- queue host tasks and schedule updates
+Plugins are root-scoped factories with per-node setup scopes.
 
 Component recursion is reconciler-owned. By the time plugins run, node input has
 already been resolved to host elements.
@@ -197,35 +192,55 @@ Guidelines:
 
 ## Writing plugins
 
-A plugin receives a plugin handle and root, and can optionally return a host factory.
+A plugin uses three intentional scopes:
 
-Typical plugin patterns:
+- root scope: `definePlugin(root => ({ ... }))` (runs once when the reconciler is created)
+- node setup scope: `setup(handle)` (runs once per active plugin+host pair)
+- node lifecycle scope: returned object methods `commit(event)` and `remove()`
 
-- transform host props before patching
-- respond to host insert/remove events
-- queue host tasks for imperative work
-- call `update()` for follow-up renders
+Use root lifecycle events directly when you need whole-tree coordination:
 
 ```ts
-let plugin = definePlugin((_pluginHandle, root) => (host) => {
-  host.addEventListener('insert', (event) => {
-    let insertEvent = event as HostInsertEvent<MyElementNode>
-    insertEvent.node.attributes.id = String(insertEvent.input.props.id ?? '')
+let plugin = definePlugin((root) => {
+  root.addEventListener('beforeCommit', () => {
+    // root-level snapshot work
+  })
+  root.addEventListener('afterCommit', () => {
+    // root-level restore/finalize work
   })
 
-  // Optional custom event.
-  root.dispatchEvent(new Event('plugin-ready'))
-
-  return (input) => input
+  return {
+    phase: 'special',
+    keys: ['style'],
+    shouldActivate(context) {
+      return typeof context.delta.nextProps.style === 'object'
+    },
+    setup(handle) {
+      let previous: null | Record<string, unknown> = null
+      return {
+        commit(event) {
+          let next = event.delta.nextProps.style as Record<string, unknown>
+          // diff/apply changes
+          previous = next
+          event.consume('style')
+        },
+        remove() {
+          // teardown
+          previous = null
+        },
+      }
+    },
+  }
 })
 ```
 
 Guidelines:
 
-- keep plugin scope narrow (single concern)
-- avoid cross-plugin coupling
-- dispatch explicit root events only for domain-level plugin signals
-- delete handled props so later plugins can iterate without extra guards
+- keep each plugin focused on one concern
+- use `keys` + `shouldActivate` for deterministic routing
+- treat `commit(event)` as a snapshot; mutate via explicit methods (`replaceProps`, `consume`)
+- use `handle.queueTask((node, signal) => ...)` for post-commit imperative work
+- use `remove()` for node teardown, and root events for global lifecycle behavior
 
 ## Minimal flow
 

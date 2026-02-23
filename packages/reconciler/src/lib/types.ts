@@ -53,14 +53,13 @@ export type PluginHostContext<element = EventTarget> = {
   root: ReconcilerRoot<RenderValue>
   host: CommittedHostNode<any, any, any, element>
   delta: HostPropDelta
-  mergeProps(props: Record<string, unknown>): void
   replaceProps(props: Record<string, unknown>): void
   consume(key: string): void
   isConsumed(key: string): boolean
   remainingPropsView(): Record<string, unknown>
 }
 
-export type PluginSetupHandle<element = EventTarget> = EventTarget & {
+export type PluginSetupHandle<element = EventTarget> = {
   root: ReconcilerRoot<RenderValue>
   host: CommittedHostNode<any, any, any, element>
   update(): Promise<AbortSignal>
@@ -71,15 +70,17 @@ export type PluginRootHandle = EventTarget & {
   root: ReconcilerRoot<RenderValue>
 }
 
+export type PluginNodeScope<element = EventTarget> = {
+  commit?(event: PluginCommitEvent<element>): void
+  remove?(): void
+}
+
 export type Plugin<element = EventTarget> = {
   phase: PluginPhase
   priority?: number
   keys?: string[]
   shouldActivate?(context: PluginHostContext<element>): boolean
-  setup?(handle: PluginSetupHandle<element>): void
-  mount?(context: PluginHostContext<element>): unknown
-  apply?(context: PluginHostContext<element>, slot: unknown): void
-  unmount?(context: PluginHostContext<element>, slot: unknown): void
+  setup?(handle: PluginSetupHandle<element>): void | PluginNodeScope<element>
 }
 
 export type PluginDefinition<element = EventTarget> =
@@ -163,7 +164,7 @@ export type CommittedHostNode<parent, node, text extends node, element extends n
   childrenInput: RenderValue[]
   node: element
   children: CommittedNode<parent, node, text, element>[]
-  pluginSlots: Array<undefined | unknown>
+  pluginSlots: Array<undefined | null | PluginNodeScope<any>>
   activePluginIds: number[]
 }
 
@@ -204,7 +205,6 @@ export class PluginCommitEvent<element = EventTarget> extends Event {
   root: ReconcilerRoot<RenderValue>
   host: CommittedHostNode<any, any, any, element>
   delta: HostPropDelta
-  #mergeProps: PluginHostContext<element>['mergeProps']
   #replaceProps: PluginHostContext<element>['replaceProps']
   #consume: PluginHostContext<element>['consume']
   #isConsumed: PluginHostContext<element>['isConsumed']
@@ -215,15 +215,10 @@ export class PluginCommitEvent<element = EventTarget> extends Event {
     this.root = context.root
     this.host = context.host
     this.delta = context.delta
-    this.#mergeProps = context.mergeProps
     this.#replaceProps = context.replaceProps
     this.#consume = context.consume
     this.#isConsumed = context.isConsumed
     this.#remainingPropsView = context.remainingPropsView
-  }
-
-  mergeProps(props: Record<string, unknown>) {
-    this.#mergeProps(props)
   }
 
   replaceProps(props: Record<string, unknown>) {

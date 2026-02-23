@@ -30,13 +30,12 @@ describe('types helpers', () => {
 
   it('proxies plugin commit event operations to host context', () => {
     let consumed = new Set<string>()
-    let merged: Record<string, unknown> = {}
     let replaced: null | Record<string, unknown> = null
     let root = {} as ReconcilerRoot<RenderValue>
     let host = { id: 1, type: 'button', node: {} } as any
     let delta: HostPropDelta = {
       kind: 'mount',
-      prevProps: {},
+      previousProps: {},
       nextProps: { title: 'next' },
       changedKeys: ['title'],
     }
@@ -44,9 +43,6 @@ describe('types helpers', () => {
       root,
       host,
       delta,
-      mergeProps(props) {
-        merged = { ...merged, ...props }
-      },
       replaceProps(props) {
         replaced = props
       },
@@ -62,11 +58,9 @@ describe('types helpers', () => {
     }
 
     let event = new PluginCommitEvent(context)
-    event.mergeProps({ className: 'x' })
     event.replaceProps({ role: 'button' })
     event.consume('title')
 
-    assert.deepEqual(merged, { className: 'x' })
     assert.deepEqual(replaced, { role: 'button' })
     assert.equal(event.isConsumed('title'), true)
     assert.deepEqual(event.remainingPropsView(), { title: 'next' })
@@ -77,7 +71,7 @@ describe('types helpers', () => {
 
   it('returns plugin values unchanged from definePlugin', () => {
     let plugin: Plugin = {
-      phase: 'props',
+      phase: 'special',
       keys: ['title'],
       shouldActivate() {
         return true

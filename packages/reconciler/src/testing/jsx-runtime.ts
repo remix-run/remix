@@ -10,6 +10,7 @@ const EMPTY_CHILDREN: RenderValue[] = []
 
 export type ComponentHandle = {
   update(): Promise<AbortSignal>
+  queueTask(task: (signal: AbortSignal) => void): void
 }
 export type RenderValue =
   | ReconcilerJsxElement
