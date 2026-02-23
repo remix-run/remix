@@ -86,6 +86,12 @@ let missingWithoutSetupProps = <WithoutSetupComponent />
 
 let goodStyleProp = <div style={{ color: 'red' }} />
 let goodDataAttribute = <div data-id="x" />
+let goodButtonType = <button type="button" />
+// @ts-expect-error button type is a constrained literal union
+let badButtonType = <button type="lol" />
+let goodAnchorRole = <a href="/docs" role="button" />
+// @ts-expect-error role is constrained when href is present
+let badAnchorRole = <a href="/docs" role="main" />
 
 let goodOnMixin = (
   <button
@@ -130,6 +136,10 @@ void badWithoutSetupValue
 void missingWithoutSetupProps
 void goodStyleProp
 void goodDataAttribute
+void goodButtonType
+void badButtonType
+void goodAnchorRole
+void badAnchorRole
 void goodOnMixin
 void goodOnMixinInput
 void badOnMixin
