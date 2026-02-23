@@ -1,13 +1,13 @@
 import { createMixin } from '@remix-run/reconciler'
 import type { MixinDescriptor } from '@remix-run/reconciler'
-import type { JSX as DomJSX } from '../../jsx-runtime.ts'
+import type { JSX } from '../jsx.ts'
 
 export type AnimateLayoutOptions = {
   duration?: number
   easing?: string
 }
 
-type DomElementType = Extract<keyof DomJSX.IntrinsicElements, string>
+type DomElementType = Extract<keyof JSX.IntrinsicElements, string>
 
 let animateLayoutMixin = createMixin<
   [options: AnimateLayoutOptions | undefined],

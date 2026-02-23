@@ -1,6 +1,6 @@
-export { Fragment, jsx, jsxs } from './jsx-runtime.ts'
-import { jsx } from './jsx-runtime.ts'
-import type { DomJsxElement } from './jsx-runtime.ts'
+export { Fragment, jsx, jsxs } from './lib/jsx.ts'
+import { jsx } from './lib/jsx.ts'
+import type { DomJsxElement } from './lib/jsx.ts'
 
 export function jsxDEV(
   type: unknown,

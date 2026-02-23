@@ -17,7 +17,7 @@ export {
   spring,
   stylePropsPlugin,
 } from './lib/dom-plugins.ts'
-export { Fragment, jsx, jsxs } from './jsx-runtime.ts'
+export { Fragment, jsx, jsxs } from './lib/jsx.ts'
 export { jsxDEV } from './jsx-dev-runtime.ts'
 
 export type {
@@ -30,7 +30,7 @@ export type {
   MixValue,
   MixinDescriptor,
   MixinType,
-} from './jsx-runtime.ts'
+} from './lib/jsx.ts'
 
 export type {
   DomElementNode,

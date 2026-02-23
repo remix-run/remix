@@ -1,9 +1,9 @@
 import { createMixin } from '@remix-run/reconciler'
 import type { MixinDescriptor } from '@remix-run/reconciler'
-import type { JSX as DomJSX } from '../../jsx-runtime.ts'
+import type { JSX } from '../jsx.ts'
 import { getDomHostInput } from '../dom-node-policy.ts'
 
-type DomElementType = Extract<keyof DomJSX.IntrinsicElements, string>
+type DomElementType = Extract<keyof JSX.IntrinsicElements, string>
 
 type AnimateKeyframes = Parameters<Element['animate']>[0]
 type AnimateTiming = Parameters<Element['animate']>[1]
