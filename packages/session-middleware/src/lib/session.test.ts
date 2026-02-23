@@ -59,7 +59,7 @@ describe('session middleware', () => {
       return fetch('http://example.com')
     })
 
-    const response = await router.fetch('https://remix.run')
+    let response = await router.fetch('https://remix.run')
 
     assert.equal(response.headers.get('Set-Cookie')?.length != null, true)
   })
