@@ -32,6 +32,8 @@ export function session(sessionCookie: Cookie, sessionStorage: SessionStorage): 
 
     let setCookieValue = await sessionStorage.save(session)
     if (setCookieValue != null) {
+      // make sure the response is mutable
+      response = new Response(response.body, response)
       response.headers.append('Set-Cookie', await sessionCookie.serialize(setCookieValue))
     }
 
