@@ -2,6 +2,7 @@ import { definePlugin } from './types.ts'
 import type { Plugin } from './types.ts'
 import type { PluginCommitEvent } from './types.ts'
 import type { PluginSetupHandle } from './types.ts'
+import { ReconcilerErrorEvent } from './types.ts'
 import type { HostTask, ReconcilerElement, ReconcilerRoot, RenderValue } from './types.ts'
 
 export type MixinType<
@@ -115,7 +116,8 @@ export let mixPlugin: Plugin<unknown> = definePlugin({
         let result = runner(...descriptor.args, composedProps)
         if (!result) continue
         if (!isReconcilerElement(result)) {
-          throw new Error('mixins must return a reconciler element')
+          handle.root.dispatchEvent(new ReconcilerErrorEvent(new Error('mixins must return a reconciler element')))
+          continue
         }
         let resultType =
           typeof result.type === 'string'
@@ -124,7 +126,10 @@ export let mixPlugin: Plugin<unknown> = definePlugin({
               ? result.type.__rmxMixinElementType
               : null
         if (resultType == null || resultType !== hostType) {
-          throw new Error('mixins must return an element with the same host type')
+          handle.root.dispatchEvent(
+            new ReconcilerErrorEvent(new Error('mixins must return an element with the same host type')),
+          )
+          continue
         }
         if (result.type !== resultType) {
           result = {
@@ -143,7 +148,11 @@ export let mixPlugin: Plugin<unknown> = definePlugin({
       if (runnerEntries.length > descriptors.length) {
         runnerEntries.length = descriptors.length
       }
-      context.mergeProps(getMergedProps(context.delta.nextProps, composedProps))
+      let nextMix = context.delta.nextProps.mix
+      context.replaceProps({
+        ...composedProps,
+        ...(nextMix === undefined ? {} : { mix: nextMix }),
+      })
       context.consume('mix')
     })
   },
@@ -196,23 +205,6 @@ function isReconcilerElement(value: unknown): value is ReconcilerElement {
 function isMixinElement(value: unknown): value is MixinElement<string> {
   if (typeof value !== 'function') return false
   return '__rmxMixinElementType' in value
-}
-
-function getMergedProps(
-  previous: Record<string, unknown>,
-  next: Record<string, unknown>,
-) {
-  let merged: Record<string, unknown> = {}
-  for (let key in next) {
-    if (key === 'mix') continue
-    merged[key] = next[key]
-  }
-  for (let key in previous) {
-    if (key === 'mix') continue
-    if (key in next) continue
-    merged[key] = undefined
-  }
-  return merged
 }
 
 function withoutMix(props: Record<string, unknown>) {

@@ -54,6 +54,7 @@ export type PluginHostContext<element = EventTarget> = {
   host: CommittedHostNode<any, any, any, element>
   delta: HostPropDelta
   mergeProps(props: Record<string, unknown>): void
+  replaceProps(props: Record<string, unknown>): void
   consume(key: string): void
   isConsumed(key: string): boolean
   remainingPropsView(): Record<string, unknown>
@@ -183,7 +184,7 @@ export type CommittedNode<parent, node, text extends node, element extends node>
   | CommittedHostNode<parent, node, text, element>
   | CommittedComponentNode<parent, node, text, element>
 
-export type ReconcilerRoot<renderValue> = {
+export type ReconcilerRoot<renderValue> = EventTarget & {
   render(value: null | renderValue): void
   flush(): void
   remove(): void
@@ -204,6 +205,7 @@ export class PluginCommitEvent<element = EventTarget> extends Event {
   host: CommittedHostNode<any, any, any, element>
   delta: HostPropDelta
   #mergeProps: PluginHostContext<element>['mergeProps']
+  #replaceProps: PluginHostContext<element>['replaceProps']
   #consume: PluginHostContext<element>['consume']
   #isConsumed: PluginHostContext<element>['isConsumed']
   #remainingPropsView: PluginHostContext<element>['remainingPropsView']
@@ -214,6 +216,7 @@ export class PluginCommitEvent<element = EventTarget> extends Event {
     this.host = context.host
     this.delta = context.delta
     this.#mergeProps = context.mergeProps
+    this.#replaceProps = context.replaceProps
     this.#consume = context.consume
     this.#isConsumed = context.isConsumed
     this.#remainingPropsView = context.remainingPropsView
@@ -221,6 +224,10 @@ export class PluginCommitEvent<element = EventTarget> extends Event {
 
   mergeProps(props: Record<string, unknown>) {
     this.#mergeProps(props)
+  }
+
+  replaceProps(props: Record<string, unknown>) {
+    this.#replaceProps(props)
   }
 
   consume(key: string) {

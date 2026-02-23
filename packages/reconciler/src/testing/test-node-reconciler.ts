@@ -27,6 +27,12 @@ export function createTestNodeReconciler(
       let root = reconciler.createRoot(container)
       return {
         container,
+        addEventListener(...args: Parameters<EventTarget['addEventListener']>) {
+          root.addEventListener(...args)
+        },
+        removeEventListener(...args: Parameters<EventTarget['removeEventListener']>) {
+          root.removeEventListener(...args)
+        },
         render(value: null | RenderValue) {
           root.render(value)
         },

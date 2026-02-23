@@ -3,8 +3,19 @@ import {
   RECONCILER_NODE_CHILDREN,
   RECONCILER_PROP_KEYS,
 } from '../testing/jsx.ts'
+import {
+  isPhasePluginAhead,
+  isSetupSlot,
+  removeActivePluginId,
+  teardownPlugin,
+} from './root-helpers.ts'
 import { createScheduler } from './scheduler.ts'
-import { PluginAfterCommitEvent, PluginBeforeCommitEvent, PluginCommitEvent } from './types.ts'
+import {
+  PluginAfterCommitEvent,
+  PluginBeforeCommitEvent,
+  PluginCommitEvent,
+  ReconcilerErrorEvent,
+} from './types.ts'
 import type {
   CommittedComponentNode,
   CommittedHostNode,
@@ -31,6 +42,7 @@ import type {
 
 type RootState<parent, node, text extends node, element extends node> = {
   container: parent
+  api: ReconcilerRoot<RenderValue>
   current: CommittedNode<parent, node, text, element>[]
   renderValue: null | RenderValue
   pendingTasks: RootTask[]
@@ -38,6 +50,7 @@ type RootState<parent, node, text extends node, element extends node> = {
   disposed: boolean
   dirtyNodeIds: Set<number>
   hasPendingComponentUpdate: boolean
+  isFlushing: boolean
   pendingHostCommits: PendingHostCommit<parent, node, text, element>[]
   enqueue(): void
 }
@@ -82,6 +95,7 @@ export function createReconciler<parent, node, text extends node, element extend
     createRoot(container: parent): ReconcilerRoot<RenderValue> {
       let root: RootState<parent, node, text, element> = {
         container,
+        api: createEmptyRootFacade(),
         current: [],
         renderValue: null,
         pendingTasks: [],
@@ -89,6 +103,7 @@ export function createReconciler<parent, node, text extends node, element extend
         disposed: false,
         dirtyNodeIds: new Set(),
         hasPendingComponentUpdate: false,
+        isFlushing: false,
         pendingHostCommits: [],
         enqueue() {},
       }
@@ -97,8 +112,8 @@ export function createReconciler<parent, node, text extends node, element extend
         flushWork,
       }
       root.enqueue = () => scheduler.enqueue(scheduledRoot)
-      let rootApi: ReconcilerRoot<RenderValue> = {
-        render(value) {
+      let rootApi = Object.assign(new EventTarget(), {
+        render(value: null | RenderValue) {
           if (root.disposed) return
           root.renderValue = value
           root.enqueue()
@@ -118,25 +133,33 @@ export function createReconciler<parent, node, text extends node, element extend
           flushWork()
           root.disposed = true
         },
-      }
+      }) as ReconcilerRoot<RenderValue>
+      root.api = rootApi
       pluginRootHandle.root = rootApi
       return rootApi
 
       function flushWork() {
         if (root.disposed) return
-        pluginRootHandle.dispatchEvent(new PluginBeforeCommitEvent(rootApi))
-        root.renderController?.abort()
-        root.renderController = new AbortController()
-        root.dirtyNodeIds.clear()
-        root.pendingHostCommits.length = 0
+        root.isFlushing = true
+        try {
+          pluginRootHandle.dispatchEvent(new PluginBeforeCommitEvent(rootApi))
+          root.renderController?.abort()
+          root.renderController = new AbortController()
+          root.dirtyNodeIds.clear()
+          root.pendingHostCommits.length = 0
 
-        let nextNodes = normalizeToRenderNodes(root.renderValue)
-        let { children } = reconcileChildren(root.container, root.current, nextNodes, root)
-        root.current = children
-        flushPendingHostCommits(root)
-        runPendingTasks(root)
-        root.hasPendingComponentUpdate = false
-        pluginRootHandle.dispatchEvent(new PluginAfterCommitEvent(rootApi))
+          let nextNodes = normalizeToRenderNodes(root.renderValue)
+          let { children } = reconcileChildren(root.container, root.current, nextNodes, root)
+          root.current = children
+          flushPendingHostCommits(root)
+          runPendingTasks(root)
+          root.hasPendingComponentUpdate = false
+          pluginRootHandle.dispatchEvent(new PluginAfterCommitEvent(rootApi))
+        } catch (cause) {
+          rootApi.dispatchEvent(new ReconcilerErrorEvent(cause))
+        } finally {
+          root.isFlushing = false
+        }
       }
     },
   }
@@ -491,9 +514,7 @@ export function createReconciler<parent, node, text extends node, element extend
         })
       },
       queueTask(task) {
-        markDirty()
         root.pendingTasks.push(task)
-        root.enqueue()
       },
     }
   }
@@ -604,8 +625,19 @@ export function createReconciler<parent, node, text extends node, element extend
     let phaseCandidateVersion = 0
     let phaseOrdered: null | PreparedPlugin<any>[] = null
     let phaseCursor = -1
+    let markKeysForLaterPhasePlugins = (keys: string[]) => {
+      if (!phaseRoutedByKey || !phaseCandidateMarks || !phaseOrdered) return
+      for (let key of keys) {
+        let routed = phaseRoutedByKey.get(key)
+        if (!routed) continue
+        for (let id of routed) {
+          if (!isPhasePluginAhead(phaseOrdered, id, phaseCursor)) continue
+          phaseCandidateMarks[id] = phaseCandidateVersion
+        }
+      }
+    }
     let context: PluginHostContext<element> = {
-      root: createRootFacade(root),
+      root: root.api,
       host,
       delta: effectiveDelta,
       mergeProps(props) {
@@ -619,15 +651,15 @@ export function createReconciler<parent, node, text extends node, element extend
             mergedKeys.push(key)
           }
         }
-        if (!phaseRoutedByKey || !phaseCandidateMarks || !phaseOrdered) return
-        for (let key of mergedKeys) {
-          let routed = phaseRoutedByKey.get(key)
-          if (!routed) continue
-          for (let id of routed) {
-            if (!isPhasePluginAhead(phaseOrdered, id, phaseCursor)) continue
-            phaseCandidateMarks[id] = phaseCandidateVersion
-          }
-        }
+        markKeysForLaterPhasePlugins(mergedKeys)
+      },
+      replaceProps(props) {
+        effectiveDelta.nextProps = { ...props }
+        effectiveDelta.changedKeys = listChangedPropKeys(
+          effectiveDelta.previousProps,
+          effectiveDelta.nextProps,
+        )
+        markKeysForLaterPhasePlugins(effectiveDelta.changedKeys)
       },
       consume(key) {
         if (!consumed) consumed = new Set()
@@ -637,11 +669,11 @@ export function createReconciler<parent, node, text extends node, element extend
         return consumed?.has(key) ?? false
       },
       remainingPropsView() {
-        if (!consumed) return delta.nextProps
+        if (!consumed) return effectiveDelta.nextProps
         let output: Record<string, unknown> = {}
-        for (let key in delta.nextProps) {
+        for (let key in effectiveDelta.nextProps) {
           if (consumed?.has(key)) continue
-          output[key] = delta.nextProps[key]
+          output[key] = effectiveDelta.nextProps[key]
         }
         return output
       },
@@ -688,7 +720,7 @@ export function createReconciler<parent, node, text extends node, element extend
   ) {
     if (host.activePluginIds.length === 0) return
     let context: PluginHostContext<element> = {
-      root: createRootFacade(root),
+      root: root.api,
       host,
       delta: {
         kind: 'update',
@@ -697,6 +729,7 @@ export function createReconciler<parent, node, text extends node, element extend
         changedKeys: [],
       },
       mergeProps() {},
+      replaceProps() {},
       consume() {},
       isConsumed() {
         return false
@@ -816,7 +849,6 @@ export function createReconciler<parent, node, text extends node, element extend
         })
       handle.queueTask = (task) => {
         root.pendingTasks.push((signal) => task(context.host.node, signal))
-        root.enqueue()
       }
       plugin.setup(handle)
       return {
@@ -828,70 +860,6 @@ export function createReconciler<parent, node, text extends node, element extend
     return mounted === undefined ? null : mounted
   }
 
-  function teardownPlugin(
-    plugin: Plugin<any>,
-    context: PluginHostContext<element>,
-    slot: unknown,
-  ) {
-    if (isSetupSlot(slot)) {
-      slot.handle.dispatchEvent(new Event('remove'))
-      return
-    }
-    plugin.unmount?.(context, slot)
-  }
-
-  function isSetupSlot(
-    slot: unknown,
-  ): slot is {
-    __rmxSetupSlot: true
-    handle: PluginSetupHandle<element>
-  } {
-    if (!slot || typeof slot !== 'object') return false
-    let value = slot as { __rmxSetupSlot?: unknown; handle?: unknown }
-    return value.__rmxSetupSlot === true && value.handle instanceof EventTarget
-  }
-
-  function removeActivePluginId(ids: number[], id: number) {
-    let index = ids.indexOf(id)
-    if (index === -1) return
-    ids.splice(index, 1)
-  }
-
-  function isPhasePluginAhead(
-    ordered: PreparedPlugin<any>[],
-    id: number,
-    cursor: number,
-  ) {
-    for (let index = cursor + 1; index < ordered.length; index++) {
-      if (ordered[index].id === id) return true
-    }
-    return false
-  }
-
-  function createRootFacade(root: RootState<parent, node, text, element>): ReconcilerRoot<RenderValue> {
-    return {
-      render(value) {
-        if (root.disposed) return
-        root.renderValue = value
-        root.enqueue()
-      },
-      flush() {
-        if (root.disposed) return
-        scheduler.flush()
-      },
-      remove() {
-        if (root.disposed) return
-        root.renderValue = null
-        root.enqueue()
-      },
-      dispose() {
-        if (root.disposed) return
-        root.renderValue = null
-        root.enqueue()
-        root.disposed = true
-      },
-    }
-  }
 }
 
 function preparePlugins(rawPlugins: Array<Plugin<any>>): PreparedPlugins {
@@ -953,12 +921,12 @@ function materializePlugins(
 }
 
 function createEmptyRootFacade(): ReconcilerRoot<RenderValue> {
-  return {
+  return Object.assign(new EventTarget(), {
     render() {},
     flush() {},
     remove() {},
     dispose() {},
-  }
+  }) as ReconcilerRoot<RenderValue>
 }
 
 function comparePreparedPlugins(a: PreparedPlugin<any>, b: PreparedPlugin<any>) {
