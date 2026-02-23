@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { createDomNodePolicy } from './dom-node-policy.ts'
+import {
+  createDomNodePolicy,
+  getDomHostInput,
+  markDomNodeForReclaim,
+} from './dom-node-policy.ts'
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg'
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
@@ -54,5 +58,64 @@ describe('dom node policy', () => {
     let text = policy.createText('hello')
     policy.setText(text, 'updated')
     expect(text.data).toBe('updated')
+  })
+
+  it('reclaims keyed nodes that are marked for reclaim', () => {
+    let policy = createDomNodePolicy(document)
+    let container = document.createElement('div')
+
+    policy.prepareHostMount?.(container, {
+      type: 'item',
+      key: 'same-key',
+      props: {},
+      children: [],
+    })
+    let first = policy.createElement(container, 'item')
+    policy.insert(container, first, null)
+    markDomNodeForReclaim(first, true)
+    policy.remove(container, first)
+
+    policy.prepareHostMount?.(container, {
+      type: 'item',
+      key: 'same-key',
+      props: { title: 'next' },
+      children: [],
+    })
+    let second = policy.createElement(container, 'item')
+    expect(second).toBe(first)
+    expect(getDomHostInput(second)?.props.title).toBe('next')
+  })
+
+  it('falls back to normal remove when parent does not match', () => {
+    let policy = createDomNodePolicy(document)
+    let firstParent = document.createElement('div')
+    let secondParent = document.createElement('div')
+    let node = policy.createElement(firstParent, 'item')
+    policy.insert(firstParent, node, null)
+
+    policy.remove(secondParent, node)
+    expect(firstParent.firstChild).toBe(node)
+  })
+
+  it('resolves namespace inside a shadow root host', () => {
+    let policy = createDomNodePolicy(document)
+    let host = document.createElement('div')
+    let shadow = host.attachShadow({ mode: 'open' })
+    let node = policy.createElement(shadow, 'span')
+    expect(node.namespaceURI).toBe(HTML_NAMESPACE)
+  })
+
+  it('resolves svg namespace for fragment-like parents with svg hosts', () => {
+    let policy = createDomNodePolicy(document)
+    let pseudoShadowRoot = {
+      nodeType: Node.DOCUMENT_FRAGMENT_NODE,
+      host: {
+        namespaceURI: SVG_NAMESPACE,
+        localName: 'svg',
+      },
+    } as unknown as ShadowRoot
+
+    let node = policy.createElement(pseudoShadowRoot, 'circle')
+    expect(node.namespaceURI).toBe(SVG_NAMESPACE)
   })
 })

@@ -38,4 +38,50 @@ describe('on mixin', () => {
     expect(initialSignal.aborted).toBe(true)
     expect(latestSignal.aborted).toBe(false)
   })
+
+  it('retargets listeners when event type changes and detaches on unmount', () => {
+    let clicks = 0
+    let pointerDowns = 0
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+
+    root.render(
+      <button
+        mix={[
+          on('click', () => {
+            clicks++
+          }),
+        ]}
+      />,
+    )
+    root.flush()
+    root.flush()
+
+    let button = container.firstElementChild as HTMLButtonElement
+    button.click()
+    expect(clicks).toBe(1)
+
+    root.render(
+      <button
+        mix={[
+          on('pointerdown', () => {
+            pointerDowns++
+          }),
+        ]}
+      />,
+    )
+    root.flush()
+    root.flush()
+
+    button.click()
+    button.dispatchEvent(new PointerEvent('pointerdown'))
+    expect(clicks).toBe(1)
+    expect(pointerDowns).toBe(1)
+
+    root.render(null)
+    root.flush()
+    button.dispatchEvent(new PointerEvent('pointerdown'))
+    expect(pointerDowns).toBe(1)
+  })
 })

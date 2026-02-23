@@ -166,6 +166,8 @@ function toCssValue(key: string, value: CssScalar) {
 
 function appendClassName(existing: unknown, nextClassName: string) {
   if (typeof existing !== 'string' || existing.length === 0) return nextClassName
+  let classNames = existing.split(/\s+/).filter(Boolean)
+  if (classNames.includes(nextClassName)) return existing
   return `${existing} ${nextClassName}`
 }
 
