@@ -1,5 +1,6 @@
 export { createDomNodePolicy } from './lib/dom-node-policy.ts'
 export { createDomReconciler } from './lib/dom-reconciler.ts'
+export { renderToHTMLStream } from './lib/render-to-html-stream.ts'
 export {
   animateEntrance,
   animateExit,
@@ -42,3 +43,4 @@ export type {
 } from './lib/dom-node-policy.ts'
 
 export type { Component, ComponentHandle } from '@remix-run/reconciler'
+export type { RenderToHTMLStreamOptions } from './lib/render-to-html-stream.ts'

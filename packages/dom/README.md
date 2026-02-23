@@ -34,6 +34,32 @@ let reconciler = createReconciler({
 let root = reconciler.createRoot(document.getElementById('app')!)
 ```
 
+## Server HTML streaming
+
+For server rendering, use `renderToHTMLStream`:
+
+```ts
+import { renderToHTMLStream } from '@remix-run/dom'
+
+let stream = renderToHTMLStream(<App />, {
+  onError(error) {
+    console.error(error)
+  },
+  async resolveFrame(src, signal) {
+    let response = await fetch(src, { signal })
+    return await response.text()
+  },
+})
+```
+
+Notes:
+
+- returns `ReadableStream<Uint8Array>`
+- does not require a `document`
+- supports cancellation with `signal`
+- supports `<frame src fallback>` async boundaries via `resolveFrame`
+- hydration/bootstrap concerns are intentionally out of scope for this API phase
+
 `tsconfig.json` example for DOM JSX:
 
 ```json

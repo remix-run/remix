@@ -52,8 +52,16 @@ export type DomElementProps<node extends EventTarget> = {
   mix?: MixValue<node>
 } & Record<string, unknown>
 
+export type FrameElementProps = {
+  src: string
+  fallback?: RenderValue
+  key?: unknown
+}
+
 export type DomHTMLElements = {
   [tagName in keyof HTMLElementTagNameMap]: DomElementProps<HTMLElementTagNameMap[tagName]>
+} & {
+  frame: FrameElementProps
 }
 
 export type DomSVGElements = {
