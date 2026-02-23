@@ -1,5 +1,5 @@
 import { createDomReconciler } from '@remix-run/dom'
-import { draggable } from './draggable.ts'
+import { draggable } from './draggable.tsx'
 
 function App(_handle: { update(): Promise<AbortSignal> }, _setup: unknown) {
   return () => (

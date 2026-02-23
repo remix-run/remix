@@ -8,8 +8,8 @@ export type DragDetail = {
 export let dragStartEvent = 'rmx:dragstart' as const
 export let dragEndEvent = 'rmx:dragend' as const
 
-let baseDraggable = createMixin<[boolean], HTMLElement>(() => (handle, node) => {
-  if (!(node instanceof HTMLElement)) return () => {}
+let baseDraggable = createMixin<[boolean], HTMLElement>((handle) => {
+  let node: null | HTMLElement = null
   let enabled = true
   let pointerId: null | number = null
   let startLeft = 0
@@ -17,9 +17,24 @@ let baseDraggable = createMixin<[boolean], HTMLElement>(() => (handle, node) => 
   let startClientX = 0
   let startClientY = 0
 
-  let onPointerDown = (event: PointerEvent) => {
-    if (!enabled) return
+  handle.addEventListener('remove', stopDrag)
+
+  handle.queueTask((nextNode) => {
+    node = nextNode
+  })
+
+  return (nextEnabled: boolean = true, props) => {
+    enabled = nextEnabled
+    if (!enabled) {
+      stopDrag()
+    }
+    return <handle.element {...props} mix={[on('pointerdown', onPointerDown)]} />
+  }
+
+  function onPointerDown(event: PointerEvent) {
     if (event.button !== 0) return
+    if (!enabled) return
+    if (!node) return
 
     let style = getComputedStyle(node)
     if (style.position === 'static') {
@@ -43,28 +58,8 @@ let baseDraggable = createMixin<[boolean], HTMLElement>(() => (handle, node) => 
     dispatchDragEvent(node, dragStartEvent)
   }
 
-  node.addEventListener('pointerdown', onPointerDown)
-  handle.addEventListener('remove', () => {
-    stopDrag()
-    node.removeEventListener('pointerdown', onPointerDown)
-  })
-
-  return (nextEnabled: boolean = true) => {
-    enabled = nextEnabled
-    if (!enabled) {
-      stopDrag()
-    }
-    return {
-      mix: [
-        on<HTMLElement, PointerEvent>('pointerdown', (event: PointerEvent) => {
-          if (event.button !== 0) return
-          onPointerDown(event)
-        }),
-      ],
-    }
-  }
-
   function onPointerMove(event: PointerEvent) {
+    if (!node) return
     if (pointerId == null) return
     if (event.pointerId !== pointerId) return
     let dx = event.clientX - startClientX
@@ -74,6 +69,7 @@ let baseDraggable = createMixin<[boolean], HTMLElement>(() => (handle, node) => 
   }
 
   function onPointerDone(event: PointerEvent) {
+    if (!node) return
     if (pointerId == null) return
     if (event.pointerId !== pointerId) return
     stopDrag()
@@ -81,6 +77,7 @@ let baseDraggable = createMixin<[boolean], HTMLElement>(() => (handle, node) => 
   }
 
   function stopDrag() {
+    if (!node) return
     if (pointerId == null) return
     pointerId = null
     node.style.cursor = 'grab'
