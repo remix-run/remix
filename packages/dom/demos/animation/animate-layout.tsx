@@ -1,4 +1,4 @@
-import { on } from '@remix-run/dom'
+import { animateLayout, on, spring } from '@remix-run/dom'
 
 type DemoHandle = {
   update(): Promise<AbortSignal>
@@ -9,8 +9,9 @@ function createItem() {
   return { id: nextId++, label: `Item ${nextId - 1}` }
 }
 
-export function DefaultAnimate(handle: DemoHandle, _setup: unknown) {
+export function AnimateLayout(handle: DemoHandle, _setup: unknown) {
   let items = [createItem(), createItem()]
+  let layoutSpring = spring('snappy')
   let rerender = () => {
     void handle.update()
   }
@@ -25,7 +26,16 @@ export function DefaultAnimate(handle: DemoHandle, _setup: unknown) {
               rerender()
             }),
           ]}
-          style={{ flex: 1, padding: '8px 12px', border: 'none', borderRadius: 6, backgroundColor: '#10b981', color: 'white', cursor: 'pointer', fontWeight: 500 }}
+          style={{
+            flex: 1,
+            padding: '8px 12px',
+            border: 'none',
+            borderRadius: 6,
+            backgroundColor: '#10b981',
+            color: 'white',
+            cursor: 'pointer',
+            fontWeight: 500,
+          }}
         >
           Add
         </button>
@@ -39,7 +49,16 @@ export function DefaultAnimate(handle: DemoHandle, _setup: unknown) {
               rerender()
             }),
           ]}
-          style={{ flex: 1, padding: '8px 12px', border: 'none', borderRadius: 6, backgroundColor: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 500 }}
+          style={{
+            flex: 1,
+            padding: '8px 12px',
+            border: 'none',
+            borderRadius: 6,
+            backgroundColor: '#6366f1',
+            color: 'white',
+            cursor: 'pointer',
+            fontWeight: 500,
+          }}
         >
           Shuffle
         </button>
@@ -47,7 +66,18 @@ export function DefaultAnimate(handle: DemoHandle, _setup: unknown) {
       {items.map((item) => (
         <div
           key={item.id}
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontWeight: 500, color: '#334155' }}
+          mix={[animateLayout({ duration: layoutSpring.duration, easing: layoutSpring.easing })]}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            backgroundColor: '#f1f5f9',
+            borderRadius: 8,
+            padding: '10px 12px',
+            fontSize: 14,
+            fontWeight: 500,
+            color: '#334155',
+          }}
         >
           <span>{item.label}</span>
           <button
@@ -57,7 +87,14 @@ export function DefaultAnimate(handle: DemoHandle, _setup: unknown) {
                 rerender()
               }),
             ]}
-            style={{ border: 'none', background: 'transparent', cursor: 'pointer', width: 20, height: 20, color: '#94a3b8' }}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              width: 20,
+              height: 20,
+              color: '#94a3b8',
+            }}
           >
             x
           </button>

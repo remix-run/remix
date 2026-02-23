@@ -142,6 +142,7 @@ export function createReconciler<parent, node, text extends node, element extend
         root.isFlushing = true
         try {
           pluginRootHandle.dispatchEvent(new PluginBeforeCommitEvent(rootApi))
+          rootApi.dispatchEvent(new PluginBeforeCommitEvent(rootApi))
           root.renderController?.abort()
           root.renderController = new AbortController()
           root.dirtyNodeIds.clear()
@@ -154,6 +155,7 @@ export function createReconciler<parent, node, text extends node, element extend
           runPendingTasks(root)
           root.hasPendingComponentUpdate = false
           pluginRootHandle.dispatchEvent(new PluginAfterCommitEvent(rootApi))
+          rootApi.dispatchEvent(new PluginAfterCommitEvent(rootApi))
         } catch (cause) {
           rootApi.dispatchEvent(new ReconcilerErrorEvent(cause))
         } finally {

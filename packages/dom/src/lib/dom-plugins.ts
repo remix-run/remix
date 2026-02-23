@@ -3,6 +3,7 @@ import type { PluginDefinition } from '@remix-run/reconciler'
 import { basicPropsPlugin } from './plugins/basic-props-plugin.ts'
 import { createDocumentStatePlugin } from './plugins/document-state-plugin.ts'
 import { stylePropsPlugin } from './plugins/style-props-plugin.ts'
+import { animateLayout } from './mixins/animate-layout-mixin.tsx'
 import { css } from './mixins/css-mixin.tsx'
 import { on } from './mixins/on-mixin.tsx'
 import { spring } from './spring.ts'
@@ -20,4 +21,4 @@ export function createDomPlugins(document: Document) {
 export { basicPropsPlugin } from './plugins/basic-props-plugin.ts'
 export { createDocumentStatePlugin, getDocumentState } from './plugins/document-state-plugin.ts'
 export { stylePropsPlugin } from './plugins/style-props-plugin.ts'
-export { createMixin, css, mixPlugin, on, spring }
+export { animateLayout, createMixin, css, mixPlugin, on, spring }

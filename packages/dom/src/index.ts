@@ -1,6 +1,7 @@
 export { createDomNodePolicy } from './lib/dom-node-policy.ts'
 export { createDomReconciler } from './lib/dom-reconciler.ts'
 export {
+  animateLayout,
   basicPropsPlugin,
   createMixin,
   css,

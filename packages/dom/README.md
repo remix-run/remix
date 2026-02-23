@@ -7,7 +7,7 @@ This package currently provides:
 - a production-oriented `NodePolicy` implementation for DOM trees
 - a DOM JSX runtime (`@remix-run/dom/jsx-runtime`)
 - a DOM plugin pipeline (`createDomPlugins(document)`)
-- first-class mixins (`on`, `css`) via `mixPlugin`
+- first-class mixins (`on`, `css`, `animateLayout`) via `mixPlugin`
 
 ## Agent-first orientation
 
@@ -51,11 +51,12 @@ Event handling is expressed with mixins using `on(...)`.
 Example:
 
 ```tsx
-import { css, on } from '@remix-run/dom'
+import { animateLayout, css, on } from '@remix-run/dom'
 
 root.render(
   <button
     mix={[
+      animateLayout({ duration: 240, easing: 'ease-out' }),
       css({
         padding: '10px 14px',
         borderRadius: 8,

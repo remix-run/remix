@@ -1,5 +1,5 @@
 import { createDomReconciler } from '@remix-run/dom'
-import { DefaultAnimate } from './default-animate.tsx'
+import { AnimateLayout } from './animate-layout.tsx'
 import { EnterAnimation } from './enter.tsx'
 import { ExitAnimation } from './exit.tsx'
 import { RollingSquare } from './rolling-square.tsx'
@@ -20,7 +20,7 @@ function App(_handle: DemoHandle, _setup: unknown) {
         </p>
         <div mix={[grid]}>
           <Tile title="Default Animate" notes="Enter + layout spring animation">
-            <DefaultAnimate />
+            <AnimateLayout />
           </Tile>
           <Tile title="Rolling Square" notes="CSS transition with spring() timing">
             <RollingSquare />
