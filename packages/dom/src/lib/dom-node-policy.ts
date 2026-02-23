@@ -13,14 +13,7 @@ export type DomTraversal = {
 
 export type DomNodePolicy = NodePolicy<DomParentNode, DomNode, DomTextNode, DomElementNode>
 
-export let DOM_RECLAIM_ON_REMOVE = Symbol.for('@remix-run/dom/reclaim-on-remove')
-
 let hostInputByNode = new WeakMap<Node, HostInput>()
-let reclaimOnRemoveByNode = new WeakMap<Element, boolean>()
-
-export function markDomNodeForReclaim(node: Element, reclaimOnRemove: boolean) {
-  reclaimOnRemoveByNode.set(node, reclaimOnRemove)
-}
 
 export function getDomHostInput(node: Node) {
   return hostInputByNode.get(node) ?? null
@@ -28,7 +21,6 @@ export function getDomHostInput(node: Node) {
 
 export function createDomNodePolicy(document: Document): DomNodePolicy {
   let pendingHostInput: null | HostInput = null
-  let reclaimPoolByParent = new WeakMap<Node, Map<string, Map<unknown, Element[]>>>()
 
   return {
     createText(value) {
@@ -43,16 +35,11 @@ export function createDomNodePolicy(document: Document): DomNodePolicy {
     createElement(parent, type) {
       let mountInput = pendingHostInput
       pendingHostInput = null
-      if (mountInput?.key != null && mountInput.type === type) {
-        let reclaimed = reclaimNode(reclaimPoolByParent, parent, type, mountInput.key)
-        if (reclaimed) {
-          hostInputByNode.set(reclaimed, mountInput)
-          return reclaimed
-        }
-      }
       let namespace = resolveNamespace(parent)
       let created =
-        namespace === HTML_NAMESPACE ? document.createElement(type) : document.createElementNS(namespace, type)
+        namespace === HTML_NAMESPACE
+          ? document.createElement(type)
+          : document.createElementNS(namespace, type)
       if (mountInput) hostInputByNode.set(created, mountInput)
       return created
     },
@@ -76,63 +63,9 @@ export function createDomNodePolicy(document: Document): DomNodePolicy {
     },
     remove(parent, node) {
       if (node.parentNode !== parent) return
-      if (node instanceof Element && shouldRetainNode(node)) {
-        let input = hostInputByNode.get(node)
-        if (input?.key != null) {
-          parent.removeChild(node)
-          retainNode(reclaimPoolByParent, parent, input.type, input.key, node)
-          return
-        }
-      }
       node.parentNode?.removeChild(node)
     },
   }
-}
-
-function shouldRetainNode(node: Element) {
-  return reclaimOnRemoveByNode.get(node) === true
-}
-
-function retainNode(
-  reclaimPoolByParent: WeakMap<Node, Map<string, Map<unknown, Element[]>>>,
-  parent: Node,
-  type: string,
-  key: unknown,
-  node: Element,
-) {
-  let byType = reclaimPoolByParent.get(parent)
-  if (!byType) {
-    byType = new Map()
-    reclaimPoolByParent.set(parent, byType)
-  }
-  let byKey = byType.get(type)
-  if (!byKey) {
-    byKey = new Map()
-    byType.set(type, byKey)
-  }
-  let bucket = byKey.get(key)
-  if (!bucket) {
-    bucket = []
-    byKey.set(key, bucket)
-  }
-  bucket.push(node)
-}
-
-function reclaimNode(
-  reclaimPoolByParent: WeakMap<Node, Map<string, Map<unknown, Element[]>>>,
-  parent: Node,
-  type: string,
-  key: unknown,
-) {
-  let byType = reclaimPoolByParent.get(parent)
-  let byKey = byType?.get(type)
-  let bucket = byKey?.get(key)
-  if (!bucket || bucket.length === 0) return null
-  let reclaimed = bucket.pop() ?? null
-  if (bucket.length === 0) byKey?.delete(key)
-  if (byKey && byKey.size === 0) byType?.delete(type)
-  if (byType && byType.size === 0) reclaimPoolByParent.delete(parent)
-  return reclaimed
 }
 
 function resolveNamespace(parent: DomParentNode) {

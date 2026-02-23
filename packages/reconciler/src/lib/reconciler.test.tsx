@@ -675,6 +675,106 @@ describe('incremental reconciler validation', () => {
     assert.equal(removals, 1)
   })
 
+  it('defers final remove cleanup until retained detach completes', async () => {
+    let detachCalls = 0
+    let removeCalls = 0
+    let resolveDetach = () => {}
+    let detachDone = new Promise<void>((resolve) => {
+      resolveDetach = resolve
+    })
+    let plugin = definePlugin<EventTarget>({
+      phase: 'special',
+      keys: ['flag'],
+      shouldActivate() {
+        return true
+      },
+      setup() {
+        return {
+          detach(event) {
+            detachCalls++
+            event.retain()
+            event.waitUntil(detachDone)
+          },
+          remove() {
+            removeCalls++
+          },
+        }
+      },
+    })
+    let reconciler = createTestNodeReconciler([plugin as any])
+    let root = reconciler.createRoot()
+
+    root.render(<item key="same" flag="on" />)
+    root.flush()
+    root.render(null)
+    root.flush()
+
+    assert.equal(detachCalls, 1)
+    assert.equal(removeCalls, 0)
+    assert.equal(root.inspect(), '<item></item>')
+
+    resolveDetach()
+    await detachDone
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    root.flush()
+    assert.equal(removeCalls, 1)
+    assert.equal(root.inspect(), '')
+  })
+
+  it('reuses retained keyed hosts without rerunning setup or remove', async () => {
+    let setups = 0
+    let detachCalls = 0
+    let removeCalls = 0
+    let resolveDetach = () => {}
+    let detachDone = new Promise<void>((resolve) => {
+      resolveDetach = resolve
+    })
+    let plugin = definePlugin<EventTarget>({
+      phase: 'special',
+      keys: ['flag'],
+      shouldActivate() {
+        return true
+      },
+      setup() {
+        setups++
+        return {
+          detach(event) {
+            detachCalls++
+            event.retain()
+            event.waitUntil(detachDone)
+          },
+          remove() {
+            removeCalls++
+          },
+        }
+      },
+    })
+    let reconciler = createTestNodeReconciler([plugin as any])
+    let root = reconciler.createRoot()
+
+    root.render(<item key="same" flag="on" />)
+    root.flush()
+    root.render(null)
+    root.flush()
+    assert.equal(root.inspect(), '<item></item>')
+
+    root.render(<item key="same" flag="on" />)
+    root.flush()
+
+    assert.equal(root.inspect(), '<item></item>')
+    assert.equal(setups, 1)
+    assert.equal(detachCalls, 1)
+    assert.equal(removeCalls, 0)
+
+    resolveDetach()
+    await detachDone
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    root.flush()
+
+    assert.equal(root.inspect(), '<item></item>')
+    assert.equal(removeCalls, 0)
+  })
+
   it('handles falsy render values and hosts without children', () => {
     let reconciler = createTestNodeReconciler()
     let root = reconciler.createRoot()

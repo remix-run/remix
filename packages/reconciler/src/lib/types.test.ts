@@ -4,6 +4,7 @@ import {
   PluginAfterCommitEvent,
   PluginBeforeCommitEvent,
   PluginCommitEvent,
+  PluginDetachEvent,
   ReconcilerErrorEvent,
   definePlugin,
 } from './types.ts'
@@ -81,5 +82,24 @@ describe('types helpers', () => {
 
     assert.equal(definePlugin(plugin), plugin)
     assert.equal(definePlugin(factory), factory)
+  })
+
+  it('tracks retain and waitUntil state on detach events', async () => {
+    let root = {} as ReconcilerRoot<RenderValue>
+    let host = { id: 1, type: 'item', node: {} } as any
+    let event = new PluginDetachEvent(root, host)
+    let resolved = false
+    let pending = Promise.resolve().then(() => {
+      resolved = true
+    })
+    event.waitUntil(pending)
+    event.retain()
+    await Promise.all(event.waitUntilPromises())
+
+    assert.equal(event.type, 'detach')
+    assert.equal(event.root, root)
+    assert.equal(event.host, host)
+    assert.equal(event.isRetained(), true)
+    assert.equal(resolved, true)
   })
 })

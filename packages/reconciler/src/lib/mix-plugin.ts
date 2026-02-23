@@ -1,6 +1,7 @@
 import { definePlugin } from './types.ts'
 import type { Plugin } from './types.ts'
 import type { PluginCommitEvent } from './types.ts'
+import type { PluginDetachEvent } from './types.ts'
 import type { PluginSetupHandle } from './types.ts'
 import { ReconcilerErrorEvent } from './types.ts'
 import type { HostTask, ReconcilerElement, ReconcilerRoot, RenderValue } from './types.ts'
@@ -65,6 +66,23 @@ type RunnerEntry = {
   handle: MixinHandle<unknown>
 }
 
+class MixinDetachEvent extends Event {
+  #event: PluginDetachEvent<unknown>
+
+  constructor(event: PluginDetachEvent<unknown>) {
+    super('detach')
+    this.#event = event
+  }
+
+  retain() {
+    this.#event.retain()
+  }
+
+  waitUntil(promise: Promise<unknown>) {
+    this.#event.waitUntil(promise)
+  }
+}
+
 export function createMixin<args extends unknown[], node = unknown, elementType extends string = string>(
   type: MixinType<node, args, elementType>,
 ) {
@@ -85,6 +103,13 @@ export let mixPlugin: Plugin<unknown> = definePlugin({
     let hostType = handle.host.type
     let runnerEntries: RunnerEntry[] = []
     return {
+      detach(event) {
+        for (let index = 0; index < runnerEntries.length; index++) {
+          let entry = runnerEntries[index]
+          let detachEvent = new MixinDetachEvent(event as PluginDetachEvent<unknown>)
+          entry?.handle.dispatchEvent(detachEvent)
+        }
+      },
       remove() {
         for (let index = 0; index < runnerEntries.length; index++) {
           let entry = runnerEntries[index]

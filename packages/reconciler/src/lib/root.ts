@@ -12,6 +12,7 @@ import {
   PluginAfterCommitEvent,
   PluginBeforeCommitEvent,
   PluginCommitEvent,
+  PluginDetachEvent,
   ReconcilerErrorEvent,
 } from './types.ts'
 import type {
@@ -51,6 +52,10 @@ type RootState<parent, node, text extends node, element extends node> = {
   hasPendingComponentUpdate: boolean
   isFlushing: boolean
   pendingHostCommits: PendingHostCommit<parent, node, text, element>[]
+  pendingRetainedByParent: Map<
+    parent | element,
+    Map<string, Map<unknown, PendingRetainedHost<parent, node, text, element>[]>>
+  >
   enqueue(): void
 }
 
@@ -71,6 +76,14 @@ type PreparedPlugins = {
 type PendingHostCommit<parent, node, text extends node, element extends node> = {
   host: CommittedHostNode<parent, node, text, element>
   delta: HostPropDelta
+}
+
+type PendingRetainedHost<parent, node, text extends node, element extends node> = {
+  host: CommittedHostNode<parent, node, text, element>
+  parent: parent | element
+  type: string
+  key: unknown
+  canceled: boolean
 }
 
 type NodeResult<parent, node, text extends node, element extends node> = {
@@ -104,6 +117,7 @@ export function createReconciler<parent, node, text extends node, element extend
         hasPendingComponentUpdate: false,
         isFlushing: false,
         pendingHostCommits: [],
+        pendingRetainedByParent: new Map(),
         enqueue() {},
       }
 
@@ -433,6 +447,41 @@ export function createReconciler<parent, node, text extends node, element extend
     }
 
     if (next.kind === 'host') {
+      if (next.key != null) {
+        let retained = reclaimRetainedHost(root, parentNode, next.type, next.key)
+        if (retained) {
+          let previousProps = retained.props
+          let propsChangedKeys = listChangedPropKeys(previousProps, next.props)
+          let propsChanged = propsChangedKeys.length > 0
+          retained.key = next.key
+          retained.type = next.type
+          retained.props = next.props
+          retained.childrenInput = next.children
+          if (propsChanged) {
+            root.pendingHostCommits.push({
+              host: retained,
+              delta: {
+                kind: 'update',
+                previousProps,
+                nextProps: next.props,
+                changedKeys: propsChangedKeys,
+              },
+            })
+          }
+          let childrenResult = reconcileChildren(
+            retained.node,
+            retained.children,
+            normalizeToRenderNodes(next.children),
+            root,
+          )
+          retained.children = childrenResult.children
+          root.dirtyNodeIds.add(retained.id)
+          return {
+            node: retained,
+            changed: true,
+          }
+        }
+      }
       policy.prepareHostMount?.(parentNode, {
         type: next.type,
         key: next.key,
@@ -533,6 +582,29 @@ export function createReconciler<parent, node, text extends node, element extend
     }
 
     if (nodeToRemove.kind === 'host') {
+      let detachEvent = detachHostPlugins(nodeToRemove, root)
+      if (detachEvent.isRetained()) {
+        let retained: PendingRetainedHost<parent, node, text, element> = {
+          host: nodeToRemove,
+          parent: parentNode,
+          type: nodeToRemove.type,
+          key: nodeToRemove.key,
+          canceled: false,
+        }
+        if (nodeToRemove.key != null) {
+          retainHost(root.pendingRetainedByParent, retained)
+        }
+        let waitUntilPromises = detachEvent.waitUntilPromises()
+        let done =
+          waitUntilPromises.length === 0
+            ? Promise.resolve()
+            : Promise.all(waitUntilPromises.map((promise) => promise.catch(() => {}))).then(() => {})
+        done.then(() => {
+          if (retained.canceled) return
+          finalizeRetainedHost(retained, root)
+        })
+        return
+      }
       for (let child of nodeToRemove.children) {
         removeNode(nodeToRemove.node, child, root)
       }
@@ -718,6 +790,22 @@ export function createReconciler<parent, node, text extends node, element extend
     host.activePluginIds = []
   }
 
+  function detachHostPlugins(
+    host: CommittedHostNode<parent, node, text, element>,
+    root: RootState<parent, node, text, element>,
+  ) {
+    let detachEvent = new PluginDetachEvent<element>(root.api, host)
+    if (host.activePluginIds.length === 0) return detachEvent
+    let ids = host.activePluginIds.slice()
+    for (let pluginId of ids) {
+      if (!plugins.all[pluginId]) continue
+      let slot = host.pluginSlots[pluginId]
+      if (slot === undefined) continue
+      slot?.detach?.(detachEvent)
+    }
+    return detachEvent
+  }
+
   function runPluginPhase(
     ordered: PreparedPlugin<any>[],
     routedByKey: Map<string, number[]>,
@@ -816,6 +904,77 @@ export function createReconciler<parent, node, text extends node, element extend
       },
     }
     return plugin.setup(handle) ?? null
+  }
+
+  function retainHost(
+    pendingRetainedByParent: RootState<parent, node, text, element>['pendingRetainedByParent'],
+    retained: PendingRetainedHost<parent, node, text, element>,
+  ) {
+    let byType = pendingRetainedByParent.get(retained.parent)
+    if (!byType) {
+      byType = new Map()
+      pendingRetainedByParent.set(retained.parent, byType)
+    }
+    let byKey = byType.get(retained.type)
+    if (!byKey) {
+      byKey = new Map()
+      byType.set(retained.type, byKey)
+    }
+    let bucket = byKey.get(retained.key)
+    if (!bucket) {
+      bucket = []
+      byKey.set(retained.key, bucket)
+    }
+    bucket.push(retained)
+  }
+
+  function reclaimRetainedHost(
+    root: RootState<parent, node, text, element>,
+    parentNode: parent | element,
+    type: string,
+    key: unknown,
+  ) {
+    let byType = root.pendingRetainedByParent.get(parentNode)
+    let byKey = byType?.get(type)
+    let bucket = byKey?.get(key)
+    if (!bucket || bucket.length === 0) return null
+    let retained = bucket.pop() ?? null
+    if (!retained) return null
+    if (bucket.length === 0) byKey?.delete(key)
+    if (byKey && byKey.size === 0) byType?.delete(type)
+    if (byType && byType.size === 0) root.pendingRetainedByParent.delete(parentNode)
+    retained.canceled = true
+    return retained.host
+  }
+
+  function removeRetainedHost(
+    pendingRetainedByParent: RootState<parent, node, text, element>['pendingRetainedByParent'],
+    retained: PendingRetainedHost<parent, node, text, element>,
+  ) {
+    let byType = pendingRetainedByParent.get(retained.parent)
+    let byKey = byType?.get(retained.type)
+    let bucket = byKey?.get(retained.key)
+    if (!bucket || bucket.length === 0) return
+    let index = bucket.indexOf(retained)
+    if (index >= 0) bucket.splice(index, 1)
+    if (bucket.length === 0) byKey?.delete(retained.key)
+    if (byKey && byKey.size === 0) byType?.delete(retained.type)
+    if (byType && byType.size === 0) pendingRetainedByParent.delete(retained.parent)
+  }
+
+  function finalizeRetainedHost(
+    retained: PendingRetainedHost<parent, node, text, element>,
+    root: RootState<parent, node, text, element>,
+  ) {
+    removeRetainedHost(root.pendingRetainedByParent, retained)
+    let host = retained.host
+    for (let child of host.children) {
+      removeNode(host.node, child, root)
+    }
+    teardownHostPlugins(host, root)
+    let parent = policy.getParent(host.node)
+    if (!parent) return
+    policy.remove(parent, host.node)
   }
 
 }

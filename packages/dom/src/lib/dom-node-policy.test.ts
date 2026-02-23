@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  createDomNodePolicy,
-  getDomHostInput,
-  markDomNodeForReclaim,
-} from './dom-node-policy.ts'
+import { createDomNodePolicy, getDomHostInput } from './dom-node-policy.ts'
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg'
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
@@ -60,7 +56,7 @@ describe('dom node policy', () => {
     expect(text.data).toBe('updated')
   })
 
-  it('reclaims keyed nodes that are marked for reclaim', () => {
+  it('tracks latest host input metadata for created elements', () => {
     let policy = createDomNodePolicy(document)
     let container = document.createElement('div')
 
@@ -72,18 +68,7 @@ describe('dom node policy', () => {
     })
     let first = policy.createElement(container, 'item')
     policy.insert(container, first, null)
-    markDomNodeForReclaim(first, true)
-    policy.remove(container, first)
-
-    policy.prepareHostMount?.(container, {
-      type: 'item',
-      key: 'same-key',
-      props: { title: 'next' },
-      children: [],
-    })
-    let second = policy.createElement(container, 'item')
-    expect(second).toBe(first)
-    expect(getDomHostInput(second)?.props.title).toBe('next')
+    expect(getDomHostInput(first)?.key).toBe('same-key')
   })
 
   it('falls back to normal remove when parent does not match', () => {

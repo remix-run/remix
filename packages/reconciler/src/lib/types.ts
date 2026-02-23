@@ -73,6 +73,7 @@ export type PluginRootHandle = EventTarget & {
 }
 
 export type PluginNodeScope<element = EventTarget> = {
+  detach?(event: PluginDetachEvent<element>): void
   commit?(event: PluginCommitEvent<element>): void
   remove?(): void
 }
@@ -237,6 +238,36 @@ export class PluginCommitEvent<element = EventTarget> extends Event {
 
   remainingPropsView() {
     return this.#remainingPropsView()
+  }
+}
+
+export class PluginDetachEvent<element = EventTarget> extends Event {
+  root: ReconcilerRoot<RenderValue>
+  host: CommittedHostNode<any, any, any, element>
+  #retained = false
+  #waitUntilPromises: Promise<unknown>[] = []
+
+  constructor(root: ReconcilerRoot<RenderValue>, host: CommittedHostNode<any, any, any, element>) {
+    super('detach')
+    this.root = root
+    this.host = host
+  }
+
+  retain() {
+    this.#retained = true
+  }
+
+  waitUntil(promise: Promise<unknown>) {
+    this.#retained = true
+    this.#waitUntilPromises.push(promise)
+  }
+
+  isRetained() {
+    return this.#retained
+  }
+
+  waitUntilPromises() {
+    return this.#waitUntilPromises
   }
 }
 

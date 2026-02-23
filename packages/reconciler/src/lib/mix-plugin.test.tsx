@@ -457,4 +457,43 @@ describe('mix plugin', () => {
     assert.equal(calls, 1)
   })
 
+  it('dispatches detach before final remove when retained', async () => {
+    let detachCalls = 0
+    let removeCalls = 0
+    let resolveDetach = () => {}
+    let detachDone = new Promise<void>((resolve) => {
+      resolveDetach = resolve
+    })
+    let retained = createMixin<[], EventTarget>((handle) => {
+      handle.addEventListener('detach', (event) => {
+        detachCalls++
+        let detachEvent = event as Event & {
+          retain(): void
+          waitUntil(promise: Promise<unknown>): void
+        }
+        detachEvent.retain()
+        detachEvent.waitUntil(detachDone)
+      })
+      handle.addEventListener('remove', () => {
+        removeCalls++
+      })
+      return (_props) => <handle.element />
+    })
+
+    let reconciler = createTestNodeReconciler([mixPlugin as any])
+    let root = reconciler.createRoot()
+    root.render(<button mix={[retained()]}>hello</button>)
+    root.flush()
+    root.render(null)
+    root.flush()
+    assert.equal(detachCalls, 1)
+    assert.equal(removeCalls, 0)
+
+    resolveDetach()
+    await detachDone
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    root.flush()
+    assert.equal(removeCalls, 1)
+  })
+
 })
