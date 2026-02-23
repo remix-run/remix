@@ -572,7 +572,7 @@ export const workerHref = workerTsAsset.href`,
       fs.mkdirSync(path.join(root, '.assets', 'app'), { recursive: true })
       fs.writeFileSync(
         path.join(root, '.assets', 'app', 'worker.ts.placeholder.ts'),
-        `// @generated\nexport const href = '/__@assets/app/worker.ts'\nexport const preloads = ['/__@assets/app/worker.ts#preloads']\n`,
+        `// @generated\nconst workerTsAsset = {\n  href: '/__@assets/app/worker.ts',\n  preloads: ['/__@assets/app/worker.ts#preloads'],\n}\nexport default workerTsAsset\n`,
       )
 
       await build({
@@ -644,7 +644,7 @@ export const href = workerTsAsset.href`,
       fs.mkdirSync(path.join(root, '.assets', 'app'), { recursive: true })
       fs.writeFileSync(
         path.join(root, '.assets', 'app', 'worker.ts.placeholder.ts'),
-        `// @generated\nexport const href = '/__@assets/app/worker.ts'\nexport const preloads = ['/__@assets/app/worker.ts#preloads']\n`,
+        `// @generated\nconst workerTsAsset = {\n  href: '/__@assets/app/worker.ts',\n  preloads: ['/__@assets/app/worker.ts#preloads'],\n}\nexport default workerTsAsset\n`,
       )
 
       await build({

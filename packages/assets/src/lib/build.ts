@@ -17,10 +17,14 @@ import {
   findFileRule,
   normalizeSourcePath,
   runFileRule,
-  selectVariant,
   type CompiledFileRule,
 } from './files.ts'
-import { GENERATED_MARKER, toCodegenFilePath, writeIfChanged } from './codegen.ts'
+import {
+  generateBuildFileContent,
+  generateBuildScriptContent,
+  toCodegenFilePath,
+  writeIfChanged,
+} from './codegen.ts'
 
 /**
  * Discover the full module graph from entry points.
@@ -353,48 +357,6 @@ function formatPreloads(urls: string[]): string {
   if (urls.length === 0) return '[]'
   if (urls.length === 1) return `['${urls[0]}']`
   return `[\n${urls.map((u) => `  '${u}'`).join(',\n')},\n]`
-}
-
-function generateBuildFileContent(
-  sourcePath: string,
-  output: AssetsManifest['files']['outputs'][string],
-  baseUrl: string,
-): string {
-  let lines = [GENERATED_MARKER, `// source: ${sourcePath}`]
-
-  if ('variants' in output) {
-    let variantEntries = Object.entries(output.variants)
-    if (output.defaultVariant) {
-      let defaultPath = output.variants[output.defaultVariant].path
-      lines.push(`export const href = '${toAssetUrl(defaultPath, baseUrl)}'`)
-    }
-    lines.push(`export const variants = {`)
-    for (let [variant, variantOutput] of variantEntries) {
-      lines.push(`  ${variant}: { href: '${toAssetUrl(variantOutput.path, baseUrl)}' },`)
-    }
-    lines.push(`}`)
-  } else {
-    lines.push(`export const href = '${toAssetUrl(output.path, baseUrl)}'`)
-  }
-
-  return lines.join('\n') + '\n'
-}
-
-function generateBuildScriptContent(
-  sourcePath: string,
-  outputPath: string,
-  preloadUrls: string[],
-  baseUrl: string,
-): string {
-  let href = toAssetUrl(outputPath, baseUrl)
-  return (
-    [
-      GENERATED_MARKER,
-      `// source: ${sourcePath}`,
-      `export const href = '${href}'`,
-      `export const preloads = ${formatPreloads(preloadUrls)}`,
-    ].join('\n') + '\n'
-  )
 }
 
 function collectPreloadUrls(

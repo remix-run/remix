@@ -403,7 +403,7 @@ function formatPreloads(urls: string[], indent = ''): string {
   return `[\n${urls.map((u) => `${inner}'${u}'`).join(',\n')},\n${indent}]`
 }
 
-function generateBuildScriptContent(
+export function generateBuildScriptContent(
   sourcePath: string,
   outputPath: string,
   preloadUrls: string[],
@@ -424,7 +424,7 @@ function generateBuildScriptContent(
   )
 }
 
-function generateBuildFileContent(
+export function generateBuildFileContent(
   sourcePath: string,
   output: AssetsManifest['files']['outputs'][string],
   baseUrl: string,
