@@ -56,6 +56,36 @@ root.render(<app>Hello</app>)
 root.flush()
 ```
 
+### `createStreamingRenderer({ policy, plugins })`
+
+Creates a target-agnostic streaming renderer for server output:
+
+- `policy` defines how host nodes become stream chunks
+- `plugins` define prop semantics for that policy (same `special`/`terminal` model)
+
+```ts
+import { createStreamingRenderer } from '@remix-run/reconciler'
+
+let renderer = createStreamingRenderer({
+  policy: myStreamingPolicy,
+  plugins: [myStreamingPlugin],
+})
+let root = renderer.createRoot(<app />)
+let stream = root.stream()
+```
+
+Streaming lifecycle guarantees:
+
+- emits `beforeCommit` before render traversal begins
+- emits `afterCommit` after traversal + queued tasks + policy finalization
+- dispatches `error` with `cause` when traversal/policy/plugin work throws
+- `abort(reason)` cancels pending async work and errors the stream
+
+Ordering guarantees:
+
+- chunks from a node are emitted in traversal order
+- promise-backed children emit after they resolve, preserving parent/child order
+
 ### Runtime and scheduler
 
 The runtime handles:

@@ -280,3 +280,168 @@ export function definePlugin<element>(
 ) {
   return plugin
 }
+
+export type StreamingChunkOutput<chunk> =
+  | null
+  | undefined
+  | chunk
+  | Iterable<chunk>
+  | AsyncIterable<chunk>
+
+export type StreamingRenderValue = RenderValue | Promise<RenderValue>
+
+export type StreamingHostInput = {
+  type: string
+  key: unknown
+  props: Record<string, unknown>
+  children: StreamingRenderValue[]
+}
+
+export type StreamingElementStart<chunk, elementState> = {
+  state: elementState
+  open?: StreamingChunkOutput<chunk>
+  body?: StreamingChunkOutput<chunk>
+  skipChildren?: boolean
+}
+
+export type StreamingBoundaryResult<chunk> = {
+  open?: StreamingChunkOutput<chunk>
+  fallback?: null | StreamingRenderValue
+  close?: StreamingChunkOutput<chunk>
+  deferred?: Promise<StreamingChunkOutput<chunk>>
+}
+
+export type StreamingPolicy<chunk, rootContext = unknown, elementState = unknown> = {
+  beginRoot?(root: StreamingRendererRoot<chunk>): rootContext | Promise<rootContext>
+  resolveBoundary?(
+    input: StreamingHostInput,
+    context: rootContext,
+    signal: AbortSignal,
+  ): null | StreamingBoundaryResult<chunk> | Promise<null | StreamingBoundaryResult<chunk>>
+  beginElement(
+    input: StreamingHostInput,
+    context: rootContext,
+  ):
+    | StreamingElementStart<chunk, elementState>
+    | Promise<StreamingElementStart<chunk, elementState>>
+  text(value: string, context: rootContext): StreamingChunkOutput<chunk> | Promise<StreamingChunkOutput<chunk>>
+  endElement(
+    state: elementState,
+    context: rootContext,
+  ): StreamingChunkOutput<chunk> | Promise<StreamingChunkOutput<chunk>>
+  finalize?(context: rootContext): StreamingChunkOutput<chunk> | Promise<StreamingChunkOutput<chunk>>
+}
+
+export type StreamingHostNode = {
+  id: number
+  key: unknown
+  type: string
+  props: Record<string, unknown>
+  childrenInput: StreamingRenderValue[]
+  pluginSlots: Array<undefined | null | StreamingPluginNodeScope>
+  activePluginIds: number[]
+}
+
+export type StreamingPropDelta = {
+  kind: 'mount'
+  previousProps: Record<string, unknown>
+  nextProps: Record<string, unknown>
+  changedKeys: string[]
+}
+
+export type StreamingPluginHostContext = {
+  root: StreamingRendererRoot<any>
+  host: StreamingHostNode
+  delta: StreamingPropDelta
+  replaceProps(props: Record<string, unknown>): void
+  consume(key: string): void
+  isConsumed(key: string): boolean
+  remainingPropsView(): Record<string, unknown>
+}
+
+export type StreamingPluginSetupHandle = {
+  root: StreamingRendererRoot<any>
+  host: StreamingHostNode
+  update(): Promise<AbortSignal>
+  queueTask(task: RootTask): void
+}
+
+export type StreamingPluginNodeScope = {
+  commit?(context: StreamingPluginHostContext): void
+  remove?(): void
+}
+
+export type StreamingPluginRootHandle = EventTarget & {
+  root: StreamingRendererRoot<any>
+}
+
+export type StreamingPlugin<phase extends PluginPhase = PluginPhase> = {
+  phase: phase
+  priority?: number
+  keys?: string[]
+  shouldActivate?(context: StreamingPluginHostContext): boolean
+  setup?(handle: StreamingPluginSetupHandle): void | StreamingPluginNodeScope
+}
+
+export type StreamingPluginDefinition =
+  | StreamingPlugin
+  | ((root: StreamingPluginRootHandle) => StreamingPlugin)
+
+export type PreparedStreamingPlugin = {
+  id: number
+  phase: PluginPhase
+  priority: number
+  routingKeys: string[]
+  plugin: StreamingPlugin
+}
+
+export type StreamingRendererRoot<chunk> = EventTarget & {
+  stream(): ReadableStream<chunk>
+  toString(): Promise<string>
+  abort(reason?: unknown): void
+}
+
+export type StreamingRenderer<chunk> = {
+  createRoot(value: null | StreamingRenderValue): StreamingRendererRoot<chunk>
+}
+
+export class StreamingBeforeCommitEvent<chunk> extends Event {
+  root: StreamingRendererRoot<chunk>
+
+  constructor(root: StreamingRendererRoot<chunk>) {
+    super('beforeCommit')
+    this.root = root
+  }
+}
+
+export class StreamingAfterCommitEvent<chunk> extends Event {
+  root: StreamingRendererRoot<chunk>
+
+  constructor(root: StreamingRendererRoot<chunk>) {
+    super('afterCommit')
+    this.root = root
+  }
+}
+
+export class StreamingErrorEvent extends Event {
+  cause: unknown
+
+  constructor(cause: unknown) {
+    super('error')
+    this.cause = cause
+  }
+}
+
+export function defineStreamingPlugin<phase extends PluginPhase>(
+  plugin: StreamingPlugin<phase>,
+): StreamingPlugin<phase>
+export function defineStreamingPlugin<phase extends PluginPhase>(
+  plugin: (root: StreamingPluginRootHandle) => StreamingPlugin<phase>,
+): (root: StreamingPluginRootHandle) => StreamingPlugin<phase>
+export function defineStreamingPlugin<phase extends PluginPhase>(
+  plugin:
+    | StreamingPlugin<phase>
+    | ((root: StreamingPluginRootHandle) => StreamingPlugin<phase>),
+) {
+  return plugin
+}

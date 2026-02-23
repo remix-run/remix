@@ -1,8 +1,11 @@
 export { createReconciler } from './lib/root.ts'
+export { createStreamingRenderer } from './lib/streaming-renderer.ts'
 export { definePlugin } from './lib/types.ts'
+export { defineStreamingPlugin } from './lib/types.ts'
 export { PluginAfterCommitEvent, PluginBeforeCommitEvent } from './lib/types.ts'
 export { PluginCommitEvent } from './lib/types.ts'
 export { ReconcilerErrorEvent } from './lib/types.ts'
+export { StreamingAfterCommitEvent, StreamingBeforeCommitEvent, StreamingErrorEvent } from './lib/types.ts'
 export { createMixin, mixPlugin } from './lib/mix-plugin.ts'
 export { createTestNodeReconciler } from './testing/test-node-reconciler.ts'
 export {
@@ -35,6 +38,21 @@ export type {
   RenderNode,
   RenderValue,
   RootTask as Task,
+  StreamingChunkOutput,
+  StreamingBoundaryResult,
+  StreamingElementStart,
+  StreamingHostInput,
+  StreamingHostNode,
+  StreamingPlugin,
+  StreamingPluginDefinition,
+  StreamingPluginHostContext,
+  StreamingPluginNodeScope,
+  StreamingPluginRootHandle,
+  StreamingPluginSetupHandle,
+  StreamingPolicy,
+  StreamingRenderValue,
+  StreamingRenderer,
+  StreamingRendererRoot,
 } from './lib/types.ts'
 
 export type { MixinDescriptor, MixinHandle, MixinType, MixValue } from './lib/mix-plugin.ts'
