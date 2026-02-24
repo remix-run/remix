@@ -52,4 +52,43 @@ describe('basic props plugin', () => {
     expect(updated.getAttribute('for')).toBeNull()
     expect(updated.getAttribute('aria-label')).toBeNull()
   })
+
+  it('normalizes class/className/innerHTML nulls and removal paths', () => {
+    let reconciler = createDomReconciler(document, [basicPropsPlugin as any])
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+
+    root.render(<label class={null as any} innerHTML={null as any}>ignored</label>)
+    root.flush()
+    let first = container.firstElementChild as HTMLLabelElement
+    expect(first.className).toBe('')
+    expect(first.innerHTML).toBe('')
+
+    root.render(<label className="next" innerHTML="<span>x</span>" />)
+    root.flush()
+    let second = container.firstElementChild as HTMLLabelElement
+    expect(second.className).toBe('')
+    expect(second.innerHTML).toBe('<span>x</span>')
+
+    root.render(<label className="from-classname" class="from-class" />)
+    root.flush()
+    let third = container.firstElementChild as HTMLLabelElement
+    expect(third.className).toBe('from-class')
+
+    root.render(<label />)
+    root.flush()
+    let fourth = container.firstElementChild as HTMLLabelElement
+    expect(fourth.className).toBe('')
+    expect(fourth.innerHTML).toBe('')
+  })
+
+  it('applies null className values as empty strings', () => {
+    let reconciler = createDomReconciler(document, [basicPropsPlugin as any])
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+
+    root.render(<label className={null as any} />)
+    root.flush()
+    expect((container.firstElementChild as HTMLLabelElement).className).toBe('')
+  })
 })

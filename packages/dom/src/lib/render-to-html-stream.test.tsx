@@ -351,6 +351,101 @@ describe('renderToHTMLStream', () => {
     expect(html).toContain('<\\/template>')
   })
 
+  it('serializes boolean attributes and skips null/false/function attributes', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <main hidden={true} disabled={false} data-empty={null as any} onclick={() => {}}>
+          ok
+        </main>,
+      ),
+    )
+    expect(html).toContain('<main hidden>')
+    expect(html).not.toContain('disabled=')
+    expect(html).not.toContain('data-empty=')
+    expect(html).not.toContain('onclick=')
+  })
+
+  it('hoists managed script tags that use innerHTML bodies', async () => {
+    let html = await readStream(
+      renderToHTMLStream(
+        <html>
+          <body>
+            <script type="application/ld+json" innerHTML={'{"name":"x"}'} />
+          </body>
+        </html>,
+      ),
+    )
+    expect(html).toContain('<head><script type="application/ld+json">{"name":"x"}</script></head>')
+  })
+
+  it('handles empty and zero-length streamed frame chunks', async () => {
+    let encoder = new TextEncoder()
+    let streamValue = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array())
+        controller.enqueue(new Uint8Array())
+        controller.enqueue(encoder.encode('<b>from-stream</b>'))
+        controller.close()
+      },
+    })
+    let html = await readStream(
+      renderToHTMLStream(<frame src="/empty-stream" fallback={'wait'} />, {
+        resolveFrame: async () => streamValue,
+      }),
+    )
+    expect(html).toContain('<template id="')
+    expect(html).toContain('<b>from-stream</b>')
+  })
+
+  it('emits an empty template when streamed frame has no bytes', async () => {
+    let emptyStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.close()
+      },
+    })
+    let html = await readStream(
+      renderToHTMLStream(<frame src="/totally-empty" fallback={'wait'} />, {
+        resolveFrame: async () => emptyStream,
+      }),
+    )
+    expect(html).toContain('<template id="')
+    expect(html).toContain('</template>')
+  })
+
+  it('aborts blocking frame boundaries before deferred open content is emitted', async () => {
+    let resolveFrameValue = (_value: string) => {}
+    let pending = new Promise<string>((resolve) => {
+      resolveFrameValue = resolve
+    })
+    let controller = new AbortController()
+    let stream = renderToHTMLStream(<frame src="/blocking-abort" />, {
+      signal: controller.signal,
+      resolveFrame: async () => pending,
+    })
+    let readPromise = readStream(stream)
+    controller.abort(new Error('abort blocking open'))
+    resolveFrameValue('<div>late</div>')
+    await expect(readPromise).rejects.toThrow('abort blocking open')
+  })
+
+  it('closes deferred frame template when a named template appears mid-stream', async () => {
+    let encoder = new TextEncoder()
+    let streamValue = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode('<div>start'))
+        controller.enqueue(encoder.encode('</div><template id="late">x</template><p>tail</p>'))
+        controller.close()
+      },
+    })
+    let html = await readStream(
+      renderToHTMLStream(<frame src="/named-template-stream" fallback={'wait'} />, {
+        resolveFrame: async () => streamValue,
+      }),
+    )
+    expect(html).toContain('<template id="')
+    expect(html).toContain('<div>start</div></template><template id="late">x</template><p>tail</p>')
+  })
+
   it('runs deferred resolved frame content through plugins', async () => {
     let html = await readStream(
       renderToHTMLStream(<frame src="/deferred-plugin" fallback={'wait'} />, {
@@ -668,6 +763,55 @@ describe('renderToHTMLStream', () => {
       renderToHTMLStream(<EscapeEntry text={'</script><x>'} />),
     )
     expect(html).toContain('\\u003c/script>\\u003cx>')
+  })
+
+  it('renders regular components without hydration boundaries', async () => {
+    function Plain() {
+      return () => <section>plain component</section>
+    }
+    let html = await readStream(
+      renderToHTMLStream(
+        <main>
+          <Plain />
+        </main>,
+      ),
+    )
+    expect(html).toContain('<main><section>plain component</section></main>')
+    expect(html).not.toContain('rmx:h:')
+  })
+
+  it('throws when clientEntry receives non-object props', async () => {
+    let BadEntry = clientEntry('/entries/bad-props.js#Bad', () => () => <div>bad</div>)
+    let badElement = {
+      $rmx: true as const,
+      type: BadEntry as unknown,
+      key: null,
+      props: [] as unknown as Record<string, unknown>,
+    }
+    await expect(readStream(renderToHTMLStream(badElement as any))).rejects.toThrow(
+      'clientEntry props must be an object',
+    )
+  })
+
+  it('streams named templates discovered in the first resolved frame chunk', async () => {
+    let encoder = new TextEncoder()
+    let streamValue = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode('<div>before</div><template id="late-inline"><i>x</i></template>'),
+        )
+        controller.enqueue(encoder.encode('<p>tail</p>'))
+        controller.close()
+      },
+    })
+    let html = await readStream(
+      renderToHTMLStream(<frame src="/named-first-chunk" fallback={'wait'} />, {
+        resolveFrame: async () => streamValue,
+      }),
+    )
+    expect(html).toContain('<template id="')
+    expect(html).toContain('<template id="late-inline"><i>x</i></template>')
+    expect(html).toContain('<p>tail</p>')
   })
 })
 

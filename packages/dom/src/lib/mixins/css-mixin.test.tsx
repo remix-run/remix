@@ -145,4 +145,80 @@ describe('css mixin', () => {
     root.flush()
     expect((container.firstElementChild as HTMLButtonElement).className).toBe('')
   })
+
+  it('keeps existing class strings stable when generated class already exists', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+    let styles = { color: 'purple' }
+
+    root.render(<button mix={[css(styles)]}>x</button>)
+    root.flush()
+    let first = container.firstElementChild as HTMLButtonElement
+    let generated = first.className
+
+    root.render(
+      <button className={`${generated} base`} mix={[css(styles)]}>
+        x
+      </button>,
+    )
+    root.flush()
+
+    let second = container.firstElementChild as HTMLButtonElement
+    expect(second.className).toBe(`${generated} base`)
+  })
+
+  it('supports stable serialization of array and function-like style values', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+
+    root.render(
+      <button
+        mix={[
+          css({
+            color: 'teal',
+            shadow: [1, 2, 3] as any,
+            handler: (() => {}) as any,
+          }),
+        ]}
+      >
+        x
+      </button>,
+    )
+    root.flush()
+
+    let first = container.firstElementChild as HTMLButtonElement
+    root.render(
+      <button
+        mix={[
+          css({
+            handler: (() => {}) as any,
+            shadow: [1, 2, 3] as any,
+            color: 'teal',
+          }),
+        ]}
+      >
+        x
+      </button>,
+    )
+    root.flush()
+    let second = container.firstElementChild as HTMLButtonElement
+    expect(second.className).toBe(first.className)
+  })
+
+  it('ignores null css values while keeping stable serialized keys', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+
+    root.render(<button mix={[css({ color: null as any, opacity: 1 })]}>x</button>)
+    root.flush()
+    let first = container.firstElementChild as HTMLButtonElement
+
+    root.render(<button mix={[css({ opacity: 1, color: null as any })]}>x</button>)
+    root.flush()
+    let second = container.firstElementChild as HTMLButtonElement
+    expect(second.className).toBe(first.className)
+  })
 })

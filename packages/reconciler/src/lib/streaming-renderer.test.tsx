@@ -439,6 +439,18 @@ describe('createStreamingRenderer', () => {
     assert.equal(html, '<provider><child>dark</child></provider>')
   })
 
+  it('returns undefined for missing provider context during streaming render', async () => {
+    let MissingProvider = () => () => <unused />
+    let Consumer = (handle: any) => {
+      return () => <child>{String(handle.context.get(MissingProvider))}</child>
+    }
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+    })
+    let html = await renderer.createRoot(<Consumer />).toString()
+    assert.equal(html, '<child>undefined</child>')
+  })
+
   it('handles beginRoot promise rejection', async () => {
     let renderer = createStreamingRenderer({
       policy: {

@@ -421,6 +421,171 @@ describe('boot', () => {
 
     expect(errors.length).toBe(1)
   })
+
+  it('dispatches runtime error when hydrated module export is not a component function', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- rmx:h:h1 --><button>server</button><!-- /rmx:h -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"h":{"h1":{"moduleUrl":"/entries/bad.js","exportName":"Bad","props":{}}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+    let errors: unknown[] = []
+    let runtime = boot({
+      document,
+      loadModule: async () => ({ not: 'a component' }) as any,
+    })
+    runtime.addEventListener('error', (event) => {
+      if (!(event instanceof RuntimeErrorEvent)) return
+      errors.push(event.error)
+    })
+    await runtime.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(errors.length).toBe(1)
+    expect(String(errors[0])).toContain('is not a component function')
+  })
+
+  it('revives serialized element-like hydration props before rendering entries', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- rmx:h:h1 --><button>server</button><!-- /rmx:h -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"h":{"h1":{"moduleUrl":"/entries/element-props.js","exportName":"Entry","props":{"badge":{"$rmx":true,"type":"strong","key":"badge-key","props":{"children":"badge text"}},"items":[{"$rmx":true,"type":"em","key":"i0","props":{"children":"item-0"}}]}}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+    let runtime = boot({
+      document,
+      loadModule: async () => () => (props: { badge: any; items: any[] }) => (
+        <article>
+          {props.badge}
+          {props.items[0]}
+        </article>
+      ),
+    })
+    await runtime.ready()
+
+    expect(document.body.innerHTML).toContain('<strong>badge text</strong>')
+    expect(document.body.innerHTML).toContain('<em>item-0</em>')
+  })
+
+  it('suppresses queued runtime error dispatch after dispose', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- rmx:h:h1 --><button>server</button><!-- /rmx:h -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"h":{"h1":{"moduleUrl":"/entries/dispose.js","exportName":"Dispose","props":{}}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+    let errorEvents = 0
+    let runtime = boot({
+      document,
+      loadModule: async () => {
+        throw new Error('late load failure')
+      },
+    })
+    runtime.addEventListener('error', () => {
+      errorEvents++
+    })
+    runtime.dispose()
+    await runtime.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(errorEvents).toBe(0)
+  })
+
+  it('reports malformed frame boundaries via runtime error events', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- f:broken --><p>broken frame</p>',
+      '<script type="application/json" id="rmx-data">',
+      '{"f":{"broken":{"status":"pending","src":"/broken"}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+    let errors: unknown[] = []
+    let runtime = boot({
+      document,
+      loadModule: async () => () => <button>never</button>,
+    })
+    runtime.addEventListener('error', (event) => {
+      if (!(event instanceof RuntimeErrorEvent)) return
+      errors.push(event.error)
+    })
+    await runtime.ready()
+
+    expect(errors.length).toBeGreaterThanOrEqual(1)
+    expect(errors.some((error) => String(error).includes('End marker not found'))).toBe(true)
+  })
+
+  it('ignores empty hydration and frame marker ids', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- rmx:h: --><p>empty hydration id</p><!-- /rmx:h -->',
+      '<!-- f: --><p>empty frame id</p><!-- /f -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"h":{"":{"moduleUrl":"/entries/ignored.js","exportName":"Ignored","props":{"label":"x"}}},"f":{"":{"status":"pending","src":"/ignored"}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+    let loadModule = vi.fn(async () => () => () => <button>never</button>)
+    let runtime = boot({
+      document,
+      loadModule,
+    })
+    await runtime.ready()
+
+    expect(loadModule).toHaveBeenCalledTimes(0)
+    expect(runtime.frames.get('')).toBeUndefined()
+  })
+
+  it('returns an aborted signal when reloading a disposed frame', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- f:f1 --><p>loading</p><!-- /f -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"f":{"f1":{"status":"resolved","name":"disposed-frame","src":"/frame/disposed"}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+    let runtime = boot({
+      document,
+      loadModule: async () => () => <button>noop</button>,
+      resolveFrame: async () => '<div>frame content</div>',
+    })
+    await runtime.ready()
+
+    let frame = runtime.frames.get('disposed-frame')
+    expect(frame).toBeDefined()
+    runtime.dispose()
+
+    let signal = await frame!.reload()
+    expect(signal.aborted).toBe(true)
+    expect(String(signal.reason)).toContain('frame disposed')
+  })
+
+  it('dispose is idempotent when called multiple times', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- rmx:h:h1 --><button>server</button><!-- /rmx:h -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"h":{"h1":{"moduleUrl":"/entries/idempotent.js","exportName":"Entry","props":{"label":"x"}}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+    let runtime = boot({
+      document,
+      loadModule: async () => () => (props: { label: string }) => <button>{props.label}</button>,
+    })
+    await runtime.ready()
+
+    runtime.dispose()
+    runtime.dispose()
+    expect(document.body.innerHTML).not.toContain('<button>x</button>')
+  })
 })
 
 async function waitFor(assertion: () => void, attempts = 20) {

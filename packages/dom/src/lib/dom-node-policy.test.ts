@@ -7,6 +7,11 @@ const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 describe('dom node policy', () => {
   let createPolicy = () => createDomNodePolicy(document)(new EventTarget())
 
+  it('returns null host input for unknown nodes', () => {
+    let node = document.createElement('div')
+    expect(getDomHostInput(node)).toBeNull()
+  })
+
   it('supports basic create/insert/move/remove operations', () => {
     let policy = createPolicy()
     let container = document.createElement('div')
@@ -156,5 +161,89 @@ describe('dom node policy', () => {
     let created = policy.createElement(container, 'item')
     expect(created).toBe(existing)
     expect(getDomHostInput(existing)?.key).toBe('reused')
+  })
+
+  it('ignores enter/leave children events with non-node parents', () => {
+    let reconciler = new EventTarget()
+    let policy = createDomNodePolicy(document)(reconciler)
+    let container = document.createElement('div')
+    let enter = new Event('enterChildren') as Event & {
+      parent?: unknown
+      startAnchor?: unknown
+      endAnchor?: unknown
+    }
+    enter.parent = 'not-a-node'
+    let leave = new Event('leaveChildren') as Event & {
+      parent?: unknown
+    }
+    leave.parent = 123
+
+    reconciler.dispatchEvent(enter)
+    reconciler.dispatchEvent(leave)
+
+    let created = policy.createElement(container, 'alpha')
+    expect(created.localName).toBe('alpha')
+  })
+
+  it('does not reuse cursor candidates when namespace differs', () => {
+    let reconciler = new EventTarget()
+    let policy = createDomNodePolicy(document)(reconciler)
+    let container = document.createElement('div')
+    let existingSvg = document.createElementNS(SVG_NAMESPACE, 'item')
+    container.append(existingSvg)
+
+    let enter = new Event('enterChildren') as Event & {
+      parent?: unknown
+      startAnchor?: unknown
+      endAnchor?: unknown
+    }
+    enter.parent = container
+    reconciler.dispatchEvent(enter)
+
+    let created = policy.createElement(container, 'item')
+    expect(created).not.toBe(existingSvg)
+    expect(created.namespaceURI).toBe(HTML_NAMESPACE)
+  })
+
+  it('falls back to html namespace when element or shadow host namespace is empty', () => {
+    let policy = createPolicy()
+    let pseudoElementParent = {
+      nodeType: Node.ELEMENT_NODE,
+      localName: 'div',
+      namespaceURI: '',
+    } as unknown as Node & ParentNode
+    let fromElementFallback = policy.createElement(pseudoElementParent, 'span')
+    expect(fromElementFallback.namespaceURI).toBe(HTML_NAMESPACE)
+
+    let pseudoShadowRoot = {
+      nodeType: Node.DOCUMENT_FRAGMENT_NODE,
+      host: {
+        namespaceURI: '',
+        localName: 'div',
+      },
+    } as unknown as ShadowRoot
+    let fromShadowFallback = policy.createElement(pseudoShadowRoot, 'span')
+    expect(fromShadowFallback.namespaceURI).toBe(HTML_NAMESPACE)
+  })
+
+  it('ignores leaveChildren events that do not match any tracked scope', () => {
+    let reconciler = new EventTarget()
+    createDomNodePolicy(document)(reconciler)
+    let parentA = document.createElement('div')
+    let parentB = document.createElement('div')
+
+    let enter = new Event('enterChildren') as Event & {
+      parent?: unknown
+      startAnchor?: unknown
+      endAnchor?: unknown
+    }
+    enter.parent = parentA
+    reconciler.dispatchEvent(enter)
+
+    let leave = new Event('leaveChildren') as Event & {
+      parent?: unknown
+    }
+    leave.parent = parentB
+    expect(() => reconciler.dispatchEvent(leave)).not.toThrow()
   })
 })

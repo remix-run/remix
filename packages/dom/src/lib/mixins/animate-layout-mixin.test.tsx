@@ -180,6 +180,47 @@ describe('animateLayout mixin', () => {
 
     expect(animateSpy).toHaveBeenCalledTimes(0)
   })
+
+  it('keeps newer animation active when older animation settles later', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+
+    root.render(<div mix={[animateLayout()]} />)
+    root.flush()
+
+    let node = container.firstElementChild as HTMLElement
+    let firstAnimation = createAnimation()
+    let secondAnimation = createAnimation()
+    let thirdAnimation = createAnimation()
+    let animateSpy = vi
+      .fn(() => firstAnimation)
+      .mockImplementationOnce(() => firstAnimation)
+      .mockImplementationOnce(() => secondAnimation)
+      .mockImplementationOnce(() => thirdAnimation)
+    node.animate = animateSpy
+
+    vi.spyOn(node, 'getBoundingClientRect')
+      .mockReturnValueOnce(createRect(0, 0, 100, 100))
+      .mockReturnValueOnce(createRect(10, 0, 100, 100))
+      .mockReturnValueOnce(createRect(10, 0, 100, 100))
+      .mockReturnValueOnce(createRect(20, 0, 100, 100))
+      .mockReturnValueOnce(createRect(20, 0, 100, 100))
+      .mockReturnValueOnce(createRect(30, 0, 100, 100))
+
+    root.render(<div mix={[animateLayout()]} />)
+    root.flush()
+    root.render(<div mix={[animateLayout()]} />)
+    root.flush()
+
+    firstAnimation.cancel()
+
+    root.render(<div mix={[animateLayout()]} />)
+    root.flush()
+
+    expect(animateSpy).toHaveBeenCalledTimes(3)
+    expect(secondAnimation.cancel).toHaveBeenCalledTimes(1)
+  })
 })
 
 function createAnimation(): MockAnimation {

@@ -27,4 +27,10 @@ describe('spring', () => {
     expect(value).toContain('opacity ')
     expect(value).toContain('linear(')
   })
+
+  it('supports transition helper with preset names and single properties', () => {
+    let value = spring.transition('transform', 'smooth', { duration: 250 })
+    expect(value).toContain('transform ')
+    expect(value).toContain('linear(')
+  })
 })

@@ -182,6 +182,49 @@ describe('incremental reconciler validation', () => {
     assert.equal(root.inspect(), '<wrap><leaf>second</leaf></wrap>')
   })
 
+  it('returns undefined when no matching context provider exists', () => {
+    let MissingProvider: Component<undefined, {}> = () => () => <unused />
+    let Consumer: Component<undefined, {}> = (handle) => {
+      return () => {
+        let contextValue = handle.context.get(MissingProvider)
+        return <leaf>{String(contextValue)}</leaf>
+      }
+    }
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+
+    root.render(<Consumer />)
+    root.flush()
+    assert.equal(root.inspect(), '<leaf>undefined</leaf>')
+  })
+
+  it('prefers nearest provider when multiple providers share the same component type', () => {
+    let Provider: Component<undefined, { value: string; children?: unknown }> = (handle) => {
+      return (props) => {
+        handle.context.set({ value: props.value })
+        return <wrap>{props.children}</wrap>
+      }
+    }
+    let Consumer: Component<undefined, {}> = (handle) => {
+      return () => {
+        let contextValue = handle.context.get(Provider) as { value: string }
+        return <leaf>{contextValue.value}</leaf>
+      }
+    }
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+
+    root.render(
+      <Provider value="outer">
+        <Provider value="inner">
+          <Consumer />
+        </Provider>
+      </Provider>,
+    )
+    root.flush()
+    assert.equal(root.inspect(), '<wrap><wrap><leaf>inner</leaf></wrap></wrap>')
+  })
+
   it('bails out component subtree when props are shallow-equal and no local update is pending', () => {
     let renders = 0
     let Child: Component<undefined, { label: string }> = () => (props) => {
