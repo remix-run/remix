@@ -270,6 +270,116 @@ describe('animate presence mixins', () => {
     expect(keyframes[0]).toMatchObject({ opacity: 0 })
   })
 
+  it('uses edge values from object keyframe arrays for exit animations', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+
+    root.render(
+      <div
+        mix={[
+          animateExit({
+            keyframes: { opacity: [0, 1], transform: [] as unknown as string[] },
+          }),
+        ]}
+      />,
+    )
+    root.flush()
+
+    let node = container.firstElementChild as HTMLElement
+    let animation = createAnimation()
+    let animateSpy = vi.fn(() => animation)
+    node.animate = animateSpy
+
+    root.render(null)
+    root.flush()
+
+    let keyframes = (animateSpy.mock.calls[0]?.[0] ?? []) as Keyframe[]
+    expect(keyframes[1]?.opacity).toBe(1)
+    expect(keyframes[1]?.transform).toBeUndefined()
+  })
+
+  it('falls back to default keyframes when array definitions are empty', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+    let animation = createAnimation()
+    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(() => animation)
+
+    root.render(<div mix={[animateEntrance({ keyframes: [] })]} />)
+    root.flush()
+    let enterKeyframes = (animateSpy.mock.calls[0]?.[0] ?? []) as Keyframe[]
+    expect(enterKeyframes[0]).toMatchObject({ opacity: 0 })
+
+    root.render(<div key="x" mix={[animateExit({ keyframes: [] })]} />)
+    root.flush()
+    let node = container.firstElementChild as HTMLElement
+    node.animate = vi.fn(() => animation)
+    root.render(null)
+    root.flush()
+    let exitCalls = (node.animate as any).mock.calls as unknown[][]
+    let exitKeyframes = (exitCalls[0]?.[0] ?? []) as Keyframe[]
+    expect(exitKeyframes[1]).toMatchObject({ opacity: 0 })
+  })
+
+  it('keeps explicit fill option when provided', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+    let animation = createAnimation()
+    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(() => animation)
+
+    root.render(
+      <div
+        mix={[
+          animateEntrance({
+            keyframes: { opacity: 0 },
+            options: { duration: 100, fill: 'forwards' },
+          }),
+        ]}
+      />,
+    )
+    root.flush()
+    let options = animateSpy.mock.calls[0]?.[1] as KeyframeAnimationOptions
+    expect(options.fill).toBe('forwards')
+  })
+
+  it('does not start a second entrance animation while one is active', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+    let animation = createAnimation()
+    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(() => animation)
+
+    root.render(<div key="same" mix={[animateEntrance({ keyframes: { opacity: 0 } })]} />)
+    root.flush()
+    root.render(<div key="same" mix={[animateEntrance({ keyframes: { opacity: 0 } })]} />)
+    root.flush()
+
+    expect(animateSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('reuses active exit animation on repeated detach attempts', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let root = reconciler.createRoot(container)
+    let animation = createAnimation()
+
+    root.render(<div key="same" mix={[animateExit({ keyframes: { opacity: 0 } })]} />)
+    root.flush()
+
+    let node = container.firstElementChild as HTMLElement
+    let animateSpy = vi.fn(() => animation)
+    node.animate = animateSpy
+
+    root.render(null)
+    root.flush()
+    root.render(null)
+    root.flush()
+
+    expect(animateSpy).toHaveBeenCalledTimes(1)
+  })
+
 })
 
 function createAnimation() {

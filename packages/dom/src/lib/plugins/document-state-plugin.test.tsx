@@ -38,4 +38,52 @@ describe('document state plugin', () => {
       container.remove()
     }
   })
+
+  it('gracefully skips restore when active element has no fallback id', () => {
+    let documentStatePlugin = createDocumentStatePlugin(document)
+    let reconciler = createDomReconciler(document, [documentStatePlugin as any, basicPropsPlugin as any])
+    let container = document.createElement('div')
+    document.body.appendChild(container)
+    let root = reconciler.createRoot(container)
+
+    try {
+      root.render(<input key="one" value="abc" />)
+      root.flush()
+      let first = container.firstElementChild as HTMLInputElement
+      first.focus()
+
+      root.render(
+        <textarea key="two">
+          next
+        </textarea>,
+      )
+      root.flush()
+
+      expect(container.firstElementChild?.localName).toBe('textarea')
+    } finally {
+      container.remove()
+    }
+  })
+
+  it('handles inputs without selection ranges during snapshot capture', () => {
+    let documentStatePlugin = createDocumentStatePlugin(document)
+    let reconciler = createDomReconciler(document, [documentStatePlugin as any, basicPropsPlugin as any])
+    let container = document.createElement('div')
+    document.body.appendChild(container)
+    let root = reconciler.createRoot(container)
+
+    try {
+      root.render(<input id="focus-target" type="number" value={1 as any} />)
+      root.flush()
+      let input = container.firstElementChild as HTMLInputElement
+      input.focus()
+
+      root.render(<input id="focus-target" type="number" value={2 as any} />)
+      root.flush()
+
+      expect(container.firstElementChild?.localName).toBe('input')
+    } finally {
+      container.remove()
+    }
+  })
 })

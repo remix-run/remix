@@ -56,6 +56,20 @@ describe('dom node policy', () => {
     expect(text.data).toBe('updated')
   })
 
+  it('provides getType/firstChild traversal helpers', () => {
+    let policy = createDomNodePolicy(document)
+    let container = document.createElement('div')
+    let alpha = policy.createElement(container, 'alpha')
+    let beta = policy.createElement(container, 'beta')
+    policy.insert(container, alpha, null)
+    policy.insert(container, beta, null)
+
+    expect(policy.getType(alpha)).toBe('alpha')
+    expect(policy.firstChild(container)).toBe(alpha)
+    expect(policy.nextSibling(alpha)).toBe(beta)
+    expect(policy.getParent(alpha)).toBe(container)
+  })
+
   it('tracks latest host input metadata for created elements', () => {
     let policy = createDomNodePolicy(document)
     let container = document.createElement('div')
@@ -102,5 +116,15 @@ describe('dom node policy', () => {
 
     let node = policy.createElement(pseudoShadowRoot, 'circle')
     expect(node.namespaceURI).toBe(SVG_NAMESPACE)
+  })
+
+  it('falls back to html namespace for non-element/non-fragment parents', () => {
+    let policy = createDomNodePolicy(document)
+    let pseudoParent = {
+      nodeType: Node.DOCUMENT_NODE,
+      insertBefore: document.body.insertBefore.bind(document.body),
+    } as unknown as Node & ParentNode
+    let node = policy.createElement(pseudoParent, 'div')
+    expect(node.namespaceURI).toBe(HTML_NAMESPACE)
   })
 })

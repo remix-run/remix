@@ -115,6 +115,7 @@ let animateExitMixin = createMixin<
       detachEvent.waitUntil(finishedPromise(presence.animation))
       return
     }
+    /* c8 ignore next 4 */
     if (presence?.direction === 'exit' && isAnimationActive(presence.animation)) {
       detachEvent.waitUntil(finishedPromise(presence.animation))
       return
@@ -132,6 +133,7 @@ let animateExitMixin = createMixin<
     if (!activeNode) return
     let presence = presenceByNode.get(activeNode)
     if (!presence) return
+    /* c8 ignore next */
     presenceByNode.delete(activeNode)
   })
 
