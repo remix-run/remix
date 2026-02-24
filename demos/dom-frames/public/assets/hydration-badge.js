@@ -1,2 +1,0 @@
-import{a as o,d as t}from"./chunks/chunk-NSJRWVLG.js";var r=t("/assets/hydration-badge.js#HydrationBadge",function(d){let e=!1;return d.queueTask(()=>{e=!0,d.update()}),()=>o("div",{style:{display:"inline-block",border:"1px solid #2a3c60",borderRadius:"999px",padding:"4px 10px",fontSize:"12px",background:e?"#0e3a24":"#3b2e0f",color:"#f1f5ff"},children:e?"Hydrated on client":"Server HTML only"})});export{r as HydrationBadge};
-//# sourceMappingURL=hydration-badge.js.map

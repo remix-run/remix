@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../app/assets/hydration-badge.tsx"],
-  "sourcesContent": ["import { clientEntry, type ComponentHandle } from '@remix-run/dom'\n\nexport let HydrationBadge = clientEntry(\n  '/assets/hydration-badge.js#HydrationBadge',\n  function HydrationBadge(handle: ComponentHandle) {\n    let mounted = false\n    handle.queueTask(() => {\n      mounted = true\n      handle.update()\n    })\n    return () => (\n      <div\n        style={{\n          display: 'inline-block',\n          border: '1px solid #2a3c60',\n          borderRadius: '999px',\n          padding: '4px 10px',\n          fontSize: '12px',\n          background: mounted ? '#0e3a24' : '#3b2e0f',\n          color: '#f1f5ff',\n        }}\n      >\n        {mounted ? 'Hydrated on client' : 'Server HTML only'}\n      </div>\n    )\n  },\n)\n"],
-  "mappings": "sDAEO,IAAIA,EAAiBC,EAC1B,4CACA,SAAwBC,EAAyB,CAC/C,IAAIC,EAAU,GACd,OAAAD,EAAO,UAAU,IAAM,CACrBC,EAAU,GACVD,EAAO,OAAO,CAChB,CAAC,EACM,IACLE,EAAC,OACC,MAAO,CACL,QAAS,eACT,OAAQ,oBACR,aAAc,QACd,QAAS,WACT,SAAU,OACV,WAAYD,EAAU,UAAY,UAClC,MAAO,SACT,EAEC,SAAAA,EAAU,qBAAuB,mBACpC,CAEJ,CACF",
-  "names": ["HydrationBadge", "clientEntry", "handle", "mounted", "jsx"]
-}
