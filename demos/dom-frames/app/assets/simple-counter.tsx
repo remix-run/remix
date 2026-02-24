@@ -1,6 +1,9 @@
 import { clientEntry, on, type ComponentHandle } from '@remix-run/dom'
 
-type CounterProps = { label: string }
+type CounterProps = {
+  label: string
+  serverTime?: string
+}
 
 export let SimpleCounter = clientEntry(
   '/assets/simple-counter.js#SimpleCounter',
@@ -17,6 +20,9 @@ export let SimpleCounter = clientEntry(
           color: '#f1f5ff',
           fontSize: '14px',
           cursor: 'pointer',
+          display: 'grid',
+          textAlign: 'left',
+          gap: '4px',
         }}
         mix={[
           on('click', () => {
@@ -25,7 +31,12 @@ export let SimpleCounter = clientEntry(
           }),
         ]}
       >
-        {props.label}: {count}
+        <span>
+          {props.label}: {count}
+        </span>
+        {props.serverTime ? (
+          <span style={{ fontSize: '12px', color: '#b5c5f9' }}>Server: {props.serverTime}</span>
+        ) : null}
       </button>
     )
   },

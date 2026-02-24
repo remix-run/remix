@@ -251,6 +251,7 @@ router.get(routes.frames.nestedInner, async () => {
 
 router.get(routes.frames.reloadableClock, async () => {
   await delay(350)
+  let serverTime = new Date().toLocaleTimeString()
   return htmlResponse(
     renderToHTMLStream(
       <div
@@ -258,10 +259,9 @@ router.get(routes.frames.reloadableClock, async () => {
       >
         <div>
           <div style={{ fontSize: '13px', color: '#b5c5f9' }}>Server time</div>
-          <div style={{ fontSize: '20px', fontVariantNumeric: 'tabular-nums' }}>
-            {new Date().toLocaleTimeString()}
-          </div>
+          <div style={{ fontSize: '20px', fontVariantNumeric: 'tabular-nums' }}>{serverTime}</div>
         </div>
+        <SimpleCounter setup={0} label="Frame counter" serverTime={serverTime} />
         <FrameReloadButton />
       </div>,
       { onError: console.error },
