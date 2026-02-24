@@ -48,4 +48,32 @@ describe('dom reconciler plugins', () => {
     updated.click()
     expect(clicks).toBe(1)
   })
+
+  it('supports rendering and removing within range root boundaries', () => {
+    let reconciler = createDomReconciler(document)
+    let container = document.createElement('div')
+    let before = document.createElement('before')
+    let start = document.createComment('range:start')
+    let end = document.createComment('range:end')
+    let after = document.createElement('after')
+    container.append(before, start, end, after)
+    let root = reconciler.createRoot([start, end])
+
+    root.render(
+      <>
+        <a>A</a>
+        <b>B</b>
+      </>,
+    )
+    root.flush()
+    expect(container.innerHTML).toBe(
+      '<before></before><!--range:start--><a>A</a><b>B</b><!--range:end--><after></after>',
+    )
+
+    root.remove()
+    root.flush()
+    expect(container.innerHTML).toBe(
+      '<before></before><!--range:start--><!--range:end--><after></after>',
+    )
+  })
 })

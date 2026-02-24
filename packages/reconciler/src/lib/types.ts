@@ -23,6 +23,8 @@ export type ReconcilerElement = {
   props: Record<string, unknown>
 }
 
+export type RootTarget<parent, node> = parent | [node, node]
+
 export type NodePolicy<parent, node, text extends node, element extends node> = {
   createText(value: string): text
   setText(node: text, value: string): void

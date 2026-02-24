@@ -37,6 +37,7 @@ export type {
   ReconcilerRoot,
   RenderNode,
   RenderValue,
+  RootTarget,
   RootTask as Task,
   StreamingChunkOutput,
   StreamingBoundaryInput,

@@ -34,11 +34,14 @@ import type {
   ReconcilerRoot,
   RenderNode,
   RenderValue,
+  RootTarget,
   RootTask,
 } from './types.ts'
 
 type RootState<parent, node, text extends node, element extends node> = {
-  container: parent
+  target: RootTarget<parent, node>
+  container: parent | element
+  boundaryEnd: null | node
   api: ReconcilerRoot<RenderValue>
   current: CommittedNode<parent, node, text, element>[]
   renderValue: null | RenderValue
@@ -102,9 +105,12 @@ export function createReconciler<parent, node, text extends node, element extend
   let candidateVersion = 1
 
   return {
-    createRoot(container: parent): ReconcilerRoot<RenderValue> {
+    createRoot(target: RootTarget<parent, node>): ReconcilerRoot<RenderValue> {
+      let resolvedTarget = resolveRootTarget(target)
       let root: RootState<parent, node, text, element> = {
-        container,
+        target,
+        container: resolvedTarget.container,
+        boundaryEnd: resolvedTarget.boundaryEnd,
         api: createEmptyRootFacade(),
         current: [],
         renderValue: null,
@@ -163,7 +169,13 @@ export function createReconciler<parent, node, text extends node, element extend
           root.pendingHostCommits.length = 0
 
           let nextNodes = normalizeToRenderNodes(root.renderValue)
-          let { children } = reconcileChildren(root.container, root.current, nextNodes, root)
+          let { children } = reconcileChildren(
+            root.container,
+            root.current,
+            nextNodes,
+            root,
+            root.boundaryEnd,
+          )
           root.current = children
           flushPendingHostCommits(root)
           runPendingTasks(root)
@@ -218,6 +230,7 @@ export function createReconciler<parent, node, text extends node, element extend
     currentChildren: CommittedNode<parent, node, text, element>[],
     nextNodes: RenderNode[],
     root: RootState<parent, node, text, element>,
+    trailingAnchor: null | node = null,
   ) {
     let requiresPlacement = false
     let changed = false
@@ -273,9 +286,9 @@ export function createReconciler<parent, node, text extends node, element extend
 
     if (requiresPlacement) {
       if (canUseMinimalMovePlacement(currentChildren, nextNodes, sourceIndices)) {
-        placeChildrenWithMinimalMoves(parentNode, nextCommitted, sourceIndices)
+        placeChildrenWithMinimalMoves(parentNode, nextCommitted, sourceIndices, trailingAnchor)
       } else {
-        placeChildren(parentNode, nextCommitted)
+        placeChildren(parentNode, nextCommitted, trailingAnchor)
       }
     }
     return {
@@ -630,8 +643,9 @@ export function createReconciler<parent, node, text extends node, element extend
   function placeChildren(
     parentNode: parent | element,
     children: CommittedNode<parent, node, text, element>[],
+    trailingAnchor: null | node,
   ) {
-    let anchor: null | node = null
+    let anchor: null | node = trailingAnchor
     for (let index = children.length - 1; index >= 0; index--) {
       let childNode = firstMaterialNode(children[index])
       if (!childNode) continue
@@ -653,12 +667,13 @@ export function createReconciler<parent, node, text extends node, element extend
     parentNode: parent | element,
     children: CommittedNode<parent, node, text, element>[],
     sourceIndices: number[],
+    trailingAnchor: null | node,
   ) {
     let stableIndices = longestIncreasingSubsequenceIndices(sourceIndices)
     let stableMarks = new Uint8Array(children.length)
     for (let index of stableIndices) stableMarks[index] = 1
 
-    let anchor: null | node = null
+    let anchor: null | node = trailingAnchor
     for (let index = children.length - 1; index >= 0; index--) {
       let childNode = firstMaterialNode(children[index])
       if (!childNode) continue
@@ -979,6 +994,35 @@ export function createReconciler<parent, node, text extends node, element extend
     let parent = policy.getParent(host.node)
     if (!parent) return
     policy.remove(parent, host.node)
+  }
+
+  function resolveRootTarget(target: RootTarget<parent, node>) {
+    if (!Array.isArray(target)) {
+      return {
+        container: target,
+        boundaryEnd: null as null | node,
+      }
+    }
+    let [start, end] = target
+    if (start === end) {
+      throw new Error('invalid range root target: start and end boundaries must be distinct nodes')
+    }
+    let startParent = policy.getParent(start)
+    let endParent = policy.getParent(end)
+    if (startParent == null || endParent == null || startParent !== endParent) {
+      throw new Error('invalid range root target: boundaries must share the same parent')
+    }
+    let cursor: null | node = start
+    while (cursor) {
+      if (cursor === end) {
+        return {
+          container: startParent,
+          boundaryEnd: end,
+        }
+      }
+      cursor = policy.nextSibling(cursor)
+    }
+    throw new Error('invalid range root target: end boundary must follow start boundary')
   }
 }
 
