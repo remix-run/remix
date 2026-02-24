@@ -26,6 +26,11 @@ export interface DevAssetsMiddlewareOptions extends CreateDevAssetsHandlerOption
 export interface DevAssetsHandler {
   /** The middleware to pass to createRouter(). */
   middleware: Middleware
+  /**
+   * Resolves once the initial codegen pass is complete, so #assets/... imports
+   * can be dynamically imported right after awaiting this in dev mode.
+   */
+  ready: Promise<void>
   /** Stop the file watcher started by watchCodegenPlaceholders(). */
   close(): void
 }
@@ -78,6 +83,7 @@ export function createDevAssets(options: DevAssetsMiddlewareOptions): DevAssetsH
 
   return {
     middleware,
+    ready: codegenInit ?? Promise.resolve(),
     close() {
       watcher?.close()
     },
