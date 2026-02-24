@@ -1,6 +1,7 @@
 export { createDomNodePolicy } from './lib/dom-node-policy.ts'
 export { createDomReconciler } from './lib/dom-reconciler.ts'
 export { clientEntry } from './lib/client-entry.ts'
+export { hydrateClientEntries } from './lib/client-runtime.ts'
 export { renderToHTMLStream } from './lib/render-to-html-stream.ts'
 export {
   animateEntrance,
@@ -42,6 +43,11 @@ export type {
 } from './lib/dom-node-policy.ts'
 
 export type { Component, ComponentHandle } from '@remix-run/reconciler'
+export type {
+  ClientModuleLoader,
+  HydrateClientEntriesOptions,
+  HydratedRoot,
+} from './lib/client-runtime.ts'
 export type {
   EntryComponent,
   HydrationData,
