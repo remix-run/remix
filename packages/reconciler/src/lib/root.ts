@@ -1100,10 +1100,9 @@ function isCompatible<parent, node, text extends node, element extends node>(
   next: RenderNode,
 ) {
   if (current.kind !== next.kind) return false
-  if (current.kind === 'text' && next.kind === 'text') return true
-  if (current.kind === 'host' && next.kind === 'host') return current.type === next.type
-  if (current.kind === 'component' && next.kind === 'component') return current.type === next.type
-  return false
+  if (current.kind === 'text') return true
+  if (current.kind === 'host') return next.kind === 'host' && current.type === next.type
+  return next.kind === 'component' && current.type === next.type
 }
 
 function normalizeSingle(value: RenderValue): null | RenderNode {

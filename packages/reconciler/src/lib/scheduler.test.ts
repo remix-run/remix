@@ -42,4 +42,25 @@ describe('scheduler', () => {
     scheduler.flush()
     assert.equal(calls, 1)
   })
+
+  it('flush drains roots enqueued during a flush cycle', () => {
+    let scheduler = createScheduler()
+    let calls: string[] = []
+    let second = {
+      flushWork() {
+        calls.push('second')
+      },
+    }
+    let first = {
+      flushWork() {
+        calls.push('first')
+        scheduler.enqueue(second)
+      },
+    }
+
+    scheduler.enqueue(first)
+    scheduler.flush()
+
+    assert.deepEqual(calls, ['first', 'second'])
+  })
 })

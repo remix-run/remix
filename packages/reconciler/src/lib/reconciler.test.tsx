@@ -3,8 +3,10 @@ import { describe, it } from 'node:test'
 import { RECONCILER_PROP_KEYS } from '../testing/jsx.ts'
 import { RECONCILER_NODE_CHILDREN } from '../testing/jsx.ts'
 import { jsx } from '../testing/jsx-runtime.ts'
+import { createTestContainer, createTestNodePolicy, stringifyTestNode } from '../testing/test-node-policy.ts'
 import { createTestNodeReconciler } from '../testing/test-node-reconciler.ts'
 import type { Component } from '../testing/jsx-runtime.ts'
+import { createReconciler } from './root.ts'
 import { definePlugin } from './types.ts'
 
 describe('incremental reconciler validation', () => {
@@ -394,6 +396,83 @@ describe('incremental reconciler validation', () => {
     root.render(<c>C</c>)
     root.flush()
     assert.equal(root.inspect(), '')
+  })
+
+  it('treats lifecycle methods as no-ops after dispose', async () => {
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+
+    root.render(<a>A</a>)
+    root.dispose()
+    await Promise.resolve()
+    assert.equal(root.inspect(), '')
+
+    root.render(<b>B</b>)
+    root.flush()
+    root.remove()
+    root.dispose()
+    assert.equal(root.inspect(), '')
+  })
+
+  it('supports plugins without setup scopes', () => {
+    let shouldActivateCalls = 0
+    let plugin = definePlugin<EventTarget>({
+      phase: 'special',
+      keys: [],
+      shouldActivate() {
+        shouldActivateCalls++
+        return true
+      },
+    })
+    let reconciler = createTestNodeReconciler([plugin as any])
+    let root = reconciler.createRoot()
+    root.render(<item />)
+    root.flush()
+    root.render(<item />)
+    root.flush()
+
+    assert.equal(shouldActivateCalls, 1)
+    assert.equal(root.inspect(), '<item></item>')
+  })
+
+  it('orders same-priority plugins by registration order', () => {
+    let order: string[] = []
+    let first = definePlugin<EventTarget>({
+      phase: 'special',
+      priority: 1,
+      keys: [],
+      shouldActivate() {
+        return true
+      },
+      setup() {
+        return {
+          commit() {
+            order.push('first')
+          },
+        }
+      },
+    })
+    let second = definePlugin<EventTarget>({
+      phase: 'special',
+      priority: 1,
+      keys: [],
+      shouldActivate() {
+        return true
+      },
+      setup() {
+        return {
+          commit() {
+            order.push('second')
+          },
+        }
+      },
+    })
+    let reconciler = createTestNodeReconciler([first as any, second as any])
+    let root = reconciler.createRoot()
+    root.render(<item />)
+    root.flush()
+
+    assert.deepEqual(order, ['first', 'second'])
   })
 
   it('runs queued component tasks on a later flush', () => {
@@ -813,6 +892,83 @@ describe('incremental reconciler validation', () => {
     assert.equal(removeCalls, 0)
   })
 
+  it('finalizes retained hosts immediately on dispose', () => {
+    let removeCalls = 0
+    let pending = new Promise<void>(() => {})
+    let plugin = definePlugin<EventTarget>({
+      phase: 'special',
+      keys: ['flag'],
+      shouldActivate() {
+        return true
+      },
+      setup() {
+        return {
+          detach(event) {
+            event.retain()
+            event.waitUntil(pending)
+          },
+          remove() {
+            removeCalls++
+          },
+        }
+      },
+    })
+    let reconciler = createTestNodeReconciler([plugin as any])
+    let root = reconciler.createRoot()
+
+    root.render(<item key="same" flag="on" />)
+    root.flush()
+    root.render(null)
+    root.flush()
+    assert.equal(root.inspect(), '<item></item>')
+
+    root.dispose()
+    root.flush()
+    assert.equal(root.inspect(), '')
+    assert.equal(removeCalls, 1)
+  })
+
+  it('handles retained host finalization when node was externally removed', async () => {
+    let resolveDetach = () => {}
+    let detachDone = new Promise<void>((resolve) => {
+      resolveDetach = resolve
+    })
+    let plugin = definePlugin<EventTarget>({
+      phase: 'special',
+      keys: ['flag'],
+      shouldActivate() {
+        return true
+      },
+      setup() {
+        return {
+          detach(event) {
+            event.retain()
+            event.waitUntil(detachDone)
+          },
+        }
+      },
+    })
+    let reconciler = createTestNodeReconciler([plugin as any])
+    let root = reconciler.createRoot()
+
+    root.render(<item key="same" flag="on" />)
+    root.flush()
+    root.render(null)
+    root.flush()
+    assert.equal(root.inspect(), '<item></item>')
+
+    let retainedNode = root.container.children[0]
+    if (!retainedNode) throw new Error('expected retained node')
+    reconciler.policy.remove(root.container, retainedNode as any)
+    assert.equal(root.inspect(), '')
+
+    resolveDetach()
+    await detachDone
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    root.flush()
+    assert.equal(root.inspect(), '')
+  })
+
   it('handles falsy render values and hosts without children', () => {
     let reconciler = createTestNodeReconciler()
     let root = reconciler.createRoot()
@@ -828,6 +984,29 @@ describe('incremental reconciler validation', () => {
     root.render(<item />)
     root.flush()
     assert.equal(root.inspect(), '<item></item>')
+  })
+
+  it('supports components that render null', () => {
+    let Maybe: Component<undefined, { show: boolean }> = () => (props) =>
+      props.show ? <value>shown</value> : null
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+
+    root.render(<Maybe show={true} />)
+    root.flush()
+    assert.equal(root.inspect(), '<value>shown</value>')
+
+    root.render(<Maybe show={false} />)
+    root.flush()
+    assert.equal(root.inspect(), '')
+  })
+
+  it('ignores non-element object values in children lists', () => {
+    let reconciler = createTestNodeReconciler()
+    let root = reconciler.createRoot()
+    root.render(<node>{[({ junk: true } as unknown), 'ok']}</node>)
+    root.flush()
+    assert.equal(root.inspect(), '<node>ok</node>')
   })
 
   it('allows plugins to dispose root via context facade', () => {
@@ -909,5 +1088,116 @@ describe('incremental reconciler validation', () => {
     root.render(manualElement as any)
     root.flush()
     assert.equal(root.inspect(), '<node>ab</node>')
+  })
+
+  it('renders into a bounded range root without touching sibling content', () => {
+    let policy = createTestNodePolicy()
+    let container = createTestContainer()
+    let before = policy.createElement(container, 'before')
+    let start = policy.createText('[')
+    let end = policy.createText(']')
+    let after = policy.createElement(container, 'after')
+    policy.insert(container, before, null)
+    policy.insert(container, start, null)
+    policy.insert(container, end, null)
+    policy.insert(container, after, null)
+
+    let reconciler = createReconciler({
+      policy,
+    })
+    let root = reconciler.createRoot([start, end])
+    root.render(
+      <>
+        <a>A</a>
+        <b>B</b>
+      </>,
+    )
+    root.flush()
+
+    assert.equal(
+      stringifyTestNode(container),
+      '<before></before>[<a>A</a><b>B</b>]<after></after>',
+    )
+  })
+
+  it('remove() only clears content inside a bounded range root', () => {
+    let policy = createTestNodePolicy()
+    let container = createTestContainer()
+    let before = policy.createElement(container, 'before')
+    let start = policy.createText('[')
+    let end = policy.createText(']')
+    let after = policy.createElement(container, 'after')
+    policy.insert(container, before, null)
+    policy.insert(container, start, null)
+    policy.insert(container, end, null)
+    policy.insert(container, after, null)
+
+    let reconciler = createReconciler({
+      policy,
+    })
+    let root = reconciler.createRoot([start, end])
+    root.render(<x>X</x>)
+    root.flush()
+    assert.equal(stringifyTestNode(container), '<before></before>[<x>X</x>]<after></after>')
+
+    root.remove()
+    root.flush()
+    assert.equal(stringifyTestNode(container), '<before></before>[]<after></after>')
+  })
+
+  it('throws when range root boundaries are invalid', () => {
+    let policy = createTestNodePolicy()
+    let leftContainer = createTestContainer()
+    let rightContainer = createTestContainer()
+    let start = policy.createText('start')
+    let end = policy.createText('end')
+    policy.insert(leftContainer, start, null)
+    policy.insert(rightContainer, end, null)
+
+    let reconciler = createReconciler({
+      policy,
+    })
+    assert.throws(
+      () => {
+        reconciler.createRoot([start, end])
+      },
+      /boundaries must share the same parent/,
+    )
+  })
+
+  it('throws when range root boundaries are the same node', () => {
+    let policy = createTestNodePolicy()
+    let container = createTestContainer()
+    let marker = policy.createText('marker')
+    policy.insert(container, marker, null)
+
+    let reconciler = createReconciler({
+      policy,
+    })
+    assert.throws(
+      () => {
+        reconciler.createRoot([marker, marker])
+      },
+      /must be distinct/,
+    )
+  })
+
+  it('throws when range root end boundary does not follow start boundary', () => {
+    let policy = createTestNodePolicy()
+    let container = createTestContainer()
+    let start = policy.createText('start')
+    let end = policy.createText('end')
+    policy.insert(container, end, null)
+    policy.insert(container, start, null)
+
+    let reconciler = createReconciler({
+      policy,
+    })
+    assert.throws(
+      () => {
+        reconciler.createRoot([start, end])
+      },
+      /must follow start/,
+    )
   })
 })
