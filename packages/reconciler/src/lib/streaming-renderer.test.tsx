@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import { createStreamingRenderer } from './streaming-renderer.ts'
 import { defineStreamingPlugin } from './types.ts'
 import type { StreamingPolicy } from './types.ts'
+import { RECONCILER_NODE_CHILDREN } from '../testing/jsx.ts'
 
 type ElementState = {
   type: string
@@ -326,5 +327,246 @@ describe('createStreamingRenderer', () => {
     })
     let html = await renderer.createRoot(<m>ok</m>).toString()
     assert.equal(html, '<m>ok</m>')
+  })
+
+  it('supports manual reconciler elements without cached children metadata', async () => {
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+    })
+    let manualSingle = {
+      $rmx: true as const,
+      type: 'single',
+      key: null,
+      props: { children: 'one' },
+    }
+    let manualArray = {
+      $rmx: true as const,
+      type: 'array',
+      key: null,
+      props: { children: ['a', 'b'] },
+    }
+    let manualEmpty = {
+      $rmx: true as const,
+      type: 'empty',
+      key: null,
+      props: {},
+    }
+    let html = await renderer
+      .createRoot([manualSingle as any, manualArray as any, manualEmpty as any])
+      .toString()
+    assert.equal(html, '<single>one</single><array>ab</array><empty></empty>')
+  })
+
+  it('tracks removed keys when plugins replace host props', async () => {
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+      plugins: [
+        defineStreamingPlugin({
+          phase: 'special',
+          keys: ['remove-me'],
+          shouldActivate() {
+            return true
+          },
+          setup() {
+            return {
+              commit(context) {
+                context.replaceProps({ keep: context.delta.nextProps.keep })
+              },
+            }
+          },
+        }),
+      ],
+    })
+    let html = await renderer.createRoot(<x keep="yes" remove-me="nope" />).toString()
+    assert.equal(html, '<x keep="yes"></x>')
+  })
+
+  it('prefers cached children metadata over props.children fallback', async () => {
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+    })
+    let manualWithCache = {
+      $rmx: true as const,
+      type: 'node',
+      key: null,
+      props: { children: 'props-child' },
+      [RECONCILER_NODE_CHILDREN]: ['cached-child'],
+    }
+    let html = await renderer.createRoot(manualWithCache as any).toString()
+    assert.equal(html, '<node>cached-child</node>')
+  })
+
+  it('runs component queued tasks and exposes update signal', async () => {
+    let queued = 0
+    let updatePromise: null | Promise<AbortSignal> = null
+    let Comp = (handle: any) => {
+      updatePromise = handle.update()
+      handle.queueTask(() => {
+        queued++
+      })
+      return () => <tasked>ok</tasked>
+    }
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+    })
+    let html = await renderer.createRoot(<Comp />).toString()
+    assert.equal(html, '<tasked>ok</tasked>')
+    assert.equal(queued, 1)
+    assert.ok(updatePromise)
+    let signal = await updatePromise
+    assert.equal(signal.aborted, false)
+  })
+
+  it('handles beginRoot promise rejection', async () => {
+    let renderer = createStreamingRenderer({
+      policy: {
+        beginRoot() {
+          return Promise.reject(new Error('beginRoot failed'))
+        },
+        beginElement(input) {
+          return { state: { type: input.type }, open: `<${input.type}>` }
+        },
+        text(value) {
+          return value
+        },
+        endElement(state) {
+          return `</${state.type}>`
+        },
+      },
+    })
+    await assert.rejects(() => renderer.createRoot(<x />).toString(), /beginRoot failed/)
+  })
+
+  it('orders multiple streaming plugins by priority', async () => {
+    let order: string[] = []
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+      plugins: [
+        defineStreamingPlugin({
+          phase: 'special',
+          priority: 10,
+          shouldActivate() {
+            return true
+          },
+          setup() {
+            return {
+              commit() {
+                order.push('late')
+              },
+            }
+          },
+        }),
+        defineStreamingPlugin({
+          phase: 'special',
+          priority: -10,
+          shouldActivate() {
+            return true
+          },
+          setup() {
+            return {
+              commit() {
+                order.push('early')
+              },
+            }
+          },
+        }),
+      ],
+    })
+    await renderer.createRoot(<x />).toString()
+    assert.deepEqual(order, ['early', 'late'])
+  })
+
+  it('exposes consume/isConsumed/remainingPropsView in streaming plugin context', async () => {
+    let seen: Array<Record<string, unknown>> = []
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+      plugins: [
+        defineStreamingPlugin({
+          phase: 'special',
+          keys: ['x', 'y'],
+          shouldActivate() {
+            return true
+          },
+          setup() {
+            return {
+              commit(context) {
+                context.consume('x')
+                context.replaceProps(context.remainingPropsView())
+                seen.push({
+                  xConsumed: context.isConsumed('x'),
+                  yConsumed: context.isConsumed('y'),
+                  remaining: context.remainingPropsView(),
+                })
+              },
+            }
+          },
+        }),
+      ],
+    })
+    let html = await renderer.createRoot(<ctx x="one" y="two" />).toString()
+    assert.equal(html, '<ctx y="two"></ctx>')
+    assert.deepEqual(seen, [{ xConsumed: true, yConsumed: false, remaining: { y: 'two' } }])
+  })
+
+  it('skips routed plugins whose keys are unchanged on mount routing', async () => {
+    let runs: string[] = []
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+      plugins: [
+        defineStreamingPlugin({
+          phase: 'special',
+          keys: ['a'],
+          shouldActivate() {
+            return true
+          },
+          setup() {
+            return {
+              commit() {
+                runs.push('a')
+              },
+            }
+          },
+        }),
+        defineStreamingPlugin({
+          phase: 'special',
+          keys: ['b'],
+          shouldActivate() {
+            return true
+          },
+          setup() {
+            return {
+              commit() {
+                runs.push('b')
+              },
+            }
+          },
+        }),
+      ],
+    })
+    await renderer.createRoot(<route a="yes" />).toString()
+    assert.deepEqual(runs, ['a'])
+  })
+
+  it('runs plugin queued tasks during pending task flush', async () => {
+    let queued = 0
+    let renderer = createStreamingRenderer({
+      policy: testPolicy,
+      plugins: [
+        defineStreamingPlugin({
+          phase: 'special',
+          shouldActivate() {
+            return true
+          },
+          setup(handle) {
+            handle.queueTask(() => {
+              queued++
+            })
+            return null
+          },
+        }),
+      ],
+    })
+    await renderer.createRoot(<queued />).toString()
+    assert.equal(queued, 1)
   })
 })

@@ -339,7 +339,7 @@ function runHostPlugins(
       delta,
       replaceProps(nextProps) {
         delta.nextProps = { ...nextProps }
-        delta.changedKeys = listChangedPropKeys(delta.previousProps, delta.nextProps)
+        delta.changedKeys = listOwnPropKeys(delta.nextProps)
       },
       consume(key) {
         if (!consumed) consumed = new Set()
@@ -365,26 +365,19 @@ function runHostPlugins(
       if (!ids) continue
       for (let id of ids) routedIdSet.add(id)
     }
-    for (let id of host.activePluginIds) routedIdSet.add(id)
 
     for (let prepared of ordered) {
       if (routedIdSet.size > 0 && !routedIdSet.has(prepared.id) && prepared.routingKeys.length > 0) {
         continue
       }
-      let isActive = host.pluginSlots[prepared.id] !== undefined
       let shouldActivate = prepared.plugin.shouldActivate?.(context) ?? true
-      if (!isActive && !shouldActivate) continue
-      if (isActive && !shouldActivate) {
-        host.pluginSlots[prepared.id]?.remove?.()
-        host.pluginSlots[prepared.id] = undefined
-        removeActivePluginId(host.activePluginIds, prepared.id)
-        continue
-      }
-      if (!isActive) {
-        host.pluginSlots[prepared.id] = setupPlugin(prepared.plugin, context, signal, tasks)
+      if (!shouldActivate) continue
+      let slot = setupPlugin(prepared.plugin, context, signal, tasks)
+      if (slot !== null) {
+        host.pluginSlots[prepared.id] = slot
         host.activePluginIds.push(prepared.id)
       }
-      host.pluginSlots[prepared.id]?.commit?.(context)
+      slot?.commit?.(context)
     }
   }
 }
@@ -569,12 +562,6 @@ function comparePreparedStreamingPlugin(a: PreparedStreamingPlugin, b: PreparedS
   return a.id - b.id
 }
 
-function removeActivePluginId(activePluginIds: number[], id: number) {
-  let index = activePluginIds.indexOf(id)
-  if (index < 0) return
-  activePluginIds.splice(index, 1)
-}
-
 function readChildren(element: ReconcilerElement) {
   let cached = (element as ReconcilerElement & { [RECONCILER_NODE_CHILDREN]?: StreamingRenderValue[] })[
     RECONCILER_NODE_CHILDREN
@@ -593,21 +580,6 @@ function listOwnPropKeys(props: Record<string, unknown>) {
     keys.push(key)
   }
   return keys
-}
-
-function listChangedPropKeys(previous: Record<string, unknown>, next: Record<string, unknown>) {
-  if (previous === next) return []
-  let changed: string[] = []
-  for (let key in next) {
-    if (key === 'children') continue
-    if (previous[key] !== next[key]) changed.push(key)
-  }
-  for (let key in previous) {
-    if (key === 'children') continue
-    if (key in next) continue
-    changed.push(key)
-  }
-  return changed
 }
 
 function isReconcilerElement(value: unknown): value is ReconcilerElement {
