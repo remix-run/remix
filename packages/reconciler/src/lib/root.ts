@@ -594,8 +594,19 @@ export function createReconciler<parent, node, text extends node, element extend
     id: string,
     markDirty: () => void,
   ): ComponentHandle {
+    let frame = {
+      src: '/',
+      reload: async () => AbortSignal.abort('Frame reload is unavailable in this runtime'),
+    }
     let handle: ComponentHandle = {
       id,
+      frame,
+      frames: {
+        top: frame,
+        get() {
+          return undefined
+        },
+      },
       update() {
         return new Promise((resolve) => {
           markDirty()

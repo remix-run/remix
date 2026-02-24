@@ -17,8 +17,8 @@ export type ComponentFrameRegistry = {
 
 export type ComponentHandle = UpdateHandle & {
   id: string
-  frame?: ComponentFrameHandle
-  frames?: ComponentFrameRegistry
+  frame: ComponentFrameHandle
+  frames: ComponentFrameRegistry
 }
 
 export type HostTask<element> = (node: element, signal: AbortSignal) => void

@@ -460,6 +460,7 @@ async function* streamTemplateUntilNamedTemplate(
         }
         continue
       }
+      if (!value) continue
       yield value
     }
     if (open) {
@@ -486,6 +487,7 @@ async function* streamByteTail(tail: ReadableStream<Uint8Array>, signal: AbortSi
       if (signal.aborted) throw signal.reason ?? new Error('stream aborted')
       let { done, value } = await reader.read()
       if (done) break
+      if (!value) continue
       yield value
     }
   } finally {

@@ -416,8 +416,19 @@ function createComponentUpdateHandle(
   signal: AbortSignal,
   tasks: RootTask[],
 ): ComponentHandle {
+  let frame = {
+    src: '/',
+    reload: async () => AbortSignal.abort('Frame reload is unavailable in streaming renderer'),
+  }
   return {
     id,
+    frame,
+    frames: {
+      top: frame,
+      get() {
+        return undefined
+      },
+    },
     update: async () => signal,
     queueTask(task) {
       tasks.push(task)
