@@ -383,6 +383,183 @@ describe('renderToHTMLStream', () => {
     expect(html).toContain('"src":"/inner"')
   })
 
+  it('streams nested non-blocking frames in separate chunks for blocking outer frames', async () => {
+    let resolveInner = (_value: string) => {}
+    let innerPromise = new Promise<string>((resolve) => {
+      resolveInner = resolve
+    })
+    let stream = renderToHTMLStream(<frame src="/outer" />, {
+      resolveFrame: async (src) => {
+        if (src === '/outer') {
+          return renderToHTMLStream(
+            <section>
+              Outer
+              <frame src="/inner" fallback={<span>Inner loading</span>} />
+            </section>,
+            {
+              resolveFrame: async (nestedSrc) => {
+                if (nestedSrc === '/inner') return innerPromise
+                return '<div>unexpected</div>'
+              },
+            },
+          )
+        }
+        if (src === '/inner') return innerPromise
+        return '<div>unexpected</div>'
+      },
+    })
+    let reader = stream.getReader()
+    let decoder = new TextDecoder()
+    let first = await readUntil(
+      reader,
+      decoder,
+      (html) => html.includes('Inner loading') || html.includes('<template id="'),
+      100,
+    )
+    expect(first).toContain('Outer')
+    expect(first).toContain('Inner loading')
+    expect(first.includes('<template id="')).toBe(false)
+
+    resolveInner('<article>Inner done</article>')
+    let second = await readUntil(reader, decoder, (html) => html.includes('<template id="'), 100)
+    expect(second).toContain('<template id="')
+    expect(second).toContain('<article>Inner done</article>')
+  })
+
+  it('streams nested non-blocking frames in separate chunks for non-blocking outer frames', async () => {
+    let resolveOuter = (_value: ReadableStream<Uint8Array>) => {}
+    let resolveInner = (_value: string) => {}
+    let outerPromise = new Promise<ReadableStream<Uint8Array>>((resolve) => {
+      resolveOuter = resolve
+    })
+    let innerPromise = new Promise<string>((resolve) => {
+      resolveInner = resolve
+    })
+    let stream = renderToHTMLStream(<frame src="/outer" fallback={'Loading outer'} />, {
+      resolveFrame: async (src) => {
+        if (src === '/outer') return outerPromise
+        if (src === '/inner') return innerPromise
+        return '<div>unexpected</div>'
+      },
+    })
+    let reader = stream.getReader()
+    let decoder = new TextDecoder()
+    let initial = await readUntil(reader, decoder, (html) => html.includes('Loading outer'), 100)
+    expect(initial).toContain('Loading outer')
+
+    resolveOuter(
+      renderToHTMLStream(
+        <section>
+          Outer
+          <frame src="/inner" fallback={<span>Inner loading</span>} />
+        </section>,
+        {
+          resolveFrame: async (src) => {
+            if (src === '/inner') return innerPromise
+            return '<div>unexpected</div>'
+          },
+        },
+      ),
+    )
+    let second = await readUntil(reader, decoder, (html) => html.includes('<template id="'), 100)
+    expect(second).toContain('<template id="')
+    expect(second).toContain('Outer')
+    expect(second).toContain('Inner loading')
+    expect(second.includes('Inner done')).toBe(false)
+
+    resolveInner('<article>Inner done</article>')
+    let third = await readUntil(reader, decoder, (html) => html.includes('Inner done'), 100)
+    expect(third).toContain('<template id="')
+    expect(third).toContain('Inner done')
+  })
+
+  it('renders nested blocking frames in the first chunk for blocking outer frames', async () => {
+    let resolveInner = (_value: string) => {}
+    let innerPromise = new Promise<string>((resolve) => {
+      resolveInner = resolve
+    })
+    let stream = renderToHTMLStream(<frame src="/outer" />, {
+      resolveFrame: async (src) => {
+        if (src === '/outer') {
+          return renderToHTMLStream(
+            <section>
+              Outer
+              <frame src="/inner" />
+            </section>,
+            {
+              resolveFrame: async (nestedSrc) => {
+                if (nestedSrc === '/inner') return innerPromise
+                return '<div>unexpected</div>'
+              },
+            },
+          )
+        }
+        if (src === '/inner') return innerPromise
+        return '<div>unexpected</div>'
+      },
+    })
+    let reader = stream.getReader()
+    let decoder = new TextDecoder()
+    resolveInner('<article>Inner done</article>')
+    let first = await readUntil(
+      reader,
+      decoder,
+      (html) => html.includes('Outer') && html.includes('Inner done'),
+      200,
+    )
+    expect(first).toContain('Outer')
+    expect(first).toContain('<article>Inner done</article>')
+    expect(first.includes('<template id="')).toBe(false)
+  })
+
+  it('emits non-blocking outer template with nested blocking child resolved content', async () => {
+    let resolveOuter = (_value: ReadableStream<Uint8Array>) => {}
+    let resolveInner = (_value: string) => {}
+    let outerPromise = new Promise<ReadableStream<Uint8Array>>((resolve) => {
+      resolveOuter = resolve
+    })
+    let innerPromise = new Promise<string>((resolve) => {
+      resolveInner = resolve
+    })
+    let stream = renderToHTMLStream(<frame src="/outer" fallback={'Loading outer'} />, {
+      resolveFrame: async (src) => {
+        if (src === '/outer') return outerPromise
+        if (src === '/inner') return innerPromise
+        return '<div>unexpected</div>'
+      },
+    })
+    let reader = stream.getReader()
+    let decoder = new TextDecoder()
+    let initial = await readUntil(reader, decoder, (html) => html.includes('Loading outer'), 100)
+    expect(initial).toContain('Loading outer')
+
+    resolveOuter(
+      renderToHTMLStream(
+        <section>
+          Outer
+          <frame src="/inner" />
+        </section>,
+        {
+          resolveFrame: async (src) => {
+            if (src === '/inner') return innerPromise
+            return '<div>unexpected</div>'
+          },
+        },
+      ),
+    )
+    resolveInner('<article>Inner done</article>')
+    let next = await readUntil(
+      reader,
+      decoder,
+      (html) => html.includes('<template id="') && html.includes('Inner done'),
+      200,
+    )
+    expect(next).toContain('<template id="')
+    expect(next).toContain('Outer')
+    expect(next).toContain('<article>Inner done</article>')
+    expect(next.includes('Loading inner')).toBe(false)
+  })
+
   it('throws when frame src is not a string', async () => {
     let stream = renderToHTMLStream(<frame src={123 as any} fallback={'x'} />)
     await expect(readStream(stream)).rejects.toThrow('<frame> requires a "src" string prop')

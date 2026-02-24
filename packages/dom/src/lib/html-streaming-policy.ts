@@ -58,6 +58,11 @@ export type ResolveFrame = (
 
 type ResolveFrameValue = string | Uint8Array | ReadableStream<Uint8Array> | StreamingRenderValue
 
+type ResolvedFrameHtml = {
+  html: string
+  tail?: ReadableStream<Uint8Array>
+}
+
 type HtmlStreamingPolicyOptions = {
   resolveFrame?: ResolveFrame
   renderFrameValueToString?: (
@@ -143,8 +148,12 @@ export function createHtmlStreamingPolicy(
         signal,
       )
       return {
-        open: emitBlockingFrameBoundaryOpen(frameId, blocking),
+        open: emitBlockingFrameBoundaryOpen(frameId, blocking, signal),
         close: encoder.encode('<!-- /f -->'),
+        deferred: blocking.then((resolved) => {
+          if (!resolved.tail) return null
+          return streamByteTail(resolved.tail, signal)
+        }),
       }
     },
     beginElement(input, context) {
@@ -280,12 +289,22 @@ async function resolveFrameTemplate(
   signal: AbortSignal,
 ) {
   let resolved = await resolveFrame(src, signal)
-  let html = await resolvedFrameToHtml(resolved, renderFrameValueToString, signal)
-  let extracted = extractNamedTemplates(html)
-  let escaped = extracted.htmlWithoutTemplates.replace(/<\/template/gi, '<\\/template')
-  return encoder.encode(
-    `<template id="${frameId}">${escaped}</template>${extracted.templatesHtml.join('')}`,
-  )
+  let frame = await resolvedFrameToHtml(resolved, renderFrameValueToString, signal)
+  let extracted = extractNamedTemplates(frame.html)
+  if (!frame.tail) {
+    let escaped = escapeTemplateClosers(extracted.htmlWithoutTemplates)
+    return encoder.encode(
+      `<template id="${frameId}">${escaped}</template>${extracted.templatesHtml.join('')}`,
+    )
+  }
+  if (extracted.templatesHtml.length > 0) {
+    let escaped = escapeTemplateClosers(extracted.htmlWithoutTemplates)
+    let prefix = encoder.encode(
+      `<template id="${frameId}">${escaped}</template>${extracted.templatesHtml.join('')}`,
+    )
+    return streamTemplateAndTail(prefix, frame.tail, signal)
+  }
+  return streamTemplateUntilNamedTemplate(frameId, extracted.htmlWithoutTemplates, frame.tail, signal)
 }
 
 async function resolveFrameBlockingContent(
@@ -295,28 +314,41 @@ async function resolveFrameBlockingContent(
   signal: AbortSignal,
 ) {
   let resolved = await resolveFrame(src, signal)
-  let html = await resolvedFrameToHtml(resolved, renderFrameValueToString, signal)
-  return encoder.encode(html)
+  return await resolvedFrameToHtml(resolved, renderFrameValueToString, signal)
 }
 
-async function* emitBlockingFrameBoundaryOpen(frameId: string, blocking: Promise<Uint8Array>) {
+async function* emitBlockingFrameBoundaryOpen(
+  frameId: string,
+  blocking: Promise<ResolvedFrameHtml>,
+  signal: AbortSignal,
+) {
   yield encoder.encode(`<!-- f:${frameId} -->`)
-  yield await blocking
+  let resolved = await blocking
+  if (signal.aborted) throw signal.reason ?? new Error('stream aborted')
+  if (resolved.html) {
+    yield encoder.encode(resolved.html)
+  }
 }
 
 async function resolvedFrameToHtml(
   value: ResolveFrameValue,
   renderFrameValueToString: HtmlStreamingPolicyOptions['renderFrameValueToString'],
   signal: AbortSignal,
-) {
+): Promise<ResolvedFrameHtml> {
   if (signal.aborted) throw signal.reason ?? new Error('stream aborted')
-  if (typeof value === 'string') return value
-  if (value instanceof Uint8Array) return new TextDecoder().decode(value)
-  if (isByteStream(value)) return readByteStream(value, signal)
+  if (typeof value === 'string') return { html: value }
+  if (value instanceof Uint8Array) return { html: new TextDecoder().decode(value) }
+  if (isByteStream(value)) {
+    let { first, tail } = await splitFirstChunk(value)
+    return {
+      html: new TextDecoder().decode(first),
+      tail,
+    }
+  }
   if (!renderFrameValueToString) {
     throw new Error('Missing frame renderer')
   }
-  return renderFrameValueToString(value, signal)
+  return { html: await renderFrameValueToString(value, signal) }
 }
 
 function isByteStream(value: unknown): value is ReadableStream<Uint8Array> {
@@ -328,19 +360,134 @@ function isByteStream(value: unknown): value is ReadableStream<Uint8Array> {
   )
 }
 
-async function readByteStream(stream: ReadableStream<Uint8Array>, signal: AbortSignal) {
+async function splitFirstChunk(stream: ReadableStream<Uint8Array>) {
   let reader = stream.getReader()
+  let first: null | Uint8Array = null
+  while (true) {
+    let next = await reader.read()
+    if (next.done) break
+    if (next.value.byteLength === 0) continue
+    first = next.value
+    break
+  }
+  if (!first) {
+    reader.releaseLock()
+    return {
+      first: new Uint8Array(),
+      tail: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.close()
+        },
+      }),
+    }
+  }
+  let released = false
+  let release = () => {
+    if (released) return
+    released = true
+    try {
+      reader.releaseLock()
+    } catch {
+      // Ignore release failures from already-closed streams.
+    }
+  }
+  let tail = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      let next = await reader.read()
+      if (next.done) {
+        controller.close()
+        release()
+        return
+      }
+      controller.enqueue(next.value)
+    },
+    cancel(reason) {
+      release()
+      return reader.cancel(reason)
+    },
+  })
+  return { first, tail }
+}
+
+async function* streamTemplateAndTail(
+  initialTemplateChunk: Uint8Array,
+  tail: ReadableStream<Uint8Array>,
+  signal: AbortSignal,
+) {
+  yield initialTemplateChunk
+  yield* streamByteTail(tail, signal)
+}
+
+async function* streamTemplateUntilNamedTemplate(
+  frameId: string,
+  firstChunkHtml: string,
+  tail: ReadableStream<Uint8Array>,
+  signal: AbortSignal,
+) {
+  yield encoder.encode(`<template id="${frameId}">${escapeTemplateClosers(firstChunkHtml)}`)
+  let reader = tail.getReader()
   let decoder = new TextDecoder()
-  let output = ''
+  let open = true
+  let buffer = ''
   try {
     while (true) {
       if (signal.aborted) throw signal.reason ?? new Error('stream aborted')
       let { done, value } = await reader.read()
       if (done) break
-      output += decoder.decode(value, { stream: true })
+      if (open) {
+        buffer += decoder.decode(value, { stream: true })
+        let namedTemplateStart = findNamedTemplateStart(buffer)
+        if (namedTemplateStart !== -1) {
+          let before = buffer.slice(0, namedTemplateStart)
+          let fromTemplate = buffer.slice(namedTemplateStart)
+          if (before) {
+            yield encoder.encode(escapeTemplateClosers(before))
+          }
+          yield encoder.encode('</template>')
+          if (fromTemplate) {
+            yield encoder.encode(fromTemplate)
+          }
+          open = false
+          buffer = ''
+          continue
+        }
+        if (buffer.length > 24) {
+          let flush = buffer.slice(0, -24)
+          if (flush) {
+            yield encoder.encode(escapeTemplateClosers(flush))
+          }
+          buffer = buffer.slice(-24)
+        }
+        continue
+      }
+      yield value
     }
-    output += decoder.decode()
-    return output
+    if (open) {
+      buffer += decoder.decode()
+      if (buffer) {
+        yield encoder.encode(escapeTemplateClosers(buffer))
+      }
+      yield encoder.encode('</template>')
+      return
+    }
+    let remainder = decoder.decode()
+    if (remainder) {
+      yield encoder.encode(remainder)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
+
+async function* streamByteTail(tail: ReadableStream<Uint8Array>, signal: AbortSignal) {
+  let reader = tail.getReader()
+  try {
+    while (true) {
+      if (signal.aborted) throw signal.reason ?? new Error('stream aborted')
+      let { done, value } = await reader.read()
+      if (done) break
+      yield value
+    }
   } finally {
     reader.releaseLock()
   }
@@ -354,6 +501,14 @@ function extractNamedTemplates(html: string) {
     return ''
   })
   return { htmlWithoutTemplates, templatesHtml }
+}
+
+function escapeTemplateClosers(html: string) {
+  return html.replace(/<\/template/gi, '<\\/template')
+}
+
+function findNamedTemplateStart(html: string) {
+  return html.search(/<template\b[^>]*\bid=(?:"[^"]+"|'[^']+')[^>]*>/i)
 }
 
 function serializeRmxDataScript(

@@ -18,16 +18,12 @@ export let FrameReloadButton = clientEntry(
         }}
         mix={[
           on('click', async () => {
-            if (pending) return
-            if (!handle.frame) return
             pending = true
-            void handle.update()
-            try {
-              await handle.frame.reload()
-            } finally {
-              pending = false
-              void handle.update()
-            }
+            handle.update()
+            let signal = await handle.frame.reload()
+            if (signal.aborted) return
+            pending = false
+            handle.update()
           }),
         ]}
       >
