@@ -159,7 +159,7 @@ export default [
       'jsdoc/check-param-names': 'error',
       'jsdoc/check-property-names': 'error',
       'jsdoc/check-syntax': 'error',
-      'jsdoc/check-tag-names': ['error'],
+      'jsdoc/check-tag-names': ['error', { definedTags: ['runnableExample'] }],
       'jsdoc/check-template-names': 'error',
       'jsdoc/check-types': 'error',
       'jsdoc/check-values': 'error',

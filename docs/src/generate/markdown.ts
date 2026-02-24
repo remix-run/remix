@@ -36,7 +36,6 @@ const h1 = (heading: string) => h(1, heading)
 const h2 = (heading: string, body: string) => h(2, heading, body)
 const h3 = (heading: string, body: string) => h(3, heading, body)
 const h4 = (heading: string, body: string) => h(4, heading, body)
-const code = (content: string) => `\`${content}\``
 const p = (content: string) => `${content}`
 const pre = async (content: string, lang = 'ts') => {
   if (content.includes('(...)')) {

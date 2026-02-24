@@ -1,6 +1,6 @@
 import * as typedoc from 'typedoc'
 import { getApiNameFromFullName, invariant, unimplemented, warn } from './utils.ts'
-import { IGNORE_SYMBOLS, MDN_SYMBOLS } from './symbols.ts'
+import { MDN_SYMBOLS } from './symbols.ts'
 
 export type DocumentedAPI =
   | DocumentedFunction
@@ -25,54 +25,52 @@ type Method = {
   returns: string | undefined
 }
 
-// Documented function API
-export type DocumentedFunction = Method & {
-  type: 'function'
+// Fields required for all types
+type BaseDocumentedAPI = {
+  type: 'function' | 'class' | 'interface' | 'interface-function' | 'type'
   path: string
   source: string | undefined
+  name: string
   aliases: string[] | undefined
+  description: string
+}
+
+// Documented function API
+export type DocumentedFunction = BaseDocumentedAPI & {
+  type: 'function'
+  signature: string
+  parameters: ParameterOrProperty[]
+  returns: string | undefined
   example: string | undefined
 }
 
 // Documented class API
-export type DocumentedClass = {
+export type DocumentedClass = BaseDocumentedAPI & {
   type: 'class'
-  path: string
-  source: string | undefined
-  name: string
-  aliases: string[] | undefined
-  description: string
-  example: string | undefined
   constructor: Method | undefined
   properties: ParameterOrProperty[] | undefined
   methods: Method[] | undefined
+  example: string | undefined
 }
 
 // Documented interface API
-export type DocumentedInterface = {
+export type DocumentedInterface = BaseDocumentedAPI & {
   type: 'interface'
-  path: string
-  source: string | undefined
-  name: string
-  aliases: string[] | undefined
-  description: string
+  signature: string
   properties: ParameterOrProperty[] | undefined
   methods: Method[] | undefined
-  signature: string
 }
 
-export type DocumentedInterfaceFunction = Omit<DocumentedFunction, 'type'> & {
+export type DocumentedInterfaceFunction = BaseDocumentedAPI & {
   type: 'interface-function'
+  signature: string
+  parameters: ParameterOrProperty[]
+  returns: string | undefined
 }
 
 // Documented type API
-export type DocumentedType = {
+export type DocumentedType = BaseDocumentedAPI & {
   type: 'type'
-  path: string
-  source: string | undefined
-  name: string
-  aliases: string[] | undefined
-  description: string
   signature: string
 }
 
@@ -126,11 +124,15 @@ function getDocumentedFunction(
     type: 'function',
     path: getApiFilePath(fullName, 'function'),
     source: node.sources?.[0]?.url,
+    name: method.name,
     aliases: getApiAliases(node.comment!),
+    description: method.description,
+    signature: method.signature,
     example: node.comment?.getTag('@example')?.content
       ? processApiComment(node.comment.getTag('@example')!.content)
       : undefined,
-    ...method,
+    parameters: method.parameters,
+    returns: method.returns,
   }
 }
 
@@ -138,18 +140,9 @@ function getDocumentedInterfaceFunction(
   fullName: string,
   node: typedoc.SignatureReflection,
 ): DocumentedInterfaceFunction {
-  let { type, ...fn } = getDocumentedFunction(fullName, node)
   return {
+    ...getDocumentedFunction(fullName, node),
     type: 'interface-function',
-    name: fn.name,
-    signature: fn.signature,
-    description: fn.description,
-    parameters: fn.parameters,
-    returns: fn.returns,
-    example: fn.example,
-    path: fn.path,
-    source: fn.source,
-    aliases: fn.aliases,
   }
 }
 
@@ -172,16 +165,18 @@ function getDocumentedClass(
     new Set([typedoc.ReflectionKind.Constructor]),
   )
 
+  let name = getApiNameFromFullName(fullName)
+
   return {
     type: 'class',
+    path: getApiFilePath(fullName, 'class'),
+    source: node.sources?.[0]?.url,
+    name,
     aliases: getApiAliases(node.comment!),
+    description: getApiDescription(node.comment!),
     example: node.comment?.getTag('@example')?.content
       ? processApiComment(node.comment.getTag('@example')!.content)
       : undefined,
-    path: getApiFilePath(fullName, 'class'),
-    source: node.sources?.[0]?.url,
-    name: getApiNameFromFullName(fullName),
-    description: getApiDescription(node.comment!),
     constructor,
     properties,
     methods,
@@ -228,9 +223,9 @@ function getDocumentedInterface(
     name: getApiNameFromFullName(fullName),
     aliases: getApiAliases(node.comment!),
     description: getApiDescription(node.comment!),
+    signature,
     properties,
     methods,
-    signature,
   }
 }
 
