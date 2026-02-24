@@ -50,7 +50,7 @@ export type {
   FrameRegistry,
   ResolveFrame,
   RuntimeHandle,
-} from './lib/client-runtime.ts'
+} from './lib/client-runtime.tsx'
 export type {
   EntryComponent,
   HydrationData,

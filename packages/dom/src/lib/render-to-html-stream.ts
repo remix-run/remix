@@ -2,7 +2,10 @@ import { createStreamingRenderer } from '@remix-run/reconciler'
 import type { StreamingRenderValue } from '@remix-run/reconciler'
 import { createHtmlStreamingPlugins } from './html-streaming-plugins.ts'
 import { createHtmlStreamingPolicy } from './html-streaming-policy.ts'
-import { HTML_STREAMING_FINALIZE_PREFIX, HTML_STREAMING_FINALIZE_SUFFIX } from './html-streaming-policy.ts'
+import {
+  HTML_STREAMING_FINALIZE_PREFIX,
+  HTML_STREAMING_FINALIZE_SUFFIX,
+} from './html-streaming-policy.ts'
 import type { ResolveFrame } from './html-streaming-policy.ts'
 
 export type RenderToHTMLStreamOptions = {
