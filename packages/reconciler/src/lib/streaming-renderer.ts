@@ -204,6 +204,7 @@ async function emitValue<chunk, rootContext, elementState>(
       kind: 'component',
       type: componentType,
       key: value.key,
+      setup,
       props,
       rendered,
     }

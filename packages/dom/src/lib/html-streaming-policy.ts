@@ -86,10 +86,12 @@ export function createHtmlStreamingPolicy(
           throw new Error('clientEntry props must be an object')
         }
         let hydrationId = crypto.randomUUID()
+        let hydrationProps =
+          input.setup === undefined ? input.props : { ...input.props, setup: input.setup }
         context.hydrationData.set(hydrationId, {
           moduleUrl: input.type.$moduleUrl,
           exportName: input.type.$exportName,
-          props: serializeHydrationProps(input.props),
+          props: serializeHydrationProps(hydrationProps),
         })
         return {
           open: encoder.encode(`<!-- rmx:h:${hydrationId} -->`),

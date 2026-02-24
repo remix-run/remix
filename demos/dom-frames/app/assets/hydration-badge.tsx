@@ -6,7 +6,7 @@ export let HydrationBadge = clientEntry(
     let mounted = false
     handle.queueTask(() => {
       mounted = true
-      void handle.update()
+      handle.update()
     })
     return () => (
       <div

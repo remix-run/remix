@@ -354,6 +354,7 @@ export type StreamingComponentInput = {
   kind: 'component'
   type: Component<any, any, StreamingRenderValue>
   key: unknown
+  setup: unknown
   props: Record<string, unknown>
   rendered: StreamingRenderValue
 }
