@@ -118,6 +118,103 @@ describe('boot', () => {
     expect(document.body.innerHTML).toContain('streamed chunk content')
   })
 
+  it('replaces pending frame fallback when deferred template chunk arrives', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- f:f1 --><p>loading frame</p><!-- /f -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"f":{"f1":{"status":"pending","name":"late","src":"/frame/late"}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+
+    let runtime = boot({
+      document,
+      loadModule: async () => () => <button>noop</button>,
+    })
+    await runtime.ready()
+    expect(document.body.innerHTML).toContain('loading frame')
+
+    let template = document.createElement('template')
+    template.id = 'f1'
+    template.innerHTML = '<p>resolved frame content</p>'
+    document.body.appendChild(template)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.body.innerHTML).toContain('resolved frame content')
+    expect(document.body.innerHTML).not.toContain('loading frame')
+  })
+
+  it('consumes early frame templates that exist before boot starts', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- f:f1 --><p>loading frame</p><!-- /f -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"f":{"f1":{"status":"pending","name":"early","src":"/frame/early"}}}',
+      '</script>',
+      '<template id="f1"><p>early resolved content</p></template>',
+      '</main>',
+    ].join('')
+
+    let runtime = boot({
+      document,
+      loadModule: async () => () => <button>noop</button>,
+    })
+    await runtime.ready()
+
+    expect(document.body.innerHTML).toContain('early resolved content')
+    expect(document.body.innerHTML).not.toContain('loading frame')
+  })
+
+  it('does not block ready on hydration markers from late frame templates', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<!-- rmx:h:h1 --><button id="initial">server initial</button><!-- /rmx:h -->',
+      '<!-- f:f1 --><p id="frame-fallback">loading frame</p><!-- /f -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"h":{"h1":{"moduleUrl":"/entries/initial.js","exportName":"Initial","props":{"label":"initial"}}},"f":{"f1":{"status":"pending","name":"late-hydration","src":"/frame/late"}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+
+    let resolveLateModule = (_value: unknown) => {}
+    let lateModulePromise = new Promise<unknown>((resolve) => {
+      resolveLateModule = resolve
+    })
+    let loadModule = vi.fn(async (moduleUrl: string, exportName: string) => {
+      if (moduleUrl === '/entries/initial.js' && exportName === 'Initial') {
+        return () => (props: { label: string }) => <button id="initial">{props.label}</button>
+      }
+      if (moduleUrl === '/entries/late.js' && exportName === 'Late') {
+        return lateModulePromise
+      }
+      throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
+    })
+
+    let runtime = boot({ document, loadModule })
+    await runtime.ready()
+    expect(loadModule).toHaveBeenCalledTimes(1)
+    expect(document.getElementById('initial')?.textContent).toBe('initial')
+
+    let template = document.createElement('template')
+    template.id = 'f1'
+    template.innerHTML = [
+      '<!-- rmx:h:h2 --><button id="late">server late</button><!-- /rmx:h -->',
+      '<script type="application/json" id="rmx-data">',
+      '{"h":{"h2":{"moduleUrl":"/entries/late.js","exportName":"Late","props":{"label":"late"}}}}',
+      '</script>',
+    ].join('')
+    document.body.appendChild(template)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(loadModule).toHaveBeenCalledTimes(2)
+    expect(document.getElementById('late')?.textContent).toBe('server late')
+
+    resolveLateModule(() => (props: { label: string }) => <button id="late">{props.label}</button>)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(document.getElementById('late')?.textContent).toBe('late')
+  })
+
   it('disposes hydrated roots and frame content', async () => {
     document.body.innerHTML = [
       '<main>',

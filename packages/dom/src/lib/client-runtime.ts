@@ -33,8 +33,10 @@ type FrameBoundary = {
 
 type FrameState = {
   handle: FrameHandle
+  id: string
   start: Comment
   end: Comment
+  status: 'pending' | 'resolved'
   disposed: boolean
   reloadController: null | AbortController
 }
@@ -87,7 +89,10 @@ type RuntimeState = {
   moduleLoads: Map<string, Promise<Component<any, any, any> | undefined>>
   rootsByStart: Map<Comment, ReconcilerRoot>
   frameStatesByStart: Map<Comment, FrameState>
+  frameStatesById: Map<string, FrameState>
   namedFrames: Map<string, FrameHandle>
+  pendingFrameTemplates: Map<string, DocumentFragment[]>
+  templateObserver: null | MutationObserver
   reconcilerByFrame: WeakMap<object, ReturnType<typeof createDomReconciler>>
   disposed: boolean
   runtime: RuntimeHandle
@@ -111,7 +116,10 @@ export function boot(options: BootOptions): RuntimeHandle {
     moduleLoads: new Map(),
     rootsByStart: new Map(),
     frameStatesByStart: new Map(),
+    frameStatesById: new Map(),
     namedFrames: new Map(),
+    pendingFrameTemplates: new Map(),
+    templateObserver: null,
     reconcilerByFrame: new WeakMap(),
     disposed: false,
     runtime: null as unknown as RuntimeHandle,
@@ -134,7 +142,11 @@ export function boot(options: BootOptions): RuntimeHandle {
       for (let frameState of Array.from(state.frameStatesByStart.values())) {
         disposeFrameState(state, frameState)
       }
+      state.templateObserver?.disconnect()
+      state.templateObserver = null
       state.frameStatesByStart.clear()
+      state.frameStatesById.clear()
+      state.pendingFrameTemplates.clear()
       state.namedFrames.clear()
       for (let root of state.rootsByStart.values()) {
         root.dispose()
@@ -147,6 +159,8 @@ export function boot(options: BootOptions): RuntimeHandle {
   let readyPromise = (async () => {
     try {
       mergeRmxDataFromScope(state.data, doc, options.onError)
+      startFrameTemplateObservation(state)
+      processExistingFrameTemplates(state)
       let container = doc.body ?? doc.documentElement ?? doc
       pruneDisconnectedRuntimeNodes(state)
       await hydrateContainer(state, Array.from(container.childNodes), topFrame)
@@ -186,6 +200,7 @@ async function hydrateContainer(
     let frameData = state.data.f?.[boundary.id]
     if (!frameData || typeof frameData.src !== 'string') continue
     let frameState = getOrCreateFrameState(state, boundary, frameData)
+    await applyPendingTemplateIfAvailable(state, frameState)
     await hydrateContainer(state, getRangeNodes(boundary.start, boundary.end), frameState.handle)
   }
 }
@@ -243,6 +258,8 @@ function getOrCreateFrameState(state: RuntimeState, boundary: FrameBoundary, dat
   let existing = state.frameStatesByStart.get(boundary.start)
   if (existing) {
     existing.end = boundary.end
+    existing.id = boundary.id
+    existing.status = data.status
     existing.handle.src = data.src
     if (typeof data.name === 'string') {
       existing.handle.name = data.name
@@ -254,8 +271,10 @@ function getOrCreateFrameState(state: RuntimeState, boundary: FrameBoundary, dat
   let target = new EventTarget()
   let frameState: FrameState = {
     handle: null as unknown as FrameHandle,
+    id: boundary.id,
     start: boundary.start,
     end: boundary.end,
+    status: data.status,
     disposed: false,
     reloadController: null,
   }
@@ -291,6 +310,7 @@ function getOrCreateFrameState(state: RuntimeState, boundary: FrameBoundary, dat
   }) as FrameHandle
   frameState.handle = handle
   state.frameStatesByStart.set(boundary.start, frameState)
+  state.frameStatesById.set(boundary.id, frameState)
   if (typeof data.name === 'string') {
     state.namedFrames.set(data.name, handle)
   }
@@ -327,6 +347,9 @@ function disposeFrameState(state: RuntimeState, frameState: FrameState) {
   frameState.reloadController = null
   disposeOwnedInsideRange(state, frameState.start, frameState.end)
   state.frameStatesByStart.delete(frameState.start)
+  if (state.frameStatesById.get(frameState.id) === frameState) {
+    state.frameStatesById.delete(frameState.id)
+  }
   if (frameState.handle.name && state.namedFrames.get(frameState.handle.name) === frameState.handle) {
     state.namedFrames.delete(frameState.handle.name)
   }
@@ -507,6 +530,96 @@ function mergeRmxData(into: RmxData, from: RmxData) {
     if (!into.f) into.f = {}
     copyOwnEntries(into.f, from.f)
   }
+}
+
+async function applyPendingTemplateIfAvailable(state: RuntimeState, frameState: FrameState) {
+  if (frameState.status !== 'pending') return
+  let queue = state.pendingFrameTemplates.get(frameState.id)
+  let fragment = queue?.shift()
+  if (!fragment) return
+  if (queue && queue.length === 0) {
+    state.pendingFrameTemplates.delete(frameState.id)
+  }
+  await applyFrameTemplate(state, frameState, fragment)
+}
+
+async function applyFrameTemplate(
+  state: RuntimeState,
+  frameState: FrameState,
+  fragment: DocumentFragment,
+) {
+  if (state.disposed || frameState.disposed || frameState.status !== 'pending') return
+  mergeRmxDataFromScope(state.data, fragment, state.options.onError)
+  await replaceFrameContentFragment(state, frameState, fragment)
+  frameState.status = 'resolved'
+  state.runtime.flush()
+}
+
+async function replaceFrameContentFragment(
+  state: RuntimeState,
+  frameState: FrameState,
+  fragment: DocumentFragment,
+) {
+  if (frameState.disposed || state.disposed) return
+  disposeOwnedInsideRange(state, frameState.start, frameState.end)
+  clearRange(frameState.start, frameState.end)
+  frameState.start.parentNode?.insertBefore(fragment, frameState.end)
+  await hydrateContainer(state, getRangeNodes(frameState.start, frameState.end), frameState.handle)
+}
+
+function startFrameTemplateObservation(state: RuntimeState) {
+  if (state.templateObserver) return
+  let root = state.doc.body ?? state.doc.documentElement ?? state.doc
+  let observer = new MutationObserver((mutations) => {
+    for (let mutation of mutations) {
+      for (let node of Array.from(mutation.addedNodes)) {
+        processFrameTemplateNode(state, node)
+      }
+    }
+  })
+  observer.observe(root, { childList: true, subtree: true })
+  state.templateObserver = observer
+}
+
+function processExistingFrameTemplates(state: RuntimeState) {
+  let templates = Array.from(state.doc.querySelectorAll('template[id]'))
+  for (let template of templates) {
+    if (!(template instanceof HTMLTemplateElement)) continue
+    processFrameTemplateElement(state, template)
+  }
+}
+
+function processFrameTemplateNode(state: RuntimeState, node: Node) {
+  if (node instanceof HTMLTemplateElement) {
+    processFrameTemplateElement(state, node)
+    return
+  }
+  if (!(node instanceof Element)) return
+  let templates = Array.from(node.querySelectorAll('template[id]'))
+  for (let template of templates) {
+    if (!(template instanceof HTMLTemplateElement)) continue
+    processFrameTemplateElement(state, template)
+  }
+}
+
+function processFrameTemplateElement(state: RuntimeState, template: HTMLTemplateElement) {
+  let frameId = template.id
+  if (!frameId) return
+  let fragment = template.content
+  template.remove()
+  let frameState = state.frameStatesById.get(frameId)
+  if (frameState && !frameState.disposed && frameState.status === 'pending') {
+    void applyFrameTemplate(state, frameState, fragment).catch((error) =>
+      state.options.onError?.(error, frameId),
+    )
+    return
+  }
+  let queue = state.pendingFrameTemplates.get(frameId)
+  if (!queue) {
+    queue = []
+    state.pendingFrameTemplates.set(frameId, queue)
+  }
+  queue.push(fragment)
 }
 
 function copyOwnEntries<T>(target: Record<string, T>, source: Record<string, T>) {
