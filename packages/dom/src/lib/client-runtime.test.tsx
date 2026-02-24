@@ -287,8 +287,8 @@ describe('boot', () => {
       '</main>',
     ].join('')
 
-    let resolveLateModule = (_value: unknown) => {}
-    let lateModulePromise = new Promise<unknown>((resolve) => {
+    let resolveLateModule = (_value: Function) => {}
+    let lateModulePromise = new Promise<Function>((resolve) => {
       resolveLateModule = resolve
     })
     let loadModule = vi.fn(async (moduleUrl: string, exportName: string) => {

@@ -46,7 +46,7 @@ type ReconcilerRoot = ReturnType<ReturnType<typeof createDomReconciler>['createR
 export type ClientModuleLoader = (
   moduleUrl: string,
   exportName: string,
-) => Promise<unknown> | unknown
+) => Promise<Function> | Function
 
 export type ResolveFrame = (
   src: string,
@@ -85,8 +85,8 @@ type RuntimeState = {
   doc: Document
   options: BootOptions
   data: RmxData
-  moduleCache: Map<string, Component<any, any, any>>
-  moduleLoads: Map<string, Promise<Component<any, any, any> | undefined>>
+  moduleCache: Map<string, Function>
+  moduleLoads: Map<string, Promise<Function | undefined>>
   rootsByStart: Map<Comment, ReconcilerRoot>
   frameStatesByStart: Map<Comment, FrameState>
   frameStatesById: Map<string, FrameState>
@@ -952,7 +952,7 @@ async function getOrLoadModule(
           `Export "${entry.exportName}" from "${entry.moduleUrl}" is not a component function`,
         )
       }
-      let component = loaded as Component<any, any, any>
+      let component = loaded as Function
       state.moduleCache.set(key, component)
       return component
     } catch (error) {

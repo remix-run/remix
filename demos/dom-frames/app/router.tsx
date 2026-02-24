@@ -21,7 +21,7 @@ middleware.push(
 )
 export let router = createRouter({ middleware })
 
-let pageStyle: Record<string, string> = {
+let pageStyle = {
   fontFamily:
     'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
   margin: '0',
@@ -30,20 +30,20 @@ let pageStyle: Record<string, string> = {
   color: '#edf2ff',
 }
 
-let cardStyle: Record<string, string> = {
+let cardStyle = {
   border: '1px solid rgba(255,255,255,0.14)',
   borderRadius: '12px',
   padding: '16px',
   background: 'rgba(255,255,255,0.04)',
 }
 
-let navLinkStyle: Record<string, string> = {
+let navLinkStyle = {
   color: '#c7d5ff',
   textDecoration: 'underline',
   fontSize: '14px',
 }
 
-router.get(routes.home, async (context: { request: Request }) => {
+router.get(routes.home, async (context) => {
   let content = (
     <div style={cardStyle}>
       <p style={{ marginTop: '0' }}>
@@ -76,7 +76,7 @@ router.get(routes.home, async (context: { request: Request }) => {
   )
   return htmlResponse(
     renderToHTMLStream(renderPage('DOM Boot + Frames Demo', content), {
-      resolveFrame: (src: string, signal: AbortSignal) =>
+      resolveFrame: (src, signal) =>
         resolveFrameViaRouter(context.request, src, signal),
       onError(error) {
         console.error(error)
@@ -106,7 +106,7 @@ router.get(routes.simpleHydration, async () => {
   )
 })
 
-router.get(routes.oooStreaming, async (context: { request: Request }) => {
+router.get(routes.oooStreaming, async (context) => {
   let content = (
     <div style={{ ...cardStyle, display: 'grid', gap: '14px' }}>
       <p style={{ margin: '0' }}>
@@ -131,7 +131,7 @@ router.get(routes.oooStreaming, async (context: { request: Request }) => {
   )
   return htmlResponse(
     renderToHTMLStream(renderPage('Basic out-of-order frame streaming', content), {
-      resolveFrame: (src: string, signal: AbortSignal) =>
+      resolveFrame: (src, signal) =>
         resolveFrameViaRouter(context.request, src, signal),
       onError(error) {
         console.error(error)
@@ -140,7 +140,7 @@ router.get(routes.oooStreaming, async (context: { request: Request }) => {
   )
 })
 
-router.get(routes.nestedFrames, async (context: { request: Request }) => {
+router.get(routes.nestedFrames, async (context) => {
   let content = (
     <div style={{ ...cardStyle, display: 'grid', gap: '12px' }}>
       <p style={{ marginTop: '0' }}>
@@ -154,7 +154,7 @@ router.get(routes.nestedFrames, async (context: { request: Request }) => {
   )
   return htmlResponse(
     renderToHTMLStream(renderPage('Nested frames', content), {
-      resolveFrame: (src: string, signal: AbortSignal) =>
+      resolveFrame: (src, signal) =>
         resolveFrameViaRouter(context.request, src, signal),
       onError(error) {
         console.error(error)
@@ -163,7 +163,7 @@ router.get(routes.nestedFrames, async (context: { request: Request }) => {
   )
 })
 
-router.get(routes.frameReload, async (context: { request: Request }) => {
+router.get(routes.frameReload, async (context) => {
   let content = (
     <div style={cardStyle}>
       <p style={{ marginTop: '0' }}>
@@ -177,7 +177,7 @@ router.get(routes.frameReload, async (context: { request: Request }) => {
   )
   return htmlResponse(
     renderToHTMLStream(renderPage('Frame reload from client entry', content), {
-      resolveFrame: (src: string, signal: AbortSignal) =>
+      resolveFrame: (src, signal) =>
         resolveFrameViaRouter(context.request, src, signal),
       onError(error) {
         console.error(error)
@@ -212,7 +212,7 @@ router.get(routes.frames.slowB, async () => {
   )
 })
 
-router.get(routes.frames.nestedOuter, async (context: { request: Request }) => {
+router.get(routes.frames.nestedOuter, async (context) => {
   await delay(600)
   return htmlResponse(
     renderToHTMLStream(
@@ -226,7 +226,7 @@ router.get(routes.frames.nestedOuter, async (context: { request: Request }) => {
         />
       </div>,
       {
-        resolveFrame: (src: string, signal: AbortSignal) =>
+        resolveFrame: (src, signal) =>
           resolveFrameViaRouter(context.request, src, signal),
         onError: console.error,
       },
