@@ -1,6 +1,6 @@
 import { createMixin } from '@remix-run/reconciler'
 import type { MixinDescriptor } from '@remix-run/reconciler'
-import type { JSX } from '../jsx.ts'
+import type { JSX } from '../jsx/runtime.ts'
 
 type CssScalar = string | number
 type CssInput = {

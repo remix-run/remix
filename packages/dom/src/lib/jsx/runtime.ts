@@ -6,7 +6,7 @@ import {
 } from '@remix-run/reconciler'
 import type { Component, ReconcilerElement, RenderValue } from '@remix-run/reconciler'
 import type { MixValue } from '@remix-run/reconciler'
-import type * as dom from './jsx-props.ts'
+import type * as dom from '../jsx-props.ts'
 
 export const Fragment = RECONCILER_FRAGMENT
 

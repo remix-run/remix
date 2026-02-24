@@ -1,7 +1,7 @@
 import { createMixin } from '@remix-run/reconciler'
 import type { MixinDescriptor } from '@remix-run/reconciler'
-import type { JSX } from '../jsx.ts'
-import type { DispatchedEvent } from '../jsx.ts'
+import type { JSX } from '../jsx/runtime.ts'
+import type { DispatchedEvent } from '../jsx/runtime.ts'
 
 type EventMap<target extends EventTarget> = target extends HTMLElement
   ? HTMLElementEventMap
