@@ -1,3 +1,4 @@
+import { TypedEventTarget } from '@remix-run/typed-event-target'
 import { definePlugin } from './types.ts'
 import type { Plugin } from './types.ts'
 import type { PluginCommitEvent } from './types.ts'
@@ -34,7 +35,14 @@ export type MixValue<node = unknown, elementType extends string = string> = Read
   MixinDescriptor<node, any, elementType>
 >
 
-export type MixinHandle<node = unknown, elementType extends string = string> = EventTarget & {
+type MixinHandleEventMap = {
+  detach: MixinDetachEvent
+  remove: Event
+}
+
+export type MixinHandle<node = unknown, elementType extends string = string> = TypedEventTarget<
+  MixinHandleEventMap
+> & {
   root: ReconcilerRoot<RenderValue>
   element: MixinElement<elementType>
   update(): Promise<AbortSignal>
@@ -59,7 +67,7 @@ type RunnerEntry = {
   handle: MixinHandle<unknown>
 }
 
-class MixinDetachEvent extends Event {
+export class MixinDetachEvent extends Event {
   #event: PluginDetachEvent<unknown>
 
   constructor(event: PluginDetachEvent<unknown>) {
@@ -183,7 +191,7 @@ export let mixPlugin: Plugin<unknown> = definePlugin({
 })
 
 function createMixinHandle(handle: PluginSetupHandle<unknown>) {
-  let mixinHandle = new EventTarget() as MixinHandle<unknown, string>
+  let mixinHandle = new TypedEventTarget<MixinHandleEventMap>() as MixinHandle<unknown, string>
   let element = ((_updateHandle: unknown, _setup: unknown) => (props: Record<string, unknown>) => ({
     $rmx: true as const,
     type: handle.host.type,

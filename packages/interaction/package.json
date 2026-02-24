@@ -59,6 +59,9 @@
     "typecheck": "tsgo --noEmit",
     "prepublishOnly": "pnpm build"
   },
+  "dependencies": {
+    "@remix-run/typed-event-target": "workspace:^"
+  },
   "devDependencies": {
     "@typescript/native-preview": "catalog:",
     "@vitest/browser": "^3.2.4",

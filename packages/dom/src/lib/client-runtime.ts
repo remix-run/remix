@@ -1,3 +1,4 @@
+import { TypedEventTarget } from '@remix-run/typed-event-target'
 import type { Component, ComponentHandle } from '@remix-run/reconciler'
 import { jsx } from './jsx/jsx-runtime.ts'
 import { createDomReconciler } from './dom-reconciler.ts'
@@ -59,7 +60,16 @@ export type BootOptions = {
   resolveFrame?: ResolveFrame
 }
 
-export type FrameHandle = EventTarget &
+type FrameHandleEventMap = {
+  reloadStart: Event
+  reloadComplete: Event
+}
+
+type RuntimeHandleEventMap = {
+  error: RuntimeErrorEvent
+}
+
+export type FrameHandle = TypedEventTarget<FrameHandleEventMap> &
   {
     src: string
     reload(): Promise<AbortSignal>
@@ -72,7 +82,7 @@ export type FrameRegistry = {
   get(name: string): undefined | FrameHandle
 }
 
-export type RuntimeHandle = EventTarget & {
+export type RuntimeHandle = TypedEventTarget<RuntimeHandleEventMap> & {
   frame: FrameHandle
   frames: FrameRegistry
   ready(): Promise<void>
@@ -111,7 +121,7 @@ type RuntimeState = {
 
 export function boot(options: BootOptions): RuntimeHandle {
   let doc = options.document ?? document
-  let eventTarget = new EventTarget()
+  let eventTarget = new TypedEventTarget<RuntimeHandleEventMap>()
   let topFrame = createRootFrameHandle(doc)
   let frames: FrameRegistry = {
     top: topFrame,
@@ -186,7 +196,7 @@ export function boot(options: BootOptions): RuntimeHandle {
 }
 
 function createRootFrameHandle(doc: Document): FrameHandle {
-  let target = new EventTarget()
+  let target = new TypedEventTarget<FrameHandleEventMap>()
   return Object.assign(target, {
     id: 'root',
     src: doc.location?.href ?? '/',
@@ -282,7 +292,7 @@ function getOrCreateFrameState(state: RuntimeState, boundary: FrameBoundary, dat
     return existing
   }
 
-  let target = new EventTarget()
+  let target = new TypedEventTarget<FrameHandleEventMap>()
   let frameState: FrameState = {
     handle: null as unknown as FrameHandle,
     id: boundary.id,

@@ -53,7 +53,8 @@
   },
   "dependencies": {
     "@remix-run/interaction": "workspace:^",
-    "@remix-run/reconciler": "workspace:^"
+    "@remix-run/reconciler": "workspace:^",
+    "@remix-run/typed-event-target": "workspace:^"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",

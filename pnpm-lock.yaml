@@ -410,6 +410,9 @@ importers:
       '@remix-run/reconciler':
         specifier: workspace:^
         version: link:../reconciler
+      '@remix-run/typed-event-target':
+        specifier: workspace:^
+        version: link:../typed-event-target
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -688,6 +691,10 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/interaction:
+    dependencies:
+      '@remix-run/typed-event-target':
+        specifier: workspace:^
+        version: link:../typed-event-target
     devDependencies:
       '@typescript/native-preview':
         specifier: 'catalog:'
@@ -919,6 +926,10 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/reconciler:
+    dependencies:
+      '@remix-run/typed-event-target':
+        specifier: workspace:^
+        version: link:../typed-event-target
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1229,6 +1240,12 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
+
+  packages/typed-event-target:
+    devDependencies:
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
 
   scripts:
     dependencies:

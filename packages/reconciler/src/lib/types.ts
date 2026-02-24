@@ -1,3 +1,5 @@
+import type { TypedEventTarget } from '@remix-run/typed-event-target'
+
 export type RootTask = (signal: AbortSignal) => void
 
 export type UpdateHandle = {
@@ -52,8 +54,13 @@ export type NodePolicy<parent, node, text extends node, element extends node> = 
 }
 
 export type NodePolicyDefinition<parent, node, text extends node, element extends node> = (
-  reconciler: EventTarget,
+  reconciler: TypedEventTarget<NodePolicyEventMap<parent, node, element>>,
 ) => NodePolicy<parent, node, text, element>
+
+export type NodePolicyEventMap<parent, node, element extends node> = {
+  enterChildren: ReconcilerEnterChildrenEvent<parent, node, element>
+  leaveChildren: ReconcilerLeaveChildrenEvent<parent, node, element>
+}
 
 export type HostInput = {
   type: string
@@ -88,7 +95,12 @@ export type PluginSetupHandle<element = EventTarget> = {
   queueTask(task: HostTask<element>): void
 }
 
-export type PluginRootHandle = EventTarget & {
+export type PluginRootHandleEventMap = {
+  beforeCommit: PluginBeforeCommitEvent
+  afterCommit: PluginAfterCommitEvent
+}
+
+export type PluginRootHandle = TypedEventTarget<PluginRootHandleEventMap> & {
   root: ReconcilerRoot<RenderValue>
 }
 
@@ -208,7 +220,13 @@ export type CommittedNode<parent, node, text extends node, element extends node>
   | CommittedHostNode<parent, node, text, element>
   | CommittedComponentNode<parent, node, text, element>
 
-export type ReconcilerRoot<renderValue> = EventTarget & {
+export type ReconcilerRootEventMap = {
+  beforeCommit: PluginBeforeCommitEvent
+  afterCommit: PluginAfterCommitEvent
+  error: ReconcilerErrorEvent
+}
+
+export type ReconcilerRoot<renderValue> = TypedEventTarget<ReconcilerRootEventMap> & {
   render(value: null | renderValue): void
   flush(): void
   remove(): void
@@ -435,7 +453,12 @@ export type StreamingPluginNodeScope = {
   remove?(): void
 }
 
-export type StreamingPluginRootHandle = EventTarget & {
+export type StreamingPluginRootHandleEventMap = {
+  beforeCommit: StreamingBeforeCommitEvent<any>
+  afterCommit: StreamingAfterCommitEvent<any>
+}
+
+export type StreamingPluginRootHandle = TypedEventTarget<StreamingPluginRootHandleEventMap> & {
   root: StreamingRendererRoot<any>
 }
 
@@ -459,7 +482,13 @@ export type PreparedStreamingPlugin = {
   plugin: StreamingPlugin
 }
 
-export type StreamingRendererRoot<chunk> = EventTarget & {
+export type StreamingRendererRootEventMap<chunk> = {
+  beforeCommit: StreamingBeforeCommitEvent<chunk>
+  afterCommit: StreamingAfterCommitEvent<chunk>
+  error: StreamingErrorEvent
+}
+
+export type StreamingRendererRoot<chunk> = TypedEventTarget<StreamingRendererRootEventMap<chunk>> & {
   stream(): ReadableStream<chunk>
   toString(): Promise<string>
   abort(reason?: unknown): void

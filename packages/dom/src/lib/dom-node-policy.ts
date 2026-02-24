@@ -38,15 +38,10 @@ export function createDomNodePolicy(document: Document): DomNodePolicyDefinition
     let cursorScopes: CursorScope[] = []
 
     reconciler.addEventListener('enterChildren', (event) => {
-      let enter = event as Event & {
-        parent?: unknown
-        startAnchor?: unknown
-        endAnchor?: unknown
-      }
-      if (!(enter.parent instanceof Node)) return
-      let parent = enter.parent as DomParentNode | DomElementNode
-      let startAnchor = enter.startAnchor instanceof Node ? enter.startAnchor : null
-      let endAnchor = enter.endAnchor instanceof Node ? enter.endAnchor : null
+      if (!(event.parent instanceof Node)) return
+      let parent = event.parent
+      let startAnchor = event.startAnchor instanceof Node ? event.startAnchor : null
+      let endAnchor = event.endAnchor instanceof Node ? event.endAnchor : null
       let initial = startAnchor ? startAnchor.nextSibling : parent.firstChild
       cursorScopes.push({
         parent,
@@ -56,10 +51,9 @@ export function createDomNodePolicy(document: Document): DomNodePolicyDefinition
     })
 
     reconciler.addEventListener('leaveChildren', (event) => {
-      let leave = event as Event & { parent?: unknown }
-      if (!(leave.parent instanceof Node)) return
+      if (!(event.parent instanceof Node)) return
       for (let index = cursorScopes.length - 1; index >= 0; index--) {
-        if (cursorScopes[index]?.parent !== leave.parent) continue
+        if (cursorScopes[index]?.parent !== event.parent) continue
         cursorScopes.splice(index, 1)
         return
       }
@@ -118,7 +112,7 @@ export function createDomNodePolicy(document: Document): DomNodePolicyDefinition
         return node.localName
       },
       getParent(node) {
-        return node.parentNode as null | DomParentNode
+        return node.parentNode
       },
       firstChild(parent) {
         return parent.firstChild

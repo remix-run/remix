@@ -1,4 +1,5 @@
 import { RECONCILER_FRAGMENT, RECONCILER_NODE_CHILDREN } from '../testing/jsx.ts'
+import { TypedEventTarget } from '@remix-run/typed-event-target'
 import {
   StreamingAfterCommitEvent,
   StreamingBeforeCommitEvent,
@@ -19,11 +20,13 @@ import type {
   StreamingPluginHostContext,
   StreamingPluginNodeScope,
   StreamingPluginRootHandle,
+  StreamingPluginRootHandleEventMap,
   StreamingPluginSetupHandle,
   StreamingPolicy,
   StreamingRenderValue,
   StreamingRenderer,
   StreamingRendererRoot,
+  StreamingRendererRootEventMap,
 } from './types.ts'
 
 type PreparedStreamingPlugins = {
@@ -55,7 +58,7 @@ type StreamingRendererOptions<chunk, rootContext, elementState> = {
 export function createStreamingRenderer<chunk, rootContext = unknown, elementState = unknown>(
   options: StreamingRendererOptions<chunk, rootContext, elementState>,
 ): StreamingRenderer<chunk> {
-  let pluginRootHandle = new EventTarget() as StreamingPluginRootHandle
+  let pluginRootHandle = new TypedEventTarget<StreamingPluginRootHandleEventMap>() as StreamingPluginRootHandle
   pluginRootHandle.root = createEmptyStreamingRootFacade()
   let plugins = prepareStreamingPlugins(materializeStreamingPlugins(options.plugins ?? [], pluginRootHandle))
   return {
@@ -72,7 +75,7 @@ function createStreamingRoot<chunk, rootContext, elementState>(
   policy: StreamingPolicy<chunk, rootContext, elementState>,
   plugins: PreparedStreamingPlugins,
 ) {
-  let root = Object.assign(new EventTarget(), {
+  let root = Object.assign(new TypedEventTarget<StreamingRendererRootEventMap<chunk>>(), {
     stream,
     toString,
     abort,
@@ -616,7 +619,7 @@ function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
 }
 
 function createEmptyStreamingRootFacade() {
-  return Object.assign(new EventTarget(), {
+  return Object.assign(new TypedEventTarget<StreamingRendererRootEventMap<any>>(), {
     stream() {
       return new ReadableStream()
     },

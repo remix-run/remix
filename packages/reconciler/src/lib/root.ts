@@ -3,6 +3,7 @@ import {
   RECONCILER_NODE_CHILDREN,
   RECONCILER_PROP_KEYS,
 } from '../testing/jsx.ts'
+import { TypedEventTarget } from '@remix-run/typed-event-target'
 import { isPhasePluginAhead, removeActivePluginId } from './root-helpers.ts'
 import { createScheduler } from './scheduler.ts'
 import {
@@ -25,16 +26,19 @@ import type {
   HostPropDelta,
   HostRenderNode,
   NodePolicy,
+  NodePolicyEventMap,
   NodePolicyDefinition,
   Plugin,
   PluginDefinition,
   PluginHostContext,
   PluginNodeScope,
   PluginRootHandle,
+  PluginRootHandleEventMap,
   PluginSetupHandle,
   PreparedPlugin,
   ReconcilerElement,
   ReconcilerRoot,
+  ReconcilerRootEventMap,
   RenderNode,
   RenderValue,
   RootTarget,
@@ -99,9 +103,9 @@ type NodeResult<parent, node, text extends node, element extends node> = {
 export function createReconciler<parent, node, text extends node, element extends node>(
   options: ReconcilerOptions<parent, node, text, element>,
 ) {
-  let policyEvents = new EventTarget()
+  let policyEvents = new TypedEventTarget<NodePolicyEventMap<parent, node, element>>()
   let policy = materializeNodePolicy(options.policy, policyEvents)
-  let pluginRootHandle = new EventTarget() as PluginRootHandle
+  let pluginRootHandle = new TypedEventTarget<PluginRootHandleEventMap>() as PluginRootHandle
   pluginRootHandle.root = createEmptyRootFacade()
   let plugins = preparePlugins(materializePlugins(options.plugins ?? [], pluginRootHandle))
   let scheduler = createScheduler()
@@ -136,7 +140,7 @@ export function createReconciler<parent, node, text extends node, element extend
         flushWork,
       }
       root.enqueue = () => scheduler.enqueue(scheduledRoot)
-      let rootApi = Object.assign(new EventTarget(), {
+      let rootApi = Object.assign(new TypedEventTarget<ReconcilerRootEventMap>(), {
         render(value: null | RenderValue) {
           if (root.disposed) return
           root.renderValue = value
@@ -1119,13 +1123,13 @@ function materializePlugins(plugins: Array<PluginDefinition<any>>, root: PluginR
 
 function materializeNodePolicy<parent, node, text extends node, element extends node>(
   policy: NodePolicyDefinition<parent, node, text, element>,
-  reconciler: EventTarget,
+  reconciler: TypedEventTarget<NodePolicyEventMap<parent, node, element>>,
 ): NodePolicy<parent, node, text, element> {
   return policy(reconciler)
 }
 
 function createEmptyRootFacade(): ReconcilerRoot<RenderValue> {
-  return Object.assign(new EventTarget(), {
+  return Object.assign(new TypedEventTarget<ReconcilerRootEventMap>(), {
     render() {},
     flush() {},
     remove() {},

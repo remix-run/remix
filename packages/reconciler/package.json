@@ -47,6 +47,9 @@
       "./package.json": "./package.json"
     }
   },
+  "dependencies": {
+    "@remix-run/typed-event-target": "workspace:^"
+  },
   "devDependencies": {
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",

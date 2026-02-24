@@ -5,10 +5,6 @@ import { getDomHostInput } from '../dom-node-policy.ts'
 
 type AnimateKeyframes = Parameters<Element['animate']>[0]
 type AnimateTiming = Parameters<Element['animate']>[1]
-type MixinDetachEvent = Event & {
-  retain(): void
-  waitUntil(promise: Promise<unknown>): void
-}
 
 export type AnimateEntranceOptions = {
   initial?: boolean
@@ -103,28 +99,27 @@ let animateExitMixin = createMixin<
 
   handle.addEventListener('detach', (event) => {
     if (!activeNode) return
-    let detachEvent = event as MixinDetachEvent
 
     let presence = presenceByNode.get(activeNode)
     if (presence?.direction === 'enter' && isAnimationActive(presence.animation)) {
-      detachEvent.retain()
+      event.retain()
       presence.animation.reverse()
       presenceByNode.set(activeNode, { animation: presence.animation, direction: 'exit' })
-      detachEvent.waitUntil(finishedPromise(presence.animation))
+      event.waitUntil(finishedPromise(presence.animation))
       return
     }
     if (presence?.direction === 'exit' && isAnimationActive(presence.animation)) {
-      detachEvent.waitUntil(finishedPromise(presence.animation))
+      event.waitUntil(finishedPromise(presence.animation))
       return
     }
 
-    detachEvent.retain()
+    event.retain()
     let keyframes = createPresenceKeyframes(latestOptions?.keyframes, 'exit', defaultExitDefinition)
     let optionsWithDefaults = withDefaultFill(latestOptions?.options, 'forwards')
     let animation = activeNode.animate(keyframes, optionsWithDefaults)
     presenceByNode.set(activeNode, { animation, direction: 'exit' })
     attachPresenceCleanup(activeNode, animation)
-    detachEvent.waitUntil(finishedPromise(animation))
+    event.waitUntil(finishedPromise(animation))
   })
 
   handle.addEventListener('remove', () => {

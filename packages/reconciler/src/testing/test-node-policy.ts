@@ -1,3 +1,4 @@
+import { TypedEventTarget } from '@remix-run/typed-event-target'
 import type { NodePolicy } from '../lib/types.ts'
 
 export type TestContainerNode = {
@@ -5,7 +6,9 @@ export type TestContainerNode = {
   children: TestNode[]
 }
 
-export type TestElementNode = EventTarget & {
+type TestElementEventMap = Record<string, Event>
+
+export type TestElementNode = TypedEventTarget<TestElementEventMap> & {
   kind: 'element'
   type: string
   parent: null | TestContainerNode | TestElementNode
@@ -58,7 +61,7 @@ export function createTestNodePolicy(): TestNodePolicy {
       operations.push(`setText:${value}`)
     },
     createElement(_parent, type) {
-      return Object.assign(new EventTarget(), {
+      return Object.assign(new TypedEventTarget<TestElementEventMap>(), {
         kind: 'element' as const,
         type,
         parent: null as null | TestContainerNode | TestElementNode,
