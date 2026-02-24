@@ -93,6 +93,7 @@ type RuntimeState = {
   namedFrames: Map<string, FrameHandle>
   pendingFrameTemplates: Map<string, DocumentFragment[]>
   templateObserver: null | MutationObserver
+  pendingHydrationPass: boolean
   reconcilerByFrame: WeakMap<object, ReturnType<typeof createDomReconciler>>
   disposed: boolean
   runtime: RuntimeHandle
@@ -120,6 +121,7 @@ export function boot(options: BootOptions): RuntimeHandle {
     namedFrames: new Map(),
     pendingFrameTemplates: new Map(),
     templateObserver: null,
+    pendingHydrationPass: false,
     reconcilerByFrame: new WeakMap(),
     disposed: false,
     runtime: null as unknown as RuntimeHandle,
@@ -573,12 +575,57 @@ function startFrameTemplateObservation(state: RuntimeState) {
   let observer = new MutationObserver((mutations) => {
     for (let mutation of mutations) {
       for (let node of Array.from(mutation.addedNodes)) {
-        processFrameTemplateNode(state, node)
+        processAddedRuntimeNode(state, node)
       }
     }
   })
   observer.observe(root, { childList: true, subtree: true })
   state.templateObserver = observer
+}
+
+function processAddedRuntimeNode(state: RuntimeState, node: Node) {
+  processFrameTemplateNode(state, node)
+  if (nodeHasRuntimeBoundaryStart(node) || isRmxDataScriptNode(node)) {
+    scheduleHydrationPass(state)
+  }
+}
+
+function scheduleHydrationPass(state: RuntimeState) {
+  if (state.pendingHydrationPass || state.disposed) return
+  state.pendingHydrationPass = true
+  queueMicrotask(() => {
+    state.pendingHydrationPass = false
+    if (state.disposed) return
+    let container = state.doc.body ?? state.doc.documentElement ?? state.doc
+    void hydrateContainer(state, Array.from(container.childNodes), state.runtime.frame)
+      .then(() => {
+        state.runtime.flush()
+      })
+      .catch((error) => {
+        state.options.onError?.(error, null)
+      })
+  })
+}
+
+function isRmxDataScriptNode(node: Node) {
+  return (
+    node instanceof HTMLScriptElement &&
+    node.id === 'rmx-data' &&
+    node.getAttribute('type') === 'application/json'
+  )
+}
+
+function nodeHasRuntimeBoundaryStart(node: Node): boolean {
+  if (node instanceof Comment) {
+    let marker = node.data.trim()
+    return marker.startsWith('rmx:h:') || marker.startsWith('f:')
+  }
+  for (let child of Array.from(node.childNodes)) {
+    if (nodeHasRuntimeBoundaryStart(child)) {
+      return true
+    }
+  }
+  return false
 }
 
 function processExistingFrameTemplates(state: RuntimeState) {
@@ -605,7 +652,7 @@ function processFrameTemplateNode(state: RuntimeState, node: Node) {
 function processFrameTemplateElement(state: RuntimeState, template: HTMLTemplateElement) {
   let frameId = template.id
   if (!frameId) return
-  let fragment = template.content
+  let fragment = template.content.cloneNode(true) as DocumentFragment
   template.remove()
   let frameState = state.frameStatesById.get(frameId)
   if (frameState && !frameState.disposed && frameState.status === 'pending') {

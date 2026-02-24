@@ -205,14 +205,59 @@ describe('boot', () => {
       '</script>',
     ].join('')
     document.body.appendChild(template)
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    expect(loadModule).toHaveBeenCalledTimes(2)
+    await waitFor(() => {
+      expect(loadModule).toHaveBeenCalledTimes(2)
+    })
     expect(document.getElementById('late')?.textContent).toBe('server late')
 
     resolveLateModule(() => (props: { label: string }) => <button id="late">{props.label}</button>)
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(document.getElementById('late')?.textContent).toBe('late')
+    await waitFor(() => {
+      expect(document.getElementById('late')?.textContent).toBe('late')
+    })
+  })
+
+  it('discovers late frame boundaries that stream after boot starts', async () => {
+    document.body.innerHTML = [
+      '<main>',
+      '<script type="application/json" id="rmx-data">',
+      '{"f":{"f1":{"status":"pending","name":"late-a","src":"/frame/a"},"f2":{"status":"pending","name":"late-b","src":"/frame/b"}}}',
+      '</script>',
+      '</main>',
+    ].join('')
+
+    let runtime = boot({
+      document,
+      loadModule: async () => () => <button>noop</button>,
+    })
+    await runtime.ready()
+
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<!-- f:f1 --><p id="fallback-a">loading A</p><!-- /f --><!-- f:f2 --><p id="fallback-b">loading B</p><!-- /f -->',
+    )
+    await waitFor(() => {
+      expect(runtime.frames.get('late-a')).toBeDefined()
+      expect(runtime.frames.get('late-b')).toBeDefined()
+    })
+
+    let templateB = document.createElement('template')
+    templateB.id = 'f2'
+    templateB.innerHTML = '<p id="resolved-b">resolved B</p>'
+    document.body.appendChild(templateB)
+    await waitFor(() => {
+      expect(document.getElementById('resolved-b')).toBeTruthy()
+      expect(document.getElementById('fallback-b')).toBeNull()
+      expect(document.getElementById('fallback-a')).toBeTruthy()
+    })
+
+    let templateA = document.createElement('template')
+    templateA.id = 'f1'
+    templateA.innerHTML = '<p id="resolved-a">resolved A</p>'
+    document.body.appendChild(templateA)
+    await waitFor(() => {
+      expect(document.getElementById('resolved-a')).toBeTruthy()
+      expect(document.getElementById('fallback-a')).toBeNull()
+    })
   })
 
   it('disposes hydrated roots and frame content', async () => {
@@ -265,3 +310,17 @@ describe('boot', () => {
     expect(errors.length).toBe(1)
   })
 })
+
+async function waitFor(assertion: () => void, attempts = 20) {
+  let lastError: unknown = null
+  for (let index = 0; index < attempts; index++) {
+    try {
+      assertion()
+      return
+    } catch (error) {
+      lastError = error
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  }
+  throw lastError
+}

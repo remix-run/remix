@@ -22,7 +22,8 @@ export function renderToHTMLStream(
   ) => {
     let frameRoot = renderer.createRoot(frameValue)
     signal.addEventListener('abort', () => frameRoot.abort(signal.reason), { once: true })
-    return frameRoot.toString()
+    let stream = createFinalizedHtmlStream(frameRoot.stream())
+    return readStreamToString(stream)
   }
   renderer = createStreamingRenderer({
     policy: createHtmlStreamingPolicy({
@@ -52,6 +53,23 @@ export function renderToHTMLStream(
     }
   }
   return createFinalizedHtmlStream(root.stream())
+}
+
+async function readStreamToString(stream: ReadableStream<Uint8Array>) {
+  let reader = stream.getReader()
+  let decoder = new TextDecoder()
+  let output = ''
+  try {
+    while (true) {
+      let result = await reader.read()
+      if (result.done) break
+      output += decoder.decode(result.value, { stream: true })
+    }
+    output += decoder.decode()
+    return output
+  } finally {
+    reader.releaseLock()
+  }
 }
 
 function createFinalizedHtmlStream(source: ReadableStream<Uint8Array>) {

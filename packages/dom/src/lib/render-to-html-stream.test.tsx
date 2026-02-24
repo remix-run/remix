@@ -93,6 +93,62 @@ describe('renderToHTMLStream', () => {
     )
   })
 
+  it('streams each deferred frame template as it resolves', async () => {
+    let resolveA = (_value: string) => {}
+    let resolveB = (_value: string) => {}
+    let frameA = new Promise<string>((resolve) => {
+      resolveA = resolve
+    })
+    let frameB = new Promise<string>((resolve) => {
+      resolveB = resolve
+    })
+    let stream = renderToHTMLStream(
+      <main>
+        <frame src="/a" fallback={<p>loading a</p>} />
+        <frame src="/b" fallback={<p>loading b</p>} />
+      </main>,
+      {
+        resolveFrame: async (src) => (src === '/a' ? frameA : frameB),
+      },
+    )
+
+    let reader = stream.getReader()
+    let decoder = new TextDecoder()
+    let initial = ''
+    let frameAId: null | string = null
+    let frameBId: null | string = null
+    while (!frameAId || !frameBId) {
+      let read = await reader.read()
+      if (read.done) break
+      initial += decoder.decode(read.value, { stream: true })
+      frameAId = initial.match(/<!-- f:([^ ]+) -->/)?.[1] ?? frameAId
+      let frameMarkers = Array.from(initial.matchAll(/<!-- f:([^ ]+) -->/g))
+      if (frameMarkers.length >= 2) {
+        frameAId = frameMarkers[0]?.[1] ?? frameAId
+        frameBId = frameMarkers[1]?.[1] ?? frameBId
+      }
+    }
+    if (!frameAId || !frameBId) {
+      throw new Error('expected two frame ids in initial chunk')
+    }
+
+    resolveB('<aside>done b</aside>')
+    let firstTemplateHtml = await readUntil(
+      reader,
+      decoder,
+      (html) => html.includes(`<template id="${frameBId}">`) || html.includes(`<template id="${frameAId}">`),
+      100,
+    )
+    expect(firstTemplateHtml).toContain(`<template id="${frameBId}"><aside>done b</aside></template>`)
+    expect(firstTemplateHtml.includes(`<template id="${frameAId}">`)).toBe(false)
+
+    resolveA('<aside>done a</aside>')
+    let rest = await readRemaining(reader, decoder)
+    expect(firstTemplateHtml + rest).toContain(
+      `<template id="${frameAId}"><aside>done a</aside></template>`,
+    )
+  })
+
   it('passes abort signal to resolveFrame', async () => {
     let capturedSignal: null | AbortSignal = null
     let resolveFrameStarted = () => {}
@@ -305,6 +361,28 @@ describe('renderToHTMLStream', () => {
     expect(html).toContain('<aside class="pane" tabindex="3">done</aside>')
   })
 
+  it('includes nested frame metadata when resolveFrame returns JSX with nested pending frame', async () => {
+    let html = await readStream(
+      renderToHTMLStream(<frame src="/outer" fallback={'loading outer'} />, {
+        resolveFrame: async (src) => {
+          if (src === '/outer') {
+            return (
+              <section>
+                <frame src="/inner" fallback={'loading inner'} />
+              </section>
+            )
+          }
+          if (src === '/inner') {
+            return '<div>inner done</div>'
+          }
+          return '<div>unknown</div>'
+        },
+      }),
+    )
+    expect(html).toContain('"src":"/outer"')
+    expect(html).toContain('"src":"/inner"')
+  })
+
   it('throws when frame src is not a string', async () => {
     let stream = renderToHTMLStream(<frame src={123 as any} fallback={'x'} />)
     await expect(readStream(stream)).rejects.toThrow('<frame> requires a "src" string prop')
@@ -434,4 +512,26 @@ async function readRemaining(
   }
   output += decoder.decode()
   return output
+}
+
+async function readWithTimeout<value>(promise: Promise<value>, timeoutMs: number) {
+  let timeout = new Promise<null>((resolve) => {
+    setTimeout(() => resolve(null), timeoutMs)
+  })
+  return await Promise.race([promise, timeout])
+}
+
+async function readUntil(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  decoder: TextDecoder,
+  done: (html: string) => boolean,
+  timeoutMs: number,
+) {
+  let html = ''
+  while (true) {
+    let next = await readWithTimeout(reader.read(), timeoutMs)
+    if (!next || next.done) return html
+    html += decoder.decode(next.value, { stream: true })
+    if (done(html)) return html
+  }
 }

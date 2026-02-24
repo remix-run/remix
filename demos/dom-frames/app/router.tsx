@@ -88,7 +88,9 @@ router.get(routes.home, async (context: { request: Request }) => {
 router.get(routes.simpleHydration, async () => {
   let content = (
     <div style={cardStyle}>
-      <p style={{ marginTop: '0' }}>This page SSRs a client entry counter and hydrates it after boot.</p>
+      <p style={{ marginTop: '0' }}>
+        This page SSRs a client entry counter and hydrates it after boot.
+      </p>
       <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
         <SimpleCounter setup={1} label="Count" />
         <HydrationBadge />
@@ -251,7 +253,9 @@ router.get(routes.frames.reloadableClock, async () => {
   await delay(350)
   return htmlResponse(
     renderToHTMLStream(
-      <div style={{ ...cardStyle, background: 'rgba(255,255,255,0.02)', display: 'grid', gap: '10px' }}>
+      <div
+        style={{ ...cardStyle, background: 'rgba(255,255,255,0.02)', display: 'grid', gap: '10px' }}
+      >
         <div>
           <div style={{ fontSize: '13px', color: '#b5c5f9' }}>Server time</div>
           <div style={{ fontSize: '20px', fontVariantNumeric: 'tabular-nums' }}>

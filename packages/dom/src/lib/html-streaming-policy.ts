@@ -281,8 +281,11 @@ async function resolveFrameTemplate(
 ) {
   let resolved = await resolveFrame(src, signal)
   let html = await resolvedFrameToHtml(resolved, renderFrameValueToString, signal)
-  let escaped = html.replace(/<\/template/gi, '<\\/template')
-  return encoder.encode(`<template id="${frameId}">${escaped}</template>`)
+  let extracted = extractNamedTemplates(html)
+  let escaped = extracted.htmlWithoutTemplates.replace(/<\/template/gi, '<\\/template')
+  return encoder.encode(
+    `<template id="${frameId}">${escaped}</template>${extracted.templatesHtml.join('')}`,
+  )
 }
 
 async function resolveFrameBlockingContent(
@@ -341,6 +344,16 @@ async function readByteStream(stream: ReadableStream<Uint8Array>, signal: AbortS
   } finally {
     reader.releaseLock()
   }
+}
+
+function extractNamedTemplates(html: string) {
+  let templatePattern = /<template\b[^>]*\bid=(?:"[^"]+"|'[^']+')[^>]*>[\s\S]*?<\/template>/gi
+  let templatesHtml: string[] = []
+  let htmlWithoutTemplates = html.replace(templatePattern, (templateHtml) => {
+    templatesHtml.push(templateHtml)
+    return ''
+  })
+  return { htmlWithoutTemplates, templatesHtml }
 }
 
 function serializeRmxDataScript(

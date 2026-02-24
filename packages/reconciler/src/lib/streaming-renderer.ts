@@ -440,11 +440,12 @@ async function emitDeferredOutputs<chunk>(
 ) {
   while (state.deferred.length > 0) {
     let pending = state.deferred.splice(0, state.deferred.length)
-    let settled = await Promise.allSettled(pending)
-    for (let entry of settled) {
-      if (entry.status === 'rejected') throw entry.reason
-      await emitChunkOutput(entry.value, controller, state.abortController.signal)
-    }
+    await Promise.all(
+      pending.map(async (output) => {
+        let resolved = await output
+        await emitChunkOutput(resolved, controller, state.abortController.signal)
+      }),
+    )
   }
 }
 
